@@ -14,3 +14,14 @@ CONVENZIONI: File kebab-case, Componenti PascalCase, Variabili camelCase italian
 VINCOLI: Budget zero, Codice rivendibile, GDPR compliant, Performance sotto 2 secondi
 
 BUSINESS: Margine configurabile su spedizioni, Modello commissioni da definire, Possibile abbonamento aziende
+
+GIT: 
+- Repository: https://github.com/gdsgroupsas-jpg/spediresicuro.git
+- Account GitHub: gdsgroupsas-jpg
+- Branch principale: master
+- ⚠️ SEMPRE verificare account Git prima di commit/push manuali: git config user.name (deve essere "gdsgroupsas-jpg")
+
+VERCEL:
+- Deploy automatico attivo: ogni push su master → deploy automatico su Vercel
+- Account Vercel: stesso account del vecchio progetto "spedire sicuro platform"
+- ⚠️ Creare nuovo progetto Vercel separato per questo progetto
