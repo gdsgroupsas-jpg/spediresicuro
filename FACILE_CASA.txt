@@ -22,8 +22,9 @@
 2. Vai nella cartella del progetto:
    cd C:\percorso\dove\hai\salvato\spediresicuro
 
-3. Copia e incolla questo comando:
+3. Copia e incolla questi 2 comandi uno alla volta:
    git pull origin master
+   npm install
 
 4. Poi avvia:
    npm run dev
@@ -40,4 +41,3 @@
 ---
 
 FATTO! È tutto qui! 🚀
-
