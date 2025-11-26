@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
+        "seed:geo": "ts-node --project tsconfig.seed.json scripts/seed-geo.ts",
   },
   "dependencies": {
     "react": "^18.2.0",
