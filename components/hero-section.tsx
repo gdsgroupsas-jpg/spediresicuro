@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 // Tipo per le varianti della hero section
 type Variant = 'brand' | 'tech-trust' | 'energy-professional' | 'modern-minimal'
@@ -99,29 +100,26 @@ export default function HeroSection({ variant = 'brand' }: HeroSectionProps) {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               {/* CTA Primario */}
-              <button
-                className={`${config.primaryColor} ${config.primaryHover} text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl`}
-                onClick={() => {
-                  // TODO: Implementare upload screenshot
-                  console.log('Carica screenshot')
-                }}
+              <Link
+                href="/preventivo"
+                className={`${config.primaryColor} ${config.primaryHover} text-white px-8 py-4 rounded-xl font-bold text-lg shadow-2xl transform transition-all duration-300 hover:scale-105 hover:shadow-3xl flex items-center justify-center gap-2 group`}
               >
-                {config.ctaPrimary}
-              </button>
+                <span>{config.ctaPrimary}</span>
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
 
               {/* CTA Secondario */}
-              <button
-                className={`border-2 ${config.textColor} border-current px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transform transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2`}
-                onClick={() => {
-                  // TODO: Implementare video demo
-                  console.log('Mostra demo')
-                }}
+              <Link
+                href="/come-funziona"
+                className={`border-2 ${config.textColor} border-current px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-50/50 transform transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 group`}
               >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                 </svg>
                 {config.ctaSecondary}
-              </button>
+              </Link>
             </div>
 
             {/* Social Proof */}
@@ -157,14 +155,24 @@ export default function HeroSection({ variant = 'brand' }: HeroSectionProps) {
               </div>
             </div>
 
-            {/* Urgenza Soft */}
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.accentBg} bg-opacity-10 border border-current border-opacity-20`}>
-              <svg className={`w-5 h-5 ${config.accentColor}`} fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-              </svg>
-              <span className={`text-sm font-medium ${config.textColor}`}>
-                Posti limitati per piano gratuito
-              </span>
+            {/* Urgenza Soft + Trust Badges */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${config.accentBg} bg-opacity-10 border border-current border-opacity-20 animate-pulse`}>
+                <svg className={`w-5 h-5 ${config.accentColor}`} fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <span className={`text-sm font-medium ${config.textColor}`}>
+                  🎁 Prova Gratuita - Nessuna Carta Richiesta
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Setup in 2 minuti</span>
+                <span className="text-gray-300">•</span>
+                <span>Nessun costo nascosto</span>
+              </div>
             </div>
           </div>
 

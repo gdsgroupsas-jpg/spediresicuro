@@ -65,6 +65,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calcola prezzo base
+    const peso = parseFloat(body.peso) || 0;
+    const basePrice = 10; // Prezzo base fisso
+    const pesoPrice = peso * 2; // 2€ per kg
+    const expressMultiplier = body.tipoSpedizione === 'express' ? 1.5 : 1;
+    const prezzoBase = (basePrice + pesoPrice) * expressMultiplier;
+    
+    // Margine configurabile (default 15%)
+    const marginePercentuale = 15;
+    const margine = (prezzoBase * marginePercentuale) / 100;
+    const prezzoFinale = prezzoBase + margine;
+
+    // Genera tracking number
+    const trackingPrefix = (body.corriere || 'GLS').substring(0, 3).toUpperCase();
+    const trackingNumber = `${trackingPrefix}${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
     // Prepara i dati della spedizione
     const spedizione = {
       // Dati mittente
@@ -88,7 +104,7 @@ export async function POST(request: NextRequest) {
         email: body.destinatarioEmail || '',
       },
       // Dettagli spedizione
-      peso: parseFloat(body.peso) || 0,
+      peso: peso,
       dimensioni: {
         lunghezza: parseFloat(body.lunghezza) || 0,
         larghezza: parseFloat(body.larghezza) || 0,
@@ -96,14 +112,14 @@ export async function POST(request: NextRequest) {
       },
       tipoSpedizione: body.tipoSpedizione || 'standard',
       note: body.note || '',
-      // Campi calcolati (verranno aggiunti in futuro con calcolo prezzi)
-      prezzoBase: 0,
-      margine: 0,
-      prezzoFinale: 0,
-      // Status e tracking (default)
+      // Campi calcolati
+      prezzoBase: prezzoBase,
+      margine: margine,
+      prezzoFinale: prezzoFinale,
+      // Status e tracking
       status: 'in_preparazione',
-      tracking: null,
-      corriere: null,
+      tracking: trackingNumber,
+      corriere: body.corriere || 'GLS',
     };
 
     // Salva nel database locale

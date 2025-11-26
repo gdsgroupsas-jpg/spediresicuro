@@ -12,6 +12,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   MapPin, 
   Package, 
@@ -27,7 +28,9 @@ import {
 } from 'lucide-react';
 import AsyncLocationCombobox from '@/components/ui/async-location-combobox';
 import DashboardNav from '@/components/dashboard-nav';
+import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import type { OnLocationSelect } from '@/types/geo';
+import type { Corriere } from '@/types/corrieri';
 
 interface FormData {
   // Mittente
@@ -54,6 +57,7 @@ interface FormData {
   larghezza: string;
   altezza: string;
   tipoSpedizione: string;
+  corriere: string;
   note: string;
 }
 
@@ -222,6 +226,7 @@ function RouteVisualizer({
 }
 
 export default function NuovaSpedizionePage() {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     mittenteNome: '',
     mittenteIndirizzo: '',
@@ -242,6 +247,7 @@ export default function NuovaSpedizionePage() {
     larghezza: '',
     altezza: '',
     tipoSpedizione: 'standard',
+    corriere: 'GLS',
     note: '',
   });
 
@@ -336,31 +342,10 @@ export default function NuovaSpedizionePage() {
       const result = await response.json();
       setSubmitSuccess(true);
 
+      // Reindirizza alla lista dopo 2 secondi
       setTimeout(() => {
-        setFormData({
-          mittenteNome: '',
-          mittenteIndirizzo: '',
-          mittenteCitta: '',
-          mittenteProvincia: '',
-          mittenteCap: '',
-          mittenteTelefono: '',
-          mittenteEmail: '',
-          destinatarioNome: '',
-          destinatarioIndirizzo: '',
-          destinatarioCitta: '',
-          destinatarioProvincia: '',
-          destinatarioCap: '',
-          destinatarioTelefono: '',
-          destinatarioEmail: '',
-          peso: '',
-          lunghezza: '',
-          larghezza: '',
-          altezza: '',
-          tipoSpedizione: 'standard',
-          note: '',
-        });
-        setSubmitSuccess(false);
-      }, 3000);
+        router.push('/dashboard/spedizioni');
+      }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -691,6 +676,44 @@ export default function NuovaSpedizionePage() {
                         province: formData.destinatarioProvincia || '',
                       }}
                     />
+                  </div>
+
+                  {/* AI Routing Advisor */}
+                  {formData.destinatarioCitta && formData.destinatarioProvincia && estimatedCost > 0 && (
+                    <div className="pt-6 border-t border-gray-200">
+                      <AIRoutingAdvisor
+                        citta={formData.destinatarioCitta}
+                        provincia={formData.destinatarioProvincia}
+                        corriereScelto={formData.corriere || 'GLS'}
+                        prezzoCorriereScelto={estimatedCost}
+                        onAcceptSuggestion={(corriere) => {
+                          setFormData((prev) => ({ ...prev, corriere }));
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Corriere Selection */}
+                  <div className="pt-6 border-t border-gray-200">
+                    <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
+                      Corriere
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['GLS', 'SDA', 'Bartolini'] as Corriere[]).map((corriere) => (
+                        <button
+                          key={corriere}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, corriere }))}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            formData.corriere === corriere
+                              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                          }`}
+                        >
+                          {corriere}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Cost Calculator */}
