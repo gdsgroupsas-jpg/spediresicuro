@@ -22,3 +22,16 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Assicura che il logo SVG non venga tagliato */
+header svg {
+  overflow: visible;
+  display: block;
+}
+
+/* Container logo per evitare tagli */
+.logo-container {
+  overflow: visible;
+  display: flex;
+  align-items: center;
+}
+

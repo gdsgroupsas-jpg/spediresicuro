@@ -8,13 +8,33 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Colori personalizzati per SpedireSicuro.it
-        primary: '#2563eb',
-        'primary-dark': '#1e40af',
-        'primary-light': '#3b82f6',
-        secondary: '#10b981',
-        'secondary-dark': '#059669',
-        'secondary-light': '#34d399',
+        // Colori Brand Ufficiali SpedireSicuro.it
+        brand: {
+          // Gradiente Giallo/Arancione (fulmine)
+          'yellow-start': '#FFD700',
+          'yellow-end': '#FF9500',
+          // Azzurro tech (orbita)
+          'cyan': '#00B8D4',
+          // Neutri
+          'black': '#000000',
+          'gray': '#666666',
+        },
+        // Colori legacy (mantenuti per compatibilità)
+        primary: '#FF9500', // Arancione brand
+        'primary-dark': '#FF6B00',
+        'primary-light': '#FFB84D',
+        secondary: '#00B8D4', // Azzurro brand
+        'secondary-dark': '#0095B0',
+        'secondary-light': '#33C5D9',
+        // Palette Variante A - Tech Trust
+        'tech-blue': '#0066FF',
+        'tech-violet': '#7C3AED',
+        // Palette Variante B - Energy Professional
+        'energy-orange': '#FF6B35',
+        'energy-navy': '#001F54',
+        // Palette Variante C - Modern Minimal
+        'minimal-black': '#0A0A0A',
+        'minimal-lime': '#00FF87',
       },
     },
   },
