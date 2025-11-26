@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:monitor": "node scripts/error-monitor.js dev",
     "build": "next build",
+    "build:monitor": "node scripts/error-monitor.js build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "check:errors": "node scripts/check-errors.js",
     "setup:supabase": "ts-node --project tsconfig.scripts.json scripts/setup-supabase.ts",
     "verify:supabase": "ts-node --project tsconfig.scripts.json scripts/verify-supabase.ts",
     "check:table": "ts-node --project tsconfig.scripts.json scripts/check-table-structure.ts",

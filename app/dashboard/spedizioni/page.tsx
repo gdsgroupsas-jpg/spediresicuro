@@ -7,9 +7,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Search, Filter, Download, X } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 
 // Interfaccia per una spedizione
@@ -79,6 +80,11 @@ export default function ListaSpedizioniPage() {
   const [spedizioni, setSpedizioni] = useState<Spedizione[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Filtri e ricerca
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('all');
 
   // Carica le spedizioni
   useEffect(() => {
@@ -137,6 +143,105 @@ export default function ListaSpedizioniPage() {
     window.open(`https://tracking.example.com/${tracking}`, '_blank');
   };
 
+  // Filtra spedizioni
+  const filteredSpedizioni = useMemo(() => {
+    let filtered = [...spedizioni];
+
+    // Filtro per ricerca
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.destinatario?.nome?.toLowerCase().includes(query) ||
+          s.mittente?.nome?.toLowerCase().includes(query) ||
+          s.tracking?.toLowerCase().includes(query) ||
+          s.destinatario?.citta?.toLowerCase().includes(query) ||
+          s.destinatario?.provincia?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filtro per status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((s) => (s.status || 'in_preparazione') === statusFilter);
+    }
+
+    // Filtro per data
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.setHours(0, 0, 0, 0));
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      filtered = filtered.filter((s) => {
+        const date = new Date(s.createdAt);
+        switch (dateFilter) {
+          case 'today':
+            return date >= today;
+          case 'week':
+            return date >= weekAgo;
+          case 'month':
+            return date >= monthAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    return filtered;
+  }, [spedizioni, searchQuery, statusFilter, dateFilter]);
+
+  // Download CSV
+  const handleDownloadCSV = () => {
+    const headers = [
+      'ID',
+      'Data Creazione',
+      'Mittente',
+      'Città Mittente',
+      'Provincia Mittente',
+      'Destinatario',
+      'Città Destinatario',
+      'Provincia Destinatario',
+      'Tracking',
+      'Status',
+      'Corriere',
+      'Tipo Spedizione',
+      'Peso (kg)',
+      'Prezzo (€)',
+    ];
+
+    const rows = filteredSpedizioni.map((s) => [
+      s.id,
+      formatDate(s.createdAt),
+      s.mittente?.nome || '',
+      s.mittente?.citta || '',
+      s.mittente?.provincia || '',
+      s.destinatario?.nome || '',
+      s.destinatario?.citta || '',
+      s.destinatario?.provincia || '',
+      s.tracking || '',
+      s.status || 'in_preparazione',
+      s.corriere || '',
+      s.tipoSpedizione || '',
+      s.peso?.toString() || '',
+      s.prezzoFinale?.toFixed(2) || '0.00',
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `spedizioni_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -146,27 +251,118 @@ export default function ListaSpedizioniPage() {
           subtitle="Gestisci e monitora tutte le tue spedizioni in tempo reale"
           showBackButton={true}
           actions={
-            <Link
-              href="/dashboard/spedizioni/nuova"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all transform hover:scale-105"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex items-center gap-3">
+              {spedizioni.length > 0 && (
+                <button
+                  onClick={handleDownloadCSV}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  Esporta CSV
+                </button>
+              )}
+              <Link
+                href="/dashboard/spedizioni/nuova"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all transform hover:scale-105"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Nuova Spedizione
-            </Link>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Nuova Spedizione
+              </Link>
+            </div>
           }
         />
+
+        {/* Filtri e Ricerca */}
+        {!isLoading && !error && spedizioni.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Ricerca */}
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Cerca per destinatario, tracking, città..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filtro Status */}
+              <div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                >
+                  <option value="all">Tutti gli status</option>
+                  <option value="in_preparazione">In Preparazione</option>
+                  <option value="in_transito">In Transito</option>
+                  <option value="consegnata">Consegnata</option>
+                  <option value="eccezione">Eccezione</option>
+                  <option value="annullata">Annullata</option>
+                </select>
+              </div>
+
+              {/* Filtro Data */}
+              <div>
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                >
+                  <option value="all">Tutte le date</option>
+                  <option value="today">Oggi</option>
+                  <option value="week">Ultima settimana</option>
+                  <option value="month">Ultimo mese</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Risultati filtri */}
+            {(searchQuery || statusFilter !== 'all' || dateFilter !== 'all') && (
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
+                  <span className="font-medium text-gray-900">{spedizioni.length}</span> spedizioni
+                </div>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setStatusFilter('all');
+                    setDateFilter('all');
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" />
+                  Reset filtri
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Main Content Card */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -247,7 +443,7 @@ export default function ListaSpedizioniPage() {
           )}
 
           {/* Table */}
-          {!isLoading && !error && spedizioni.length > 0 && (
+          {!isLoading && !error && filteredSpedizioni.length > 0 && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -303,7 +499,7 @@ export default function ListaSpedizioniPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {spedizioni.map((spedizione) => (
+                  {filteredSpedizioni.map((spedizione) => (
                     <tr
                       key={spedizione.id}
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -427,10 +623,35 @@ export default function ListaSpedizioniPage() {
           )}
         </div>
 
-        {/* Footer Stats (opzionale) */}
-        {!isLoading && !error && spedizioni.length > 0 && (
+        {/* Empty State per filtri */}
+        {!isLoading && !error && spedizioni.length > 0 && filteredSpedizioni.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
+            <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Nessun risultato trovato
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Prova a modificare i filtri di ricerca
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+                setDateFilter('all');
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Reset filtri
+            </button>
+          </div>
+        )}
+
+        {/* Footer Stats */}
+        {!isLoading && !error && filteredSpedizioni.length > 0 && (
           <div className="mt-6 text-sm text-gray-600 text-center">
-            Mostrando <span className="font-medium text-gray-900">{spedizioni.length}</span>{' '}
+            Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
+            <span className="font-medium text-gray-900">{spedizioni.length}</span>{' '}
             {spedizioni.length === 1 ? 'spedizione' : 'spedizioni'}
           </div>
         )}

@@ -42,6 +42,9 @@ function formatLocationOption(location: {
 /**
  * Handler GET
  */
+// Forza route dinamica
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Estrai query parameter
