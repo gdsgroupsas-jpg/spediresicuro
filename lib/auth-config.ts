@@ -2,16 +2,31 @@
  * NextAuth Configuration (v5)
  * 
  * Configurazione centralizzata per NextAuth.js v5
- * Supporta: Credentials, Google OAuth, GitHub OAuth, Facebook OAuth
+ * Supporta: Credentials, Google OAuth, GitHub OAuth
  */
 
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
-import FacebookProvider from 'next-auth/providers/facebook';
+
+// Debug: verifica configurazione Google OAuth (solo in sviluppo)
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔍 Google OAuth Config Check:', {
+    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length,
+    clientIdEndsWith: process.env.GOOGLE_CLIENT_ID?.slice(-10),
+    hasSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    secretLength: process.env.GOOGLE_CLIENT_SECRET?.length,
+    nextAuthUrl: process.env.NEXTAUTH_URL,
+  });
+}
 
 export const authOptions = {
+  // URL base per NextAuth (necessario per OAuth callbacks)
+  basePath: '/api/auth',
+  // Trust host per permettere callbacks dinamici
+  trustHost: true,
   providers: [
     // Provider Credentials (Email/Password)
     CredentialsProvider({
@@ -20,7 +35,8 @@ export const authOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials: Partial<Record<string, unknown>> | undefined) {
+        // Type guard per verificare che le credenziali siano valide
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
@@ -28,8 +44,8 @@ export const authOptions = {
         // Verifica credenziali dal database
         const { verifyUserCredentials } = await import('@/lib/database');
         const user = verifyUserCredentials(
-          credentials.email,
-          credentials.password
+          credentials.email as string,
+          credentials.password as string
         );
 
         if (user) {
@@ -58,13 +74,6 @@ export const authOptions = {
       clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
       allowDangerousEmailAccountLinking: true,
     }),
-    
-    // Facebook OAuth Provider
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID || '',
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || '',
-      allowDangerousEmailAccountLinking: true,
-    }),
   ],
   pages: {
     signIn: '/login',
@@ -86,14 +95,14 @@ export const authOptions = {
               password: '', // Password vuota per utenti OAuth
               name: user.name || user.email.split('@')[0],
               role: 'user',
-              provider: account?.provider as 'google' | 'github' | 'facebook',
+              provider: account?.provider as 'google' | 'github',
               providerId: account?.providerAccountId,
               image: user.image,
             });
           } else if (account?.provider && !existingUser.provider) {
             // Aggiorna utente esistente con provider OAuth
             updateUser(existingUser.id, {
-              provider: account.provider as 'google' | 'github' | 'facebook',
+              provider: account.provider as 'google' | 'github',
               providerId: account.providerAccountId,
               image: user.image,
             });
