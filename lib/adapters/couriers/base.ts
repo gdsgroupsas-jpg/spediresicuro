@@ -51,12 +51,16 @@ export abstract class CourierAdapter {
   /**
    * Calcola preventivo (se API lo supporta)
    */
-  abstract calculateQuote?(data: any): Promise<number>;
+  async calculateQuote?(data: any): Promise<number> {
+    throw new Error('calculateQuote not implemented');
+  }
 
   /**
    * Annulla spedizione
    */
-  abstract cancelShipment?(trackingNumber: string): Promise<void>;
+  async cancelShipment?(trackingNumber: string): Promise<void> {
+    throw new Error('cancelShipment not implemented');
+  }
 }
 
 /**

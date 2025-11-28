@@ -27,7 +27,7 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
 
     // Validazione file
     if (!file.type.startsWith('image/')) {
-      const err = 'Il file deve essere un\'immagine (JPG, PNG, etc.)';
+      const err = 'Il file deve essere un&apos;immagine (JPG, PNG, etc.)';
       setError(err);
       onError?.(err);
       return;
@@ -108,7 +108,7 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <Upload className="w-12 h-12 mb-3 text-gray-400" />
             <p className="mb-2 text-sm text-gray-700">
-              <span className="font-semibold">Clicca per caricare</span> o trascina un'immagine
+              <span className="font-semibold">Clicca per caricare</span> o trascina un&apos;immagine
             </p>
             <p className="text-xs text-gray-500">PNG, JPG, GIF fino a 10MB</p>
             <p className="mt-2 text-xs text-gray-400">
@@ -131,7 +131,7 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
           <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
             <img
               src={preview}
-              alt="Preview"
+              alt="Anteprima immagine caricata per estrazione OCR"
               className="w-full h-auto max-h-96 object-contain"
             />
 
@@ -144,7 +144,7 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
                     Estrazione dati in corso...
                   </p>
                   <p className="text-xs text-gray-500">
-                    Analisi OCR dell'immagine
+                    Analisi OCR dell&apos;immagine
                   </p>
                 </div>
               </div>
@@ -192,9 +192,9 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
       {/* Info Box */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-start space-x-2">
-          <Image className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Image className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-label="Informazioni OCR" />
           <div className="text-sm text-blue-900">
-            <p className="font-medium mb-1">Come funziona l'OCR:</p>
+            <p className="font-medium mb-1">Come funziona l&apos;OCR:</p>
             <ul className="list-disc list-inside space-y-1 text-xs text-blue-800">
               <li>Carica uno screenshot o foto del documento di spedizione</li>
               <li>Il sistema estrae automaticamente: nome, indirizzo, CAP, città, telefono</li>
