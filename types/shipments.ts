@@ -1,0 +1,168 @@
+/**
+ * Types: Shipments
+ */
+
+export type ShipmentStatus =
+  | 'draft'
+  | 'pending'
+  | 'processing'
+  | 'shipped'
+  | 'in_transit'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'failed'
+  | 'cancelled'
+  | 'returned';
+
+export type RecipientType = 'B2C' | 'B2B';
+
+export type CourierServiceType = 'standard' | 'express' | 'economy' | 'same_day' | 'next_day';
+
+export interface Shipment {
+  id: string;
+  user_id: string;
+  tracking_number: string;
+  external_tracking_number?: string;
+  status: ShipmentStatus;
+
+  // Mittente
+  sender_name: string;
+  sender_address?: string;
+  sender_city?: string;
+  sender_zip?: string;
+  sender_province?: string;
+  sender_country?: string;
+  sender_phone?: string;
+  sender_email?: string;
+
+  // Destinatario
+  recipient_name: string;
+  recipient_type: RecipientType;
+  recipient_address: string;
+  recipient_address_number?: string;
+  recipient_city: string;
+  recipient_zip: string;
+  recipient_province: string;
+  recipient_country: string;
+  recipient_phone: string;
+  recipient_email?: string;
+  recipient_notes?: string;
+
+  // Pacco
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  volumetric_weight?: number;
+
+  // Valore
+  declared_value?: number;
+  currency: string;
+
+  // Servizio
+  courier_id: string;
+  courier?: any; // Riferimento corriere
+  service_type: CourierServiceType;
+  cash_on_delivery: boolean;
+  cash_on_delivery_amount?: number;
+  insurance: boolean;
+
+  // Pricing
+  base_price?: number;
+  surcharges?: number;
+  total_cost?: number;
+  margin_percent?: number;
+  final_price?: number;
+
+  // Geo-analytics
+  geo_zone?: string;
+  courier_quality_score?: number;
+
+  // E-commerce
+  ecommerce_platform?: string;
+  ecommerce_order_id?: string;
+  ecommerce_order_number?: string;
+
+  // OCR
+  created_via_ocr?: boolean;
+  ocr_confidence_score?: number;
+
+  // Note
+  notes?: string;
+  internal_notes?: string;
+
+  // Timestamps
+  shipped_at?: string;
+  delivered_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateShipmentInput {
+  sender_name: string;
+  sender_address?: string;
+  sender_city?: string;
+  sender_zip?: string;
+  sender_province?: string;
+  sender_phone?: string;
+  sender_email?: string;
+
+  recipient_name: string;
+  recipient_type?: RecipientType;
+  recipient_address: string;
+  recipient_city: string;
+  recipient_zip: string;
+  recipient_province: string;
+  recipient_phone: string;
+  recipient_email?: string;
+  recipient_notes?: string;
+
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+
+  declared_value?: number;
+
+  courier_id: string;
+  service_type?: CourierServiceType;
+  cash_on_delivery?: boolean;
+  cash_on_delivery_amount?: number;
+  insurance?: boolean;
+
+  base_price?: number;
+  margin_percent?: number;
+
+  notes?: string;
+}
+
+export interface UpdateShipmentInput {
+  status?: ShipmentStatus;
+  external_tracking_number?: string;
+  shipped_at?: string;
+  delivered_at?: string;
+  notes?: string;
+  internal_notes?: string;
+}
+
+export interface ShipmentFilters {
+  status?: ShipmentStatus;
+  courier_id?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  order_by?: string;
+  order_dir?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
+export interface ShipmentEvent {
+  id: string;
+  shipment_id: string;
+  status: ShipmentStatus;
+  description: string;
+  location?: string;
+  event_date: string;
+  created_at: string;
+}

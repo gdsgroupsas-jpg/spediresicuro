@@ -1,6 +1,10 @@
-// Definizioni TypeScript per il progetto
+/**
+ * Types - Central Export
+ *
+ * Export centralizzato di tutti i tipi TypeScript del progetto
+ */
 
-// Tipo per una spedizione
+// Legacy types (mantenuti per retrocompatibilità)
 export interface Spedizione {
   id: string
   mittente: string
@@ -17,7 +21,6 @@ export interface Spedizione {
   dataCreazione: string
 }
 
-// Tipo per un preventivo
 export interface Preventivo {
   id: string
   peso: number
@@ -32,10 +35,17 @@ export interface Preventivo {
   prezzoFinale: number
 }
 
-// Tipo per configurazione margine
 export interface ConfigurazioneMargine {
   margineDefault: number
   margineMinimo: number
   margineMassimo: number
 }
+
+// New types (production-ready)
+export * from './shipments';
+export * from './listini';
+export * from './products';
+export * from './warehouse';
+export * from './ecommerce';
+export * from './analytics';
 
