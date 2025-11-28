@@ -1,0 +1,7 @@
+/**
+ * OCR Adapters - Export centrale
+ */
+
+export * from './base';
+export * from './mock';
+export * from './tesseract';
