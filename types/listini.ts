@@ -2,8 +2,10 @@
  * Types: Price Lists (Listini)
  */
 
+import type { CourierServiceType } from './shipments';
+
 export type PriceListStatus = 'draft' | 'active' | 'archived';
-export type CourierServiceType = 'standard' | 'express' | 'economy' | 'same_day' | 'next_day';
+export type { CourierServiceType };
 
 export interface PriceList {
   id: string;

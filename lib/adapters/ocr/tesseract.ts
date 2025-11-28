@@ -13,33 +13,15 @@ export class TesseractAdapter extends OCRAdapter {
   }
 
   async extract(imageData: Buffer | string, options?: OCROptions): Promise<OCRResult> {
-    try {
-      // TODO: Implementare con tesseract.js
-      // const Tesseract = require('tesseract.js');
-      // const { data: { text } } = await Tesseract.recognize(imageData, options?.language || 'ita');
-
-      // Per ora, fallback a mock
-      console.warn('[Tesseract] Not implemented, falling back to mock');
-      const { MockOCRAdapter } = require('./mock');
-      const mock = new MockOCRAdapter();
-      return await mock.extract(imageData, options);
-    } catch (error: any) {
-      return {
-        success: false,
-        confidence: 0,
-        extractedData: {},
-        error: error.message,
-      };
-    }
+    // Per ora, fallback a mock (tesseract.js non installato)
+    console.warn('[Tesseract] Not installed, falling back to mock');
+    const { MockOCRAdapter } = require('./mock');
+    const mock = new MockOCRAdapter();
+    return await mock.extract(imageData, options);
   }
 
   async isAvailable(): Promise<boolean> {
-    // Check se tesseract.js è installato
-    try {
-      require.resolve('tesseract.js');
-      return true;
-    } catch {
-      return false;
-    }
+    // tesseract.js non installato di default
+    return false;
   }
 }
