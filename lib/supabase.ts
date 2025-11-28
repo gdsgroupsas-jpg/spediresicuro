@@ -20,11 +20,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Use placeholder values during build if not configured
+const buildTimeUrl = supabaseUrl || 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
+const buildTimeAnonKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder';
+const buildTimeServiceKey = supabaseServiceKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0NTE5MjAwMCwiZXhwIjoxOTYwNzY4MDAwfQ.placeholder';
+
 /**
  * Client Supabase per uso client-side (browser)
  * Usa la chiave anonima (pubblica, sicura per Row Level Security)
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(buildTimeUrl, buildTimeAnonKey, {
   auth: {
     persistSession: false, // Non persistiamo sessioni per questo progetto
   },
@@ -33,17 +38,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 /**
  * Client Supabase Admin per uso server-side (API routes, scripts)
  * Usa la service role key (privata, bypassa RLS)
- * 
+ *
  * ⚠️ USARE SOLO IN SERVER-SIDE! Non esporre mai questa chiave nel client.
  */
 export const supabaseAdmin = supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
+  ? createClient(buildTimeUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     })
-  : null;
+  : createClient(buildTimeUrl, buildTimeServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
 // Verifica configurazione admin
 if (!supabaseAdmin && process.env.NODE_ENV === 'production') {
