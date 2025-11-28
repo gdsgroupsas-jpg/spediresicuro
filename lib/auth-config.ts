@@ -10,17 +10,44 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
 
-// Debug: verifica configurazione Google OAuth (solo in sviluppo)
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔍 Google OAuth Config Check:', {
-    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
-    clientIdLength: process.env.GOOGLE_CLIENT_ID?.length,
-    clientIdEndsWith: process.env.GOOGLE_CLIENT_ID?.slice(-10),
-    hasSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-    secretLength: process.env.GOOGLE_CLIENT_SECRET?.length,
-    nextAuthUrl: process.env.NEXTAUTH_URL,
-  });
+// Tipi per i callbacks NextAuth
+interface SignInParams {
+  user: { id?: string; email?: string | null; name?: string | null; image?: string | null };
+  account: { provider?: string; providerAccountId?: string } | null;
+  profile?: Record<string, unknown>;
 }
+
+interface JwtParams {
+  token: Record<string, unknown> & { role?: string; provider?: string };
+  user?: { id?: string; email?: string; name?: string; role?: string };
+  account?: { provider?: string } | null;
+}
+
+interface SessionParams {
+  session: {
+    user?: { id?: string; email?: string | null; name?: string | null; image?: string | null; role?: string; provider?: string };
+  };
+  token: Record<string, unknown> & { role?: string; provider?: string };
+}
+
+// Validazione configurazione OAuth
+function validateOAuthConfig() {
+  const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  const hasGitHub = !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 OAuth Config Check:', {
+      google: hasGoogle ? '✅ Configurato' : '⚠️ Non configurato',
+      github: hasGitHub ? '✅ Configurato' : '⚠️ Non configurato',
+      nextAuthUrl: process.env.NEXTAUTH_URL || '⚠️ Non configurato',
+    });
+  }
+  
+  return { hasGoogle, hasGitHub };
+}
+
+// Verifica configurazione all'avvio
+validateOAuthConfig();
 
 export const authOptions = {
   // URL base per NextAuth (necessario per OAuth callbacks)
@@ -61,26 +88,34 @@ export const authOptions = {
       },
     }),
     
-    // Google OAuth Provider
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      allowDangerousEmailAccountLinking: true, // Permette linking account con stessa email
-    }),
+    // Google OAuth Provider (solo se configurato)
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true, // Permette linking account con stessa email
+          }),
+        ]
+      : []),
     
-    // GitHub OAuth Provider
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-      allowDangerousEmailAccountLinking: true,
-    }),
+    // GitHub OAuth Provider (solo se configurato)
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+      ? [
+          GitHubProvider({
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
   ],
   pages: {
     signIn: '/login',
     error: '/login',
   },
   callbacks: {
-    async signIn({ user, account, profile }: any) {
+    async signIn({ user, account, profile }: SignInParams) {
       // Se l'utente si registra tramite OAuth, crealo/aggiornalo nel database
       if (account?.provider !== 'credentials' && user?.email) {
         try {
@@ -93,18 +128,18 @@ export const authOptions = {
             createUser({
               email: user.email,
               password: '', // Password vuota per utenti OAuth
-              name: user.name || user.email.split('@')[0],
+              name: user.name || user.email.split('@')[0] || 'Utente',
               role: 'user',
               provider: account?.provider as 'google' | 'github',
               providerId: account?.providerAccountId,
-              image: user.image,
+              image: user.image || undefined,
             });
           } else if (account?.provider && !existingUser.provider) {
             // Aggiorna utente esistente con provider OAuth
             updateUser(existingUser.id, {
               provider: account.provider as 'google' | 'github',
               providerId: account.providerAccountId,
-              image: user.image,
+              image: user.image || undefined,
             });
           }
         } catch (error) {
@@ -115,19 +150,19 @@ export const authOptions = {
       
       return true;
     },
-    async jwt({ token, user, account }: any) {
+    async jwt({ token, user, account }: JwtParams) {
       // Prima chiamata (dopo login)
       if (user) {
-        token.role = (user as any).role || 'user';
+        token.role = (user.role as string) || 'user';
         token.provider = account?.provider || 'credentials';
       }
       
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }: SessionParams) {
       if (session.user) {
-        (session.user as any).role = token.role || 'user';
-        (session.user as any).provider = token.provider || 'credentials';
+        session.user.role = (token.role as string) || 'user';
+        session.user.provider = (token.provider as string) || 'credentials';
       }
       return session;
     },
