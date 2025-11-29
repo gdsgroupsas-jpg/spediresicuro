@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth-config';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
 
 /**
@@ -15,12 +16,23 @@ import { addSpedizione, getSpedizioni } from '@/lib/database';
  */
 export async function GET() {
   try {
+    // Autenticazione
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+    }
+
     const spedizioni = getSpedizioni();
+
+    // Filtra solo spedizioni non eliminate
+    const spedizioniAttive = spedizioni.filter((s: any) => !s.deleted);
+
     return NextResponse.json(
       {
         success: true,
-        data: spedizioni,
-        count: spedizioni.length,
+        data: spedizioniAttive,
+        count: spedizioniAttive.length,
       },
       { status: 200 }
     );
@@ -41,6 +53,13 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Autenticazione
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+    }
+
     // Leggi i dati dal body della richiesta
     const body = await request.json();
 
@@ -120,6 +139,11 @@ export async function POST(request: NextRequest) {
       status: 'in_preparazione',
       tracking: trackingNumber,
       corriere: body.corriere || 'GLS',
+      // Audit Trail - Tracciamento creazione
+      created_by_user_email: session.user.email,
+      created_by_user_name: session.user.name || session.user.email,
+      // Soft Delete
+      deleted: false,
     };
 
     // Salva nel database locale
@@ -136,6 +160,65 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Errore API spedizioni:', error);
+    return NextResponse.json(
+      {
+        error: 'Errore interno del server',
+        message: error instanceof Error ? error.message : 'Errore sconosciuto',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Handler DELETE - Soft delete spedizione
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Autenticazione
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+    }
+
+    // Ottieni ID dalla query
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID spedizione mancante' }, { status: 400 });
+    }
+
+    // Carica database
+    const { readDatabase, writeDatabase } = await import('@/lib/database');
+    const db = readDatabase();
+
+    // Trova spedizione
+    const spedizioneIndex = db.spedizioni.findIndex((s: any) => s.id === id);
+
+    if (spedizioneIndex === -1) {
+      return NextResponse.json({ error: 'Spedizione non trovata' }, { status: 404 });
+    }
+
+    // Soft delete - segna come eliminata
+    db.spedizioni[spedizioneIndex] = {
+      ...db.spedizioni[spedizioneIndex],
+      deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by_user_email: session.user.email,
+      deleted_by_user_name: session.user.name || session.user.email,
+    };
+
+    // Salva
+    writeDatabase(db);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Spedizione eliminata con successo',
+    });
+  } catch (error) {
+    console.error('Errore DELETE spedizione:', error);
     return NextResponse.json(
       {
         error: 'Errore interno del server',
