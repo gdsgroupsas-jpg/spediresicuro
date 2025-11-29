@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "locks": [],
+  "info": "File per coordinare lavoro tra agenti AI multipli. Aggiungi lock quando inizi task lungo per evitare conflitti.",
+  "usage": {
+    "example": {
+      "files": ["app/api/auth/**/*", "lib/auth-config.ts"],
+      "agent": "claude-code",
+      "branch": "claude/auth-system-01XYZ",
+      "started": "2024-01-29T14:00:00Z",
+      "reason": "Implementing complete authentication system",
+      "estimatedEnd": "2024-01-29T16:00:00Z"
+    },
+    "instructions": [
+      "Prima di modificare file, controlla se sono locked",
+      "Aggiungi lock quando inizi task che dura più di 30 minuti",
+      "Rimuovi lock quando finisci o fai commit finale",
+      "Se file locked da altro agente, lavora su altro o aspetta"
+    ]
+  }
+}
