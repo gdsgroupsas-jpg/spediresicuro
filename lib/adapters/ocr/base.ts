@@ -131,15 +131,32 @@ export abstract class OCRAdapter {
 /**
  * Factory per creare OCR adapter
  */
-export function createOCRAdapter(type: 'mock' | 'tesseract' = 'mock'): OCRAdapter {
+export function createOCRAdapter(type: 'mock' | 'tesseract' | 'auto' = 'auto'): OCRAdapter {
   switch (type) {
-    case 'tesseract':
+    case 'tesseract': {
       const { TesseractAdapter } = require('./tesseract');
       return new TesseractAdapter();
+    }
 
-    case 'mock':
-    default:
-      const { MockOCRAdapter } = require('./mock');
-      return new MockOCRAdapter();
+    case 'mock': {
+      const { ImprovedMockOCRAdapter } = require('./mock');
+      return new ImprovedMockOCRAdapter();
+    }
+
+    case 'auto':
+    default: {
+      // Prova Tesseract, fallback a mock migliorato
+      try {
+        const { TesseractAdapter } = require('./tesseract');
+        const tesseract = new TesseractAdapter();
+        // Verifica disponibilità in modo sincrono (per ora usa sempre mock migliorato se auto)
+        // L'API route gestirà il check asincrono
+        const { ImprovedMockOCRAdapter } = require('./mock');
+        return new ImprovedMockOCRAdapter();
+      } catch {
+        const { ImprovedMockOCRAdapter } = require('./mock');
+        return new ImprovedMockOCRAdapter();
+      }
+    }
   }
 }

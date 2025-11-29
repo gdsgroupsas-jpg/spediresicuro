@@ -1,0 +1,34 @@
+# ============================================
+# GOOGLE OAUTH
+# ============================================
+# ❌ SOSTITUISCI QUESTI PLACEHOLDER CON I TUOI VALORI REALI
+# 
+# Ottieni le credenziali da: https://console.cloud.google.com/apis/credentials
+# Callback URL: http://localhost:3001/api/auth/callback/google
+#
+# ❌ ATTUALE (SBAGLIATO - DA SOSTITUIRE):
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+#
+# ✅ DOVREBBE ESSERE (ESEMPIO):
+# GOOGLE_CLIENT_ID=123456789-abc123def456.apps.googleusercontent.com
+# GOOGLE_CLIENT_SECRET=GOCSPX-abc123def456ghi789
+
+# ============================================
+# GITHUB OAUTH
+# ============================================
+# ❌ SOSTITUISCI QUESTI PLACEHOLDER CON I TUOI VALORI REALI
+#
+# Ottieni le credenziali da: https://github.com/settings/developers
+# Callback URL: http://localhost:3001/api/auth/callback/github
+#
+# ❌ ATTUALE (SBAGLIATO - DA SOSTITUIRE):
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+#
+# ✅ DOVREBBE ESSERE (ESEMPIO):
+# GITHUB_CLIENT_ID=Iv1.abc123def456ghi789
+# GITHUB_CLIENT_SECRET=abc123def456ghi789jkl012mno345pqr678
+
+
+

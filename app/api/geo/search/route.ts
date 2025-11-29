@@ -88,10 +88,18 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Errore ricerca Supabase:', error);
+      // Messaggi errore più specifici
+      let errorMessage = 'Errore durante la ricerca';
+      if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+        errorMessage = 'Database non configurato correttamente. La tabella geo_locations potrebbe non esistere.';
+      } else if (error.message?.includes('timeout') || error.message?.includes('network')) {
+        errorMessage = 'Errore di connessione al database. Riprova tra qualche istante.';
+      }
       return NextResponse.json(
         {
-          error: 'Errore durante la ricerca',
+          error: errorMessage,
           message: error.message,
+          results: [],
         },
         { status: 500 }
       );

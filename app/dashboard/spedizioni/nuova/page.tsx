@@ -29,6 +29,8 @@ import {
 import AsyncLocationCombobox from '@/components/ui/async-location-combobox';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
+import OCRUpload from '@/components/ocr/ocr-upload';
+import { generateShipmentCSV, downloadCSV, generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
 import type { OnLocationSelect } from '@/types/geo';
 import type { Corriere } from '@/types/corrieri';
 
@@ -256,6 +258,7 @@ export default function NuovaSpedizionePage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'csv'>('pdf');
 
   // Validazione campi
   const validation = useMemo(() => {
@@ -321,6 +324,32 @@ export default function NuovaSpedizionePage() {
     }));
   };
 
+  // Handler dati estratti da OCR
+  const handleOCRDataExtracted = (data: any) => {
+    // Popola i campi destinatario con i dati estratti
+    setFormData((prev) => ({
+      ...prev,
+      destinatarioNome: data.recipient_name || prev.destinatarioNome,
+      destinatarioIndirizzo: data.recipient_address || prev.destinatarioIndirizzo,
+      destinatarioCitta: data.recipient_city || prev.destinatarioCitta,
+      destinatarioProvincia: data.recipient_province || prev.destinatarioProvincia,
+      destinatarioCap: data.recipient_zip || prev.destinatarioCap,
+      destinatarioTelefono: data.recipient_phone || prev.destinatarioTelefono,
+      destinatarioEmail: data.recipient_email || prev.destinatarioEmail,
+      note: data.notes || prev.note,
+    }));
+    
+    // Se c'è una città, cerca la location per popolare provincia e CAP
+    if (data.recipient_city && !data.recipient_province) {
+      // Il componente AsyncLocationCombobox gestirà la ricerca
+    }
+  };
+
+  // Handler errori OCR
+  const handleOCRError = (error: string) => {
+    setSubmitError(`Errore OCR: ${error}`);
+  };
+
   // Handler submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -343,6 +372,29 @@ export default function NuovaSpedizionePage() {
       const result = await response.json();
       setSubmitSuccess(true);
       setCreatedTracking(result.data?.tracking || null);
+
+      // Genera e scarica documento (CSV o PDF)
+      const spedizioneData = result.data;
+      if (spedizioneData) {
+        // Aggiungi data creazione se manca
+        const spedizioneWithDate = {
+          ...spedizioneData,
+          createdAt: spedizioneData.createdAt || new Date().toISOString(),
+        };
+
+        // Piccolo delay per assicurarsi che il download parta dopo il rendering
+        setTimeout(() => {
+          if (downloadFormat === 'csv') {
+            const csvContent = generateShipmentCSV(spedizioneWithDate);
+            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.csv`;
+            downloadCSV(csvContent, filename);
+          } else {
+            const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+            downloadPDF(pdfDoc, filename);
+          }
+        }, 500);
+      }
 
       // Reindirizza alla lista dopo 3 secondi
       setTimeout(() => {
@@ -414,6 +466,22 @@ export default function NuovaSpedizionePage() {
               </div>
               <ProgressBar percentage={progress} />
             </div>
+
+            {/* OCR Upload Card - Solo quando AI Import è attivo */}
+            {sourceMode === 'ai' && (
+              <SmartCard title="Importa da Immagine (OCR)" icon={Sparkles}>
+                <OCRUpload
+                  onDataExtracted={handleOCRDataExtracted}
+                  onError={handleOCRError}
+                />
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900">
+                    <strong>💡 Suggerimento:</strong> Carica uno screenshot WhatsApp, foto documento o immagine con i dati del destinatario. 
+                    Il sistema estrarrà automaticamente nome, indirizzo, CAP, città, telefono e email.
+                  </p>
+                </div>
+              </SmartCard>
+            )}
 
             {/* Mittente Card */}
             <SmartCard title="Mittente" icon={MapPin}>
@@ -752,6 +820,37 @@ export default function NuovaSpedizionePage() {
                           <span>+50%</span>
                         </div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Download Format Selector */}
+                  <div className="pt-6 border-t border-gray-200">
+                    <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
+                      Formato Download
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDownloadFormat('pdf')}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          downloadFormat === 'pdf'
+                            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        📄 PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDownloadFormat('csv')}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          downloadFormat === 'csv'
+                            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                      >
+                        📊 CSV
+                      </button>
                     </div>
                   </div>
 

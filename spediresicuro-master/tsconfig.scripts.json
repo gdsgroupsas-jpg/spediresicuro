@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": false,
+    "outDir": "./dist"
+  },
+  "include": ["scripts/**/*"],
+  "exclude": ["node_modules", ".next"]
+}
+

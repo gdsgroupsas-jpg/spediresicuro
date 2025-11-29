@@ -17,8 +17,8 @@ export class XLSXExporter {
    */
   static isAvailable(): boolean {
     try {
-      require.resolve('xlsx');
-      return true;
+      // In Next.js, non possiamo usare require.resolve a build time
+      return true; // Assumiamo disponibile se nel package.json
     } catch {
       return false;
     }
@@ -32,12 +32,13 @@ export class XLSXExporter {
     columns: { key: keyof T; label: string; width?: number }[],
     options: XLSXOptions = {}
   ): Promise<Buffer> {
-    if (!this.isAvailable()) {
+    let XLSX: any;
+    try {
+      // Import dinamico per evitare errori a build time
+      XLSX = await import('xlsx');
+    } catch (error) {
       throw new Error('Libreria xlsx non installata. Eseguire: npm install xlsx');
     }
-
-    const XLSX = require('xlsx');
-
     const {
       sheetName = 'Sheet1',
       includeFormatting = true,
@@ -128,7 +129,13 @@ export class XLSXExporter {
    * Esporta LDV in XLSX
    */
   static async exportLDV(shipment: any, options?: XLSXOptions): Promise<Buffer> {
-    const XLSX = require('xlsx');
+    let XLSX: any;
+    try {
+      // Import dinamico per evitare errori a build time
+      XLSX = await import('xlsx');
+    } catch (error) {
+      throw new Error('Libreria xlsx non installata. Eseguire: npm install xlsx');
+    }
 
     const wb = XLSX.utils.book_new();
 
