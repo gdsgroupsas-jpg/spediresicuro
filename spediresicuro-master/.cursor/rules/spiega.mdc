@@ -1,0 +1,69 @@
+# PROGETTO: SPEDIRESICURO.IT
+
+Piattaforma per preventivi e gestione spedizioni con margine di ricarico.
+
+## OBIETTIVI PRINCIPALI
+
+1. Massima rivendibilità (servizio appetibile per committenti)
+2. Costi operativi vicini allo zero
+3. Scalabilità (deve reggere crescita senza riscritture)
+4. Codice pulito e comprensibile (altri devono poterci lavorare)
+
+## TECNOLOGIE USATE
+
+- **Framework:** Next.js 14 con App Router
+- **Linguaggio:** TypeScript
+- **Styling:** Tailwind CSS
+- **Database:** 
+  - Fase 1: File JSON locale (gratis)
+  - Fase 2: PostgreSQL su Vercel (gratis fino a 256MB)
+- **Hosting:** Vercel (piano gratuito)
+- **Pagamenti:** Stripe (da integrare dopo MVP)
+- **Email:** Resend o SendGrid (free tier)
+
+## STRUTTURA PROGETTO
+```
+/spediresicuro
+  /app
+    /api          → Endpoint API
+    /(routes)     → Pagine pubbliche
+    /dashboard    → Area riservata
+  /components     → Componenti riutilizzabili
+  /lib            → Utility e helper
+  /public         → Asset statici
+  /types          → TypeScript types
+  package.json
+  .env.local
+  README.md
+```
+
+## CONVENZIONI
+
+- **Nomi file:** kebab-case (es. `preventivo-form.tsx`)
+- **Nomi componenti:** PascalCase (es. `PreventivoForm`)
+- **Nomi variabili:** camelCase italiano (es. `prezzoFinale`, `datiSpedizione`)
+- **Commenti:** In italiano, sopra logica complessa
+- **Errori:** Sempre con try/catch e messaggi utente-friendly
+
+## PRIORITÀ SVILUPPO
+
+1. Landing page con preventivo istantaneo
+2. Form raccolta dati spedizione
+3. Calcolo automatico con margine configurabile
+4. Sistema tracking (UI prima, API corrieri dopo)
+5. Dashboard utente
+6. Integrazione pagamenti
+
+## VINCOLI
+
+- Budget zero per tools
+- Codice deve essere transfer-ready (facile vendere il progetto)
+- Ogni feature deve generare ROI
+- Sicurezza dati personali (GDPR-compliant)
+- Performance: caricamento < 2 secondi
+
+## MODELLO BUSINESS
+
+- Ricarico su spedizioni (es. corriere 10€ → cliente 15€)
+- Commissione fissa per spedizione (es. 2€)
+- Piano abbonamento aziende (da definire)

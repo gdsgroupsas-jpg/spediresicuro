@@ -1,0 +1,52 @@
+[33mcommit c9b7ff53bd0010f100b5b53e19452eef16feddc2[m
+Author: Claude <noreply@anthropic.com>
+Date:   Fri Nov 28 15:24:29 2025 +0000
+
+    docs: add AI agent prompts and integration guide
+    
+    Created 3 comprehensive markdown files for AI agents:
+    
+    **COMET_AGENT_SUPABASE_SETUP.md** (82KB):
+    - Complete Supabase setup guide for Comet Agent
+    - Step-by-step instructions for database configuration
+    - Schema import (users, couriers, shipments, geo_locations)
+    - Test data insertion (admin, couriers, cities)
+    - .env.local file generation
+    - Verification steps and troubleshooting
+    - GOAL: Enable shipment creation + CSV download by 18:00
+    
+    **CURSOR_CLEANUP_REPO.md** (18KB):
+    - Repository cleanup guide for Cursor AI
+    - Remove redundant SETUP_*.md files (7 files)
+    - Clean obsolete SQL files
+    - Remove unused components/dependencies
+    - Update .gitignore
+    - Create CLEANUP_REPORT.md
+    - Verification and testing steps
+    
+    **AI_INTEGRATION_GUIDE.md** (27KB):
+    - Master guide for all AI agents (Claude, ChatGPT, Cursor, etc.)
+    - Correct project name: SpedireSicuro.it (not SpediSicuro!)
+    - Current project status and completed setups
+    - Critical files and what NOT to modify
+    - Known issues (homepage hydration errors)
+    - Common tasks and how to approach them
+    - Security rules for credentials
+    - Collaboration guidelines between AIs
+    
+    All files include:
+    ✅ Clear instructions and step-by-step guides
+    ✅ Safety checks and confirmations before actions
+    ✅ Troubleshooting sections
+    ✅ Expected outputs and verification steps
+    ✅ Warnings about existing project (don't overwrite!)
+    
+    Purpose: Enable AI agents to work effectively on project without:
+    - Creating confusion with old projects
+    - Duplicating already-completed setups
+    - Using wrong project names
+    - Breaking existing functionality
+
+AI_INTEGRATION_GUIDE.md
+COMET_AGENT_SUPABASE_SETUP.md
+CURSOR_CLEANUP_REPO.md

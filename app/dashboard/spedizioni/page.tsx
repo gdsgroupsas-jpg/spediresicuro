@@ -10,8 +10,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Download, X } from 'lucide-react';
+import { Search, Filter, Download, X, FileText, FileSpreadsheet, File } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
+import { ExportService } from '@/lib/adapters/export';
 
 // Interfaccia per una spedizione
 interface Spedizione {
@@ -85,6 +86,9 @@ export default function ListaSpedizioniPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [courierFilter, setCourierFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Carica le spedizioni
   useEffect(() => {
@@ -187,59 +191,65 @@ export default function ListaSpedizioniPage() {
       });
     }
 
+    // Filtro per corriere
+    if (courierFilter !== 'all') {
+      filtered = filtered.filter((s) => (s.corriere || '').toLowerCase() === courierFilter.toLowerCase());
+    }
+
     return filtered;
-  }, [spedizioni, searchQuery, statusFilter, dateFilter]);
+  }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter]);
 
-  // Download CSV
-  const handleDownloadCSV = () => {
-    const headers = [
-      'ID',
-      'Data Creazione',
-      'Mittente',
-      'Città Mittente',
-      'Provincia Mittente',
-      'Destinatario',
-      'Città Destinatario',
-      'Provincia Destinatario',
-      'Tracking',
-      'Status',
-      'Corriere',
-      'Tipo Spedizione',
-      'Peso (kg)',
-      'Prezzo (€)',
-    ];
+  // Export multiplo usando ExportService
+  const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
+    if (filteredSpedizioni.length === 0) {
+      alert('Nessuna spedizione da esportare');
+      return;
+    }
 
-    const rows = filteredSpedizioni.map((s) => [
-      s.id,
-      formatDate(s.createdAt),
-      s.mittente?.nome || '',
-      s.mittente?.citta || '',
-      s.mittente?.provincia || '',
-      s.destinatario?.nome || '',
-      s.destinatario?.citta || '',
-      s.destinatario?.provincia || '',
-      s.tracking || '',
-      s.status || 'in_preparazione',
-      s.corriere || '',
-      s.tipoSpedizione || '',
-      s.peso?.toString() || '',
-      s.prezzoFinale?.toFixed(2) || '0.00',
-    ]);
+    setIsExporting(true);
+    try {
+      // Converti formato spedizioni per ExportService
+      const shipmentsForExport = filteredSpedizioni.map((s) => ({
+        tracking_number: s.tracking || s.id,
+        created_at: s.createdAt,
+        status: s.status || 'in_preparazione',
+        courier_name: s.corriere || '',
+        recipient_name: s.destinatario?.nome || '',
+        recipient_address: s.destinatario?.indirizzo || '',
+        recipient_city: s.destinatario?.citta || '',
+        recipient_province: s.destinatario?.provincia || '',
+        recipient_zip: s.destinatario?.cap || '',
+        recipient_phone: s.destinatario?.telefono || '',
+        recipient_email: s.destinatario?.email || '',
+        sender_name: s.mittente?.nome || '',
+        sender_address: s.mittente?.indirizzo || '',
+        sender_city: s.mittente?.citta || '',
+        sender_province: s.mittente?.provincia || '',
+        sender_zip: s.mittente?.cap || '',
+        weight: s.peso || 0,
+        service_type: s.tipoSpedizione || 'standard',
+        total_price: s.prezzoFinale || 0,
+      }));
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
+      const result = await ExportService.exportShipments(shipmentsForExport, format);
 
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `spedizioni_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Crea blob e scarica
+      const blob = new Blob([result.data], { type: result.mimeType });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', result.filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Errore export:', error);
+      alert(`Errore durante l'export: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -252,14 +262,51 @@ export default function ListaSpedizioniPage() {
           showBackButton={true}
           actions={
             <div className="flex items-center gap-3">
-              {spedizioni.length > 0 && (
-                <button
-                  onClick={handleDownloadCSV}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all"
-                >
-                  <Download className="w-4 h-4" />
-                  Esporta CSV
-                </button>
+              {filteredSpedizioni.length > 0 && (
+                <div className="relative group">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    disabled={isExporting}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    {isExporting ? 'Esportazione...' : 'Esporta'}
+                  </button>
+                  {showFilters && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <button
+                        onClick={() => {
+                          handleExport('csv');
+                          setShowFilters(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4 text-gray-600" />
+                        <span>Esporta CSV</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleExport('xlsx');
+                          setShowFilters(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-gray-600" />
+                        <span>Esporta XLSX</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleExport('pdf');
+                          setShowFilters(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <File className="w-4 h-4 text-gray-600" />
+                        <span>Esporta PDF</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               <Link
                 href="/dashboard/spedizioni/nuova"
@@ -287,7 +334,7 @@ export default function ListaSpedizioniPage() {
         {/* Filtri e Ricerca */}
         {!isLoading && !error && spedizioni.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Ricerca */}
               <div className="md:col-span-2">
                 <div className="relative">
@@ -323,6 +370,23 @@ export default function ListaSpedizioniPage() {
                   <option value="consegnata">Consegnata</option>
                   <option value="eccezione">Eccezione</option>
                   <option value="annullata">Annullata</option>
+                </select>
+              </div>
+
+              {/* Filtro Corriere */}
+              <div>
+                <select
+                  value={courierFilter}
+                  onChange={(e) => setCourierFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                >
+                  <option value="all">Tutti i corrieri</option>
+                  <option value="GLS">GLS</option>
+                  <option value="BRT">BRT</option>
+                  <option value="DHL">DHL</option>
+                  <option value="UPS">UPS</option>
+                  <option value="SDA">SDA</option>
+                  <option value="POSTE">Poste Italiane</option>
                 </select>
               </div>
 

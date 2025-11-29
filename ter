@@ -1,0 +1,61 @@
+[33mcommit 94f494ad34676c101b05814a4be2bbfa7e56d295[m
+Author: Claude <noreply@anthropic.com>
+Date:   Fri Nov 28 10:52:01 2025 +0000
+
+    docs: guide setup complete per SpediSicuro Platform
+    
+    Creati 6 file markdown con istruzioni dettagliate per Comet Agent:
+    
+    **SETUP_INDEX.md** - Indice principale con:
+    - ⚠️ Warning: distinguere vecchio da nuovo progetto
+    - Ordine esecuzione setup (00→01→02→03→04)
+    - Checklist completa
+    - Istruzioni per agent: CHIEDERE prima di accedere
+    
+    **SETUP_00_GIT_GITHUB.md** - Git & GitHub:
+    - Configurazione Git locale
+    - Creazione repository GitHub
+    - SSH key setup
+    - Branch protection
+    - GitHub Actions CI/CD
+    
+    **SETUP_01_SUPABASE.md** - Database PostgreSQL:
+    - Creazione progetto Supabase
+    - Import schema (19 tabelle)
+    - Row Level Security
+    - Raccolta credenziali API
+    
+    **SETUP_02_GOOGLE_OAUTH.md** - Autenticazione:
+    - Google OAuth 2.0 setup
+    - GitHub OAuth (opzionale)
+    - Facebook OAuth (opzionale)
+    - NextAuth configuration
+    
+    **SETUP_03_VERCEL.md** - Deployment:
+    - Deploy su Vercel
+    - Environment variables
+    - Custom domain
+    - Auto-deploy CI/CD
+    - Analytics & Speed Insights
+    
+    **SETUP_04_ENV_FINAL.md** - Env Variables:
+    - Raccolta tutte le credenziali
+    - Creazione .env.local
+    - Backup sicuro
+    - Test finale
+    
+    Tutti i file includono:
+    ✅ Warning per evitare confusione con vecchio progetto
+    ✅ Istruzioni per agent di chiedere conferma
+    ✅ Troubleshooting section
+    ✅ Output formato richiesto
+    ✅ Nomi corretti: SpediSicuro (non Ferrari)
+    
+    Pronto per uso con Comet Agent!
+
+SETUP_00_GIT_GITHUB.md
+SETUP_01_SUPABASE.md
+SETUP_02_GOOGLE_OAUTH.md
+SETUP_03_VERCEL.md
+SETUP_04_ENV_FINAL.md
+SETUP_INDEX.md
