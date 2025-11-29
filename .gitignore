@@ -37,3 +37,9 @@ next-env.d.ts
 
 # Error log (opzionale - decommenta se vuoi tracciarlo in git)
 # ERROR_LOG.md
+
+# AI Agent Files - KEEP TRACKED (do not ignore)
+# Questi file DEVONO essere committati per condivisione tra agenti:
+# .AI_DIRECTIVE.md
+# .ai-lock.json
+# AGENT_NOTES.md
