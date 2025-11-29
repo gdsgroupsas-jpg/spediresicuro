@@ -131,8 +131,18 @@ export abstract class OCRAdapter {
 /**
  * Factory per creare OCR adapter
  */
-export function createOCRAdapter(type: 'mock' | 'tesseract' | 'auto' = 'auto'): OCRAdapter {
+export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google-vision' | 'auto' = 'auto'): OCRAdapter {
   switch (type) {
+    case 'google-vision': {
+      const { GoogleVisionOCRAdapter } = require('./google-vision');
+      return new GoogleVisionOCRAdapter();
+    }
+
+    case 'claude': {
+      const { ClaudeOCRAdapter } = require('./claude');
+      return new ClaudeOCRAdapter();
+    }
+
     case 'tesseract': {
       const { TesseractAdapter } = require('./tesseract');
       return new TesseractAdapter();
@@ -145,18 +155,46 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'auto' = 'auto'): 
 
     case 'auto':
     default: {
-      // Prova Tesseract, fallback a mock migliorato
+      // Priorità: Google Vision > Claude Vision > Tesseract > Mock
+
+      console.log('🔎 Selezionando OCR adapter automaticamente...');
+      console.log(`   GOOGLE_CLOUD_CREDENTIALS presente: ${!!process.env.GOOGLE_CLOUD_CREDENTIALS}`);
+      console.log(`   ANTHROPIC_API_KEY presente: ${!!process.env.ANTHROPIC_API_KEY}`);
+
+      // 1. Prova Google Cloud Vision (più affidabile per OCR)
+      if (process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        try {
+          console.log('✅ OCR Google Cloud Vision ATTIVO - OCR reale professionale');
+          const { GoogleVisionOCRAdapter } = require('./google-vision');
+          return new GoogleVisionOCRAdapter();
+        } catch (error) {
+          console.warn('❌ Google Vision non disponibile:', error);
+        }
+      }
+
+      // 2. Prova Claude Vision (se ANTHROPIC_API_KEY configurata)
+      if (process.env.ANTHROPIC_API_KEY) {
+        try {
+          console.log('✅ OCR Claude Vision ATTIVO - consumerà crediti Anthropic');
+          const { ClaudeOCRAdapter } = require('./claude');
+          return new ClaudeOCRAdapter();
+        } catch (error) {
+          console.warn('❌ Claude Vision non disponibile, fallback a Mock:', error);
+        }
+      }
+
+      // 2. Prova Tesseract (se disponibile)
       try {
         const { TesseractAdapter } = require('./tesseract');
-        const tesseract = new TesseractAdapter();
-        // Verifica disponibilità in modo sincrono (per ora usa sempre mock migliorato se auto)
-        // L'API route gestirà il check asincrono
-        const { ImprovedMockOCRAdapter } = require('./mock');
-        return new ImprovedMockOCRAdapter();
-      } catch {
-        const { ImprovedMockOCRAdapter } = require('./mock');
-        return new ImprovedMockOCRAdapter();
+        return new TesseractAdapter();
+      } catch (error) {
+        console.warn('Tesseract non disponibile, fallback a Mock:', error);
       }
+
+      // 3. Fallback a Mock migliorato
+      console.warn('⚠️ ANTHROPIC_API_KEY non configurata - usando Mock OCR');
+      const { ImprovedMockOCRAdapter } = require('./mock');
+      return new ImprovedMockOCRAdapter();
     }
   }
 }

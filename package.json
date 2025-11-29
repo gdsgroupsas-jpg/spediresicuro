@@ -21,6 +21,8 @@
     "check:env:simple": "node scripts/check-env-simple.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "@google-cloud/vision": "^5.3.4",
     "@supabase/supabase-js": "^2.39.0",
     "cmdk": "^1.0.0",
     "jspdf": "^2.5.2",

@@ -260,6 +260,66 @@ export default function NuovaSpedizionePage() {
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
   const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'csv'>('pdf');
 
+  // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const queryMode = params.get('mode');
+      const aiFlag = params.get('ai');
+
+      if ((queryMode && queryMode.toLowerCase() === 'ai') || aiFlag === '1' || aiFlag === 'true') {
+        setSourceMode('ai');
+        localStorage.setItem('sourceMode', 'ai');
+        return;
+      }
+
+      const saved = localStorage.getItem('sourceMode');
+      if (saved === 'ai' || saved === 'manual') {
+        setSourceMode(saved as 'manual' | 'ai');
+      }
+    } catch (e) {
+      // ignore storage or URL errors
+    }
+  }, []);
+
+  const handleSetSourceMode = (mode: 'manual' | 'ai') => {
+    setSourceMode(mode);
+    try {
+      localStorage.setItem('sourceMode', mode);
+    } catch (e) {
+      // no-op if storage fails
+    }
+  };
+
+  // Carica mittente predefinito all'avvio
+  useEffect(() => {
+    async function loadDefaultSender() {
+      try {
+        const response = await fetch('/api/user/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.defaultSender) {
+            setFormData((prev) => ({
+              ...prev,
+              mittenteNome: data.defaultSender.nome || '',
+              mittenteIndirizzo: data.defaultSender.indirizzo || '',
+              mittenteCitta: data.defaultSender.citta || '',
+              mittenteProvincia: data.defaultSender.provincia || '',
+              mittenteCap: data.defaultSender.cap || '',
+              mittenteTelefono: data.defaultSender.telefono || '',
+              mittenteEmail: data.defaultSender.email || '',
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Errore caricamento mittente predefinito:', error);
+        // Non bloccare, continua con form vuoto
+      }
+    }
+
+    loadDefaultSender();
+  }, []);
+
   // Validazione campi
   const validation = useMemo(() => {
     return {
@@ -441,7 +501,8 @@ export default function NuovaSpedizionePage() {
                 <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                   <button
                     type="button"
-                    onClick={() => setSourceMode('manual')}
+                    onClick={() => handleSetSourceMode('manual')}
+                    aria-pressed={sourceMode === 'manual'}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                       sourceMode === 'manual'
                         ? 'bg-white text-gray-900 shadow-sm'
@@ -452,7 +513,8 @@ export default function NuovaSpedizionePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSourceMode('ai')}
+                    onClick={() => handleSetSourceMode('ai')}
+                    aria-pressed={sourceMode === 'ai'}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                       sourceMode === 'ai'
                         ? 'bg-white text-gray-900 shadow-sm'
