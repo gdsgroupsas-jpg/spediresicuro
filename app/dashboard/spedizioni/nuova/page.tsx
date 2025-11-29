@@ -260,6 +260,35 @@ export default function NuovaSpedizionePage() {
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
   const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'csv'>('pdf');
 
+  // Carica mittente predefinito all'avvio
+  useEffect(() => {
+    async function loadDefaultSender() {
+      try {
+        const response = await fetch('/api/user/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.defaultSender) {
+            setFormData((prev) => ({
+              ...prev,
+              mittenteNome: data.defaultSender.nome || '',
+              mittenteIndirizzo: data.defaultSender.indirizzo || '',
+              mittenteCitta: data.defaultSender.citta || '',
+              mittenteProvincia: data.defaultSender.provincia || '',
+              mittenteCap: data.defaultSender.cap || '',
+              mittenteTelefono: data.defaultSender.telefono || '',
+              mittenteEmail: data.defaultSender.email || '',
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Errore caricamento mittente predefinito:', error);
+        // Non bloccare, continua con form vuoto
+      }
+    }
+
+    loadDefaultSender();
+  }, []);
+
   // Validazione campi
   const validation = useMemo(() => {
     return {

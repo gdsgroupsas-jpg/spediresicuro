@@ -6,29 +6,10 @@
  */
 
 import NextAuth from 'next-auth';
+import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
-
-// Tipi per i callbacks NextAuth
-interface SignInParams {
-  user: { id?: string; email?: string | null; name?: string | null; image?: string | null };
-  account: { provider?: string; providerAccountId?: string } | null;
-  profile?: Record<string, unknown>;
-}
-
-interface JwtParams {
-  token: Record<string, unknown> & { role?: string; provider?: string };
-  user?: { id?: string; email?: string; name?: string; role?: string };
-  account?: { provider?: string } | null;
-}
-
-interface SessionParams {
-  session: {
-    user?: { id?: string; email?: string | null; name?: string | null; image?: string | null; role?: string; provider?: string };
-  };
-  token: Record<string, unknown> & { role?: string; provider?: string };
-}
 
 // Validazione configurazione OAuth
 function validateOAuthConfig() {
@@ -115,14 +96,14 @@ export const authOptions = {
     error: '/login',
   },
   callbacks: {
-    async signIn({ user, account, profile }: SignInParams) {
+    async signIn({ user, account, profile }: any) {
       // Se l'utente si registra tramite OAuth, crealo/aggiornalo nel database
       if (account?.provider !== 'credentials' && user?.email) {
         try {
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
-          
+
           const existingUser = findUserByEmail(user.email);
-          
+
           if (!existingUser) {
             // Crea nuovo utente OAuth
             createUser({
@@ -147,19 +128,19 @@ export const authOptions = {
           // Non bloccare il login in caso di errore
         }
       }
-      
+
       return true;
     },
-    async jwt({ token, user, account }: JwtParams) {
+    async jwt({ token, user, account }: any) {
       // Prima chiamata (dopo login)
       if (user) {
         token.role = (user.role as string) || 'user';
         token.provider = account?.provider || 'credentials';
       }
-      
+
       return token;
     },
-    async session({ session, token }: SessionParams) {
+    async session({ session, token }: any) {
       if (session.user) {
         session.user.role = (token.role as string) || 'user';
         session.user.provider = (token.provider as string) || 'credentials';

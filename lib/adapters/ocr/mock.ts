@@ -85,7 +85,7 @@ export class MockOCRAdapter extends OCRAdapter {
     };
   }
 
-  private generateRawText(data: any): string {
+  protected generateRawText(data: any): string {
     return `
 DESTINATARIO: ${data.recipient_name}
 Indirizzo: ${data.recipient_address}

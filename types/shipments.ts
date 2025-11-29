@@ -96,6 +96,19 @@ export interface Shipment {
   delivered_at?: string;
   created_at: string;
   updated_at: string;
+
+  // Audit Trail - Tracciamento completo
+  created_by_user_id: string;
+  created_by_user_name?: string;
+  updated_by_user_id?: string;
+  updated_by_user_name?: string;
+
+  // Soft Delete
+  deleted: boolean;
+  deleted_at?: string;
+  deleted_by_user_id?: string;
+  deleted_by_user_name?: string;
+  deletion_reason?: string;
 }
 
 export interface CreateShipmentInput {

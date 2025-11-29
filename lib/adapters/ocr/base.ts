@@ -131,8 +131,13 @@ export abstract class OCRAdapter {
 /**
  * Factory per creare OCR adapter
  */
-export function createOCRAdapter(type: 'mock' | 'tesseract' | 'auto' = 'auto'): OCRAdapter {
+export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'auto' = 'auto'): OCRAdapter {
   switch (type) {
+    case 'claude': {
+      const { ClaudeOCRAdapter } = require('./claude');
+      return new ClaudeOCRAdapter();
+    }
+
     case 'tesseract': {
       const { TesseractAdapter } = require('./tesseract');
       return new TesseractAdapter();
@@ -145,18 +150,31 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'auto' = 'auto'): 
 
     case 'auto':
     default: {
-      // Prova Tesseract, fallback a mock migliorato
+      // Priorità: Claude Vision > Tesseract > Mock
+
+      // 1. Prova Claude Vision (se ANTHROPIC_API_KEY configurata)
+      if (process.env.ANTHROPIC_API_KEY) {
+        try {
+          console.log('✅ OCR Claude Vision ATTIVO - consumerà crediti Anthropic');
+          const { ClaudeOCRAdapter } = require('./claude');
+          return new ClaudeOCRAdapter();
+        } catch (error) {
+          console.warn('Claude Vision non disponibile, fallback a Mock:', error);
+        }
+      }
+
+      // 2. Prova Tesseract (se disponibile)
       try {
         const { TesseractAdapter } = require('./tesseract');
-        const tesseract = new TesseractAdapter();
-        // Verifica disponibilità in modo sincrono (per ora usa sempre mock migliorato se auto)
-        // L'API route gestirà il check asincrono
-        const { ImprovedMockOCRAdapter } = require('./mock');
-        return new ImprovedMockOCRAdapter();
-      } catch {
-        const { ImprovedMockOCRAdapter } = require('./mock');
-        return new ImprovedMockOCRAdapter();
+        return new TesseractAdapter();
+      } catch (error) {
+        console.warn('Tesseract non disponibile, fallback a Mock:', error);
       }
+
+      // 3. Fallback a Mock migliorato
+      console.warn('⚠️ ANTHROPIC_API_KEY non configurata - usando Mock OCR');
+      const { ImprovedMockOCRAdapter } = require('./mock');
+      return new ImprovedMockOCRAdapter();
     }
   }
 }
