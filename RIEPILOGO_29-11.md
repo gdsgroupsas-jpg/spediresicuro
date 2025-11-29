@@ -29,8 +29,8 @@
   - `RISOLUZIONE_GENERAL_OAUTH_FLOW.md` - Sostituiti segreti reali con placeholder
 
 - **Segreti rimossi**:
-  - Client ID: `***REMOVED_GOOGLE_CLIENT_ID***.apps.googleusercontent.com` → `TUO_CLIENT_ID.apps.googleusercontent.com`
-  - Client Secret: `***REMOVED_GOOGLE_SECRET***` → `TUO_CLIENT_SECRET`
+  - Client ID: `TUO_CLIENT_ID.apps.googleusercontent.com` (rimosso segreto reale)
+  - Client Secret: `TUO_CLIENT_SECRET` (rimosso segreto reale)
 
 ## ⚠️ Problema Attuale: Push Bloccato da GitHub
 
