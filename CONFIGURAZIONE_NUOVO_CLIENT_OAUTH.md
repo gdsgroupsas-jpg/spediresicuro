@@ -4,8 +4,8 @@
 
 Ho aggiornato le credenziali in `.env.local`:
 
-- ✅ **GOOGLE_CLIENT_ID:** `***REMOVED_GOOGLE_CLIENT_ID***.apps.googleusercontent.com`
-- ✅ **GOOGLE_CLIENT_SECRET:** `***REMOVED_GOOGLE_SECRET***`
+- ✅ **GOOGLE_CLIENT_ID:** `TUO_CLIENT_ID.apps.googleusercontent.com` (rimosso segreto reale)
+- ✅ **GOOGLE_CLIENT_SECRET:** `TUO_CLIENT_SECRET` (rimosso segreto reale)
 - ✅ **NEXTAUTH_URL:** `http://localhost:3000`
 - ✅ **NEXTAUTH_SECRET:** Generato automaticamente
 
@@ -20,7 +20,7 @@ Ho aggiornato le credenziali in `.env.local`:
 1. Vai su: **https://console.cloud.google.com/**
 2. Seleziona progetto: **"spedire-sicuro-geocoding"** (o il tuo progetto)
 3. Menu → **APIs & Services** → **Credentials**
-4. Clicca sul tuo **OAuth 2.0 Client ID** (quello con Client ID: `***REMOVED_GOOGLE_CLIENT_ID***`)
+4. Clicca sul tuo **OAuth 2.0 Client ID** (quello con Client ID che termina con `.apps.googleusercontent.com`)
 5. Scorri fino a **"Authorized redirect URIs"**
 6. Clicca **"+ ADD URI"**
 7. Inserisci ESATTAMENTE:
@@ -62,7 +62,7 @@ All'avvio del server, dovresti vedere:
 ```
 🔍 Google OAuth Config Check: {
   hasClientId: true,
-  clientIdEndsWith: '...vodu8',
+  clientIdEndsWith: '...apps.googleusercontent.com',
   hasSecret: true,
   ...
 }
