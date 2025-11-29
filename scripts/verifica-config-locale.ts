@@ -7,8 +7,16 @@
 
 console.log('🔍 Verifica Configurazione Locale - SpedireSicuro.it\n');
 
+// Tipo per le variabili di configurazione
+interface ConfigVar {
+  nome: string;
+  descrizione: string;
+  esempio: string;
+  opzionale?: boolean;
+}
+
 // Lista variabili obbligatorie
-const variabiliObbligatorie = {
+const variabiliObbligatorie: Record<string, ConfigVar> = {
   // Supabase
   NEXT_PUBLIC_SUPABASE_URL: {
     nome: 'Supabase URL',

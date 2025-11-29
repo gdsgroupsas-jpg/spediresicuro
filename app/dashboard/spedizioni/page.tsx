@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Download, X, FileText, FileSpreadsheet, File } from 'lucide-react';
+import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2 } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
 
@@ -95,8 +95,15 @@ export default function ListaSpedizioniPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [courierFilter, setCourierFilter] = useState<string>('all');
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Modale eliminazione
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [spedizioneToDelete, setSpedizioneToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Carica le spedizioni
   useEffect(() => {
@@ -155,6 +162,45 @@ export default function ListaSpedizioniPage() {
     window.open(`https://tracking.example.com/${tracking}`, '_blank');
   };
 
+  // Handler elimina spedizione
+  const handleDeleteClick = (id: string) => {
+    setSpedizioneToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!spedizioneToDelete) return;
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch(`/api/spedizioni?id=${spedizioneToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Errore durante l\'eliminazione');
+      }
+
+      // Rimuovi dalla lista locale
+      setSpedizioni((prev) => prev.filter((s) => s.id !== spedizioneToDelete));
+
+      // Chiudi modale
+      setShowDeleteModal(false);
+      setSpedizioneToDelete(null);
+    } catch (error) {
+      console.error('Errore eliminazione:', error);
+      alert('Errore durante l\'eliminazione della spedizione');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setSpedizioneToDelete(null);
+  };
+
   // Filtra spedizioni
   const filteredSpedizioni = useMemo(() => {
     let filtered = [...spedizioni];
@@ -179,24 +225,43 @@ export default function ListaSpedizioniPage() {
 
     // Filtro per data
     if (dateFilter !== 'all') {
-      const now = new Date();
-      const today = new Date(now.setHours(0, 0, 0, 0));
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      if (dateFilter === 'custom') {
+        // Filtro personalizzato con range
+        filtered = filtered.filter((s) => {
+          const date = new Date(s.createdAt);
+          const from = customDateFrom ? new Date(customDateFrom) : null;
+          const to = customDateTo ? new Date(customDateTo) : null;
 
-      filtered = filtered.filter((s) => {
-        const date = new Date(s.createdAt);
-        switch (dateFilter) {
-          case 'today':
-            return date >= today;
-          case 'week':
-            return date >= weekAgo;
-          case 'month':
-            return date >= monthAgo;
-          default:
-            return true;
-        }
-      });
+          if (from && to) {
+            return date >= from && date <= new Date(to.getTime() + 86400000); // +1 giorno per includere tutto il giorno "to"
+          } else if (from) {
+            return date >= from;
+          } else if (to) {
+            return date <= new Date(to.getTime() + 86400000);
+          }
+          return true;
+        });
+      } else {
+        // Filtri predefiniti
+        const now = new Date();
+        const today = new Date(now.setHours(0, 0, 0, 0));
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        filtered = filtered.filter((s) => {
+          const date = new Date(s.createdAt);
+          switch (dateFilter) {
+            case 'today':
+              return date >= today;
+            case 'week':
+              return date >= weekAgo;
+            case 'month':
+              return date >= monthAgo;
+            default:
+              return true;
+          }
+        });
+      }
     }
 
     // Filtro per corriere
@@ -242,7 +307,11 @@ export default function ListaSpedizioniPage() {
       const result = await ExportService.exportShipments(shipmentsForExport, format);
 
       // Crea blob e scarica
-      const blob = new Blob([result.data], { type: result.mimeType });
+      // Converti Buffer in formato compatibile con Blob
+      const blobData = typeof result.data === 'string'
+        ? result.data
+        : new Uint8Array(result.data);
+      const blob = new Blob([blobData], { type: result.mimeType });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
@@ -409,9 +478,38 @@ export default function ListaSpedizioniPage() {
                   <option value="today">Oggi</option>
                   <option value="week">Ultima settimana</option>
                   <option value="month">Ultimo mese</option>
+                  <option value="custom">Range personalizzato</option>
                 </select>
               </div>
             </div>
+
+            {/* Date Range Personalizzato */}
+            {dateFilter === 'custom' && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Data Inizio
+                  </label>
+                  <input
+                    type="date"
+                    value={customDateFrom}
+                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Data Fine
+                  </label>
+                  <input
+                    type="date"
+                    value={customDateTo}
+                    onChange={(e) => setCustomDateTo(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Risultati filtri */}
             {(searchQuery || statusFilter !== 'all' || dateFilter !== 'all') && (
@@ -685,6 +783,16 @@ export default function ListaSpedizioniPage() {
                               </svg>
                             </button>
                           )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(spedizione.id);
+                            }}
+                            className="text-gray-400 hover:text-red-600 focus:outline-none transition-colors"
+                            title="Elimina spedizione"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -725,6 +833,57 @@ export default function ListaSpedizioniPage() {
             Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
             <span className="font-medium text-gray-900">{spedizioni.length}</span>{' '}
             {spedizioni.length === 1 ? 'spedizione' : 'spedizioni'}
+          </div>
+        )}
+
+        {/* Modale Conferma Eliminazione */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Elimina Spedizione</h3>
+                  <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <p className="text-sm text-gray-700 mb-6">
+                Sei sicuro di voler eliminare questa spedizione? I dati saranno archiviati ma non visibili nella lista.
+              </p>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={cancelDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Eliminazione...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Elimina
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
