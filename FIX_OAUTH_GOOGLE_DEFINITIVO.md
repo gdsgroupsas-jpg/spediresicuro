@@ -35,11 +35,11 @@ NEXTAUTH_URL=http://localhost:3000
 2. Clicca sul tuo **OAuth 2.0 Client ID**
 3. **VERIFICA che il Client ID corrisponda:**
    ```
-   ***REMOVED_GOOGLE_CLIENT_ID***.apps.googleusercontent.com
+   TUO_CLIENT_ID.apps.googleusercontent.com
    ```
 4. **VERIFICA che il Client Secret corrisponda:**
    ```
-   ***REMOVED_GOOGLE_SECRET***
+   TUO_CLIENT_SECRET
    ```
 
 #### 2.3 Configura Callback URL (CRITICO!)
