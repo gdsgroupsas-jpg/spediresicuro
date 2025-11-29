@@ -20,14 +20,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Crea adapter OCR
-    // NOTA: Tesseract.js funziona solo lato client (browser), non in API routes
-    // Quindi usiamo sempre il mock migliorato nelle API routes
-    // Per OCR reale, dovrebbe essere implementato lato client (browser)
-    const ocrType = 'mock'; // Forza mock in server-side
-    const ocr = createOCRAdapter(ocrType as any);
+    // Usa 'auto' per selezionare automaticamente il migliore disponibile:
+    // 1. Google Vision (se GOOGLE_CLOUD_CREDENTIALS configurata) ✅ ATTIVO
+    // 2. Claude Vision (se ANTHROPIC_API_KEY configurata)
+    // 3. Tesseract (se disponibile)
+    // 4. Mock (fallback)
+    const ocr = createOCRAdapter('auto');
+    
+    console.log(`🔍 OCR Adapter utilizzato: ${(ocr as any).name || 'unknown'}`);
 
     // Check disponibilità
     const available = await ocr.isAvailable();
+    console.log(`📊 OCR disponibile: ${available}`);
     if (!available) {
       return NextResponse.json(
         {
@@ -41,8 +45,25 @@ export async function POST(request: NextRequest) {
     // Converti base64 a Buffer
     const imageBuffer = Buffer.from(image, 'base64');
 
-    // Estrai dati
-    const result = await ocr.extract(imageBuffer, options);
+    // Estrai dati con fallback: Google Vision → Claude Vision
+    let result = await ocr.extract(imageBuffer, options);
+    let usedAdapter = (ocr as any).name;
+
+    // Fallback: se Google Vision fallisce, prova Claude
+    if (!result.success && usedAdapter === 'google-vision') {
+      console.warn('⚠️ Google Vision fallito, provo Claude Vision:', result.error);
+      
+      if (process.env.ANTHROPIC_API_KEY) {
+        try {
+          const claudeOcr = createOCRAdapter('claude');
+          result = await claudeOcr.extract(imageBuffer, options);
+          usedAdapter = 'claude-vision';
+          console.log('✅ Usando Claude Vision come fallback');
+        } catch (error) {
+          console.warn('❌ Anche Claude Vision fallito:', error);
+        }
+      }
+    }
 
     if (!result.success) {
       return NextResponse.json(

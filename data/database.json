@@ -106,7 +106,11 @@
       "tracking": "GLS72285633ONBG",
       "corriere": "GLS",
       "id": "1764372285633",
-      "createdAt": "2025-11-28T23:24:45.633Z"
+      "createdAt": "2025-11-28T23:24:45.633Z",
+      "deleted": true,
+      "deleted_at": "2025-11-29T17:17:42.519Z",
+      "deleted_by_user_email": "gdsgroupsas@gmail.com",
+      "deleted_by_user_name": "Salvatore Squillante"
     },
     {
       "mittente": {
@@ -142,7 +146,11 @@
       "tracking": "BAR73925522ABQ9",
       "corriere": "Bartolini",
       "id": "1764373925522",
-      "createdAt": "2025-11-28T23:52:05.522Z"
+      "createdAt": "2025-11-28T23:52:05.522Z",
+      "deleted": true,
+      "deleted_at": "2025-11-29T17:17:36.904Z",
+      "deleted_by_user_email": "gdsgroupsas@gmail.com",
+      "deleted_by_user_name": "Salvatore Squillante"
     }
   ],
   "preventivi": [],
@@ -167,6 +175,18 @@
       "role": "user",
       "createdAt": "2025-11-28T18:46:48.974Z",
       "updatedAt": "2025-11-28T18:46:48.974Z"
+    },
+    {
+      "id": "1764432858842",
+      "email": "gdsgroupsas@gmail.com",
+      "password": "",
+      "name": "Salvatore Squillante",
+      "role": "user",
+      "provider": "google",
+      "providerId": "117786451125200185621",
+      "image": "https://lh3.googleusercontent.com/a/ACg8ocKliI_NDBFnQwvUaag6XuSetx2G_j7w4IiP6vY7IxydP0HVKA=s96-c",
+      "createdAt": "2025-11-29T16:14:18.842Z",
+      "updatedAt": "2025-11-29T16:14:18.842Z"
     }
   ]
 }

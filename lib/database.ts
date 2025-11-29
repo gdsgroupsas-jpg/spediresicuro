@@ -23,6 +23,17 @@ interface Database {
   };
 }
 
+// Interfaccia per mittente predefinito
+export interface DefaultSender {
+  nome: string;
+  indirizzo: string;
+  citta: string;
+  provincia: string;
+  cap: string;
+  telefono: string;
+  email?: string;
+}
+
 // Interfaccia per gli utenti
 export interface User {
   id: string;
@@ -33,6 +44,7 @@ export interface User {
   provider?: 'credentials' | 'google' | 'github' | 'facebook'; // Provider di autenticazione
   providerId?: string; // ID utente dal provider OAuth
   image?: string; // Avatar URL (da OAuth)
+  defaultSender?: DefaultSender; // Mittente predefinito per spedizioni
   createdAt: string;
   updatedAt: string;
 }
