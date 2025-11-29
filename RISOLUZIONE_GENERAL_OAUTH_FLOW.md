@@ -23,8 +23,8 @@ Richiedi dettagli: flowName=GeneralOAuthFlow
 1. **Apri** `.env.local`
 2. **Verifica** che le credenziali siano reali (non placeholder):
    ```env
-   GOOGLE_CLIENT_ID=345930037956-4jor1tdut2tfqksjmdq81e4qte4kl250.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=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
+   GOOGLE_CLIENT_ID=TUO_CLIENT_ID.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=TUO_CLIENT_SECRET
    ```
 3. **Se vedi ancora** `your-google-client-id`, sostituisci con i valori reali
 
