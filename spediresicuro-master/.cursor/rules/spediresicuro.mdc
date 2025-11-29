@@ -1,0 +1,27 @@
+---
+alwaysApply: true
+---
+PROGETTO: SpedireSicuro.it - Preventivi spedizioni con ricarico
+
+STACK: Next.js 14, TypeScript, Tailwind CSS, Vercel gratis
+
+DATABASE: JSON locale poi PostgreSQL Vercel
+
+PRIORITÀ: Landing preventivo, Form spedizione, Calcolo margine, Tracking, Dashboard, Pagamenti
+
+CONVENZIONI: File kebab-case, Componenti PascalCase, Variabili camelCase italiano, Commenti in italiano
+
+VINCOLI: Budget zero, Codice rivendibile, GDPR compliant, Performance sotto 2 secondi
+
+BUSINESS: Margine configurabile su spedizioni, Modello commissioni da definire, Possibile abbonamento aziende
+
+GIT: 
+- Repository: https://github.com/gdsgroupsas-jpg/spediresicuro.git
+- Account GitHub: gdsgroupsas-jpg
+- Branch principale: master
+- ⚠️ SEMPRE verificare account Git prima di commit/push manuali: git config user.name (deve essere "gdsgroupsas-jpg")
+
+VERCEL:
+- Deploy automatico attivo: ogni push su master → deploy automatico su Vercel
+- Account Vercel: stesso account del vecchio progetto "spedire sicuro platform"
+- ⚠️ Creare nuovo progetto Vercel separato per questo progetto

@@ -1,0 +1,110 @@
+# ============================================
+# CONFIGURAZIONE AMBIENTE - SpedireSicuro.it
+# ============================================
+# 
+# ISTRUZIONI:
+# 1. Copia tutto questo contenuto
+# 2. Incolla nel file .env.local (sostituisci tutto)
+# 3. Sostituisci i placeholder Supabase con valori reali (vedi sotto)
+# 4. NON committare mai il file .env.local nel repository Git!
+#
+# ============================================
+
+# ============================================
+# AMBIENTE
+# ============================================
+# Sviluppo: development
+# Produzione: production
+NODE_ENV=development
+
+# ============================================
+# URL APPLICAZIONE
+# ============================================
+# URL base dell'applicazione (per sviluppo: http://localhost:3000)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# ============================================
+# SUPABASE (Database PostgreSQL)
+# ============================================
+# ⚠️ IMPORTANTE: Sostituisci questi placeholder con valori reali da Supabase!
+# Ottieni questi valori da: Settings → API nel dashboard Supabase
+# https://app.supabase.com → Il tuo progetto → Settings → API
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+# Service Role Key (SOLO per script server-side, NON esporre nel client!)
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+# ============================================
+# API ESTERNE (se necessario in futuro)
+# ============================================
+# TODO: Se userai API esterne per calcolo spedizioni, aggiungi qui le chiavi
+# API_KEY_CORRIERE_1=your_api_key_here
+# API_KEY_CORRIERE_2=your_api_key_here
+
+# ============================================
+# CONFIGURAZIONE MARGINI
+# ============================================
+# Margine di ricarico predefinito (in percentuale)
+# Esempio: 15 = 15% di ricarico sul costo base
+NEXT_PUBLIC_DEFAULT_MARGIN=15
+
+# ============================================
+# SICUREZZA - NEXTAUTH
+# ============================================
+# URL base per NextAuth (per sviluppo: http://localhost:3000)
+# Per produzione: https://yourdomain.com
+NEXTAUTH_URL=http://localhost:3000
+
+# Chiave segreta per sessioni e crittografia (genera una stringa casuale)
+# Puoi generarla con: openssl rand -base64 32
+# ✅ GIÀ CONFIGURATO - Non modificare se funziona
+NEXTAUTH_SECRET=YTc2M2MyYWEtYWI4MS00YTJjLTg5YWQtNTYxZGI3YzRlMDA5NzEzYmM1ZGYtYTEzNS00NmQzLTkwZTUtOTYyNDNmMzJmZGQ0
+
+# ============================================
+# OAUTH PROVIDERS (Autenticazione Social)
+# ============================================
+# Configurazione per accesso tramite Google, GitHub, Facebook
+# I provider sono opzionali - se non configurati, saranno nascosti
+
+# ============================================
+# GOOGLE OAUTH
+# ============================================
+# ✅ GIÀ CONFIGURATO - Non modificare se funziona
+# Ottieni le credenziali da: https://console.cloud.google.com/apis/credentials
+# Callback URL: http://localhost:3000/api/auth/callback/google
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# ============================================
+# GITHUB OAUTH (Opzionale)
+# ============================================
+# Ottieni le credenziali da: https://github.com/settings/developers
+# Authorization callback URL: http://localhost:3000/api/auth/callback/github (sviluppo)
+# Authorization callback URL: https://yourdomain.com/api/auth/callback/github (produzione)
+# GITHUB_CLIENT_ID=your-github-client-id
+# GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# ============================================
+# FACEBOOK OAUTH (Opzionale)
+# ============================================
+# Ottieni le credenziali da: https://developers.facebook.com/apps/
+# Valid OAuth Redirect URIs: http://localhost:3000/api/auth/callback/facebook (sviluppo)
+# Valid OAuth Redirect URIs: https://yourdomain.com/api/auth/callback/facebook (produzione)
+# FACEBOOK_CLIENT_ID=your-facebook-app-id
+# FACEBOOK_CLIENT_SECRET=your-facebook-app-secret
+
+# ============================================
+# ANALYTICS (opzionale - servizi gratuiti)
+# ============================================
+# Google Analytics (opzionale)
+# NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+
+# ============================================
+# EMAIL (opzionale - per notifiche future)
+# ============================================
+# Se in futuro vorrai inviare email, configura qui
+# SMTP_HOST=smtp.example.com
+# SMTP_PORT=587
+# SMTP_USER=your_email@example.com
+# SMTP_PASSWORD=your_password
+

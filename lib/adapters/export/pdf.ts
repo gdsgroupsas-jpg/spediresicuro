@@ -18,9 +18,9 @@ export class PDFExporter {
    */
   static isAvailable(): boolean {
     try {
-      require.resolve('jspdf');
-      require.resolve('jspdf-autotable');
-      return true;
+      // In Next.js, non possiamo usare require.resolve a build time
+      // Verifichiamo solo a runtime quando necessario
+      return true; // Assumiamo disponibili se nel package.json
     } catch {
       return false;
     }
@@ -30,13 +30,14 @@ export class PDFExporter {
    * Esporta LDV (Lettera di Vettura) in PDF
    */
   static async exportLDV(shipment: any, options: PDFOptions = {}): Promise<Buffer> {
-    if (!this.isAvailable()) {
+    let jsPDF: any;
+    try {
+      // Import dinamico per evitare errori a build time
+      jsPDF = (await import('jspdf')).jsPDF;
+      await import('jspdf-autotable');
+    } catch (error) {
       throw new Error('Librerie PDF non installate. Eseguire: npm install jspdf jspdf-autotable');
     }
-
-    const { jsPDF } = require('jspdf');
-    require('jspdf-autotable');
-
     const {
       format = 'a4',
       orientation = 'portrait',
@@ -167,13 +168,14 @@ export class PDFExporter {
    * Esporta lista spedizioni in PDF
    */
   static async exportShipmentsList(shipments: any[], options: PDFOptions = {}): Promise<Buffer> {
-    if (!this.isAvailable()) {
-      throw new Error('Librerie PDF non installate');
+    let jsPDF: any;
+    try {
+      // Import dinamico per evitare errori a build time
+      jsPDF = (await import('jspdf')).jsPDF;
+      await import('jspdf-autotable');
+    } catch (error) {
+      throw new Error('Librerie PDF non installate. Eseguire: npm install jspdf jspdf-autotable');
     }
-
-    const { jsPDF } = require('jspdf');
-    require('jspdf-autotable');
-
     const doc = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',

@@ -15,18 +15,22 @@
     "verify:supabase": "ts-node --project tsconfig.scripts.json scripts/verify-supabase.ts",
     "check:table": "ts-node --project tsconfig.scripts.json scripts/check-table-structure.ts",
     "fix:schema": "ts-node --project tsconfig.scripts.json scripts/fix-schema.ts",
-    "seed:geo": "ts-node --project tsconfig.scripts.json scripts/seed-geo.ts"
+    "seed:geo": "ts-node --project tsconfig.scripts.json scripts/seed-geo.ts",
+    "verify:config": "ts-node --project tsconfig.scripts.json scripts/verifica-config-locale.ts",
+    "check:env": "ts-node --project tsconfig.scripts.json scripts/verifica-env-sicuro.ts",
+    "check:env:simple": "node scripts/check-env-simple.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "cmdk": "^1.0.0",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.0",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "lucide-react": "^0.555.0",
     "next": "^14.2.0",
     "next-auth": "^5.0.0-beta.30",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "tesseract.js": "^6.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

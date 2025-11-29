@@ -35,10 +35,138 @@
       "corriere": null,
       "id": "1764190180400",
       "createdAt": "2025-11-26T20:49:40.400Z"
+    },
+    {
+      "mittente": {
+        "nome": "pinco ",
+        "indirizzo": "via rom",
+        "citta": "Sarno",
+        "provincia": "SA",
+        "cap": "84087",
+        "telefono": "327665485",
+        "email": "sigonò@iol.it"
+      },
+      "destinatario": {
+        "nome": "nPOLI",
+        "indirizzo": "via iskendero",
+        "citta": "San Giuseppe Vesuviano",
+        "provincia": "NA",
+        "cap": "80047",
+        "telefono": "081825455",
+        "email": "asdasdo@kj.ir"
+      },
+      "peso": 1,
+      "dimensioni": {
+        "lunghezza": 1,
+        "larghezza": 1,
+        "altezza": 1
+      },
+      "tipoSpedizione": "standard",
+      "note": "",
+      "prezzoBase": 12,
+      "margine": 1.8,
+      "prezzoFinale": 13.8,
+      "status": "in_preparazione",
+      "tracking": "GLS72282675EBU9",
+      "corriere": "GLS",
+      "id": "1764372282676",
+      "createdAt": "2025-11-28T23:24:42.676Z"
+    },
+    {
+      "mittente": {
+        "nome": "pinco ",
+        "indirizzo": "via rom",
+        "citta": "Sarno",
+        "provincia": "SA",
+        "cap": "84087",
+        "telefono": "327665485",
+        "email": "sigonò@iol.it"
+      },
+      "destinatario": {
+        "nome": "nPOLI",
+        "indirizzo": "via iskendero",
+        "citta": "San Giuseppe Vesuviano",
+        "provincia": "NA",
+        "cap": "80047",
+        "telefono": "081825455",
+        "email": "asdasdo@kj.ir"
+      },
+      "peso": 1,
+      "dimensioni": {
+        "lunghezza": 1,
+        "larghezza": 1,
+        "altezza": 1
+      },
+      "tipoSpedizione": "standard",
+      "note": "",
+      "prezzoBase": 12,
+      "margine": 1.8,
+      "prezzoFinale": 13.8,
+      "status": "in_preparazione",
+      "tracking": "GLS72285633ONBG",
+      "corriere": "GLS",
+      "id": "1764372285633",
+      "createdAt": "2025-11-28T23:24:45.633Z"
+    },
+    {
+      "mittente": {
+        "nome": "pico",
+        "indirizzo": "fio tico",
+        "citta": "San Marzano sul Sarno",
+        "provincia": "SA",
+        "cap": "84010",
+        "telefono": "081558568",
+        "email": "5@iol.it"
+      },
+      "destinatario": {
+        "nome": "Laura Bianchi",
+        "indirizzo": "Via Garibaldi, 34",
+        "citta": "Sarno",
+        "provincia": "SA",
+        "cap": "84087",
+        "telefono": "3250042806",
+        "email": "laura.bianchi@example.com"
+      },
+      "peso": 1,
+      "dimensioni": {
+        "lunghezza": 1,
+        "larghezza": 1,
+        "altezza": 1
+      },
+      "tipoSpedizione": "standard",
+      "note": "Citofono: Piano 2",
+      "prezzoBase": 12,
+      "margine": 1.8,
+      "prezzoFinale": 13.8,
+      "status": "in_preparazione",
+      "tracking": "BAR73925522ABQ9",
+      "corriere": "Bartolini",
+      "id": "1764373925522",
+      "createdAt": "2025-11-28T23:52:05.522Z"
     }
   ],
   "preventivi": [],
   "configurazioni": {
     "margine": 15
-  }
+  },
+  "utenti": [
+    {
+      "id": "1",
+      "email": "admin@spediresicuro.it",
+      "password": "admin123",
+      "name": "Admin",
+      "role": "admin",
+      "createdAt": "2025-11-28T18:46:48.974Z",
+      "updatedAt": "2025-11-28T18:46:48.974Z"
+    },
+    {
+      "id": "2",
+      "email": "demo@spediresicuro.it",
+      "password": "demo123",
+      "name": "Demo User",
+      "role": "user",
+      "createdAt": "2025-11-28T18:46:48.974Z",
+      "updatedAt": "2025-11-28T18:46:48.974Z"
+    }
+  ]
 }

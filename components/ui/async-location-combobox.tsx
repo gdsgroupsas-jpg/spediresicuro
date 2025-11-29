@@ -87,7 +87,14 @@ export default function AsyncLocationCombobox({
       }
 
       const data = await response.json();
-      setResults(data.results || []);
+      
+      // Se c'è un errore nella risposta, mostralo
+      if (data.error) {
+        setError(data.error);
+        setResults([]);
+      } else {
+        setResults(data.results || []);
+      }
     } catch (err) {
       console.error('Errore ricerca location:', err);
       setError('Errore di connessione. Riprova.');

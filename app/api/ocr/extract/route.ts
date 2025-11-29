@@ -19,8 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crea adapter OCR (usa mock di default, ma può essere configurato)
-    const ocrType = process.env.OCR_TYPE || 'mock'; // 'mock' o 'tesseract'
+    // Crea adapter OCR
+    // NOTA: Tesseract.js funziona solo lato client (browser), non in API routes
+    // Quindi usiamo sempre il mock migliorato nelle API routes
+    // Per OCR reale, dovrebbe essere implementato lato client (browser)
+    const ocrType = 'mock'; // Forza mock in server-side
     const ocr = createOCRAdapter(ocrType as any);
 
     // Check disponibilità
