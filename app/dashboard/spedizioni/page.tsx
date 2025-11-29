@@ -19,13 +19,21 @@ interface Spedizione {
   id: string;
   mittente: {
     nome: string;
+    indirizzo?: string;
     citta?: string;
     provincia?: string;
+    cap?: string;
+    telefono?: string;
+    email?: string;
   };
   destinatario: {
     nome: string;
+    indirizzo?: string;
     citta?: string;
     provincia?: string;
+    cap?: string;
+    telefono?: string;
+    email?: string;
   };
   peso: number;
   tipoSpedizione: string;
