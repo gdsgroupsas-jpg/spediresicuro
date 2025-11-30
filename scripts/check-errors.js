@@ -29,3 +29,4 @@ console.log(content.substring(0, 2000)); // Prime 2000 caratteri
 console.log('='.repeat(60));
 console.log(`\n📄 Log completo: ${LOG_FILE}\n`);
 
+

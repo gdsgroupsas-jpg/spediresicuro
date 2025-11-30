@@ -2,14 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Stili globali personalizzati */
+/* ============================================
+   PALETTE WORLD-CLASS: ELECTRIC YELLOW + DEEP VOID
+   ============================================ */
 :root {
   --font-sans: system-ui, -apple-system, sans-serif;
+  
+  /* Palette principale */
+  --electric-yellow: #FACC15;
+  --electric-yellow-glow: rgba(250, 204, 21, 0.4);
+  --deep-void: #09090b;
+  --void-elevated: #0f0f11;
+  --void-surface: #18181b;
+  
+  /* Gradienti animati */
+  --gradient-yellow-start: #FACC15;
+  --gradient-yellow-mid: #FDE047;
+  --gradient-yellow-end: #FBBF24;
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(15, 15, 17, 0.7);
+  --glass-border: rgba(250, 204, 21, 0.1);
+  --glass-blur: 12px;
 }
 
+/* ============================================
+   BASE STYLES - DEEP VOID BACKGROUND
+   ============================================ */
 body {
   font-family: var(--font-sans);
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-[#09090b] text-gray-100;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Noise texture pattern overlay - rimuove effetto piatto */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(0deg, rgba(250, 204, 21, 0.03) 0px, transparent 1px, transparent 2px, rgba(250, 204, 21, 0.03) 3px),
+    repeating-linear-gradient(90deg, rgba(250, 204, 21, 0.03) 0px, transparent 1px, transparent 2px, rgba(250, 204, 21, 0.03) 3px);
+  background-size: 4px 4px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
 }
 
 /* Utility per performance */
@@ -33,5 +74,186 @@ header svg {
   overflow: visible;
   display: flex;
   align-items: center;
+}
+
+/* ============================================
+   GLASSMORPHISM UTILITIES
+   ============================================ */
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+  }
+  
+  .glass-strong {
+    background: rgba(15, 15, 17, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(250, 204, 21, 0.2);
+  }
+  
+  .glass-subtle {
+    background: rgba(15, 15, 17, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(250, 204, 21, 0.05);
+  }
+}
+
+/* ============================================
+   GRADIENTI ANIMATI
+   ============================================ */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.gradient-animated {
+  background: linear-gradient(
+    -45deg,
+    var(--gradient-yellow-start),
+    var(--gradient-yellow-mid),
+    var(--gradient-yellow-end),
+    var(--gradient-yellow-mid),
+    var(--gradient-yellow-start)
+  );
+  background-size: 300% 300%;
+  animation: gradient-shift 8s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ============================================
+   GLOW EFFECTS
+   ============================================ */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--electric-yellow-glow),
+                0 0 40px var(--electric-yellow-glow),
+                0 0 60px var(--electric-yellow-glow);
+  }
+  50% {
+    box-shadow: 0 0 30px var(--electric-yellow-glow),
+                0 0 60px var(--electric-yellow-glow),
+                0 0 90px var(--electric-yellow-glow);
+  }
+}
+
+.glow-on-focus:focus {
+  outline: none;
+  border-color: var(--electric-yellow);
+  box-shadow: 0 0 0 3px var(--electric-yellow-glow),
+              0 0 20px var(--electric-yellow-glow);
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.glow-static {
+  box-shadow: 0 0 20px var(--electric-yellow-glow);
+}
+
+/* ============================================
+   GRID BEAM BACKGROUND (3D Perspective)
+   ============================================ */
+@keyframes grid-move {
+  0% {
+    transform: translate(0, 0) perspective(1000px) rotateX(60deg);
+  }
+  100% {
+    transform: translate(0, 20px) perspective(1000px) rotateX(60deg);
+  }
+}
+
+.grid-beam {
+  position: relative;
+  overflow: hidden;
+}
+
+.grid-beam::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: 
+    linear-gradient(rgba(250, 204, 21, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(250, 204, 21, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-move 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   MICRO-INTERAZIONI: BUTTON FEEDBACK
+   ============================================ */
+@layer utilities {
+  .btn-tactile {
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .btn-tactile:active {
+    transform: scale(0.95);
+  }
+  
+  .btn-tactile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(250, 204, 21, 0.3);
+  }
+}
+
+/* ============================================
+   CARD HOVER EFFECTS
+   ============================================ */
+@layer utilities {
+  .card-lift {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(250, 204, 21, 0.2),
+                0 0 0 1px rgba(250, 204, 21, 0.1);
+  }
+}
+
+/* ============================================
+   CRUSCOTTO FINANZIARIO: MONOSPACE NUMBERS
+   ============================================ */
+@layer utilities {
+  .font-mono-numbers {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+  }
+  
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  
+  .status-success {
+    @apply bg-green-500/20 text-green-400 border border-green-500/30;
+  }
+  
+  .status-warning {
+    @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+  }
+  
+  .status-error {
+    @apply bg-red-500/20 text-red-400 border border-red-500/30;
+  }
+  
+  .status-info {
+    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
+  }
 }
 

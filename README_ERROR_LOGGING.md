@@ -53,3 +53,4 @@ Il file `ERROR_LOG.md` contiene:
 
 Quando ci sono errori, posso leggere automaticamente `ERROR_LOG.md` e correggere i problemi senza dover chiedere dettagli.
 
+

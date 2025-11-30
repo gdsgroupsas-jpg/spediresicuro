@@ -21,7 +21,10 @@ import {
   Settings,
   ChevronRight,
   LogOut,
-  User
+  User,
+  Plus,
+  Mail,
+  Zap
 } from 'lucide-react';
 
 interface BreadcrumbItem {
@@ -126,25 +129,49 @@ export default function DashboardNav({
         <div className="flex items-center gap-3">
           {actions}
           
-          {/* User Menu */}
+          {/* User Menu (cliccabile per andare a dati-cliente) */}
           {session && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-              <User className="w-4 h-4 text-gray-600" />
-              <span className="text-sm text-gray-700 hidden sm:inline">
+            <Link
+              href="/dashboard/dati-cliente"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors cursor-pointer ${
+                pathname === '/dashboard/dati-cliente'
+                  ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white border-transparent shadow-sm'
+                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-700'
+              }`}
+            >
+              <User className={`w-4 h-4 ${pathname === '/dashboard/dati-cliente' ? 'text-white' : 'text-gray-600'}`} />
+              <span className={`text-sm hidden sm:inline ${pathname === '/dashboard/dati-cliente' ? 'text-white' : 'text-gray-700'}`}>
                 {session.user?.name || session.user?.email}
               </span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="p-1.5 hover:bg-red-50 rounded-md transition-colors group"
-                title="Esci"
-              >
-                <LogOut className="w-4 h-4 text-gray-600 group-hover:text-red-600 transition-colors" />
-              </button>
-            </div>
+            </Link>
           )}
           
-          {/* Quick Links Menu */}
+          {/* Quick Links Menu - Sequenza: Nuova Spedizione, Lista Spedizioni, Overview, Posta, Impostazioni, Logout */}
           <div className="hidden md:flex items-center gap-2">
+            <Link
+              href="/dashboard/spedizioni/nuova"
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                pathname === '/dashboard/spedizioni/nuova'
+                  ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Plus className="w-4 h-4 inline mr-1.5" />
+              Nuova Spedizione
+            </Link>
+            
+            <Link
+              href="/dashboard/spedizioni"
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                pathname?.startsWith('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova'
+                  ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Package className="w-4 h-4 inline mr-1.5" />
+              Lista Spedizioni
+            </Link>
+            
             <Link
               href="/dashboard"
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -158,30 +185,81 @@ export default function DashboardNav({
             </Link>
             
             <Link
-              href="/dashboard/spedizioni"
+              href="/dashboard/posta"
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                pathname?.startsWith('/dashboard/spedizioni')
+                pathname?.startsWith('/dashboard/posta')
                   ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Package className="w-4 h-4 inline mr-1.5" />
-              Spedizioni
+              <Mail className="w-4 h-4 inline mr-1.5" />
+              Posta
             </Link>
             
             <Link
-              href="/preventivo"
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all"
+              href="/dashboard/integrazioni"
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                pathname?.startsWith('/dashboard/integrazioni')
+                  ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
             >
-              <FileText className="w-4 h-4 inline mr-1.5" />
-              Preventivi
+              <Zap className="w-4 h-4 inline mr-1.5" />
+              Integrazioni
             </Link>
+            
+            <Link
+              href="/dashboard/impostazioni"
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                pathname === '/dashboard/impostazioni'
+                  ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Settings className="w-4 h-4 inline mr-1.5" />
+              Impostazioni
+            </Link>
+            
+            {session && (
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all"
+                title="Esci"
+              >
+                <LogOut className="w-4 h-4 inline mr-1.5" />
+                Logout
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Mobile Quick Links */}
+      {/* Mobile Quick Links - Sequenza: Nuova Spedizione, Lista Spedizioni, Overview, Posta, Impostazioni, Logout */}
       <div className="md:hidden mt-4 flex items-center gap-2 overflow-x-auto pb-2">
+        <Link
+          href="/dashboard/spedizioni/nuova"
+          className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+            pathname === '/dashboard/spedizioni/nuova'
+              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+              : 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          <Plus className="w-3 h-3 inline mr-1" />
+          Nuova Spedizione
+        </Link>
+        
+        <Link
+          href="/dashboard/spedizioni"
+          className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+            pathname?.startsWith('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova'
+              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+              : 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          <Package className="w-3 h-3 inline mr-1" />
+          Lista Spedizioni
+        </Link>
+        
         <Link
           href="/dashboard"
           className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
@@ -195,24 +273,51 @@ export default function DashboardNav({
         </Link>
         
         <Link
-          href="/dashboard/spedizioni"
+          href="/dashboard/posta"
           className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-            pathname?.startsWith('/dashboard/spedizioni')
+            pathname?.startsWith('/dashboard/posta')
               ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
               : 'bg-gray-100 text-gray-700'
           }`}
         >
-          <Package className="w-3 h-3 inline mr-1" />
-          Spedizioni
+          <Mail className="w-3 h-3 inline mr-1" />
+          Posta
         </Link>
         
         <Link
-          href="/preventivo"
-          className="px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700"
+          href="/dashboard/integrazioni"
+          className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+            pathname?.startsWith('/dashboard/integrazioni')
+              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+              : 'bg-gray-100 text-gray-700'
+          }`}
         >
-          <FileText className="w-3 h-3 inline mr-1" />
-          Preventivi
+          <Zap className="w-3 h-3 inline mr-1" />
+          Integrazioni
         </Link>
+        
+        <Link
+          href="/dashboard/impostazioni"
+          className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+            pathname === '/dashboard/impostazioni'
+              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+              : 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          <Settings className="w-3 h-3 inline mr-1" />
+          Impostazioni
+        </Link>
+        
+        {session && (
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className="px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all"
+            title="Esci"
+          >
+            <LogOut className="w-3 h-3 inline mr-1" />
+            Logout
+          </button>
+        )}
       </div>
     </div>
   );

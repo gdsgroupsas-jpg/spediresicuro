@@ -94,3 +94,4 @@ const result = await worker.recognize(image);
 
 **L'errore è risolto! Il sistema ora usa il mock migliorato in server-side.** ✅
 
+

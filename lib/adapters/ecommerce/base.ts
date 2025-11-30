@@ -238,6 +238,10 @@ export function createEcommerceAdapter(
       const { MagentoAdapter } = require('./magento');
       return new MagentoAdapter(credentials);
 
+    case 'amazon':
+      const { AmazonAdapter } = require('./amazon');
+      return new AmazonAdapter(credentials);
+
     default:
       throw new Error(`Piattaforma e-commerce non supportata: ${platform}`);
   }

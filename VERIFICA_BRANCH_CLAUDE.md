@@ -124,3 +124,4 @@ Se vuoi vedere le modifiche specifiche, usa i comandi sopra per vedere i commit 
 
 **Vuoi che ti mostri i file specifici creati da Claude?** 📁
 
+

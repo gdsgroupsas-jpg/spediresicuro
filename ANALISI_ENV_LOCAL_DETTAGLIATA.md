@@ -328,3 +328,4 @@ npm run dev
 **Data:** $(Get-Date -Format "yyyy-MM-dd HH:mm")
 **Stato generale:** ⚠️ **QUASI PERFETTO** - Solo 1 variabile da verificare
 
+

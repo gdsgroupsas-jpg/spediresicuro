@@ -34,6 +34,71 @@ export interface DefaultSender {
   email?: string;
 }
 
+// Interfaccia per dati cliente completi
+export interface DatiCliente {
+  // Dati anagrafici base
+  nome: string;
+  cognome: string;
+  codiceFiscale: string;
+  dataNascita?: string;
+  luogoNascita?: string;
+  sesso?: 'M' | 'F';
+  
+  // Contatti
+  telefono: string;
+  cellulare?: string;
+  email: string;
+  
+  // Indirizzo
+  indirizzo: string;
+  citta: string;
+  provincia: string;
+  cap: string;
+  nazione?: string;
+  
+  // Tipo cliente
+  tipoCliente: 'persona' | 'azienda';
+  
+  // Dati azienda (se tipoCliente === 'azienda')
+  ragioneSociale?: string;
+  partitaIva?: string;
+  codiceSDI?: string; // Codice destinatario SDI per fatturazione elettronica
+  pec?: string; // Email PEC per fatturazione elettronica
+  
+  // Dati fatturazione
+  indirizzoFatturazione?: string;
+  cittaFatturazione?: string;
+  provinciaFatturazione?: string;
+  capFatturazione?: string;
+  
+  // Dati bancari
+  iban?: string;
+  banca?: string;
+  nomeIntestatario?: string;
+  
+  // Documenti (opzionali ma presenti)
+  documentoIdentita?: {
+    tipo: 'carta_identita' | 'patente' | 'passaporto';
+    numero: string;
+    rilasciatoDa: string;
+    dataRilascio: string;
+    dataScadenza?: string;
+    file?: string; // URL del documento caricato
+  };
+  
+  // Flag completamento
+  datiCompletati: boolean;
+  dataCompletamento?: string;
+}
+
+// Interfaccia per integrazioni e-commerce
+export interface Integrazione {
+  platform: string;
+  credentials: Record<string, string>;
+  connectedAt: string;
+  status: 'active' | 'inactive';
+}
+
 // Interfaccia per gli utenti
 export interface User {
   id: string;
@@ -45,6 +110,8 @@ export interface User {
   providerId?: string; // ID utente dal provider OAuth
   image?: string; // Avatar URL (da OAuth)
   defaultSender?: DefaultSender; // Mittente predefinito per spedizioni
+  datiCliente?: DatiCliente; // Dati completi del cliente
+  integrazioni?: Integrazione[]; // Integrazioni e-commerce
   createdAt: string;
   updatedAt: string;
 }

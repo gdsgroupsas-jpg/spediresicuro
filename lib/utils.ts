@@ -1,4 +1,14 @@
 // Funzioni utility per il progetto
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+/**
+ * Utility per unire classi CSS in modo sicuro
+ * Combina clsx e tailwind-merge per gestire conflitti Tailwind
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 /**
  * Calcola il prezzo finale aggiungendo il margine al prezzo base

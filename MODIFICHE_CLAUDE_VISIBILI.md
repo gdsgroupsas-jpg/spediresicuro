@@ -157,3 +157,4 @@ Tutti questi file sono già in master e sono stati creati da Claude:
 
 Vuoi che ti mostri il contenuto di qualche file specifico creato da Claude?
 
+

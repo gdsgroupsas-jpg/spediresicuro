@@ -52,27 +52,36 @@ export abstract class OCRAdapter {
 
   /**
    * Helper: Normalizza telefono italiano
+   * Mantiene il simbolo + se presente
    */
   protected normalizePhone(phone: string): string {
     if (!phone) return '';
 
-    // Rimuovi spazi, trattini, parentesi
+    // Rimuovi spazi, trattini, parentesi (ma mantieni il +)
     let normalized = phone.replace(/[\s\-()]/g, '');
 
-    // Rimuovi prefisso internazionale +39 o 0039
-    normalized = normalized.replace(/^(\+39|0039)/, '');
+    // Se inizia con +39, mantieni il +
+    if (normalized.startsWith('+39')) {
+      return normalized; // Es: "+393911639459"
+    }
 
-    // Rimuovi leading zero se numero mobile
-    if (normalized.startsWith('3') && normalized.length === 10) {
+    // Se inizia con 0039, converti in +39
+    if (normalized.startsWith('0039')) {
+      return '+' + normalized.substring(2); // Es: "0039333123456" → "+39333123456"
+    }
+
+    // Se è un numero italiano senza prefisso (10 cifre che inizia con 3), aggiungi +39
+    if (/^3\d{9}$/.test(normalized)) {
+      return '+39' + normalized; // Es: "3331234567" → "+393331234567"
+    }
+
+    // Se inizia già con +, mantienilo
+    if (normalized.startsWith('+')) {
       return normalized;
     }
 
-    // Per fissi, mantieni leading zero
-    if (normalized.length === 9 || normalized.length === 10) {
-      return normalized;
-    }
-
-    return phone; // Ritorna originale se non riconosciuto
+    // Altrimenti ritorna normalizzato senza prefisso
+    return normalized;
   }
 
   /**
