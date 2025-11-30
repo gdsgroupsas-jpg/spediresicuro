@@ -1,0 +1,4 @@
+ldv,nominativo,indirizzo,cap,citta,provincia,rif_mitt,rif_dest,costo,email_dest,order_id,bda,created_at
+3UW1LZ1436641,"Daniele Pelà","via cesare Battisti 29h",24046,"Osio Sotto",BG,"DUESSE S.R.L.",,4.0000,dlwg080vrj38p7j@marketplace.amazon.it,406-5945828-8539538,,2025-11-28T08:31:36.000000Z
+3UW1LZ1436642,"Mario Rossi","Via Roma 10",20100,Milano,MI,"DUESSE S.R.L.",,5.5000,mario.rossi@example.com,406-5945828-8539539,,2025-11-28T09:00:00.000000Z
+3UW1LZ1436643,"Luigi Verdi","Corso Italia 25",10100,Torino,TO,"DUESSE S.R.L.",,6.0000,luigi.verdi@example.com,406-5945828-8539540,,2025-11-28T10:15:00.000000Z

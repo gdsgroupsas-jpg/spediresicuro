@@ -10,10 +10,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload } from 'lucide-react';
+import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload, FileUp } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
 import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
+import ImportOrders from '@/components/import/import-orders';
 
 // Interfaccia per una spedizione
 interface Spedizione {
@@ -110,6 +111,9 @@ export default function ListaSpedizioniPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [spedizioneToDelete, setSpedizioneToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Modale import
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Carica le spedizioni
   useEffect(() => {
@@ -395,6 +399,16 @@ export default function ListaSpedizioniPage() {
           showBackButton={true}
           actions={
             <div className="flex items-center gap-3">
+              {/* Pulsante Import Ordini */}
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 border border-blue-700 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
+                title="Importa ordini da CSV/Excel"
+              >
+                <FileUp className="w-4 h-4" />
+                Importa
+              </button>
+
               {filteredSpedizioni.length > 0 && (
                 <div className="relative group">
                   <button
@@ -901,6 +915,27 @@ export default function ListaSpedizioniPage() {
             Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
             <span className="font-medium text-gray-900">{spedizioni.length}</span>{' '}
             {spedizioni.length === 1 ? 'spedizione' : 'spedizioni'}
+          </div>
+        )}
+
+        {/* Modale Import Ordini */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="w-full max-w-5xl my-8">
+              <ImportOrders
+                onImportComplete={(count, errors) => {
+                  if (errors.length > 0) {
+                    alert(`Importati ${count} ordini con ${errors.length} errori:\n${errors.join('\n')}`);
+                  } else {
+                    alert(`Importati ${count} ordini con successo!`);
+                  }
+                  setShowImportModal(false);
+                  // Ricarica spedizioni
+                  window.location.reload();
+                }}
+                onCancel={() => setShowImportModal(false)}
+              />
+            </div>
           </div>
         )}
 
