@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       platform,
       credentials,
       connectedAt: new Date().toISOString(),
-      status: 'active',
+      status: 'active' as const,
     }
 
     if (existingIndex >= 0) {
