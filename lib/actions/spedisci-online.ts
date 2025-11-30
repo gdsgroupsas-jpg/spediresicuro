@@ -7,8 +7,7 @@
  * per la creazione automatica delle LDV con routing ottimale.
  */
 
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-config'
+import { auth } from '@/lib/auth-config'
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online'
 import { getFulfillmentOrchestrator, ShipmentResult } from '@/lib/engine/fulfillment-orchestrator'
 import { findUserByEmail } from '@/lib/database'
@@ -20,7 +19,7 @@ import type { Shipment, CreateShipmentInput } from '@/types/shipments'
  */
 export async function getSpedisciOnlineCredentials() {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return { success: false, error: 'Non autenticato' }
@@ -85,7 +84,7 @@ export async function createShipmentWithOrchestrator(
 ): Promise<ShipmentResult> {
   try {
     // 1. Verifica autenticazione
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return {
@@ -154,7 +153,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
   base_url?: string
 }) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return { success: false, error: 'Non autenticato' }
