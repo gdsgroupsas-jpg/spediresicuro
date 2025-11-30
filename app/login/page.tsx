@@ -195,6 +195,9 @@ export default function LoginPage() {
         if (result?.error) {
           setError('Credenziali non valide. Riprova.');
         } else if (result?.ok) {
+          // Refresh session prima di navigare
+          router.refresh();
+
           // Verifica se i dati cliente sono completati
           try {
             const userDataResponse = await fetch('/api/user/dati-cliente');
@@ -214,7 +217,6 @@ export default function LoginPage() {
             // In caso di errore, reindirizza al dashboard
             router.push('/dashboard');
           }
-          router.refresh();
         }
         setIsLoading(false);
       }
