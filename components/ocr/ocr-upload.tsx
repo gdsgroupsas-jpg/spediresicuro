@@ -196,7 +196,7 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
       {/* Info Box */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-start space-x-2">
-          <Image className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-label="Informazioni OCR" />
+          <ImageIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-label="Informazioni OCR" />
           <div className="text-sm text-blue-900">
             <p className="font-medium mb-1">Come funziona l&apos;OCR:</p>
             <ul className="list-disc list-inside space-y-1 text-xs text-blue-800">
