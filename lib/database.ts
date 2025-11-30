@@ -220,15 +220,41 @@ export function writeDatabase(data: Database): void {
 
 /**
  * Aggiunge una nuova spedizione
+ *
+ * ⚠️ IMPORTANTE: Gestisce correttamente ldv (Lettera di Vettura) e tracking
+ * - ldv è il tracking number per ordini da Sped isci.Online
+ * - Se ldv è presente, viene usato anche come tracking
+ * - Se tracking non è presente, usa ldv come fallback
  */
-export function addSpedizione(spedizione: any): void {
+export function addSpedizione(spedizione: any, userEmail?: string): any {
   const db = readDatabase();
-  db.spedizioni.push({
+
+  // ⚠️ CRITICO: Normalizza tracking/ldv
+  // PRIORITÀ: ldv > tracking > generato automaticamente
+  const ldv = spedizione.ldv || '';
+  const tracking = spedizione.tracking || spedizione.ldv || `TRK${Date.now()}`;
+
+  // ⚠️ DEBUG: Log per verificare cosa viene salvato
+  console.log('💾 Salvando spedizione:', {
+    ldv_originale: spedizione.ldv,
+    tracking_originale: spedizione.tracking,
+    ldv_salvato: ldv,
+    tracking_salvato: tracking,
+  });
+
+  const nuovaSpedizione = {
     ...spedizione,
     id: Date.now().toString(),
+    ldv: ldv, // Campo LDV originale (importante per Spedisci.Online)
+    tracking: tracking, // Tracking normalizzato (può essere ldv o generato)
     createdAt: new Date().toISOString(),
-  });
+    created_by_user_email: userEmail || '',
+  };
+
+  db.spedizioni.push(nuovaSpedizione);
   writeDatabase(db);
+
+  return nuovaSpedizione;
 }
 
 /**
