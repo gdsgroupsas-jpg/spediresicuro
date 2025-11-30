@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
       // Destinatario (da file importato) - struttura completa
       destinatarioNome: body.destinatarioNome || body.nome || body.nominativo || '',
       destinatarioIndirizzo: body.destinatarioIndirizzo || body.indirizzo || '',
-      destinatarioCitta: body.destinatarioCitta || body.citta || body.localita || '',
+      // Accetta sia "citta" che "localita" come nome campo
+      destinatarioCitta: body.destinatarioCitta || body.citta || body.localita || body.city || body.recipient_city || '',
       destinatarioProvincia: body.destinatarioProvincia || body.provincia || '',
       destinatarioCap: body.destinatarioCap || body.cap || '',
       destinatarioTelefono: body.destinatarioTelefono || body.telefono || '',

@@ -63,4 +63,19 @@ if (!supabaseAdmin && process.env.NODE_ENV === 'production') {
   );
 }
 
+/**
+ * Verifica se Supabase è configurato correttamente
+ * Utile per decidere se usare Supabase o fallback JSON
+ */
+export function isSupabaseConfigured(): boolean {
+  const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
+                 process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
+  const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && 
+                     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder');
+  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY && 
+                        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
+  
+  return hasUrl && hasAnonKey && hasServiceKey;
+}
+
 

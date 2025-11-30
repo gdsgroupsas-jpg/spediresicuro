@@ -53,7 +53,17 @@ export default function AsyncLocationCombobox({
   className = '',
   defaultValue,
 }: AsyncLocationComboboxProps) {
-  const [inputValue, setInputValue] = useState(defaultValue ? `${defaultValue.city} (${defaultValue.province})${defaultValue.cap ? ` - ${defaultValue.cap}` : ''}` : '');
+  // Formato semplificato: solo "Città (Provincia)" o "Città (Provincia) - CAP"
+  const formatLocationText = (city: string, province: string, cap?: string | null) => {
+    if (cap) {
+      return `${city} (${province}) - ${cap}`;
+    }
+    return `${city} (${province})`;
+  };
+
+  const [inputValue, setInputValue] = useState(
+    defaultValue ? formatLocationText(defaultValue.city, defaultValue.province, defaultValue.cap) : ''
+  );
   const [results, setResults] = useState<GeoLocationOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,12 +73,16 @@ export default function AsyncLocationCombobox({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Aggiorna inputValue quando defaultValue cambia
+  // Aggiorna inputValue quando defaultValue cambia (es. quando AI popola i campi)
   useEffect(() => {
     if (defaultValue) {
-      setInputValue(`${defaultValue.city} (${defaultValue.province})${defaultValue.cap ? ` - ${defaultValue.cap}` : ''}`);
+      const newValue = formatLocationText(defaultValue.city, defaultValue.province, defaultValue.cap);
+      // Aggiorna solo se il valore è diverso per evitare loop infiniti
+      if (inputValue !== newValue) {
+        setInputValue(newValue);
+      }
     }
-  }, [defaultValue]);
+  }, [defaultValue, inputValue]);
 
   // Debounce input (300ms)
   const debouncedQuery = useDebounce(inputValue, 300);
@@ -127,6 +141,7 @@ export default function AsyncLocationCombobox({
    */
   const handleSelectLocation = (location: GeoLocationOption) => {
     setSelectedLocation(location);
+    // Mostra solo città e provincia, senza regione o altre info
     setInputValue(`${location.city} (${location.province})`);
 
     // Se ha un solo CAP, seleziona direttamente
@@ -137,6 +152,8 @@ export default function AsyncLocationCombobox({
         cap: location.caps[0],
         caps: location.caps,
       });
+      // Aggiorna input con CAP
+      setInputValue(formatLocationText(location.city, location.province, location.caps[0]));
       setIsOpen(false);
       setShowCapSelector(false);
     } else if (location.caps.length > 1) {
@@ -168,7 +185,7 @@ export default function AsyncLocationCombobox({
       caps: selectedLocation.caps,
     });
 
-    setInputValue(`${selectedLocation.city} (${selectedLocation.province}) - ${cap}`);
+    setInputValue(formatLocationText(selectedLocation.city, selectedLocation.province, cap));
     setShowCapSelector(false);
     setSelectedLocation(null);
   };
@@ -260,12 +277,7 @@ export default function AsyncLocationCombobox({
                     onSelect={() => handleSelectLocation(location)}
                     className="px-4 py-2 cursor-pointer hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{location.displayText}</span>
-                      {location.region && (
-                        <span className="text-xs text-gray-500">{location.region}</span>
-                      )}
-                    </div>
+                    <span className="font-medium">{location.displayText}</span>
                   </Command.Item>
                 ))}
               </Command.List>

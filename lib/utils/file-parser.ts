@@ -22,6 +22,7 @@ export interface ImportedOrder {
   indirizzo?: string;
   cap?: string;
   citta?: string;
+  localita?: string; // Variante di "citta" (usata in alcuni CSV)
   provincia?: string;
   telefono?: string;
   cellulare?: string;
@@ -81,12 +82,13 @@ export function normalizeImportedOrder(order: ImportedOrder): any {
     order_id: order.order_id || '', // Order ID (separato dal tracking)
 
     // Destinatario normalizzato
+    // IMPORTANTE: Accetta sia "citta" che "localita" come nome colonna
     destinatario: {
       nome: nomeDestinatario,
       indirizzo: order.indirizzo || '',
       cap: order.cap || '',
-      citta: order.citta || '',
-      provincia: order.provincia || '',
+      citta: order.citta || order.localita || (order as any).city || (order as any).recipient_city || '',
+      provincia: order.provincia || (order as any).province || (order as any).recipient_province || '',
       telefono: order.telefono || order.cellulare || '',
       email: emailDestinatario,
     },

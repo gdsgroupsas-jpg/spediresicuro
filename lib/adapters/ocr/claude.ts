@@ -41,8 +41,8 @@ export class ClaudeOCRAdapter extends OCRAdapter {
       // Determina media type (assumiamo JPEG, ma potremmo rilevarlo)
       const mediaType = this.detectMediaType(base64Image);
 
-      // Prompt ottimizzato per estrazione dati LDV italiana
-      const prompt = `Analizza questa immagine di una Lettera di Vettura (LDV) o documento di spedizione italiano.
+      // Prompt ottimizzato per estrazione dati LDV italiana e screenshot WhatsApp
+      const prompt = `Analizza questa immagine. Potrebbe essere una Lettera di Vettura (LDV), documento di spedizione italiano, o uno screenshot WhatsApp.
 
 Estrai SOLO i dati del DESTINATARIO nel seguente formato JSON:
 
@@ -57,26 +57,103 @@ Estrai SOLO i dati del DESTINATARIO nel seguente formato JSON:
   "notes": "Note aggiuntive (es: citofono, piano, orari)"
 }
 
-REGOLE IMPORTANTI:
-- Restituisci SOLO il JSON, nessun altro testo
-- Se un campo non è presente, usa stringa vuota ""
-- Per il CAP, verifica sia 5 cifre
-- Per provincia, usa SEMPRE sigla 2 lettere (es: "Milano" → "MI")
-- Per telefono, normalizza formato italiano (rimuovi spazi/trattini)
-- Concentrati SOLO sui dati del destinatario, NON del mittente
-- Se trovi più indirizzi, prendi quello etichettato come "DESTINATARIO" o "CONSEGNA"
+REGOLE CRITICHE PER L'ESTRAZIONE:
 
-Esempio output corretto:
+1. DISTINGUI ETICHETTE DA VALORI REALI (FONDAMENTALE):
+   - NON estrarre MAI etichette come "Nome e Cognome", "Nome cognome", "Nome:", "Telefono:", "Indirizzo:", "Città:", "CAP:", ecc.
+   - Queste sono SOLO etichette/label, NON sono dati reali!
+   - Estrai SOLO i VALORI REALI che seguono o precedono le etichette
+   - Esempi SBAGLIATI (NON fare così):
+     * "Nome e Cognome" → SBAGLIATO! È un'etichetta
+     * "Nome cognome" → SBAGLIATO! È un'etichetta
+     * "Telefono" → SBAGLIATO! È un'etichetta
+   - Esempi CORRETTI:
+     * "Nome e Cognome: Mario Rossi" → estrai "Mario Rossi"
+     * Bolla WhatsApp con "Nome cognome" + bolla con "BENETTI ARIANA" → estrai "BENETTI ARIANA"
+     * "Telefono: +39 333 1234567" → estrai "+39 333 1234567"
+   - Per screenshot WhatsApp: le etichette sono spesso in bolle separate, cerca il valore nella bolla adiacente
+   - Se trovi solo un'etichetta senza valore reale, lascia il campo vuoto "" piuttosto che estrarre l'etichetta
+
+2. TELEFONO (SPECIALMENTE PER WHATSAPP):
+   - Se è uno screenshot WhatsApp, il numero è SEMPRE nella parte ALTA dell'immagine
+   - Il prefisso è SEMPRE visibile (es: +39, 0039, o solo il numero con prefisso)
+   - COPIA IL NUMERO ESATTAMENTE COME APPARE (con prefisso se presente)
+   - NON rimuovere spazi, trattini o prefissi - copia tutto pari pari
+   - Esempi corretti: "+39 333 1234567", "+39 3331234567", "0039 333 1234567", "333 1234567"
+   - Cerca nella parte alta dell'immagine per screenshot WhatsApp
+   - Il numero può essere vicino al nome del contatto o in un campo separato
+
+3. NOME E COGNOME (CRITICO - NON SBAGLIARE):
+   - NON estrarre MAI etichette come "Nome e Cognome", "Nome cognome", "Nome:", "Cognome:", "Nome e Cognome:", ecc.
+   - Queste sono SOLO etichette/label, NON sono il nome reale!
+   - Estrai SOLO il valore reale che segue o precede l'etichetta
+   - LISTA ETICHETTE DA IGNORARE (NON estrarre MAI):
+     * "Nome e Cognome"
+     * "Nome cognome"
+     * "Nome:"
+     * "Cognome:"
+     * "Nome e Cognome:"
+     * "Nome completo"
+     * Qualsiasi testo che sia chiaramente un'etichetta di campo
+   - Esempi CORRETTI:
+     * Se vedi "Nome e Cognome: Mario Rossi" → estrai "Mario Rossi"
+     * Se vedi "Nome: Luigi Verdi" → estrai "Luigi Verdi"
+     * Se vedi una bolla WhatsApp con "Nome cognome" e poi una bolla con "BENETTI ARIANA" → estrai "BENETTI ARIANA" (NON "Nome cognome"!)
+     * Se vedi solo "BENETTI ARIANA" senza etichette → estrai "BENETTI ARIANA"
+   - Per screenshot WhatsApp:
+     * Le etichette sono spesso in bolle separate dai valori (bolle verdi = etichette, bolle bianche = valori)
+     * Se vedi una bolla con "Nome cognome" o simile, cerca il valore nella bolla successiva o precedente
+     * Il valore reale è spesso in una bolla diversa (bianca se l'etichetta è verde, o viceversa)
+     * Se trovi solo l'etichetta senza valore reale, lascia il campo vuoto ""
+   - REGOLA D'ORO: Se il testo corrisponde a un'etichetta comune (Nome, Cognome, Telefono, Indirizzo, Città, CAP, ecc.), NON estrarlo!
+   - Se hai dubbi se un testo è un'etichetta o un valore, è meglio lasciare vuoto che estrarre un'etichetta
+   - CONTROLLO FINALE: Prima di inserire nel campo "recipient_name", chiediti: "Questo è un nome reale o un'etichetta?" Se è un'etichetta, NON estrarlo!
+
+4. ALTRI CAMPI:
+   - Cerca SEMPRE di estrarre città, provincia e CAP - sono campi CRITICI
+   - Se trovi la città ma NON trovi provincia o CAP, cerca attentamente:
+     * La provincia può essere scritta per esteso (es: "Milano") o come sigla (es: "MI")
+     * Il CAP è sempre un numero di 5 cifre (es: 20100, 00100)
+     * Spesso città, CAP e provincia sono sulla stessa riga
+   - Per provincia, usa SEMPRE sigla 2 lettere maiuscole (es: "Milano" → "MI")
+   - Per il CAP, verifica sia esattamente 5 cifre
+
+5. REGOLE GENERALI:
+   - Restituisci SOLO il JSON, nessun altro testo
+   - Se un campo NON è presente, usa stringa vuota ""
+   - Concentrati SOLO sui dati del destinatario, NON del mittente
+   - Se trovi più indirizzi, prendi quello etichettato come "DESTINATARIO" o "CONSEGNA"
+
+Esempi output corretti:
+
+Esempio 1 - Documento normale:
 {
   "recipient_name": "Mario Rossi",
   "recipient_address": "Via Roma, 123",
   "recipient_city": "Milano",
   "recipient_zip": "20100",
   "recipient_province": "MI",
-  "recipient_phone": "3331234567",
+  "recipient_phone": "+39 333 1234567",
   "recipient_email": "mario.rossi@example.com",
   "notes": "Citofono: Rossi - Piano 3"
-}`;
+}
+
+Esempio 2 - Screenshot WhatsApp (etichette in bolle separate):
+Se vedi:
+- Bolla verde: "Nome cognome"
+- Bolla bianca: "BENETTI ARIANA"
+→ Estrai:
+{
+  "recipient_name": "BENETTI ARIANA",
+  "recipient_address": "Via Ca Diedo 61",
+  "recipient_city": "Camponogara",
+  "recipient_zip": "",
+  "recipient_province": "VE",
+  "recipient_phone": "+39 333 854 3594",
+  "recipient_email": "",
+  "notes": ""
+}
+NOTA: "Nome cognome" NON va nel campo recipient_name perché è un'etichetta!`;
 
       // Chiamata API Claude Vision
       const response = await this.client.messages.create({
@@ -148,14 +225,55 @@ Esempio output corretto:
 
       const parsed = JSON.parse(jsonMatch[0]);
 
+      // Lista etichette comuni da filtrare (NON devono essere estratte come valori)
+      const commonLabels = [
+        'nome e cognome',
+        'nome cognome',
+        'nome:',
+        'cognome:',
+        'nome e cognome:',
+        'nome completo',
+        'telefono',
+        'tel',
+        'phone',
+        'indirizzo',
+        'address',
+        'città',
+        'city',
+        'cap',
+        'provincia',
+        'province',
+        'email',
+        'e-mail',
+        'mail',
+      ];
+
+      // Verifica che il nome non sia un'etichetta
+      let recipientName = parsed.recipient_name?.trim() || '';
+      const nameLower = recipientName.toLowerCase();
+      if (commonLabels.some(label => nameLower === label || nameLower.startsWith(label + ':'))) {
+        // Se è un'etichetta, non estrarla
+        console.warn('⚠️ Rilevata etichetta invece di nome reale:', recipientName);
+        recipientName = '';
+      }
+
       // Normalizza dati
+      // Per il telefono, mantieni il formato originale se ha prefisso (es: +39, 0039)
+      // Altrimenti normalizza
+      let phone = parsed.recipient_phone?.trim() || '';
+      if (phone && !phone.match(/^(\+39|0039)/)) {
+        // Se non ha prefisso, normalizza
+        phone = this.normalizePhone(phone);
+      }
+      // Se ha prefisso, mantieni così com'è (pari pari come richiesto)
+
       return {
-        recipient_name: parsed.recipient_name?.trim() || '',
+        recipient_name: recipientName,
         recipient_address: parsed.recipient_address?.trim() || '',
         recipient_city: parsed.recipient_city?.trim() || '',
         recipient_zip: this.validateZip(parsed.recipient_zip) || '',
         recipient_province: parsed.recipient_province?.trim().toUpperCase() || '',
-        recipient_phone: this.normalizePhone(parsed.recipient_phone || ''),
+        recipient_phone: phone,
         recipient_email: parsed.recipient_email?.trim() || '',
         notes: parsed.notes?.trim() || '',
       };

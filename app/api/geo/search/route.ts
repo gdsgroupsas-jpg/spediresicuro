@@ -22,13 +22,9 @@ function formatLocationOption(location: {
   region: string | null;
   caps: string[];
 }): GeoLocationOption {
-  // Formatta i CAP: "00100, 00118" o solo "00100"
-  const capsText = location.caps.length > 0 
-    ? location.caps.slice(0, 3).join(', ') + (location.caps.length > 3 ? '...' : '')
-    : 'N/A';
-
-  // Testo display: "Roma (RM) - 00100, 00118"
-  const displayText = `${location.name} (${location.province})${capsText !== 'N/A' ? ` - ${capsText}` : ''}`;
+  // Testo display semplificato: solo "Roma (RM)" senza CAP o regione
+  // Il CAP verrà mostrato solo dopo la selezione
+  const displayText = `${location.name} (${location.province})`;
 
   return {
     city: location.name,
