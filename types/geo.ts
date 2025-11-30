@@ -43,3 +43,4 @@ export type OnLocationSelect = (location: {
   caps: string[]; // Tutti i CAP disponibili
 }) => void;
 
+

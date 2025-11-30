@@ -136,3 +136,4 @@ git commit -m "feat: integrazione funzionalità Claude - OCR Upload, Filtri avan
 
 **Esegui manualmente e dimmi se funziona!** 🚀
 
+

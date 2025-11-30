@@ -1,0 +1,31 @@
+# Gitpod Configuration per SpedireSicuro
+# Questo file configura Gitpod per avviare automaticamente il progetto
+
+tasks:
+  - name: Install & Dev
+    init: |
+      echo "📦 Installing dependencies..."
+      npm install
+    command: |
+      echo "🚀 Starting development server..."
+      npm run dev
+
+ports:
+  - port: 3000
+    onOpen: open-browser
+    visibility: public
+
+github:
+  prebuilds:
+    master: true
+    branches: true
+    pullRequests: true
+    addCheck: true
+    addComment: true
+
+vscode:
+  extensions:
+    - dbaeumer.vscode-eslint
+    - esbenp.prettier-vscode
+    - bradlc.vscode-tailwindcss
+

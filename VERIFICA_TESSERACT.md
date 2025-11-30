@@ -88,3 +88,4 @@ Se non funziona, vedrai:
 
 **Tesseract.js è pronto! I modelli si scaricheranno automaticamente al primo utilizzo.** 🚀
 
+

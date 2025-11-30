@@ -163,3 +163,4 @@ Il sistema è completamente configurato. Esegui `npm run seed:geo` e poi testa t
 
 **Ultimo aggiornamento:** 2025-01-27
 
+

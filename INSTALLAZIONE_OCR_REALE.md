@@ -168,3 +168,4 @@ npm install tesseract.js
 
 Poi riavvia il server e prova con un'immagine reale!
 
+

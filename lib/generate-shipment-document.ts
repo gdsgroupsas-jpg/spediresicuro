@@ -36,61 +36,104 @@ export interface SpedizioneData {
   status: string;
   note?: string;
   createdAt?: string;
+  // Campi aggiuntivi per formato spedisci.online
+  contrassegno?: number | string;
+  assicurazione?: number | string;
+  contenuto?: string;
+  order_id?: string;
+  totale_ordine?: number | string;
+  rif_mittente?: string;
+  rif_destinatario?: string;
+  colli?: number | string;
 }
 
 /**
  * Genera CSV per una singola spedizione
+ * Formato compatibile con spedisci.online
+ * Separatore: punto e virgola (;)
+ * Decimali: punto (.)
+ * Encoding: UTF-8
  */
 export function generateShipmentCSV(spedizione: SpedizioneData): string {
-  const rows: string[] = [];
+  // Helper per formattare valori (sostituisce virgola con punto per decimali)
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+    // Se è un numero, converti virgola in punto
+    if (typeof value === 'number') {
+      return String(value).replace(',', '.');
+    }
+    // Se è una stringa con virgola decimale, converti in punto
+    if (typeof value === 'string' && /^\d+,\d+$/.test(value)) {
+      return value.replace(',', '.');
+    }
+    return String(value);
+  };
+
+  // Helper per escape valori CSV (gestisce punto e virgola nei testi)
+  const escapeCSV = (value: string): string => {
+    if (!value) return '';
+    // Se contiene punto e virgola o virgolette, racchiudi tra virgolette e raddoppia le virgolette interne
+    if (value.includes(';') || value.includes('"') || value.includes('\n')) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  };
+
+  // Prepara i valori secondo formato spedisci.online
+  const destinatario = escapeCSV(spedizione.destinatario.nome || '');
+  const indirizzo = escapeCSV(spedizione.destinatario.indirizzo || '');
+  const cap = spedizione.destinatario.cap || '';
+  const localita = escapeCSV(spedizione.destinatario.citta || '');
+  const provincia = (spedizione.destinatario.provincia || '').toUpperCase().slice(0, 2);
+  const country = 'IT';
+  const peso = formatValue(spedizione.peso || 0);
+  const colli = formatValue(spedizione.colli || 1);
+  const contrassegno = formatValue(spedizione.contrassegno || '');
+  const rif_mittente = escapeCSV(spedizione.rif_mittente || spedizione.mittente.nome || '');
+  const rif_destinatario = escapeCSV(spedizione.rif_destinatario || spedizione.destinatario.nome || '');
+  const note = escapeCSV(spedizione.note || '');
+  const telefono = spedizione.destinatario.telefono || '';
+  const email_destinatario = spedizione.destinatario.email || '';
+  const contenuto = escapeCSV(spedizione.contenuto || '');
+  const order_id = escapeCSV(spedizione.order_id || spedizione.tracking || '');
+  const totale_ordine = formatValue(spedizione.totale_ordine || spedizione.prezzoFinale || '');
+
+  // Header CSV secondo formato spedisci.online (tutto minuscolo)
+  const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
   
-  // Header
-  rows.push('DETTAGLIO SPEDIZIONE');
-  rows.push(`Tracking Number,${spedizione.tracking}`);
-  rows.push(`Data Creazione,${spedizione.createdAt || new Date().toISOString()}`);
-  rows.push(`Status,${spedizione.status}`);
-  rows.push('');
-  
-  // Mittente
-  rows.push('MITTENTE');
-  rows.push(`Nome,${spedizione.mittente.nome}`);
-  rows.push(`Indirizzo,${spedizione.mittente.indirizzo}`);
-  rows.push(`Città,${spedizione.mittente.citta}`);
-  rows.push(`Provincia,${spedizione.mittente.provincia}`);
-  rows.push(`CAP,${spedizione.mittente.cap}`);
-  rows.push(`Telefono,${spedizione.mittente.telefono}`);
-  rows.push(`Email,${spedizione.mittente.email}`);
-  rows.push('');
-  
-  // Destinatario
-  rows.push('DESTINATARIO');
-  rows.push(`Nome,${spedizione.destinatario.nome}`);
-  rows.push(`Indirizzo,${spedizione.destinatario.indirizzo}`);
-  rows.push(`Città,${spedizione.destinatario.citta}`);
-  rows.push(`Provincia,${spedizione.destinatario.provincia}`);
-  rows.push(`CAP,${spedizione.destinatario.cap}`);
-  rows.push(`Telefono,${spedizione.destinatario.telefono}`);
-  rows.push(`Email,${spedizione.destinatario.email}`);
-  rows.push('');
-  
-  // Dettagli spedizione
-  rows.push('DETTAGLI SPEDIZIONE');
-  rows.push(`Peso (kg),${spedizione.peso}`);
-  rows.push(`Dimensioni,${spedizione.dimensioni.lunghezza}x${spedizione.dimensioni.larghezza}x${spedizione.dimensioni.altezza} cm`);
-  rows.push(`Tipo,${spedizione.tipoSpedizione}`);
-  rows.push(`Corriere,${spedizione.corriere}`);
-  rows.push(`Prezzo,€ ${spedizione.prezzoFinale.toFixed(2)}`);
-  if (spedizione.note) {
-    rows.push(`Note,${spedizione.note}`);
-  }
-  
-  return rows.join('\n');
+  // Riga dati
+  const row = [
+    destinatario,
+    indirizzo,
+    cap,
+    localita,
+    provincia,
+    country,
+    peso,
+    colli,
+    contrassegno,
+    rif_mittente,
+    rif_destinatario,
+    note,
+    telefono,
+    email_destinatario,
+    contenuto,
+    order_id,
+    totale_ordine,
+  ].join(';') + ';'; // Aggiungi punto e virgola finale
+
+  // Restituisci header + riga dati
+  return header + '\n' + row;
 }
 
 /**
  * Scarica CSV
+ * Formato spedisci.online: separatore punto e virgola, encoding UTF-8
  */
 export function downloadCSV(content: string, filename: string) {
+  // BOM UTF-8 per compatibilità Excel + encoding UTF-8
   const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);

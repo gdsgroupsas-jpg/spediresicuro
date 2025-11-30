@@ -223,3 +223,4 @@ npm run type-check
 **Ultimo aggiornamento**: Setup verificato e funzionante ✅
 
 
+
