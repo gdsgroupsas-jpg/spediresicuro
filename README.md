@@ -89,7 +89,7 @@
 - ✅ OAuth Google, GitHub, Facebook
 - ✅ Session management con NextAuth v5
 - ✅ Protezione route dashboard
-- ✅ Credenziali demo: `admin@spediresicuro.it` / `admin123`
+- ✅ Credenziali demo (solo sviluppo locale): `admin@spediresicuro.it` / `admin123`
 
 ### 3. 📊 Dashboard
 - ✅ Dashboard principale con statistiche
@@ -285,9 +285,11 @@ Dovresti vedere:
 
 Vai su **http://localhost:3000**
 
-**Login demo:**
+**Login demo (solo sviluppo locale):**
 - Email: `admin@spediresicuro.it`
 - Password: `admin123`
+
+⚠️ **Nota:** Le credenziali demo sono disponibili solo in ambiente di sviluppo (`NODE_ENV=development`). In produzione, gli utenti devono registrarsi o utilizzare OAuth.
 
 ---
 
@@ -441,12 +443,11 @@ Schema PostgreSQL completo con 19+ tabelle:
 
 ## 🔐 Autenticazione
 
-### Credenziali Demo
+### Credenziali Demo (Solo Sviluppo Locale)
 
-```
-Email: admin@spediresicuro.it
-Password: admin123
-```
+⚠️ **Le credenziali demo sono disponibili solo in ambiente di sviluppo locale** (`NODE_ENV=development`).
+
+In produzione, gli utenti devono registrarsi tramite il form di registrazione o utilizzare OAuth.
 
 ### OAuth Providers
 

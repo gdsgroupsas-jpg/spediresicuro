@@ -8,14 +8,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth-config';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
 
 /**
  * Handler GET - Ottiene tutte le spedizioni
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const spedizioni = getSpedizioni();
+    // Autenticazione
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+    }
+
+    const spedizioni = await getSpedizioni(session.user.email);
     return NextResponse.json(
       {
         success: true,
