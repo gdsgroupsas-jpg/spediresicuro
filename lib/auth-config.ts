@@ -15,13 +15,24 @@ import GitHubProvider from 'next-auth/providers/github';
 function validateOAuthConfig() {
   const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   const hasGitHub = !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+  const nextAuthUrl = getNextAuthUrl();
   
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 OAuth Config Check:', {
-      google: hasGoogle ? '✅ Configurato' : '⚠️ Non configurato',
-      github: hasGitHub ? '✅ Configurato' : '⚠️ Non configurato',
-      nextAuthUrl: process.env.NEXTAUTH_URL || '⚠️ Non configurato',
-    });
+  // Log sempre in produzione per debug
+  console.log('🔍 OAuth Config Check:', {
+    google: hasGoogle ? '✅ Configurato' : '⚠️ Non configurato',
+    github: hasGitHub ? '✅ Configurato' : '⚠️ Non configurato',
+    nextAuthUrl: nextAuthUrl,
+    vercelUrl: process.env.VERCEL_URL || 'N/A',
+    nodeEnv: process.env.NODE_ENV || 'N/A',
+  });
+  
+  // ⚠️ Warning se Google OAuth configurato ma URL non valido
+  if (hasGoogle && process.env.NODE_ENV === 'production') {
+    if (!nextAuthUrl.startsWith('https://')) {
+      console.warn('⚠️ ATTENZIONE: NEXTAUTH_URL deve essere HTTPS in produzione!');
+    }
+    console.log('📝 Verifica che il callback URL sia configurato in Google Console:');
+    console.log(`   ${nextAuthUrl}/api/auth/callback/google`);
   }
   
   return { hasGoogle, hasGitHub };
@@ -30,11 +41,29 @@ function validateOAuthConfig() {
 // Verifica configurazione all'avvio
 validateOAuthConfig();
 
+// Determina URL base per NextAuth (locale o produzione)
+function getNextAuthUrl(): string {
+  // In produzione su Vercel, usa VERCEL_URL se disponibile
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Altrimenti usa NEXTAUTH_URL se configurato
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  // Fallback per sviluppo locale
+  return process.env.NODE_ENV === 'production' 
+    ? 'https://spediresicuro.vercel.app' // Dominio Vercel produzione
+    : 'http://localhost:3000';
+}
+
 export const authOptions = {
   // URL base per NextAuth (necessario per OAuth callbacks)
   basePath: '/api/auth',
-  // Trust host per permettere callbacks dinamici
+  // Trust host per permettere callbacks dinamici (importante per Vercel)
   trustHost: true,
+  // URL esplicito per produzione
+  url: getNextAuthUrl(),
   providers: [
     // Provider Credentials (Email/Password)
     CredentialsProvider({
@@ -76,6 +105,14 @@ export const authOptions = {
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             allowDangerousEmailAccountLinking: true, // Permette linking account con stessa email
+            // ⚠️ IMPORTANTE: Configurazione esplicita per produzione
+            authorization: {
+              params: {
+                prompt: 'consent',
+                access_type: 'offline',
+                response_type: 'code',
+              },
+            },
           }),
         ]
       : []),
