@@ -22,25 +22,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export function createServerActionClient() {
   const cookieStore = cookies()
   
+  // Per Server Actions, usiamo un client base senza configurazione cookies avanzata
+  // I cookie vengono gestiti automaticamente da Next.js
   return createClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
-      set(name: string, value: string, options: any) {
-        try {
-          cookieStore.set(name, value, options)
-        } catch (error) {
-          // Cookie setting può fallire in Server Actions, ignoriamo
-        }
-      },
-      remove(name: string, options: any) {
-        try {
-          cookieStore.set(name, '', { ...options, maxAge: 0 })
-        } catch (error) {
-          // Cookie removal può fallire in Server Actions, ignoriamo
-        }
-      },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
     },
   })
 }

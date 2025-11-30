@@ -12,8 +12,7 @@
 import { z } from 'zod'
 import { createEcommerceAdapter } from '@/lib/adapters/ecommerce/base'
 import { createServerActionClient } from '@/lib/supabase-server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-config'
+import { auth } from '@/lib/auth-config'
 import { findUserByEmail } from '@/lib/database'
 
 /**
@@ -253,7 +252,7 @@ export async function testIntegration(provider: string, credentials: any) {
 export async function saveIntegration(provider: string, credentials: any) {
   try {
     // 1. Verifica autenticazione tramite NextAuth
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       throw new Error('Non autenticato')
@@ -398,7 +397,7 @@ export async function getUserIntegrations() {
 export async function getIntegrations() {
   try {
     // 1. Verifica autenticazione tramite NextAuth
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       throw new Error('Non autenticato')
@@ -471,7 +470,7 @@ export async function getIntegrations() {
     console.error('Errore getIntegrations:', error)
     // Fallback al database locale in caso di errore
     try {
-      const session = await getServerSession(authOptions)
+      const session = await auth()
       if (session?.user?.email) {
         const user = findUserByEmail(session.user.email)
         return {
