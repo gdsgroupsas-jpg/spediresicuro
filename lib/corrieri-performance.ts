@@ -41,7 +41,7 @@ export async function analyzeCorrieriPerformance(
   provincia: string
 ): Promise<CorrierePerformance[]> {
   // Ottieni tutte le spedizioni
-  const spedizioni = getSpedizioni();
+  const spedizioni = await getSpedizioni();
 
   // Filtra per zona (ultime 2 settimane)
   const dueSettimaneFa = new Date();
