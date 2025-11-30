@@ -10,9 +10,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2 } from 'lucide-react';
+import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
+import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
 
 // Interfaccia per una spedizione
 interface Spedizione {
@@ -380,6 +381,18 @@ export default function ListaSpedizioniPage() {
                       >
                         <File className="w-4 h-4 text-gray-600" />
                         <span>Esporta PDF</span>
+                      </button>
+                      <div className="border-t border-gray-200 my-1"></div>
+                      <button
+                        onClick={() => {
+                          handleExportSpedisciOnlineCSV();
+                          setShowFilters(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-yellow-50 flex items-center gap-2 text-yellow-700"
+                        title="Esporta CSV nel formato spedisci.online per importazione manuale"
+                      >
+                        <Upload className="w-4 h-4 text-yellow-600" />
+                        <span>CSV Spedisci.Online</span>
                       </button>
                     </div>
                   )}

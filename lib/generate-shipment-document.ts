@@ -129,6 +129,104 @@ export function generateShipmentCSV(spedizione: SpedizioneData): string {
 }
 
 /**
+ * Genera CSV multiplo per lista spedizioni
+ * Formato compatibile con spedisci.online per importazione batch
+ * 
+ * @param spedizioni Array di spedizioni da esportare
+ * @returns Stringa CSV con header + tutte le righe
+ */
+export function generateMultipleShipmentsCSV(spedizioni: SpedizioneData[]): string {
+  if (spedizioni.length === 0) {
+    return '';
+  }
+
+  // Header CSV (una sola volta)
+  const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
+  
+  // Genera CSV per ogni spedizione
+  const rows = spedizioni.map(spedizione => {
+    // Usa la stessa logica di generateShipmentCSV ma solo per la riga dati
+    const formatValue = (value: any): string => {
+      if (value === null || value === undefined || value === '') return '';
+      if (typeof value === 'number') return String(value).replace(',', '.');
+      if (typeof value === 'string' && /^\d+,\d+$/.test(value)) {
+        return value.replace(',', '.');
+      }
+      return String(value);
+    };
+
+    const escapeCSV = (value: string): string => {
+      if (!value) return '';
+      if (value.includes(';') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const destinatario = escapeCSV(spedizione.destinatario.nome || '');
+    const indirizzo = escapeCSV(spedizione.destinatario.indirizzo || '');
+    const cap = spedizione.destinatario.cap || '';
+    const localita = escapeCSV(spedizione.destinatario.citta || '');
+    const provincia = (spedizione.destinatario.provincia || '').toUpperCase().slice(0, 2);
+    const country = 'IT';
+    const peso = formatValue(spedizione.peso || 0);
+    const colli = formatValue(spedizione.colli || 1);
+    const contrassegno = formatValue(spedizione.contrassegno || '');
+    const rif_mittente = escapeCSV(spedizione.rif_mittente || spedizione.mittente.nome || '');
+    const rif_destinatario = escapeCSV(spedizione.rif_destinatario || spedizione.destinatario.nome || '');
+    const note = escapeCSV(spedizione.note || '');
+    const telefono = spedizione.destinatario.telefono || '';
+    const email_destinatario = spedizione.destinatario.email || '';
+    const contenuto = escapeCSV(spedizione.contenuto || '');
+    const order_id = escapeCSV(spedizione.order_id || spedizione.tracking || '');
+    const totale_ordine = formatValue(spedizione.totale_ordine || spedizione.prezzoFinale || '');
+
+    return [
+      destinatario,
+      indirizzo,
+      cap,
+      localita,
+      provincia,
+      country,
+      peso,
+      colli,
+      contrassegno,
+      rif_mittente,
+      rif_destinatario,
+      note,
+      telefono,
+      email_destinatario,
+      contenuto,
+      order_id,
+      totale_ordine,
+    ].join(';') + ';';
+  });
+
+  // Restituisci header + tutte le righe
+  return header + '\n' + rows.join('\n');
+}
+
+/**
+ * Scarica CSV multiplo
+ */
+export function downloadMultipleCSV(content: string, filename: string) {
+  // BOM UTF-8 per compatibilità Excel + encoding UTF-8
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Scarica CSV
  * Formato spedisci.online: separatore punto e virgola, encoding UTF-8
  */
