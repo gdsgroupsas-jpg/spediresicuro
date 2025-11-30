@@ -121,30 +121,32 @@ export interface User {
 
 // Inizializza il database se non esiste
 function initDatabase(): Database {
+  // Utenti demo solo in sviluppo locale (non in produzione)
+  const demoUsers: User[] = process.env.NODE_ENV === 'development' ? [
+    {
+      id: '1',
+      email: 'admin@spediresicuro.it',
+      password: 'admin123', // Solo per sviluppo locale
+      name: 'Admin',
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      email: 'demo@spediresicuro.it',
+      password: 'demo123', // Solo per sviluppo locale
+      name: 'Demo User',
+      role: 'user',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ] : [];
+
   const defaultData: Database = {
     spedizioni: [],
     preventivi: [],
-    utenti: [
-      // Utenti demo predefiniti (in produzione rimuovere)
-      {
-        id: '1',
-        email: 'admin@spediresicuro.it',
-        password: 'admin123', // In produzione: hash con bcrypt
-        name: 'Admin',
-        role: 'admin',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        email: 'demo@spediresicuro.it',
-        password: 'demo123', // In produzione: hash con bcrypt
-        name: 'Demo User',
-        role: 'user',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ],
+    utenti: demoUsers,
     configurazioni: {
       margine: 15, // Margine predefinito 15%
     },
@@ -178,11 +180,12 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
-      db.utenti = [
+      // Utenti demo solo in sviluppo locale (non in produzione)
+      db.utenti = process.env.NODE_ENV === 'development' ? [
         {
           id: '1',
           email: 'admin@spediresicuro.it',
-          password: 'admin123',
+          password: 'admin123', // Solo per sviluppo locale
           name: 'Admin',
           role: 'admin',
           createdAt: new Date().toISOString(),
@@ -191,13 +194,13 @@ export function readDatabase(): Database {
         {
           id: '2',
           email: 'demo@spediresicuro.it',
-          password: 'demo123',
+          password: 'demo123', // Solo per sviluppo locale
           name: 'Demo User',
           role: 'user',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-      ];
+      ] : [];
       // Salva la migrazione
       writeDatabase(db);
     }
