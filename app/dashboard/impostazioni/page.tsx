@@ -171,7 +171,7 @@ export default function ImpostazioniPage() {
                       value={senderForm.nome}
                       onChange={(e) => setSenderForm({ ...senderForm, nome: e.target.value })}
                       placeholder="es. Mario Rossi / Azienda S.r.l."
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -189,7 +189,7 @@ export default function ImpostazioniPage() {
                       value={senderForm.indirizzo}
                       onChange={(e) => setSenderForm({ ...senderForm, indirizzo: e.target.value })}
                       placeholder="es. Via Roma, 123"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -204,7 +204,7 @@ export default function ImpostazioniPage() {
                       value={senderForm.citta}
                       onChange={(e) => setSenderForm({ ...senderForm, citta: e.target.value })}
                       placeholder="es. Milano"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -236,7 +236,7 @@ export default function ImpostazioniPage() {
                       onChange={(e) => setSenderForm({ ...senderForm, cap: e.target.value.replace(/\D/g, '').slice(0, 5) })}
                       placeholder="es. 20100"
                       maxLength={5}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -254,7 +254,7 @@ export default function ImpostazioniPage() {
                       value={senderForm.telefono}
                       onChange={(e) => setSenderForm({ ...senderForm, telefono: e.target.value })}
                       placeholder="es. 3331234567"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -272,7 +272,7 @@ export default function ImpostazioniPage() {
                       value={senderForm.email || ''}
                       onChange={(e) => setSenderForm({ ...senderForm, email: e.target.value })}
                       placeholder="es. info@azienda.it"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>

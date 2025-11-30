@@ -216,7 +216,7 @@ export default function AsyncLocationCombobox({
             }
           }}
           placeholder={placeholder}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-cyan focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-cyan focus:border-transparent"
           aria-label="Cerca città, provincia o CAP"
           aria-haspopup="listbox"
           aria-controls={isOpen ? 'location-results' : undefined}

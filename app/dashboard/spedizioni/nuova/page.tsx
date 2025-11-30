@@ -106,7 +106,7 @@ function SmartInput({
           onChange={(e) => onChange(e.target.value)}
           required={required}
           placeholder={placeholder}
-          className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+          className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 ${
             showError
               ? 'border-red-300 ring-2 ring-red-100 focus:ring-red-500 focus:border-red-500'
               : showValid
@@ -684,7 +684,7 @@ export default function NuovaSpedizionePage() {
                         onChange={(e) => setFormData((prev) => ({ ...prev, peso: e.target.value }))}
                         required
                         placeholder="0.00"
-                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 ${
                           validation.peso
                             ? 'border-green-300 ring-2 ring-green-100'
                             : formData.peso
@@ -711,7 +711,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.lunghezza}
                       onChange={(e) => setFormData((prev) => ({ ...prev, lunghezza: e.target.value }))}
                       placeholder="0.0"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
                     />
                   </div>
 
@@ -726,7 +726,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.larghezza}
                       onChange={(e) => setFormData((prev) => ({ ...prev, larghezza: e.target.value }))}
                       placeholder="0.0"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
                     />
                   </div>
 
@@ -741,7 +741,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.altezza}
                       onChange={(e) => setFormData((prev) => ({ ...prev, altezza: e.target.value }))}
                       placeholder="0.0"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -755,7 +755,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.tipoSpedizione}
                       onChange={(e) => setFormData((prev) => ({ ...prev, tipoSpedizione: e.target.value }))}
                       required
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
                     >
                       <option value="standard">📦 Standard</option>
                       <option value="express">⚡ Express</option>
@@ -772,7 +772,7 @@ export default function NuovaSpedizionePage() {
                       onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
                       rows={3}
                       placeholder="Note aggiuntive..."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
                     />
                   </div>
                 </div>
