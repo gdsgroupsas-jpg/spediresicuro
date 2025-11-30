@@ -601,7 +601,7 @@ export default function ListaSpedizioniPage() {
     }
   };
 
-  // Export multiplo usando ExportService (solo spedizioni selezionate)
+  // Export multiplo usando formato corretto per importazione
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
     const spedizioniToExport = selectedShipments.size > 0
       ? filteredSpedizioni.filter(s => selectedShipments.has(s.id))
@@ -614,46 +614,89 @@ export default function ListaSpedizioniPage() {
 
     setIsExporting(true);
     try {
-      // Converti formato spedizioni per ExportService
-      const shipmentsForExport = spedizioniToExport.map((s) => ({
-        tracking_number: s.tracking || s.id,
-        created_at: s.createdAt,
-        status: s.status || 'in_preparazione',
-        courier_name: s.corriere || '',
-        recipient_name: s.destinatario?.nome || '',
-        recipient_address: s.destinatario?.indirizzo || '',
-        recipient_city: s.destinatario?.citta || '',
-        recipient_province: s.destinatario?.provincia || '',
-        recipient_zip: s.destinatario?.cap || '',
-        recipient_phone: s.destinatario?.telefono || '',
-        recipient_email: s.destinatario?.email || '',
-        sender_name: s.mittente?.nome || '',
-        sender_address: s.mittente?.indirizzo || '',
-        sender_city: s.mittente?.citta || '',
-        sender_province: s.mittente?.provincia || '',
-        sender_zip: s.mittente?.cap || '',
-        weight: s.peso || 0,
-        service_type: s.tipoSpedizione || 'standard',
-        total_price: s.prezzoFinale || 0,
-      }));
+      // Per CSV, usa il formato corretto per importazione (compatibile con Supabase)
+      if (format === 'csv') {
+        // Converti formato spedizioni per generateMultipleShipmentsCSV
+        const spedizioniFormattate = spedizioniToExport.map((s) => ({
+          destinatario: {
+            nome: s.destinatario?.nome || '',
+            indirizzo: s.destinatario?.indirizzo || '',
+            citta: s.destinatario?.citta || '',
+            provincia: s.destinatario?.provincia || '',
+            cap: s.destinatario?.cap || '',
+            telefono: s.destinatario?.telefono || '',
+            email: s.destinatario?.email || '',
+          },
+          mittente: {
+            nome: s.mittente?.nome || '',
+            indirizzo: s.mittente?.indirizzo || '',
+            citta: s.mittente?.citta || '',
+            provincia: s.mittente?.provincia || '',
+            cap: s.mittente?.cap || '',
+            telefono: s.mittente?.telefono || '',
+            email: s.mittente?.email || '',
+          },
+          peso: s.peso || 1,
+          colli: s.colli || 1,
+          contrassegno: s.contrassegno || 0,
+          rif_mittente: s.rif_mittente || s.mittente?.nome || 'MITTENTE',
+          rif_destinatario: s.rif_destinatario || s.destinatario?.nome || '',
+          note: s.note || '',
+          contenuto: s.contenuto || '',
+          order_id: s.order_id || s.tracking || '',
+          totale_ordine: s.totale_ordine || s.contrassegno || s.prezzoFinale || 0,
+          tracking: s.tracking || '',
+          dimensioni: s.dimensioni || { lunghezza: 0, larghezza: 0, altezza: 0 },
+          tipoSpedizione: s.tipoSpedizione || 'standard',
+          corriere: s.corriere || '',
+          prezzoFinale: s.prezzoFinale || 0,
+          status: s.status || 'in_preparazione',
+        }));
 
-      const result = await ExportService.exportShipments(shipmentsForExport, format);
+        const csvContent = generateMultipleShipmentsCSV(spedizioniFormattate);
+        const filename = `spedizioni_${new Date().toISOString().split('T')[0]}.csv`;
+        downloadMultipleCSV(csvContent, filename);
+      } else {
+        // Per XLSX e PDF, usa ExportService
+        const shipmentsForExport = spedizioniToExport.map((s) => ({
+          tracking_number: s.tracking || s.id,
+          created_at: s.createdAt,
+          status: s.status || 'in_preparazione',
+          courier_name: s.corriere || '',
+          recipient_name: s.destinatario?.nome || '',
+          recipient_address: s.destinatario?.indirizzo || '',
+          recipient_city: s.destinatario?.citta || '',
+          recipient_province: s.destinatario?.provincia || '',
+          recipient_zip: s.destinatario?.cap || '',
+          recipient_phone: s.destinatario?.telefono || '',
+          recipient_email: s.destinatario?.email || '',
+          sender_name: s.mittente?.nome || '',
+          sender_address: s.mittente?.indirizzo || '',
+          sender_city: s.mittente?.citta || '',
+          sender_province: s.mittente?.provincia || '',
+          sender_zip: s.mittente?.cap || '',
+          weight: s.peso || 0,
+          service_type: s.tipoSpedizione || 'standard',
+          total_price: s.prezzoFinale || 0,
+        }));
 
-      // Crea blob e scarica
-      // Converti Buffer in formato compatibile con Blob
-      const blobData = typeof result.data === 'string'
-        ? result.data
-        : new Uint8Array(result.data);
-      const blob = new Blob([blobData], { type: result.mimeType });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', result.filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+        const result = await ExportService.exportShipments(shipmentsForExport, format);
+
+        // Crea blob e scarica
+        const blobData = typeof result.data === 'string'
+          ? result.data
+          : new Uint8Array(result.data);
+        const blob = new Blob([blobData], { type: result.mimeType });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', result.filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Errore export:', error);
       alert(`Errore durante l'export: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);

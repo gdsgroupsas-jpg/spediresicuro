@@ -123,6 +123,31 @@ export const authOptions = {
               image: user.image || undefined,
             });
           }
+
+          // ⚠️ NUOVO: Crea/aggiorna profilo in user_profiles Supabase
+          try {
+            const { supabaseAdmin } = await import('@/lib/supabase');
+            const { isSupabaseConfigured } = await import('@/lib/supabase');
+            
+            if (isSupabaseConfigured()) {
+              await supabaseAdmin
+                .from('user_profiles')
+                .upsert(
+                  {
+                    email: user.email,
+                    name: user.name || user.email.split('@')[0],
+                    provider: account?.provider || 'credentials',
+                    provider_id: account?.providerAccountId || null,
+                    nextauth_user_id: user.id || null,
+                  },
+                  { onConflict: 'email' }
+                );
+              console.log(`✅ [SUPABASE] Profilo utente sincronizzato in user_profiles per ${user.email}`);
+            }
+          } catch (supabaseError: any) {
+            // Non bloccare il login se la sincronizzazione Supabase fallisce
+            console.warn('⚠️ [SUPABASE] Errore sincronizzazione profilo:', supabaseError.message);
+          }
         } catch (error) {
           console.error('Errore gestione utente OAuth:', error);
           // Non bloccare il login in caso di errore
