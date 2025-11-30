@@ -26,7 +26,7 @@ interface Platform {
   icon: any
   description: string
   color: string
-  credentials: Record<string, string>
+  credentials: Record<string, string | undefined>
 }
 
 interface IntegrationDialogProps {

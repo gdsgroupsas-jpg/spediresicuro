@@ -7,8 +7,7 @@
  * per la creazione automatica delle LDV con routing ottimale.
  */
 
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-config'
+import { auth } from '@/lib/auth-config'
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online'
 import { getFulfillmentOrchestrator, ShipmentResult } from '@/lib/engine/fulfillment-orchestrator'
 import { findUserByEmail } from '@/lib/database'
@@ -20,7 +19,7 @@ import type { Shipment, CreateShipmentInput } from '@/types/shipments'
  */
 export async function getSpedisciOnlineCredentials() {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return { success: false, error: 'Non autenticato' }
@@ -49,12 +48,32 @@ export async function getSpedisciOnlineCredentials() {
       }
     }
 
+    const userEmail = session.user.email
+
     // Fallback: database locale
-    const user = findUserByEmail(session.user.email)
-    if (user?.integrazioni?.spedisci_online) {
-      return {
-        success: true,
-        credentials: user.integrazioni.spedisci_online,
+    const user = findUserByEmail(userEmail)
+
+    if (user) {
+      if (Array.isArray(user.integrazioni)) {
+        const arrayIntegration = user.integrazioni.find(
+          (integration) => integration.platform === 'spedisci-online'
+        )
+
+        if (arrayIntegration) {
+          return {
+            success: true,
+            credentials: arrayIntegration.credentials,
+          }
+        }
+      } else {
+        const legacyIntegrations = (user as { integrazioni?: Record<string, any> }).integrazioni
+
+        if (legacyIntegrations?.spedisci_online) {
+          return {
+            success: true,
+            credentials: legacyIntegrations.spedisci_online,
+          }
+        }
       }
     }
 
@@ -85,7 +104,7 @@ export async function createShipmentWithOrchestrator(
 ): Promise<ShipmentResult> {
   try {
     // 1. Verifica autenticazione
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return {
@@ -154,11 +173,13 @@ export async function saveSpedisciOnlineCredentials(credentials: {
   base_url?: string
 }) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.email) {
       return { success: false, error: 'Non autenticato' }
     }
+
+    const userEmail = session.user.email
 
     // Validazione base
     if (!credentials.api_key) {
@@ -193,7 +214,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
     // Fallback: database locale
     const { readDatabase, writeDatabase } = await import('@/lib/database')
     const db = readDatabase()
-    const user = db.users.find((u: any) => u.email === session.user.email)
+    const user = db.utenti.find((u: any) => u.email === userEmail)
     
     if (user) {
       if (!user.integrazioni) {
