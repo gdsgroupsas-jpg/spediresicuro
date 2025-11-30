@@ -232,7 +232,7 @@ export function addSpedizione(spedizione: any, userEmail?: string): any {
   // ⚠️ CRITICO: Normalizza tracking/ldv
   // PRIORITÀ: ldv > tracking > generato automaticamente
   const ldv = spedizione.ldv || '';
-  const tracking = spedizione.tracking || spedizione.ldv || `TRK${Date.now()}`;
+  const tracking = spedizione.tracking || spedizione.ldv || spedizione.tracking_number || spedizione.trackingNumber || `TRK${Date.now()}`;
 
   // ⚠️ DEBUG: Log per verificare cosa viene salvato
   console.log('💾 Salvando spedizione:', {
@@ -241,19 +241,72 @@ export function addSpedizione(spedizione: any, userEmail?: string): any {
     ldv_salvato: ldv,
     tracking_salvato: tracking,
   });
-
+  
+  // Prepara struttura completa spedizione
   const nuovaSpedizione = {
     ...spedizione,
-    id: Date.now().toString(),
+    id: spedizione.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    createdAt: spedizione.createdAt || spedizione.created_at || new Date().toISOString(),
+    created_by_user_email: userEmail || '',
+    // Assicura struttura destinatario (priorità: struttura esistente > campi separati)
+    // ⚠️ IMPORTANTE: Se esiste già destinatario con nome, mantienilo, altrimenti costruiscilo
+    destinatario: (spedizione.destinatario && spedizione.destinatario.nome) 
+      ? spedizione.destinatario 
+      : {
+          nome: spedizione.destinatarioNome || spedizione.nome || spedizione.nominativo || spedizione.destinatario?.nome || '',
+          indirizzo: spedizione.destinatarioIndirizzo || spedizione.indirizzo || spedizione.destinatario?.indirizzo || '',
+          citta: spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || spedizione.destinatario?.citta || '',
+          provincia: spedizione.destinatarioProvincia || spedizione.provincia || spedizione.destinatario?.provincia || '',
+          cap: spedizione.destinatarioCap || spedizione.cap || spedizione.destinatario?.cap || '',
+          telefono: spedizione.destinatarioTelefono || spedizione.telefono || spedizione.destinatario?.telefono || '',
+          email: spedizione.destinatarioEmail || spedizione.email_dest || spedizione.email || spedizione.destinatario?.email || '',
+        },
+    // Assicura struttura mittente
+    mittente: spedizione.mittente || {
+      nome: spedizione.mittenteNome || 'Mittente Predefinito',
+      indirizzo: spedizione.mittenteIndirizzo || '',
+      citta: spedizione.mittenteCitta || '',
+      provincia: spedizione.mittenteProvincia || '',
+      cap: spedizione.mittenteCap || '',
+      telefono: spedizione.mittenteTelefono || '',
+      email: spedizione.mittenteEmail || '',
+    },
+    // ⚠️ CRITICO: Tracking (ldv è il tracking number, NON order_id)
+    // LDV = Lettera di Vettura = Tracking Number (es. "3UW1LZ1436641")
+    // order_id è un campo separato (es. "406-5945828-8539538")
+    // Per ordini importati da Spedisci.Online, ldv contiene il tracking
+    // Per ordini creati dalla piattaforma, tracking è già presente
+    // ⚠️ IMPORTANTE: Mantieni entrambi i campi per compatibilità
     ldv: ldv, // Campo LDV originale (importante per Spedisci.Online)
     tracking: tracking, // Tracking normalizzato (può essere ldv o generato)
-    createdAt: new Date().toISOString(),
-    created_by_user_email: userEmail || '',
+    // Assicura status
+    status: spedizione.status || 'in_preparazione',
+    // Assicura prezzo
+    prezzoFinale: spedizione.prezzoFinale || spedizione.totale_ordine || spedizione.costo || 0,
+    // Mantieni tutti gli altri campi
+    peso: spedizione.peso || 1,
+    tipoSpedizione: spedizione.tipoSpedizione || 'standard',
+    corriere: spedizione.corriere || '',
+    imported: spedizione.imported || false,
+    importSource: spedizione.importSource || '',
+    importPlatform: spedizione.importPlatform || '',
+    verified: spedizione.verified || false,
+    order_id: spedizione.order_id || '',
+    totale_ordine: spedizione.totale_ordine || spedizione.costo || 0,
+    rif_mittente: spedizione.rif_mittente || spedizione.rif_mitt || '',
+    rif_destinatario: spedizione.rif_destinatario || spedizione.rif_dest || '',
+    note: spedizione.note || '',
+    contrassegno: spedizione.contrassegno,
+    assicurazione: spedizione.assicurazione,
+    dimensioni: spedizione.dimensioni,
+    colli: spedizione.colli || 1,
+    // ⚠️ IMPORTANTE: Assicura che deleted sia sempre false per nuove spedizioni
+    deleted: false,
   };
-
+  
   db.spedizioni.push(nuovaSpedizione);
   writeDatabase(db);
-
+  
   return nuovaSpedizione;
 }
 
@@ -276,6 +329,26 @@ export function addPreventivo(preventivo: any): void {
 export function getSpedizioni(): any[] {
   const db = readDatabase();
   return db.spedizioni;
+}
+
+/**
+ * Aggiorna una spedizione esistente
+ */
+export function updateSpedizione(id: string, updates: any): void {
+  const db = readDatabase();
+  const index = db.spedizioni.findIndex((s: any) => s.id === id);
+  
+  if (index === -1) {
+    throw new Error('Spedizione non trovata');
+  }
+  
+  db.spedizioni[index] = {
+    ...db.spedizioni[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  
+  writeDatabase(db);
 }
 
 /**
