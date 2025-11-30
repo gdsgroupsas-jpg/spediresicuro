@@ -142,50 +142,18 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
         result.recipient_email = email;
       }
 
-      // Nome/Cognome/Ragione Sociale (di solito prima riga o dopo "Destinatario:")
-      // Distingui tra persona fisica e giuridica
-      if (i === 0 && !result.recipient_name && line.length > 3 && line.length < 80) {
-        // Se contiene indicatori aziendali, è ragione sociale
-        const isCompany = /\b(S\.r\.l\.|S\.p\.A\.|S\.n\.c\.|S\.a\.s\.|S\.r\.l|SPA|SRL|SNC|SAS)\b/i.test(line);
-        // Se contiene titoli, è persona fisica
-        const isPerson = /\b(Dott\.|Dott\.ssa|Sig\.|Sig\.ra|Sig\.na|Avv\.|Ing\.|Arch\.)\b/i.test(line);
-        
-        if (isCompany || isPerson || !/\d/.test(line)) {
-          // Probabilmente è un nome, non un indirizzo
-          result.recipient_name = line;
-        }
+      // Nome (di solito prima riga o dopo "Destinatario:")
+      if (i === 0 && !result.recipient_name && line.length > 3 && line.length < 50) {
+        result.recipient_name = line;
       }
 
-      // Cerca dopo etichette comuni
-      const lowerLine = line.toLowerCase();
-      if ((lowerLine.includes('destinatario') || 
-           lowerLine.includes('spedire a') || 
-           lowerLine.includes('consegna a') ||
-           lowerLine.includes('nome:')) && 
-          i + 1 < lines.length) {
-        const nextLine = lines[i + 1];
-        if (nextLine && nextLine.length > 2 && nextLine.length < 80) {
-          result.recipient_name = nextLine;
-        }
+      if (line.toLowerCase().includes('destinatario') && i + 1 < lines.length) {
+        result.recipient_name = lines[i + 1];
       }
 
-      // Indirizzo completo (cerca via, corso, piazza, ecc. + numero civico)
-      if (!result.recipient_address) {
-        // Pattern per indirizzo: tipo strada + nome + numero
-        const addressPattern = /^(via|corso|piazza|viale|largo|strada|vicolo|piazzale|lungomare|borgo|contrada|frazione)\s+[a-zàèéìòù\s]+(?:\s*,?\s*)(\d+[a-z]?)(?:\s*[/-]\s*\d+[a-z]?)?/i;
-        const addressMatch = line.match(addressPattern);
-        
-        if (addressMatch) {
-          // Estrai indirizzo completo con numero civico
-          result.recipient_address = line.trim();
-        } else if (/^(via|corso|piazza|viale|largo|strada|vicolo|piazzale|lungomare|borgo|contrada|frazione)/i.test(line)) {
-          // Se inizia con tipo di strada ma non ha numero, prendi anche la riga successiva se ha numero
-          if (i + 1 < lines.length && /\d+/.test(lines[i + 1])) {
-            result.recipient_address = `${line.trim()}, ${lines[i + 1].trim()}`;
-          } else {
-            result.recipient_address = line.trim();
-          }
-        }
+      // Indirizzo (cerca via, corso, piazza, ecc.)
+      if (!result.recipient_address && /^(via|corso|piazza|viale|largo|strada|vicolo)/i.test(line)) {
+        result.recipient_address = line;
       }
     }
 

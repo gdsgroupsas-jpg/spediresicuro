@@ -130,7 +130,9 @@ export function generateShipmentCSV(spedizione: SpedizioneData): string {
 
 /**
  * Genera CSV multiplo per lista spedizioni
- * Formato compatibile con spedisci.online per importazione batch
+ * Formato ESATTO spedisci.online per importazione batch
+ * Separatore: VIRGOLA (,)
+ * Indirizzo sempre tra virgolette se contiene virgole
  * 
  * @param spedizioni Array di spedizioni da esportare
  * @returns Stringa CSV con header + tutte le righe
@@ -140,47 +142,77 @@ export function generateMultipleShipmentsCSV(spedizioni: SpedizioneData[]): stri
     return '';
   }
 
-  // Header CSV (una sola volta)
-  const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
+  // Helper per formattare valori numerici (virgola decimale → punto)
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined || value === '') return '';
+    if (typeof value === 'number') {
+      return String(value).replace(',', '.');
+    }
+    if (typeof value === 'string') {
+      // Se contiene virgola decimale (es. "25,5"), converti in punto
+      if (/^\d+,\d+$/.test(value.trim())) {
+        return value.replace(',', '.');
+      }
+      return value;
+    }
+    return String(value);
+  };
+
+  // Helper per escape CSV con VIRGOLA come separatore
+  // Indirizzo sempre tra virgolette se contiene virgole o spazi
+  const escapeCSV = (value: string, alwaysQuote: boolean = false): string => {
+    if (!value) return '';
+    const trimmed = value.trim();
+    
+    // Se contiene virgole, virgolette o newline, metti sempre tra virgolette
+    if (alwaysQuote || trimmed.includes(',') || trimmed.includes('"') || trimmed.includes('\n')) {
+      return `"${trimmed.replace(/"/g, '""')}"`;
+    }
+    return trimmed;
+  };
+
+  // Header CSV ESATTO come richiesto (separatore VIRGOLA)
+  const header = 'destinatario,indirizzo,cap,localita,provincia,country,peso,colli,contrassegno,rif_mittente,rif_destinatario,note,telefono,email_destinatario,contenuto,order_id,totale_ordine';
   
   // Genera CSV per ogni spedizione
   const rows = spedizioni.map(spedizione => {
-    // Usa la stessa logica di generateShipmentCSV ma solo per la riga dati
-    const formatValue = (value: any): string => {
-      if (value === null || value === undefined || value === '') return '';
-      if (typeof value === 'number') return String(value).replace(',', '.');
-      if (typeof value === 'string' && /^\d+,\d+$/.test(value)) {
-        return value.replace(',', '.');
-      }
-      return String(value);
-    };
-
-    const escapeCSV = (value: string): string => {
-      if (!value) return '';
-      if (value.includes(';') || value.includes('"') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    };
-
+    // Estrai e normalizza tutti i campi
     const destinatario = escapeCSV(spedizione.destinatario.nome || '');
-    const indirizzo = escapeCSV(spedizione.destinatario.indirizzo || '');
-    const cap = spedizione.destinatario.cap || '';
+    
+    // Indirizzo: sempre tra virgolette se contiene virgole o spazi (es. "Via Roma, n 20")
+    const indirizzoRaw = spedizione.destinatario.indirizzo || '';
+    const indirizzo = escapeCSV(indirizzoRaw, true); // alwaysQuote = true per indirizzo
+    
+    const cap = (spedizione.destinatario.cap || '').trim();
     const localita = escapeCSV(spedizione.destinatario.citta || '');
-    const provincia = (spedizione.destinatario.provincia || '').toUpperCase().slice(0, 2);
+    const provincia = (spedizione.destinatario.provincia || '').toUpperCase().trim().slice(0, 2);
     const country = 'IT';
     const peso = formatValue(spedizione.peso || 0);
     const colli = formatValue(spedizione.colli || 1);
     const contrassegno = formatValue(spedizione.contrassegno || '');
-    const rif_mittente = escapeCSV(spedizione.rif_mittente || spedizione.mittente.nome || '');
+    
+    // Rif mittente: default "MITTENTE" se non specificato
+    const rif_mittente = escapeCSV(spedizione.rif_mittente || spedizione.mittente.nome || 'MITTENTE');
+    
+    // Rif destinatario: default nome destinatario
     const rif_destinatario = escapeCSV(spedizione.rif_destinatario || spedizione.destinatario.nome || '');
+    
     const note = escapeCSV(spedizione.note || '');
-    const telefono = spedizione.destinatario.telefono || '';
-    const email_destinatario = spedizione.destinatario.email || '';
+    
+    // Telefono: rimuovi spazi e caratteri speciali, mantieni solo numeri
+    const telefonoRaw = spedizione.destinatario.telefono || '';
+    const telefono = telefonoRaw.replace(/[\s\-()]/g, '').replace(/^\+39/, '').trim();
+    
+    const email_destinatario = (spedizione.destinatario.email || '').trim();
     const contenuto = escapeCSV(spedizione.contenuto || '');
+    
+    // Order ID: tracking o order_id se presente
     const order_id = escapeCSV(spedizione.order_id || spedizione.tracking || '');
-    const totale_ordine = formatValue(spedizione.totale_ordine || spedizione.prezzoFinale || '');
+    
+    // Totale ordine: contrassegno o prezzo finale
+    const totale_ordine = formatValue(spedizione.totale_ordine || spedizione.contrassegno || spedizione.prezzoFinale || '');
 
+    // Costruisci riga CSV con VIRGOLA come separatore (NO virgola finale)
     return [
       destinatario,
       indirizzo,
@@ -199,10 +231,10 @@ export function generateMultipleShipmentsCSV(spedizioni: SpedizioneData[]): stri
       contenuto,
       order_id,
       totale_ordine,
-    ].join(';') + ';';
+    ].join(',');
   });
 
-  // Restituisci header + tutte le righe
+  // Restituisci header + tutte le righe (separate da newline)
   return header + '\n' + rows.join('\n');
 }
 
