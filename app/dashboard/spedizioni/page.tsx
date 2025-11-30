@@ -14,6 +14,7 @@ import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, U
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
 import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
+import type { SpedizioneData } from '@/lib/generate-shipment-document';
 
 // Interfaccia per una spedizione
 interface Spedizione {
@@ -273,6 +274,49 @@ export default function ListaSpedizioniPage() {
     return filtered;
   }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, customDateFrom, customDateTo]);
 
+  // Converti spedizione nel formato richiesto da spedisci.online
+  const mapToSpedisciOnlineData = (spedizione: Spedizione): SpedizioneData => ({
+    tracking: spedizione.tracking || spedizione.id,
+    mittente: {
+      nome: spedizione.mittente?.nome || '',
+      indirizzo: spedizione.mittente?.indirizzo || '',
+      citta: spedizione.mittente?.citta || '',
+      provincia: spedizione.mittente?.provincia || '',
+      cap: spedizione.mittente?.cap || '',
+      telefono: spedizione.mittente?.telefono || '',
+      email: spedizione.mittente?.email || '',
+    },
+    destinatario: {
+      nome: spedizione.destinatario?.nome || '',
+      indirizzo: spedizione.destinatario?.indirizzo || '',
+      citta: spedizione.destinatario?.citta || '',
+      provincia: spedizione.destinatario?.provincia || '',
+      cap: spedizione.destinatario?.cap || '',
+      telefono: spedizione.destinatario?.telefono || '',
+      email: spedizione.destinatario?.email || '',
+    },
+    peso: spedizione.peso || 0,
+    dimensioni: {
+      lunghezza: 0,
+      larghezza: 0,
+      altezza: 0,
+    },
+    tipoSpedizione: spedizione.tipoSpedizione || 'standard',
+    corriere: spedizione.corriere || '',
+    prezzoFinale: spedizione.prezzoFinale || 0,
+    status: spedizione.status || 'in_preparazione',
+    note: '',
+    createdAt: spedizione.createdAt,
+    contrassegno: '',
+    assicurazione: '',
+    contenuto: '',
+    order_id: spedizione.tracking || spedizione.id,
+    totale_ordine: spedizione.prezzoFinale || '',
+    rif_mittente: spedizione.mittente?.nome || '',
+    rif_destinatario: spedizione.destinatario?.nome || '',
+    colli: 1,
+  });
+
   // Export multiplo usando ExportService
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
     if (filteredSpedizioni.length === 0) {
@@ -325,6 +369,32 @@ export default function ListaSpedizioniPage() {
     } catch (error) {
       console.error('Errore export:', error);
       alert(`Errore durante l'export: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportSpedisciOnlineCSV = async () => {
+    if (filteredSpedizioni.length === 0) {
+      alert('Nessuna spedizione da esportare');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const formattedShipments = filteredSpedizioni.map(mapToSpedisciOnlineData);
+      const csvContent = generateMultipleShipmentsCSV(formattedShipments);
+
+      if (!csvContent) {
+        alert('Impossibile generare il CSV. Controlla i dati delle spedizioni.');
+        return;
+      }
+
+      const filename = `spedizioni-spedisci-online-${new Date().toISOString().split('T')[0]}.csv`;
+      downloadMultipleCSV(csvContent, filename);
+    } catch (error) {
+      console.error('Errore export spedisci.online:', error);
+      alert('Errore durante la generazione del CSV spedisci.online');
     } finally {
       setIsExporting(false);
     }

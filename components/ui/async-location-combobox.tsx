@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Command } from 'cmdk';
 import type { GeoLocationOption, OnLocationSelect } from '@/types/geo';
 
@@ -62,6 +62,7 @@ export default function AsyncLocationCombobox({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
 
   // Aggiorna inputValue quando defaultValue cambia
   useEffect(() => {
@@ -219,6 +220,8 @@ export default function AsyncLocationCombobox({
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-cyan focus:border-transparent"
           aria-label="Cerca città, provincia o CAP"
           aria-haspopup="listbox"
+          aria-controls={listboxId}
+          aria-expanded={isOpen}
           role="combobox"
         />
 
@@ -253,7 +256,7 @@ export default function AsyncLocationCombobox({
             </div>
           ) : (
             <Command>
-              <Command.List>
+              <Command.List id={listboxId}>
                 {results.map((location, index) => (
                   <Command.Item
                     key={`${location.city}-${location.province}-${index}`}
