@@ -1,17 +1,19 @@
 'use server'
 
 /**
- * Server Actions per Integrazione Spedisci.Online
+ * Server Actions per Integrazione Spedisci.Online e Fulfillment Orchestrator
  * 
- * Gestisce l'invio automatico delle spedizioni a spedisci.online
- * per la creazione automatica delle LDV.
+ * Gestisce l'invio automatico delle spedizioni tramite orchestrator intelligente
+ * per la creazione automatica delle LDV con routing ottimale.
  */
 
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-config'
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online'
+import { getFulfillmentOrchestrator, ShipmentResult } from '@/lib/engine/fulfillment-orchestrator'
 import { findUserByEmail } from '@/lib/database'
 import { createServerActionClient } from '@/lib/supabase-server'
+import type { Shipment, CreateShipmentInput } from '@/types/shipments'
 
 /**
  * Recupera credenziali spedisci.online dell'utente
@@ -70,54 +72,75 @@ export async function getSpedisciOnlineCredentials() {
 }
 
 /**
- * Invia spedizione a spedisci.online
+ * Crea spedizione tramite Fulfillment Orchestrator
+ * 
+ * Usa routing intelligente:
+ * 1. Adapter diretto (se disponibile) - massima velocità
+ * 2. Broker spedisci.online (se configurato) - copertura completa
+ * 3. Fallback CSV (se tutto fallisce) - zero perdita ordini
  */
-export async function sendShipmentToSpedisciOnline(shipmentData: any) {
+export async function createShipmentWithOrchestrator(
+  shipmentData: Shipment | CreateShipmentInput | any,
+  courierCode: string
+): Promise<ShipmentResult> {
   try {
     // 1. Verifica autenticazione
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
-      return { success: false, error: 'Non autenticato' }
+      return {
+        success: false,
+        tracking_number: '',
+        carrier: courierCode,
+        method: 'fallback',
+        error: 'Non autenticato',
+      }
     }
 
-    // 2. Recupera credenziali
+    // 2. Ottieni orchestrator
+    const orchestrator = getFulfillmentOrchestrator()
+
+    // 3. Registra broker adapter (spedisci.online) se disponibile
     const credentialsResult = await getSpedisciOnlineCredentials()
-    
-    if (!credentialsResult.success || !credentialsResult.credentials) {
-      return {
-        success: false,
-        error: 'Credenziali spedisci.online non configurate. Configurale nelle Impostazioni.',
+    if (credentialsResult.success && credentialsResult.credentials) {
+      try {
+        const brokerAdapter = new SpedisciOnlineAdapter(credentialsResult.credentials)
+        orchestrator.registerBrokerAdapter(brokerAdapter)
+      } catch (error) {
+        console.warn('Impossibile registrare broker adapter:', error)
       }
     }
 
-    // 3. Crea adapter
-    const adapter = new SpedisciOnlineAdapter(credentialsResult.credentials)
+    // 4. Crea spedizione tramite orchestrator (routing intelligente)
+    const result = await orchestrator.createShipment(shipmentData, courierCode)
 
-    // 4. Test connessione
-    const isConnected = await adapter.connect()
-    if (!isConnected) {
-      return {
-        success: false,
-        error: 'Impossibile connettersi a spedisci.online. Verifica le credenziali.',
-      }
-    }
-
-    // 5. Crea spedizione
-    const result = await adapter.createShipment(shipmentData)
-
-    return {
-      success: true,
-      tracking_number: result.tracking_number,
-      label_url: result.label_url,
-      message: 'Spedizione inviata a spedisci.online con successo',
-    }
+    return result
   } catch (error) {
-    console.error('Errore invio spedizione a spedisci.online:', error)
+    console.error('Errore creazione spedizione tramite orchestrator:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Errore durante l\'invio',
+      tracking_number: '',
+      carrier: courierCode,
+      method: 'fallback',
+      error: error instanceof Error ? error.message : 'Errore durante la creazione',
+      message: 'Errore durante la creazione LDV',
     }
+  }
+}
+
+/**
+ * @deprecated Usa createShipmentWithOrchestrator invece
+ * Mantenuto per retrocompatibilità
+ */
+export async function sendShipmentToSpedisciOnline(shipmentData: any) {
+  const result = await createShipmentWithOrchestrator(shipmentData, 'GLS')
+  
+  return {
+    success: result.success,
+    tracking_number: result.tracking_number,
+    label_url: result.label_url,
+    message: result.message || 'Spedizione processata',
+    error: result.error,
   }
 }
 
