@@ -50,10 +50,15 @@ export async function getSpedisciOnlineCredentials() {
 
     // Fallback: database locale
     const user = findUserByEmail(session.user.email)
-    if (user?.integrazioni?.spedisci_online) {
-      return {
-        success: true,
-        credentials: user.integrazioni.spedisci_online,
+    if (user?.integrazioni) {
+      const spedisciOnlineIntegration = user.integrazioni.find(
+        (i: any) => i.platform === 'spedisci_online' || i.platform === 'spedisci-online'
+      )
+      if (spedisciOnlineIntegration) {
+        return {
+          success: true,
+          credentials: spedisciOnlineIntegration.credentials,
+        }
       }
     }
 
@@ -190,17 +195,30 @@ export async function saveSpedisciOnlineCredentials(credentials: {
     }
 
     // Fallback: database locale
-    const { readDatabase, writeDatabase } = await import('@/lib/database')
-    const db = readDatabase()
-    const user = db.users.find((u: any) => u.email === session.user.email)
-    
+    const { findUserByEmail: findUser, updateUser } = await import('@/lib/database')
+    const user = findUser(session.user.email)
+
     if (user) {
-      if (!user.integrazioni) {
-        user.integrazioni = {}
+      const integrations = user.integrazioni || []
+      const existingIndex = integrations.findIndex(
+        (i: any) => i.platform === 'spedisci_online' || i.platform === 'spedisci-online'
+      )
+
+      const integration = {
+        platform: 'spedisci-online',
+        credentials,
+        connectedAt: new Date().toISOString(),
+        status: 'active' as const,
       }
-      user.integrazioni.spedisci_online = credentials
-      writeDatabase(db)
-      
+
+      if (existingIndex >= 0) {
+        integrations[existingIndex] = integration
+      } else {
+        integrations.push(integration)
+      }
+
+      updateUser(user.id, { integrazioni: integrations })
+
       return { success: true, message: 'Credenziali salvate con successo' }
     }
 

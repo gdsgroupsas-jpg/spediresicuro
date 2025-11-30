@@ -219,7 +219,6 @@ export default function AsyncLocationCombobox({
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-cyan focus:border-transparent"
           aria-label="Cerca città, provincia o CAP"
           aria-haspopup="listbox"
-          aria-expanded={isOpen ? 'true' : 'false'}
           aria-controls={isOpen ? 'location-results' : undefined}
         />
 
