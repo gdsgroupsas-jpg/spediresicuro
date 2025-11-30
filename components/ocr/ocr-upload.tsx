@@ -7,7 +7,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Upload, Image, X, AlertCircle, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
+import { Upload, Image as ImageIcon, X, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface OCRUploadProps {
   onDataExtracted: (data: any) => void;
@@ -129,10 +130,13 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
       {preview && (
         <div className="relative">
           <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
-            <img
+            <Image
               src={preview}
               alt="Anteprima immagine caricata per estrazione OCR"
+              width={800}
+              height={600}
               className="w-full h-auto max-h-96 object-contain"
+              unoptimized
             />
 
             {/* Overlay durante estrazione */}

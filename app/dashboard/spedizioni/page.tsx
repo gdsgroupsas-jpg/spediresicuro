@@ -270,7 +270,7 @@ export default function ListaSpedizioniPage() {
     }
 
     return filtered;
-  }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter]);
+  }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, customDateFrom, customDateTo]);
 
   // Export multiplo usando ExportService
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {

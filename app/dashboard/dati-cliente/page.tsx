@@ -728,7 +728,7 @@ export default function DatiClientePage() {
                   className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 >
                   <option value="">Seleziona</option>
-                  <option value="carta_identita">Carta d'Identità</option>
+                  <option value="carta_identita">Carta d&apos;Identità</option>
                   <option value="patente">Patente</option>
                   <option value="passaporto">Passaporto</option>
                 </select>
