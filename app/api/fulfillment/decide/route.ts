@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createFulfillmentOrchestrator } from '@/lib/engine/fulfillment-orchestrator';
+import { getFulfillmentOrchestrator } from '@/lib/engine/fulfillment-orchestrator';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,23 +35,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crea orchestratore
-    const orchestrator = createFulfillmentOrchestrator(priorities);
+    // Ottieni orchestratore
+    const orchestrator = getFulfillmentOrchestrator();
 
-    // Ottieni decisione
-    const decision = await orchestrator.decide({
-      order_id,
-      items,
-      destination,
-      service_type,
-      delivery_deadline: delivery_deadline ? new Date(delivery_deadline) : undefined,
-      priorities,
-    });
-
+    // L'orchestrator attuale non ha metodo decide()
+    // Questo endpoint è per funzionalità futura
+    // Per ora restituiamo un errore o una risposta di base
+    
     return NextResponse.json({
-      success: true,
-      decision,
-    });
+      success: false,
+      error: 'Endpoint non ancora implementato. Usa createShipmentWithOrchestrator per creare spedizioni.',
+      message: 'Questo endpoint sarà implementato in futuro per decisioni di fulfillment avanzate.',
+    }, { status: 501 });
   } catch (error: any) {
     console.error('Fulfillment Decision Error:', error);
 
