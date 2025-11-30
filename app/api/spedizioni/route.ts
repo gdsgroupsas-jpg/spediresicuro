@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get('id');
     
     if (id) {
-      // Restituisci singola spedizione
-      const spedizioni = getSpedizioni();
+      // Restituisci singola spedizione (filtrata per utente autenticato)
+      const spedizioni = await getSpedizioni(session.user.email);
       const spedizione = spedizioni.find((s: any) => s.id === id);
       
       if (!spedizione || spedizione.deleted === true) {
@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    const spedizioni = getSpedizioni();
+    // Ottieni spedizioni filtrate per utente autenticato (multi-tenancy)
+    const spedizioni = await getSpedizioni(session.user.email);
 
     // Filtra solo spedizioni non eliminate (deleted deve essere esplicitamente true per essere filtrate)
     const spedizioniAttive = spedizioni.filter((s: any) => {
@@ -255,8 +256,8 @@ export async function POST(request: NextRequest) {
       deleted: false,
     };
 
-    // Salva nel database locale
-    addSpedizione(spedizione);
+    // Salva nel database (Supabase + JSON fallback)
+    await addSpedizione(spedizione, session.user.email);
 
     // INVIO AUTOMATICO LDV TRAMITE ORCHESTRATOR (se configurato)
     let ldvResult = null;

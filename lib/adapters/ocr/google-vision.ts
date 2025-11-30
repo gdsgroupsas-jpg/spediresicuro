@@ -95,9 +95,13 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
 
   /**
    * Parse indirizzo italiano da testo OCR
+   * Migliorato per distinguere etichette da valori e gestire screenshot WhatsApp
    */
   private parseItalianAddress(text: string): Record<string, string> {
     const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    
+    // Per screenshot WhatsApp, le prime righe contengono spesso nome e telefono
+    const isWhatsAppScreenshot = this.detectWhatsAppScreenshot(lines);
 
     const result: Record<string, string> = {
       recipient_name: '',
@@ -114,26 +118,61 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // CAP (5 cifre)
+      // CAP (5 cifre) - cerca pattern più comuni
       const zipMatch = line.match(/\b(\d{5})\b/);
       if (zipMatch && !result.recipient_zip) {
         result.recipient_zip = zipMatch[1];
 
         // La riga con CAP di solito contiene città e provincia
-        // Es: "20100 Milano (MI)" o "00100 Roma RM"
-        const cityMatch = line.match(/\d{5}\s+([A-Za-zàèéìòù\s]+?)(?:\s*\(?([A-Z]{2})\)?)?$/i);
+        // Pattern comuni:
+        // - "20100 Milano (MI)"
+        // - "00100 Roma RM"
+        // - "20100 Milano MI"
+        // - "CAP 20100 Milano (MI)"
+        const cityMatch = line.match(/\d{5}\s+([A-Za-zàèéìòù\s]+?)(?:\s*\(?([A-Z]{2})\)?|\s+([A-Z]{2}))?$/i);
         if (cityMatch) {
           result.recipient_city = cityMatch[1].trim();
-          if (cityMatch[2]) {
-            result.recipient_province = cityMatch[2].toUpperCase();
+          // Provincia può essere in parentesi o dopo la città
+          const province = cityMatch[2] || cityMatch[3];
+          if (province) {
+            result.recipient_province = province.toUpperCase();
           }
         }
       }
 
-      // Telefono
-      const phone = this.extractPhone(line);
-      if (phone && !result.recipient_phone) {
-        result.recipient_phone = phone;
+      // Se abbiamo CAP ma non città, cerca città nella stessa riga o nelle righe successive
+      if (result.recipient_zip && !result.recipient_city) {
+        // Cerca città dopo il CAP nella stessa riga
+        const cityAfterZip = line.match(/\d{5}\s+([A-Za-zàèéìòù\s]+)/i);
+        if (cityAfterZip) {
+          result.recipient_city = cityAfterZip[1].trim();
+        }
+      }
+
+      // Se abbiamo città ma non provincia, cerca provincia nella stessa riga o nelle righe vicine
+      if (result.recipient_city && !result.recipient_province) {
+        // Cerca sigla provincia (2 lettere maiuscole) nella stessa riga
+        const provinceMatch = line.match(/\b([A-Z]{2})\b/);
+        if (provinceMatch && provinceMatch[1] !== result.recipient_zip) {
+          result.recipient_province = provinceMatch[1];
+        }
+      }
+
+      // Telefono - per screenshot WhatsApp cerca nelle prime righe e mantieni prefisso
+      if (!result.recipient_phone) {
+        // Se è screenshot WhatsApp, cerca nelle prime 5 righe (parte alta) e mantieni prefisso
+        if (isWhatsAppScreenshot && i < 5) {
+          const phone = this.extractPhoneWithPrefix(line);
+          if (phone) {
+            result.recipient_phone = phone;
+          }
+        } else {
+          // Altrimenti cerca normalmente ma mantieni prefisso se presente
+          const phone = this.extractPhoneWithPrefix(line);
+          if (phone) {
+            result.recipient_phone = phone;
+          }
+        }
       }
 
       // Email
@@ -142,13 +181,50 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
         result.recipient_email = email;
       }
 
-      // Nome (di solito prima riga o dopo "Destinatario:")
-      if (i === 0 && !result.recipient_name && line.length > 3 && line.length < 50) {
-        result.recipient_name = line;
+      // Nome - DISTINGUI ETICHETTE DA VALORI REALI
+      // Lista etichette comuni da NON estrarre
+      const nameLabels = [
+        'nome e cognome',
+        'nome cognome',
+        'nome:',
+        'cognome:',
+        'nome e cognome:',
+        'nome completo',
+      ];
+      const isNameLabel = nameLabels.some(label => line.toLowerCase().trim() === label || line.toLowerCase().trim().startsWith(label));
+      
+      if (isNameLabel) {
+        // Questa è un'etichetta, cerca il valore nella riga successiva
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          // Verifica che la riga successiva non sia un'altra etichetta
+          const isNextLineLabel = nameLabels.some(label => nextLine.toLowerCase() === label || nextLine.toLowerCase().startsWith(label));
+          if (!isNextLineLabel && nextLine.length > 2) {
+            result.recipient_name = nextLine;
+          }
+        }
+      } else if (line.toLowerCase().includes('destinatario') && i + 1 < lines.length) {
+        // Se c'è "Destinatario:", prendi la riga successiva
+        const nextLine = lines[i + 1].trim();
+        if (!nameLabels.some(label => nextLine.toLowerCase() === label)) {
+          result.recipient_name = nextLine;
+        }
+      } else if (i === 0 && !result.recipient_name && line.length > 3 && line.length < 50) {
+        // Prima riga solo se non è un'etichetta
+        if (!isNameLabel && !/^(telefono|tel|phone|indirizzo|via|corso|cap|provincia)/i.test(line)) {
+          result.recipient_name = line;
+        }
       }
-
-      if (line.toLowerCase().includes('destinatario') && i + 1 < lines.length) {
-        result.recipient_name = lines[i + 1];
+      
+      // Pattern per "Nome: Valore" o "Nome e Cognome: Valore"
+      const nameValuePattern = /^(nome\s+e\s+cognome|nome|cognome)[\s:]+(.+)$/i;
+      const nameValueMatch = line.match(nameValuePattern);
+      if (nameValueMatch && nameValueMatch[2]) {
+        const value = nameValueMatch[2].trim();
+        // Verifica che il valore non sia un'etichetta
+        if (!nameLabels.some(label => value.toLowerCase() === label)) {
+          result.recipient_name = value;
+        }
       }
 
       // Indirizzo (cerca via, corso, piazza, ecc.)
@@ -202,5 +278,50 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
     maxScore += optionalFields.length * 5;
 
     return Math.min(score / maxScore, 1);
+  }
+
+  /**
+   * Rileva se è uno screenshot WhatsApp
+   */
+  private detectWhatsAppScreenshot(lines: string[]): boolean {
+    // Cerca pattern tipici di WhatsApp nelle prime righe
+    const firstLines = lines.slice(0, 5).join(' ').toLowerCase();
+    return (
+      firstLines.includes('whatsapp') ||
+      firstLines.includes('wa.me') ||
+      firstLines.includes('chat') ||
+      // Pattern comune: nome contatto seguito da numero con prefisso nella parte alta
+      (lines.length > 0 && lines[0].length > 0 && lines[0].length < 50 && 
+       lines.some((l, i) => i < 3 && /(\+39|0039|\d{10,})/.test(l)))
+    );
+  }
+
+  /**
+   * Estrae telefono mantenendo prefisso se presente
+   * Override del metodo base per mantenere prefisso per screenshot WhatsApp
+   */
+  protected extractPhoneWithPrefix(text: string): string | undefined {
+    if (!text) return undefined;
+
+    // Pattern per numeri con prefisso +39 o 0039 (mantieni tutto pari pari)
+    const phoneWithPrefix = text.match(/(\+39|0039)[\s\-]?[\d\s\-]{8,12}/);
+    if (phoneWithPrefix) {
+      return phoneWithPrefix[0].trim(); // Mantieni spazi e formato originale
+    }
+
+    // Pattern per numeri italiani (3xx seguito da 6-7 cifre)
+    const phonePattern = /(?:tel[elefono]*[\s:]*)?([\d\s\+\-\(\)]{8,15})/i;
+    const match = text.match(phonePattern);
+    if (match) {
+      const phone = match[1].trim();
+      // Se ha prefisso, mantienilo
+      if (phone.match(/^(\+39|0039)/)) {
+        return phone; // Mantieni formato originale
+      }
+      // Altrimenti usa il metodo base (normalizza)
+      return this.extractPhone(text);
+    }
+
+    return undefined;
   }
 }

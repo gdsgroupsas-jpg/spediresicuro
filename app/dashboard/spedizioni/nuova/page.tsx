@@ -399,10 +399,8 @@ export default function NuovaSpedizionePage() {
       note: data.notes || prev.note,
     }));
     
-    // Se c'è una città, cerca la location per popolare provincia e CAP
-    if (data.recipient_city && !data.recipient_province) {
-      // Il componente AsyncLocationCombobox gestirà la ricerca
-    }
+    // ⚠️ RIMOSSO: Autocompletamento automatico provincia/CAP per evitare bug
+    // L'utente dovrà completare manualmente i campi mancanti tramite autocompletamento
   };
 
   // Handler errori OCR
@@ -639,6 +637,15 @@ export default function NuovaSpedizionePage() {
                     onSelect={handleDestinatarioLocation}
                     placeholder="Cerca città..."
                     className="w-full"
+                    defaultValue={
+                      formData.destinatarioCitta && formData.destinatarioProvincia
+                        ? {
+                            city: formData.destinatarioCitta,
+                            province: formData.destinatarioProvincia,
+                            cap: formData.destinatarioCap || null,
+                          }
+                        : undefined
+                    }
                   />
                 </div>
 
