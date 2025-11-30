@@ -91,10 +91,16 @@ export async function POST(request: NextRequest) {
     const expressMultiplier = body.tipoSpedizione === 'express' ? 1.5 : 1;
     const prezzoBase = (basePrice + pesoPrice) * expressMultiplier;
     
+    // Costi aggiuntivi
+    const contrassegno = parseFloat(body.contrassegno) || 0;
+    const assicurazione = parseFloat(body.assicurazione) || 0;
+    const costoContrassegno = contrassegno > 0 ? 3 : 0; // Costo fisso per gestione contrassegno
+    const costoAssicurazione = assicurazione > 0 ? (assicurazione * 0.02) : 0; // 2% del valore assicurato
+    
     // Margine configurabile (default 15%)
     const marginePercentuale = 15;
     const margine = (prezzoBase * marginePercentuale) / 100;
-    const prezzoFinale = prezzoBase + margine;
+    const prezzoFinale = prezzoBase + margine + costoContrassegno + costoAssicurazione;
 
     // Genera tracking number
     const trackingPrefix = (body.corriere || 'GLS').substring(0, 3).toUpperCase();
@@ -130,10 +136,21 @@ export async function POST(request: NextRequest) {
         altezza: parseFloat(body.altezza) || 0,
       },
       tipoSpedizione: body.tipoSpedizione || 'standard',
+      contrassegno: contrassegno,
+      assicurazione: assicurazione,
       note: body.note || '',
+      // Campi aggiuntivi per formato spedisci.online
+      contenuto: body.contenuto || '',
+      order_id: body.order_id || '',
+      totale_ordine: prezzoFinale,
+      rif_mittente: body.rif_mittente || body.mittenteNome || '',
+      rif_destinatario: body.rif_destinatario || body.destinatarioNome || '',
+      colli: body.colli || 1,
       // Campi calcolati
       prezzoBase: prezzoBase,
       margine: margine,
+      costoContrassegno: costoContrassegno,
+      costoAssicurazione: costoAssicurazione,
       prezzoFinale: prezzoFinale,
       // Status e tracking
       status: 'in_preparazione',
@@ -149,12 +166,29 @@ export async function POST(request: NextRequest) {
     // Salva nel database locale
     addSpedizione(spedizione);
 
+    // INVIO AUTOMATICO A SPEDISCI.ONLINE (se configurato)
+    let spedisciOnlineResult = null;
+    try {
+      const { sendShipmentToSpedisciOnline } = await import('@/lib/actions/spedisci-online');
+      spedisciOnlineResult = await sendShipmentToSpedisciOnline(spedizione);
+      
+      if (spedisciOnlineResult.success) {
+        console.log('✅ Spedizione inviata a spedisci.online:', spedisciOnlineResult.tracking_number);
+      } else {
+        console.warn('⚠️ Invio a spedisci.online fallito (non critico):', spedisciOnlineResult.error);
+      }
+    } catch (error) {
+      // Non bloccare la risposta se l'invio a spedisci.online fallisce
+      console.warn('⚠️ Errore invio a spedisci.online (non critico):', error);
+    }
+
     // Risposta di successo
     return NextResponse.json(
       {
         success: true,
         message: 'Spedizione creata con successo',
         data: spedizione,
+        spedisci_online: spedisciOnlineResult, // Info invio spedisci.online
       },
       { status: 201 }
     );

@@ -12,6 +12,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import DashboardNav from '@/components/dashboard-nav';
 
@@ -151,6 +153,8 @@ function ProgressRing({
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [stats, setStats] = useState<Stats>({
     totaleSpedizioni: 0,
     spedizioniOggi: 0,
@@ -167,6 +171,27 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [recentSpedizioni, setRecentSpedizioni] = useState<any[]>([]);
   const [margine, setMargine] = useState(15);
+
+  // Verifica se i dati cliente sono completati (solo per nuovi utenti)
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.email) {
+      async function checkDatiCompletati() {
+        try {
+          const response = await fetch('/api/user/dati-cliente');
+          if (response.ok) {
+            const data = await response.json();
+            // Se i dati non sono completati, reindirizza alla pagina dati-cliente
+            if (!data.datiCliente || !data.datiCliente.datiCompletati) {
+              router.push('/dashboard/dati-cliente');
+            }
+          }
+        } catch (err) {
+          console.error('Errore verifica dati cliente:', err);
+        }
+      }
+      checkDatiCompletati();
+    }
+  }, [status, session, router]);
 
   // Carica dati dashboard
   useEffect(() => {
@@ -299,27 +324,6 @@ export default function DashboardPage() {
           title="Dashboard"
           subtitle="Panoramica completa delle tue attività di spedizione"
           showBackButton={false}
-          actions={
-            <Link
-              href="/dashboard/spedizioni/nuova"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all transform hover:scale-105"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Nuova Spedizione
-            </Link>
-          }
         />
 
         {isLoading ? (
@@ -634,39 +638,14 @@ export default function DashboardPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-6">
                 Azioni Rapide
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link
-                  href="/dashboard/spedizioni/nuova"
-                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"
-                >
-                  <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-500 transition-colors">
-                    <svg
-                      className="w-5 h-5 text-blue-600 group-hover:text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Nuova Spedizione</p>
-                    <p className="text-xs text-gray-600">Crea una nuova spedizione</p>
-                  </div>
-                </Link>
-
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Link
                   href="/dashboard/spedizioni"
-                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group"
+                  className="flex items-center gap-3 p-4 border-2 border-indigo-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group bg-gradient-to-br from-indigo-50 to-blue-50"
                 >
-                  <div className="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-500 transition-colors">
+                  <div className="p-2 bg-indigo-500 rounded-lg group-hover:bg-indigo-600 transition-colors shadow-sm">
                     <svg
-                      className="w-5 h-5 text-indigo-600 group-hover:text-white"
+                      className="w-5 h-5 text-white"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -675,14 +654,32 @@ export default function DashboardPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Lista Spedizioni</p>
-                    <p className="text-xs text-gray-600">Visualizza tutte le spedizioni</p>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-base">Lista Spedizioni</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Visualizza, filtra e gestisci tutte le spedizioni</p>
+                    {stats.totaleSpedizioni > 0 && (
+                      <p className="text-xs font-medium text-indigo-600 mt-1">
+                        {stats.totaleSpedizioni} spedizione{stats.totaleSpedizioni !== 1 ? 'i' : ''} total{stats.totaleSpedizioni !== 1 ? 'i' : 'e'}
+                      </p>
+                    )}
                   </div>
+                  <svg
+                    className="w-5 h-5 text-indigo-500 group-hover:text-indigo-600 transition-colors"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
                 </Link>
 
                 <Link

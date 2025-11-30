@@ -53,7 +53,7 @@ export default function AsyncLocationCombobox({
   className = '',
   defaultValue,
 }: AsyncLocationComboboxProps) {
-  const [inputValue, setInputValue] = useState(defaultValue ? `${defaultValue.city} (${defaultValue.province})` : '');
+  const [inputValue, setInputValue] = useState(defaultValue ? `${defaultValue.city} (${defaultValue.province})${defaultValue.cap ? ` - ${defaultValue.cap}` : ''}` : '');
   const [results, setResults] = useState<GeoLocationOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +62,13 @@ export default function AsyncLocationCombobox({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Aggiorna inputValue quando defaultValue cambia
+  useEffect(() => {
+    if (defaultValue) {
+      setInputValue(`${defaultValue.city} (${defaultValue.province})${defaultValue.cap ? ` - ${defaultValue.cap}` : ''}`);
+    }
+  }, [defaultValue]);
 
   // Debounce input (300ms)
   const debouncedQuery = useDebounce(inputValue, 300);

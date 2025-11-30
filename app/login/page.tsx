@@ -195,8 +195,25 @@ export default function LoginPage() {
         if (result?.error) {
           setError('Credenziali non valide. Riprova.');
         } else if (result?.ok) {
-          // Redirect al dashboard
-          router.push('/dashboard');
+          // Verifica se i dati cliente sono completati
+          try {
+            const userDataResponse = await fetch('/api/user/dati-cliente');
+            if (userDataResponse.ok) {
+              const userData = await userDataResponse.json();
+              // Se i dati non sono completati, reindirizza alla pagina dati-cliente
+              if (!userData.datiCliente || !userData.datiCliente.datiCompletati) {
+                router.push('/dashboard/dati-cliente');
+              } else {
+                router.push('/dashboard');
+              }
+            } else {
+              // Se non riesce a recuperare i dati, reindirizza comunque al dashboard
+              router.push('/dashboard');
+            }
+          } catch (err) {
+            // In caso di errore, reindirizza al dashboard
+            router.push('/dashboard');
+          }
           router.refresh();
         }
         setIsLoading(false);

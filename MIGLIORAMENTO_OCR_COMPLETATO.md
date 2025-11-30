@@ -134,3 +134,4 @@ Poi riavvia il server e prova con un'immagine reale! 🚀
 
 **La qualità dell'estrazione è ora molto migliore!** ✅
 
+

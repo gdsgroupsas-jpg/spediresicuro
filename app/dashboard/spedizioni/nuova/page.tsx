@@ -30,6 +30,7 @@ import AsyncLocationCombobox from '@/components/ui/async-location-combobox';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
+import FieldTooltip from '@/components/ui/field-tooltip';
 import { generateShipmentCSV, downloadCSV, generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
 import type { OnLocationSelect } from '@/types/geo';
 import type { Corriere } from '@/types/corrieri';
@@ -60,6 +61,8 @@ interface FormData {
   altezza: string;
   tipoSpedizione: string;
   corriere: string;
+  contrassegno: string;
+  assicurazione: string;
   note: string;
 }
 
@@ -250,6 +253,8 @@ export default function NuovaSpedizionePage() {
     altezza: '',
     tipoSpedizione: 'standard',
     corriere: 'GLS',
+    contrassegno: '',
+    assicurazione: '',
     note: '',
   });
 
@@ -259,6 +264,19 @@ export default function NuovaSpedizionePage() {
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
   const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'csv'>('pdf');
+  
+  // Stato per validazione indirizzo destinatario
+  const [addressValidation, setAddressValidation] = useState<{
+    isValid: boolean | null;
+    message: string | null;
+    suggestion: string | null;
+    isChecking: boolean;
+  }>({
+    isValid: null,
+    message: null,
+    suggestion: null,
+    isChecking: false,
+  });
 
   // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
   useEffect(() => {
@@ -384,24 +402,120 @@ export default function NuovaSpedizionePage() {
     }));
   };
 
-  // Handler dati estratti da OCR
-  const handleOCRDataExtracted = (data: any) => {
-    // Popola i campi destinatario con i dati estratti
+  // Funzione per validare indirizzo con Google Maps
+  const validateAddress = async (address: string, city: string, province: string, zip: string) => {
+    if (!address || !city) {
+      return;
+    }
+
+    setAddressValidation({ isValid: null, message: null, suggestion: null, isChecking: true });
+
+    try {
+      const response = await fetch('/api/address/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, city, province, zip }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAddressValidation({
+          isValid: result.isValid,
+          message: result.message || null,
+          suggestion: result.suggestion || null,
+          isChecking: false,
+        });
+      } else {
+        setAddressValidation({
+          isValid: null,
+          message: null,
+          suggestion: null,
+          isChecking: false,
+        });
+      }
+    } catch (error) {
+      console.error('Errore validazione indirizzo:', error);
+      setAddressValidation({
+        isValid: null,
+        message: null,
+        suggestion: null,
+        isChecking: false,
+      });
+    }
+  };
+
+  // Handler dati estratti da OCR - Popola TUTTI i campi automaticamente
+  // In modalità AI, i campi città/CAP/provincia sono input di testo (non autocomplete)
+  const handleOCRDataExtracted = async (data: any) => {
+    // Popola destinatario - ordine: nome, indirizzo, città, CAP, provincia
+    const updatedData: Partial<FormData> = {
+      destinatarioNome: data.recipient_name || data.destinatarioNome || '',
+      destinatarioIndirizzo: data.recipient_address || data.destinatarioIndirizzo || '',
+      // In modalità AI: campi di testo normali, non autocomplete
+      destinatarioCitta: data.recipient_city || data.destinatarioCitta || '',
+      destinatarioCap: data.recipient_zip || data.destinatarioCap || '',
+      destinatarioProvincia: data.recipient_province || data.destinatarioProvincia || '',
+      destinatarioTelefono: data.recipient_phone || data.destinatarioTelefono || '',
+      destinatarioEmail: data.recipient_email || data.destinatarioEmail || '',
+      note: data.notes || data.note || '',
+    };
+
+    // Popola anche mittente se presente nei dati OCR - ordine: nome, indirizzo, città, CAP, provincia
+    if (data.sender_name || data.mittenteNome) {
+      updatedData.mittenteNome = data.sender_name || data.mittenteNome || '';
+      updatedData.mittenteIndirizzo = data.sender_address || data.mittenteIndirizzo || '';
+      // In modalità AI: campi di testo normali, non autocomplete
+      updatedData.mittenteCitta = data.sender_city || data.mittenteCitta || '';
+      updatedData.mittenteCap = data.sender_zip || data.mittenteCap || '';
+      updatedData.mittenteProvincia = data.sender_province || data.mittenteProvincia || '';
+      updatedData.mittenteTelefono = data.sender_phone || data.mittenteTelefono || '';
+      updatedData.mittenteEmail = data.sender_email || data.mittenteEmail || '';
+    }
+
+    // Popola anche peso e dimensioni se presenti
+    if (data.weight || data.peso) {
+      updatedData.peso = String(data.weight || data.peso).replace(',', '.'); // Converti virgola in punto per formato spedisci.online
+    }
+    if (data.length || data.lunghezza) {
+      updatedData.lunghezza = String(data.length || data.lunghezza);
+    }
+    if (data.width || data.larghezza) {
+      updatedData.larghezza = String(data.width || data.larghezza);
+    }
+    if (data.height || data.altezza) {
+      updatedData.altezza = String(data.height || data.altezza);
+    }
+
+    // Popola campi aggiuntivi per formato spedisci.online
+    if (data.contenuto) {
+      updatedData.note = (updatedData.note ? updatedData.note + ' - ' : '') + data.contenuto;
+    }
+    if (data.order_id) {
+      // Salva order_id nelle note o in un campo separato se necessario
+      updatedData.note = (updatedData.note ? updatedData.note + ' | Order ID: ' : 'Order ID: ') + data.order_id;
+    }
+    if (data.contrassegno) {
+      updatedData.contrassegno = String(data.contrassegno).replace(',', '.'); // Converti virgola in punto
+    }
+
+    // Aggiorna il form con tutti i dati
     setFormData((prev) => ({
       ...prev,
-      destinatarioNome: data.recipient_name || prev.destinatarioNome,
-      destinatarioIndirizzo: data.recipient_address || prev.destinatarioIndirizzo,
-      destinatarioCitta: data.recipient_city || prev.destinatarioCitta,
-      destinatarioProvincia: data.recipient_province || prev.destinatarioProvincia,
-      destinatarioCap: data.recipient_zip || prev.destinatarioCap,
-      destinatarioTelefono: data.recipient_phone || prev.destinatarioTelefono,
-      destinatarioEmail: data.recipient_email || prev.destinatarioEmail,
-      note: data.notes || prev.note,
+      ...updatedData,
     }));
-    
-    // Se c'è una città, cerca la location per popolare provincia e CAP
-    if (data.recipient_city && !data.recipient_province) {
-      // Il componente AsyncLocationCombobox gestirà la ricerca
+
+    // Valida l'indirizzo destinatario dopo l'estrazione
+    if (updatedData.destinatarioIndirizzo && updatedData.destinatarioCitta) {
+      // Piccolo delay per assicurarsi che il form sia aggiornato
+      setTimeout(() => {
+        validateAddress(
+          updatedData.destinatarioIndirizzo || '',
+          updatedData.destinatarioCitta || '',
+          updatedData.destinatarioProvincia || '',
+          updatedData.destinatarioCap || ''
+        );
+      }, 500);
     }
   };
 
@@ -433,13 +547,33 @@ export default function NuovaSpedizionePage() {
       setSubmitSuccess(true);
       setCreatedTracking(result.data?.tracking || null);
 
+      // Mostra info invio spedisci.online (se presente)
+      if (result.spedisci_online) {
+        if (result.spedisci_online.success) {
+          console.log('✅ Spedizione inviata automaticamente a spedisci.online');
+          // Potresti mostrare un toast qui
+        } else {
+          console.warn('⚠️ Invio a spedisci.online fallito:', result.spedisci_online.error);
+          // Potresti mostrare un avviso non bloccante
+        }
+      }
+
       // Genera e scarica documento (CSV o PDF)
       const spedizioneData = result.data;
       if (spedizioneData) {
-        // Aggiungi data creazione se manca
+        // Prepara dati completi per CSV/PDF con formato spedisci.online
         const spedizioneWithDate = {
           ...spedizioneData,
           createdAt: spedizioneData.createdAt || new Date().toISOString(),
+          // Campi aggiuntivi per formato spedisci.online
+          contrassegno: formData.contrassegno || spedizioneData.contrassegno || '',
+          assicurazione: formData.assicurazione || spedizioneData.assicurazione || '',
+          contenuto: spedizioneData.contenuto || '',
+          order_id: spedizioneData.order_id || spedizioneData.tracking || '',
+          totale_ordine: spedizioneData.prezzoFinale || spedizioneData.totale_ordine || '',
+          rif_mittente: spedizioneData.rif_mittente || spedizioneData.mittente?.nome || '',
+          rif_destinatario: spedizioneData.rif_destinatario || spedizioneData.destinatario?.nome || '',
+          colli: spedizioneData.colli || 1,
         };
 
         // Piccolo delay per assicurarsi che il download parta dopo il rendering
@@ -548,16 +682,19 @@ export default function NuovaSpedizionePage() {
             {/* Mittente Card */}
             <SmartCard title="Mittente" icon={MapPin}>
               <div className="space-y-4">
-                <SmartInput
-                  label="Nome Completo"
-                  value={formData.mittenteNome}
-                  onChange={(v) => setFormData((prev) => ({ ...prev, mittenteNome: v }))}
-                  required
-                  placeholder="Mario Rossi"
-                  icon={User}
-                  isValid={validation.mittenteNome}
-                  errorMessage={formData.mittenteNome && !validation.mittenteNome ? 'Nome troppo corto' : undefined}
-                />
+                {/* Ordine: Nome, Indirizzo, Città, CAP, Provincia */}
+                <FieldTooltip content="Inserisci il nome completo o la ragione sociale del mittente. Questo campo è obbligatorio.">
+                  <SmartInput
+                    label="Nome / Cognome / Ragione Sociale"
+                    value={formData.mittenteNome}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteNome: v }))}
+                    required
+                    placeholder="Mario Rossi o Azienda S.r.l."
+                    icon={User}
+                    isValid={validation.mittenteNome}
+                    errorMessage={formData.mittenteNome && !validation.mittenteNome ? 'Nome troppo corto' : undefined}
+                  />
+                </FieldTooltip>
 
                 <SmartInput
                   label="Indirizzo"
@@ -570,16 +707,88 @@ export default function NuovaSpedizionePage() {
                   errorMessage={formData.mittenteIndirizzo && !validation.mittenteIndirizzo ? 'Indirizzo troppo corto' : undefined}
                 />
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    Città, Provincia, CAP <span className="text-red-500">*</span>
-                  </label>
-                  <AsyncLocationCombobox
-                    onSelect={handleMittenteLocation}
-                    placeholder="Cerca città..."
-                    className="w-full"
-                  />
-                </div>
+                {/* Se modalità AI: campi di testo normali, altrimenti autocomplete */}
+                {sourceMode === 'ai' ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    <SmartInput
+                      label="Città"
+                      value={formData.mittenteCitta}
+                      onChange={(v) => setFormData((prev) => ({ ...prev, mittenteCitta: v }))}
+                      required
+                      placeholder="Milano"
+                      isValid={validation.mittenteCitta}
+                      errorMessage={formData.mittenteCitta && !validation.mittenteCitta ? 'Città troppo corta' : undefined}
+                    />
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                        CAP <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.mittenteCap}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, mittenteCap: e.target.value.replace(/\D/g, '').slice(0, 5) }))}
+                        required
+                        placeholder="20100"
+                        maxLength={5}
+                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+                          formData.mittenteCap.length === 5
+                            ? 'border-green-300 ring-2 ring-green-100'
+                            : formData.mittenteCap && formData.mittenteCap.length !== 5
+                            ? 'border-red-300 ring-2 ring-red-100'
+                            : 'border-gray-200 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500]'
+                        } focus:outline-none`}
+                      />
+                      {formData.mittenteCap && formData.mittenteCap.length !== 5 && (
+                        <p className="text-xs text-red-600">CAP deve essere di 5 cifre</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                        Provincia <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.mittenteProvincia}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, mittenteProvincia: e.target.value.toUpperCase().slice(0, 2) }))}
+                        required
+                        placeholder="MI"
+                        maxLength={2}
+                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+                          formData.mittenteProvincia.length === 2
+                            ? 'border-green-300 ring-2 ring-green-100'
+                            : formData.mittenteProvincia && formData.mittenteProvincia.length !== 2
+                            ? 'border-red-300 ring-2 ring-red-100'
+                            : 'border-gray-200 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500]'
+                        } focus:outline-none uppercase`}
+                      />
+                      {formData.mittenteProvincia && formData.mittenteProvincia.length !== 2 && (
+                        <p className="text-xs text-red-600">Provincia deve essere di 2 lettere</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <FieldTooltip content="Cerca la città digitando il nome o il CAP. Il sistema troverà automaticamente provincia e CAP corrispondenti. Se la città ha più CAP, potrai selezionare quello corretto.">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                        Città, Provincia, CAP <span className="text-red-500">*</span>
+                      </label>
+                      <AsyncLocationCombobox
+                        onSelect={handleMittenteLocation}
+                        placeholder="Cerca città..."
+                        className="w-full"
+                        defaultValue={
+                          formData.mittenteCitta && formData.mittenteProvincia
+                            ? {
+                                city: formData.mittenteCitta,
+                                province: formData.mittenteProvincia,
+                                cap: formData.mittenteCap || null,
+                              }
+                            : undefined
+                        }
+                      />
+                    </div>
+                  </FieldTooltip>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <SmartInput
@@ -609,38 +818,158 @@ export default function NuovaSpedizionePage() {
             {/* Destinatario Card */}
             <SmartCard title="Destinatario" icon={Package}>
               <div className="space-y-4">
+                {/* Ordine: Nome, Indirizzo, Città, CAP, Provincia */}
                 <SmartInput
-                  label="Nome Completo"
+                  label="Nome / Cognome / Ragione Sociale"
                   value={formData.destinatarioNome}
                   onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioNome: v }))}
                   required
-                  placeholder="Luigi Verdi"
+                  placeholder="Luigi Verdi o Azienda S.r.l."
                   icon={User}
                   isValid={validation.destinatarioNome}
                   errorMessage={formData.destinatarioNome && !validation.destinatarioNome ? 'Nome troppo corto' : undefined}
                 />
 
-                <SmartInput
-                  label="Indirizzo"
-                  value={formData.destinatarioIndirizzo}
-                  onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioIndirizzo: v }))}
-                  required
-                  placeholder="Via Milano 456"
-                  icon={MapPin}
-                  isValid={validation.destinatarioIndirizzo}
-                  errorMessage={formData.destinatarioIndirizzo && !validation.destinatarioIndirizzo ? 'Indirizzo troppo corto' : undefined}
-                />
-
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    Città, Provincia, CAP <span className="text-red-500">*</span>
-                  </label>
-                  <AsyncLocationCombobox
-                    onSelect={handleDestinatarioLocation}
-                    placeholder="Cerca città..."
-                    className="w-full"
+                  <SmartInput
+                    label="Indirizzo"
+                    value={formData.destinatarioIndirizzo}
+                    onChange={(v) => {
+                      setFormData((prev) => ({ ...prev, destinatarioIndirizzo: v }));
+                      // Valida indirizzo quando cambia (con debounce implicito)
+                      if (v.length >= 5 && formData.destinatarioCitta) {
+                        setTimeout(() => {
+                          validateAddress(v, formData.destinatarioCitta, formData.destinatarioProvincia, formData.destinatarioCap);
+                        }, 1000);
+                      } else {
+                        setAddressValidation({ isValid: null, message: null, suggestion: null, isChecking: false });
+                      }
+                    }}
+                    required
+                    placeholder="Via Milano 456"
+                    icon={MapPin}
+                    isValid={validation.destinatarioIndirizzo}
+                    errorMessage={formData.destinatarioIndirizzo && !validation.destinatarioIndirizzo ? 'Indirizzo troppo corto' : undefined}
                   />
+                  
+                  {/* Avviso validazione indirizzo */}
+                  {addressValidation.isChecking && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                      <p className="text-sm text-blue-900">Verifica indirizzo su Google Maps...</p>
+                    </div>
+                  )}
+                  
+                  {!addressValidation.isChecking && addressValidation.isValid === false && (
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-yellow-900">
+                            {addressValidation.message || 'Indirizzo non trovato su Google Maps'}
+                          </p>
+                          {addressValidation.suggestion && (
+                            <p className="text-sm text-yellow-800 mt-1">
+                              <strong>Forse la via giusta è:</strong> {addressValidation.suggestion}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!addressValidation.isChecking && addressValidation.isValid === true && (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <p className="text-sm text-green-900">
+                        {addressValidation.message || 'Indirizzo verificato su Google Maps'}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Se modalità AI: campi di testo normali, altrimenti autocomplete */}
+                {sourceMode === 'ai' ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    <SmartInput
+                      label="Città"
+                      value={formData.destinatarioCitta}
+                      onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioCitta: v }))}
+                      required
+                      placeholder="Milano"
+                      isValid={validation.destinatarioCitta}
+                      errorMessage={formData.destinatarioCitta && !validation.destinatarioCitta ? 'Città troppo corta' : undefined}
+                    />
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                        CAP <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.destinatarioCap}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, destinatarioCap: e.target.value.replace(/\D/g, '').slice(0, 5) }))}
+                        required
+                        placeholder="20100"
+                        maxLength={5}
+                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+                          formData.destinatarioCap.length === 5
+                            ? 'border-green-300 ring-2 ring-green-100'
+                            : formData.destinatarioCap && formData.destinatarioCap.length !== 5
+                            ? 'border-red-300 ring-2 ring-red-100'
+                            : 'border-gray-200 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500]'
+                        } focus:outline-none`}
+                      />
+                      {formData.destinatarioCap && formData.destinatarioCap.length !== 5 && (
+                        <p className="text-xs text-red-600">CAP deve essere di 5 cifre</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                        Provincia <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.destinatarioProvincia}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, destinatarioProvincia: e.target.value.toUpperCase().slice(0, 2) }))}
+                        required
+                        placeholder="MI"
+                        maxLength={2}
+                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+                          formData.destinatarioProvincia.length === 2
+                            ? 'border-green-300 ring-2 ring-green-100'
+                            : formData.destinatarioProvincia && formData.destinatarioProvincia.length !== 2
+                            ? 'border-red-300 ring-2 ring-red-100'
+                            : 'border-gray-200 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500]'
+                        } focus:outline-none uppercase`}
+                      />
+                      {formData.destinatarioProvincia && formData.destinatarioProvincia.length !== 2 && (
+                        <p className="text-xs text-red-600">Provincia deve essere di 2 lettere</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <FieldTooltip content="Cerca la città digitando il nome o il CAP. Il sistema troverà automaticamente provincia e CAP corrispondenti. Se la città ha più CAP, potrai selezionare quello corretto.">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                        Città, Provincia, CAP <span className="text-red-500">*</span>
+                      </label>
+                      <AsyncLocationCombobox
+                        onSelect={handleDestinatarioLocation}
+                        placeholder="Cerca città..."
+                        className="w-full"
+                        defaultValue={
+                          formData.destinatarioCitta && formData.destinatarioProvincia
+                            ? {
+                                city: formData.destinatarioCitta,
+                                province: formData.destinatarioProvincia,
+                                cap: formData.destinatarioCap || null,
+                              }
+                            : undefined
+                        }
+                      />
+                    </div>
+                  </FieldTooltip>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <SmartInput
@@ -765,16 +1094,72 @@ export default function NuovaSpedizionePage() {
 
                   <div>
                     <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                      Note (opzionale)
+                      Corriere
                     </label>
-                    <textarea
-                      value={formData.note}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
-                      rows={3}
-                      placeholder="Note aggiuntive..."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
-                    />
+                    <select
+                      value={formData.corriere}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, corriere: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                    >
+                      <option value="GLS">GLS</option>
+                      <option value="BRT">BRT</option>
+                      <option value="DHL">DHL</option>
+                      <option value="UPS">UPS</option>
+                      <option value="SDA">SDA</option>
+                      <option value="POSTE">Poste Italiane</option>
+                    </select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FieldTooltip content="Inserisci l'importo che il corriere dovrà riscuotere dal destinatario al momento della consegna. Il contrassegno è opzionale e comporta costi aggiuntivi.">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                        Contrassegno (€) <span className="text-gray-400 text-xs normal-case">opzionale</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.contrassegno}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, contrassegno: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Importo da riscuotere alla consegna</p>
+                    </div>
+                  </FieldTooltip>
+
+                  <FieldTooltip content="Inserisci il valore assicurato del pacco. Questo determina il risarcimento in caso di smarrimento o danneggiamento. L'assicurazione è opzionale ma consigliata per oggetti di valore.">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                        Assicurazione (€) <span className="text-gray-400 text-xs normal-case">opzionale</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.assicurazione}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, assicurazione: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Valore assicurato del pacco</p>
+                    </div>
+                  </FieldTooltip>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                    Note (opzionale)
+                  </label>
+                  <textarea
+                    value={formData.note}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
+                    rows={3}
+                    placeholder="Note aggiuntive..."
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
+                  />
                 </div>
               </div>
             </SmartCard>

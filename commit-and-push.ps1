@@ -53,3 +53,4 @@ if ($LASTEXITCODE -eq 0) {
 
 Write-Host "`n✅ Completato!" -ForegroundColor Green
 
+
