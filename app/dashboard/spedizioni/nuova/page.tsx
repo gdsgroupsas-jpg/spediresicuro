@@ -547,13 +547,16 @@ export default function NuovaSpedizionePage() {
       setSubmitSuccess(true);
       setCreatedTracking(result.data?.tracking || null);
 
-      // Mostra info invio spedisci.online (se presente)
-      if (result.spedisci_online) {
-        if (result.spedisci_online.success) {
-          console.log('✅ Spedizione inviata automaticamente a spedisci.online');
+      // Mostra info creazione LDV (se presente)
+      if (result.ldv) {
+        if (result.ldv.success) {
+          const methodLabel = result.ldv.method === 'direct' ? 'adapter diretto' 
+            : result.ldv.method === 'broker' ? 'broker spedisci.online' 
+            : 'CSV fallback';
+          console.log(`✅ LDV creata tramite ${methodLabel}:`, result.ldv.tracking_number);
           // Potresti mostrare un toast qui
         } else {
-          console.warn('⚠️ Invio a spedisci.online fallito:', result.spedisci_online.error);
+          console.warn('⚠️ Creazione LDV fallita:', result.ldv.error);
           // Potresti mostrare un avviso non bloccante
         }
       }

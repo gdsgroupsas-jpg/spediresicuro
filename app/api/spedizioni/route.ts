@@ -166,20 +166,24 @@ export async function POST(request: NextRequest) {
     // Salva nel database locale
     addSpedizione(spedizione);
 
-    // INVIO AUTOMATICO A SPEDISCI.ONLINE (se configurato)
-    let spedisciOnlineResult = null;
+    // INVIO AUTOMATICO LDV TRAMITE ORCHESTRATOR (se configurato)
+    let ldvResult = null;
     try {
-      const { sendShipmentToSpedisciOnline } = await import('@/lib/actions/spedisci-online');
-      spedisciOnlineResult = await sendShipmentToSpedisciOnline(spedizione);
+      const { createShipmentWithOrchestrator } = await import('@/lib/actions/spedisci-online');
+      ldvResult = await createShipmentWithOrchestrator(spedizione, body.corriere || 'GLS');
       
-      if (spedisciOnlineResult.success) {
-        console.log('✅ Spedizione inviata a spedisci.online:', spedisciOnlineResult.tracking_number);
+      if (ldvResult.success) {
+        console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
+        // Aggiorna tracking number se fornito dall'orchestrator
+        if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
+          spedizione.tracking = ldvResult.tracking_number;
+        }
       } else {
-        console.warn('⚠️ Invio a spedisci.online fallito (non critico):', spedisciOnlineResult.error);
+        console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
       }
     } catch (error) {
-      // Non bloccare la risposta se l'invio a spedisci.online fallisce
-      console.warn('⚠️ Errore invio a spedisci.online (non critico):', error);
+      // Non bloccare la risposta se la creazione LDV fallisce
+      console.warn('⚠️ Errore creazione LDV (non critico):', error);
     }
 
     // Risposta di successo
@@ -188,7 +192,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Spedizione creata con successo',
         data: spedizione,
-        spedisci_online: spedisciOnlineResult, // Info invio spedisci.online
+        ldv: ldvResult, // Info creazione LDV (orchestrator)
       },
       { status: 201 }
     );
