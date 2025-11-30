@@ -14,7 +14,7 @@ import { addSpedizione, getSpedizioni } from '@/lib/database';
 /**
  * Handler GET - Ottiene tutte le spedizioni
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Autenticazione
     const session = await auth();
@@ -23,16 +23,108 @@ export async function GET() {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
+    // Gestisci query parameter per singola spedizione
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (id) {
+      // Restituisci singola spedizione
+      const spedizioni = getSpedizioni();
+      const spedizione = spedizioni.find((s: any) => s.id === id);
+      
+      if (!spedizione || spedizione.deleted === true) {
+        return NextResponse.json({ error: 'Spedizione non trovata' }, { status: 404 });
+      }
+      
+      // Normalizza struttura destinatario
+      const spedizioneNormalizzata = {
+        ...spedizione,
+        destinatario: spedizione.destinatario?.nome 
+          ? spedizione.destinatario 
+          : {
+              nome: spedizione.destinatarioNome || spedizione.destinatario?.nome || spedizione.nome || spedizione.nominativo || '',
+              indirizzo: spedizione.destinatarioIndirizzo || spedizione.destinatario?.indirizzo || spedizione.indirizzo || '',
+              citta: spedizione.destinatarioCitta || spedizione.destinatario?.citta || spedizione.citta || spedizione.localita || '',
+              provincia: spedizione.destinatarioProvincia || spedizione.destinatario?.provincia || spedizione.provincia || '',
+              cap: spedizione.destinatarioCap || spedizione.destinatario?.cap || spedizione.cap || '',
+              telefono: spedizione.destinatarioTelefono || spedizione.destinatario?.telefono || spedizione.telefono || '',
+              email: spedizione.destinatarioEmail || spedizione.destinatario?.email || spedizione.email_dest || spedizione.email || '',
+            },
+        mittente: spedizione.mittente || {
+          nome: spedizione.mittenteNome || 'Mittente Predefinito',
+          indirizzo: spedizione.mittenteIndirizzo || '',
+          citta: spedizione.mittenteCitta || '',
+          provincia: spedizione.mittenteProvincia || '',
+          cap: spedizione.mittenteCap || '',
+          telefono: spedizione.mittenteTelefono || '',
+          email: spedizione.mittenteEmail || '',
+        },
+        // ⚠️ IMPORTANTE: Tracking - per ordini importati, ldv è il tracking
+        // Per ordini creati dalla piattaforma, tracking è già presente
+        tracking: spedizione.ldv || spedizione.tracking || '',
+      };
+      
+      return NextResponse.json({
+        success: true,
+        data: spedizioneNormalizzata,
+      }, { status: 200 });
+    }
+
     const spedizioni = getSpedizioni();
 
-    // Filtra solo spedizioni non eliminate
-    const spedizioniAttive = spedizioni.filter((s: any) => !s.deleted);
+    // Filtra solo spedizioni non eliminate (deleted deve essere esplicitamente true per essere filtrate)
+    const spedizioniAttive = spedizioni.filter((s: any) => {
+      // Se deleted non esiste o è false, mostra la spedizione
+      return s.deleted !== true;
+    });
+
+    // ⚠️ IMPORTANTE: Normalizza struttura destinatario per tutte le spedizioni
+    // Questo risolve il problema delle spedizioni importate salvate con campi separati
+    const spedizioniNormalizzate = spedizioniAttive.map((s: any) => {
+      // Se non ha struttura destinatario ma ha campi separati, costruiscila
+      if (!s.destinatario || !s.destinatario.nome) {
+        return {
+          ...s,
+          destinatario: {
+            nome: s.destinatarioNome || s.destinatario?.nome || s.nome || s.nominativo || '',
+            indirizzo: s.destinatarioIndirizzo || s.destinatario?.indirizzo || s.indirizzo || '',
+            citta: s.destinatarioCitta || s.destinatario?.citta || s.citta || s.localita || '',
+            provincia: s.destinatarioProvincia || s.destinatario?.provincia || s.provincia || '',
+            cap: s.destinatarioCap || s.destinatario?.cap || s.cap || '',
+            telefono: s.destinatarioTelefono || s.destinatario?.telefono || s.telefono || '',
+            email: s.destinatarioEmail || s.destinatario?.email || s.email_dest || s.email || '',
+          },
+          // Assicura anche struttura mittente
+          mittente: s.mittente || {
+            nome: s.mittenteNome || 'Mittente Predefinito',
+            indirizzo: s.mittenteIndirizzo || '',
+            citta: s.mittenteCitta || '',
+            provincia: s.mittenteProvincia || '',
+            cap: s.mittenteCap || '',
+            telefono: s.mittenteTelefono || '',
+            email: s.mittenteEmail || '',
+          },
+          // ⚠️ IMPORTANTE: Assicura tracking (ldv è il tracking, NON order_id)
+          // Per ordini importati da Spedisci.Online, ldv contiene il tracking
+          // Per ordini creati dalla piattaforma, tracking è già presente
+          tracking: s.ldv || s.tracking || s.tracking_number || s.trackingNumber || '', // PRIMA PRIORITÀ: ldv
+          // Mantieni anche ldv separato per compatibilità
+          ldv: s.ldv || s.tracking || '',
+        };
+      }
+      return s;
+    });
+
+    // Log per debug (rimuovere in produzione)
+    console.log(`📦 Totale spedizioni nel DB: ${spedizioni.length}`);
+    console.log(`✅ Spedizioni attive: ${spedizioniAttive.length}`);
+    console.log(`📥 Spedizioni importate: ${spedizioniNormalizzate.filter((s: any) => s.imported).length}`);
 
     return NextResponse.json(
       {
         success: true,
-        data: spedizioniAttive,
-        count: spedizioniAttive.length,
+        data: spedizioniNormalizzate,
+        count: spedizioniNormalizzate.length,
       },
       { status: 200 }
     );

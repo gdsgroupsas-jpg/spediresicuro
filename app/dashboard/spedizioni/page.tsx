@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload, FileUp } from 'lucide-react';
+import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload, CheckSquare, Square, FileDown, CheckCircle2, AlertCircle, ChevronDown, Calendar } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
 import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
@@ -31,6 +31,7 @@ interface Spedizione {
   destinatario: {
     nome: string;
     indirizzo?: string;
+    numeroCivico?: string;
     citta?: string;
     provincia?: string;
     cap?: string;
@@ -50,6 +51,21 @@ interface Spedizione {
   tracking?: string;
   status?: 'in_preparazione' | 'in_transito' | 'consegnata' | 'eccezione' | 'annullata';
   corriere?: string;
+  // Campi per ordini importati
+  imported?: boolean;
+  importSource?: string;
+  importPlatform?: string;
+  verified?: boolean;
+  order_id?: string;
+  // Campi aggiuntivi per export e import
+  contrassegno?: number | string;
+  assicurazione?: number | string;
+  contenuto?: string;
+  note?: string;
+  totale_ordine?: number | string;
+  rif_mittente?: string;
+  rif_destinatario?: string;
+  colli?: number;
 }
 
 // Componente Badge Status
@@ -91,6 +107,31 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// Componente Badge Importato
+function ImportedBadge({ imported, verified, platform }: { imported?: boolean; verified?: boolean; platform?: string }) {
+  if (!imported) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
+          verified
+            ? 'bg-green-50 text-green-700 border-green-300'
+            : 'bg-purple-50 text-purple-700 border-purple-300'
+        }`}
+        title={verified ? 'Ordine verificato e pronto per export' : 'Ordine importato - Verifica richiesta'}
+      >
+        {verified ? '✓ Verificato' : '📥 Importato'}
+      </span>
+      {platform && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
+          {platform}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function ListaSpedizioniPage() {
   const router = useRouter();
   const [spedizioni, setSpedizioni] = useState<Spedizione[]>([]);
@@ -106,14 +147,23 @@ export default function ListaSpedizioniPage() {
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Selezione multipla per export CSV
+  const [selectedShipments, setSelectedShipments] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   // Modale eliminazione
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [spedizioneToDelete, setSpedizioneToDelete] = useState<string | null>(null);
+  const [spedizioniToDelete, setSpedizioniToDelete] = useState<Set<string>>(new Set()); // Per cancellazione multipla
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Modale import
+  // Modale import ordini
   const [showImportModal, setShowImportModal] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+
+  // Menu selezione rapida per periodo
+  const [showSelectMenu, setShowSelectMenu] = useState(false);
 
   // Carica le spedizioni
   useEffect(() => {
@@ -127,7 +177,13 @@ export default function ListaSpedizioniPage() {
         }
 
         const result = await response.json();
-        setSpedizioni(result.data || []);
+        const spedizioniCaricate = result.data || [];
+        
+        // Log per debug
+        console.log('📦 Spedizioni caricate:', spedizioniCaricate.length);
+        console.log('📥 Spedizioni importate:', spedizioniCaricate.filter((s: any) => s.imported).length);
+        
+        setSpedizioni(spedizioniCaricate);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Errore sconosciuto');
         console.error('Errore caricamento spedizioni:', err);
@@ -172,43 +228,72 @@ export default function ListaSpedizioniPage() {
     window.open(`https://tracking.example.com/${tracking}`, '_blank');
   };
 
-  // Handler elimina spedizione
+  // Handler elimina spedizione singola
   const handleDeleteClick = (id: string) => {
     setSpedizioneToDelete(id);
+    setSpedizioniToDelete(new Set()); // Reset eliminazione multipla
     setShowDeleteModal(true);
   };
 
+  // Cancella spedizioni selezionate
+  const handleDeleteSelected = () => {
+    if (selectedShipments.size === 0) {
+      alert('Seleziona almeno una spedizione da eliminare');
+      return;
+    }
+    setSpedizioniToDelete(selectedShipments);
+    setSpedizioneToDelete(null); // Reset eliminazione singola
+    setShowDeleteModal(true);
+  };
+
+  // Annulla eliminazione
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setSpedizioneToDelete(null);
+    setSpedizioniToDelete(new Set());
+  };
+
+  // Conferma eliminazione (singola o multipla)
   const confirmDelete = async () => {
-    if (!spedizioneToDelete) return;
+    const idsToDelete = spedizioneToDelete 
+      ? [spedizioneToDelete] 
+      : Array.from(spedizioniToDelete);
+
+    if (idsToDelete.length === 0) {
+      return;
+    }
 
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/spedizioni?id=${spedizioneToDelete}`, {
-        method: 'DELETE',
-      });
+      // Elimina tutte le spedizioni selezionate
+      for (const id of idsToDelete) {
+        const response = await fetch(`/api/spedizioni?id=${id}`, {
+          method: 'DELETE',
+        });
 
-      if (!response.ok) {
-        throw new Error('Errore durante l\'eliminazione');
+        if (!response.ok) {
+          throw new Error(`Errore durante l'eliminazione della spedizione ${id}`);
+        }
       }
 
       // Rimuovi dalla lista locale
-      setSpedizioni((prev) => prev.filter((s) => s.id !== spedizioneToDelete));
+      setSpedizioni((prev) => prev.filter((s) => !idsToDelete.includes(s.id)));
+      
+      // Deseleziona tutte
+      setSelectedShipments(new Set());
+      setSelectAll(false);
 
       // Chiudi modale
       setShowDeleteModal(false);
       setSpedizioneToDelete(null);
+      setSpedizioniToDelete(new Set());
     } catch (error) {
       console.error('Errore eliminazione:', error);
-      alert('Errore durante l\'eliminazione della spedizione');
+      alert('Errore durante l\'eliminazione delle spedizioni');
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setSpedizioneToDelete(null);
   };
 
   // Filtra spedizioni
@@ -282,44 +367,228 @@ export default function ListaSpedizioniPage() {
     return filtered;
   }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, customDateFrom, customDateTo]);
 
-  // Export CSV formato spedisci.online
+  // Gestione selezione multipla
+  const handleToggleSelect = (id: string) => {
+    setSelectedShipments((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedShipments(new Set());
+      setSelectAll(false);
+    } else {
+      setSelectedShipments(new Set(filteredSpedizioni.map(s => s.id)));
+      setSelectAll(true);
+    }
+  };
+
+  // Sincronizza selectAll con selectedShipments
+  useEffect(() => {
+    if (filteredSpedizioni.length > 0) {
+      const allSelected = filteredSpedizioni.every(s => selectedShipments.has(s.id));
+      setSelectAll(allSelected);
+    } else {
+      setSelectAll(false);
+    }
+  }, [selectedShipments, filteredSpedizioni]);
+
+  // Download LDV singola
+  const handleDownloadLDV = async (id: string, format: 'pdf' | 'csv' | 'xlsx' = 'pdf') => {
+    try {
+      const response = await fetch(`/api/spedizioni/${id}/ldv?format=${format}`);
+      if (!response.ok) {
+        throw new Error('Errore durante il download della LDV');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `LDV_${id}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Errore download LDV:', error);
+      alert('Errore durante il download della LDV');
+    }
+  };
+
+  // Modifica ordine importato
+  const handleEditImported = (id: string) => {
+    router.push(`/dashboard/spedizioni/${id}?edit=true&imported=true`);
+  };
+
+  // Funzioni selezione rapida per periodo
+  const handleSelectByPeriod = (period: string) => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    switch (period) {
+      case 'oggi':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        break;
+      case 'ieri':
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0);
+        endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+        break;
+      case '3gg':
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 3);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case '1settimana':
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case '1mese':
+        startDate = new Date(now);
+        startDate.setMonth(startDate.getMonth() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case '30gg':
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'tutti':
+        setSelectedShipments(new Set(filteredSpedizioni.map(s => s.id)));
+        setSelectAll(true);
+        setShowSelectMenu(false);
+        return;
+      default:
+        return;
+    }
+
+    // Filtra spedizioni nel periodo
+    const spedizioniNelPeriodo = filteredSpedizioni.filter(s => {
+      const spedizioneDate = new Date(s.createdAt);
+      return spedizioneDate >= startDate && spedizioneDate <= endDate;
+    });
+
+    setSelectedShipments(new Set(spedizioniNelPeriodo.map(s => s.id)));
+    setSelectAll(spedizioniNelPeriodo.length === filteredSpedizioni.length);
+    setShowSelectMenu(false);
+  };
+
+  // Selezione per range personalizzato
+  const handleSelectByCustomRange = () => {
+    const startInput = prompt('Data inizio (formato: YYYY-MM-DD):');
+    const endInput = prompt('Data fine (formato: YYYY-MM-DD):');
+
+    if (!startInput || !endInput) {
+      return;
+    }
+
+    try {
+      const startDate = new Date(startInput);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(endInput);
+      endDate.setHours(23, 59, 59, 999);
+
+      const spedizioniNelRange = filteredSpedizioni.filter(s => {
+        const spedizioneDate = new Date(s.createdAt);
+        return spedizioneDate >= startDate && spedizioneDate <= endDate;
+      });
+
+      setSelectedShipments(new Set(spedizioniNelRange.map(s => s.id)));
+      setSelectAll(spedizioniNelRange.length === filteredSpedizioni.length);
+      setShowSelectMenu(false);
+    } catch (error) {
+      alert('Formato data non valido. Usa YYYY-MM-DD');
+    }
+  };
+
+  // Chiudi menu selezione quando si clicca fuori
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.select-menu-container')) {
+        setShowSelectMenu(false);
+      }
+    };
+
+    if (showSelectMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSelectMenu]);
+
+  // Export CSV formato spedisci.online (solo spedizioni selezionate)
   const handleExportSpedisciOnlineCSV = async () => {
-    if (filteredSpedizioni.length === 0) {
-      alert('Nessuna spedizione da esportare');
+    const spedizioniToExport = selectedShipments.size > 0
+      ? filteredSpedizioni.filter(s => selectedShipments.has(s.id))
+      : filteredSpedizioni;
+
+    if (spedizioniToExport.length === 0) {
+      alert('Seleziona almeno una spedizione da esportare');
       return;
     }
 
     setIsExporting(true);
     try {
       // Converti Spedizione[] a SpedizioneData[] normalizzando tutti i campi
-      const spedizioniForCSV = filteredSpedizioni.map(s => ({
-        tracking: s.tracking || s.id,
-        mittente: {
-          nome: s.mittente?.nome || '',
-          indirizzo: s.mittente?.indirizzo || '',
-          citta: s.mittente?.citta || '',
-          provincia: s.mittente?.provincia || '',
-          cap: s.mittente?.cap || '',
-          telefono: s.mittente?.telefono || '',
-          email: s.mittente?.email || '',
-        },
-        destinatario: {
-          nome: s.destinatario?.nome || '',
-          indirizzo: s.destinatario?.indirizzo || '',
-          citta: s.destinatario?.citta || '',
-          provincia: s.destinatario?.provincia || '',
-          cap: s.destinatario?.cap || '',
-          telefono: s.destinatario?.telefono || '',
-          email: s.destinatario?.email || '',
-        },
-        peso: s.peso || 0,
-        dimensioni: s.dimensioni || { lunghezza: 0, larghezza: 0, altezza: 0 },
-        tipoSpedizione: s.tipoSpedizione || 'standard',
-        corriere: s.corriere || '',
-        prezzoFinale: s.prezzoFinale || 0,
-        status: s.status || 'in_preparazione',
-        createdAt: s.createdAt,
-      }));
+      // ⚠️ IMPORTANTE: Mappatura completa per formato CSV spedisci.online
+      const spedizioniForCSV = spedizioniToExport.map(s => {
+        // Estrai indirizzo completo (indirizzo + numero civico se separati)
+        const indirizzoCompleto = s.destinatario?.indirizzo || '';
+        const numeroCivico = s.destinatario?.numeroCivico || '';
+        const indirizzoFinale = numeroCivico 
+          ? `${indirizzoCompleto}, n ${numeroCivico}`.trim()
+          : indirizzoCompleto;
+
+        return {
+          tracking: s.tracking || s.id,
+          mittente: {
+            nome: s.mittente?.nome || '',
+            indirizzo: s.mittente?.indirizzo || '',
+            citta: s.mittente?.citta || '',
+            provincia: s.mittente?.provincia || '',
+            cap: s.mittente?.cap || '',
+            telefono: s.mittente?.telefono || '',
+            email: s.mittente?.email || '',
+          },
+          destinatario: {
+            nome: s.destinatario?.nome || '',
+            indirizzo: indirizzoFinale,
+            citta: s.destinatario?.citta || '',
+            provincia: s.destinatario?.provincia || '',
+            cap: s.destinatario?.cap || '',
+            telefono: s.destinatario?.telefono || '',
+            email: s.destinatario?.email || '',
+          },
+          peso: s.peso || 0,
+          dimensioni: s.dimensioni || { lunghezza: 0, larghezza: 0, altezza: 0 },
+          tipoSpedizione: s.tipoSpedizione || 'standard',
+          corriere: s.corriere || '',
+          prezzoFinale: s.prezzoFinale || 0,
+          status: s.status || 'in_preparazione',
+          createdAt: s.createdAt,
+          // Campi aggiuntivi per formato spedisci.online
+          contrassegno: s.contrassegno || '',
+          assicurazione: s.assicurazione || '',
+          contenuto: s.contenuto || s.note || '',
+          order_id: s.order_id || s.tracking || s.id,
+          totale_ordine: s.totale_ordine || s.contrassegno || s.prezzoFinale || '',
+          rif_mittente: s.rif_mittente || s.mittente?.nome || 'MITTENTE',
+          rif_destinatario: s.rif_destinatario || s.destinatario?.nome || '',
+          colli: s.colli || 1,
+          note: s.note || '',
+        };
+      });
 
       const csvData = generateMultipleShipmentsCSV(spedizioniForCSV);
       const filename = `spedizioni_spedisci_online_${new Date().toISOString().split('T')[0]}.csv`;
@@ -332,17 +601,21 @@ export default function ListaSpedizioniPage() {
     }
   };
 
-  // Export multiplo usando ExportService
+  // Export multiplo usando ExportService (solo spedizioni selezionate)
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
-    if (filteredSpedizioni.length === 0) {
-      alert('Nessuna spedizione da esportare');
+    const spedizioniToExport = selectedShipments.size > 0
+      ? filteredSpedizioni.filter(s => selectedShipments.has(s.id))
+      : filteredSpedizioni;
+
+    if (spedizioniToExport.length === 0) {
+      alert('Seleziona almeno una spedizione da esportare');
       return;
     }
 
     setIsExporting(true);
     try {
       // Converti formato spedizioni per ExportService
-      const shipmentsForExport = filteredSpedizioni.map((s) => ({
+      const shipmentsForExport = spedizioniToExport.map((s) => ({
         tracking_number: s.tracking || s.id,
         created_at: s.createdAt,
         status: s.status || 'in_preparazione',
@@ -398,71 +671,96 @@ export default function ListaSpedizioniPage() {
           subtitle="Gestisci e monitora tutte le tue spedizioni in tempo reale"
           showBackButton={true}
           actions={
-            <div className="flex items-center gap-3">
-              {/* Pulsante Import Ordini */}
+            <div className="flex flex-wrap items-center gap-3">
+              {selectedShipments.size > 0 && (
+                <div className="text-sm text-gray-700 font-semibold bg-gradient-to-r from-[#FFD700]/20 to-[#FF9500]/20 px-3 py-1.5 rounded-lg border border-[#FF9500]/30">
+                  {selectedShipments.size} selezionate
+                </div>
+              )}
+              {/* Pulsante Import */}
               <button
                 onClick={() => setShowImportModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 border border-blue-700 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
-                title="Importa ordini da CSV/Excel"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all"
               >
-                <FileUp className="w-4 h-4" />
-                Importa
+                <FileDown className="w-4 h-4" />
+                Importa Ordini
               </button>
 
+              {/* Pulsante Cancella Selezionate */}
+              {selectedShipments.size > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Cancella ({selectedShipments.size})
+                </button>
+              )}
+
               {filteredSpedizioni.length > 0 && (
-                <div className="relative group">
+                <div className="relative">
                   <button
                     onClick={() => setShowFilters(!showFilters)}
                     disabled={isExporting}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all disabled:opacity-50 transform hover:scale-105"
                   >
                     <Download className="w-4 h-4" />
                     {isExporting ? 'Esportazione...' : 'Esporta'}
                   </button>
                   {showFilters && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                      <button
-                        onClick={() => {
-                          handleExport('csv');
-                          setShowFilters(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        <FileText className="w-4 h-4 text-gray-600" />
-                        <span>Esporta CSV</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleExport('xlsx');
-                          setShowFilters(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        <FileSpreadsheet className="w-4 h-4 text-gray-600" />
-                        <span>Esporta XLSX</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleExport('pdf');
-                          setShowFilters(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        <File className="w-4 h-4 text-gray-600" />
-                        <span>Esporta PDF</span>
-                      </button>
-                      <div className="border-t border-gray-200 my-1"></div>
-                      <button
-                        onClick={() => {
-                          handleExportSpedisciOnlineCSV();
-                          setShowFilters(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-yellow-50 flex items-center gap-2 text-yellow-700"
-                        title="Esporta CSV nel formato spedisci.online per importazione manuale"
-                      >
-                        <Upload className="w-4 h-4 text-yellow-600" />
-                        <span>CSV Spedisci.Online</span>
-                      </button>
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                      <div className="p-2">
+                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 mb-1">
+                          Formati Standard
+                        </div>
+                        <button
+                          onClick={() => {
+                            handleExport('csv');
+                            setShowFilters(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 flex items-center gap-2 text-gray-900 font-medium rounded-lg transition-colors"
+                        >
+                          <FileText className="w-4 h-4 text-gray-600" />
+                          <span>Esporta CSV</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleExport('xlsx');
+                            setShowFilters(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 flex items-center gap-2 text-gray-900 font-medium rounded-lg transition-colors"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 text-gray-600" />
+                          <span>Esporta XLSX</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleExport('pdf');
+                            setShowFilters(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 flex items-center gap-2 text-gray-900 font-medium rounded-lg transition-colors"
+                        >
+                          <File className="w-4 h-4 text-gray-600" />
+                          <span>Esporta PDF</span>
+                        </button>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="p-2">
+                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 mb-1">
+                          Importazione
+                        </div>
+                        <button
+                          onClick={() => {
+                            handleExportSpedisciOnlineCSV();
+                            setShowFilters(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 bg-gradient-to-r from-[#FFD700]/10 to-[#FF9500]/10 hover:from-[#FFD700]/20 hover:to-[#FF9500]/20 flex items-center gap-2 text-[#FF9500] font-semibold rounded-lg transition-all border border-[#FF9500]/20"
+                          title="Esporta CSV nel formato spedisci.online per importazione manuale"
+                        >
+                          <Upload className="w-4 h-4 text-[#FF9500]" />
+                          <span>CSV Spedisci.Online</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -490,9 +788,9 @@ export default function ListaSpedizioniPage() {
           }
         />
 
-        {/* Filtri e Ricerca */}
+        {/* Filtri e Ricerca - Stile Premium */}
         {!isLoading && !error && spedizioni.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
+          <div className="bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-xl p-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Ricerca */}
               <div className="md:col-span-2">
@@ -503,7 +801,7 @@ export default function ListaSpedizioniPage() {
                     placeholder="Cerca per destinatario, tracking, città..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500 font-medium"
                   />
                   {searchQuery && (
                     <button
@@ -521,7 +819,7 @@ export default function ListaSpedizioniPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent bg-white text-gray-900 font-medium"
                 >
                   <option value="all">Tutti gli status</option>
                   <option value="in_preparazione">In Preparazione</option>
@@ -537,7 +835,7 @@ export default function ListaSpedizioniPage() {
                 <select
                   value={courierFilter}
                   onChange={(e) => setCourierFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent bg-white text-gray-900 font-medium"
                 >
                   <option value="all">Tutti i corrieri</option>
                   <option value="GLS">GLS</option>
@@ -554,7 +852,7 @@ export default function ListaSpedizioniPage() {
                 <select
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent bg-white text-gray-900 font-medium"
                 >
                   <option value="all">Tutte le date</option>
                   <option value="today">Oggi</option>
@@ -617,7 +915,7 @@ export default function ListaSpedizioniPage() {
         )}
 
         {/* Main Content Card */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-xl overflow-hidden">
           {/* Loading State */}
           {isLoading && (
             <div className="p-12 text-center">
@@ -704,6 +1002,98 @@ export default function ListaSpedizioniPage() {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
+                      <div className="flex items-center gap-2 relative select-menu-container">
+                        <button
+                          onClick={handleSelectAll}
+                          className="flex items-center justify-center"
+                          title={selectAll ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                        >
+                          {selectAll ? (
+                            <CheckSquare className="w-5 h-5 text-[#FF9500]" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowSelectMenu(!showSelectMenu)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <span>Seleziona</span>
+                            <ChevronDown className={`w-3 h-3 transition-transform ${showSelectMenu ? 'rotate-180' : ''}`} />
+                          </button>
+                          
+                          {showSelectMenu && (
+                            <div className="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                              <div className="p-1">
+                                <button
+                                  onClick={() => handleSelectByPeriod('tutti')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <CheckSquare className="w-4 h-4" />
+                                  <span>Tutti</span>
+                                </button>
+                                <div className="border-t border-gray-100 my-1"></div>
+                                <button
+                                  onClick={() => handleSelectByPeriod('oggi')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Oggi</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSelectByPeriod('ieri')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Ieri</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSelectByPeriod('3gg')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Ultimi 3 giorni</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSelectByPeriod('1settimana')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Ultima settimana</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSelectByPeriod('1mese')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Ultimo mese</span>
+                                </button>
+                                <button
+                                  onClick={() => handleSelectByPeriod('30gg')}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Ultimi 30 giorni</span>
+                                </button>
+                                <div className="border-t border-gray-100 my-1"></div>
+                                <button
+                                  onClick={handleSelectByCustomRange}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-md transition-colors flex items-center gap-2 font-medium"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Data a piacere...</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Destinatario
                     </th>
                     <th
@@ -757,12 +1147,34 @@ export default function ListaSpedizioniPage() {
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => handleViewDetails(spedizione.id)}
                     >
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => handleToggleSelect(spedizione.id)}
+                          className="flex items-center justify-center"
+                        >
+                          {selectedShipments.has(spedizione.id) ? (
+                            <CheckSquare className="w-5 h-5 text-[#FF9500]" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {spedizione.destinatario?.nome || 'N/A'}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {spedizione.destinatario?.nome || 'N/A'}
+                            </div>
+                            <ImportedBadge 
+                              imported={spedizione.imported} 
+                              verified={spedizione.verified}
+                              platform={spedizione.importPlatform}
+                            />
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 mt-1">
                             {spedizione.destinatario?.citta && spedizione.destinatario?.provincia
                               ? `${spedizione.destinatario.citta}, ${spedizione.destinatario.provincia}`
                               : ''}
@@ -813,12 +1225,40 @@ export default function ListaSpedizioniPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
+                          {spedizione.imported && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditImported(spedizione.id);
+                              }}
+                              className={`p-2 rounded-lg focus:outline-none transition-all ${
+                                spedizione.verified
+                                  ? 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                                  : 'text-purple-500 hover:text-purple-700 hover:bg-purple-100'
+                              }`}
+                              title={spedizione.verified ? 'Modifica ordine importato' : 'Verifica e modifica ordine'}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadLDV(spedizione.id, 'pdf');
+                            }}
+                            className="p-2 text-gray-400 hover:text-[#FF9500] hover:bg-gradient-to-r hover:from-[#FFD700]/10 hover:to-[#FF9500]/10 rounded-lg focus:outline-none transition-all"
+                            title="Scarica LDV PDF"
+                          >
+                            <FileText className="w-5 h-5" />
+                          </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleViewDetails(spedizione.id);
                             }}
-                            className="text-gray-400 hover:text-blue-600 focus:outline-none transition-colors"
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg focus:outline-none transition-all"
                             title="Visualizza dettagli"
                           >
                             <svg
@@ -847,7 +1287,7 @@ export default function ListaSpedizioniPage() {
                                 e.stopPropagation();
                                 handleTrack(spedizione.tracking!);
                               }}
-                              className="text-gray-400 hover:text-indigo-600 focus:outline-none transition-colors"
+                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg focus:outline-none transition-all"
                               title="Traccia spedizione"
                             >
                               <svg
@@ -870,7 +1310,7 @@ export default function ListaSpedizioniPage() {
                               e.stopPropagation();
                               handleDeleteClick(spedizione.id);
                             }}
-                            className="text-gray-400 hover:text-red-600 focus:outline-none transition-colors"
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg focus:outline-none transition-all"
                             title="Elimina spedizione"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -887,7 +1327,7 @@ export default function ListaSpedizioniPage() {
 
         {/* Empty State per filtri */}
         {!isLoading && !error && spedizioni.length > 0 && filteredSpedizioni.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
+          <div className="bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-xl p-12 text-center">
             <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Nessun risultato trovato
@@ -921,20 +1361,90 @@ export default function ListaSpedizioniPage() {
         {/* Modale Import Ordini */}
         {showImportModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="w-full max-w-5xl my-8">
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8">
               <ImportOrders
-                onImportComplete={(count, errors) => {
-                  if (errors.length > 0) {
-                    alert(`Importati ${count} ordini con ${errors.length} errori:\n${errors.join('\n')}`);
-                  } else {
-                    alert(`Importati ${count} ordini con successo!`);
+                onImportComplete={async (successCount, errors) => {
+                  setImportResult({ success: successCount, errors });
+                  
+                  // ⚠️ IMPORTANTE: Ricarica immediatamente le spedizioni senza ricaricare tutta la pagina
+                  try {
+                    console.log('🔄 Ricaricamento spedizioni dopo import...');
+                    const response = await fetch('/api/spedizioni');
+                    if (response.ok) {
+                      const result = await response.json();
+                      const nuoveSpedizioni = result.data || [];
+                      console.log('✅ Spedizioni caricate:', nuoveSpedizioni.length);
+                      console.log('📥 Spedizioni importate:', nuoveSpedizioni.filter((s: any) => s.imported).length);
+                      setSpedizioni(nuoveSpedizioni);
+                    }
+                  } catch (err) {
+                    console.error('❌ Errore ricaricamento spedizioni:', err);
                   }
-                  setShowImportModal(false);
-                  // Ricarica spedizioni
-                  window.location.reload();
+                  
+                  // Chiudi modale dopo 2 secondi se tutto ok
+                  setTimeout(() => {
+                    setShowImportModal(false);
+                    if (errors.length === 0 && successCount > 0) {
+                      setImportResult(null);
+                    }
+                  }, 2000);
                 }}
-                onCancel={() => setShowImportModal(false)}
+                onCancel={() => {
+                  setShowImportModal(false);
+                  setImportResult(null);
+                }}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Modale Risultato Import */}
+        {importResult && !showImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                  importResult.errors.length === 0 
+                    ? 'bg-green-100' 
+                    : 'bg-yellow-100'
+                }`}>
+                  {importResult.errors.length === 0 ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-yellow-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Importazione Completata
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {importResult.success} ordini importati con successo
+                  </p>
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-red-900 mb-2">
+                    Errori ({importResult.errors.length}):
+                  </h4>
+                  <ul className="text-xs text-red-700 space-y-1 max-h-32 overflow-y-auto">
+                    {importResult.errors.map((error, index) => (
+                      <li key={index}>• {error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setImportResult(null);
+                }}
+                className="w-full px-4 py-2 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg hover:shadow-lg transition-all"
+              >
+                Chiudi
+              </button>
             </div>
           </div>
         )}
@@ -949,15 +1459,32 @@ export default function ListaSpedizioniPage() {
                   <Trash2 className="w-6 h-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Elimina Spedizione</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {spedizioniToDelete.size > 0 
+                      ? `Elimina ${spedizioniToDelete.size} Spedizioni`
+                      : 'Elimina Spedizione'}
+                  </h3>
                   <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
                 </div>
               </div>
 
               {/* Body */}
-              <p className="text-sm text-gray-700 mb-6">
-                Sei sicuro di voler eliminare questa spedizione? I dati saranno archiviati ma non visibili nella lista.
-              </p>
+              <div className="mb-6">
+                {spedizioniToDelete.size > 0 ? (
+                  <div>
+                    <p className="text-sm text-gray-700 mb-3">
+                      Sei sicuro di voler eliminare <strong className="text-red-600">{spedizioniToDelete.size} spedizioni selezionate</strong>?
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      I dati saranno archiviati ma non visibili nella lista.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700">
+                    Sei sicuro di voler eliminare questa spedizione? I dati saranno archiviati ma non visibili nella lista.
+                  </p>
+                )}
+              </div>
 
               {/* Actions */}
               <div className="flex items-center justify-end gap-3">

@@ -281,7 +281,7 @@ export default function IntegrationDialog({
                 type={key.includes('secret') || key.includes('token') ? 'password' : 'text'}
                 {...register(key)}
                 placeholder={getFieldPlaceholder(key)}
-                className="w-full px-4 py-2.5 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                className="w-full px-4 py-2.5 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
               />
               {errors[key] && (
                 <p className="text-xs text-red-400 mt-1">{errors[key]?.message as string}</p>

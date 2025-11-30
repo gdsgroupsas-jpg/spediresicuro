@@ -361,7 +361,7 @@ export default function DatiClientePage() {
                   value={formData.nome}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -374,7 +374,7 @@ export default function DatiClientePage() {
                   value={formData.cognome}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -401,7 +401,7 @@ export default function DatiClientePage() {
                   name="dataNascita"
                   value={formData.dataNascita}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -413,7 +413,7 @@ export default function DatiClientePage() {
                   name="luogoNascita"
                   value={formData.luogoNascita}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -424,7 +424,7 @@ export default function DatiClientePage() {
                   name="sesso"
                   value={formData.sesso}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 >
                   <option value="">Seleziona</option>
                   <option value="M">Maschio</option>
@@ -441,7 +441,7 @@ export default function DatiClientePage() {
                   value={formData.telefono}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -453,7 +453,7 @@ export default function DatiClientePage() {
                   name="cellulare"
                   value={formData.cellulare}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
             </div>
@@ -477,7 +477,7 @@ export default function DatiClientePage() {
                     value={formData.ragioneSociale}
                     onChange={handleChange}
                     required={formData.tipoCliente === 'azienda'}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                   />
                 </div>
                 <div>
@@ -491,7 +491,7 @@ export default function DatiClientePage() {
                     onChange={handleChange}
                     required={formData.tipoCliente === 'azienda'}
                     maxLength={11}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                   />
                 </div>
                 <div>
@@ -503,7 +503,7 @@ export default function DatiClientePage() {
                     name="codiceSDI"
                     value={formData.codiceSDI}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                     placeholder="XXXXXXX"
                   />
                 </div>
@@ -516,7 +516,7 @@ export default function DatiClientePage() {
                     name="pec"
                     value={formData.pec}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                     placeholder="azienda@pec.it"
                   />
                 </div>
@@ -541,7 +541,7 @@ export default function DatiClientePage() {
                   value={formData.indirizzo}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -554,7 +554,7 @@ export default function DatiClientePage() {
                   value={formData.citta}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -583,7 +583,7 @@ export default function DatiClientePage() {
                   onChange={handleChange}
                   required
                   maxLength={5}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -595,7 +595,7 @@ export default function DatiClientePage() {
                   name="nazione"
                   value={formData.nazione}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
             </div>
@@ -618,7 +618,7 @@ export default function DatiClientePage() {
                     name="indirizzoFatturazione"
                     value={formData.indirizzoFatturazione}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                   />
                 </div>
                 <div>
@@ -630,7 +630,7 @@ export default function DatiClientePage() {
                     name="cittaFatturazione"
                     value={formData.cittaFatturazione}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                   />
                 </div>
                 <div>
@@ -656,7 +656,7 @@ export default function DatiClientePage() {
                     value={formData.capFatturazione}
                     onChange={handleChange}
                     maxLength={5}
-                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                    className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                   />
                 </div>
               </div>
@@ -692,7 +692,7 @@ export default function DatiClientePage() {
                   name="banca"
                   value={formData.banca}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -704,7 +704,7 @@ export default function DatiClientePage() {
                   name="nomeIntestatario"
                   value={formData.nomeIntestatario}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
             </div>
@@ -725,7 +725,7 @@ export default function DatiClientePage() {
                   name="tipoDocumento"
                   value={formData.tipoDocumento}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 >
                   <option value="">Seleziona</option>
                   <option value="carta_identita">Carta d&apos;Identità</option>
@@ -742,7 +742,7 @@ export default function DatiClientePage() {
                   name="numeroDocumento"
                   value={formData.numeroDocumento}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -754,7 +754,7 @@ export default function DatiClientePage() {
                   name="rilasciatoDa"
                   value={formData.rilasciatoDa}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -766,7 +766,7 @@ export default function DatiClientePage() {
                   name="dataRilascio"
                   value={formData.dataRilascio}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div>
@@ -778,7 +778,7 @@ export default function DatiClientePage() {
                   name="dataScadenza"
                   value={formData.dataScadenza}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
+                  className="w-full px-4 py-2 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#FACC15] glow-on-focus transition-all"
                 />
               </div>
               <div className="md:col-span-2">
