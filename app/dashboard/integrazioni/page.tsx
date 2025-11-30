@@ -30,7 +30,7 @@ const platforms = [
     credentials: {
       store_url: '',
       access_token: '',
-    },
+    } as Record<string, string>,
   },
   {
     id: 'woocommerce',
@@ -42,7 +42,7 @@ const platforms = [
       store_url: '',
       api_key: '',
       api_secret: '',
-    },
+    } as Record<string, string>,
   },
   {
     id: 'amazon',
@@ -58,7 +58,7 @@ const platforms = [
       aws_secret_key: '',
       seller_id: '',
       region: 'eu-west-1',
-    },
+    } as Record<string, string>,
   },
   {
     id: 'magento',
@@ -69,7 +69,7 @@ const platforms = [
     credentials: {
       store_url: '',
       access_token: '',
-    },
+    } as Record<string, string>,
   },
   {
     id: 'prestashop',
@@ -81,7 +81,7 @@ const platforms = [
       store_url: '',
       api_key: '',
       api_secret: '',
-    },
+    } as Record<string, string>,
   },
   {
     id: 'custom',
@@ -93,9 +93,9 @@ const platforms = [
       store_url: '',
       api_key: '',
       api_secret: '',
-    },
+    } as Record<string, string>,
   },
-]
+] as const
 
 // Varianti animazione container
 const containerVariants = {

@@ -37,6 +37,11 @@ interface Spedizione {
     email?: string;
   };
   peso: number;
+  dimensioni?: {
+    lunghezza: number;
+    larghezza: number;
+    altezza: number;
+  };
   tipoSpedizione: string;
   prezzoFinale: number;
   createdAt: string;
@@ -272,6 +277,56 @@ export default function ListaSpedizioniPage() {
 
     return filtered;
   }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, customDateFrom, customDateTo]);
+
+  // Export CSV formato spedisci.online
+  const handleExportSpedisciOnlineCSV = async () => {
+    if (filteredSpedizioni.length === 0) {
+      alert('Nessuna spedizione da esportare');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Converti Spedizione[] a SpedizioneData[] normalizzando tutti i campi
+      const spedizioniForCSV = filteredSpedizioni.map(s => ({
+        tracking: s.tracking || s.id,
+        mittente: {
+          nome: s.mittente?.nome || '',
+          indirizzo: s.mittente?.indirizzo || '',
+          citta: s.mittente?.citta || '',
+          provincia: s.mittente?.provincia || '',
+          cap: s.mittente?.cap || '',
+          telefono: s.mittente?.telefono || '',
+          email: s.mittente?.email || '',
+        },
+        destinatario: {
+          nome: s.destinatario?.nome || '',
+          indirizzo: s.destinatario?.indirizzo || '',
+          citta: s.destinatario?.citta || '',
+          provincia: s.destinatario?.provincia || '',
+          cap: s.destinatario?.cap || '',
+          telefono: s.destinatario?.telefono || '',
+          email: s.destinatario?.email || '',
+        },
+        peso: s.peso || 0,
+        dimensioni: s.dimensioni || { lunghezza: 0, larghezza: 0, altezza: 0 },
+        tipoSpedizione: s.tipoSpedizione || 'standard',
+        corriere: s.corriere || '',
+        prezzoFinale: s.prezzoFinale || 0,
+        status: s.status || 'in_preparazione',
+        createdAt: s.createdAt,
+      }));
+
+      const csvData = generateMultipleShipmentsCSV(spedizioniForCSV);
+      const filename = `spedizioni_spedisci_online_${new Date().toISOString().split('T')[0]}.csv`;
+      downloadMultipleCSV(csvData, filename);
+    } catch (error) {
+      console.error('Errore export CSV Spedisci.Online:', error);
+      alert('Errore durante l\'esportazione CSV Spedisci.Online');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Export multiplo usando ExportService
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
