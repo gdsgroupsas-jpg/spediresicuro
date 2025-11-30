@@ -170,18 +170,18 @@ export class FulfillmentOrchestrator {
    * Genera CSV fallback per upload manuale
    */
   private generateFallbackCSV(data: Shipment | CreateShipmentInput): string {
-    // Normalizza dati
-    const recipientName = 'recipient_name' in data ? data.recipient_name : data.recipient?.nome || '';
-    const recipientAddress = 'recipient_address' in data ? data.recipient_address : data.recipient?.indirizzo || '';
-    const recipientCity = 'recipient_city' in data ? data.recipient_city : data.recipient?.citta || '';
-    const recipientZip = 'recipient_zip' in data ? data.recipient_zip : data.recipient?.cap || '';
-    const recipientProvince = 'recipient_province' in data ? data.recipient_province : data.recipient?.provincia || '';
-    const weight = 'weight' in data ? data.weight : data.peso || 0;
-    const cashOnDelivery = 'cash_on_delivery' in data ? data.cash_on_delivery : false;
-    const cashOnDeliveryAmount = 'cash_on_delivery_amount' in data ? data.cash_on_delivery_amount : 0;
-    const notes = 'notes' in data ? data.notes : data.note || '';
-    const recipientPhone = 'recipient_phone' in data ? data.recipient_phone : data.recipient?.telefono || '';
-    const recipientEmail = 'recipient_email' in data ? data.recipient_email : data.recipient?.email || '';
+    // Normalizza dati - entrambi i tipi hanno gli stessi campi
+    const recipientName = (data as any).recipient_name || '';
+    const recipientAddress = (data as any).recipient_address || '';
+    const recipientCity = (data as any).recipient_city || '';
+    const recipientZip = (data as any).recipient_zip || '';
+    const recipientProvince = (data as any).recipient_province || '';
+    const weight = (data as any).weight || 0;
+    const cashOnDelivery = (data as any).cash_on_delivery || false;
+    const cashOnDeliveryAmount = (data as any).cash_on_delivery_amount || 0;
+    const notes = (data as any).notes || '';
+    const recipientPhone = (data as any).recipient_phone || '';
+    const recipientEmail = (data as any).recipient_email || '';
 
     // Helper per escape CSV
     const escapeCSV = (value: string): string => {
