@@ -81,10 +81,26 @@ export async function initializeDemoUsers(): Promise<{ created: number; skipped:
  */
 export async function ensureDemoUsersExist(): Promise<void> {
   try {
-    await initializeDemoUsers();
+    console.log('🔄 [INIT] Verifica inizializzazione utenti demo...');
+    const result = await initializeDemoUsers();
+    console.log('✅ [INIT] Risultato inizializzazione:', result);
+    
+    // Se Supabase è configurato ma non sono stati creati utenti, potrebbe esserci un problema
+    if (isSupabaseConfigured() && result.created === 0 && result.skipped === 0) {
+      console.warn('⚠️ [INIT] Supabase configurato ma nessun utente demo inizializzato. Verifica la configurazione.');
+    }
   } catch (error: any) {
     // Non bloccare l'applicazione se l'inizializzazione fallisce
-    console.warn('⚠️ [INIT] Errore inizializzazione utenti demo:', error.message);
+    console.error('❌ [INIT] Errore inizializzazione utenti demo:', error.message);
+    console.error('❌ [INIT] Stack trace:', error.stack);
+    
+    // Se Supabase è configurato ma c'è un errore, potrebbe essere un problema di connessione
+    if (isSupabaseConfigured()) {
+      console.warn('⚠️ [INIT] Supabase è configurato ma l\'inizializzazione è fallita. Verifica:');
+      console.warn('   - Le variabili d\'ambiente SUPABASE sono corrette?');
+      console.warn('   - La tabella "users" esiste in Supabase?');
+      console.warn('   - La Service Role Key ha i permessi corretti?');
+    }
   }
 }
 
