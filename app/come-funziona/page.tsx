@@ -12,13 +12,13 @@ export default function ComeFunzionaPage() {
             <div className="bg-white rounded-xl shadow-lg p-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Carica lo Screenshot</h2>
               <p className="text-gray-700">
-                Carica uno screenshot di WhatsApp o un'immagine con i dati della spedizione. La nostra AI legge automaticamente tutte le informazioni.
+                Carica uno screenshot di WhatsApp o un&apos;immagine con i dati della spedizione. La nostra AI legge automaticamente tutte le informazioni.
               </p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Verifica e Modifica</h2>
               <p className="text-gray-700">
-                Controlla i dati estratti dall'AI e modifica se necessario. Tutto è già compilato automaticamente!
+                Controlla i dati estratti dall&apos;AI e modifica se necessario. Tutto è già compilato automaticamente!
               </p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-8">
