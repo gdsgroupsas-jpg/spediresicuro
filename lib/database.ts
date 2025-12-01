@@ -122,11 +122,13 @@ export interface User {
 // Inizializza il database se non esiste
 function initDatabase(): Database {
   // Utenti demo solo in sviluppo locale (non in produzione)
-  const demoUsers: User[] = process.env.NODE_ENV === 'development' ? [
+  // 🔓 ACCESSO DEMO: Credenziali disponibili per dimostrazione web
+  // Questi utenti sono disponibili sia in sviluppo che in produzione per accesso dimostrativo
+  const demoUsers: User[] = [
     {
       id: '1',
       email: 'admin@spediresicuro.it',
-      password: 'admin123', // Solo per sviluppo locale
+      password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
       name: 'Admin',
       role: 'admin',
       createdAt: new Date().toISOString(),
@@ -135,13 +137,13 @@ function initDatabase(): Database {
     {
       id: '2',
       email: 'demo@spediresicuro.it',
-      password: 'demo123', // Solo per sviluppo locale
+      password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
       name: 'Demo User',
       role: 'user',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-  ] : [];
+  ];
 
   const defaultData: Database = {
     spedizioni: [],
@@ -180,12 +182,12 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
-      // Utenti demo solo in sviluppo locale (non in produzione)
-      db.utenti = process.env.NODE_ENV === 'development' ? [
+      // 🔓 ACCESSO DEMO: Credenziali disponibili per dimostrazione web
+      db.utenti = [
         {
           id: '1',
           email: 'admin@spediresicuro.it',
-          password: 'admin123', // Solo per sviluppo locale
+          password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
           name: 'Admin',
           role: 'admin',
           createdAt: new Date().toISOString(),
@@ -194,13 +196,13 @@ export function readDatabase(): Database {
         {
           id: '2',
           email: 'demo@spediresicuro.it',
-          password: 'demo123', // Solo per sviluppo locale
+          password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
           name: 'Demo User',
           role: 'user',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-      ] : [];
+      ];
       // Salva la migrazione
       writeDatabase(db);
     }
