@@ -4,19 +4,9 @@
   "description": "Spedizioni intelligenti con AI - Da screenshot WhatsApp a spedizione pronta in 10 secondi",
   "icons": [
     {
-      "src": "/brand/favicon/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    },
-    {
-      "src": "/brand/favicon/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/brand/favicon/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ],
   "theme_color": "#FF9500",
