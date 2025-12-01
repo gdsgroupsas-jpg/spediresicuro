@@ -937,6 +937,12 @@ export async function createUser(userData: {
   }
   
   // ⚠️ PRIORITÀ 2: Salva in JSON (fallback o se Supabase non configurato)
+  // ⚠️ IMPORTANTE: Su Vercel il file system è read-only, quindi JSON non funziona
+  // Se siamo in produzione e Supabase non è configurato, dobbiamo fallire con un messaggio chiaro
+  if (process.env.NODE_ENV === 'production' && !isSupabaseConfigured()) {
+    throw new Error('Supabase non configurato. Configura le variabili ambiente NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY su Vercel.');
+  }
+  
   try {
     const db = readDatabase();
     db.utenti.push(newUser);
@@ -944,12 +950,23 @@ export async function createUser(userData: {
     console.log('✅ [JSON] Utente salvato in JSON locale');
     return newUser;
   } catch (error: any) {
+    // Se è un errore di file system read-only (Vercel), spiega meglio
+    if (error?.code === 'EROFS' || error?.message?.includes('read-only') || error?.message?.includes('EROFS')) {
+      if (isSupabaseConfigured()) {
+        // Supabase è configurato ma ha fallito, e JSON è read-only
+        throw new Error('Errore salvataggio in Supabase. Verifica la configurazione e che la tabella users esista. JSON non disponibile su Vercel (read-only).');
+      } else {
+        // Supabase non configurato e JSON read-only
+        throw new Error('Database non disponibile. Configura Supabase su Vercel (variabili ambiente) per salvare gli utenti in produzione.');
+      }
+    }
+    
     // Se Supabase non è configurato E JSON fallisce, questo è CRITICO
     if (!isSupabaseConfigured()) {
-      throw new Error(`Impossibile salvare l'utente: errore nel database JSON - ${error.message}`);
+      throw new Error(`Impossibile salvare l'utente: errore nel database JSON - ${error.message}. Configura Supabase per produzione.`);
     }
     // Se Supabase è configurato ma ha fallito E JSON fallisce, questo è CRITICO
-    throw new Error(`Impossibile salvare l'utente: sia Supabase che JSON hanno fallito - ${error.message}`);
+    throw new Error(`Impossibile salvare l'utente: sia Supabase che JSON hanno fallito. Errore Supabase: vedi log. Errore JSON: ${error.message}`);
   }
 }
 
