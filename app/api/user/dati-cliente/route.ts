@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let user: any = null; // Dichiarato fuori dal try per accesso nel catch
+  let session: any = null; // Dichiarato fuori dal try per accesso nel catch
   try {
-    const session = await auth()
+    session = await auth()
 
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = await findUserByEmail(session.user.email)
+    user = await findUserByEmail(session.user.email)
 
     if (!user) {
       return NextResponse.json(
