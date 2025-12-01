@@ -18,7 +18,15 @@ export default async function DashboardLayout({
   // Verifica autenticazione
   const session = await auth();
 
+  console.log('🔍 [DASHBOARD LAYOUT] Verifica sessione:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    email: session?.user?.email,
+    provider: (session?.user as any)?.provider,
+  });
+
   if (!session) {
+    console.log('❌ [DASHBOARD LAYOUT] Nessuna sessione trovata, redirect a /login');
     redirect('/login');
   }
 

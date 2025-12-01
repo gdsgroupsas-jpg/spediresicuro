@@ -217,7 +217,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
         integrations.push(integration)
       }
 
-      updateUser(user.id, { integrazioni: integrations })
+      await updateUser(user.id, { integrazioni: integrations })
 
       return { success: true, message: 'Credenziali salvate con successo' }
     }

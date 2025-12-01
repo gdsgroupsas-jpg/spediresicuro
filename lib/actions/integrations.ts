@@ -325,7 +325,7 @@ export async function saveIntegration(provider: string, credentials: any) {
         integrations.push(integration)
       }
 
-      updateUser(localUser.id, {
+      await updateUser(localUser.id, {
         integrazioni: integrations,
       })
 
