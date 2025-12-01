@@ -269,6 +269,13 @@ export default function DatiClientePage() {
       
       console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data)
       
+      // Imposta un flag in sessionStorage per indicare che i dati sono stati appena salvati
+      // Questo evita che il controllo nella dashboard reindirizzi di nuovo qui
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('datiClienteAppenaSalvati', 'true')
+        console.log('💾 [DATI CLIENTE] Flag salvato in sessionStorage')
+      }
+      
       // Reindirizza alla dashboard dopo 1.5 secondi usando window.location
       // per forzare un refresh completo e assicurarsi che i dati siano aggiornati
       setTimeout(() => {
