@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const user = findUserByEmail(session.user.email)
+    const user = await findUserByEmail(session.user.email)
 
     if (!user) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = findUserByEmail(session.user.email)
+    const user = await findUserByEmail(session.user.email)
 
     if (!user) {
       return NextResponse.json(
