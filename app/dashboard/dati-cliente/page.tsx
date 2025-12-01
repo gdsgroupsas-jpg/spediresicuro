@@ -269,9 +269,11 @@ export default function DatiClientePage() {
       
       console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data)
       
-      // Reindirizza alla dashboard dopo 1.5 secondi (ridotto per migliore UX)
+      // Reindirizza alla dashboard dopo 1.5 secondi usando window.location
+      // per forzare un refresh completo e assicurarsi che i dati siano aggiornati
       setTimeout(() => {
-        router.push('/dashboard')
+        console.log('🔄 [DATI CLIENTE] Reindirizzamento a /dashboard con refresh completo...')
+        window.location.href = '/dashboard'
       }, 1500)
     } catch (err: any) {
       setError('Errore durante il salvataggio: ' + err.message)
