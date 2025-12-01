@@ -263,12 +263,16 @@ export default function DatiClientePage() {
         return
       }
 
+      // Salvataggio riuscito!
       setSuccess(true)
+      setIsSaving(false) // Importante: resetta lo stato di salvataggio
       
-      // Reindirizza alla dashboard dopo 2 secondi
+      console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data)
+      
+      // Reindirizza alla dashboard dopo 1.5 secondi (ridotto per migliore UX)
       setTimeout(() => {
         router.push('/dashboard')
-      }, 2000)
+      }, 1500)
     } catch (err: any) {
       setError('Errore durante il salvataggio: ' + err.message)
       setIsSaving(false)
@@ -300,11 +304,11 @@ export default function DatiClientePage() {
         )}
 
         {success && (
-          <div className="mb-6 p-4 glass border border-green-500/30 rounded-lg flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-green-300">Dati salvati con successo!</p>
-              <p className="text-xs text-green-400 mt-1">Reindirizzamento alla dashboard...</p>
+          <div className="mb-6 p-4 glass border-2 border-green-500/50 rounded-lg flex items-start gap-3 bg-green-500/10 animate-pulse">
+            <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-base font-bold text-green-300">✅ Dati salvati con successo!</p>
+              <p className="text-sm text-green-400 mt-1">Reindirizzamento alla dashboard in corso...</p>
             </div>
           </div>
         )}
@@ -797,13 +801,18 @@ export default function DatiClientePage() {
           <div className="flex justify-end gap-4">
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || success}
               className="px-8 py-3 bg-gradient-to-r from-[#FACC15] to-[#FBBF24] text-[#09090b] font-bold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 btn-tactile"
             >
               {isSaving ? (
                 <>
                   <div className="w-5 h-5 border-2 border-[#09090b] border-t-transparent rounded-full animate-spin" />
                   Salvataggio...
+                </>
+              ) : success ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Salvato con successo!
                 </>
               ) : (
                 <>
