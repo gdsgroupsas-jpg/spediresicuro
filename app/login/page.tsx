@@ -168,16 +168,27 @@ export default function LoginPage() {
     const errorDescription = urlParams.get('error_description');
     
     if (errorParam) {
-      console.error('❌ [LOGIN] Errore OAuth rilevato:', {
+      const errorDetails = {
         error: errorParam,
         description: errorDescription,
         fullUrl: window.location.href,
-      });
+      };
+      
+      console.error('❌ [LOGIN] Errore OAuth rilevato:', errorDetails);
+      console.error('❌ [LOGIN] Dettagli completi:', JSON.stringify(errorDetails, null, 2));
       
       // Messaggio errore più dettagliato
       let errorMessage = 'Errore durante il login con Google. ';
       if (errorDescription) {
-        errorMessage += errorDescription;
+        // Decodifica URL encoding se presente
+        try {
+          errorMessage += decodeURIComponent(errorDescription);
+        } catch {
+          errorMessage += errorDescription;
+        }
+      } else if (errorParam) {
+        // Usa il codice errore come messaggio se disponibile
+        errorMessage += `Codice errore: ${errorParam}`;
       } else {
         errorMessage += 'Riprova o contatta il supporto.';
       }
