@@ -74,25 +74,51 @@ export const authOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials: Partial<Record<string, unknown>> | undefined) {
+        console.log('🔐 [AUTH] authorize chiamato con:', {
+          hasEmail: !!credentials?.email,
+          hasPassword: !!credentials?.password,
+          email: credentials?.email,
+        });
+
         // Type guard per verificare che le credenziali siano valide
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ [AUTH] Credenziali mancanti');
           return null;
         }
 
-        // Verifica credenziali dal database
-        const { verifyUserCredentials } = await import('@/lib/database');
-        const user = verifyUserCredentials(
-          credentials.email as string,
-          credentials.password as string
-        );
+        try {
+          // Verifica credenziali dal database
+          console.log('🔍 [AUTH] Importazione verifyUserCredentials...');
+          const { verifyUserCredentials } = await import('@/lib/database');
+          
+          console.log('🔍 [AUTH] Verifica credenziali per:', credentials.email);
+          const user = verifyUserCredentials(
+            credentials.email as string,
+            credentials.password as string
+          );
 
-        if (user) {
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
+          if (user) {
+            console.log('✅ [AUTH] Utente trovato:', {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+            });
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+            };
+          } else {
+            console.log('❌ [AUTH] Utente non trovato o password errata');
+          }
+        } catch (error: any) {
+          console.error('❌ [AUTH] Errore durante verifica credenziali:', {
+            message: error?.message,
+            stack: error?.stack,
+            name: error?.name,
+          });
         }
 
         return null;

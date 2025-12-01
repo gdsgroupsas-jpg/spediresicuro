@@ -202,26 +202,37 @@ function ensureDemoUsersExist(db: Database): Database {
   // Assicura che gli utenti demo esistano sempre
   let hasChanges = false;
   for (const demoUser of demoUsers) {
-    const existingUser = db.utenti.find(u => u.email === demoUser.email);
-    if (!existingUser) {
+    const existingUserIndex = db.utenti.findIndex(u => u.email === demoUser.email);
+    if (existingUserIndex === -1) {
       // Aggiungi utente demo se non esiste
       db.utenti.push(demoUser);
       hasChanges = true;
+      console.log('➕ [DB] Utente demo aggiunto:', demoUser.email);
     } else {
       // Aggiorna password e dati se l'utente esiste ma ha dati diversi
-      if (existingUser.password !== demoUser.password || existingUser.role !== demoUser.role) {
+      const existingUser = db.utenti[existingUserIndex];
+      if (existingUser.password !== demoUser.password || existingUser.role !== demoUser.role || existingUser.name !== demoUser.name) {
         existingUser.password = demoUser.password;
         existingUser.role = demoUser.role;
         existingUser.name = demoUser.name;
         existingUser.updatedAt = new Date().toISOString();
         hasChanges = true;
+        console.log('🔄 [DB] Utente demo aggiornato:', demoUser.email);
       }
     }
   }
 
-  // Salva se ci sono state modifiche
+  // Salva se ci sono state modifiche (solo se il file system è scrivibile)
   if (hasChanges) {
-    writeDatabase(db);
+    try {
+      writeDatabase(db);
+      console.log('✅ [DB] Database salvato con utenti demo');
+    } catch (error: any) {
+      // Su Vercel il file system potrebbe essere read-only, ma va bene
+      // Gli utenti demo sono già in memoria e funzioneranno
+      console.warn('⚠️ [DB] Impossibile salvare database (potrebbe essere read-only su Vercel):', error.message);
+      console.log('ℹ️ [DB] Gli utenti demo sono comunque disponibili in memoria');
+    }
   }
 
   return db;
@@ -857,28 +868,100 @@ export function findUserByEmail(email: string): User | undefined {
 }
 
 /**
+ * 🔓 Utenti demo sempre disponibili in memoria (fallback garantito)
+ */
+function getDemoUsers(): User[] {
+  return [
+    {
+      id: '1',
+      email: 'admin@spediresicuro.it',
+      password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
+      name: 'Admin',
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      email: 'demo@spediresicuro.it',
+      password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
+      name: 'Demo User',
+      role: 'user',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+}
+
+/**
  * Verifica le credenziali di un utente
  */
 export function verifyUserCredentials(
   email: string,
   password: string
 ): User | null {
-  // 🔓 GARANTISCE che gli utenti demo esistano sempre prima di verificare
-  // Questo è importante per produzione dove il database potrebbe essere vuoto
-  const db = readDatabase();
-  const dbWithDemoUsers = ensureDemoUsersExist(db);
+  console.log('🔍 [DB] verifyUserCredentials chiamato per:', email);
   
-  const user = dbWithDemoUsers.utenti.find((u) => u.email === email);
-  if (!user) {
+  try {
+    // 🔓 PRIMA VERIFICA: Controlla sempre gli utenti demo in memoria (garantito sempre)
+    const demoUsers = getDemoUsers();
+    const demoUser = demoUsers.find(u => u.email === email);
+    
+    if (demoUser && demoUser.password === password) {
+      console.log('✅ [DB] Utente demo trovato in memoria:', email);
+      return demoUser;
+    }
+    
+    // SECONDA VERIFICA: Controlla nel database (file o Supabase)
+    console.log('📖 [DB] Lettura database...');
+    const db = readDatabase();
+    console.log('📊 [DB] Database letto, utenti presenti:', db.utenti?.length || 0);
+    
+    console.log('🔓 [DB] Garantisco esistenza utenti demo...');
+    const dbWithDemoUsers = ensureDemoUsersExist(db);
+    console.log('📊 [DB] Dopo ensureDemoUsersExist, utenti presenti:', dbWithDemoUsers.utenti?.length || 0);
+    
+    console.log('🔍 [DB] Cerca utente con email:', email);
+    const user = dbWithDemoUsers.utenti.find((u) => u.email === email);
+    
+    if (!user) {
+      console.log('❌ [DB] Utente non trovato con email:', email);
+      console.log('📋 [DB] Utenti disponibili nel DB:', dbWithDemoUsers.utenti.map(u => u.email));
+      return null;
+    }
+    
+    console.log('✅ [DB] Utente trovato nel database:', {
+      email: user.email,
+      hasPassword: !!user.password,
+      passwordMatch: user.password === password,
+    });
+    
+    // TODO: In produzione, confrontare hash con bcrypt
+    if (user.password !== password) {
+      console.log('❌ [DB] Password non corrisponde');
+      return null;
+    }
+    
+    console.log('✅ [DB] Credenziali verificate con successo');
+    return user;
+  } catch (error: any) {
+    console.error('❌ [DB] Errore in verifyUserCredentials:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
+    
+    // 🔓 FALLBACK: Se tutto fallisce, controlla sempre gli utenti demo in memoria
+    console.log('🔄 [DB] Fallback: controllo utenti demo in memoria...');
+    const demoUsers = getDemoUsers();
+    const demoUser = demoUsers.find(u => u.email === email && u.password === password);
+    if (demoUser) {
+      console.log('✅ [DB] Utente demo trovato nel fallback:', email);
+      return demoUser;
+    }
+    
     return null;
   }
-  
-  // TODO: In produzione, confrontare hash con bcrypt
-  if (user.password !== password) {
-    return null;
-  }
-  
-  return user;
 }
 
 /**
