@@ -206,7 +206,8 @@ export default function DashboardPage() {
       }
       
       // TERZO: Se non ci sono flag, controlla il database (solo se necessario)
-      // Delay più lungo per dare tempo al database di aggiornarsi dopo un salvataggio
+      // IMPORTANTE: Questo controllo è CRITICO - se i dati sono completati nel database,
+      // NON reindirizzare MAI a dati-cliente, anche se non c'è localStorage
       const timeoutId = setTimeout(async () => {
         async function checkDatiCompletati() {
           try {
@@ -222,26 +223,30 @@ export default function DashboardPage() {
                 rawData: data.datiCliente, // Log completo per debug
               });
               
-              // Se i dati sono completati, salva in localStorage per evitare controlli futuri
+              // Se i dati sono completati nel database, salva in localStorage e NON reindirizzare
               if (data.datiCliente && data.datiCliente.datiCompletati) {
-                console.log('✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage');
+                console.log('✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage e NON reindirizzo');
                 if (typeof window !== 'undefined' && session?.user?.email) {
                   localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
                 }
+                // IMPORTANTE: NON reindirizzare se i dati sono completati nel database
+                // Questo risolve il problema dopo logout/login
               } else {
-                // Se i dati non sono completati, reindirizza alla pagina dati-cliente
+                // Se i dati NON sono completati nel database, reindirizza alla pagina dati-cliente
                 console.log('🔄 [DASHBOARD] Dati non completati nel database, reindirizzamento a /dashboard/dati-cliente');
                 router.push('/dashboard/dati-cliente');
               }
             } else {
               console.warn('⚠️ [DASHBOARD] Errore nella risposta API:', response.status);
+              // In caso di errore API, NON reindirizzare (potrebbe essere un problema temporaneo)
             }
           } catch (err) {
             console.error('❌ [DASHBOARD] Errore verifica dati cliente:', err);
+            // In caso di errore, NON reindirizzare (potrebbe essere un problema temporaneo)
           }
         }
         checkDatiCompletati();
-      }, 2000); // Delay aumentato a 2 secondi per dare più tempo al database
+      }, 1000); // Delay ridotto a 1 secondo (sufficiente per il database)
       
       return () => clearTimeout(timeoutId);
     }

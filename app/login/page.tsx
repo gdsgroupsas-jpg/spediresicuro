@@ -222,15 +222,20 @@ export default function LoginPage() {
               datiCompletati: userData.datiCliente?.datiCompletati,
             });
             
-            // Se i dati non sono completati, reindirizza alla pagina dati-cliente
-            if (!userData.datiCliente || !userData.datiCliente.datiCompletati) {
-              console.log('🔄 [LOGIN] Reindirizzamento a /dashboard/dati-cliente');
-              // Usa window.location per forzare refresh completo
-              window.location.href = '/dashboard/dati-cliente';
-            } else {
+            // Se i dati sono completati, salva in localStorage per evitare controlli futuri
+            if (userData.datiCliente && userData.datiCliente.datiCompletati) {
+              console.log('✅ [LOGIN] Dati cliente completati, salvo in localStorage');
+              if (typeof window !== 'undefined' && session?.user?.email) {
+                localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+              }
               console.log('🔄 [LOGIN] Reindirizzamento a /dashboard');
               // Usa window.location per forzare refresh completo
               window.location.href = '/dashboard';
+            } else {
+              // Se i dati non sono completati, reindirizza alla pagina dati-cliente
+              console.log('🔄 [LOGIN] Dati non completati, reindirizzamento a /dashboard/dati-cliente');
+              // Usa window.location per forzare refresh completo
+              window.location.href = '/dashboard/dati-cliente';
             }
           } else {
             console.warn('⚠️ [LOGIN] Errore recupero dati cliente, redirect a dashboard');
