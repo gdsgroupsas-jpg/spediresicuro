@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Aggiorna utente (da estendere il database per supportare integrazioni)
-    updateUser(user.id, {
+    await updateUser(user.id, {
       integrazioni: integrations,
     })
 

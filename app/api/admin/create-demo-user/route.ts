@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       // Se esiste già, aggiorna il ruolo ad admin se necessario
       if (existingUser.role !== 'admin') {
-        updateUser(existingUser.id, { role: 'admin' });
+        await updateUser(existingUser.id, { role: 'admin' });
         return NextResponse.json(
           {
             success: true,

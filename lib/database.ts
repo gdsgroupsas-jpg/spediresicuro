@@ -910,6 +910,11 @@ export async function createUser(userData: {
           throw new Error('Email già registrata');
         }
         
+        // Se siamo su Vercel (produzione), NON provare JSON (read-only)
+        if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+          throw new Error(`Errore Supabase: ${supabaseError.message}. Verifica che la tabella 'users' esista e che le variabili Supabase siano configurate correttamente su Vercel.`);
+        }
+        
         console.log('📁 [FALLBACK] Provo database JSON locale');
       } else {
         console.log(`✅ [SUPABASE] Utente salvato con successo! ID: ${supabaseUser.id}`);
@@ -972,24 +977,156 @@ export async function createUser(userData: {
 
 /**
  * Aggiorna un utente esistente
+ * 
+ * ⚠️ IMPORTANTE: Ora salva PRIMA in Supabase se configurato, poi in JSON come fallback
  */
-export function updateUser(userId: string, updates: Partial<User>): User {
-  const db = readDatabase();
-  const userIndex = db.utenti.findIndex((u) => u.id === userId);
-  
-  if (userIndex === -1) {
-    throw new Error('Utente non trovato');
+export async function updateUser(userId: string, updates: Partial<User>): Promise<User> {
+  // ⚠️ PRIORITÀ 1: Aggiorna in Supabase se configurato
+  if (isSupabaseConfigured()) {
+    try {
+      console.log('🔄 [SUPABASE] Aggiornamento utente in Supabase:', userId);
+      
+      // Prepara i dati per Supabase (converte nomi campi)
+      const supabaseUpdates: any = {
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Mappa i campi da formato User a formato Supabase
+      if (updates.email !== undefined) supabaseUpdates.email = updates.email;
+      if (updates.password !== undefined) supabaseUpdates.password = updates.password;
+      if (updates.name !== undefined) supabaseUpdates.name = updates.name;
+      if (updates.role !== undefined) supabaseUpdates.role = updates.role;
+      if (updates.provider !== undefined) supabaseUpdates.provider = updates.provider;
+      if (updates.providerId !== undefined) supabaseUpdates.provider_id = updates.providerId;
+      if (updates.image !== undefined) supabaseUpdates.image = updates.image;
+      if (updates.datiCliente !== undefined) {
+        // Converti datiCliente in JSON se non è già un oggetto JSON
+        supabaseUpdates.dati_cliente = typeof updates.datiCliente === 'string' 
+          ? JSON.parse(updates.datiCliente) 
+          : updates.datiCliente;
+        console.log('📝 [SUPABASE] Salvataggio dati_cliente:', JSON.stringify(supabaseUpdates.dati_cliente).substring(0, 100) + '...');
+      }
+      if (updates.defaultSender !== undefined) {
+        supabaseUpdates.default_sender = typeof updates.defaultSender === 'string'
+          ? JSON.parse(updates.defaultSender)
+          : updates.defaultSender;
+      }
+      if (updates.integrazioni !== undefined) {
+        supabaseUpdates.integrazioni = typeof updates.integrazioni === 'string'
+          ? JSON.parse(updates.integrazioni)
+          : updates.integrazioni;
+      }
+      
+      console.log('📋 [SUPABASE] Campi da aggiornare:', Object.keys(supabaseUpdates));
+      
+      const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
+        .from('users')
+        .update(supabaseUpdates)
+        .eq('id', userId)
+        .select()
+        .single();
+      
+      if (supabaseError) {
+        console.error('❌ [SUPABASE] Errore aggiornamento utente:', {
+          message: supabaseError.message,
+          code: supabaseError.code,
+          details: supabaseError.details,
+          hint: supabaseError.hint,
+        });
+        
+        // Se siamo su Vercel (produzione), NON provare JSON (read-only)
+        if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+          throw new Error(`Errore Supabase: ${supabaseError.message}. Verifica che la tabella 'users' esista e che le variabili Supabase siano configurate correttamente su Vercel.`);
+        }
+        
+        console.log('📁 [FALLBACK] Provo database JSON locale');
+      } else {
+        console.log(`✅ [SUPABASE] Utente aggiornato con successo! ID: ${supabaseUser.id}`);
+        
+        // Converti formato Supabase a formato User
+        const updatedUser: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          password: supabaseUser.password || '',
+          name: supabaseUser.name,
+          role: supabaseUser.role || 'user',
+          provider: supabaseUser.provider || 'credentials',
+          providerId: supabaseUser.provider_id,
+          image: supabaseUser.image,
+          datiCliente: supabaseUser.dati_cliente || updates.datiCliente,
+          defaultSender: supabaseUser.default_sender || updates.defaultSender,
+          createdAt: supabaseUser.created_at || new Date().toISOString(),
+          updatedAt: supabaseUser.updated_at || new Date().toISOString(),
+        };
+        
+        // Prova comunque a salvare in JSON per compatibilità (non critico se fallisce)
+        try {
+          const db = readDatabase();
+          const userIndex = db.utenti.findIndex((u) => u.id === userId);
+          if (userIndex !== -1) {
+            db.utenti[userIndex] = updatedUser;
+            writeDatabase(db);
+          }
+        } catch (jsonError: any) {
+          // Non critico: già salvato in Supabase
+          if (jsonError?.code === 'EROFS') {
+            console.log('ℹ️ [JSON] File system read-only (Vercel) - salvataggio JSON saltato (non critico)');
+          } else {
+            console.warn('⚠️ [JSON] Errore salvataggio JSON (non critico):', jsonError.message);
+          }
+        }
+        
+        return updatedUser;
+      }
+    } catch (error: any) {
+      console.error('❌ [SUPABASE] Errore generico aggiornamento utente:', error.message);
+      
+      // Se siamo su Vercel, NON provare JSON
+      if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+        throw error;
+      }
+      
+      console.log('📁 [FALLBACK] Provo database JSON locale');
+    }
   }
   
-  db.utenti[userIndex] = {
-    ...db.utenti[userIndex],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
+  // ⚠️ PRIORITÀ 2: Aggiorna in JSON (fallback o se Supabase non configurato)
+  // ⚠️ IMPORTANTE: Su Vercel il file system è read-only, quindi JSON non funziona
+  if (process.env.NODE_ENV === 'production' && !isSupabaseConfigured()) {
+    throw new Error('Supabase non configurato. Configura le variabili ambiente NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY su Vercel.');
+  }
   
-  writeDatabase(db);
-  
-  return db.utenti[userIndex];
+  try {
+    const db = readDatabase();
+    const userIndex = db.utenti.findIndex((u) => u.id === userId);
+    
+    if (userIndex === -1) {
+      throw new Error('Utente non trovato');
+    }
+    
+    db.utenti[userIndex] = {
+      ...db.utenti[userIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    writeDatabase(db);
+    
+    return db.utenti[userIndex];
+  } catch (error: any) {
+    // Se è un errore di file system read-only (Vercel), spiega meglio
+    if (error?.code === 'EROFS' || error?.message?.includes('read-only') || error?.message?.includes('EROFS')) {
+      if (isSupabaseConfigured()) {
+        // Supabase è configurato ma ha fallito, e JSON è read-only
+        throw new Error('Errore aggiornamento in Supabase. Verifica la configurazione e che la tabella users esista. JSON non disponibile su Vercel (read-only).');
+      } else {
+        // Supabase non configurato e JSON read-only
+        throw new Error('Database non disponibile. Configura Supabase su Vercel (variabili ambiente) per aggiornare gli utenti in produzione.');
+      }
+    }
+    
+    throw error;
+  }
 }
 
 /**

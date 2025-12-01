@@ -18,7 +18,8 @@
     "seed:geo": "ts-node --project tsconfig.scripts.json scripts/seed-geo.ts",
     "verify:config": "ts-node --project tsconfig.scripts.json scripts/verifica-config-locale.ts",
     "check:env": "ts-node --project tsconfig.scripts.json scripts/verifica-env-sicuro.ts",
-    "check:env:simple": "node scripts/check-env-simple.js"
+    "check:env:simple": "node scripts/check-env-simple.js",
+    "verify:users": "ts-node --project tsconfig.scripts.json scripts/verifica-crea-utenti-supabase.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
