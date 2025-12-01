@@ -109,12 +109,50 @@ export default function DatiClientePage() {
     dataScadenza: '',
   })
 
-  // Carica dati esistenti se presenti
+  // Carica dati esistenti se presenti e verifica se sono già completati
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      loadExistingData()
+      // Controlla se i dati sono già completati (localStorage)
+      const datiGiàCompletati = typeof window !== 'undefined' 
+        ? localStorage.getItem(`datiCompletati_${session.user.email}`) === 'true'
+        : false;
+      
+      if (datiGiàCompletati) {
+        console.log('✅ [DATI CLIENTE] Dati già completati in localStorage, reindirizzamento a dashboard');
+        router.push('/dashboard');
+        return;
+      }
+      
+      // Carica dati esistenti e verifica se sono completati nel database
+      async function checkAndLoad() {
+        try {
+          const response = await fetch('/api/user/dati-cliente', {
+            cache: 'no-store',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            // Se i dati sono già completati nel database, reindirizza alla dashboard
+            if (data.datiCliente && data.datiCliente.datiCompletati) {
+              console.log('✅ [DATI CLIENTE] Dati già completati nel database, salvo in localStorage e reindirizzamento a dashboard');
+              if (typeof window !== 'undefined' && session?.user?.email) {
+                localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+              }
+              router.push('/dashboard');
+              return;
+            }
+          }
+          // Se i dati non sono completati, carica i dati esistenti nel form
+          loadExistingData();
+        } catch (err) {
+          console.error('❌ [DATI CLIENTE] Errore verifica dati:', err);
+          // In caso di errore, carica comunque i dati esistenti
+          loadExistingData();
+        }
+      }
+      
+      checkAndLoad();
     }
-  }, [status, session])
+  }, [status, session, router])
 
   const loadExistingData = async () => {
     try {
