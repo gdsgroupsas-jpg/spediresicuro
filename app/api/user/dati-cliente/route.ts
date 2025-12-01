@@ -178,8 +178,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Aggiorna utente (ora è asincrono e usa Supabase)
-    await updateUser(user.id, {
+    console.log('💾 [API DATI CLIENTE] Salvataggio dati cliente:', {
+      userId: user.id,
+      email: session.user.email,
+      datiCompletati: datiCliente.datiCompletati,
+      hasDatiCliente: !!datiCliente,
+    })
+    
+    const updatedUser = await updateUser(user.id, {
       datiCliente,
+    })
+    
+    console.log('✅ [API DATI CLIENTE] Utente aggiornato:', {
+      userId: updatedUser.id,
+      hasDatiCliente: !!updatedUser.datiCliente,
+      datiCompletati: updatedUser.datiCliente?.datiCompletati,
     })
 
     return NextResponse.json({
