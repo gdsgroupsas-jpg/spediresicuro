@@ -273,6 +273,12 @@ export default function DatiClientePage() {
         hasDatiCliente: !!data.datiCliente,
       })
       
+      // Salva IMMEDIATAMENTE in localStorage per evitare controlli futuri nella dashboard
+      if (typeof window !== 'undefined' && session?.user?.email) {
+        localStorage.setItem(`datiCompletati_${session.user.email}`, 'true')
+        console.log('💾 [DATI CLIENTE] Flag salvato in localStorage:', session.user.email)
+      }
+      
       // Reindirizza alla dashboard con parametro URL per indicare che i dati sono stati appena salvati
       // Questo evita che il controllo nella dashboard reindirizzi di nuovo qui
       setTimeout(() => {
