@@ -215,12 +215,38 @@ export function readDatabase(): Database {
 /**
  * Scrive i dati nel database JSON
  */
+/**
+ * Scrive i dati nel database JSON
+ * 
+ * ⚠️ IMPORTANTE: Preserva il codice errore originale per permettere gestione specifica
+ * - EROFS: file system read-only (Vercel) - non critico se Supabase ha successo
+ * - Altri errori: critici - indicano problemi reali
+ */
 export function writeDatabase(data: Database): void {
   try {
+    // Verifica se la directory esiste
+    const dataDir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (error) {
-    console.error('Errore scrittura database:', error);
-    throw new Error('Impossibile salvare i dati');
+  } catch (error: any) {
+    // Preserva il codice errore originale per permettere gestione specifica
+    const errorCode = error?.code;
+    const errorMessage = error?.message || 'Errore sconosciuto';
+    
+    console.error('Errore scrittura database:', {
+      code: errorCode,
+      message: errorMessage,
+      path: DB_PATH,
+    });
+    
+    // Crea nuovo errore preservando codice originale
+    const wrappedError: any = new Error(`Impossibile salvare i dati: ${errorMessage}`);
+    wrappedError.code = errorCode; // Preserva codice originale (EROFS, EACCES, ENOSPC, ecc.)
+    wrappedError.originalError = error; // Preserva errore originale per debug
+    throw wrappedError;
   }
 }
 
@@ -386,7 +412,7 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     sender_email: mittente.email || spedizione.mittenteEmail || '',
     // Destinatario
     recipient_name: destinatario.nome || spedizione.destinatarioNome || spedizione.nome || spedizione.nominativo || '',
-    recipient_type: 'B2C' as any, // Default B2C (da implementare logica B2B se necessario)
+    recipient_type: 'B2C', // Default B2C (da implementare logica B2B se necessario)
     recipient_address: destinatario.indirizzo || spedizione.destinatarioIndirizzo || spedizione.indirizzo || '',
     recipient_city: destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || '',
     recipient_zip: destinatario.cap || spedizione.destinatarioCap || spedizione.cap || '',
@@ -406,11 +432,11 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     service_type: (spedizione.tipoSpedizione === 'express' ? 'express' : 
                    spedizione.tipoSpedizione === 'economy' ? 'economy' : 
                    spedizione.tipoSpedizione === 'same_day' ? 'same_day' : 
-                   spedizione.tipoSpedizione === 'next_day' ? 'next_day' : 'standard') as any,
+                   spedizione.tipoSpedizione === 'next_day' ? 'next_day' : 'standard'),
     cash_on_delivery: !!spedizione.contrassegno,
     cash_on_delivery_amount: spedizione.contrassegno ? parseFloat(String(spedizione.contrassegno)) : null,
     insurance: !!spedizione.assicurazione,
-    declared_value: spedizione.valoreDichiarato || (spedizione.assicurazione ? parseFloat(String(spedizione.valoreDichiarato || spedizione.assicurazione)) : null),
+    declared_value: spedizione.valoreDichiarato ? parseFloat(String(spedizione.valoreDichiarato)) : (spedizione.assicurazione ? parseFloat(String(spedizione.assicurazione)) : null),
     currency: 'EUR', // Default EUR
     // Pricing
     base_price: spedizione.prezzoBase || null,
@@ -577,7 +603,13 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     deleted: false,
   };
 
-  // ⚠️ NUOVO: Salva in Supabase (database principale) solo se configurato
+  // 🔒 Traccia se almeno un salvataggio è riuscito (CRITICO per prevenire data loss)
+  let savedSuccessfully = false;
+  let supabaseSuccess = false;
+  let jsonSuccess = false;
+  let jsonError: Error | null = null;
+
+  // ⚠️ PRIORITÀ 1: Salva in Supabase (database principale) se configurato
   if (isSupabaseConfigured()) {
     try {
       console.log('🔄 Tentativo salvataggio in Supabase...');
@@ -603,26 +635,73 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
 
       if (supabaseError) {
         console.error('❌ [SUPABASE] Errore salvataggio:', supabaseError.message);
-        console.log('📁 [FALLBACK] Uso database JSON locale');
-        // Continua con salvataggio JSON come fallback
+        console.log('📁 [FALLBACK] Provo database JSON locale');
       } else {
         console.log(`✅ [SUPABASE] Spedizione salvata con successo! ID: ${supabaseData.id}`);
         // Aggiorna ID con quello di Supabase
         nuovaSpedizione.id = supabaseData.id;
+        supabaseSuccess = true;
+        savedSuccessfully = true;
       }
     } catch (error: any) {
       console.error('❌ [SUPABASE] Errore generico:', error.message);
-      console.log('📁 [FALLBACK] Uso database JSON locale');
-      // Continua con salvataggio JSON come fallback
+      console.log('📁 [FALLBACK] Provo database JSON locale');
     }
   } else {
     console.log('📁 [JSON] Supabase non configurato, uso database JSON locale');
   }
   
-  // Salva anche in JSON per compatibilità (fallback)
-  const db = readDatabase();
-  db.spedizioni.push(nuovaSpedizione);
-  writeDatabase(db);
+  // ⚠️ PRIORITÀ 2: Salva in JSON per compatibilità/fallback
+  // Solo se Supabase non è configurato O se Supabase ha fallito
+  if (!supabaseSuccess) {
+    try {
+      const db = readDatabase();
+      db.spedizioni.push(nuovaSpedizione);
+      writeDatabase(db);
+      console.log('✅ [JSON] Spedizione salvata in JSON locale');
+      jsonSuccess = true;
+      savedSuccessfully = true;
+    } catch (error: any) {
+      jsonError = error;
+      console.error('❌ [JSON] Errore salvataggio JSON:', error.message);
+      
+      // Se Supabase non è configurato O ha fallito E JSON fallisce, questo è CRITICO
+      if (!savedSuccessfully) {
+        const errorMessage = isSupabaseConfigured()
+          ? 'Impossibile salvare la spedizione: sia Supabase che JSON hanno fallito'
+          : `Impossibile salvare la spedizione: errore nel database JSON - ${error.message}`;
+        throw new Error(errorMessage);
+      }
+    }
+  } else {
+    // Supabase ha avuto successo, prova comunque JSON per compatibilità (ma non è critico se fallisce)
+    try {
+      const db = readDatabase();
+      db.spedizioni.push(nuovaSpedizione);
+      writeDatabase(db);
+      console.log('✅ [JSON] Spedizione salvata anche in JSON locale');
+      jsonSuccess = true;
+    } catch (error: any) {
+      jsonError = error;
+      // Non critico: già salvato in Supabase
+      // Distingue tra EROFS (non critico) e altri errori (warning)
+      if (error?.code === 'EROFS' || error?.message?.includes('EROFS') || error?.message?.includes('read-only')) {
+        console.log('ℹ️ [JSON] File system read-only (Vercel) - salvataggio JSON saltato (non critico)');
+      } else {
+        console.warn('⚠️ [JSON] Errore salvataggio JSON (non critico, già salvato in Supabase):', error.message);
+      }
+    }
+  }
+  
+  // 🔒 CRITICO: Verifica che almeno un salvataggio sia riuscito (previene data loss)
+  if (!savedSuccessfully) {
+    const errorDetails = [
+      isSupabaseConfigured() && !supabaseSuccess ? 'Supabase: fallito' : null,
+      !jsonSuccess && jsonError ? `JSON: ${jsonError.message}` : null,
+    ].filter(Boolean).join(', ');
+    
+    throw new Error(`Impossibile salvare la spedizione. Fallimenti: ${errorDetails}`);
+  }
   
   return nuovaSpedizione;
 }
