@@ -49,7 +49,7 @@ export async function getSpedisciOnlineCredentials() {
     }
 
     // Fallback: database locale
-    const user = findUserByEmail(session.user.email)
+    const user = await findUserByEmail(session.user.email)
     if (user?.integrazioni) {
       const spedisciOnlineIntegration = user.integrazioni.find(
         (i: any) => i.platform === 'spedisci_online' || i.platform === 'spedisci-online'
@@ -196,7 +196,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
 
     // Fallback: database locale
     const { findUserByEmail: findUser, updateUser } = await import('@/lib/database')
-    const user = findUser(session.user.email)
+    const user = await findUser(session.user.email)
 
     if (user) {
       const integrations = user.integrazioni || []
