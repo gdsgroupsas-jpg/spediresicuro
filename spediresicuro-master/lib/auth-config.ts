@@ -43,7 +43,7 @@ export const authOptions = {
 
         // Verifica credenziali dal database
         const { verifyUserCredentials } = await import('@/lib/database');
-        const user = verifyUserCredentials(
+        const user = await verifyUserCredentials(
           credentials.email as string,
           credentials.password as string
         );
@@ -86,11 +86,11 @@ export const authOptions = {
         try {
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
           
-          const existingUser = findUserByEmail(user.email);
+          const existingUser = await findUserByEmail(user.email);
           
           if (!existingUser) {
             // Crea nuovo utente OAuth
-            createUser({
+            await createUser({
               email: user.email,
               password: '', // Password vuota per utenti OAuth
               name: user.name || user.email.split('@')[0],
