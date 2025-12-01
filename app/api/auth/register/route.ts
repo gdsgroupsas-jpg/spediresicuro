@@ -81,14 +81,18 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
+    // Log dettagliato per debug
     console.error('❌ [REGISTER] Errore registrazione:', error);
     console.error('❌ [REGISTER] Stack:', error.stack);
-    console.error('❌ [REGISTER] Dettagli:', {
+    console.error('❌ [REGISTER] Dettagli completi:', {
       message: error.message,
       name: error.name,
       code: error.code,
+      cause: error.cause,
+      originalError: error.originalError,
     });
     
+    // Gestione errori specifici
     if (error.message === 'Email già registrata' || error.message?.includes('già registrata')) {
       return NextResponse.json(
         { error: 'Questa email è già registrata. Usa il login invece della registrazione.' },
@@ -96,13 +100,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Messaggio errore più dettagliato per debug
+    // Errore Supabase - violazione constraint unique
+    if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint') || error.code === '23505') {
+      return NextResponse.json(
+        { error: 'Questa email è già registrata. Usa il login invece della registrazione.' },
+        { status: 409 }
+      );
+    }
+
+    // Errore database non disponibile
+    if (error.message?.includes('EROFS') || error.message?.includes('read-only')) {
+      return NextResponse.json(
+        { error: 'Database temporaneamente non disponibile. Riprova tra qualche istante.' },
+        { status: 503 }
+      );
+    }
+
+    // Messaggio errore più dettagliato per debug (solo in sviluppo)
     const errorMessage = process.env.NODE_ENV === 'development' 
       ? `Errore durante la registrazione: ${error.message || 'Errore sconosciuto'}`
       : 'Errore durante la registrazione. Riprova.';
 
     return NextResponse.json(
-      { error: errorMessage },
+      { 
+        error: errorMessage,
+        // In sviluppo, aggiungi dettagli per debug
+        ...(process.env.NODE_ENV === 'development' && {
+          details: {
+            message: error.message,
+            code: error.code,
+            name: error.name,
+          }
+        })
+      },
       { status: 500 }
     );
   }
