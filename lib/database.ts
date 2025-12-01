@@ -270,11 +270,25 @@ export function readDatabase(): Database {
 
 /**
  * Scrive i dati nel database JSON
+ * 
+ * ⚠️ IMPORTANTE: Su Vercel il file system è read-only.
+ * Questa funzione lancerà un errore EROFS se chiamata su Vercel.
+ * Gestire sempre con try/catch quando si chiama questa funzione.
  */
 export function writeDatabase(data: Database): void {
   try {
+    // Verifica se la directory esiste
+    const dataDir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (error) {
+  } catch (error: any) {
+    // Su Vercel (read-only file system), questo è normale
+    if (error?.code === 'EROFS' || error?.message?.includes('read-only')) {
+      throw new Error('EROFS: read-only file system (Vercel) - impossibile scrivere database JSON');
+    }
     console.error('Errore scrittura database:', error);
     throw new Error('Impossibile salvare i dati');
   }
@@ -661,10 +675,28 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     console.log('📁 [JSON] Supabase non configurato, uso database JSON locale');
   }
   
-  // Salva anche in JSON per compatibilità (fallback)
-  const db = readDatabase();
-  db.spedizioni.push(nuovaSpedizione);
-  writeDatabase(db);
+  // 🔒 Salva in JSON per compatibilità (SOLO se file system è scrivibile)
+  // Su Vercel il file system è read-only, quindi questo viene gestito gracefulmente
+  try {
+    const db = readDatabase();
+    db.spedizioni.push(nuovaSpedizione);
+    writeDatabase(db);
+    console.log('✅ [JSON] Spedizione salvata anche in JSON locale');
+  } catch (error: any) {
+    // Su Vercel (read-only file system), questo errore è normale e non critico
+    const isReadOnlyError = error?.code === 'EROFS' 
+      || error?.message?.includes('read-only') 
+      || error?.message?.includes('EROFS')
+      || error?.message?.includes('ENOENT'); // File non esiste (normale su Vercel)
+    
+    if (isReadOnlyError) {
+      console.log('ℹ️ [JSON] File system read-only (Vercel) - salvataggio JSON saltato (non critico)');
+      console.log('ℹ️ [JSON] La spedizione è comunque salvata in Supabase o disponibile in memoria');
+    } else {
+      console.warn('⚠️ [JSON] Errore salvataggio JSON (non critico):', error?.message || error);
+    }
+    // Non bloccare il processo: la spedizione è già salvata in Supabase o disponibile in memoria
+  }
   
   return nuovaSpedizione;
 }
