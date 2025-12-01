@@ -9,7 +9,7 @@
 
 ### ✅ Test 1: Login
 1. Vai su `http://localhost:3000/login`
-2. Login con: `admin@spediresicuro.it` / `admin123`
+2. Login con credenziali di sviluppo (configurate nel file lib/database.ts)
 3. ✅ Dovresti essere reindirizzato alla dashboard
 4. Controlla log server: `✅ [SUPABASE] Profilo utente sincronizzato...`
 

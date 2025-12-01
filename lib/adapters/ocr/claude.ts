@@ -57,6 +57,14 @@ Estrai SOLO i dati del DESTINATARIO nel seguente formato JSON:
   "notes": "Note aggiuntive (es: citofono, piano, orari)"
 }
 
+⚠️ REGOLA CRITICA PER SCREENSHOT WHATSAPP:
+- Se è uno screenshot WhatsApp, considera SOLO i messaggi in GRIGIO/BIANCO (messaggi del destinatario/ricevuti)
+- IGNORA COMPLETAMENTE i messaggi in VERDE (messaggi inviati dall'utente/mittente)
+- I messaggi verdi NON contengono dati del destinatario, quindi vanno completamente ignorati
+- Estrai dati SOLO dai messaggi grigi/bianchi che contengono le informazioni di spedizione del destinatario
+- Se vedi messaggi verdi con etichette tipo "Nome cognome", "Indirizzo", ecc., IGNORALI - sono solo etichette del mittente
+- Concentrati esclusivamente sui messaggi grigi/bianchi che contengono i dati reali del destinatario
+
 REGOLE CRITICHE PER L'ESTRAZIONE:
 
 1. DISTINGUI ETICHETTE DA VALORI REALI (FONDAMENTALE):
@@ -101,9 +109,9 @@ REGOLE CRITICHE PER L'ESTRAZIONE:
      * Se vedi una bolla WhatsApp con "Nome cognome" e poi una bolla con "BENETTI ARIANA" → estrai "BENETTI ARIANA" (NON "Nome cognome"!)
      * Se vedi solo "BENETTI ARIANA" senza etichette → estrai "BENETTI ARIANA"
    - Per screenshot WhatsApp:
-     * Le etichette sono spesso in bolle separate dai valori (bolle verdi = etichette, bolle bianche = valori)
-     * Se vedi una bolla con "Nome cognome" o simile, cerca il valore nella bolla successiva o precedente
-     * Il valore reale è spesso in una bolla diversa (bianca se l'etichetta è verde, o viceversa)
+     * IGNORA COMPLETAMENTE i messaggi in VERDE (sono messaggi inviati dal mittente)
+     * Considera SOLO i messaggi in GRIGIO/BIANCO (sono messaggi ricevuti dal destinatario)
+     * I dati del destinatario sono sempre nei messaggi grigi/bianchi, mai in quelli verdi
      * Se trovi solo l'etichetta senza valore reale, lascia il campo vuoto ""
    - REGOLA D'ORO: Se il testo corrisponde a un'etichetta comune (Nome, Cognome, Telefono, Indirizzo, Città, CAP, ecc.), NON estrarlo!
    - Se hai dubbi se un testo è un'etichetta o un valore, è meglio lasciare vuoto che estrarre un'etichetta
@@ -138,11 +146,12 @@ Esempio 1 - Documento normale:
   "notes": "Citofono: Rossi - Piano 3"
 }
 
-Esempio 2 - Screenshot WhatsApp (etichette in bolle separate):
+Esempio 2 - Screenshot WhatsApp:
 Se vedi:
-- Bolla verde: "Nome cognome"
-- Bolla bianca: "BENETTI ARIANA"
-→ Estrai:
+- Bolla GRIGIA/BIANCA (messaggio destinatario): "BENETTI ARIANA"
+- Bolla GRIGIA/BIANCA (messaggio destinatario): "Via Ca Diedo 61"
+- Bolla VERDE (messaggio mittente - IGNORA): "Nome cognome" o qualsiasi altro testo
+→ Estrai SOLO dai messaggi grigi/bianchi:
 {
   "recipient_name": "BENETTI ARIANA",
   "recipient_address": "Via Ca Diedo 61",
@@ -153,7 +162,7 @@ Se vedi:
   "recipient_email": "",
   "notes": ""
 }
-NOTA: "Nome cognome" NON va nel campo recipient_name perché è un'etichetta!`;
+NOTA CRITICA: I messaggi VERDI (inviati dal mittente) vanno COMPLETAMENTE IGNORATI. Estrai dati SOLO dai messaggi GRIGI/BIANCHI (ricevuti dal destinatario)!`;
 
       // Chiamata API Claude Vision
       const response = await this.client.messages.create({

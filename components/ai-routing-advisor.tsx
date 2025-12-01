@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, TrendingUp, Zap, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, TrendingUp, Zap, X, Sparkles } from 'lucide-react';
 import { RoutingSuggestion } from '@/types/corrieri';
 
 interface AIRoutingAdvisorProps {
@@ -67,18 +67,39 @@ export default function AIRoutingAdvisor({
     fetchSuggestion();
   }, [citta, provincia, corriereScelto, prezzoCorriereScelto, isDismissed]);
 
-  if (isDismissed || !suggestion) {
+  // Mostra loading anche se non c'è ancora suggerimento
+  if (isDismissed) {
     return null;
   }
 
+  // Mostra sempre il componente in loading o con suggerimento
   if (isLoading) {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 animate-pulse">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-5">
         <div className="flex items-center gap-3">
-          <div className="w-5 h-5 bg-blue-300 rounded-full"></div>
+          <div className="w-6 h-6 bg-blue-400 rounded-full animate-pulse"></div>
           <div className="flex-1">
-            <div className="h-4 bg-blue-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-blue-100 rounded w-1/2"></div>
+            <div className="h-5 bg-blue-200 rounded w-3/4 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-blue-100 rounded w-1/2 animate-pulse"></div>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-blue-700">
+          Analisi in corso... Stiamo valutando i migliori corrieri per questa destinazione
+        </p>
+      </div>
+    );
+  }
+
+  // Se non c'è suggerimento ma ci sono i dati, mostra un messaggio informativo
+  if (!suggestion) {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-gray-400" />
+          <div className="flex-1">
+            <p className="text-sm text-gray-600">
+              Compila i dati della spedizione per vedere il suggerimento intelligente del corriere
+            </p>
           </div>
         </div>
       </div>
