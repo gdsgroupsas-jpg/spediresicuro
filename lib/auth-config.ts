@@ -243,7 +243,8 @@ export const authOptions = {
             stack: error?.stack,
             name: error?.name,
           });
-          // Non bloccare il login in caso di errore, ma logga tutto
+          // ⚠️ IMPORTANTE: Non bloccare il login, ma logga tutto per debug
+          // Il login può continuare anche se la creazione utente fallisce
         }
       }
 
