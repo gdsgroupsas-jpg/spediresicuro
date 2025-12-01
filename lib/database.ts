@@ -169,12 +169,73 @@ function initDatabase(): Database {
 }
 
 /**
+ * Garantisce che gli utenti demo esistano sempre nel database
+ */
+function ensureDemoUsersExist(db: Database): Database {
+  // 🔓 ACCESSO DEMO: Credenziali disponibili per dimostrazione web
+  const demoUsers: User[] = [
+    {
+      id: '1',
+      email: 'admin@spediresicuro.it',
+      password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
+      name: 'Admin',
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      email: 'demo@spediresicuro.it',
+      password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
+      name: 'Demo User',
+      role: 'user',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  // Inizializza array utenti se non esiste
+  if (!db.utenti) {
+    db.utenti = [];
+  }
+
+  // Assicura che gli utenti demo esistano sempre
+  let hasChanges = false;
+  for (const demoUser of demoUsers) {
+    const existingUser = db.utenti.find(u => u.email === demoUser.email);
+    if (!existingUser) {
+      // Aggiungi utente demo se non esiste
+      db.utenti.push(demoUser);
+      hasChanges = true;
+    } else {
+      // Aggiorna password e dati se l'utente esiste ma ha dati diversi
+      if (existingUser.password !== demoUser.password || existingUser.role !== demoUser.role) {
+        existingUser.password = demoUser.password;
+        existingUser.role = demoUser.role;
+        existingUser.name = demoUser.name;
+        existingUser.updatedAt = new Date().toISOString();
+        hasChanges = true;
+      }
+    }
+  }
+
+  // Salva se ci sono state modifiche
+  if (hasChanges) {
+    writeDatabase(db);
+  }
+
+  return db;
+}
+
+/**
  * Legge i dati dal database JSON
  */
 export function readDatabase(): Database {
   try {
     if (!fs.existsSync(DB_PATH)) {
-      return initDatabase();
+      const db = initDatabase();
+      // Assicura che gli utenti demo esistano
+      return ensureDemoUsersExist(db);
     }
 
     const fileContent = fs.readFileSync(DB_PATH, 'utf-8');
@@ -182,35 +243,17 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
-      // 🔓 ACCESSO DEMO: Credenziali disponibili per dimostrazione web
-      db.utenti = [
-        {
-          id: '1',
-          email: 'admin@spediresicuro.it',
-          password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
-          name: 'Admin',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          email: 'demo@spediresicuro.it',
-          password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
-          name: 'Demo User',
-          role: 'user',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      // Salva la migrazione
-      writeDatabase(db);
+      db.utenti = [];
     }
     
-    return db;
+    // Garantisce che gli utenti demo esistano sempre
+    const dbWithDemoUsers = ensureDemoUsersExist(db);
+    
+    return dbWithDemoUsers;
   } catch (error) {
     console.error('Errore lettura database:', error);
-    return initDatabase();
+    const db = initDatabase();
+    return ensureDemoUsersExist(db);
   }
 }
 
@@ -820,7 +863,12 @@ export function verifyUserCredentials(
   email: string,
   password: string
 ): User | null {
-  const user = findUserByEmail(email);
+  // 🔓 GARANTISCE che gli utenti demo esistano sempre prima di verificare
+  // Questo è importante per produzione dove il database potrebbe essere vuoto
+  const db = readDatabase();
+  const dbWithDemoUsers = ensureDemoUsersExist(db);
+  
+  const user = dbWithDemoUsers.utenti.find((u) => u.email === email);
   if (!user) {
     return null;
   }
