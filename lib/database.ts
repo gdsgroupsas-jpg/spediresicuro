@@ -122,13 +122,11 @@ export interface User {
 // Inizializza il database se non esiste
 function initDatabase(): Database {
   // Utenti demo solo in sviluppo locale (non in produzione)
-  // 🔓 ACCESSO DEMO: Credenziali disponibili per dimostrazione web
-  // Questi utenti sono disponibili sia in sviluppo che in produzione per accesso dimostrativo
-  const demoUsers: User[] = [
+  const demoUsers: User[] = process.env.NODE_ENV === 'development' ? [
     {
       id: '1',
       email: 'admin@spediresicuro.it',
-      password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
+      password: 'admin123', // Solo per sviluppo locale
       name: 'Admin',
       role: 'admin',
       createdAt: new Date().toISOString(),
@@ -137,13 +135,13 @@ function initDatabase(): Database {
     {
       id: '2',
       email: 'demo@spediresicuro.it',
-      password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
+      password: 'demo123', // Solo per sviluppo locale
       name: 'Demo User',
       role: 'user',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-  ];
+  ] : [];
 
   const defaultData: Database = {
     spedizioni: [],
@@ -169,84 +167,12 @@ function initDatabase(): Database {
 }
 
 /**
- * Garantisce che gli utenti demo esistano sempre nel database
- */
-function ensureDemoUsersExist(db: Database): Database {
-  // 🔓 ACCESSO DEMO: Credenziali disponibili per dimostrazione web
-  const demoUsers: User[] = [
-    {
-      id: '1',
-      email: 'admin@spediresicuro.it',
-      password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
-      name: 'Admin',
-      role: 'admin',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      email: 'demo@spediresicuro.it',
-      password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
-      name: 'Demo User',
-      role: 'user',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
-
-  // Inizializza array utenti se non esiste
-  if (!db.utenti) {
-    db.utenti = [];
-  }
-
-  // Assicura che gli utenti demo esistano sempre
-  let hasChanges = false;
-  for (const demoUser of demoUsers) {
-    const existingUserIndex = db.utenti.findIndex(u => u.email === demoUser.email);
-    if (existingUserIndex === -1) {
-      // Aggiungi utente demo se non esiste
-      db.utenti.push(demoUser);
-      hasChanges = true;
-      console.log('➕ [DB] Utente demo aggiunto:', demoUser.email);
-    } else {
-      // Aggiorna password e dati se l'utente esiste ma ha dati diversi
-      const existingUser = db.utenti[existingUserIndex];
-      if (existingUser.password !== demoUser.password || existingUser.role !== demoUser.role || existingUser.name !== demoUser.name) {
-        existingUser.password = demoUser.password;
-        existingUser.role = demoUser.role;
-        existingUser.name = demoUser.name;
-        existingUser.updatedAt = new Date().toISOString();
-        hasChanges = true;
-        console.log('🔄 [DB] Utente demo aggiornato:', demoUser.email);
-      }
-    }
-  }
-
-  // Salva se ci sono state modifiche (solo se il file system è scrivibile)
-  if (hasChanges) {
-    try {
-      writeDatabase(db);
-      console.log('✅ [DB] Database salvato con utenti demo');
-    } catch (error: any) {
-      // Su Vercel il file system potrebbe essere read-only, ma va bene
-      // Gli utenti demo sono già in memoria e funzioneranno
-      console.warn('⚠️ [DB] Impossibile salvare database (potrebbe essere read-only su Vercel):', error.message);
-      console.log('ℹ️ [DB] Gli utenti demo sono comunque disponibili in memoria');
-    }
-  }
-
-  return db;
-}
-
-/**
  * Legge i dati dal database JSON
  */
 export function readDatabase(): Database {
   try {
     if (!fs.existsSync(DB_PATH)) {
-      const db = initDatabase();
-      // Assicura che gli utenti demo esistano
-      return ensureDemoUsersExist(db);
+      return initDatabase();
     }
 
     const fileContent = fs.readFileSync(DB_PATH, 'utf-8');
@@ -254,26 +180,47 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
-      db.utenti = [];
+      // Utenti demo solo in sviluppo locale (non in produzione)
+      db.utenti = process.env.NODE_ENV === 'development' ? [
+        {
+          id: '1',
+          email: 'admin@spediresicuro.it',
+          password: 'admin123', // Solo per sviluppo locale
+          name: 'Admin',
+          role: 'admin',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          email: 'demo@spediresicuro.it',
+          password: 'demo123', // Solo per sviluppo locale
+          name: 'Demo User',
+          role: 'user',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ] : [];
+      // Salva la migrazione
+      writeDatabase(db);
     }
     
-    // Garantisce che gli utenti demo esistano sempre
-    const dbWithDemoUsers = ensureDemoUsersExist(db);
-    
-    return dbWithDemoUsers;
+    return db;
   } catch (error) {
     console.error('Errore lettura database:', error);
-    const db = initDatabase();
-    return ensureDemoUsersExist(db);
+    return initDatabase();
   }
 }
 
 /**
  * Scrive i dati nel database JSON
+ */
+/**
+ * Scrive i dati nel database JSON
  * 
- * ⚠️ IMPORTANTE: Su Vercel il file system è read-only.
- * Questa funzione lancerà un errore EROFS se chiamata su Vercel.
- * Gestire sempre con try/catch quando si chiama questa funzione.
+ * ⚠️ IMPORTANTE: Preserva il codice errore originale per permettere gestione specifica
+ * - EROFS: file system read-only (Vercel) - non critico se Supabase ha successo
+ * - Altri errori: critici - indicano problemi reali
  */
 export function writeDatabase(data: Database): void {
   try {
@@ -285,12 +232,21 @@ export function writeDatabase(data: Database): void {
     
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch (error: any) {
-    // Su Vercel (read-only file system), questo è normale
-    if (error?.code === 'EROFS' || error?.message?.includes('read-only')) {
-      throw new Error('EROFS: read-only file system (Vercel) - impossibile scrivere database JSON');
-    }
-    console.error('Errore scrittura database:', error);
-    throw new Error('Impossibile salvare i dati');
+    // Preserva il codice errore originale per permettere gestione specifica
+    const errorCode = error?.code;
+    const errorMessage = error?.message || 'Errore sconosciuto';
+    
+    console.error('Errore scrittura database:', {
+      code: errorCode,
+      message: errorMessage,
+      path: DB_PATH,
+    });
+    
+    // Crea nuovo errore preservando codice originale
+    const wrappedError: any = new Error(`Impossibile salvare i dati: ${errorMessage}`);
+    wrappedError.code = errorCode; // Preserva codice originale (EROFS, EACCES, ENOSPC, ecc.)
+    wrappedError.originalError = error; // Preserva errore originale per debug
+    throw wrappedError;
   }
 }
 
@@ -675,28 +631,10 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     console.log('📁 [JSON] Supabase non configurato, uso database JSON locale');
   }
   
-  // 🔒 Salva in JSON per compatibilità (SOLO se file system è scrivibile)
-  // Su Vercel il file system è read-only, quindi questo viene gestito gracefulmente
-  try {
-    const db = readDatabase();
-    db.spedizioni.push(nuovaSpedizione);
-    writeDatabase(db);
-    console.log('✅ [JSON] Spedizione salvata anche in JSON locale');
-  } catch (error: any) {
-    // Su Vercel (read-only file system), questo errore è normale e non critico
-    const isReadOnlyError = error?.code === 'EROFS' 
-      || error?.message?.includes('read-only') 
-      || error?.message?.includes('EROFS')
-      || error?.message?.includes('ENOENT'); // File non esiste (normale su Vercel)
-    
-    if (isReadOnlyError) {
-      console.log('ℹ️ [JSON] File system read-only (Vercel) - salvataggio JSON saltato (non critico)');
-      console.log('ℹ️ [JSON] La spedizione è comunque salvata in Supabase o disponibile in memoria');
-    } else {
-      console.warn('⚠️ [JSON] Errore salvataggio JSON (non critico):', error?.message || error);
-    }
-    // Non bloccare il processo: la spedizione è già salvata in Supabase o disponibile in memoria
-  }
+  // Salva anche in JSON per compatibilità (fallback)
+  const db = readDatabase();
+  db.spedizioni.push(nuovaSpedizione);
+  writeDatabase(db);
   
   return nuovaSpedizione;
 }
@@ -900,100 +838,23 @@ export function findUserByEmail(email: string): User | undefined {
 }
 
 /**
- * 🔓 Utenti demo sempre disponibili in memoria (fallback garantito)
- */
-function getDemoUsers(): User[] {
-  return [
-    {
-      id: '1',
-      email: 'admin@spediresicuro.it',
-      password: 'admin123', // 🔓 Credenziale demo per accesso dimostrativo
-      name: 'Admin',
-      role: 'admin',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      email: 'demo@spediresicuro.it',
-      password: 'demo123', // 🔓 Credenziale demo per accesso dimostrativo
-      name: 'Demo User',
-      role: 'user',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
-}
-
-/**
  * Verifica le credenziali di un utente
  */
 export function verifyUserCredentials(
   email: string,
   password: string
 ): User | null {
-  console.log('🔍 [DB] verifyUserCredentials chiamato per:', email);
-  
-  try {
-    // 🔓 PRIMA VERIFICA: Controlla sempre gli utenti demo in memoria (garantito sempre)
-    const demoUsers = getDemoUsers();
-    const demoUser = demoUsers.find(u => u.email === email);
-    
-    if (demoUser && demoUser.password === password) {
-      console.log('✅ [DB] Utente demo trovato in memoria:', email);
-      return demoUser;
-    }
-    
-    // SECONDA VERIFICA: Controlla nel database (file o Supabase)
-    console.log('📖 [DB] Lettura database...');
-    const db = readDatabase();
-    console.log('📊 [DB] Database letto, utenti presenti:', db.utenti?.length || 0);
-    
-    console.log('🔓 [DB] Garantisco esistenza utenti demo...');
-    const dbWithDemoUsers = ensureDemoUsersExist(db);
-    console.log('📊 [DB] Dopo ensureDemoUsersExist, utenti presenti:', dbWithDemoUsers.utenti?.length || 0);
-    
-    console.log('🔍 [DB] Cerca utente con email:', email);
-    const user = dbWithDemoUsers.utenti.find((u) => u.email === email);
-    
-    if (!user) {
-      console.log('❌ [DB] Utente non trovato con email:', email);
-      console.log('📋 [DB] Utenti disponibili nel DB:', dbWithDemoUsers.utenti.map(u => u.email));
-      return null;
-    }
-    
-    console.log('✅ [DB] Utente trovato nel database:', {
-      email: user.email,
-      hasPassword: !!user.password,
-      passwordMatch: user.password === password,
-    });
-    
-    // TODO: In produzione, confrontare hash con bcrypt
-    if (user.password !== password) {
-      console.log('❌ [DB] Password non corrisponde');
-      return null;
-    }
-    
-    console.log('✅ [DB] Credenziali verificate con successo');
-    return user;
-  } catch (error: any) {
-    console.error('❌ [DB] Errore in verifyUserCredentials:', {
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name,
-    });
-    
-    // 🔓 FALLBACK: Se tutto fallisce, controlla sempre gli utenti demo in memoria
-    console.log('🔄 [DB] Fallback: controllo utenti demo in memoria...');
-    const demoUsers = getDemoUsers();
-    const demoUser = demoUsers.find(u => u.email === email && u.password === password);
-    if (demoUser) {
-      console.log('✅ [DB] Utente demo trovato nel fallback:', email);
-      return demoUser;
-    }
-    
+  const user = findUserByEmail(email);
+  if (!user) {
     return null;
   }
+  
+  // TODO: In produzione, confrontare hash con bcrypt
+  if (user.password !== password) {
+    return null;
+  }
+  
+  return user;
 }
 
 /**
@@ -1003,4 +864,3 @@ export function getAllUsers(): User[] {
   const db = readDatabase();
   return db.utenti;
 }
-
