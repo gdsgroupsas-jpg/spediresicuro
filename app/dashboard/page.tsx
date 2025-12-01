@@ -175,21 +175,36 @@ export default function DashboardPage() {
   // Verifica se i dati cliente sono completati (solo per nuovi utenti)
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      async function checkDatiCompletati() {
-        try {
-          const response = await fetch('/api/user/dati-cliente');
-          if (response.ok) {
-            const data = await response.json();
-            // Se i dati non sono completati, reindirizza alla pagina dati-cliente
-            if (!data.datiCliente || !data.datiCliente.datiCompletati) {
-              router.push('/dashboard/dati-cliente');
+      // Piccolo delay per dare tempo al database di aggiornarsi dopo un salvataggio
+      const timeoutId = setTimeout(async () => {
+        async function checkDatiCompletati() {
+          try {
+            // Aggiungi cache: 'no-store' per assicurarsi di ottenere dati freschi
+            const response = await fetch('/api/user/dati-cliente', {
+              cache: 'no-store',
+            });
+            if (response.ok) {
+              const data = await response.json();
+              console.log('📋 [DASHBOARD] Verifica dati cliente:', {
+                hasDatiCliente: !!data.datiCliente,
+                datiCompletati: data.datiCliente?.datiCompletati,
+              });
+              // Se i dati non sono completati, reindirizza alla pagina dati-cliente
+              if (!data.datiCliente || !data.datiCliente.datiCompletati) {
+                console.log('🔄 [DASHBOARD] Dati non completati, reindirizzamento a /dashboard/dati-cliente');
+                router.push('/dashboard/dati-cliente');
+              } else {
+                console.log('✅ [DASHBOARD] Dati cliente completati, utente può usare la dashboard');
+              }
             }
+          } catch (err) {
+            console.error('❌ [DASHBOARD] Errore verifica dati cliente:', err);
           }
-        } catch (err) {
-          console.error('Errore verifica dati cliente:', err);
         }
-      }
-      checkDatiCompletati();
+        checkDatiCompletati();
+      }, 500); // Delay di 500ms per dare tempo al database
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [status, session, router]);
 
