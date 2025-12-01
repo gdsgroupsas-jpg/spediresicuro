@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica se l'utente esiste già
-    const existingUser = findUserByEmail(email);
+    const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { error: 'Email già registrata' },
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crea nuovo utente
-    const newUser = createUser({
+    const newUser = await createUser({
       email,
       password, // TODO: Hash con bcrypt in produzione
       name,
