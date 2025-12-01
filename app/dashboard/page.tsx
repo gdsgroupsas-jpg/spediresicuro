@@ -175,7 +175,22 @@ export default function DashboardPage() {
   // Verifica se i dati cliente sono completati (solo per nuovi utenti)
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      // Piccolo delay per dare tempo al database di aggiornarsi dopo un salvataggio
+      // Controlla se i dati sono stati appena salvati (flag in sessionStorage)
+      const datiAppenaSalvati = typeof window !== 'undefined' 
+        ? sessionStorage.getItem('datiClienteAppenaSalvati') === 'true'
+        : false;
+      
+      if (datiAppenaSalvati) {
+        console.log('✅ [DASHBOARD] Dati appena salvati, rimuovo flag e salto controllo');
+        // Rimuovi il flag
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('datiClienteAppenaSalvati');
+        }
+        // Non eseguire il controllo, i dati sono stati appena salvati
+        return;
+      }
+      
+      // Delay più lungo per dare tempo al database di aggiornarsi dopo un salvataggio
       const timeoutId = setTimeout(async () => {
         async function checkDatiCompletati() {
           try {
@@ -188,6 +203,7 @@ export default function DashboardPage() {
               console.log('📋 [DASHBOARD] Verifica dati cliente:', {
                 hasDatiCliente: !!data.datiCliente,
                 datiCompletati: data.datiCliente?.datiCompletati,
+                rawData: data.datiCliente, // Log completo per debug
               });
               // Se i dati non sono completati, reindirizza alla pagina dati-cliente
               if (!data.datiCliente || !data.datiCliente.datiCompletati) {
@@ -196,13 +212,15 @@ export default function DashboardPage() {
               } else {
                 console.log('✅ [DASHBOARD] Dati cliente completati, utente può usare la dashboard');
               }
+            } else {
+              console.warn('⚠️ [DASHBOARD] Errore nella risposta API:', response.status);
             }
           } catch (err) {
             console.error('❌ [DASHBOARD] Errore verifica dati cliente:', err);
           }
         }
         checkDatiCompletati();
-      }, 500); // Delay di 500ms per dare tempo al database
+      }, 1000); // Delay aumentato a 1 secondo per dare più tempo al database
       
       return () => clearTimeout(timeoutId);
     }
