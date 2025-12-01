@@ -175,12 +175,27 @@ export default function DashboardPage() {
   // Verifica se i dati cliente sono completati (solo per nuovi utenti)
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      // Controlla se i dati sono stati appena salvati (parametro URL)
+      // PRIMA: Controlla se i dati sono già stati completati (localStorage) - più veloce
+      const datiGiàCompletati = typeof window !== 'undefined' 
+        ? localStorage.getItem(`datiCompletati_${session.user.email}`) === 'true'
+        : false;
+      
+      if (datiGiàCompletati) {
+        console.log('✅ [DASHBOARD] Dati già completati in localStorage, salto controllo');
+        // Non eseguire il controllo, i dati sono già stati completati
+        return;
+      }
+      
+      // SECONDO: Controlla se i dati sono stati appena salvati (parametro URL)
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const datiAppenaSalvati = urlParams?.get('saved') === 'true';
       
       if (datiAppenaSalvati) {
-        console.log('✅ [DASHBOARD] Dati appena salvati (parametro URL), rimuovo parametro e salto controllo');
+        console.log('✅ [DASHBOARD] Dati appena salvati (parametro URL), salvo in localStorage e rimuovo parametro');
+        // Salva IMMEDIATAMENTE in localStorage per evitare controlli futuri
+        if (typeof window !== 'undefined' && session?.user?.email) {
+          localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+        }
         // Rimuovi il parametro URL senza ricaricare la pagina
         if (typeof window !== 'undefined') {
           const newUrl = window.location.pathname;
@@ -190,17 +205,7 @@ export default function DashboardPage() {
         return;
       }
       
-      // Controlla se i dati sono già stati completati in una sessione precedente (localStorage)
-      const datiGiàCompletati = typeof window !== 'undefined' 
-        ? localStorage.getItem(`datiCompletati_${session.user.email}`) === 'true'
-        : false;
-      
-      if (datiGiàCompletati) {
-        console.log('✅ [DASHBOARD] Dati già completati in sessione precedente, salto controllo');
-        // Non eseguire il controllo, i dati sono già stati completati
-        return;
-      }
-      
+      // TERZO: Se non ci sono flag, controlla il database (solo se necessario)
       // Delay più lungo per dare tempo al database di aggiornarsi dopo un salvataggio
       const timeoutId = setTimeout(async () => {
         async function checkDatiCompletati() {
@@ -211,7 +216,7 @@ export default function DashboardPage() {
             });
             if (response.ok) {
               const data = await response.json();
-              console.log('📋 [DASHBOARD] Verifica dati cliente:', {
+              console.log('📋 [DASHBOARD] Verifica dati cliente dal database:', {
                 hasDatiCliente: !!data.datiCliente,
                 datiCompletati: data.datiCliente?.datiCompletati,
                 rawData: data.datiCliente, // Log completo per debug
@@ -219,13 +224,13 @@ export default function DashboardPage() {
               
               // Se i dati sono completati, salva in localStorage per evitare controlli futuri
               if (data.datiCliente && data.datiCliente.datiCompletati) {
-                console.log('✅ [DASHBOARD] Dati cliente completati, salvo in localStorage');
+                console.log('✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage');
                 if (typeof window !== 'undefined' && session?.user?.email) {
                   localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
                 }
               } else {
                 // Se i dati non sono completati, reindirizza alla pagina dati-cliente
-                console.log('🔄 [DASHBOARD] Dati non completati, reindirizzamento a /dashboard/dati-cliente');
+                console.log('🔄 [DASHBOARD] Dati non completati nel database, reindirizzamento a /dashboard/dati-cliente');
                 router.push('/dashboard/dati-cliente');
               }
             } else {
