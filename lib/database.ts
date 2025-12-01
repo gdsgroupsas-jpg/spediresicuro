@@ -215,38 +215,12 @@ export function readDatabase(): Database {
 /**
  * Scrive i dati nel database JSON
  */
-/**
- * Scrive i dati nel database JSON
- * 
- * ⚠️ IMPORTANTE: Preserva il codice errore originale per permettere gestione specifica
- * - EROFS: file system read-only (Vercel) - non critico se Supabase ha successo
- * - Altri errori: critici - indicano problemi reali
- */
 export function writeDatabase(data: Database): void {
   try {
-    // Verifica se la directory esiste
-    const dataDir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (error: any) {
-    // Preserva il codice errore originale per permettere gestione specifica
-    const errorCode = error?.code;
-    const errorMessage = error?.message || 'Errore sconosciuto';
-    
-    console.error('Errore scrittura database:', {
-      code: errorCode,
-      message: errorMessage,
-      path: DB_PATH,
-    });
-    
-    // Crea nuovo errore preservando codice originale
-    const wrappedError: any = new Error(`Impossibile salvare i dati: ${errorMessage}`);
-    wrappedError.code = errorCode; // Preserva codice originale (EROFS, EACCES, ENOSPC, ecc.)
-    wrappedError.originalError = error; // Preserva errore originale per debug
-    throw wrappedError;
+  } catch (error) {
+    console.error('Errore scrittura database:', error);
+    throw new Error('Impossibile salvare i dati');
   }
 }
 
@@ -407,14 +381,17 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     sender_city: mittente.citta || spedizione.mittenteCitta || '',
     sender_zip: mittente.cap || spedizione.mittenteCap || '',
     sender_province: mittente.provincia || spedizione.mittenteProvincia || '',
+    sender_country: 'IT', // Default Italia
     sender_phone: mittente.telefono || spedizione.mittenteTelefono || '',
     sender_email: mittente.email || spedizione.mittenteEmail || '',
     // Destinatario
     recipient_name: destinatario.nome || spedizione.destinatarioNome || spedizione.nome || spedizione.nominativo || '',
+    recipient_type: 'B2C' as any, // Default B2C (da implementare logica B2B se necessario)
     recipient_address: destinatario.indirizzo || spedizione.destinatarioIndirizzo || spedizione.indirizzo || '',
     recipient_city: destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || '',
     recipient_zip: destinatario.cap || spedizione.destinatarioCap || spedizione.cap || '',
     recipient_province: destinatario.provincia || spedizione.destinatarioProvincia || spedizione.provincia || '',
+    recipient_country: 'IT', // Default Italia
     recipient_phone: destinatario.telefono || spedizione.destinatarioTelefono || spedizione.telefono || '',
     recipient_email: destinatario.email || spedizione.destinatarioEmail || spedizione.email_dest || spedizione.email || '',
     // Pacco
@@ -422,21 +399,32 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     length: spedizione.dimensioni?.lunghezza || null,
     width: spedizione.dimensioni?.larghezza || null,
     height: spedizione.dimensioni?.altezza || null,
-    // ⚠️ NUOVO: packages_count (colli)
-    packages_count: spedizione.colli || spedizione.packages_count || 1,
+    // ⚠️ NOTA: packages_count NON esiste nello schema Supabase - rimosso
     // Servizio
+    // ⚠️ courier_id è UUID che fa riferimento a couriers(id) - per ora null (da implementare mapping nome->UUID)
+    courier_id: null, // TODO: Mappare spedizione.corriere (es. "GLS", "SDA") a UUID da tabella couriers
+    service_type: (spedizione.tipoSpedizione === 'express' ? 'express' : 
+                   spedizione.tipoSpedizione === 'economy' ? 'economy' : 
+                   spedizione.tipoSpedizione === 'same_day' ? 'same_day' : 
+                   spedizione.tipoSpedizione === 'next_day' ? 'next_day' : 'standard') as any,
     cash_on_delivery: !!spedizione.contrassegno,
     cash_on_delivery_amount: spedizione.contrassegno ? parseFloat(String(spedizione.contrassegno)) : null,
     insurance: !!spedizione.assicurazione,
+    declared_value: spedizione.valoreDichiarato || (spedizione.assicurazione ? parseFloat(String(spedizione.valoreDichiarato || spedizione.assicurazione)) : null),
+    currency: 'EUR', // Default EUR
     // Pricing
     base_price: spedizione.prezzoBase || null,
+    surcharges: (spedizione.costoContrassegno || 0) + (spedizione.costoAssicurazione || 0),
+    total_cost: (spedizione.prezzoBase || 0) + (spedizione.costoContrassegno || 0) + (spedizione.costoAssicurazione || 0),
     final_price: spedizione.prezzoFinale || spedizione.totale_ordine || spedizione.costo || 0,
     margin_percent: spedizione.margine || 15,
+    // E-commerce (per order_reference visto negli screenshot)
+    ecommerce_order_number: spedizione.order_id || spedizione.order_reference || spedizione.rif_destinatario || null,
+    ecommerce_order_id: spedizione.order_id || null,
     // Note
     notes: spedizione.note || '',
     // Campi aggiuntivi (salvati in JSONB o come note)
-    // Nota: Supabase non ha campi nativi per questi, li salviamo in notes o in un campo JSONB custom
-    // Per ora li manteniamo nel formato JSON per compatibilità
+    // Nota: packages_count (colli) non esiste nello schema Supabase - non può essere salvato
   };
 }
 
