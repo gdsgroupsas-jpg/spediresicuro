@@ -898,7 +898,18 @@ export async function createUser(userData: {
         .single();
       
       if (supabaseError) {
-        console.error('❌ [SUPABASE] Errore salvataggio utente:', supabaseError.message);
+        console.error('❌ [SUPABASE] Errore salvataggio utente:', {
+          message: supabaseError.message,
+          code: supabaseError.code,
+          details: supabaseError.details,
+          hint: supabaseError.hint,
+        });
+        
+        // Se è un errore di constraint unique (email già esistente), rilancia l'errore
+        if (supabaseError.code === '23505' || supabaseError.message?.includes('duplicate key') || supabaseError.message?.includes('unique constraint')) {
+          throw new Error('Email già registrata');
+        }
+        
         console.log('📁 [FALLBACK] Provo database JSON locale');
       } else {
         console.log(`✅ [SUPABASE] Utente salvato con successo! ID: ${supabaseUser.id}`);
