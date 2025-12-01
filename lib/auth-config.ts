@@ -268,7 +268,14 @@ export const authOptions = {
     strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 giorni
   },
-  secret: process.env.NEXTAUTH_SECRET || 'spediresicuro-secret-key-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('NEXTAUTH_SECRET è obbligatorio in produzione! Configura la variabile d\'ambiente.');
+    }
+    // In sviluppo, genera un warning ma permette di continuare
+    console.warn('⚠️ NEXTAUTH_SECRET non configurato. Configura .env.local per sicurezza!');
+    return 'dev-secret-not-for-production-change-in-env-local';
+  })(),
 };
 
 // Export auth function for server-side usage

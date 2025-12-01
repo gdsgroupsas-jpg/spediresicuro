@@ -26,12 +26,10 @@ import {
   X,
   Loader2
 } from 'lucide-react';
-import AsyncLocationCombobox from '@/components/ui/async-location-combobox';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
 import { generateShipmentCSV, downloadCSV, generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
-import type { OnLocationSelect } from '@/types/geo';
 import type { Corriere } from '@/types/corrieri';
 
 interface FormData {
@@ -53,7 +51,7 @@ interface FormData {
   destinatarioTelefono: string;
   destinatarioEmail: string;
 
-  // Dettagli spedizione
+  // Dati Spedizione (uguali per manuale e AI import)
   peso: string;
   lunghezza: string;
   larghezza: string;
@@ -61,6 +59,13 @@ interface FormData {
   tipoSpedizione: string;
   corriere: string;
   note: string;
+  
+  // Servizi Aggiuntivi (dopo selezione corriere)
+  contrassegno: boolean;
+  importoContrassegno: string;
+  assicurazione: boolean;
+  valoreDichiarato: string;
+  ritiro: boolean;
 }
 
 // Componente Input con validazione
@@ -74,6 +79,7 @@ function SmartInput({
   icon: Icon,
   isValid,
   errorMessage,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -84,6 +90,7 @@ function SmartInput({
   icon?: any;
   isValid?: boolean;
   errorMessage?: string;
+  maxLength?: number;
 }) {
   const hasValue = value.length > 0;
   const showValid = hasValue && isValid === true;
@@ -106,6 +113,7 @@ function SmartInput({
           onChange={(e) => onChange(e.target.value)}
           required={required}
           placeholder={placeholder}
+          maxLength={maxLength}
           className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 ${
             showError
               ? 'border-red-300 ring-2 ring-red-100 focus:ring-red-500 focus:border-red-500'
@@ -251,6 +259,11 @@ export default function NuovaSpedizionePage() {
     tipoSpedizione: 'standard',
     corriere: 'GLS',
     note: '',
+    contrassegno: false,
+    importoContrassegno: '',
+    assicurazione: false,
+    valoreDichiarato: '',
+    ritiro: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -364,25 +377,6 @@ export default function NuovaSpedizionePage() {
     return Math.round((baseCost + weightCost) * distanceMultiplier * typeMultiplier);
   }, [formData.peso, formData.mittenteCitta, formData.destinatarioCitta, formData.tipoSpedizione]);
 
-  // Handler selezione location mittente
-  const handleMittenteLocation: OnLocationSelect = (location) => {
-    setFormData((prev) => ({
-      ...prev,
-      mittenteCitta: location.city,
-      mittenteProvincia: location.province,
-      mittenteCap: location.cap || '',
-    }));
-  };
-
-  // Handler selezione location destinatario
-  const handleDestinatarioLocation: OnLocationSelect = (location) => {
-    setFormData((prev) => ({
-      ...prev,
-      destinatarioCitta: location.city,
-      destinatarioProvincia: location.province,
-      destinatarioCap: location.cap || '',
-    }));
-  };
 
   // Handler dati estratti da OCR
   const handleOCRDataExtracted = (data: any) => {
@@ -408,9 +402,51 @@ export default function NuovaSpedizionePage() {
     setSubmitError(`Errore OCR: ${error}`);
   };
 
-  // Handler submit
+  // Funzione per resettare il form a valori iniziali
+  const resetForm = () => {
+    setFormData({
+      mittenteNome: '',
+      mittenteIndirizzo: '',
+      mittenteCitta: '',
+      mittenteProvincia: '',
+      mittenteCap: '',
+      mittenteTelefono: '',
+      mittenteEmail: '',
+      destinatarioNome: '',
+      destinatarioIndirizzo: '',
+      destinatarioCitta: '',
+      destinatarioProvincia: '',
+      destinatarioCap: '',
+      destinatarioTelefono: '',
+      destinatarioEmail: '',
+      peso: '',
+      lunghezza: '',
+      larghezza: '',
+      altezza: '',
+      tipoSpedizione: 'standard',
+      corriere: 'GLS',
+      note: '',
+      contrassegno: false,
+      importoContrassegno: '',
+      assicurazione: false,
+      valoreDichiarato: '',
+      ritiro: false,
+    });
+    setSubmitSuccess(false);
+    setSubmitError(null);
+    setCreatedTracking(null);
+  };
+
+  // Handler submit con prevenzione doppio click
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ Prevenzione doppio click: blocca se già in corso submit
+    if (isSubmitting) {
+      console.warn('⚠️ Submit già in corso, ignorato doppio click');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(false);
@@ -454,10 +490,7 @@ export default function NuovaSpedizionePage() {
         }, 500);
       }
 
-      // Reindirizza alla lista dopo 3 secondi
-      setTimeout(() => {
-        router.push('/dashboard/spedizioni');
-      }, 3000);
+      // ⚠️ RIMOSSO: Redirect automatico - ora l'utente può scegliere
     } catch (error) {
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -568,14 +601,36 @@ export default function NuovaSpedizionePage() {
                   errorMessage={formData.mittenteIndirizzo && !validation.mittenteIndirizzo ? 'Indirizzo troppo corto' : undefined}
                 />
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    Città, Provincia, CAP <span className="text-red-500">*</span>
-                  </label>
-                  <AsyncLocationCombobox
-                    onSelect={handleMittenteLocation}
-                    placeholder="Cerca città..."
-                    className="w-full"
+                <div className="grid grid-cols-3 gap-4">
+                  <SmartInput
+                    label="Città"
+                    value={formData.mittenteCitta}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteCitta: v }))}
+                    required
+                    placeholder="Roma"
+                    icon={MapPin}
+                    isValid={validation.mittenteCitta}
+                    errorMessage={formData.mittenteCitta && !validation.mittenteCitta ? 'Città non valida' : undefined}
+                  />
+                  <SmartInput
+                    label="Provincia"
+                    value={formData.mittenteProvincia}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteProvincia: v.toUpperCase() }))}
+                    required
+                    placeholder="RM"
+                    maxLength={2}
+                    isValid={formData.mittenteProvincia.length === 2}
+                    errorMessage={formData.mittenteProvincia && formData.mittenteProvincia.length !== 2 ? 'Inserisci 2 caratteri' : undefined}
+                  />
+                  <SmartInput
+                    label="CAP"
+                    value={formData.mittenteCap}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteCap: v.replace(/\D/g, '').slice(0, 5) }))}
+                    required
+                    placeholder="00100"
+                    maxLength={5}
+                    isValid={formData.mittenteCap.length === 5}
+                    errorMessage={formData.mittenteCap && formData.mittenteCap.length !== 5 ? 'CAP deve essere di 5 cifre' : undefined}
                   />
                 </div>
 
@@ -629,23 +684,36 @@ export default function NuovaSpedizionePage() {
                   errorMessage={formData.destinatarioIndirizzo && !validation.destinatarioIndirizzo ? 'Indirizzo troppo corto' : undefined}
                 />
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    Città, Provincia, CAP <span className="text-red-500">*</span>
-                  </label>
-                  <AsyncLocationCombobox
-                    onSelect={handleDestinatarioLocation}
-                    placeholder="Cerca città..."
-                    className="w-full"
-                    defaultValue={
-                      formData.destinatarioCitta && formData.destinatarioProvincia
-                        ? {
-                            city: formData.destinatarioCitta,
-                            province: formData.destinatarioProvincia,
-                            cap: formData.destinatarioCap || null,
-                          }
-                        : undefined
-                    }
+                <div className="grid grid-cols-3 gap-4">
+                  <SmartInput
+                    label="Città"
+                    value={formData.destinatarioCitta}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioCitta: v }))}
+                    required
+                    placeholder="Milano"
+                    icon={MapPin}
+                    isValid={validation.destinatarioCitta}
+                    errorMessage={formData.destinatarioCitta && !validation.destinatarioCitta ? 'Città non valida' : undefined}
+                  />
+                  <SmartInput
+                    label="Provincia"
+                    value={formData.destinatarioProvincia}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioProvincia: v.toUpperCase() }))}
+                    required
+                    placeholder="MI"
+                    maxLength={2}
+                    isValid={formData.destinatarioProvincia.length === 2}
+                    errorMessage={formData.destinatarioProvincia && formData.destinatarioProvincia.length !== 2 ? 'Inserisci 2 caratteri' : undefined}
+                  />
+                  <SmartInput
+                    label="CAP"
+                    value={formData.destinatarioCap}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioCap: v.replace(/\D/g, '').slice(0, 5) }))}
+                    required
+                    placeholder="20100"
+                    maxLength={5}
+                    isValid={formData.destinatarioCap.length === 5}
+                    errorMessage={formData.destinatarioCap && formData.destinatarioCap.length !== 5 ? 'CAP deve essere di 5 cifre' : undefined}
                   />
                 </div>
 
@@ -674,8 +742,8 @@ export default function NuovaSpedizionePage() {
               </div>
             </SmartCard>
 
-            {/* Pacco Card */}
-            <SmartCard title="Dettagli Pacco" icon={Package}>
+            {/* Dati Spedizione Card - Uguale per Manuale e AI Import */}
+            <SmartCard title="Dati Spedizione" icon={Package}>
               <div className="space-y-4">
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1">
@@ -772,19 +840,119 @@ export default function NuovaSpedizionePage() {
 
                   <div>
                     <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                      Note (opzionale)
+                      Corriere <span className="text-red-500">*</span>
                     </label>
-                    <textarea
-                      value={formData.note}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
-                      rows={3}
-                      placeholder="Note aggiuntive..."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
-                    />
+                    <select
+                      value={formData.corriere}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, corriere: e.target.value }))}
+                      required
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                    >
+                      <option value="GLS">🚚 GLS</option>
+                      <option value="SDA">🚚 SDA</option>
+                      <option value="Bartolini">🚚 Bartolini</option>
+                    </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                    Note (opzionale)
+                  </label>
+                  <textarea
+                    value={formData.note}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
+                    rows={3}
+                    placeholder="Note aggiuntive..."
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
+                  />
                 </div>
               </div>
             </SmartCard>
+
+            {/* Servizi Aggiuntivi Card - Appare dopo selezione corriere */}
+            {formData.corriere && (
+              <SmartCard title="Servizi Aggiuntivi" icon={Truck}>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="contrassegno"
+                        checked={formData.contrassegno}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, contrassegno: e.target.checked }))}
+                        className="w-5 h-5 text-[#FF9500] border-gray-300 rounded focus:ring-[#FF9500] focus:ring-2"
+                      />
+                      <label htmlFor="contrassegno" className="text-sm font-medium text-gray-700">
+                        💰 Contrassegno
+                      </label>
+                    </div>
+
+                    {formData.contrassegno && (
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                          Importo Contrassegno (€)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.importoContrassegno}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, importoContrassegno: e.target.value }))}
+                          placeholder="0.00"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="assicurazione"
+                        checked={formData.assicurazione}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, assicurazione: e.target.checked }))}
+                        className="w-5 h-5 text-[#FF9500] border-gray-300 rounded focus:ring-[#FF9500] focus:ring-2"
+                      />
+                      <label htmlFor="assicurazione" className="text-sm font-medium text-gray-700">
+                        🛡️ Assicurazione
+                      </label>
+                    </div>
+
+                    {formData.assicurazione && (
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                          Valore Dichiarato (€)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.valoreDichiarato}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, valoreDichiarato: e.target.value }))}
+                          placeholder="0.00"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="ritiro"
+                      checked={formData.ritiro}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, ritiro: e.target.checked }))}
+                      className="w-5 h-5 text-[#FF9500] border-gray-300 rounded focus:ring-[#FF9500] focus:ring-2"
+                    />
+                    <label htmlFor="ritiro" className="text-sm font-medium text-gray-700">
+                      📦 Ritiro presso mittente
+                    </label>
+                  </div>
+                </div>
+              </SmartCard>
+            )}
           </div>
 
           {/* RIGHT COLUMN - Live Ticket Preview (33% - STICKY) */}
@@ -817,9 +985,18 @@ export default function NuovaSpedizionePage() {
                     />
                   </div>
 
-                  {/* AI Routing Advisor */}
-                  {formData.destinatarioCitta && formData.destinatarioProvincia && estimatedCost > 0 && (
+                  {/* Scelta Intelligente Corriere - AI Routing Advisor */}
+                  {formData.destinatarioCitta && formData.destinatarioProvincia && formData.peso && (
                     <div className="pt-6 border-t border-gray-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="w-4 h-4 text-[#FF9500]" />
+                        <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                          🧠 Scelta Intelligente Corriere
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Analisi automatica basata su performance, affidabilità e costi nella zona di destinazione
+                      </p>
                       <AIRoutingAdvisor
                         citta={formData.destinatarioCitta}
                         provincia={formData.destinatarioProvincia}
@@ -832,10 +1009,10 @@ export default function NuovaSpedizionePage() {
                     </div>
                   )}
 
-                  {/* Corriere Selection */}
+                  {/* Selezione Manuale Corriere */}
                   <div className="pt-6 border-t border-gray-200">
                     <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
-                      Corriere
+                      Corriere <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {(['GLS', 'SDA', 'Bartolini'] as Corriere[]).map((corriere) => (
@@ -972,19 +1149,41 @@ export default function NuovaSpedizionePage() {
                   )}
 
                   {submitSuccess && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                      <div className="flex items-center gap-2 text-green-700 mb-2">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span className="font-semibold">Spedizione creata con successo!</span>
-                      </div>
-                      {createdTracking && (
-                        <div className="mt-2 p-3 bg-white rounded-lg border border-green-200">
-                          <div className="text-xs text-gray-600 mb-1">Tracking Number:</div>
-                          <div className="text-lg font-mono font-bold text-green-700">{createdTracking}</div>
+                    <div className="p-5 bg-green-50 border-2 border-green-300 rounded-xl shadow-lg">
+                      <div className="flex items-start gap-3 mb-4">
+                        <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <h3 className="font-bold text-green-900 text-lg mb-1">
+                            ✅ LDV Creata con Successo!
+                          </h3>
+                          <p className="text-sm text-green-700">
+                            La spedizione è stata creata correttamente. Vedi i dettagli nella lista spedizioni.
+                          </p>
+                          {createdTracking && (
+                            <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
+                              <div className="text-xs text-gray-600 mb-1">Tracking Number:</div>
+                              <div className="text-lg font-mono font-bold text-green-700">{createdTracking}</div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div className="mt-2 text-xs text-green-600">
-                        Reindirizzamento alla lista spedizioni...
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => router.push('/dashboard/spedizioni')}
+                          className="flex-1 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                          Vedi Lista Spedizioni
+                        </button>
+                        <button
+                          type="button"
+                          onClick={resetForm}
+                          className="flex-1 px-4 py-2 bg-white border-2 border-green-600 text-green-700 font-semibold rounded-lg hover:bg-green-50 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Package className="w-4 h-4" />
+                          Crea Nuova Spedizione
+                        </button>
                       </div>
                     </div>
                   )}

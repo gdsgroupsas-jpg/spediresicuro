@@ -89,7 +89,7 @@
 - ✅ OAuth Google, GitHub, Facebook
 - ✅ Session management con NextAuth v5
 - ✅ Protezione route dashboard
-- ✅ Credenziali demo (solo sviluppo locale): `admin@spediresicuro.it` / `admin123`
+- ✅ Utenti demo disponibili solo in modalità sviluppo (password gestite in modo sicuro)
 
 ### 3. 📊 Dashboard
 - ✅ Dashboard principale con statistiche
@@ -285,11 +285,7 @@ Dovresti vedere:
 
 Vai su **http://localhost:3000**
 
-**Login demo (solo sviluppo locale):**
-- Email: `admin@spediresicuro.it`
-- Password: `admin123`
-
-⚠️ **Nota:** Le credenziali demo sono disponibili solo in ambiente di sviluppo (`NODE_ENV=development`). In produzione, gli utenti devono registrarsi o utilizzare OAuth.
+⚠️ **Nota:** Per l'ambiente di sviluppo, consulta la documentazione interna. In produzione, gli utenti devono registrarsi o utilizzare OAuth.
 
 ---
 
