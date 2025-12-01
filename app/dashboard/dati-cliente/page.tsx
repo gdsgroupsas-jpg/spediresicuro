@@ -268,19 +268,16 @@ export default function DatiClientePage() {
       setIsSaving(false) // Importante: resetta lo stato di salvataggio
       
       console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data)
+      console.log('✅ [DATI CLIENTE] Verifica dati salvati:', {
+        datiCompletati: data.datiCliente?.datiCompletati,
+        hasDatiCliente: !!data.datiCliente,
+      })
       
-      // Imposta un flag in sessionStorage per indicare che i dati sono stati appena salvati
+      // Reindirizza alla dashboard con parametro URL per indicare che i dati sono stati appena salvati
       // Questo evita che il controllo nella dashboard reindirizzi di nuovo qui
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('datiClienteAppenaSalvati', 'true')
-        console.log('💾 [DATI CLIENTE] Flag salvato in sessionStorage')
-      }
-      
-      // Reindirizza alla dashboard dopo 1.5 secondi usando window.location
-      // per forzare un refresh completo e assicurarsi che i dati siano aggiornati
       setTimeout(() => {
-        console.log('🔄 [DATI CLIENTE] Reindirizzamento a /dashboard con refresh completo...')
-        window.location.href = '/dashboard'
+        console.log('🔄 [DATI CLIENTE] Reindirizzamento a /dashboard?saved=true con refresh completo...')
+        window.location.href = '/dashboard?saved=true'
       }, 1500)
     } catch (err: any) {
       setError('Errore durante il salvataggio: ' + err.message)
