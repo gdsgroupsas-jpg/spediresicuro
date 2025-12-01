@@ -39,18 +39,12 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
       console.log('🔐 [LOGIN] Tentativo login Google OAuth...');
       
       // NextAuth gestisce automaticamente il redirect per OAuth
-      // Il redirect avverrà automaticamente dopo l'autorizzazione Google
-      const result = await signIn('google', { 
+      // Per provider OAuth, signIn reindirizza automaticamente e non ritorna un valore
+      await signIn('google', { 
         callbackUrl: '/dashboard',
       });
       
-      console.log('✅ [LOGIN] signIn Google chiamato, risultato:', result);
-      
-      // Se signIn non reindirizza automaticamente (non dovrebbe succedere con redirect: true)
-      if (result?.error) {
-        console.error('❌ [LOGIN] Errore da signIn:', result.error);
-        setOauthError(`Errore durante il login: ${result.error}`);
-      }
+      console.log('✅ [LOGIN] signIn Google chiamato, redirect in corso...');
     } catch (error: any) {
       console.error('❌ [LOGIN] Errore Google OAuth:', error);
       console.error('❌ [LOGIN] Dettagli errore:', {
