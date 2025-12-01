@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { LogIn, Mail, Lock, AlertCircle, Loader2, UserPlus, User, CheckCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Loader2, UserPlus, User, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { LogoHorizontal } from '@/components/logo';
 
@@ -160,6 +160,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Verifica se c'è un errore OAuth nell'URL (da callback)
   useEffect(() => {
@@ -223,29 +225,31 @@ export default function LoginPage() {
             // Se i dati non sono completati, reindirizza alla pagina dati-cliente
             if (!userData.datiCliente || !userData.datiCliente.datiCompletati) {
               console.log('🔄 [LOGIN] Reindirizzamento a /dashboard/dati-cliente');
-              router.push('/dashboard/dati-cliente');
+              // Usa window.location per forzare refresh completo
+              window.location.href = '/dashboard/dati-cliente';
             } else {
               console.log('🔄 [LOGIN] Reindirizzamento a /dashboard');
-              router.push('/dashboard');
+              // Usa window.location per forzare refresh completo
+              window.location.href = '/dashboard';
             }
           } else {
             console.warn('⚠️ [LOGIN] Errore recupero dati cliente, redirect a dashboard');
             // Se non riesce a recuperare i dati, reindirizza comunque al dashboard
-            router.push('/dashboard');
+            window.location.href = '/dashboard';
           }
         } catch (err: any) {
           console.error('❌ [LOGIN] Errore verifica dati cliente:', err);
           // In caso di errore, reindirizza al dashboard
-          router.push('/dashboard');
+          window.location.href = '/dashboard';
         }
       }
       
       // Piccolo delay per assicurarsi che la sessione sia completamente caricata
       setTimeout(() => {
         checkAndRedirect();
-      }, 100);
+      }, 300);
     }
-  }, [status, session, router]);
+  }, [status, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,28 +317,23 @@ export default function LoginPage() {
         if (result?.error) {
           setError('Credenziali non valide. Riprova.');
         } else if (result?.ok) {
-          // Refresh session prima di navigare
-          router.refresh();
-
-          // Verifica se i dati cliente sono completati
-          try {
-            const userDataResponse = await fetch('/api/user/dati-cliente');
-            if (userDataResponse.ok) {
-              const userData = await userDataResponse.json();
-              // Se i dati non sono completati, reindirizza alla pagina dati-cliente
-              if (!userData.datiCliente || !userData.datiCliente.datiCompletati) {
-                router.push('/dashboard/dati-cliente');
-              } else {
-                router.push('/dashboard');
-              }
-            } else {
-              // Se non riesce a recuperare i dati, reindirizza comunque al dashboard
-              router.push('/dashboard');
-            }
-          } catch (err) {
-            // In caso di errore, reindirizza al dashboard
-            router.push('/dashboard');
+          // ⚠️ IMPORTANTE: Aspetta che la sessione sia aggiornata prima di navigare
+          // Usa window.location invece di router.push per forzare un refresh completo
+          console.log('✅ [LOGIN] Login riuscito, attendo aggiornamento sessione...');
+          
+          // Forza refresh della sessione
+          const sessionResponse = await fetch('/api/auth/session');
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            console.log('✅ [LOGIN] Sessione aggiornata:', sessionData);
           }
+          
+          // Piccolo delay per assicurarsi che la sessione sia salvata
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Usa window.location per forzare un refresh completo della pagina
+          // Questo assicura che la sessione sia caricata correttamente
+          window.location.href = '/dashboard';
         }
         setIsLoading(false);
       }
@@ -476,14 +475,26 @@ export default function LoginPage() {
                   <Lock className="w-5 h-5" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder={mode === 'register' ? 'Minimo 6 caratteri' : '••••••••'}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -498,14 +509,26 @@ export default function LoginPage() {
                     <Lock className="w-5 h-5" />
                   </div>
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Ripeti la password"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
                     disabled={isLoading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
               </div>
             )}
