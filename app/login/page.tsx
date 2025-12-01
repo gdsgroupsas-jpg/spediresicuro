@@ -437,23 +437,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo Credentials (solo in sviluppo locale) */}
-          {mode === 'login' && process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-xs font-semibold text-blue-900 mb-2">
-                💡 Credenziali Demo (Solo Sviluppo Locale)
-              </p>
-              <div className="text-xs text-blue-700 space-y-1">
-                <p>
-                  <strong>Admin:</strong> admin@spediresicuro.it / admin123
-                </p>
-                <p>
-                  <strong>Demo:</strong> demo@spediresicuro.it / demo123
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Link Home */}
           <div className="mt-6 text-center">
             <Link
