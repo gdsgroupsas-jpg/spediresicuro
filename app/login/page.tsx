@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { LogIn, Mail, Lock, AlertCircle, Loader2, UserPlus, User, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ type AuthMode = 'login' | 'register';
 // Componente per i pulsanti OAuth
 function OAuthButtons({ isLoading }: { isLoading: boolean }) {
   const [oauthProviders, setOauthProviders] = useState<string[]>([]);
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
   // Verifica quali provider OAuth sono configurati
   useEffect(() => {
@@ -30,6 +31,36 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
     
     setOauthProviders(providers);
   }, []);
+
+  // Gestione login Google con gestione errori
+  const handleGoogleSignIn = async () => {
+    try {
+      setOauthError(null);
+      console.log('🔐 [LOGIN] Tentativo login Google OAuth...');
+      
+      // NextAuth gestisce automaticamente il redirect per OAuth
+      // Il redirect avverrà automaticamente dopo l'autorizzazione Google
+      const result = await signIn('google', { 
+        callbackUrl: '/dashboard',
+      });
+      
+      console.log('✅ [LOGIN] signIn Google chiamato, risultato:', result);
+      
+      // Se signIn non reindirizza automaticamente (non dovrebbe succedere con redirect: true)
+      if (result?.error) {
+        console.error('❌ [LOGIN] Errore da signIn:', result.error);
+        setOauthError(`Errore durante il login: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('❌ [LOGIN] Errore Google OAuth:', error);
+      console.error('❌ [LOGIN] Dettagli errore:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+      });
+      setOauthError(`Errore durante il login: ${error.message || 'Verifica la configurazione OAuth'}`);
+    }
+  };
 
   if (oauthProviders.length === 0) {
     return null;
@@ -46,11 +77,17 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
         </div>
       </div>
 
+      {oauthError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {oauthError}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3">
         {/* Google OAuth */}
         <button
           type="button"
-          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+          onClick={handleGoogleSignIn}
           disabled={isLoading}
           className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-sm hover:shadow-md"
         >
@@ -120,6 +157,7 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -128,6 +166,81 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Verifica se c'è un errore OAuth nell'URL (da callback)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
+    
+    if (errorParam) {
+      console.error('❌ [LOGIN] Errore OAuth rilevato:', {
+        error: errorParam,
+        description: errorDescription,
+        fullUrl: window.location.href,
+      });
+      
+      // Messaggio errore più dettagliato
+      let errorMessage = 'Errore durante il login con Google. ';
+      if (errorDescription) {
+        errorMessage += errorDescription;
+      } else {
+        errorMessage += 'Riprova o contatta il supporto.';
+      }
+      
+      setError(errorMessage);
+      // Rimuovi il parametro error dall'URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Se l'utente è autenticato dopo OAuth callback, reindirizza al dashboard
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      console.log('✅ [LOGIN] Utente autenticato, verifica dati cliente...', {
+        email: session.user.email,
+        status,
+      });
+      
+      // Verifica se i dati cliente sono completati
+      async function checkAndRedirect() {
+        try {
+          console.log('📋 [LOGIN] Chiamata API per verificare dati cliente...');
+          const userDataResponse = await fetch('/api/user/dati-cliente');
+          
+          if (userDataResponse.ok) {
+            const userData = await userDataResponse.json();
+            console.log('📋 [LOGIN] Dati cliente ricevuti:', {
+              hasDatiCliente: !!userData.datiCliente,
+              datiCompletati: userData.datiCliente?.datiCompletati,
+            });
+            
+            // Se i dati non sono completati, reindirizza alla pagina dati-cliente
+            if (!userData.datiCliente || !userData.datiCliente.datiCompletati) {
+              console.log('🔄 [LOGIN] Reindirizzamento a /dashboard/dati-cliente');
+              router.push('/dashboard/dati-cliente');
+            } else {
+              console.log('🔄 [LOGIN] Reindirizzamento a /dashboard');
+              router.push('/dashboard');
+            }
+          } else {
+            console.warn('⚠️ [LOGIN] Errore recupero dati cliente, redirect a dashboard');
+            // Se non riesce a recuperare i dati, reindirizza comunque al dashboard
+            router.push('/dashboard');
+          }
+        } catch (err: any) {
+          console.error('❌ [LOGIN] Errore verifica dati cliente:', err);
+          // In caso di errore, reindirizza al dashboard
+          router.push('/dashboard');
+        }
+      }
+      
+      // Piccolo delay per assicurarsi che la sessione sia completamente caricata
+      setTimeout(() => {
+        checkAndRedirect();
+      }, 100);
+    }
+  }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

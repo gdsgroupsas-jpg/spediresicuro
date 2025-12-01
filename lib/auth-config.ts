@@ -43,13 +43,14 @@ validateOAuthConfig();
 
 // Determina URL base per NextAuth (locale o produzione)
 function getNextAuthUrl(): string {
-  // In produzione su Vercel, usa VERCEL_URL se disponibile
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // Altrimenti usa NEXTAUTH_URL se configurato
+  // ⚠️ PRIORITÀ: Usa NEXTAUTH_URL se configurato (per produzione)
+  // Questo permette di usare l'URL di produzione anche quando VERCEL_URL è presente
   if (process.env.NEXTAUTH_URL) {
     return process.env.NEXTAUTH_URL;
+  }
+  // In produzione su Vercel, usa VERCEL_URL se disponibile (per preview deploy)
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
   }
   // Fallback per sviluppo locale
   return process.env.NODE_ENV === 'production' 
@@ -134,15 +135,25 @@ export const authOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }: any) {
+      console.log('🔐 [NEXTAUTH] signIn callback chiamato:', {
+        provider: account?.provider,
+        email: user?.email,
+        hasAccount: !!account,
+        hasProfile: !!profile,
+      });
+
       // Se l'utente si registra tramite OAuth, crealo/aggiornalo nel database
       if (account?.provider !== 'credentials' && user?.email) {
         try {
+          console.log('📝 [NEXTAUTH] Creazione/aggiornamento utente OAuth per:', user.email);
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
 
           const existingUser = findUserByEmail(user.email);
+          console.log('👤 [NEXTAUTH] Utente esistente trovato:', !!existingUser);
 
           if (!existingUser) {
             // Crea nuovo utente OAuth
+            console.log('➕ [NEXTAUTH] Creazione nuovo utente OAuth');
             createUser({
               email: user.email,
               password: '', // Password vuota per utenti OAuth
@@ -152,13 +163,16 @@ export const authOptions = {
               providerId: account?.providerAccountId,
               image: user.image || undefined,
             });
+            console.log('✅ [NEXTAUTH] Nuovo utente OAuth creato con successo');
           } else if (account?.provider && !existingUser.provider) {
             // Aggiorna utente esistente con provider OAuth
+            console.log('🔄 [NEXTAUTH] Aggiornamento utente esistente con provider OAuth');
             updateUser(existingUser.id, {
               provider: account.provider as 'google' | 'github',
               providerId: account.providerAccountId,
               image: user.image || undefined,
             });
+            console.log('✅ [NEXTAUTH] Utente aggiornato con successo');
           }
 
           // ⚠️ NUOVO: Crea/aggiorna profilo in user_profiles Supabase
@@ -185,12 +199,18 @@ export const authOptions = {
             // Non bloccare il login se la sincronizzazione Supabase fallisce
             console.warn('⚠️ [SUPABASE] Errore sincronizzazione profilo:', supabaseError.message);
           }
-        } catch (error) {
-          console.error('Errore gestione utente OAuth:', error);
-          // Non bloccare il login in caso di errore
+        } catch (error: any) {
+          console.error('❌ [NEXTAUTH] Errore gestione utente OAuth:', error);
+          console.error('❌ [NEXTAUTH] Dettagli errore:', {
+            message: error?.message,
+            stack: error?.stack,
+            name: error?.name,
+          });
+          // Non bloccare il login in caso di errore, ma logga tutto
         }
       }
 
+      console.log('✅ [NEXTAUTH] signIn callback completato con successo');
       return true;
     },
     async jwt({ token, user, account }: any) {
@@ -208,6 +228,40 @@ export const authOptions = {
         session.user.provider = (token.provider as string) || 'credentials';
       }
       return session;
+    },
+    async redirect({ url, baseUrl }: any) {
+      console.log('🔄 [NEXTAUTH] redirect callback chiamato:', { url, baseUrl });
+      
+      // Se l'URL è relativo, usa baseUrl
+      if (url.startsWith('/')) {
+        // Reindirizza sempre al dashboard (la pagina dashboard gestirà il controllo dati cliente)
+        // Se l'URL è già /dashboard o /dashboard/dati-cliente, mantienilo
+        if (url.startsWith('/dashboard')) {
+          const redirectUrl = `${baseUrl}${url}`;
+          console.log('✅ [NEXTAUTH] Redirect a:', redirectUrl);
+          return redirectUrl;
+        }
+        // Altrimenti reindirizza al dashboard
+        const redirectUrl = `${baseUrl}/dashboard`;
+        console.log('✅ [NEXTAUTH] Redirect a dashboard:', redirectUrl);
+        return redirectUrl;
+      }
+      
+      // Se l'URL è assoluto e dello stesso dominio, permetti
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.origin === baseUrl) {
+          console.log('✅ [NEXTAUTH] Redirect a URL assoluto stesso dominio:', url);
+          return url;
+        }
+      } catch (error) {
+        console.warn('⚠️ [NEXTAUTH] Errore parsing URL:', error);
+      }
+      
+      // Altrimenti reindirizza al dashboard
+      const redirectUrl = `${baseUrl}/dashboard`;
+      console.log('✅ [NEXTAUTH] Redirect fallback a dashboard:', redirectUrl);
+      return redirectUrl;
     },
   },
   session: {
