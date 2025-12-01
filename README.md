@@ -439,11 +439,15 @@ Schema PostgreSQL completo con 19+ tabelle:
 
 ## 🔐 Autenticazione
 
-### Credenziali Demo (Solo Sviluppo Locale)
+### Credenziali Demo
 
-⚠️ **Le credenziali demo sono disponibili solo in ambiente di sviluppo locale** (`NODE_ENV=development`).
+Le credenziali demo sono attive per accesso dimostrativo:
+- Email: `admin@spediresicuro.it`
+- Password: `admin123`
 
-In produzione, gli utenti devono registrarsi tramite il form di registrazione o utilizzare OAuth.
+⚠️ **Le credenziali demo non sono visibili nell'interfaccia utente** ma sono funzionanti per dimostrazioni.
+
+Gli utenti possono anche registrarsi tramite il form di registrazione o utilizzare OAuth.
 
 ### OAuth Providers
 
