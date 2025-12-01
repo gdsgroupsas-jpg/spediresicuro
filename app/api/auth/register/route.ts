@@ -108,10 +108,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Errore database non disponibile
-    if (error.message?.includes('EROFS') || error.message?.includes('read-only')) {
+    // Errore database non disponibile o Supabase non configurato
+    if (error.message?.includes('EROFS') || error.message?.includes('read-only') || error.message?.includes('Supabase non configurato')) {
       return NextResponse.json(
-        { error: 'Database temporaneamente non disponibile. Riprova tra qualche istante.' },
+        { 
+          error: error.message?.includes('Supabase non configurato') 
+            ? 'Database non configurato. Contatta il supporto tecnico.'
+            : 'Database temporaneamente non disponibile. Riprova tra qualche istante.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
         { status: 503 }
       );
     }
