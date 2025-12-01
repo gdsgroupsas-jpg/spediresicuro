@@ -121,12 +121,13 @@ export interface User {
 
 // Inizializza il database se non esiste
 function initDatabase(): Database {
-  // Utenti demo solo in sviluppo locale (non in produzione)
-  const demoUsers: User[] = process.env.NODE_ENV === 'development' ? [
+  // Utenti demo: sempre creati (sia sviluppo che produzione)
+  // ⚠️ IMPORTANTE: In produzione, questi utenti verranno creati in Supabase se configurato
+  const demoUsers: User[] = [
     {
       id: '1',
       email: 'admin@spediresicuro.it',
-      password: 'admin123', // Solo per sviluppo locale
+      password: 'admin123',
       name: 'Admin',
       role: 'admin',
       createdAt: new Date().toISOString(),
@@ -135,13 +136,13 @@ function initDatabase(): Database {
     {
       id: '2',
       email: 'demo@spediresicuro.it',
-      password: 'demo123', // Solo per sviluppo locale
+      password: 'demo123',
       name: 'Demo User',
       role: 'user',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-  ] : [];
+  ];
 
   const defaultData: Database = {
     spedizioni: [],
@@ -180,12 +181,12 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
-      // Utenti demo solo in sviluppo locale (non in produzione)
-      db.utenti = process.env.NODE_ENV === 'development' ? [
+      // Utenti demo sempre creati (sia sviluppo che produzione)
+      db.utenti = [
         {
           id: '1',
           email: 'admin@spediresicuro.it',
-          password: 'admin123', // Solo per sviluppo locale
+          password: 'admin123',
           name: 'Admin',
           role: 'admin',
           createdAt: new Date().toISOString(),
@@ -194,15 +195,22 @@ export function readDatabase(): Database {
         {
           id: '2',
           email: 'demo@spediresicuro.it',
-          password: 'demo123', // Solo per sviluppo locale
+          password: 'demo123',
           name: 'Demo User',
           role: 'user',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
-      ] : [];
+      ];
       // Salva la migrazione
-      writeDatabase(db);
+      try {
+        writeDatabase(db);
+      } catch (error: any) {
+        // Non critico: se è read-only (Vercel), l'utente verrà creato in Supabase
+        if (error?.code !== 'EROFS') {
+          console.warn('⚠️ [JSON] Errore salvataggio migrazione utenti:', error.message);
+        }
+      }
     }
     
     return db;
@@ -837,8 +845,10 @@ export function getMargine(): number {
 
 /**
  * Crea un nuovo utente
+ * 
+ * ⚠️ IMPORTANTE: Ora salva PRIMA in Supabase se configurato, poi in JSON come fallback
  */
-export function createUser(userData: {
+export async function createUser(userData: {
   email: string;
   password: string;
   name: string;
@@ -846,11 +856,9 @@ export function createUser(userData: {
   provider?: 'credentials' | 'google' | 'github' | 'facebook';
   providerId?: string;
   image?: string;
-}): User {
-  const db = readDatabase();
-  
-  // Verifica se l'email esiste già
-  const existingUser = db.utenti.find((u) => u.email === userData.email);
+}): Promise<User> {
+  // Verifica se l'utente esiste già (controlla sia JSON che Supabase)
+  const existingUser = await findUserByEmail(userData.email);
   if (existingUser) {
     throw new Error('Email già registrata');
   }
@@ -868,10 +876,70 @@ export function createUser(userData: {
     updatedAt: new Date().toISOString(),
   };
   
-  db.utenti.push(newUser);
-  writeDatabase(db);
+  // ⚠️ PRIORITÀ 1: Salva in Supabase se configurato
+  if (isSupabaseConfigured()) {
+    try {
+      console.log('🔄 [SUPABASE] Tentativo salvataggio utente in Supabase...');
+      
+      const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
+        .from('users')
+        .insert([
+          {
+            email: userData.email,
+            password: userData.password || null, // Null per utenti OAuth
+            name: userData.name,
+            role: userData.role || 'user',
+            provider: userData.provider || 'credentials',
+            provider_id: userData.providerId || null,
+            image: userData.image || null,
+          },
+        ])
+        .select()
+        .single();
+      
+      if (supabaseError) {
+        console.error('❌ [SUPABASE] Errore salvataggio utente:', supabaseError.message);
+        console.log('📁 [FALLBACK] Provo database JSON locale');
+      } else {
+        console.log(`✅ [SUPABASE] Utente salvato con successo! ID: ${supabaseUser.id}`);
+        // Usa l'ID di Supabase
+        newUser.id = supabaseUser.id;
+        // Prova comunque a salvare in JSON per compatibilità (non critico se fallisce)
+        try {
+          const db = readDatabase();
+          db.utenti.push(newUser);
+          writeDatabase(db);
+        } catch (jsonError: any) {
+          // Non critico: già salvato in Supabase
+          if (jsonError?.code === 'EROFS') {
+            console.log('ℹ️ [JSON] File system read-only (Vercel) - salvataggio JSON saltato (non critico)');
+          } else {
+            console.warn('⚠️ [JSON] Errore salvataggio JSON (non critico):', jsonError.message);
+          }
+        }
+        return newUser;
+      }
+    } catch (error: any) {
+      console.error('❌ [SUPABASE] Errore generico salvataggio utente:', error.message);
+      console.log('📁 [FALLBACK] Provo database JSON locale');
+    }
+  }
   
-  return newUser;
+  // ⚠️ PRIORITÀ 2: Salva in JSON (fallback o se Supabase non configurato)
+  try {
+    const db = readDatabase();
+    db.utenti.push(newUser);
+    writeDatabase(db);
+    console.log('✅ [JSON] Utente salvato in JSON locale');
+    return newUser;
+  } catch (error: any) {
+    // Se Supabase non è configurato E JSON fallisce, questo è CRITICO
+    if (!isSupabaseConfigured()) {
+      throw new Error(`Impossibile salvare l'utente: errore nel database JSON - ${error.message}`);
+    }
+    // Se Supabase è configurato ma ha fallito E JSON fallisce, questo è CRITICO
+    throw new Error(`Impossibile salvare l'utente: sia Supabase che JSON hanno fallito - ${error.message}`);
+  }
 }
 
 /**
@@ -898,20 +966,124 @@ export function updateUser(userId: string, updates: Partial<User>): User {
 
 /**
  * Trova un utente per email
+ * 
+ * ⚠️ IMPORTANTE: Ora cerca PRIMA in Supabase se configurato, poi in JSON come fallback
  */
-export function findUserByEmail(email: string): User | undefined {
+export async function findUserByEmail(email: string): Promise<User | undefined> {
+  // ⚠️ PRIORITÀ 1: Cerca in Supabase se configurato
+  if (isSupabaseConfigured()) {
+    try {
+      console.log('🔍 [SUPABASE] Cerca utente in Supabase per:', email);
+      
+      const { data: supabaseUser, error } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+      
+      if (!error && supabaseUser) {
+        // Converti formato Supabase a formato User
+        const user: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          password: supabaseUser.password || '',
+          name: supabaseUser.name,
+          role: supabaseUser.role || 'user',
+          provider: supabaseUser.provider || 'credentials',
+          providerId: supabaseUser.provider_id || undefined,
+          image: supabaseUser.image || undefined,
+          createdAt: supabaseUser.created_at || new Date().toISOString(),
+          updatedAt: supabaseUser.updated_at || new Date().toISOString(),
+        };
+        console.log('✅ [SUPABASE] Utente trovato in Supabase');
+        return user;
+      } else {
+        console.log('⚠️ [SUPABASE] Utente non trovato, provo JSON fallback');
+      }
+    } catch (error: any) {
+      console.error('❌ [SUPABASE] Errore ricerca utente:', error.message);
+      console.log('📁 [FALLBACK] Provo database JSON locale');
+    }
+  }
+  
+  // ⚠️ PRIORITÀ 2: Cerca in JSON (fallback o se Supabase non configurato)
   const db = readDatabase();
-  return db.utenti.find((u) => u.email === email);
+  const user = db.utenti.find((u) => u.email === email);
+  if (user) {
+    console.log('✅ [JSON] Utente trovato in JSON locale');
+  }
+  return user;
 }
 
 /**
  * Verifica le credenziali di un utente
+ * 
+ * ⚠️ IMPORTANTE: Ora legge PRIMA da Supabase se configurato, poi da JSON come fallback
  */
-export function verifyUserCredentials(
+export async function verifyUserCredentials(
   email: string,
   password: string
-): User | null {
-  const user = findUserByEmail(email);
+): Promise<User | null> {
+  // ⚠️ PRIORITÀ 1: Cerca in Supabase se configurato
+  if (isSupabaseConfigured()) {
+    try {
+      console.log('🔍 [SUPABASE] Verifica credenziali in Supabase per:', email);
+      
+      const { data: supabaseUser, error } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+      
+      if (!error && supabaseUser) {
+        // Verifica password (TODO: in produzione usare bcrypt)
+        if (supabaseUser.password && supabaseUser.password === password) {
+          // Converti formato Supabase a formato User
+          const user: User = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            password: supabaseUser.password || '',
+            name: supabaseUser.name,
+            role: supabaseUser.role || 'user',
+            provider: supabaseUser.provider || 'credentials',
+            providerId: supabaseUser.provider_id || undefined,
+            image: supabaseUser.image || undefined,
+            createdAt: supabaseUser.created_at || new Date().toISOString(),
+            updatedAt: supabaseUser.updated_at || new Date().toISOString(),
+          };
+          console.log('✅ [SUPABASE] Credenziali verificate con successo');
+          return user;
+        } else if (!supabaseUser.password && password === '') {
+          // Utente OAuth (password vuota)
+          const user: User = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            password: '',
+            name: supabaseUser.name,
+            role: supabaseUser.role || 'user',
+            provider: supabaseUser.provider || 'credentials',
+            providerId: supabaseUser.provider_id || undefined,
+            image: supabaseUser.image || undefined,
+            createdAt: supabaseUser.created_at || new Date().toISOString(),
+            updatedAt: supabaseUser.updated_at || new Date().toISOString(),
+          };
+          console.log('✅ [SUPABASE] Utente OAuth trovato');
+          return user;
+        } else {
+          console.log('❌ [SUPABASE] Password errata');
+          return null;
+        }
+      } else {
+        console.log('⚠️ [SUPABASE] Utente non trovato, provo JSON fallback');
+      }
+    } catch (error: any) {
+      console.error('❌ [SUPABASE] Errore verifica credenziali:', error.message);
+      console.log('📁 [FALLBACK] Provo database JSON locale');
+    }
+  }
+  
+  // ⚠️ PRIORITÀ 2: Cerca in JSON (fallback o se Supabase non configurato)
+  const user = await findUserByEmail(email);
   if (!user) {
     return null;
   }
@@ -921,6 +1093,7 @@ export function verifyUserCredentials(
     return null;
   }
   
+  console.log('✅ [JSON] Credenziali verificate in JSON locale');
   return user;
 }
 

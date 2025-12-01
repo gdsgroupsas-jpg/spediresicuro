@@ -91,8 +91,19 @@ export const authOptions = {
           console.log('🔍 [AUTH] Importazione verifyUserCredentials...');
           const { verifyUserCredentials } = await import('@/lib/database');
           
+          // ⚠️ NUOVO: Inizializza utenti demo se necessario (solo per utenti demo)
+          if (credentials.email === 'admin@spediresicuro.it' || credentials.email === 'demo@spediresicuro.it') {
+            try {
+              const { ensureDemoUsersExist } = await import('@/lib/database-init');
+              await ensureDemoUsersExist();
+            } catch (initError: any) {
+              // Non bloccare il login se l'inizializzazione fallisce
+              console.warn('⚠️ [AUTH] Errore inizializzazione utenti demo:', initError.message);
+            }
+          }
+          
           console.log('🔍 [AUTH] Verifica credenziali per:', credentials.email);
-          const user = verifyUserCredentials(
+          const user = await verifyUserCredentials(
             credentials.email as string,
             credentials.password as string
           );
@@ -174,13 +185,13 @@ export const authOptions = {
           console.log('📝 [NEXTAUTH] Creazione/aggiornamento utente OAuth per:', user.email);
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
 
-          const existingUser = findUserByEmail(user.email);
+          const existingUser = await findUserByEmail(user.email);
           console.log('👤 [NEXTAUTH] Utente esistente trovato:', !!existingUser);
 
           if (!existingUser) {
             // Crea nuovo utente OAuth
             console.log('➕ [NEXTAUTH] Creazione nuovo utente OAuth');
-            createUser({
+            await createUser({
               email: user.email,
               password: '', // Password vuota per utenti OAuth
               name: user.name || user.email.split('@')[0] || 'Utente',
