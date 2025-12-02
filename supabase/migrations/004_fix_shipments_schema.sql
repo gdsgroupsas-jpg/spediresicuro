@@ -1071,6 +1071,27 @@ BEGIN
     CREATE INDEX IF NOT EXISTS idx_shipments_created_by_email ON shipments(created_by_user_email) WHERE created_by_user_email IS NOT NULL;
   END IF;
   
+  -- ⚠️ CRITICO: Rimuovi vincolo UNIQUE da order_reference se esiste (non dovrebbe essere UNIQUE)
+  -- Il vincolo potrebbe essere un constraint o un indice UNIQUE
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'shipments_order_reference_key' 
+    AND conrelid = 'shipments'::regclass
+  ) THEN
+    ALTER TABLE shipments DROP CONSTRAINT IF EXISTS shipments_order_reference_key;
+    RAISE NOTICE '✅ Rimosso vincolo UNIQUE da order_reference (constraint)';
+  END IF;
+  
+  -- Rimuovi anche indice UNIQUE se esiste
+  IF EXISTS (
+    SELECT 1 FROM pg_indexes 
+    WHERE tablename = 'shipments' 
+    AND indexname = 'shipments_order_reference_key'
+  ) THEN
+    DROP INDEX IF EXISTS shipments_order_reference_key;
+    RAISE NOTICE '✅ Rimosso indice UNIQUE da order_reference';
+  END IF;
+  
   -- Indice su imported (se esiste)
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 

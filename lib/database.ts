@@ -505,7 +505,9 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     // E-commerce (per order_reference visto negli screenshot)
     ecommerce_order_number: spedizione.order_id || spedizione.order_reference || spedizione.rif_destinatario || null,
     ecommerce_order_id: spedizione.order_id || null,
-    order_reference: spedizione.order_reference || spedizione.order_id || spedizione.rif_destinatario || null, // ⚠️ Campo obbligatorio in Supabase (ma nullable)
+    // ⚠️ CRITICO: order_reference non deve essere UNIQUE - genera un valore unico se non fornito
+    // Usa tracking_number come fallback per garantire unicità
+    order_reference: spedizione.order_reference || spedizione.order_id || spedizione.rif_destinatario || tracking || null,
     // Note
     notes: spedizione.note || '',
     // ⚠️ CRITICO: Audit Trail - created_by_user_email (per multi-tenancy quando user_id è null)
