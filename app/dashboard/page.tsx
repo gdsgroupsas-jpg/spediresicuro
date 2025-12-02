@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import DashboardNav from '@/components/dashboard-nav';
+import UserFeaturesList from '@/components/features/user-features-list';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -765,6 +766,11 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-600">Calcola un preventivo</p>
                   </div>
                 </Link>
+              </div>
+
+              {/* Killer Features Attive */}
+              <div className="mb-8">
+                <UserFeaturesList />
               </div>
             </div>
           </>
