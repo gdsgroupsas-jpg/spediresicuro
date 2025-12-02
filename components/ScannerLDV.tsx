@@ -146,12 +146,12 @@ export default function ScannerLDV({ onClose, onSuccess }: ScannerLDVProps) {
    * Scansione continua del video stream
    */
   const scanContinuously = useCallback(async () => {
-    if (!codeReaderRef.current || !videoRef.current || isProcessing || successMessage) return
+    if (!codeReaderRef.current || !videoRef.current || !streamRef.current || isProcessing || successMessage) return
 
     try {
       // Decodifica continua dal video stream
       await codeReaderRef.current.decodeFromStream(
-        undefined,
+        streamRef.current,
         videoRef.current,
         (result, err) => {
           if (result && handleScanResultRef.current) {
