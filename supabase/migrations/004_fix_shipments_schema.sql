@@ -700,6 +700,10 @@ BEGIN
       AND column_name = 'cash_on_delivery'
       AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
     ) THEN
+      -- ⚠️ CRITICO: Elimina view che dipende dalla colonna prima di cambiare il tipo
+      DROP VIEW IF EXISTS shipments_active CASCADE;
+      RAISE NOTICE '⚠️ View shipments_active eliminata temporaneamente per conversione tipo colonna';
+      
       -- 1) Drop default (se esiste)
       BEGIN
         ALTER TABLE shipments ALTER COLUMN cash_on_delivery DROP DEFAULT;
@@ -751,6 +755,9 @@ BEGIN
       AND column_name = 'insurance'
       AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
     ) THEN
+      -- ⚠️ CRITICO: Elimina view che dipende dalla colonna prima di cambiare il tipo (se non già eliminata)
+      DROP VIEW IF EXISTS shipments_active CASCADE;
+      
       -- 1) Drop default (se esiste)
       BEGIN
         ALTER TABLE shipments ALTER COLUMN insurance DROP DEFAULT;
