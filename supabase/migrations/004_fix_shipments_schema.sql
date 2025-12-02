@@ -685,13 +685,30 @@ BEGIN
     RAISE NOTICE '✅ Aggiunto campo: currency';
   END IF;
   
-  -- Cash on delivery (boolean)
+  -- Cash on delivery (boolean) - ⚠️ CRITICO: Verifica e correggi tipo se è NUMERIC invece di BOOLEAN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'shipments' AND column_name = 'cash_on_delivery'
   ) THEN
     ALTER TABLE shipments ADD COLUMN cash_on_delivery BOOLEAN DEFAULT false;
     RAISE NOTICE '✅ Aggiunto campo: cash_on_delivery';
+  ELSE
+    -- Verifica se il tipo è sbagliato (NUMERIC invece di BOOLEAN)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'shipments' 
+      AND column_name = 'cash_on_delivery'
+      AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
+    ) THEN
+      -- Correggi il tipo: prima converte i dati, poi cambia il tipo
+      ALTER TABLE shipments 
+        ALTER COLUMN cash_on_delivery TYPE BOOLEAN 
+        USING CASE 
+          WHEN cash_on_delivery::text = 'true' OR cash_on_delivery::text = '1' OR cash_on_delivery::numeric > 0 THEN true
+          ELSE false
+        END;
+      RAISE NOTICE '✅ Corretto tipo di cash_on_delivery da NUMERIC a BOOLEAN';
+    END IF;
   END IF;
   
   -- Cash on delivery amount
@@ -703,13 +720,30 @@ BEGIN
     RAISE NOTICE '✅ Aggiunto campo: cash_on_delivery_amount';
   END IF;
   
-  -- Insurance (boolean)
+  -- Insurance (boolean) - ⚠️ CRITICO: Verifica e correggi tipo se è NUMERIC invece di BOOLEAN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'shipments' AND column_name = 'insurance'
   ) THEN
     ALTER TABLE shipments ADD COLUMN insurance BOOLEAN DEFAULT false;
     RAISE NOTICE '✅ Aggiunto campo: insurance';
+  ELSE
+    -- Verifica se il tipo è sbagliato (NUMERIC invece di BOOLEAN)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'shipments' 
+      AND column_name = 'insurance'
+      AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
+    ) THEN
+      -- Correggi il tipo: prima converte i dati, poi cambia il tipo
+      ALTER TABLE shipments 
+        ALTER COLUMN insurance TYPE BOOLEAN 
+        USING CASE 
+          WHEN insurance::text = 'true' OR insurance::text = '1' OR insurance::numeric > 0 THEN true
+          ELSE false
+        END;
+      RAISE NOTICE '✅ Corretto tipo di insurance da NUMERIC a BOOLEAN';
+    END IF;
   END IF;
   
   -- ⚠️ CRITICO: Campi Pricing (usati da mapSpedizioneToSupabase)
