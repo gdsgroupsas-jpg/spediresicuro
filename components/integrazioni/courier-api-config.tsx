@@ -420,7 +420,7 @@ export default function CourierAPIConfig() {
                   </div>
                   <div className="mt-2 space-y-1">
                     <p className="text-xs text-gray-500">
-                      <strong>Formato JSON:</strong> {"{"}"interno": "Interno", "postedeliverybusiness": "PosteDeliveryBusiness", "gls": "Gls"{"}"}
+                      <strong>Formato JSON:</strong> {"{"}&quot;interno&quot;: &quot;Interno&quot;, &quot;postedeliverybusiness&quot;: &quot;PosteDeliveryBusiness&quot;, &quot;gls&quot;: &quot;Gls&quot;{"}"}
                     </p>
                     <p className="text-xs text-gray-400">
                       <strong>Oppure formato semplice</strong> (una riga per contratto, copia-incolla dalla tabella):<br/>
