@@ -157,7 +157,7 @@ export default function CourierAPIConfig() {
       const { listConfigurations } = await import('@/actions/configurations')
       const result = await listConfigurations()
       if (result.success) {
-        setExistingConfigs(result.configurations || [])
+        setExistingConfigs(result.configs || [])
       }
     } catch (error) {
       console.error('Errore caricamento configurazioni:', error)
