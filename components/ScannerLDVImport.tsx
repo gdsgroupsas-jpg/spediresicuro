@@ -166,7 +166,7 @@ export default function ScannerLDVImport({ onClose, onSuccess, mode = 'import' }
     if (!codeReaderRef.current || !videoRef.current || isProcessing || successMessage) return
 
     try {
-      await codeReaderRef.current.decodeFromVideoStream(
+      await codeReaderRef.current.decodeFromStream(
         undefined,
         videoRef.current,
         (result, err) => {
