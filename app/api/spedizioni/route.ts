@@ -362,6 +362,8 @@ export async function POST(request: NextRequest) {
 
 /**
  * Handler DELETE - Soft delete spedizione
+ * 
+ * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -380,41 +382,75 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID spedizione mancante' }, { status: 400 });
     }
 
-    // Carica database
-    const { readDatabase, writeDatabase } = await import('@/lib/database');
-    const db = readDatabase();
-
-    // Trova spedizione
-    const spedizioneIndex = db.spedizioni.findIndex((s: any) => s.id === id);
-
-    if (spedizioneIndex === -1) {
-      return NextResponse.json({ error: 'Spedizione non trovata' }, { status: 404 });
+    // ⚠️ CRITICO: Usa SOLO Supabase per soft delete
+    const { supabaseAdmin } = await import('@/lib/supabase-admin');
+    
+    console.log(`🗑️ [SUPABASE] Soft delete spedizione: ${id}`);
+    
+    // Ottieni user_id Supabase se disponibile (opzionale)
+    let supabaseUserId: string | null = null;
+    try {
+      const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
+      supabaseUserId = await getSupabaseUserIdFromEmail(session.user.email);
+    } catch (error) {
+      // Non critico se non trovato
+      console.warn('⚠️ [SUPABASE] Impossibile ottenere user_id per soft delete:', error);
     }
 
-    // Soft delete - segna come eliminata
-    db.spedizioni[spedizioneIndex] = {
-      ...db.spedizioni[spedizioneIndex],
-      deleted: true,
-      deleted_at: new Date().toISOString(),
-      deleted_by_user_email: session.user.email,
-      deleted_by_user_name: session.user.name || session.user.email,
-    };
+    // Soft delete - aggiorna spedizione in Supabase
+    const { data, error } = await supabaseAdmin
+      .from('shipments')
+      .update({
+        deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by_user_id: supabaseUserId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('deleted', false) // Solo se non è già eliminata
+      .select()
+      .single();
 
-    // Salva
-    writeDatabase(db);
+    if (error) {
+      console.error('❌ [SUPABASE] Errore soft delete:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      
+      // Se la spedizione non esiste o è già eliminata
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Spedizione non trovata o già eliminata' }, { status: 404 });
+      }
+      
+      throw new Error(`Errore Supabase: ${error.message}${error.details ? ` - ${error.details}` : ''}`);
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Spedizione non trovata o già eliminata' }, { status: 404 });
+    }
+
+    console.log(`✅ [SUPABASE] Spedizione ${id} eliminata con successo (soft delete)`);
 
     return NextResponse.json({
       success: true,
       message: 'Spedizione eliminata con successo',
     });
   } catch (error) {
-    console.error('Errore DELETE spedizione:', error);
+    console.error('❌ [API] Errore DELETE spedizione:', error);
+    console.error('❌ [API] Stack:', error instanceof Error ? error.stack : 'N/A');
+    
+    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+    const isSupabaseError = errorMessage.includes('Supabase') || errorMessage.includes('supabase');
+    
     return NextResponse.json(
       {
-        error: 'Errore interno del server',
-        message: error instanceof Error ? error.message : 'Errore sconosciuto',
+        error: isSupabaseError ? 'Errore database Supabase' : 'Errore interno del server',
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
       },
-      { status: 500 }
+      { status: isSupabaseError ? 503 : 500 }
     );
   }
 }
