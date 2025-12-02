@@ -51,7 +51,7 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                L'accesso e l'utilizzo del servizio SpedireSicuro.it implica l'accettazione 
+                L&apos;accesso e l&apos;utilizzo del servizio SpedireSicuro.it implica l&apos;accettazione 
                 di questi Termini e Condizioni. Se non accetti questi termini, non utilizzare 
                 il servizio.
               </p>
@@ -152,7 +152,7 @@ export default function TermsConditionsPage() {
                 <p>
                   I prezzi delle spedizioni sono calcolati in base a peso, dimensioni, 
                   destinazione e servizio selezionato. I prezzi possono variare e sono 
-                  indicati prima della conferma dell'ordine.
+                  indicati prima della conferma dell&apos;ordine.
                 </p>
               </div>
               <div>
@@ -190,12 +190,12 @@ export default function TermsConditionsPage() {
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>Ritardi, perdite o danni alle spedizioni (responsabilità del corriere)</li>
-                <li>Errori nelle informazioni fornite dall'utente</li>
+                <li>Errori nelle informazioni fornite dall&apos;utente</li>
                 <li>Interruzioni o malfunzionamenti temporanei del servizio</li>
                 <li>Danni indiretti o consequenziali</li>
               </ul>
               <p className="mt-4">
-                La responsabilità massima è limitata all'importo pagato per il servizio 
+                La responsabilità massima è limitata all&apos;importo pagato per il servizio 
                 specifico.
               </p>
             </div>
@@ -267,8 +267,8 @@ export default function TermsConditionsPage() {
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
                 Ci riserviamo il diritto di modificare questi termini in qualsiasi momento. 
-                Le modifiche saranno pubblicate su questa pagina. L'utilizzo continuato 
-                del servizio dopo le modifiche implica l'accettazione dei nuovi termini.
+                Le modifiche saranno pubblicate su questa pagina. L&apos;utilizzo continuato 
+                del servizio dopo le modifiche implica l&apos;accettazione dei nuovi termini.
               </p>
               <p className="mt-4">
                 <strong>Ultimo aggiornamento:</strong> [DATA]

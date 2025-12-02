@@ -34,7 +34,7 @@ export default function CookiePolicyPage() {
                 Cookie Policy
               </h1>
               <p className="text-sm text-gray-600 mt-1">
-                Informativa sull'utilizzo dei cookie
+                Informativa sull&apos;utilizzo dei cookie
               </p>
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function CookiePolicyPage() {
                 I cookie sono piccoli file di testo che vengono memorizzati sul tuo dispositivo 
                 quando visiti un sito web. I cookie permettono al sito di ricordare le tue 
                 azioni e preferenze per un periodo di tempo, così non devi reinserirle ogni 
-                volta che torni sul sito o navighi da una pagina all'altra.
+                volta che torni sul sito o navighi da una pagina all&apos;altra.
               </p>
             </div>
           </section>
@@ -73,7 +73,7 @@ export default function CookiePolicyPage() {
                 <p>
                   Questi cookie sono essenziali per il funzionamento del sito e non possono 
                   essere disattivati. Vengono generalmente impostati solo in risposta ad azioni 
-                  da te effettuate, come l'impostazione delle preferenze di privacy, l'accesso 
+                  da te effettuate, come l&apos;impostazione delle preferenze di privacy, l&apos;accesso 
                   o la compilazione di moduli.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4 mt-3">
@@ -117,7 +117,7 @@ export default function CookiePolicyPage() {
                 </h3>
                 <p>
                   Questi cookie vengono utilizzati per tracciare i visitatori attraverso i siti 
-                  web. L'intento è mostrare annunci rilevanti e coinvolgenti per il singolo 
+                  web. L&apos;intento è mostrare annunci rilevanti e coinvolgenti per il singolo 
                   utente e quindi più preziosi per editori e inserzionisti di terze parti.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4 mt-3">

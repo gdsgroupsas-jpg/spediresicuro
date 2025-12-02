@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage() {
             <div className="prose prose-sm max-w-none text-gray-700 space-y-4">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  2.1 Dati forniti direttamente dall'utente
+                  2.1 Dati forniti direttamente dall&apos;utente
                 </h3>
                 <p>
                   Raccogliamo i seguenti dati quando utilizzi il nostro servizio:
@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage() {
                   2.2 Dati raccolti automaticamente
                 </h3>
                 <p>
-                  Durante l'utilizzo del servizio, raccogliamo automaticamente:
+                  Durante l&apos;utilizzo del servizio, raccogliamo automaticamente:
                 </p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Dati di utilizzo (pagine visitate, tempo di permanenza)</li>
