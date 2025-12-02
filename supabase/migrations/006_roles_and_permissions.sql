@@ -6,27 +6,52 @@
 -- ============================================
 
 -- ============================================
--- STEP 1: Estendi ENUM user_role
+-- STEP 1: Crea o Estendi ENUM user_role
 -- ============================================
 
--- Rimuovi enum esistente se ha solo 'admin', 'user', 'merchant'
 DO $$ 
 BEGIN
-  -- Aggiungi nuovi ruoli all'enum esistente
-  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'agent' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
-    ALTER TYPE user_role ADD VALUE 'agent';
-  END IF;
-  
-  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'manager' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
-    ALTER TYPE user_role ADD VALUE 'manager';
-  END IF;
-  
-  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'support' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
-    ALTER TYPE user_role ADD VALUE 'support';
-  END IF;
-  
-  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'viewer' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
-    ALTER TYPE user_role ADD VALUE 'viewer';
+  -- Verifica se l'ENUM esiste già
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    -- Crea l'ENUM con tutti i valori
+    CREATE TYPE user_role AS ENUM ('admin', 'user', 'merchant', 'agent', 'manager', 'support', 'viewer');
+    RAISE NOTICE '✅ Creato ENUM user_role con tutti i valori';
+  ELSE
+    -- ENUM esiste già, aggiungi solo i valori mancanti
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'agent' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      ALTER TYPE user_role ADD VALUE 'agent';
+      RAISE NOTICE '✅ Aggiunto valore "agent" a user_role';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'manager' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      ALTER TYPE user_role ADD VALUE 'manager';
+      RAISE NOTICE '✅ Aggiunto valore "manager" a user_role';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'support' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      ALTER TYPE user_role ADD VALUE 'support';
+      RAISE NOTICE '✅ Aggiunto valore "support" a user_role';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'viewer' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      ALTER TYPE user_role ADD VALUE 'viewer';
+      RAISE NOTICE '✅ Aggiunto valore "viewer" a user_role';
+    END IF;
+    
+    -- Verifica se mancano anche i valori base
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'admin' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      -- Se manca admin, probabilmente l'ENUM è vuoto o corrotto
+      RAISE WARNING '⚠️ Valore "admin" mancante in user_role - potrebbe essere necessario ricreare l''ENUM';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'user' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      RAISE WARNING '⚠️ Valore "user" mancante in user_role - potrebbe essere necessario ricreare l''ENUM';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'merchant' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')) THEN
+      ALTER TYPE user_role ADD VALUE 'merchant';
+      RAISE NOTICE '✅ Aggiunto valore "merchant" a user_role';
+    END IF;
   END IF;
 END $$;
 
