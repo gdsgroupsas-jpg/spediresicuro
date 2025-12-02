@@ -114,6 +114,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_killer_features_updated_at ON public.killer_features;
 CREATE TRIGGER trigger_update_killer_features_updated_at
   BEFORE UPDATE ON public.killer_features
   FOR EACH ROW
@@ -174,6 +175,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_user_features_updated_at ON public.user_features;
 CREATE TRIGGER trigger_update_user_features_updated_at
   BEFORE UPDATE ON public.user_features
   FOR EACH ROW
@@ -620,6 +622,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_log_role_change ON public.users;
 CREATE TRIGGER trigger_log_role_change
   AFTER UPDATE OF role ON public.users
   FOR EACH ROW
