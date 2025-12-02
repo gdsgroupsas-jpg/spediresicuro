@@ -339,7 +339,7 @@ export default function DatiClientePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] relative">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
       <DashboardNav 
         title="Completa i Tuoi Dati Cliente"
         subtitle="Compila tutti i campi obbligatori per completare la registrazione"

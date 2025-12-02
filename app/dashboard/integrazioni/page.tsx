@@ -154,7 +154,7 @@ export default function IntegrazioniPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] relative">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
       <DashboardNav 
         title="Integrazioni Store & Widget"
         subtitle="Collega il tuo e-commerce o usa il nostro Universal Widget per importare ordini in 1 click"
