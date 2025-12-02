@@ -30,7 +30,12 @@ import {
   Clock,
   XCircle,
   Sparkles,
-  Settings
+  Settings,
+  Trash2,
+  Edit,
+  MoreVertical,
+  Power,
+  PowerOff
 } from 'lucide-react';
 
 interface AdminStats {
@@ -90,6 +95,16 @@ export default function AdminDashboardPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [killerFeatures, setKillerFeatures] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Stati per modali e azioni
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+  const [showDeleteShipmentModal, setShowDeleteShipmentModal] = useState(false);
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
+  const [userFeatures, setUserFeatures] = useState<any[]>([]);
+  const [isLoadingFeatures, setIsLoadingFeatures] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Verifica autorizzazione e carica dati
   useEffect(() => {
@@ -197,6 +212,136 @@ export default function AdminDashboardPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  // Carica features di un utente
+  async function loadUserFeatures(userId: string) {
+    setIsLoadingFeatures(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/features`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserFeatures(data.features || []);
+      }
+    } catch (error) {
+      console.error('Errore caricamento features utente:', error);
+    } finally {
+      setIsLoadingFeatures(false);
+    }
+  }
+
+  // Apri modale gestione features
+  function handleManageFeatures(user: User) {
+    setSelectedUser(user);
+    setShowFeaturesModal(true);
+    loadUserFeatures(user.id);
+  }
+
+  // Toggle feature per utente
+  async function toggleUserFeature(featureCode: string, activate: boolean) {
+    if (!selectedUser) return;
+
+    try {
+      const response = await fetch('/api/admin/features', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserEmail: selectedUser.email,
+          featureCode,
+          activate,
+          activationType: 'admin_grant',
+        }),
+      });
+
+      if (response.ok) {
+        // Ricarica features
+        await loadUserFeatures(selectedUser.id);
+        // Ricarica dati dashboard
+        const overviewResponse = await fetch('/api/admin/overview');
+        if (overviewResponse.ok) {
+          const data = await overviewResponse.json();
+          if (data.success) {
+            setUsers(data.users || []);
+          }
+        }
+      } else {
+        const errorData = await response.json();
+        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+      }
+    } catch (error: any) {
+      console.error('Errore toggle feature:', error);
+      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+    }
+  }
+
+  // Cancella utente
+  async function handleDeleteUser() {
+    if (!selectedUser || isDeleting) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Ricarica dati
+        const overviewResponse = await fetch('/api/admin/overview');
+        if (overviewResponse.ok) {
+          const data = await overviewResponse.json();
+          if (data.success) {
+            setUsers(data.users || []);
+            setStats(data.stats);
+          }
+        }
+        setShowDeleteUserModal(false);
+        setSelectedUser(null);
+        alert('Utente cancellato con successo');
+      } else {
+        const errorData = await response.json();
+        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+      }
+    } catch (error: any) {
+      console.error('Errore cancellazione utente:', error);
+      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  // Cancella spedizione
+  async function handleDeleteShipment() {
+    if (!selectedShipment || isDeleting) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/shipments/${selectedShipment.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Ricarica dati
+        const overviewResponse = await fetch('/api/admin/overview');
+        if (overviewResponse.ok) {
+          const data = await overviewResponse.json();
+          if (data.success) {
+            setShipments(data.shipments || []);
+            setStats(data.stats);
+          }
+        }
+        setShowDeleteShipmentModal(false);
+        setSelectedShipment(null);
+        alert('Spedizione cancellata con successo');
+      } else {
+        const errorData = await response.json();
+        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+      }
+    } catch (error: any) {
+      console.error('Errore cancellazione spedizione:', error);
+      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   // Badge status spedizione
@@ -411,6 +556,9 @@ export default function AdminDashboardPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Registrato
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Azioni
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -438,6 +586,29 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(user.created_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleManageFeatures(user)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Gestisci Features"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                          </button>
+                          {user.email !== session?.user?.email && (
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowDeleteUserModal(true);
+                              }}
+                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                              title="Cancella Account"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -470,6 +641,9 @@ export default function AdminDashboardPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Azioni
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -492,6 +666,18 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(shipment.created_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            setSelectedShipment(shipment);
+                            setShowDeleteShipmentModal(true);
+                          }}
+                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                          title="Cancella Spedizione"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -550,6 +736,188 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Modali */}
+        
+        {/* Modale Cancellazione Utente */}
+        {showDeleteUserModal && selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteUserModal(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Cancella Account</h3>
+                    <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-700 mb-4">
+                  Sei sicuro di voler cancellare l'account di <strong>{selectedUser.email}</strong>?
+                  <br />
+                  <span className="text-sm text-red-600">Tutte le spedizioni verranno eliminate.</span>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDeleteUser}
+                    disabled={isDeleting}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? 'Cancellazione...' : 'Cancella Account'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteUserModal(false);
+                      setSelectedUser(null);
+                    }}
+                    disabled={isDeleting}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modale Cancellazione Spedizione */}
+        {showDeleteShipmentModal && selectedShipment && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteShipmentModal(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Cancella Spedizione</h3>
+                    <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-700 mb-4">
+                  Sei sicuro di voler cancellare la spedizione <strong>{selectedShipment.tracking_number || selectedShipment.id}</strong>?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDeleteShipment}
+                    disabled={isDeleting}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? 'Cancellazione...' : 'Cancella Spedizione'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteShipmentModal(false);
+                      setSelectedShipment(null);
+                    }}
+                    disabled={isDeleting}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modale Gestione Features */}
+        {showFeaturesModal && selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowFeaturesModal(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Sparkles className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Gestisci Features</h3>
+                      <p className="text-sm text-gray-600">{selectedUser.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowFeaturesModal(false);
+                      setSelectedUser(null);
+                      setUserFeatures([]);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <XCircle className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                {isLoadingFeatures ? (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p className="text-gray-500 mt-2">Caricamento features...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {userFeatures.map((feature) => (
+                      <div
+                        key={feature.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-900">{feature.name}</h4>
+                            {feature.is_free ? (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                Gratuita
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                Premium
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">{feature.description}</p>
+                          {feature.is_active_for_user && feature.expires_at && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Scade il: {new Date(feature.expires_at).toLocaleDateString('it-IT')}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => toggleUserFeature(feature.code, !feature.is_active_for_user)}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
+                            feature.is_active_for_user
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {feature.is_active_for_user ? (
+                            <>
+                              <Power className="w-4 h-4" />
+                              Attiva
+                            </>
+                          ) : (
+                            <>
+                              <PowerOff className="w-4 h-4" />
+                              Disattiva
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                    {userFeatures.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">Nessuna feature disponibile</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
