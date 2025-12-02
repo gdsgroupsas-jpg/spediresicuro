@@ -260,25 +260,72 @@ export default function ListaSpedizioniPage() {
       : Array.from(spedizioniToDelete);
 
     if (idsToDelete.length === 0) {
+      console.warn('⚠️ Nessun ID da eliminare');
       return;
     }
 
     setIsDeleting(true);
 
     try {
+      console.log(`🗑️ Eliminazione di ${idsToDelete.length} spedizione/i:`, idsToDelete);
+      
       // Elimina tutte le spedizioni selezionate
-      for (const id of idsToDelete) {
-        const response = await fetch(`/api/spedizioni?id=${id}`, {
-          method: 'DELETE',
-        });
+      const deletePromises = idsToDelete.map(async (id) => {
+        console.log(`🔄 Eliminazione spedizione: ${id}`);
+        
+        try {
+          const response = await fetch(`/api/spedizioni?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
 
-        if (!response.ok) {
-          throw new Error(`Errore durante l'eliminazione della spedizione ${id}`);
+          console.log(`📊 Risposta DELETE per ${id}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+          });
+
+          if (!response.ok) {
+            // Prova a leggere il messaggio di errore dalla risposta
+            let errorMessage = `Errore ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.message || errorData.error || errorMessage;
+              console.error(`❌ Errore risposta per ${id}:`, errorData);
+            } catch (e) {
+              const errorText = await response.text();
+              console.error(`❌ Errore testo risposta per ${id}:`, errorText);
+              errorMessage = errorText || errorMessage;
+            }
+            
+            throw new Error(`Errore durante l'eliminazione della spedizione ${id}: ${errorMessage}`);
+          }
+
+          // Verifica che la risposta sia valida
+          const result = await response.json();
+          console.log(`✅ Spedizione ${id} eliminata con successo:`, result);
+          
+          return { id, success: true };
+        } catch (error: any) {
+          console.error(`❌ Errore eliminazione spedizione ${id}:`, error);
+          return { id, success: false, error: error.message };
         }
+      });
+
+      const results = await Promise.all(deletePromises);
+      
+      // Verifica se tutte le eliminazioni sono riuscite
+      const failed = results.filter(r => !r.success);
+      if (failed.length > 0) {
+        const errorMessages = failed.map(f => `${f.id}: ${f.error}`).join('\n');
+        throw new Error(`Errore durante l'eliminazione di ${failed.length} spedizione/i:\n${errorMessages}`);
       }
 
-      // Rimuovi dalla lista locale
-      setSpedizioni((prev) => prev.filter((s) => !idsToDelete.includes(s.id)));
+      // Rimuovi dalla lista locale solo le spedizioni eliminate con successo
+      const successfulIds = results.filter(r => r.success).map(r => r.id);
+      setSpedizioni((prev) => prev.filter((s) => !successfulIds.includes(s.id)));
       
       // Deseleziona tutte
       setSelectedShipments(new Set());
@@ -288,9 +335,11 @@ export default function ListaSpedizioniPage() {
       setShowDeleteModal(false);
       setSpedizioneToDelete(null);
       setSpedizioniToDelete(new Set());
-    } catch (error) {
-      console.error('Errore eliminazione:', error);
-      alert('Errore durante l\'eliminazione delle spedizioni');
+      
+      console.log(`✅ Eliminazione completata: ${successfulIds.length} spedizione/i eliminate`);
+    } catch (error: any) {
+      console.error('❌ Errore eliminazione:', error);
+      alert(`Errore durante l'eliminazione delle spedizioni:\n${error.message}`);
     } finally {
       setIsDeleting(false);
     }
