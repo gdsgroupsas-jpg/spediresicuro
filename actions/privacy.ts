@@ -190,8 +190,8 @@ export async function requestAccountDeletion(confirmation: string): Promise<{
     // 1. Recupera utente
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
-      .eq('email', userEmail)
       .select('*')
+      .eq('email', userEmail)
       .single();
 
     if (userError || !user) {
