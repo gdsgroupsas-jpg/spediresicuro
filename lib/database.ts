@@ -1161,10 +1161,16 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
           provider: supabaseUser.provider || 'credentials',
           providerId: supabaseUser.provider_id || undefined,
           image: supabaseUser.image || undefined,
+          datiCliente: supabaseUser.dati_cliente || undefined,
+          defaultSender: supabaseUser.default_sender || undefined,
+          integrazioni: supabaseUser.integrazioni || undefined,
           createdAt: supabaseUser.created_at || new Date().toISOString(),
           updatedAt: supabaseUser.updated_at || new Date().toISOString(),
         };
-        console.log('✅ [SUPABASE] Utente trovato in Supabase');
+        console.log('✅ [SUPABASE] Utente trovato in Supabase', {
+          hasDatiCliente: !!user.datiCliente,
+          datiCompletati: user.datiCliente?.datiCompletati,
+        });
         return user;
       } else {
         console.log('⚠️ [SUPABASE] Utente non trovato, provo JSON fallback');
