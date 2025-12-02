@@ -617,8 +617,11 @@ COMMENT ON FUNCTION toggle_user_feature IS 'Attiva/disattiva una feature per un 
 -- FINE SCRIPT
 -- ============================================
 
-RAISE NOTICE '✅ Sistema ruoli e permessi creato con successo!';
-RAISE NOTICE '📋 Features create: %', (SELECT COUNT(*) FROM public.killer_features);
-RAISE NOTICE '👥 Ruoli supportati: admin, user, agent, manager, merchant, support, viewer';
-RAISE NOTICE '🔐 Funzioni helper disponibili: user_has_feature(), get_user_active_features(), change_user_role(), toggle_user_feature()';
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Sistema ruoli e permessi creato con successo!';
+  RAISE NOTICE '📋 Features create: %', (SELECT COUNT(*) FROM public.killer_features);
+  RAISE NOTICE '👥 Ruoli supportati: admin, user, agent, manager, merchant, support, viewer';
+  RAISE NOTICE '🔐 Funzioni helper disponibili: user_has_feature(), get_user_active_features(), change_user_role(), toggle_user_feature()';
+END $$;
 
