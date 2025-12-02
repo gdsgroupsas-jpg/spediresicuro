@@ -109,12 +109,50 @@ export default function DatiClientePage() {
     dataScadenza: '',
   })
 
-  // Carica dati esistenti se presenti
+  // Carica dati esistenti se presenti e verifica se sono già completati
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      loadExistingData()
+      // Controlla se i dati sono già completati (localStorage)
+      const datiGiàCompletati = typeof window !== 'undefined' 
+        ? localStorage.getItem(`datiCompletati_${session.user.email}`) === 'true'
+        : false;
+      
+      if (datiGiàCompletati) {
+        console.log('✅ [DATI CLIENTE] Dati già completati in localStorage, reindirizzamento a dashboard');
+        router.push('/dashboard');
+        return;
+      }
+      
+      // Carica dati esistenti e verifica se sono completati nel database
+      async function checkAndLoad() {
+        try {
+          const response = await fetch('/api/user/dati-cliente', {
+            cache: 'no-store',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            // Se i dati sono già completati nel database, reindirizza alla dashboard
+            if (data.datiCliente && data.datiCliente.datiCompletati) {
+              console.log('✅ [DATI CLIENTE] Dati già completati nel database, salvo in localStorage e reindirizzamento a dashboard');
+              if (typeof window !== 'undefined' && session?.user?.email) {
+                localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+              }
+              router.push('/dashboard');
+              return;
+            }
+          }
+          // Se i dati non sono completati, carica i dati esistenti nel form
+          loadExistingData();
+        } catch (err) {
+          console.error('❌ [DATI CLIENTE] Errore verifica dati:', err);
+          // In caso di errore, carica comunque i dati esistenti
+          loadExistingData();
+        }
+      }
+      
+      checkAndLoad();
     }
-  }, [status, session])
+  }, [status, session, router])
 
   const loadExistingData = async () => {
     try {
@@ -263,12 +301,28 @@ export default function DatiClientePage() {
         return
       }
 
+      // Salvataggio riuscito!
       setSuccess(true)
+      setIsSaving(false) // Importante: resetta lo stato di salvataggio
       
-      // Reindirizza alla dashboard dopo 2 secondi
+      console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data)
+      console.log('✅ [DATI CLIENTE] Verifica dati salvati:', {
+        datiCompletati: data.datiCliente?.datiCompletati,
+        hasDatiCliente: !!data.datiCliente,
+      })
+      
+      // Salva IMMEDIATAMENTE in localStorage per evitare controlli futuri nella dashboard
+      if (typeof window !== 'undefined' && session?.user?.email) {
+        localStorage.setItem(`datiCompletati_${session.user.email}`, 'true')
+        console.log('💾 [DATI CLIENTE] Flag salvato in localStorage:', session.user.email)
+      }
+      
+      // Reindirizza alla dashboard con parametro URL per indicare che i dati sono stati appena salvati
+      // Questo evita che il controllo nella dashboard reindirizzi di nuovo qui
       setTimeout(() => {
-        router.push('/dashboard')
-      }, 2000)
+        console.log('🔄 [DATI CLIENTE] Reindirizzamento a /dashboard?saved=true con refresh completo...')
+        window.location.href = '/dashboard?saved=true'
+      }, 1500)
     } catch (err: any) {
       setError('Errore durante il salvataggio: ' + err.message)
       setIsSaving(false)
@@ -300,11 +354,11 @@ export default function DatiClientePage() {
         )}
 
         {success && (
-          <div className="mb-6 p-4 glass border border-green-500/30 rounded-lg flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-green-300">Dati salvati con successo!</p>
-              <p className="text-xs text-green-400 mt-1">Reindirizzamento alla dashboard...</p>
+          <div className="mb-6 p-4 glass border-2 border-green-500/50 rounded-lg flex items-start gap-3 bg-green-500/10 animate-pulse">
+            <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-base font-bold text-green-300">✅ Dati salvati con successo!</p>
+              <p className="text-sm text-green-400 mt-1">Reindirizzamento alla dashboard in corso...</p>
             </div>
           </div>
         )}
@@ -797,13 +851,18 @@ export default function DatiClientePage() {
           <div className="flex justify-end gap-4">
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || success}
               className="px-8 py-3 bg-gradient-to-r from-[#FACC15] to-[#FBBF24] text-[#09090b] font-bold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 btn-tactile"
             >
               {isSaving ? (
                 <>
                   <div className="w-5 h-5 border-2 border-[#09090b] border-t-transparent rounded-full animate-spin" />
                   Salvataggio...
+                </>
+              ) : success ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Salvato con successo!
                 </>
               ) : (
                 <>

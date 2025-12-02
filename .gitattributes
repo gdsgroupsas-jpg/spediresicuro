@@ -1,0 +1,13 @@
+# Forza encoding UTF-8 per tutti i file di testo
+* text=auto eol=lf
+
+# Forza UTF-8 esplicito per file TypeScript/JavaScript
+*.ts text eol=lf charset=utf-8
+*.tsx text eol=lf charset=utf-8
+*.js text eol=lf charset=utf-8
+*.jsx text eol=lf charset=utf-8
+
+# Forza UTF-8 per file di configurazione
+*.json text eol=lf charset=utf-8
+*.md text eol=lf charset=utf-8
+
