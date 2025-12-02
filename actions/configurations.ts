@@ -301,6 +301,12 @@ export async function deleteConfiguration(
 
     console.log(`✅ Configurazione eliminata:`, id);
 
+    // Audit log: credenziale eliminata
+    await logAuditEvent('credential_deleted', 'courier_config', id, {
+      provider_id: config.provider_id,
+      name: config.name,
+    });
+
     return {
       success: true,
       message: 'Configurazione eliminata con successo',
