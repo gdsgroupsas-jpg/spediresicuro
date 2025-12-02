@@ -16,23 +16,45 @@ function validateOAuthConfig() {
   const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   const hasGitHub = !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
   const nextAuthUrl = getNextAuthUrl();
+  const hasNextAuthSecret = !!process.env.NEXTAUTH_SECRET;
+  const hasNextAuthUrl = !!process.env.NEXTAUTH_URL;
   
   // Log sempre in produzione per debug
-  console.log('🔍 OAuth Config Check:', {
+  console.log('🔍 [AUTH CONFIG] OAuth Config Check:', {
     google: hasGoogle ? '✅ Configurato' : '⚠️ Non configurato',
     github: hasGitHub ? '✅ Configurato' : '⚠️ Non configurato',
     nextAuthUrl: nextAuthUrl,
+    hasNextAuthUrl: hasNextAuthUrl,
+    hasNextAuthSecret: hasNextAuthSecret,
     vercelUrl: process.env.VERCEL_URL || 'N/A',
     nodeEnv: process.env.NODE_ENV || 'N/A',
   });
   
-  // ⚠️ Warning se Google OAuth configurato ma URL non valido
+  // ⚠️ Errori critici che causano "Configuration"
+  const errors: string[] = [];
+  
+  if (!hasNextAuthSecret) {
+    errors.push('❌ NEXTAUTH_SECRET non configurato - OBBLIGATORIO!');
+  }
+  
+  if (process.env.NODE_ENV === 'production' && !hasNextAuthUrl) {
+    errors.push('⚠️ NEXTAUTH_URL non configurato - consigliato in produzione');
+  }
+  
   if (hasGoogle && process.env.NODE_ENV === 'production') {
     if (!nextAuthUrl.startsWith('https://')) {
-      console.warn('⚠️ ATTENZIONE: NEXTAUTH_URL deve essere HTTPS in produzione!');
+      errors.push('⚠️ NEXTAUTH_URL deve essere HTTPS in produzione!');
     }
-    console.log('📝 Verifica che il callback URL sia configurato in Google Console:');
+    console.log('📝 [AUTH CONFIG] Verifica che il callback URL sia configurato in Google Console:');
     console.log(`   ${nextAuthUrl}/api/auth/callback/google`);
+  }
+  
+  if (errors.length > 0) {
+    console.error('❌ [AUTH CONFIG] Errori di configurazione trovati:');
+    errors.forEach(error => console.error(`   ${error}`));
+    console.error('❌ [AUTH CONFIG] Questi errori causeranno l\'errore "Configuration" in NextAuth!');
+  } else {
+    console.log('✅ [AUTH CONFIG] Configurazione OAuth valida');
   }
   
   return { hasGoogle, hasGitHub };
@@ -43,19 +65,63 @@ validateOAuthConfig();
 
 // Determina URL base per NextAuth (locale o produzione)
 function getNextAuthUrl(): string {
-  // ⚠️ PRIORITÀ: Usa NEXTAUTH_URL se configurato (per produzione)
-  // Questo permette di usare l'URL di produzione anche quando VERCEL_URL è presente
+  // ⚠️ IMPORTANTE: In produzione su Vercel, rileva automaticamente l'URL corretto
+  // per evitare redirect a localhost:3000
+  
+  // Se siamo su Vercel (produzione o preview)
+  if (process.env.VERCEL_URL) {
+    const vercelUrl = `https://${process.env.VERCEL_URL}`;
+    console.log('🌐 [AUTH] Rilevato URL Vercel:', vercelUrl);
+    
+    // Se NEXTAUTH_URL è configurato ma punta a localhost, ignoralo e usa VERCEL_URL
+    if (process.env.NEXTAUTH_URL && process.env.NEXTAUTH_URL.includes('localhost')) {
+      console.warn('⚠️ [AUTH] NEXTAUTH_URL punta a localhost, uso VERCEL_URL invece');
+      return vercelUrl;
+    }
+    
+    // Se NEXTAUTH_URL è configurato correttamente (non localhost), usalo
+    if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes('localhost')) {
+      console.log('✅ [AUTH] Usando NEXTAUTH_URL configurato:', process.env.NEXTAUTH_URL);
+      return process.env.NEXTAUTH_URL;
+    }
+    
+    // Altrimenti usa VERCEL_URL
+    return vercelUrl;
+  }
+  
+  // Se NEXTAUTH_URL è configurato e non siamo su Vercel, usalo
   if (process.env.NEXTAUTH_URL) {
+    console.log('✅ [AUTH] Usando NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
     return process.env.NEXTAUTH_URL;
   }
-  // In produzione su Vercel, usa VERCEL_URL se disponibile (per preview deploy)
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
+  
   // Fallback per sviluppo locale
-  return process.env.NODE_ENV === 'production' 
-    ? 'https://spediresicuro.vercel.app' // Dominio Vercel produzione
+  const fallbackUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://spediresicuro.vercel.app' // Dominio Vercel produzione (fallback)
     : 'http://localhost:3000';
+  
+  console.log('📝 [AUTH] Usando URL fallback:', fallbackUrl);
+  return fallbackUrl;
+}
+
+// ⚠️ IMPORTANTE: Valida configurazione prima di creare authOptions
+const nextAuthUrl = getNextAuthUrl();
+const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+
+// Log configurazione per debug
+console.log('🔍 [AUTH CONFIG] Configurazione NextAuth:', {
+  nextAuthUrl,
+  hasNextAuthSecret: !!nextAuthSecret,
+  hasNextAuthUrl: !!process.env.NEXTAUTH_URL,
+  vercelUrl: process.env.VERCEL_URL || 'N/A',
+  nodeEnv: process.env.NODE_ENV || 'N/A',
+});
+
+// ⚠️ Verifica che NEXTAUTH_SECRET sia configurato in produzione
+if (process.env.NODE_ENV === 'production' && !nextAuthSecret) {
+  console.error('❌ [AUTH CONFIG] ERRORE CRITICO: NEXTAUTH_SECRET non configurato in produzione!');
+  console.error('❌ [AUTH CONFIG] Questo causerà l\'errore "Configuration" in NextAuth.');
+  console.error('❌ [AUTH CONFIG] Vai su Vercel → Settings → Environment Variables e aggiungi NEXTAUTH_SECRET');
 }
 
 export const authOptions = {
@@ -64,7 +130,7 @@ export const authOptions = {
   // Trust host per permettere callbacks dinamici (importante per Vercel)
   trustHost: true,
   // URL esplicito per produzione
-  url: getNextAuthUrl(),
+  url: nextAuthUrl,
   providers: [
     // Provider Credentials (Email/Password)
     CredentialsProvider({
@@ -91,8 +157,22 @@ export const authOptions = {
           console.log('🔍 [AUTH] Importazione verifyUserCredentials...');
           const { verifyUserCredentials } = await import('@/lib/database');
           
+          // ⚠️ NUOVO: Inizializza utenti demo se necessario (solo per utenti demo)
+          if (credentials.email === 'admin@spediresicuro.it' || credentials.email === 'demo@spediresicuro.it') {
+            try {
+              console.log('🔄 [AUTH] Inizializzazione utenti demo per:', credentials.email);
+              const { ensureDemoUsersExist } = await import('@/lib/database-init');
+              await ensureDemoUsersExist();
+              console.log('✅ [AUTH] Inizializzazione utenti demo completata');
+            } catch (initError: any) {
+              // Non bloccare il login se l'inizializzazione fallisce
+              console.warn('⚠️ [AUTH] Errore inizializzazione utenti demo:', initError.message);
+              console.warn('⚠️ [AUTH] Stack trace:', initError.stack);
+            }
+          }
+          
           console.log('🔍 [AUTH] Verifica credenziali per:', credentials.email);
-          const user = verifyUserCredentials(
+          const user = await verifyUserCredentials(
             credentials.email as string,
             credentials.password as string
           );
@@ -103,6 +183,7 @@ export const authOptions = {
               email: user.email,
               name: user.name,
               role: user.role,
+              provider: user.provider,
             });
             return {
               id: user.id,
@@ -111,7 +192,11 @@ export const authOptions = {
               role: user.role,
             };
           } else {
-            console.log('❌ [AUTH] Utente non trovato o password errata');
+            console.log('❌ [AUTH] Utente non trovato o password errata per:', credentials.email);
+            // Se è un utente demo e non è stato trovato, potrebbe essere un problema di inizializzazione
+            if (credentials.email === 'admin@spediresicuro.it' || credentials.email === 'demo@spediresicuro.it') {
+              console.warn('⚠️ [AUTH] ATTENZIONE: Utente demo non trovato dopo inizializzazione!');
+            }
           }
         } catch (error: any) {
           console.error('❌ [AUTH] Errore durante verifica credenziali:', {
@@ -158,6 +243,8 @@ export const authOptions = {
   pages: {
     signIn: '/login',
     error: '/login',
+    // ⚠️ IMPORTANTE: Non reindirizzare a /login dopo OAuth callback
+    // NextAuth gestirà il redirect tramite il callback redirect
   },
   callbacks: {
     async signIn({ user, account, profile }: any) {
@@ -174,13 +261,13 @@ export const authOptions = {
           console.log('📝 [NEXTAUTH] Creazione/aggiornamento utente OAuth per:', user.email);
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
 
-          const existingUser = findUserByEmail(user.email);
+          const existingUser = await findUserByEmail(user.email);
           console.log('👤 [NEXTAUTH] Utente esistente trovato:', !!existingUser);
 
           if (!existingUser) {
             // Crea nuovo utente OAuth
             console.log('➕ [NEXTAUTH] Creazione nuovo utente OAuth');
-            createUser({
+            await createUser({
               email: user.email,
               password: '', // Password vuota per utenti OAuth
               name: user.name || user.email.split('@')[0] || 'Utente',
@@ -193,7 +280,7 @@ export const authOptions = {
           } else if (account?.provider && !existingUser.provider) {
             // Aggiorna utente esistente con provider OAuth
             console.log('🔄 [NEXTAUTH] Aggiornamento utente esistente con provider OAuth');
-            updateUser(existingUser.id, {
+            await updateUser(existingUser.id, {
               provider: account.provider as 'google' | 'github',
               providerId: account.providerAccountId,
               image: user.image || undefined,
@@ -232,7 +319,8 @@ export const authOptions = {
             stack: error?.stack,
             name: error?.name,
           });
-          // Non bloccare il login in caso di errore, ma logga tutto
+          // ⚠️ IMPORTANTE: Non bloccare il login, ma logga tutto per debug
+          // Il login può continuare anche se la creazione utente fallisce
         }
       }
 
@@ -242,33 +330,90 @@ export const authOptions = {
     async jwt({ token, user, account }: any) {
       // Prima chiamata (dopo login)
       if (user) {
+        console.log('🔐 [NEXTAUTH] jwt callback - creazione token per utente:', {
+          email: user.email,
+          role: user.role,
+          provider: account?.provider,
+        });
         token.role = (user.role as string) || 'user';
         token.provider = account?.provider || 'credentials';
+        token.email = user.email;
+        token.name = user.name;
+      } else {
+        console.log('🔄 [NEXTAUTH] jwt callback - aggiornamento token esistente:', {
+          email: token.email,
+          role: token.role,
+          provider: token.provider,
+        });
       }
 
       return token;
     },
     async session({ session, token }: any) {
+      console.log('🔐 [NEXTAUTH] session callback chiamato:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        tokenEmail: token.email,
+        tokenRole: token.role,
+        tokenProvider: token.provider,
+      });
+
       if (session.user) {
         session.user.role = (token.role as string) || 'user';
         session.user.provider = (token.provider as string) || 'credentials';
+        
+        // Assicurati che email e name siano presenti
+        if (token.email) {
+          session.user.email = token.email;
+        }
+        if (token.name) {
+          session.user.name = token.name;
+        }
+        
+        console.log('✅ [NEXTAUTH] Session aggiornata:', {
+          email: session.user.email,
+          role: session.user.role,
+          provider: (session.user as any).provider,
+        });
       }
       return session;
     },
     async redirect({ url, baseUrl }: any) {
-      console.log('🔄 [NEXTAUTH] redirect callback chiamato:', { url, baseUrl });
+      // ⚠️ IMPORTANTE: Usa sempre l'URL corretto (non localhost in produzione)
+      const correctBaseUrl = getNextAuthUrl();
       
-      // Se l'URL è relativo, usa baseUrl
+      console.log('🔄 [NEXTAUTH] redirect callback chiamato:', { 
+        url, 
+        baseUrl, 
+        correctBaseUrl,
+        nodeEnv: process.env.NODE_ENV,
+        vercelUrl: process.env.VERCEL_URL,
+      });
+      
+      // Se baseUrl punta a localhost ma siamo in produzione, usa correctBaseUrl
+      const finalBaseUrl = (baseUrl.includes('localhost') && process.env.NODE_ENV === 'production') 
+        ? correctBaseUrl 
+        : baseUrl;
+      
+      // ⚠️ IMPORTANTE: Se l'URL è /login, reindirizza sempre al dashboard
+      // Questo evita loop di redirect dopo OAuth callback
+      if (url === '/login' || url.startsWith('/login')) {
+        const redirectUrl = `${finalBaseUrl}/dashboard`;
+        console.log('⚠️ [NEXTAUTH] URL è /login, reindirizzo a dashboard:', redirectUrl);
+        return redirectUrl;
+      }
+      
+      // Se l'URL è relativo, usa finalBaseUrl
       if (url.startsWith('/')) {
         // Reindirizza sempre al dashboard (la pagina dashboard gestirà il controllo dati cliente)
         // Se l'URL è già /dashboard o /dashboard/dati-cliente, mantienilo
         if (url.startsWith('/dashboard')) {
-          const redirectUrl = `${baseUrl}${url}`;
+          const redirectUrl = `${finalBaseUrl}${url}`;
           console.log('✅ [NEXTAUTH] Redirect a:', redirectUrl);
           return redirectUrl;
         }
         // Altrimenti reindirizza al dashboard
-        const redirectUrl = `${baseUrl}/dashboard`;
+        const redirectUrl = `${finalBaseUrl}/dashboard`;
         console.log('✅ [NEXTAUTH] Redirect a dashboard:', redirectUrl);
         return redirectUrl;
       }
@@ -276,16 +421,26 @@ export const authOptions = {
       // Se l'URL è assoluto e dello stesso dominio, permetti
       try {
         const urlObj = new URL(url);
-        if (urlObj.origin === baseUrl) {
+        const baseUrlObj = new URL(finalBaseUrl);
+        
+        // Se l'URL è dello stesso dominio, permetti
+        if (urlObj.origin === baseUrlObj.origin) {
           console.log('✅ [NEXTAUTH] Redirect a URL assoluto stesso dominio:', url);
           return url;
+        }
+        
+        // Se l'URL punta a localhost ma siamo in produzione, reindirizza al dominio corretto
+        if (urlObj.origin.includes('localhost') && process.env.NODE_ENV === 'production') {
+          const correctedUrl = url.replace(urlObj.origin, baseUrlObj.origin);
+          console.log('⚠️ [NEXTAUTH] URL corretto da localhost a produzione:', correctedUrl);
+          return correctedUrl;
         }
       } catch (error) {
         console.warn('⚠️ [NEXTAUTH] Errore parsing URL:', error);
       }
       
       // Altrimenti reindirizza al dashboard
-      const redirectUrl = `${baseUrl}/dashboard`;
+      const redirectUrl = `${finalBaseUrl}/dashboard`;
       console.log('✅ [NEXTAUTH] Redirect fallback a dashboard:', redirectUrl);
       return redirectUrl;
     },
@@ -294,13 +449,30 @@ export const authOptions = {
     strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 giorni
   },
-  secret: process.env.NEXTAUTH_SECRET || (() => {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('NEXTAUTH_SECRET è obbligatorio in produzione! Configura la variabile d\'ambiente.');
+  secret: (() => {
+    const secret = process.env.NEXTAUTH_SECRET;
+    
+    // ⚠️ IMPORTANTE: Valida NEXTAUTH_SECRET
+    if (!secret) {
+      const errorMsg = 'NEXTAUTH_SECRET è obbligatorio! Configura la variabile d\'ambiente su Vercel.';
+      console.error('❌ [AUTH CONFIG]', errorMsg);
+      
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(errorMsg);
+      }
+      
+      // In sviluppo, genera un warning ma permette di continuare
+      console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET non configurato. Usando secret di sviluppo.');
+      return 'dev-secret-not-for-production-change-in-env-local';
     }
-    // In sviluppo, genera un warning ma permette di continuare
-    console.warn('⚠️ NEXTAUTH_SECRET non configurato. Configura .env.local per sicurezza!');
-    return 'dev-secret-not-for-production-change-in-env-local';
+    
+    // Verifica che il secret sia abbastanza lungo (almeno 32 caratteri)
+    if (secret.length < 32) {
+      console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET sembra troppo corto. Dovrebbe essere almeno 32 caratteri.');
+    }
+    
+    console.log('✅ [AUTH CONFIG] NEXTAUTH_SECRET configurato correttamente');
+    return secret;
   })(),
 };
 

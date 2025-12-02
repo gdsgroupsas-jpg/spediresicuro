@@ -175,21 +175,80 @@ export default function DashboardPage() {
   // Verifica se i dati cliente sono completati (solo per nuovi utenti)
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      async function checkDatiCompletati() {
-        try {
-          const response = await fetch('/api/user/dati-cliente');
-          if (response.ok) {
-            const data = await response.json();
-            // Se i dati non sono completati, reindirizza alla pagina dati-cliente
-            if (!data.datiCliente || !data.datiCliente.datiCompletati) {
-              router.push('/dashboard/dati-cliente');
-            }
-          }
-        } catch (err) {
-          console.error('Errore verifica dati cliente:', err);
-        }
+      // PRIMA: Controlla se i dati sono già stati completati (localStorage) - più veloce
+      const datiGiàCompletati = typeof window !== 'undefined' 
+        ? localStorage.getItem(`datiCompletati_${session.user.email}`) === 'true'
+        : false;
+      
+      if (datiGiàCompletati) {
+        console.log('✅ [DASHBOARD] Dati già completati in localStorage, salto controllo');
+        // Non eseguire il controllo, i dati sono già stati completati
+        return;
       }
-      checkDatiCompletati();
+      
+      // SECONDO: Controlla se i dati sono stati appena salvati (parametro URL)
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const datiAppenaSalvati = urlParams?.get('saved') === 'true';
+      
+      if (datiAppenaSalvati) {
+        console.log('✅ [DASHBOARD] Dati appena salvati (parametro URL), salvo in localStorage e rimuovo parametro');
+        // Salva IMMEDIATAMENTE in localStorage per evitare controlli futuri
+        if (typeof window !== 'undefined' && session?.user?.email) {
+          localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+        }
+        // Rimuovi il parametro URL senza ricaricare la pagina
+        if (typeof window !== 'undefined') {
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, '', newUrl);
+        }
+        // Non eseguire il controllo, i dati sono stati appena salvati
+        return;
+      }
+      
+      // TERZO: Se non ci sono flag, controlla il database (solo se necessario)
+      // IMPORTANTE: Questo controllo è CRITICO - se i dati sono completati nel database,
+      // NON reindirizzare MAI a dati-cliente, anche se non c'è localStorage
+      const timeoutId = setTimeout(async () => {
+        async function checkDatiCompletati() {
+          try {
+            // Aggiungi cache: 'no-store' per assicurarsi di ottenere dati freschi
+            const response = await fetch('/api/user/dati-cliente', {
+              cache: 'no-store',
+            });
+            if (response.ok) {
+              const data = await response.json();
+              console.log('📋 [DASHBOARD] Verifica dati cliente dal database:', {
+                hasDatiCliente: !!data.datiCliente,
+                datiCompletati: data.datiCliente?.datiCompletati,
+                rawData: data.datiCliente, // Log completo per debug
+              });
+              
+              // Se i dati sono completati nel database, salva in localStorage e NON reindirizzare
+              if (data.datiCliente && data.datiCliente.datiCompletati) {
+                console.log('✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage e NON reindirizzo');
+                if (typeof window !== 'undefined' && session?.user?.email) {
+                  localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+                }
+                // IMPORTANTE: NON reindirizzare se i dati sono completati nel database
+                // Questo risolve il problema dopo logout/login
+              } else {
+                // Se i dati NON sono completati nel database, reindirizza alla pagina dati-cliente
+                console.log('🔄 [DASHBOARD] Dati non completati nel database, reindirizzamento a /dashboard/dati-cliente');
+                router.push('/dashboard/dati-cliente');
+              }
+            } else {
+              console.warn('⚠️ [DASHBOARD] Errore nella risposta API:', response.status);
+              // In caso di errore API, NON reindirizzare (potrebbe essere un problema temporaneo)
+            }
+          } catch (err) {
+            console.error('❌ [DASHBOARD] Errore verifica dati cliente:', err);
+            // In caso di errore, NON reindirizzare (potrebbe essere un problema temporaneo)
+          }
+        }
+        checkDatiCompletati();
+      }, 1000); // Delay ridotto a 1 secondo (sufficiente per il database)
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [status, session, router]);
 

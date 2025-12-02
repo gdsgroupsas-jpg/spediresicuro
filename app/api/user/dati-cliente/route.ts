@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const user = findUserByEmail(session.user.email)
+    const user = await findUserByEmail(session.user.email)
 
     if (!user) {
       return NextResponse.json(
@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let user: any = null; // Dichiarato fuori dal try per accesso nel catch
+  let session: any = null; // Dichiarato fuori dal try per accesso nel catch
   try {
-    const session = await auth()
+    session = await auth()
 
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = findUserByEmail(session.user.email)
+    user = await findUserByEmail(session.user.email)
 
     if (!user) {
       return NextResponse.json(
@@ -175,9 +177,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Aggiorna utente
-    updateUser(user.id, {
+    // Aggiorna utente (ora è asincrono e usa Supabase)
+    console.log('💾 [API DATI CLIENTE] Salvataggio dati cliente:', {
+      userId: user.id,
+      email: session.user.email,
+      datiCompletati: datiCliente.datiCompletati,
+      hasDatiCliente: !!datiCliente,
+    })
+    
+    const updatedUser = await updateUser(user.id, {
       datiCliente,
+    })
+    
+    console.log('✅ [API DATI CLIENTE] Utente aggiornato:', {
+      userId: updatedUser.id,
+      hasDatiCliente: !!updatedUser.datiCliente,
+      datiCompletati: updatedUser.datiCliente?.datiCompletati,
     })
 
     return NextResponse.json({
@@ -186,9 +201,30 @@ export async function POST(request: NextRequest) {
       datiCliente,
     })
   } catch (error: any) {
-    console.error('Errore salvataggio dati cliente:', error)
+    console.error('❌ [DATI CLIENTE] Errore salvataggio dati cliente:', error)
+    console.error('❌ [DATI CLIENTE] Dettagli errore:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      userId: user?.id,
+      email: session?.user?.email,
+    })
+    
+    // Messaggio errore più dettagliato per l'utente
+    let errorMessage = 'Errore durante il salvataggio dei dati';
+    if (error?.message?.includes('dati_cliente')) {
+      errorMessage = 'Errore: il campo dati_cliente non esiste nella tabella users. Esegui lo script SQL per aggiungere il campo.';
+    } else if (error?.message?.includes('Supabase')) {
+      errorMessage = `Errore Supabase: ${error.message}`;
+    } else if (error?.code === 'EROFS') {
+      errorMessage = 'Errore: file system read-only. Verifica che Supabase sia configurato correttamente.';
+    }
+    
     return NextResponse.json(
-      { error: 'Errore durante il salvataggio dei dati' },
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      },
       { status: 500 }
     )
   }
