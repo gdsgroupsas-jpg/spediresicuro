@@ -1223,6 +1223,9 @@ export async function verifyUserCredentials(
             provider: supabaseUser.provider || 'credentials',
             providerId: supabaseUser.provider_id || undefined,
             image: supabaseUser.image || undefined,
+            datiCliente: supabaseUser.dati_cliente || undefined,
+            defaultSender: supabaseUser.default_sender || undefined,
+            integrazioni: supabaseUser.integrazioni || undefined,
             createdAt: supabaseUser.created_at || new Date().toISOString(),
             updatedAt: supabaseUser.updated_at || new Date().toISOString(),
           };
@@ -1239,6 +1242,9 @@ export async function verifyUserCredentials(
             provider: supabaseUser.provider || 'credentials',
             providerId: supabaseUser.provider_id || undefined,
             image: supabaseUser.image || undefined,
+            datiCliente: supabaseUser.dati_cliente || undefined,
+            defaultSender: supabaseUser.default_sender || undefined,
+            integrazioni: supabaseUser.integrazioni || undefined,
             createdAt: supabaseUser.created_at || new Date().toISOString(),
             updatedAt: supabaseUser.updated_at || new Date().toISOString(),
           };
