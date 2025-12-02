@@ -722,15 +722,31 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
 
     const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
     
-    // Log del payload per debug (solo in sviluppo)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📋 [SUPABASE] Payload da inserire:', JSON.stringify(supabasePayload, null, 2));
+    // ⚠️ CRITICO: Verifica e pulisci tutti i campi numerici per evitare "false" come stringa
+    const cleanedPayload: any = {};
+    for (const [key, value] of Object.entries(supabasePayload)) {
+      // Se il valore è false, null, undefined, o stringa "false", gestiscilo in base al tipo di campo
+      if (value === false || value === 'false') {
+        // Campi numerici devono essere null o 0, non false
+        const numericFields = ['weight', 'length', 'width', 'height', 'cash_on_delivery_amount', 'declared_value', 
+          'base_price', 'surcharges', 'total_cost', 'final_price', 'margin_percent', 'volumetric_weight'];
+        if (numericFields.includes(key)) {
+          cleanedPayload[key] = null;
+        } else {
+          cleanedPayload[key] = value;
+        }
+      } else {
+        cleanedPayload[key] = value;
+      }
     }
+    
+    // Log del payload per debug (sempre in produzione per troubleshooting)
+    console.log('📋 [SUPABASE] Payload da inserire:', JSON.stringify(cleanedPayload, null, 2));
     
     console.log('🔄 [SUPABASE] Esecuzione INSERT...');
     const { data: supabaseData, error: supabaseError } = await supabaseAdmin
       .from('shipments')
-      .insert([supabasePayload])
+      .insert([cleanedPayload])
       .select()
       .single();
 
