@@ -1029,9 +1029,11 @@ export async function createUser(userData: {
   password: string;
   name: string;
   role?: 'user' | 'admin';
+  accountType?: 'user' | 'admin';
   provider?: 'credentials' | 'google' | 'github' | 'facebook';
   providerId?: string;
   image?: string;
+  parentAdminId?: string;
 }): Promise<User> {
   // Verifica se l'utente esiste già (controlla sia JSON che Supabase)
   const existingUser = await findUserByEmail(userData.email);
@@ -1057,6 +1059,9 @@ export async function createUser(userData: {
     try {
       console.log('🔄 [SUPABASE] Tentativo salvataggio utente in Supabase...');
       
+      // Determina account_type basandosi su accountType o role
+      const accountType = userData.accountType || (userData.role === 'admin' ? 'admin' : 'user');
+      
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from('users')
         .insert([
@@ -1064,10 +1069,13 @@ export async function createUser(userData: {
             email: userData.email,
             password: userData.password || null, // Null per utenti OAuth
             name: userData.name,
-            role: userData.role || 'user',
+            role: userData.role || (accountType === 'admin' ? 'admin' : 'user'),
+            account_type: accountType,
             provider: userData.provider || 'credentials',
             provider_id: userData.providerId || null,
             image: userData.image || null,
+            parent_admin_id: userData.parentAdminId || null,
+            admin_level: accountType === 'admin' ? (userData.parentAdminId ? null : 1) : 0,
           },
         ])
         .select()

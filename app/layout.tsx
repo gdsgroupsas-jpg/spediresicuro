@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Providers from '@/components/providers'
+import CookieBanner from '@/components/legal/CookieBanner'
 
 export const metadata: Metadata = {
   title: 'SpedireSicuro.it - Spedizioni Intelligenti con AI',
@@ -76,7 +77,10 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <CookieBanner />
+        </Providers>
       </body>
     </html>
   )

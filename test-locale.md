@@ -79,3 +79,4 @@ Se tutto funziona, dovresti vedere:
 - ✅ Export CSV funziona
 - ✅ Log chiari che mostrano cosa sta succedendo
 
+
