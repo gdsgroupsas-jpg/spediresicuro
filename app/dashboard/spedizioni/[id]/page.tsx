@@ -162,7 +162,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-[#FF9500] animate-spin" />
       </div>
     );
@@ -170,7 +170,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
 
   if (error || !spedizione) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
           <p className="text-gray-600">{error || 'Spedizione non trovata'}</p>
@@ -180,7 +180,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <DashboardNav
           title={isEditMode ? 'Modifica Ordine Importato' : 'Dettaglio Spedizione'}
