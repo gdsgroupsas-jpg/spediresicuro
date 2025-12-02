@@ -47,3 +47,4 @@ Write-Host "Vercel aggiornerà automaticamente il sito." -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Puoi verificare su: https://github.com/gdsgroupsas-jpg/spediresicuro" -ForegroundColor Yellow
 
+

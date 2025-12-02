@@ -12,6 +12,8 @@ import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online'
 import { getFulfillmentOrchestrator, ShipmentResult } from '@/lib/engine/fulfillment-orchestrator'
 import { findUserByEmail } from '@/lib/database'
 import { createServerActionClient } from '@/lib/supabase-server'
+import { getShippingProvider } from '@/lib/couriers/factory'
+import { supabaseAdmin } from '@/lib/db/client'
 import type { Shipment, CreateShipmentInput } from '@/types/shipments'
 
 /**
@@ -101,21 +103,45 @@ export async function createShipmentWithOrchestrator(
       }
     }
 
-    // 2. Ottieni orchestrator
-    const orchestrator = getFulfillmentOrchestrator()
+    // 2. Ottieni user_id per factory
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single()
 
-    // 3. Registra broker adapter (spedisci.online) se disponibile
-    const credentialsResult = await getSpedisciOnlineCredentials()
-    if (credentialsResult.success && credentialsResult.credentials) {
-      try {
-        const brokerAdapter = new SpedisciOnlineAdapter(credentialsResult.credentials)
-        orchestrator.registerBrokerAdapter(brokerAdapter)
-      } catch (error) {
-        console.warn('Impossibile registrare broker adapter:', error)
+    if (!user) {
+      return {
+        success: false,
+        tracking_number: '',
+        carrier: courierCode,
+        method: 'fallback',
+        error: 'Utente non trovato',
       }
     }
 
-    // 4. Crea spedizione tramite orchestrator (routing intelligente)
+    // 3. Ottieni orchestrator
+    const orchestrator = getFulfillmentOrchestrator()
+
+    // 4. Registra broker adapter usando factory (SOLO DATABASE, nessun fallback env)
+    // Se courierCode è spedisci_online, usa factory per recuperare provider dal DB
+    if (courierCode.toLowerCase() === 'spedisci_online' || courierCode.toLowerCase() === 'spedisci-online') {
+      try {
+        const provider = await getShippingProvider(user.id, 'spedisci_online', shipmentData)
+        if (provider && provider instanceof SpedisciOnlineAdapter) {
+          orchestrator.registerBrokerAdapter(provider)
+          console.log('✅ Broker adapter registrato tramite configurazione DB')
+        } else {
+          console.error('❌ Impossibile recuperare provider dal database. Configura una configurazione in /dashboard/admin/configurations')
+          throw new Error('Configurazione corriere non trovata nel database')
+        }
+      } catch (error) {
+        console.error('❌ Errore registrazione broker adapter:', error)
+        throw error
+      }
+    }
+
+    // 5. Crea spedizione tramite orchestrator (routing intelligente)
     const result = await orchestrator.createShipment(shipmentData, courierCode)
 
     return result

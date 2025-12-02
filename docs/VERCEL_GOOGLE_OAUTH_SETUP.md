@@ -100,3 +100,4 @@ Se ancora non funziona:
 ### Login funziona ma redirect non funziona
 **Soluzione**: Verifica che trustHost sia true nella configurazione NextAuth (già configurato).
 
+
