@@ -1,12 +1,14 @@
 /**
- * Database Adapter: Supabase + JSON (Fallback)
+ * Database Adapter: SOLO Supabase
  * 
- * ⚠️ MIGRAZIONE IN CORSO: Questo file ora usa Supabase come database principale.
- * Mantiene compatibilità con formato JSON esistente per transizione graduale.
+ * ⚠️ CRITICO: Questo file usa SOLO Supabase - nessun fallback JSON per spedizioni.
+ * Se Supabase non è configurato o fallisce, viene lanciato un errore chiaro.
  * 
- * Funzioni per leggere e scrivere dati:
- * - PRIORITÀ: Supabase (database principale)
- * - FALLBACK: JSON locale (per compatibilità)
+ * Funzioni spedizioni:
+ * - SOLO Supabase (nessun fallback JSON)
+ * 
+ * Funzioni utenti/preventivi/configurazioni:
+ * - Usano ancora JSON (da migrare in futuro)
  */
 
 import fs from 'fs';
@@ -124,6 +126,8 @@ export interface User {
 }
 
 // Inizializza il database se non esiste
+// ⚠️ IMPORTANTE: Su Vercel (produzione) il file system è read-only, quindi questa funzione
+// non può creare file. Usa solo in sviluppo locale o quando Supabase non è configurato.
 function initDatabase(): Database {
   // Utenti demo: sempre creati (sia sviluppo che produzione)
   // ⚠️ IMPORTANTE: In produzione, questi utenti verranno creati in Supabase se configurato
@@ -157,15 +161,32 @@ function initDatabase(): Database {
     },
   };
 
-  // Crea la cartella data se non esiste
-  const dataDir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  // ⚠️ CRITICO: Su Vercel (produzione) il file system è read-only
+  // Non tentare di creare file in produzione
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    console.warn('⚠️ [JSON] File system read-only su Vercel - initDatabase() ritorna solo dati in memoria');
+    return defaultData;
   }
 
-  // Crea il file database se non esiste
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
+  // Crea la cartella data se non esiste (solo in sviluppo)
+  try {
+    const dataDir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    // Crea il file database se non esiste (solo in sviluppo)
+    if (!fs.existsSync(DB_PATH)) {
+      fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
+    }
+  } catch (error: any) {
+    // Se è EROFS (read-only), ritorna solo dati in memoria
+    if (error?.code === 'EROFS' || error?.message?.includes('read-only')) {
+      console.warn('⚠️ [JSON] File system read-only - initDatabase() ritorna solo dati in memoria');
+      return defaultData;
+    }
+    // Altrimenti rilancia l'errore
+    throw error;
   }
 
   return defaultData;
@@ -412,6 +433,7 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     user_id: userId || null, // Se null, Supabase userà auth.uid() se disponibile
     // Tracking
     tracking_number: tracking,
+    ldv: ldv || null, // Lettera di Vettura (importante per Spedisci.Online)
     status: statusSupabase,
     // Mittente
     sender_name: mittente.nome || spedizione.mittenteNome || 'Mittente Predefinito',
@@ -468,71 +490,109 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
 
 /**
  * Helper: Converte formato Supabase a formato JSON spedizione
+ * ⚠️ IMPORTANTE: Gestisce campi mancanti/null in modo sicuro
  */
 function mapSpedizioneFromSupabase(s: any): any {
-  return {
-    id: s.id,
-    tracking: s.tracking_number,
-    ldv: s.tracking_number, // Per compatibilità
-    status: mapStatusFromSupabase(s.status),
-    createdAt: s.created_at,
-    // Destinatario (formato JSON annidato)
-    destinatario: {
-      nome: s.recipient_name,
-      indirizzo: s.recipient_address,
-      citta: s.recipient_city,
-      provincia: s.recipient_province,
-      cap: s.recipient_zip,
-      telefono: s.recipient_phone,
-      email: s.recipient_email || '',
-    },
-    // Mittente
-    mittente: {
-      nome: s.sender_name,
-      indirizzo: s.sender_address || '',
-      citta: s.sender_city || '',
-      provincia: s.sender_province || '',
-      cap: s.sender_zip || '',
-      telefono: s.sender_phone || '',
-      email: s.sender_email || '',
-    },
-    // Pacco
-    peso: s.weight,
-    dimensioni: s.length && s.width && s.height ? {
-      lunghezza: s.length,
-      larghezza: s.width,
-      altezza: s.height,
-    } : undefined,
-    // Servizio
-    contrassegno: s.cash_on_delivery_amount || (s.cash_on_delivery ? 0 : undefined),
-    assicurazione: s.insurance,
-    // Pricing
-    prezzoBase: s.base_price,
-    prezzoFinale: s.final_price,
-    margine: s.margin_percent,
-    // Note
-    note: s.notes || '',
-    // Campi aggiuntivi (mantenuti per compatibilità)
-    corriere: s.courier_id || '',
-    tipoSpedizione: s.service_type || 'standard',
-    // ⚠️ NUOVO: packages_count (colli) - non presente in schema, usa default
-    colli: 1, // TODO: aggiungere campo packages_count allo schema Supabase
-    // Campi per export CSV (rif_mittente, rif_destinatario, contenuto, order_id, totale_ordine)
-    rif_mittente: s.sender_name || '', // Usa sender_name come rif_mittente
-    rif_destinatario: s.recipient_name || '', // Usa recipient_name come rif_destinatario
-    contenuto: s.internal_notes || '', // Usa internal_notes per contenuto
-    order_id: s.ecommerce_order_id || s.ecommerce_order_number || '',
-    totale_ordine: s.final_price || 0,
-    deleted: false,
-  };
+  try {
+    return {
+      id: s.id || '',
+      tracking: s.tracking_number || s.ldv || '',
+      ldv: s.ldv || s.tracking_number || '',
+      status: s.status ? mapStatusFromSupabase(s.status) : 'in_preparazione',
+      createdAt: s.created_at || new Date().toISOString(),
+      // Destinatario (formato JSON annidato)
+      destinatario: {
+        nome: s.recipient_name || '',
+        indirizzo: s.recipient_address || '',
+        citta: s.recipient_city || '',
+        provincia: s.recipient_province || '',
+        cap: s.recipient_zip || '',
+        telefono: s.recipient_phone || '',
+        email: s.recipient_email || '',
+      },
+      // Mittente
+      mittente: {
+        nome: s.sender_name || 'Mittente Predefinito',
+        indirizzo: s.sender_address || '',
+        citta: s.sender_city || '',
+        provincia: s.sender_province || '',
+        cap: s.sender_zip || '',
+        telefono: s.sender_phone || '',
+        email: s.sender_email || '',
+      },
+      // Pacco
+      peso: s.weight || 1,
+      dimensioni: (s.length && s.width && s.height) ? {
+        lunghezza: s.length,
+        larghezza: s.width,
+        altezza: s.height,
+      } : undefined,
+      // Servizio
+      contrassegno: s.cash_on_delivery_amount || (s.cash_on_delivery ? 0 : undefined),
+      assicurazione: s.insurance || false,
+      // Pricing
+      prezzoBase: s.base_price || null,
+      prezzoFinale: s.final_price || 0,
+      margine: s.margin_percent || 15,
+      // Note
+      note: s.notes || '',
+      // Campi aggiuntivi (mantenuti per compatibilità)
+      corriere: s.courier_id || '',
+      tipoSpedizione: s.service_type || 'standard',
+      // ⚠️ NUOVO: packages_count (colli)
+      colli: s.packages_count || 1,
+      // Campi per export CSV (rif_mittente, rif_destinatario, contenuto, order_id, totale_ordine)
+      rif_mittente: s.sender_reference || s.sender_name || '',
+      rif_destinatario: s.recipient_reference || s.recipient_name || '',
+      contenuto: s.content || s.internal_notes || '',
+      order_id: s.ecommerce_order_id || s.ecommerce_order_number || '',
+      totale_ordine: s.final_price || 0,
+      deleted: s.deleted || false,
+      // Campi aggiuntivi per compatibilità
+      imported: s.imported || false,
+      importSource: s.import_source || '',
+      importPlatform: s.import_platform || '',
+      verified: s.verified || false,
+    };
+  } catch (error: any) {
+    console.error('❌ [MAP] Errore mapping spedizione:', error.message, s);
+    // Ritorna struttura minima in caso di errore
+    return {
+      id: s.id || '',
+      tracking: s.tracking_number || s.ldv || '',
+      ldv: s.ldv || s.tracking_number || '',
+      status: 'in_preparazione',
+      createdAt: s.created_at || new Date().toISOString(),
+      destinatario: {
+        nome: s.recipient_name || '',
+        indirizzo: s.recipient_address || '',
+        citta: s.recipient_city || '',
+        provincia: s.recipient_province || '',
+        cap: s.recipient_zip || '',
+        telefono: s.recipient_phone || '',
+        email: s.recipient_email || '',
+      },
+      mittente: {
+        nome: s.sender_name || 'Mittente Predefinito',
+        indirizzo: s.sender_address || '',
+        citta: s.sender_city || '',
+        provincia: s.sender_province || '',
+        cap: s.sender_zip || '',
+        telefono: s.sender_phone || '',
+        email: s.sender_email || '',
+      },
+      peso: s.weight || 1,
+      prezzoFinale: s.final_price || 0,
+      deleted: s.deleted || false,
+    };
+  }
 }
 
 /**
  * Aggiunge una nuova spedizione
  * 
- * ⚠️ IMPORTANTE: Ora salva PRIMA in Supabase, poi in JSON per compatibilità
- * - Supabase: database principale
- * - JSON: fallback/compatibilità
+ * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
+ * Se Supabase non è configurato o fallisce, viene lanciato un errore
  *
  * Gestisce correttamente ldv (Lettera di Vettura) e tracking
  * - ldv è il tracking number per ordini da Spedisci.Online
@@ -540,6 +600,12 @@ function mapSpedizioneFromSupabase(s: any): any {
  * - Se tracking non è presente, usa ldv come fallback
  */
 export async function addSpedizione(spedizione: any, userEmail?: string): Promise<any> {
+  // ⚠️ CRITICO: Verifica che Supabase sia configurato
+  if (!isSupabaseConfigured()) {
+    const errorMsg = 'Supabase non configurato. Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY';
+    console.error('❌ [SUPABASE]', errorMsg);
+    throw new Error(errorMsg);
+  }
   // ⚠️ CRITICO: Normalizza tracking/ldv
   // PRIORITÀ: ldv > tracking > generato automaticamente
   const ldv = spedizione.ldv || '';
@@ -615,107 +681,70 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     deleted: false,
   };
 
-  // 🔒 Traccia se almeno un salvataggio è riuscito (CRITICO per prevenire data loss)
-  let savedSuccessfully = false;
-  let supabaseSuccess = false;
-  let jsonSuccess = false;
-  let jsonError: Error | null = null;
-
-  // ⚠️ PRIORITÀ 1: Salva in Supabase (database principale) se configurato
-  if (isSupabaseConfigured()) {
-    try {
-      console.log('🔄 Tentativo salvataggio in Supabase...');
-      
-      // Ottieni user_id Supabase da email NextAuth
-      let supabaseUserId: string | null = null;
-      if (userEmail) {
-        supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
-        if (!supabaseUserId) {
-          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per email: ${userEmail}. La spedizione sarà salvata senza user_id.`);
-        } else {
-          console.log(`✅ [SUPABASE] User ID trovato: ${supabaseUserId.substring(0, 8)}...`);
-        }
-      }
-
-      const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
-      
-      const { data: supabaseData, error: supabaseError } = await supabaseAdmin
-        .from('shipments')
-        .insert([supabasePayload])
-        .select()
-        .single();
-
-      if (supabaseError) {
-        console.error('❌ [SUPABASE] Errore salvataggio:', supabaseError.message);
-        console.log('📁 [FALLBACK] Provo database JSON locale');
-      } else {
-        console.log(`✅ [SUPABASE] Spedizione salvata con successo! ID: ${supabaseData.id}`);
-        // Aggiorna ID con quello di Supabase
-        nuovaSpedizione.id = supabaseData.id;
-        supabaseSuccess = true;
-        savedSuccessfully = true;
-      }
-    } catch (error: any) {
-      console.error('❌ [SUPABASE] Errore generico:', error.message);
-      console.log('📁 [FALLBACK] Provo database JSON locale');
-    }
-  } else {
-    console.log('📁 [JSON] Supabase non configurato, uso database JSON locale');
-  }
-  
-  // ⚠️ PRIORITÀ 2: Salva in JSON per compatibilità/fallback
-  // Solo se Supabase non è configurato O se Supabase ha fallito
-  if (!supabaseSuccess) {
-    try {
-      const db = readDatabase();
-      db.spedizioni.push(nuovaSpedizione);
-      writeDatabase(db);
-      console.log('✅ [JSON] Spedizione salvata in JSON locale');
-      jsonSuccess = true;
-      savedSuccessfully = true;
-    } catch (error: any) {
-      jsonError = error;
-      console.error('❌ [JSON] Errore salvataggio JSON:', error.message);
-      
-      // Se Supabase non è configurato O ha fallito E JSON fallisce, questo è CRITICO
-      if (!savedSuccessfully) {
-        const errorMessage = isSupabaseConfigured()
-          ? 'Impossibile salvare la spedizione: sia Supabase che JSON hanno fallito'
-          : `Impossibile salvare la spedizione: errore nel database JSON - ${error.message}`;
-        throw new Error(errorMessage);
-      }
-    }
-  } else {
-    // Supabase ha avuto successo, prova comunque JSON per compatibilità (ma non è critico se fallisce)
-    try {
-      const db = readDatabase();
-      db.spedizioni.push(nuovaSpedizione);
-      writeDatabase(db);
-      console.log('✅ [JSON] Spedizione salvata anche in JSON locale');
-      jsonSuccess = true;
-    } catch (error: any) {
-      jsonError = error;
-      // Non critico: già salvato in Supabase
-      // Distingue tra EROFS (non critico) e altri errori (warning)
-      if (error?.code === 'EROFS' || error?.message?.includes('EROFS') || error?.message?.includes('read-only')) {
-        console.log('ℹ️ [JSON] File system read-only (Vercel) - salvataggio JSON saltato (non critico)');
-      } else {
-        console.warn('⚠️ [JSON] Errore salvataggio JSON (non critico, già salvato in Supabase):', error.message);
-      }
-    }
-  }
-  
-  // 🔒 CRITICO: Verifica che almeno un salvataggio sia riuscito (previene data loss)
-  if (!savedSuccessfully) {
-    const errorDetails = [
-      isSupabaseConfigured() && !supabaseSuccess ? 'Supabase: fallito' : null,
-      !jsonSuccess && jsonError ? `JSON: ${jsonError.message}` : null,
-    ].filter(Boolean).join(', ');
+  // ⚠️ CRITICO: Salva SOLO in Supabase - nessun fallback JSON
+  try {
+    console.log('🔄 [SUPABASE] Salvataggio spedizione...');
     
-    throw new Error(`Impossibile salvare la spedizione. Fallimenti: ${errorDetails}`);
+    // Ottieni user_id Supabase da email NextAuth
+    let supabaseUserId: string | null = null;
+    if (userEmail) {
+      supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
+      if (!supabaseUserId) {
+        console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per email: ${userEmail}. La spedizione sarà salvata senza user_id.`);
+      } else {
+        console.log(`✅ [SUPABASE] User ID trovato: ${supabaseUserId.substring(0, 8)}...`);
+      }
+    }
+
+    const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
+    
+    // Log del payload per debug (solo in sviluppo)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📋 [SUPABASE] Payload da inserire:', JSON.stringify(supabasePayload, null, 2));
+    }
+    
+    console.log('🔄 [SUPABASE] Esecuzione INSERT...');
+    const { data: supabaseData, error: supabaseError } = await supabaseAdmin
+      .from('shipments')
+      .insert([supabasePayload])
+      .select()
+      .single();
+
+    if (supabaseError) {
+      console.error('❌ [SUPABASE] Errore salvataggio:', {
+        message: supabaseError.message,
+        details: supabaseError.details,
+        hint: supabaseError.hint,
+        code: supabaseError.code,
+      });
+      
+      // Messaggio errore più dettagliato
+      let errorMessage = `Errore Supabase: ${supabaseError.message}`;
+      if (supabaseError.details) {
+        errorMessage += ` - ${supabaseError.details}`;
+      }
+      if (supabaseError.hint) {
+        errorMessage += `. Suggerimento: ${supabaseError.hint}`;
+      }
+      if (supabaseError.message?.includes('column') && supabaseError.message?.includes('does not exist')) {
+        errorMessage += `. Esegui lo script SQL 004_fix_shipments_schema.sql per aggiungere i campi mancanti.`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    console.log(`✅ [SUPABASE] Spedizione salvata con successo! ID: ${supabaseData.id}`);
+    
+    // Aggiorna ID con quello di Supabase
+    nuovaSpedizione.id = supabaseData.id;
+    
+    return nuovaSpedizione;
+  } catch (error: any) {
+    console.error('❌ [SUPABASE] Errore generico salvataggio:', error.message);
+    console.error('❌ [SUPABASE] Stack:', error.stack);
+    // Rilancia l'errore invece di usare fallback JSON
+    throw error;
   }
-  
-  return nuovaSpedizione;
 }
 
 /**
@@ -734,23 +763,24 @@ export function addPreventivo(preventivo: any): void {
 /**
  * Ottiene tutte le spedizioni
  * 
- * ⚠️ NUOVO: Ora legge PRIMA da Supabase filtrando per user_id, poi da JSON come fallback
+ * ⚠️ IMPORTANTE: Usa SOLO Supabase - nessun fallback JSON
  * 
  * @param userEmail Email utente per filtrare le spedizioni (multi-tenancy)
  */
 export async function getSpedizioni(userEmail?: string): Promise<any[]> {
-  // ⚠️ IMPORTANTE: Se Supabase non è configurato, usa sempre JSON
+  // ⚠️ CRITICO: Verifica che Supabase sia configurato
   if (!isSupabaseConfigured()) {
-    console.log('📁 [JSON] Supabase non configurato, uso database JSON locale');
-    const db = readDatabase();
-    const filtered = db.spedizioni.filter((s: any) => 
-      !s.deleted && (!userEmail || !s.created_by_user_email || s.created_by_user_email === userEmail)
-    );
-    console.log(`📁 [JSON] Trovate ${filtered.length} spedizioni nel database JSON`);
-    return filtered;
+    const errorMsg = 'Supabase non configurato. Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY';
+    console.error('❌ [SUPABASE]', errorMsg);
+    console.error('❌ [SUPABASE] URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Presente' : 'Mancante');
+    console.error('❌ [SUPABASE] Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Presente' : 'Mancante');
+    console.error('❌ [SUPABASE] Service Key:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Presente' : 'Mancante');
+    throw new Error(errorMsg);
   }
 
   try {
+    console.log(`🔍 [SUPABASE] Recupero spedizioni${userEmail ? ` per ${userEmail}` : ' (tutte)'}`);
+    
     // Se abbiamo email, filtra per user_id
     let query = supabaseAdmin
       .from('shipments')
@@ -759,46 +789,79 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
 
     // ⚠️ IMPORTANTE: Filtra per user_id se email fornita (multi-tenancy)
     if (userEmail) {
-      const supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
-      if (supabaseUserId) {
-        query = query.eq('user_id', supabaseUserId);
-      } else {
-        // Se non trovato user_id, filtra per email nel campo notes o usa JSON fallback
-        console.warn(`⚠️ Nessun user_id trovato per ${userEmail}, uso JSON fallback`);
-        const db = readDatabase();
-        return db.spedizioni.filter((s: any) => 
-          !s.deleted && (!s.created_by_user_email || s.created_by_user_email === userEmail)
-        );
+      try {
+        const supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
+        if (supabaseUserId) {
+          query = query.eq('user_id', supabaseUserId);
+          console.log(`✅ [SUPABASE] Filtro per user_id: ${supabaseUserId.substring(0, 8)}...`);
+        } else {
+          // Se non trovato user_id, prova a filtrare per email
+          query = query.eq('created_by_user_email', userEmail);
+          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per ${userEmail}, filtro per email`);
+        }
+      } catch (userIdError: any) {
+        console.warn(`⚠️ [SUPABASE] Errore recupero user_id per ${userEmail}:`, userIdError.message);
+        // Continua senza filtro user_id, filtra solo per email
+        query = query.eq('created_by_user_email', userEmail);
       }
     }
 
+    console.log('🔄 [SUPABASE] Esecuzione query...');
     const { data: supabaseSpedizioni, error } = await query;
 
-    if (!error && supabaseSpedizioni && supabaseSpedizioni.length > 0) {
-      // Converti formato Supabase a formato JSON
-      const spedizioniJSON = supabaseSpedizioni.map(mapSpedizioneFromSupabase);
-      console.log(`✅ [SUPABASE] Recuperate ${spedizioniJSON.length} spedizioni${userEmail ? ` per ${userEmail}` : ''}`);
-      return spedizioniJSON;
+    if (error) {
+      console.error('❌ [SUPABASE] Errore query:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw new Error(`Errore Supabase: ${error.message}${error.details ? ` - ${error.details}` : ''}${error.hint ? `. Suggerimento: ${error.hint}` : ''}. Verifica la configurazione e che la tabella shipments esista.`);
     }
 
-    // Fallback: leggi da JSON
-    console.log('⚠️ [SUPABASE] Nessuna spedizione trovata o errore, uso JSON come fallback');
-    const db = readDatabase();
-    const filtered = db.spedizioni.filter((s: any) => 
-      !s.deleted && (!userEmail || !s.created_by_user_email || s.created_by_user_email === userEmail)
-    );
-    console.log(`📁 [JSON] Trovate ${filtered.length} spedizioni nel database JSON`);
-    return filtered;
+    // Se non ci sono spedizioni, ritorna array vuoto (non è un errore)
+    if (!supabaseSpedizioni || supabaseSpedizioni.length === 0) {
+      console.log(`ℹ️ [SUPABASE] Nessuna spedizione trovata${userEmail ? ` per ${userEmail}` : ''}`);
+      return [];
+    }
+
+    try {
+      // Filtra spedizioni non eliminate PRIMA del mapping
+      const spedizioniAttive = supabaseSpedizioni.filter((s: any) => {
+        // Se deleted non esiste o è null o false, mostra la spedizione
+        return s.deleted !== true;
+      });
+      
+      // Converti formato Supabase a formato JSON
+      const spedizioniJSON = spedizioniAttive.map((s: any) => {
+        try {
+          return mapSpedizioneFromSupabase(s);
+        } catch (mapError: any) {
+          console.error('❌ [SUPABASE] Errore mapping spedizione:', mapError.message, s);
+          throw new Error(`Errore mapping spedizione ${s.id}: ${mapError.message}`);
+        }
+      });
+      
+      console.log(`✅ [SUPABASE] Recuperate ${spedizioniJSON.length} spedizioni attive su ${supabaseSpedizioni.length} totali${userEmail ? ` per ${userEmail}` : ''}`);
+      return spedizioniJSON;
+    } catch (mapError: any) {
+      console.error('❌ [SUPABASE] Errore mapping generale:', mapError.message);
+      throw new Error(`Errore mapping spedizioni: ${mapError.message}`);
+    }
   } catch (error: any) {
     console.error('❌ [SUPABASE] Errore lettura:', error.message);
-    console.log('📁 [FALLBACK] Uso database JSON locale');
-    // Fallback: leggi da JSON
-    const db = readDatabase();
-    const filtered = db.spedizioni.filter((s: any) => 
-      !s.deleted && (!userEmail || !s.created_by_user_email || s.created_by_user_email === userEmail)
-    );
-    console.log(`📁 [JSON] Trovate ${filtered.length} spedizioni nel database JSON`);
-    return filtered;
+    console.error('❌ [SUPABASE] Stack:', error.stack);
+    
+    // ⚠️ CRITICO: Se l'errore è EROFS (read-only file system), significa che qualcosa sta ancora cercando di usare JSON
+    // Questo NON dovrebbe mai succedere in getSpedizioni perché non usiamo più JSON
+    if (error.message?.includes('EROFS') || error.message?.includes('read-only') || error.code === 'EROFS') {
+      console.error('❌ [SUPABASE] ERRORE CRITICO: Rilevato tentativo di accesso a JSON file system!');
+      console.error('❌ [SUPABASE] Questo NON dovrebbe mai succedere in getSpedizioni - verifica che non ci siano chiamate a readDatabase()');
+      throw new Error('Errore configurazione: il sistema sta cercando di usare JSON invece di Supabase. Verifica che Supabase sia configurato correttamente.');
+    }
+    
+    // Rilancia l'errore invece di usare fallback JSON
+    throw error;
   }
 }
 
