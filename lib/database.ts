@@ -411,6 +411,28 @@ async function getSupabaseUserIdFromEmail(email: string): Promise<string | null>
 }
 
 /**
+ * Helper: Converte un valore in numero o null (gestisce false, undefined, null, stringhe)
+ */
+function toNumberOrNull(value: any): number | null {
+  if (value === null || value === undefined || value === false || value === '') {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? null : value;
+  }
+  const parsed = parseFloat(String(value));
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Helper: Converte un valore in numero o 0 (gestisce false, undefined, null, stringhe)
+ */
+function toNumberOrZero(value: any): number {
+  const num = toNumberOrNull(value);
+  return num !== null ? num : 0;
+}
+
+/**
  * Helper: Converte formato JSON spedizione a formato Supabase
  * 
  * ⚠️ IMPORTANTE: Ora include user_id e packages_count per multi-tenancy
@@ -468,16 +490,18 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
                    spedizione.tipoSpedizione === 'same_day' ? 'same_day' : 
                    spedizione.tipoSpedizione === 'next_day' ? 'next_day' : 'standard'),
     cash_on_delivery: !!spedizione.contrassegno,
-    cash_on_delivery_amount: spedizione.contrassegno ? parseFloat(String(spedizione.contrassegno)) : null,
+    // ⚠️ CRITICO: Assicura che cash_on_delivery_amount sia sempre un numero o null, mai false
+    cash_on_delivery_amount: toNumberOrNull(spedizione.contrassegno),
     insurance: !!spedizione.assicurazione,
-    declared_value: spedizione.valoreDichiarato ? parseFloat(String(spedizione.valoreDichiarato)) : (spedizione.assicurazione ? parseFloat(String(spedizione.assicurazione)) : null),
+    // ⚠️ CRITICO: Assicura che declared_value sia sempre un numero o null, mai false
+    declared_value: toNumberOrNull(spedizione.valoreDichiarato) || toNumberOrNull(spedizione.assicurazione),
     currency: 'EUR', // Default EUR
-    // Pricing
-    base_price: spedizione.prezzoBase || null,
-    surcharges: (spedizione.costoContrassegno || 0) + (spedizione.costoAssicurazione || 0),
-    total_cost: (spedizione.prezzoBase || 0) + (spedizione.costoContrassegno || 0) + (spedizione.costoAssicurazione || 0),
-    final_price: spedizione.prezzoFinale || spedizione.totale_ordine || spedizione.costo || 0,
-    margin_percent: spedizione.margine || 15,
+    // Pricing - ⚠️ CRITICO: Assicura che tutti i campi pricing siano sempre numeri o null, mai false
+    base_price: toNumberOrNull(spedizione.prezzoBase),
+    surcharges: toNumberOrZero(spedizione.costoContrassegno) + toNumberOrZero(spedizione.costoAssicurazione),
+    total_cost: toNumberOrZero(spedizione.prezzoBase) + toNumberOrZero(spedizione.costoContrassegno) + toNumberOrZero(spedizione.costoAssicurazione),
+    final_price: toNumberOrZero(spedizione.prezzoFinale) || toNumberOrZero(spedizione.totale_ordine) || toNumberOrZero(spedizione.costo),
+    margin_percent: toNumberOrNull(spedizione.margine) || 15,
     // E-commerce (per order_reference visto negli screenshot)
     ecommerce_order_number: spedizione.order_id || spedizione.order_reference || spedizione.rif_destinatario || null,
     ecommerce_order_id: spedizione.order_id || null,
