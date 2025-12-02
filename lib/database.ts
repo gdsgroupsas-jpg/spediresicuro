@@ -881,22 +881,34 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
       try {
         const supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
         if (supabaseUserId) {
-          query = query.eq('user_id', supabaseUserId);
-          console.log(`✅ [SUPABASE] Filtro per user_id: ${supabaseUserId.substring(0, 8)}...`);
+          // Filtra per user_id (include anche spedizioni con user_id null se created_by_user_email corrisponde)
+          query = query.or(`user_id.eq.${supabaseUserId},and(user_id.is.null,created_by_user_email.eq.${userEmail})`);
+          console.log(`✅ [SUPABASE] Filtro per user_id: ${supabaseUserId.substring(0, 8)}... (include anche user_id null con email corrispondente)`);
         } else {
-          // Se non trovato user_id, prova a filtrare per email
+          // Se non trovato user_id, filtra per email (include anche spedizioni con user_id null)
           query = query.eq('created_by_user_email', userEmail);
-          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per ${userEmail}, filtro per email`);
+          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per ${userEmail}, filtro per created_by_user_email`);
         }
       } catch (userIdError: any) {
         console.warn(`⚠️ [SUPABASE] Errore recupero user_id per ${userEmail}:`, userIdError.message);
         // Continua senza filtro user_id, filtra solo per email
         query = query.eq('created_by_user_email', userEmail);
+        console.log(`🔄 [SUPABASE] Filtro fallback: created_by_user_email = ${userEmail}`);
       }
     }
 
     console.log('🔄 [SUPABASE] Esecuzione query...');
     const { data: supabaseSpedizioni, error } = await query;
+    
+    // ⚠️ DEBUG: Log dettagliato per troubleshooting
+    console.log(`📊 [SUPABASE] Query risultato:`, {
+      count: supabaseSpedizioni?.length || 0,
+      hasError: !!error,
+      errorMessage: error?.message,
+      firstShipmentId: supabaseSpedizioni?.[0]?.id,
+      firstShipmentEmail: supabaseSpedizioni?.[0]?.created_by_user_email,
+      firstShipmentUserId: supabaseSpedizioni?.[0]?.user_id,
+    });
 
     if (error) {
       console.error('❌ [SUPABASE] Errore query:', {
