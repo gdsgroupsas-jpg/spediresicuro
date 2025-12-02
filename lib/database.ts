@@ -323,7 +323,7 @@ function mapStatusFromSupabase(status: string): string {
  * 2. Se non trovato, cerca in auth.users e crea/aggiorna il profilo
  * 3. Crea automaticamente il profilo se l'utente esiste in auth.users
  */
-async function getSupabaseUserIdFromEmail(email: string): Promise<string | null> {
+export async function getSupabaseUserIdFromEmail(email: string): Promise<string | null> {
   try {
     // 1. Cerca prima in user_profiles (veloce grazie all'indice su email)
     const { data: profile, error } = await supabaseAdmin
