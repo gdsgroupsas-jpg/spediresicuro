@@ -12,11 +12,13 @@ import { motion } from 'framer-motion'
 import DashboardNav from '@/components/dashboard-nav'
 import IntegrationCard from '@/components/integrazioni/integration-card'
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
+import CourierAPIForm from '@/components/integrazioni/courier-api-form'
 import { 
   ShoppingBag, 
   Store, 
   Zap,
-  Code
+  Code,
+  Truck
 } from 'lucide-react'
 
 // Piattaforme supportate
@@ -169,6 +171,16 @@ export default function IntegrazioniPage() {
           className="mb-12"
         >
           <UniversalWidgetCard />
+        </motion.div>
+
+        {/* Sezione API Corrieri */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mb-12"
+        >
+          <CourierAPIForm />
         </motion.div>
 
         {/* Grid Integrazioni */}
