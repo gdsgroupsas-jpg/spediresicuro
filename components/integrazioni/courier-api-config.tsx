@@ -273,18 +273,20 @@ export default function CourierAPIConfig() {
       // Salva configurazione usando server action
       const { saveConfiguration } = await import('@/actions/configurations')
       
-      const formDataToSend = new FormData()
-      Object.keys(configData).forEach(key => {
-        if (configData[key] !== null && configData[key] !== undefined) {
-          if (typeof configData[key] === 'object') {
-            formDataToSend.append(key, JSON.stringify(configData[key]))
-          } else {
-            formDataToSend.append(key, String(configData[key]))
-          }
-        }
-      })
+      // Prepara CourierConfigInput
+      const configInput = {
+        name: configData.name,
+        provider_id: configData.provider_id,
+        api_key: configData.api_key,
+        base_url: configData.base_url,
+        contract_mapping: configData.contract_mapping || {},
+        is_active: configData.is_active ?? true,
+        is_default: false,
+        description: configData.description,
+        notes: configData.notes,
+      }
 
-      const result = await saveConfiguration(formDataToSend)
+      const result = await saveConfiguration(configInput)
 
       if (result.success) {
         setResult({
