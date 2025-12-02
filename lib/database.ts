@@ -476,11 +476,11 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     recipient_country: 'IT', // Default Italia
     recipient_phone: destinatario.telefono || spedizione.destinatarioTelefono || spedizione.telefono || '',
     recipient_email: destinatario.email || spedizione.destinatarioEmail || spedizione.email_dest || spedizione.email || '',
-    // Pacco
-    weight: spedizione.peso || 1,
-    length: spedizione.dimensioni?.lunghezza || null,
-    width: spedizione.dimensioni?.larghezza || null,
-    height: spedizione.dimensioni?.altezza || null,
+    // Pacco - ⚠️ CRITICO: Assicura che tutti i campi numerici siano sempre numeri o null, mai false
+    weight: toNumberOrZero(spedizione.peso) || 1,
+    length: toNumberOrNull(spedizione.dimensioni?.lunghezza),
+    width: toNumberOrNull(spedizione.dimensioni?.larghezza),
+    height: toNumberOrNull(spedizione.dimensioni?.altezza),
     // ⚠️ NOTA: packages_count NON esiste nello schema Supabase - rimosso
     // Servizio
     // ⚠️ courier_id è UUID che fa riferimento a couriers(id) - per ora null (da implementare mapping nome->UUID)
