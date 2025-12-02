@@ -474,18 +474,9 @@ LEFT JOIN public.user_features uf ON uf.user_email = u.email AND uf.is_active = 
 LEFT JOIN public.killer_features kf ON kf.id = uf.feature_id
 GROUP BY u.id, u.email, u.name, u.role, u.provider, u.created_at, u.updated_at, u.last_login_at, up.supabase_user_id;
 
--- Policy per god_view_users (solo admin)
-CREATE POLICY "Solo admin può vedere god_view_users"
-ON public.god_view_users
-FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users 
-    WHERE email = (SELECT auth.email()) 
-    AND role = 'admin'
-  )
-);
+-- ⚠️ NOTA: Le policy RLS non possono essere applicate alle view in PostgreSQL
+-- L'accesso alla view god_view_users deve essere controllato a livello applicativo
+-- Solo gli admin possono accedere a questa view (verificare ruolo nel codice)
 
 -- ============================================
 -- STEP 10: Funzione per Gestione Utenti (God View)
