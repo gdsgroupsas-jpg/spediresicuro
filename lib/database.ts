@@ -505,6 +505,7 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     // E-commerce (per order_reference visto negli screenshot)
     ecommerce_order_number: spedizione.order_id || spedizione.order_reference || spedizione.rif_destinatario || null,
     ecommerce_order_id: spedizione.order_id || null,
+    order_reference: spedizione.order_reference || spedizione.order_id || spedizione.rif_destinatario || null, // ⚠️ Campo obbligatorio in Supabase (ma nullable)
     // Note
     notes: spedizione.note || '',
     // Campi aggiuntivi (salvati in JSONB o come note)
