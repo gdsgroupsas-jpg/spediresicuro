@@ -2,12 +2,12 @@
  * Courier Factory - Database-Backed Provider Instantiation
  * 
  * Factory per istanziare provider corrieri usando configurazioni dinamiche dal database.
- * Sostituisce la dipendenza da variabili d'ambiente statiche.
+ * ⚠️ SOLO DATABASE: Nessun fallback a variabili d'ambiente.
  * 
  * Logica:
  * 1. Recupera configurazione per utente (assigned_config_id o default)
  * 2. Istanzia provider con credenziali dalla configurazione
- * 3. Supporta fallback a variabili d'ambiente se DB non disponibile
+ * 3. Se non trovata, ritorna null (nessun fallback)
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
@@ -30,10 +30,11 @@ export interface CourierConfig {
 /**
  * Recupera configurazione corriere per utente
  * 
+ * ⚠️ SOLO DATABASE: Nessun fallback a variabili d'ambiente.
+ * 
  * Priorità:
  * 1. Configurazione assegnata specificamente all'utente (assigned_config_id)
- * 2. Configurazione default per il provider
- * 3. Fallback a variabili d'ambiente (retrocompatibilità)
+ * 2. Configurazione default per il provider (is_default = true)
  * 
  * @param userId - ID utente
  * @param providerId - ID provider (es: 'spedisci_online')
@@ -77,7 +78,7 @@ export async function getCourierConfigForUser(
       const { data: configData, error: configError } = await query.single();
 
       if (configError || !configData) {
-        console.warn('Nessuna configurazione trovata nel DB, uso fallback env');
+        console.error('❌ Nessuna configurazione trovata nel DB');
         return null;
       }
 
