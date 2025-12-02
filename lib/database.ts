@@ -508,6 +508,8 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     order_reference: spedizione.order_reference || spedizione.order_id || spedizione.rif_destinatario || null, // ⚠️ Campo obbligatorio in Supabase (ma nullable)
     // Note
     notes: spedizione.note || '',
+    // ⚠️ CRITICO: Audit Trail - created_by_user_email (per multi-tenancy quando user_id è null)
+    created_by_user_email: spedizione.created_by_user_email || null,
     // Campi aggiuntivi (salvati in JSONB o come note)
     // Nota: packages_count (colli) non esiste nello schema Supabase - non può essere salvato
   };
