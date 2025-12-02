@@ -441,6 +441,18 @@ USING (true);
 -- STEP 9: View per God View (Admin Dashboard)
 -- ============================================
 
+-- Prima verifica se la colonna last_login_at esiste, altrimenti creala
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'last_login_at'
+  ) THEN
+    ALTER TABLE public.users ADD COLUMN last_login_at TIMESTAMPTZ;
+    RAISE NOTICE '✅ Aggiunta colonna last_login_at a users';
+  END IF;
+END $$;
+
 CREATE OR REPLACE VIEW public.god_view_users AS
 SELECT 
   u.id,
@@ -458,7 +470,7 @@ SELECT
 FROM public.users u
 LEFT JOIN public.user_profiles up ON u.email = up.email
 LEFT JOIN public.shipments s ON s.user_id = u.id OR s.created_by_user_email = u.email
-LEFT JOIN public.user_features uf ON uf.user_email = u.email
+LEFT JOIN public.user_features uf ON uf.user_email = u.email AND uf.is_active = true
 LEFT JOIN public.killer_features kf ON kf.id = uf.feature_id
 GROUP BY u.id, u.email, u.name, u.role, u.provider, u.created_at, u.updated_at, u.last_login_at, up.supabase_user_id;
 
