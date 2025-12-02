@@ -378,8 +378,17 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
+    console.log(`🗑️ [API] DELETE richiesto per ID: ${id}`);
+
     if (!id) {
+      console.error('❌ [API] ID spedizione mancante nella query string');
       return NextResponse.json({ error: 'ID spedizione mancante' }, { status: 400 });
+    }
+
+    // Valida formato ID (UUID o stringa)
+    if (typeof id !== 'string' || id.trim() === '') {
+      console.error('❌ [API] ID spedizione non valido:', id);
+      return NextResponse.json({ error: 'ID spedizione non valido' }, { status: 400 });
     }
 
     // ⚠️ CRITICO: Usa SOLO Supabase per soft delete
