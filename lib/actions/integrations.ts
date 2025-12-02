@@ -303,7 +303,7 @@ export async function saveIntegration(provider: string, credentials: any) {
 
     // 7. Fallback al database JSON locale se necessario
     if (useLocalFallback) {
-      const localUser = findUserByEmail(session.user.email)
+      const localUser = await findUserByEmail(session.user.email)
       if (!localUser) {
         throw new Error('Utente non trovato')
       }
@@ -325,7 +325,7 @@ export async function saveIntegration(provider: string, credentials: any) {
         integrations.push(integration)
       }
 
-      updateUser(localUser.id, {
+      await updateUser(localUser.id, {
         integrazioni: integrations,
       })
 
@@ -417,7 +417,7 @@ export async function getIntegrations() {
       // Fallback: usa database locale se Supabase non è configurato
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       if (!supabaseUrl) {
-        const user = findUserByEmail(session.user.email)
+        const user = await findUserByEmail(session.user.email)
         if (!user) {
           return {
             success: true,
@@ -447,7 +447,7 @@ export async function getIntegrations() {
     if (error) {
       console.error('Errore Supabase select:', error)
       // Fallback al database locale in caso di errore
-      const user = findUserByEmail(session.user.email)
+      const user = await findUserByEmail(session.user.email)
       return {
         success: true,
         integrations: user?.integrazioni || [],
@@ -472,7 +472,7 @@ export async function getIntegrations() {
     try {
       const session = await auth()
       if (session?.user?.email) {
-        const user = findUserByEmail(session.user.email)
+        const user = await findUserByEmail(session.user.email)
         return {
           success: true,
           integrations: user?.integrazioni || [],

@@ -9,6 +9,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import { readDatabase, writeDatabase, type DefaultSender } from '@/lib/database';
 
+// ⚠️ IMPORTANTE: Questa route usa headers() per l'autenticazione, quindi deve essere dinamica
+export const dynamic = 'force-dynamic';
+
 /**
  * GET - Recupera impostazioni utente
  */
