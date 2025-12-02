@@ -64,6 +64,10 @@ async function executeSQL(supabase: ReturnType<typeof createClient>, sql: string
 
 /**
  * Esegue SQL dividendolo in parti (per query che non supportano RPC)
+ * 
+ * ⚠️ IMPORTANTE: Supabase NON supporta l'esecuzione di DDL (CREATE TABLE, ALTER, DROP)
+ * via API REST. Le query DDL devono essere eseguite manualmente nel SQL Editor.
+ * Questa funzione serve solo per informare l'utente.
  */
 async function executeSQLByParts(
   supabase: ReturnType<typeof createClient>,
@@ -75,58 +79,29 @@ async function executeSQLByParts(
     .map((q) => q.trim())
     .filter((q) => q.length > 0 && !q.startsWith('--'));
 
-  console.log(`\n📝 Eseguo ${queries.length} query SQL...\n`);
+  console.log(`\n📝 Trovate ${queries.length} query SQL nello schema...\n`);
 
-  for (let i = 0; i < queries.length; i++) {
-    const query = queries[i];
-    
-    // Salta commenti e istruzioni che non possiamo eseguire via client
-    if (
-      query.startsWith('COMMENT') ||
-      query.startsWith('--') ||
-      query.toLowerCase().includes('create extension')
-    ) {
-      console.log(`⏭️  Query ${i + 1} saltata (non eseguibile via client)`);
-      continue;
-    }
+  // Conta query DDL
+  const ddlQueries = queries.filter((q) => {
+    const lower = q.toLowerCase();
+    return (
+      lower.startsWith('create') ||
+      lower.startsWith('alter') ||
+      lower.startsWith('drop') ||
+      lower.startsWith('comment')
+    );
+  });
 
-    try {
-      // Per CREATE TABLE, INDEX, etc. dobbiamo usare l'API REST direttamente
-      if (
-        query.toLowerCase().startsWith('create') ||
-        query.toLowerCase().startsWith('alter') ||
-        query.toLowerCase().startsWith('drop')
-      ) {
-        console.log(`🔧 Query ${i + 1}/${queries.length}: ${query.substring(0, 50)}...`);
-        
-        // Usa l'API REST di Supabase per DDL
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_SERVICE_KEY!,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({ query }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          // Se è un errore "already exists", va bene
-          if (!errorText.includes('already exists') && !errorText.includes('duplicate')) {
-            console.warn(`⚠️  Query ${i + 1} ha generato warning: ${errorText.substring(0, 100)}`);
-          } else {
-            console.log(`✅ Query ${i + 1} completata (già esistente)`);
-          }
-        } else {
-          console.log(`✅ Query ${i + 1} completata`);
-        }
-      }
-    } catch (error) {
-      console.warn(`⚠️  Errore query ${i + 1}:`, error instanceof Error ? error.message : error);
-    }
+  if (ddlQueries.length > 0) {
+    console.log('⚠️  IMPORTANTE: Supabase non supporta l\'esecuzione di DDL via API\n');
+    console.log(`   Trovate ${ddlQueries.length} query DDL che devono essere eseguite manualmente.\n`);
+    console.log('   Le query DDL (CREATE TABLE, ALTER, DROP) devono essere eseguite');
+    console.log('   direttamente nel SQL Editor del dashboard Supabase.\n');
+    return; // Esci, non possiamo eseguire DDL via API
   }
+
+  // Se ci sono solo query SELECT/INSERT/UPDATE, potremmo provare (ma di solito non serve)
+  console.log('ℹ️  Nessuna query DDL trovata. Se ci sono query DML, verranno gestite separatamente.\n');
 }
 
 /**
