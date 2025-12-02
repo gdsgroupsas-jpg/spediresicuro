@@ -657,6 +657,15 @@ BEGIN
     RAISE NOTICE '✅ Aggiunto campo: volumetric_weight';
   END IF;
   
+  -- Notes (campo principale)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'notes'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN notes TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: notes';
+  END IF;
+  
   -- Internal notes
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
