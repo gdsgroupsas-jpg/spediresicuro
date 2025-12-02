@@ -13,6 +13,10 @@ import fs from 'fs';
 import path from 'path';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
+// --- CONFIGURAZIONE AMBIENTE ---
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+
 // Percorso del file database JSON
 const DB_PATH = path.join(process.cwd(), 'data', 'database.json');
 
@@ -121,8 +125,8 @@ export interface User {
 
 // Inizializza il database se non esiste
 function initDatabase(): Database {
-  // Utenti demo solo in sviluppo locale (non in produzione)
-  const demoUsers: User[] = process.env.NODE_ENV === 'development' ? [
+      // Utenti demo solo in sviluppo locale (non in produzione)
+      const demoUsers: User[] = IS_DEVELOPMENT ? [
     {
       id: '1',
       email: 'admin@spediresicuro.it',
@@ -181,7 +185,7 @@ export function readDatabase(): Database {
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
       // Utenti demo solo in sviluppo locale (non in produzione)
-      db.utenti = process.env.NODE_ENV === 'development' ? [
+      db.utenti = IS_DEVELOPMENT ? [
         {
           id: '1',
           email: 'admin@spediresicuro.it',
