@@ -285,7 +285,7 @@ export default function CookieBanner() {
                     </h3>
                     <p className="text-sm text-gray-600 mb-2">
                       Questi cookie vengono utilizzati per mostrarti annunci pubblicitari 
-                      rilevanti e tracciare l'efficacia delle campagne pubblicitarie.
+                      rilevanti e tracciare l&apos;efficacia delle campagne pubblicitarie.
                     </p>
                     <p className="text-xs text-gray-500">
                       Esempi: Facebook Pixel, Google Ads

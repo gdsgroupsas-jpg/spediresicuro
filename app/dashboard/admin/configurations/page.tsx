@@ -330,7 +330,7 @@ export default function ConfigurationsPage() {
                 <p className="text-sm text-blue-800 leading-relaxed">
                   Gestisci configurazioni API corrieri in modo dinamico. Ogni configurazione può essere 
                   assegnata a utenti specifici o impostata come default per un provider. 
-                  Questo sistema sostituisce le variabili d'ambiente statiche.
+                  Questo sistema sostituisce le variabili d&apos;ambiente statiche.
                 </p>
               </div>
             </div>
