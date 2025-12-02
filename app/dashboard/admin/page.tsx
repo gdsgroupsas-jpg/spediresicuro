@@ -754,7 +754,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="p-6">
                 <p className="text-gray-700 mb-4">
-                  Sei sicuro di voler cancellare l'account di <strong>{selectedUser.email}</strong>?
+                  Sei sicuro di voler cancellare l&apos;account di <strong>{selectedUser.email}</strong>?
                   <br />
                   <span className="text-sm text-red-600">Tutte le spedizioni verranno eliminate.</span>
                 </p>
