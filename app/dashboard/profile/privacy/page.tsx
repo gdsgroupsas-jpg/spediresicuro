@@ -209,7 +209,7 @@ export default function PrivacyPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Elimina il mio account (Diritto all'Oblio)
+                  Elimina il mio account (Diritto all&apos;Oblio)
                 </h3>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
                   Puoi richiedere la cancellazione del tuo account. I tuoi dati personali 

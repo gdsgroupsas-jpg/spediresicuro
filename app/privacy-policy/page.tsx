@@ -152,7 +152,7 @@ export default function PrivacyPolicyPage() {
           {/* Sezione 6: Diritti dell'Interessato */}
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              6. Diritti dell'Interessato (Art. 15-22 GDPR)
+              6. Diritti dell&apos;Interessato (Art. 15-22 GDPR)
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>Hai diritto a:</p>
