@@ -150,7 +150,7 @@ export default function ScannerLDV({ onClose, onSuccess }: ScannerLDVProps) {
 
     try {
       // Decodifica continua dal video stream
-      await codeReaderRef.current.decodeFromVideoStream(
+      await codeReaderRef.current.decodeFromStream(
         undefined,
         videoRef.current,
         (result, err) => {
