@@ -10,7 +10,7 @@ import { createUser, findUserByEmail } from '@/lib/database';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name } = body;
+    const { email, password, name, accountType } = body;
 
     console.log('📝 [REGISTER] Tentativo registrazione:', { email, hasPassword: !!password, hasName: !!name });
 
@@ -58,13 +58,18 @@ export async function POST(request: NextRequest) {
       // Continua comunque, potrebbe essere un errore temporaneo
     }
 
+    // Validazione accountType
+    const validAccountType = accountType === 'admin' ? 'admin' : 'user';
+    const role = validAccountType === 'admin' ? 'admin' : 'user';
+
     // Crea nuovo utente
-    console.log('➕ [REGISTER] Creazione nuovo utente...');
+    console.log('➕ [REGISTER] Creazione nuovo utente...', { email, accountType: validAccountType });
     const newUser = await createUser({
       email,
       password, // TODO: Hash con bcrypt in produzione
       name,
-      role: 'user',
+      role,
+      accountType: validAccountType,
     });
 
     console.log('✅ [REGISTER] Utente creato con successo:', newUser.email);

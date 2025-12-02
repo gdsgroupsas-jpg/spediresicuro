@@ -12,7 +12,8 @@ export type ShipmentStatus =
   | 'delivered'
   | 'failed'
   | 'cancelled'
-  | 'returned';
+  | 'returned'
+  | 'scanned_at_pickup';
 
 export type RecipientType = 'B2C' | 'B2B';
 
@@ -23,6 +24,7 @@ export interface Shipment {
   user_id: string;
   tracking_number: string;
   external_tracking_number?: string;
+  ldv?: string; // Lettera di Vettura (per scansione)
   status: ShipmentStatus;
 
   // Mittente
@@ -96,6 +98,17 @@ export interface Shipment {
   delivered_at?: string;
   created_at: string;
   updated_at: string;
+
+  // Logistica e Ritiro
+  pickup_time?: string; // Timestamp UTC del ritiro
+  gps_location?: string; // Formato: "lat,lng" (es. "45.4642,9.1900")
+  picked_up_by?: string; // ID o nome dell'operatore che ha ritirato
+
+  // Resi
+  is_return?: boolean; // Flag per identificare spedizioni di reso
+  original_shipment_id?: string; // UUID o tracking della spedizione originale
+  return_reason?: string; // Motivo del reso
+  return_status?: 'requested' | 'processing' | 'completed' | 'cancelled'; // Stato del reso
 
   // Audit Trail - Tracciamento completo
   created_by_user_id: string;

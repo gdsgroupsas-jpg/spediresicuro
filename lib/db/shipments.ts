@@ -87,16 +87,59 @@ export async function getShipmentByTracking(trackingNumber: string): Promise<Shi
 }
 
 /**
+ * Ottiene tutti gli ID utenti nella gerarchia (incluso l'utente stesso)
+ * Se l'utente è admin, include anche tutti i sotto-admin fino a 5 livelli
+ */
+async function getHierarchyUserIds(userId: string, includeSubAdmins: boolean = true): Promise<string[]> {
+  if (!includeSubAdmins) {
+    return [userId]
+  }
+
+  try {
+    // Verifica se l'utente è admin
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('account_type')
+      .eq('id', userId)
+      .single()
+
+    // Se non è admin, ritorna solo l'ID utente
+    if (!user || (user.account_type !== 'admin' && user.account_type !== 'superadmin')) {
+      return [userId]
+    }
+
+    // Se è admin, ottieni tutti i sotto-admin
+    const { data: subAdmins } = await supabaseAdmin.rpc('get_all_sub_admins', {
+      p_admin_id: userId,
+      p_max_level: 5,
+    })
+
+    // Include anche l'admin stesso
+    const allIds = [userId, ...(subAdmins?.map((u: any) => u.id) || [])]
+    return allIds
+  } catch (error: any) {
+    console.error('Errore recupero gerarchia:', error)
+    // In caso di errore, ritorna solo l'ID utente
+    return [userId]
+  }
+}
+
+/**
  * Lista spedizioni con filtri
+ * Se l'utente è admin, include anche le spedizioni dei sotto-admin
  */
 export async function listShipments(
   userId: string,
-  filters?: ShipmentFilters
+  filters?: ShipmentFilters,
+  includeSubAdmins: boolean = true
 ): Promise<{ shipments: Shipment[]; total: number }> {
+  // Ottieni tutti gli ID della gerarchia
+  const hierarchyIds = await getHierarchyUserIds(userId, includeSubAdmins)
+
   let query = supabase
     .from('shipments')
     .select('*, courier:couriers(*)', { count: 'exact' })
-    .eq('user_id', userId);
+    .in('user_id', hierarchyIds);
 
   // Applica filtri
   if (filters?.status) {
@@ -232,12 +275,20 @@ export async function getShipmentEvents(shipmentId: string) {
 
 /**
  * Statistiche spedizioni per dashboard
+ * Se l'utente è admin, include anche le statistiche dei sotto-admin
  */
-export async function getShipmentStats(userId: string, period: 'today' | 'week' | 'month' | 'all' = 'all') {
+export async function getShipmentStats(
+  userId: string,
+  period: 'today' | 'week' | 'month' | 'all' = 'all',
+  includeSubAdmins: boolean = true
+) {
+  // Ottieni tutti gli ID della gerarchia
+  const hierarchyIds = await getHierarchyUserIds(userId, includeSubAdmins)
+
   let query = supabase
     .from('shipments')
-    .select('status, final_price, created_at')
-    .eq('user_id', userId);
+    .select('status, final_price, created_at, user_id')
+    .in('user_id', hierarchyIds);
 
   // Filtra per periodo
   const now = new Date();

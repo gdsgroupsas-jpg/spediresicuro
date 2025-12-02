@@ -424,6 +424,7 @@ export default function AdminDashboardPage() {
           showBackButton={true}
         />
 
+
         {/* Stat Cards - Utenti */}
         <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -916,6 +917,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

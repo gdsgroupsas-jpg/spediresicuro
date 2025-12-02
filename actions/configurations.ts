@@ -1,0 +1,480 @@
+'use server';
+
+/**
+ * Server Actions per Gestione Configurazioni Corrieri
+ * 
+ * CRUD completo per configurazioni API corrieri gestite dinamicamente.
+ * Solo gli admin possono eseguire queste operazioni.
+ */
+
+import { auth } from '@/lib/auth-config';
+import { supabaseAdmin } from '@/lib/db/client';
+import { findUserByEmail } from '@/lib/database';
+
+// Tipi per le configurazioni
+export interface CourierConfigInput {
+  id?: string; // Se presente, è un update
+  name: string;
+  provider_id: string;
+  api_key: string;
+  api_secret?: string;
+  base_url: string;
+  contract_mapping: Record<string, string>; // Es: { "poste": "CODE123", "gls": "CODE456" }
+  is_active?: boolean;
+  is_default?: boolean;
+  description?: string;
+  notes?: string;
+}
+
+export interface CourierConfig {
+  id: string;
+  name: string;
+  provider_id: string;
+  api_key: string; // ⚠️ In produzione, considerare mascherare o non esporre
+  api_secret?: string;
+  base_url: string;
+  contract_mapping: Record<string, string>;
+  is_active: boolean;
+  is_default: boolean;
+  description?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+/**
+ * Verifica se l'utente corrente è admin
+ */
+async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }> {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.email) {
+      return { isAdmin: false, error: 'Non autenticato' };
+    }
+
+    const user = await findUserByEmail(session.user.email);
+    
+    if (!user || user.role !== 'admin') {
+      return { isAdmin: false, error: 'Accesso negato. Solo gli admin possono gestire le configurazioni.' };
+    }
+
+    return { isAdmin: true };
+  } catch (error: any) {
+    console.error('Errore verifica admin:', error);
+    return { isAdmin: false, error: error.message || 'Errore verifica permessi' };
+  }
+}
+
+/**
+ * Server Action: Salva configurazione (Create o Update)
+ * 
+ * @param data - Dati configurazione
+ * @returns Risultato operazione
+ */
+export async function saveConfiguration(
+  data: CourierConfigInput
+): Promise<{
+  success: boolean;
+  config?: CourierConfig;
+  error?: string;
+}> {
+  try {
+    // 1. Verifica permessi admin
+    const { isAdmin, error: authError } = await verifyAdminAccess();
+    if (!isAdmin) {
+      return { success: false, error: authError };
+    }
+
+    const session = await auth();
+    const adminEmail = session?.user?.email || 'system';
+
+    // 2. Validazione input
+    if (!data.name || !data.provider_id || !data.api_key || !data.base_url) {
+      return {
+        success: false,
+        error: 'Campi obbligatori mancanti: name, provider_id, api_key, base_url',
+      };
+    }
+
+    // 3. Se è un update, verifica che la configurazione esista
+    if (data.id) {
+      const { data: existingConfig, error: fetchError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('id')
+        .eq('id', data.id)
+        .single();
+
+      if (fetchError || !existingConfig) {
+        return {
+          success: false,
+          error: 'Configurazione non trovata',
+        };
+      }
+    }
+
+    // 4. Se is_default = true, rimuovi default da altre config dello stesso provider
+    if (data.is_default) {
+      await supabaseAdmin
+        .from('courier_configs')
+        .update({ is_default: false })
+        .eq('provider_id', data.provider_id)
+        .neq('id', data.id || '00000000-0000-0000-0000-000000000000'); // Evita conflitto se è nuovo
+    }
+
+    // 5. Prepara dati per insert/update
+    const configData: any = {
+      name: data.name,
+      provider_id: data.provider_id,
+      api_key: data.api_key,
+      base_url: data.base_url,
+      contract_mapping: data.contract_mapping || {},
+      is_active: data.is_active ?? true,
+      is_default: data.is_default ?? false,
+      description: data.description || null,
+      notes: data.notes || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Aggiungi api_secret se fornito
+    if (data.api_secret) {
+      configData.api_secret = data.api_secret;
+    }
+
+    // 6. Esegui insert o update
+    let result;
+    if (data.id) {
+      // Update
+      const { data: updatedConfig, error: updateError } = await supabaseAdmin
+        .from('courier_configs')
+        .update(configData)
+        .eq('id', data.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Errore update configurazione:', updateError);
+        return {
+          success: false,
+          error: updateError.message || 'Errore durante l\'aggiornamento',
+        };
+      }
+
+      result = updatedConfig;
+    } else {
+      // Insert
+      configData.created_by = adminEmail;
+      const { data: newConfig, error: insertError } = await supabaseAdmin
+        .from('courier_configs')
+        .insert(configData)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Errore inserimento configurazione:', insertError);
+        return {
+          success: false,
+          error: insertError.message || 'Errore durante la creazione',
+        };
+      }
+
+      result = newConfig;
+    }
+
+    console.log(`✅ Configurazione ${data.id ? 'aggiornata' : 'creata'}:`, result.id);
+
+    return {
+      success: true,
+      config: result as CourierConfig,
+    };
+  } catch (error: any) {
+    console.error('Errore saveConfiguration:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante il salvataggio',
+    };
+  }
+}
+
+/**
+ * Server Action: Elimina configurazione
+ * 
+ * ⚠️ Verifica se la configurazione è in uso prima di eliminare
+ * 
+ * @param id - ID configurazione da eliminare
+ * @returns Risultato operazione
+ */
+export async function deleteConfiguration(
+  id: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  message?: string;
+}> {
+  try {
+    // 1. Verifica permessi admin
+    const { isAdmin, error: authError } = await verifyAdminAccess();
+    if (!isAdmin) {
+      return { success: false, error: authError };
+    }
+
+    // 2. Verifica se la configurazione esiste
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('id, name, provider_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    // 3. Verifica se è in uso (assegnata ad utenti)
+    const { data: usersUsingConfig, error: usersError } = await supabaseAdmin
+      .from('users')
+      .select('id, email')
+      .eq('assigned_config_id', id)
+      .limit(1);
+
+    if (usersError) {
+      console.error('Errore verifica utenti:', usersError);
+    }
+
+    if (usersUsingConfig && usersUsingConfig.length > 0) {
+      return {
+        success: false,
+        error: `Impossibile eliminare: la configurazione è assegnata a ${usersUsingConfig.length} utente/i. 
+                Rimuovi prima l'assegnazione agli utenti.`,
+      };
+    }
+
+    // 4. Se è default, non permettere eliminazione (o richiedere conferma speciale)
+    if (config.provider_id) {
+      const { data: defaultCheck } = await supabaseAdmin
+        .from('courier_configs')
+        .select('is_default')
+        .eq('id', id)
+        .single();
+
+      if (defaultCheck?.is_default) {
+        return {
+          success: false,
+          error: 'Impossibile eliminare la configurazione default. Imposta prima un\'altra configurazione come default.',
+        };
+      }
+    }
+
+    // 5. Elimina configurazione
+    const { error: deleteError } = await supabaseAdmin
+      .from('courier_configs')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Errore eliminazione configurazione:', deleteError);
+      return {
+        success: false,
+        error: deleteError.message || 'Errore durante l\'eliminazione',
+      };
+    }
+
+    console.log(`✅ Configurazione eliminata:`, id);
+
+    return {
+      success: true,
+      message: 'Configurazione eliminata con successo',
+    };
+  } catch (error: any) {
+    console.error('Errore deleteConfiguration:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'eliminazione',
+    };
+  }
+}
+
+/**
+ * Server Action: Assegna configurazione a utente
+ * 
+ * @param userId - ID utente
+ * @param configId - ID configurazione (null per rimuovere assegnazione)
+ * @returns Risultato operazione
+ */
+export async function assignConfigurationToUser(
+  userId: string,
+  configId: string | null
+): Promise<{
+  success: boolean;
+  error?: string;
+  message?: string;
+}> {
+  try {
+    // 1. Verifica permessi admin
+    const { isAdmin, error: authError } = await verifyAdminAccess();
+    if (!isAdmin) {
+      return { success: false, error: authError };
+    }
+
+    // 2. Verifica che l'utente esista
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return {
+        success: false,
+        error: 'Utente non trovato',
+      };
+    }
+
+    // 3. Se configId è fornito, verifica che la configurazione esista e sia attiva
+    if (configId) {
+      const { data: config, error: configError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('id, is_active')
+        .eq('id', configId)
+        .single();
+
+      if (configError || !config) {
+        return {
+          success: false,
+          error: 'Configurazione non trovata',
+        };
+      }
+
+      if (!config.is_active) {
+        return {
+          success: false,
+          error: 'Impossibile assegnare una configurazione inattiva',
+        };
+      }
+    }
+
+    // 4. Aggiorna utente
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ assigned_config_id: configId })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Errore assegnazione configurazione:', updateError);
+      return {
+        success: false,
+        error: updateError.message || 'Errore durante l\'assegnazione',
+      };
+    }
+
+    console.log(`✅ Configurazione ${configId ? 'assegnata' : 'rimossa'} per utente:`, userId);
+
+    return {
+      success: true,
+      message: configId 
+        ? 'Configurazione assegnata con successo' 
+        : 'Assegnazione rimossa con successo',
+    };
+  } catch (error: any) {
+    console.error('Errore assignConfigurationToUser:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'assegnazione',
+    };
+  }
+}
+
+/**
+ * Server Action: Lista tutte le configurazioni (solo admin)
+ * 
+ * @returns Lista configurazioni
+ */
+export async function listConfigurations(): Promise<{
+  success: boolean;
+  configs?: CourierConfig[];
+  error?: string;
+}> {
+  try {
+    // 1. Verifica permessi admin
+    const { isAdmin, error: authError } = await verifyAdminAccess();
+    if (!isAdmin) {
+      return { success: false, error: authError };
+    }
+
+    // 2. Recupera tutte le configurazioni
+    const { data: configs, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (fetchError) {
+      console.error('Errore recupero configurazioni:', fetchError);
+      return {
+        success: false,
+        error: fetchError.message || 'Errore durante il recupero',
+      };
+    }
+
+    return {
+      success: true,
+      configs: (configs || []) as CourierConfig[],
+    };
+  } catch (error: any) {
+    console.error('Errore listConfigurations:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante il recupero',
+    };
+  }
+}
+
+/**
+ * Server Action: Ottieni configurazione specifica (solo admin)
+ * 
+ * @param id - ID configurazione
+ * @returns Configurazione
+ */
+export async function getConfiguration(
+  id: string
+): Promise<{
+  success: boolean;
+  config?: CourierConfig;
+  error?: string;
+}> {
+  try {
+    // 1. Verifica permessi admin
+    const { isAdmin, error: authError } = await verifyAdminAccess();
+    if (!isAdmin) {
+      return { success: false, error: authError };
+    }
+
+    // 2. Recupera configurazione
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    return {
+      success: true,
+      config: config as CourierConfig,
+    };
+  } catch (error: any) {
+    console.error('Errore getConfiguration:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante il recupero',
+    };
+  }
+}
+

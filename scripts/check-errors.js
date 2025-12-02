@@ -30,3 +30,4 @@ console.log('='.repeat(60));
 console.log(`\n📄 Log completo: ${LOG_FILE}\n`);
 
 
+
