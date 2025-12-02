@@ -10,11 +10,40 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload, CheckSquare, Square, FileDown, CheckCircle2, AlertCircle, ChevronDown, Calendar } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload, CheckSquare, Square, FileDown, CheckCircle2, AlertCircle, ChevronDown, Calendar, ArrowLeftRight, Package, Camera } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
 import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
 import ImportOrders from '@/components/import/import-orders';
+import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
+import dynamic from 'next/dynamic';
+
+// Carica lo scanner solo quando serve (dynamic import per performance)
+const ReturnScanner = dynamic(() => import('@/components/ReturnScanner'), {
+  ssr: false, // Non renderizzare lato server (serve browser per camera)
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600">Caricamento scanner...</p>
+      </div>
+    </div>
+  ),
+});
+
+// Scanner LDV Import (mobile-optimized con real-time)
+const ScannerLDVImport = dynamic(() => import('@/components/ScannerLDVImport'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600">Caricamento scanner...</p>
+      </div>
+    </div>
+  ),
+});
 
 // Interfaccia per una spedizione
 interface Spedizione {
@@ -132,17 +161,65 @@ function ImportedBadge({ imported, verified, platform }: { imported?: boolean; v
   );
 }
 
+// Componente Badge Reso
+function ReturnBadge({ isReturn, returnStatus }: { isReturn?: boolean; returnStatus?: string }) {
+  if (!isReturn) return null;
+
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    requested: {
+      label: 'Reso Richiesto',
+      className: 'bg-orange-50 text-orange-700 border-orange-300',
+    },
+    processing: {
+      label: 'Reso in Elaborazione',
+      className: 'bg-blue-50 text-blue-700 border-blue-300',
+    },
+    completed: {
+      label: 'Reso Completato',
+      className: 'bg-green-50 text-green-700 border-green-300',
+    },
+    cancelled: {
+      label: 'Reso Annullato',
+      className: 'bg-gray-50 text-gray-700 border-gray-300',
+    },
+  };
+
+  const config = returnStatus && statusConfig[returnStatus]
+    ? statusConfig[returnStatus]
+    : {
+        label: 'Reso',
+        className: 'bg-purple-50 text-purple-700 border-purple-300',
+      };
+
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${config.className}`}
+      title="Questa è una spedizione di reso"
+    >
+      <ArrowLeftRight className="w-3 h-3 mr-1" />
+      {config.label}
+    </span>
+  );
+}
+
 export default function ListaSpedizioniPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [spedizioni, setSpedizioni] = useState<Spedizione[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Real-time: userId e killer feature
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hasLDVScanner, setHasLDVScanner] = useState(false);
+  const [showLDVScanner, setShowLDVScanner] = useState(false);
   
   // Filtri e ricerca
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [courierFilter, setCourierFilter] = useState<string>('all');
+  const [returnFilter, setReturnFilter] = useState<string>('all'); // 'all', 'returns', 'no-returns'
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
@@ -162,8 +239,46 @@ export default function ListaSpedizioniPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
 
+  // Modale scanner resi
+  const [showReturnScanner, setShowReturnScanner] = useState(false);
+
   // Menu selezione rapida per periodo
   const [showSelectMenu, setShowSelectMenu] = useState(false);
+
+  // Ottieni userId dalla sessione
+  useEffect(() => {
+    async function getUserId() {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/user/info');
+          if (response.ok) {
+            const data = await response.json();
+            setUserId(data.id || null);
+          }
+        } catch (err) {
+          console.error('Errore recupero userId:', err);
+        }
+      }
+    }
+    getUserId();
+  }, [session]);
+
+  // Verifica killer feature LDV Scanner
+  useEffect(() => {
+    async function checkFeature() {
+      try {
+        const response = await fetch('/api/features/check?feature=ldv_scanner_import');
+        if (response.ok) {
+          const data = await response.json();
+          setHasLDVScanner(data.hasAccess || false);
+        }
+      } catch (err) {
+        console.error('Errore verifica killer feature:', err);
+        setHasLDVScanner(false);
+      }
+    }
+    checkFeature();
+  }, []);
 
   // Carica le spedizioni
   useEffect(() => {
@@ -194,6 +309,38 @@ export default function ListaSpedizioniPage() {
 
     fetchSpedizioni();
   }, []);
+
+  // Listener Real-Time per aggiornamenti automatici (mobile → desktop)
+  useRealtimeShipments({
+    userId: userId || '',
+    enabled: !!userId && !isLoading,
+    onInsert: (shipment: any) => {
+      console.log('📦 [Real-Time] Nuova spedizione importata:', shipment);
+      
+      // Verifica che non sia già nella lista
+      const exists = spedizioni.some(s => s.id === shipment.id || (s as any).tracking === shipment.tracking_number);
+      
+      if (!exists) {
+        // Aggiungi in cima alla lista
+        setSpedizioni(prev => [shipment, ...prev]);
+        
+        // Notifica utente (opzionale, puoi aggiungere toast)
+        console.log('✅ Nuova spedizione aggiunta in tempo reale!');
+      }
+    },
+    onUpdate: (shipment: any) => {
+      console.log('📝 [Real-Time] Spedizione aggiornata:', shipment);
+      // Aggiorna spedizione esistente nella lista
+      setSpedizioni(prev => 
+        prev.map(s => (s.id === shipment.id || (s as any).tracking === shipment.tracking_number) ? shipment : s)
+      );
+    },
+    onDelete: (shipmentId: string) => {
+      console.log('🗑️ [Real-Time] Spedizione eliminata:', shipmentId);
+      // Rimuovi dalla lista
+      setSpedizioni(prev => prev.filter(s => s.id !== shipmentId));
+    },
+  });
 
   // Formatta data
   const formatDate = (dateString: string) => {
@@ -413,8 +560,15 @@ export default function ListaSpedizioniPage() {
       filtered = filtered.filter((s) => (s.corriere || '').toLowerCase() === courierFilter.toLowerCase());
     }
 
+    // Filtro per resi
+    if (returnFilter === 'returns') {
+      filtered = filtered.filter((s: any) => s.is_return === true);
+    } else if (returnFilter === 'no-returns') {
+      filtered = filtered.filter((s: any) => !s.is_return || s.is_return === false);
+    }
+
     return filtered;
-  }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, customDateFrom, customDateTo]);
+  }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, returnFilter, customDateFrom, customDateTo]);
 
   // Gestione selezione multipla
   const handleToggleSelect = (id: string) => {
@@ -857,6 +1011,25 @@ export default function ListaSpedizioniPage() {
                   )}
                 </div>
               )}
+              {/* Scanner LDV Import (solo se ha la killer feature) */}
+              {hasLDVScanner && (
+                <button
+                  onClick={() => setShowLDVScanner(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all transform hover:scale-105"
+                  title="Importa spedizione tramite scanner barcode/QR (mobile o desktop)"
+                >
+                  <Camera className="w-5 h-5" />
+                  Scanner LDV
+                </button>
+              )}
+              <button
+                onClick={() => setShowReturnScanner(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all transform hover:scale-105"
+                title="Registra un reso tramite scanner"
+              >
+                <ArrowLeftRight className="w-5 h-5" />
+                Registra Reso
+              </button>
               <Link
                 href="/dashboard/spedizioni/nuova"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all transform hover:scale-105"
@@ -922,6 +1095,19 @@ export default function ListaSpedizioniPage() {
                 </select>
               </div>
 
+              {/* Filtro Resi */}
+              <div>
+                <select
+                  value={returnFilter}
+                  onChange={(e) => setReturnFilter(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent bg-white text-gray-900 font-medium"
+                >
+                  <option value="all">Tutte le spedizioni</option>
+                  <option value="returns">Solo resi</option>
+                  <option value="no-returns">Solo normali</option>
+                </select>
+              </div>
+
               {/* Filtro Corriere */}
               <div>
                 <select
@@ -984,7 +1170,7 @@ export default function ListaSpedizioniPage() {
             )}
 
             {/* Risultati filtri */}
-            {(searchQuery || statusFilter !== 'all' || dateFilter !== 'all') && (
+            {(searchQuery || statusFilter !== 'all' || dateFilter !== 'all' || returnFilter !== 'all' || courierFilter !== 'all') && (
               <div className="mt-4 flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                   Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
@@ -995,6 +1181,8 @@ export default function ListaSpedizioniPage() {
                     setSearchQuery('');
                     setStatusFilter('all');
                     setDateFilter('all');
+                    setReturnFilter('all');
+                    setCourierFilter('all');
                   }}
                   className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
                 >
@@ -1289,9 +1477,15 @@ export default function ListaSpedizioniPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge
-                          status={spedizione.status || 'in_preparazione'}
-                        />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <StatusBadge
+                            status={spedizione.status || 'in_preparazione'}
+                          />
+                          <ReturnBadge
+                            isReturn={(spedizione as any).is_return}
+                            returnStatus={(spedizione as any).return_status}
+                          />
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-900 capitalize">
@@ -1607,6 +1801,31 @@ export default function ListaSpedizioniPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal Scanner Resi */}
+        {showReturnScanner && (
+          <ReturnScanner
+            onClose={() => setShowReturnScanner(false)}
+            onSuccess={(returnShipment, originalShipment) => {
+              console.log('Reso registrato:', returnShipment, originalShipment)
+              // Real-time aggiornerà automaticamente la lista
+              // Non serve reload grazie a useRealtimeShipments
+            }}
+          />
+        )}
+
+        {/* Modal Scanner LDV Import (mobile/desktop real-time) */}
+        {showLDVScanner && hasLDVScanner && (
+          <ScannerLDVImport
+            mode="import"
+            onClose={() => setShowLDVScanner(false)}
+            onSuccess={(shipment) => {
+              console.log('✅ Spedizione importata via scanner:', shipment)
+              // Real-time aggiornerà automaticamente la lista
+              // La spedizione apparirà in tempo reale su tutti i dispositivi
+            }}
+          />
         )}
       </div>
     </div>

@@ -21,8 +21,14 @@ const buildTimeUrl = supabaseUrl || 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
 const buildTimeAnonKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder';
 const buildTimeServiceKey = supabaseServiceKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0NTE5MjAwMCwiZXhwIjoxOTYwNzY4MDAwfQ.placeholder';
 
-// Client pubblico (con RLS)
-export const supabase = createClient(buildTimeUrl, buildTimeAnonKey);
+// Client pubblico (con RLS e Realtime abilitato)
+export const supabase = createClient(buildTimeUrl, buildTimeAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // Limita eventi per performance
+    },
+  },
+});
 
 // Client admin (bypassa RLS) - usare solo server-side
 export const supabaseAdmin = createClient(buildTimeUrl, buildTimeServiceKey, {

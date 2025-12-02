@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { LogIn, Mail, Lock, AlertCircle, Loader2, UserPlus, User, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Loader2, UserPlus, User, CheckCircle, Eye, EyeOff, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { LogoHorizontal } from '@/components/logo';
 
@@ -157,6 +157,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountType, setAccountType] = useState<'user' | 'admin'>('user');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -293,6 +294,7 @@ export default function LoginPage() {
             email,
             password,
             name: name.trim(),
+            accountType: accountType,
           }),
         });
 
@@ -310,6 +312,7 @@ export default function LoginPage() {
         setPassword('');
         setConfirmPassword('');
         setName('');
+        setAccountType('user');
         setIsLoading(false);
       } else {
         // Login
@@ -506,6 +509,80 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Tipo Account (solo per registrazione) */}
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Tipo Account
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Account User */}
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('user')}
+                    className={`p-4 border-2 rounded-xl transition-all text-left ${
+                      accountType === 'user'
+                        ? 'border-[#FF9500] bg-orange-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        accountType === 'user' ? 'bg-[#FF9500] text-white' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 mb-1">Account User</div>
+                        <div className="text-xs text-gray-600">
+                          Esperienza base con funzionalità essenziali
+                        </div>
+                      </div>
+                      {accountType === 'user' && (
+                        <div className="flex-shrink-0">
+                          <div className="w-5 h-5 rounded-full bg-[#FF9500] flex items-center justify-center">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Account Admin */}
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('admin')}
+                    className={`p-4 border-2 rounded-xl transition-all text-left ${
+                      accountType === 'admin'
+                        ? 'border-[#FF9500] bg-orange-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        accountType === 'admin' ? 'bg-[#FF9500] text-white' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 mb-1">Account Admin</div>
+                        <div className="text-xs text-gray-600">
+                          Accesso completo + killer features
+                        </div>
+                      </div>
+                      {accountType === 'admin' && (
+                        <div className="flex-shrink-0">
+                          <div className="w-5 h-5 rounded-full bg-[#FF9500] flex items-center justify-center">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Conferma Password (solo per registrazione) */}
             {mode === 'register' && (
