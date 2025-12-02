@@ -81,25 +81,6 @@ export default function DashboardNav({
     }
     checkUserRole();
   }, [session]);
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  // Verifica ruolo utente
-  useEffect(() => {
-    async function checkUserRole() {
-      if (session?.user?.email) {
-        try {
-          const response = await fetch('/api/user/settings');
-          if (response.ok) {
-            const data = await response.json();
-            setUserRole(data.user?.role || null);
-          }
-        } catch (error) {
-          console.error('Errore verifica ruolo:', error);
-        }
-      }
-    }
-    checkUserRole();
-  }, [session]);
 
   // Genera breadcrumbs automatici se non forniti
   const autoBreadcrumbs: BreadcrumbItem[] = breadcrumbs || (() => {
