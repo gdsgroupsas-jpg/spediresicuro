@@ -329,6 +329,116 @@ BEGIN
   -- AGGIUNGI CAMPI OPZIONALI MANCANTI
   -- ============================================
   
+  -- ⚠️ CRITICO: Campi Mittente (usati da mapSpedizioneToSupabase)
+  -- Sender address
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'sender_address'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN sender_address TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: sender_address';
+  END IF;
+  
+  -- Sender city
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'sender_city'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN sender_city TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: sender_city';
+  END IF;
+  
+  -- Sender zip
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'sender_zip'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN sender_zip TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: sender_zip';
+  END IF;
+  
+  -- Sender province
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'sender_province'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN sender_province TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: sender_province';
+  END IF;
+  
+  -- Sender phone
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'sender_phone'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN sender_phone TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: sender_phone';
+  END IF;
+  
+  -- Sender email
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'sender_email'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN sender_email TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: sender_email';
+  END IF;
+  
+  -- ⚠️ CRITICO: Campi Destinatario (usati da mapSpedizioneToSupabase)
+  -- Recipient address
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'recipient_address'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN recipient_address TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: recipient_address';
+  END IF;
+  
+  -- Recipient city
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'recipient_city'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN recipient_city TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: recipient_city';
+  END IF;
+  
+  -- Recipient zip
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'recipient_zip'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN recipient_zip TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: recipient_zip';
+  END IF;
+  
+  -- Recipient province
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'recipient_province'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN recipient_province TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: recipient_province';
+  END IF;
+  
+  -- Recipient phone
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'recipient_phone'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN recipient_phone TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: recipient_phone';
+  END IF;
+  
+  -- Recipient email
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'recipient_email'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN recipient_email TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: recipient_email';
+  END IF;
+  
   -- LDV (Lettera di Vettura)
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
