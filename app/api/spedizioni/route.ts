@@ -392,7 +392,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // ⚠️ CRITICO: Usa SOLO Supabase per soft delete
-    const { supabaseAdmin } = await import('@/lib/supabase-admin');
+    const { supabaseAdmin } = await import('@/lib/supabase');
     
     console.log(`🗑️ [SUPABASE] Soft delete spedizione: ${id}`);
     
