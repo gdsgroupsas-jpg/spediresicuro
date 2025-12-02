@@ -722,20 +722,34 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
 
     const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
     
-    // ⚠️ CRITICO: Verifica e pulisci tutti i campi numerici per evitare "false" come stringa
+    // ⚠️ CRITICO: Verifica e pulisci tutti i campi numerici per evitare "false" come stringa o booleano
     const cleanedPayload: any = {};
+    // Lista COMPLETA di tutti i campi numerici nello schema Supabase shipments
+    const numericFields = [
+      'weight', 'length', 'width', 'height', 'volumetric_weight',
+      'cash_on_delivery_amount', 'declared_value',
+      'base_price', 'surcharges', 'total_cost', 'final_price', 'margin_percent',
+      'courier_quality_score', 'ocr_confidence_score'
+    ];
+    
     for (const [key, value] of Object.entries(supabasePayload)) {
-      // Se il valore è false, null, undefined, o stringa "false", gestiscilo in base al tipo di campo
-      if (value === false || value === 'false') {
-        // Campi numerici devono essere null o 0, non false
-        const numericFields = ['weight', 'length', 'width', 'height', 'cash_on_delivery_amount', 'declared_value', 
-          'base_price', 'surcharges', 'total_cost', 'final_price', 'margin_percent', 'volumetric_weight'];
-        if (numericFields.includes(key)) {
+      // Se è un campo numerico, assicura che sia sempre un numero o null, MAI false o "false"
+      if (numericFields.includes(key)) {
+        if (value === false || value === 'false' || value === '' || value === null || value === undefined) {
           cleanedPayload[key] = null;
+        } else if (typeof value === 'string') {
+          // Se è una stringa, prova a convertirla in numero
+          const num = parseFloat(value);
+          cleanedPayload[key] = isNaN(num) ? null : num;
+        } else if (typeof value === 'number') {
+          // Se è già un numero, mantienilo
+          cleanedPayload[key] = isNaN(value) ? null : value;
         } else {
-          cleanedPayload[key] = value;
+          // Altri tipi → null
+          cleanedPayload[key] = null;
         }
       } else {
+        // Campi non numerici: mantieni il valore originale
         cleanedPayload[key] = value;
       }
     }
