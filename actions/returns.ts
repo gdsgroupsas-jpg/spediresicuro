@@ -202,7 +202,6 @@ export async function processReturnScan(
       // Valore merce
       declared_value: originalShipment.declared_value,
       currency: originalShipment.currency || 'EUR',
-      notes: originalShipment.notes || `Reso: ${returnReason.trim()}`,
       
       // Servizio (stesso corriere)
       courier_id: originalShipment.courier_id,
