@@ -1221,15 +1221,17 @@ COMMENT ON COLUMN shipments.ldv IS 'Lettera di Vettura (LDV) - Tracking original
 -- ⚠️ SICUREZZA: Assicura che la view shipments_active usi SECURITY INVOKER
 DO $$
 BEGIN
-  -- Ricrea la view senza SECURITY DEFINER
+  -- Ricrea la view senza SECURITY DEFINER (usa SECURITY INVOKER esplicito)
   DROP VIEW IF EXISTS shipments_active CASCADE;
   
-  CREATE VIEW shipments_active AS
+  -- Crea view con SECURITY INVOKER esplicito (più sicuro)
+  CREATE VIEW shipments_active
+  WITH (security_invoker = true) AS
   SELECT *
   FROM shipments
   WHERE deleted = false OR deleted IS NULL;
   
-  RAISE NOTICE '✅ View shipments_active ricreata con SECURITY INVOKER (default)';
+  RAISE NOTICE '✅ View shipments_active ricreata con SECURITY INVOKER esplicito';
 END $$;
 
 COMMENT ON VIEW shipments_active IS 'View che mostra solo le spedizioni attive (non eliminate) - SECURITY INVOKER per sicurezza';
