@@ -1170,24 +1170,15 @@ BEGIN
   
   RETURN FOUND;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
+-- ⚠️ NOTA: Rimosso SECURITY DEFINER per sicurezza - la funzione userà i permessi dell'utente chiamante
 
 COMMENT ON FUNCTION soft_delete_shipment IS 'Esegue soft delete di una spedizione';
 
 -- ============================================
--- STEP 7: Crea View per Spedizioni Attive
+-- STEP 7: Crea View per Spedizioni Attive (SPOSTATO DOPO STEP 9)
 -- ============================================
-
--- ⚠️ SICUREZZA: Rimuovi SECURITY DEFINER se presente e ricrea con SECURITY INVOKER
-DROP VIEW IF EXISTS shipments_active CASCADE;
-
-CREATE VIEW shipments_active
-WITH (security_invoker = true) AS
-SELECT *
-FROM shipments
-WHERE deleted = false OR deleted IS NULL;
-
-COMMENT ON VIEW shipments_active IS 'View che mostra solo le spedizioni attive (non eliminate)';
+-- La view viene creata nello STEP 9 per assicurare sicurezza
 
 -- ============================================
 -- STEP 8: Aggiungi RLS Policies (se RLS è abilitato)
