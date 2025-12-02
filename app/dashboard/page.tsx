@@ -17,6 +17,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import DashboardNav from '@/components/dashboard-nav';
 import UserFeaturesList from '@/components/features/user-features-list';
+import { Shield, ArrowRight } from 'lucide-react';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -156,6 +157,7 @@ function ProgressRing({
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({
     totaleSpedizioni: 0,
     spedizioniOggi: 0,
@@ -252,6 +254,24 @@ export default function DashboardPage() {
       return () => clearTimeout(timeoutId);
     }
   }, [status, session, router]);
+
+  // Verifica ruolo utente
+  useEffect(() => {
+    async function checkUserRole() {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/user/settings');
+          if (response.ok) {
+            const data = await response.json();
+            setUserRole(data.role || null);
+          }
+        } catch (error) {
+          console.error('Errore verifica ruolo:', error);
+        }
+      }
+    }
+    checkUserRole();
+  }, [session]);
 
   // Carica dati dashboard
   useEffect(() => {
@@ -767,6 +787,25 @@ export default function DashboardPage() {
                   </div>
                 </Link>
               </div>
+
+              {/* Admin Dashboard Link - Solo per admin */}
+              {userRole === 'admin' && (
+                <div className="mb-8">
+                  <Link
+                    href="/dashboard/admin"
+                    className="flex items-center gap-3 p-6 border-2 border-purple-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg"
+                  >
+                    <div className="p-3 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg group-hover:scale-110 transition-transform shadow-md">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">Admin Dashboard</h3>
+                      <p className="text-sm text-gray-600 mt-1">Gestisci utenti, spedizioni e impostazioni globali</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-purple-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                  </Link>
+                </div>
+              )}
 
               {/* Killer Features Attive */}
               <div className="mb-8">
