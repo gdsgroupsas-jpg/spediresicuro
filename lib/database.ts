@@ -726,7 +726,7 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     const cleanedPayload: any = {};
     // Lista COMPLETA di tutti i campi numerici nello schema Supabase shipments
     const numericFields = [
-      'weight', 'length', 'width', 'height', 'volumetric_weight',
+      'weight', 'length', 'width', 'height', 'volumetric_weight', 'packages_count',
       'cash_on_delivery_amount', 'declared_value',
       'base_price', 'surcharges', 'total_cost', 'final_price', 'margin_percent',
       'courier_quality_score', 'ocr_confidence_score'
@@ -742,15 +742,27 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
           const num = parseFloat(value);
           cleanedPayload[key] = isNaN(num) ? null : num;
         } else if (typeof value === 'number') {
-          // Se è già un numero, mantienilo
+          // Se è già un numero, mantienilo (ma verifica NaN)
           cleanedPayload[key] = isNaN(value) ? null : value;
+        } else if (typeof value === 'boolean') {
+          // Se è un booleano, convertilo in null (non dovrebbe mai succedere)
+          cleanedPayload[key] = null;
         } else {
           // Altri tipi → null
           cleanedPayload[key] = null;
         }
       } else {
-        // Campi non numerici: mantieni il valore originale
+        // Campi non numerici: mantieni il valore originale MA verifica che non ci siano false dove non dovrebbero esserci
         cleanedPayload[key] = value;
+      }
+    }
+    
+    // ⚠️ ULTIMA VERIFICA: Rimuovi esplicitamente qualsiasi campo numerico che potrebbe essere false
+    // Questo è un doppio controllo per sicurezza
+    for (const field of numericFields) {
+      if (cleanedPayload[field] === false || cleanedPayload[field] === 'false') {
+        console.warn(`⚠️ [CLEANUP] Campo numerico ${field} aveva valore false, convertito in null`);
+        cleanedPayload[field] = null;
       }
     }
     
