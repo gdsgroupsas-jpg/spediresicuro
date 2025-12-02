@@ -45,7 +45,7 @@ export default function PrivacyPage() {
       const result = await exportUserData();
 
       if (!result.success) {
-        setExportError(result.error || 'Errore durante l\'export dei dati');
+        setExportError(result.error || 'Errore durante l&apos;export dei dati');
         return;
       }
 
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
       setTimeout(() => setExportSuccess(false), 5000);
     } catch (error: any) {
       console.error('Errore export:', error);
-      setExportError(error.message || 'Errore durante l\'export dei dati');
+        setExportError(error.message || 'Errore durante l&apos;export dei dati');
     } finally {
       setIsExporting(false);
     }
@@ -337,7 +337,7 @@ export default function PrivacyPage() {
               >
                 <h4 className="font-medium text-gray-900 mb-1">Cookie Policy</h4>
                 <p className="text-xs text-gray-600">
-                  Informativa sull'utilizzo dei cookie
+                  Informativa sull&apos;utilizzo dei cookie
                 </p>
               </a>
             </div>
