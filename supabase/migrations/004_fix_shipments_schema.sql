@@ -700,13 +700,15 @@ BEGIN
       AND column_name = 'cash_on_delivery'
       AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
     ) THEN
-      -- Correggi il tipo: prima converte i dati, poi cambia il tipo
+      -- Correggi il tipo: prima rimuovi DEFAULT, poi converte i dati, poi cambia il tipo, poi riaggiungi DEFAULT
+      ALTER TABLE shipments ALTER COLUMN cash_on_delivery DROP DEFAULT;
       ALTER TABLE shipments 
         ALTER COLUMN cash_on_delivery TYPE BOOLEAN 
         USING CASE 
-          WHEN cash_on_delivery::text = 'true' OR cash_on_delivery::text = '1' OR cash_on_delivery::numeric > 0 THEN true
+          WHEN cash_on_delivery::text = 'true' OR cash_on_delivery::text = '1' OR (cash_on_delivery::numeric > 0) THEN true
           ELSE false
         END;
+      ALTER TABLE shipments ALTER COLUMN cash_on_delivery SET DEFAULT false;
       RAISE NOTICE '✅ Corretto tipo di cash_on_delivery da NUMERIC a BOOLEAN';
     END IF;
   END IF;
@@ -735,13 +737,15 @@ BEGIN
       AND column_name = 'insurance'
       AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
     ) THEN
-      -- Correggi il tipo: prima converte i dati, poi cambia il tipo
+      -- Correggi il tipo: prima rimuovi DEFAULT, poi converte i dati, poi cambia il tipo, poi riaggiungi DEFAULT
+      ALTER TABLE shipments ALTER COLUMN insurance DROP DEFAULT;
       ALTER TABLE shipments 
         ALTER COLUMN insurance TYPE BOOLEAN 
         USING CASE 
-          WHEN insurance::text = 'true' OR insurance::text = '1' OR insurance::numeric > 0 THEN true
+          WHEN insurance::text = 'true' OR insurance::text = '1' OR (insurance::numeric > 0) THEN true
           ELSE false
         END;
+      ALTER TABLE shipments ALTER COLUMN insurance SET DEFAULT false;
       RAISE NOTICE '✅ Corretto tipo di insurance da NUMERIC a BOOLEAN';
     END IF;
   END IF;
