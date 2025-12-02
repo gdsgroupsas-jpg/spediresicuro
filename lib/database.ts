@@ -881,11 +881,12 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
       try {
         const supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
         if (supabaseUserId) {
-          // Filtra per user_id (include anche spedizioni con user_id null se created_by_user_email corrisponde)
+          // Filtra per user_id OPPURE (user_id null E created_by_user_email corrispondente)
+          // Usa sintassi PostgREST corretta: or(user_id.eq.uuid,and(user_id.is.null,created_by_user_email.eq.email))
           query = query.or(`user_id.eq.${supabaseUserId},and(user_id.is.null,created_by_user_email.eq.${userEmail})`);
           console.log(`✅ [SUPABASE] Filtro per user_id: ${supabaseUserId.substring(0, 8)}... (include anche user_id null con email corrispondente)`);
         } else {
-          // Se non trovato user_id, filtra per email (include anche spedizioni con user_id null)
+          // Se non trovato user_id, filtra SOLO per email (le spedizioni con user_id null avranno created_by_user_email)
           query = query.eq('created_by_user_email', userEmail);
           console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per ${userEmail}, filtro per created_by_user_email`);
         }
@@ -895,6 +896,9 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
         query = query.eq('created_by_user_email', userEmail);
         console.log(`🔄 [SUPABASE] Filtro fallback: created_by_user_email = ${userEmail}`);
       }
+    } else {
+      // Se non c'è email, mostra tutte le spedizioni (solo per admin)
+      console.log('⚠️ [SUPABASE] Nessuna email fornita, recupero tutte le spedizioni (solo per admin)');
     }
 
     console.log('🔄 [SUPABASE] Esecuzione query...');
