@@ -29,7 +29,23 @@ export async function GET(request: NextRequest) {
     
     if (id) {
       // Restituisci singola spedizione (filtrata per utente autenticato)
-      const spedizioni = await getSpedizioni(session.user.email);
+      let spedizioni: any[] = [];
+      try {
+        spedizioni = await getSpedizioni(session.user.email);
+      } catch (error: any) {
+        console.error('❌ [API] Errore getSpedizioni (singola):', error.message);
+        if (error.message?.includes('Supabase non configurato')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Database non configurato',
+              message: 'Supabase non è configurato. Configura le variabili ambiente necessarie.',
+            },
+            { status: 503 }
+          );
+        }
+        throw error;
+      }
       const spedizione = spedizioni.find((s: any) => s.id === id);
       
       if (!spedizione || spedizione.deleted === true) {
@@ -71,7 +87,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Ottieni spedizioni filtrate per utente autenticato (multi-tenancy)
-    const spedizioni = await getSpedizioni(session.user.email);
+    let spedizioni: any[] = [];
+    try {
+      spedizioni = await getSpedizioni(session.user.email);
+    } catch (error: any) {
+      console.error('❌ [API] Errore getSpedizioni:', error.message);
+      // Se Supabase non è configurato, ritorna array vuoto con messaggio
+      if (error.message?.includes('Supabase non configurato')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Database non configurato',
+            message: 'Supabase non è configurato. Configura le variabili ambiente necessarie.',
+            data: [],
+            count: 0,
+          },
+          { status: 503 }
+        );
+      }
+      // Altrimenti rilancia l'errore
+      throw error;
+    }
 
     // Filtra solo spedizioni non eliminate (deleted deve essere esplicitamente true per essere filtrate)
     const spedizioniAttive = spedizioni.filter((s: any) => {
@@ -130,13 +166,21 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Errore API spedizioni GET:', error);
+    console.error('❌ [API] Errore API spedizioni GET:', error);
+    console.error('❌ [API] Stack:', error instanceof Error ? error.stack : 'N/A');
+    
+    // Messaggio errore più dettagliato
+    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+    const isSupabaseError = errorMessage.includes('Supabase') || errorMessage.includes('supabase');
+    
     return NextResponse.json(
       {
-        error: 'Errore interno del server',
-        message: error instanceof Error ? error.message : 'Errore sconosciuto',
+        success: false,
+        error: isSupabaseError ? 'Errore database Supabase' : 'Errore interno del server',
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
       },
-      { status: 500 }
+      { status: isSupabaseError ? 503 : 500 }
     );
   }
 }
@@ -256,8 +300,15 @@ export async function POST(request: NextRequest) {
       deleted: false,
     };
 
-    // Salva nel database (Supabase + JSON fallback)
-    await addSpedizione(spedizione, session.user.email);
+    // Salva nel database (SOLO Supabase)
+    try {
+      await addSpedizione(spedizione, session.user.email);
+    } catch (error: any) {
+      console.error('❌ [API] Errore addSpedizione:', error.message);
+      console.error('❌ [API] Stack:', error.stack);
+      // Rilancia l'errore con messaggio più chiaro
+      throw error;
+    }
 
     // INVIO AUTOMATICO LDV TRAMITE ORCHESTRATOR (se configurato)
     let ldvResult = null;
@@ -290,13 +341,21 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Errore API spedizioni:', error);
+    console.error('❌ [API] Errore API spedizioni POST:', error);
+    console.error('❌ [API] Stack:', error instanceof Error ? error.stack : 'N/A');
+    
+    // Messaggio errore più dettagliato
+    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+    const isSupabaseError = errorMessage.includes('Supabase') || errorMessage.includes('supabase') || errorMessage.includes('column') || errorMessage.includes('schema');
+    
     return NextResponse.json(
       {
-        error: 'Errore interno del server',
-        message: error instanceof Error ? error.message : 'Errore sconosciuto',
+        success: false,
+        error: isSupabaseError ? 'Errore database Supabase' : 'Errore interno del server',
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
       },
-      { status: 500 }
+      { status: isSupabaseError ? 503 : 500 }
     );
   }
 }

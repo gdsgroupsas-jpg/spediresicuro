@@ -7,13 +7,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
-import { readDatabase, writeDatabase, type DefaultSender } from '@/lib/database';
+import { findUserByEmail, updateUser } from '@/lib/database';
 
 // ⚠️ IMPORTANTE: Questa route usa headers() per l'autenticazione, quindi deve essere dinamica
 export const dynamic = 'force-dynamic';
 
 /**
  * GET - Recupera impostazioni utente
+ * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
  */
 export async function GET(request: NextRequest) {
   try {
@@ -24,11 +25,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    // Carica database
-    const db = readDatabase();
-
-    // Trova utente
-    const user = db.utenti.find((u) => u.email === session.user?.email);
+    // Trova utente in Supabase
+    const user = await findUserByEmail(session.user.email);
 
     if (!user) {
       return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
@@ -43,14 +41,21 @@ export async function GET(request: NextRequest) {
       provider: user.provider,
       image: user.image,
     });
-  } catch (error) {
-    console.error('Errore GET /api/user/settings:', error);
-    return NextResponse.json({ error: 'Errore server' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ [API] Errore GET /api/user/settings:', error);
+    return NextResponse.json(
+      { 
+        error: 'Errore server',
+        message: error instanceof Error ? error.message : 'Errore sconosciuto',
+      },
+      { status: 500 }
+    );
   }
 }
 
 /**
  * PUT - Aggiorna impostazioni utente
+ * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -88,33 +93,31 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Carica database
-    const db = readDatabase();
+    // Trova utente in Supabase
+    const user = await findUserByEmail(session.user.email);
 
-    // Trova utente
-    const userIndex = db.utenti.findIndex((u) => u.email === session.user?.email);
-
-    if (userIndex === -1) {
+    if (!user) {
       return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
     }
 
-    // Aggiorna impostazioni
-    db.utenti[userIndex] = {
-      ...db.utenti[userIndex],
+    // Aggiorna impostazioni in Supabase
+    const updatedUser = await updateUser(user.id, {
       defaultSender: defaultSender || undefined,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Salva database
-    writeDatabase(db);
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Impostazioni salvate con successo',
-      defaultSender: db.utenti[userIndex].defaultSender,
+      defaultSender: updatedUser.defaultSender || null,
     });
-  } catch (error) {
-    console.error('Errore PUT /api/user/settings:', error);
-    return NextResponse.json({ error: 'Errore server' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ [API] Errore PUT /api/user/settings:', error);
+    return NextResponse.json(
+      { 
+        error: 'Errore server',
+        message: error instanceof Error ? error.message : 'Errore sconosciuto',
+      },
+      { status: 500 }
+    );
   }
 }
