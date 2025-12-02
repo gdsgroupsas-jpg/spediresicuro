@@ -32,7 +32,8 @@ import {
   MapPin,
   Phone,
   Mail as MailIcon,
-  FileText as FileTextIcon
+  FileText as FileTextIcon,
+  Shield
 } from 'lucide-react';
 
 interface BreadcrumbItem {
@@ -61,6 +62,44 @@ export default function DashboardNav({
   const [showDatiClienteModal, setShowDatiClienteModal] = useState(false);
   const [datiCliente, setDatiCliente] = useState<any>(null);
   const [isLoadingDati, setIsLoadingDati] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Verifica ruolo utente
+  useEffect(() => {
+    async function checkUserRole() {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/user/settings');
+          if (response.ok) {
+            const data = await response.json();
+            setUserRole(data.role || null);
+          }
+        } catch (error) {
+          console.error('Errore verifica ruolo:', error);
+        }
+      }
+    }
+    checkUserRole();
+  }, [session]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Verifica ruolo utente
+  useEffect(() => {
+    async function checkUserRole() {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/user/settings');
+          if (response.ok) {
+            const data = await response.json();
+            setUserRole(data.user?.role || null);
+          }
+        } catch (error) {
+          console.error('Errore verifica ruolo:', error);
+        }
+      }
+    }
+    checkUserRole();
+  }, [session]);
 
   // Genera breadcrumbs automatici se non forniti
   const autoBreadcrumbs: BreadcrumbItem[] = breadcrumbs || (() => {
@@ -256,6 +295,22 @@ export default function DashboardNav({
               <span className="sm:hidden">Impost.</span>
             </Link>
             
+            {/* Link Admin - Solo per admin */}
+            {userRole === 'admin' && (
+              <Link
+                href="/dashboard/admin"
+                className={`px-3 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all duration-300 shrink-0 whitespace-nowrap ${
+                  pathname === '/dashboard/admin'
+                    ? 'bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 text-white shadow-lg shadow-purple-500/30 transform scale-105'
+                    : 'bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 text-white shadow-lg shadow-purple-500/30 hover:scale-105'
+                }`}
+              >
+                <Shield className="w-3 h-3 lg:w-4 lg:h-4 inline mr-1 lg:mr-1.5" />
+                <span className="hidden sm:inline">Admin</span>
+                <span className="sm:hidden">Admin</span>
+              </Link>
+            )}
+            
             {session && (
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
@@ -344,6 +399,21 @@ export default function DashboardNav({
             <Settings className="w-3 h-3 inline mr-1" />
             Impostazioni
           </Link>
+          
+          {/* Link Admin - Solo per admin (Mobile) */}
+          {userRole === 'admin' && (
+            <Link
+              href="/dashboard/admin"
+              className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-300 ${
+                pathname === '/dashboard/admin'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white shadow-md transform scale-105'
+                  : 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white shadow-md hover:scale-105'
+              }`}
+            >
+              <Shield className="w-3 h-3 inline mr-1" />
+              Admin
+            </Link>
+          )}
           
           {session && (
             <button
