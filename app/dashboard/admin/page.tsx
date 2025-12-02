@@ -32,8 +32,6 @@ import {
   Sparkles,
   Settings,
   Trash2,
-  Edit,
-  MoreVertical,
   Power,
   PowerOff
 } from 'lucide-react';
