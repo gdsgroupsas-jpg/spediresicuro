@@ -766,13 +766,35 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
       }
     }
     
+    // ⚠️ ULTIMA VERIFICA PRE-INSERT: Serializza e deserializza per assicurarsi che i tipi siano corretti
+    // Questo forza la conversione di qualsiasi valore residuo
+    const finalPayload = JSON.parse(JSON.stringify(cleanedPayload, (key, value) => {
+      // Se è un campo numerico e il valore è false o "false", convertilo in null
+      const numericFields = [
+        'weight', 'length', 'width', 'height', 'volumetric_weight', 'packages_count',
+        'cash_on_delivery_amount', 'declared_value',
+        'base_price', 'surcharges', 'total_cost', 'final_price', 'margin_percent',
+        'courier_quality_score', 'ocr_confidence_score'
+      ];
+      if (numericFields.includes(key)) {
+        if (value === false || value === 'false') {
+          return null;
+        }
+        if (typeof value === 'string' && value !== '') {
+          const num = parseFloat(value);
+          return isNaN(num) ? null : num;
+        }
+      }
+      return value;
+    }));
+    
     // Log del payload per debug (sempre in produzione per troubleshooting)
-    console.log('📋 [SUPABASE] Payload da inserire:', JSON.stringify(cleanedPayload, null, 2));
+    console.log('📋 [SUPABASE] Payload FINALE da inserire:', JSON.stringify(finalPayload, null, 2));
     
     console.log('🔄 [SUPABASE] Esecuzione INSERT...');
     const { data: supabaseData, error: supabaseError } = await supabaseAdmin
       .from('shipments')
-      .insert([cleanedPayload])
+      .insert([finalPayload])
       .select()
       .single();
 
