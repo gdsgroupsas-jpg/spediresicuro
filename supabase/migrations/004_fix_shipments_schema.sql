@@ -187,6 +187,7 @@ BEGIN
     ecommerce_platform TEXT,
     ecommerce_order_id TEXT,
     ecommerce_order_number TEXT,
+    order_reference TEXT, -- Riferimento ordine (nullable, può essere null)
     
     -- OCR data
     created_via_ocr BOOLEAN DEFAULT false,
@@ -893,6 +894,27 @@ BEGIN
   ) THEN
     ALTER TABLE shipments ADD COLUMN ecommerce_order_number TEXT;
     RAISE NOTICE '✅ Aggiunto campo: ecommerce_order_number';
+  END IF;
+  
+  -- Order reference (nullable, può essere null)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'shipments' AND column_name = 'order_reference'
+  ) THEN
+    ALTER TABLE shipments ADD COLUMN order_reference TEXT;
+    RAISE NOTICE '✅ Aggiunto campo: order_reference';
+  ELSE
+    -- ⚠️ CRITICO: Se esiste già ma ha NOT NULL, rimuovilo
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'shipments' 
+      AND column_name = 'order_reference'
+      AND is_nullable = 'NO'
+    ) THEN
+      -- Rimuovi NOT NULL constraint
+      ALTER TABLE shipments ALTER COLUMN order_reference DROP NOT NULL;
+      RAISE NOTICE '✅ Rimosso vincolo NOT NULL da order_reference';
+    END IF;
   END IF;
   
   -- Sender country
