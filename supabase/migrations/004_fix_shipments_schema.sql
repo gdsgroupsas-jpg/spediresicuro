@@ -700,16 +700,23 @@ BEGIN
       AND column_name = 'cash_on_delivery'
       AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
     ) THEN
-      -- Correggi il tipo: prima rimuovi DEFAULT, poi converte i dati, poi cambia il tipo, poi riaggiungi DEFAULT
-      ALTER TABLE shipments ALTER COLUMN cash_on_delivery DROP DEFAULT;
-      ALTER TABLE shipments 
-        ALTER COLUMN cash_on_delivery TYPE BOOLEAN 
-        USING CASE 
-          WHEN cash_on_delivery::text = 'true' OR cash_on_delivery::text = '1' OR (cash_on_delivery::numeric > 0) THEN true
-          ELSE false
-        END;
+      -- Correggi il tipo usando approccio sicuro: colonna temporanea
+      -- 1. Crea colonna temporanea BOOLEAN
+      ALTER TABLE shipments ADD COLUMN cash_on_delivery_new BOOLEAN;
+      -- 2. Copia e converte i dati
+      UPDATE shipments SET cash_on_delivery_new = CASE 
+        WHEN cash_on_delivery::text = 'true' OR cash_on_delivery::text = '1' OR (cash_on_delivery::numeric > 0) THEN true
+        ELSE false
+      END;
+      -- 3. Rimuovi colonna vecchia
+      ALTER TABLE shipments DROP COLUMN cash_on_delivery;
+      -- 4. Rinomina colonna nuova
+      ALTER TABLE shipments RENAME COLUMN cash_on_delivery_new TO cash_on_delivery;
+      -- 5. Aggiungi DEFAULT
       ALTER TABLE shipments ALTER COLUMN cash_on_delivery SET DEFAULT false;
-      RAISE NOTICE '✅ Corretto tipo di cash_on_delivery da NUMERIC a BOOLEAN';
+      -- 6. Aggiungi NOT NULL se necessario (opzionale)
+      -- ALTER TABLE shipments ALTER COLUMN cash_on_delivery SET NOT NULL;
+      RAISE NOTICE '✅ Corretto tipo di cash_on_delivery da NUMERIC a BOOLEAN (metodo colonna temporanea)';
     END IF;
   END IF;
   
@@ -737,16 +744,23 @@ BEGIN
       AND column_name = 'insurance'
       AND data_type IN ('numeric', 'integer', 'smallint', 'bigint', 'decimal')
     ) THEN
-      -- Correggi il tipo: prima rimuovi DEFAULT, poi converte i dati, poi cambia il tipo, poi riaggiungi DEFAULT
-      ALTER TABLE shipments ALTER COLUMN insurance DROP DEFAULT;
-      ALTER TABLE shipments 
-        ALTER COLUMN insurance TYPE BOOLEAN 
-        USING CASE 
-          WHEN insurance::text = 'true' OR insurance::text = '1' OR (insurance::numeric > 0) THEN true
-          ELSE false
-        END;
+      -- Correggi il tipo usando approccio sicuro: colonna temporanea
+      -- 1. Crea colonna temporanea BOOLEAN
+      ALTER TABLE shipments ADD COLUMN insurance_new BOOLEAN;
+      -- 2. Copia e converte i dati
+      UPDATE shipments SET insurance_new = CASE 
+        WHEN insurance::text = 'true' OR insurance::text = '1' OR (insurance::numeric > 0) THEN true
+        ELSE false
+      END;
+      -- 3. Rimuovi colonna vecchia
+      ALTER TABLE shipments DROP COLUMN insurance;
+      -- 4. Rinomina colonna nuova
+      ALTER TABLE shipments RENAME COLUMN insurance_new TO insurance;
+      -- 5. Aggiungi DEFAULT
       ALTER TABLE shipments ALTER COLUMN insurance SET DEFAULT false;
-      RAISE NOTICE '✅ Corretto tipo di insurance da NUMERIC a BOOLEAN';
+      -- 6. Aggiungi NOT NULL se necessario (opzionale)
+      -- ALTER TABLE shipments ALTER COLUMN insurance SET NOT NULL;
+      RAISE NOTICE '✅ Corretto tipo di insurance da NUMERIC a BOOLEAN (metodo colonna temporanea)';
     END IF;
   END IF;
   
