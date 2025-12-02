@@ -10,6 +10,8 @@
 import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/db/client';
 import { findUserByEmail } from '@/lib/database';
+import { encryptCredential, decryptCredential, isEncrypted } from '@/lib/security/encryption';
+import { logAuditEvent } from '@/lib/security/audit-log';
 
 // Tipi per le configurazioni
 export interface CourierConfigInput {
@@ -124,10 +126,11 @@ export async function saveConfiguration(
     }
 
     // 5. Prepara dati per insert/update
+    // ⚠️ SICUREZZA: Cripta credenziali sensibili prima di salvare
     const configData: any = {
       name: data.name,
       provider_id: data.provider_id,
-      api_key: data.api_key,
+      api_key: isEncrypted(data.api_key) ? data.api_key : encryptCredential(data.api_key),
       base_url: data.base_url,
       contract_mapping: data.contract_mapping || {},
       is_active: data.is_active ?? true,
@@ -137,9 +140,11 @@ export async function saveConfiguration(
       updated_at: new Date().toISOString(),
     };
 
-    // Aggiungi api_secret se fornito
+    // Aggiungi api_secret se fornito (criptato)
     if (data.api_secret) {
-      configData.api_secret = data.api_secret;
+      configData.api_secret = isEncrypted(data.api_secret) 
+        ? data.api_secret 
+        : encryptCredential(data.api_secret);
     }
 
     // 6. Esegui insert o update
@@ -180,6 +185,18 @@ export async function saveConfiguration(
       }
 
       result = newConfig;
+      
+      // Audit log: credenziale creata
+      await logAuditEvent('credential_created', 'courier_config', result.id, {
+        provider_id: data.provider_id,
+        name: data.name,
+      });
+    } else {
+      // Audit log: credenziale aggiornata
+      await logAuditEvent('credential_updated', 'courier_config', data.id, {
+        provider_id: data.provider_id,
+        name: data.name,
+      });
     }
 
     console.log(`✅ Configurazione ${data.id ? 'aggiornata' : 'creata'}:`, result.id);
@@ -418,9 +435,30 @@ export async function listConfigurations(): Promise<{
       };
     }
 
+    // ⚠️ SICUREZZA: Decripta credenziali solo se necessario (per visualizzazione)
+    // In produzione, considerare di non esporre mai le credenziali decriptate
+    const decryptedConfigs = (configs || []).map((config: any) => {
+      const decrypted: any = { ...config };
+      
+      // Decripta solo se richiesto (per ora decriptiamo sempre, ma potremmo aggiungere un flag)
+      try {
+        if (config.api_key && isEncrypted(config.api_key)) {
+          decrypted.api_key = decryptCredential(config.api_key);
+        }
+        if (config.api_secret && isEncrypted(config.api_secret)) {
+          decrypted.api_secret = decryptCredential(config.api_secret);
+        }
+      } catch (error) {
+        console.error('Errore decriptazione credenziali:', error);
+        // In caso di errore, mantieni criptato
+      }
+      
+      return decrypted;
+    }) as CourierConfig[];
+
     return {
       success: true,
-      configs: (configs || []) as CourierConfig[],
+      configs: decryptedConfigs,
     };
   } catch (error: any) {
     console.error('Errore listConfigurations:', error);
@@ -465,9 +503,25 @@ export async function getConfiguration(
       };
     }
 
+    // ⚠️ SICUREZZA: Decripta credenziali
+    const decrypted: any = { ...config };
+    try {
+      if (config.api_key && isEncrypted(config.api_key)) {
+        decrypted.api_key = decryptCredential(config.api_key);
+      }
+      if (config.api_secret && isEncrypted(config.api_secret)) {
+        decrypted.api_secret = decryptCredential(config.api_secret);
+      }
+    } catch (error) {
+      console.error('Errore decriptazione credenziali:', error);
+    }
+
+    // Audit log: credenziale visualizzata
+    await logAuditEvent('credential_viewed', 'courier_config', id);
+
     return {
       success: true,
-      config: config as CourierConfig,
+      config: decrypted as CourierConfig,
     };
   } catch (error: any) {
     console.error('Errore getConfiguration:', error);
