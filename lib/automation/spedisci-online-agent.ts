@@ -132,9 +132,10 @@ export class SpedisciOnlineAgent {
       if (lockCheck.has_lock) {
         if (lockCheck.lock_type === 'manual') {
           // Utente sta usando manualmente - NON interferire
+          const expiresAt = lockCheck.expires_at ? new Date(lockCheck.expires_at).toLocaleString('it-IT') : 'data sconosciuta';
           return {
             success: false,
-            error: `Account in uso manuale. Lock attivo fino alle ${new Date(lockCheck.expires_at).toLocaleString('it-IT')}. Attendi o rilascia lock manualmente.`,
+            error: `Account in uso manuale. Lock attivo fino alle ${expiresAt}. Attendi o rilascia lock manualmente.`,
           };
         } else if (lockCheck.lock_type === 'agent' && !forceRefresh) {
           // Altro agent sta lavorando - aspetta
