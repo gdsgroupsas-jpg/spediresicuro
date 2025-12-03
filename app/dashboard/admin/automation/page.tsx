@@ -524,7 +524,7 @@ export default function AutomationPage() {
                   <p className="text-sm text-yellow-800">
                     <strong>⚠️ 2FA Manuale (Microsoft Authenticator):</strong>
                     <br />
-                    Con questo metodo, durante sync manuale ti verrà chiesto di inserire l'OTP dal tuo Authenticator.
+                    Con questo metodo, durante sync manuale ti verrà chiesto di inserire l&apos;OTP dal tuo Authenticator.
                     <br />
                     Sync automatico (cron) non funzionerà con questo metodo.
                   </p>
