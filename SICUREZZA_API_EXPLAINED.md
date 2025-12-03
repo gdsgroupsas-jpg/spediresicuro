@@ -177,3 +177,4 @@ Non costa nulla (è gratis) e aumenta moltissimo la sicurezza.
 **Documento creato**: 3 Dicembre 2025  
 **Per domande**: Vedi `docs/CONFIGURAZIONE_ENCRYPTION_KEY.md`
 
+
