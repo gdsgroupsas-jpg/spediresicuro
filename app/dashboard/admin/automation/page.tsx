@@ -265,9 +265,14 @@ export default function AutomationPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Automation Spedisci.Online</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 mb-4">
           Gestisci automazione per estrazione automatica di session cookies e contratti
         </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <p className="text-sm text-blue-800">
+            <strong>📝 Come iniziare:</strong> Clicca su <strong>"Settings"</strong> nella colonna "Azioni" per configurare le credenziali Spedisci.Online e le impostazioni di automazione.
+          </p>
+        </div>
       </div>
 
       {/* Lista Configurazioni */}
@@ -379,9 +384,9 @@ export default function AutomationPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => handleOpenSettings(config.id)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
                     >
-                      Settings
+                      ⚙️ Impostazioni
                     </button>
                     <button
                       onClick={() => handleManualSync(config.id, false)}
@@ -419,7 +424,10 @@ export default function AutomationPage() {
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Automation Settings</h2>
+            <h2 className="text-xl font-bold mb-4">⚙️ Impostazioni Automation</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Inserisci le credenziali Spedisci.Online e configura le impostazioni di automazione. Tutti i campi con * sono obbligatori.
+            </p>
 
             <div className="space-y-4">
               {/* Metodo 2FA */}
@@ -453,8 +461,8 @@ export default function AutomationPage() {
                       type="email"
                       value={formSettings.email_2fa || ''}
                       onChange={(e) => setFormSettings({ ...formSettings, email_2fa: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="email@example.com"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="es. mario.rossi@gmail.com"
                     />
                   </div>
 
@@ -467,8 +475,8 @@ export default function AutomationPage() {
                       type="text"
                       value={formSettings.imap_server || ''}
                       onChange={(e) => setFormSettings({ ...formSettings, imap_server: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="imap.gmail.com"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="es. imap.gmail.com"
                     />
                   </div>
 
@@ -481,7 +489,8 @@ export default function AutomationPage() {
                       type="number"
                       value={formSettings.imap_port || 993}
                       onChange={(e) => setFormSettings({ ...formSettings, imap_port: parseInt(e.target.value) })}
-                      className="w-full border rounded px-3 py-2"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="es. 993"
                     />
                   </div>
 
@@ -494,8 +503,8 @@ export default function AutomationPage() {
                       type="text"
                       value={formSettings.imap_username || ''}
                       onChange={(e) => setFormSettings({ ...formSettings, imap_username: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="email@example.com"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="es. mario.rossi@gmail.com"
                     />
                   </div>
 
@@ -508,8 +517,8 @@ export default function AutomationPage() {
                       type="password"
                       value={formSettings.imap_password || ''}
                       onChange={(e) => setFormSettings({ ...formSettings, imap_password: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="App Password Gmail"
+                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="es. xxxx xxxx xxxx xxxx (App Password Gmail)"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Per Gmail: usa App Password (non password normale)
@@ -540,7 +549,8 @@ export default function AutomationPage() {
                   type="text"
                   value={formSettings.spedisci_online_username || ''}
                   onChange={(e) => setFormSettings({ ...formSettings, spedisci_online_username: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="es. mario.rossi@azienda.it"
                 />
               </div>
 
@@ -553,7 +563,8 @@ export default function AutomationPage() {
                   type="password"
                   value={formSettings.spedisci_online_password || ''}
                   onChange={(e) => setFormSettings({ ...formSettings, spedisci_online_password: e.target.value })}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="es. Inserisci la tua password Spedisci.Online"
                 />
               </div>
 
@@ -566,7 +577,8 @@ export default function AutomationPage() {
                   type="number"
                   value={formSettings.auto_refresh_interval_hours || 24}
                   onChange={(e) => setFormSettings({ ...formSettings, auto_refresh_interval_hours: parseInt(e.target.value) })}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="es. 24 (ore)"
                 />
               </div>
 
