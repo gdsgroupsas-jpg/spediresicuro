@@ -318,7 +318,7 @@ export class SpedisciOnlineAgent {
       // 8. Estrai cookie di sessione
       const cookies = await page.cookies();
       const sessionCookie = cookies
-        .map(c => `${c.name}=${c.value}`)
+        .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
         .join('; ');
 
       if (!sessionCookie) {
