@@ -295,3 +295,4 @@ Le implementazioni di ieri sera rappresentano un **importante passo avanti** per
 **Basato su:** Commit del 2 Dicembre 2025  
 **Repository:** https://github.com/gdsgroupsas-jpg/spediresicuro.git
 
+

@@ -8,3 +8,4 @@ echo Eseguo push...
 git push
 echo Fatto!
 
+

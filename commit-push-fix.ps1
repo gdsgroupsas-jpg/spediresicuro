@@ -45,3 +45,4 @@ Write-Host "====================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Vai su Vercel per vedere il deploy automatico." -ForegroundColor Yellow
 
+
