@@ -26,23 +26,32 @@ async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }
       return { isAdmin: false, error: 'Non autenticato' };
     }
 
+    // Cerca prima con account_type, poi con role (per compatibilità)
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('account_type')
+      .select('account_type, role')
       .eq('email', session.user.email)
       .single();
 
     if (error || !user) {
-      return { isAdmin: false, error: 'Utente non trovato' };
+      return { isAdmin: false, error: 'Utente non trovato. Verifica di essere loggato correttamente.' };
     }
 
-    if (user.account_type !== 'superadmin' && user.account_type !== 'admin') {
+    // Verifica admin usando account_type o role (per compatibilità)
+    const isAdmin = 
+      user.account_type === 'superadmin' || 
+      user.account_type === 'admin' ||
+      user.role === 'admin' ||
+      user.role === 'superadmin';
+
+    if (!isAdmin) {
       return { isAdmin: false, error: 'Solo admin può gestire automation' };
     }
 
     return { isAdmin: true };
   } catch (error: any) {
-    return { isAdmin: false, error: error.message };
+    console.error('Errore verifyAdminAccess:', error);
+    return { isAdmin: false, error: error.message || 'Errore verifica permessi' };
   }
 }
 
