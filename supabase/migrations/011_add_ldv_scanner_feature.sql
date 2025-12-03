@@ -68,3 +68,4 @@ BEGIN
   RAISE NOTICE '   - Solo superadmin può concederla agli utenti';
 END $$;
 
+

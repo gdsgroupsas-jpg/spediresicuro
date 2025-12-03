@@ -118,3 +118,4 @@ Che tipo di documento viene scansionato?
 
 Se qualcosa è diverso, dimmelo e lo correggo.
 
+

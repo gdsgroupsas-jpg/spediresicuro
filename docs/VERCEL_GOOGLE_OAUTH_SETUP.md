@@ -101,3 +101,4 @@ Se ancora non funziona:
 **Soluzione**: Verifica che trustHost sia true nella configurazione NextAuth (già configurato).
 
 
+
