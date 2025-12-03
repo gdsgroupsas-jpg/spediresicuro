@@ -217,8 +217,8 @@ export default function SpedisciOnlineConfig() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="Incolla qui la tua API Key"
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono"
-                  style={{ fontSize: '15px', letterSpacing: '0.5px' }}
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
+                  style={{ fontSize: '15px', letterSpacing: '0.5px', color: '#111827' }}
                 />
                 <button
                   type="button"
@@ -244,8 +244,8 @@ export default function SpedisciOnlineConfig() {
                 value={dominio}
                 onChange={(e) => setDominio(e.target.value)}
                 placeholder="ecommerceitalia.spedisci.online"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
-                style={{ fontSize: '15px' }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
+                  style={{ fontSize: '15px', color: '#111827' }}
               />
             </div>
           </div>
@@ -259,8 +259,8 @@ export default function SpedisciOnlineConfig() {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://ecommerceitalia.spedisci.online/api/v2/"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono"
-              style={{ fontSize: '15px' }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
+                  style={{ fontSize: '15px', color: '#111827' }}
             />
           </div>
         </div>
@@ -331,8 +331,8 @@ export default function SpedisciOnlineConfig() {
                   value={newContract.codice}
                   onChange={(e) => setNewContract({ ...newContract, codice: e.target.value })}
                   placeholder="Es: gls-NN6-STANDARD-(TR-VE)"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono"
-                  style={{ fontSize: '15px', letterSpacing: '0.3px' }}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
+                  style={{ fontSize: '15px', letterSpacing: '0.3px', color: '#111827' }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
@@ -350,8 +350,8 @@ export default function SpedisciOnlineConfig() {
                   value={newContract.corriere}
                   onChange={(e) => setNewContract({ ...newContract, corriere: e.target.value })}
                   placeholder="Es: Gls"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
-                  style={{ fontSize: '15px' }}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
+                  style={{ fontSize: '15px', color: '#111827' }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
