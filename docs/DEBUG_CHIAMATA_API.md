@@ -271,3 +271,4 @@ AND is_active = true;
 
 **Ultimo aggiornamento**: 3 Dicembre 2025
 
+
