@@ -83,15 +83,20 @@ export default function AutomationPage() {
   async function loadConfigs() {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/configurations')
-      if (!response.ok) throw new Error('Errore caricamento configurazioni')
+      // Usa server action invece di API
+      const { listConfigurations } = await import('@/actions/configurations')
+      const result = await listConfigurations()
       
-      const data = await response.json()
-      if (data.success && data.configs) {
-        // Filtra solo Spedisci.Online
-        const spedisciConfigs = data.configs.filter(
-          (c: any) => c.provider_id === 'spedisci_online'
-        )
+      if (result.success && result.configs) {
+        // Filtra solo Spedisci.Online e aggiungi campi automation
+        const spedisciConfigs = result.configs
+          .filter((c: any) => c.provider_id === 'spedisci_online')
+          .map((c: any) => ({
+            ...c,
+            automation_enabled: c.automation_enabled || false,
+            last_automation_sync: c.last_automation_sync || null,
+            session_data: c.session_data || null,
+          }))
         setConfigs(spedisciConfigs)
       }
     } catch (error) {
