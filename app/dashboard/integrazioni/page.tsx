@@ -12,7 +12,7 @@ import { motion } from 'framer-motion'
 import DashboardNav from '@/components/dashboard-nav'
 import IntegrationCard from '@/components/integrazioni/integration-card'
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
-import CourierAPIConfig from '@/components/integrazioni/courier-api-config'
+import SpedisciOnlineConfig from '@/components/integrazioni/spedisci-online-config'
 import { 
   ShoppingBag, 
   Store, 
@@ -172,14 +172,14 @@ export default function IntegrazioniPage() {
           <UniversalWidgetCard />
         </motion.div>
 
-        {/* Sezione API Corrieri - Configurazione Credenziali */}
+        {/* Sezione API Corrieri - Configurazione Credenziali Spedisci.Online */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mb-12"
         >
-          <CourierAPIConfig />
+          <SpedisciOnlineConfig />
         </motion.div>
 
         {/* Grid Integrazioni */}

@@ -89,11 +89,17 @@ export async function createShipmentWithOrchestrator(
   shipmentData: Shipment | CreateShipmentInput | any,
   courierCode: string
 ): Promise<ShipmentResult> {
+  console.log('🚀 [ORCHESTRATOR] createShipmentWithOrchestrator chiamato', {
+    courierCode,
+    hasShipmentData: !!shipmentData,
+  });
+  
   try {
     // 1. Verifica autenticazione
     const session = await auth()
     
     if (!session?.user?.email) {
+      console.warn('⚠️ [ORCHESTRATOR] Non autenticato');
       return {
         success: false,
         tracking_number: '',
@@ -102,6 +108,8 @@ export async function createShipmentWithOrchestrator(
         error: 'Non autenticato',
       }
     }
+    
+    console.log('✅ [ORCHESTRATOR] Utente autenticato:', session.user.email);
 
     // 2. Ottieni user_id (prova prima in users, poi user_profiles, poi auth.users)
     let userId: string | null = null
@@ -209,17 +217,39 @@ export async function createShipmentWithOrchestrator(
             }
           }
           
+          // Prepara contract_mapping
+          let contractMapping: Record<string, string> = {}
+          if (defaultConfig.contract_mapping) {
+            if (typeof defaultConfig.contract_mapping === 'string') {
+              try {
+                contractMapping = JSON.parse(defaultConfig.contract_mapping)
+              } catch {
+                console.warn('⚠️ Errore parsing contract_mapping, uso come oggetto')
+              }
+            } else if (typeof defaultConfig.contract_mapping === 'object') {
+              contractMapping = defaultConfig.contract_mapping
+            }
+          }
+          
           // Istanzia provider dalla configurazione
           const credentials = {
             api_key: api_key,
             api_secret: api_secret,
             base_url: defaultConfig.base_url,
-            customer_code: defaultConfig.contract_mapping?.['default'] || undefined,
+            customer_code: contractMapping['default'] || undefined,
+            contract_mapping: contractMapping, // Passa il mapping completo
           }
+          
+          console.log('🔧 [SPEDISCI.ONLINE] Istanzio adapter con credenziali:', {
+            has_api_key: !!credentials.api_key,
+            base_url: credentials.base_url,
+            contract_mapping_count: Object.keys(credentials.contract_mapping || {}).length,
+          });
           
           const provider = new SpedisciOnlineAdapter(credentials)
           orchestrator.registerBrokerAdapter(provider)
-          console.log('✅ Broker adapter (Spedisci.Online) registrato tramite configurazione DEFAULT')
+          console.log('✅ [SPEDISCI.ONLINE] Broker adapter registrato tramite configurazione DEFAULT')
+          console.log('✅ [SPEDISCI.ONLINE] Contratti configurati:', Object.keys(credentials.contract_mapping || {}))
         } else {
           console.warn('⚠️ Spedisci.Online non configurato (né per utente né default).')
           console.warn('⚠️ Configura Spedisci.Online in /dashboard/integrazioni per abilitare chiamate API reali.')
@@ -236,7 +266,14 @@ export async function createShipmentWithOrchestrator(
     // 1. Adapter diretto (se disponibile per il corriere)
     // 2. Broker Spedisci.Online (se registrato sopra)
     // 3. Fallback CSV (se tutto fallisce)
+    console.log('🎯 [ORCHESTRATOR] Chiamo orchestrator.createShipment con corriere:', courierCode);
     const result = await orchestrator.createShipment(shipmentData, courierCode)
+    console.log('🎯 [ORCHESTRATOR] Risultato orchestrator:', {
+      success: result.success,
+      method: result.method,
+      has_tracking: !!result.tracking_number,
+      error: result.error,
+    });
 
     return result
   } catch (error) {

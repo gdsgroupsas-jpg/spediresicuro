@@ -106,9 +106,28 @@ export class FulfillmentOrchestrator {
     // ===========================================
     // STRATEGIA 2: BROKER (spedisci.online)
     // ===========================================
+    console.log('🔍 [ORCHESTRATOR] Controllo broker adapter...', {
+      allowBroker: this.config.allowBroker,
+      hasBrokerAdapter: !!this.brokerAdapter,
+    });
+    
     if (this.config.allowBroker && this.brokerAdapter) {
+      console.log('✅ [ORCHESTRATOR] Broker adapter disponibile, uso Spedisci.Online');
       try {
-        const result = await this.brokerAdapter.createShipment(shipmentData);
+        // Assicura che il corriere sia presente nei dati per il mapping del codice contratto
+        const shipmentDataWithCourier = {
+          ...shipmentData,
+          corriere: courierCode, // Aggiungi il corriere ai dati
+          courier_id: shipmentData.courier_id || courierCode,
+        };
+        
+        console.log('📦 [ORCHESTRATOR] Chiamo broker adapter con corriere:', courierCode);
+        const result = await this.brokerAdapter.createShipment(shipmentDataWithCourier);
+        
+        console.log('✅ [ORCHESTRATOR] Broker adapter ha restituito:', {
+          has_tracking: !!result.tracking_number,
+          has_label: !!result.label_pdf,
+        });
         
         return {
           success: true,
@@ -119,10 +138,18 @@ export class FulfillmentOrchestrator {
           method: 'broker',
           message: 'LDV creata tramite broker spedisci.online',
         };
-      } catch (error) {
-        console.warn('Broker spedisci.online fallito:', error);
+      } catch (error: any) {
+        console.error('❌ [ORCHESTRATOR] Broker spedisci.online fallito:', {
+          message: error?.message,
+          stack: error?.stack,
+        });
         // Continua con fallback
       }
+    } else {
+      console.warn('⚠️ [ORCHESTRATOR] Broker adapter NON disponibile:', {
+        allowBroker: this.config.allowBroker,
+        hasBrokerAdapter: !!this.brokerAdapter,
+      });
     }
 
     // ===========================================
