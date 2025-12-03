@@ -139,9 +139,10 @@ export class SpedisciOnlineAgent {
           };
         } else if (lockCheck.lock_type === 'agent' && !forceRefresh) {
           // Altro agent sta lavorando - aspetta
+          const expiresAt = lockCheck.expires_at ? new Date(lockCheck.expires_at).toLocaleString('it-IT') : 'data sconosciuta';
           return {
             success: false,
-            error: `Altro agent sta lavorando. Lock attivo fino alle ${new Date(lockCheck.expires_at).toLocaleString('it-IT')}.`,
+            error: `Altro agent sta lavorando. Lock attivo fino alle ${expiresAt}.`,
           };
         }
       }
