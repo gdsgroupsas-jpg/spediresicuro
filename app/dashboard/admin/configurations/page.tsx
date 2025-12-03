@@ -216,6 +216,33 @@ export default function ConfigurationsPage() {
     }
   }
 
+  // Verifica se configurazione è importante (richiede conferma speciale)
+  function isImportantConfig(config: CourierConfig): { isImportant: boolean; reasons: string[] } {
+    const reasons: string[] = [];
+    
+    if (config.is_default) {
+      reasons.push('Configurazione DEFAULT');
+    }
+    if (config.is_active) {
+      reasons.push('Configurazione ATTIVA');
+    }
+    // Verifica se ha automation abilitata
+    const hasAutomation = (config as any).automation_enabled || 
+                          (config as any).automation_settings?.enabled;
+    if (hasAutomation) {
+      reasons.push('Automation ABILITATA');
+    }
+    // Verifica se ha session data
+    if ((config as any).session_data) {
+      reasons.push('Ha SESSION DATA salvata');
+    }
+    
+    return {
+      isImportant: reasons.length > 0,
+      reasons,
+    };
+  }
+
   // Elimina configurazione
   async function handleDelete() {
     if (!selectedConfig || isDeleting) return;
@@ -237,6 +264,45 @@ export default function ConfigurationsPage() {
       alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  // Elimina tutte le configurazioni (con doppia conferma)
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState('');
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
+  async function handleDeleteAll() {
+    if (deleteAllConfirm !== 'ELIMINA TUTTE') {
+      alert('Devi digitare "ELIMINA TUTTE" per confermare');
+      return;
+    }
+
+    setIsDeletingAll(true);
+    try {
+      let deleted = 0;
+      let errors = 0;
+      
+      for (const config of configs) {
+        const result = await deleteConfiguration(config.id);
+        if (result.success) {
+          deleted++;
+        } else {
+          errors++;
+          console.error(`Errore eliminazione ${config.name}:`, result.error);
+        }
+      }
+
+      setShowDeleteAllModal(false);
+      setDeleteAllConfirm('');
+      await loadConfigurations();
+      
+      alert(`Eliminazione completata: ${deleted} eliminate, ${errors} errori`);
+    } catch (error: any) {
+      console.error('Errore eliminazione multipla:', error);
+      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+    } finally {
+      setIsDeletingAll(false);
     }
   }
 
@@ -307,13 +373,24 @@ export default function ConfigurationsPage() {
           { label: 'Configurazioni', href: '/dashboard/admin/configurations' },
         ]}
         actions={
-          <button
-            onClick={handleCreate}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nuova Configurazione
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCreate}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Nuova Configurazione
+            </button>
+            {configs.length > 0 && (
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Elimina Tutte
+              </button>
+            )}
+          </div>
         }
       />
 
@@ -650,35 +727,132 @@ export default function ConfigurationsPage() {
       )}
 
       {/* Modale Eliminazione */}
-      {showDeleteModal && selectedConfig && (
+      {showDeleteModal && selectedConfig && (() => {
+        const important = isImportantConfig(selectedConfig);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">Elimina Configurazione</h2>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-gray-700 mb-4">
+                  Sei sicuro di voler eliminare la configurazione <strong>{selectedConfig.name}</strong>?
+                </p>
+                
+                {important.isImportant && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-red-900 mb-2">
+                          ⚠️ CONFIGURAZIONE IMPORTANTE
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
+                          {important.reasons.map((reason, idx) => (
+                            <li key={idx}>{reason}</li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-red-700 mt-2 font-semibold">
+                          Questa configurazione è critica per il sistema!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <p className="text-xs text-amber-800">
+                    ⚠️ Questa azione è irreversibile. Verifica che la configurazione non sia assegnata ad alcun utente.
+                  </p>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                    important.isImportant
+                      ? 'bg-red-700 text-white hover:bg-red-800'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Eliminazione...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      {important.isImportant ? 'Elimina (Conferma Speciale)' : 'Elimina'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modale Elimina Tutte */}
+      {showDeleteAllModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Elimina Configurazione</h2>
+              <h2 className="text-xl font-bold text-red-900">⚠️ Elimina TUTTE le Configurazioni</h2>
             </div>
             <div className="px-6 py-4">
-              <p className="text-gray-700 mb-4">
-                Sei sicuro di voler eliminare la configurazione <strong>{selectedConfig.name}</strong>?
-              </p>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                <p className="text-xs text-amber-800">
-                  ⚠️ Questa azione è irreversibile. Verifica che la configurazione non sia assegnata ad alcun utente.
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+                <p className="font-semibold text-red-900 mb-2">
+                  ⚠️ ATTENZIONE: Questa azione eliminerà <strong>{configs.length}</strong> configurazioni!
                 </p>
+                <p className="text-sm text-red-800 mb-2">
+                  Questa operazione è <strong>IRREVERSIBILE</strong> e potrebbe:
+                </p>
+                <ul className="list-disc list-inside text-sm text-red-800 space-y-1 ml-2">
+                  <li>Interrompere tutte le spedizioni in corso</li>
+                  <li>Rimuovere tutte le credenziali API salvate</li>
+                  <li>Eliminare tutte le sessioni automation</li>
+                  <li>Bloccare l&apos;accesso ai corrieri</li>
+                </ul>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Digita <strong className="text-red-600">&quot;ELIMINA TUTTE&quot;</strong> per confermare:
+                </label>
+                <input
+                  type="text"
+                  value={deleteAllConfirm}
+                  onChange={(e) => setDeleteAllConfirm(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="ELIMINA TUTTE"
+                />
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
               <button
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => {
+                  setShowDeleteAllModal(false);
+                  setDeleteAllConfirm('');
+                }}
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Annulla
               </button>
               <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleDeleteAll}
+                disabled={isDeletingAll || deleteAllConfirm !== 'ELIMINA TUTTE'}
+                className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isDeleting ? (
+                {isDeletingAll ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Eliminazione...
@@ -686,7 +860,7 @@ export default function ConfigurationsPage() {
                 ) : (
                   <>
                     <Trash2 className="w-4 h-4" />
-                    Elimina
+                    Elimina TUTTE
                   </>
                 )}
               </button>
