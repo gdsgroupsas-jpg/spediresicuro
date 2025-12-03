@@ -321,6 +321,84 @@ export async function deleteConfiguration(
 }
 
 /**
+ * Server Action: Aggiorna status attivo/inattivo di una configurazione
+ * 
+ * @param id - ID configurazione
+ * @param isActive - Nuovo stato (true = attiva, false = inattiva)
+ * @returns Risultato operazione
+ */
+export async function updateConfigurationStatus(
+  id: string,
+  isActive: boolean
+): Promise<{
+  success: boolean;
+  error?: string;
+  message?: string;
+}> {
+  try {
+    // 1. Verifica permessi admin
+    const { isAdmin, error: authError } = await verifyAdminAccess();
+    if (!isAdmin) {
+      return { success: false, error: authError };
+    }
+
+    // 2. Verifica se la configurazione esiste
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('id, name, provider_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    // 3. Aggiorna status
+    const { error: updateError } = await supabaseAdmin
+      .from('courier_configs')
+      .update({
+        is_active: isActive,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Errore aggiornamento status configurazione:', updateError);
+      return {
+        success: false,
+        error: updateError.message || 'Errore durante l\'aggiornamento',
+      };
+    }
+
+    // Audit log
+    await logAuditEvent(
+      isActive ? 'credential_activated' : 'credential_deactivated',
+      'courier_config',
+      id,
+      {
+        provider_id: config.provider_id,
+        name: config.name,
+        is_active: isActive,
+      }
+    );
+
+    return {
+      success: true,
+      message: `Configurazione ${isActive ? 'attivata' : 'disattivata'} con successo`,
+    };
+  } catch (error: any) {
+    console.error('Errore updateConfigurationStatus:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'aggiornamento',
+    };
+  }
+}
+
+/**
  * Server Action: Assegna configurazione a utente
  * 
  * @param userId - ID utente
