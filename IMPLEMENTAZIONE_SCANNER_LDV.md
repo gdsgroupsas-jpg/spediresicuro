@@ -159,3 +159,4 @@ Esegui la migration `007_add_pickup_scanning_fields.sql` su Supabase per aggiung
 - ✅ Validazione LDV esistente
 - ✅ Prevenzione doppio ritiro
 
+

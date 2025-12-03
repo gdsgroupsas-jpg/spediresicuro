@@ -136,3 +136,4 @@ Quando importata via scanner:
 3. **Testare verifica duplicati** prima di completare
 4. **Ottimizzare performance** (già fatto con dynamic import)
 
+

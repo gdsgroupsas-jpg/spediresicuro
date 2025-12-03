@@ -199,3 +199,4 @@ Vedi file `PROMPT_MIGLIORATO_GEMINI.md` per versione completa migliorata.
 
 Creare versione migliorata del prompt e implementare le parti mancanti.
 
+

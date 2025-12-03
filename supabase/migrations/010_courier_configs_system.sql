@@ -130,6 +130,12 @@ EXECUTE FUNCTION update_courier_configs_updated_at();
 -- Abilita RLS
 ALTER TABLE public.courier_configs ENABLE ROW LEVEL SECURITY;
 
+-- Rimuovi policy esistenti se presenti (per permettere re-esecuzione)
+DROP POLICY IF EXISTS "Admin può vedere tutte le configurazioni" ON public.courier_configs;
+DROP POLICY IF EXISTS "Admin può inserire configurazioni" ON public.courier_configs;
+DROP POLICY IF EXISTS "Admin può aggiornare configurazioni" ON public.courier_configs;
+DROP POLICY IF EXISTS "Admin può eliminare configurazioni" ON public.courier_configs;
+
 -- Policy: Solo Admin possono vedere tutte le configurazioni
 CREATE POLICY "Admin può vedere tutte le configurazioni"
 ON public.courier_configs
