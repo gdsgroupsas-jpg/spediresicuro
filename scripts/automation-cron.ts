@@ -12,7 +12,7 @@
  * {
  *   "crons": [{
  *     "path": "/api/cron/automation-sync",
- *     "schedule": "0 */6 * * *"  // Ogni 6 ore
+ *     "schedule": "0 0,6,12,18 * * *"  // Ogni 6 ore
  *   }]
  * }
  */
