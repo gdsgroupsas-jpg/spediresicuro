@@ -16,6 +16,8 @@ export type AuditAction =
   | 'credential_updated'     // Credenziale aggiornata
   | 'credential_deleted'     // Credenziale eliminata
   | 'credential_decrypted'   // Credenziale decriptata
+  | 'credential_activated'   // Credenziale attivata
+  | 'credential_deactivated' // Credenziale disattivata
 
 export interface AuditLogEntry {
   action: AuditAction
