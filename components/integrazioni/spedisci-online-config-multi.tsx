@@ -251,7 +251,7 @@ export default function SpedisciOnlineConfigMulti() {
   }
 
   // Verifica se è admin
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = (session?.user as any)?.role === 'admin'
 
   if (!isAdmin) {
     return (
