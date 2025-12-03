@@ -270,7 +270,7 @@ export default function AutomationPage() {
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <p className="text-sm text-blue-800">
-            <strong>📝 Come iniziare:</strong> Clicca su <strong>"Settings"</strong> nella colonna "Azioni" per configurare le credenziali Spedisci.Online e le impostazioni di automazione.
+            <strong>📝 Come iniziare:</strong> Clicca su <strong>&quot;Settings&quot;</strong> nella colonna &quot;Azioni&quot; per configurare le credenziali Spedisci.Online e le impostazioni di automazione.
           </p>
         </div>
       </div>
