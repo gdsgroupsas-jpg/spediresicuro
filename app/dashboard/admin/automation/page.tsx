@@ -14,7 +14,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardNav from '@/components/dashboard-nav'
-import { ArrowLeft } from 'lucide-react'
 import {
   toggleAutomation,
   saveAutomationSettings,
@@ -282,8 +281,8 @@ export default function AutomationPage() {
           </p>
         </div>
 
-      {/* Form Configurazione Diretta */}
-      {selectedConfig && (
+        {/* Form Configurazione Diretta */}
+        {selectedConfig && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-bold mb-4">⚙️ Configurazione Automation</h2>
           <p className="text-sm text-gray-600 mb-4">
@@ -481,10 +480,10 @@ export default function AutomationPage() {
             </div>
           </div>
         </div>
-      )}
+        )}
 
-      {/* Lista Configurazioni */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Lista Configurazioni */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -633,20 +632,20 @@ export default function AutomationPage() {
             Nessuna configurazione Spedisci.Online trovata
           </div>
         )}
+        </div>
+
+        {/* Modal OTP Input */}
+        <OTPInputModal
+          isOpen={showOTPModal}
+          onClose={() => {
+            setShowOTPModal(false)
+            setPendingSyncConfigId(null)
+          }}
+          onConfirm={handleOTPConfirm}
+          title="Inserisci Codice OTP"
+          message="Apri Microsoft Authenticator e inserisci il codice a 6 cifre per Spedisci.Online:"
+        />
       </div>
-
-
-      {/* Modal OTP Input */}
-      <OTPInputModal
-        isOpen={showOTPModal}
-        onClose={() => {
-          setShowOTPModal(false)
-          setPendingSyncConfigId(null)
-        }}
-        onConfirm={handleOTPConfirm}
-        title="Inserisci Codice OTP"
-        message="Apri Microsoft Authenticator e inserisci il codice a 6 cifre per Spedisci.Online:"
-      />
     </div>
   )
 }
