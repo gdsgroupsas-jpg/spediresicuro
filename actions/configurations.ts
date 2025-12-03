@@ -167,6 +167,12 @@ export async function saveConfiguration(
       }
 
       result = updatedConfig;
+      
+      // Audit log: credenziale aggiornata
+      await logAuditEvent('credential_updated', 'courier_config', data.id, {
+        provider_id: data.provider_id,
+        name: data.name,
+      });
     } else {
       // Insert
       configData.created_by = adminEmail;
@@ -188,12 +194,6 @@ export async function saveConfiguration(
       
       // Audit log: credenziale creata
       await logAuditEvent('credential_created', 'courier_config', result.id, {
-        provider_id: data.provider_id,
-        name: data.name,
-      });
-    } else {
-      // Audit log: credenziale aggiornata
-      await logAuditEvent('credential_updated', 'courier_config', data.id, {
         provider_id: data.provider_id,
         name: data.name,
       });
