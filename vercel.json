@@ -6,6 +6,5 @@
     "app/api/cron/**/*.ts": {
       "maxDuration": 300
     }
-  },
-  "buildCommand": "npm install && npm run build"
+  }
 }
