@@ -194,7 +194,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    */
   async getTracking(trackingNumber: string): Promise<TrackingEvent[]> {
     try {
-      const response = await fetch(`${this.BASE_URL}/v1/tracking/${trackingNumber}`, {
+      // Costruisci URL tracking in modo intelligente: se BASE_URL contiene già /api/v2, usa percorso corretto
+      let trackingEndpoint = `/v1/tracking/${trackingNumber}`;
+      if (this.BASE_URL.includes('/api/v2')) {
+        trackingEndpoint = `/tracking/${trackingNumber}`;
+      }
+      const response = await fetch(`${this.BASE_URL}${trackingEndpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.API_KEY}`,
@@ -227,7 +232,13 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * ===========================================
    */
   private async createShipmentJSON(payload: SpedisciOnlineShipmentPayload): Promise<SpedisciOnlineResponse> {
-    const url = `${this.BASE_URL}/v1/shipments`;
+    // Costruisci URL in modo intelligente: se BASE_URL contiene già /api/v2, non aggiungere /v1
+    let endpoint = '/v1/shipments';
+    if (this.BASE_URL.includes('/api/v2')) {
+      // Se BASE_URL contiene già /api/v2, l'endpoint dovrebbe essere solo /shipments
+      endpoint = '/shipments';
+    }
+    const url = `${this.BASE_URL}${endpoint}`;
     console.log('📡 [SPEDISCI.ONLINE] Chiamata fetch a:', url);
     console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));
     console.log('📡 [SPEDISCI.ONLINE] Codice contratto nel payload:', payload.codice_contratto || 'MANCANTE');
@@ -292,7 +303,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     formData.append('file', blob, 'spedizione.csv');
     formData.append('format', 'csv');
 
-    const response = await fetch(`${this.BASE_URL}/v1/shipments/upload`, {
+    // Costruisci URL upload in modo intelligente: se BASE_URL contiene già /api/v2, usa percorso corretto
+    let uploadEndpoint = '/v1/shipments/upload';
+    if (this.BASE_URL.includes('/api/v2')) {
+      uploadEndpoint = '/shipments/upload';
+    }
+    const response = await fetch(`${this.BASE_URL}${uploadEndpoint}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.API_KEY}`,
@@ -378,9 +394,18 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       }
     }
 
+    // STRATEGIA 5: Se c'è un solo contratto disponibile, usalo come fallback
+    // (alcuni contratti sono unici e servono per tutti i corrieri)
+    const contractKeys = Object.keys(this.CONTRACT_MAPPING);
+    if (contractKeys.length === 1) {
+      const fallbackContract = contractKeys[0];
+      console.warn(`⚠️ Nessun match specifico trovato per ${courier}, uso contratto unico disponibile: ${fallbackContract}`);
+      return fallbackContract;
+    }
+
     // Se non trovato, log warning con dettagli
     console.warn(`⚠️ Nessun codice contratto trovato per corriere: ${courier}`);
-    console.warn(`⚠️ Mapping disponibile:`, Object.keys(this.CONTRACT_MAPPING));
+    console.warn(`⚠️ Mapping disponibile:`, contractKeys);
     return undefined;
   }
 
