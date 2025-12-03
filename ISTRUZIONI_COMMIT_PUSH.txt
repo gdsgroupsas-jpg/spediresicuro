@@ -1,0 +1,38 @@
+=========================================
+ISTRUZIONI RAPIDE PER COMMIT E PUSH
+=========================================
+
+PROBLEMA: Il terminale è bloccato da git pager.
+
+SOLUZIONE: Apri un NUOVO terminale PowerShell e copia/incolla questi comandi:
+
+-----------------------------------------
+PASSO 1: Apri Nuovo Terminale
+-----------------------------------------
+1. Premi Windows + X
+2. Seleziona "Windows PowerShell" o "Terminale"
+
+-----------------------------------------
+PASSO 2: Copia e Incolla Questi Comandi
+-----------------------------------------
+
+cd C:\spediresicuro-master\spediresicuro
+
+git config --global core.pager ""
+
+git add -A
+
+git commit -m "fix: Sistema chiamata API Spedisci.Online + criptazione opzionale + fix vari"
+
+git push
+
+-----------------------------------------
+FATTO!
+-----------------------------------------
+
+Dopo il push, Vercel farà automaticamente il deploy.
+
+Per verificare: vai su https://vercel.com/dashboard e controlla i deployment.
+
+=========================================
+

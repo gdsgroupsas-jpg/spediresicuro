@@ -103,45 +103,139 @@ export async function createShipmentWithOrchestrator(
       }
     }
 
-    // 2. Ottieni user_id per factory
-    const { data: user } = await supabaseAdmin
+    // 2. Ottieni user_id (prova prima in users, poi user_profiles, poi auth.users)
+    let userId: string | null = null
+    
+    // Prova prima nella tabella users
+    const { data: userFromUsers } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('email', session.user.email)
       .single()
-
-    if (!user) {
-      return {
-        success: false,
-        tracking_number: '',
-        carrier: courierCode,
-        method: 'fallback',
-        error: 'Utente non trovato',
+    
+    if (userFromUsers?.id) {
+      userId = userFromUsers.id
+    } else {
+      // Prova a recuperare da user_profiles o auth.users
+      try {
+        const { getSupabaseUserIdFromEmail } = await import('@/lib/database')
+        userId = await getSupabaseUserIdFromEmail(session.user.email)
+      } catch (error) {
+        console.warn('⚠️ Impossibile recuperare user_id:', error)
       }
     }
 
     // 3. Ottieni orchestrator
     const orchestrator = getFulfillmentOrchestrator()
 
-    // 4. Registra broker adapter usando factory (SOLO DATABASE, nessun fallback env)
-    // Se courierCode è spedisci_online, usa factory per recuperare provider dal DB
-    if (courierCode.toLowerCase() === 'spedisci_online' || courierCode.toLowerCase() === 'spedisci-online') {
+    // 4. SEMPRE registra broker adapter (Spedisci.Online) se configurato nel database
+    // Questo permette di usare Spedisci.Online come broker per qualsiasi corriere (GLS, SDA, ecc.)
+    // Se userId è null, prova comunque a recuperare configurazione default
+    if (userId) {
       try {
-        const provider = await getShippingProvider(user.id, 'spedisci_online', shipmentData)
+        const provider = await getShippingProvider(userId, 'spedisci_online', shipmentData)
         if (provider && provider instanceof SpedisciOnlineAdapter) {
           orchestrator.registerBrokerAdapter(provider)
-          console.log('✅ Broker adapter registrato tramite configurazione DB')
+          console.log('✅ Broker adapter (Spedisci.Online) registrato tramite configurazione DB')
         } else {
-          console.error('❌ Impossibile recuperare provider dal database. Configura una configurazione in /dashboard/admin/configurations')
-          throw new Error('Configurazione corriere non trovata nel database')
+          console.warn('⚠️ Spedisci.Online non configurato per questo utente. Provo configurazione default...')
+          // Continua - proveremo a recuperare config default
         }
       } catch (error) {
-        console.error('❌ Errore registrazione broker adapter:', error)
-        throw error
+        console.warn('⚠️ Errore recupero configurazione per utente:', error)
+        // Continua - proveremo config default
+      }
+    }
+    
+    // Se non abbiamo ancora registrato il broker, prova a recuperare configurazione default (admin)
+    // Verifica se il broker è registrato controllando internamente
+    let brokerRegistered = false
+    try {
+      // Verifica se il broker è già registrato (usando reflection)
+      const brokerAdapter = (orchestrator as any).brokerAdapter
+      brokerRegistered = !!brokerAdapter
+    } catch {
+      brokerRegistered = false
+    }
+    
+    if (!brokerRegistered) {
+      try {
+        // Prova a recuperare configurazione default (is_default = true) o qualsiasi configurazione attiva
+        let { data: defaultConfig } = await supabaseAdmin
+          .from('courier_configs')
+          .select('*')
+          .eq('provider_id', 'spedisci_online')
+          .eq('is_active', true)
+          .eq('is_default', true)
+          .single()
+        
+        // Se non c'è default, prova qualsiasi configurazione attiva
+        if (!defaultConfig) {
+          const { data: activeConfigs } = await supabaseAdmin
+            .from('courier_configs')
+            .select('*')
+            .eq('provider_id', 'spedisci_online')
+            .eq('is_active', true)
+            .limit(1)
+          
+          if (activeConfigs && activeConfigs.length > 0) {
+            defaultConfig = activeConfigs[0]
+          }
+        }
+        
+        if (defaultConfig) {
+          // Decripta credenziali se necessario
+          const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption')
+          
+          let api_key = defaultConfig.api_key
+          let api_secret = defaultConfig.api_secret
+          
+          // Decripta se necessario
+          if (api_key && isEncrypted(api_key)) {
+            try {
+              api_key = decryptCredential(api_key)
+            } catch (decryptError) {
+              console.error('❌ Errore decriptazione api_key:', decryptError)
+              throw new Error('Impossibile decriptare credenziali')
+            }
+          }
+          
+          if (api_secret && isEncrypted(api_secret)) {
+            try {
+              api_secret = decryptCredential(api_secret)
+            } catch (decryptError) {
+              console.error('❌ Errore decriptazione api_secret:', decryptError)
+              // api_secret è opzionale, continua senza
+            }
+          }
+          
+          // Istanzia provider dalla configurazione
+          const credentials = {
+            api_key: api_key,
+            api_secret: api_secret,
+            base_url: defaultConfig.base_url,
+            customer_code: defaultConfig.contract_mapping?.['default'] || undefined,
+          }
+          
+          const provider = new SpedisciOnlineAdapter(credentials)
+          orchestrator.registerBrokerAdapter(provider)
+          console.log('✅ Broker adapter (Spedisci.Online) registrato tramite configurazione DEFAULT')
+        } else {
+          console.warn('⚠️ Spedisci.Online non configurato (né per utente né default).')
+          console.warn('⚠️ Configura Spedisci.Online in /dashboard/integrazioni per abilitare chiamate API reali.')
+        }
+      } catch (error: any) {
+        console.warn('⚠️ Impossibile registrare broker adapter (Spedisci.Online):', error?.message || error)
+        console.warn('⚠️ La spedizione verrà creata solo localmente (fallback CSV).')
+        // Non bloccare il processo - continuerà con fallback CSV
       }
     }
 
     // 5. Crea spedizione tramite orchestrator (routing intelligente)
+    // L'orchestrator userà:
+    // 1. Adapter diretto (se disponibile per il corriere)
+    // 2. Broker Spedisci.Online (se registrato sopra)
+    // 3. Fallback CSV (se tutto fallisce)
     const result = await orchestrator.createShipment(shipmentData, courierCode)
 
     return result
