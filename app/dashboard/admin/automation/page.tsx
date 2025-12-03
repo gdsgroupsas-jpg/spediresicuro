@@ -13,6 +13,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import DashboardNav from '@/components/dashboard-nav'
+import { ArrowLeft } from 'lucide-react'
 import {
   toggleAutomation,
   saveAutomationSettings,
@@ -42,7 +44,6 @@ export default function AutomationPage() {
   const [loading, setLoading] = useState(true)
   const [selectedConfig, setSelectedConfig] = useState<string | null>(null)
   const [settings, setSettings] = useState<AutomationSettings | null>(null)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [locks, setLocks] = useState<Record<string, any>>({})
   const [showOTPModal, setShowOTPModal] = useState(false)
@@ -132,7 +133,7 @@ export default function AutomationPage() {
       })
     }
     
-    setShowSettingsModal(true)
+    // Form già visibile nella pagina
   }
 
   async function handleSaveSettings() {
@@ -155,7 +156,7 @@ export default function AutomationPage() {
     
     if (result.success) {
       alert('Settings salvati con successo')
-      setShowSettingsModal(false)
+      setSelectedConfig(null)
       await loadConfigs()
     } else {
       alert(`Errore: ${result.error}`)
@@ -262,18 +263,225 @@ export default function AutomationPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Automation Spedisci.Online</h1>
-        <p className="text-gray-600 mb-4">
-          Gestisci automazione per estrazione automatica di session cookies e contratti
-        </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <DashboardNav
+          title="Automation Spedisci.Online"
+          subtitle="Gestisci automazione per estrazione automatica di session cookies e contratti"
+          showBackButton={true}
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Admin', href: '/dashboard/admin' },
+            { label: 'Automation', href: '/dashboard/admin/automation' },
+          ]}
+        />
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-sm text-blue-800">
-            <strong>📝 Come iniziare:</strong> Clicca su <strong>&quot;Settings&quot;</strong> nella colonna &quot;Azioni&quot; per configurare le credenziali Spedisci.Online e le impostazioni di automazione.
+            <strong>📝 Come iniziare:</strong> Clicca su &quot;⚙️ Configura&quot; su una configurazione qui sotto per aprire il form e inserire le credenziali Spedisci.Online.
           </p>
         </div>
-      </div>
+
+      {/* Form Configurazione Diretta */}
+      {selectedConfig && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-bold mb-4">⚙️ Configurazione Automation</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Inserisci le credenziali Spedisci.Online e configura le impostazioni di automazione. Tutti i campi con * sono obbligatori.
+          </p>
+          <div className="space-y-4">
+            {/* Metodo 2FA */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Metodo 2FA *
+              </label>
+              <select
+                value={formSettings.two_factor_method || 'email'}
+                onChange={(e) => setFormSettings({ ...formSettings, two_factor_method: e.target.value as 'email' | 'manual' })}
+                className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+              >
+                <option value="email">Email (IMAP) - Legge codice da email</option>
+                <option value="manual">Manuale (Microsoft Authenticator) - Inserisci OTP manualmente</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {formSettings.two_factor_method === 'manual' 
+                  ? '⚠️ Con Microsoft Authenticator, devi inserire OTP manualmente durante sync'
+                  : 'Per Gmail: usa App Password (non password normale)'}
+              </p>
+            </div>
+
+            {/* Email 2FA (solo se metodo = email) */}
+            {formSettings.two_factor_method === 'email' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Email per 2FA *
+                  </label>
+                  <input
+                    type="email"
+                    value={formSettings.email_2fa || ''}
+                    onChange={(e) => setFormSettings({ ...formSettings, email_2fa: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="es. mario.rossi@gmail.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    IMAP Server *
+                  </label>
+                  <input
+                    type="text"
+                    value={formSettings.imap_server || ''}
+                    onChange={(e) => setFormSettings({ ...formSettings, imap_server: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="es. imap.gmail.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    IMAP Port *
+                  </label>
+                  <input
+                    type="number"
+                    value={formSettings.imap_port || 993}
+                    onChange={(e) => setFormSettings({ ...formSettings, imap_port: parseInt(e.target.value) })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="es. 993"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    IMAP Username *
+                  </label>
+                  <input
+                    type="text"
+                    value={formSettings.imap_username || ''}
+                    onChange={(e) => setFormSettings({ ...formSettings, imap_username: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="es. mario.rossi@gmail.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    IMAP Password (App Password) *
+                  </label>
+                  <input
+                    type="password"
+                    value={formSettings.imap_password || ''}
+                    onChange={(e) => setFormSettings({ ...formSettings, imap_password: e.target.value })}
+                    className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="es. xxxx xxxx xxxx xxxx (App Password Gmail)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Per Gmail: usa App Password (non password normale)
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Info Manual 2FA */}
+            {formSettings.two_factor_method === 'manual' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>⚠️ 2FA Manuale (Microsoft Authenticator):</strong>
+                  <br />
+                  Con questo metodo, durante sync manuale ti verrà chiesto di inserire l&apos;OTP dal tuo Authenticator.
+                  <br />
+                  Sync automatico (cron) non funzionerà con questo metodo.
+                </p>
+              </div>
+            )}
+
+            {/* Spedisci.Online Username */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Spedisci.Online Username *
+              </label>
+              <input
+                type="text"
+                value={formSettings.spedisci_online_username || ''}
+                onChange={(e) => setFormSettings({ ...formSettings, spedisci_online_username: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="es. mario.rossi@azienda.it"
+              />
+            </div>
+
+            {/* Spedisci.Online Password */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Spedisci.Online Password *
+              </label>
+              <input
+                type="password"
+                value={formSettings.spedisci_online_password || ''}
+                onChange={(e) => setFormSettings({ ...formSettings, spedisci_online_password: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="es. Inserisci la tua password Spedisci.Online"
+              />
+            </div>
+
+            {/* Auto Refresh Interval */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Auto Refresh Interval (ore)
+              </label>
+              <input
+                type="number"
+                value={formSettings.auto_refresh_interval_hours || 24}
+                onChange={(e) => setFormSettings({ ...formSettings, auto_refresh_interval_hours: parseInt(e.target.value) })}
+                className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="es. 24 (ore)"
+              />
+            </div>
+
+            {/* Enabled */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formSettings.enabled || false}
+                onChange={(e) => setFormSettings({ ...formSettings, enabled: e.target.checked })}
+                className="mr-2"
+              />
+              <label className="text-sm font-medium">
+                Abilita automation
+              </label>
+            </div>
+
+            {/* Bottoni */}
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                onClick={() => {
+                  setSelectedConfig(null)
+                  setFormSettings({
+                    email_2fa: '',
+                    imap_server: 'imap.gmail.com',
+                    imap_port: 993,
+                    imap_username: '',
+                    imap_password: '',
+                    spedisci_online_username: '',
+                    spedisci_online_password: '',
+                    auto_refresh_interval_hours: 24,
+                    enabled: false,
+                  })
+                }}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Salva Configurazione
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lista Configurazioni */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -383,10 +591,17 @@ export default function AutomationPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
-                      onClick={() => handleOpenSettings(config.id)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+                      onClick={() => {
+                        setSelectedConfig(config.id)
+                        handleOpenSettings(config.id)
+                      }}
+                      className={`px-3 py-1 rounded font-medium ${
+                        selectedConfig === config.id
+                          ? 'bg-blue-700 text-white'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                     >
-                      ⚙️ Impostazioni
+                      {selectedConfig === config.id ? '✓ Configura' : '⚙️ Configura'}
                     </button>
                     <button
                       onClick={() => handleManualSync(config.id, false)}
@@ -420,199 +635,6 @@ export default function AutomationPage() {
         )}
       </div>
 
-      {/* Modal Settings */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">⚙️ Impostazioni Automation</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Inserisci le credenziali Spedisci.Online e configura le impostazioni di automazione. Tutti i campi con * sono obbligatori.
-            </p>
-
-            <div className="space-y-4">
-              {/* Metodo 2FA */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Metodo 2FA *
-                </label>
-                <select
-                  value={formSettings.two_factor_method || 'email'}
-                  onChange={(e) => setFormSettings({ ...formSettings, two_factor_method: e.target.value as 'email' | 'manual' })}
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="email">Email (IMAP) - Legge codice da email</option>
-                  <option value="manual">Manuale (Microsoft Authenticator) - Inserisci OTP manualmente</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formSettings.two_factor_method === 'manual' 
-                    ? '⚠️ Con Microsoft Authenticator, devi inserire OTP manualmente durante sync'
-                    : 'Per Gmail: usa App Password (non password normale)'}
-                </p>
-              </div>
-
-              {/* Email 2FA (solo se metodo = email) */}
-              {formSettings.two_factor_method === 'email' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Email per 2FA *
-                    </label>
-                    <input
-                      type="email"
-                      value={formSettings.email_2fa || ''}
-                      onChange={(e) => setFormSettings({ ...formSettings, email_2fa: e.target.value })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="es. mario.rossi@gmail.com"
-                    />
-                  </div>
-
-                  {/* IMAP Server */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      IMAP Server *
-                    </label>
-                    <input
-                      type="text"
-                      value={formSettings.imap_server || ''}
-                      onChange={(e) => setFormSettings({ ...formSettings, imap_server: e.target.value })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="es. imap.gmail.com"
-                    />
-                  </div>
-
-                  {/* IMAP Port */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      IMAP Port *
-                    </label>
-                    <input
-                      type="number"
-                      value={formSettings.imap_port || 993}
-                      onChange={(e) => setFormSettings({ ...formSettings, imap_port: parseInt(e.target.value) })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="es. 993"
-                    />
-                  </div>
-
-                  {/* IMAP Username */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      IMAP Username *
-                    </label>
-                    <input
-                      type="text"
-                      value={formSettings.imap_username || ''}
-                      onChange={(e) => setFormSettings({ ...formSettings, imap_username: e.target.value })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="es. mario.rossi@gmail.com"
-                    />
-                  </div>
-
-                  {/* IMAP Password */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      IMAP Password (App Password) *
-                    </label>
-                    <input
-                      type="password"
-                      value={formSettings.imap_password || ''}
-                      onChange={(e) => setFormSettings({ ...formSettings, imap_password: e.target.value })}
-                      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="es. xxxx xxxx xxxx xxxx (App Password Gmail)"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Per Gmail: usa App Password (non password normale)
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Info Manual 2FA */}
-              {formSettings.two_factor_method === 'manual' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                  <p className="text-sm text-yellow-800">
-                    <strong>⚠️ 2FA Manuale (Microsoft Authenticator):</strong>
-                    <br />
-                    Con questo metodo, durante sync manuale ti verrà chiesto di inserire l&apos;OTP dal tuo Authenticator.
-                    <br />
-                    Sync automatico (cron) non funzionerà con questo metodo.
-                  </p>
-                </div>
-              )}
-
-              {/* Spedisci.Online Username */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Spedisci.Online Username *
-                </label>
-                <input
-                  type="text"
-                  value={formSettings.spedisci_online_username || ''}
-                  onChange={(e) => setFormSettings({ ...formSettings, spedisci_online_username: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="es. mario.rossi@azienda.it"
-                />
-              </div>
-
-              {/* Spedisci.Online Password */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Spedisci.Online Password *
-                </label>
-                <input
-                  type="password"
-                  value={formSettings.spedisci_online_password || ''}
-                  onChange={(e) => setFormSettings({ ...formSettings, spedisci_online_password: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="es. Inserisci la tua password Spedisci.Online"
-                />
-              </div>
-
-              {/* Auto Refresh Interval */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Auto Refresh Interval (ore)
-                </label>
-                <input
-                  type="number"
-                  value={formSettings.auto_refresh_interval_hours || 24}
-                  onChange={(e) => setFormSettings({ ...formSettings, auto_refresh_interval_hours: parseInt(e.target.value) })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="es. 24 (ore)"
-                />
-              </div>
-
-              {/* Enabled */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formSettings.enabled || false}
-                  onChange={(e) => setFormSettings({ ...formSettings, enabled: e.target.checked })}
-                  className="mr-2"
-                />
-                <label className="text-sm font-medium">
-                  Abilita automation
-                </label>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleSaveSettings}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Salva
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal OTP Input */}
       <OTPInputModal
