@@ -28,10 +28,18 @@ const buildTimeServiceKey = supabaseServiceKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6I
 /**
  * Client Supabase per uso client-side (browser)
  * Usa la chiave anonima (pubblica, sicura per Row Level Security)
+ * 
+ * ⚠️ IMPORTANTE: Usa storage key univoco per evitare istanze multiple
  */
 export const supabase = createClient(buildTimeUrl, buildTimeAnonKey, {
   auth: {
     persistSession: false, // Non persistiamo sessioni per questo progetto
+    storageKey: 'spediresicuro-auth', // Chiave univoca per evitare conflitti
+  },
+  global: {
+    headers: {
+      'x-client-info': 'spediresicuro@1.0.0',
+    },
   },
 });
 
