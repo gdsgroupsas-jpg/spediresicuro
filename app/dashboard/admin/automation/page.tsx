@@ -489,38 +489,39 @@ export default function AutomationPage() {
 
         {/* Lista Configurazioni */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Nome
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Base URL
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Automation
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Ultimo Sync
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Session
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Lock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">
-                Azioni
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {configs.map((config) => {
-              const sessionStatus = getSessionStatus(config)
-              
-              return (
-                <tr key={config.id}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Nome
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Base URL
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Automation
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Ultimo Sync
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Session
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Lock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">
+                    Azioni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {configs.map((config) => {
+                  const sessionStatus = getSessionStatus(config)
+                  
+                  return (
+                    <tr key={config.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {config.name}
                   </td>
@@ -628,19 +629,18 @@ export default function AutomationPage() {
                       )}
                     </div>
                   </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                    </tr>
+                  )
+                })}
+              </tbody>
 
-        {configs.length === 0 && (
-          <div className="p-6 text-center text-gray-500">
-            Nessuna configurazione Spedisci.Online trovata
+            {configs.length === 0 && (
+              <div className="p-6 text-center text-gray-500">
+                Nessuna configurazione Spedisci.Online trovata
+              </div>
+            )}
+            </table>
           </div>
-        )}
-        </table>
-        </div>
         </div>
 
         {/* Modal OTP Input */}
