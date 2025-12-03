@@ -1,0 +1,26 @@
+[33mac46154[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix DEFINITIVO: Risolto problema dopo logout/login - Login salva in localStorage quando dati completati - Dashboard NON reindirizza se dati completati nel database - Pagina dati-cliente reindirizza se dati già completati - Controllo database sempre prioritario su localStorage
+[33m9d4d89c[m Fix CRITICO: Risolto definitivamente redirect loop - Salvataggio immediato in localStorage quando dati salvati - Controllo localStorage PRIMA di tutto nella dashboard - Salvataggio in localStorage anche quando parametro URL presente - Ordine controlli: localStorage -> parametro URL -> database
+[33mf0e217b[m Fix DEFINITIVO: Risolto redirect loop dopo salvataggio dati cliente - Usato parametro URL ?saved=true invece di sessionStorage - Dashboard salta controllo se parametro presente - Salvataggio in localStorage quando dati completati per evitare controlli futuri - Delay aumentato a 2 secondi - Aggiunti log dettagliati per debug completo
+[33m955a0c8[m Fix: Evita redirect loop dopo salvataggio dati cliente - Aggiunto flag sessionStorage per indicare salvataggio appena completato - Dashboard salta controllo se dati appena salvati - Delay aumentato a 1 secondo - Aggiunti log dettagliati per debug
+[33mf1e24d3[m Fix: Redirect dopo salvataggio dati cliente - Usato window.location.href invece di router.push per refresh completo - Aggiunto delay nel controllo dashboard per dare tempo al database - Aggiunto cache: no-store per ottenere dati freschi - Aggiunti log per debug
+[33m7da6a55[m Fix: Migliorato feedback salvataggio dati cliente - Aggiunto setIsSaving(false) dopo successo - Messaggio successo più visibile con animazione - Bottone disabilitato dopo successo per evitare doppi invii - Redirect ridotto a 1.5 secondi
+[33mcca0829[m Fix: Corretto errore TypeScript - variabile user non accessibile nel catch
+[33m3ba1f42[m Fix: Migrazione completa a Supabase per salvataggio dati utente - updateUser ora async e usa Supabase - Script SQL per ricreare tabella users con schema completo - Script SQL per inserire utenti demo - Fix EROFS su Vercel usando Supabase invece di JSON
+[33ma2ab67b[m Add: File .gitattributes per forzare encoding UTF-8 su file TypeScript/TSX
+[33m59cb8b7[m Fix: Forzato encoding UTF-8 esplicito nel file login
+[33m62cbe2b[m Fix: Corretto encoding UTF-8 nel file login - Sostituiti caratteri corrotti con caratteri corretti
+[33m4ec0f8e[m Fix: Corretto bug React warning su aggiornamento stato durante navigazione login
+[33m4c09431[m fix: Risolto problema login remoto e aggiunto toggle password - Usa window.location.href invece di router.push per forzare refresh completo dopo login - Aggiunto toggle per mostrare/nascondere password nei campi password e conferma password - Migliorata gestione redirect dopo OAuth login - Fix await mancante su updateUser
+[33md1f7b2e[m docs: Aggiunta guida verifica Supabase e migliorato endpoint test - Guida passo-passo per configurare Supabase su Vercel - Endpoint test mostra dettagli errori e azioni da fare - Conta utenti nella tabella users
+[33me7a37eb[m feat: Aggiunto endpoint test per verificare configurazione database - Verifica se Supabase è configurato - Verifica se tabella users esiste - Mostra dettagli configurazione
+[33m0f93393[m fix: Migliorata gestione errori quando Supabase non configurato - Messaggio chiaro se Supabase manca in produzione - Evita tentativo salvataggio JSON su Vercel read-only - Spiega che serve configurare Supabase
+[33m7f200de[m fix: Migliorata gestione errori registrazione - Rileva errori Supabase constraint unique - Messaggi errore più chiari e dettagliati - Gestione errori database read-only
+[33m3c0aa58[m fix: Corretti errori ESLint per caratteri non escapati nelle pagine
+[33ma3c9b17[m fix: Create pagine mancanti per prevenire errori 404 - Aggiunte pagine: preventivi, come-funziona, prezzi, contatti
+[33m159697f[m fix: Migliorato logging e messaggi errore registrazione - Messaggio più chiaro quando email già registrata - Logging dettagliato per debug errori 500
+[33me4448f3[m fix: Migliorato logging errore OAuth e corretto favicon mancante - Usa favicon.svg invece di file PNG mancanti - Migliorato logging per vedere dettagli errore OAuth
+[33mb30be25[m chore: Rimossi file temporanei e cartella spediresicuro-master fisicamente
+[33mf09d1e4[m chore: Rimossa cartella duplicata spediresicuro-master e aggiunta a .gitignore
+[33m24dbc00[m fix: Aggiunto await mancante in spediresicuro-master/lib/auth-config.ts per verifyUserCredentials, findUserByEmail e createUser
+[33mb03c386[m fix: Aggiunto await mancante in spediresicuro-master/app/api/auth/register/route.ts
+[33m02a0a01[m fix: Risolto problema login admin in produzione - Creazione automatica utenti demo in Supabase - Funzioni database ora async e supportano Supabase - Inizializzazione automatica utenti demo al primo login - Endpoint API per creare utenti admin manualmente

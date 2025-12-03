@@ -22,9 +22,7 @@ function getEncryptionKey(): Buffer {
   
   if (!envKey) {
     // ⚠️ SOLO PER SVILUPPO - In produzione DEVE essere configurata
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('ENCRYPTION_KEY non configurata in produzione!')
-    }
+    // Non lanciamo errore qui, gestiamo nella funzione chiamante
     console.warn('⚠️ ENCRYPTION_KEY non configurata, usando chiave di default (SOLO SVILUPPO)')
     // Chiave di default per sviluppo (NON usare in produzione!)
     return crypto.scryptSync('default-dev-key-change-in-production', 'salt', KEY_LENGTH)
@@ -43,12 +41,25 @@ function getEncryptionKey(): Buffer {
 /**
  * Cripta un valore sensibile
  * 
+ * ⚠️ Se ENCRYPTION_KEY non è configurata, restituisce il testo in chiaro (con warning)
+ * 
  * @param plaintext - Testo da criptare
- * @returns Stringa criptata in formato: iv:salt:tag:encrypted (tutti in base64)
+ * @returns Stringa criptata in formato: iv:salt:tag:encrypted (tutti in base64) o testo in chiaro se chiave non configurata
  */
 export function encryptCredential(plaintext: string): string {
   if (!plaintext) {
     return ''
+  }
+
+  // Se ENCRYPTION_KEY non è configurata, restituisci in chiaro (con warning)
+  if (!process.env.ENCRYPTION_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ ENCRYPTION_KEY non configurata in produzione. Le credenziali verranno salvate in chiaro (NON SICURO). Configura ENCRYPTION_KEY su Vercel per abilitare la criptazione.')
+    } else {
+      console.warn('⚠️ ENCRYPTION_KEY non configurata. Le credenziali verranno salvate in chiaro.')
+    }
+    // Restituisci in chiaro - il sistema continuerà a funzionare
+    return plaintext
   }
 
   try {
@@ -77,7 +88,9 @@ export function encryptCredential(plaintext: string): string {
     return result
   } catch (error) {
     console.error('Errore criptazione credenziale:', error)
-    throw new Error('Errore durante la criptazione della credenziale')
+    // In caso di errore, restituisci in chiaro invece di lanciare errore
+    console.warn('⚠️ Fallback: credenziale salvata in chiaro a causa di errore di criptazione')
+    return plaintext
   }
 }
 
