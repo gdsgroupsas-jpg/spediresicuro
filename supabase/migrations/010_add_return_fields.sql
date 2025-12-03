@@ -154,3 +154,4 @@ BEGIN
   RAISE NOTICE '   - Indici creati per performance';
 END $$;
 
+

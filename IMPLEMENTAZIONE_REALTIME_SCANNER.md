@@ -198,3 +198,4 @@ Per ora, lo scanner è già configurato per resi con prop `mode="return"`.
 - **Killer feature** deve essere attivata dall'admin per l'utente
 - **WebSocket** si riconnette automaticamente se cade
 
+

@@ -33,7 +33,9 @@ import {
   Settings,
   Trash2,
   Power,
-  PowerOff
+  PowerOff,
+  Zap,
+  Cog
 } from 'lucide-react';
 
 interface AdminStats {
@@ -424,6 +426,36 @@ export default function AdminDashboardPage() {
           showBackButton={true}
         />
 
+        {/* Quick Links - Admin Tools */}
+        <div className="mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link
+              href="/dashboard/admin/configurations"
+              className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all group"
+            >
+              <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                <Cog className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">Configurazioni</h3>
+                <p className="text-sm text-gray-500">Gestisci API corrieri</p>
+              </div>
+            </Link>
+            
+            <Link
+              href="/dashboard/admin/automation"
+              className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-500 hover:shadow-md transition-all group"
+            >
+              <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                <Zap className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">Automation</h3>
+                <p className="text-sm text-gray-500">Spedisci.Online Agent</p>
+              </div>
+            </Link>
+          </div>
+        </div>
 
         {/* Stat Cards - Utenti */}
         <div className="mb-8">
