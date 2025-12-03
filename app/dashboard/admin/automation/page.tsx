@@ -510,7 +510,7 @@ export default function AutomationPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Lock
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">
                 Azioni
               </th>
             </tr>
@@ -593,38 +593,40 @@ export default function AutomationPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => {
-                        setSelectedConfig(config.id)
-                        handleOpenSettings(config.id)
-                      }}
-                      className={`px-3 py-1 rounded font-medium ${
-                        selectedConfig === config.id
-                          ? 'bg-blue-700 text-white'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                    >
-                      {selectedConfig === config.id ? '✓ Configura' : '⚙️ Configura'}
-                    </button>
-                    <button
-                      onClick={() => handleManualSync(config.id, false)}
-                      disabled={syncing === config.id || locks[config.id]?.has_lock}
-                      className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                      title={locks[config.id]?.has_lock ? 'Lock attivo, usa "Forza Sync" per ignorare' : ''}
-                    >
-                      {syncing === config.id ? 'Sync...' : 'Sync'}
-                    </button>
-                    {locks[config.id]?.has_lock && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
-                        onClick={() => handleManualSync(config.id, true)}
-                        disabled={syncing === config.id}
-                        className="text-orange-600 hover:text-orange-900 disabled:opacity-50"
-                        title="Forza sync ignorando lock (usa con cautela)"
+                        onClick={() => {
+                          setSelectedConfig(config.id)
+                          handleOpenSettings(config.id)
+                        }}
+                        className={`px-3 py-1.5 rounded font-medium text-sm whitespace-nowrap ${
+                          selectedConfig === config.id
+                            ? 'bg-blue-700 text-white'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
                       >
-                        Forza Sync
+                        {selectedConfig === config.id ? '✓ Configura' : '⚙️ Configura'}
                       </button>
-                    )}
+                      <button
+                        onClick={() => handleManualSync(config.id, false)}
+                        disabled={syncing === config.id || locks[config.id]?.has_lock}
+                        className="px-2 py-1 text-green-600 hover:text-green-900 disabled:opacity-50 text-sm whitespace-nowrap"
+                        title={locks[config.id]?.has_lock ? 'Lock attivo, usa "Forza Sync" per ignorare' : ''}
+                      >
+                        {syncing === config.id ? 'Sync...' : 'Sync'}
+                      </button>
+                      {locks[config.id]?.has_lock && (
+                        <button
+                          onClick={() => handleManualSync(config.id, true)}
+                          disabled={syncing === config.id}
+                          className="px-2 py-1 text-orange-600 hover:text-orange-900 disabled:opacity-50 text-sm whitespace-nowrap"
+                          title="Forza sync ignorando lock (usa con cautela)"
+                        >
+                          Forza Sync
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )
@@ -637,6 +639,8 @@ export default function AutomationPage() {
             Nessuna configurazione Spedisci.Online trovata
           </div>
         )}
+        </table>
+        </div>
         </div>
 
         {/* Modal OTP Input */}
