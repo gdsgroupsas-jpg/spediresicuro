@@ -12,7 +12,7 @@ import { motion } from 'framer-motion'
 import DashboardNav from '@/components/dashboard-nav'
 import IntegrationCard from '@/components/integrazioni/integration-card'
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
-import SpedisciOnlineConfig from '@/components/integrazioni/spedisci-online-config'
+import SpedisciOnlineConfigMulti from '@/components/integrazioni/spedisci-online-config-multi'
 import { 
   ShoppingBag, 
   Store, 
@@ -179,7 +179,7 @@ export default function IntegrazioniPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mb-12"
         >
-          <SpedisciOnlineConfig />
+          <SpedisciOnlineConfigMulti />
         </motion.div>
 
         {/* Grid Integrazioni */}
