@@ -127,3 +127,4 @@ Il `contract_mapping` sarà salvato nel database come JSON:
 **Priorità**: Alta  
 **Stima tempo**: 1-2 ore
 
+
