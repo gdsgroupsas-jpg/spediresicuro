@@ -126,7 +126,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       });
 
       // 2. PRIORITÀ 1: Chiamata API JSON sincrona (LDV istantanea)
-      console.log('🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a:', `${this.BASE_URL}/v1/shipments`);
+      // L'URL verrà costruito correttamente in createShipmentJSON
       try {
         const result = await this.createShipmentJSON(payload);
         console.log('✅ [SPEDISCI.ONLINE] Chiamata API JSON riuscita!', {
@@ -194,10 +194,11 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    */
   async getTracking(trackingNumber: string): Promise<TrackingEvent[]> {
     try {
-      // Costruisci URL tracking in modo intelligente: se BASE_URL contiene già /api/v2, usa percorso corretto
+      // Costruisci URL tracking in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1
       let trackingEndpoint = `/v1/tracking/${trackingNumber}`;
       if (this.BASE_URL.includes('/api/v2')) {
-        trackingEndpoint = `/tracking/${trackingNumber}`;
+        // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/tracking
+        trackingEndpoint = `/v1/tracking/${trackingNumber}`;
       }
       const response = await fetch(`${this.BASE_URL}${trackingEndpoint}`, {
         method: 'GET',
@@ -232,13 +233,14 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * ===========================================
    */
   private async createShipmentJSON(payload: SpedisciOnlineShipmentPayload): Promise<SpedisciOnlineResponse> {
-    // Costruisci URL in modo intelligente: se BASE_URL contiene già /api/v2, non aggiungere /v1
+    // Costruisci URL in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1
     let endpoint = '/v1/shipments';
     if (this.BASE_URL.includes('/api/v2')) {
-      // Se BASE_URL contiene già /api/v2, l'endpoint dovrebbe essere solo /shipments
-      endpoint = '/shipments';
+      // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/shipments
+      endpoint = '/v1/shipments';
     }
     const url = `${this.BASE_URL}${endpoint}`;
+    console.log('🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a:', url);
     console.log('📡 [SPEDISCI.ONLINE] Chiamata fetch a:', url);
     console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));
     console.log('📡 [SPEDISCI.ONLINE] Codice contratto nel payload:', payload.codice_contratto || 'MANCANTE');
@@ -303,10 +305,11 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     formData.append('file', blob, 'spedizione.csv');
     formData.append('format', 'csv');
 
-    // Costruisci URL upload in modo intelligente: se BASE_URL contiene già /api/v2, usa percorso corretto
+    // Costruisci URL upload in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1
     let uploadEndpoint = '/v1/shipments/upload';
     if (this.BASE_URL.includes('/api/v2')) {
-      uploadEndpoint = '/shipments/upload';
+      // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/shipments/upload
+      uploadEndpoint = '/v1/shipments/upload';
     }
     const response = await fetch(`${this.BASE_URL}${uploadEndpoint}`, {
       method: 'POST',
