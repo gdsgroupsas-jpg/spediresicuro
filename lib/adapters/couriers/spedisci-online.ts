@@ -69,7 +69,9 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     }
     
     this.API_KEY = credentials.api_key;
-    this.BASE_URL = credentials.base_url || 'https://api.spedisci.online';
+    // Normalizza BASE_URL rimuovendo slash finale per evitare doppi slash
+    const baseUrl = credentials.base_url || 'https://api.spedisci.online';
+    this.BASE_URL = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.CONTRACT_MAPPING = credentials.contract_mapping || {};
   }
 
@@ -331,27 +333,54 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     }
 
     // Cerca un contratto che corrisponde al corriere
-    // Il mapping è: codice contratto completo -> nome corriere
-    // Es: "gls-NN6-STANDARD-(TR-VE)" -> "Gls"
+    // Il mapping può essere in due formati:
+    // 1. codice contratto -> nome corriere (es: "gls-NN6-STANDARD" -> "Gls")
+    // 2. nome corriere -> codice contratto (es: "SDA" -> "sda-123-456")
     
-    // Prima cerca match esatto (nome corriere)
+    // STRATEGIA 1: Cerca match esatto nel VALORE (nome corriere nel mapping)
     for (const [contractCode, courierName] of Object.entries(this.CONTRACT_MAPPING)) {
-      if (courierName.toLowerCase() === courier) {
+      const normalizedCourierName = String(courierName).toLowerCase().trim();
+      if (normalizedCourierName === courier) {
         console.log(`✅ Codice contratto trovato per ${courier}: ${contractCode}`);
         return contractCode;
       }
     }
 
-    // Poi cerca match parziale (codice contratto che inizia con il nome del corriere)
+    // STRATEGIA 2: Cerca match esatto nella CHIAVE (codice contratto che contiene il nome corriere)
     for (const [contractCode] of Object.entries(this.CONTRACT_MAPPING)) {
-      if (contractCode.toLowerCase().startsWith(courier + '-')) {
+      const normalizedContractCode = contractCode.toLowerCase();
+      if (normalizedContractCode === courier || normalizedContractCode.startsWith(courier + '-')) {
+        console.log(`✅ Codice contratto trovato (match chiave) per ${courier}: ${contractCode}`);
+        return contractCode;
+      }
+    }
+
+    // STRATEGIA 3: Cerca match parziale nel codice contratto (es: "sda" in "sda-XXX-YYY")
+    for (const [contractCode] of Object.entries(this.CONTRACT_MAPPING)) {
+      const normalizedContractCode = contractCode.toLowerCase();
+      // Cerca se il codice contratto inizia con il nome del corriere o lo contiene dopo un trattino
+      if (normalizedContractCode.includes(courier) && (
+        normalizedContractCode.startsWith(courier) ||
+        normalizedContractCode.includes('-' + courier + '-') ||
+        normalizedContractCode.endsWith('-' + courier)
+      )) {
         console.log(`✅ Codice contratto trovato (parziale) per ${courier}: ${contractCode}`);
         return contractCode;
       }
     }
 
-    // Se non trovato, log warning
+    // STRATEGIA 4: Cerca match parziale nel nome corriere (es: "SDA Express" contiene "sda")
+    for (const [contractCode, courierName] of Object.entries(this.CONTRACT_MAPPING)) {
+      const normalizedCourierName = String(courierName).toLowerCase();
+      if (normalizedCourierName.includes(courier) || courier.includes(normalizedCourierName.split(' ')[0])) {
+        console.log(`✅ Codice contratto trovato (match parziale nome) per ${courier}: ${contractCode}`);
+        return contractCode;
+      }
+    }
+
+    // Se non trovato, log warning con dettagli
     console.warn(`⚠️ Nessun codice contratto trovato per corriere: ${courier}`);
+    console.warn(`⚠️ Mapping disponibile:`, Object.keys(this.CONTRACT_MAPPING));
     return undefined;
   }
 
