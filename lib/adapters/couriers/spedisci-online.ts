@@ -20,6 +20,7 @@ export interface SpedisciOnlineCredentials extends CourierCredentials {
   api_secret?: string;
   customer_code?: string;
   base_url?: string; // Default: https://api.spedisci.online
+  contract_mapping?: Record<string, string>; // Mapping: codice contratto completo -> nome corriere
 }
 
 export interface SpedisciOnlineShipmentPayload {
@@ -40,6 +41,7 @@ export interface SpedisciOnlineShipmentPayload {
   contenuto?: string;
   order_id?: string;
   totale_ordine?: number | string;
+  codice_contratto?: string; // Codice contratto completo (es: "gls-NN6-STANDARD-(TR-VE)")
 }
 
 export interface SpedisciOnlineResponse {
@@ -54,6 +56,7 @@ export interface SpedisciOnlineResponse {
 export class SpedisciOnlineAdapter extends CourierAdapter {
   private readonly API_KEY: string;
   private readonly BASE_URL: string;
+  private readonly CONTRACT_MAPPING: Record<string, string>; // Mapping: codice contratto -> corriere
 
   /**
    * Costruttore che forza le credenziali (Niente credenziali = Niente LDV)
@@ -67,6 +70,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     
     this.API_KEY = credentials.api_key;
     this.BASE_URL = credentials.base_url || 'https://api.spedisci.online';
+    this.CONTRACT_MAPPING = credentials.contract_mapping || {};
   }
 
   /**
@@ -100,13 +104,34 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * 3. Fallback CSV locale (solo se tutto fallisce)
    */
   async createShipment(data: Shipment | CreateShipmentInput | any): Promise<ShippingLabel> {
+    console.log('🚀 [SPEDISCI.ONLINE] Inizio creazione spedizione...');
+    console.log('🚀 [SPEDISCI.ONLINE] BASE_URL:', this.BASE_URL);
+    console.log('🚀 [SPEDISCI.ONLINE] API_KEY presente:', !!this.API_KEY);
+    console.log('🚀 [SPEDISCI.ONLINE] CONTRACT_MAPPING:', Object.keys(this.CONTRACT_MAPPING || {}).length, 'contratti');
+    
     try {
-      // 1. Mappatura Dati nel formato Spedisci.Online
-      const payload = this.mapToSpedisciOnlineFormat(data);
+      // 1. Trova codice contratto basato sul corriere selezionato
+      console.log('🔍 [SPEDISCI.ONLINE] Cerco codice contratto per corriere:', data.corriere || data.courier_id || 'non trovato');
+      const contractCode = this.findContractCode(data);
+      console.log('🔍 [SPEDISCI.ONLINE] Codice contratto trovato:', contractCode || 'NESSUNO');
+      
+      // 2. Mappatura Dati nel formato Spedisci.Online (include codice contratto)
+      const payload = this.mapToSpedisciOnlineFormat(data, contractCode);
+      console.log('📦 [SPEDISCI.ONLINE] Payload preparato:', {
+        destinatario: payload.destinatario,
+        codice_contratto: payload.codice_contratto,
+        base_url: this.BASE_URL,
+      });
 
       // 2. PRIORITÀ 1: Chiamata API JSON sincrona (LDV istantanea)
+      console.log('🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a:', `${this.BASE_URL}/v1/shipments`);
       try {
         const result = await this.createShipmentJSON(payload);
+        console.log('✅ [SPEDISCI.ONLINE] Chiamata API JSON riuscita!', {
+          success: result.success,
+          tracking_number: result.tracking_number,
+          has_label: !!result.label_pdf,
+        });
         
         if (result.success) {
           return {
@@ -116,7 +141,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           };
         }
       } catch (jsonError: any) {
-        console.warn('Creazione JSON fallita, provo CSV upload:', jsonError.message);
+        console.error('❌ [SPEDISCI.ONLINE] Creazione JSON fallita:', {
+          message: jsonError.message,
+          stack: jsonError.stack,
+          base_url: this.BASE_URL,
+        });
+        console.warn('⚠️ [SPEDISCI.ONLINE] Provo CSV upload...');
         // Continua con CSV upload
       }
 
@@ -138,8 +168,11 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       }
 
       // 4. FALLBACK: Genera CSV locale (solo se tutto fallisce)
+      console.warn('⚠️ [SPEDISCI.ONLINE] TUTTE LE CHIAMATE API FALLITE - Genero CSV locale come fallback');
       const csvContent = this.generateCSV(payload);
       const trackingNumber = this.extractTrackingNumber(data) || this.generateTrackingNumber();
+      
+      console.warn('⚠️ [SPEDISCI.ONLINE] CSV locale generato. Tracking:', trackingNumber);
       
       return {
         tracking_number: trackingNumber,
@@ -192,7 +225,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * ===========================================
    */
   private async createShipmentJSON(payload: SpedisciOnlineShipmentPayload): Promise<SpedisciOnlineResponse> {
-    const response = await fetch(`${this.BASE_URL}/v1/shipments`, {
+    const url = `${this.BASE_URL}/v1/shipments`;
+    console.log('📡 [SPEDISCI.ONLINE] Chiamata fetch a:', url);
+    console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));
+    console.log('📡 [SPEDISCI.ONLINE] Codice contratto nel payload:', payload.codice_contratto || 'MANCANTE');
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -202,21 +240,35 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       body: JSON.stringify(payload),
     });
 
+    console.log('📡 [SPEDISCI.ONLINE] Risposta ricevuta:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
       // Cattura l'errore specifico
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      let errorBody = null;
       
       try {
-        const errorBody = await response.json();
+        errorBody = await response.json();
         errorMessage = errorBody.message || errorBody.error || errorMessage;
+        console.error('❌ [SPEDISCI.ONLINE] Errore risposta API:', errorBody);
       } catch {
-        // Ignora se non è JSON
+        const textError = await response.text();
+        console.error('❌ [SPEDISCI.ONLINE] Errore risposta API (non JSON):', textError);
+        errorMessage = textError || errorMessage;
       }
       
       throw new Error(`Spedisci.Online Error: ${errorMessage}`);
     }
 
     const result = await response.json();
+    console.log('✅ [SPEDISCI.ONLINE] Risposta API successo:', {
+      has_tracking: !!result.tracking_number,
+      has_label: !!result.label_pdf,
+    });
     
     return {
       success: true,
@@ -262,13 +314,58 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
   }
 
   /**
+   * Trova il codice contratto basato sul corriere selezionato
+   */
+  private findContractCode(data: Shipment | CreateShipmentInput | any): string | undefined {
+    // Estrai il corriere dai dati
+    const courier = (
+      data.corriere || 
+      data.courier_id || 
+      data.courier?.code || 
+      data.courier?.name ||
+      ''
+    ).toLowerCase().trim();
+
+    if (!courier || !this.CONTRACT_MAPPING || Object.keys(this.CONTRACT_MAPPING).length === 0) {
+      return undefined;
+    }
+
+    // Cerca un contratto che corrisponde al corriere
+    // Il mapping è: codice contratto completo -> nome corriere
+    // Es: "gls-NN6-STANDARD-(TR-VE)" -> "Gls"
+    
+    // Prima cerca match esatto (nome corriere)
+    for (const [contractCode, courierName] of Object.entries(this.CONTRACT_MAPPING)) {
+      if (courierName.toLowerCase() === courier) {
+        console.log(`✅ Codice contratto trovato per ${courier}: ${contractCode}`);
+        return contractCode;
+      }
+    }
+
+    // Poi cerca match parziale (codice contratto che inizia con il nome del corriere)
+    for (const [contractCode] of Object.entries(this.CONTRACT_MAPPING)) {
+      if (contractCode.toLowerCase().startsWith(courier + '-')) {
+        console.log(`✅ Codice contratto trovato (parziale) per ${courier}: ${contractCode}`);
+        return contractCode;
+      }
+    }
+
+    // Se non trovato, log warning
+    console.warn(`⚠️ Nessun codice contratto trovato per corriere: ${courier}`);
+    return undefined;
+  }
+
+  /**
    * ===========================================
    * METODO PRIVATO: MAPPATURA DATI
    * ===========================================
    * 
    * Mappa i dati interni (Shipment/CreateShipmentInput) al formato Spedisci.Online
    */
-  private mapToSpedisciOnlineFormat(data: Shipment | CreateShipmentInput | any): SpedisciOnlineShipmentPayload {
+  private mapToSpedisciOnlineFormat(
+    data: Shipment | CreateShipmentInput | any,
+    contractCode?: string
+  ): SpedisciOnlineShipmentPayload {
     // Normalizza dati da diverse fonti
     const recipientName = 'recipient_name' in data 
       ? data.recipient_name 
@@ -328,6 +425,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       contenuto: '',
       order_id: tracking,
       totale_ordine: formatValue(finalPrice),
+      codice_contratto: contractCode, // Codice contratto completo (es: "gls-NN6-STANDARD-(TR-VE)")
     };
   }
 

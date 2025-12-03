@@ -141,11 +141,26 @@ function instantiateProviderFromConfig(
     switch (providerId.toLowerCase()) {
       case 'spedisci_online':
       case 'spedisci-online': {
+        // Prepara contract_mapping (può essere già un oggetto o una stringa JSON)
+        let contractMapping: Record<string, string> = {};
+        if (config.contract_mapping) {
+          if (typeof config.contract_mapping === 'string') {
+            try {
+              contractMapping = JSON.parse(config.contract_mapping);
+            } catch {
+              console.warn('Errore parsing contract_mapping come JSON, provo formato semplice');
+            }
+          } else if (typeof config.contract_mapping === 'object') {
+            contractMapping = config.contract_mapping;
+          }
+        }
+
         const credentials: SpedisciOnlineCredentials = {
           api_key: config.api_key,
           api_secret: config.api_secret,
           base_url: config.base_url,
-          customer_code: config.contract_mapping?.['default'] || undefined,
+          customer_code: contractMapping['default'] || undefined,
+          contract_mapping: contractMapping, // Passa il mapping completo
         };
 
         return new SpedisciOnlineAdapter(credentials);
