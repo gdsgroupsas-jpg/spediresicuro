@@ -31,7 +31,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. Restituisci informazioni (senza password)
+    // 3. Recupera anche account_type da Supabase se disponibile
+    let accountType = user.role; // Fallback a role
+    try {
+      const { supabaseAdmin } = await import('@/lib/db/client');
+      const { data: supabaseUser } = await supabaseAdmin
+        .from('users')
+        .select('account_type, role')
+        .eq('email', session.user.email)
+        .single();
+      
+      if (supabaseUser) {
+        accountType = supabaseUser.account_type || supabaseUser.role || user.role;
+      }
+    } catch (error) {
+      // Ignora errori, usa role come fallback
+      console.warn('Errore recupero account_type:', error);
+    }
+
+    // 4. Restituisci informazioni (senza password)
     return NextResponse.json({
       success: true,
       user: {
@@ -39,6 +57,7 @@ export async function GET(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
+        account_type: accountType, // Aggiunto per compatibilità
         provider: user.provider,
         image: user.image,
         datiCliente: user.datiCliente,
