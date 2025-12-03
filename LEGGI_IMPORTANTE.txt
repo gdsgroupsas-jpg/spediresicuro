@@ -1,0 +1,29 @@
+=========================================
+⚡ TERMINALE BLOCCATO - SOLUZIONE
+=========================================
+
+Il terminale attuale è bloccato dal git pager.
+
+SOLUZIONE:
+
+1. CHIUDI il terminale bloccato completamente
+2. Apri un NUOVO terminale (PowerShell o CMD)
+3. Vai in: C:\spediresicuro-master\spediresicuro
+4. Esegui: COMMIT_URGENTE.bat
+
+OPPURE
+
+Incolla questi comandi uno alla volta:
+
+cd C:\spediresicuro-master\spediresicuro
+git config --global core.pager ""
+git add -A
+git commit -m "fix: Correzione TypeScript + tutti i fix"
+git push
+
+=========================================
+
+Tutti i file sono pronti, serve solo fare commit e push!
+
+=========================================
+
