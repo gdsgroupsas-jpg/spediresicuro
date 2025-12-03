@@ -182,9 +182,19 @@ export class SpedisciOnlineAgent {
       console.log('🚀 [AGENT] Avvio estrazione session data...');
 
       // 1. Apri browser
+      // Configurazione ottimizzata per Vercel Serverless
       browser = await puppeteer.launch({
         headless: true, // Modalità headless (senza UI)
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process', // Importante per Vercel
+          '--disable-gpu',
+        ],
       });
 
       const page = await browser.newPage();
