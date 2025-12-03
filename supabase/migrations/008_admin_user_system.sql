@@ -383,3 +383,4 @@ BEGIN
   RAISE NOTICE '   UPDATE users SET account_type = ''superadmin'', admin_level = 0 WHERE email = ''admin@spediresicuro.it'';';
 END $$;
 
+

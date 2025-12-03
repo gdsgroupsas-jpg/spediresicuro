@@ -185,3 +185,4 @@ Il sistema è pronto. Esegui le migration SQL e inizia a usarlo!
 
 Prossimi step: UI per gestire i sotto-admin e Server Actions per crearli.
 
+

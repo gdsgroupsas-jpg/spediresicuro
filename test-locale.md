@@ -80,3 +80,4 @@ Se tutto funziona, dovresti vedere:
 - ✅ Log chiari che mostrano cosa sta succedendo
 
 
+
