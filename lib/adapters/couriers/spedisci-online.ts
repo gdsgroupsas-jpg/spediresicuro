@@ -231,73 +231,146 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * ===========================================
    * METODO PRIVATO: CREAZIONE JSON (PRIORITÀ 1)
    * ===========================================
+   * 
+   * Prova automaticamente diversi endpoint fino a trovare quello corretto
    */
   private async createShipmentJSON(payload: SpedisciOnlineShipmentPayload): Promise<SpedisciOnlineResponse> {
-    // Costruisci URL in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1
-    let endpoint = '/v1/shipments';
-    if (this.BASE_URL.includes('/api/v2')) {
-      // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/shipments
-      endpoint = '/v1/shipments';
-    }
-    const url = `${this.BASE_URL}${endpoint}`;
-    console.log('🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a:', url);
-    console.log('📡 [SPEDISCI.ONLINE] Chiamata fetch a:', url);
     console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));
     console.log('📡 [SPEDISCI.ONLINE] Codice contratto nel payload:', payload.codice_contratto || 'MANCANTE');
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.API_KEY}`,
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    console.log('📡 [SPEDISCI.ONLINE] Risposta ricevuta:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-    });
-
-    if (!response.ok) {
-      // Cattura l'errore specifico
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      let errorBody = null;
+    // Genera lista di endpoint da provare in ordine di probabilità
+    const endpointsToTry = this.generateEndpointVariations();
+    
+    let lastError: Error | null = null;
+    
+    // Prova ogni endpoint fino a trovare uno che funziona
+    for (const endpoint of endpointsToTry) {
+      const url = `${this.BASE_URL}${endpoint}`;
+      console.log(`🔍 [SPEDISCI.ONLINE] Tentativo endpoint: ${url}`);
       
       try {
-        errorBody = await response.json();
-        errorMessage = errorBody.message || errorBody.error || errorMessage;
-        console.error('❌ [SPEDISCI.ONLINE] Errore risposta API:', errorBody);
-      } catch {
-        const textError = await response.text();
-        console.error('❌ [SPEDISCI.ONLINE] Errore risposta API (non JSON):', textError);
-        errorMessage = textError || errorMessage;
-      }
-      
-      throw new Error(`Spedisci.Online Error: ${errorMessage}`);
-    }
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.API_KEY}`,
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
 
-    const result = await response.json();
-    console.log('✅ [SPEDISCI.ONLINE] Risposta API successo:', {
-      has_tracking: !!result.tracking_number,
-      has_label: !!result.label_pdf,
-    });
+        console.log('📡 [SPEDISCI.ONLINE] Risposta ricevuta:', {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+        });
+
+        // Se la risposta è OK (200-299), abbiamo trovato l'endpoint corretto!
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ [SPEDISCI.ONLINE] Endpoint corretto trovato!', url);
+          console.log('✅ [SPEDISCI.ONLINE] Risposta API successo:', {
+            has_tracking: !!result.tracking_number,
+            has_label: !!result.label_pdf,
+          });
+          
+          return {
+            success: true,
+            tracking_number: result.tracking_number || result.tracking || this.generateTrackingNumber(),
+            label_url: result.label_url || result.label_pdf_url,
+            label_pdf: result.label_pdf, // Base64 encoded
+            message: result.message || 'LDV creata con successo',
+          };
+        }
+
+        // Se non è OK, salva l'errore e prova il prossimo endpoint
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorBody = null;
+        
+        try {
+          errorBody = await response.json();
+          errorMessage = errorBody.message || errorBody.error || errorMessage;
+        } catch {
+          const textError = await response.text();
+          errorMessage = textError || errorMessage;
+        }
+        
+        // Se è un errore diverso da 404, potrebbe essere un problema di autenticazione o payload
+        // In questo caso, fermiamo qui e restituiamo l'errore
+        if (response.status !== 404) {
+          console.error(`❌ [SPEDISCI.ONLINE] Errore ${response.status} su ${url}:`, errorMessage);
+          throw new Error(`Spedisci.Online Error (${response.status}): ${errorMessage}`);
+        }
+        
+        // Se è 404, continua con il prossimo endpoint
+        console.warn(`⚠️ [SPEDISCI.ONLINE] Endpoint ${url} restituisce 404, provo il prossimo...`);
+        lastError = new Error(`Endpoint ${url} non trovato (404)`);
+        
+      } catch (error: any) {
+        // Se non è un errore 404, rilanciamo subito
+        if (error.message && !error.message.includes('404') && !error.message.includes('not found')) {
+          throw error;
+        }
+        lastError = error;
+        console.warn(`⚠️ [SPEDISCI.ONLINE] Errore su ${url}:`, error.message);
+        // Continua con il prossimo endpoint
+      }
+    }
     
-    return {
-      success: true,
-      tracking_number: result.tracking_number || result.tracking || this.generateTrackingNumber(),
-      label_url: result.label_url || result.label_pdf_url,
-      label_pdf: result.label_pdf, // Base64 encoded
-      message: result.message || 'LDV creata con successo',
-    };
+    // Se arriviamo qui, tutti gli endpoint hanno fallito
+    console.error('❌ [SPEDISCI.ONLINE] Tutti gli endpoint provati hanno fallito');
+    throw lastError || new Error('Spedisci.Online: Nessun endpoint valido trovato');
+  }
+
+  /**
+   * Genera variazioni di endpoint da provare in ordine di probabilità
+   */
+  private generateEndpointVariations(): string[] {
+    const baseUrl = this.BASE_URL;
+    const endpoints: string[] = [];
+    
+    // Estrai il dominio base (senza /api/v2 o /api/v1)
+    let domainBase = baseUrl;
+    if (baseUrl.includes('/api/v2')) {
+      domainBase = baseUrl.replace('/api/v2', '');
+    } else if (baseUrl.includes('/api/v1')) {
+      domainBase = baseUrl.replace('/api/v1', '');
+    } else if (baseUrl.includes('/api')) {
+      domainBase = baseUrl.replace('/api', '');
+    }
+    
+    // Lista di endpoint da provare in ordine di probabilità
+    if (baseUrl.includes('/api/v2')) {
+      // Se BASE_URL contiene /api/v2, prova queste combinazioni:
+      endpoints.push('/api/v2/shipments');           // 1. Senza /v1 (più probabile)
+      endpoints.push('/api/v2/v1/shipments');         // 2. Con /v1 (attuale)
+      endpoints.push('/v1/shipments');                 // 3. Solo /v1 (senza /api/v2)
+      endpoints.push('/shipments');                    // 4. Solo /shipments
+      endpoints.push('/api/v1/shipments');             // 5. /api/v1 invece di /api/v2
+    } else if (baseUrl.includes('/api/v1')) {
+      // Se BASE_URL contiene /api/v1
+      endpoints.push('/api/v1/shipments');
+      endpoints.push('/v1/shipments');
+      endpoints.push('/shipments');
+    } else {
+      // Se BASE_URL è il dominio base
+      endpoints.push('/api/v2/shipments');
+      endpoints.push('/api/v1/shipments');
+      endpoints.push('/v1/shipments');
+      endpoints.push('/shipments');
+    }
+    
+    // Rimuovi duplicati mantenendo l'ordine
+    return [...new Set(endpoints)];
   }
 
   /**
    * ===========================================
    * METODO PRIVATO: UPLOAD CSV (PRIORITÀ 2)
    * ===========================================
+   * 
+   * Prova automaticamente diversi endpoint per l'upload CSV
    */
   private async uploadCSV(csvContent: string): Promise<SpedisciOnlineResponse> {
     const formData = new FormData();
@@ -305,33 +378,93 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     formData.append('file', blob, 'spedizione.csv');
     formData.append('format', 'csv');
 
-    // Costruisci URL upload in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1
-    let uploadEndpoint = '/v1/shipments/upload';
-    if (this.BASE_URL.includes('/api/v2')) {
-      // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/shipments/upload
-      uploadEndpoint = '/v1/shipments/upload';
-    }
-    const response = await fetch(`${this.BASE_URL}${uploadEndpoint}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.API_KEY}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Upload CSV fallito: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    // Genera lista di endpoint per upload CSV
+    const uploadEndpoints = this.generateUploadEndpointVariations();
     
-    return {
-      success: true,
-      tracking_number: result.tracking_number || this.generateTrackingNumber(),
-      label_url: result.label_url,
-      label_pdf: result.label_pdf,
-      message: result.message || 'CSV caricato con successo',
-    };
+    let lastError: Error | null = null;
+    
+    // Prova ogni endpoint fino a trovare uno che funziona
+    for (const endpoint of uploadEndpoints) {
+      const url = `${this.BASE_URL}${endpoint}`;
+      console.log(`🔍 [SPEDISCI.ONLINE] Tentativo upload CSV su: ${url}`);
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.API_KEY}`,
+          },
+          body: formData,
+        });
+
+        console.log('📡 [SPEDISCI.ONLINE] Risposta upload CSV:', {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ [SPEDISCI.ONLINE] Upload CSV riuscito su:', url);
+          
+          return {
+            success: true,
+            tracking_number: result.tracking_number || this.generateTrackingNumber(),
+            label_url: result.label_url,
+            label_pdf: result.label_pdf,
+            message: result.message || 'CSV caricato con successo',
+          };
+        }
+
+        // Se non è OK, salva l'errore e prova il prossimo endpoint
+        if (response.status !== 404) {
+          const errorText = await response.text();
+          throw new Error(`Upload CSV fallito (${response.status}): ${errorText}`);
+        }
+        
+        console.warn(`⚠️ [SPEDISCI.ONLINE] Endpoint upload ${url} restituisce 404, provo il prossimo...`);
+        lastError = new Error(`Endpoint upload ${url} non trovato (404)`);
+        
+      } catch (error: any) {
+        if (error.message && !error.message.includes('404') && !error.message.includes('not found')) {
+          throw error;
+        }
+        lastError = error;
+        console.warn(`⚠️ [SPEDISCI.ONLINE] Errore upload su ${url}:`, error.message);
+      }
+    }
+    
+    // Se arriviamo qui, tutti gli endpoint hanno fallito
+    console.error('❌ [SPEDISCI.ONLINE] Tutti gli endpoint upload CSV hanno fallito');
+    throw lastError || new Error('Spedisci.Online: Nessun endpoint upload CSV valido trovato');
+  }
+
+  /**
+   * Genera variazioni di endpoint per upload CSV
+   */
+  private generateUploadEndpointVariations(): string[] {
+    const baseUrl = this.BASE_URL;
+    const endpoints: string[] = [];
+    
+    if (baseUrl.includes('/api/v2')) {
+      endpoints.push('/api/v2/shipments/upload');
+      endpoints.push('/api/v2/v1/shipments/upload');
+      endpoints.push('/v1/shipments/upload');
+      endpoints.push('/shipments/upload');
+      endpoints.push('/api/v1/shipments/upload');
+    } else if (baseUrl.includes('/api/v1')) {
+      endpoints.push('/api/v1/shipments/upload');
+      endpoints.push('/v1/shipments/upload');
+      endpoints.push('/shipments/upload');
+    } else {
+      endpoints.push('/api/v2/shipments/upload');
+      endpoints.push('/api/v1/shipments/upload');
+      endpoints.push('/v1/shipments/upload');
+      endpoints.push('/shipments/upload');
+    }
+    
+    return [...new Set(endpoints)];
   }
 
   /**
