@@ -21,14 +21,17 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Installa dipendenze (usa npm install perché non c'è package-lock.json)
-RUN npm install --omit=dev && npm cache clean --force
+# Installa TUTTE le dipendenze (serve TypeScript per compilare)
+RUN npm install && npm cache clean --force
 
 # Copia codice sorgente
 COPY src ./src
 
 # Compila TypeScript
 RUN npm run build
+
+# Rimuovi devDependencies dopo build (opzionale, per ridurre dimensione immagine)
+RUN npm prune --production
 
 # Esponi porta
 EXPOSE 3000
