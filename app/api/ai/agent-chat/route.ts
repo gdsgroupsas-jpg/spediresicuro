@@ -1,12 +1,106 @@
 /**
- * API Route: Assistente AI Logistico
+ * API Route: Assistente AI Logistico - "Super Segretaria"
  * 
  * Endpoint POST per la chat con l'assistente AI.
- * Verifica autenticazione e restituisce risposte mock personalizzate.
+ * Integra Claude 3 Haiku per analisi intelligente dei dati logistici.
+ * Verifica autenticazione e interroga Supabase per dati reali.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
+import Anthropic from '@anthropic-ai/sdk';
+import { supabaseAdmin } from '@/lib/db/client';
+
+// Inizializza Claude client
+const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+const claudeClient = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
+
+/**
+ * System Prompt "Super Segretaria"
+ */
+const SYSTEM_PROMPT = `Sei l'Assistente Esecutiva di SpedireSicuro.it. Il tuo ruolo è risolvere problemi, non solo chattare.
+
+**LE TUE REGOLE OPERATIVE:**
+
+1. **Onestà sui Dati:** Prima di rispondere, controlla la data dei dati. Se sono vecchi (>2 ore), avvisa: 'Dati aggiornati alle [ORA]. Attendo il prossimo sync automatico.'
+
+2. **Analisi Logistica:** Se lo status è 'Giacenza' o 'Indirizzo Errato', spiega al cliente cosa significa in italiano semplice e suggerisci l'azione (es. 'Chiama il destinatario').
+
+3. **Analisi Finanziaria:** Se l'utente chiede 'Perché costa X?', analizza il rapporto Peso/Volume e il Prezzo Finale.
+
+4. **Tono:** Professionale, empatico, proattivo.
+
+5. **Linguaggio:** Sempre in italiano, chiaro e semplice. Evita gergo tecnico se non necessario.
+
+6. **Azioni Concrete:** Non limitarti a descrivere, suggerisci sempre azioni pratiche.
+
+Rispondi sempre in modo utile, preciso e orientato alla soluzione.`;
+
+/**
+ * Recupera dati spedizioni da Supabase
+ */
+async function fetchShipmentsData(userId: string, userMessage: string): Promise<{
+  shipments: any[];
+  dataFreshness: string;
+  hoursSinceUpdate: number;
+}> {
+  try {
+    // Cerca tracking number nel messaggio
+    const trackingMatch = userMessage.match(/\b[A-Z0-9]{8,}\b/);
+    const trackingNumber = trackingMatch ? trackingMatch[0] : null;
+
+    let query = supabaseAdmin
+      .from('shipments')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+
+    if (trackingNumber) {
+      query = query.eq('tracking_number', trackingNumber);
+    }
+
+    const { data: shipments, error } = await query;
+
+    if (error) {
+      console.error('❌ [AI] Errore query Supabase:', error);
+      return { shipments: [], dataFreshness: 'Errore', hoursSinceUpdate: Infinity };
+    }
+
+    // Calcola freschezza dati
+    const now = new Date();
+    let latestUpdate = new Date(0);
+    
+    shipments?.forEach((shipment: any) => {
+      if (shipment.updated_at) {
+        const updated = new Date(shipment.updated_at);
+        if (updated > latestUpdate) {
+          latestUpdate = updated;
+        }
+      }
+    });
+
+    const hoursSinceUpdate = (now.getTime() - latestUpdate.getTime()) / (1000 * 60 * 60);
+    const dataFreshness = latestUpdate.getTime() > 0 
+      ? latestUpdate.toLocaleString('it-IT', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      : 'Nessun dato';
+
+    return {
+      shipments: shipments || [],
+      dataFreshness,
+      hoursSinceUpdate,
+    };
+  } catch (error: any) {
+    console.error('❌ [AI] Errore fetch spedizioni:', error);
+    return { shipments: [], dataFreshness: 'Errore', hoursSinceUpdate: Infinity };
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,63 +126,74 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const userMessage = body.message || '';
 
-    // Simula una risposta intelligente dell'AI basata sul ruolo e sul messaggio
-    let aiResponse = '';
-    
-    if (!userMessage.trim()) {
-      aiResponse = `Ciao ${userName}! 👋 Sono il tuo Assistente Logistico AI (versione mock). Vedo che sei loggato come **${userRole}**. Il tuo ID utente è \`${userId}\`. 
+    // Recupera dati spedizioni da Supabase (solo se userId valido)
+    const { shipments, dataFreshness, hoursSinceUpdate } = userId 
+      ? await fetchShipmentsData(userId, userMessage)
+      : { shipments: [], dataFreshness: 'N/A', hoursSinceUpdate: Infinity };
 
-Come posso aiutarti oggi? Posso assisterti con:
-- 📦 Gestione spedizioni
-- 📋 Consultazione listini corrieri
-- 🚚 Calcolo preventivi
-- 📊 Analisi statistiche
-- ⚙️ Configurazioni e integrazioni
-
-Scrivimi pure la tua domanda!`;
-    } else {
-      // Risposte contestuali basate su parole chiave nel messaggio
-      const messageLower = userMessage.toLowerCase();
+    // Prepara contesto per Claude
+    let contextData = '';
+    if (shipments.length > 0) {
+      contextData = `\n\n**DATI SPEDIZIONI DISPONIBILI:**\n`;
+      contextData += `- Numero spedizioni trovate: ${shipments.length}\n`;
+      contextData += `- Dati aggiornati alle: ${dataFreshness}\n`;
       
-      if (messageLower.includes('spedizione') || messageLower.includes('spedire')) {
-        aiResponse = `Perfetto! Per le spedizioni posso aiutarti a:
-- 📦 Creare una nuova spedizione
-- 🔍 Cercare una spedizione esistente
-- 📊 Visualizzare statistiche delle tue spedizioni
-- 💰 Calcolare preventivi
+      if (hoursSinceUpdate > 2) {
+        contextData += `- ⚠️ ATTENZIONE: Dati vecchi di ${Math.round(hoursSinceUpdate)} ore. Avvisa l'utente.\n`;
+      }
 
-Vuoi che ti guidi nella creazione di una nuova spedizione?`;
-      } else if (messageLower.includes('listino') || messageLower.includes('prezzo') || messageLower.includes('costo')) {
-        aiResponse = `Ottimo! Per i listini e i prezzi posso aiutarti con:
-- 💰 Consultare i listini dei corrieri
-- 📊 Confrontare i prezzi tra diversi corrieri
-- 🎯 Calcolare il miglior preventivo per la tua spedizione
-- 📈 Analizzare i margini di ricarico
+      contextData += `\n**DETTAGLI SPEDIZIONI:**\n`;
+      shipments.slice(0, 5).forEach((shipment: any, index: number) => {
+        contextData += `${index + 1}. Tracking: ${shipment.tracking_number || 'N/A'}\n`;
+        contextData += `   Status: ${shipment.status || 'N/A'}\n`;
+        contextData += `   Destinatario: ${shipment.recipient_name || 'N/A'}\n`;
+        contextData += `   Città: ${shipment.recipient_city || 'N/A'}\n`;
+        if (shipment.final_price) {
+          contextData += `   Prezzo: €${shipment.final_price}\n`;
+        }
+        if (shipment.weight) {
+          contextData += `   Peso: ${shipment.weight} kg\n`;
+        }
+        contextData += `   Aggiornato: ${shipment.updated_at ? new Date(shipment.updated_at).toLocaleString('it-IT') : 'N/A'}\n\n`;
+      });
+    } else {
+      contextData = `\n\n**DATI:** Nessuna spedizione trovata nel database.`;
+    }
 
-Quale corriere ti interessa?`;
-      } else if (messageLower.includes('aiuto') || messageLower.includes('help') || messageLower.includes('come')) {
-        aiResponse = `Sono qui per aiutarti! 🚀
+    // Usa Claude AI se disponibile, altrimenti fallback mock
+    let aiResponse = '';
+    let isMock = false;
 
-Come Assistente Logistico, posso supportarti in:
-- 📦 **Spedizioni**: Creazione, gestione e tracking
-- 💰 **Preventivi**: Calcolo prezzi e confronto corrieri
-- 📊 **Dashboard**: Statistiche e analisi
-- ⚙️ **Integrazioni**: Configurazione corrieri e e-commerce
-- 👥 **Team**: Gestione utenti e permessi
+    if (claudeClient && anthropicApiKey) {
+      try {
+        // Chiama Claude 3 Haiku
+        const message = await claudeClient.messages.create({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: `Ciao! Sono ${userName}, ruolo: ${userRole}.${contextData}\n\n**DOMANDA UTENTE:**\n${userMessage || 'Ciao, come posso aiutarti?'}\n\nRispondi in modo professionale, empatico e proattivo. Se i dati sono vecchi (>2 ore), avvisa l'utente.`
+            }
+          ],
+        });
 
-Cosa vorresti fare?`;
-      } else if (messageLower.includes('grazie') || messageLower.includes('grazie mille')) {
-        aiResponse = `Prego! 😊 Sono sempre qui per aiutarti. Se hai altre domande sulle spedizioni o sui listini, non esitare a chiedere!`;
+        aiResponse = message.content[0].type === 'text' ? message.content[0].text : 'Errore parsing risposta';
+        isMock = false;
+      } catch (claudeError: any) {
+        console.error('❌ [AI] Errore Claude API:', claudeError);
+        // Fallback a risposta mock
+        isMock = true;
+        aiResponse = `Ciao ${userName}! 👋 Sono il tuo Assistente Logistico AI.${contextData}\n\nMi dispiace, al momento non posso accedere all'AI avanzata. Come posso aiutarti con le tue spedizioni?`;
+      }
+    } else {
+      // Fallback mock se Claude non configurato
+      isMock = true;
+      if (!userMessage.trim()) {
+        aiResponse = `Ciao ${userName}! 👋 Sono il tuo Assistente Logistico AI.${contextData}\n\nCome posso aiutarti oggi? Posso assisterti con:\n- 📦 Gestione spedizioni\n- 📋 Consultazione listini corrieri\n- 🚚 Calcolo preventivi\n- 📊 Analisi statistiche\n\nScrivimi pure la tua domanda!`;
       } else {
-        aiResponse = `Capisco! Come ${userRole}, posso aiutarti con quella richiesta. 
-
-Per darti un supporto migliore, potresti specificare se si tratta di:
-- 📦 Una questione relativa alle spedizioni
-- 💰 Una domanda sui listini o preventivi
-- ⚙️ Una configurazione o integrazione
-- 📊 Statistiche o report
-
-Oppure dimmi pure in modo più dettagliato cosa ti serve!`;
+        aiResponse = `Ciao ${userName}! 👋${contextData}\n\nHo capito la tua richiesta: "${userMessage}". Per darti una risposta più precisa, configura ANTHROPIC_API_KEY per attivare l'AI avanzata.`;
       }
     }
 
@@ -100,7 +205,11 @@ Oppure dimmi pure in modo più dettagliato cosa ti serve!`;
         userId,
         userRole,
         timestamp: new Date().toISOString(),
-        isMock: true // Indica che è una risposta mock
+        isMock,
+        dataFreshness,
+        hoursSinceUpdate: Math.round(hoursSinceUpdate * 10) / 10,
+        shipmentsCount: shipments.length,
+        usingClaude: !isMock && !!claudeClient,
       }
     });
 

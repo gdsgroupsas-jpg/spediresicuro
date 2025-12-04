@@ -142,6 +142,29 @@ export interface ExtractionResult {
   message?: string;
 }
 
+export interface ShipmentData {
+  tracking_number: string;
+  status: string;
+  recipient_name: string;
+  recipient_city?: string;
+  recipient_zip?: string;
+  price?: number;
+  final_price?: number;
+  shipped_at?: string;
+  delivery_notes?: string;
+  updated_at: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  shipments_synced: number;
+  shipments_updated: number;
+  shipments_created: number;
+  errors: string[];
+  error?: string;
+  message?: string;
+}
+
 // ============================================
 // CLASSE PRINCIPALE: SpedisciOnlineAgent
 // ============================================
@@ -512,6 +535,364 @@ class SpedisciOnlineAgent {
       return {};
     }
   }
+
+  /**
+   * Sincronizza spedizioni da Spedisci.Online
+   * Scraping intelligente con retry logic e validazione
+   */
+  async syncShipmentsFromPortal(configId: string, maxRetries: number = 3): Promise<SyncResult> {
+    if (!puppeteer) {
+      return {
+        success: false,
+        shipments_synced: 0,
+        shipments_updated: 0,
+        shipments_created: 0,
+        errors: ['Puppeteer non installato'],
+        error: 'Puppeteer non installato',
+      };
+    }
+
+    let browser: any = null;
+    const errors: string[] = [];
+    let shipmentsSynced = 0;
+    let shipmentsUpdated = 0;
+    let shipmentsCreated = 0;
+
+    // Retry logic con exponential backoff
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 [SYNC SHIPMENTS] Tentativo ${attempt}/${maxRetries} per config ${configId.substring(0, 8)}...`);
+
+        // Recupera configurazione
+        const { data: config, error: configError } = await supabaseAdmin
+          .from('courier_configs')
+          .select('*')
+          .eq('id', configId)
+          .single();
+
+        if (configError || !config) {
+          throw new Error('Configurazione non trovata');
+        }
+
+        if (!config.automation_enabled) {
+          return {
+            success: false,
+            shipments_synced: 0,
+            shipments_updated: 0,
+            shipments_created: 0,
+            errors: ['Automation non abilitata'],
+            error: 'Automation non abilitata',
+          };
+        }
+
+        const rawSettings = config.automation_settings as any;
+        if (!rawSettings || !rawSettings.enabled) {
+          return {
+            success: false,
+            shipments_synced: 0,
+            shipments_updated: 0,
+            shipments_created: 0,
+            errors: ['Automation settings non configurate'],
+            error: 'Automation settings non configurate',
+          };
+        }
+
+        const settings: AutomationSettings = { ...rawSettings };
+        
+        // Decripta password se necessario
+        if (config.automation_encrypted) {
+          if (settings.spedisci_online_password) {
+            settings.spedisci_online_password = decryptCredential(settings.spedisci_online_password);
+          }
+        }
+
+        // Apri browser
+        browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--disable-gpu',
+          ],
+          timeout: 60000, // 60 secondi timeout
+        });
+
+        const page = await browser.newPage();
+        
+        // Set timeout per operazioni
+        page.setDefaultTimeout(30000);
+        page.setDefaultNavigationTimeout(30000);
+
+        // Login
+        console.log('🔐 [SYNC SHIPMENTS] Esecuzione login...');
+        await page.goto(`${config.base_url}/login`, {
+          waitUntil: 'networkidle2',
+          timeout: 30000,
+        });
+
+        await page.type('input[name="email"]', settings.spedisci_online_username);
+        await page.type('input[name="password"]', settings.spedisci_online_password);
+        await page.click('button[type="submit"]');
+        await page.waitForTimeout(2000);
+
+        // Gestione 2FA
+        const needs2FA = await page.evaluate(() => {
+          return document.body.textContent?.includes('codice') || 
+                 document.querySelector('input[name="code"]') !== null;
+        });
+
+        if (needs2FA) {
+          if (settings.two_factor_method === 'email') {
+            const code2FA = await this.read2FACode();
+            if (code2FA) {
+              const codeInput = await page.$('input[name="code"], input[name="otp"]');
+              if (codeInput) {
+                await codeInput.type(code2FA);
+              }
+              const submitButton = await page.$('button[type="submit"]');
+              if (submitButton) {
+                await submitButton.click();
+              }
+              await page.waitForTimeout(2000);
+            }
+          }
+        }
+
+        // Verifica login
+        const loginSuccess = await page.evaluate(() => {
+          return !window.location.href.includes('/login');
+        });
+
+        if (!loginSuccess) {
+          throw new Error('Login fallito');
+        }
+
+        // Naviga alla pagina spedizioni
+        console.log('📦 [SYNC SHIPMENTS] Navigazione a pagina spedizioni...');
+        await page.goto(`${config.base_url}/shippings`, {
+          waitUntil: 'networkidle2',
+          timeout: 30000,
+        });
+
+        // Attendi che la tabella sia caricata
+        await page.waitForSelector('table, .table, [data-shipments], tbody', { timeout: 10000 }).catch(() => {
+          console.warn('⚠️ Tabella spedizioni non trovata, provo selettori alternativi...');
+        });
+
+        // Estrai dati spedizioni dalla tabella HTML
+        const shipmentsData = await page.evaluate(() => {
+          const shipments: ShipmentData[] = [];
+          
+          // Prova diversi selettori per la tabella
+          const table = document.querySelector('table') || 
+                       document.querySelector('.table') ||
+                       document.querySelector('[data-shipments]') ||
+                       document.querySelector('tbody')?.closest('table');
+
+          if (!table) {
+            return shipments;
+          }
+
+          const rows = table.querySelectorAll('tbody tr, tr:not(thead tr)');
+          
+          rows.forEach((row, index) => {
+            if (index >= 50) return; // Limite 50 spedizioni
+            
+            try {
+              const cells = row.querySelectorAll('td');
+              if (cells.length < 3) return;
+
+              // Estrai tracking number (prima colonna o colonna con link)
+              const trackingCell = cells[0] || cells.find(cell => 
+                cell.textContent?.match(/[A-Z0-9]{8,}/) || 
+                cell.querySelector('a')
+              );
+              const trackingLink = trackingCell?.querySelector('a');
+              const trackingText = trackingLink?.textContent?.trim() || 
+                                  trackingCell?.textContent?.trim() || '';
+              const trackingNumber = trackingText.match(/[A-Z0-9]{8,}/)?.[0];
+
+              if (!trackingNumber) return;
+
+              // Estrai status (cerca badge, span con classe status, o seconda colonna)
+              const statusCell = cells[1] || cells.find(cell => 
+                cell.textContent?.match(/in transito|consegnato|giacenza|in lavorazione|errore/i) ||
+                cell.querySelector('.badge, .status, [class*="status"]')
+              );
+              const statusText = statusCell?.textContent?.trim() || 'unknown';
+              const status = statusText.toLowerCase()
+                .replace(/[^a-z0-9]/g, '_')
+                .substring(0, 50);
+
+              // Estrai destinatario (terza colonna o colonna con nome)
+              const recipientCell = cells[2] || cells.find(cell => 
+                cell.textContent?.match(/[A-Z][a-z]+ [A-Z][a-z]+/) ||
+                cell.textContent?.length > 10
+              );
+              const recipientText = recipientCell?.textContent?.trim() || '';
+              const recipientMatch = recipientText.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/);
+              const recipientName = recipientMatch?.[0] || recipientText.substring(0, 100);
+
+              // Estrai prezzo (cerca colonna con € o numero decimale)
+              const priceCell = cells.find(cell => 
+                cell.textContent?.includes('€') || 
+                cell.textContent?.match(/\d+[,.]\d{2}/)
+              );
+              const priceText = priceCell?.textContent?.replace(/[^\d,.]/g, '').replace(',', '.') || '';
+              const price = priceText ? parseFloat(priceText) : undefined;
+
+              // Estrai data (cerca formato data)
+              const dateCell = cells.find(cell => 
+                cell.textContent?.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)
+              );
+              const dateText = dateCell?.textContent?.trim() || '';
+              
+              shipments.push({
+                tracking_number: trackingNumber,
+                status: status,
+                recipient_name: recipientName,
+                price: price,
+                final_price: price,
+                shipped_at: dateText ? new Date(dateText).toISOString() : undefined,
+                updated_at: new Date().toISOString(),
+              });
+            } catch (err) {
+              console.warn('Errore parsing riga:', err);
+            }
+          });
+
+          return shipments;
+        });
+
+        console.log(`📊 [SYNC SHIPMENTS] Estratte ${shipmentsData.length} spedizioni`);
+
+        if (shipmentsData.length === 0) {
+          return {
+            success: true,
+            shipments_synced: 0,
+            shipments_updated: 0,
+            shipments_created: 0,
+            errors: ['Nessuna spedizione trovata nella tabella'],
+            message: 'Nessuna spedizione trovata',
+          };
+        }
+
+        // Upsert in Supabase
+        for (const shipment of shipmentsData) {
+          try {
+            // Valida dati
+            if (!shipment.tracking_number || shipment.tracking_number.length < 5) {
+              errors.push(`Tracking number non valido: ${shipment.tracking_number}`);
+              continue;
+            }
+
+            // Cerca spedizione esistente
+            const { data: existing, error: searchError } = await supabaseAdmin
+              .from('shipments')
+              .select('id, updated_at')
+              .eq('tracking_number', shipment.tracking_number)
+              .maybeSingle();
+
+            if (searchError && searchError.code !== 'PGRST116') { // PGRST116 = not found (ok)
+              errors.push(`Errore ricerca spedizione ${shipment.tracking_number}: ${searchError.message}`);
+              continue;
+            }
+
+            const updateData: any = {
+              status: shipment.status,
+              recipient_name: shipment.recipient_name,
+              updated_at: shipment.updated_at,
+            };
+
+            if (shipment.recipient_city) updateData.recipient_city = shipment.recipient_city;
+            if (shipment.recipient_zip) updateData.recipient_zip = shipment.recipient_zip;
+            if (shipment.final_price) updateData.final_price = shipment.final_price;
+            if (shipment.shipped_at) updateData.shipped_at = shipment.shipped_at;
+            if (shipment.delivery_notes) updateData.notes = shipment.delivery_notes;
+
+            if (existing) {
+              // Update esistente
+              const { error: updateError } = await supabaseAdmin
+                .from('shipments')
+                .update(updateData)
+                .eq('id', existing.id);
+
+              if (updateError) {
+                errors.push(`Errore update spedizione ${shipment.tracking_number}: ${updateError.message}`);
+              } else {
+                shipmentsUpdated++;
+                shipmentsSynced++;
+              }
+            } else {
+              // Insert nuovo
+              const { error: insertError } = await supabaseAdmin
+                .from('shipments')
+                .insert({
+                  tracking_number: shipment.tracking_number,
+                  ...updateData,
+                  created_at: shipment.updated_at,
+                });
+
+              if (insertError) {
+                errors.push(`Errore insert spedizione ${shipment.tracking_number}: ${insertError.message}`);
+              } else {
+                shipmentsCreated++;
+                shipmentsSynced++;
+              }
+            }
+          } catch (err: any) {
+            errors.push(`Errore processamento spedizione: ${err.message}`);
+          }
+        }
+
+        // Successo!
+        await browser.close();
+        browser = null;
+
+        return {
+          success: true,
+          shipments_synced: shipmentsSynced,
+          shipments_updated: shipmentsUpdated,
+          shipments_created: shipmentsCreated,
+          errors: errors.length > 0 ? errors : [],
+          message: `Sincronizzate ${shipmentsSynced} spedizioni (${shipmentsCreated} nuove, ${shipmentsUpdated} aggiornate)`,
+        };
+
+      } catch (error: any) {
+        console.error(`❌ [SYNC SHIPMENTS] Errore tentativo ${attempt}:`, error);
+        errors.push(`Tentativo ${attempt}: ${error.message}`);
+
+        if (browser) {
+          try {
+            await browser.close();
+          } catch (e) {
+            // Ignora errori chiusura browser
+          }
+          browser = null;
+        }
+
+        // Se non è l'ultimo tentativo, aspetta prima di riprovare (exponential backoff)
+        if (attempt < maxRetries) {
+          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 secondi
+          console.log(`⏳ [SYNC SHIPMENTS] Attesa ${waitTime}ms prima di riprovare...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    // Tutti i tentativi falliti
+    return {
+      success: false,
+      shipments_synced: shipmentsSynced,
+      shipments_updated: shipmentsUpdated,
+      shipments_created: shipmentsCreated,
+      errors: errors,
+      error: `Tutti i ${maxRetries} tentativi falliti`,
+    };
+  }
 }
 
 // ============================================
@@ -617,6 +998,75 @@ export async function syncAllEnabledConfigs(): Promise<void> {
     }
   } catch (error: any) {
     console.error('❌ [SYNC] Errore sync globale:', error);
+  }
+}
+
+/**
+ * Sincronizza spedizioni da Spedisci.Online per una configurazione
+ */
+export async function syncShipmentsFromPortal(configId: string): Promise<SyncResult> {
+  try {
+    const { data: config, error } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('id', configId)
+      .single();
+
+    if (error || !config) {
+      return {
+        success: false,
+        shipments_synced: 0,
+        shipments_updated: 0,
+        shipments_created: 0,
+        errors: ['Configurazione non trovata'],
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    if (!config.automation_enabled) {
+      return {
+        success: false,
+        shipments_synced: 0,
+        shipments_updated: 0,
+        shipments_created: 0,
+        errors: ['Automation non abilitata'],
+        error: 'Automation non abilitata',
+      };
+    }
+
+    const rawSettings = config.automation_settings as any;
+    if (!rawSettings || !rawSettings.enabled) {
+      return {
+        success: false,
+        shipments_synced: 0,
+        shipments_updated: 0,
+        shipments_created: 0,
+        errors: ['Automation settings non configurate'],
+        error: 'Automation settings non configurate',
+      };
+    }
+
+    const settings: AutomationSettings = { ...rawSettings };
+    
+    // Decripta password se necessario
+    if (config.automation_encrypted) {
+      if (settings.spedisci_online_password) {
+        settings.spedisci_online_password = decryptCredential(settings.spedisci_online_password);
+      }
+    }
+
+    const agent = new SpedisciOnlineAgent(settings, config.base_url);
+    return await agent.syncShipmentsFromPortal(configId);
+  } catch (error: any) {
+    console.error('❌ Errore sync spedizioni:', error);
+    return {
+      success: false,
+      shipments_synced: 0,
+      shipments_updated: 0,
+      shipments_created: 0,
+      errors: [error.message || 'Errore durante sync'],
+      error: error.message || 'Errore durante sync',
+    };
   }
 }
 
