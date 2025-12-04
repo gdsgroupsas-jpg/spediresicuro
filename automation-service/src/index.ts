@@ -6,7 +6,7 @@
  */
 
 import express from 'express';
-import { syncCourierConfig, syncAllEnabledConfigs } from './agent';
+import { syncCourierConfig, syncAllEnabledConfigs, syncShipmentsFromPortal } from './agent';
 
 const app = express();
 app.use(express.json());
@@ -103,6 +103,80 @@ app.post('/api/sync', async (req, res) => {
     // Sanitizza error message in produzione (non esporre dettagli sistema)
     const errorMessage = process.env.NODE_ENV === 'production'
       ? 'Errore durante sync. Verifica logs per dettagli.'
+      : error.message || 'Errore sconosciuto';
+    
+    return res.status(500).json({
+      success: false,
+      error: errorMessage,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Endpoint per sync spedizioni
+app.post('/api/sync-shipments', async (req, res) => {
+  try {
+    const { configId } = req.body;
+    
+    // Verifica autenticazione (OBBLIGATORIA)
+    const authToken = req.headers.authorization;
+    const expectedToken = process.env.AUTOMATION_SERVICE_TOKEN;
+    
+    if (!expectedToken) {
+      console.error('❌ [SYNC SHIPMENTS] AUTOMATION_SERVICE_TOKEN non configurato - Rischio sicurezza!');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Configurazione sicurezza mancante' 
+      });
+    }
+    
+    if (authToken !== `Bearer ${expectedToken}`) {
+      console.warn('⚠️ [SYNC SHIPMENTS] Tentativo accesso non autorizzato');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized - Token mancante o non valido' 
+      });
+    }
+
+    if (!configId) {
+      return res.status(400).json({
+        success: false,
+        error: 'configId richiesto',
+      });
+    }
+
+    // Log sanitizzato
+    const configIdShort = configId ? `${configId.substring(0, 8)}...` : null;
+    console.log(`🔄 [SYNC SHIPMENTS] Avvio sync spedizioni per config: ${configIdShort}`);
+
+    const result = await syncShipmentsFromPortal(configId);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        shipments_synced: result.shipments_synced,
+        shipments_updated: result.shipments_updated,
+        shipments_created: result.shipments_created,
+        errors: result.errors,
+        message: result.message,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        shipments_synced: result.shipments_synced,
+        shipments_updated: result.shipments_updated,
+        shipments_created: result.shipments_created,
+        errors: result.errors,
+        error: result.error,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ [SYNC SHIPMENTS] Errore:', error);
+    
+    const errorMessage = process.env.NODE_ENV === 'production'
+      ? 'Errore durante sync spedizioni. Verifica logs per dettagli.'
       : error.message || 'Errore sconosciuto';
     
     return res.status(500).json({
