@@ -4,7 +4,7 @@
 
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "automation-service/Dockerfile"
 
 [deploy]
 startCommand = "node dist/index.js"
