@@ -1,0 +1,65 @@
+[33mcommit 47cf5c0cbe8334cd74a80a71de382d50720e57ae[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: gdsgroupsas-jpg <sigorn@hotmail.it>
+Date:   Wed Dec 3 15:34:47 2025 +0100
+
+    Fix: Corretto endpoint API Spedisci.Online - usa /api/v2/v1/shipments quando BASE_URL contiene /api/v2 - Rimosso log obsoleto con URL sbagliato - Ora l'URL sarà corretto: /api/v2/v1/shipments invece di /api/v2/shipments
+
+[1mdiff --git a/lib/adapters/couriers/spedisci-online.ts b/lib/adapters/couriers/spedisci-online.ts[m
+[1mindex 164f99a..35a57e5 100644[m
+[1m--- a/lib/adapters/couriers/spedisci-online.ts[m
+[1m+++ b/lib/adapters/couriers/spedisci-online.ts[m
+[36m@@ -126,7 +126,7 @@[m [mexport class SpedisciOnlineAdapter extends CourierAdapter {[m
+       });[m
+ [m
+       // 2. PRIORITÀ 1: Chiamata API JSON sincrona (LDV istantanea)[m
+[31m-      console.log('🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a:', `${this.BASE_URL}/v1/shipments`);[m
+[32m+[m[32m      // L'URL verrà costruito correttamente in createShipmentJSON[m
+       try {[m
+         const result = await this.createShipmentJSON(payload);[m
+         console.log('✅ [SPEDISCI.ONLINE] Chiamata API JSON riuscita!', {[m
+[36m@@ -194,10 +194,11 @@[m [mexport class SpedisciOnlineAdapter extends CourierAdapter {[m
+    */[m
+   async getTracking(trackingNumber: string): Promise<TrackingEvent[]> {[m
+     try {[m
+[31m-      // Costruisci URL tracking in modo intelligente: se BASE_URL contiene già /api/v2, usa percorso corretto[m
+[32m+[m[32m      // Costruisci URL tracking in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1[m
+       let trackingEndpoint = `/v1/tracking/${trackingNumber}`;[m
+       if (this.BASE_URL.includes('/api/v2')) {[m
+[31m-        trackingEndpoint = `/tracking/${trackingNumber}`;[m
+[32m+[m[32m        // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/tracking[m
+[32m+[m[32m        trackingEndpoint = `/v1/tracking/${trackingNumber}`;[m
+       }[m
+       const response = await fetch(`${this.BASE_URL}${trackingEndpoint}`, {[m
+         method: 'GET',[m
+[36m@@ -232,13 +233,14 @@[m [mexport class SpedisciOnlineAdapter extends CourierAdapter {[m
+    * ===========================================[m
+    */[m
+   private async createShipmentJSON(payload: SpedisciOnlineShipmentPayload): Promise<SpedisciOnlineResponse> {[m
+[31m-    // Costruisci URL in modo intelligente: se BASE_URL contiene già /api/v2, non aggiungere /v1[m
+[32m+[m[32m    // Costruisci URL in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1[m
+     let endpoint = '/v1/shipments';[m
+     if (this.BASE_URL.includes('/api/v2')) {[m
+[31m-      // Se BASE_URL contiene già /api/v2, l'endpoint dovrebbe essere solo /shipments[m
+[31m-      endpoint = '/shipments';[m
+[32m+[m[32m      // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/shipments[m
+[32m+[m[32m      endpoint = '/v1/shipments';[m
+     }[m
+     const url = `${this.BASE_URL}${endpoint}`;[m
+[32m+[m[32m    console.log('🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a:', url);[m
+     console.log('📡 [SPEDISCI.ONLINE] Chiamata fetch a:', url);[m
+     console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));[m
+     console.log('📡 [SPEDISCI.ONLINE] Codice contratto nel payload:', payload.codice_contratto || 'MANCANTE');[m
+[36m@@ -303,10 +305,11 @@[m [mexport class SpedisciOnlineAdapter extends CourierAdapter {[m
+     formData.append('file', blob, 'spedizione.csv');[m
+     formData.append('format', 'csv');[m
+ [m
+[31m-    // Costruisci URL upload in modo intelligente: se BASE_URL contiene già /api/v2, usa percorso corretto[m
+[32m+[m[32m    // Costruisci URL upload in modo intelligente: se BASE_URL contiene già /api/v2, aggiungi /v1[m
+     let uploadEndpoint = '/v1/shipments/upload';[m
+     if (this.BASE_URL.includes('/api/v2')) {[m
+[31m-      uploadEndpoint = '/shipments/upload';[m
+[32m+[m[32m      // Se BASE_URL contiene già /api/v2, l'endpoint completo dovrebbe essere /api/v2/v1/shipments/upload[m
+[32m+[m[32m      uploadEndpoint = '/v1/shipments/upload';[m
+     }[m
+     const response = await fetch(`${this.BASE_URL}${uploadEndpoint}`, {[m
+       method: 'POST',[m

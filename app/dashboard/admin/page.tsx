@@ -424,6 +424,55 @@ export default function AdminDashboardPage() {
           showBackButton={true}
         />
 
+        {/* Quick Actions - Solo per Superadmin */}
+        {session?.user && (
+          <div className="mb-8">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Azioni Rapide
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Link
+                  href="/dashboard/admin/configurations"
+                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Configurazioni Corrieri</h3>
+                      <p className="text-sm text-gray-500">Gestisci API corrieri</p>
+                    </div>
+                  </div>
+                </Link>
+                <Link
+                  href="/dashboard/admin/features"
+                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Features Piattaforma</h3>
+                      <p className="text-sm text-gray-500">Attiva/disattiva features</p>
+                    </div>
+                  </div>
+                </Link>
+                <Link
+                  href="/dashboard/team"
+                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-green-600" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Gestione Team</h3>
+                      <p className="text-sm text-gray-500">Gestisci utenti e admin</p>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stat Cards - Utenti */}
         <div className="mb-8">
