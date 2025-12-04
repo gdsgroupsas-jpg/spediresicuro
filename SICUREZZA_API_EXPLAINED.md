@@ -178,3 +178,7 @@ Non costa nulla (è gratis) e aumenta moltissimo la sicurezza.
 **Per domande**: Vedi `docs/CONFIGURAZIONE_ENCRYPTION_KEY.md`
 
 
+
+
+
+
