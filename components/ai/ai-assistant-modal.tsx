@@ -226,7 +226,7 @@ export default function AiAssistantModal({ isOpen, onClose }: AiAssistantModalPr
                   <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 text-[#FF9500] animate-spin" />
-                      <span className="text-sm text-gray-600">L'assistente sta scrivendo...</span>
+                      <span className="text-sm text-gray-600">L&apos;assistente sta scrivendo...</span>
                     </div>
                   </div>
                 </motion.div>
