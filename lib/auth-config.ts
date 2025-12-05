@@ -261,13 +261,13 @@ export const authOptions = {
           console.log('📝 [NEXTAUTH] Creazione/aggiornamento utente OAuth per:', user.email);
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
 
-          const existingUser = await findUserByEmail(user.email);
-          console.log('👤 [NEXTAUTH] Utente esistente trovato:', !!existingUser);
+          let dbUser = await findUserByEmail(user.email);
+          console.log('👤 [NEXTAUTH] Utente esistente trovato:', !!dbUser);
 
-          if (!existingUser) {
+          if (!dbUser) {
             // Crea nuovo utente OAuth
             console.log('➕ [NEXTAUTH] Creazione nuovo utente OAuth');
-            await createUser({
+            const newUser = await createUser({
               email: user.email,
               password: '', // Password vuota per utenti OAuth
               name: user.name || user.email.split('@')[0] || 'Utente',
@@ -277,15 +277,28 @@ export const authOptions = {
               image: user.image || undefined,
             });
             console.log('✅ [NEXTAUTH] Nuovo utente OAuth creato con successo');
-          } else if (account?.provider && !existingUser.provider) {
+            dbUser = newUser; // Salva il nuovo utente creato
+          } else if (account?.provider && !dbUser.provider) {
             // Aggiorna utente esistente con provider OAuth
             console.log('🔄 [NEXTAUTH] Aggiornamento utente esistente con provider OAuth');
-            await updateUser(existingUser.id, {
+            await updateUser(dbUser.id, {
               provider: account.provider as 'google' | 'github',
               providerId: account.providerAccountId,
               image: user.image || undefined,
             });
             console.log('✅ [NEXTAUTH] Utente aggiornato con successo');
+          }
+
+          // ⚠️ CRITICAL FIX: Assegna l'ID del database all'utente OAuth
+          // Questo assicura che user.id sia l'ID del nostro database, non l'ID di Google/GitHub
+          if (dbUser) {
+            user.id = dbUser.id;
+            user.role = dbUser.role;
+            console.log('✅ [NEXTAUTH] ID database assegnato a user OAuth:', {
+              userId: user.id,
+              userRole: user.role,
+              email: user.email,
+            });
           }
 
           // ⚠️ NUOVO: Crea/aggiorna profilo in user_profiles Supabase
