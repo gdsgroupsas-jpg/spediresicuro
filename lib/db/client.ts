@@ -22,10 +22,20 @@ const buildTimeAnonKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ
 const buildTimeServiceKey = supabaseServiceKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0NTE5MjAwMCwiZXhwIjoxOTYwNzY4MDAwfQ.placeholder';
 
 // Client pubblico (con RLS e Realtime abilitato)
+// ⚠️ IMPORTANTE: Usa storage key univoco per evitare istanze multiple
 export const supabase = createClient(buildTimeUrl, buildTimeAnonKey, {
+  auth: {
+    persistSession: false,
+    storageKey: 'spediresicuro-auth', // Chiave univoca per evitare conflitti
+  },
   realtime: {
     params: {
       eventsPerSecond: 10, // Limita eventi per performance
+    },
+  },
+  global: {
+    headers: {
+      'x-client-info': 'spediresicuro@1.0.0',
     },
   },
 });

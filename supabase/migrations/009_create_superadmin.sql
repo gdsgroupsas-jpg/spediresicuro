@@ -103,3 +103,4 @@ BEGIN
   RAISE NOTICE '   - Usa l''email del superadmin per accedere e gestire la piattaforma';
 END $$;
 
+

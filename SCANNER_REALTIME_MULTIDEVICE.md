@@ -227,3 +227,4 @@ Esegui `012_enable_realtime_shipments.sql` per abilitare automaticamente.
 - [ ] Toast notifiche desktop
 - [ ] Test multi-dispositivo
 
+
