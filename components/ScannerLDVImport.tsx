@@ -49,11 +49,14 @@ export default function ScannerLDVImport({ onClose, onSuccess, mode = 'import' }
   // Rileva se è mobile
   useEffect(() => {
     const checkMobile = () => {
+      if (typeof window === 'undefined' || typeof navigator === 'undefined') return
       setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768)
     }
     checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', checkMobile)
+    }
   }, [])
 
   // Inizializza scanner e richiedi geolocalizzazione
@@ -77,7 +80,7 @@ export default function ScannerLDVImport({ onClose, onSuccess, mode = 'import' }
    * Richiedi geolocalizzazione GPS
    */
   const requestGeolocation = useCallback(() => {
-    if (!navigator.geolocation) {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGpsLocation({ lat: 0, lng: 0, error: 'Geolocalizzazione non supportata' })
       return
     }
@@ -125,6 +128,12 @@ export default function ScannerLDVImport({ onClose, onSuccess, mode = 'import' }
    */
   const startScanning = useCallback(async () => {
     if (!codeReaderRef.current || !videoRef.current) return
+    
+    // Safety check per browser support
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('La fotocamera non è supportata su questo browser')
+      return
+    }
 
     try {
       setIsScanning(true)

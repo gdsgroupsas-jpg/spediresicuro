@@ -78,9 +78,6 @@ export async function POST(request: NextRequest) {
     // Normalizza e valida dati estratti
     const normalizedData = normalizeExtractedData(result.extractedData);
 
-    // ⚠️ RIMOSSO: Ricerca automatica provincia/CAP per evitare bug
-    // L'utente dovrà completare manualmente i campi mancanti tramite autocompletamento
-
     return NextResponse.json({
       success: true,
       confidence: result.confidence,
@@ -104,40 +101,8 @@ export async function POST(request: NextRequest) {
  * Normalizza e valida dati estratti
  */
 function normalizeExtractedData(data: any) {
-  // Lista etichette comuni da filtrare (NON devono essere estratte come valori)
-  const commonLabels = [
-    'nome e cognome',
-    'nome cognome',
-    'nome:',
-    'cognome:',
-    'nome e cognome:',
-    'nome completo',
-    'telefono',
-    'tel',
-    'phone',
-    'indirizzo',
-    'address',
-    'città',
-    'city',
-    'cap',
-    'provincia',
-    'province',
-    'email',
-    'e-mail',
-    'mail',
-  ];
-
-  // Verifica che il nome non sia un'etichetta
-  let recipientName = data.recipient_name?.trim() || '';
-  const nameLower = recipientName.toLowerCase();
-  if (commonLabels.some(label => nameLower === label || nameLower.startsWith(label + ':'))) {
-    // Se è un'etichetta, non estrarla
-    console.warn('⚠️ Rilevata etichetta invece di nome reale nel normalize:', recipientName);
-    recipientName = '';
-  }
-
   return {
-    recipient_name: recipientName,
+    recipient_name: data.recipient_name?.trim() || '',
     recipient_address: data.recipient_address?.trim() || '',
     recipient_city: data.recipient_city?.trim() || '',
     recipient_zip: data.recipient_zip?.replace(/\s/g, '') || '',
@@ -150,22 +115,15 @@ function normalizeExtractedData(data: any) {
 
 /**
  * Normalizza numero telefono italiano
- * IMPORTANTE: Se il numero ha già il prefisso (+39 o 0039), mantienilo così com'è (pari pari)
- * Altrimenti normalizza rimuovendo solo spazi/trattini ma mantenendo il numero
  */
 function normalizePhone(phone: string): string {
   if (!phone) return '';
 
-  // Se ha già prefisso +39 o 0039, mantieni tutto così com'è (pari pari come richiesto)
-  if (phone.match(/^(\+39|0039)/)) {
-    return phone.trim(); // Mantieni spazi e formato originale
-  }
-
-  // Altrimenti normalizza: rimuovi solo spazi/trattini/parentesi ma mantieni il numero
+  // Rimuovi spazi, trattini, parentesi
   let normalized = phone.replace(/[\s\-()]/g, '');
+
+  // Rimuovi prefisso +39 o 0039
+  normalized = normalized.replace(/^(\+39|0039)/, '');
 
   return normalized;
 }
-
-// ⚠️ RIMOSSA: Funzione enrichLocationData - autocompletamento automatico rimosso per evitare bug
-// L'utente dovrà completare manualmente i campi mancanti tramite autocompletamento
