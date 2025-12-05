@@ -78,8 +78,19 @@ export async function POST(request: NextRequest) {
     const userName = session.user.name || session.user.email || 'Utente';
     const isAdmin = userRole === 'admin';
 
+    // Verifica che userId sia definito
+    if (!userId) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'ID utente non trovato nella sessione',
+        },
+        { status: 401 }
+      );
+    }
+
     // Rate limiting
-    const rateLimit = checkRateLimit(userId);
+    const rateLimit = checkRateLimit(userId as string);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { 
