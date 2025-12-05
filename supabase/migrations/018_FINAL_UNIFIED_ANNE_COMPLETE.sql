@@ -295,115 +295,365 @@ CREATE INDEX IF NOT EXISTS idx_shipments_anne_fulltext ON shipments USING GIN(
 -- SECTION 5: VIEW ANNE_ALL_SHIPMENTS
 -- ============================================
 
--- Crea o sostituisci la view per Anne AI
-CREATE OR REPLACE VIEW anne_all_shipments_view AS
-SELECT 
-  s.id,
-  s.tracking_number,
-  s.external_tracking_number,
-  s.status,
-  s.user_id,
-  s.created_by_user_email,
-  
-  -- Mittente
-  s.sender_name,
-  s.sender_address,
-  s.sender_city,
-  s.sender_zip,
-  s.sender_province,
-  s.sender_country,
-  s.sender_phone,
-  s.sender_email,
-  s.sender_reference,
-  
-  -- Destinatario
-  s.recipient_name,
-  s.recipient_type,
-  s.recipient_address,
-  s.recipient_city,
-  s.recipient_zip,
-  s.recipient_province,
-  s.recipient_country,
-  s.recipient_phone,
-  s.recipient_email,
-  s.recipient_notes,
-  
-  -- Pacco
-  s.weight,
-  s.length,
-  s.width,
-  s.height,
-  s.volumetric_weight,
-  s.packages_count,
-  s.content,
-  s.declared_value,
-  s.currency,
-  
-  -- Corriere
-  s.courier_id,
-  s.service_type,
-  c.name AS courier_name,
-  c.display_name AS courier_display_name,
-  
-  -- Pricing
-  s.base_price,
-  s.surcharges,
-  s.total_cost,
-  s.margin_percent,
-  s.final_price,
-  s.cash_on_delivery,
-  s.cash_on_delivery_amount,
-  s.insurance,
-  
-  -- E-commerce
-  s.ecommerce_platform,
-  s.ecommerce_order_id,
-  s.ecommerce_order_number,
-  
-  -- Sorgente
-  s.imported,
-  s.import_source,
-  s.import_platform,
-  s.created_via_ocr,
-  s.ocr_confidence_score,
-  
-  -- Metadati
-  s.verified,
-  s.deleted,
-  s.deleted_at,
-  s.notes,
-  s.internal_notes,
-  s.ldv,
-  
-  -- Timestamp
-  s.created_at,
-  s.updated_at,
-  s.shipped_at,
-  s.delivered_at,
-  s.pickup_time,
-  s.gps_location,
-  
-  -- Categorizzazione sorgente
-  CASE 
-    WHEN s.created_via_ocr = true THEN 'OCR (PDF/Screenshot)'
-    WHEN s.imported = true AND s.import_source = 'csv' THEN 'Import CSV'
-    WHEN s.imported = true AND s.import_source IN ('xls', 'xlsx', 'excel') THEN 'Import Excel'
-    WHEN s.imported = true AND s.import_source = 'pdf' THEN 'Import PDF'
-    WHEN s.ecommerce_platform IS NOT NULL THEN 'E-commerce (' || s.ecommerce_platform || ')'
-    WHEN s.import_platform IS NOT NULL THEN 'Piattaforma (' || s.import_platform || ')'
-    ELSE 'Creata Manualmente'
-  END AS source_category,
-  
-  -- Info proprietario
-  u.email AS owner_email,
-  u.name AS owner_name,
-  u.role AS owner_role,
-  u.account_type AS owner_account_type
-  
-FROM shipments s
-LEFT JOIN couriers c ON s.courier_id = c.id
-LEFT JOIN users u ON s.user_id = u.id
-WHERE s.deleted = false;
+-- Crea o sostituisci la view per Anne AI (con controllo esistenza tabelle)
+DO $$
+DECLARE
+  v_has_couriers BOOLEAN;
+  v_has_users BOOLEAN;
+BEGIN
+  -- Verifica se la tabella couriers esiste
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'couriers'
+  ) INTO v_has_couriers;
+
+  -- Verifica se la tabella users esiste
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'users'
+  ) INTO v_has_users;
+
+  -- Crea la view in base alle tabelle disponibili
+  IF v_has_couriers AND v_has_users THEN
+    -- Versione completa con couriers e users
+    EXECUTE '
+    CREATE OR REPLACE VIEW anne_all_shipments_view AS
+    SELECT 
+      s.id,
+      s.tracking_number,
+      s.external_tracking_number,
+      s.status,
+      s.user_id,
+      s.created_by_user_email,
+      
+      -- Mittente
+      s.sender_name,
+      s.sender_address,
+      s.sender_city,
+      s.sender_zip,
+      s.sender_province,
+      s.sender_country,
+      s.sender_phone,
+      s.sender_email,
+      s.sender_reference,
+      
+      -- Destinatario
+      s.recipient_name,
+      s.recipient_type,
+      s.recipient_address,
+      s.recipient_city,
+      s.recipient_zip,
+      s.recipient_province,
+      s.recipient_country,
+      s.recipient_phone,
+      s.recipient_email,
+      s.recipient_notes,
+      
+      -- Pacco
+      s.weight,
+      s.length,
+      s.width,
+      s.height,
+      s.volumetric_weight,
+      s.packages_count,
+      s.content,
+      s.declared_value,
+      s.currency,
+      
+      -- Corriere
+      s.courier_id,
+      s.service_type,
+      c.name AS courier_name,
+      c.display_name AS courier_display_name,
+      
+      -- Pricing
+      s.base_price,
+      s.surcharges,
+      s.total_cost,
+      s.margin_percent,
+      s.final_price,
+      s.cash_on_delivery,
+      s.cash_on_delivery_amount,
+      s.insurance,
+      
+      -- E-commerce
+      s.ecommerce_platform,
+      s.ecommerce_order_id,
+      s.ecommerce_order_number,
+      
+      -- Sorgente
+      s.imported,
+      s.import_source,
+      s.import_platform,
+      s.created_via_ocr,
+      s.ocr_confidence_score,
+      
+      -- Metadati
+      s.verified,
+      s.deleted,
+      s.deleted_at,
+      s.notes,
+      s.internal_notes,
+      s.ldv,
+      
+      -- Timestamp
+      s.created_at,
+      s.updated_at,
+      s.shipped_at,
+      s.delivered_at,
+      s.pickup_time,
+      s.gps_location,
+      
+      -- Categorizzazione sorgente
+      CASE 
+        WHEN s.created_via_ocr = true THEN ''OCR (PDF/Screenshot)''
+        WHEN s.imported = true AND s.import_source = ''csv'' THEN ''Import CSV''
+        WHEN s.imported = true AND s.import_source IN (''xls'', ''xlsx'', ''excel'') THEN ''Import Excel''
+        WHEN s.imported = true AND s.import_source = ''pdf'' THEN ''Import PDF''
+        WHEN s.ecommerce_platform IS NOT NULL THEN ''E-commerce ('' || s.ecommerce_platform || '')''
+        WHEN s.import_platform IS NOT NULL THEN ''Piattaforma ('' || s.import_platform || '')''
+        ELSE ''Creata Manualmente''
+      END AS source_category,
+      
+      -- Info proprietario
+      u.email AS owner_email,
+      u.name AS owner_name,
+      u.role AS owner_role,
+      u.account_type AS owner_account_type
+      
+    FROM shipments s
+    LEFT JOIN couriers c ON s.courier_id = c.id
+    LEFT JOIN users u ON s.user_id = u.id
+    WHERE s.deleted = false
+    ';
+    RAISE NOTICE '✅ View anne_all_shipments_view creata (versione completa con couriers e users)';
+    
+  ELSIF v_has_users THEN
+    -- Versione senza couriers ma con users
+    EXECUTE '
+    CREATE OR REPLACE VIEW anne_all_shipments_view AS
+    SELECT 
+      s.id,
+      s.tracking_number,
+      s.external_tracking_number,
+      s.status,
+      s.user_id,
+      s.created_by_user_email,
+      
+      -- Mittente
+      s.sender_name,
+      s.sender_address,
+      s.sender_city,
+      s.sender_zip,
+      s.sender_province,
+      s.sender_country,
+      s.sender_phone,
+      s.sender_email,
+      s.sender_reference,
+      
+      -- Destinatario
+      s.recipient_name,
+      s.recipient_type,
+      s.recipient_address,
+      s.recipient_city,
+      s.recipient_zip,
+      s.recipient_province,
+      s.recipient_country,
+      s.recipient_phone,
+      s.recipient_email,
+      s.recipient_notes,
+      
+      -- Pacco
+      s.weight,
+      s.length,
+      s.width,
+      s.height,
+      s.volumetric_weight,
+      s.packages_count,
+      s.content,
+      s.declared_value,
+      s.currency,
+      
+      -- Corriere
+      s.courier_id,
+      s.service_type,
+      NULL::TEXT AS courier_name,
+      NULL::TEXT AS courier_display_name,
+      
+      -- Pricing
+      s.base_price,
+      s.surcharges,
+      s.total_cost,
+      s.margin_percent,
+      s.final_price,
+      s.cash_on_delivery,
+      s.cash_on_delivery_amount,
+      s.insurance,
+      
+      -- E-commerce
+      s.ecommerce_platform,
+      s.ecommerce_order_id,
+      s.ecommerce_order_number,
+      
+      -- Sorgente
+      s.imported,
+      s.import_source,
+      s.import_platform,
+      s.created_via_ocr,
+      s.ocr_confidence_score,
+      
+      -- Metadati
+      s.verified,
+      s.deleted,
+      s.deleted_at,
+      s.notes,
+      s.internal_notes,
+      s.ldv,
+      
+      -- Timestamp
+      s.created_at,
+      s.updated_at,
+      s.shipped_at,
+      s.delivered_at,
+      s.pickup_time,
+      s.gps_location,
+      
+      -- Categorizzazione sorgente
+      CASE 
+        WHEN s.created_via_ocr = true THEN ''OCR (PDF/Screenshot)''
+        WHEN s.imported = true AND s.import_source = ''csv'' THEN ''Import CSV''
+        WHEN s.imported = true AND s.import_source IN (''xls'', ''xlsx'', ''excel'') THEN ''Import Excel''
+        WHEN s.imported = true AND s.import_source = ''pdf'' THEN ''Import PDF''
+        WHEN s.ecommerce_platform IS NOT NULL THEN ''E-commerce ('' || s.ecommerce_platform || '')''
+        WHEN s.import_platform IS NOT NULL THEN ''Piattaforma ('' || s.import_platform || '')''
+        ELSE ''Creata Manualmente''
+      END AS source_category,
+      
+      -- Info proprietario
+      u.email AS owner_email,
+      u.name AS owner_name,
+      u.role AS owner_role,
+      u.account_type AS owner_account_type
+      
+    FROM shipments s
+    LEFT JOIN users u ON s.user_id = u.id
+    WHERE s.deleted = false
+    ';
+    RAISE NOTICE '⚠️ View anne_all_shipments_view creata (senza tabella couriers)';
+    
+  ELSE
+    -- Versione base senza couriers né users
+    EXECUTE '
+    CREATE OR REPLACE VIEW anne_all_shipments_view AS
+    SELECT 
+      s.id,
+      s.tracking_number,
+      s.external_tracking_number,
+      s.status,
+      s.user_id,
+      s.created_by_user_email,
+      
+      -- Mittente
+      s.sender_name,
+      s.sender_address,
+      s.sender_city,
+      s.sender_zip,
+      s.sender_province,
+      s.sender_country,
+      s.sender_phone,
+      s.sender_email,
+      s.sender_reference,
+      
+      -- Destinatario
+      s.recipient_name,
+      s.recipient_type,
+      s.recipient_address,
+      s.recipient_city,
+      s.recipient_zip,
+      s.recipient_province,
+      s.recipient_country,
+      s.recipient_phone,
+      s.recipient_email,
+      s.recipient_notes,
+      
+      -- Pacco
+      s.weight,
+      s.length,
+      s.width,
+      s.height,
+      s.volumetric_weight,
+      s.packages_count,
+      s.content,
+      s.declared_value,
+      s.currency,
+      
+      -- Corriere
+      s.courier_id,
+      s.service_type,
+      NULL::TEXT AS courier_name,
+      NULL::TEXT AS courier_display_name,
+      
+      -- Pricing
+      s.base_price,
+      s.surcharges,
+      s.total_cost,
+      s.margin_percent,
+      s.final_price,
+      s.cash_on_delivery,
+      s.cash_on_delivery_amount,
+      s.insurance,
+      
+      -- E-commerce
+      s.ecommerce_platform,
+      s.ecommerce_order_id,
+      s.ecommerce_order_number,
+      
+      -- Sorgente
+      s.imported,
+      s.import_source,
+      s.import_platform,
+      s.created_via_ocr,
+      s.ocr_confidence_score,
+      
+      -- Metadati
+      s.verified,
+      s.deleted,
+      s.deleted_at,
+      s.notes,
+      s.internal_notes,
+      s.ldv,
+      
+      -- Timestamp
+      s.created_at,
+      s.updated_at,
+      s.shipped_at,
+      s.delivered_at,
+      s.pickup_time,
+      s.gps_location,
+      
+      -- Categorizzazione sorgente
+      CASE 
+        WHEN s.created_via_ocr = true THEN ''OCR (PDF/Screenshot)''
+        WHEN s.imported = true AND s.import_source = ''csv'' THEN ''Import CSV''
+        WHEN s.imported = true AND s.import_source IN (''xls'', ''xlsx'', ''excel'') THEN ''Import Excel''
+        WHEN s.imported = true AND s.import_source = ''pdf'' THEN ''Import PDF''
+        WHEN s.ecommerce_platform IS NOT NULL THEN ''E-commerce ('' || s.ecommerce_platform || '')''
+        WHEN s.import_platform IS NOT NULL THEN ''Piattaforma ('' || s.import_platform || '')''
+        ELSE ''Creata Manualmente''
+      END AS source_category,
+      
+      -- Info proprietario (NULL se non esiste tabella users)
+      NULL::TEXT AS owner_email,
+      NULL::TEXT AS owner_name,
+      NULL::user_role AS owner_role,
+      NULL::account_type AS owner_account_type
+      
+    FROM shipments s
+    WHERE s.deleted = false
+    ';
+    RAISE NOTICE '⚠️ View anne_all_shipments_view creata (senza tabelle couriers e users)';
+  END IF;
+END $$;
 
 COMMENT ON VIEW anne_all_shipments_view IS 'View completa Anne AI - TUTTE le spedizioni da tutte le fonti';
 
@@ -513,35 +763,56 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Abilita RLS su shipments
 ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 
--- Policy per superadmin: accesso completo
+-- Policy per superadmin: accesso completo (con controllo esistenza tabella users)
 DO $$
+DECLARE
+  v_has_users BOOLEAN;
 BEGIN
+  -- Verifica se la tabella users esiste
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'users'
+  ) INTO v_has_users;
+
+  -- Elimina policy esistente se presente
   DROP POLICY IF EXISTS anne_superadmin_read_all_shipments ON shipments;
   
-  CREATE POLICY anne_superadmin_read_all_shipments
-  ON shipments
-  FOR SELECT
-  TO authenticated
-  USING (
-    -- Superadmin/Admin può leggere TUTTO
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.email = (SELECT auth.email())
-        AND (
-          users.role = 'admin' 
-          OR users.account_type = 'superadmin'::account_type
-        )
-    )
-    OR
-    -- Utenti normali: solo le proprie spedizioni
-    (
-      user_id = (SELECT id FROM users WHERE email = (SELECT auth.email()) LIMIT 1)
+  IF v_has_users THEN
+    -- Policy completa con tabella users
+    CREATE POLICY anne_superadmin_read_all_shipments
+    ON shipments
+    FOR SELECT
+    TO authenticated
+    USING (
+      -- Superadmin/Admin può leggere TUTTO
+      EXISTS (
+        SELECT 1 FROM users
+        WHERE users.email = (SELECT auth.email())
+          AND (
+            users.role = 'admin' 
+            OR users.account_type = 'superadmin'::account_type
+          )
+      )
       OR
+      -- Utenti normali: solo le proprie spedizioni
+      (
+        user_id = (SELECT id FROM users WHERE email = (SELECT auth.email()) LIMIT 1)
+        OR
+        created_by_user_email = (SELECT auth.email())
+      )
+    );
+    RAISE NOTICE '✅ Policy RLS: anne_superadmin_read_all_shipments (con tabella users)';
+  ELSE
+    -- Policy base senza tabella users (accesso solo tramite email)
+    CREATE POLICY anne_superadmin_read_all_shipments
+    ON shipments
+    FOR SELECT
+    TO authenticated
+    USING (
       created_by_user_email = (SELECT auth.email())
-    )
-  );
-  
-  RAISE NOTICE '✅ Policy RLS: anne_superadmin_read_all_shipments';
+    );
+    RAISE NOTICE '⚠️ Policy RLS: anne_superadmin_read_all_shipments (senza tabella users - solo email)';
+  END IF;
 END $$;
 
 -- ============================================
