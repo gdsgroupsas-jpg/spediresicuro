@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verifica account_type = 'superadmin'
-    if (user.account_type !== 'superadmin') {
+    // Verifica role = 'admin'
+    if (user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Accesso negato. Solo il superadmin può modificare le features della piattaforma.' },
+        { error: 'Accesso negato. Solo gli admin possono modificare le features della piattaforma.' },
         { status: 403 }
       );
     }
