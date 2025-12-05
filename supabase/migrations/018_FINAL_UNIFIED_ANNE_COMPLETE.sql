@@ -704,7 +704,7 @@ RETURNS TABLE (
   tracking_number TEXT,
   recipient_name TEXT,
   recipient_city TEXT,
-  status shipment_status,
+  status TEXT,
   source_category TEXT,
   created_at TIMESTAMPTZ,
   relevance REAL
@@ -716,7 +716,7 @@ BEGIN
     s.tracking_number,
     s.recipient_name,
     s.recipient_city,
-    s.status,
+    s.status::TEXT,
     CASE 
       WHEN s.created_via_ocr = true THEN 'OCR'
       WHEN s.imported = true AND s.import_source = 'csv' THEN 'CSV'
