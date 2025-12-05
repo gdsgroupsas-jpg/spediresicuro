@@ -382,7 +382,7 @@ export async function executeTool(
             const prevRevenue = previousShipments.reduce((sum, s) => sum + (parseFloat(s.final_price) || 0), 0);
             const prevMargin = prevRevenue - previousShipments.reduce((sum, s) => sum + (parseFloat(s.base_price) || 0), 0);
             
-            analysis.comparison = {
+            (analysis as any).comparison = {
               revenueChange: Math.round((totalRevenue - prevRevenue) * 100) / 100,
               revenueChangePercent: prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100 * 100) / 100 : 0,
               marginChange: Math.round((totalMargin - prevMargin) * 100) / 100,
@@ -468,4 +468,5 @@ export async function executeTool(
     };
   }
 }
+
 
