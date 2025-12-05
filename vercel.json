@@ -6,11 +6,5 @@
     "app/api/cron/**/*.ts": {
       "maxDuration": 300
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/trigger-sync",
-      "schedule": "0 * * * *"
-    }
-  ]
+  }
 }
