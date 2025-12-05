@@ -13,6 +13,7 @@ import DashboardNav from '@/components/dashboard-nav'
 import IntegrationCard from '@/components/integrazioni/integration-card'
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
 import SpedisciOnlineConfigMulti from '@/components/integrazioni/spedisci-online-config-multi'
+import Link from 'next/link'
 import { 
   ShoppingBag, 
   Store, 
@@ -180,6 +181,24 @@ export default function IntegrazioniPage() {
           className="mb-12"
         >
           <SpedisciOnlineConfigMulti />
+          
+          {/* Link Automation */}
+          <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-purple-900 mb-1">🤖 Automation Spedisci.Online</h3>
+                <p className="text-sm text-purple-700">
+                  Configura automazione per estrazione automatica di session cookies e contratti
+                </p>
+              </div>
+              <Link
+                href="/dashboard/admin/automation"
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+              >
+                Gestisci Automation →
+              </Link>
+            </div>
+          </div>
         </motion.div>
 
         {/* Grid Integrazioni */}

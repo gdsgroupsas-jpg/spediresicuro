@@ -239,3 +239,4 @@ Se hai problemi:
 3. Verifica che i campi siano stati aggiunti alla tabella `users`
 4. Esegui lo script di verifica sopra
 
+
