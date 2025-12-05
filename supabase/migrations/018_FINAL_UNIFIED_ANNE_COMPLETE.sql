@@ -822,10 +822,33 @@ END $$;
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs') THEN
-    -- Indici audit logs
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_user_email ON audit_logs(user_email);
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity);
+    -- Indici audit logs (solo se le colonne esistono)
+    
+    -- Indice su user_email (solo se la colonna esiste - migration 013)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'audit_logs' AND column_name = 'user_email'
+    ) THEN
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user_email ON audit_logs(user_email);
+    END IF;
+    
+    -- Indice su action (solo se la colonna esiste - migration 013)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'audit_logs' AND column_name = 'action'
+    ) THEN
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+    END IF;
+    
+    -- Indice su severity (solo se la colonna esiste - migration 002)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'audit_logs' AND column_name = 'severity'
+    ) THEN
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity);
+    END IF;
+    
+    -- Indice su created_at (sempre presente)
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
     
     RAISE NOTICE '✅ Indici audit_logs creati';
