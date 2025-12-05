@@ -212,8 +212,8 @@ export default function AnnePromoSection() {
             </div>
             <div className="flex-1">
               <p className="text-gray-700 text-lg leading-relaxed italic mb-4">
-                "Ciao! Sono Anne, il tuo Executive Business Partner. Posso aiutarti a calcolare prezzi ottimali, 
-                gestire spedizioni, analizzare il business e molto altro. <strong>Parlami come con un collega esperto!</strong>"
+                &quot;Ciao! Sono Anne, il tuo Executive Business Partner. Posso aiutarti a calcolare prezzi ottimali,
+                gestire spedizioni, analizzare il business e molto altro. <strong>Parlami come con un collega esperto!</strong>&quot;
               </p>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Sparkles className="w-4 h-4 text-purple-500" />
