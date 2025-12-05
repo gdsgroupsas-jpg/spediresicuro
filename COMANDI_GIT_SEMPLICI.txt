@@ -1,0 +1,25 @@
+═══════════════════════════════════════════════════════════
+  COMANDI GIT DA ESEGUIRE MANUALMENTE
+═══════════════════════════════════════════════════════════
+
+Apri PowerShell o Git Bash nella cartella:
+c:\spediresicuro-master\spediresicuro
+
+Poi incolla questi 3 comandi uno alla volta:
+
+1. git add components/homepage/anne-promo-section.tsx app/page.tsx
+
+2. git commit -m "Aggiunta sezione promozionale Anne sulla homepage"
+
+3. git push origin master
+
+═══════════════════════════════════════════════════════════
+  OPPURE USA LO SCRIPT BATCH
+═══════════════════════════════════════════════════════════
+
+Fai doppio clic su: FAI-DEPLOY-ORA.bat
+
+Lo script farà tutto automaticamente!
+
+═══════════════════════════════════════════════════════════
+

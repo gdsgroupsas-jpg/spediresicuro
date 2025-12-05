@@ -70,3 +70,4 @@ BEGIN
   RAISE NOTICE '   - Mobile scanner → Desktop lista';
 END $$;
 
+

@@ -1,0 +1,20 @@
+[33m27d186b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m feat: Sistema toggle features piattaforma per superadmin - Aggiunta tabella platform_features per gestire attivazione/disattivazione globale - Pagina superadmin /dashboard/admin/features per gestire tutte le features - API endpoints per verificare e modificare features - Helper e hook React per uso lato client/server - Link rapido nella dashboard admin
+[33m47cf5c0[m Fix: Corretto endpoint API Spedisci.Online - usa /api/v2/v1/shipments quando BASE_URL contiene /api/v2 - Rimosso log obsoleto con URL sbagliato - Ora l'URL sarà corretto: /api/v2/v1/shipments invece di /api/v2/shipments
+[33m3f98c28[m Fix: Costruzione intelligente URL API Spedisci.Online e fallback contratto unico - URL costruito correttamente quando BASE_URL contiene già /api/v2 - Aggiunto fallback: se c'è un solo contratto, usalo per tutti i corrieri - Sistemato anche per upload CSV e tracking
+[33m42a4cb2[m Fix: Sistemati problemi URL doppio slash e ricerca codice contratto Spedisci.Online - Normalizzato BASE_URL rimuovendo slash finale - Migliorata ricerca codice contratto con 4 strategie di match - Aggiunto logging dettagliato per debug
+[33m000435f[m Aggiornamento documentazione e script: modifiche a riepiloghi, istruzioni e script di commit
+[33m4b81af3[m fix: Correzione TypeScript session role + audit log types + fix visibilit├á + multi-dominio
+[33m33290b1[m fix: Correzione TypeScript session role + tutti i fix completati
+[33m0962313[m feat: Fix visibilit├á testo + multi-dominio + codice contratto + fix TypeScript audit log
+[33ma6ca14c[m feat: Fix visibilit├á testo + interfaccia multi-dominio + codice contratto + log debug
+[33mb6e5132[m feat: Sistema codice contratto Spedisci.Online + log debug dettagliati
+[33mfa01bb5[m feat: Sistema codice contratto Spedisci.Online + log debug dettagliati
+[33m2cea71f[m fix: Sistema chiamata API Spedisci.Online + criptazione opzionale + fix vari
+[33me08bb78[m fix: Corretto errore sintassi else duplicato in configurations.ts
+[33m37a98b7[m fix: Aggiunto audit logging per eliminazione credenziali
+[33m220c1d0[m feat: Sistema sicurezza completo per credenziali API
+[33m964d0c7[m fix: Corretto tipo parametro saveConfiguration (CourierConfigInput invece di FormData)
+[33maeca71f[m fix: Corretto nome proprietà configs invece di configurations
+[33ma0b6217[m fix: Corrette virgolette non escapate in courier-api-config.tsx
+[33m2432b90[m feat: Configurazione API Corrieri con copia-incolla credenziali
+[33m91c6beb[m feat: Aggiunta sezione API Corrieri in integrazioni con form creazione LDV

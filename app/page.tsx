@@ -5,6 +5,7 @@ import FeaturesSection from '@/components/homepage/features-section'
 import StatsSection from '@/components/homepage/stats-section'
 import HowItWorks from '@/components/homepage/how-it-works'
 import TestimonialsSection from '@/components/homepage/testimonials-section'
+import AnnePromoSection from '@/components/homepage/anne-promo-section'
 import CTASection from '@/components/homepage/cta-section'
 
 export default function Home() {
@@ -26,6 +27,9 @@ export default function Home() {
         
         {/* Testimonials */}
         <TestimonialsSection />
+        
+        {/* Anne Promo Section */}
+        <AnnePromoSection />
         
         {/* Final CTA */}
         <CTASection />

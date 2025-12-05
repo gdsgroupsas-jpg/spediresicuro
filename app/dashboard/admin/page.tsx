@@ -33,8 +33,11 @@ import {
   Settings,
   Trash2,
   Power,
-  PowerOff
+  PowerOff,
+  Zap,
+  Cog
 } from 'lucide-react';
+import { listConfigurations, assignConfigurationToUser } from '@/actions/configurations';
 
 interface AdminStats {
   // Utenti
@@ -71,6 +74,7 @@ interface User {
   role: string;
   provider: string;
   created_at: string;
+  assigned_config_id?: string | null;
 }
 
 interface Shipment {
@@ -103,6 +107,50 @@ export default function AdminDashboardPage() {
   const [userFeatures, setUserFeatures] = useState<any[]>([]);
   const [isLoadingFeatures, setIsLoadingFeatures] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [courierConfigs, setCourierConfigs] = useState<any[]>([]);
+  const [assigningConfig, setAssigningConfig] = useState<string | null>(null);
+
+  // Carica configurazioni corrieri
+  useEffect(() => {
+    loadCourierConfigs();
+  }, []);
+
+  async function loadCourierConfigs() {
+    try {
+      const result = await listConfigurations();
+      if (result.success && result.configs) {
+        setCourierConfigs(result.configs);
+      }
+    } catch (error) {
+      console.error('Errore caricamento configurazioni:', error);
+    }
+  }
+
+  // Assegna configurazione a utente
+  async function handleAssignConfig(userId: string, configId: string | null) {
+    setAssigningConfig(userId);
+    try {
+      const result = await assignConfigurationToUser(userId, configId);
+      if (result.success) {
+        // Ricarica dati
+        const overviewResponse = await fetch('/api/admin/overview');
+        if (overviewResponse.ok) {
+          const data = await overviewResponse.json();
+          if (data.success) {
+            setUsers(data.users || []);
+          }
+        }
+        alert(result.message || 'Configurazione assegnata con successo');
+      } else {
+        alert(`Errore: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Errore assegnazione configurazione:', error);
+      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+    } finally {
+      setAssigningConfig(null);
+    }
+  }
 
   // Verifica autorizzazione e carica dati
   useEffect(() => {
@@ -424,7 +472,7 @@ export default function AdminDashboardPage() {
           showBackButton={true}
         />
 
-        {/* Quick Actions - Solo per Superadmin */}
+        {/* Quick Actions - Admin Tools */}
         {session?.user && (
           <div className="mb-8">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -432,41 +480,53 @@ export default function AdminDashboardPage() {
                 <Settings className="w-5 h-5" />
                 Azioni Rapide
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Link
                   href="/dashboard/admin/configurations"
-                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all group"
                 >
-                  <div className="flex items-center gap-3">
-                    <Settings className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Configurazioni Corrieri</h3>
-                      <p className="text-sm text-gray-500">Gestisci API corrieri</p>
-                    </div>
+                  <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                    <Cog className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Configurazioni</h3>
+                    <p className="text-sm text-gray-500">Gestisci API corrieri</p>
                   </div>
                 </Link>
                 <Link
                   href="/dashboard/admin/features"
-                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all group"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
                     <Sparkles className="w-5 h-5 text-purple-600" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Features Piattaforma</h3>
-                      <p className="text-sm text-gray-500">Attiva/disattiva features</p>
-                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Features Piattaforma</h3>
+                    <p className="text-sm text-gray-500">Attiva/disattiva features</p>
+                  </div>
+                </Link>
+                <Link
+                  href="/dashboard/admin/automation"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                    <Zap className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Automation</h3>
+                    <p className="text-sm text-gray-500">Gestisci automazione</p>
                   </div>
                 </Link>
                 <Link
                   href="/dashboard/team"
-                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all group"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
                     <Users className="w-5 h-5 text-green-600" />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Gestione Team</h3>
-                      <p className="text-sm text-gray-500">Gestisci utenti e admin</p>
-                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Gestione Team</h3>
+                    <p className="text-sm text-gray-500">Gestisci utenti e admin</p>
                   </div>
                 </Link>
               </div>
@@ -602,6 +662,9 @@ export default function AdminDashboardPage() {
                       Provider
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Configurazione Corriere
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Registrato
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -631,6 +694,21 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {user.provider || 'credentials'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={user.assigned_config_id || ''}
+                          onChange={(e) => handleAssignConfig(user.id, e.target.value || null)}
+                          disabled={assigningConfig === user.id}
+                          className="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                        >
+                          <option value="">Nessuna (usa default)</option>
+                          {courierConfigs.map((config) => (
+                            <option key={config.id} value={config.id}>
+                              {config.name} ({config.provider_id})
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(user.created_at)}
