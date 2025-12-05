@@ -59,6 +59,20 @@ Questo script SQL **unificato e idempotente** include TUTTO:
    ========================================
    ```
 
+#### 🔧 **SE HAI ERRORE: "relation couriers does not exist"**
+
+Il tuo database non ha le tabelle `users` o `couriers`. Nessun problema!
+
+**Soluzione rapida:**
+
+1. **Prima** esegui questo script per creare le tabelle mancanti:
+   - File: `supabase/migrations/000_CREATE_MISSING_TABLES.sql`
+   - Copia TUTTO e esegui in SQL Editor
+
+2. **Poi** esegui Migration 018 come sopra
+
+Lo script 018 è ora **smart** e funziona anche senza queste tabelle, ma è meglio averle.
+
 ---
 
 ### STEP 2: Verifica che tutto funzioni ✓
@@ -143,6 +157,21 @@ Dopo il deploy Vercel:
 
 ## 🐛 TROUBLESHOOTING
 
+### ⚠️ Errore: "relation couriers does not exist" o "column user_email does not exist"
+
+**Causa:** Hai eseguito lo script VECCHIO (`ANNE_SUPERADMIN_ACCESS.sql`) invece del nuovo
+
+**Soluzione:**
+1. **Verifica che stai usando il file corretto:**
+   - ✅ **USA:** `supabase/migrations/018_FINAL_UNIFIED_ANNE_COMPLETE.sql`
+   - ❌ **NON usare:** `ANNE_SUPERADMIN_ACCESS.sql` (deprecato)
+2. Vai su Supabase SQL Editor
+3. Copia di nuovo **TUTTO** lo script `018_FINAL_UNIFIED_ANNE_COMPLETE.sql`
+4. Esegui di nuovo (lo script è idempotente, puoi eseguirlo più volte)
+5. Verifica che vedi `✅ MIGRATION 018 COMPLETATA CON SUCCESSO!`
+
+---
+
 ### Errore: "ID utente non trovato nella sessione" (ancora presente)
 
 **Causa:** Sessione vecchia in cache
@@ -153,14 +182,17 @@ Dopo il deploy Vercel:
 3. Fai **Login di nuovo**
 4. Se ancora errore: aspetta 5 minuti (il deploy Vercel potrebbe non essere completato)
 
-### Errore: "relation anne_all_shipments_view does not exist"
+### Errore: "relation couriers does not exist" o "column user_email does not exist"
 
-**Causa:** Migration 018 non eseguita
+**Causa:** Hai eseguito lo script VECCHIO invece di quello nuovo
 
 **Soluzione:**
-1. Vai su Supabase SQL Editor
-2. Esegui Migration 018 completa
-3. Verifica output `✅ MIGRATION 018 COMPLETATA`
+1. **Verifica che stai usando il file corretto:**
+   - ✅ Usa: `supabase/migrations/018_FINAL_UNIFIED_ANNE_COMPLETE.sql`
+   - ❌ NON usare: `ANNE_SUPERADMIN_ACCESS.sql` (deprecato)
+2. Copia di nuovo TUTTO lo script 018
+3. Esegui di nuovo su Supabase SQL Editor
+4. Lo script è idempotente (puoi eseguirlo più volte senza problemi)
 
 ### Anne non risponde
 
