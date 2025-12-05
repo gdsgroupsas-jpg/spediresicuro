@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FF9500">
+  <title>Offline - SpedireSicuro</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #FF9500 0%, #FFB84D 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .offline-container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px 20px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .offline-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    p {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .offline-features {
+      text-align: left;
+      background: #f5f5f5;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .feature:last-child {
+      margin-bottom: 0;
+    }
+
+    .feature-icon {
+      font-size: 24px;
+      margin-right: 12px;
+    }
+
+    .feature-text {
+      font-size: 14px;
+      color: #333;
+    }
+
+    button {
+      background: linear-gradient(135deg, #FF9500 0%, #FFB84D 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:hover {
+      box-shadow: 0 10px 30px rgba(255, 149, 0, 0.4);
+    }
+
+    .status-info {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fff3e0;
+      border-radius: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📡</div>
+    <h1>Modalità Offline</h1>
+    <p>Sei offline, ma SpedireSicuro continua a funzionare!</p>
+
+    <div class="offline-features">
+      <div class="feature">
+        <span class="feature-icon">📦</span>
+        <span class="feature-text">Consulta il tracking delle spedizioni</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">💬</span>
+        <span class="feature-text">Chat con Anne (risposte offline)</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">📊</span>
+        <span class="feature-text">Visualizza i dati in cache</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🔄</span>
+        <span class="feature-text">Sincronizzazione automatica al ritorno online</span>
+      </div>
+    </div>
+
+    <button onclick="location.href='/'">Torna alla Home</button>
+
+    <div class="status-info">
+      <strong>💡 Tip:</strong> I dati vengono sincronizzati automaticamente quando torni online.
+    </div>
+  </div>
+
+  <script>
+    // Monitoraggio connessione
+    window.addEventListener('online', () => {
+      console.log('Connessione ripristinata');
+      // Ricarica la pagina o sincronizza i dati
+      // location.reload();
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('Disconnesso');
+    });
+  </script>
+</body>
+</html>

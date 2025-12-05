@@ -60,7 +60,12 @@ export const metadata: Metadata = {
       { url: '/favicon.svg', sizes: '180x180', type: 'image/svg+xml' },
     ],
   },
-  manifest: '/site.webmanifest',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SpedireSicuro',
+  },
 }
 
 export default function RootLayout({
