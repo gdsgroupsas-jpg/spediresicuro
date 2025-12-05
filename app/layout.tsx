@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Providers from '@/components/providers'
 import CookieBanner from '@/components/legal/CookieBanner'
+import PWAInstallPrompt from '@/components/pwa/pwa-install-prompt'
+import NotificationPrompt from '@/components/pwa/notification-prompt'
 
 export const metadata: Metadata = {
   title: 'SpedireSicuro.it - Spedizioni Intelligenti con AI',
@@ -85,6 +87,8 @@ export default function RootLayout({
         <Providers>
           {children}
           <CookieBanner />
+          <PWAInstallPrompt />
+          <NotificationPrompt />
         </Providers>
       </body>
     </html>

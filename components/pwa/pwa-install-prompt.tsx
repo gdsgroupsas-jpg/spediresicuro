@@ -14,6 +14,9 @@ export function PWAInstallPrompt() {
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
+    // Safety checks per browser APIs
+    if (typeof window === 'undefined') return;
+    
     // Ascolta l'evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -21,7 +24,7 @@ export function PWAInstallPrompt() {
       setDeferredPrompt(event);
       
       // Mostra il prompt solo se l'app non è già installata
-      if (!window.matchMedia('(display-mode: standalone)').matches) {
+      if (window.matchMedia && !window.matchMedia('(display-mode: standalone)').matches) {
         setShowPrompt(true);
       }
     };
@@ -35,7 +38,7 @@ export function PWAInstallPrompt() {
     };
 
     // Controlla se è già in modalità standalone (installata)
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true);
     }
 
