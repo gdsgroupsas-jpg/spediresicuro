@@ -130,7 +130,5 @@ export function playBeepSound() {
     console.warn('Audio non supportato:', error)
   }
 }
-  }
-}
 
 
