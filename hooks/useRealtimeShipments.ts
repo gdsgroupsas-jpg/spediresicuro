@@ -104,9 +104,14 @@ export function vibrateDevice(pattern: number | number[] = 200) {
  * Helper per suono feedback (beep)
  */
 export function playBeepSound() {
-  if (typeof window !== 'undefined') {
+  if (typeof window === 'undefined') return
+  
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContext) return
+    
     // Crea beep audio
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const audioContext = new AudioContext()
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
 
@@ -121,6 +126,10 @@ export function playBeepSound() {
 
     oscillator.start(audioContext.currentTime)
     oscillator.stop(audioContext.currentTime + 0.1)
+  } catch (error) {
+    console.warn('Audio non supportato:', error)
+  }
+}
   }
 }
 

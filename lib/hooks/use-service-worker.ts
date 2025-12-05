@@ -18,11 +18,16 @@ export function useServiceWorker() {
     ready: false,
     registered: false,
     updateAvailable: false,
-    notificationsSupported: 'Notification' in window,
+    notificationsSupported: typeof window !== 'undefined' && 'Notification' in window,
     notificationsEnabled: false,
   });
 
   useEffect(() => {
+    // Safety checks
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return;
+    }
+    
     if (!('serviceWorker' in navigator)) {
       console.warn('Service Workers non supportati');
       return;
