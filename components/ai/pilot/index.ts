@@ -3,4 +3,3 @@
  */
 
 export { PilotModal } from './pilot-modal';
-export { default } from './pilot-modal';
