@@ -702,11 +702,14 @@ class SpedisciOnlineAgent {
             if (index >= 50) return; // Limite 50 spedizioni
             
             try {
-              const cells = row.querySelectorAll('td');
-              if (cells.length < 3) return;
+              const cellsNodeList = row.querySelectorAll('td');
+              if (cellsNodeList.length < 3) return;
+
+              // Converti NodeList in array per usare find()
+              const cells = Array.from(cellsNodeList);
 
               // Estrai tracking number (prima colonna o colonna con link)
-              const trackingCell = cells[0] || cells.find(cell => 
+              const trackingCell = cells[0] || cells.find((cell: HTMLTableCellElement) => 
                 cell.textContent?.match(/[A-Z0-9]{8,}/) || 
                 cell.querySelector('a')
               );
@@ -718,7 +721,7 @@ class SpedisciOnlineAgent {
               if (!trackingNumber) return;
 
               // Estrai status (cerca badge, span con classe status, o seconda colonna)
-              const statusCell = cells[1] || cells.find(cell => 
+              const statusCell = cells[1] || cells.find((cell: HTMLTableCellElement) => 
                 cell.textContent?.match(/in transito|consegnato|giacenza|in lavorazione|errore/i) ||
                 cell.querySelector('.badge, .status, [class*="status"]')
               );
@@ -728,7 +731,7 @@ class SpedisciOnlineAgent {
                 .substring(0, 50);
 
               // Estrai destinatario (terza colonna o colonna con nome)
-              const recipientCell = cells[2] || cells.find(cell => 
+              const recipientCell = cells[2] || cells.find((cell: HTMLTableCellElement) => 
                 cell.textContent?.match(/[A-Z][a-z]+ [A-Z][a-z]+/) ||
                 cell.textContent?.length > 10
               );
@@ -737,7 +740,7 @@ class SpedisciOnlineAgent {
               const recipientName = recipientMatch?.[0] || recipientText.substring(0, 100);
 
               // Estrai prezzo (cerca colonna con € o numero decimale)
-              const priceCell = cells.find(cell => 
+              const priceCell = cells.find((cell: HTMLTableCellElement) => 
                 cell.textContent?.includes('€') || 
                 cell.textContent?.match(/\d+[,.]\d{2}/)
               );
@@ -745,7 +748,7 @@ class SpedisciOnlineAgent {
               const price = priceText ? parseFloat(priceText) : undefined;
 
               // Estrai data (cerca formato data)
-              const dateCell = cells.find(cell => 
+              const dateCell = cells.find((cell: HTMLTableCellElement) => 
                 cell.textContent?.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)
               );
               const dateText = dateCell?.textContent?.trim() || '';
