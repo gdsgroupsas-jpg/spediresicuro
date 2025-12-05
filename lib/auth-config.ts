@@ -331,16 +331,19 @@ export const authOptions = {
       // Prima chiamata (dopo login)
       if (user) {
         console.log('🔐 [NEXTAUTH] jwt callback - creazione token per utente:', {
+          id: user.id,
           email: user.email,
           role: user.role,
           provider: account?.provider,
         });
+        token.id = user.id; // ⚠️ IMPORTANTE: Salva ID utente nel token
         token.role = (user.role as string) || 'user';
         token.provider = account?.provider || 'credentials';
         token.email = user.email;
         token.name = user.name;
       } else {
         console.log('🔄 [NEXTAUTH] jwt callback - aggiornamento token esistente:', {
+          id: token.id,
           email: token.email,
           role: token.role,
           provider: token.provider,
@@ -353,12 +356,15 @@ export const authOptions = {
       console.log('🔐 [NEXTAUTH] session callback chiamato:', {
         hasSession: !!session,
         hasUser: !!session?.user,
+        tokenId: token.id,
         tokenEmail: token.email,
         tokenRole: token.role,
         tokenProvider: token.provider,
       });
 
       if (session.user) {
+        // ⚠️ IMPORTANTE: Salva ID utente nella sessione
+        session.user.id = token.id;
         session.user.role = (token.role as string) || 'user';
         session.user.provider = (token.provider as string) || 'credentials';
         
@@ -371,6 +377,7 @@ export const authOptions = {
         }
         
         console.log('✅ [NEXTAUTH] Session aggiornata:', {
+          id: session.user.id,
           email: session.user.email,
           role: session.user.role,
           provider: (session.user as any).provider,
