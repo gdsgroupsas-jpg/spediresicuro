@@ -119,11 +119,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Costruisci system prompt
-    const systemPrompt = isVoiceInput 
-      ? getVoicePrompt() 
-      : buildSystemPrompt(context, isAdmin);
-
-    // Prepara messaggi per Claude
+    const systemPrompt = isVoiceInput
+      ? getVoicePrompt()
+      : buildSystemPrompt(context as any, isAdmin);    // Prepara messaggi per Claude
     const claudeMessages: any[] = [];
     
     // Aggiungi storia conversazione (ultimi 10 messaggi per limitare token)
