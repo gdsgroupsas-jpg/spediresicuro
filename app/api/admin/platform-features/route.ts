@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 2. Verifica che sia superadmin
+    // 2. Verifica che sia admin
     const user = await findUserByEmail(session.user.email);
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Utente non trovato' },
@@ -32,15 +32,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verifica account_type = 'superadmin'
-    if (user.account_type !== 'superadmin') {
+    // Verifica role = 'admin'
+    if (user.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Accesso negato. Solo il superadmin può gestire le features della piattaforma.' },
+        { error: 'Accesso negato. Solo gli admin possono gestire le features della piattaforma.' },
         { status: 403 }
       );
-    }
-
-    // 3. Carica tutte le platform features
+    }    // 3. Carica tutte le platform features
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
         { error: 'Supabase non configurato' },
