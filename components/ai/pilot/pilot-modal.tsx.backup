@@ -1,0 +1,540 @@
+/**
+ * Componente: Annie AI - Pilot Modal
+ *
+ * Assistente AI Logistico Agentico avanzato con:
+ * - Supporto Markdown per risposte formattate
+ * - Quick Actions per operazioni comuni
+ * - UI Premium con glassmorphism
+ * - Voice input placeholder
+ * - Context-aware responses
+ */
+
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import {
+  X,
+  Send,
+  Bot,
+  Loader2,
+  Sparkles,
+  MessageSquare,
+  Package,
+  Calculator,
+  FileText,
+  TrendingUp,
+  Mic,
+  MicOff,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Copy,
+  Check,
+  AlertCircle,
+  Clock
+} from 'lucide-react';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  isError?: boolean;
+  metadata?: {
+    isMock?: boolean;
+    dataFreshness?: string;
+    shipmentsCount?: number;
+    toolUsed?: string;
+  };
+}
+
+interface QuickAction {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  prompt: string;
+  color: string;
+}
+
+interface PilotModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    id: 'shipments',
+    label: 'Le mie spedizioni',
+    icon: <Package className="w-4 h-4" />,
+    prompt: 'Mostrami le mie ultime spedizioni e il loro stato attuale',
+    color: 'from-blue-500 to-blue-600'
+  },
+  {
+    id: 'pricing',
+    label: 'Calcola preventivo',
+    icon: <Calculator className="w-4 h-4" />,
+    prompt: 'Aiutami a calcolare il preventivo per una nuova spedizione',
+    color: 'from-green-500 to-green-600'
+  },
+  {
+    id: 'tracking',
+    label: 'Traccia spedizione',
+    icon: <FileText className="w-4 h-4" />,
+    prompt: 'Voglio tracciare una spedizione. Come posso fare?',
+    color: 'from-purple-500 to-purple-600'
+  },
+  {
+    id: 'analytics',
+    label: 'Analisi costi',
+    icon: <TrendingUp className="w-4 h-4" />,
+    prompt: 'Analizza i miei costi di spedizione e suggerisci come ottimizzarli',
+    color: 'from-orange-500 to-orange-600'
+  }
+];
+
+export function PilotModal({ isOpen, onClose }: PilotModalProps) {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content: `**Ciao!** Sono **Annie**, la tua Assistente AI Logistica Agentica.
+
+Posso aiutarti con:
+- **Gestione spedizioni** - tracciamento, stato, problemi
+- **Calcolo preventivi** - confronto corrieri e prezzi
+- **Analisi dati** - statistiche e ottimizzazioni
+- **Supporto operativo** - compilazione form, suggerimenti
+
+*Scegli un&apos;azione rapida qui sotto o scrivimi la tua domanda!*`,
+      timestamp: new Date()
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Scroll automatico ai nuovi messaggi
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Focus sull'input quando si apre il modal
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  // Gestione copia messaggio
+  const handleCopyMessage = useCallback((messageId: string, content: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedMessageId(messageId);
+    setTimeout(() => setCopiedMessageId(null), 2000);
+  }, []);
+
+  // Reset conversazione
+  const handleReset = useCallback(() => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: `**Ciao!** Sono **Annie**, la tua Assistente AI Logistica Agentica.
+
+Posso aiutarti con:
+- **Gestione spedizioni** - tracciamento, stato, problemi
+- **Calcolo preventivi** - confronto corrieri e prezzi
+- **Analisi dati** - statistiche e ottimizzazioni
+- **Supporto operativo** - compilazione form, suggerimenti
+
+*Scegli un&apos;azione rapida qui sotto o scrivimi la tua domanda!*`,
+        timestamp: new Date()
+      }
+    ]);
+  }, []);
+
+  // Gestione invio messaggio
+  const handleSendMessage = async (messageText?: string) => {
+    const text = messageText || inputMessage.trim();
+
+    if (!text || isLoading) return;
+
+    // Aggiungi messaggio utente
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/ai/agent-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: text }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date(),
+          metadata: {
+            isMock: data.metadata?.isMock,
+            dataFreshness: data.metadata?.dataFreshness,
+            shipmentsCount: data.metadata?.shipmentsCount,
+          }
+        };
+        setMessages(prev => [...prev, aiMessage]);
+      } else {
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: `**Oops!** Si e verificato un errore: ${data.error || 'Errore sconosciuto'}. Riprova tra qualche secondo.`,
+          timestamp: new Date(),
+          isError: true
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } catch (error: unknown) {
+      console.error('Errore invio messaggio:', error);
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: `**Errore di connessione**
+
+Non riesco a comunicare con il server. Verifica:
+- La tua connessione internet
+- Che il server sia attivo
+
+*Riprova tra qualche secondo.*`,
+        timestamp: new Date(),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Gestione invio con Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Toggle voice (placeholder)
+  const toggleVoice = () => {
+    setIsVoiceActive(!isVoiceActive);
+    // TODO: Implementare Web Speech API
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 30 }}
+          transition={{ duration: 0.3, type: 'spring', bounce: 0.2 }}
+          onClick={(e) => e.stopPropagation()}
+          className={`bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl flex flex-col border border-gray-200/60 overflow-hidden transition-all duration-300 ${
+            isExpanded
+              ? 'w-full h-full max-w-full max-h-full rounded-none'
+              : 'max-w-4xl w-full max-h-[90vh]'
+          }`}
+        >
+          {/* Header Premium */}
+          <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-4 sm:p-6 flex items-center justify-between relative overflow-hidden">
+            {/* Background pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{
+                backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                backgroundSize: '20px 20px'
+              }} />
+            </div>
+
+            <div className="flex items-center gap-3 relative z-10">
+              <motion.div
+                className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm"
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+              </motion.div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                  Annie
+                  <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium backdrop-blur-sm">
+                    AI Agentic
+                  </span>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300" />
+                </h2>
+                <p className="text-xs sm:text-sm text-white/80 mt-0.5">
+                  Assistente Logistico Intelligente
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 relative z-10">
+              <button
+                onClick={handleReset}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                title="Nuova conversazione"
+              >
+                <RotateCcw className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors hidden sm:block"
+                title={isExpanded ? 'Riduci' : 'Espandi'}
+              >
+                {isExpanded ? (
+                  <Minimize2 className="w-5 h-5 text-white" />
+                ) : (
+                  <Maximize2 className="w-5 h-5 text-white" />
+                )}
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Chiudi"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="px-4 sm:px-6 py-3 bg-gradient-to-b from-gray-50 to-white border-b border-gray-100">
+            <p className="text-xs text-gray-500 mb-2 font-medium">Azioni rapide</p>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {QUICK_ACTIONS.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => handleSendMessage(action.prompt)}
+                  disabled={isLoading}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-white text-xs sm:text-sm font-medium bg-gradient-to-r ${action.color} shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {action.icon}
+                  <span className="hidden sm:inline">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Area Messaggi */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-white to-gray-50/50">
+            <div className="space-y-4 max-w-3xl mx-auto">
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex gap-3 ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className={`flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-md ${
+                      message.isError
+                        ? 'bg-gradient-to-br from-red-500 to-red-600'
+                        : 'bg-gradient-to-br from-violet-500 to-purple-600'
+                    }`}>
+                      {message.isError ? (
+                        <AlertCircle className="w-5 h-5 text-white" />
+                      ) : (
+                        <Bot className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="relative group max-w-[85%] sm:max-w-[80%]">
+                    <div
+                      className={`rounded-2xl px-4 py-3 shadow-sm ${
+                        message.role === 'user'
+                          ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white'
+                          : message.isError
+                            ? 'bg-red-50 border border-red-200 text-gray-900'
+                            : 'bg-white border border-gray-200 text-gray-900'
+                      }`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <div className="prose prose-sm max-w-none prose-headings:font-bold prose-p:my-1 prose-ul:my-1 prose-li:my-0">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      )}
+
+                      <div className={`flex items-center justify-between gap-2 mt-2 pt-2 border-t ${
+                        message.role === 'user'
+                          ? 'border-white/20'
+                          : message.isError
+                            ? 'border-red-200'
+                            : 'border-gray-100'
+                      }`}>
+                        <div className="flex items-center gap-1">
+                          <Clock className={`w-3 h-3 ${
+                            message.role === 'user' ? 'text-white/60' : 'text-gray-400'
+                          }`} />
+                          <span className={`text-xs ${
+                            message.role === 'user' ? 'text-white/60' : 'text-gray-400'
+                          }`}>
+                            {message.timestamp.toLocaleTimeString('it-IT', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+
+                        {message.metadata?.dataFreshness && (
+                          <span className="text-xs text-gray-400">
+                            Dati: {message.metadata.dataFreshness}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Copy button */}
+                    {message.role === 'assistant' && !message.isError && (
+                      <button
+                        onClick={() => handleCopyMessage(message.id, message.content)}
+                        className="absolute -right-2 -top-2 p-1.5 bg-white border border-gray-200 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copia messaggio"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="w-3.5 h-3.5 text-green-600" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5 text-gray-500" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {message.role === 'user' && (
+                    <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                      <MessageSquare className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+
+              {/* Loading indicator */}
+              {isLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex gap-3 justify-start"
+                >
+                  <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+                      <span className="text-sm text-gray-600">Annie sta elaborando...</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div className="border-t border-gray-200 bg-white p-3 sm:p-4">
+            <div className="flex items-end gap-2 sm:gap-3 max-w-3xl mx-auto">
+              {/* Voice button (placeholder) */}
+              <button
+                onClick={toggleVoice}
+                className={`p-2.5 sm:p-3 rounded-xl transition-all duration-200 ${
+                  isVoiceActive
+                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+                title={isVoiceActive ? 'Disattiva microfono' : 'Attiva microfono'}
+              >
+                {isVoiceActive ? (
+                  <MicOff className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+              </button>
+
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Scrivi un messaggio ad Annie..."
+                  rows={1}
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm text-gray-900 bg-white placeholder:text-gray-400"
+                  style={{
+                    minHeight: '48px',
+                    maxHeight: '120px',
+                  }}
+                  disabled={isLoading}
+                />
+                <div className="absolute bottom-2 right-3 text-xs text-gray-400">
+                  {inputMessage.length > 0 && `${inputMessage.length}`}
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={!inputMessage.trim() || isLoading}
+                className={`px-4 sm:px-5 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                  inputMessage.trim() && !isLoading
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+                <span className="hidden sm:inline">
+                  {isLoading ? 'Invio...' : 'Invia'}
+                </span>
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-2 max-w-3xl mx-auto">
+              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Invio</kbd> per inviare &middot; <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Shift + Invio</kbd> per nuova riga
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
+export default PilotModal;
