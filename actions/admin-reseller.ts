@@ -364,6 +364,163 @@ export async function getSubUsersStats(): Promise<{
 }
 
 /**
+ * Server Action: Gestisce il wallet di un Sub-User (solo ricariche, no prelievi)
+ * 
+ * I Reseller possono solo AGGIUNGERE credito ai loro Sub-Users, non rimuoverlo.
+ * Questo per sicurezza e per evitare abusi.
+ * 
+ * @param subUserId - ID del Sub-User
+ * @param amount - Importo da aggiungere (deve essere positivo)
+ * @param reason - Motivo della ricarica (es. "Ricarica mensile", "Bonus", ecc.)
+ * @returns Risultato operazione
+ */
+export async function manageSubUserWallet(
+  subUserId: string,
+  amount: number,
+  reason: string = 'Ricarica manuale Reseller'
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+  transactionId?: string
+  newBalance?: number
+}> {
+  try {
+    // 1. Verifica autenticazione e Reseller status
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return {
+        success: false,
+        error: 'Non autenticato.',
+      }
+    }
+
+    const resellerCheck = await isCurrentUserReseller()
+    if (!resellerCheck.isReseller || !resellerCheck.userId) {
+      return {
+        success: false,
+        error: 'Solo i Reseller possono gestire il wallet dei Sub-Users.',
+      }
+    }
+
+    // 2. Valida importo (solo positivo per sicurezza)
+    if (amount <= 0) {
+      return {
+        success: false,
+        error: 'L\'importo deve essere positivo. I Reseller possono solo aggiungere credito, non rimuoverlo.',
+      }
+    }
+
+    // 3. Verifica che il Sub-User appartenga al Reseller corrente
+    const { data: subUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, wallet_balance, parent_id')
+      .eq('id', subUserId)
+      .single()
+
+    if (userError || !subUser) {
+      return {
+        success: false,
+        error: 'Sub-User non trovato.',
+      }
+    }
+
+    // Verifica che il Sub-User appartenga al Reseller
+    if (subUser.parent_id !== resellerCheck.userId) {
+      return {
+        success: false,
+        error: 'Non hai i permessi per gestire il wallet di questo utente. Il Sub-User non appartiene al tuo account.',
+      }
+    }
+
+    // 4. Aggiungi credito usando funzione SQL se disponibile
+    let transactionId: string
+
+    try {
+      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
+        p_user_id: subUserId,
+        p_amount: amount,
+        p_description: reason,
+        p_created_by: resellerCheck.userId,
+      })
+
+      if (txError) {
+        // Fallback: inserisci transazione manualmente
+        const { data: tx, error: insertError } = await supabaseAdmin
+          .from('wallet_transactions')
+          .insert([
+            {
+              user_id: subUserId,
+              amount: amount,
+              type: 'reseller_recharge',
+              description: reason,
+              created_by: resellerCheck.userId,
+            },
+          ])
+          .select('id')
+          .single()
+
+        if (insertError) {
+          console.error('Errore creazione transazione:', insertError)
+          return {
+            success: false,
+            error: insertError.message || 'Errore durante la creazione della transazione.',
+          }
+        }
+
+        transactionId = tx.id
+
+        // Aggiorna wallet_balance manualmente se la funzione SQL non esiste
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({
+            wallet_balance: (subUser.wallet_balance || 0) + amount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', subUserId)
+
+        if (updateError) {
+          console.error('Errore aggiornamento wallet:', updateError)
+          return {
+            success: false,
+            error: updateError.message || 'Errore durante l\'aggiornamento del wallet.',
+          }
+        }
+      } else {
+        transactionId = txData
+      }
+    } catch (error: any) {
+      console.error('Errore in manageSubUserWallet:', error)
+      return {
+        success: false,
+        error: error.message || 'Errore sconosciuto durante la gestione del wallet.',
+      }
+    }
+
+    // 5. Ottieni nuovo balance
+    const { data: updatedUser } = await supabaseAdmin
+      .from('users')
+      .select('wallet_balance')
+      .eq('id', subUserId)
+      .single()
+
+    return {
+      success: true,
+      message: `Ricarica di €${amount} completata con successo.`,
+      transactionId,
+      newBalance: updatedUser?.wallet_balance || 0,
+    }
+  } catch (error: any) {
+    console.error('Errore in manageSubUserWallet:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto.',
+    }
+  }
+}
+
+/**
  * Server Action: Ottiene le spedizioni aggregate dei Sub-Users
  * 
  * @param limit - Numero massimo di risultati (default: 50)

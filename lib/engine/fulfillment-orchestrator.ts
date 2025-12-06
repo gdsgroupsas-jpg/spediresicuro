@@ -13,6 +13,8 @@
 import { CourierAdapter, ShippingLabel } from '@/lib/adapters/couriers/base';
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
 import type { Shipment, CreateShipmentInput } from '@/types/shipments';
+import { calculatePriceWithRules, getApplicablePriceList } from '@/lib/db/price-lists-advanced';
+import type { PriceCalculationResult } from '@/types/listini';
 
 export interface ShipmentResult {
   success: boolean;
@@ -64,16 +66,53 @@ export class FulfillmentOrchestrator {
   }
 
   /**
+   * Calcola preventivo usando sistema listini avanzato
+   * 
+   * Recupera listino applicabile e calcola prezzo con regole PriceRule
+   */
+  async calculateQuote(
+    userId: string,
+    params: {
+      weight: number
+      volume?: number
+      destination: {
+        zip?: string
+        province?: string
+        region?: string
+        country?: string
+      }
+      courierId?: string
+      serviceType?: string
+      options?: {
+        declaredValue?: number
+        cashOnDelivery?: boolean
+        insurance?: boolean
+      }
+    },
+    priceListId?: string
+  ): Promise<PriceCalculationResult | null> {
+    try {
+      return await calculatePriceWithRules(userId, params, priceListId)
+    } catch (error: any) {
+      console.error('Errore calcolo preventivo:', error)
+      return null
+    }
+  }
+
+  /**
    * Crea spedizione con routing intelligente
    * 
    * Algoritmo O(1) di Dominio:
    * 1. Se adapter diretto disponibile → usa diretto (massima velocità)
    * 2. Se non disponibile → usa broker (spedisci.online)
    * 3. Se fallisce → genera CSV fallback
+   * 
+   * AGGIORNATO: Calcola anche prezzo usando sistema listini avanzato
    */
   async createShipment(
     shipmentData: Shipment | CreateShipmentInput,
-    courierCode: string
+    courierCode: string,
+    userId?: string
   ): Promise<ShipmentResult> {
     const normalizedCourier = courierCode.toLowerCase();
 

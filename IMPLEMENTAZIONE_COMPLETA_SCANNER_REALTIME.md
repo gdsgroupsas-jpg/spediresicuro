@@ -347,3 +347,5 @@ DO UPDATE SET is_active = TRUE;
 **Pronto per l'uso operativo!** 🚀
 
 
+
+

@@ -117,3 +117,5 @@ Write-ColorOutput "📚 Documentazione:" "Cyan"
 Write-ColorOutput "   • Leggi: RIEPILOGO_LAVORO_ATTUALE.md" "White"
 Write-Host ""
 
+
+
