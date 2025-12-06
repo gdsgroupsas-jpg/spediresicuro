@@ -321,8 +321,8 @@ export default function DashboardNav({
               <span className="sm:hidden">Impost.</span>
             </Link>
             
-            {/* Link Admin - Solo per admin */}
-            {userRole === 'admin' && (
+            {/* Link Admin - Solo per admin/superadmin */}
+            {(userRole === 'admin' || accountType === 'admin' || accountType === 'superadmin') && (
               <Link
                 href="/dashboard/admin"
                 className={`px-3 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all duration-300 shrink-0 whitespace-nowrap ${
@@ -437,8 +437,8 @@ export default function DashboardNav({
             Impostazioni
           </Link>
           
-          {/* Link Admin - Solo per admin (Mobile) */}
-          {userRole === 'admin' && (
+          {/* Link Admin - Solo per admin/superadmin (Mobile) */}
+          {(userRole === 'admin' || accountType === 'admin' || accountType === 'superadmin') && (
             <Link
               href="/dashboard/admin"
               className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-300 ${
