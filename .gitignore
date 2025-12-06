@@ -62,6 +62,10 @@ next-env.d.ts
 # .ai-lock.json
 # AGENT_NOTES.md
 
+# Cursor IDE
+.cursor/
+.cursorrules
+
 # Cartella duplicata (non serve)
 spediresicuro-master/
 pediresicuro-masterspediresicuro
