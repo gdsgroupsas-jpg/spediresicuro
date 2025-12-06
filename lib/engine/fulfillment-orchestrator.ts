@@ -82,7 +82,7 @@ export class FulfillmentOrchestrator {
         country?: string
       }
       courierId?: string
-      serviceType?: string
+      serviceType?: CourierServiceType
       options?: {
         declaredValue?: number
         cashOnDelivery?: boolean
