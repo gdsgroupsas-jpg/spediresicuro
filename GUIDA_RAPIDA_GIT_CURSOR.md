@@ -6,7 +6,27 @@
 
 ## ⚡ SOLUZIONE VELOCE (1 MINUTO)
 
+### 🚨 Hai Errori di Autenticazione?
+
+Se vedi errori tipo:
+- ❌ "Authentication failed"
+- ❌ "Permission denied"  
+- ❌ "Support for password authentication was removed"
+
+**Devi configurare le credenziali GitHub PRIMA!**
+
+➡️ **Leggi:** [RISOLVI_ERRORI_GIT_PUSH_PULL.md](RISOLVI_ERRORI_GIT_PUSH_PULL.md)
+
+**In breve:**
+1. Crea Personal Access Token su https://github.com/settings/tokens
+2. Quando fai `git push` usa il token come password
+3. Fatto! Da ora funziona sempre
+
+---
+
 ### Vuoi Sincronizzare? (Pull + Push)
+
+**IMPORTANTE:** Devi aver configurato le credenziali prima (vedi sopra)!
 
 **Windows:**
 ```bash
@@ -171,6 +191,23 @@ quick-commit-push.ps1             # PowerShell (rapido)
 ---
 
 ## ⚠️ ERRORI COMUNI
+
+### "Authentication failed" o "Permission denied"
+
+**Causa:** Credenziali GitHub non configurate
+
+**Soluzione Completa:** [RISOLVI_ERRORI_GIT_PUSH_PULL.md](RISOLVI_ERRORI_GIT_PUSH_PULL.md)
+
+**Soluzione Rapida:**
+```bash
+# 1. Crea token su: https://github.com/settings/tokens
+# 2. Quando fai git push:
+git push origin master
+# Username: gdsgroupsas-jpg
+# Password: [INCOLLA IL TOKEN, NON LA PASSWORD]
+```
+
+---
 
 ### "error: failed to push some refs"
 
