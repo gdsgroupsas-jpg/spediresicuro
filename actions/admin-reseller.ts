@@ -131,13 +131,13 @@ export async function createSubUser(data: {
       generatedPassword = password
     }
 
-    // Hash password (usa bcrypt se disponibile)
-    let hashedPassword = password
+    // Hash password (obbligatorio per sicurezza)
+    let hashedPassword: string
     try {
       hashedPassword = await bcrypt.hash(password, 10)
     } catch (hashError) {
-      console.warn('Errore hash password, uso password in chiaro (non sicuro per produzione):', hashError)
-      // In produzione, dovrebbe sempre hashare. Per ora uso password in chiaro per compatibilità
+      console.error('❌ Errore critico hash password:', hashError)
+      throw new Error('Impossibile creare utente: errore hash password')
     }
 
     // 6. Crea nuovo Sub-User in Supabase
