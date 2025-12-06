@@ -52,26 +52,40 @@ export async function GET(request: NextRequest) {
       console.warn('Errore recupero account_type:', error);
     }
 
-    // 4. Restituisci informazioni (senza password)
+    // 4. Prepara dati utente
+    const userData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      account_type: accountType,
+      provider: user.provider,
+      image: user.image,
+      company_name: (user as any).company_name,
+      vat_number: (user as any).vat_number,
+      phone: (user as any).phone,
+      datiCliente: (user as any).datiCliente,
+      defaultSender: (user as any).defaultSender,
+      integrazioni: (user as any).integrazioni,
+      createdAt: (user as any).createdAt,
+      updatedAt: (user as any).updatedAt,
+    };
+
+    // 5. Restituisci informazioni (senza password)
+    // Formato nuovo: { success: true, user: { ... } }
+    // Formato retrocompatibile: anche a livello root per compatibilità
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        account_type: accountType, // Aggiunto per compatibilità
-        provider: user.provider,
-        image: user.image,
-        company_name: (user as any).company_name,
-        vat_number: (user as any).vat_number,
-        phone: (user as any).phone,
-        datiCliente: (user as any).datiCliente,
-        defaultSender: (user as any).defaultSender,
-        integrazioni: (user as any).integrazioni,
-        createdAt: (user as any).createdAt,
-        updatedAt: (user as any).updatedAt,
-      },
+      user: userData,
+      // Retrocompatibilità: proprietà anche a livello root
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      account_type: userData.account_type,
+      accountType: userData.account_type, // Alias per compatibilità
+      provider: userData.provider,
+      image: userData.image,
     });
 
   } catch (error: any) {
