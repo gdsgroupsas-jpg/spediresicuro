@@ -10,7 +10,6 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
-import { calculateOptimalQuote } from '@/lib/engine/fulfillment-orchestrator';
 
 interface ShipmentRow {
   // Mittente
