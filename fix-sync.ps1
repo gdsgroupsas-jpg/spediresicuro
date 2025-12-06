@@ -31,3 +31,4 @@ Write-Host "`n✅ Sincronizzazione completata!" -ForegroundColor Green
 
 
 
+
