@@ -35,14 +35,17 @@ export async function GET(request: NextRequest) {
     let accountType = user.role; // Fallback a role
     try {
       const { supabaseAdmin } = await import('@/lib/db/client');
-      const { data: supabaseUser } = await supabaseAdmin
+      const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from('users')
         .select('account_type, role')
         .eq('email', session.user.email)
         .single();
       
-      if (supabaseUser) {
+      if (supabaseError) {
+        console.warn('Errore recupero account_type da Supabase:', supabaseError);
+      } else if (supabaseUser) {
         accountType = supabaseUser.account_type || supabaseUser.role || user.role;
+        console.log('Account Type recuperato da Supabase:', accountType, 'per email:', session.user.email);
       }
     } catch (error) {
       // Ignora errori, usa role come fallback
