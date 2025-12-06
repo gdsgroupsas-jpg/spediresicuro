@@ -253,7 +253,9 @@ export default function ListaSpedizioniPage() {
           const response = await fetch('/api/user/info');
           if (response.ok) {
             const data = await response.json();
-            setUserId(data.id || null);
+            // API restituisce { success: true, user: { id, ... } }
+            const userData = data.user || data;
+            setUserId(userData.id || null);
           }
         } catch (err) {
           console.error('Errore recupero userId:', err);
