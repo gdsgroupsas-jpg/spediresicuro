@@ -354,13 +354,73 @@ export const authOptions = {
         token.provider = account?.provider || 'credentials';
         token.email = user.email;
         token.name = user.name;
+        
+        // ⚠️ NUOVO: Carica campi reseller e wallet da Supabase se disponibile
+        if (user.email && typeof window === 'undefined') { // Solo server-side
+          try {
+            const { supabaseAdmin } = await import('@/lib/db/client');
+            const { data: userData, error } = await supabaseAdmin
+              .from('users')
+              .select('id, is_reseller, parent_id, wallet_balance, account_type')
+              .eq('email', user.email)
+              .single();
+            
+            if (!error && userData) {
+              token.is_reseller = userData.is_reseller || false;
+              token.parent_id = userData.parent_id || null;
+              token.wallet_balance = parseFloat(userData.wallet_balance || '0') || 0;
+              token.account_type = userData.account_type || 'user';
+              
+              console.log('✅ [NEXTAUTH] Campi reseller/wallet caricati:', {
+                is_reseller: token.is_reseller,
+                parent_id: token.parent_id,
+                wallet_balance: token.wallet_balance,
+                account_type: token.account_type,
+              });
+            }
+          } catch (error: any) {
+            console.warn('⚠️ [NEXTAUTH] Errore caricamento campi reseller/wallet (non critico):', error.message);
+            // Non critico, usa valori di default
+            token.is_reseller = false;
+            token.parent_id = null;
+            token.wallet_balance = 0;
+            token.account_type = 'user';
+          }
+        }
       } else {
         console.log('🔄 [NEXTAUTH] jwt callback - aggiornamento token esistente:', {
           id: token.id,
           email: token.email,
           role: token.role,
           provider: token.provider,
+          is_reseller: token.is_reseller,
+          wallet_balance: token.wallet_balance,
         });
+        
+        // ⚠️ NUOVO: Aggiorna wallet_balance periodicamente (ogni 5 minuti max)
+        if (token.email && typeof window === 'undefined') {
+          const lastUpdate = token.wallet_last_update || 0;
+          const now = Date.now();
+          const fiveMinutes = 5 * 60 * 1000;
+          
+          if (now - lastUpdate > fiveMinutes) {
+            try {
+              const { supabaseAdmin } = await import('@/lib/db/client');
+              const { data: userData } = await supabaseAdmin
+                .from('users')
+                .select('wallet_balance')
+                .eq('email', token.email)
+                .single();
+              
+              if (userData) {
+                token.wallet_balance = parseFloat(userData.wallet_balance || '0') || 0;
+                token.wallet_last_update = now;
+              }
+            } catch (error: any) {
+              console.warn('⚠️ [NEXTAUTH] Errore aggiornamento wallet (non critico):', error.message);
+            }
+          }
+        }
       }
 
       return token;
@@ -389,11 +449,20 @@ export const authOptions = {
           session.user.name = token.name;
         }
         
+        // ⚠️ NUOVO: Aggiungi campi reseller e wallet alla sessione
+        (session.user as any).is_reseller = token.is_reseller || false;
+        (session.user as any).parent_id = token.parent_id || null;
+        (session.user as any).wallet_balance = token.wallet_balance || 0;
+        (session.user as any).account_type = token.account_type || 'user';
+        
         console.log('✅ [NEXTAUTH] Session aggiornata:', {
           id: session.user.id,
           email: session.user.email,
           role: session.user.role,
           provider: (session.user as any).provider,
+          is_reseller: (session.user as any).is_reseller,
+          wallet_balance: (session.user as any).wallet_balance,
+          account_type: (session.user as any).account_type,
         });
       }
       return session;
