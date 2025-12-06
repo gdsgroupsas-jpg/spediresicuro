@@ -135,18 +135,8 @@ export default function PriceListsPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <DashboardNav
-            title={
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <FileText className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Gestione Listini Prezzi</h1>
-                  <p className="text-sm text-gray-500">Sistema avanzato di pricing con regole dinamiche</p>
-                </div>
-              </div>
-            }
-            subtitle="Crea, modifica e gestisci listini prezzi con sistema PriceRule avanzato"
+            title="Gestione Listini Prezzi"
+            subtitle="Sistema avanzato di pricing con regole dinamiche - Crea, modifica e gestisci listini"
             actions={
               <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
