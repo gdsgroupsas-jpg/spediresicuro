@@ -8,6 +8,19 @@ Questo **NON è un bug**. È una **limitazione di sicurezza intenzionale**.
 
 ---
 
+## 🚨 HAI ERRORI DI PUSH/PULL?
+
+Se ricevi errori tipo:
+- ❌ "Authentication failed"
+- ❌ "Permission denied"
+- ❌ "Support for password authentication was removed"
+
+**Leggi subito:** [RISOLVI_ERRORI_GIT_PUSH_PULL.md](RISOLVI_ERRORI_GIT_PUSH_PULL.md)
+
+**Soluzione rapida:** Devi configurare le credenziali GitHub (token o SSH key).
+
+---
+
 ## ❓ Domanda Frequente
 
 > "Perché Cursor non riesce a fare più pull e push in automatico a gestire branch e merge?"
@@ -85,6 +98,7 @@ Per capire tutto leggi:
 
 ## 📚 LINK UTILI
 
+- [**Errori Push/Pull? Leggi qui!**](RISOLVI_ERRORI_GIT_PUSH_PULL.md) ⚠️
 - [Guida Rapida](GUIDA_RAPIDA_GIT_CURSOR.md) ⭐
 - [Spiegazione Completa](PERCHE_CURSOR_NON_PUO_FARE_GIT_AUTOMATICO.md)
 - [Regole Cursor](.cursorrules)
@@ -92,5 +106,5 @@ Per capire tutto leggi:
 
 ---
 
-**Versione:** 1.0  
+**Versione:** 1.1 (Aggiunto troubleshooting autenticazione)  
 **Data:** 6 Dicembre 2025
