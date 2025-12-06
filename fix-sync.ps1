@@ -30,3 +30,4 @@ git status --short
 Write-Host "`n✅ Sincronizzazione completata!" -ForegroundColor Green
 
 
+
