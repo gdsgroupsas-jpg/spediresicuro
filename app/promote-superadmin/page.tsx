@@ -136,24 +136,22 @@ export default function PromoteSuperadminPage() {
               )}
 
               {/* Pulsanti Azione */}
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <div className="mt-6">
                 <button
                   onClick={() => {
-                    // Logout e redirect
+                    // Logout completo e redirect
                     window.location.href = '/api/auth/signout?callbackUrl=/login'
                   }}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg transition-colors shadow-lg"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Logout e Riaccedi
+                  <LogOut className="w-5 h-5" />
+                  Logout e Riaccedi ORA
                 </button>
-                <button
-                  onClick={() => router.push('/dashboard/team')}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                >
-                  <Shield className="w-4 h-4" />
-                  Vai a Team Management
-                </button>
+              </div>
+              <div className="mt-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-4">
+                <p className="text-sm text-amber-900 font-bold text-center">
+                  ⚠️ IMPORTANTE: Devi fare logout completo e login di nuovo per applicare i permessi superadmin!
+                </p>
               </div>
             </div>
           )}

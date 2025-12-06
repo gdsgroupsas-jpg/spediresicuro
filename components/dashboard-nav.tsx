@@ -66,6 +66,7 @@ export default function DashboardNav({
   const [datiCliente, setDatiCliente] = useState<any>(null);
   const [isLoadingDati, setIsLoadingDati] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<string | null>(null);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
 
   // Verifica ruolo utente
@@ -73,10 +74,11 @@ export default function DashboardNav({
     async function checkUserRole() {
       if (session?.user?.email) {
         try {
-          const response = await fetch('/api/user/settings');
+          const response = await fetch('/api/user/info');
           if (response.ok) {
             const data = await response.json();
             setUserRole(data.role || null);
+            setAccountType(data.account_type || null);
           }
         } catch (error) {
           console.error('Errore verifica ruolo:', error);
@@ -203,9 +205,23 @@ export default function DashboardNav({
                   }`}
                 >
                   <User className={`w-4 h-4 transition-transform duration-300 ${pathname === '/dashboard/dati-cliente' ? 'text-white' : 'text-gray-600'}`} />
-                  <span className={`text-xs lg:text-sm font-semibold hidden lg:inline ${pathname === '/dashboard/dati-cliente' ? 'text-white' : 'text-gray-700'}`}>
-                    {session.user?.name || session.user?.email}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs lg:text-sm font-semibold hidden lg:inline ${pathname === '/dashboard/dati-cliente' ? 'text-white' : 'text-gray-700'}`}>
+                      {session.user?.name || session.user?.email}
+                    </span>
+                    {/* Badge Ruolo */}
+                    {accountType && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        accountType === 'superadmin' 
+                          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/30' 
+                          : accountType === 'admin'
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/30'
+                          : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-md shadow-gray-500/30'
+                      }`}>
+                        {accountType === 'superadmin' ? '👑 SUPERADMIN' : accountType === 'admin' ? '⭐ ADMIN' : '👤 USER'}
+                      </span>
+                    )}
+                  </div>
                 </button>
               )}
             </div>
