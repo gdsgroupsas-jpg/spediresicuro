@@ -172,3 +172,5 @@ Cartella `automation-service/` con:
 Segui `GUIDA_SETUP_RAILWAY.md` per i dettagli passo-passo.
 
 
+
+

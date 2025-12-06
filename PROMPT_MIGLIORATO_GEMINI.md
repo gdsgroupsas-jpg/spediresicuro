@@ -71,3 +71,5 @@
 * Componente `components/ReturnScanner.tsx`.
 * Aggiornamento dell'interfaccia `Spedizione` in `types/index.ts`.
 * **Istruzioni SQL FINALIZZATE** per l'aggiunta di `parent_user_id` e i campi `is_return` alla tabella `spedizioni`.v
+
+

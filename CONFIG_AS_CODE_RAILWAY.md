@@ -74,3 +74,5 @@ automation-service/railway.toml
 **Entrambe le soluzioni funzionano!** ✅
 
 
+
+

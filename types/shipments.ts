@@ -75,6 +75,8 @@ export interface Shipment {
   total_cost?: number;
   margin_percent?: number;
   final_price?: number;
+  price_list_id?: string; // ID listino applicato (per audit)
+  applied_price_rule_id?: string; // ID regola applicata (per audit)
 
   // Geo-analytics
   geo_zone?: string;
@@ -158,6 +160,7 @@ export interface CreateShipmentInput {
 
   base_price?: number;
   margin_percent?: number;
+  price_list_id?: string; // Listino da applicare (opzionale, altrimenti usa getApplicablePriceList)
 
   notes?: string;
 }
