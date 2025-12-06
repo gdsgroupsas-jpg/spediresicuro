@@ -240,3 +240,5 @@ Se hai problemi:
 4. Esegui lo script di verifica sopra
 
 
+
+

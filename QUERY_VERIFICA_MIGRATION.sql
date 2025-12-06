@@ -89,3 +89,5 @@ AND tablename = 'shipments';
 -- le migration sono state applicate correttamente! ✅
 
 
+
+

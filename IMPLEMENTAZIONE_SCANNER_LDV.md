@@ -160,3 +160,5 @@ Esegui la migration `007_add_pickup_scanning_fields.sql` su Supabase per aggiung
 - ✅ Prevenzione doppio ritiro
 
 
+
+
