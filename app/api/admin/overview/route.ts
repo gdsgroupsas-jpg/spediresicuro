@@ -29,12 +29,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 2. Verifica che l'utente sia admin
-    const user = await findUserByEmail(session.user.email);
+    // 2. Verifica che l'utente sia admin o superadmin
+    let userAccountType: string | null = null;
+    let userRole: string | null = null;
     
-    if (!user || user.role !== 'admin') {
+    if (isSupabaseConfigured()) {
+      const { data: supabaseUser, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('role, account_type')
+        .eq('email', session.user.email)
+        .single();
+      
+      if (!userError && supabaseUser) {
+        userAccountType = supabaseUser.account_type;
+        userRole = supabaseUser.role;
+      }
+    } else {
+      const user = await findUserByEmail(session.user.email);
+      if (user) {
+        userRole = user.role || null;
+        userAccountType = (user as any).account_type || null;
+      }
+    }
+    
+    // Superadmin e admin hanno sempre accesso
+    const isAuthorized = userAccountType === 'superadmin' || 
+                        userAccountType === 'admin' || 
+                        userRole === 'admin';
+    
+    if (!isAuthorized) {
       return NextResponse.json(
-        { error: 'Accesso negato. Solo gli admin possono accedere a questa risorsa.' },
+        { error: 'Accesso negato. Solo gli admin e superadmin possono accedere a questa risorsa.' },
         { status: 403 }
       );
     }

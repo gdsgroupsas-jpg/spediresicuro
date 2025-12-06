@@ -62,17 +62,53 @@ interface PriceList {
 }
 
 export default function PriceListsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [priceLists, setPriceLists] = useState<PriceList[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [accountType, setAccountType] = useState<string | null>(null)
+
+  // Verifica permessi superadmin/admin
+  useEffect(() => {
+    if (status === 'loading') return
+    
+    if (status === 'unauthenticated' || !session) {
+      router.push('/login')
+      return
+    }
+
+    async function checkPermissions() {
+      try {
+        const response = await fetch('/api/user/info')
+        if (response.ok) {
+          const data = await response.json()
+          const userData = data.user || data
+          const userAccountType = userData.account_type || userData.accountType
+          setAccountType(userAccountType)
+          
+          // Superadmin e admin hanno sempre accesso
+          if (userAccountType !== 'superadmin' && userAccountType !== 'admin') {
+            router.push('/dashboard?error=unauthorized')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Errore verifica permessi:', error)
+        router.push('/dashboard?error=unauthorized')
+      }
+    }
+
+    checkPermissions()
+  }, [session, status, router])
 
   useEffect(() => {
-    loadPriceLists()
-  }, [statusFilter])
+    if (accountType === 'superadmin' || accountType === 'admin') {
+      loadPriceLists()
+    }
+  }, [statusFilter, accountType])
 
   async function loadPriceLists() {
     try {
