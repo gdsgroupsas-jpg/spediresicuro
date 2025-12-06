@@ -34,6 +34,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Select } from '@/components/ui/select'
 import { getPriceListByIdAction } from '@/actions/price-lists'
 import type { PriceList, PriceRule } from '@/types/listini'
 
