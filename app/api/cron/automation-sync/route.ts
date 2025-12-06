@@ -11,6 +11,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncAllEnabledConfigs } from '@/lib/automation/spedisci-online-agent';
 
+// Forza rendering dinamico (usa request.headers)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Verifica secret token (protezione cron job)

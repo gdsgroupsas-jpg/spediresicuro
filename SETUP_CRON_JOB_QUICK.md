@@ -40,3 +40,4 @@ Vercel Dashboard → Deployments → Functions → `/api/cron/trigger-sync`
 **📖 Per dettagli completi:** Vedi `REMINDER_SETUP_CRON_JOB.md`
 
 
+

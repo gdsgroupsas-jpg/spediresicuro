@@ -18,14 +18,14 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 WORKDIR /app
 
 # Copia package files
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY automation-service/package*.json ./
+COPY automation-service/tsconfig.json ./
 
 # Installa TUTTE le dipendenze (serve TypeScript per compilare)
 RUN npm install && npm cache clean --force
 
 # Copia codice sorgente
-COPY src ./src
+COPY automation-service/src ./src
 
 # Compila TypeScript
 RUN npm run build

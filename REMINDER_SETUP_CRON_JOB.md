@@ -295,3 +295,4 @@ Prima di considerare il cron job configurato, verifica:
 **Ricorda:** Il cron job è già configurato nel codice, devi solo aggiungere le variabili ambiente su Vercel! 🚀
 
 
+
