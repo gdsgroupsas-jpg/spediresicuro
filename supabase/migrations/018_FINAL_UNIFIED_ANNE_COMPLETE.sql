@@ -695,6 +695,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Funzione: Ricerca spedizioni full-text
+-- Prima elimina la funzione esistente se ha tipo diverso
+DROP FUNCTION IF EXISTS anne_search_shipments(TEXT, INTEGER);
+
 CREATE OR REPLACE FUNCTION anne_search_shipments(
   p_search_term TEXT,
   p_limit INTEGER DEFAULT 50
