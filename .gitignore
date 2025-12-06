@@ -62,12 +62,27 @@ next-env.d.ts
 # .ai-lock.json
 # AGENT_NOTES.md
 
-# Cursor IDE
+# IDE e Editor - configurazioni locali
 .cursor/
 .cursorrules
+.claude/
+.codespaces/
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
 
-# Cartella duplicata (non serve)
+# Cartelle duplicate (non servono)
 spediresicuro-master/
 pediresicuro-masterspediresicuro
+codice/
 
+# File temporanei Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Build e cache
 .vercel
+*.tsbuildinfo
+.next/
+node_modules/
