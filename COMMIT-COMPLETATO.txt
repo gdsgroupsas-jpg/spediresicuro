@@ -1,0 +1,18 @@
+COMMIT E PUSH COMPLETATO
+Data: 6 Dicembre 2025 - 22:35
+
+File committati:
+- supabase/migrations/021_verify_fix_account_type_config.sql (fix sintassi RAISE NOTICE)
+- components/dashboard-nav.tsx (fix accountType)
+- app/api/user/info/route.ts (fix caricamento account_type)
+- app/api/debug/check-my-account-type/route.ts (nuovo)
+- DEBUG-BADGE-SUPERADMIN.md (nuovo)
+- VERIFICA-ACCOUNT-TYPE.md (nuovo)
+- ISTRUZIONI-PUSH-MANUALE-FIX.md (aggiornato)
+
+Modifiche principali:
+1. Fix componente dashboard-nav.tsx per leggere data.user.account_type
+2. Fix script SQL 021 - RAISE NOTICE ora in blocco DO $$
+3. Date aggiornate a 2025
+4. Aggiunto logging per debug
+5. Creata API debug /api/debug/check-my-account-type

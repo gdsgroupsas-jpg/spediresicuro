@@ -77,8 +77,11 @@ export default function DashboardNav({
           const response = await fetch('/api/user/info');
           if (response.ok) {
             const data = await response.json();
-            setUserRole(data.role || null);
-            setAccountType(data.account_type || null);
+            // L'API restituisce { success: true, user: { ... } }
+            const userData = data.user || data;
+            setUserRole(userData.role || null);
+            setAccountType(userData.account_type || null);
+            console.log('Account Type caricato:', userData.account_type, 'Role:', userData.role);
           }
         } catch (error) {
           console.error('Errore verifica ruolo:', error);

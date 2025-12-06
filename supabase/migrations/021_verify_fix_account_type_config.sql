@@ -2,13 +2,25 @@
  * Migration: Verifica e Fix Configurazioni account_type
  * 
  * Questo script:
- * 1. Verifica che l'ENUM account_type esista
- * 2. Verifica che la colonna account_type esista nella tabella users
- * 3. Fixa inconsistenze tra role e account_type
- * 4. Assicura che gli admin con role='admin' abbiano account_type corretto
- * 5. Assicura che i superadmin abbiano admin_level = 0
+ * 1. Verifica che l'ENUM account_type esista (crea se mancante)
+ * 2. Verifica che la colonna account_type esista nella tabella users (crea se mancante)
+ * 3. Verifica che la colonna admin_level esista (crea se mancante)
+ * 4. Fixa account_type NULL o non impostato
+ * 5. Corregge inconsistenze tra role e account_type
+ * 6. Assicura che i superadmin abbiano admin_level = 0
+ * 7. Valida che admin_level sia nel range 0-5
+ * 8. Crea indici per performance
+ * 9. Genera report statistiche finale
  * 
- * Data: Dicembre 2024
+ * Data: 6 Dicembre 2025
+ * Creato: 6 Dicembre 2025 - 22:30
+ * 
+ * ISTRUZIONI:
+ * 1. Copia tutto il contenuto di questo file
+ * 2. Vai su Supabase Dashboard → SQL Editor
+ * 3. Incolla lo script
+ * 4. Clicca "Run" o premi F5
+ * 5. Controlla il report finale nella console
  */
 
 -- ============================================
@@ -111,8 +123,7 @@ BEGIN
   END IF;
   
   -- Se role!='admin' ma account_type='admin' o 'superadmin', 
-  -- lascia account_type così com'è (può essere corretto)
-  -- ma aggiorna role se necessario (per compatibilità)
+  -- aggiorna role per compatibilità
   UPDATE public.users 
   SET role = 'admin'::user_role
   WHERE account_type IN ('admin', 'superadmin')
@@ -175,7 +186,7 @@ BEGIN
 END $$;
 
 -- ============================================
--- STEP 8: Verifica e crea indici
+-- STEP 8: Verifica e crea indici per performance
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_users_account_type 
@@ -186,8 +197,13 @@ CREATE INDEX IF NOT EXISTS idx_users_admin_level
 ON public.users(admin_level) 
 WHERE admin_level > 0;
 
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Indici creati/verificati';
+END $$;
+
 -- ============================================
--- STEP 9: Report finale
+-- STEP 9: Report finale con statistiche
 -- ============================================
 
 DO $$
@@ -197,6 +213,7 @@ DECLARE
   v_admin_count INTEGER;
   v_user_count INTEGER;
   v_null_account_type INTEGER;
+  v_users_list TEXT;
 BEGIN
   -- Conta utenti totali
   SELECT COUNT(*) INTO v_total_users FROM public.users;
@@ -218,6 +235,11 @@ BEGIN
   FROM public.users 
   WHERE account_type IS NULL;
   
+  -- Lista superadmin
+  SELECT string_agg(email, ', ') INTO v_users_list
+  FROM public.users 
+  WHERE account_type = 'superadmin';
+  
   RAISE NOTICE '';
   RAISE NOTICE '========================================';
   RAISE NOTICE '📊 REPORT FINALE VERIFICA ACCOUNT_TYPE';
@@ -229,32 +251,49 @@ BEGIN
   RAISE NOTICE 'Account Type NULL: %', v_null_account_type;
   RAISE NOTICE '========================================';
   
+  IF v_users_list IS NOT NULL THEN
+    RAISE NOTICE 'Superadmin trovati: %', v_users_list;
+  END IF;
+  
   IF v_null_account_type > 0 THEN
     RAISE WARNING '⚠️ ATTENZIONE: Trovati % utenti con account_type NULL', v_null_account_type;
   END IF;
   
   IF v_superadmin_count = 0 THEN
-    RAISE NOTICE '⚠️ ATTENZIONE: Nessun superadmin trovato';
-    RAISE NOTICE '   Per creare/promuovere un superadmin:';
-    RAISE NOTICE '   UPDATE users SET account_type = ''superadmin'', admin_level = 0 WHERE email = ''EMAIL_SUPERADMIN'';';
+    RAISE NOTICE '';
+    RAISE NOTICE '⚠️ ATTENZIONE: Nessun superadmin trovato!';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Per promuovere un utente a superadmin, esegui:';
+    RAISE NOTICE 'UPDATE users SET account_type = ''superadmin'', admin_level = 0, role = ''admin'' WHERE email = ''TUA_EMAIL_QUI'';';
+    RAISE NOTICE '';
   END IF;
 END $$;
 
 -- ============================================
--- COMPLETAMENTO
+-- STEP 10: Verifica struttura finale
 -- ============================================
 
 DO $$
 BEGIN
   RAISE NOTICE '';
-  RAISE NOTICE '✅ Migration completata: Verifica e Fix Configurazioni account_type';
-  RAISE NOTICE '   - Verificato ENUM account_type';
-  RAISE NOTICE '   - Verificata colonna account_type';
-  RAISE NOTICE '   - Fixati account_type NULL';
-  RAISE NOTICE '   - Corrette inconsistenze role vs account_type';
-  RAISE NOTICE '   - Verificato admin_level per superadmin';
-  RAISE NOTICE '   - Creati indici per performance';
+  RAISE NOTICE '========================================';
+  RAISE NOTICE '✅ MIGRATION COMPLETATA CON SUCCESSO';
+  RAISE NOTICE '========================================';
   RAISE NOTICE '';
-  RAISE NOTICE '📋 Controlla il report sopra per statistiche';
+  RAISE NOTICE 'Verifiche completate:';
+  RAISE NOTICE '  ✅ ENUM account_type verificato/creato';
+  RAISE NOTICE '  ✅ Colonna account_type verificata/creata';
+  RAISE NOTICE '  ✅ Colonna admin_level verificata/creata';
+  RAISE NOTICE '  ✅ Account_type NULL fixati';
+  RAISE NOTICE '  ✅ Inconsistenze role vs account_type corrette';
+  RAISE NOTICE '  ✅ Admin_level per superadmin verificato';
+  RAISE NOTICE '  ✅ Admin_level validato (range 0-5)';
+  RAISE NOTICE '  ✅ Indici creati per performance';
+  RAISE NOTICE '';
+  RAISE NOTICE '📋 Controlla il report sopra per statistiche dettagliate';
+  RAISE NOTICE '';
 END $$;
 
+-- ============================================
+-- FINE SCRIPT
+-- ============================================
