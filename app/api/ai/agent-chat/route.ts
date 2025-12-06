@@ -19,11 +19,24 @@ const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const claudeClient = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
 
 // Debug: Verifica API key al caricamento del modulo
+console.log('🔍 [Anne Module] Verifica Environment Variables:');
+console.log('   ANTHROPIC_API_KEY presente:', !!anthropicApiKey);
+console.log('   ANTHROPIC_API_KEY lunghezza:', anthropicApiKey?.length || 0);
+console.log('   ANTHROPIC_API_KEY primi 20 char:', anthropicApiKey?.substring(0, 20) || 'NESSUNA');
+console.log('   Tutte le env keys:', Object.keys(process.env).filter(k => k.includes('ANTHROPIC') || k.includes('CLAUDE')));
+console.log('   NODE_ENV:', process.env.NODE_ENV);
+console.log('   VERCEL:', process.env.VERCEL);
+console.log('   VERCEL_ENV:', process.env.VERCEL_ENV);
+
 if (anthropicApiKey) {
-  console.log('✅ [Anne Module] ANTHROPIC_API_KEY caricata (lunghezza:', anthropicApiKey.length, ')');
+  console.log('✅ [Anne Module] ANTHROPIC_API_KEY caricata correttamente');
 } else {
-  console.warn('⚠️ [Anne Module] ANTHROPIC_API_KEY NON trovata in process.env');
-  console.warn('   Environment keys disponibili:', Object.keys(process.env).filter(k => k.includes('ANTHROPIC')));
+  console.error('❌ [Anne Module] ANTHROPIC_API_KEY NON TROVATA!');
+  console.error('   Possibili cause:');
+  console.error('   1. Variabile non configurata su Vercel');
+  console.error('   2. Nome variabile errato (deve essere esattamente "ANTHROPIC_API_KEY")');
+  console.error('   3. Non applicata a environment "Production"');
+  console.error('   4. Deploy necessario dopo aver aggiunto la variabile');
 }
 
 // Rate limiting semplice (in-memory, per produzione usare Redis)
