@@ -177,6 +177,38 @@ export const ANNE_TOOLS: ToolDefinition[] = [
       required: [],
     },
   },
+  {
+    name: 'create_batch_shipments',
+    description: 'Crea spedizioni multiple da file Excel/CSV. Analizza il file, calcola preventivi per tutti i corrieri, suggerisce il migliore per ogni spedizione e crea tutto in batch. COMPLETO end-to-end.',
+    parameters: {
+      type: 'object',
+      properties: {
+        csvData: {
+          type: 'string',
+          description: 'Contenuto del file CSV/Excel (formato testo, righe separate da \\n, colonne separate da , o tab). Prima riga = intestazioni. Colonne supportate: nome, destinatario, indirizzo, città, cap, provincia, telefono, email, colli, peso, note, corriere (preferito)',
+        },
+        defaultSender: {
+          type: 'object',
+          description: 'Dati mittente di default da usare per tutte le spedizioni (se non specificato nel CSV)',
+          properties: {
+            name: { type: 'string' },
+            company: { type: 'string' },
+            address: { type: 'string' },
+            city: { type: 'string' },
+            zip: { type: 'string' },
+            province: { type: 'string' },
+            phone: { type: 'string' },
+            email: { type: 'string' },
+          },
+        },
+        autoSelectBestCourier: {
+          type: 'boolean',
+          description: 'Se true, Anne seleziona automaticamente il corriere più conveniente per ogni spedizione. Se false, usa quello indicato nel CSV o chiede conferma (default: true)',
+        },
+      },
+      required: ['csvData'],
+    },
+  },
 ];
 
 /**
@@ -450,6 +482,56 @@ export async function executeTool(
             health: criticalCount > 0 ? 'critical' : errorCount > 5 ? 'degraded' : 'healthy',
           },
         };
+      }
+      
+      case 'create_batch_shipments': {
+        const { parseShipmentsData, createBatchShipments } = await import('./tools/shipments-batch');
+        
+        try {
+          // Parse CSV data
+          const shipmentsData = parseShipmentsData(toolCall.arguments.csvData);
+          
+          if (shipmentsData.length === 0) {
+            return {
+              success: false,
+              result: null,
+              error: 'Nessuna spedizione valida trovata nel file. Verifica che contenga le colonne obbligatorie: nome, indirizzo, città, cap, peso',
+            };
+          }
+          
+          console.log(`📦 [ANNE BATCH] Trovate ${shipmentsData.length} spedizioni da creare`);
+          
+          // Crea spedizioni in batch
+          const result = await createBatchShipments(
+            shipmentsData,
+            userId,
+            toolCall.arguments.defaultSender
+          );
+          
+          return {
+            success: true,
+            result: {
+              summary: `✅ Batch completato: ${result.created} spedizioni create su ${result.totalShipments} totali`,
+              statistics: {
+                total: result.totalShipments,
+                created: result.created,
+                failed: result.failed,
+                totalCost: `€${result.totalCost.toFixed(2)}`,
+                totalSavings: `€${result.totalSavings.toFixed(2)}`,
+                averageSavings: `€${result.summary.averageSavings.toFixed(2)} per spedizione`,
+              },
+              byCourer: result.summary.byCourer,
+              shipments: result.shipments,
+              successRate: `${Math.round((result.created / result.totalShipments) * 100)}%`,
+            },
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            result: null,
+            error: `Errore creazione batch: ${error.message}`,
+          };
+        }
       }
       
       default:
