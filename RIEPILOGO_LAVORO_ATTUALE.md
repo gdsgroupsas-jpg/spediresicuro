@@ -439,3 +439,5 @@ Prima di iniziare a lavorare, verifica:
 **Ultimo aggiornamento:** Dicembre 2025  
 **Versione documento:** 1.0
 
+
+

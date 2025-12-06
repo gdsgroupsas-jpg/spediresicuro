@@ -4,18 +4,25 @@
  * CRUD operations per listini prezzi corrieri
  */
 
-import { supabase } from './client';
-import type { PriceList, PriceListEntry, CreatePriceListInput } from '@/types/listini';
+import { supabase, supabaseAdmin } from './client';
+import type { PriceList, PriceListEntry, CreatePriceListInput, UpdatePriceListInput } from '@/types/listini';
+
+// Re-export funzioni avanzate
+export { 
+  getApplicablePriceList, 
+  calculatePriceWithRules 
+} from './price-lists-advanced';
 
 /**
  * Crea nuovo listino
  */
 export async function createPriceList(data: CreatePriceListInput, userId: string): Promise<PriceList> {
-  const { data: priceList, error } = await supabase
+  const { data: priceList, error } = await supabaseAdmin
     .from('price_lists')
     .insert({
       ...data,
       created_by: userId,
+      created_by_user_id: userId, // Compatibilità
     })
     .select()
     .single();
@@ -29,10 +36,37 @@ export async function createPriceList(data: CreatePriceListInput, userId: string
 }
 
 /**
+ * Aggiorna listino esistente
+ */
+export async function updatePriceList(
+  id: string,
+  data: UpdatePriceListInput,
+  userId: string
+): Promise<PriceList> {
+  const { data: priceList, error } = await supabaseAdmin
+    .from('price_lists')
+    .update({
+      ...data,
+      updated_at: new Date().toISOString(),
+      updated_by: userId,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating price list:', error);
+    throw new Error(`Errore aggiornamento listino: ${error.message}`);
+  }
+
+  return priceList as PriceList;
+}
+
+/**
  * Ottieni listino per ID
  */
 export async function getPriceListById(id: string): Promise<PriceList | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('price_lists')
     .select('*, courier:couriers(*), entries:price_list_entries(*)')
     .eq('id', id)
@@ -41,7 +75,16 @@ export async function getPriceListById(id: string): Promise<PriceList | null> {
   if (error) {
     if (error.code === 'PGRST116') return null;
     console.error('Error fetching price list:', error);
-    throw new Error(`Errore recupero listino: ${error.message}`);
+    return null;
+  }
+
+  // Parse rules JSONB se presente
+  if (data.rules && typeof data.rules === 'string') {
+    try {
+      data.rules = JSON.parse(data.rules)
+    } catch {
+      data.rules = []
+    }
   }
 
   return data as PriceList;

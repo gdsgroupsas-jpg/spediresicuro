@@ -48,3 +48,5 @@ Write-Host ""
 Write-Host "Verifica manuale su:" -ForegroundColor Yellow
 Write-Host "https://github.com/gdsgroupsas-jpg/spediresicuro" -ForegroundColor Cyan
 
+
+

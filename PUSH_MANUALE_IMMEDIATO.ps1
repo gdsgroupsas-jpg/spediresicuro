@@ -92,3 +92,5 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Premi un tasto per chiudere..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+
+

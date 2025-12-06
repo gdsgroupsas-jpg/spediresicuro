@@ -173,3 +173,5 @@ Write-ColorOutput "   • npm run verify:supabase - Verifica database" "White"
 Write-ColorOutput "   • git status          - Vedi stato repository" "White"
 Write-Host ""
 
+
+
