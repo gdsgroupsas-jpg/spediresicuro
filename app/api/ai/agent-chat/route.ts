@@ -154,6 +154,12 @@ export async function POST(request: NextRequest) {
       content: isVoiceInput ? userMessage.replace('[VOX]', '') : userMessage,
     });
 
+    // ⚠️ Validazione: Claude richiede almeno un messaggio non vuoto
+    if (claudeMessages.length === 0 || !claudeMessages[claudeMessages.length - 1].content.trim()) {
+      console.warn('⚠️ [Anne] Messaggio vuoto, uso greeting di default');
+      claudeMessages[claudeMessages.length - 1].content = 'Ciao Anne, come va?';
+    }
+
     // Usa Claude AI se disponibile
     let aiResponse = '';
     let toolCalls: any[] = [];
@@ -163,12 +169,13 @@ export async function POST(request: NextRequest) {
       try {
         console.log('🤖 [Anne] Chiamata Claude API in corso...');
         console.log('   API Key presente:', anthropicApiKey ? 'SI (lunghezza: ' + anthropicApiKey.length + ')' : 'NO');
-        console.log('   Model:', 'claude-3-5-sonnet-20241022');
+        console.log('   Model:', 'claude-3-haiku-20240307');
         console.log('   Messages count:', claudeMessages.length);
+        console.log('   System prompt length:', systemPrompt.length);
         
-        // Chiama Claude 3.5 Sonnet con tools
+        // Chiama Claude 3 Haiku con tools (3.5 Sonnet non disponibile con questa API key)
         const response = await claudeClient.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-3-haiku-20240307',
           max_tokens: 4096,
           system: systemPrompt,
           messages: claudeMessages,
@@ -217,7 +224,7 @@ export async function POST(request: NextRequest) {
 
           // Seconda chiamata a Claude con risultati tools
           const followUpResponse = await claudeClient.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-3-haiku-20240307',
             max_tokens: 4096,
             system: systemPrompt,
             messages: [
