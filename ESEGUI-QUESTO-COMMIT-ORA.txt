@@ -1,0 +1,69 @@
+================================================================================
+  ⚠️  PROBLEMA: PowerShell non mostra output - COMMIT MANUALE NECESSARIO
+================================================================================
+
+Il problema è che PowerShell/cmd non mostrano output, quindi non riesco a 
+verificare se i commit funzionano.
+
+SOLUZIONE: Esegui questi comandi MANUALMENTE in PowerShell o CMD:
+
+================================================================================
+  COMANDI DA ESEGUIRE (COPIA E INCOLLA)
+================================================================================
+
+cd d:\spediresicuro-master
+
+git add -A
+
+git status
+
+git commit -m "Fix: Script SQL 021 corretto sintassi RAISE NOTICE, date 2025, fix accountType completo"
+
+git push origin master
+
+git log --oneline -1
+
+================================================================================
+  VERIFICA
+================================================================================
+
+Dopo il push, l'hash dovrebbe cambiare da:
+  766a9813d612fb815ec0b238fd891c93db733c41
+
+A un nuovo hash (diverso).
+
+Se vedi ancora 766a981, significa che:
+1. Non ci sono modifiche da committare (già committate)
+2. C'è un errore di autenticazione GitHub
+3. C'è un conflitto
+
+================================================================================
+  SE IL PUSH FALLISCE PER AUTENTICAZIONE
+================================================================================
+
+1. Vai su GitHub.com → Settings → Developer settings → Personal access tokens
+2. Crea un nuovo token con permessi "repo"
+3. Quando git chiede password, usa il token invece della password
+
+OPPURE
+
+Cambia a SSH:
+git remote set-url origin git@github.com:gdsgroupsas-jpg/spediresicuro.git
+
+================================================================================
+  FILE CHE DOVREBBERO ESSERE COMMITTATI
+================================================================================
+
+✅ supabase/migrations/021_verify_fix_account_type_config.sql
+   - Data: 6 Dicembre 2025 (non 2024)
+   - RAISE NOTICE in blocco DO $$ ... END $$;
+
+✅ components/dashboard-nav.tsx
+   - Fix caricamento accountType da data.user.account_type
+
+✅ app/api/user/info/route.ts
+   - Logging migliorato
+
+✅ Altri file di debug/documentazione
+
+================================================================================
