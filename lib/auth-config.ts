@@ -156,21 +156,7 @@ export const authOptions = {
           // Verifica credenziali dal database
           console.log('🔍 [AUTH] Importazione verifyUserCredentials...');
           const { verifyUserCredentials } = await import('@/lib/database');
-          
-          // ⚠️ NUOVO: Inizializza utenti demo se necessario (solo per utenti demo)
-          if (credentials.email === 'admin@spediresicuro.it' || credentials.email === 'demo@spediresicuro.it') {
-            try {
-              console.log('🔄 [AUTH] Inizializzazione utenti demo per:', credentials.email);
-              const { ensureDemoUsersExist } = await import('@/lib/database-init');
-              await ensureDemoUsersExist();
-              console.log('✅ [AUTH] Inizializzazione utenti demo completata');
-            } catch (initError: any) {
-              // Non bloccare il login se l'inizializzazione fallisce
-              console.warn('⚠️ [AUTH] Errore inizializzazione utenti demo:', initError.message);
-              console.warn('⚠️ [AUTH] Stack trace:', initError.stack);
-            }
-          }
-          
+
           console.log('🔍 [AUTH] Verifica credenziali per:', credentials.email);
           const user = await verifyUserCredentials(
             credentials.email as string,

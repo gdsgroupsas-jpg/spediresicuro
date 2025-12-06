@@ -1,9 +1,0 @@
-email,password,name,role,provider,created_at,updated_at
-admin@spediresicuro.it,admin123,Admin,admin,credentials,2025-01-01T00:00:00Z,2025-01-01T00:00:00Z
-demo@spediresicuro.it,demo123,Demo User,user,credentials,2025-01-01T00:00:00Z,2025-01-01T00:00:00Z
-
-
-
-
-
-
