@@ -87,7 +87,9 @@ export default function TeamManagementPage() {
           throw new Error('Errore verifica utente')
         }
 
-        const userData = await response.json()
+        const responseData = await response.json()
+        // API restituisce { success: true, user: { account_type, ... } }
+        const userData = responseData.user || responseData
         
         // Verifica account_type
         if (userData.account_type !== 'admin' && userData.account_type !== 'superadmin') {

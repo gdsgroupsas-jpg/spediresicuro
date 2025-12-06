@@ -67,7 +67,9 @@ export default function PlatformFeaturesPage() {
           // Verifica se è superadmin (account_type = 'superadmin')
           const userResponse = await fetch('/api/user/info');
           if (userResponse.ok) {
-            const userData = await userResponse.json();
+            const userResponseData = await userResponse.json();
+            // API restituisce { success: true, user: { account_type, ... } }
+            const userData = userResponseData.user || userResponseData;
             if (userData.account_type === 'superadmin') {
               setIsAuthorized(true);
               await loadFeatures();
