@@ -1,11 +1,81 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Shield } from 'lucide-react'
 
 import { QueryProvider } from '@/components/providers/query-provider'
 import { UsersTable } from './_components/users-table'
 
 export default function SuperAdminDashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Verifica permessi superadmin
+  useEffect(() => {
+    if (status === 'loading') return
+
+    if (status === 'unauthenticated' || !session) {
+      router.push('/login')
+      return
+    }
+
+    async function checkSuperAdmin() {
+      try {
+        const response = await fetch('/api/user/info')
+        if (response.ok) {
+          const data = await response.json()
+          const userData = data.user || data
+          const accountType = userData.account_type || userData.accountType
+
+          if (accountType === 'superadmin') {
+            setIsAuthorized(true)
+          } else {
+            router.push('/dashboard?error=unauthorized')
+            return
+          }
+        } else {
+          router.push('/dashboard?error=unauthorized')
+          return
+        }
+      } catch (error) {
+        console.error('Errore verifica superadmin:', error)
+        router.push('/dashboard?error=unauthorized')
+        return
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkSuperAdmin()
+  }, [session, status, router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verifica permessi...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h1>
+          <p className="text-gray-600">Solo i superadmin possono accedere a questa sezione.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <QueryProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20">
