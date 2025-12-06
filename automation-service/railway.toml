@@ -1,6 +1,6 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "automation-service/Dockerfile"
 
 [deploy]
 startCommand = "npm start"
