@@ -14,6 +14,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { 
   FileText, 
   Plus, 
@@ -62,6 +63,7 @@ interface PriceList {
 
 export default function PriceListsPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [priceLists, setPriceLists] = useState<PriceList[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -283,10 +285,12 @@ export default function PriceListsPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={`/dashboard/listini/${list.id}`}>
-                                <Eye className="h-4 w-4" />
-                              </a>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => router.push(`/dashboard/listini/${list.id}`)}
+                            >
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="sm">
                               <Edit className="h-4 w-4" />
