@@ -40,6 +40,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { QueryProvider } from '@/components/providers/query-provider'
@@ -358,24 +360,261 @@ export default function PriceListsPage() {
   )
 }
 
-// Componente Dialog Creazione (semplificato per ora)
+// Componente Dialog Creazione Listino Completo
 function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
 }) {
+  const [name, setName] = useState('')
+  const [version, setVersion] = useState('1.0.0')
+  const [status, setStatus] = useState<'draft' | 'active' | 'archived'>('draft')
+  const [priority, setPriority] = useState<'global' | 'partner' | 'client' | 'default'>('default')
+  const [courierId, setCourierId] = useState<string>('')
+  const [isGlobal, setIsGlobal] = useState(false)
+  const [description, setDescription] = useState('')
+  const [validFrom, setValidFrom] = useState('')
+  const [validUntil, setValidUntil] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [couriers, setCouriers] = useState<any[]>([])
+
+  // Carica corrieri disponibili
+  useEffect(() => {
+    if (isOpen) {
+      loadCouriers()
+    }
+  }, [isOpen])
+
+  async function loadCouriers() {
+    try {
+      // Prova API couriers, altrimenti usa lista hardcoded
+      try {
+        const response = await fetch('/api/couriers')
+        if (response.ok) {
+          const data = await response.json()
+          setCouriers(data.couriers || data || [])
+          return
+        }
+      } catch (apiError) {
+        console.warn('API couriers non disponibile, uso lista default')
+      }
+      
+      // Fallback: lista corrieri comuni
+      setCouriers([
+        { id: 'bartolini', name: 'Bartolini', code: 'BRT' },
+        { id: 'dhl', name: 'DHL', code: 'DHL' },
+        { id: 'gls', name: 'GLS', code: 'GLS' },
+        { id: 'sda', name: 'SDA', code: 'SDA' },
+        { id: 'ups', name: 'UPS', code: 'UPS' },
+        { id: 'fedex', name: 'FedEx', code: 'FEDEX' },
+      ])
+    } catch (error) {
+      console.error('Errore caricamento corrieri:', error)
+      // Fallback lista vuota
+      setCouriers([])
+    }
+  }
+
+  async function handleCreate() {
+    if (!name.trim()) {
+      setError('Il nome del listino è obbligatorio')
+      return
+    }
+
+    if (!version.trim()) {
+      setError('La versione è obbligatoria')
+      return
+    }
+
+    setIsCreating(true)
+    setError(null)
+
+    try {
+      const result = await createPriceListAction({
+        name: name.trim(),
+        version: version.trim(),
+        status,
+        priority,
+        courier_id: courierId || undefined,
+        is_global: isGlobal,
+        description: description.trim() || undefined,
+        valid_from: validFrom || undefined,
+        valid_until: validUntil || undefined,
+      })
+
+      if (result.success) {
+        toast.success('Listino creato con successo!')
+        // Reset form
+        setName('')
+        setVersion('1.0.0')
+        setStatus('draft')
+        setPriority('default')
+        setCourierId('')
+        setIsGlobal(false)
+        setDescription('')
+        setValidFrom('')
+        setValidUntil('')
+        onSuccess()
+      } else {
+        setError(result.error || 'Errore durante la creazione del listino')
+        toast.error(result.error || 'Errore durante la creazione del listino')
+      }
+    } catch (error: any) {
+      setError(error.message || 'Errore sconosciuto')
+      toast.error('Errore durante la creazione del listino')
+      console.error(error)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuovo Listino Prezzi</DialogTitle>
           <DialogDescription>
             Crea un nuovo listino con sistema PriceRule avanzato
           </DialogDescription>
         </DialogHeader>
-        <div className="p-4 text-center text-gray-500">
-          <p>Dialog completo in sviluppo...</p>
-          <p className="text-sm mt-2">Usa la pagina di dettaglio per creare listini completi</p>
+
+        <div className="space-y-4 py-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Nome Listino */}
+          <div>
+            <Label htmlFor="name">Nome Listino *</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Es: Listino Standard 2025"
+              className="mt-1"
+            />
+          </div>
+
+          {/* Versione */}
+          <div>
+            <Label htmlFor="version">Versione *</Label>
+            <Input
+              id="version"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              placeholder="Es: 1.0.0"
+              className="mt-1"
+            />
+          </div>
+
+          {/* Status e Priority */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">Stato</Label>
+              <Select
+                id="status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as 'draft' | 'active' | 'archived')}
+              >
+                <option value="draft">Bozza</option>
+                <option value="active">Attivo</option>
+                <option value="archived">Archiviato</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="priority">Priorità</Label>
+              <Select
+                id="priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as 'global' | 'partner' | 'client' | 'default')}
+              >
+                <option value="default">Default</option>
+                <option value="client">Cliente</option>
+                <option value="partner">Partner</option>
+                <option value="global">Globale</option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Corriere */}
+          <div>
+            <Label htmlFor="courier">Corriere (opzionale)</Label>
+            <Select
+              id="courier"
+              value={courierId}
+              onChange={(e) => setCourierId(e.target.value)}
+            >
+              <option value="">Nessuno (Multi-corriere)</option>
+              {couriers.map((courier) => (
+                <option key={courier.id} value={courier.id}>
+                  {courier.name} ({courier.code})
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          {/* Global */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isGlobal"
+              checked={isGlobal}
+              onChange={(e) => setIsGlobal(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <Label htmlFor="isGlobal" className="cursor-pointer">
+              Listino globale (visibile a tutti gli utenti)
+            </Label>
+          </div>
+
+          {/* Date validità */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="validFrom">Valido dal (opzionale)</Label>
+              <Input
+                id="validFrom"
+                type="date"
+                value={validFrom}
+                onChange={(e) => setValidFrom(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="validUntil">Valido fino a (opzionale)</Label>
+              <Input
+                id="validUntil"
+                type="date"
+                value={validUntil}
+                onChange={(e) => setValidUntil(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Descrizione */}
+          <div>
+            <Label htmlFor="description">Descrizione (opzionale)</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descrizione del listino..."
+              className="mt-1"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} disabled={isCreating}>
+            Annulla
+          </Button>
+          <Button onClick={handleCreate} disabled={isCreating || !name.trim() || !version.trim()}>
+            {isCreating ? 'Creazione...' : 'Crea Listino'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
