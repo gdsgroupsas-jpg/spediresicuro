@@ -74,7 +74,7 @@ export default function PromoteSuperadminPage() {
               Promozione Superadmin
             </h1>
             <p className="text-gray-600">
-              Email corrente: <strong>{session.user.email}</strong>
+              Email corrente: <strong>{session.user?.email || 'Non disponibile'}</strong>
             </p>
           </div>
 
