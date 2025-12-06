@@ -97,17 +97,23 @@ export async function POST(request: NextRequest) {
     // 5. Sposta tutte le spedizioni dai duplicati all'utente principale
     let totalMoved = 0;
     for (const duplicate of duplicates) {
-      const { count, error: moveError } = await supabaseAdmin
+      // Prima conta quante spedizioni ha il duplicato
+      const { count: duplicateCount } = await supabaseAdmin
+        .from('shipments')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', duplicate.id);
+
+      // Poi sposta le spedizioni
+      const { error: moveError } = await supabaseAdmin
         .from('shipments')
         .update({ user_id: mainUser.id })
-        .eq('user_id', duplicate.id)
-        .select('*', { count: 'exact' });
+        .eq('user_id', duplicate.id);
 
       if (moveError) {
         console.error(`❌ [FIX-DUPLICATE] Errore spostamento spedizioni da ${duplicate.id}:`, moveError);
       } else {
-        totalMoved += count || 0;
-        console.log(`✅ [FIX-DUPLICATE] Spostate ${count} spedizioni da duplicato ${duplicate.id}`);
+        totalMoved += duplicateCount || 0;
+        console.log(`✅ [FIX-DUPLICATE] Spostate ${duplicateCount} spedizioni da duplicato ${duplicate.id}`);
       }
     }
 
