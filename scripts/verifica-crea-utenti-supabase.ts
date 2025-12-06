@@ -15,27 +15,33 @@ import { findUserByEmail, createUser } from '../lib/database';
 
 /**
  * Genera una password sicura casuale se non configurata via env
+ * Usa 24 bytes per maggiore sicurezza (48 caratteri hex)
  */
 function generateSecurePassword(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return crypto.randomBytes(24).toString('hex');
 }
 
 /**
  * Ottiene gli utenti demo con password dalle variabili d'ambiente
+ * Se non configurate, genera password casuali sicure e le mostra all'utente
  */
 function getDemoUsers() {
-  const adminPassword = process.env.DEMO_ADMIN_PASSWORD;
-  const demoPassword = process.env.DEMO_USER_PASSWORD;
+  let adminPassword = process.env.DEMO_ADMIN_PASSWORD;
+  let demoPassword = process.env.DEMO_USER_PASSWORD;
   
-  if (!adminPassword || !demoPassword) {
-    console.error('❌ ERRORE: Le password demo non sono configurate!');
-    console.error('   Configura queste variabili d\'ambiente:');
-    console.error('   - DEMO_ADMIN_PASSWORD');
-    console.error('   - DEMO_USER_PASSWORD');
-    console.error('\n   Esempio:');
-    console.error('   export DEMO_ADMIN_PASSWORD="your-secure-admin-password"');
-    console.error('   export DEMO_USER_PASSWORD="your-secure-demo-password"');
-    process.exit(1);
+  // Se le password non sono configurate, genera password casuali
+  if (!adminPassword) {
+    adminPassword = generateSecurePassword();
+    console.warn('⚠️ DEMO_ADMIN_PASSWORD non configurata. Generata password casuale.');
+    console.log(`   Password admin generata: ${adminPassword}`);
+    console.log('   Salva questa password per accedere!\n');
+  }
+  
+  if (!demoPassword) {
+    demoPassword = generateSecurePassword();
+    console.warn('⚠️ DEMO_USER_PASSWORD non configurata. Generata password casuale.');
+    console.log(`   Password demo generata: ${demoPassword}`);
+    console.log('   Salva questa password per accedere!\n');
   }
   
   return [
