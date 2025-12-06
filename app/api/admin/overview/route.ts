@@ -14,6 +14,9 @@ import { auth } from '@/lib/auth-config';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
+// Forza rendering dinamico (usa headers, session, ecc.)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione

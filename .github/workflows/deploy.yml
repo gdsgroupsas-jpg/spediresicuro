@@ -1,0 +1,17 @@
+name: Deploy Automation
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'automation-service/**'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Deployment
+        run: |
+          echo "🚀 Deploy automation-service su Railway"
+          echo "Railway fa auto-deploy da GitHub, questo workflow è solo per notifiche"
