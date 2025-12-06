@@ -3,30 +3,61 @@
  * 
  * Funzione per inizializzare gli utenti demo in Supabase se non esistono già.
  * Viene chiamata automaticamente quando necessario.
+ * 
+ * ⚠️ SICUREZZA: Le password degli utenti demo devono essere configurate tramite
+ * variabili d'ambiente. NON hardcodare password in questo file.
  */
 
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import { findUserByEmail, createUser } from './database';
+import crypto from 'crypto';
 
-const DEMO_USERS = [
-  {
-    email: 'admin@spediresicuro.it',
-    password: 'admin123',
-    name: 'Admin',
-    role: 'admin' as const,
-  },
-  {
-    email: 'demo@spediresicuro.it',
-    password: 'demo123',
-    name: 'Demo User',
-    role: 'user' as const,
-  },
-];
+/**
+ * Genera una password sicura casuale se non configurata via env
+ */
+function generateSecurePassword(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+/**
+ * Ottiene le credenziali demo dalle variabili d'ambiente
+ * Se non configurate, genera password casuali sicure
+ */
+function getDemoUsers() {
+  const adminPassword = process.env.DEMO_ADMIN_PASSWORD || generateSecurePassword();
+  const demoPassword = process.env.DEMO_USER_PASSWORD || generateSecurePassword();
+  
+  // Log solo se le password sono state generate (non configurate)
+  if (!process.env.DEMO_ADMIN_PASSWORD) {
+    console.warn('⚠️ [INIT] DEMO_ADMIN_PASSWORD non configurata. Generata password casuale.');
+  }
+  if (!process.env.DEMO_USER_PASSWORD) {
+    console.warn('⚠️ [INIT] DEMO_USER_PASSWORD non configurata. Generata password casuale.');
+  }
+  
+  return [
+    {
+      email: 'admin@spediresicuro.it',
+      password: adminPassword,
+      name: 'Admin',
+      role: 'admin' as const,
+    },
+    {
+      email: 'demo@spediresicuro.it',
+      password: demoPassword,
+      name: 'Demo User',
+      role: 'user' as const,
+    },
+  ];
+}
 
 /**
  * Inizializza gli utenti demo in Supabase se non esistono già
  * 
  * ⚠️ IMPORTANTE: Questa funzione viene chiamata automaticamente quando necessario
+ * Le password devono essere configurate tramite variabili d'ambiente:
+ * - DEMO_ADMIN_PASSWORD per l'utente admin
+ * - DEMO_USER_PASSWORD per l'utente demo
  */
 export async function initializeDemoUsers(): Promise<{ created: number; skipped: number }> {
   let created = 0;
@@ -39,6 +70,9 @@ export async function initializeDemoUsers(): Promise<{ created: number; skipped:
   }
 
   console.log('🔄 [INIT] Inizializzazione utenti demo in Supabase...');
+  
+  // Ottieni utenti demo con password da env
+  const DEMO_USERS = getDemoUsers();
 
   for (const userData of DEMO_USERS) {
     try {
