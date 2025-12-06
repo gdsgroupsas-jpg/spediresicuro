@@ -129,28 +129,10 @@ export interface User {
 // ⚠️ IMPORTANTE: Su Vercel (produzione) il file system è read-only, quindi questa funzione
 // non può creare file. Usa solo in sviluppo locale o quando Supabase non è configurato.
 function initDatabase(): Database {
-  // Utenti demo: sempre creati (sia sviluppo che produzione)
-  // ⚠️ IMPORTANTE: In produzione, questi utenti verranno creati in Supabase se configurato
-  const demoUsers: User[] = [
-    {
-      id: '1',
-      email: 'admin@spediresicuro.it',
-      password: 'admin123',
-      name: 'Admin',
-      role: 'admin',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      email: 'demo@spediresicuro.it',
-      password: 'demo123',
-      name: 'Demo User',
-      role: 'user',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
+  // ⚠️ SICUREZZA: Utenti demo rimossi per sicurezza
+  // Gli utenti devono essere creati manualmente nel database o via Supabase
+  // NON usare password hardcoded in produzione
+  const demoUsers: User[] = [];
 
   const defaultData: Database = {
     spedizioni: [],
@@ -206,36 +188,9 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
-      // Utenti demo sempre creati (sia sviluppo che produzione)
-      db.utenti = [
-        {
-          id: '1',
-          email: 'admin@spediresicuro.it',
-          password: 'admin123',
-          name: 'Admin',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          email: 'demo@spediresicuro.it',
-          password: 'demo123',
-          name: 'Demo User',
-          role: 'user',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      // Salva la migrazione
-      try {
-        writeDatabase(db);
-      } catch (error: any) {
-        // Non critico: se è read-only (Vercel), l'utente verrà creato in Supabase
-        if (error?.code !== 'EROFS') {
-          console.warn('⚠️ [JSON] Errore salvataggio migrazione utenti:', error.message);
-        }
-      }
+      // ⚠️ SICUREZZA: Utenti demo rimossi per sicurezza
+      // Gli utenti devono essere creati manualmente nel database o via Supabase
+      db.utenti = [];
     }
     
     return db;
