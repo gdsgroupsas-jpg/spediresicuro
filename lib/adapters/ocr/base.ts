@@ -155,13 +155,24 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google
 
     case 'auto':
     default: {
-      // Priorità: Google Vision > Claude Vision > Tesseract > Mock
+      // Priorità: Claude Vision (screen) > Google Vision > Tesseract > Mock
 
       console.log('🔎 Selezionando OCR adapter automaticamente...');
-      console.log(`   GOOGLE_CLOUD_CREDENTIALS presente: ${!!process.env.GOOGLE_CLOUD_CREDENTIALS}`);
       console.log(`   ANTHROPIC_API_KEY presente: ${!!process.env.ANTHROPIC_API_KEY}`);
+      console.log(`   GOOGLE_CLOUD_CREDENTIALS presente: ${!!process.env.GOOGLE_CLOUD_CREDENTIALS}`);
 
-      // 1. Prova Google Cloud Vision (più affidabile per OCR)
+      // 1. Prova Claude Vision (priorità per screen OCR)
+      if (process.env.ANTHROPIC_API_KEY) {
+        try {
+          console.log('✅ OCR Claude Vision (screen) ATTIVO - consumerà crediti Anthropic');
+          const { ClaudeOCRAdapter } = require('./claude');
+          return new ClaudeOCRAdapter();
+        } catch (error) {
+          console.warn('❌ Claude Vision non disponibile:', error);
+        }
+      }
+
+      // 2. Prova Google Cloud Vision (fallback)
       if (process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         try {
           console.log('✅ OCR Google Cloud Vision ATTIVO - OCR reale professionale');
@@ -169,17 +180,6 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google
           return new GoogleVisionOCRAdapter();
         } catch (error) {
           console.warn('❌ Google Vision non disponibile:', error);
-        }
-      }
-
-      // 2. Prova Claude Vision (se ANTHROPIC_API_KEY configurata)
-      if (process.env.ANTHROPIC_API_KEY) {
-        try {
-          console.log('✅ OCR Claude Vision ATTIVO - consumerà crediti Anthropic');
-          const { ClaudeOCRAdapter } = require('./claude');
-          return new ClaudeOCRAdapter();
-        } catch (error) {
-          console.warn('❌ Claude Vision non disponibile, fallback a Mock:', error);
         }
       }
 
