@@ -3,25 +3,56 @@
  * 
  * Questo script verifica se gli utenti demo esistono in Supabase
  * e li crea se mancano.
+ * 
+ * ⚠️ SICUREZZA: Le password devono essere configurate tramite variabili d'ambiente:
+ * - DEMO_ADMIN_PASSWORD per l'utente admin
+ * - DEMO_USER_PASSWORD per l'utente demo
  */
 
+import crypto from 'crypto';
 import { isSupabaseConfigured, supabaseAdmin } from '../lib/supabase';
 import { findUserByEmail, createUser } from '../lib/database';
 
-const DEMO_USERS = [
-  {
-    email: 'admin@spediresicuro.it',
-    password: 'admin123',
-    name: 'Admin',
-    role: 'admin' as const,
-  },
-  {
-    email: 'demo@spediresicuro.it',
-    password: 'demo123',
-    name: 'Demo User',
-    role: 'user' as const,
-  },
-];
+/**
+ * Genera una password sicura casuale se non configurata via env
+ */
+function generateSecurePassword(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+/**
+ * Ottiene gli utenti demo con password dalle variabili d'ambiente
+ */
+function getDemoUsers() {
+  const adminPassword = process.env.DEMO_ADMIN_PASSWORD;
+  const demoPassword = process.env.DEMO_USER_PASSWORD;
+  
+  if (!adminPassword || !demoPassword) {
+    console.error('❌ ERRORE: Le password demo non sono configurate!');
+    console.error('   Configura queste variabili d\'ambiente:');
+    console.error('   - DEMO_ADMIN_PASSWORD');
+    console.error('   - DEMO_USER_PASSWORD');
+    console.error('\n   Esempio:');
+    console.error('   export DEMO_ADMIN_PASSWORD="your-secure-admin-password"');
+    console.error('   export DEMO_USER_PASSWORD="your-secure-demo-password"');
+    process.exit(1);
+  }
+  
+  return [
+    {
+      email: 'admin@spediresicuro.it',
+      password: adminPassword,
+      name: 'Admin',
+      role: 'admin' as const,
+    },
+    {
+      email: 'demo@spediresicuro.it',
+      password: demoPassword,
+      name: 'Demo User',
+      role: 'user' as const,
+    },
+  ];
+}
 
 async function main() {
   console.log('🔍 Verifica Utenti Demo in Supabase\n');
@@ -38,6 +69,9 @@ async function main() {
   }
 
   console.log('✅ Supabase configurato correttamente\n');
+  
+  // Ottieni utenti demo con password da env
+  const DEMO_USERS = getDemoUsers();
 
   // Verifica connessione a Supabase
   try {
@@ -117,12 +151,9 @@ async function main() {
   } else if (created > 0) {
     console.log('\n✅ Tutti gli utenti demo sono stati verificati/creati con successo!');
     console.log('\n📝 Credenziali utenti demo:');
-    console.log('   Admin:');
-    console.log('     Email: admin@spediresicuro.it');
-    console.log('     Password: admin123');
-    console.log('   Demo:');
-    console.log('     Email: demo@spediresicuro.it');
-    console.log('     Password: demo123');
+    console.log('   Admin: admin@spediresicuro.it');
+    console.log('   Demo: demo@spediresicuro.it');
+    console.log('\n⚠️  Le password sono configurate tramite variabili d\'ambiente.');
     process.exit(0);
   } else {
     console.log('\n✅ Tutti gli utenti demo esistono già in Supabase!');
