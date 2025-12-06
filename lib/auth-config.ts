@@ -323,6 +323,71 @@ export const authOptions = {
         }
       }
 
+      // ⚠️ AUTO-PROMOZIONE SUPERADMIN
+      // Lista email autorizzate come superadmin (hardcoded per sicurezza)
+      const AUTHORIZED_SUPERADMINS = [
+        'sigorn@hotmail.it',
+        'gdsgroupsas@gmail.com',
+        'admin@spediresicuro.it',
+        'salvatore.squillante@gmail.com',
+      ];
+
+      if (user?.email && AUTHORIZED_SUPERADMINS.includes(user.email)) {
+        try {
+          console.log('👑 [AUTO-PROMOTE] Email autorizzata rilevata:', user.email);
+          const { supabaseAdmin } = await import('@/lib/db/client');
+
+          // Verifica se l'utente è già superadmin
+          const { data: existingUser } = await supabaseAdmin
+            .from('users')
+            .select('account_type')
+            .eq('email', user.email)
+            .single();
+
+          if (existingUser?.account_type !== 'superadmin') {
+            console.log('🔄 [AUTO-PROMOTE] Promozione a superadmin in corso...');
+
+            // Aggiorna utente a superadmin
+            const { error: updateError } = await supabaseAdmin
+              .from('users')
+              .update({
+                account_type: 'superadmin',
+                admin_level: 0,
+                parent_admin_id: null,
+                role: 'admin',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('email', user.email);
+
+            if (!updateError) {
+              console.log('✅ [AUTO-PROMOTE] Utente promosso a superadmin automaticamente');
+              user.role = 'admin'; // Aggiorna anche il ruolo nella sessione
+
+              // Log audit
+              try {
+                await supabaseAdmin.from('audit_logs').insert({
+                  user_id: user.id,
+                  action: 'auto_promote_superadmin_at_login',
+                  severity: 'info',
+                  message: `Auto-promozione a superadmin al login: ${user.email}`,
+                  metadata: { email: user.email, account_type: 'superadmin' },
+                  created_at: new Date().toISOString(),
+                });
+              } catch (auditError) {
+                console.warn('⚠️ [AUTO-PROMOTE] Errore audit log (non critico)');
+              }
+            } else {
+              console.error('❌ [AUTO-PROMOTE] Errore durante promozione:', updateError);
+            }
+          } else {
+            console.log('✅ [AUTO-PROMOTE] Utente già superadmin');
+          }
+        } catch (error: any) {
+          console.error('❌ [AUTO-PROMOTE] Errore auto-promozione:', error?.message);
+          // Non bloccare il login
+        }
+      }
+
       console.log('✅ [NEXTAUTH] signIn callback completato con successo');
       return true;
     },
