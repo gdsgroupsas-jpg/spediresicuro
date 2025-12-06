@@ -12,7 +12,7 @@
 
 import { CourierAdapter, ShippingLabel } from '@/lib/adapters/couriers/base';
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
-import type { Shipment, CreateShipmentInput } from '@/types/shipments';
+import type { Shipment, CreateShipmentInput, CourierServiceType } from '@/types/shipments';
 import { calculatePriceWithRules, getApplicablePriceList } from '@/lib/db/price-lists-advanced';
 import type { PriceCalculationResult } from '@/types/listini';
 
