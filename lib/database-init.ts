@@ -14,9 +14,10 @@ import crypto from 'crypto';
 
 /**
  * Genera una password sicura casuale se non configurata via env
+ * Usa 24 bytes per maggiore sicurezza (48 caratteri hex)
  */
 function generateSecurePassword(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return crypto.randomBytes(24).toString('hex');
 }
 
 /**
