@@ -474,16 +474,19 @@ export const authOptions = {
     
     // ⚠️ IMPORTANTE: Valida NEXTAUTH_SECRET
     if (!secret) {
-      const errorMsg = 'NEXTAUTH_SECRET è obbligatorio! Configura la variabile d\'ambiente su Vercel.';
+      const errorMsg = 'NEXTAUTH_SECRET è obbligatorio! Configura la variabile d\'ambiente.';
       console.error('❌ [AUTH CONFIG]', errorMsg);
       
       if (process.env.NODE_ENV === 'production') {
         throw new Error(errorMsg);
       }
       
-      // In sviluppo, genera un warning ma permette di continuare
-      console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET non configurato. Usando secret di sviluppo.');
-      return 'dev-secret-not-for-production-change-in-env-local';
+      // ⚠️ SICUREZZA: In sviluppo, genera un secret casuale temporaneo
+      // invece di usare un valore hardcoded prevedibile
+      console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET non configurato. Generando secret casuale per sviluppo.');
+      console.warn('⚠️ [AUTH CONFIG] Le sessioni non saranno persistenti tra riavvii. Configura NEXTAUTH_SECRET in .env.local');
+      const crypto = require('crypto');
+      return crypto.randomBytes(32).toString('hex');
     }
     
     // Verifica che il secret sia abbastanza lungo (almeno 32 caratteri)

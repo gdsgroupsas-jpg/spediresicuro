@@ -9,15 +9,37 @@
  * 
  * Funzioni utenti/preventivi/configurazioni:
  * - Usano ancora JSON (da migrare in futuro)
+ * 
+ * ⚠️ SICUREZZA: Le password degli utenti demo devono essere configurate tramite
+ * variabili d'ambiente DEMO_ADMIN_PASSWORD e DEMO_USER_PASSWORD
  */
 
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
 // --- CONFIGURAZIONE AMBIENTE ---
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+
+/**
+ * Genera una password sicura casuale se non configurata via env
+ */
+function generateSecurePassword(): string {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+/**
+ * Ottiene le password demo dalle variabili d'ambiente
+ * Se non configurate, genera password casuali sicure
+ */
+function getDemoPasswords(): { admin: string; demo: string } {
+  return {
+    admin: process.env.DEMO_ADMIN_PASSWORD || generateSecurePassword(),
+    demo: process.env.DEMO_USER_PASSWORD || generateSecurePassword(),
+  };
+}
 
 // Percorso del file database JSON
 const DB_PATH = path.join(process.cwd(), 'data', 'database.json');
@@ -129,13 +151,17 @@ export interface User {
 // ⚠️ IMPORTANTE: Su Vercel (produzione) il file system è read-only, quindi questa funzione
 // non può creare file. Usa solo in sviluppo locale o quando Supabase non è configurato.
 function initDatabase(): Database {
+  // ⚠️ SICUREZZA: Le password sono lette dalle variabili d'ambiente
+  // Se non configurate, vengono generate password casuali sicure
+  const passwords = getDemoPasswords();
+  
   // Utenti demo: sempre creati (sia sviluppo che produzione)
   // ⚠️ IMPORTANTE: In produzione, questi utenti verranno creati in Supabase se configurato
   const demoUsers: User[] = [
     {
       id: '1',
       email: 'admin@spediresicuro.it',
-      password: 'admin123',
+      password: passwords.admin,
       name: 'Admin',
       role: 'admin',
       createdAt: new Date().toISOString(),
@@ -144,7 +170,7 @@ function initDatabase(): Database {
     {
       id: '2',
       email: 'demo@spediresicuro.it',
-      password: 'demo123',
+      password: passwords.demo,
       name: 'Demo User',
       role: 'user',
       createdAt: new Date().toISOString(),
@@ -206,12 +232,15 @@ export function readDatabase(): Database {
     
     // Migrazione: aggiungi campo utenti se non esiste
     if (!db.utenti) {
+      // ⚠️ SICUREZZA: Le password sono lette dalle variabili d'ambiente
+      const passwords = getDemoPasswords();
+      
       // Utenti demo sempre creati (sia sviluppo che produzione)
       db.utenti = [
         {
           id: '1',
           email: 'admin@spediresicuro.it',
-          password: 'admin123',
+          password: passwords.admin,
           name: 'Admin',
           role: 'admin',
           createdAt: new Date().toISOString(),
@@ -220,7 +249,7 @@ export function readDatabase(): Database {
         {
           id: '2',
           email: 'demo@spediresicuro.it',
-          password: 'demo123',
+          password: passwords.demo,
           name: 'Demo User',
           role: 'user',
           createdAt: new Date().toISOString(),
