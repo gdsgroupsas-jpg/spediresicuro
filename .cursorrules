@@ -1,0 +1,260 @@
+# REGOLE CURSOR PER SPEDIRESICURO.IT
+
+## 🎯 IMPORTANTE: LIMITAZIONI GIT IN CURSOR
+
+### ❌ COSA CURSOR **NON PUÒ FARE** AUTOMATICAMENTE
+
+Cursor (e gli AI assistants al suo interno) **NON POSSONO** eseguire automaticamente:
+
+1. ❌ `git pull` automatico
+2. ❌ `git push` automatico  
+3. ❌ `git commit` automatico
+4. ❌ Creazione/merge automatico di branch
+5. ❌ Risoluzione automatica di conflitti
+
+### 🔐 PERCHÉ QUESTE LIMITAZIONI ESISTONO
+
+**Motivi di Sicurezza:**
+- Gli AI non devono avere controllo diretto del repository
+- Rischio di push non autorizzati o dannosi
+- Impossibilità di verificare l'identità dell'autore
+- Potenziale perdita di dati o codice
+
+**Motivi Tecnici:**
+- Git richiede autenticazione (credentials, SSH keys, tokens)
+- Gli AI non hanno accesso alle credenziali dell'utente
+- Le operazioni git richiedono conferma umana
+- I conflitti di merge richiedono decisioni umane
+
+**Best Practices del Progetto:**
+- Ogni commit deve essere verificato da un umano
+- Il controllo versione è responsabilità dello sviluppatore
+- La sicurezza del repository è prioritaria
+
+### ✅ COSA CURSOR **PUÒ FARE**
+
+Cursor può **ASSISTERE** con:
+
+1. ✅ Suggerire modifiche al codice
+2. ✅ Generare commit messages
+3. ✅ Mostrare comandi git da eseguire
+4. ✅ Spiegare come risolvere conflitti
+5. ✅ Creare script di automazione (da eseguire manualmente)
+6. ✅ Revisionare il codice prima del commit
+
+## 📋 WORKFLOW GIT CORRETTO CON CURSOR
+
+### 1. **Sviluppo con Cursor**
+
+```bash
+# Cursor ti aiuta a scrivere il codice, ma TU esegui:
+git status                    # Verifica modifiche
+git add .                     # Aggiungi modifiche
+git commit -m "messaggio"     # Commit (Cursor può suggerire il messaggio)
+```
+
+### 2. **Sincronizzazione**
+
+```bash
+# PRIMA di iniziare a lavorare:
+git pull origin master        # TU esegui il pull manualmente
+
+# DOPO aver completato il lavoro:
+git push origin master        # TU esegui il push manualmente
+```
+
+### 3. **Branch e Merge**
+
+```bash
+# Creazione branch:
+git checkout -b nome-branch   # TU crei il branch
+
+# Merge:
+git checkout master           # TU cambi branch
+git merge nome-branch         # TU fai il merge
+```
+
+## 🛠️ SCRIPT AUTOMATICI DISPONIBILI
+
+Il progetto ha già script pre-configurati che **TU** puoi eseguire:
+
+### Windows (File .bat)
+
+- `SYNC-AUTO.bat` - Sincronizzazione completa (pull + push)
+- `PULL-AUTO.bat` - Solo pull da GitHub
+- `PUSH-AUTO.bat` - Solo push verso GitHub
+- `COMMIT-PUSH-SEMPLICE.bat` - Commit e push rapido
+
+### PowerShell (File .ps1)
+
+- `sync-automatico-completo.ps1` - Sincronizzazione completa
+- `commit-and-push.ps1` - Commit e push
+- `quick-commit-push.ps1` - Commit e push rapido
+- `verifica-e-push.ps1` - Verifica e push
+
+### Come Usare gli Script
+
+**Su Windows:**
+```bash
+# Doppio click sul file .bat
+# OPPURE da terminale:
+.\SYNC-AUTO.bat
+```
+
+**Su PowerShell:**
+```powershell
+# Esegui da terminale:
+.\sync-automatico-completo.ps1
+```
+
+## 📖 CONVENZIONI PROGETTO
+
+### Naming
+
+- **File:** kebab-case (es. `preventivo-form.tsx`)
+- **Componenti:** PascalCase (es. `PreventivoForm`)
+- **Variabili:** camelCase italiano (es. `prezzoFinale`, `datiSpedizione`)
+- **Commenti:** Sempre in italiano
+
+### Git
+
+- **Account:** gdsgroupsas-jpg
+- **Branch principale:** master
+- **Formato commit:** `type(scope): description` in italiano
+  - `feat`: Nuova funzionalità
+  - `fix`: Correzione bug
+  - `docs`: Documentazione
+  - `style`: Formattazione
+  - `refactor`: Refactoring
+  - `test`: Test
+  - `chore`: Manutenzione
+
+### Vercel Deploy
+
+- ⚠️ **Deploy automatico attivo:** Ogni push su `master` → deploy automatico
+- ⚠️ Testa sempre in locale prima di pushare
+- ⚠️ Verifica che il build passi: `npm run build`
+
+## 🚀 STACK TECNICO
+
+- **Framework:** Next.js 14 (App Router)
+- **Linguaggio:** TypeScript
+- **Database:** Supabase (PostgreSQL)
+- **Styling:** Tailwind CSS
+- **Auth:** NextAuth.js
+- **Hosting:** Vercel (piano free)
+
+## ⚠️ REGOLE CRITICHE
+
+### Database
+
+1. ✅ **SOLO Supabase** per spedizioni
+2. ❌ **MAI** usare JSON fallback per spedizioni
+3. ❌ **MAI** `fs.writeFileSync()` su Vercel (read-only filesystem)
+
+### Sicurezza
+
+1. 🔐 Mai committare `.env.local`
+2. 🔐 Mai esporre API keys nel codice
+3. 🔐 Sempre validare input utente
+4. 🔐 Sempre verificare autenticazione nelle API routes
+
+### Performance
+
+- ⚡ Build deve completare in < 2 minuti
+- ⚡ Caricamento pagine < 2 secondi
+- ⚡ Optimized images (Next.js Image)
+
+## 💬 COME CHIEDERE AIUTO A CURSOR
+
+### ✅ Richieste Corrette
+
+```
+"Aiutami a scrivere una funzione per calcolare il prezzo finale"
+"Suggerisci un commit message per queste modifiche"
+"Come posso risolvere questo errore TypeScript?"
+"Crea uno script che verifichi lo stato del repository"
+"Mostrami i comandi git per fare merge di un branch"
+```
+
+### ❌ Richieste Impossibili
+
+```
+"Fai pull automatico dal repository"        # ❌ Cursor non può
+"Pusha le modifiche su GitHub"              # ❌ Cursor non può
+"Crea un branch e fai merge automatico"     # ❌ Cursor non può
+"Risolvi i conflitti git automaticamente"   # ❌ Cursor non può
+```
+
+### ✅ Alternative Corrette
+
+```
+"Mostrami i comandi per fare pull"          # ✅ Cursor può spiegare
+"Quale script posso usare per pushare?"     # ✅ Cursor può suggerire
+"Come si crea un branch per questa feature?" # ✅ Cursor può insegnare
+"Spiega come risolvere questo conflitto"    # ✅ Cursor può guidare
+```
+
+## 📚 DOCUMENTAZIONE DI RIFERIMENTO
+
+- **Progetto:** `.AI_DIRECTIVE.md` - Direttive complete per AI
+- **Riepilogo:** `RIEPILOGO_PROGETTO_CURSOR.md` - Overview progetto
+- **Spiegazione:** `SPIEGAZIONE-PROBLEMA.md` - Spiegazione limitazioni git
+- **Setup:** `SETUP.md` - Guida setup ambiente
+
+## 🎯 QUICK START
+
+1. **Leggi questo file** (`.cursorrules`) completamente
+2. **Verifica git config:** `git config user.name` → deve essere "gdsgroupsas-jpg"
+3. **Pull manuale:** `git pull origin master`
+4. **Sviluppa** con assistenza Cursor
+5. **Test locale:** `npm run dev`
+6. **Build test:** `npm run build`
+7. **Commit manuale:** `git add . && git commit -m "messaggio"`
+8. **Push manuale:** `git push origin master`
+9. **Oppure usa script:** `.\SYNC-AUTO.bat` (Windows) o `.\sync-automatico-completo.ps1` (PowerShell)
+
+## 🔄 WORKFLOW OTTIMALE
+
+### Sessione di Sviluppo Tipica
+
+```bash
+# 1. Inizio sessione
+git pull origin master                    # TU esegui
+npm run dev                               # Avvia dev server
+
+# 2. Sviluppo con Cursor
+# Cursor ti assiste nella scrittura del codice
+# Cursor suggerisce modifiche e soluzioni
+# TU prendi le decisioni finali
+
+# 3. Test
+npm run build                             # Verifica che compili
+npm run lint                              # Verifica linting
+npm run type-check                        # Verifica TypeScript
+
+# 4. Commit (Cursor può suggerire il messaggio)
+git add .
+git commit -m "feat: descrizione"        # TU esegui
+
+# 5. Push
+git push origin master                    # TU esegui
+
+# 6. Verifica deploy Vercel (automatico)
+# Vai su dashboard Vercel e controlla
+```
+
+## 📞 SUPPORTO
+
+**In caso di problemi:**
+
+1. Controlla `.AI_DIRECTIVE.md` per direttive complete
+2. Controlla `SPIEGAZIONE-PROBLEMA.md` per spiegazioni
+3. Usa gli script automatici nella root del progetto
+4. Chiedi a Cursor di spiegare (non di eseguire) comandi git
+
+---
+
+**Versione:** 1.0
+**Data:** Dicembre 2025
+**Progetto:** SpedireSicuro.it
