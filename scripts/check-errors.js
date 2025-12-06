@@ -34,3 +34,4 @@ console.log(`\n📄 Log completo: ${LOG_FILE}\n`);
 
 
 
+
