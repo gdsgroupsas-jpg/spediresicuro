@@ -91,24 +91,22 @@ export default function PriceListDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header con pulsante indietro */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/dashboard/listini')}
+            className="gap-2 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Indietro
+          </Button>
+        </div>
+
         <DashboardNav
-          title={
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard/listini')}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Indietro
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{priceList.name}</h1>
-                <p className="text-sm text-gray-500">v{priceList.version}</p>
-              </div>
-            </div>
-          }
+          title={`${priceList.name} - v${priceList.version}`}
+          subtitle="Gestione dettaglio listino prezzi"
           actions={
             <div className="flex gap-2">
               {!isEditing && (
