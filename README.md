@@ -32,10 +32,14 @@ npm run dev
 Se usi **Cursor IDE**, leggi subito:
 
 - 📖 **[.cursorrules](.cursorrules)** - Regole e limitazioni Cursor
+- 🚨 **[RISOLVI_ERRORI_GIT_PUSH_PULL.md](RISOLVI_ERRORI_GIT_PUSH_PULL.md)** - Errori di autenticazione? Leggi qui!
 - 🚀 **[GUIDA_RAPIDA_GIT_CURSOR.md](GUIDA_RAPIDA_GIT_CURSOR.md)** - Come usare git con Cursor
 - ❓ **[PERCHE_CURSOR_NON_PUO_FARE_GIT_AUTOMATICO.md](PERCHE_CURSOR_NON_PUO_FARE_GIT_AUTOMATICO.md)** - FAQ su limitazioni
 
-**⚠️ IMPORTANTE:** Cursor **NON PUÒ** fare git pull/push/commit automatico per motivi di sicurezza. Usa gli script automatici o comandi manuali.
+**⚠️ IMPORTANTE:** 
+- Cursor **NON PUÒ** fare git pull/push/commit automatico per motivi di sicurezza
+- Se ricevi errori di autenticazione, **devi configurare le credenziali** GitHub (vedi guida sopra)
+- Usa gli script automatici o comandi manuali
 
 ---
 
