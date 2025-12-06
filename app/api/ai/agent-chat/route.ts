@@ -18,6 +18,14 @@ import { supabaseAdmin } from '@/lib/db/client';
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const claudeClient = anthropicApiKey ? new Anthropic({ apiKey: anthropicApiKey }) : null;
 
+// Debug: Verifica API key al caricamento del modulo
+if (anthropicApiKey) {
+  console.log('✅ [Anne Module] ANTHROPIC_API_KEY caricata (lunghezza:', anthropicApiKey.length, ')');
+} else {
+  console.warn('⚠️ [Anne Module] ANTHROPIC_API_KEY NON trovata in process.env');
+  console.warn('   Environment keys disponibili:', Object.keys(process.env).filter(k => k.includes('ANTHROPIC')));
+}
+
 // Rate limiting semplice (in-memory, per produzione usare Redis)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 20; // Max 20 richieste
@@ -153,6 +161,11 @@ export async function POST(request: NextRequest) {
 
     if (claudeClient && anthropicApiKey) {
       try {
+        console.log('🤖 [Anne] Chiamata Claude API in corso...');
+        console.log('   API Key presente:', anthropicApiKey ? 'SI (lunghezza: ' + anthropicApiKey.length + ')' : 'NO');
+        console.log('   Model:', 'claude-3-5-sonnet-20241022');
+        console.log('   Messages count:', claudeMessages.length);
+        
         // Chiama Claude 3.5 Sonnet con tools
         const response = await claudeClient.messages.create({
           model: 'claude-3-5-sonnet-20241022',
@@ -161,6 +174,8 @@ export async function POST(request: NextRequest) {
           messages: claudeMessages,
           tools: formatToolsForAnthropic(),
         });
+        
+        console.log('✅ [Anne] Risposta Claude ricevuta:', response.content.length, 'blocks');
 
         // Processa risposta
         const contentBlocks = response.content;
@@ -232,7 +247,14 @@ export async function POST(request: NextRequest) {
 
         isMock = false;
       } catch (claudeError: any) {
-        console.error('❌ [Anne] Errore Claude API:', claudeError);
+        console.error('❌ [Anne] Errore Claude API:', {
+          message: claudeError?.message,
+          status: claudeError?.status,
+          type: claudeError?.type,
+          error: claudeError?.error,
+          headers: claudeError?.headers,
+        });
+        console.error('❌ [Anne] Stack trace:', claudeError?.stack);
         
         // Fallback a risposta mock
         isMock = true;
@@ -240,6 +262,11 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Fallback mock se Claude non configurato
+      console.warn('⚠️ [Anne] Claude non disponibile:', {
+        hasClient: !!claudeClient,
+        hasApiKey: !!anthropicApiKey,
+        apiKeyLength: anthropicApiKey?.length || 0,
+      });
       isMock = true;
       if (!userMessage.trim()) {
         aiResponse = `Ciao ${userName}! 👋 Sono Anne, il tuo Executive Business Partner.${isAdmin ? '\n\nMonitoro business, finanza e sistemi. Posso analizzare margini, diagnosticare errori tecnici e proporre strategie di ottimizzazione.' : '\n\nSono qui per aiutarti con le tue spedizioni, calcolare costi ottimali e risolvere problemi operativi.'}\n\nCome posso aiutarti oggi?`;
