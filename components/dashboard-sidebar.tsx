@@ -112,6 +112,7 @@ export default function DashboardSidebar() {
     }`;
   };
 
+  const isAdmin = accountType === 'admin' || accountType === 'superadmin';
   const isSuperAdmin = accountType === 'superadmin';
 
   return (
