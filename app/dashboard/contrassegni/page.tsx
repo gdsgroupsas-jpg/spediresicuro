@@ -177,7 +177,9 @@ export default function ContrassegniPage() {
     const pending = shipments.filter((s) => s.paymentStatus === 'pending').length;
     const delivered = shipments.filter((s) => s.paymentStatus === 'delivered').length;
     const paymentExpected = shipments.filter((s) => s.paymentStatus === 'payment_expected').length;
-    const paid = shipments.filter((s) => s.paymentStatus === 'paid').length;
+    const paid = shipments.filter((s) => s.paymentStatus === 'paid' || s.paymentStatus === 'evaso').length;
+    const inCaricaCount = shipments.filter((s) => s.paymentStatus === 'in_carica').length;
+    const evasoCount = shipments.filter((s) => s.paymentStatus === 'evaso').length;
     const totalAmount = shipments.reduce((sum, s) => sum + (s.cash_on_delivery_amount || 0), 0);
     const pendingAmount = shipments
       .filter((s) => s.paymentStatus === 'payment_expected' || s.paymentStatus === 'delivered')
@@ -191,8 +193,8 @@ export default function ContrassegniPage() {
       paid,
       totalAmount,
       pendingAmount,
-      inCarica,
-      evaso,
+      inCarica: inCaricaCount,
+      evaso: evasoCount,
     };
   }, [shipments]);
 
