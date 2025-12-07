@@ -56,19 +56,24 @@ export abstract class OCRAdapter {
   protected normalizePhone(phone: string): string {
     if (!phone) return '';
 
-    // Rimuovi spazi, trattini, parentesi
-    let normalized = phone.replace(/[\s\-()]/g, '');
+    // Rimuovi spazi, trattini, parentesi, punti
+    let normalized = phone.replace(/[\s\-().]/g, '');
 
     // Rimuovi prefisso internazionale +39 o 0039
     normalized = normalized.replace(/^(\+39|0039)/, '');
 
-    // Rimuovi leading zero se numero mobile
+    // Rimuovi leading zero se numero mobile (3xx)
     if (normalized.startsWith('3') && normalized.length === 10) {
       return normalized;
     }
 
-    // Per fissi, mantieni leading zero
-    if (normalized.length === 9 || normalized.length === 10) {
+    // Per fissi, mantieni leading zero se manca
+    if (normalized.length === 9 && !normalized.startsWith('0')) {
+      normalized = '0' + normalized;
+    }
+
+    // Validazione base: lunghezza corretta
+    if (normalized.length >= 9 && normalized.length <= 11) {
       return normalized;
     }
 
@@ -155,24 +160,13 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google
 
     case 'auto':
     default: {
-      // Priorità: Claude Vision (screen) > Google Vision > Tesseract > Mock
+      // Priorità: Google Vision > Claude Vision > Tesseract > Mock
 
       console.log('🔎 Selezionando OCR adapter automaticamente...');
-      console.log(`   ANTHROPIC_API_KEY presente: ${!!process.env.ANTHROPIC_API_KEY}`);
       console.log(`   GOOGLE_CLOUD_CREDENTIALS presente: ${!!process.env.GOOGLE_CLOUD_CREDENTIALS}`);
+      console.log(`   ANTHROPIC_API_KEY presente: ${!!process.env.ANTHROPIC_API_KEY}`);
 
-      // 1. Prova Claude Vision (priorità per screen OCR)
-      if (process.env.ANTHROPIC_API_KEY) {
-        try {
-          console.log('✅ OCR Claude Vision (screen) ATTIVO - consumerà crediti Anthropic');
-          const { ClaudeOCRAdapter } = require('./claude');
-          return new ClaudeOCRAdapter();
-        } catch (error) {
-          console.warn('❌ Claude Vision non disponibile:', error);
-        }
-      }
-
-      // 2. Prova Google Cloud Vision (fallback)
+      // 1. Prova Google Cloud Vision (più affidabile per OCR)
       if (process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         try {
           console.log('✅ OCR Google Cloud Vision ATTIVO - OCR reale professionale');
@@ -180,6 +174,17 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google
           return new GoogleVisionOCRAdapter();
         } catch (error) {
           console.warn('❌ Google Vision non disponibile:', error);
+        }
+      }
+
+      // 2. Prova Claude Vision (se ANTHROPIC_API_KEY configurata)
+      if (process.env.ANTHROPIC_API_KEY) {
+        try {
+          console.log('✅ OCR Claude Vision ATTIVO - consumerà crediti Anthropic');
+          const { ClaudeOCRAdapter } = require('./claude');
+          return new ClaudeOCRAdapter();
+        } catch (error) {
+          console.warn('❌ Claude Vision non disponibile, fallback a Mock:', error);
         }
       }
 
