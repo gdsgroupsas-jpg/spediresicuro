@@ -88,19 +88,19 @@ export default function DashboardMobileNav() {
 
   return (
     <>
-      {/* Bottom Navigation Bar - Fixed */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-inset-bottom">
+      {/* Bottom Navigation Bar - Fixed con grafica migliorata */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-gray-50 border-t-2 border-gray-200 z-50 safe-area-inset-bottom shadow-2xl">
         <div className="flex items-center justify-around px-2 py-2">
           {/* Home */}
           <Link
             href="/dashboard"
             className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 ${
               isActive('/dashboard') && pathname === '/dashboard'
-                ? 'text-orange-600'
-                : 'text-gray-600'
+                ? 'text-orange-600 bg-orange-50 scale-105'
+                : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Home className={`w-6 h-6 ${isActive('/dashboard') && pathname === '/dashboard' ? 'fill-orange-600' : ''}`} />
+            <Home className={`w-6 h-6 transition-all ${isActive('/dashboard') && pathname === '/dashboard' ? 'fill-orange-600 drop-shadow-md' : ''}`} />
             <span className="text-[10px] font-semibold">Home</span>
           </Link>
 
@@ -109,25 +109,25 @@ export default function DashboardMobileNav() {
             href="/dashboard/spedizioni"
             className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 ${
               isActive('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova'
-                ? 'text-orange-600'
-                : 'text-gray-600'
+                ? 'text-orange-600 bg-orange-50 scale-105'
+                : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Package className={`w-6 h-6 ${isActive('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova' ? 'fill-orange-600' : ''}`} />
+            <Package className={`w-6 h-6 transition-all ${isActive('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova' ? 'fill-orange-600 drop-shadow-md' : ''}`} />
             <span className="text-[10px] font-semibold">Spedizioni</span>
           </Link>
 
-          {/* Nuova Spedizione - CTA Centrale */}
+          {/* Nuova Spedizione - CTA Centrale con animazione migliorata */}
           <Link
             href="/dashboard/spedizioni/nuova"
             className="flex flex-col items-center gap-1 -mt-4"
           >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 ${
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 transform ${
               isActive('/dashboard/spedizioni/nuova')
-                ? 'bg-gradient-to-br from-orange-600 to-amber-600 scale-105'
-                : 'bg-gradient-to-br from-orange-500 to-amber-500 hover:scale-105'
+                ? 'bg-gradient-to-br from-orange-600 to-amber-600 scale-110 rotate-6'
+                : 'bg-gradient-to-br from-orange-500 to-amber-500 hover:scale-110 hover:rotate-3'
             }`}>
-              <Plus className="w-7 h-7 text-white" strokeWidth={3} />
+              <Plus className="w-7 h-7 text-white drop-shadow-lg" strokeWidth={3} />
             </div>
             <span className="text-[10px] font-bold text-orange-600 mt-1">Nuova</span>
           </Link>
@@ -137,21 +137,26 @@ export default function DashboardMobileNav() {
             href="/dashboard/posta"
             className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 ${
               isActive('/dashboard/posta')
-                ? 'text-orange-600'
-                : 'text-gray-600'
+                ? 'text-orange-600 bg-orange-50 scale-105'
+                : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Mail className={`w-6 h-6 ${isActive('/dashboard/posta') ? 'fill-orange-600' : ''}`} />
+            <Mail className={`w-6 h-6 transition-all ${isActive('/dashboard/posta') ? 'fill-orange-600 drop-shadow-md' : ''}`} />
             <span className="text-[10px] font-semibold">Posta</span>
           </Link>
 
           {/* Menu */}
           <button
             onClick={() => setIsMenuOpen(true)}
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-gray-600 transition-all duration-200"
+            className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 hover:bg-gray-100"
           >
-            <Menu className="w-6 h-6" />
-            <span className="text-[10px] font-semibold">Menu</span>
+            <div className="relative">
+              <Menu className="w-6 h-6 text-gray-600" />
+              {(isAdmin || isSuperAdmin) && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </div>
+            <span className="text-[10px] font-semibold text-gray-600">Menu</span>
           </button>
         </div>
       </div>
@@ -159,43 +164,48 @@ export default function DashboardMobileNav() {
       {/* Menu Drawer - Slide from Right */}
       {isMenuOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop con animazione */}
           <div
-            className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity"
+            className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity animate-in fade-in-0 duration-200"
             onClick={() => setIsMenuOpen(false)}
           />
 
-          {/* Drawer */}
-          <div className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 shadow-2xl overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-amber-600 p-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white">Menu</h2>
-                <p className="text-sm text-white/90">Navigazione completa</p>
+          {/* Drawer con animazione slide */}
+          <div className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+            {/* Header con design migliorato */}
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-amber-600 p-6 flex items-center justify-between shadow-lg z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Menu className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Menu</h2>
+                  <p className="text-sm text-white/90">Navigazione completa</p>
+                </div>
               </div>
               <button
                 onClick={() => setIsMenuOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 active:scale-95"
               >
                 <X className="w-6 h-6 text-white" />
               </button>
             </div>
 
-            {/* User Info */}
+            {/* User Info con design migliorato */}
             {session && (
               <Link
                 href="/dashboard/dati-cliente"
-                className="flex items-center gap-3 p-6 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-3 p-6 border-b-2 border-gray-100 hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-200">
                   {session.user?.name?.[0]?.toUpperCase() || session.user?.email?.[0]?.toUpperCase() || 'U'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">
+                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-orange-600 transition-colors">
                     {session.user?.name || session.user?.email?.split('@')[0]}
                   </p>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
                     {accountType && (
                       <span className="text-xs">
