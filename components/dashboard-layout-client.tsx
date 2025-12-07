@@ -2,7 +2,8 @@
  * Dashboard Layout Client Component
  *
  * Componente client-side per gestire:
- * - AI Assistant modal globale
+ * - AI Assistant modal globale (Pilot)
+ * - Anne Assistant (fantasmino floating)
  * - Eventi personalizzati per aprire l'AI Assistant
  * - Session management
  */
@@ -11,7 +12,9 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { PilotModal } from '@/components/ai/pilot/pilot-modal';
+import { AnneProvider, AnneAssistant } from '@/components/anne';
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
@@ -19,6 +22,7 @@ interface DashboardLayoutClientProps {
 
 export default function DashboardLayoutClient({ children }: DashboardLayoutClientProps) {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [accountType, setAccountType] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -43,7 +47,7 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
     loadUserInfo();
   }, [session]);
 
-  // Ascolta l'evento personalizzato per aprire l'AI Assistant
+  // Ascolta l'evento personalizzato per aprire l'AI Assistant (Pilot)
   useEffect(() => {
     const handleOpenAiAssistant = () => {
       setShowAiAssistant(true);
@@ -56,11 +60,13 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
     };
   }, []);
 
+  const effectiveUserRole = (accountType || userRole || 'user') as 'user' | 'admin' | 'superadmin';
+
   return (
-    <>
+    <AnneProvider>
       {children}
 
-      {/* AI Assistant Modal - Globale */}
+      {/* Pilot Modal - AI Assistant avanzato */}
       {session?.user && (
         <PilotModal
           isOpen={showAiAssistant}
@@ -70,6 +76,16 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
           userName={session.user.name || session.user.email || 'Utente'}
         />
       )}
-    </>
+
+      {/* Anne Assistant - Fantasmino floating */}
+      {session?.user && (
+        <AnneAssistant
+          userId={session.user.id || ''}
+          userRole={effectiveUserRole}
+          userName={session.user.name || session.user.email || 'Utente'}
+          currentPage={pathname || '/dashboard'}
+        />
+      )}
+    </AnneProvider>
   );
 }
