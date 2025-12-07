@@ -1,14 +1,20 @@
 /**
  * Dashboard Layout
- * 
+ *
  * Layout protetto per tutte le pagine del dashboard.
  * Verifica autenticazione e reindirizza al login se necessario.
- * Verifica se i dati cliente sono completati e reindirizza se necessario.
+ * Include:
+ * - Sidebar per desktop
+ * - Mobile navigation con bottom bar
+ * - AI Assistant modal globale
  */
 
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth-config';
 import { findUserByEmail } from '@/lib/database';
+import DashboardSidebar from '@/components/dashboard-sidebar';
+import DashboardMobileNav from '@/components/dashboard-mobile-nav';
+import DashboardLayoutClient from '@/components/dashboard-layout-client';
 
 export default async function DashboardLayout({
   children,
@@ -30,10 +36,22 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // Verifica se i dati cliente sono completati (solo se non siamo già sulla pagina dati-cliente)
-  // Nota: Questo controllo viene fatto lato server, ma per evitare problemi di routing
-  // facciamo il check lato client nella pagina stessa
-  
-  return <>{children}</>;
+  return (
+    <DashboardLayoutClient>
+      {/* Sidebar - Desktop Only */}
+      <DashboardSidebar />
+
+      {/* Main Content Area */}
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        {/* Content */}
+        <main className="flex-1 pb-20 lg:pb-0">
+          {children}
+        </main>
+      </div>
+
+      {/* Mobile Navigation - Mobile Only */}
+      <DashboardMobileNav />
+    </DashboardLayoutClient>
+  );
 }
 
