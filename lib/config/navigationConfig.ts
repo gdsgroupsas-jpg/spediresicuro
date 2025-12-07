@@ -11,6 +11,8 @@ import {
   LayoutDashboard,
   Package,
   Plus,
+  List,
+  PackageX,
   Mail,
   Settings,
   FileText,
@@ -25,6 +27,15 @@ import {
   Building2,
   BookOpen,
   ScanLine,
+  TruckIcon,
+  RotateCcw,
+  MapPin,
+  Calculator,
+  Euro,
+  FileSpreadsheet,
+  Archive,
+  Search,
+  DollarSign,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -69,7 +80,8 @@ export interface NavigationConfig {
 }
 
 /**
- * LOGISTICA - Spedizioni, tracking, resi
+ * LOGISTICA - Menu completo operazioni spedizioni
+ * Ispirato a Spedisci.Online ma migliorato e organizzato
  */
 const logisticsSection: NavSection = {
   id: 'logistics',
@@ -95,10 +107,45 @@ const logisticsSection: NavSection = {
     },
     {
       id: 'shipments',
-      label: 'Tutte le Spedizioni',
+      label: 'Elenco Spedizioni',
       href: '/dashboard/spedizioni',
-      icon: Package,
-      description: 'Archivio completo spedizioni',
+      icon: List,
+      description: 'Tutte le spedizioni',
+    },
+    {
+      id: 'giacenze',
+      label: 'Giacenze',
+      href: '/dashboard/giacenze',
+      icon: Archive,
+      description: 'Spedizioni in giacenza',
+    },
+    {
+      id: 'tracking',
+      label: 'Tracking Interno',
+      href: '/dashboard/tracking',
+      icon: MapPin,
+      description: 'Tracciamento spedizioni',
+    },
+    {
+      id: 'returns',
+      label: 'Gestione Resi',
+      href: '/dashboard/resi',
+      icon: RotateCcw,
+      description: 'Resi e rimborsi',
+    },
+    {
+      id: 'return-scanner',
+      label: 'Scanner Resi',
+      href: '/dashboard/scanner-resi',
+      icon: ScanLine,
+      description: 'Scansione LDV per resi',
+    },
+    {
+      id: 'shipments-cancelled',
+      label: 'Spedizioni Cancellate',
+      href: '/dashboard/spedizioni/cancellate',
+      icon: PackageX,
+      description: 'Archivio spedizioni annullate',
     },
   ],
 };
@@ -208,6 +255,7 @@ const resellerSection: NavSection = {
 
 /**
  * AMMINISTRAZIONE - Solo per admin/superadmin
+ * Include gestione utenti, features, prezzi e distinte contrassegni
  */
 const adminSection: NavSection = {
   id: 'admin',
@@ -232,6 +280,41 @@ const adminSection: NavSection = {
       description: 'Dashboard amministratore principale',
     },
     {
+      id: 'team',
+      label: 'Team Aziendale',
+      href: '/dashboard/team',
+      icon: Building2,
+      description: 'Gestione team e sub-admin',
+    },
+    {
+      id: 'price-lists',
+      label: 'Listini Prezzi',
+      href: '/dashboard/listini',
+      icon: FileText,
+      description: 'Gestione listini per utenti',
+    },
+    {
+      id: 'cash-on-delivery',
+      label: 'Lista Contrassegni',
+      href: '/dashboard/contrassegni',
+      icon: DollarSign,
+      description: 'Gestione contrassegni',
+    },
+    {
+      id: 'cash-statements',
+      label: 'Distinte Contrassegni',
+      href: '/dashboard/distinte-contrassegni',
+      icon: FileSpreadsheet,
+      description: 'Distinte riepilogative contrassegni',
+    },
+    {
+      id: 'cost-adjustment',
+      label: 'Rettifica Costi',
+      href: '/dashboard/rettifica-costi',
+      icon: Calculator,
+      description: 'Correzione costi spedizioni',
+    },
+    {
       id: 'admin-features',
       label: 'Features Platform',
       href: '/dashboard/admin/features',
@@ -251,20 +334,6 @@ const adminSection: NavSection = {
       href: '/dashboard/admin/configurations',
       icon: Settings,
       description: 'Impostazioni globali piattaforma',
-    },
-    {
-      id: 'team',
-      label: 'Team Aziendale',
-      href: '/dashboard/team',
-      icon: Building2,
-      description: 'Gestione team e sub-admin',
-    },
-    {
-      id: 'price-lists',
-      label: 'Listini Prezzi',
-      href: '/dashboard/listini',
-      icon: FileText,
-      description: 'Gestione listini per utenti',
     },
   ],
 };
