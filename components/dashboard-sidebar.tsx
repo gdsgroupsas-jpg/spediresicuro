@@ -165,7 +165,81 @@ export default function DashboardSidebar() {
 
       {/* Navigation con stili migliorati */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {/* Main Actions - Con grafica distintiva */}
+        {/* 1. Dashboard Item Standalone - PRIMO */}
+        {navigationConfig.dashboardItem && (
+          <Link
+            href={navigationConfig.dashboardItem.href}
+            className={getNavItemClass(navigationConfig.dashboardItem.href, navigationConfig.dashboardItem.variant)}
+            title={navigationConfig.dashboardItem.description}
+          >
+            <navigationConfig.dashboardItem.icon className="w-5 h-5 flex-shrink-0" />
+            <span className="flex-1 font-semibold">{navigationConfig.dashboardItem.label}</span>
+          </Link>
+        )}
+
+        {/* 2. Sections: Logistica, AI & Automazione, etc. */}
+        {navigationConfig.sections.map((section) => {
+          const isExpanded = expandedSections.has(section.id);
+          const hasActiveItem = section.items.some(item => 
+            pathname === item.href || pathname.startsWith(item.href)
+          );
+          
+          return (
+            <div key={section.id} className="space-y-2">
+              {/* Section Header - Design migliorato con tendina - Stile uniforme per menu principali */}
+              {section.collapsible ? (
+                <button
+                  onClick={() => toggleSection(section.id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all duration-200",
+                    hasActiveItem 
+                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md" 
+                      : "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200",
+                    "border border-orange-300"
+                  )}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                  <span className="uppercase tracking-wide">{section.label}</span>
+                  {hasActiveItem && !isExpanded && (
+                    <div className="ml-auto w-2 h-2 rounded-full bg-white animate-pulse" />
+                  )}
+                </button>
+              ) : (
+                <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {section.label}
+                </div>
+              )}
+
+              {/* Section Items - Animazione tendina */}
+              {(!section.collapsible || isExpanded) && (
+                <div className="space-y-1 pl-2">
+                  {section.items.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      className={getNavItemClass(item.href, item.variant)}
+                      title={item.description}
+                    >
+                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge && (
+                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* 3. Anne AI Assistant - DOPO le sections */}
         {navigationConfig.mainActions.map((action) => {
           const isAiAction = action.variant === 'ai';
           const isPrimaryAction = action.variant === 'primary';
@@ -214,109 +288,6 @@ export default function DashboardSidebar() {
                     </span>
                   )}
                 </Link>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Dashboard Item Standalone (tra AI e Logistica) */}
-        {navigationConfig.dashboardItem && (
-          <Link
-            href={navigationConfig.dashboardItem.href}
-            className={getNavItemClass(navigationConfig.dashboardItem.href, navigationConfig.dashboardItem.variant)}
-            title={navigationConfig.dashboardItem.description}
-          >
-            <navigationConfig.dashboardItem.icon className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1 font-semibold">{navigationConfig.dashboardItem.label}</span>
-          </Link>
-        )}
-
-        {/* Sections con dropdown tendina migliorati */}
-        {navigationConfig.sections.map((section) => {
-          const isExpanded = expandedSections.has(section.id);
-          const hasActiveItem = section.items.some(item => 
-            pathname === item.href || pathname.startsWith(item.href)
-          );
-          
-          return (
-            <div key={section.id} className="space-y-2">
-              {/* Section Header - Design migliorato con tendina - Stile uniforme per menu principali */}
-              {section.collapsible ? (
-                <button
-                  onClick={() => toggleSection(section.id)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all duration-200",
-                    hasActiveItem 
-                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md" 
-                      : "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200",
-                    "border border-orange-300"
-                  )}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
-                  <span className="uppercase tracking-wide">{section.label}</span>
-                  {hasActiveItem && !isExpanded && (
-                    <div className="ml-auto w-2 h-2 rounded-full bg-white animate-pulse" />
-                  )}
-                </button>
-              ) : (
-                <h3 className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b-2 border-gray-300 bg-gray-50 rounded-t-lg">
-                  {section.label}
-                </h3>
-              )}
-
-              {/* Section Items - Sottosezioni con stile uniforme grigio/blu - Stile distintivo per sottomenu */}
-              {(!section.collapsible || isExpanded) && (
-                <div className={cn(
-                  "pl-2 space-y-1 transition-all duration-300",
-                  isExpanded ? "animate-in fade-in-0 slide-in-from-top-2" : ""
-                )}>
-                  {section.items.map((item) => {
-                    const isItemActive = pathname === item.href || pathname.startsWith(item.href);
-                    const isPrimaryItem = item.variant === 'primary';
-                    const isGradientItem = item.variant === 'gradient';
-                    
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group text-sm",
-                          // Stili per item primario (mantieni stile speciale)
-                          isPrimaryItem && "bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-sm hover:shadow-md hover:from-blue-600 hover:to-cyan-600",
-                          // Stili per item gradient (mantieni stile speciale)
-                          isGradientItem && "bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold shadow-sm hover:shadow-md hover:from-purple-600 hover:to-indigo-600",
-                          // Stili uniformi per sottomenu normali - attivo
-                          !isPrimaryItem && !isGradientItem && isItemActive && "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 font-medium border-l-4 border-blue-500 shadow-sm",
-                          // Stili uniformi per sottomenu normali - inattivo (grigio/blu)
-                          !isPrimaryItem && !isGradientItem && !isItemActive && "bg-gray-50 text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-blue-50 hover:text-blue-700 hover:border-l-4 hover:border-blue-300",
-                          // Animazione al passaggio del mouse
-                          "hover:translate-x-1"
-                        )}
-                        title={item.description}
-                      >
-                        <item.icon className={cn(
-                          "w-4 h-4 transition-all",
-                          isPrimaryItem || isGradientItem ? "text-white" : isItemActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"
-                        )} />
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && (
-                          <span className={cn(
-                            "text-xs px-2 py-0.5 rounded-full font-medium",
-                            isPrimaryItem || isGradientItem 
-                              ? "bg-white/20 text-white" 
-                              : "bg-blue-100 text-blue-700"
-                          )}>
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
               )}
             </div>
           );
