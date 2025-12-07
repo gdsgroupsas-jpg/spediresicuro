@@ -73,10 +73,31 @@ export function PilotModal({
         }),
       });
 
-      const data = await response.json();
+      // ⚠️ Leggi il testo prima di fare parse JSON per evitare "Unexpected end of JSON input"
+      const responseText = await response.text();
+      
+      // Verifica che ci sia contenuto
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error('Risposta vuota dal server. Verifica che il server sia in esecuzione e che ANTHROPIC_API_KEY sia configurata.');
+      }
+
+      // Prova a fare parse JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Errore parsing JSON:', parseError);
+        console.error('Risposta ricevuta:', responseText.substring(0, 500));
+        throw new Error(`Risposta non valida dal server: ${responseText.substring(0, 200)}`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Errore sconosciuto');
+        // ⚠️ Mostra dettagli errore in sviluppo
+        const errorMessage = data.error || data.message || 'Errore sconosciuto';
+        const errorDetails = data.details ? `\n\nDettagli: ${JSON.stringify(data.details, null, 2)}` : '';
+        const errorHint = data.hint ? `\n\n💡 ${data.hint}` : '';
+        
+        throw new Error(`${errorMessage}${errorDetails}${errorHint}`);
       }
 
       setMessages(prev => [
@@ -350,6 +371,7 @@ export function PilotModal({
     </div>
   );
 }
+
 
 
 

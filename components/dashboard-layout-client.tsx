@@ -28,16 +28,53 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
   const [userRole, setUserRole] = useState<string | null>(null);
 
   // Carica il tipo di account e ruolo
+  // ⚠️ OTTIMIZZAZIONE: Usa cache per evitare fetch duplicati (già fatto nella sidebar)
   useEffect(() => {
     async function loadUserInfo() {
       if (session?.user?.email) {
+        // ⚠️ OTTIMIZZAZIONE: Controlla cache prima di fare fetch
+        const cacheKey = `userInfo_${session.user.email}`;
+        const cachedData = typeof window !== 'undefined' 
+          ? sessionStorage.getItem(cacheKey)
+          : null;
+        
+        if (cachedData) {
+          try {
+            const userData = JSON.parse(cachedData);
+            setAccountType(userData.account_type || null);
+            setUserRole(userData.role || null);
+            // Aggiorna in background senza bloccare
+            fetch('/api/user/info')
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data) {
+                  const freshData = data.user || data;
+                  setAccountType(freshData.account_type || null);
+                  setUserRole(freshData.role || null);
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(freshData));
+                  }
+                }
+              })
+              .catch(() => {});
+            return;
+          } catch (e) {
+            // Cache invalida, continua con fetch
+          }
+        }
+        
         try {
-          const response = await fetch('/api/user/info');
+          const response = await fetch('/api/user/info', {
+            next: { revalidate: 30 }
+          });
           if (response.ok) {
             const data = await response.json();
             const userData = data.user || data;
             setAccountType(userData.account_type || null);
             setUserRole(userData.role || null);
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(cacheKey, JSON.stringify(userData));
+            }
           }
         } catch (error) {
           console.error('Errore caricamento info utente:', error);

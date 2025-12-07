@@ -322,11 +322,10 @@ export function getNavigationForUser(
   const { isReseller = false, hasTeam = false } = features;
 
   // Filtra le sezioni in base ai permessi
+  // ⚠️ Comunicazioni e Supporto vanno alla fine come richiesto dall'utente
   let sections: NavSection[] = [
     logisticsSection,
     aiSection,
-    communicationsSection,
-    supportSection,
   ];
 
   // Aggiungi sezione reseller solo se l'utente è reseller
@@ -352,6 +351,10 @@ export function getNavigationForUser(
 
   // Aggiungi sempre la sezione account
   sections.push(accountSection);
+
+  // ⚠️ Aggiungi Comunicazioni e Supporto alla fine come richiesto dall'utente
+  sections.push(communicationsSection);
+  sections.push(supportSection);
 
   // Azioni principali (visibili sempre in alto)
   const mainActions: NavItem[] = [

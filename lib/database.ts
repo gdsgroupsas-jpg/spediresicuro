@@ -1286,13 +1286,19 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
         .single();
       
       if (!error && supabaseUser) {
+        // ⚠️ IMPORTANTE: Mappa account_type a role se è admin/superadmin
+        let effectiveRole = supabaseUser.role || 'user';
+        if (supabaseUser.account_type === 'superadmin' || supabaseUser.account_type === 'admin') {
+          effectiveRole = 'admin';
+        }
+        
         // Converti formato Supabase a formato User
         const user: User = {
           id: supabaseUser.id,
           email: supabaseUser.email,
           password: supabaseUser.password || '',
           name: supabaseUser.name,
-          role: supabaseUser.role || 'user',
+          role: effectiveRole,
           provider: supabaseUser.provider || 'credentials',
           providerId: supabaseUser.provider_id || undefined,
           image: supabaseUser.image || undefined,
@@ -1302,9 +1308,15 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
           createdAt: supabaseUser.created_at || new Date().toISOString(),
           updatedAt: supabaseUser.updated_at || new Date().toISOString(),
         };
+        
+        // ⚠️ IMPORTANTE: Aggiungi account_type come proprietà estesa per compatibilità
+        (user as any).account_type = supabaseUser.account_type || effectiveRole;
+        
         console.log('✅ [SUPABASE] Utente trovato in Supabase', {
           hasDatiCliente: !!user.datiCliente,
           datiCompletati: user.datiCliente?.datiCompletati,
+          role: effectiveRole,
+          account_type: supabaseUser.account_type,
         });
         return user;
       } else {
