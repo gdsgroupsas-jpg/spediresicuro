@@ -102,8 +102,29 @@ export function buildSystemPrompt(
   },
   isAdmin: boolean = false
 ): string {
+  // ⚠️ Verifica che userContext sia valido
+  if (!userContext || !userContext.user) {
+    console.warn('⚠️ [buildSystemPrompt] Context non valido, uso default');
+    userContext = {
+      user: {
+        userId: 'unknown',
+        userRole: 'user',
+        userName: 'Utente',
+        recentShipments: [],
+      },
+    };
+  }
+  
   const basePrompt = isAdmin ? getAdminPrompt() : getBasePrompt();
-  const contextString = formatContextForPrompt(userContext);
+  
+  // ⚠️ Proteggi formatContextForPrompt da errori
+  let contextString = '';
+  try {
+    contextString = formatContextForPrompt(userContext);
+  } catch (formatError: any) {
+    console.error('❌ [buildSystemPrompt] Errore formatContextForPrompt:', formatError);
+    contextString = `**CONTESTO UTENTE:**\n- Nome: ${userContext.user.userName}\n- Ruolo: ${userContext.user.userRole}\n`;
+  }
   
   return `${basePrompt}
 
