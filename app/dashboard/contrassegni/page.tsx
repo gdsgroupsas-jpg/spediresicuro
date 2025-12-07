@@ -44,6 +44,7 @@ export default function ContrassegniPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user?.email) {
