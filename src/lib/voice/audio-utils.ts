@@ -56,7 +56,12 @@ export async function decodeAudioData(
   const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 
   try {
-    return await audioContext.decodeAudioData(buffer.slice(0));
+    // Ensure we have an ArrayBuffer, not SharedArrayBuffer
+    const arrayBuffer = buffer instanceof ArrayBuffer ? buffer : new ArrayBuffer(buffer.byteLength);
+    if (!(buffer instanceof ArrayBuffer)) {
+      new Uint8Array(arrayBuffer).set(new Uint8Array(buffer));
+    }
+    return await audioContext.decodeAudioData(arrayBuffer);
   } catch (error) {
     // Fallback: manual PCM decode to mono buffer
     const view = new DataView(buffer);
