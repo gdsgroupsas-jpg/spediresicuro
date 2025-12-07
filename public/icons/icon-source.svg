@@ -1,0 +1,32 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sfondo bianco per PWA -->
+  <rect width="512" height="512" fill="white" rx="64"/>
+  
+  <defs>
+    <linearGradient id="arrowGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFD700" />
+      <stop offset="100%" stop-color="#FFA500" />
+    </linearGradient>
+    <linearGradient id="ringGradient" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#00D4FF" />
+    </linearGradient>
+  </defs>
+
+  <!-- Logo centrato e ridimensionato -->
+  <g transform="translate(64, 64) scale(0.75)">
+    <path
+      d="M256 425C162.65 425 87 349.35 87 256C87 162.65 162.65 87 256 87C302.5 87 345 105.5 375.5 136L405 106.5C366.5 68 313.5 44 256 44C138.5 44 44 138.5 44 256C44 373.5 138.5 468 256 468C313.5 468 366.5 444 405 405.5L375.5 376C345 406.5 302.5 425 256 425Z"
+      fill="url(#ringGradient)"
+    />
+    <path
+      d="M140 400L290 75L225 225L325 225L175 550L240 400L140 400Z"
+      fill="url(#arrowGradient)"
+      opacity="0.9"
+    />
+    <path
+      d="M190 350L340 25L275 175L375 175L225 500L290 350L190 350Z"
+      fill="url(#arrowGradient)"
+    />
+  </g>
+</svg>

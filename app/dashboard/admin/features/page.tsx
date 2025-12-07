@@ -59,36 +59,56 @@ export default function PlatformFeaturesPage() {
         return;
       }
 
-      // Verifica ruolo superadmin
+      // Verifica ruolo admin o superadmin
       try {
-        const response = await fetch('/api/admin/overview');
-        if (response.ok) {
-          const data = await response.json();
-          // Verifica se è superadmin (account_type = 'superadmin')
-          const userResponse = await fetch('/api/user/info');
-          if (userResponse.ok) {
-            const userResponseData = await userResponse.json();
-            // API restituisce { success: true, user: { account_type, ... } }
-            const userData = userResponseData.user || userResponseData;
-            if (userData.account_type === 'superadmin') {
-              setIsAuthorized(true);
-              await loadFeatures();
-            } else {
-              setIsAuthorized(false);
-              setError('Accesso negato. Solo il superadmin può gestire le features della piattaforma.');
-            }
+        // Verifica se è admin o superadmin
+        const userResponse = await fetch('/api/user/info');
+        if (userResponse.ok) {
+          const userResponseData = await userResponse.json();
+          console.log('🔍 [FEATURES] Dati utente ricevuti:', userResponseData);
+          
+          // API restituisce { success: true, user: { account_type, role, ... } }
+          const userData = userResponseData.user || userResponseData;
+          const accountType = userData.account_type || userData.accountType;
+          const role = userData.role;
+          
+          console.log('🔍 [FEATURES] Verifica autorizzazione:', {
+            accountType,
+            role,
+            email: userData.email,
+          });
+          
+          // Permetti accesso se è superadmin O admin (role) O admin (account_type)
+          // L'API backend permette accesso se role === 'admin', quindi allineiamo il frontend
+          if (accountType === 'superadmin' || role === 'admin' || accountType === 'admin') {
+            console.log('✅ [FEATURES] Accesso autorizzato');
+            setIsAuthorized(true);
+            await loadFeatures();
           } else {
+            console.log('❌ [FEATURES] Accesso negato - ruolo non autorizzato');
             setIsAuthorized(false);
-            setError('Errore durante la verifica dei permessi');
+            setError(`Accesso negato. Ruolo attuale: ${role || 'N/A'}, Account Type: ${accountType || 'N/A'}. Solo gli admin possono gestire le features.`);
           }
         } else {
-          setIsAuthorized(false);
-          setError('Accesso negato. Solo il superadmin può accedere.');
+          const errorText = await userResponse.text();
+          console.error('❌ [FEATURES] Errore API user/info:', errorText);
+          
+          // Fallback: verifica tramite API admin/overview (se funziona, è admin)
+          const response = await fetch('/api/admin/overview');
+          if (response.ok) {
+            console.log('✅ [FEATURES] Accesso autorizzato tramite fallback');
+            setIsAuthorized(true);
+            await loadFeatures();
+          } else {
+            console.log('❌ [FEATURES] Accesso negato anche tramite fallback');
+            setIsAuthorized(false);
+            setError('Accesso negato. Solo gli admin possono accedere.');
+          }
         }
       } catch (error) {
-        console.error('Errore verifica autorizzazione:', error);
+        console.error('❌ [FEATURES] Errore verifica autorizzazione:', error);
         setIsAuthorized(false);
-        setError('Errore durante la verifica dei permessi');
+        setError(`Errore durante la verifica dei permessi: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       } finally {
         setIsLoading(false);
       }
@@ -187,24 +207,18 @@ export default function PlatformFeaturesPage() {
 
   if (!isAuthorized || error) {
     return (
-      <>
-        <DashboardNav
-          title="Gestione Features Piattaforma"
-          subtitle="Attiva/disattiva features della piattaforma"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Admin', href: '/dashboard/admin' },
-            { label: 'Features', href: '/dashboard/admin/features' },
-          ]}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Accesso Negato</h2>
-            <p className="text-gray-600">{error || 'Solo il superadmin può accedere a questa pagina'}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Accesso Negato</h2>
+          <p className="text-gray-600 mb-4">{error || 'Solo gli admin possono accedere a questa pagina'}</p>
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg text-left text-sm">
+            <p className="font-semibold mb-2">Debug Info:</p>
+            <p className="text-gray-600">Apri la console del browser (F12) per vedere i dettagli dell'errore.</p>
+            <p className="text-gray-600 mt-2">Cerca i log che iniziano con: 🔍 [FEATURES]</p>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 

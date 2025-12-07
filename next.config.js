@@ -7,6 +7,11 @@ const nextConfig = {
   // Ottimizzazioni per Vercel
   compress: true,
   
+  // ⚠️ OTTIMIZZAZIONE: Prefetch più aggressivo per navigazione veloce
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+  },
+  
   // Configurazione immagini (se necessario in futuro)
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -55,7 +60,7 @@ const nextConfig = {
               // In futuro, considerare alternative che non richiedono eval
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://widget.spediresicuro.it https://cdn.jsdelivr.net",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com data:",
+              "font-src 'self' https://fonts.gstatic.com https://r2cdn.perplexity.ai data:",
               "img-src 'self' data: https: blob:",
               "connect-src 'self' https://*.supabase.co https://*.vercel.app wss://*.supabase.co https://api.anthropic.com",
               "worker-src 'self' blob:", // Necessario per Tesseract.js workers

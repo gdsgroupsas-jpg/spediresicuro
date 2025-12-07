@@ -63,6 +63,57 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ============================================
+   FIX: SELEZIONE TESTO NEGLI INPUT
+   ============================================ */
+/* FORZA TESTO VISIBILE IN TUTTI GLI INPUT */
+input,
+textarea,
+select {
+  color: #111827 !important; /* Grigio scuro/nero - sempre visibile */
+  -webkit-text-fill-color: #111827 !important;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Placeholder visibile */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important; /* Grigio medio */
+  opacity: 0.7 !important;
+}
+
+/* Stile selezione personalizzato */
+input::selection,
+textarea::selection {
+  background-color: rgba(250, 204, 21, 0.3) !important;
+  color: #111827 !important;
+}
+
+input::-moz-selection,
+textarea::-moz-selection {
+  background-color: rgba(250, 204, 21, 0.3) !important;
+  color: #111827 !important;
+}
+
+/* Previene comportamenti strani di autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #111827 !important;
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  color: #111827 !important;
+}
+
+/* Forza color scheme light per tutti gli input */
+input,
+textarea,
+select {
+  color-scheme: light !important;
+}
+
 /* Assicura che il logo SVG non venga tagliato */
 header svg {
   overflow: visible;
