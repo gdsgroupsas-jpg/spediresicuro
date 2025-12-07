@@ -468,3 +468,142 @@ export async function getAllUsers(limit: number = 100): Promise<{
     }
   }
 }
+
+/**
+ * Server Action: Crea un nuovo utente Reseller completo
+ *
+ * @param data - Dati del nuovo reseller
+ * @returns Risultato operazione
+ */
+export async function createReseller(data: {
+  email: string
+  name: string
+  password: string
+  initialCredit?: number
+  notes?: string
+}): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+  userId?: string
+}> {
+  try {
+    // 1. Verifica che l'utente corrente sia Super Admin
+    const superAdminCheck = await isCurrentUserSuperAdmin()
+    if (!superAdminCheck.isSuperAdmin) {
+      return {
+        success: false,
+        error: 'Solo i Super Admin possono creare reseller.',
+      }
+    }
+
+    // 2. Valida dati input
+    if (!data.email || !data.name || !data.password) {
+      return {
+        success: false,
+        error: 'Email, nome e password sono obbligatori.',
+      }
+    }
+
+    // Validazione email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(data.email)) {
+      return {
+        success: false,
+        error: 'Email non valida.',
+      }
+    }
+
+    // Validazione password
+    if (data.password.length < 6) {
+      return {
+        success: false,
+        error: 'La password deve essere di almeno 6 caratteri.',
+      }
+    }
+
+    // 3. Verifica che l'email non sia già in uso
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', data.email.toLowerCase().trim())
+      .single()
+
+    if (existingUser) {
+      return {
+        success: false,
+        error: 'Questa email è già registrata.',
+      }
+    }
+
+    // 4. Crea utente usando la funzione esistente createUser
+    // Import necessario già presente all'inizio del file
+    const bcrypt = require('bcryptjs')
+    const hashedPassword = await bcrypt.hash(data.password, 10)
+
+    // 5. Crea utente nel database
+    const { data: newUser, error: createError } = await supabaseAdmin
+      .from('users')
+      .insert([
+        {
+          email: data.email.toLowerCase().trim(),
+          name: data.name.trim(),
+          password: hashedPassword,
+          account_type: 'user', // Inizialmente user
+          is_reseller: true, // Ma con flag reseller attivo
+          wallet_balance: data.initialCredit || 0,
+          email_verified: true, // Auto-verificato da super admin
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select('id')
+      .single()
+
+    if (createError) {
+      console.error('Errore creazione reseller:', createError)
+      return {
+        success: false,
+        error: createError.message || 'Errore durante la creazione del reseller.',
+      }
+    }
+
+    const userId = newUser.id
+
+    // 6. Se c'è credito iniziale, crea transazione wallet
+    if (data.initialCredit && data.initialCredit > 0) {
+      await supabaseAdmin
+        .from('wallet_transactions')
+        .insert([
+          {
+            user_id: userId,
+            amount: data.initialCredit,
+            type: 'admin_gift',
+            description: 'Credito iniziale alla creazione account reseller',
+            created_by: superAdminCheck.userId,
+          },
+        ])
+    }
+
+    // 7. Se ci sono note, salvale (opzionale, se esiste una tabella notes)
+    if (data.notes) {
+      // Potremmo salvare le note in una tabella separata o nel campo note dell'utente
+      await supabaseAdmin
+        .from('users')
+        .update({ notes: data.notes })
+        .eq('id', userId)
+    }
+
+    return {
+      success: true,
+      message: `Reseller "${data.name}" creato con successo!`,
+      userId: userId,
+    }
+  } catch (error: any) {
+    console.error('Errore in createReseller:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto.',
+    }
+  }
+}
