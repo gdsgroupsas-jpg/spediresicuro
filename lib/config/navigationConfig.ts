@@ -396,10 +396,10 @@ export function getNavigationForUser(
   const { isReseller = false, hasTeam = false } = features;
 
   // Filtra le sezioni in base ai permessi
-  // ⚠️ Ordine: AI, Dashboard (standalone), Logistica, poi resto
+  // ⚠️ Ordine DEFINITIVO: Dashboard (standalone), Logistica, AI & Automazione, poi resto
   let sections: NavSection[] = [
-    aiSection,
     logisticsSection,
+    aiSection,
   ];
 
   // Aggiungi sezione reseller solo se l'utente è reseller
@@ -430,11 +430,11 @@ export function getNavigationForUser(
   sections.push(communicationsSection);
   sections.push(supportSection);
 
-  // Azioni principali (visibili sempre in alto)
+  // Azioni principali (AI Assistant visibile DOPO Dashboard e Logistica)
   const mainActions: NavItem[] = [
     {
       id: 'ai-assistant',
-      label: 'AI Assistant',
+      label: 'Anne AI Assistant',
       href: '#ai-assistant',
       icon: Bot,
       variant: 'ai',
@@ -444,7 +444,7 @@ export function getNavigationForUser(
 
   return {
     mainActions,
-    dashboardItem, // Dashboard come item standalone
+    dashboardItem, // Dashboard come primo item standalone
     sections,
   };
 }
