@@ -188,11 +188,11 @@ export default function AiAssistantModal({ isOpen, onClose }: AiAssistantModalPr
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
                       message.role === 'user'
-                        ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white'
-                        : 'bg-white border border-gray-200 text-gray-900'
+                        ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-semibold'
+                        : 'bg-white border border-gray-200 text-gray-900 font-semibold'
                     }`}
                   >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap font-semibold">
                       {message.content}
                     </p>
                     <p className={`text-xs mt-2 ${
@@ -247,7 +247,7 @@ export default function AiAssistantModal({ isOpen, onClose }: AiAssistantModalPr
                   onKeyDown={handleKeyDown}
                   placeholder="Scrivi un messaggio..."
                   rows={1}
-                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:border-[#FF9500] focus:shadow-md resize-none text-sm font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
+                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:border-[#FF9500] focus:shadow-md resize-none text-sm font-semibold text-gray-900 placeholder:text-gray-400 bg-white hover:border-gray-400 transition-all"
                   style={{
                     minHeight: '48px',
                     maxHeight: '120px',
