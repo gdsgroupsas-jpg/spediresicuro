@@ -86,3 +86,13 @@ $RECYCLE.BIN/
 *.tsbuildinfo
 .next/
 node_modules/
+
+# Script PowerShell locali (utilità personali)
+fix-git-output.ps1
+fix-git-output-auto.ps1
+get-last-commit.ps1
+get-commit.bat
+TEST-OUTPUT-GIT.bat
+VEDI-ULTIMO-COMMIT.bat
+setup.bat
+SPIEGAZIONE-PROBLEMA-OUTPUT.md
