@@ -1,12 +1,11 @@
 /**
- * Dashboard Sidebar Component - Redesigned
+ * Dashboard Sidebar Component - Clean & Modern Design
  *
- * Sidebar moderna con:
- * - Navigazione organizzata gerarchicamente per ruolo
- * - Sezioni collassabili
- * - Design marketing-oriented
- * - Icone e colori distintivi
- * - Configurazione dinamica tramite navigationConfig
+ * Sidebar minimalista e professionale con:
+ * - Design pulito e moderno (ispirato a Linear/Vercel)
+ * - Organizzazione logica e intuitiva
+ * - Colori sobri con accenti strategici
+ * - Navigazione fluida e chiara
  */
 
 'use client';
@@ -17,7 +16,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
   Package,
-  User,
   LogOut,
   ChevronDown,
   ChevronRight,
@@ -25,7 +23,6 @@ import {
 import {
   getNavigationForUser,
   isNavItemActive,
-  navItemVariants,
   type UserRole,
   type NavSection,
 } from '@/lib/config/navigationConfig';
@@ -63,7 +60,6 @@ export default function DashboardSidebar() {
   }, [session]);
 
   // Ottieni la configurazione di navigazione per l'utente corrente
-  // ⚠️ Usa useMemo per evitare ricreazioni ad ogni render (risolve "Maximum update depth exceeded")
   const userRole: UserRole = (accountType as UserRole) || 'user';
   const navigationConfig = useMemo(() => {
     return getNavigationForUser(userRole, {
@@ -71,27 +67,22 @@ export default function DashboardSidebar() {
     });
   }, [userRole, isReseller]);
   
-  // ⚠️ Memoizza anche manuallyCollapsed per stabilità
   const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
 
-  // Auto-espandi sezioni se siamo in una pagina relativa (rispetta scelte manuali)
-  // ⚠️ Usa functional update per setExpandedSections e dipendenze stabili
+  // Auto-espandi sezioni se siamo in una pagina relativa
   useEffect(() => {
     setExpandedSections((prevExpanded) => {
       const newExpandedSections = new Set<string>();
 
       navigationConfig.sections.forEach((section) => {
-        // Se l'utente ha manualmente chiuso questa sezione, non riaprirla automaticamente
         if (manuallyCollapsedMemo.has(section.id)) {
           return;
         }
 
-        // Espandi automaticamente se defaultExpanded è true
         if (section.defaultExpanded) {
           newExpandedSections.add(section.id);
         }
 
-        // Espandi se una delle voci è attiva (sempre, anche se chiusa manualmente)
         const hasActiveItem = section.items.some((item) =>
           isNavItemActive(item.href, pathname || '')
         );
@@ -110,7 +101,6 @@ export default function DashboardSidebar() {
     setExpandedSections((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
-        // Chiudendo manualmente, segna come collassata manualmente
         newSet.delete(sectionId);
         setManuallyCollapsed((prevCollapsed) => {
           const newCollapsed = new Set(prevCollapsed);
@@ -118,7 +108,6 @@ export default function DashboardSidebar() {
           return newCollapsed;
         });
       } else {
-        // Aprendo manualmente, rimuovi dal set delle collassate manualmente
         newSet.add(sectionId);
         setManuallyCollapsed((prevCollapsed) => {
           const newCollapsed = new Set(prevCollapsed);
@@ -130,198 +119,170 @@ export default function DashboardSidebar() {
     });
   };
 
-  // Helper per ottenere le classi CSS di un nav item
-  const getNavItemClass = (href: string, variant: string = 'default') => {
-    const isActive = isNavItemActive(href, pathname || '');
-    const variantStyles = navItemVariants[variant as keyof typeof navItemVariants] || navItemVariants.default;
-
-    return `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-      isActive ? variantStyles.active : variantStyles.inactive
-    }`;
-  };
-
   const isAdmin = accountType === 'admin' || accountType === 'superadmin';
   const isSuperAdmin = accountType === 'superadmin';
 
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 bg-gradient-to-b from-gray-50 to-white border-r border-gray-200 shadow-sm z-50">
-      {/* Logo/Brand con SuperAdmin Badge */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg">
-            <Package className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">SpediRe Sicuro</h1>
-            <p className="text-xs text-gray-500">Dashboard Pro</p>
-          </div>
+    <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-50">
+      {/* Header - Logo e Brand */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+          <Package className="w-5 h-5 text-white" />
         </div>
-        {isSuperAdmin && (
-          <div className="px-2 py-1 rounded-md bg-gradient-to-r from-red-500 to-rose-600 shadow-md">
-            <span className="text-[10px] font-bold text-white uppercase tracking-wider">Super</span>
-          </div>
-        )}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-semibold text-gray-900 truncate">SpediRe Sicuro</h1>
+          {isSuperAdmin && (
+            <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">Super Admin</p>
+          )}
+        </div>
       </div>
 
-      {/* Navigation con stili migliorati */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {/* 1. Dashboard Item Standalone - PRIMO */}
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {/* Dashboard - Sempre visibile in alto */}
         {navigationConfig.dashboardItem && (
           <Link
             href={navigationConfig.dashboardItem.href}
-            className={getNavItemClass(navigationConfig.dashboardItem.href, navigationConfig.dashboardItem.variant)}
-            title={navigationConfig.dashboardItem.description}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              isNavItemActive(navigationConfig.dashboardItem.href, pathname || '')
+                ? "bg-gray-100 text-gray-900"
+                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+            )}
           >
-            <navigationConfig.dashboardItem.icon className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1 font-semibold">{navigationConfig.dashboardItem.label}</span>
+            <navigationConfig.dashboardItem.icon className="w-4 h-4 flex-shrink-0" />
+            <span>{navigationConfig.dashboardItem.label}</span>
           </Link>
         )}
 
-        {/* 2. Sections: Logistica, AI & Automazione, etc. */}
+        {/* AI Assistant - Azione rapida prominente */}
+        {navigationConfig.mainActions.map((action) => {
+          if (action.href === '#ai-assistant') {
+            return (
+              <button
+                key={action.id}
+                onClick={() => {
+                  const event = new CustomEvent('openAiAssistant');
+                  window.dispatchEvent(event);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 transition-all shadow-sm hover:shadow-md"
+              >
+                <action.icon className="w-4 h-4" />
+                <span>{action.label}</span>
+              </button>
+            );
+          }
+          return null;
+        })}
+
+        {/* Sezioni principali */}
         {navigationConfig.sections.map((section) => {
           const isExpanded = expandedSections.has(section.id);
           const hasActiveItem = section.items.some(item => 
-            pathname === item.href || pathname.startsWith(item.href)
+            isNavItemActive(item.href, pathname || '')
           );
           
           return (
-            <div key={section.id} className="space-y-2">
-              {/* Section Header - Design migliorato con tendina - Stile uniforme per menu principali */}
+            <div key={section.id} className="space-y-0.5">
+              {/* Section Header */}
               {section.collapsible ? (
                 <button
                   onClick={() => toggleSection(section.id)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all duration-200",
-                    hasActiveItem 
-                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md" 
-                      : "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200",
-                    "border border-orange-300"
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 uppercase tracking-wider transition-colors",
+                    hasActiveItem && "text-gray-900",
+                    "hover:text-gray-900"
                   )}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="w-3.5 h-3.5" />
                   ) : (
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3.5 h-3.5" />
                   )}
-                  <span className="uppercase tracking-wide">{section.label}</span>
-                  {hasActiveItem && !isExpanded && (
-                    <div className="ml-auto w-2 h-2 rounded-full bg-white animate-pulse" />
-                  )}
+                  <span className="flex-1 text-left">{section.label}</span>
                 </button>
               ) : (
-                <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   {section.label}
                 </div>
               )}
 
-              {/* Section Items - Animazione tendina */}
+              {/* Section Items */}
               {(!section.collapsible || isExpanded) && (
-                <div className="space-y-1 pl-2">
-                  {section.items.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      className={getNavItemClass(item.href, item.variant)}
-                      title={item.description}
-                    >
-                      <item.icon className="w-5 h-5 flex-shrink-0" />
-                      <span className="flex-1">{item.label}</span>
-                      {item.badge && (
-                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
+                <div className="space-y-0.5 pl-5">
+                  {section.items.map((item) => {
+                    const isItemActive = isNavItemActive(item.href, pathname || '');
+                    const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
+                    
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group",
+                          isItemActive
+                            ? isPrimary
+                              ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-900 font-medium"
+                            : isPrimary
+                            ? "text-gray-700 hover:bg-gray-50"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        )}
+                        title={item.description}
+                      >
+                        <item.icon className={cn(
+                          "w-4 h-4 flex-shrink-0",
+                          isItemActive && isPrimary ? "text-white" : ""
+                        )} />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge && (
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                            isItemActive && isPrimary
+                              ? "bg-white/20 text-white"
+                              : "bg-gray-200 text-gray-700"
+                          )}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* 3. Anne AI Assistant - DOPO le sections */}
-        {navigationConfig.mainActions.map((action) => {
-          const isAiAction = action.variant === 'ai';
-          const isPrimaryAction = action.variant === 'primary';
-          const isActive = pathname === action.href || pathname.startsWith(action.href);
-          
-          return (
-            <div key={action.id}>
-              {action.href === '#ai-assistant' ? (
-                <button
-                  onClick={() => {
-                    const event = new CustomEvent('openAiAssistant');
-                    window.dispatchEvent(event);
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-200 shadow-md hover:shadow-lg",
-                    isAiAction && "bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700",
-                    isPrimaryAction && "bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:from-orange-600 hover:to-amber-700",
-                    !isAiAction && !isPrimaryAction && "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:bg-orange-50"
-                  )}
-                  title={action.description}
-                >
-                  <action.icon className="w-5 h-5" />
-                  <span className="flex-1 text-left">{action.label}</span>
-                  {action.badge && (
-                    <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-2 py-0.5 rounded-full font-medium">
-                      {action.badge}
-                    </span>
-                  )}
-                </button>
-              ) : (
-                <Link
-                  href={action.href}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-200",
-                    isPrimaryAction && "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md hover:shadow-lg hover:from-orange-600 hover:to-amber-700",
-                    !isPrimaryAction && isActive && "bg-orange-50 text-orange-700 border-l-4 border-orange-500 shadow-sm",
-                    !isPrimaryAction && !isActive && "text-gray-700 hover:bg-gray-100"
-                  )}
-                  title={action.description}
-                >
-                  <action.icon className="w-5 h-5" />
-                  <span className="flex-1">{action.label}</span>
-                  {action.badge && (
-                    <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
-                      {action.badge}
-                    </span>
-                  )}
-                </Link>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Footer - User Profile con design migliorato */}
+      {/* Footer - User Profile */}
       {session && (
-        <div className="border-t-2 border-gray-200 bg-white p-4 space-y-2">
+        <div className="border-t border-gray-200 bg-gray-50 p-3 space-y-1">
           <Link
             href="/dashboard/dati-cliente"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group border border-transparent hover:border-orange-200"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white transition-colors group"
           >
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-semibold shadow-md">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-xs font-semibold">
               {session.user?.name?.[0]?.toUpperCase() || session.user?.email?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">
+              <p className="text-sm font-medium text-gray-900 truncate">
                 {session.user?.name || session.user?.email?.split('@')[0]}
               </p>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
-                {isSuperAdmin && <span className="text-xs">👑</span>}
-                {isAdmin && !isSuperAdmin && <span className="text-xs">⭐</span>}
-                {isReseller && <span className="text-xs">💼</span>}
+                {isSuperAdmin && <span className="text-[10px]">👑</span>}
+                {isAdmin && !isSuperAdmin && <span className="text-[10px]">⭐</span>}
+                {isReseller && <span className="text-[10px]">💼</span>}
               </div>
             </div>
           </Link>
 
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 hover:shadow-sm transition-all duration-200 font-medium border border-transparent hover:border-red-200"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-white hover:text-red-600 transition-colors"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" />
             <span>Esci</span>
           </button>
         </div>

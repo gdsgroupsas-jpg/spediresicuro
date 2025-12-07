@@ -27,7 +27,7 @@ import {
   Building2,
   BookOpen,
   ScanLine,
-  TruckIcon,
+  Truck,
   RotateCcw,
   MapPin,
   Calculator,
@@ -93,12 +93,12 @@ const dashboardItem: NavItem = {
 };
 
 /**
- * LOGISTICA - Menu completo operazioni spedizioni
- * Ispirato a Spedisci.Online ma migliorato e organizzato
+ * LOGISTICA - Menu organizzato per workflow operativo
+ * Ordine logico: Creazione → Gestione → Giacenze → Resi
  */
 const logisticsSection: NavSection = {
   id: 'logistics',
-  label: 'Logistica',
+  label: 'Spedizioni',
   collapsible: true,
   defaultExpanded: true,
   items: [
@@ -108,14 +108,14 @@ const logisticsSection: NavSection = {
       href: '/dashboard/spedizioni/nuova',
       icon: Plus,
       variant: 'gradient',
-      description: 'Crea spedizione rapidamente',
+      description: 'Crea una nuova spedizione',
     },
     {
       id: 'shipments',
-      label: 'Elenco Spedizioni',
+      label: 'Tutte le Spedizioni',
       href: '/dashboard/spedizioni',
       icon: List,
-      description: 'Tutte le spedizioni',
+      description: 'Elenco completo spedizioni',
     },
     {
       id: 'giacenze',
@@ -125,18 +125,31 @@ const logisticsSection: NavSection = {
       description: 'Spedizioni in giacenza',
     },
     {
-      id: 'tracking',
-      label: 'Tracking Interno',
-      href: '/dashboard/tracking',
-      icon: MapPin,
-      description: 'Tracciamento spedizioni',
+      id: 'contrassegni',
+      label: 'Contrassegni',
+      href: '/dashboard/contrassegni',
+      icon: DollarSign,
+      description: 'Gestione spedizioni con contrassegno',
     },
+  ],
+};
+
+/**
+ * RESI - Gestione resi e rimborsi
+ * Scanner Resi è un sottomenu di Resi
+ */
+const returnsSection: NavSection = {
+  id: 'returns',
+  label: 'Resi',
+  collapsible: true,
+  defaultExpanded: true,
+  items: [
     {
-      id: 'returns',
+      id: 'returns-main',
       label: 'Gestione Resi',
       href: '/dashboard/resi',
       icon: RotateCcw,
-      description: 'Resi e rimborsi',
+      description: 'Gestione resi e rimborsi',
     },
     {
       id: 'return-scanner',
@@ -145,40 +158,31 @@ const logisticsSection: NavSection = {
       icon: ScanLine,
       description: 'Scansione LDV per resi',
     },
-    {
-      id: 'shipments-cancelled',
-      label: 'Spedizioni Cancellate',
-      href: '/dashboard/spedizioni/cancellate',
-      icon: PackageX,
-      description: 'Archivio spedizioni annullate',
-    },
   ],
 };
 
 /**
- * INTELLIGENZA ARTIFICIALE - Anne e automazioni
+ * STRUMENTI - AI e automazioni
  */
-const aiSection: NavSection = {
-  id: 'ai',
-  label: 'AI & Automazione',
+const toolsSection: NavSection = {
+  id: 'tools',
+  label: 'Strumenti',
   collapsible: true,
   defaultExpanded: true,
   items: [
     {
       id: 'ocr-scanner',
-      label: 'AI OCR Scanner',
+      label: 'OCR Scanner',
       href: '/dashboard/ocr-scanner',
       icon: ScanLine,
-      variant: 'gradient',
-      description: 'Scanner OCR per estrazione dati da immagini',
+      description: 'Estrazione dati da immagini',
     },
     {
       id: 'voice-control',
-      label: 'Voice Control',
+      label: 'Controllo Vocale',
       href: '/dashboard/voice',
       icon: Mic,
-      variant: 'default',
-      description: 'Controllo vocale delle funzioni',
+      description: 'Comandi vocali',
     },
   ],
 };
@@ -396,14 +400,16 @@ export function getNavigationForUser(
   const { isReseller = false, hasTeam = false } = features;
 
   // Filtra le sezioni in base ai permessi
-  // ⚠️ Ordine DEFINITIVO: Dashboard (standalone), Logistica, AI & Automazione, poi resto
+  // ⚠️ Ordine logico: Spedizioni → Resi → Strumenti → Finanze → Admin → Account → Comunicazioni → Supporto
   let sections: NavSection[] = [
     logisticsSection,
-    aiSection,
+    returnsSection,
+    toolsSection,
   ];
 
-  // Aggiungi sezione reseller solo se l'utente è reseller
+  // Aggiungi sezione finanze se reseller o se ha wallet
   if (isReseller) {
+    sections.push(financeSection);
     sections.push(resellerSection);
   }
 
@@ -430,15 +436,15 @@ export function getNavigationForUser(
   sections.push(communicationsSection);
   sections.push(supportSection);
 
-  // Azioni principali (AI Assistant visibile DOPO Dashboard e Logistica)
+  // Azioni principali (AI Assistant - sempre visibile)
   const mainActions: NavItem[] = [
     {
       id: 'ai-assistant',
-      label: 'Anne AI Assistant',
+      label: 'Anne AI',
       href: '#ai-assistant',
       icon: Bot,
       variant: 'ai',
-      description: 'Apri Anne, il tuo assistente virtuale',
+      description: 'Assistente virtuale intelligente',
     },
   ];
 

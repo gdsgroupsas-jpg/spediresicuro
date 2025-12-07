@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildContext } from '@/lib/ai/context-builder';
-import { buildSystemPrompt, getVoicePrompt } from '@/lib/ai/prompts';
+import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from '@/lib/ai/prompts';
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
 import { getCachedContext, setCachedContext, getContextCacheKey } from '@/lib/ai/cache';
 import { supabaseAdmin } from '@/lib/db/client';
@@ -79,35 +79,6 @@ function formatToolsForAnthropic() {
     description: tool.description,
     input_schema: tool.parameters,
   }));
-}
-
-/**
- * Prompt base per utenti normali
- */
-function getBasePrompt(): string {
-  return `Sei Anne, Executive Business Partner per SpediReSicuro.
-
-Il tuo ruolo:
-- Assistere gli utenti nella gestione delle loro spedizioni
-- Fornire informazioni su costi e ottimizzazioni
-- Risolvere problemi operativi
-
-Rispondi sempre in modo professionale, chiaro e conciso.`;
-}
-
-/**
- * Prompt avanzato per amministratori
- */
-function getAdminPrompt(): string {
-  return `Sei Anne, Executive Business Partner per SpediReSicuro.
-
-Il tuo ruolo avanzato per amministratori:
-- Monitoraggio business, finanza e sistemi
-- Analisi margini e performance
-- Diagnostica errori tecnici
-- Proposte strategiche di ottimizzazione
-
-Rispondi con dati precisi e analisi approfondite quando richiesto.`;
 }
 
 export async function POST(request: NextRequest) {
