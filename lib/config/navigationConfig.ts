@@ -76,8 +76,21 @@ export type UserRole = 'user' | 'admin' | 'superadmin';
  */
 export interface NavigationConfig {
   mainActions: NavItem[];
+  dashboardItem?: NavItem; // Dashboard standalone
   sections: NavSection[];
 }
+
+/**
+ * DASHBOARD - Item standalone (non in un menu)
+ */
+const dashboardItem: NavItem = {
+  id: 'dashboard',
+  label: 'Dashboard',
+  href: '/dashboard',
+  icon: LayoutDashboard,
+  variant: 'primary',
+  description: 'Panoramica generale e statistiche',
+};
 
 /**
  * LOGISTICA - Menu completo operazioni spedizioni
@@ -89,14 +102,6 @@ const logisticsSection: NavSection = {
   collapsible: true,
   defaultExpanded: true,
   items: [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
-      variant: 'primary',
-      description: 'Panoramica generale e statistiche',
-    },
     {
       id: 'new-shipment',
       label: 'Nuova Spedizione',
@@ -391,10 +396,10 @@ export function getNavigationForUser(
   const { isReseller = false, hasTeam = false } = features;
 
   // Filtra le sezioni in base ai permessi
-  // ⚠️ Comunicazioni e Supporto vanno alla fine come richiesto dall'utente
+  // ⚠️ Ordine: AI, Dashboard (standalone), Logistica, poi resto
   let sections: NavSection[] = [
-    logisticsSection,
     aiSection,
+    logisticsSection,
   ];
 
   // Aggiungi sezione reseller solo se l'utente è reseller
@@ -439,6 +444,7 @@ export function getNavigationForUser(
 
   return {
     mainActions,
+    dashboardItem, // Dashboard come item standalone
     sections,
   };
 }
