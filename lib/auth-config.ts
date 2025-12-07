@@ -31,29 +31,36 @@ function validateOAuthConfig() {
   });
   
   // ⚠️ Errori critici che causano "Configuration"
-  const errors: string[] = [];
+  const criticalErrors: string[] = [];
+  const warnings: string[] = [];
   
   if (!hasNextAuthSecret) {
-    errors.push('❌ NEXTAUTH_SECRET non configurato - OBBLIGATORIO!');
+    criticalErrors.push('❌ NEXTAUTH_SECRET non configurato - OBBLIGATORIO!');
   }
   
-  if (process.env.NODE_ENV === 'production' && !hasNextAuthUrl) {
-    errors.push('⚠️ NEXTAUTH_URL non configurato - consigliato in produzione');
+  if (process.env.NODE_ENV === 'production' && !hasNextAuthUrl && !process.env.VERCEL_URL) {
+    warnings.push('⚠️ NEXTAUTH_URL non configurato - consigliato in produzione');
   }
   
   if (hasGoogle && process.env.NODE_ENV === 'production') {
-    if (!nextAuthUrl.startsWith('https://')) {
-      errors.push('⚠️ NEXTAUTH_URL deve essere HTTPS in produzione!');
+    if (!nextAuthUrl.startsWith('https://') && !process.env.VERCEL_URL) {
+      warnings.push('⚠️ NEXTAUTH_URL deve essere HTTPS in produzione!');
     }
     console.log('📝 [AUTH CONFIG] Verifica che il callback URL sia configurato in Google Console:');
     console.log(`   ${nextAuthUrl}/api/auth/callback/google`);
   }
   
-  if (errors.length > 0) {
-    console.error('❌ [AUTH CONFIG] Errori di configurazione trovati:');
-    errors.forEach(error => console.error(`   ${error}`));
-    console.error('❌ [AUTH CONFIG] Questi errori causeranno l\'errore "Configuration" in NextAuth!');
-  } else {
+  if (criticalErrors.length > 0) {
+    console.error('❌ [AUTH CONFIG] ERRORI CRITICI - Causano "Configuration":');
+    criticalErrors.forEach(error => console.error(`   ${error}`));
+  }
+  
+  if (warnings.length > 0) {
+    console.warn('⚠️ [AUTH CONFIG] Avvisi (non bloccanti):');
+    warnings.forEach(warning => console.warn(`   ${warning}`));
+  }
+  
+  if (criticalErrors.length === 0 && warnings.length === 0) {
     console.log('✅ [AUTH CONFIG] Configurazione OAuth valida');
   }
   
@@ -594,21 +601,40 @@ export const authOptions = {
     
     // ⚠️ IMPORTANTE: Valida NEXTAUTH_SECRET
     if (!secret) {
-      const errorMsg = 'NEXTAUTH_SECRET è obbligatorio! Configura la variabile d\'ambiente su Vercel.';
-      console.error('❌ [AUTH CONFIG]', errorMsg);
+      const errorMsg = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ERRORE CRITICO: NEXTAUTH_SECRET NON CONFIGURATO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NextAuth richiede NEXTAUTH_SECRET per funzionare.
+
+🔧 COME RISOLVERE:
+
+1. Vai su Vercel Dashboard
+2. Seleziona il progetto "spediresicuro"
+3. Settings → Environment Variables
+4. Aggiungi nuova variabile:
+   - Nome: NEXTAUTH_SECRET
+   - Valore: (genera con: openssl rand -base64 32)
+   - Environment: Production, Preview, Development
+5. Redeploy l'applicazione
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      `;
+      console.error(errorMsg);
       
       if (process.env.NODE_ENV === 'production') {
-        throw new Error(errorMsg);
+        throw new Error('NEXTAUTH_SECRET non configurato');
       }
       
       // In sviluppo, genera un warning ma permette di continuare
       console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET non configurato. Usando secret di sviluppo.');
-      return 'dev-secret-not-for-production-change-in-env-local';
+      return 'dev-secret-not-for-production-change-in-env-local-please';
     }
     
     // Verifica che il secret sia abbastanza lungo (almeno 32 caratteri)
     if (secret.length < 32) {
-      console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET sembra troppo corto. Dovrebbe essere almeno 32 caratteri.');
+      console.warn('⚠️ [AUTH CONFIG] NEXTAUTH_SECRET sembra troppo corto. Consigliato almeno 32 caratteri.');
     }
     
     console.log('✅ [AUTH CONFIG] NEXTAUTH_SECRET configurato correttamente');
