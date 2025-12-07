@@ -29,6 +29,7 @@ import {
   type UserRole,
   type NavSection,
 } from '@/lib/config/navigationConfig';
+import { cn } from '@/lib/utils';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
