@@ -27,6 +27,7 @@ import {
   User,
   LogOut,
   Bot,
+  Mic,
   ChevronDown,
   ChevronRight,
   Wallet,
@@ -152,6 +153,18 @@ export default function DashboardSidebar() {
               <Bot className="w-5 h-5" />
               <span>AI Assistant</span>
             </button>
+
+            <Link
+              href="/dashboard/voice"
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                isActive('/dashboard/voice')
+                  ? 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-600 font-semibold shadow-sm'
+                  : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium'
+              }`}
+            >
+              <Mic className="w-5 h-5" />
+              <span>Voice Control</span>
+            </Link>
           </nav>
         </div>
 
