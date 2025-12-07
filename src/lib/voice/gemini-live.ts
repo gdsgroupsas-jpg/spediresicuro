@@ -155,7 +155,8 @@ export class GeminiLiveClient {
       throw new Error('Failed to get media stream');
     }
 
-    const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+    const mediaStream = this.mediaStream; // Local reference for TypeScript
+    const source = this.audioContext.createMediaStreamSource(mediaStream);
     const gain = this.audioContext.createGain();
     // Avoid feedback loop: mute the monitoring chain
     gain.gain.value = 0;
