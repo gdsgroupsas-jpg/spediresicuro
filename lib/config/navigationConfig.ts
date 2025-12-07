@@ -23,6 +23,7 @@ import {
   Wallet,
   Zap,
   Building2,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -134,6 +135,24 @@ const communicationsSection: NavSection = {
       href: '/dashboard/posta',
       icon: Mail,
       description: 'Messaggi e notifiche',
+    },
+  ],
+};
+
+/**
+ * SUPPORTO
+ */
+const supportSection: NavSection = {
+  id: 'support',
+  label: 'Supporto',
+  collapsible: false,
+  items: [
+    {
+      id: 'manual',
+      label: 'Manuale Utente',
+      href: '/manuale',
+      icon: BookOpen,
+      description: 'Documentazione completa',
     },
   ],
 };
@@ -268,6 +287,7 @@ export function getNavigationForUser(
     logisticsSection,
     aiSection,
     communicationsSection,
+    supportSection,
   ];
 
   // Aggiungi finanze (sempre visibile, modificato in base a isReseller)
