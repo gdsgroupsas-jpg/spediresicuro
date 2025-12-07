@@ -219,6 +219,18 @@ export default function DashboardSidebar() {
           );
         })}
 
+        {/* Dashboard Item Standalone (tra AI e Logistica) */}
+        {navigationConfig.dashboardItem && (
+          <Link
+            href={navigationConfig.dashboardItem.href}
+            className={getNavItemClass(navigationConfig.dashboardItem.href, navigationConfig.dashboardItem.variant)}
+            title={navigationConfig.dashboardItem.description}
+          >
+            <navigationConfig.dashboardItem.icon className="w-5 h-5 flex-shrink-0" />
+            <span className="flex-1 font-semibold">{navigationConfig.dashboardItem.label}</span>
+          </Link>
+        )}
+
         {/* Sections con dropdown tendina migliorati */}
         {navigationConfig.sections.map((section) => {
           const isExpanded = expandedSections.has(section.id);
