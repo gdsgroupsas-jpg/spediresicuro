@@ -70,10 +70,11 @@ const markdownComponents: Components = {
       {...props}
     />
   ),
-  code: ({ node: _node, inline, className, children, ...props }) => {
+  code: ({ node, className, children, ...props }) => {
     const codeClass = className ? String(className) : '';
+    const isInline = !className?.includes('language-');
 
-    if (inline) {
+    if (isInline) {
       return (
         <code
           className={`px-2 py-1 rounded-md bg-white/10 text-amber-200 font-mono text-sm ${codeClass}`}
