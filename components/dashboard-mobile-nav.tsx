@@ -31,6 +31,7 @@ import {
   User,
   LogOut,
   ChevronRight,
+  BookOpen,
 } from 'lucide-react';
 
 export default function DashboardMobileNav() {
@@ -259,6 +260,23 @@ export default function DashboardMobileNav() {
                   >
                     <Settings className="w-5 h-5" />
                     <span>Impostazioni</span>
+                  </Link>
+                </nav>
+              </div>
+
+              {/* Supporto */}
+              <div>
+                <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                  Supporto
+                </h3>
+                <nav className="space-y-1">
+                  <Link
+                    href="/manuale"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <BookOpen className="w-5 h-5" />
+                    <span>Manuale Utente</span>
                   </Link>
                 </nav>
               </div>
