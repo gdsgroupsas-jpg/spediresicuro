@@ -3,16 +3,19 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Shield } from 'lucide-react'
+import { Shield, Store } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { UsersTable } from './_components/users-table'
+import { CreateResellerDialog } from './_components/create-reseller-dialog'
 
 export default function SuperAdminDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [showCreateReseller, setShowCreateReseller] = useState(false)
 
   // Verifica permessi superadmin
   useEffect(() => {
@@ -102,18 +105,39 @@ export default function SuperAdminDashboard() {
           {/* Users Table - Self-contained component with filters, sorting, bulk actions */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Gestione Utenti
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Visualizza, modifica e gestisci tutti gli utenti della piattaforma
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Gestione Utenti
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Visualizza, modifica e gestisci tutti gli utenti della piattaforma
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowCreateReseller(true)}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                >
+                  <Store className="w-4 h-4 mr-2" />
+                  Crea Reseller
+                </Button>
+              </div>
             </div>
 
             <div className="p-6">
               <UsersTable />
             </div>
           </div>
+
+          {/* Create Reseller Dialog */}
+          <CreateResellerDialog
+            isOpen={showCreateReseller}
+            onClose={() => setShowCreateReseller(false)}
+            onSuccess={() => {
+              // Refresh della tabella utenti
+              window.location.reload()
+            }}
+          />
         </main>
       </div>
     </QueryProvider>
