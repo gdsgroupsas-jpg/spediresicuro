@@ -26,6 +26,7 @@ import PageHeader from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { RechargeWalletDialog } from '@/components/wallet/recharge-wallet-dialog'
 import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 
 interface WalletTransaction {
@@ -55,6 +56,7 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [stats, setStats] = useState<WalletStats | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all')
+  const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false)
 
   // Verifica autenticazione
   useEffect(() => {
@@ -80,57 +82,40 @@ export default function WalletPage() {
         setWalletBalance(user.wallet_balance || 0)
       }
 
-      // Carica transazioni (TODO: creare API endpoint)
-      // Per ora mock data
-      const mockTransactions: WalletTransaction[] = [
-        {
-          id: '1',
-          amount: 100,
-          type: 'admin_gift',
-          description: 'Credito iniziale',
-          created_at: new Date().toISOString(),
-          balance_after: 100,
-        },
-        {
-          id: '2',
-          amount: -25.50,
-          type: 'shipment',
-          description: 'Spedizione #12345 - Milano a Roma',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          balance_after: 74.50,
-        },
-        {
-          id: '3',
-          amount: 50,
-          type: 'recharge',
-          description: 'Ricarica wallet',
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          balance_after: 124.50,
-        },
-        {
-          id: '4',
-          amount: -15.00,
-          type: 'feature',
-          description: 'Attivazione feature Premium',
-          created_at: new Date(Date.now() - 259200000).toISOString(),
-          balance_after: 109.50,
-        },
-      ]
+      // Carica transazioni reali dal database
+      let loadedTransactions: WalletTransaction[] = []
+      const transactionsResponse = await fetch('/api/wallet/transactions')
+      if (transactionsResponse.ok) {
+        const transactionsData = await transactionsResponse.json()
+        if (transactionsData.success && transactionsData.transactions) {
+          // Le transazioni arrivano in ordine decrescente (più recenti prima)
+          // Calcola balance_after partendo dal saldo attuale e andando indietro
+          let runningBalance = walletBalance
+          loadedTransactions = transactionsData.transactions.map((tx: WalletTransaction) => {
+            // Sottrai l'importo per ottenere il saldo prima di questa transazione
+            runningBalance -= tx.amount
+            return {
+              ...tx,
+              balance_after: runningBalance + tx.amount, // Saldo dopo questa transazione
+            }
+          })
+        }
+      }
 
-      setTransactions(mockTransactions)
+      setTransactions(loadedTransactions)
 
-      // Calcola statistiche
-      const totalCredits = mockTransactions
+      // Calcola statistiche dalle transazioni caricate
+      const totalCredits = loadedTransactions
         .filter((t) => t.amount > 0)
         .reduce((sum, t) => sum + t.amount, 0)
 
       const totalDebits = Math.abs(
-        mockTransactions
+        loadedTransactions
           .filter((t) => t.amount < 0)
           .reduce((sum, t) => sum + t.amount, 0)
       )
 
-      const lastRecharge = mockTransactions
+      const lastRecharge = loadedTransactions
         .filter((t) => t.amount > 0)
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
 
@@ -138,10 +123,10 @@ export default function WalletPage() {
         currentBalance: walletBalance,
         totalCredits,
         totalDebits,
-        transactionsCount: mockTransactions.length,
+        transactionsCount: loadedTransactions.length,
         lastRecharge: lastRecharge?.created_at,
-        averageTransaction: mockTransactions.length > 0
-          ? Math.abs(mockTransactions.reduce((sum, t) => sum + t.amount, 0) / mockTransactions.length)
+        averageTransaction: loadedTransactions.length > 0
+          ? Math.abs(loadedTransactions.reduce((sum, t) => sum + t.amount, 0) / loadedTransactions.length)
           : 0,
       })
     } catch (error) {
@@ -174,12 +159,55 @@ export default function WalletPage() {
   const getTransactionTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
       admin_gift: { label: 'Regalo Admin', color: 'bg-purple-100 text-purple-700' },
+      admin_deduction: { label: 'Prelievo Admin', color: 'bg-red-100 text-red-700' },
       recharge: { label: 'Ricarica', color: 'bg-green-100 text-green-700' },
+      self_recharge: { label: 'Ricarica Self', color: 'bg-green-100 text-green-700' },
+      recharge_request: { label: 'Richiesta Ricarica', color: 'bg-yellow-100 text-yellow-700' },
       shipment: { label: 'Spedizione', color: 'bg-blue-100 text-blue-700' },
       feature: { label: 'Feature', color: 'bg-orange-100 text-orange-700' },
       refund: { label: 'Rimborso', color: 'bg-teal-100 text-teal-700' },
+      reseller_recharge: { label: 'Ricarica Reseller', color: 'bg-indigo-100 text-indigo-700' },
     }
     return types[type] || { label: type, color: 'bg-gray-100 text-gray-700' }
+  }
+
+  const handleExportTransactions = () => {
+    try {
+      // Prepara dati CSV
+      const headers = ['Data', 'Tipo', 'Descrizione', 'Importo', 'Saldo Dopo']
+      const rows = filteredTransactions.map(tx => {
+        const typeInfo = getTransactionTypeLabel(tx.type)
+        return [
+          formatDateTime(tx.created_at),
+          typeInfo.label,
+          tx.description,
+          formatCurrency(tx.amount),
+          tx.balance_after !== undefined ? formatCurrency(tx.balance_after) : '-'
+        ]
+      })
+
+      // Crea CSV
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+
+      // Download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `wallet-transazioni-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success('Transazioni esportate con successo!')
+    } catch (error) {
+      console.error('Errore export:', error)
+      toast.error('Errore durante l\'export delle transazioni')
+    }
   }
 
   if (isLoading) {
@@ -200,11 +228,18 @@ export default function WalletPage() {
         subtitle="Gestisci il tuo credito e monitora le transazioni"
         actions={
           <div className="flex gap-3">
-            <Button variant="outline" className="gap-2">
+            <Button 
+              variant="outline" 
+              className="gap-2 border-2 border-gray-300 hover:border-gray-400"
+              onClick={handleExportTransactions}
+            >
               <Download className="w-4 h-4" />
               Esporta
             </Button>
-            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 gap-2">
+            <Button 
+              onClick={() => setRechargeDialogOpen(true)}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 gap-2"
+            >
               <Plus className="w-4 h-4" />
               Ricarica Wallet
             </Button>
@@ -452,6 +487,16 @@ export default function WalletPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recharge Wallet Dialog */}
+      <RechargeWalletDialog
+        isOpen={rechargeDialogOpen}
+        onClose={() => setRechargeDialogOpen(false)}
+        onSuccess={() => {
+          loadWalletData() // Ricarica i dati dopo la ricarica
+        }}
+        currentBalance={walletBalance}
+      />
     </div>
   )
 }

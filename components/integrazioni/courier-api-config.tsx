@@ -406,7 +406,7 @@ export default function CourierAPIConfig() {
                     onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
                     placeholder={field.placeholder}
                     rows={8}
-                    className="w-full px-4 py-3 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-y"
+                    className="w-full px-4 py-3 pr-20 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md font-mono font-medium text-sm text-gray-900 bg-white hover:border-gray-400 transition-all resize-y"
                   />
                   <div className="absolute right-2 top-2 flex items-center gap-1">
                     {formData[field.key] && (
