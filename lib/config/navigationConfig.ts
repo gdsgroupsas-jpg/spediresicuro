@@ -24,6 +24,7 @@ import {
   Zap,
   Building2,
   BookOpen,
+  ScanLine,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -108,9 +109,17 @@ const logisticsSection: NavSection = {
 const aiSection: NavSection = {
   id: 'ai',
   label: 'AI & Automazione',
-  collapsible: false,
+  collapsible: true,
   defaultExpanded: true,
   items: [
+    {
+      id: 'ocr-scanner',
+      label: 'AI OCR Scanner',
+      href: '/dashboard/ocr-scanner',
+      icon: ScanLine,
+      variant: 'gradient',
+      description: 'Scanner OCR per estrazione dati da immagini',
+    },
     {
       id: 'voice-control',
       label: 'Voice Control',

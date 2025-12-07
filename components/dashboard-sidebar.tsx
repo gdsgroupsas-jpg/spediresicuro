@@ -37,6 +37,7 @@ export default function DashboardSidebar() {
   const [accountType, setAccountType] = useState<string | null>(null);
   const [isReseller, setIsReseller] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   // Carica il tipo di account e reseller status
@@ -67,17 +68,22 @@ export default function DashboardSidebar() {
     isReseller,
   });
 
-  // Auto-espandi sezioni se siamo in una pagina relativa
+  // Auto-espandi sezioni se siamo in una pagina relativa (rispetta scelte manuali)
   useEffect(() => {
     const newExpandedSections = new Set<string>();
 
     navigationConfig.sections.forEach((section) => {
+      // Se l'utente ha manualmente chiuso questa sezione, non riaprirla automaticamente
+      if (manuallyCollapsed.has(section.id)) {
+        return;
+      }
+
       // Espandi automaticamente se defaultExpanded è true
       if (section.defaultExpanded) {
         newExpandedSections.add(section.id);
       }
 
-      // Espandi se una delle voci è attiva
+      // Espandi se una delle voci è attiva (sempre, anche se chiusa manualmente)
       const hasActiveItem = section.items.some((item) =>
         isNavItemActive(item.href, pathname || '')
       );
@@ -88,16 +94,28 @@ export default function DashboardSidebar() {
     });
 
     setExpandedSections(newExpandedSections);
-  }, [pathname, navigationConfig]);
+  }, [pathname, navigationConfig, manuallyCollapsed]);
 
   // Toggle espansione sezione
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
+        // Chiudendo manualmente, segna come collassata manualmente
         newSet.delete(sectionId);
+        setManuallyCollapsed((prevCollapsed) => {
+          const newCollapsed = new Set(prevCollapsed);
+          newCollapsed.add(sectionId);
+          return newCollapsed;
+        });
       } else {
+        // Aprendo manualmente, rimuovi dal set delle collassate manualmente
         newSet.add(sectionId);
+        setManuallyCollapsed((prevCollapsed) => {
+          const newCollapsed = new Set(prevCollapsed);
+          newCollapsed.delete(sectionId);
+          return newCollapsed;
+        });
       }
       return newSet;
     });
@@ -201,33 +219,35 @@ export default function DashboardSidebar() {
           
           return (
             <div key={section.id} className="space-y-2">
-              {/* Section Header - Design migliorato con tendina */}
+              {/* Section Header - Design migliorato con tendina - Stile uniforme per menu principali */}
               {section.collapsible ? (
                 <button
                   onClick={() => toggleSection(section.id)}
                   className={cn(
                     "w-full flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all duration-200",
-                    hasActiveItem ? "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700" : "text-gray-600 hover:bg-gray-100",
-                    "border-b-2 border-gray-200"
+                    hasActiveItem 
+                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md" 
+                      : "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200",
+                    "border border-orange-300"
                   )}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-orange-500" />
+                    <ChevronDown className="w-4 h-4" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <ChevronRight className="w-4 h-4" />
                   )}
                   <span className="uppercase tracking-wide">{section.label}</span>
                   {hasActiveItem && !isExpanded && (
-                    <div className="ml-auto w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                    <div className="ml-auto w-2 h-2 rounded-full bg-white animate-pulse" />
                   )}
                 </button>
               ) : (
-                <h3 className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-200">
+                <h3 className="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b-2 border-gray-300 bg-gray-50 rounded-t-lg">
                   {section.label}
                 </h3>
               )}
 
-              {/* Section Items - Sottosezioni con stile distintivo */}
+              {/* Section Items - Sottosezioni con stile uniforme grigio/blu - Stile distintivo per sottomenu */}
               {(!section.collapsible || isExpanded) && (
                 <div className={cn(
                   "pl-2 space-y-1 transition-all duration-300",
@@ -244,14 +264,14 @@ export default function DashboardSidebar() {
                         href={item.href}
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group text-sm",
-                          // Stili per item primario
-                          isPrimaryItem && "bg-gradient-to-r from-orange-400 to-amber-500 text-white font-semibold shadow-sm hover:shadow-md hover:from-orange-500 hover:to-amber-600",
-                          // Stili per item gradient
-                          isGradientItem && "bg-gradient-to-r from-blue-400 to-cyan-500 text-white font-semibold shadow-sm hover:shadow-md hover:from-blue-500 hover:to-cyan-600",
-                          // Stili per item normale attivo
-                          !isPrimaryItem && !isGradientItem && isItemActive && "bg-orange-50 text-orange-700 font-medium border-l-3 border-orange-500 pl-3",
-                          // Stili per item normale inattivo
-                          !isPrimaryItem && !isGradientItem && !isItemActive && "text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:pl-5",
+                          // Stili per item primario (mantieni stile speciale)
+                          isPrimaryItem && "bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-sm hover:shadow-md hover:from-blue-600 hover:to-cyan-600",
+                          // Stili per item gradient (mantieni stile speciale)
+                          isGradientItem && "bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold shadow-sm hover:shadow-md hover:from-purple-600 hover:to-indigo-600",
+                          // Stili uniformi per sottomenu normali - attivo
+                          !isPrimaryItem && !isGradientItem && isItemActive && "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 font-medium border-l-4 border-blue-500 shadow-sm",
+                          // Stili uniformi per sottomenu normali - inattivo (grigio/blu)
+                          !isPrimaryItem && !isGradientItem && !isItemActive && "bg-gray-50 text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-blue-50 hover:text-blue-700 hover:border-l-4 hover:border-blue-300",
                           // Animazione al passaggio del mouse
                           "hover:translate-x-1"
                         )}
@@ -259,7 +279,7 @@ export default function DashboardSidebar() {
                       >
                         <item.icon className={cn(
                           "w-4 h-4 transition-all",
-                          isPrimaryItem || isGradientItem ? "text-white" : "text-gray-400 group-hover:text-orange-500"
+                          isPrimaryItem || isGradientItem ? "text-white" : isItemActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"
                         )} />
                         <span className="flex-1">{item.label}</span>
                         {item.badge && (
@@ -267,7 +287,7 @@ export default function DashboardSidebar() {
                             "text-xs px-2 py-0.5 rounded-full font-medium",
                             isPrimaryItem || isGradientItem 
                               ? "bg-white/20 text-white" 
-                              : "bg-orange-100 text-orange-600"
+                              : "bg-blue-100 text-blue-700"
                           )}>
                             {item.badge}
                           </span>
