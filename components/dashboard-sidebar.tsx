@@ -1,11 +1,11 @@
 /**
- * Dashboard Sidebar Component
+ * Dashboard Sidebar Component - Redesigned
  *
- * Sidebar moderna per desktop con:
- * - Navigazione gerarchica organizzata
- * - Icone e testi chiari
- * - Badges per ruoli admin
- * - Design ispirato a Stripe, Linear, Vercel
+ * Sidebar moderna con:
+ * - Navigazione organizzata gerarchicamente per ruolo
+ * - Sezioni collassabili
+ * - Design marketing-oriented
+ * - Icone e colori distintivi
  */
 
 'use client';
@@ -19,7 +19,6 @@ import {
   Package,
   Plus,
   Mail,
-  Zap,
   Settings,
   FileText,
   Shield,
@@ -30,18 +29,25 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
+  Wallet,
+  Zap,
+  Store,
+  Building2,
+  UserCircle,
 } from 'lucide-react';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [accountType, setAccountType] = useState<string | null>(null);
+  const [isReseller, setIsReseller] = useState(false);
   const [isAdminExpanded, setIsAdminExpanded] = useState(false);
+  const [isAccountExpanded, setIsAccountExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carica il tipo di account
+  // Carica il tipo di account e reseller status
   useEffect(() => {
-    async function loadAccountType() {
+    async function loadUserInfo() {
       if (session?.user?.email) {
         try {
           const response = await fetch('/api/user/info');
@@ -49,24 +55,29 @@ export default function DashboardSidebar() {
             const data = await response.json();
             const userData = data.user || data;
             setAccountType(userData.account_type || null);
+            setIsReseller(userData.is_reseller === true);
           }
         } catch (error) {
-          console.error('Errore caricamento account type:', error);
+          console.error('Errore caricamento info utente:', error);
         } finally {
           setIsLoading(false);
         }
       }
     }
-    loadAccountType();
+    loadUserInfo();
   }, [session]);
 
-  // Auto-espandi admin section se siamo in una pagina admin
+  // Auto-espandi sezioni se siamo in una pagina relativa
   useEffect(() => {
     if (pathname?.startsWith('/dashboard/admin') ||
         pathname?.startsWith('/dashboard/super-admin') ||
-        pathname?.startsWith('/dashboard/team') ||
         pathname?.startsWith('/dashboard/listini')) {
       setIsAdminExpanded(true);
+    }
+    if (pathname?.startsWith('/dashboard/impostazioni') ||
+        pathname?.startsWith('/dashboard/dati-cliente') ||
+        pathname?.startsWith('/dashboard/integrazioni')) {
+      setIsAccountExpanded(true);
     }
   }, [pathname]);
 
@@ -102,8 +113,8 @@ export default function DashboardSidebar() {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
-        {/* Sezione Principale */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        {/* 📊 SEZIONE PRINCIPALE */}
         <div>
           <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
             Principale
@@ -111,7 +122,7 @@ export default function DashboardSidebar() {
           <nav className="space-y-1">
             <Link href="/dashboard" className={navItemClass('/dashboard')}>
               <LayoutDashboard className="w-5 h-5" />
-              <span>Overview</span>
+              <span>Dashboard</span>
             </Link>
 
             <Link href="/dashboard/spedizioni" className={navItemClass('/dashboard/spedizioni')}>
@@ -144,30 +155,54 @@ export default function DashboardSidebar() {
           </nav>
         </div>
 
-        {/* Sezione Gestione */}
+        {/* 💰 SEZIONE RESELLER - Solo per Reseller */}
+        {isReseller && (
+          <div>
+            <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Reseller
+            </h3>
+            <nav className="space-y-1">
+              <Link
+                href="/dashboard/reseller-team"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isActive('/dashboard/reseller-team')
+                    ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 font-semibold shadow-sm'
+                    : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 font-medium'
+                }`}
+              >
+                <Users className="w-5 h-5" />
+                <span>I Miei Clienti</span>
+              </Link>
+
+              <Link
+                href="/dashboard/wallet"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isActive('/dashboard/wallet')
+                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-600 font-semibold shadow-sm'
+                    : 'text-gray-700 hover:bg-green-50 hover:text-green-600 font-medium'
+                }`}
+              >
+                <Wallet className="w-5 h-5" />
+                <span>Wallet</span>
+              </Link>
+            </nav>
+          </div>
+        )}
+
+        {/* 📧 SEZIONE COMUNICAZIONI */}
         <div>
           <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Gestione
+            Comunicazioni
           </h3>
           <nav className="space-y-1">
             <Link href="/dashboard/posta" className={navItemClass('/dashboard/posta')}>
               <Mail className="w-5 h-5" />
               <span>Posta</span>
             </Link>
-
-            <Link href="/dashboard/integrazioni" className={navItemClass('/dashboard/integrazioni')}>
-              <Zap className="w-5 h-5" />
-              <span>Integrazioni</span>
-            </Link>
-
-            <Link href="/dashboard/impostazioni" className={navItemClass('/dashboard/impostazioni')}>
-              <Settings className="w-5 h-5" />
-              <span>Impostazioni</span>
-            </Link>
           </nav>
         </div>
 
-        {/* Sezione Amministrazione - Solo per Admin */}
+        {/* 💼 SEZIONE AMMINISTRAZIONE - Solo per Admin */}
         {isAdmin && (
           <div>
             <button
@@ -218,8 +253,8 @@ export default function DashboardSidebar() {
                       : 'text-gray-700 hover:bg-purple-50 hover:text-purple-600 font-medium'
                   }`}
                 >
-                  <Users className="w-5 h-5" />
-                  <span>Team</span>
+                  <Building2 className="w-5 h-5" />
+                  <span>Team Aziendale</span>
                 </Link>
 
                 <Link
@@ -237,6 +272,63 @@ export default function DashboardSidebar() {
             )}
           </div>
         )}
+
+        {/* ⚙️ SEZIONE IL MIO ACCOUNT */}
+        <div>
+          <button
+            onClick={() => setIsAccountExpanded(!isAccountExpanded)}
+            className="w-full flex items-center justify-between px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 hover:text-gray-600 transition-colors"
+          >
+            <span>Il Mio Account</span>
+            {isAccountExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+
+          {isAccountExpanded && (
+            <nav className="space-y-1">
+              {!isReseller && (
+                <Link
+                  href="/dashboard/wallet"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive('/dashboard/wallet')
+                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-600 font-semibold shadow-sm'
+                      : 'text-gray-700 hover:bg-green-50 hover:text-green-600 font-medium'
+                  }`}
+                >
+                  <Wallet className="w-5 h-5" />
+                  <span>Wallet</span>
+                </Link>
+              )}
+
+              <Link
+                href="/dashboard/dati-cliente"
+                className={navItemClass('/dashboard/dati-cliente')}
+              >
+                <UserCircle className="w-5 h-5" />
+                <span>Dati Cliente</span>
+              </Link>
+
+              <Link
+                href="/dashboard/impostazioni"
+                className={navItemClass('/dashboard/impostazioni')}
+              >
+                <Settings className="w-5 h-5" />
+                <span>Impostazioni</span>
+              </Link>
+
+              <Link
+                href="/dashboard/integrazioni"
+                className={navItemClass('/dashboard/integrazioni')}
+              >
+                <Zap className="w-5 h-5" />
+                <span>Integrazioni</span>
+              </Link>
+            </nav>
+          )}
+        </div>
       </div>
 
       {/* Footer - User Profile */}
@@ -255,11 +347,9 @@ export default function DashboardSidebar() {
               </p>
               <div className="flex items-center gap-1">
                 <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
-                {accountType && (
-                  <span className="text-xs">
-                    {accountType === 'superadmin' ? '👑' : accountType === 'admin' ? '⭐' : ''}
-                  </span>
-                )}
+                {isSuperAdmin && <span className="text-xs">👑</span>}
+                {isAdmin && !isSuperAdmin && <span className="text-xs">⭐</span>}
+                {isReseller && <span className="text-xs">💼</span>}
               </div>
             </div>
           </Link>
