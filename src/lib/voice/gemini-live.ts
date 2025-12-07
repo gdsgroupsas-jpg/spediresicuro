@@ -151,6 +151,10 @@ export class GeminiLiveClient {
       },
     });
 
+    if (!this.mediaStream) {
+      throw new Error('Failed to get media stream');
+    }
+
     const source = this.audioContext.createMediaStreamSource(this.mediaStream);
     const gain = this.audioContext.createGain();
     // Avoid feedback loop: mute the monitoring chain
