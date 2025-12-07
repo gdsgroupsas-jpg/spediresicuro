@@ -449,7 +449,7 @@ export default function LoginPage() {
                     onChange={(e) => setName(e.target.value)}
                     required={mode === 'register'}
                     placeholder="Mario Rossi"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md transition-all bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400"
                     disabled={isLoading}
                   />
                 </div>

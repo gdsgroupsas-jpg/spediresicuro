@@ -418,7 +418,7 @@ export default function SpedisciOnlineConfigMulti() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Es: Configurazione Principale"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
                   style={{ fontSize: '15px' }}
                 />
               </div>
@@ -462,7 +462,7 @@ export default function SpedisciOnlineConfigMulti() {
                     value={formData.dominio}
                     onChange={(e) => setFormData({ ...formData, dominio: e.target.value })}
                     placeholder="ecommerceitalia.spedisci.online"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
                     style={{ fontSize: '15px' }}
                   />
                 </div>

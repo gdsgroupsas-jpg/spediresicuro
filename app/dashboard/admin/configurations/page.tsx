@@ -550,7 +550,7 @@ export default function ConfigurationsPage() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all"
                   placeholder="Es: Account Standard, Account VIP"
                 />
               </div>
@@ -563,7 +563,7 @@ export default function ConfigurationsPage() {
                 <select
                   value={formData.provider_id}
                   onChange={(e) => handleProviderChange(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all"
                 >
                   {AVAILABLE_PROVIDERS.map((provider) => (
                     <option key={provider.id} value={provider.id}>
@@ -610,7 +610,7 @@ export default function ConfigurationsPage() {
                   type="text"
                   value={formData.base_url}
                   onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all"
                   placeholder="https://api.example.com"
                 />
               </div>
@@ -628,7 +628,7 @@ export default function ConfigurationsPage() {
                         value={entry.key}
                         onChange={(e) => updateContractEntry(index, 'key', e.target.value)}
                         placeholder="Servizio (es: poste)"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="flex-1 px-4 py-2.5 border-2 border-gray-300 rounded-lg bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all"
                       />
                       <span className="text-gray-500">→</span>
                       <input
@@ -691,7 +691,7 @@ export default function ConfigurationsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all"
                   placeholder="Descrizione della configurazione"
                 />
               </div>
@@ -700,7 +700,7 @@ export default function ConfigurationsPage() {
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowConfigModal(false)}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2.5 text-gray-900 font-medium bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
               >
                 Annulla
               </button>
@@ -770,7 +770,7 @@ export default function ConfigurationsPage() {
               <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2.5 text-gray-900 font-medium bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
                 >
                   Annulla
                 </button>
@@ -843,7 +843,7 @@ export default function ConfigurationsPage() {
                   setShowDeleteAllModal(false);
                   setDeleteAllConfirm('');
                 }}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2.5 text-gray-900 font-medium bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
               >
                 Annulla
               </button>
