@@ -61,6 +61,11 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
   }, []);
 
   const effectiveUserRole = (accountType || userRole || 'user') as 'user' | 'admin' | 'superadmin';
+  
+  // Per PilotModal, converti superadmin in admin
+  const pilotUserRole: 'admin' | 'user' = 
+    effectiveUserRole === 'superadmin' ? 'admin' : 
+    (effectiveUserRole === 'admin' ? 'admin' : 'user');
 
   return (
     <AnneProvider>
@@ -72,7 +77,7 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
           isOpen={showAiAssistant}
           onClose={() => setShowAiAssistant(false)}
           userId={session.user.id || ''}
-          userRole={(accountType as 'admin' | 'user') || (userRole as 'admin' | 'user') || 'user'}
+          userRole={pilotUserRole}
           userName={session.user.name || session.user.email || 'Utente'}
         />
       )}

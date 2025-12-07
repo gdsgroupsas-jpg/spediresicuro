@@ -277,8 +277,9 @@ export default function DashboardSidebar() {
                   })}
                 </div>
               )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Footer - User Profile con design migliorato */}
