@@ -214,7 +214,7 @@ export default function PlatformFeaturesPage() {
           <p className="text-gray-600 mb-4">{error || 'Solo gli admin possono accedere a questa pagina'}</p>
           <div className="mt-4 p-4 bg-gray-50 rounded-lg text-left text-sm">
             <p className="font-semibold mb-2">Debug Info:</p>
-            <p className="text-gray-600">Apri la console del browser (F12) per vedere i dettagli dell'errore.</p>
+            <p className="text-gray-600">Apri la console del browser (F12) per vedere i dettagli dell&apos;errore.</p>
             <p className="text-gray-600 mt-2">Cerca i log che iniziano con: 🔍 [FEATURES]</p>
           </div>
         </div>
