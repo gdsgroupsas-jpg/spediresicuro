@@ -13,7 +13,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
   Package,
@@ -63,38 +63,47 @@ export default function DashboardSidebar() {
   }, [session]);
 
   // Ottieni la configurazione di navigazione per l'utente corrente
+  // ⚠️ Usa useMemo per evitare ricreazioni ad ogni render (risolve "Maximum update depth exceeded")
   const userRole: UserRole = (accountType as UserRole) || 'user';
-  const navigationConfig = getNavigationForUser(userRole, {
-    isReseller,
-  });
+  const navigationConfig = useMemo(() => {
+    return getNavigationForUser(userRole, {
+      isReseller,
+    });
+  }, [userRole, isReseller]);
+  
+  // ⚠️ Memoizza anche manuallyCollapsed per stabilità
+  const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
 
   // Auto-espandi sezioni se siamo in una pagina relativa (rispetta scelte manuali)
+  // ⚠️ Usa functional update per setExpandedSections e dipendenze stabili
   useEffect(() => {
-    const newExpandedSections = new Set<string>();
+    setExpandedSections((prevExpanded) => {
+      const newExpandedSections = new Set<string>();
 
-    navigationConfig.sections.forEach((section) => {
-      // Se l'utente ha manualmente chiuso questa sezione, non riaprirla automaticamente
-      if (manuallyCollapsed.has(section.id)) {
-        return;
-      }
+      navigationConfig.sections.forEach((section) => {
+        // Se l'utente ha manualmente chiuso questa sezione, non riaprirla automaticamente
+        if (manuallyCollapsedMemo.has(section.id)) {
+          return;
+        }
 
-      // Espandi automaticamente se defaultExpanded è true
-      if (section.defaultExpanded) {
-        newExpandedSections.add(section.id);
-      }
+        // Espandi automaticamente se defaultExpanded è true
+        if (section.defaultExpanded) {
+          newExpandedSections.add(section.id);
+        }
 
-      // Espandi se una delle voci è attiva (sempre, anche se chiusa manualmente)
-      const hasActiveItem = section.items.some((item) =>
-        isNavItemActive(item.href, pathname || '')
-      );
+        // Espandi se una delle voci è attiva (sempre, anche se chiusa manualmente)
+        const hasActiveItem = section.items.some((item) =>
+          isNavItemActive(item.href, pathname || '')
+        );
 
-      if (hasActiveItem) {
-        newExpandedSections.add(section.id);
-      }
+        if (hasActiveItem) {
+          newExpandedSections.add(section.id);
+        }
+      });
+
+      return newExpandedSections;
     });
-
-    setExpandedSections(newExpandedSections);
-  }, [pathname, navigationConfig, manuallyCollapsed]);
+  }, [pathname, navigationConfig, manuallyCollapsedMemo]);
 
   // Toggle espansione sezione
   const toggleSection = (sectionId: string) => {
