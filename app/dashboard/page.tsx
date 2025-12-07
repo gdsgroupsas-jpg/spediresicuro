@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import DashboardNav from '@/components/dashboard-nav';
+import PageHeader from '@/components/page-header';
 import UserFeaturesList from '@/components/features/user-features-list';
 import { Shield, ArrowRight } from 'lucide-react';
 
@@ -398,14 +398,15 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation */}
-        <DashboardNav
-          title="Dashboard"
-          subtitle="Panoramica completa delle tue attività di spedizione"
-          showBackButton={false}
-        />
+      {/* Page Header */}
+      <PageHeader
+        title="Dashboard"
+        subtitle="Panoramica completa delle tue attività di spedizione"
+        showBackButton={false}
+      />
 
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
