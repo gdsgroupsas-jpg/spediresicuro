@@ -28,9 +28,12 @@ interface CashOnDeliveryShipment {
   created_at: string;
   shipped_at: string | null;
   // Calcolati
-  paymentStatus: 'pending' | 'delivered' | 'payment_expected' | 'paid';
+  paymentStatus: 'pending' | 'delivered' | 'payment_expected' | 'paid' | 'in_carica' | 'evaso';
   expectedPaymentDate: string | null;
   daysSinceDelivery: number | null;
+  // Stato contrassegno
+  contrassegnoInCarica: boolean;
+  contrassegnoEvaso: boolean;
 }
 
 type FilterStatus = 'all' | 'pending' | 'delivered' | 'payment_expected' | 'paid' | 'in_carica' | 'evaso';
@@ -46,6 +49,7 @@ export default function ContrassegniPage() {
     if (session?.user?.email) {
       loadContrassegni();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   async function loadContrassegni() {
