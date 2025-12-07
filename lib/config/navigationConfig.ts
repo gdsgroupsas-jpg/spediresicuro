@@ -183,7 +183,7 @@ const resellerSection: NavSection = {
   id: 'reseller',
   label: 'Reseller',
   collapsible: true,
-  defaultExpanded: false,
+  defaultExpanded: true,
   requiredFeature: 'reseller',
   items: [
     {
@@ -203,7 +203,7 @@ const adminSection: NavSection = {
   id: 'admin',
   label: 'Amministrazione',
   collapsible: true,
-  defaultExpanded: false,
+  defaultExpanded: true,
   requiredRole: ['admin', 'superadmin'],
   items: [
     {
@@ -244,8 +244,15 @@ const accountSection: NavSection = {
   id: 'account',
   label: 'Il Mio Account',
   collapsible: true,
-  defaultExpanded: false,
+  defaultExpanded: true,
   items: [
+    {
+      id: 'wallet',
+      label: 'Wallet',
+      href: '/dashboard/wallet',
+      icon: Wallet,
+      description: 'Ricariche e transazioni',
+    },
     {
       id: 'profile',
       label: 'Dati Cliente',
@@ -289,9 +296,6 @@ export function getNavigationForUser(
     communicationsSection,
     supportSection,
   ];
-
-  // Aggiungi finanze (sempre visibile, modificato in base a isReseller)
-  sections.push(financeSection);
 
   // Aggiungi sezione reseller solo se l'utente è reseller
   if (isReseller) {
