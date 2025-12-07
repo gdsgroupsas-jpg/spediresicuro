@@ -68,6 +68,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'SpedireSicuro',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({
@@ -76,14 +79,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="it">
+    <html lang="it" suppressHydrationWarning>
       <head>
         {/* Favicon SVG (funziona subito, senza bisogno di file esterni) */}
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         {/* Fallback per browser che non supportano SVG favicon */}
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <Providers>
           {children}
           <CookieBanner />
