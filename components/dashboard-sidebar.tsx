@@ -35,6 +35,7 @@ import {
   Store,
   Building2,
   UserCircle,
+  BookOpen,
 } from 'lucide-react';
 
 export default function DashboardSidebar() {
@@ -211,6 +212,19 @@ export default function DashboardSidebar() {
             <Link href="/dashboard/posta" className={navItemClass('/dashboard/posta')}>
               <Mail className="w-5 h-5" />
               <span>Posta</span>
+            </Link>
+          </nav>
+        </div>
+
+        {/* Manuale / Supporto */}
+        <div>
+          <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Supporto
+          </h3>
+          <nav className="space-y-1">
+            <Link href="/manuale" className={navItemClass('/manuale')}>
+              <BookOpen className="w-5 h-5" />
+              <span>Manuale Utente</span>
             </Link>
           </nav>
         </div>
