@@ -151,20 +151,23 @@ export class GeminiLiveClient {
       },
     });
 
-    if (!this.mediaStream) {
-      throw new Error('Failed to get media stream');
+    if (!this.mediaStream || !this.audioContext) {
+      throw new Error('Failed to initialize audio pipeline');
     }
 
-    const mediaStream = this.mediaStream; // Local reference for TypeScript
-    const source = this.audioContext.createMediaStreamSource(mediaStream);
-    const gain = this.audioContext.createGain();
+    // Local references for TypeScript type narrowing
+    const mediaStream = this.mediaStream;
+    const audioContext = this.audioContext;
+    
+    const source = audioContext.createMediaStreamSource(mediaStream);
+    const gain = audioContext.createGain();
     // Avoid feedback loop: mute the monitoring chain
     gain.gain.value = 0;
 
-    this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+    this.processor = audioContext.createScriptProcessor(4096, 1, 1);
     source.connect(this.processor);
     this.processor.connect(gain);
-    gain.connect(this.audioContext.destination);
+    gain.connect(audioContext.destination);
 
     this.processor.onaudioprocess = (event: AudioProcessingEvent) => {
       const input = event.inputBuffer.getChannelData(0);
