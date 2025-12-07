@@ -6,6 +6,7 @@
  * - Sezioni collassabili
  * - Design marketing-oriented
  * - Icone e colori distintivi
+ * - Configurazione dinamica tramite navigationConfig
  */
 
 'use client';
@@ -15,35 +16,26 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
-  LayoutDashboard,
   Package,
-  Plus,
-  Mail,
-  Settings,
-  FileText,
-  Shield,
-  Users,
-  Crown,
   User,
   LogOut,
-  Bot,
-  Mic,
   ChevronDown,
   ChevronRight,
-  Wallet,
-  Zap,
-  Store,
-  Building2,
-  UserCircle,
 } from 'lucide-react';
+import {
+  getNavigationForUser,
+  isNavItemActive,
+  navItemVariants,
+  type UserRole,
+  type NavSection,
+} from '@/lib/config/navigationConfig';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [accountType, setAccountType] = useState<string | null>(null);
   const [isReseller, setIsReseller] = useState(false);
-  const [isAdminExpanded, setIsAdminExpanded] = useState(false);
-  const [isAccountExpanded, setIsAccountExpanded] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   // Carica il tipo di account e reseller status
@@ -68,36 +60,58 @@ export default function DashboardSidebar() {
     loadUserInfo();
   }, [session]);
 
+  // Ottieni la configurazione di navigazione per l'utente corrente
+  const userRole: UserRole = (accountType as UserRole) || 'user';
+  const navigationConfig = getNavigationForUser(userRole, {
+    isReseller,
+  });
+
   // Auto-espandi sezioni se siamo in una pagina relativa
   useEffect(() => {
-    if (pathname?.startsWith('/dashboard/admin') ||
-        pathname?.startsWith('/dashboard/super-admin') ||
-        pathname?.startsWith('/dashboard/listini')) {
-      setIsAdminExpanded(true);
-    }
-    if (pathname?.startsWith('/dashboard/impostazioni') ||
-        pathname?.startsWith('/dashboard/dati-cliente') ||
-        pathname?.startsWith('/dashboard/integrazioni')) {
-      setIsAccountExpanded(true);
-    }
-  }, [pathname]);
+    const newExpandedSections = new Set<string>();
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return pathname === '/dashboard';
-    }
-    return pathname?.startsWith(path);
+    navigationConfig.sections.forEach((section) => {
+      // Espandi automaticamente se defaultExpanded è true
+      if (section.defaultExpanded) {
+        newExpandedSections.add(section.id);
+      }
+
+      // Espandi se una delle voci è attiva
+      const hasActiveItem = section.items.some((item) =>
+        isNavItemActive(item.href, pathname || '')
+      );
+
+      if (hasActiveItem) {
+        newExpandedSections.add(section.id);
+      }
+    });
+
+    setExpandedSections(newExpandedSections);
+  }, [pathname, navigationConfig]);
+
+  // Toggle espansione sezione
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
   };
 
-  const navItemClass = (path: string) => {
+  // Helper per ottenere le classi CSS di un nav item
+  const getNavItemClass = (href: string, variant: string = 'default') => {
+    const isActive = isNavItemActive(href, pathname || '');
+    const variantStyles = navItemVariants[variant as keyof typeof navItemVariants] || navItemVariants.default;
+
     return `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-      isActive(path)
-        ? 'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 font-semibold shadow-sm'
-        : 'text-gray-700 hover:bg-gray-50 hover:text-orange-600 font-medium'
+      isActive ? variantStyles.active : variantStyles.inactive
     }`;
   };
 
-  const isAdmin = accountType === 'admin' || accountType === 'superadmin';
   const isSuperAdmin = accountType === 'superadmin';
 
   return (
@@ -115,233 +129,89 @@ export default function DashboardSidebar() {
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-        {/* 📊 SEZIONE PRINCIPALE */}
-        <div>
-          <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Principale
-          </h3>
-          <nav className="space-y-1">
-            <Link href="/dashboard" className={navItemClass('/dashboard')}>
-              <LayoutDashboard className="w-5 h-5" />
-              <span>Dashboard</span>
-            </Link>
-
-            <Link href="/dashboard/spedizioni" className={navItemClass('/dashboard/spedizioni')}>
-              <Package className="w-5 h-5" />
-              <span>Spedizioni</span>
-            </Link>
-
-            <Link
-              href="/dashboard/spedizioni/nuova"
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isActive('/dashboard/spedizioni/nuova')
-                  ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white font-semibold shadow-lg'
-                  : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold hover:shadow-lg hover:scale-[1.02]'
-              }`}
-            >
-              <Plus className="w-5 h-5" />
-              <span>Nuova Spedizione</span>
-            </Link>
-
-            <button
-              onClick={() => {
-                const event = new CustomEvent('openAiAssistant');
-                window.dispatchEvent(event);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
-            >
-              <Bot className="w-5 h-5" />
-              <span>AI Assistant</span>
-            </button>
-
-            <Link
-              href="/dashboard/voice"
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                isActive('/dashboard/voice')
-                  ? 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-600 font-semibold shadow-sm'
-                  : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium'
-              }`}
-            >
-              <Mic className="w-5 h-5" />
-              <span>Voice Control</span>
-            </Link>
-          </nav>
-        </div>
-
-        {/* 💰 SEZIONE RESELLER - Solo per Reseller */}
-        {isReseller && (
-          <div>
-            <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-              Reseller
-            </h3>
-            <nav className="space-y-1">
-              <Link
-                href="/dashboard/reseller-team"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive('/dashboard/reseller-team')
-                    ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600 font-semibold shadow-sm'
-                    : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 font-medium'
-                }`}
+        {/* Main Actions */}
+        {navigationConfig.mainActions.map((action) => (
+          <div key={action.id}>
+            {action.href === '#ai-assistant' ? (
+              <button
+                onClick={() => {
+                  const event = new CustomEvent('openAiAssistant');
+                  window.dispatchEvent(event);
+                }}
+                className={getNavItemClass(action.href, action.variant)}
+                title={action.description}
               >
-                <Users className="w-5 h-5" />
-                <span>I Miei Clienti</span>
-              </Link>
-
-              <Link
-                href="/dashboard/wallet"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive('/dashboard/wallet')
-                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-600 font-semibold shadow-sm'
-                    : 'text-gray-700 hover:bg-green-50 hover:text-green-600 font-medium'
-                }`}
-              >
-                <Wallet className="w-5 h-5" />
-                <span>Wallet</span>
-              </Link>
-            </nav>
-          </div>
-        )}
-
-        {/* 📧 SEZIONE COMUNICAZIONI */}
-        <div>
-          <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Comunicazioni
-          </h3>
-          <nav className="space-y-1">
-            <Link href="/dashboard/posta" className={navItemClass('/dashboard/posta')}>
-              <Mail className="w-5 h-5" />
-              <span>Posta</span>
-            </Link>
-          </nav>
-        </div>
-
-        {/* 💼 SEZIONE AMMINISTRAZIONE - Solo per Admin */}
-        {isAdmin && (
-          <div>
-            <button
-              onClick={() => setIsAdminExpanded(!isAdminExpanded)}
-              className="w-full flex items-center justify-between px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 hover:text-gray-600 transition-colors"
-            >
-              <span>Amministrazione</span>
-              {isAdminExpanded ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-            </button>
-
-            {isAdminExpanded && (
-              <nav className="space-y-1">
-                {isSuperAdmin && (
-                  <Link
-                    href="/dashboard/super-admin"
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive('/dashboard/super-admin')
-                        ? 'bg-gradient-to-r from-red-50 to-rose-50 text-red-600 font-semibold shadow-sm'
-                        : 'text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium'
-                    }`}
-                  >
-                    <Crown className="w-5 h-5" />
-                    <span>Super Admin</span>
-                  </Link>
+                <action.icon className="w-5 h-5" />
+                <span>{action.label}</span>
+                {action.badge && (
+                  <span className="ml-auto text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+                    {action.badge}
+                  </span>
                 )}
+              </button>
+            ) : (
+              <Link
+                href={action.href}
+                className={getNavItemClass(action.href, action.variant)}
+                title={action.description}
+              >
+                <action.icon className="w-5 h-5" />
+                <span>{action.label}</span>
+                {action.badge && (
+                  <span className="ml-auto text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+                    {action.badge}
+                  </span>
+                )}
+              </Link>
+            )}
+          </div>
+        ))}
 
-                <Link
-                  href="/dashboard/admin"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive('/dashboard/admin')
-                      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 font-semibold shadow-sm'
-                      : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-medium'
-                  }`}
-                >
-                  <Shield className="w-5 h-5" />
-                  <span>Admin Panel</span>
-                </Link>
+        {/* Sections */}
+        {navigationConfig.sections.map((section) => (
+          <div key={section.id}>
+            {/* Section Header */}
+            {section.collapsible ? (
+              <button
+                onClick={() => toggleSection(section.id)}
+                className="w-full flex items-center justify-between px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 hover:text-gray-600 transition-colors"
+              >
+                <span>{section.label}</span>
+                {expandedSections.has(section.id) ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </button>
+            ) : (
+              <h3 className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                {section.label}
+              </h3>
+            )}
 
-                <Link
-                  href="/dashboard/team"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive('/dashboard/team')
-                      ? 'bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-600 font-semibold shadow-sm'
-                      : 'text-gray-700 hover:bg-purple-50 hover:text-purple-600 font-medium'
-                  }`}
-                >
-                  <Building2 className="w-5 h-5" />
-                  <span>Team Aziendale</span>
-                </Link>
-
-                <Link
-                  href="/dashboard/listini"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive('/dashboard/listini')
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-600 font-semibold shadow-sm'
-                      : 'text-gray-700 hover:bg-green-50 hover:text-green-600 font-medium'
-                  }`}
-                >
-                  <FileText className="w-5 h-5" />
-                  <span>Listini</span>
-                </Link>
+            {/* Section Items */}
+            {(!section.collapsible || expandedSections.has(section.id)) && (
+              <nav className="space-y-1">
+                {section.items.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={getNavItemClass(item.href, item.variant)}
+                    title={item.description}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className="ml-auto text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                ))}
               </nav>
             )}
           </div>
-        )}
-
-        {/* ⚙️ SEZIONE IL MIO ACCOUNT */}
-        <div>
-          <button
-            onClick={() => setIsAccountExpanded(!isAccountExpanded)}
-            className="w-full flex items-center justify-between px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 hover:text-gray-600 transition-colors"
-          >
-            <span>Il Mio Account</span>
-            {isAccountExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-
-          {isAccountExpanded && (
-            <nav className="space-y-1">
-              {!isReseller && (
-                <Link
-                  href="/dashboard/wallet"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive('/dashboard/wallet')
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-600 font-semibold shadow-sm'
-                      : 'text-gray-700 hover:bg-green-50 hover:text-green-600 font-medium'
-                  }`}
-                >
-                  <Wallet className="w-5 h-5" />
-                  <span>Wallet</span>
-                </Link>
-              )}
-
-              <Link
-                href="/dashboard/dati-cliente"
-                className={navItemClass('/dashboard/dati-cliente')}
-              >
-                <UserCircle className="w-5 h-5" />
-                <span>Dati Cliente</span>
-              </Link>
-
-              <Link
-                href="/dashboard/impostazioni"
-                className={navItemClass('/dashboard/impostazioni')}
-              >
-                <Settings className="w-5 h-5" />
-                <span>Impostazioni</span>
-              </Link>
-
-              <Link
-                href="/dashboard/integrazioni"
-                className={navItemClass('/dashboard/integrazioni')}
-              >
-                <Zap className="w-5 h-5" />
-                <span>Integrazioni</span>
-              </Link>
-            </nav>
-          )}
-        </div>
+        ))}
       </div>
 
       {/* Footer - User Profile */}
