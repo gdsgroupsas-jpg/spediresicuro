@@ -449,7 +449,7 @@ export default function TeamManagementPage() {
                     required
                     disabled={isCreating}
                     placeholder="subadmin@esempio.it"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400 disabled:opacity-50"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 disabled:opacity-50 disabled:bg-gray-100"
                   />
                 </div>
 
@@ -465,7 +465,7 @@ export default function TeamManagementPage() {
                     required
                     disabled={isCreating}
                     placeholder="Mario Rossi"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400 disabled:opacity-50"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 disabled:opacity-50 disabled:bg-gray-100"
                   />
                 </div>
 
@@ -480,7 +480,7 @@ export default function TeamManagementPage() {
                     onChange={(e) => setInvitePassword(e.target.value)}
                     disabled={isCreating}
                     placeholder="Lascia vuoto per generare password automatica"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400 disabled:opacity-50"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400 disabled:opacity-50 disabled:bg-gray-100"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Se lasci vuoto, verrà generata una password casuale da comunicare al nuovo admin

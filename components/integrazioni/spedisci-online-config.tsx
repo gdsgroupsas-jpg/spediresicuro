@@ -217,7 +217,7 @@ export default function SpedisciOnlineConfig() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="Incolla qui la tua API Key"
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
+                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-mono text-gray-900 font-medium bg-white hover:border-gray-400 transition-all"
                   style={{ fontSize: '15px', letterSpacing: '0.5px', color: '#111827' }}
                 />
                 <button
@@ -244,7 +244,7 @@ export default function SpedisciOnlineConfig() {
                 value={dominio}
                 onChange={(e) => setDominio(e.target.value)}
                 placeholder="ecommerceitalia.spedisci.online"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
                   style={{ fontSize: '15px', color: '#111827' }}
               />
             </div>
@@ -259,7 +259,7 @@ export default function SpedisciOnlineConfig() {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://ecommerceitalia.spedisci.online/api/v2/"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-mono font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
                   style={{ fontSize: '15px', color: '#111827' }}
             />
           </div>

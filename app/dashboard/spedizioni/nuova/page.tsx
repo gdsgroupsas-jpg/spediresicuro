@@ -106,13 +106,13 @@ function SmartInput({
           onChange={(e) => onChange(e.target.value)}
           required={required}
           placeholder={placeholder}
-          className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+          className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
             showError
-              ? 'border-red-300 ring-2 ring-red-100 focus:ring-red-500 focus:border-red-500'
+              ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500 focus:border-red-600 bg-red-50'
               : showValid
-              ? 'border-green-300 ring-2 ring-green-100 focus:ring-green-500 focus:border-green-500'
-              : 'border-gray-200 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500]'
-          } focus:outline-none`}
+              ? 'border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50'
+              : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+          } focus:outline-none placeholder:text-gray-500`}
         />
         {showValid && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
@@ -684,13 +684,13 @@ export default function NuovaSpedizionePage() {
                         onChange={(e) => setFormData((prev) => ({ ...prev, peso: e.target.value }))}
                         required
                         placeholder="0.00"
-                        className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white ${
+                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
                           validation.peso
-                            ? 'border-green-300 ring-2 ring-green-100'
+                            ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
                             : formData.peso
-                            ? 'border-red-300 ring-2 ring-red-100'
-                            : 'border-gray-200 focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500]'
-                        } focus:outline-none`}
+                            ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
+                            : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+                        } focus:outline-none placeholder:text-gray-500`}
                       />
                       {validation.peso && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
@@ -711,7 +711,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.lunghezza}
                       onChange={(e) => setFormData((prev) => ({ ...prev, lunghezza: e.target.value }))}
                       placeholder="0.0"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium hover:border-gray-400 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md focus:outline-none placeholder:text-gray-500"
                     />
                   </div>
 
@@ -726,7 +726,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.larghezza}
                       onChange={(e) => setFormData((prev) => ({ ...prev, larghezza: e.target.value }))}
                       placeholder="0.0"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium hover:border-gray-400 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md focus:outline-none placeholder:text-gray-500"
                     />
                   </div>
 
@@ -741,7 +741,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.altezza}
                       onChange={(e) => setFormData((prev) => ({ ...prev, altezza: e.target.value }))}
                       placeholder="0.0"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium hover:border-gray-400 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md focus:outline-none placeholder:text-gray-500"
                     />
                   </div>
                 </div>
@@ -755,7 +755,7 @@ export default function NuovaSpedizionePage() {
                       value={formData.tipoSpedizione}
                       onChange={(e) => setFormData((prev) => ({ ...prev, tipoSpedizione: e.target.value }))}
                       required
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium hover:border-gray-400 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md focus:outline-none placeholder:text-gray-500"
                     >
                       <option value="standard">📦 Standard</option>
                       <option value="express">⚡ Express</option>
@@ -772,7 +772,7 @@ export default function NuovaSpedizionePage() {
                       onChange={(e) => setFormData((prev) => ({ ...prev, note: e.target.value }))}
                       rows={3}
                       placeholder="Note aggiuntive..."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 bg-gray-50 hover:bg-white focus:bg-white focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] focus:outline-none resize-none"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium hover:border-gray-400 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md focus:outline-none placeholder:text-gray-500 resize-none"
                     />
                   </div>
                 </div>
@@ -941,7 +941,7 @@ export default function NuovaSpedizionePage() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        className="px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2 text-sm font-medium text-gray-700"
+                        className="px-4 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-100 hover:border-gray-400 transition-all flex items-center justify-center gap-2 text-sm font-medium text-gray-900 bg-white"
                       >
                         <Save className="w-4 h-4" />
                         Salva Bozza
@@ -949,7 +949,7 @@ export default function NuovaSpedizionePage() {
                       <button
                         type="button"
                         onClick={() => window.history.back()}
-                        className="px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2 text-sm font-medium text-gray-700"
+                        className="px-4 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-100 hover:border-gray-400 transition-all flex items-center justify-center gap-2 text-sm font-medium text-gray-900 bg-white"
                       >
                         <X className="w-4 h-4" />
                         Annulla

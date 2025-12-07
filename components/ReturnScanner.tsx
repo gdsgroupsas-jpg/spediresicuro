@@ -391,7 +391,7 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
                   value={originalTracking}
                   onChange={(e) => setOriginalTracking(e.target.value.toUpperCase())}
                   placeholder="Inserisci tracking o LDV spedizione originale"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md transition-all bg-white text-gray-900 font-medium placeholder:text-gray-500 hover:border-gray-400"
                   disabled={isProcessing}
                 />
               </div>
