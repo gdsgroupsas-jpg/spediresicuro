@@ -36,3 +36,4 @@ COMMENT ON TABLE diagnostics_events IS 'Tabella per eventi di diagnostica, error
 COMMENT ON COLUMN diagnostics_events.type IS 'Tipo evento: error, warning, info, performance, user_action';
 COMMENT ON COLUMN diagnostics_events.severity IS 'Severità: critical, high, medium, low, info';
 COMMENT ON COLUMN diagnostics_events.context IS 'Contesto JSON con dettagli aggiuntivi dell''evento (max 10KB, max 3 livelli profondità)';
+
