@@ -61,11 +61,6 @@ export default defineConfig({
       'x-test-mode': 'playwright',
     },
   },
-  
-  // Imposta variabili d'ambiente per il webServer
-  env: {
-    PLAYWRIGHT_TEST_MODE: 'true',
-  },
 
   // Configurazione progetti (browser)
   projects: [
