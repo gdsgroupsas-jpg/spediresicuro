@@ -166,16 +166,103 @@ export interface SyncResult {
 }
 
 // ============================================
-// CLASSE PRINCIPALE: SpedisciOnlineAgent
+// CLASSE PRINCIPALE: SOA (SpedisciOnlineAgent)
 // ============================================
 
-class SpedisciOnlineAgent {
+class SOA {
   private settings: AutomationSettings;
   private baseUrl: string;
 
   constructor(settings: AutomationSettings, baseUrl: string) {
     this.settings = settings;
     this.baseUrl = baseUrl;
+  }
+
+  /**
+   * Metodo privato per eseguire login centralizzato
+   * Gestisce navigazione, inserimento credenziali, submit e 2FA (max 2 tentativi)
+   */
+  private async performLogin(page: any, settings: AutomationSettings, baseUrl: string): Promise<void> {
+    try {
+      // Naviga alla pagina di login
+      await page.goto(`${baseUrl}/login`, {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+
+      // Inserisci credenziali
+      await page.type('input[name="email"]', settings.spedisci_online_username);
+      await page.type('input[name="password"]', settings.spedisci_online_password);
+      await page.click('button[type="submit"]');
+      await page.waitForTimeout(2000);
+
+      // Gestione 2FA (max 2 tentativi)
+      let needs2FA = await page.evaluate(() => {
+        return document.body.textContent?.includes('codice') || 
+               document.querySelector('input[name="code"]') !== null;
+      });
+
+      if (needs2FA) {
+        let code2FA: string | null = null;
+        let attempts = 0;
+        const maxAttempts = 2;
+
+        while (needs2FA && attempts < maxAttempts) {
+          attempts++;
+          
+          if (settings.two_factor_method === 'email') {
+            code2FA = await this.read2FACode();
+            if (!code2FA) {
+              if (attempts >= maxAttempts) {
+                throw new Error('Impossibile leggere codice 2FA da email dopo 2 tentativi');
+              }
+              // Attendi un po' e riprova
+              await page.waitForTimeout(3000);
+              continue;
+            }
+          } else {
+            throw new Error('2FA manuale non supportato in questo servizio');
+          }
+
+          // Inserisci codice 2FA
+          const codeInput = await page.$('input[name="code"], input[name="otp"]');
+          if (codeInput) {
+            await codeInput.type(code2FA);
+          }
+          
+          const submitButton = await page.$('button[type="submit"]');
+          if (submitButton) {
+            await submitButton.click();
+          }
+          
+          await page.waitForTimeout(2000);
+
+          // Verifica se ancora serve 2FA
+          needs2FA = await page.evaluate(() => {
+            return document.body.textContent?.includes('codice') || 
+                   document.querySelector('input[name="code"]') !== null;
+          });
+        }
+
+        if (needs2FA) {
+          throw new Error('2FA non completata dopo 2 tentativi');
+        }
+      }
+
+      // Verifica login riuscito
+      const loginSuccess = await page.evaluate(() => {
+        return !window.location.href.includes('/login');
+      });
+
+      if (!loginSuccess) {
+        throw new Error('Login fallito');
+      }
+
+    } catch (error: any) {
+      // Log errore generico senza esporre password
+      console.error('❌ [LOGIN] LOGIN_FAILED:', error.message || 'Errore sconosciuto durante login');
+      throw new Error('LOGIN_FAILED');
+    }
   }
 
   async extractSessionData(configId?: string, forceRefresh: boolean = false): Promise<ExtractionResult> {
@@ -238,56 +325,8 @@ class SpedisciOnlineAgent {
 
       const page = await browser.newPage();
 
-      // Login
-      await page.goto(`${this.baseUrl}/login`, {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
-      });
-
-      await page.type('input[name="email"]', this.settings.spedisci_online_username);
-      await page.type('input[name="password"]', this.settings.spedisci_online_password);
-      await page.click('button[type="submit"]');
-      await page.waitForTimeout(2000);
-
-      // Gestione 2FA
-      const needs2FA = await page.evaluate(() => {
-        return document.body.textContent?.includes('codice') || 
-               document.querySelector('input[name="code"]') !== null;
-      });
-
-      if (needs2FA) {
-        let code2FA: string | null = null;
-        
-        if (this.settings.two_factor_method === 'email') {
-          code2FA = await this.read2FACode();
-          if (!code2FA) {
-            throw new Error('Impossibile leggere codice 2FA da email');
-          }
-        } else {
-          throw new Error('2FA manuale non supportato in questo servizio');
-        }
-
-        const codeInput = await page.$('input[name="code"], input[name="otp"]');
-        if (codeInput) {
-          await codeInput.type(code2FA);
-        }
-        
-        const submitButton = await page.$('button[type="submit"]');
-        if (submitButton) {
-          await submitButton.click();
-        }
-        
-        await page.waitForTimeout(2000);
-      }
-
-      // Verifica login
-      const loginSuccess = await page.evaluate(() => {
-        return !window.location.href.includes('/login');
-      });
-
-      if (!loginSuccess) {
-        throw new Error('Login fallito');
-      }
+      // Login centralizzato
+      await this.performLogin(page, this.settings, this.baseUrl);
 
       // Estrai CSRF token
       await page.goto(`${this.baseUrl}/shippings/create`, {
@@ -626,49 +665,9 @@ class SpedisciOnlineAgent {
         page.setDefaultTimeout(30000);
         page.setDefaultNavigationTimeout(30000);
 
-        // Login
+        // Login centralizzato
         console.log('🔐 [SYNC SHIPMENTS] Esecuzione login...');
-        await page.goto(`${config.base_url}/login`, {
-          waitUntil: 'networkidle2',
-          timeout: 30000,
-        });
-
-        await page.type('input[name="email"]', settings.spedisci_online_username);
-        await page.type('input[name="password"]', settings.spedisci_online_password);
-        await page.click('button[type="submit"]');
-        await page.waitForTimeout(2000);
-
-        // Gestione 2FA
-        const needs2FA = await page.evaluate(() => {
-          return document.body.textContent?.includes('codice') || 
-                 document.querySelector('input[name="code"]') !== null;
-        });
-
-        if (needs2FA) {
-          if (settings.two_factor_method === 'email') {
-            const code2FA = await this.read2FACode();
-            if (code2FA) {
-              const codeInput = await page.$('input[name="code"], input[name="otp"]');
-              if (codeInput) {
-                await codeInput.type(code2FA);
-              }
-              const submitButton = await page.$('button[type="submit"]');
-              if (submitButton) {
-                await submitButton.click();
-              }
-              await page.waitForTimeout(2000);
-            }
-          }
-        }
-
-        // Verifica login
-        const loginSuccess = await page.evaluate(() => {
-          return !window.location.href.includes('/login');
-        });
-
-        if (!loginSuccess) {
-          throw new Error('Login fallito');
-        }
+        await this.performLogin(page, settings, config.base_url);
 
         // Naviga alla pagina spedizioni
         console.log('📦 [SYNC SHIPMENTS] Navigazione a pagina spedizioni...');
@@ -942,7 +941,7 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
       }
     }
 
-    const agent = new SpedisciOnlineAgent(settings, config.base_url);
+    const agent = new SOA(settings, config.base_url);
     const result = await agent.extractSessionData(configId, forceRefresh);
 
     if (result.success && result.session_data) {
@@ -1058,7 +1057,7 @@ export async function syncShipmentsFromPortal(configId: string): Promise<SyncRes
       }
     }
 
-    const agent = new SpedisciOnlineAgent(settings, config.base_url);
+    const agent = new SOA(settings, config.base_url);
     return await agent.syncShipmentsFromPortal(configId);
   } catch (error: any) {
     console.error('❌ Errore sync spedizioni:', error);
