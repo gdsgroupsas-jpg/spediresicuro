@@ -1,0 +1,47 @@
+# ============================================
+# FILE .env - COPIA E COMPILA
+# ============================================
+# 
+# ISTRUZIONI:
+# 1. Copia questo contenuto
+# 2. Crea un file chiamato .env nella cartella automation-service
+# 3. Sostituisci i valori con quelli del tuo progetto Supabase
+# 4. NON committare mai questo file!
+
+# ============================================
+# SUPABASE - OBBLIGATORIO
+# ============================================
+# URL: Vai su Supabase Studio > Settings > API > Project URL
+SUPABASE_URL=https://pxd2.supabase.co
+
+# Service Role: Vai su Settings > API > Legacy keys > service_role secret > Reveal
+# ⚠️ COPIA TUTTA LA CHIAVE (è molto lunga!)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4dDI...
+
+# ============================================
+# DIAGNOSTICS - OBBLIGATORIO
+# ============================================
+DIAGNOSTICS_TOKEN=d4t1_d14gn0st1c1_s3gr3t1_2025_x9z
+
+# ============================================
+# AUTOMATION SERVICE - OBBLIGATORIO
+# ============================================
+AUTOMATION_SERVICE_TOKEN=genera_un_token_casuale_sicuro_qui
+
+# ============================================
+# CRON - OBBLIGATORIO
+# ============================================
+CRON_SECRET_TOKEN=genera_un_token_casuale_sicuro_qui_diverso_da_automation
+
+# ============================================
+# ENCRYPTION - OBBLIGATORIO
+# ============================================
+# DEVE ESSERE LA STESSA DEL PROGETTO NEXT.JS!
+# Genera con PowerShell: [Convert]::ToHexString((1..32 | ForEach-Object {Get-Random -Minimum 0 -Maximum 256}))
+ENCRYPTION_KEY=genera_64_caratteri_esadecimali_qui_STESSO_DEL_NEXTJS
+
+# ============================================
+# SERVER - OPZIONALE
+# ============================================
+PORT=3000
+NODE_ENV=development

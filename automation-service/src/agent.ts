@@ -206,8 +206,32 @@ class SOA {
   /**
    * Metodo privato per eseguire login centralizzato
    * Gestisce navigazione, inserimento credenziali, submit e 2FA (max 2 tentativi)
+   * Timeout globale di 60 secondi per l'intero processo
    */
   private async performLogin(page: any, settings: AutomationSettings, baseUrl: string): Promise<void> {
+    // Timeout globale di 60 secondi per l'intero processo di login
+    return Promise.race([
+      this._performLoginInternal(page, settings, baseUrl),
+      new Promise<void>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('LOGIN_TIMEOUT'));
+        }, 60000); // 60 secondi
+      })
+    ]).catch((error: any) => {
+      // Standardizza error handling
+      if (error.message === 'LOGIN_TIMEOUT' || error.message === '2FA_FAILED' || error.message === 'LOGIN_FAILED') {
+        throw error; // Rilancia errori già standardizzati
+      }
+      // Per altri errori, rilancia come LOGIN_FAILED
+      console.error('❌ [LOGIN] Errore durante login:', error.message || 'Errore sconosciuto');
+      throw new Error('LOGIN_FAILED');
+    });
+  }
+
+  /**
+   * Logica interna di login (senza timeout wrapper)
+   */
+  private async _performLoginInternal(page: any, settings: AutomationSettings, baseUrl: string): Promise<void> {
     try {
       // Naviga alla pagina di login
       await page.goto(`${baseUrl}/login`, {
@@ -221,7 +245,7 @@ class SOA {
       await page.click('button[type="submit"]');
       await page.waitForTimeout(2000);
 
-      // Gestione 2FA (max 2 tentativi)
+      // Gestione 2FA (max 2 tentativi con wait tra tentativi)
       let needs2FA = await page.evaluate(() => {
         return document.body.textContent?.includes('codice') || 
                document.querySelector('input[name="code"]') !== null;
@@ -235,18 +259,23 @@ class SOA {
         while (needs2FA && attempts < maxAttempts) {
           attempts++;
           
+          // Wait di 2 secondi tra un tentativo e l'altro (tranne il primo)
+          if (attempts > 1) {
+            await page.waitForTimeout(2000);
+          }
+          
           if (settings.two_factor_method === 'email') {
             code2FA = await this.read2FACode();
             if (!code2FA) {
               if (attempts >= maxAttempts) {
-                throw new Error('Impossibile leggere codice 2FA da email dopo 2 tentativi');
+                throw new Error('2FA_FAILED');
               }
-              // Attendi un po' e riprova
+              // Attendi un po' prima di riprovare
               await page.waitForTimeout(3000);
               continue;
             }
           } else {
-            throw new Error('2FA manuale non supportato in questo servizio');
+            throw new Error('2FA_FAILED: 2FA manuale non supportato in questo servizio');
           }
 
           // Inserisci codice 2FA
@@ -269,8 +298,9 @@ class SOA {
           });
         }
 
+        // Se dopo 2 tentativi ancora serve 2FA, fallisce
         if (needs2FA) {
-          throw new Error('2FA non completata dopo 2 tentativi');
+          throw new Error('2FA_FAILED');
         }
       }
 
@@ -280,12 +310,16 @@ class SOA {
       });
 
       if (!loginSuccess) {
-        throw new Error('Login fallito');
+        throw new Error('LOGIN_FAILED');
       }
 
     } catch (error: any) {
-      // Log errore generico senza esporre password
-      console.error('❌ [LOGIN] LOGIN_FAILED:', error.message || 'Errore sconosciuto durante login');
+      // Rilancia errori già standardizzati
+      if (error.message === 'LOGIN_TIMEOUT' || error.message === '2FA_FAILED' || error.message === 'LOGIN_FAILED') {
+        throw error;
+      }
+      // Per altri errori, rilancia come LOGIN_FAILED
+      console.error('❌ [LOGIN] Errore durante login:', error.message || 'Errore sconosciuto');
       throw new Error('LOGIN_FAILED');
     }
   }

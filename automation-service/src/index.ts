@@ -27,6 +27,7 @@ import { createClient } from '@supabase/supabase-js';
 import { syncCourierConfig, syncAllEnabledConfigs, syncShipmentsFromPortal } from './agent';
 
 const app = express();
+app.set('trust proxy', 1); // Trust proxy per leggere IP reale su Vercel/Railway
 app.use(express.json());
 
 // ============================================
@@ -57,14 +58,21 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey
 // RATE LIMITING
 // ============================================
 
+// Handler standardizzato per rate limit
+// express-rate-limit v7 passa options con retryAfter in secondi
+const rateLimitHandler = (req: Request, res: Response, next: any, options: any) => {
+  res.status(429).json({
+    success: false,
+    error: 'rate_limited',
+    retry_after_seconds: options.retryAfter || 60, // retryAfter è già in secondi
+  });
+};
+
 // Limiter per diagnostics: 30 richieste al minuto
 const diagnosticsLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minuto
   max: 30, // 30 richieste per finestra
-  message: {
-    success: false,
-    error: 'Troppe richieste. Limite: 30 richieste al minuto.'
-  },
+  handler: rateLimitHandler,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -73,13 +81,71 @@ const diagnosticsLimiter = rateLimit({
 const syncLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minuti
   max: 20, // 20 richieste per finestra
-  message: {
-    success: false,
-    error: 'Troppe richieste. Limite: 20 richieste ogni 10 minuti.'
-  },
+  handler: rateLimitHandler,
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// ============================================
+// SANITIZZAZIONE PII (Personally Identifiable Information)
+// ============================================
+
+/**
+ * Sanitizza un oggetto ricorsivamente mascherando email e telefoni
+ * Non cancella i campi, solo offusca i valori sensibili
+ */
+function sanitizeContext(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Se è un array, sanitizza ogni elemento
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeContext(item));
+  }
+
+  // Se è un oggetto, sanitizza ricorsivamente
+  if (typeof obj === 'object') {
+    const sanitized: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        
+        // Se il valore è una stringa, controlla se è email o telefono
+        if (typeof value === 'string') {
+          // Pattern per email: qualcosa@qualcosa.qualcosa
+          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+          if (emailPattern.test(value)) {
+            // Maschera email: a***@b.com
+            const [localPart, domain] = value.split('@');
+            const maskedLocal = localPart.length > 0 
+              ? `${localPart[0]}***` 
+              : '***';
+            sanitized[key] = `${maskedLocal}@${domain}`;
+            continue;
+          }
+
+          // Pattern per telefono: stringa numerica di 9-15 cifre
+          const phonePattern = /^[\d\s\-\+\(\)]{9,15}$/;
+          const digitsOnly = value.replace(/\D/g, '');
+          if (digitsOnly.length >= 9 && digitsOnly.length <= 15 && phonePattern.test(value)) {
+            // Maschera telefono: mostra solo ultime 4 cifre
+            const last4 = digitsOnly.slice(-4);
+            sanitized[key] = `***${last4}`;
+            continue;
+          }
+        }
+
+        // Per altri tipi, sanitizza ricorsivamente
+        sanitized[key] = sanitizeContext(value);
+      }
+    }
+    return sanitized;
+  }
+
+  // Per valori primitivi non stringa, ritorna così com'è
+  return obj;
+}
 
 // Health check endpoint (info limitate per sicurezza)
 app.get('/health', (req: Request, res: Response) => {
@@ -341,8 +407,21 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
       });
     }
 
-    // 2. Valida body: type e severity
-    const { type, severity, context, user_id, ip_address, user_agent } = req.body;
+    // 2. Valida body: type, severity e correlation_id
+    const { type, severity, context, correlation_id, user_id, ip_address, user_agent } = req.body;
+
+    // Valida correlation_id (UUID opzionale)
+    let validCorrelationId: string | null = null;
+    if (correlation_id) {
+      // Regex semplice per UUID v4: 8-4-4-4-12 caratteri esadecimali
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidPattern.test(correlation_id)) {
+        validCorrelationId = correlation_id;
+      } else {
+        // Se non è valido, ignoralo (null)
+        console.warn('⚠️ [DIAGNOSTICS] correlation_id non valido, ignorato:', correlation_id);
+      }
+    }
 
     // Valida type
     const validTypes = ['error', 'warning', 'info', 'performance', 'user_action'];
@@ -410,10 +489,13 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
       });
     }
 
-    // 4. Estrai IP address dalla richiesta se non fornito
+    // 4. Sanitizza context per rimuovere PII (email, telefoni)
+    const cleanContext = sanitizeContext(contextObj);
+
+    // 5. Estrai IP address dalla richiesta se non fornito
     const clientIp = ip_address || req.ip || req.socket.remoteAddress || null;
 
-    // 5. Salva in Supabase
+    // 6. Salva in Supabase
     if (!supabaseAdmin) {
       // Se Supabase non è configurato, ritorna un fallback invece di errore
       return res.status(202).json({
@@ -429,7 +511,8 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
       .insert({
         type,
         severity,
-        context: contextObj,
+        context: cleanContext, // Usa context sanitizzato
+        correlation_id: validCorrelationId, // Aggiungi correlation_id se valido
         user_id: user_id || null,
         ip_address: clientIp,
         user_agent: user_agent || req.headers['user-agent'] || null,

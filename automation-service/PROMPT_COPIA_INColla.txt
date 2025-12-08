@@ -1,0 +1,12 @@
+PROBLEMA: Il server automation-service non si connette a Supabase. Quando testo l'endpoint /api/diagnostics, ricevo il warning "Supabase not configured - event not persisted". Gli eventi non vengono salvati nel database.
+
+OBIETTIVO: Far funzionare la connessione a Supabase in modo che gli eventi diagnostici vengano salvati nella tabella diagnostics_events.
+
+COMPITI:
+1. Verifica che il file automation-service/.env contenga SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY con valori corretti (copiali dal file .env.local nella root del progetto)
+2. Verifica che nel file .env non ci siano spazi prima/dopo il segno = e che i valori non siano tra virgolette
+3. Verifica che SUPABASE_SERVICE_ROLE_KEY sia tutto su una riga (non spezzato)
+4. Verifica che il file dist/index.js carichi dotenv all'inizio
+5. Dopo le modifiche, riavvia il server e testa con .\test-diagnostics.bat
+
+RISULTATO ATTESO: Il test deve restituire {"success": true, "id": "uuid-reale", "message": "Diagnostic event recorded successfully"} senza warning.
