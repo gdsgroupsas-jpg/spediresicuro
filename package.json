@@ -20,7 +20,12 @@
     "check:env": "ts-node --project tsconfig.scripts.json scripts/verifica-env-sicuro.ts",
     "check:env:simple": "node scripts/check-env-simple.js",
     "verify:users": "ts-node --project tsconfig.scripts.json scripts/verifica-crea-utenti-supabase.ts",
-    "verify:reseller-wallet": "ts-node --project tsconfig.scripts.json scripts/verify-supabase-reseller-wallet.ts"
+    "verify:reseller-wallet": "ts-node --project tsconfig.scripts.json scripts/verify-supabase-reseller-wallet.ts",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:debug": "npx playwright test --debug",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:auto-fix": "node scripts/auto-fix-playwright-test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
@@ -59,6 +64,7 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/imap": "^0.8.40",
     "@types/node": "^20.11.0",
     "@types/qs": "^6.9.0",
