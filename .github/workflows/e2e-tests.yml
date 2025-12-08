@@ -31,15 +31,29 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
 
       - name: Start Next.js server
-        run: npm start &
+        run: |
+          npm start &
+          echo $! > server.pid
         env:
           NODE_ENV: production
           PORT: 3000
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
 
       - name: Wait for server
         run: npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi
 
       - name: Run E2E tests
         run: npm run test:e2e
