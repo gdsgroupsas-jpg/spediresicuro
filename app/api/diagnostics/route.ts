@@ -1,14 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Inizializza il client Supabase con la service role key per operazioni server-side
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Token per l'autenticazione dell'endpoint
 const DIAGNOSTICS_TOKEN = process.env.DIAGNOSTICS_TOKEN || 'd4t1_d14gn0st1c1_s3gr3t1_2025_x9z';
+
+/**
+ * Funzione lazy per inizializzare il client Supabase solo quando necessario
+ * Evita errori durante la build quando le variabili d'ambiente non sono disponibili
+ */
+function getSupabaseClient(): SupabaseClient | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Se le variabili non sono disponibili, ritorna null (gestito nei metodi)
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  } catch (error) {
+    console.error('Errore inizializzazione Supabase client:', error);
+    return null;
+  }
+}
 
 // Interface per il corpo della richiesta
 interface DiagnosticsPayload {
@@ -51,6 +71,19 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: type and severity' },
         { status: 400 }
       );
+    }
+
+    // Ottieni il client Supabase (lazy initialization)
+    const supabase = getSupabaseClient();
+    
+    if (!supabase) {
+      // Se Supabase non è configurato, ritorna un fallback
+      return NextResponse.json({
+        success: true,
+        id: `temp-${Date.now()}`,
+        message: 'Diagnostic event queued (database not configured)',
+        warning: 'Supabase not configured - event not persisted',
+      }, { status: 202 });
     }
 
     try {
@@ -122,6 +155,18 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid token' },
         { status: 403 }
       );
+    }
+
+    // Ottieni il client Supabase (lazy initialization)
+    const supabase = getSupabaseClient();
+    
+    if (!supabase) {
+      return NextResponse.json({
+        success: true,
+        count: 0,
+        events: [],
+        warning: 'Supabase not configured - no events available',
+      });
     }
 
     // Recupera gli ultimi 100 eventi diagnostici
