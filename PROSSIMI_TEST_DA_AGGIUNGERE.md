@@ -1,44 +1,66 @@
 # 🧪 Prossimi Test E2E da Aggiungere
 
-## ✅ Test Attuale
+## ✅ Test Attuali
 
-**`e2e/happy-path.spec.ts`** - Flusso "Nuova Spedizione"
+### 1. `e2e/happy-path.spec.ts` ✅
+**Flusso "Nuova Spedizione"**
 - ✅ Copre il flusso completo di creazione spedizione
 - ✅ Tempo: 28.1s
 - ✅ Stabilità: 100%
 
+### 2. `e2e/form-validation.spec.ts` ✅ **NUOVO**
+**Validazione Form**
+- ✅ 7 scenari di validazione
+- ✅ Test errori form
+- ✅ Verifica pulsante submit
+
+### 3. `e2e/shipments-list.spec.ts` ✅ **NUOVO**
+**Lista Spedizioni**
+- ✅ 4 scenari di visualizzazione e filtri
+- ✅ Test ricerca e filtri
+
+### 4. `e2e/shipment-detail.spec.ts` ✅ **NUOVO**
+**Dettaglio Spedizione**
+- ✅ 4 scenari di dettaglio e tracking
+- ✅ Test download etichetta
+
 ## 🎯 Test da Aggiungere (Priorità)
 
-### 1. Test Validazione Form (ALTA PRIORITÀ)
-**File:** `e2e/form-validation.spec.ts`
+### ✅ 1. Test Validazione Form (COMPLETATO)
+**File:** `e2e/form-validation.spec.ts` ✅
 
-**Scenari:**
-- ❌ Submit form incompleto (campi obbligatori mancanti)
-- ❌ Email non valida
-- ❌ Telefono non valido
-- ❌ Peso negativo o zero
-- ❌ Città non selezionata
-- ✅ Verifica messaggi di errore corretti
+**Scenari implementati:**
+- ✅ Submit form incompleto (pulsante disabilitato)
+- ✅ Email non valida
+- ✅ Telefono non valido
+- ✅ Peso zero o negativo
+- ✅ Nome/indirizzo troppo corti
+- ✅ Form completo abilita submit
 
-### 2. Test Lista Spedizioni (MEDIA PRIORITÀ)
-**File:** `e2e/shipments-list.spec.ts`
+### ✅ 2. Test Lista Spedizioni (COMPLETATO)
+**File:** `e2e/shipments-list.spec.ts` ✅
 
-**Scenari:**
+**Scenari implementati:**
 - ✅ Visualizzazione lista spedizioni
-- ✅ Filtri per status (pending, in_transit, delivered)
+- ✅ Filtri per status (in_preparazione)
 - ✅ Ricerca per tracking number
-- ✅ Paginazione
-- ✅ Export CSV/PDF
+- ✅ Visualizzazione dettagli nella lista
 
-### 3. Test Dettaglio Spedizione (MEDIA PRIORITÀ)
-**File:** `e2e/shipment-detail.spec.ts`
+**Da aggiungere:**
+- ⏳ Paginazione
+- ⏳ Export CSV/PDF
 
-**Scenari:**
-- ✅ Visualizzazione dettagli spedizione
-- ✅ Tracking in tempo reale
-- ✅ Storia eventi
+### ✅ 3. Test Dettaglio Spedizione (COMPLETATO)
+**File:** `e2e/shipment-detail.spec.ts` ✅
+
+**Scenari implementati:**
+- ✅ Visualizzazione dettagli completi
+- ✅ Storia eventi tracking
 - ✅ Download etichetta
-- ✅ Azioni disponibili (annulla, modifica)
+- ✅ Visualizzazione status
+
+**Da aggiungere:**
+- ⏳ Azioni disponibili (annulla, modifica)
 
 ### 4. Test Wallet (BASSA PRIORITÀ)
 **File:** `e2e/wallet.spec.ts`
