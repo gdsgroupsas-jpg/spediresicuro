@@ -17,8 +17,8 @@ export const metadata = {
   description: 'Documentazione completa della piattaforma SpediRe Sicuro.',
 };
 
-// Rigenera la pagina ogni ora per riflettere eventuali modifiche al manuale
-export const revalidate = 60 * 60;
+// Forza rendering dinamico (legge file system)
+export const dynamic = 'force-dynamic';
 
 async function getManualContent(): Promise<string> {
   try {

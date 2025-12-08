@@ -7,6 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isPlatformFeatureEnabled, isPlatformFeatureVisible } from '@/lib/platform-features';
 
+// Forza rendering dinamico (usa nextUrl.searchParams)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

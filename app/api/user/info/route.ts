@@ -9,6 +9,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import { findUserByEmail } from '@/lib/database';
 
+// Forza rendering dinamico (usa headers())
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
