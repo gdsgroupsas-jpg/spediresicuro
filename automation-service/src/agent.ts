@@ -27,22 +27,47 @@ try {
 }
 
 // ============================================
-// SUPABASE CLIENT
+// SUPABASE CLIENT (Lazy Initialization)
 // ============================================
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+/**
+ * Funzione lazy per inizializzare il client Supabase solo quando necessario
+ * Permette al server di avviarsi anche senza Supabase configurato
+ */
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('⚠️ SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurati');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  } catch (error) {
+    console.error('Errore inizializzazione Supabase client:', error);
+    return null;
+  }
 }
 
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+// Client Supabase (inizializzato lazy quando necessario)
+let supabaseAdmin: ReturnType<typeof getSupabaseAdmin> = null;
+
+/**
+ * Helper per ottenere il client Supabase (inizializza se necessario)
+ * Ritorna null se Supabase non è configurato
+ */
+function getSupabaseClient() {
+  if (!supabaseAdmin) {
+    supabaseAdmin = getSupabaseAdmin();
   }
-});
+  return supabaseAdmin;
+}
 
 // ============================================
 // ENCRYPTION (copiato da lib/security/encryption.ts)
@@ -400,7 +425,11 @@ class SOA {
     expires_at: string | null;
   }> {
     try {
-      const { data, error } = await supabaseAdmin.rpc('check_automation_lock', {
+      const client = getSupabaseClient();
+      if (!client) {
+        return { has_lock: false, lock_type: null, expires_at: null };
+      }
+      const { data, error } = await client.rpc('check_automation_lock', {
         p_config_id: configId,
       });
 
@@ -424,7 +453,11 @@ class SOA {
     lockedBy: string = 'system',
     durationMinutes: number = 30
   ): Promise<string> {
-    const { data, error } = await supabaseAdmin.rpc('acquire_automation_lock', {
+    const client = getSupabaseClient();
+    if (!client) {
+      throw new Error('Supabase non configurato');
+    }
+    const { data, error } = await client.rpc('acquire_automation_lock', {
       p_config_id: configId,
       p_lock_type: lockType,
       p_locked_by: lockedBy,
@@ -441,7 +474,11 @@ class SOA {
 
   private async releaseLock(configId: string, lockId?: string): Promise<boolean> {
     try {
-      const { data, error } = await supabaseAdmin.rpc('release_automation_lock', {
+      const client = getSupabaseClient();
+      if (!client) {
+        return false;
+      }
+      const { data, error } = await client.rpc('release_automation_lock', {
         p_config_id: configId,
         p_lock_id: lockId || null,
       });
@@ -454,7 +491,11 @@ class SOA {
 
   private async getExistingSession(configId: string): Promise<SessionData | null> {
     try {
-      const { data, error } = await supabaseAdmin
+      const client = getSupabaseClient();
+      if (!client) {
+        return null;
+      }
+      const { data, error } = await client
         .from('courier_configs')
         .select('session_data')
         .eq('id', configId)
@@ -603,7 +644,11 @@ class SOA {
         console.log(`🔄 [SYNC SHIPMENTS] Tentativo ${attempt}/${maxRetries} per config ${configId.substring(0, 8)}...`);
 
         // Recupera configurazione
-        const { data: config, error: configError } = await supabaseAdmin
+        const client = getSupabaseClient();
+        if (!client) {
+          throw new Error('Supabase non configurato');
+        }
+        const { data: config, error: configError } = await client
           .from('courier_configs')
           .select('*')
           .eq('id', configId)
@@ -792,7 +837,7 @@ class SOA {
             }
 
             // Cerca spedizione esistente
-            const { data: existing, error: searchError } = await supabaseAdmin
+            const { data: existing, error: searchError } = await client
               .from('shipments')
               .select('id, updated_at')
               .eq('tracking_number', shipment.tracking_number)
@@ -817,7 +862,7 @@ class SOA {
 
             if (existing) {
               // Update esistente
-              const { error: updateError } = await supabaseAdmin
+              const { error: updateError } = await client
                 .from('shipments')
                 .update(updateData)
                 .eq('id', existing.id);
@@ -830,7 +875,7 @@ class SOA {
               }
             } else {
               // Insert nuovo
-              const { error: insertError } = await supabaseAdmin
+              const { error: insertError } = await client
                 .from('shipments')
                 .insert({
                   tracking_number: shipment.tracking_number,
@@ -903,7 +948,11 @@ class SOA {
 
 export async function syncCourierConfig(configId: string, forceRefresh: boolean = false): Promise<ExtractionResult> {
   try {
-    const { data: config, error } = await supabaseAdmin
+    const client = getSupabaseClient();
+    if (!client) {
+      throw new Error('Supabase non configurato');
+    }
+    const { data: config, error } = await client
       .from('courier_configs')
       .select('*')
       .eq('id', configId)
@@ -945,7 +994,7 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
     const result = await agent.extractSessionData(configId, forceRefresh);
 
     if (result.success && result.session_data) {
-      await supabaseAdmin
+      await client
         .from('courier_configs')
         .update({
           session_data: result.session_data,
@@ -958,7 +1007,7 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
         const currentMapping = (config.contract_mapping || {}) as Record<string, string>;
         const updatedMapping = { ...currentMapping, ...result.contracts };
 
-        await supabaseAdmin
+        await client
           .from('courier_configs')
           .update({ contract_mapping: updatedMapping })
           .eq('id', configId);
@@ -977,7 +1026,12 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
 
 export async function syncAllEnabledConfigs(): Promise<void> {
   try {
-    const { data: configs, error } = await supabaseAdmin
+    const client = getSupabaseClient();
+    if (!client) {
+      console.log('ℹ️ Supabase non configurato - sync globale saltata');
+      return;
+    }
+    const { data: configs, error } = await client
       .from('courier_configs')
       .select('id')
       .eq('automation_enabled', true)
@@ -1008,7 +1062,11 @@ export async function syncAllEnabledConfigs(): Promise<void> {
  */
 export async function syncShipmentsFromPortal(configId: string): Promise<SyncResult> {
   try {
-    const { data: config, error } = await supabaseAdmin
+    const client = getSupabaseClient();
+    if (!client) {
+      throw new Error('Supabase non configurato');
+    }
+    const { data: config, error } = await client
       .from('courier_configs')
       .select('*')
       .eq('id', configId)
