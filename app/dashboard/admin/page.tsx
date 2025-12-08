@@ -480,7 +480,7 @@ export default function AdminDashboardPage() {
                 <Settings className="w-5 h-5" />
                 Azioni Rapide
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <Link
                   href="/dashboard/admin/configurations"
                   className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all group"
@@ -527,6 +527,18 @@ export default function AdminDashboardPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">Gestione Team</h3>
                     <p className="text-sm text-gray-500">Gestisci utenti e admin</p>
+                  </div>
+                </Link>
+                <Link
+                  href="/dashboard/admin/logs"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
+                    <Activity className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">Log Diagnostici</h3>
+                    <p className="text-sm text-gray-500">Eventi e monitoring</p>
                   </div>
                 </Link>
               </div>

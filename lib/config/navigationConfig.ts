@@ -36,6 +36,7 @@ import {
   Archive,
   Search,
   DollarSign,
+  Activity,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -343,6 +344,13 @@ const adminSection: NavSection = {
       href: '/dashboard/admin/configurations',
       icon: Settings,
       description: 'Impostazioni globali piattaforma',
+    },
+    {
+      id: 'admin-logs',
+      label: 'Log Diagnostici',
+      href: '/dashboard/admin/logs',
+      icon: Activity,
+      description: 'Visualizzazione eventi diagnostici e monitoring',
     },
   ],
 };
