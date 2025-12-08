@@ -1,0 +1,20 @@
+COMMIT AUTOMATICO ESEGUITO
+
+Data: $(Get-Date)
+Azione: Commit automatico delle modifiche E2E
+
+File modificati:
+- components/anne/AnneAssistant.tsx
+- e2e/happy-path.spec.ts
+- docs/E2E_TEST_COMPLETED.md
+- RIEPILOGO_FINALE.md
+- scripts/setup-git-config.ps1
+- scripts/git-commit-e2e.ps1
+- GIT_COMMIT_SOLUTION.md
+- PROSSIMO_PASSO.md
+
+Messaggio commit:
+test(e2e): Stabilizzato test Nuova Spedizione e ottimizzato Anne Assistant
+
+Se questo file esiste, il commit è stato tentato.
+Verifica con: git log --oneline -1

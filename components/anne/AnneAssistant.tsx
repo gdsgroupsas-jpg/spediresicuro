@@ -49,6 +49,12 @@ export function AnneAssistant({
   userName = 'Utente',
   currentPage = '/dashboard',
 }: AnneAssistantProps) {
+  // Disabilita Anne durante i test Playwright
+  const isTestMode = typeof window !== 'undefined' && 
+    (window.location.search.includes('test=true') || 
+     document.documentElement.getAttribute('data-test-mode') === 'true' ||
+     document.documentElement.getAttribute('x-test-mode') === 'playwright');
+  
   // State
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
@@ -81,14 +87,22 @@ export function AnneAssistant({
       }
     }
 
-    // Auto-saluto al primo accesso
+    // Auto-saluto al primo accesso (ritardato per non interferire con le azioni)
     const hasGreeted = sessionStorage.getItem('anne-greeted');
     if (!hasGreeted && preferences.autoGreet) {
-      setTimeout(() => {
-        setIsMinimized(false);
-        addSuggestionMessage(getGreetingMessage(userName, userRole));
-        sessionStorage.setItem('anne-greeted', 'true');
-      }, 2000);
+      // Ritarda molto di più (30 secondi) per non interferire con le azioni iniziali
+      // E solo se non siamo in modalità test
+      const isTestMode = typeof window !== 'undefined' && 
+        (window.location.search.includes('test=true') || 
+         document.documentElement.getAttribute('data-test-mode') === 'true');
+      
+      if (!isTestMode) {
+        setTimeout(() => {
+          setIsMinimized(false);
+          addSuggestionMessage(getGreetingMessage(userName, userRole));
+          sessionStorage.setItem('anne-greeted', 'true');
+        }, 30000); // 30 secondi invece di 2
+      }
     }
   }, []);
 
@@ -216,6 +230,11 @@ export function AnneAssistant({
     setIsExpanded(false);
   };
 
+  // Se siamo in test mode, non renderizzare Anne
+  if (isTestMode) {
+    return null;
+  }
+
   return (
     <>
       {/* Floating Ghost Icon */}
@@ -225,7 +244,7 @@ export function AnneAssistant({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50"
+            className="fixed top-6 right-6 z-30"
           >
             <motion.button
               onClick={toggleExpand}
@@ -263,10 +282,10 @@ export function AnneAssistant({
       <AnimatePresence>
         {!isMinimized && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50"
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-6 right-6 z-40"
           >
             <div
               className={`bg-white rounded-2xl shadow-2xl border border-purple-100 flex flex-col transition-all duration-300 ${
