@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth-config'
 import { supabaseAdmin } from '@/lib/db/client'
 
+// Forza rendering dinamico (usa headers())
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/wallet/transactions
  * Ottiene le transazioni wallet dell'utente corrente
