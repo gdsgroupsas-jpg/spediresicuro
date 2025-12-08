@@ -48,4 +48,5 @@ export * from './products';
 export * from './warehouse';
 export * from './ecommerce';
 export * from './analytics';
+export * from './diagnostics';
 
