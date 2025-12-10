@@ -578,6 +578,7 @@ export default function NuovaSpedizionePage() {
                     onSelect={handleMittenteLocation}
                     placeholder="Cerca città..."
                     className="w-full"
+                    isValid={validation.mittenteCitta}
                   />
                 </div>
 
@@ -639,6 +640,7 @@ export default function NuovaSpedizionePage() {
                     onSelect={handleDestinatarioLocation}
                     placeholder="Cerca città..."
                     className="w-full"
+                    isValid={validation.destinatarioCitta}
                   />
                 </div>
 
