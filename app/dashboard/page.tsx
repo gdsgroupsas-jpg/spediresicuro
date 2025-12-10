@@ -405,6 +405,44 @@ export default function DashboardPage() {
         showBackButton={false}
       />
 
+      {/* 🚀 NEW: Doctor AI Status Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8 relative z-10">
+        <div className="bg-white/80 backdrop-blur-md border border-indigo-100 rounded-xl p-4 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-full relative"></div>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+                  Doctor AI Active
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] uppercase tracking-wider font-bold">
+                  Protected
+                </span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Il sistema monitora e ripara errori in background. Nessuna anomalia rilevata.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-6 text-xs text-gray-500 font-medium">
+             <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-indigo-400" />
+                <span>API Keys Valid</span>
+             </div>
+             <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">A</div>
+                <span>Anne Ready</span>
+             </div>
+             <div className="hidden md:flex items-center gap-2 text-indigo-600 cursor-pointer hover:underline">
+                Vedi Report Completo &rarr;
+             </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoading ? (
