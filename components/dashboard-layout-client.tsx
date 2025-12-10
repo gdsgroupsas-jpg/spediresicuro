@@ -15,6 +15,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { PilotModal } from '@/components/ai/pilot/pilot-modal';
 import { AnneProvider, AnneAssistant } from '@/components/anne';
+import AnneDoctorBridge from '@/components/anne/AnneDoctorBridge';
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
@@ -126,6 +127,14 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
           userRole={effectiveUserRole}
           userName={session.user.name || session.user.email || 'Utente'}
           currentPage={pathname || '/dashboard'}
+        />
+      )}
+
+      {/* Doctor Bridge - Integrazione Self-Healing (Premium) */}
+      {session?.user && (
+        <AnneDoctorBridge
+          userRole={effectiveUserRole}
+          hasDoctorSubscription={true} // TODO: Leggere dal DB in produzione
         />
       )}
     </AnneProvider>
