@@ -5,6 +5,12 @@
  * per lo sviluppo locale.
  */
 
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Carica variabili ambiente da .env.local
+dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+
 console.log('🔍 Verifica Configurazione Locale - SpedireSicuro.it\n');
 
 // Tipo per le variabili di configurazione
