@@ -131,4 +131,4 @@ Per problemi o domande:
 ---
 
 **Versione**: 1.0.0  
-**Ultimo aggiornamento**: Dicembre 2024
+**Ultimo aggiornamento**: Dicembre 2025
