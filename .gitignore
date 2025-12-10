@@ -30,6 +30,9 @@ yarn-error.log*
 .env.production
 .env.development
 env.local
+# automation-service env
+automation-service/.env
+automation-service/.env.local
 
 # database locale (può contenere dati sensibili)
 data/database.json
@@ -96,3 +99,6 @@ TEST-OUTPUT-GIT.bat
 VEDI-ULTIMO-COMMIT.bat
 setup.bat
 SPIEGAZIONE-PROBLEMA-OUTPUT.md
+
+.vercel
+.env*.local
