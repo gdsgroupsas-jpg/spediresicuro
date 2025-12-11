@@ -44,7 +44,7 @@ export async function getUserByEmail(
       return null;
     }
 
-    return data as User;
+    return data as unknown as User;
   } catch (error) {
     console.error('Error fetching user by email:', error);
     return null;
@@ -76,7 +76,7 @@ export async function getUserById(
       return null;
     }
 
-    return data as User;
+    return data as unknown as User;
   } catch (error) {
     console.error('Error fetching user by ID:', error);
     return null;
@@ -133,7 +133,7 @@ export async function getUserChildren(
       return [];
     }
 
-    return data as User[];
+    return data as unknown as User[];
   } catch (error) {
     console.error('Error fetching user children:', error);
     return [];
@@ -166,7 +166,7 @@ export async function updateUser(
       return null;
     }
 
-    return data as User;
+    return data as unknown as User;
   } catch (error) {
     console.error('Error updating user:', error);
     return null;
@@ -201,7 +201,7 @@ export async function createUser(
       return null;
     }
 
-    return data as User;
+    return data as unknown as User;
   } catch (error) {
     console.error('Error creating user:', error);
     return null;
@@ -259,7 +259,7 @@ export async function findUsers(
       return [];
     }
 
-    return data as User[];
+    return data as unknown as User[];
   } catch (error) {
     console.error('Error finding users:', error);
     return [];
