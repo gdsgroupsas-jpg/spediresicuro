@@ -1,26 +1,30 @@
 'use client';
 
 /**
- * OCR Upload Component
+ * Agent Upload Component (ex OCR Upload)
  *
- * Upload immagine per estrazione dati spedizione via OCR
+ * Interfaccia Premium per il "Testa" del Logistics Brain.
+ * Gestisce upload, animazioni "thinking" e feedback dell'Agente.
  */
 
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
-import { Upload, Image as ImageIcon, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, Sparkles, Brain, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface OCRUploadProps {
+interface AgentUploadProps {
   onDataExtracted: (data: any) => void;
   onError?: (error: string) => void;
 }
 
-export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) {
+export default function AgentUpload({ onDataExtracted, onError }: AgentUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
-  const [extracting, setExtracting] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<string>('Sto analizzando l\'immagine...');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [confidence, setConfidence] = useState<number>(0);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,6 +48,7 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
     setError(null);
     setSuccess(false);
     setUploading(true);
+    setAgentStatus('Caricamento immagine...');
 
     // Preview
     const reader = new FileReader();
@@ -56,42 +61,44 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
       // Converti in base64
       const base64 = await fileToBase64(file);
 
-      setExtracting(true);
+      setUploading(false);
+      setAnalyzing(true);
+      setAgentStatus('Gemini sta analizzando la chat...');
 
-      // Chiamata API OCR
-      const response = await fetch('/api/ocr/extract', {
+      // 🧠 Chiamata al nuovo LOGISTICS AGENT
+      const response = await fetch('/api/agent/process-shipment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           image: base64,
-          options: {
-            language: 'ita',
-            enhance: true,
-          },
+          // text: opzionale, se volessimo passare testo manuale
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Errore estrazione OCR');
+        throw new Error('Errore durante l\'analisi dell\'Agente');
       }
 
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Errore durante l\'estrazione');
+        throw new Error(result.error || 'L\'agente non è riuscito a elaborare la richiesta');
       }
 
+      // Successo!
       setSuccess(true);
-      onDataExtracted(result.extractedData);
+      setConfidence(result.confidence || 0);
+      onDataExtracted(result.data); // Passa i dati "intelligenti" al form
+      
     } catch (err: any) {
-      const errorMsg = err.message || 'Errore durante l\'upload';
+      const errorMsg = err.message || 'Errore imprevisto';
       setError(errorMsg);
       onError?.(errorMsg);
     } finally {
       setUploading(false);
-      setExtracting(false);
+      setAnalyzing(false);
     }
   }, [onDataExtracted, onError]);
 
@@ -99,115 +106,140 @@ export default function OCRUpload({ onDataExtracted, onError }: OCRUploadProps) 
     setPreview(null);
     setError(null);
     setSuccess(false);
+    setConfidence(0);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Upload Area */}
-      {!preview && (
-        <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 border-gray-300 hover:border-gray-400 transition-colors">
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-12 h-12 mb-3 text-gray-400" />
-            <p className="mb-2 text-sm text-gray-700">
-              <span className="font-semibold">Clicca per caricare</span> o trascina un&apos;immagine
-            </p>
-            <p className="text-xs text-gray-500">PNG, JPG, GIF fino a 10MB</p>
-            <p className="mt-2 text-xs text-gray-400">
-              Screenshot WhatsApp, foto documento, etc.
-            </p>
-          </div>
-          <input
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleFileChange}
-            disabled={uploading}
-          />
-        </label>
-      )}
-
-      {/* Preview & Status */}
-      {preview && (
-        <div className="relative">
-          <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
-            <Image
-              src={preview}
-              alt="Anteprima immagine caricata per estrazione OCR"
-              width={800}
-              height={600}
-              className="w-full h-auto max-h-96 object-contain"
-              unoptimized
-            />
-
-            {/* Overlay durante estrazione */}
-            {extracting && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <div className="bg-white rounded-lg p-6 flex flex-col items-center space-y-3">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <p className="text-sm font-medium text-gray-900">
-                    Estrazione dati in corso...
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Analisi OCR dell&apos;immagine
-                  </p>
+    <div className="w-full">
+      <AnimatePresence mode="wait">
+        {!preview ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="w-full"
+          >
+            <label className="group relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-white hover:border-blue-400 hover:shadow-lg transition-all duration-300 overflow-hidden">
+              
+              {/* Sfondo animato hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-50/0 group-hover:from-blue-50/50 group-hover:to-indigo-50/50 transition-all duration-500" />
+              
+              <div className="relative z-10 flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                <div className="mb-4 p-4 bg-white rounded-full shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-300">
+                   <Sparkles className="w-8 h-8 text-blue-500" />
+                </div>
+                <p className="mb-2 text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+                  Carica Screenshot o Documento
+                </p>
+                <p className="text-sm text-gray-500 max-w-xs mx-auto mb-4">
+                  L&apos;IA estrarrà destinatario, indirizzo, note e contrassegno automaticamente.
+                </p>
+                <div className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 shadow-sm group-hover:border-blue-200">
+                  Supporta WhatsApp, Email, Foto
                 </div>
               </div>
-            )}
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={uploading || analyzing}
+              />
+            </label>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md"
+          >
+            <div className="relative aspect-video max-h-[400px] bg-slate-100 flex items-center justify-center overflow-hidden group">
+              <Image
+                src={preview}
+                alt="Analisi Agente"
+                width={800}
+                height={600}
+                className={`w-full h-full object-contain transition-all duration-700 ${analyzing ? 'blur-sm scale-105' : ''}`}
+                unoptimized
+              />
+              
+              {/* Overlay Analisi in corso */}
+              {analyzing && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-20">
+                  <motion.div 
+                    animate={{ 
+                      scale: [1, 1.1, 1],
+                      rotate: [0, 5, -5, 0],
+                      boxShadow: ["0px 0px 0px 0px rgba(59, 130, 246, 0.5)", "0px 0px 20px 10px rgba(59, 130, 246, 0.3)", "0px 0px 0px 0px rgba(59, 130, 246, 0.5)"]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4 shadow-xl"
+                  >
+                    <Brain className="w-10 h-10 text-blue-600" />
+                  </motion.div>
+                  <p className="text-white font-medium text-lg drop-shadow-md animate-pulse">
+                    {agentStatus}
+                  </p>
+                </div>
+              )}
 
-            {/* Pulsante rimuovi */}
-            {!extracting && (
-              <button
-                onClick={handleClear}
-                className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                title="Rimuovi immagine"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Status Messages */}
-          {success && !extracting && (
-            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-green-900">
-                  Dati estratti con successo!
-                </p>
-                <p className="text-xs text-green-700 mt-1">
-                  I campi sono stati compilati automaticamente. Verifica e modifica se necessario.
-                </p>
-              </div>
+              {/* Pulsante Chiudi */}
+              {!analyzing && (
+                <button
+                  onClick={handleClear}
+                  className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur text-gray-600 rounded-full hover:bg-red-50 hover:text-red-500 shadow-sm transition-all z-10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
-          )}
 
-          {error && !extracting && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-red-900">Errore</p>
-                <p className="text-xs text-red-700 mt-1">{error}</p>
-              </div>
+            {/* Footer Risultato */}
+            <div className="p-4 bg-white border-t border-gray-100">
+               {analyzing ? (
+                 <div className="flex items-center gap-3 text-blue-600">
+                   <Loader2 className="w-5 h-5 animate-spin" />
+                   <span className="text-sm font-medium">Elaborazione in corso...</span>
+                 </div>
+               ) : success ? (
+                 <motion.div 
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="flex items-center justify-between"
+                 >
+                   <div className="flex items-center gap-3">
+                     <div className="p-2 bg-green-100 text-green-600 rounded-full">
+                       <CheckCircle2 className="w-5 h-5" />
+                     </div>
+                     <div>
+                       <p className="text-sm font-bold text-gray-900">Analisi Completata</p>
+                       <p className="text-xs text-gray-500">I dati sono stati inseriti nel form</p>
+                     </div>
+                   </div>
+                   
+                   {confidence > 0 && (
+                     <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                       confidence > 80 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                     }`}>
+                       {confidence}% Sicurezza
+                     </div>
+                   )}
+                 </motion.div>
+               ) : error ? (
+                 <div className="flex items-center gap-3 text-red-600">
+                   <AlertTriangle className="w-5 h-5" />
+                   <span className="text-sm font-medium">{error}</span>
+                 </div>
+               ) : (
+                 <div className="flex items-center gap-2 text-gray-500 text-sm">
+                   <Sparkles className="w-4 h-4" />
+                   <span>Immagine pronta per l&apos;invio</span>
+                 </div>
+               )}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Info Box */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start space-x-2">
-          <ImageIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-label="Informazioni OCR" />
-          <div className="text-sm text-blue-900">
-            <p className="font-medium mb-1">Come funziona l&apos;OCR:</p>
-            <ul className="list-disc list-inside space-y-1 text-xs text-blue-800">
-              <li>Carica uno screenshot o foto del documento di spedizione</li>
-              <li>Il sistema estrae automaticamente: nome, indirizzo, CAP, città, telefono</li>
-              <li>Verifica i dati estratti e modifica se necessario</li>
-              <li>Risparmia tempo ed evita errori di digitazione!</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
