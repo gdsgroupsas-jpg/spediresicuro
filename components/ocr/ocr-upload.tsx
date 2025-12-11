@@ -113,29 +113,33 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
     <div className="w-full">
       <AnimatePresence mode="wait">
         {!preview ? (
+  return (
+    <div className="w-full">
+      <AnimatePresence mode="wait">
+        {!preview ? (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="w-full"
           >
-            <label className="group relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-white hover:border-blue-400 hover:shadow-lg transition-all duration-300 overflow-hidden">
+            <label className="group relative flex flex-col items-center justify-center w-full h-56 sm:h-64 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-white hover:border-blue-400 hover:shadow-lg transition-all duration-300 overflow-hidden touch-manipulation active:scale-[0.98] active:bg-blue-50/20">
               
-              {/* Sfondo animato hover */}
+              {/* Sfondo animato hover e touch */}
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-50/0 group-hover:from-blue-50/50 group-hover:to-indigo-50/50 transition-all duration-500" />
               
               <div className="relative z-10 flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                <div className="mb-4 p-4 bg-white rounded-full shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-300">
-                   <Sparkles className="w-8 h-8 text-blue-500" />
+                <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-white rounded-full shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-300">
+                   <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
                 </div>
-                <p className="mb-2 text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
-                  Carica Screenshot o Documento
+                <p className="mb-2 text-base sm:text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+                  Carica Foto o Screenshot
                 </p>
-                <p className="text-sm text-gray-500 max-w-xs mx-auto mb-4">
-                  L&apos;IA estrarrà destinatario, indirizzo, note e contrassegno automaticamente.
+                <p className="text-xs sm:text-sm text-gray-500 max-w-xs mx-auto mb-4 leading-relaxed">
+                  L&apos;IA estrarrà destinatario, indirizzo e contrassegno.
                 </p>
-                <div className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 shadow-sm group-hover:border-blue-200">
-                  Supporta WhatsApp, Email, Foto
+                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-gray-200 rounded-lg text-[10px] sm:text-xs font-medium text-gray-600 shadow-sm group-hover:border-blue-200">
+                  📷 WhatsApp • Email • Foto
                 </div>
               </div>
               <input
@@ -151,9 +155,9 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md"
+            className="relative rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md active:shadow-sm transition-shadow"
           >
-            <div className="relative aspect-video max-h-[400px] bg-slate-100 flex items-center justify-center overflow-hidden group">
+            <div className="relative aspect-video max-h-[300px] sm:max-h-[400px] bg-slate-100 flex items-center justify-center overflow-hidden group">
               <Image
                 src={preview}
                 alt="Analisi Agente"
