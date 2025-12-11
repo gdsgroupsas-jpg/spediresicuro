@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logisticsGraph } from '@/lib/agent/orchestrator/graph';
 import { HumanMessage } from '@langchain/core/messages';
-import { auth } from '@/auth';
+import { auth } from '@/lib/auth';
 
 export const maxDuration = 60; // Allow longer timeout for agent execution (OCR + LLM)
 
