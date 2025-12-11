@@ -4,35 +4,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
-import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, checkSupabaseConfig } from '@/lib/api-middleware';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuth();
+    if (!authResult.authorized) return authResult.response;
+    const { session } = authResult;
 
     // 2. Leggi subscription dal body
     const { subscription } = await request.json();
     if (!subscription || !subscription.endpoint) {
-      return NextResponse.json(
-        { error: 'Subscription non valida' },
-        { status: 400 }
-      );
+      return ApiErrors.BAD_REQUEST('Subscription non valida');
     }
 
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Database non configurato' },
-        { status: 500 }
-      );
-    }
+    const configCheck = checkSupabaseConfig();
+    if (configCheck) return configCheck;
 
     // 3. Salva la subscription nel database
     const { data, error } = await supabaseAdmin
@@ -49,11 +39,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Errore salvataggio subscription:', error);
-      return NextResponse.json(
-        { error: 'Errore salvataggio subscription' },
-        { status: 500 }
-      );
+      return handleApiError(error, 'POST /api/notifications/subscribe - save subscription');
     }
 
     console.log('Subscription salvata:', subscription.endpoint);
@@ -68,12 +54,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Iscritto a notifiche push',
     });
-  } catch (error) {
-    console.error('Errore subscribe notifications:', error);
-    return NextResponse.json(
-      { error: 'Errore interno' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    return handleApiError(error, 'POST /api/notifications/subscribe');
   }
 }
 
