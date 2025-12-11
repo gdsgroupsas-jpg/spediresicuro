@@ -214,6 +214,20 @@ export default function DashboardPage() {
       const timeoutId = setTimeout(async () => {
         async function checkDatiCompletati() {
           try {
+            // Email dell'utente corrente
+            const userEmail = session?.user?.email?.toLowerCase() || ''
+            
+            // Per l'utenza test@spediresicuro.it, NON reindirizzare mai a dati-cliente
+            const isTestUser = userEmail === 'test@spediresicuro.it'
+            
+            if (isTestUser) {
+              console.log('✅ [DASHBOARD] Utente test rilevato, salvo flag e NON reindirizzo a dati-cliente');
+              if (typeof window !== 'undefined' && session?.user?.email) {
+                localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+              }
+              return; // Esci senza controllare il database
+            }
+            
             // Aggiungi cache: 'no-store' per assicurarsi di ottenere dati freschi
             const response = await fetch('/api/user/dati-cliente', {
               cache: 'no-store',

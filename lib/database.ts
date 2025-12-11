@@ -1358,8 +1358,22 @@ export async function verifyUserCredentials(
         .single();
       
       if (!error && supabaseUser) {
-        // Verifica password (TODO: in produzione usare bcrypt)
-        if (supabaseUser.password && supabaseUser.password === password) {
+        // Verifica password con bcrypt se è un hash, altrimenti confronto diretto (backward compatibility)
+        let passwordMatch = false;
+        
+        if (supabaseUser.password) {
+          // Se la password inizia con $2a$, $2b$, $2x$ o $2y$ è un hash bcrypt
+          if (supabaseUser.password.startsWith('$2')) {
+            // Usa bcrypt per verificare
+            const bcrypt = require('bcryptjs');
+            passwordMatch = await bcrypt.compare(password, supabaseUser.password);
+          } else {
+            // Password in chiaro (backward compatibility per utenti esistenti)
+            passwordMatch = supabaseUser.password === password;
+          }
+        }
+        
+        if (passwordMatch) {
           // ⚠️ IMPORTANTE: Mappa account_type a role se è admin/superadmin
           let effectiveRole = supabaseUser.role || 'user';
           if (supabaseUser.account_type === 'superadmin' || supabaseUser.account_type === 'admin') {
