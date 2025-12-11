@@ -213,6 +213,23 @@ export default function LoginPage() {
       // Verifica se i dati cliente sono completati
       async function checkAndRedirect() {
         try {
+          // Email dell'utente corrente
+          const userEmail = session?.user?.email?.toLowerCase() || ''
+          
+          // Per l'utenza test@spediresicuro.it, NON reindirizzare mai a dati-cliente
+          const isTestUser = userEmail === 'test@spediresicuro.it'
+          
+          if (isTestUser) {
+            console.log('✅ [LOGIN] Utente test rilevato, salvo flag e reindirizzo direttamente a dashboard');
+            if (typeof window !== 'undefined' && session?.user?.email) {
+              localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+            }
+            // Usa router.push invece di window.location.href per migliore compatibilità mobile
+            router.refresh();
+            router.push('/dashboard');
+            return; // Esci senza controllare il database
+          }
+          
           console.log('📋 [LOGIN] Chiamata API per verificare dati cliente...');
           const userDataResponse = await fetch('/api/user/dati-cliente');
           
@@ -230,23 +247,27 @@ export default function LoginPage() {
                 localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
               }
               console.log('🔄 [LOGIN] Reindirizzamento a /dashboard');
-              // Usa window.location per forzare refresh completo
-              window.location.href = '/dashboard';
+              // Usa router.push invece di window.location.href per migliore compatibilità mobile
+              router.refresh();
+              router.push('/dashboard');
             } else {
               // Se i dati non sono completati, reindirizza alla pagina dati-cliente
               console.log('🔄 [LOGIN] Dati non completati, reindirizzamento a /dashboard/dati-cliente');
-              // Usa window.location per forzare refresh completo
-              window.location.href = '/dashboard/dati-cliente';
+              // Usa router.push invece di window.location.href per migliore compatibilità mobile
+              router.refresh();
+              router.push('/dashboard/dati-cliente');
             }
           } else {
             console.warn('⚠️ [LOGIN] Errore recupero dati cliente, redirect a dashboard');
             // Se non riesce a recuperare i dati, reindirizza comunque al dashboard
-            window.location.href = '/dashboard';
+            router.refresh();
+            router.push('/dashboard');
           }
         } catch (err: any) {
           console.error('❌ [LOGIN] Errore verifica dati cliente:', err);
           // In caso di errore, reindirizza al dashboard
-          window.location.href = '/dashboard';
+          router.refresh();
+          router.push('/dashboard');
         }
       }
       

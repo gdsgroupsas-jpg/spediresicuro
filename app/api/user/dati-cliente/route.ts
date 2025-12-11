@@ -75,31 +75,55 @@ export async function POST(request: NextRequest) {
       documentoIdentita,
     } = body
 
-    // Validazione campi obbligatori
-    if (!nome || !cognome || !codiceFiscale || !telefono || !indirizzo || !citta || !provincia || !cap) {
-      return NextResponse.json(
-        { error: 'Campi obbligatori mancanti' },
-        { status: 400 }
-      )
-    }
+    // Email dell'utente corrente
+    const userEmail = session.user.email?.toLowerCase() || ''
+    
+    // Per l'utenza test@spediresicuro.it, i campi sono opzionali
+    const isTestUser = userEmail === 'test@spediresicuro.it'
 
-    // Validazione codice fiscale
-    if (codiceFiscale.length !== 16) {
-      return NextResponse.json(
-        { error: 'Il codice fiscale deve essere di 16 caratteri' },
-        { status: 400 }
-      )
-    }
-
-    // Validazione dati azienda se tipoCliente === 'azienda'
-    if (tipoCliente === 'azienda') {
-      if (!ragioneSociale || !partitaIva) {
+    // Validazione campi obbligatori (solo se NON è l'utente test)
+    if (!isTestUser) {
+      if (!nome || !cognome || !codiceFiscale || !telefono || !indirizzo || !citta || !provincia || !cap) {
         return NextResponse.json(
-          { error: 'Ragione sociale e partita IVA sono obbligatori per le aziende' },
+          { error: 'Campi obbligatori mancanti' },
           { status: 400 }
         )
       }
-      if (partitaIva.length !== 11) {
+
+      // Validazione codice fiscale (solo se fornito e non è utente test)
+      if (codiceFiscale && codiceFiscale.length !== 16) {
+        return NextResponse.json(
+          { error: 'Il codice fiscale deve essere di 16 caratteri' },
+          { status: 400 }
+        )
+      }
+
+      // Validazione dati azienda se tipoCliente === 'azienda'
+      if (tipoCliente === 'azienda') {
+        if (!ragioneSociale || !partitaIva) {
+          return NextResponse.json(
+            { error: 'Ragione sociale e partita IVA sono obbligatori per le aziende' },
+            { status: 400 }
+          )
+        }
+        if (partitaIva.length !== 11) {
+          return NextResponse.json(
+            { error: 'La partita IVA deve essere di 11 caratteri' },
+            { status: 400 }
+          )
+        }
+      }
+    } else {
+      // Per utente test: validazione codice fiscale solo se fornito
+      if (codiceFiscale && codiceFiscale.length !== 16) {
+        return NextResponse.json(
+          { error: 'Il codice fiscale deve essere di 16 caratteri' },
+          { status: 400 }
+        )
+      }
+      
+      // Per utente test: validazione partita IVA solo se tipoCliente === 'azienda' e partitaIva è fornita
+      if (tipoCliente === 'azienda' && partitaIva && partitaIva.length !== 11) {
         return NextResponse.json(
           { error: 'La partita IVA deve essere di 11 caratteri' },
           { status: 400 }
@@ -108,16 +132,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Costruisci oggetto DatiCliente
+    // Per utente test, i campi possono essere vuoti
     const datiCliente: DatiCliente = {
-      nome,
-      cognome,
-      codiceFiscale: codiceFiscale.toUpperCase(),
-      telefono,
+      nome: nome || (isTestUser ? 'Test' : ''),
+      cognome: cognome || (isTestUser ? 'User' : ''),
+      codiceFiscale: codiceFiscale ? codiceFiscale.toUpperCase() : (isTestUser ? 'TEST12345678901' : ''),
+      telefono: telefono || (isTestUser ? '0000000000' : ''),
       email: session.user.email,
-      indirizzo,
-      citta,
-      provincia: provincia.toUpperCase(),
-      cap,
+      indirizzo: indirizzo || (isTestUser ? 'Test Address' : ''),
+      citta: citta || (isTestUser ? 'Test City' : ''),
+      provincia: provincia ? provincia.toUpperCase() : (isTestUser ? 'TE' : ''),
+      cap: cap || (isTestUser ? '00000' : ''),
       nazione: nazione || 'Italia',
       tipoCliente: tipoCliente || 'persona',
       datiCompletati: true,
