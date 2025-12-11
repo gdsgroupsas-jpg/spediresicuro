@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, findUserByEmail } from '@/lib/database';
+import { validateEmail, validatePassword } from '@/lib/validators';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,29 +19,19 @@ export async function POST(request: NextRequest) {
     // Validazione input
     if (!email || !password || !name) {
       console.log('❌ [REGISTER] Dati mancanti');
-      return NextResponse.json(
-        { error: 'Email, password e nome sono obbligatori' },
-        { status: 400 }
-      );
+      return ApiErrors.BAD_REQUEST('Email, password e nome sono obbligatori');
     }
 
     // Validazione email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!validateEmail(email)) {
       console.log('❌ [REGISTER] Email non valida:', email);
-      return NextResponse.json(
-        { error: 'Email non valida' },
-        { status: 400 }
-      );
+      return ApiErrors.VALIDATION_ERROR('Email non valida');
     }
 
     // Validazione password (minimo 6 caratteri)
-    if (password.length < 6) {
+    if (!validatePassword(password, 6)) {
       console.log('❌ [REGISTER] Password troppo corta');
-      return NextResponse.json(
-        { error: 'La password deve essere di almeno 6 caratteri' },
-        { status: 400 }
-      );
+      return ApiErrors.VALIDATION_ERROR('La password deve essere di almeno 6 caratteri');
     }
 
     // Verifica se l'utente esiste già
@@ -48,10 +40,7 @@ export async function POST(request: NextRequest) {
       const existingUser = await findUserByEmail(email);
       if (existingUser) {
         console.log('⚠️ [REGISTER] Utente già esistente:', email);
-        return NextResponse.json(
-          { error: 'Questa email è già registrata. Usa il login invece della registrazione.' },
-          { status: 409 }
-        );
+        return ApiErrors.CONFLICT('Questa email è già registrata. Usa il login invece della registrazione.');
       }
     } catch (checkError: any) {
       console.error('❌ [REGISTER] Errore verifica utente esistente:', checkError.message);

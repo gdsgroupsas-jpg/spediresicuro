@@ -2,7 +2,7 @@
 
 /**
  * Server Actions per Gestione Reseller (Rivenditore)
- * 
+ *
  * Permette agli Admin/Rivenditori di creare e gestire i propri Sub-Users (utenti finali).
  * Un Reseller può:
  * - Creare nuovi Sub-Users
@@ -15,6 +15,8 @@ import { auth } from '@/lib/auth-config'
 import { supabaseAdmin } from '@/lib/db/client'
 import { createUser } from '@/lib/database'
 import bcrypt from 'bcryptjs'
+import { validateEmail } from '@/lib/validators'
+import { userExists } from '@/lib/db/user-helpers'
 
 /**
  * Verifica se l'utente corrente è un Reseller
@@ -95,8 +97,7 @@ export async function createSubUser(data: {
     }
 
     // Validazione email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email.trim())) {
+    if (!validateEmail(data.email)) {
       return {
         success: false,
         error: 'Email non valida.',
@@ -104,13 +105,9 @@ export async function createSubUser(data: {
     }
 
     // 4. Verifica se Sub-User esiste già
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id, email')
-      .eq('email', data.email.trim())
-      .single()
+    const exists = await userExists(data.email.trim())
 
-    if (existingUser) {
+    if (exists) {
       return {
         success: false,
         error: 'Un utente con questa email esiste già.',
