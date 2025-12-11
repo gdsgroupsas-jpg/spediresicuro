@@ -206,55 +206,75 @@ export default function DatiClientePage() {
   }
 
   const validateForm = (): boolean => {
-    // Validazione campi obbligatori base
-    if (!formData.nome.trim()) {
-      setError('Il nome è obbligatorio')
-      return false
-    }
-    if (!formData.cognome.trim()) {
-      setError('Il cognome è obbligatorio')
-      return false
-    }
-    if (!formData.codiceFiscale.trim()) {
-      setError('Il codice fiscale è obbligatorio')
-      return false
-    }
-    if (formData.codiceFiscale.length !== 16) {
-      setError('Il codice fiscale deve essere di 16 caratteri')
-      return false
-    }
-    if (!formData.telefono.trim()) {
-      setError('Il telefono è obbligatorio')
-      return false
-    }
-    if (!formData.indirizzo.trim()) {
-      setError('L\'indirizzo è obbligatorio')
-      return false
-    }
-    if (!formData.citta.trim()) {
-      setError('La città è obbligatoria')
-      return false
-    }
-    if (!formData.provincia.trim()) {
-      setError('La provincia è obbligatoria')
-      return false
-    }
-    if (!formData.cap.trim()) {
-      setError('Il CAP è obbligatorio')
-      return false
-    }
+    // Email dell'utente corrente
+    const userEmail = session?.user?.email?.toLowerCase() || ''
+    
+    // Per l'utenza test@spediresicuro.it, i campi sono opzionali
+    const isTestUser = userEmail === 'test@spediresicuro.it'
 
-    // Validazione dati azienda se tipoCliente === 'azienda'
-    if (formData.tipoCliente === 'azienda') {
-      if (!formData.ragioneSociale.trim()) {
-        setError('La ragione sociale è obbligatoria per le aziende')
+    // Validazione campi obbligatori base (solo se NON è l'utente test)
+    if (!isTestUser) {
+      if (!formData.nome.trim()) {
+        setError('Il nome è obbligatorio')
         return false
       }
-      if (!formData.partitaIva.trim()) {
-        setError('La partita IVA è obbligatoria per le aziende')
+      if (!formData.cognome.trim()) {
+        setError('Il cognome è obbligatorio')
         return false
       }
-      if (formData.partitaIva.length !== 11) {
+      if (!formData.codiceFiscale.trim()) {
+        setError('Il codice fiscale è obbligatorio')
+        return false
+      }
+      if (formData.codiceFiscale.length !== 16) {
+        setError('Il codice fiscale deve essere di 16 caratteri')
+        return false
+      }
+      if (!formData.telefono.trim()) {
+        setError('Il telefono è obbligatorio')
+        return false
+      }
+      if (!formData.indirizzo.trim()) {
+        setError('L\'indirizzo è obbligatorio')
+        return false
+      }
+      if (!formData.citta.trim()) {
+        setError('La città è obbligatoria')
+        return false
+      }
+      if (!formData.provincia.trim()) {
+        setError('La provincia è obbligatoria')
+        return false
+      }
+      if (!formData.cap.trim()) {
+        setError('Il CAP è obbligatorio')
+        return false
+      }
+
+      // Validazione dati azienda se tipoCliente === 'azienda'
+      if (formData.tipoCliente === 'azienda') {
+        if (!formData.ragioneSociale.trim()) {
+          setError('La ragione sociale è obbligatoria per le aziende')
+          return false
+        }
+        if (!formData.partitaIva.trim()) {
+          setError('La partita IVA è obbligatoria per le aziende')
+          return false
+        }
+        if (formData.partitaIva.length !== 11) {
+          setError('La partita IVA deve essere di 11 caratteri')
+          return false
+        }
+      }
+    } else {
+      // Per utente test: validazione codice fiscale solo se fornito
+      if (formData.codiceFiscale.trim() && formData.codiceFiscale.length !== 16) {
+        setError('Il codice fiscale deve essere di 16 caratteri')
+        return false
+      }
+      
+      // Per utente test: validazione partita IVA solo se tipoCliente === 'azienda' e partitaIva è fornita
+      if (formData.tipoCliente === 'azienda' && formData.partitaIva.trim() && formData.partitaIva.length !== 11) {
         setError('La partita IVA deve essere di 11 caratteri')
         return false
       }
