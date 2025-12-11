@@ -384,25 +384,36 @@ export default function NuovaSpedizionePage() {
     }));
   };
 
-  // Handler dati estratti da OCR
+  // Handler dati estratti da AGENT AI
   const handleOCRDataExtracted = (data: any) => {
-    // Popola i campi destinatario con i dati estratti
-    setFormData((prev) => ({
-      ...prev,
-      destinatarioNome: data.recipient_name || prev.destinatarioNome,
-      destinatarioIndirizzo: data.recipient_address || prev.destinatarioIndirizzo,
-      destinatarioCitta: data.recipient_city || prev.destinatarioCitta,
-      destinatarioProvincia: data.recipient_province || prev.destinatarioProvincia,
-      destinatarioCap: data.recipient_zip || prev.destinatarioCap,
-      destinatarioTelefono: data.recipient_phone || prev.destinatarioTelefono,
-      destinatarioEmail: data.recipient_email || prev.destinatarioEmail,
-      note: data.notes || prev.note,
-    }));
+    // 1. Popola Dati Destinatario
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        destinatarioNome: data.recipient_name || prev.destinatarioNome,
+        destinatarioIndirizzo: data.recipient_address || prev.destinatarioIndirizzo,
+        destinatarioCitta: data.recipient_city || prev.destinatarioCitta,
+        destinatarioProvincia: data.recipient_province || prev.destinatarioProvincia,
+        destinatarioCap: data.recipient_zip || prev.destinatarioCap,
+        destinatarioTelefono: data.recipient_phone || prev.destinatarioTelefono,
+        destinatarioEmail: data.recipient_email || prev.destinatarioEmail,
+        note: data.notes ? (prev.note ? `${prev.note}\n${data.notes}` : data.notes) : prev.note,
+      };
+
+      // 2. Gestione Contrassegno (COD)
+      // Nota: Per ora metto il valore nelle note se presente, o dovrei attivare un flag COD se avessi state payment?
+      // Siccome formData attuale non ha campi COD espliciti (solo 'note' e 'tipoSpedizione'), 
+      // aggiungo l'info nelle note per sicurezza.
+      if (data.cash_on_delivery_amount) {
+        const codText = `[AUTO] Contrassegno rilevato: €${data.cash_on_delivery_amount}`;
+        newData.note = newData.note ? `${newData.note}\n${codText}` : codText;
+      }
+      
+      return newData;
+    });
     
-    // Se c'è una città, cerca la location per popolare provincia e CAP
-    if (data.recipient_city && !data.recipient_province) {
-      // Il componente AsyncLocationCombobox gestirà la ricerca
-    }
+    // Feedback visivo (opzionale toast)
+    console.log('Agent Data applied:', data);
   };
 
   // Handler errori OCR
