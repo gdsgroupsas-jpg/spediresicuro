@@ -109,10 +109,7 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
     setConfidence(0);
   };
 
-  return (
-    <div className="w-full">
-      <AnimatePresence mode="wait">
-        {!preview ? (
+
   return (
     <div className="w-full">
       <AnimatePresence mode="wait">
