@@ -16,14 +16,14 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
 
     // Configura client se credenziali disponibili
     if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
+      let credentials;
       try {
-        const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
-        this.client = new ImageAnnotatorClient({
-          credentials,
-        });
-      } catch (error) {
-        console.error('Errore parsing GOOGLE_CLOUD_CREDENTIALS:', error);
-      }
+        if (process.env.GOOGLE_CLOUD_CREDENTIALS && process.env.GOOGLE_CLOUD_CREDENTIALS.startsWith('{')) {
+          credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
+        }
+      } catch(e) { /* ignore */ }
+
+      this.client = new ImageAnnotatorClient(credentials ? { credentials } : {});
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       // Oppure usa file di credenziali
       this.client = new ImageAnnotatorClient();
