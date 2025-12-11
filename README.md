@@ -1,134 +1,120 @@
-# 🚀 SpediRe Sicuro
+# 📦 SpedireSicuro AI - Logistics Brain Platform
 
-Piattaforma web per preventivi spedizioni con ricarico configurabile.
+> **The First Logistics Operating System powered by Multimodal GenAI (Gemini 2.0 Flash)**
 
-## 📋 Stack Tecnologico
+![SpedireSicuro AI Badge](https://img.shields.io/badge/AI-Powered-purple?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-Beta_2.0-blue?style=for-the-badge) ![Tech](https://img.shields.io/badge/Stack-Next.js_|_LangGraph_|_Supabase-black?style=for-the-badge)
 
-- **Framework**: Next.js 14 (App Router)
-- **Linguaggio**: TypeScript
-- **Styling**: Tailwind CSS
-- **Database**: PostgreSQL (Supabase)
-- **Autenticazione**: NextAuth.js v5
-- **AI Assistant**: Anne (Claude AI)
-- **Deploy**: Vercel
+## 🚀 Overview
 
-## 🚀 Quick Start
+**SpedireSicuro** non è un semplice gestionale di spedizioni. È una piattaforma **AI-First** progettata per automatizzare il flusso logistico complesso attraverso agenti intelligenti.
 
-### 1. Installazione
+Il cuore del sistema è **"Anne" (Logistics Brain)**, un'architettura a grafo (LangGraph) potenziata da **Google Gemini 2.0 Flash**, capace di comprendere input multimodali (foto, chat WhatsApp, audio) e trasformarli in spedizioni pronte per i corrieri.
 
-```bash
-npm install
-```
+### ✨ Key Capabilities
 
-### 2. Configurazione
-
-Copia `.env.example` e rinominalo in `.env.local`:
-
-```bash
-# Windows
-copy .env.example .env.local
-
-# Linux/Mac
-cp .env.example .env.local
-```
-
-Compila le variabili necessarie in `.env.local`:
-
-#### Variabili Obbligatorie
-
-- `NEXT_PUBLIC_SUPABASE_URL` - URL progetto Supabase
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Chiave anonima Supabase
-- `SUPABASE_SERVICE_ROLE_KEY` - Service role key Supabase
-- `NEXTAUTH_URL` - URL applicazione (locale: `http://localhost:3000`)
-- `NEXTAUTH_SECRET` - Genera con: `openssl rand -base64 32`
-- `ENCRYPTION_KEY` - Genera con: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-
-#### Variabili Opzionali (per funzionalità avanzate)
-
-- `ANTHROPIC_API_KEY` - Chiave API per Anne AI Assistant (ottieni da https://console.anthropic.com/)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Per login Google OAuth
-- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` - Per login GitHub OAuth
-
-### 3. Avvio Server Locale
-
-```bash
-npm run dev
-```
-
-L'applicazione sarà disponibile su: **http://localhost:3000**
-
-## 📁 Struttura Progetto
-
-```
-├── app/              # Next.js App Router (pagine e API routes)
-├── components/       # Componenti React riutilizzabili
-├── lib/             # Utilities e configurazioni
-├── types/           # TypeScript types
-├── supabase/        # Migrazioni database
-├── scripts/         # Script di utilità
-│   └── tools/       # Script batch per sviluppo locale
-├── docs/            # Documentazione
-│   └── archive/     # Documentazione storica/obsoleta
-└── .env.example     # Template variabili ambiente
-```
-
-## 🔧 Script Utili (in `scripts/tools/`)
-
-- `VERIFICA-ANNE-LOCALE.bat` - Verifica configurazione Anne AI
-- `RIAVVIA-SERVER.bat` - Riavvia il server di sviluppo
-- `VERIFICA-ENV-LOCALE.bat` - Verifica variabili ambiente
-
-## 📚 Documentazione
-
-### File Principali
-
-- `README.md` - Questo file (guida rapida)
-- `MANUALE_UTENTE.md` - Manuale utente completo della piattaforma
-- `SETUP.md` - Guida setup dettagliata
-
-### Cartelle
-
-- `docs/` - Documentazione tecnica attiva
-- `docs/archive/` - Documentazione storica/obsoleta (fix risolti, guide vecchie)
-
-## 🤖 Anne AI Assistant
-
-Anne è l'assistente virtuale AI integrato nella piattaforma. Per attivarla:
-
-1. Ottieni una chiave API da https://console.anthropic.com/
-2. Aggiungi in `.env.local`: `ANTHROPIC_API_KEY=sk-ant-...`
-3. Riavvia il server: `npm run dev`
-4. Apri Anne dal pulsante "AI Assistant" nel dashboard
-
-**Verifica configurazione**: Esegui `scripts/tools/VERIFICA-ANNE-LOCALE.bat`
-
-## 🔐 Sicurezza
-
-- ⚠️ **NON committare mai `.env.local`** nel repository
-- ⚠️ Usa sempre variabili d'ambiente per chiavi e segreti
-- ⚠️ In produzione, configura tutte le variabili su Vercel
-- ⚠️ Genera sempre `NEXTAUTH_SECRET` e `ENCRYPTION_KEY` unici per ogni ambiente
-
-## 🚀 Deploy
-
-Il progetto è configurato per deploy automatico su Vercel:
-- Ogni push su `master` → deploy automatico
-- Variabili ambiente vanno configurate su Vercel Dashboard
-
-## 📝 Note
-
-- **Repository**: https://github.com/gdsgroupsas-jpg/spediresicuro.git
-- **Branch principale**: `master`
-- **Account GitHub**: gdsgroupsas-jpg
-
-## 🆘 Supporto
-
-Per problemi o domande:
-1. Controlla `docs/` per documentazione tecnica
-2. Verifica `.env.local` è configurato correttamente
-3. Controlla i log del server per errori
+1.  **🧠 Multimodal AI Ingestion**:
+    - Carica uno screenshot di WhatsApp o una foto di un'etichetta.
+    - L'IA "guarda" l'immagine, estrae indirizzi, capisce il contesto (es. "urgente", "contrassegno").
+    - Formatta i dati, corregge i telefoni (`+39...`) e compila il form.
+2.  **🤖 Agentic Workflow (LangGraph)**:
+    - Non semplici chiamate API, ma un grafo decisionale.
+    - **Nodi**: `Extraction` -> `Validation` -> `CourierSelection` -> `Booking`.
+    - L'agente può "ragionare" e chiedere feedback se i dati sono ambigui.
+3.  **🚚 Smart Routing Algorithm**:
+    - Algoritmo interno che suggerisce il corriere migliore (SDA, GLS, BRT) basandosi su:
+      - Performance storica (Capacità di consegna nella zona).
+      - Costo (Listini dinamici per Reseller).
+      - Tempi previsti.
+4.  **⚡ Premium DX & UX**:
+    - Frontend **Next.js 14** velocissimo.
+    - Interfaccia "Glassmorphism" con animazioni **Framer Motion**.
+    - **Mobile-First**: Ottimizzata per l'uso in mobilità (Touch targets, responsive).
 
 ---
 
-**Versione**: 1.0.0  
-**Ultimo aggiornamento**: Dicembre 2025
+## 🛠️ Tech Stack & Architecture
+
+### Frontend Layer
+
+- **Framework**: Next.js 14 (App Router)
+- **Styling**: TailwindCSS + Framer Motion (Animations)
+- **State**: React Hooks + Server Actions
+- **Auth**: NextAuth.js (Role Based: Superadmin, Reseller, User)
+
+### AI Brain Layer (The "Black Box")
+
+- **Orchestrator**: LangGraph (State Machine for Agents)
+- **LLM**: Google Gemini 2.0 Flash (Multimodal Vision + Text)
+- **Tools**: Custom OCR tools, Geocoding API, Courier APIs
+
+### Backend & Data
+
+- **DB**: Supabase (PostgreSQL)
+- **API**: REST Endpoints (Next.js Route Handlers)
+- **Storage**: Supabase Storage (Shipping labels, invoices)
+
+---
+
+## 📂 Project Structure
+
+```bash
+/app
+  /api              # Server-side API Routes (Agent entry points)
+  /dashboard        # Protected Application Area
+    /spedizioni     # Shipment Management
+    /ocr-scanner    # Legacy OCR tools
+/lib
+  /agent            # LangGraph Nodes & Edges definition
+  /adapters         # Courier integrations (SDA, GLS...)
+/components
+  /ocr              # AI Components (Thinking visualizations)
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Supabase Account
+- Google AI Studio Key (Gemini)
+
+### Installation
+
+1. **Clone & Install**
+
+   ```bash
+   git clone https://github.com/gdsgroupsas-jpg/spediresicuro.git
+   cd spediresicuro
+   npm install
+   ```
+
+2. **Environment Setup (.env.local)**
+
+   ```env
+   # Storage & DB
+   NEXT_PUBLIC_SUPABASE_URL=...
+   SUPABASE_SERVICE_ROLE_KEY=...
+
+   # AI Brain
+   GOOGLE_API_KEY=AIza... (Gemini 2.0 Key)
+
+   # Auth
+   NEXTAUTH_SECRET=...
+   ```
+
+3. **Run Development**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 🔮 Future Roadmap (AI Team Focus)
+
+- **Voice Agent**: Integrazione STT (Speech-to-Text) per dettare spedizioni mentre si guida.
+- **Predictive Logistics**: Modello ML per prevedere "Giacenze" prima che accadano basandosi sullo storico indirizzi.
+- **WhatsApp Bot**: Portare l'agente direttamente su WA (Twilio wrapper attorno all'Agente LangGraph).
+
+---
+
+_Built with ❤️ by the SpedireSicuro AI Team_
