@@ -2,7 +2,7 @@
 
 /**
  * Server Actions per Gestione Admin e Gerarchia Multi-Livello
- * 
+ *
  * Gestisce la creazione di sotto-admin e la gestione della gerarchia
  */
 
@@ -10,6 +10,8 @@ import { auth } from '@/lib/auth-config'
 import { supabaseAdmin } from '@/lib/db/client'
 import { createUser } from '@/lib/database'
 import type { User } from '@/lib/database'
+import { validateEmail } from '@/lib/validators'
+import { getUserByEmail, userExists } from '@/lib/db/user-helpers'
 
 /**
  * Verifica se un utente ha la killer feature multi_level_admin attiva
@@ -74,8 +76,7 @@ export async function createSubAdmin(
     }
 
     // Validazione email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(childEmail.trim())) {
+    if (!validateEmail(childEmail)) {
       return {
         success: false,
         error: 'Email non valida.',
@@ -138,13 +139,9 @@ export async function createSubAdmin(
     }
 
     // 7. Verifica se child esiste già
-    const { data: existingChild } = await supabaseAdmin
-      .from('users')
-      .select('id, email')
-      .eq('email', childEmail.trim())
-      .single()
+    const exists = await userExists(childEmail.trim())
 
-    if (existingChild) {
+    if (exists) {
       return {
         success: false,
         error: 'Un utente con questa email esiste già.',
