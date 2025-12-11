@@ -91,7 +91,8 @@ export async function findUserByEmail(
     return null;
   }
 
-  return user;
+  // Cast esplicito per risolvere il tipo GenericStringError di Supabase
+  return user as { id: string; email: string; role: string; [key: string]: any };
 }
 
 /**
