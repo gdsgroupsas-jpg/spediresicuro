@@ -6,8 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
 import { findUserByEmail, updateUser } from '@/lib/database';
+import { requireAuth } from '@/lib/api-middleware';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 // ⚠️ IMPORTANTE: Questa route usa headers() per l'autenticazione, quindi deve essere dinamica
 export const dynamic = 'force-dynamic';
@@ -19,17 +20,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Autenticazione
-    const session = await auth();
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (!authResult.authorized) return authResult.response;
+    const { session } = authResult;
 
     // Trova utente in Supabase
     const user = await findUserByEmail(session.user.email);
 
     if (!user) {
-      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
+      return ApiErrors.NOT_FOUND('Utente');
     }
 
     // Restituisci impostazioni (senza password)
@@ -42,14 +41,7 @@ export async function GET(request: NextRequest) {
       image: user.image,
     });
   } catch (error: any) {
-    console.error('❌ [API] Errore GET /api/user/settings:', error);
-    return NextResponse.json(
-      { 
-        error: 'Errore server',
-        message: error instanceof Error ? error.message : 'Errore sconosciuto',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'GET /api/user/settings');
   }
 }
 
@@ -60,11 +52,9 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Autenticazione
-    const session = await auth();
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (!authResult.authorized) return authResult.response;
+    const { session } = authResult;
 
     // Parse body
     const body = await request.json();
@@ -73,23 +63,17 @@ export async function PUT(request: NextRequest) {
     // Validazione mittente predefinito
     if (defaultSender) {
       if (!defaultSender.nome || !defaultSender.indirizzo || !defaultSender.citta || !defaultSender.cap) {
-        return NextResponse.json(
-          { error: 'Dati mittente incompleti. Campi obbligatori: nome, indirizzo, città, CAP' },
-          { status: 400 }
-        );
+        return ApiErrors.BAD_REQUEST('Dati mittente incompleti. Campi obbligatori: nome, indirizzo, città, CAP');
       }
 
       // Valida CAP italiano (5 cifre)
       if (!/^\d{5}$/.test(defaultSender.cap)) {
-        return NextResponse.json({ error: 'CAP non valido. Deve essere 5 cifre.' }, { status: 400 });
+        return ApiErrors.VALIDATION_ERROR('CAP non valido. Deve essere 5 cifre.');
       }
 
       // Valida provincia (2 lettere)
       if (defaultSender.provincia && !/^[A-Z]{2}$/.test(defaultSender.provincia)) {
-        return NextResponse.json(
-          { error: 'Provincia non valida. Deve essere 2 lettere (es: MI, RM)' },
-          { status: 400 }
-        );
+        return ApiErrors.VALIDATION_ERROR('Provincia non valida. Deve essere 2 lettere (es: MI, RM)');
       }
     }
 
@@ -97,7 +81,7 @@ export async function PUT(request: NextRequest) {
     const user = await findUserByEmail(session.user.email);
 
     if (!user) {
-      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
+      return ApiErrors.NOT_FOUND('Utente');
     }
 
     // Aggiorna impostazioni in Supabase
@@ -111,13 +95,6 @@ export async function PUT(request: NextRequest) {
       defaultSender: updatedUser.defaultSender || null,
     });
   } catch (error: any) {
-    console.error('❌ [API] Errore PUT /api/user/settings:', error);
-    return NextResponse.json(
-      { 
-        error: 'Errore server',
-        message: error instanceof Error ? error.message : 'Errore sconosciuto',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'PUT /api/user/settings');
   }
 }

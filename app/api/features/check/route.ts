@@ -5,8 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
-import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, checkSupabaseConfig } from '@/lib/api-middleware';
+import { getUserByEmail } from '@/lib/db/user-helpers';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 // Forza rendering dinamico (usa headers, session, ecc.)
 export const dynamic = 'force-dynamic';
@@ -14,28 +16,21 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuth();
+    if (!authResult.authorized) return authResult.response;
+    const { session } = authResult;
 
     // 2. Ottieni feature code dalla query
     const { searchParams } = new URL(request.url);
     const featureCode = searchParams.get('feature');
 
     if (!featureCode) {
-      return NextResponse.json(
-        { error: 'Parametro "feature" mancante' },
-        { status: 400 }
-      );
+      return ApiErrors.BAD_REQUEST('Parametro "feature" mancante');
     }
 
     // 3. Verifica accesso usando la funzione Supabase
-    if (!isSupabaseConfigured()) {
+    const configCheck = checkSupabaseConfig();
+    if (configCheck) {
       return NextResponse.json(
         { hasAccess: false, reason: 'Supabase non configurato' },
         { status: 200 }
@@ -44,13 +39,9 @@ export async function GET(request: NextRequest) {
 
     try {
       // 1. Ottieni ruolo utente
-      const { data: user, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('role')
-        .eq('email', session.user.email)
-        .single();
+      const user = await getUserByEmail(session.user.email, 'role');
 
-      if (userError || !user) {
+      if (!user) {
         return NextResponse.json({
           hasAccess: false,
           feature: featureCode,
@@ -132,11 +123,7 @@ export async function GET(request: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error('Errore API features/check:', error);
-    return NextResponse.json(
-      { error: 'Errore durante la verifica della feature' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'GET /api/features/check');
   }
 }
 
