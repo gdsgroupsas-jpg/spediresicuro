@@ -5,6 +5,7 @@
 export type ShipmentStatus =
   | 'draft'
   | 'pending'
+  | 'ready_to_ship'
   | 'processing'
   | 'shipped'
   | 'in_transit'
