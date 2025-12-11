@@ -384,6 +384,28 @@ export default function NuovaSpedizionePage() {
     }));
   };
 
+  // Helper per formattazione telefono italiana
+  const formatPhoneNumber = (phone: string): string => {
+    if (!phone) return '';
+    // Rimuovi spazi, lineette, parentesi
+    let clean = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // Se inizia con +39, ok
+    if (clean.startsWith('+39')) {
+      return clean;
+    }
+    // Se inizia con 3, aggiungi +39
+    if (clean.startsWith('3')) {
+      return `+39${clean}`;
+    }
+    // Se inizia con 0039, sostituisci con +39
+    if (clean.startsWith('0039')) {
+      return `+39${clean.substring(4)}`;
+    }
+    
+    return clean;
+  };
+
   // Handler dati estratti da AGENT AI
   const handleOCRDataExtracted = (data: any) => {
     // 1. Popola Dati Destinatario
@@ -395,15 +417,12 @@ export default function NuovaSpedizionePage() {
         destinatarioCitta: data.recipient_city || prev.destinatarioCitta,
         destinatarioProvincia: data.recipient_province || prev.destinatarioProvincia,
         destinatarioCap: data.recipient_zip || prev.destinatarioCap,
-        destinatarioTelefono: data.recipient_phone || prev.destinatarioTelefono,
+        destinatarioTelefono: data.recipient_phone ? formatPhoneNumber(data.recipient_phone) : prev.destinatarioTelefono,
         destinatarioEmail: data.recipient_email || prev.destinatarioEmail,
         note: data.notes ? (prev.note ? `${prev.note}\n${data.notes}` : data.notes) : prev.note,
       };
 
       // 2. Gestione Contrassegno (COD)
-      // Nota: Per ora metto il valore nelle note se presente, o dovrei attivare un flag COD se avessi state payment?
-      // Siccome formData attuale non ha campi COD espliciti (solo 'note' e 'tipoSpedizione'), 
-      // aggiungo l'info nelle note per sicurezza.
       if (data.cash_on_delivery_amount) {
         const codText = `[AUTO] Contrassegno rilevato: €${data.cash_on_delivery_amount}`;
         newData.note = newData.note ? `${newData.note}\n${codText}` : codText;
@@ -412,7 +431,6 @@ export default function NuovaSpedizionePage() {
       return newData;
     });
     
-    // Feedback visivo (opzionale toast)
     console.log('Agent Data applied:', data);
   };
 
@@ -590,6 +608,11 @@ export default function NuovaSpedizionePage() {
                     placeholder="Cerca città..."
                     className="w-full"
                     isValid={validation.mittenteCitta}
+                    defaultValue={formData.mittenteCitta ? {
+                      city: formData.mittenteCitta,
+                      province: formData.mittenteProvincia,
+                      cap: formData.mittenteCap
+                    } : undefined}
                   />
                 </div>
 
@@ -597,10 +620,10 @@ export default function NuovaSpedizionePage() {
                   <SmartInput
                     label="Telefono"
                     value={formData.mittenteTelefono}
-                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteTelefono: v }))}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteTelefono: formatPhoneNumber(v) }))}
                     type="tel"
                     required
-                    placeholder="+39 123 456 7890"
+                    placeholder="+39 312 345 6789"
                     isValid={validation.mittenteTelefono}
                     errorMessage={formData.mittenteTelefono && !validation.mittenteTelefono ? 'Telefono non valido' : undefined}
                   />
@@ -652,6 +675,11 @@ export default function NuovaSpedizionePage() {
                     placeholder="Cerca città..."
                     className="w-full"
                     isValid={validation.destinatarioCitta}
+                    defaultValue={formData.destinatarioCitta ? {
+                      city: formData.destinatarioCitta,
+                      province: formData.destinatarioProvincia,
+                      cap: formData.destinatarioCap
+                    } : undefined}
                   />
                 </div>
 
@@ -659,10 +687,10 @@ export default function NuovaSpedizionePage() {
                   <SmartInput
                     label="Telefono"
                     value={formData.destinatarioTelefono}
-                    onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioTelefono: v }))}
+                    onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioTelefono: formatPhoneNumber(v) }))}
                     type="tel"
                     required
-                    placeholder="+39 098 765 4321"
+                    placeholder="+39 398 765 4321"
                     isValid={validation.destinatarioTelefono}
                     errorMessage={formData.destinatarioTelefono && !validation.destinatarioTelefono ? 'Telefono non valido' : undefined}
                   />
