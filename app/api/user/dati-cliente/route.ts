@@ -6,39 +6,28 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth-config'
 import { findUserByEmail, updateUser } from '@/lib/database'
 import type { DatiCliente } from '@/lib/database'
+import { requireAuth } from '@/lib/api-middleware'
+import { ApiErrors, handleApiError } from '@/lib/api-responses'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    const authResult = await requireAuth()
+    if (!authResult.authorized) return authResult.response
+    const { session } = authResult
 
     const user = await findUserByEmail(session.user.email)
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      )
+      return ApiErrors.NOT_FOUND('Utente')
     }
 
     return NextResponse.json({
       datiCliente: user.datiCliente || null,
     })
   } catch (error: any) {
-    console.error('Errore recupero dati cliente:', error)
-    return NextResponse.json(
-      { error: 'Errore durante il recupero dei dati' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'GET /api/user/dati-cliente')
   }
 }
 
@@ -46,22 +35,14 @@ export async function POST(request: NextRequest) {
   let user: any = null; // Dichiarato fuori dal try per accesso nel catch
   let session: any = null; // Dichiarato fuori dal try per accesso nel catch
   try {
-    session = await auth()
-
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    const authResult = await requireAuth()
+    if (!authResult.authorized) return authResult.response
+    session = authResult.session
 
     user = await findUserByEmail(session.user.email)
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      )
+      return ApiErrors.NOT_FOUND('Utente')
     }
 
     const body = await request.json()

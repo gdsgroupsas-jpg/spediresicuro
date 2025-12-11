@@ -6,8 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
 import { findUserByEmail } from '@/lib/database';
+import { requireAuth } from '@/lib/api-middleware';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 // Forza rendering dinamico (usa headers())
 export const dynamic = 'force-dynamic';
@@ -15,23 +16,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuth();
+    if (!authResult.authorized) return authResult.response;
+    const { session } = authResult;
 
     // 2. Recupera informazioni utente
     const user = await findUserByEmail(session.user.email);
-    
+
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      );
+      return ApiErrors.NOT_FOUND('Utente');
     }
 
     // 3. Recupera anche account_type da Supabase se disponibile
@@ -92,14 +85,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Errore API user/info:', error);
-    return NextResponse.json(
-      { 
-        error: 'Errore durante il recupero delle informazioni utente',
-        message: error instanceof Error ? error.message : 'Errore sconosciuto',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'GET /api/user/info');
   }
 }
 

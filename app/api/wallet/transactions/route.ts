@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth-config'
 import { supabaseAdmin } from '@/lib/db/client'
+import { requireAuth } from '@/lib/api-middleware'
+import { getUserByEmail } from '@/lib/db/user-helpers'
+import { ApiErrors, handleApiError } from '@/lib/api-responses'
 
 // Forza rendering dinamico (usa headers())
 export const dynamic = 'force-dynamic';
@@ -11,27 +13,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const session = await auth()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    // Verifica autenticazione
+    const authResult = await requireAuth()
+    if (!authResult.authorized) return authResult.response
+    const { session } = authResult
 
     // Ottieni ID utente
-    const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
+    const user = await getUserByEmail(session.user.email, 'id')
 
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      )
+    if (!user) {
+      return ApiErrors.NOT_FOUND('Utente')
     }
 
     // Carica transazioni
@@ -51,11 +42,7 @@ export async function GET() {
       .limit(100)
 
     if (error) {
-      console.error('Errore caricamento transazioni:', error)
-      return NextResponse.json(
-        { error: 'Errore durante il caricamento delle transazioni' },
-        { status: 500 }
-      )
+      return handleApiError(error, 'GET /api/wallet/transactions - load transactions')
     }
 
     // Formatta transazioni
@@ -74,10 +61,6 @@ export async function GET() {
       transactions: formattedTransactions,
     })
   } catch (error: any) {
-    console.error('Errore API transazioni wallet:', error)
-    return NextResponse.json(
-      { error: error.message || 'Errore del server' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'GET /api/wallet/transactions')
   }
 }

@@ -6,38 +6,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
-import { findUserByEmail } from '@/lib/database';
-import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAdminRole, checkSupabaseConfig } from '@/lib/api-middleware';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione e permessi admin
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
-
-    const user = await findUserByEmail(session.user.email);
-    
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso negato. Solo gli admin possono accedere.' },
-        { status: 403 }
-      );
-    }
+    const adminAuth = await requireAdminRole();
+    if (!adminAuth.authorized) return adminAuth.response;
 
     // 2. Carica tutte le killer features
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Supabase non configurato' },
-        { status: 500 }
-      );
-    }
+    const configCheck = checkSupabaseConfig();
+    if (configCheck) return configCheck;
 
     const { data: features, error } = await supabaseAdmin
       .from('killer_features')
@@ -45,11 +26,7 @@ export async function GET(request: NextRequest) {
       .order('display_order', { ascending: true });
 
     if (error) {
-      console.error('Errore caricamento features:', error);
-      return NextResponse.json(
-        { error: 'Errore durante il caricamento delle features' },
-        { status: 500 }
-      );
+      return handleApiError(error, 'GET /api/admin/features - load features');
     }
 
     return NextResponse.json({
@@ -57,53 +34,27 @@ export async function GET(request: NextRequest) {
       count: features?.length || 0,
     });
   } catch (error: any) {
-    console.error('Errore API admin/features:', error);
-    return NextResponse.json(
-      { error: 'Errore durante il recupero delle features' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'GET /api/admin/features');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verifica autenticazione e permessi admin
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
-
-    const user = await findUserByEmail(session.user.email);
-    
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso negato. Solo gli admin possono gestire le features.' },
-        { status: 403 }
-      );
-    }
+    const adminAuth = await requireAdminRole();
+    if (!adminAuth.authorized) return adminAuth.response;
 
     // 2. Leggi body della richiesta
     const body = await request.json();
     const { targetUserEmail, featureCode, activate, expiresAt, activationType } = body;
 
     if (!targetUserEmail || !featureCode || typeof activate !== 'boolean') {
-      return NextResponse.json(
-        { error: 'Parametri mancanti: targetUserEmail, featureCode, activate sono obbligatori' },
-        { status: 400 }
-      );
+      return ApiErrors.BAD_REQUEST('Parametri mancanti: targetUserEmail, featureCode, activate sono obbligatori');
     }
 
     // 3. Chiama funzione Supabase per toggle feature
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Supabase non configurato' },
-        { status: 500 }
-      );
-    }
+    const configCheck = checkSupabaseConfig();
+    if (configCheck) return configCheck;
 
     try {
       // 1. Verifica che la feature esista
@@ -114,10 +65,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (featureError || !feature) {
-        return NextResponse.json(
-          { error: 'Feature non trovata' },
-          { status: 404 }
-        );
+        return ApiErrors.NOT_FOUND('Feature');
       }
 
       // 2. Inserisci o aggiorna user_feature
@@ -141,10 +89,7 @@ export async function POST(request: NextRequest) {
           .eq('id', existingUserFeature.id);
 
         if (updateError) {
-          return NextResponse.json(
-            { error: updateError.message },
-            { status: 400 }
-          );
+          return ApiErrors.BAD_REQUEST(updateError.message);
         }
       } else {
         // Crea nuova user_feature
@@ -159,10 +104,7 @@ export async function POST(request: NextRequest) {
           });
 
         if (insertError) {
-          return NextResponse.json(
-            { error: insertError.message },
-            { status: 400 }
-          );
+          return ApiErrors.BAD_REQUEST(insertError.message);
         }
       }
 
@@ -171,18 +113,10 @@ export async function POST(request: NextRequest) {
         message: `Feature ${activate ? 'attivata' : 'disattivata'} con successo`,
       });
     } catch (error: any) {
-      console.error('Errore toggle feature:', error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return handleApiError(error, 'POST /api/admin/features - toggle feature');
     }
   } catch (error: any) {
-    console.error('Errore API admin/features POST:', error);
-    return NextResponse.json(
-      { error: 'Errore durante la gestione della feature' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'POST /api/admin/features');
   }
 }
 

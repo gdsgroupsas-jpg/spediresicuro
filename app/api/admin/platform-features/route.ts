@@ -6,45 +6,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
-import { findUserByEmail } from '@/lib/database';
-import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAdminRole, checkSupabaseConfig } from '@/lib/api-middleware';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
+    // 1. Verifica autenticazione e permessi admin
+    const adminAuth = await requireAdminRole('Accesso negato. Solo gli admin possono gestire le features della piattaforma.');
+    if (!adminAuth.authorized) return adminAuth.response;
 
-    // 2. Verifica che sia admin
-    const user = await findUserByEmail(session.user.email);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      );
-    }
-
-    // Verifica role = 'admin'
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso negato. Solo gli admin possono gestire le features della piattaforma.' },
-        { status: 403 }
-      );
-    }    // 3. Carica tutte le platform features
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Supabase non configurato' },
-        { status: 500 }
-      );
-    }
+    // 2. Carica tutte le platform features
+    const configCheck = checkSupabaseConfig();
+    if (configCheck) return configCheck;
 
     const { data: features, error } = await supabaseAdmin
       .from('platform_features')
@@ -53,11 +27,7 @@ export async function GET(request: NextRequest) {
       .order('display_order', { ascending: true });
 
     if (error) {
-      console.error('Errore caricamento platform features:', error);
-      return NextResponse.json(
-        { error: 'Errore durante il caricamento delle features' },
-        { status: 500 }
-      );
+      return handleApiError(error, 'GET /api/admin/platform-features - load features');
     }
 
     return NextResponse.json({
@@ -66,62 +36,27 @@ export async function GET(request: NextRequest) {
       count: features?.length || 0,
     });
   } catch (error: any) {
-    console.error('Errore API admin/platform-features GET:', error);
-    return NextResponse.json(
-      { error: 'Errore durante il recupero delle features' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'GET /api/admin/platform-features');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
-    }
+    // 1. Verifica autenticazione e permessi admin
+    const adminAuth = await requireAdminRole('Accesso negato. Solo gli admin possono modificare le features della piattaforma.');
+    if (!adminAuth.authorized) return adminAuth.response;
 
-    // 2. Verifica che sia superadmin
-    const user = await findUserByEmail(session.user.email);
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      );
-    }
-
-    // Verifica role = 'admin'
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso negato. Solo gli admin possono modificare le features della piattaforma.' },
-        { status: 403 }
-      );
-    }
-
-    // 3. Leggi body della richiesta
+    // 2. Leggi body della richiesta
     const body = await request.json();
     const { feature_code, is_enabled, is_visible, config } = body;
 
     if (!feature_code) {
-      return NextResponse.json(
-        { error: 'Parametro feature_code obbligatorio' },
-        { status: 400 }
-      );
+      return ApiErrors.BAD_REQUEST('Parametro feature_code obbligatorio');
     }
 
     // 4. Aggiorna feature
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Supabase non configurato' },
-        { status: 500 }
-      );
-    }
+    const configCheck = checkSupabaseConfig();
+    if (configCheck) return configCheck;
 
     // Prepara oggetto aggiornamento
     const updates: any = {};
@@ -136,10 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: 'Nessun campo da aggiornare' },
-        { status: 400 }
-      );
+      return ApiErrors.BAD_REQUEST('Nessun campo da aggiornare');
     }
 
     // Aggiorna feature
@@ -151,18 +83,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Errore aggiornamento platform feature:', error);
-      return NextResponse.json(
-        { error: error.message || 'Errore durante l\'aggiornamento' },
-        { status: 400 }
-      );
+      return handleApiError(error, 'POST /api/admin/platform-features - update feature');
     }
 
     if (!data) {
-      return NextResponse.json(
-        { error: 'Feature non trovata' },
-        { status: 404 }
-      );
+      return ApiErrors.NOT_FOUND('Feature');
     }
 
     return NextResponse.json({
@@ -171,11 +96,7 @@ export async function POST(request: NextRequest) {
       feature: data,
     });
   } catch (error: any) {
-    console.error('Errore API admin/platform-features POST:', error);
-    return NextResponse.json(
-      { error: 'Errore durante l\'aggiornamento della feature' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'POST /api/admin/platform-features');
   }
 }
 
