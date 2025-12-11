@@ -80,7 +80,7 @@ export function checkSupabaseConfig(): NextResponse | undefined {
 export async function findUserByEmail(
   email: string,
   select: string = 'id, email, role'
-) {
+): Promise<{ id: string; email: string; role: string; [key: string]: any } | null> {
   const { data: user, error } = await supabaseAdmin
     .from('users')
     .select(select)
