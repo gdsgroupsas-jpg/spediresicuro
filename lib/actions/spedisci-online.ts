@@ -288,10 +288,13 @@ export async function createShipmentWithOrchestrator(
           if (normalizedCourier !== providerId) {
             orchestrator.registerDirectAdapter(providerId, directProvider);
           }
-          // Registra anche con il codice originale (se diverso dalla versione normalizzata)
-          // Questo gestisce casi come "Poste Italiane" -> "poste italiane" -> "poste"
-          if (courierCode.toLowerCase() !== normalizedCourier) {
-            orchestrator.registerDirectAdapter(courierCode.toLowerCase(), directProvider);
+          // Registra anche con il codice originale se diverso (per gestire varianti)
+          // Esempio: "Poste Italiane" -> "poste italiane" -> "poste"
+          // Se il codice originale normalizzato è diverso da quello già registrato, registra anche quello
+          const originalNormalized = courierCode.toLowerCase();
+          if (originalNormalized !== normalizedCourier) {
+            orchestrator.registerDirectAdapter(originalNormalized, directProvider);
+            console.log(`✅ [ORCHESTRATOR] Adapter registrato anche con chiave: ${originalNormalized}`);
           }
           console.log(`✅ [ORCHESTRATOR] Adapter diretto (${providerId}) registrato con chiavi: ${normalizedCourier}, ${providerId}`);
         } else {
@@ -429,4 +432,3 @@ export async function saveSpedisciOnlineCredentials(credentials: {
     }
   }
 }
-

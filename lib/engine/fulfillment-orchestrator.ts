@@ -129,10 +129,19 @@ export class FulfillmentOrchestrator {
 
     if (this.config.preferDirect) {
       const directAdapter = this.directAdapters.get(normalizedCourier);
+      
+      console.log(`🔍 [ORCHESTRATOR] Cerca adapter diretto con chiave: "${normalizedCourier}"`);
+      console.log(`🔍 [ORCHESTRATOR] Chiavi disponibili:`, Array.from(this.directAdapters.keys()));
 
       if (directAdapter) {
+        console.log(`✅ [ORCHESTRATOR] Adapter diretto trovato per ${normalizedCourier}, creo spedizione...`);
         try {
           const result = await directAdapter.createShipment(shipmentData);
+          console.log(`✅ [ORCHESTRATOR] Spedizione creata con successo:`, {
+            tracking: result.tracking_number,
+            has_label_url: !!result.label_url,
+            has_metadata: !!result.metadata
+          });
 
           return {
             success: true,
@@ -145,10 +154,12 @@ export class FulfillmentOrchestrator {
             metadata: result.metadata, // Passa metadati aggiuntivi (es: poste_account_id, waybill_number)
           };
         } catch (error) {
-          console.warn(`Adapter diretto ${courierCode} fallito:`, error);
+          console.error(`❌ [ORCHESTRATOR] Adapter diretto ${courierCode} fallito:`, error);
           directError = error instanceof Error ? error.message : 'Errore sconosciuto';
           // Continua con broker
         }
+      } else {
+        console.log(`ℹ️ [ORCHESTRATOR] Nessun adapter diretto trovato per "${normalizedCourier}"`);
       }
     }
 
