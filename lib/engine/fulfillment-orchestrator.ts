@@ -119,13 +119,18 @@ export class FulfillmentOrchestrator {
     // ===========================================
     // STRATEGIA 1: ADAPTER DIRETTO (Preferito)
     // ===========================================
+    // ===========================================
+    // STRATEGIA 1: ADAPTER DIRETTO (Preferito)
+    // ===========================================
+    let directError: string | null = null;
+
     if (this.config.preferDirect) {
       const directAdapter = this.directAdapters.get(normalizedCourier);
-      
+
       if (directAdapter) {
         try {
           const result = await directAdapter.createShipment(shipmentData);
-          
+
           return {
             success: true,
             tracking_number: result.tracking_number,
@@ -137,6 +142,7 @@ export class FulfillmentOrchestrator {
           };
         } catch (error) {
           console.warn(`Adapter diretto ${courierCode} fallito:`, error);
+          directError = error instanceof Error ? error.message : 'Errore sconosciuto';
           // Continua con broker
         }
       }
@@ -149,7 +155,7 @@ export class FulfillmentOrchestrator {
       allowBroker: this.config.allowBroker,
       hasBrokerAdapter: !!this.brokerAdapter,
     });
-    
+
     if (this.config.allowBroker && this.brokerAdapter) {
       console.log('✅ [ORCHESTRATOR] Broker adapter disponibile, uso Spedisci.Online');
       try {
@@ -159,15 +165,15 @@ export class FulfillmentOrchestrator {
           corriere: courierCode, // Aggiungi il corriere ai dati
           courier_id: shipmentData.courier_id || courierCode,
         };
-        
+
         console.log('📦 [ORCHESTRATOR] Chiamo broker adapter con corriere:', courierCode);
         const result = await this.brokerAdapter.createShipment(shipmentDataWithCourier);
-        
+
         console.log('✅ [ORCHESTRATOR] Broker adapter ha restituito:', {
           has_tracking: !!result.tracking_number,
           has_label: !!result.label_pdf,
         });
-        
+
         return {
           success: true,
           tracking_number: result.tracking_number,
@@ -199,15 +205,15 @@ export class FulfillmentOrchestrator {
         // Genera CSV per upload manuale
         const csvContent = this.generateFallbackCSV(shipmentData);
         const trackingNumber = this.generateTrackingNumber(courierCode);
-        
+
         return {
           success: false,
           tracking_number: trackingNumber,
           label_pdf: Buffer.from(csvContent, 'utf-8'),
           carrier: courierCode,
           method: 'fallback',
-          error: 'Nessun adapter disponibile',
-          message: 'CSV generato per upload manuale. Nessun adapter diretto o broker disponibile.',
+          error: directError ? `Errore API: ${directError}` : 'Nessun adapter disponibile',
+          message: directError ? `Errore API: ${directError}` : 'CSV generato per upload manuale. Nessun adapter diretto o broker disponibile.',
         };
       } catch (error) {
         return {
@@ -269,7 +275,7 @@ export class FulfillmentOrchestrator {
     };
 
     const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
-    
+
     const row = [
       escapeCSV(recipientName),
       escapeCSV(recipientAddress),
