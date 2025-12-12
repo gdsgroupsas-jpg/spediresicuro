@@ -422,3 +422,5 @@ BEGIN
   RAISE NOTICE '   - I Reseller devono avere is_reseller = true';
   RAISE NOTICE '   - Gli Admin esistenti sono stati automaticamente impostati come Reseller';
 END $$;
+
+
