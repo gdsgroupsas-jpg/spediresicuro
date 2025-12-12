@@ -8,17 +8,21 @@
  */
 
 import { useState, useEffect } from 'react'
-import { 
-  Truck, 
-  Key, 
+import {
+  Truck,
+  Key,
   Save,
   CheckCircle2,
   AlertCircle,
   Loader2,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  Zap
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const PosteWizard = dynamic(() => import('./PosteWizard'))
 
 interface CourierAPI {
   id: string
@@ -132,6 +136,7 @@ const availableAPIs: CourierAPI[] = [
 
 export default function CourierAPIConfig() {
   const [selectedAPI, setSelectedAPI] = useState<string>('spedisci_online')
+  const [showPosteWizard, setShowPosteWizard] = useState(false)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [isSaving, setIsSaving] = useState(false)
@@ -172,8 +177,8 @@ export default function CourierAPIConfig() {
       if (api) {
         api.fields.forEach(field => {
           if (field.key === 'contract_mapping') {
-            data[field.key] = typeof config.contract_mapping === 'string' 
-              ? config.contract_mapping 
+            data[field.key] = typeof config.contract_mapping === 'string'
+              ? config.contract_mapping
               : JSON.stringify(config.contract_mapping || {}, null, 2)
           } else {
             data[field.key] = config[field.key] || ''
@@ -238,29 +243,29 @@ export default function CourierAPIConfig() {
           // Formato: "codicecontratto-Corriere" (es: "interno-Interno")
           const lines = formData.contract_mapping.split('\n').filter(l => l.trim())
           const mapping: Record<string, string> = {}
-          
+
           lines.forEach(line => {
             const trimmed = line.trim()
             if (!trimmed) return
-            
+
             // Formato: "codicecontratto-Corriere" (es: "interno-Interno")
             // Oppure formato tabella: "codicecontratto    Corriere"
             const parts = trimmed.split(/[-:\t]/).map(p => p.trim()).filter(p => p)
-            
+
             if (parts.length >= 2) {
               // Prendi il primo elemento come chiave (codice contratto)
               // e l'ultimo come valore (corriere)
               const contractCode = parts[0]
               const courier = parts[parts.length - 1]
-              
+
               // Se il codice contiene trattini, prendi solo la prima parte
               // Es: "postedeliverybusiness-Solution-and-Shipment" -> "postedeliverybusiness"
               const key = contractCode.split('-')[0]
-              
+
               mapping[key] = courier
             }
           })
-          
+
           if (Object.keys(mapping).length > 0) {
             configData.contract_mapping = mapping
           } else {
@@ -272,7 +277,7 @@ export default function CourierAPIConfig() {
 
       // Salva configurazione usando server action
       const { saveConfiguration } = await import('@/actions/configurations')
-      
+
       // Prepara CourierConfigInput
       const configInput = {
         name: configData.name,
@@ -338,6 +343,16 @@ export default function CourierAPIConfig() {
         </p>
       </div>
 
+      {showPosteWizard && (
+        <PosteWizard
+          onClose={() => setShowPosteWizard(false)}
+          onSuccess={() => {
+            setShowPosteWizard(false)
+            loadConfigurations() // Reload to show new config
+          }}
+        />
+      )}
+
       {/* Selezione Corriere */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -349,11 +364,10 @@ export default function CourierAPIConfig() {
               key={api.id}
               type="button"
               onClick={() => setSelectedAPI(api.id)}
-              className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                selectedAPI === api.id
+              className={`px-4 py-3 rounded-lg border-2 transition-all ${selectedAPI === api.id
                   ? 'border-blue-600 bg-blue-50 text-blue-900 font-semibold'
                   : 'border-gray-200 hover:border-gray-300 text-gray-700'
-              }`}
+                }`}
             >
               {api.name}
               {existingConfigs.some(c => c.provider_id === api.id && c.is_active) && (
@@ -365,11 +379,10 @@ export default function CourierAPIConfig() {
       </div>
 
       {result && (
-        <div className={`mb-6 p-4 rounded-xl border ${
-          result.success 
-            ? 'bg-green-50 border-green-200 text-green-800' 
+        <div className={`mb-6 p-4 rounded-xl border ${result.success
+            ? 'bg-green-50 border-green-200 text-green-800'
             : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
+          }`}>
           <div className="flex items-start gap-3">
             {result.success ? (
               <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -387,6 +400,30 @@ export default function CourierAPIConfig() {
       {/* Form Credenziali */}
       {currentAPI && (
         <div className="space-y-6">
+
+          {/* Banner Wizard per Poste Italiane */}
+          {selectedAPI === 'poste' && !hasExistingConfig && (
+            <div className="mb-6 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl p-6 shadow-lg text-blue-900 border border-yellow-300">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Zap className="w-6 h-6" />
+                    Configurazione Guidata
+                  </h3>
+                  <p className="font-medium opacity-90">
+                    Configura il tuo account Poste Italiane in pochi secondi con il nostro nuovo Wizard automatizzato.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPosteWizard(true)}
+                  className="px-6 py-2.5 bg-white text-blue-900 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-md"
+                >
+                  Avvia Wizard
+                </button>
+              </div>
+            </div>
+          )}
+
           {hasExistingConfig && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
               <CheckCircle2 className="w-4 h-4 inline-block mr-2" />
@@ -425,9 +462,9 @@ export default function CourierAPIConfig() {
                       <strong>Formato JSON:</strong> {"{"}&quot;interno&quot;: &quot;Interno&quot;, &quot;postedeliverybusiness&quot;: &quot;PosteDeliveryBusiness&quot;, &quot;gls&quot;: &quot;Gls&quot;{"}"}
                     </p>
                     <p className="text-xs text-gray-400">
-                      <strong>Oppure formato semplice</strong> (una riga per contratto, copia-incolla dalla tabella):<br/>
-                      <code className="bg-gray-100 px-1 rounded">interno-Interno</code><br/>
-                      <code className="bg-gray-100 px-1 rounded">postedeliverybusiness-PosteDeliveryBusiness</code><br/>
+                      <strong>Oppure formato semplice</strong> (una riga per contratto, copia-incolla dalla tabella):<br />
+                      <code className="bg-gray-100 px-1 rounded">interno-Interno</code><br />
+                      <code className="bg-gray-100 px-1 rounded">postedeliverybusiness-PosteDeliveryBusiness</code><br />
                       <code className="bg-gray-100 px-1 rounded">gls-Gls</code>
                     </p>
                   </div>
