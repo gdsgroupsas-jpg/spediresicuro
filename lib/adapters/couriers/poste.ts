@@ -74,88 +74,263 @@ export class PosteAdapter extends CourierAdapter {
         }
     }
 
+    /**
+     * Normalizza i dati dal formato form al formato API Poste
+     */
+    private normalizeShipmentData(data: any): any {
+        // Estrai mittente (supporta sia formato form che formato standard)
+        const mittente = data.mittente || data.sender || {};
+        const sender = {
+            name: mittente.nome || mittente.name || data.mittenteNome || 'Mittente',
+            address: mittente.indirizzo || mittente.address || data.mittenteIndirizzo || 'Via Roma 1',
+            zip: mittente.cap || mittente.zip || data.mittenteCap || '00100',
+            city: mittente.citta || mittente.city || data.mittenteCitta || 'Roma',
+            country: mittente.country || 'IT',
+            province: mittente.provincia || mittente.province || data.mittenteProvincia || 'RM'
+        };
+
+        // Estrai destinatario (supporta sia formato form che formato standard)
+        const destinatario = data.destinatario || {};
+        const recipient = {
+            name: destinatario.nome || data.destinatarioNome || data.recipient_name || '',
+            address: destinatario.indirizzo || data.destinatarioIndirizzo || data.recipient_address || '',
+            zip: destinatario.cap || data.destinatarioCap || data.recipient_postal_code || '',
+            city: destinatario.citta || data.destinatarioCitta || data.recipient_city || '',
+            country: destinatario.country || data.recipient_country || 'IT',
+            province: destinatario.provincia || data.destinatarioProvincia || data.recipient_province || ''
+        };
+
+        // Estrai dimensioni (supporta sia formato form che formato standard)
+        const dimensioni = data.dimensioni || data.dimensions || {};
+        const dimensions = {
+            length: dimensioni.lunghezza || dimensioni.length || data.lunghezza || 0,
+            width: dimensioni.larghezza || dimensioni.width || data.larghezza || 0,
+            height: dimensioni.altezza || dimensioni.height || data.altezza || 0
+        };
+
+        // Estrai peso e servizio
+        const weight = data.peso || data.weight || 0;
+        const service = data.tipoSpedizione === 'express' ? 'express' : 
+                       data.service || 'standard';
+
+        return {
+            sender,
+            recipient_name: recipient.name,
+            recipient_address: recipient.address,
+            recipient_postal_code: recipient.zip,
+            recipient_city: recipient.city,
+            recipient_country: recipient.country,
+            recipient_province: recipient.province,
+            weight,
+            dimensions,
+            service
+        };
+    }
+
+    /**
+     * Mappa il codice servizio al codice prodotto Poste Delivery Business
+     */
+    private getProductCode(service: string): string {
+        // Mapping servizi -> codici prodotto Poste
+        const productCodeMap: Record<string, string> = {
+            'express': 'APT000901',      // Crono Express
+            'standard': 'APT000902',      // Standard
+            'economy': 'APT000903',       // Economy
+            'international': 'APT000904' // Internazionale
+        };
+        
+        return productCodeMap[service] || 'APT000902'; // Default: Standard
+    }
+
     async createShipment(data: any): Promise<ShippingLabel> {
         const token = await this.getAuthToken();
 
-        // Product codes mapping based on service
-        let productCode = 'APT000902'; // Standard default
-        if (data.service === 'express') productCode = 'APT000901';
-        if (data.service === 'international') productCode = 'APT000904';
+        // Normalizza i dati dal formato form al formato API
+        const normalizedData = this.normalizeShipmentData(data);
 
+        // Determina codice prodotto in base al servizio
+        const codiceProdotto = this.getProductCode(normalizedData.service);
+
+        // Estrai servizi accessori (contrassegno, assicurazione)
+        const serviziAccessori: any = {};
+        if (data.cash_on_delivery || data.contrassegno) {
+            serviziAccessori.contrassegno = {
+                importo: data.cash_on_delivery_amount || data.contrassegno || 0
+            };
+        }
+        if (data.insurance || data.assicurazione) {
+            serviziAccessori.assicurazione = {
+                valore: data.declared_value || data.assicurazione || 0
+            };
+        }
+
+        // Costruisci payload secondo specifiche API Poste Delivery Business
+        // Struttura: spedizione.mittente, spedizione.destinatario, spedizione.dati_spedizione
         const payload = {
-            costCenterCode: this.credentials.cost_center_code || 'CDC-DEFAULT',
-            shipmentDate: new Date().toISOString(),
-            waybills: [{
-                printFormat: 'A4',
-                product: productCode,
-                data: {
-                    sender: {
-                        nameSurname: data.sender?.name || 'Mittente',
-                        address: data.sender?.address || 'Via Roma 1',
-                        zipCode: data.sender?.zip || '00100',
-                        city: data.sender?.city || 'Roma',
-                        country: data.sender?.country || 'IT',
-                        province: data.sender?.province || 'RM'
-                    },
-                    receiver: {
-                        nameSurname: data.recipient_name,
-                        address: data.recipient_address,
-                        zipCode: data.recipient_postal_code,
-                        city: data.recipient_city,
-                        country: data.recipient_country || 'IT', // Assumed standard
-                        province: data.recipient_province,
-                    },
-                    content: 'Spedizione e-commerce',
-                    declared: [{
-                        weight: Math.ceil(data.weight * 1000), // g
-                        length: Math.ceil(data.dimensions.length), // cm
-                        width: Math.ceil(data.dimensions.width), // cm
-                        height: Math.ceil(data.dimensions.height) // cm
-                    }]
-                }
-            }]
-        };
-
-        const response = await axios.post(
-            `${this.credentials.base_url}/postalandlogistics/parcel/waybill`,
-            payload,
-            {
-                headers: {
-                    'POSTE_clientID': this.credentials.client_id,
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+            spedizione: {
+                mittente: {
+                    nome: normalizedData.sender.name,
+                    indirizzo: normalizedData.sender.address,
+                    cap: normalizedData.sender.zip,
+                    citta: normalizedData.sender.city,
+                    provincia: normalizedData.sender.province,
+                    paese: normalizedData.sender.country || 'IT',
+                    telefono: data.mittenteTelefono || data.sender?.phone || '',
+                    email: data.mittenteEmail || data.sender?.email || ''
                 },
+                destinatario: {
+                    nome: normalizedData.recipient_name,
+                    indirizzo: normalizedData.recipient_address,
+                    cap: normalizedData.recipient_postal_code,
+                    citta: normalizedData.recipient_city,
+                    provincia: normalizedData.recipient_province,
+                    paese: normalizedData.recipient_country || 'IT',
+                    telefono: data.destinatarioTelefono || data.recipient_phone || '',
+                    email: data.destinatarioEmail || data.recipient_email || ''
+                },
+                dati_spedizione: {
+                    codice_prodotto: codiceProdotto,
+                    peso: normalizedData.weight, // Kg
+                    colli: data.colli || data.packages_count || 1,
+                    contenuto: data.contenuto || data.content || 'Spedizione e-commerce',
+                    // Dimensioni (se disponibili)
+                    ...(normalizedData.dimensions.length > 0 && {
+                        lunghezza: Math.ceil(normalizedData.dimensions.length), // cm
+                        larghezza: Math.ceil(normalizedData.dimensions.width), // cm
+                        altezza: Math.ceil(normalizedData.dimensions.height) // cm
+                    })
+                },
+                // Servizi accessori (se presenti)
+                ...(Object.keys(serviziAccessori).length > 0 && {
+                    servizi_accessori: serviziAccessori
+                })
             }
-        );
-
-        // Poste returns a list of waybills
-        const waybill = response.data.waybills?.[0];
-        if (!waybill) throw new Error('No waybill generated');
-
-        return {
-            tracking_number: waybill.code,
-            label_url: waybill.downloadURL
         };
+
+        try {
+            // Endpoint per creazione waybill (da verificare con credenziali reali)
+            // Possibili endpoint: /waybill, /spedizioni, /parcel/waybill
+            const endpoint = `${this.credentials.base_url}/waybill`; // Endpoint standard secondo manuale
+            
+            const response = await axios.post(
+                endpoint,
+                payload,
+                {
+                    headers: {
+                        'POSTE_clientID': this.credentials.client_id,
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    // Gestione retry per errori 5xx
+                    validateStatus: (status) => status < 500 || status >= 600
+                }
+            );
+
+            // Gestione errori 4xx (dati mancanti, indirizzo errato)
+            if (response.status >= 400 && response.status < 500) {
+                const errorMsg = response.data?.error || response.data?.message || 'Errore validazione dati';
+                throw new Error(`Errore API Poste (${response.status}): ${errorMsg}`);
+            }
+
+            // Estrai dati risposta
+            // La risposta dovrebbe contenere: waybill_number, label_pdf_url (o base64)
+            const responseData = response.data;
+            
+            // Supporta diversi formati di risposta
+            const waybillNumber = responseData.waybill_number || 
+                                 responseData.waybill?.numero || 
+                                 responseData.numero ||
+                                 responseData.tracking_number;
+            
+            const labelUrl = responseData.label_pdf_url || 
+                           responseData.label_url ||
+                           responseData.etichetta_url ||
+                           responseData.downloadURL;
+
+            // Se non c'è URL ma c'è base64, lo gestiamo separatamente
+            const labelBase64 = responseData.label_pdf_base64 || 
+                               responseData.etichetta_base64;
+
+            if (!waybillNumber) {
+                throw new Error('Numero waybill non ricevuto dalla risposta API');
+            }
+
+            return {
+                tracking_number: waybillNumber,
+                label_url: labelUrl || undefined,
+                label_pdf: labelBase64 ? Buffer.from(labelBase64, 'base64') : undefined,
+                // Metadati aggiuntivi per salvare nel DB
+                metadata: {
+                    poste_account_id: this.credentials.client_id,
+                    poste_product_code: codiceProdotto,
+                    waybill_number: waybillNumber,
+                    label_pdf_url: labelUrl
+                }
+            };
+        } catch (error: any) {
+            // Gestione errori con retry per 5xx
+            if (error.response?.status >= 500) {
+                console.error('Errore servizio Poste (5xx), implementare retry:', error.response?.data);
+                throw new Error('Servizio Poste temporaneamente non disponibile. Riprova più tardi.');
+            }
+            
+            // Rilancia altri errori
+            if (error.response?.data) {
+                console.error('Errore API Poste:', error.response.data);
+                throw new Error(error.response.data.error || error.response.data.message || 'Errore creazione spedizione Poste');
+            }
+            
+            throw error;
+        }
     }
 
     async getTracking(trackingNumber: string): Promise<TrackingEvent[]> {
         const token = await this.getAuthToken();
 
-        const response = await axios.get(
-            `${this.credentials.base_url}/postalandlogistics/parcel/tracking?waybillNumber=${trackingNumber}`,
-            {
-                headers: {
-                    'POSTE_clientID': this.credentials.client_id,
-                    'Authorization': `Bearer ${token}`
-                },
-            }
-        );
+        try {
+            // Endpoint tracking secondo specifiche API Poste Delivery Business
+            const endpoint = `${this.credentials.base_url}/tracking?waybillNumber=${trackingNumber}`;
+            
+            const response = await axios.get(
+                endpoint,
+                {
+                    headers: {
+                        'POSTE_clientID': this.credentials.client_id,
+                        'Authorization': `Bearer ${token}`
+                    },
+                }
+            );
 
-        return (response.data || []).map((e: any) => ({
-            status: e.status || 'UNKNOWN',
-            description: e.description,
-            location: e.location,
-            date: new Date(e.date), // Check format from actual response
-        }));
+            // Mappa risposta API al formato TrackingEvent
+            // La risposta dovrebbe contenere: stato_spedizione, data_evento, descrizione_evento
+            const trackingData = response.data;
+            
+            // Supporta diversi formati di risposta
+            const events = Array.isArray(trackingData) 
+                ? trackingData 
+                : trackingData.eventi || trackingData.events || [trackingData];
+
+            return events.map((e: any) => ({
+                status: e.stato_spedizione || e.status || e.stato || 'UNKNOWN',
+                description: e.descrizione_evento || e.description || e.descrizione || '',
+                location: e.luogo || e.location || e.localita || undefined,
+                date: e.data_evento 
+                    ? new Date(e.data_evento) 
+                    : e.date 
+                        ? new Date(e.date) 
+                        : new Date(),
+                // Campi aggiuntivi per feature Green (se presenti)
+                ...(e.tot_emissioni && { tot_emissioni: e.tot_emissioni }),
+                ...(e.media_emissioni_spedizione && { media_emissioni: e.media_emissioni_spedizione })
+            }));
+        } catch (error: any) {
+            console.error('Errore tracking Poste:', error.response?.data || error.message);
+            // In caso di errore, restituisci almeno un evento base
+            return [{
+                status: 'ERROR',
+                description: error.response?.data?.error || error.message || 'Errore recupero tracking',
+                date: new Date()
+            }];
+        }
     }
 }
