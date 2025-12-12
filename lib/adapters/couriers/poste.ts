@@ -40,11 +40,11 @@ export class PosteAdapter extends CourierAdapter {
                     clientId: this.credentials.client_id,
                     secretId: this.credentials.client_secret, // Note: Manual says 'secretId' in body
                     grantType: 'client_credentials',
-                    scope: 'default' // Using default scope needed for general access
+                    scope: 'api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default' // Valore corretto come da documentazione Poste Delivery Business
                 },
                 {
                     headers: {
-                        'POSTE_clientID': this.credentials.client_id,
+                        'POSTE_clientID': this.credentials.client_id, // Header richiesto dal manuale
                         'Content-Type': 'application/json'
                     }
                 }
