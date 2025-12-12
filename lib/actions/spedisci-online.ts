@@ -22,7 +22,7 @@ import type { Shipment, CreateShipmentInput } from '@/types/shipments'
 export async function getSpedisciOnlineCredentials() {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.email) {
       return { success: false, error: 'Non autenticato' }
     }
@@ -32,7 +32,7 @@ export async function getSpedisciOnlineCredentials() {
     if (supabaseUrl) {
       const supabase = createServerActionClient()
       const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-      
+
       if (supabaseUser) {
         const { data, error } = await supabase
           .from('user_integrations')
@@ -93,11 +93,11 @@ export async function createShipmentWithOrchestrator(
     courierCode,
     hasShipmentData: !!shipmentData,
   });
-  
+
   try {
     // 1. Verifica autenticazione
     const session = await auth()
-    
+
     if (!session?.user?.email) {
       console.warn('⚠️ [ORCHESTRATOR] Non autenticato');
       return {
@@ -108,19 +108,19 @@ export async function createShipmentWithOrchestrator(
         error: 'Non autenticato',
       }
     }
-    
+
     console.log('✅ [ORCHESTRATOR] Utente autenticato:', session.user.email);
 
     // 2. Ottieni user_id (prova prima in users, poi user_profiles, poi auth.users)
     let userId: string | null = null
-    
+
     // Prova prima nella tabella users
     const { data: userFromUsers } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('email', session.user.email)
       .single()
-    
+
     if (userFromUsers?.id) {
       userId = userFromUsers.id
     } else {
@@ -154,7 +154,7 @@ export async function createShipmentWithOrchestrator(
         // Continua - proveremo config default
       }
     }
-    
+
     // Se non abbiamo ancora registrato il broker, prova a recuperare configurazione default (admin)
     // Verifica se il broker è registrato controllando internamente
     let brokerRegistered = false
@@ -165,7 +165,7 @@ export async function createShipmentWithOrchestrator(
     } catch {
       brokerRegistered = false
     }
-    
+
     if (!brokerRegistered) {
       try {
         // Prova a recuperare configurazione default (is_default = true) o qualsiasi configurazione attiva
@@ -176,7 +176,7 @@ export async function createShipmentWithOrchestrator(
           .eq('is_active', true)
           .eq('is_default', true)
           .single()
-        
+
         // Se non c'è default, prova qualsiasi configurazione attiva
         if (!defaultConfig) {
           const { data: activeConfigs } = await supabaseAdmin
@@ -185,19 +185,19 @@ export async function createShipmentWithOrchestrator(
             .eq('provider_id', 'spedisci_online')
             .eq('is_active', true)
             .limit(1)
-          
+
           if (activeConfigs && activeConfigs.length > 0) {
             defaultConfig = activeConfigs[0]
           }
         }
-        
+
         if (defaultConfig) {
           // Decripta credenziali se necessario
           const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption')
-          
+
           let api_key = defaultConfig.api_key
           let api_secret = defaultConfig.api_secret
-          
+
           // Decripta se necessario
           if (api_key && isEncrypted(api_key)) {
             try {
@@ -207,7 +207,7 @@ export async function createShipmentWithOrchestrator(
               throw new Error('Impossibile decriptare credenziali')
             }
           }
-          
+
           if (api_secret && isEncrypted(api_secret)) {
             try {
               api_secret = decryptCredential(api_secret)
@@ -216,7 +216,7 @@ export async function createShipmentWithOrchestrator(
               // api_secret è opzionale, continua senza
             }
           }
-          
+
           // Prepara contract_mapping
           let contractMapping: Record<string, string> = {}
           if (defaultConfig.contract_mapping) {
@@ -230,7 +230,7 @@ export async function createShipmentWithOrchestrator(
               contractMapping = defaultConfig.contract_mapping
             }
           }
-          
+
           // Istanzia provider dalla configurazione
           const credentials = {
             api_key: api_key,
@@ -239,13 +239,13 @@ export async function createShipmentWithOrchestrator(
             customer_code: contractMapping['default'] || undefined,
             contract_mapping: contractMapping, // Passa il mapping completo
           }
-          
+
           console.log('🔧 [SPEDISCI.ONLINE] Istanzio adapter con credenziali:', {
             has_api_key: !!credentials.api_key,
             base_url: credentials.base_url,
             contract_mapping_count: Object.keys(credentials.contract_mapping || {}).length,
           });
-          
+
           const provider = new SpedisciOnlineAdapter(credentials)
           orchestrator.registerBrokerAdapter(provider)
           console.log('✅ [SPEDISCI.ONLINE] Broker adapter registrato tramite configurazione DEFAULT')
@@ -258,6 +258,40 @@ export async function createShipmentWithOrchestrator(
         console.warn('⚠️ Impossibile registrare broker adapter (Spedisci.Online):', error?.message || error)
         console.warn('⚠️ La spedizione verrà creata solo localmente (fallback CSV).')
         // Non bloccare il processo - continuerà con fallback CSV
+      }
+    }
+
+    // 4.5 Tentativo registrazione Adapter Diretto per il corriere richiesto
+    // Mappa codici UI -> Provider ID
+    const providerMap: Record<string, string> = {
+      'sda': 'poste',
+      'poste': 'poste',
+      'poste italiane': 'poste',
+      'brt': 'brt',
+      'bartolini': 'brt',
+      'gls': 'gls'
+    };
+
+    const normalizedCourier = courierCode.toLowerCase();
+    const providerId = providerMap[normalizedCourier] || normalizedCourier;
+
+    console.log(`🔍 [ORCHESTRATOR] Cerco adapter diretto per ${courierCode} (Provider: ${providerId})...`);
+
+    if (userId) {
+      try {
+        const directProvider = await getShippingProvider(userId, providerId, shipmentData);
+        if (directProvider) {
+          orchestrator.registerDirectAdapter(normalizedCourier, directProvider);
+          // Registra anche con il codice originale per sicurezza
+          if (normalizedCourier !== courierCode) {
+            orchestrator.registerDirectAdapter(courierCode, directProvider);
+          }
+          console.log(`✅ [ORCHESTRATOR] Adapter diretto (${providerId}) registrato con successo`);
+        } else {
+          console.log(`ℹ️ [ORCHESTRATOR] Nessun adapter diretto trovato per ${providerId}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ [ORCHESTRATOR] Errore caricamento adapter diretto:`, error);
       }
     }
 
@@ -295,7 +329,7 @@ export async function createShipmentWithOrchestrator(
  */
 export async function sendShipmentToSpedisciOnline(shipmentData: any) {
   const result = await createShipmentWithOrchestrator(shipmentData, 'GLS')
-  
+
   return {
     success: result.success,
     tracking_number: result.tracking_number,
@@ -316,7 +350,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
 }) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.email) {
       return { success: false, error: 'Non autenticato' }
     }
@@ -331,7 +365,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
     if (supabaseUrl) {
       const supabase = createServerActionClient()
       const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-      
+
       if (supabaseUser) {
         const { error } = await supabase
           .from('user_integrations')
