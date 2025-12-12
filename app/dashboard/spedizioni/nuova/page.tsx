@@ -459,9 +459,12 @@ export default function NuovaSpedizionePage() {
 
       const result = await response.json();
       console.log('📦 [CLIENT] Risultato API spedizioni:', result);
-      console.log('📦 [CLIENT] LDV Result:', result.data?.ldv);
+      console.log('📦 [CLIENT] LDV Result (da result.ldv):', result.ldv);
+      console.log('📦 [CLIENT] LDV Result (da result.data?.ldv):', result.data?.ldv);
       console.log('📦 [CLIENT] Tracking:', result.data?.tracking);
       console.log('📦 [CLIENT] Corriere:', result.data?.corriere);
+      console.log('📦 [CLIENT] Success:', result.success);
+      console.log('📦 [CLIENT] Message:', result.message);
       setSubmitSuccess(true);
       setCreatedTracking(result.data?.tracking || null);
 
