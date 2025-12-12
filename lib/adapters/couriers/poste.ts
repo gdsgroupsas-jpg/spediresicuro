@@ -111,14 +111,30 @@ export class PosteAdapter extends CourierAdapter {
             console.error('❌ [POSTE AUTH] Tutti gli endpoint hanno fallito');
             throw lastError || new Error('Authentication failed: All endpoints failed');
         } catch (error: any) {
+            const errorData = error.response?.data || {};
+            const errorCode = errorData.error;
+            const errorDescription = errorData.error_description || errorData.errorDescription || '';
+            
+            // Analizza errori specifici Azure AD
+            let userFriendlyMessage = 'Authentication failed';
+            
+            if (errorCode === 'unauthorized_client' || errorDescription.includes('AADSTS700016')) {
+                userFriendlyMessage = 'Client ID non valido o applicazione non registrata nel tenant Poste Italiane. Verifica le credenziali in /dashboard/integrazioni';
+            } else if (errorCode === 'invalid_client' || errorDescription.includes('AADSTS7000215')) {
+                userFriendlyMessage = 'Client Secret non valido. Verifica le credenziali in /dashboard/integrazioni';
+            } else if (errorDescription.includes('wrong tenant')) {
+                userFriendlyMessage = 'Credenziali configurate per un tenant diverso. Verifica Client ID e Secret ID';
+            }
+            
             console.error('❌ [POSTE AUTH] Errore autenticazione:', {
-                message: error.message,
+                error_code: errorCode,
+                error_description: errorDescription.substring(0, 200), // Primi 200 caratteri
                 status: error.response?.status,
                 statusText: error.response?.statusText,
-                response_data: error.response?.data,
-                response_headers: error.response?.headers
+                user_friendly_message: userFriendlyMessage
             });
-            throw new Error('Authentication failed: ' + (error.response?.data?.errorDescription || error.response?.data?.error || error.message));
+            
+            throw new Error(`Authentication failed: ${userFriendlyMessage}. Dettagli: ${errorCode || error.message}`);
         }
     }
 
