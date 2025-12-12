@@ -106,7 +106,7 @@ export class PosteAdapter extends CourierAdapter {
             waybills: [{
                 printFormat: 'A4', // 'A4', '10x11'
                 product: productCode,
-                json: { // NOTE: User spec says 'json', not 'data'
+                data: { // FIXED: Manual v1.9 says 'data'
                     sender: {
                         nameSurname: data.sender?.name || 'Mittente',
                         address: senderAddr.address,
