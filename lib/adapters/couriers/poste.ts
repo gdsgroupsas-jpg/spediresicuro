@@ -65,6 +65,9 @@ export class PosteAdapter extends CourierAdapter {
                 cdc: this.credentials.cost_center_code || 'NON CONFIGURATO'
             });
 
+            // Tieni traccia dell'errore principale (AADSTS700016) separatamente
+            let primaryError: any = null;
+            
             for (const authUrl of possibleEndpoints) {
                 try {
                     console.log('🔑 [POSTE AUTH] Tentativo endpoint:', authUrl);
@@ -95,43 +98,75 @@ export class PosteAdapter extends CourierAdapter {
                         console.log('✅ [POSTE AUTH] expires_in:', response.data.expires_in);
                         return this.token!;
                     } else {
+                        // Se c'è un errore Azure AD (AADSTS700016), salvalo come errore principale
+                        if (response.data?.error === 'unauthorized_client' || 
+                            response.data?.error_description?.includes('AADSTS700016')) {
+                            primaryError = {
+                                error: response.data.error,
+                                error_description: response.data.error_description,
+                                error_codes: response.data.error_codes,
+                                response: { status: response.status, data: response.data }
+                            };
+                        }
                         console.warn('⚠️ [POSTE AUTH] No access_token nella risposta da:', authUrl);
-                        lastError = new Error('No access_token received');
+                        if (!primaryError) {
+                            lastError = new Error('No access_token received');
+                        }
                         continue; // Prova il prossimo endpoint
                     }
                 } catch (error: any) {
-                    console.warn(`⚠️ [POSTE AUTH] Errore con endpoint ${authUrl}:`, {
-                        message: error.message,
-                        status: error.response?.status,
-                        statusText: error.response?.statusText
-                    });
-                    lastError = error;
+                    // Se è un errore 404, è normale per gli endpoint alternativi
+                    if (error.response?.status === 404) {
+                        console.warn(`⚠️ [POSTE AUTH] Endpoint ${authUrl} non disponibile (404)`);
+                        if (!primaryError && !lastError) {
+                            lastError = error;
+                        }
+                    } else {
+                        // Altri errori (non 404)
+                        console.warn(`⚠️ [POSTE AUTH] Errore con endpoint ${authUrl}:`, {
+                            message: error.message,
+                            status: error.response?.status,
+                            statusText: error.response?.statusText
+                        });
+                        // Se c'è un errore Azure AD, salvalo come errore principale
+                        if (error.response?.data?.error === 'unauthorized_client' || 
+                            error.response?.data?.error_description?.includes('AADSTS700016')) {
+                            primaryError = {
+                                error: error.response.data.error,
+                                error_description: error.response.data.error_description,
+                                error_codes: error.response.data.error_codes,
+                                response: error.response
+                            };
+                        } else if (!primaryError) {
+                            lastError = error;
+                        }
+                    }
                     continue; // Prova il prossimo endpoint
                 }
             }
             
-            // Se tutti gli endpoint hanno fallito, lancia l'ultimo errore
+            // Se tutti gli endpoint hanno fallito, lancia l'errore principale se presente
             console.error('❌ [POSTE AUTH] Tutti gli endpoint hanno fallito');
             
-            // Se l'errore principale è AADSTS700016, fornisci istruzioni chiare
-            const firstError = lastError?.response?.data;
-            if (firstError?.error === 'unauthorized_client' || 
-                firstError?.error_description?.includes('AADSTS700016')) {
+            // Priorità: usa l'errore principale (AADSTS700016) se presente
+            if (primaryError) {
                 const clientIdPreview = this.credentials.client_id 
                     ? `${this.credentials.client_id.substring(0, 30)}...` 
                     : 'MANCANTE';
                 throw new Error(
                     `Client ID non valido o applicazione non registrata nel tenant Azure AD di Poste Italiane.\n` +
                     `Client ID usato: ${clientIdPreview}\n` +
-                    `Errore: ${firstError.error_description?.substring(0, 150) || 'Application not found in directory'}\n\n` +
+                    `Errore: ${primaryError.error_description?.substring(0, 200) || 'Application not found in directory'}\n\n` +
                     `SOLUZIONE:\n` +
                     `1. Vai su /dashboard/integrazioni\n` +
-                    `2. Verifica che Client ID e Secret ID siano corretti\n` +
-                    `3. Se necessario, ricrea la configurazione con le credenziali dal portale Poste\n` +
-                    `4. Assicurati che l'applicazione sia registrata nel tenant "Poste Italiane S.p.A."`
+                    `2. Verifica che Client ID e Secret ID siano CORRETTI e corrispondano esattamente a quelli del portale Poste\n` +
+                    `3. Se necessario, elimina la configurazione esistente e ricreala con le credenziali corrette\n` +
+                    `4. Assicurati che l'applicazione sia registrata e attiva nel tenant "Poste Italiane S.p.A."\n` +
+                    `5. Verifica che l'applicazione abbia i permessi per "Waybill Services" o "Postal Logistics API"`
                 );
             }
             
+            // Se non c'è errore principale, usa l'ultimo errore
             throw lastError || new Error('Authentication failed: All endpoints failed');
         } catch (error: any) {
             const errorData = error.response?.data || {};
