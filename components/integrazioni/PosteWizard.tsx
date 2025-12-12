@@ -164,7 +164,7 @@ export default function PosteWizard({ onClose, onSuccess }: PosteWizardProps) {
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-mono text-sm"
                                         readOnly
                                     />
-                                    <p className="text-xs text-gray-400 mt-1">L'endpoint standard di produzione è preimpostato.</p>
+                                    <p className="text-xs text-gray-400 mt-1">L&apos;endpoint standard di produzione è preimpostato.</p>
                                 </div>
 
                                 <div>
