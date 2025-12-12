@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from '@/lib/db/client';
 import { SpedisciOnlineAdapter, type SpedisciOnlineCredentials } from '@/lib/adapters/couriers/spedisci-online';
+import { PosteAdapter } from '@/lib/adapters/couriers/poste';
 import { CourierAdapter } from '@/lib/adapters/couriers/base';
 import type { Shipment, CreateShipmentInput } from '@/types/shipments';
 
@@ -53,7 +54,7 @@ export async function getCourierConfigForUser(
 
     if (error) {
       console.warn('Errore recupero config tramite RPC, provo query diretta:', error);
-      
+
       // Fallback: query diretta
       const { data: user } = await supabaseAdmin
         .from('users')
@@ -169,10 +170,21 @@ function instantiateProviderFromConfig(
       // Altri provider possono essere aggiunti qui
       case 'gls':
       case 'brt':
-      case 'poste':
         // TODO: Implementare adapter per altri provider
         console.warn(`Provider ${providerId} non ancora supportato con config DB`);
         return null;
+      case 'poste':
+        // Instantiate Poste adapter using DB config
+        // Mapping DB fields to Adapter fields:
+        // api_key -> client_id
+        // api_secret -> client_secret
+        const { api_key, api_secret, base_url } = config;
+        const posteCreds = {
+          client_id: api_key,
+          client_secret: api_secret,
+          base_url
+        } as any;
+        return new PosteAdapter(posteCreds);
 
       default:
         console.warn(`Provider sconosciuto: ${providerId}`);
