@@ -83,80 +83,79 @@ export class PosteAdapter extends CourierAdapter {
         if (data.service === 'international') productCode = 'APT000904';
 
         const payload = {
-            const payload = {
-                costCenterCode: this.credentials.cost_center_code || 'CDC-DEFAULT',
-                shipmentDate: new Date().toISOString(),
-                waybills: [{
-                    printFormat: 'A4',
-                    product: productCode,
-                    data: {
-                        sender: {
-                            nameSurname: data.sender?.name || 'Mittente',
-                            address: data.sender?.address || 'Via Roma 1',
-                            zipCode: data.sender?.zip || '00100',
-                            city: data.sender?.city || 'Roma',
-                            country: data.sender?.country || 'IT',
-                            province: data.sender?.province || 'RM'
-                        },
-                        receiver: {
-                            nameSurname: data.recipient_name,
-                            address: data.recipient_address,
-                            zipCode: data.recipient_postal_code,
-                            city: data.recipient_city,
-                            country: data.recipient_country || 'IT', // Assumed standard
-                            province: data.recipient_province,
-                        },
-                        content: 'Spedizione e-commerce',
-                        declared: [{
-                            weight: Math.ceil(data.weight * 1000), // g
-                            length: Math.ceil(data.dimensions.length), // cm
-                            width: Math.ceil(data.dimensions.width), // cm
-                            height: Math.ceil(data.dimensions.height) // cm
-                        }]
-                    }
-                }]
-            };
-
-            const response = await axios.post(
-                `${this.credentials.base_url}/postalandlogistics/parcel/waybill`,
-                payload,
-                {
-                    headers: {
-                        'POSTE_clientID': this.credentials.client_id,
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+            costCenterCode: this.credentials.cost_center_code || 'CDC-DEFAULT',
+            shipmentDate: new Date().toISOString(),
+            waybills: [{
+                printFormat: 'A4',
+                product: productCode,
+                data: {
+                    sender: {
+                        nameSurname: data.sender?.name || 'Mittente',
+                        address: data.sender?.address || 'Via Roma 1',
+                        zipCode: data.sender?.zip || '00100',
+                        city: data.sender?.city || 'Roma',
+                        country: data.sender?.country || 'IT',
+                        province: data.sender?.province || 'RM'
                     },
-                }
-            );
-
-            // Poste returns a list of waybills
-            const waybill = response.data.waybills?.[0];
-            if(!waybill) throw new Error('No waybill generated');
-
-            return {
-                tracking_number: waybill.code,
-                label_url: waybill.downloadURL
-            };
-        }
-
-    async getTracking(trackingNumber: string): Promise < TrackingEvent[] > {
-            const token = await this.getAuthToken();
-
-            const response = await axios.get(
-                `${this.credentials.base_url}/postalandlogistics/parcel/tracking?waybillNumber=${trackingNumber}`,
-                {
-                    headers: {
-                        'POSTE_clientID': this.credentials.client_id,
-                        'Authorization': `Bearer ${token}`
+                    receiver: {
+                        nameSurname: data.recipient_name,
+                        address: data.recipient_address,
+                        zipCode: data.recipient_postal_code,
+                        city: data.recipient_city,
+                        country: data.recipient_country || 'IT', // Assumed standard
+                        province: data.recipient_province,
                     },
+                    content: 'Spedizione e-commerce',
+                    declared: [{
+                        weight: Math.ceil(data.weight * 1000), // g
+                        length: Math.ceil(data.dimensions.length), // cm
+                        width: Math.ceil(data.dimensions.width), // cm
+                        height: Math.ceil(data.dimensions.height) // cm
+                    }]
                 }
-            );
+            }]
+        };
 
-            return(response.data || []).map((e: any) => ({
-                status: e.status || 'UNKNOWN',
-                description: e.description,
-                location: e.location,
-                date: new Date(e.date), // Check format from actual response
-            }));
-        }
+        const response = await axios.post(
+            `${this.credentials.base_url}/postalandlogistics/parcel/waybill`,
+            payload,
+            {
+                headers: {
+                    'POSTE_clientID': this.credentials.client_id,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+            }
+        );
+
+        // Poste returns a list of waybills
+        const waybill = response.data.waybills?.[0];
+        if (!waybill) throw new Error('No waybill generated');
+
+        return {
+            tracking_number: waybill.code,
+            label_url: waybill.downloadURL
+        };
     }
+
+    async getTracking(trackingNumber: string): Promise<TrackingEvent[]> {
+        const token = await this.getAuthToken();
+
+        const response = await axios.get(
+            `${this.credentials.base_url}/postalandlogistics/parcel/tracking?waybillNumber=${trackingNumber}`,
+            {
+                headers: {
+                    'POSTE_clientID': this.credentials.client_id,
+                    'Authorization': `Bearer ${token}`
+                },
+            }
+        );
+
+        return (response.data || []).map((e: any) => ({
+            status: e.status || 'UNKNOWN',
+            description: e.description,
+            location: e.location,
+            date: new Date(e.date), // Check format from actual response
+        }));
+    }
+}
