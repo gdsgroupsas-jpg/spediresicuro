@@ -496,6 +496,7 @@ export default function NuovaSpedizionePage() {
               } else if (!result.ldv) {
                 // Caso raro: ldv null (errore server interno prima dell'orchestrator)
                 console.warn('Oggetto LDV mancante nella risposta');
+                alert('⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli.');
               }
 
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
