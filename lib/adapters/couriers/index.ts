@@ -3,6 +3,7 @@
  */
 
 export * from './base';
+export * from './poste';
 
 // TODO: Implementare adapter specifici per corrieri quando necessario
 // - PosteItaliane
