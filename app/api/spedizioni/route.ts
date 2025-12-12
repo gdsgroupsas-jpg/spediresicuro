@@ -329,8 +329,9 @@ export async function POST(request: NextRequest) {
         if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
           updates.tracking_number = ldvResult.tracking_number;
           updates.ldv = ldvResult.tracking_number; // Salva anche come LDV
-          spedizione.tracking = ldvResult.tracking_number;
-          spedizione.ldv = ldvResult.tracking_number;
+          // Aggiorna anche l'oggetto in-memory per la risposta
+          (spedizione as any).tracking = ldvResult.tracking_number;
+          (spedizione as any).ldv = ldvResult.tracking_number;
         }
 
         // Se è una spedizione Poste, salva metadati aggiuntivi
@@ -346,8 +347,9 @@ export async function POST(request: NextRequest) {
             label_pdf_url
           };
           
-          spedizione.external_tracking_number = updates.external_tracking_number;
-          spedizione.poste_metadata = updates.metadata;
+          // Aggiorna anche l'oggetto in-memory per la risposta
+          (spedizione as any).external_tracking_number = updates.external_tracking_number;
+          (spedizione as any).poste_metadata = updates.metadata;
           
           console.log('📦 Metadati Poste salvati:', {
             waybill_number,
