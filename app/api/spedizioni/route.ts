@@ -320,9 +320,11 @@ export async function POST(request: NextRequest) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
         
         // Aggiorna tracking number se fornito dall'orchestrator
+        // Usa tipo any per permettere aggiunta proprietà dinamiche
+        const spedizioneWithLdv = spedizione as any;
         if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
-          spedizione.tracking = ldvResult.tracking_number;
-          spedizione.ldv = ldvResult.tracking_number; // Salva anche come LDV
+          spedizioneWithLdv.tracking = ldvResult.tracking_number;
+          spedizioneWithLdv.ldv = ldvResult.tracking_number; // Salva anche come LDV
         }
 
         // Se è una spedizione Poste, salva metadati aggiuntivi
@@ -330,8 +332,8 @@ export async function POST(request: NextRequest) {
           const { poste_account_id, poste_product_code, waybill_number, label_pdf_url } = ldvResult.metadata;
           
           // Aggiorna spedizione con metadati Poste
-          spedizione.external_tracking_number = waybill_number || ldvResult.tracking_number;
-          spedizione.poste_metadata = {
+          spedizioneWithLdv.external_tracking_number = waybill_number || ldvResult.tracking_number;
+          spedizioneWithLdv.poste_metadata = {
             poste_account_id,
             poste_product_code,
             waybill_number,
