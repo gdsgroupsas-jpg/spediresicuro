@@ -365,8 +365,8 @@ export default function CourierAPIConfig() {
               type="button"
               onClick={() => setSelectedAPI(api.id)}
               className={`px-4 py-3 rounded-lg border-2 transition-all ${selectedAPI === api.id
-                  ? 'border-blue-600 bg-blue-50 text-blue-900 font-semibold'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                ? 'border-blue-600 bg-blue-50 text-blue-900 font-semibold'
+                : 'border-gray-200 hover:border-gray-300 text-gray-700'
                 }`}
             >
               {api.name}
@@ -380,8 +380,8 @@ export default function CourierAPIConfig() {
 
       {result && (
         <div className={`mb-6 p-4 rounded-xl border ${result.success
-            ? 'bg-green-50 border-green-200 text-green-800'
-            : 'bg-red-50 border-red-200 text-red-800'
+          ? 'bg-green-50 border-green-200 text-green-800'
+          : 'bg-red-50 border-red-200 text-red-800'
           }`}>
           <div className="flex items-start gap-3">
             {result.success ? (
@@ -402,23 +402,31 @@ export default function CourierAPIConfig() {
         <div className="space-y-6">
 
           {/* Banner Wizard per Poste Italiane */}
-          {selectedAPI === 'poste' && !hasExistingConfig && (
-            <div className="mb-6 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl p-6 shadow-lg text-blue-900 border border-yellow-300">
+          {selectedAPI === 'poste' && (
+            <div className={`mb-6 rounded-xl p-6 shadow-lg border ${hasExistingConfig
+                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-900'
+                : 'bg-gradient-to-r from-yellow-400 to-yellow-500 border-yellow-300 text-blue-900'
+              }`}>
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold flex items-center gap-2">
-                    <Zap className="w-6 h-6" />
-                    Configurazione Guidata
+                    <Zap className={`w-6 h-6 ${hasExistingConfig ? 'text-blue-600' : ''}`} />
+                    {hasExistingConfig ? 'Aggiorna Configurazione Poste' : 'Configurazione Guidata'}
                   </h3>
                   <p className="font-medium opacity-90">
-                    Configura il tuo account Poste Italiane in pochi secondi con il nostro nuovo Wizard automatizzato.
+                    {hasExistingConfig
+                      ? 'Usa il Wizard per aggiornare Client ID e Secret ID in modo sicuro.'
+                      : 'Configura il tuo account Poste Italiane in pochi secondi con il nostro nuovo Wizard automatizzato.'}
                   </p>
                 </div>
                 <button
                   onClick={() => setShowPosteWizard(true)}
-                  className="px-6 py-2.5 bg-white text-blue-900 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-md"
+                  className={`px-6 py-2.5 font-bold rounded-lg transition-colors shadow-md ${hasExistingConfig
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-white text-blue-900 hover:bg-blue-50'
+                    }`}
                 >
-                  Avvia Wizard
+                  {hasExistingConfig ? 'Apri Wizard' : 'Avvia Wizard'}
                 </button>
               </div>
             </div>
