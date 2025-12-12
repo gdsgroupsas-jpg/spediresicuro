@@ -129,7 +129,7 @@ export default function PosteWizard({ onClose, onSuccess }: PosteWizardProps) {
                                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                     <p className="text-sm text-blue-800">
                                         <strong>📋 Non hai ancora le credenziali?</strong><br />
-                                        Devi prima registrare l'applicazione nel portale Poste Delivery Business.
+                                        Devi prima registrare l&apos;applicazione nel portale Poste Delivery Business.
                                         Consulta la <a href="/docs/GUIDA_REGISTRAZIONE_POSTE.md" target="_blank" className="underline font-semibold">guida completa</a> per i dettagli.
                                     </p>
                                 </div>
