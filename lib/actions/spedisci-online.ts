@@ -273,14 +273,20 @@ export async function createShipmentWithOrchestrator(
       'sda': 'sda' // SDA è un corriere separato, non mappare a Poste
     };
 
-    const normalizedCourier = courierCode.toLowerCase();
+    const normalizedCourier = courierCode.toLowerCase().trim();
     const providerId = providerMap[normalizedCourier] || normalizedCourier;
 
-    console.log(`🔍 [ORCHESTRATOR] Cerco adapter diretto per ${courierCode} (normalizzato: ${normalizedCourier}, provider: ${providerId})...`);
+    console.log(`🔍 [ORCHESTRATOR] Cerco adapter diretto per ${courierCode}`);
+    console.log(`   - Normalizzato: "${normalizedCourier}"`);
+    console.log(`   - Provider ID: "${providerId}"`);
+    console.log(`   - User ID: ${userId || 'NON DISPONIBILE'}`);
+    console.log(`   - Provider Map contiene "${normalizedCourier}": ${normalizedCourier in providerMap}`);
 
     if (userId) {
       try {
+        console.log(`🔍 [FACTORY] Chiamo getShippingProvider(${userId}, ${providerId})...`);
         const directProvider = await getShippingProvider(userId, providerId, shipmentData);
+        console.log(`🔍 [FACTORY] Risultato: ${directProvider ? '✅ Adapter trovato' : '❌ Adapter NON trovato'}`);
         if (directProvider) {
           // Registra con la chiave normalizzata (usata dall'orchestrator per cercare)
           orchestrator.registerDirectAdapter(normalizedCourier, directProvider);
