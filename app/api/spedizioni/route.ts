@@ -301,11 +301,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Salva nel database (SOLO Supabase)
-    let savedSpedizione: any;
     try {
-      savedSpedizione = await addSpedizione(spedizione, session.user.email);
-      spedizione.id = savedSpedizione.id;
-      console.log(`✅ [API] Spedizione salvata nel database con ID: ${savedSpedizione.id}`);
+      await addSpedizione(spedizione, session.user.email);
     } catch (error: any) {
       console.error('❌ [API] Errore addSpedizione:', error.message);
       console.error('❌ [API] Stack:', error.stack);
@@ -316,30 +313,16 @@ export async function POST(request: NextRequest) {
     // INVIO AUTOMATICO LDV TRAMITE ORCHESTRATOR (se configurato)
     let ldvResult = null;
     try {
-      console.log(`🚀 [API] Chiamo orchestrator per corriere: "${body.corriere || 'GLS'}"`);
       const { createShipmentWithOrchestrator } = await import('@/lib/actions/spedisci-online');
       ldvResult = await createShipmentWithOrchestrator(spedizione, body.corriere || 'GLS');
-      
-      console.log(`📊 [API] Risultato orchestrator:`, {
-        success: ldvResult.success,
-        method: ldvResult.method,
-        tracking: ldvResult.tracking_number,
-        has_metadata: !!ldvResult.metadata,
-        error: ldvResult.error
-      });
       
       if (ldvResult.success) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
         
-        // Prepara aggiornamenti per il database
-        const updates: any = {};
-        
         // Aggiorna tracking number se fornito dall'orchestrator
         if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
-          updates.tracking_number = ldvResult.tracking_number;
-          updates.ldv = ldvResult.tracking_number; // Salva anche come LDV
-          (spedizione as any).tracking = ldvResult.tracking_number;
-          (spedizione as any).ldv = ldvResult.tracking_number;
+          spedizione.tracking = ldvResult.tracking_number;
+          spedizione.ldv = ldvResult.tracking_number; // Salva anche come LDV
         }
 
         // Se è una spedizione Poste, salva metadati aggiuntivi
@@ -347,45 +330,26 @@ export async function POST(request: NextRequest) {
           const { poste_account_id, poste_product_code, waybill_number, label_pdf_url } = ldvResult.metadata;
           
           // Aggiorna spedizione con metadati Poste
-          updates.external_tracking_number = waybill_number || ldvResult.tracking_number;
-          updates.metadata = {
+          spedizione.external_tracking_number = waybill_number || ldvResult.tracking_number;
+          spedizione.poste_metadata = {
             poste_account_id,
             poste_product_code,
             waybill_number,
             label_pdf_url
           };
           
-          (spedizione as any).external_tracking_number = updates.external_tracking_number;
-          (spedizione as any).poste_metadata = updates.metadata;
-          
-          console.log('📦 Metadati Poste preparati per salvataggio:', {
+          console.log('📦 Metadati Poste salvati:', {
             waybill_number,
             poste_product_code,
             label_pdf_url
           });
         }
-
-        // Aggiorna la spedizione nel database con i nuovi valori
-        if (Object.keys(updates).length > 0 && savedSpedizione?.id) {
-          try {
-            const { updateShipment } = await import('@/lib/db/shipments');
-            await updateShipment(savedSpedizione.id, updates);
-            console.log('✅ [API] Spedizione aggiornata nel database con tracking e metadati');
-          } catch (updateError: any) {
-            // Non bloccare la risposta se l'aggiornamento fallisce
-            console.error('❌ [API] Errore aggiornamento spedizione nel database:', updateError.message);
-            console.error('❌ [API] Stack update:', updateError.stack);
-          }
-        } else {
-          console.warn('⚠️ [API] Nessun aggiornamento da salvare o ID spedizione mancante');
-        }
       } else {
         console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Non bloccare la risposta se la creazione LDV fallisce
-      console.error('❌ [API] Errore creazione LDV:', error.message);
-      console.error('❌ [API] Stack LDV:', error.stack);
+      console.warn('⚠️ Errore creazione LDV (non critico):', error);
     }
 
     // Risposta di successo
