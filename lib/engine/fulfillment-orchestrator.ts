@@ -25,6 +25,9 @@ export interface ShipmentResult {
   method: 'direct' | 'broker' | 'fallback';
   error?: string;
   message?: string;
+  metadata?: {
+    [key: string]: any; // Metadati aggiuntivi specifici corriere (es: poste_account_id, waybill_number, ecc.)
+  };
 }
 
 export interface FulfillmentConfig {
