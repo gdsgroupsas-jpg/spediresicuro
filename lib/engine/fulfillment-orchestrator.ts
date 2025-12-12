@@ -139,6 +139,7 @@ export class FulfillmentOrchestrator {
             carrier: courierCode,
             method: 'direct',
             message: 'LDV creata tramite adapter diretto',
+            metadata: result.metadata, // Passa metadati aggiuntivi (es: poste_account_id, waybill_number)
           };
         } catch (error) {
           console.warn(`Adapter diretto ${courierCode} fallito:`, error);
