@@ -178,11 +178,24 @@ function instantiateProviderFromConfig(
         // Mapping DB fields to Adapter fields:
         // api_key -> client_id
         // api_secret -> client_secret
-        const { api_key, api_secret, base_url } = config;
+        // contract_mapping['cdc'] -> cost_center_code
+        const { api_key, api_secret, base_url, contract_mapping } = config;
+
+        let cdc = 'CDC-DEFAULT';
+        if (contract_mapping) {
+          // Check if contract_mapping is object or string JSON
+          const mapping = typeof contract_mapping === 'string'
+            ? JSON.parse(contract_mapping)
+            : contract_mapping;
+
+          if (mapping['cdc']) cdc = mapping['cdc'];
+        }
+
         const posteCreds = {
           client_id: api_key,
           client_secret: api_secret,
-          base_url
+          base_url,
+          cost_center_code: cdc
         } as any;
         return new PosteAdapter(posteCreds);
 

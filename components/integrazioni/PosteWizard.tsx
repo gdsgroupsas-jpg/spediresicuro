@@ -67,7 +67,9 @@ export default function PosteWizard({ onClose, onSuccess }: PosteWizardProps) {
                 api_key: formData.clientId,
                 api_secret: formData.clientSecret,
                 base_url: formData.baseUrl,
-                contract_mapping: {},
+                contract_mapping: {
+                    cdc: formData.cdc || 'CDC-DEFAULT'
+                },
                 is_active: true,
                 is_default: true,
                 description: 'Configurazione creata tramite Wizard',
