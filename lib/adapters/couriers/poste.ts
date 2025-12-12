@@ -54,17 +54,20 @@ export class PosteAdapter extends CourierAdapter {
                 'Content-Type': 'application/json'
             };
 
+            // Log dettagliato per debug (senza esporre valori completi)
+            console.log('🔑 [POSTE AUTH] Configurazione autenticazione:', {
+                endpoint: `${this.credentials.base_url}/user/sessions`,
+                client_id_preview: this.credentials.client_id ? `${this.credentials.client_id.substring(0, 20)}...` : 'MANCANTE',
+                client_id_length: this.credentials.client_id?.length || 0,
+                secret_preview: this.credentials.client_secret ? `${this.credentials.client_secret.substring(0, 20)}...` : 'MANCANTE',
+                secret_length: this.credentials.client_secret?.length || 0,
+                scope: authPayload.scope,
+                cdc: this.credentials.cost_center_code || 'NON CONFIGURATO'
+            });
+
             for (const authUrl of possibleEndpoints) {
                 try {
                     console.log('🔑 [POSTE AUTH] Tentativo endpoint:', authUrl);
-                    console.log('🔑 [POSTE AUTH] Payload:', {
-                        has_client_id: !!this.credentials.client_id,
-                        client_id_length: this.credentials.client_id?.length,
-                        has_client_secret: !!this.credentials.client_secret,
-                        client_secret_length: this.credentials.client_secret?.length,
-                        scope: authPayload.scope,
-                        headers: Object.keys(authHeaders)
-                    });
 
                     const response = await axios.post(
                         authUrl,
@@ -109,6 +112,26 @@ export class PosteAdapter extends CourierAdapter {
             
             // Se tutti gli endpoint hanno fallito, lancia l'ultimo errore
             console.error('❌ [POSTE AUTH] Tutti gli endpoint hanno fallito');
+            
+            // Se l'errore principale è AADSTS700016, fornisci istruzioni chiare
+            const firstError = lastError?.response?.data;
+            if (firstError?.error === 'unauthorized_client' || 
+                firstError?.error_description?.includes('AADSTS700016')) {
+                const clientIdPreview = this.credentials.client_id 
+                    ? `${this.credentials.client_id.substring(0, 30)}...` 
+                    : 'MANCANTE';
+                throw new Error(
+                    `Client ID non valido o applicazione non registrata nel tenant Azure AD di Poste Italiane.\n` +
+                    `Client ID usato: ${clientIdPreview}\n` +
+                    `Errore: ${firstError.error_description?.substring(0, 150) || 'Application not found in directory'}\n\n` +
+                    `SOLUZIONE:\n` +
+                    `1. Vai su /dashboard/integrazioni\n` +
+                    `2. Verifica che Client ID e Secret ID siano corretti\n` +
+                    `3. Se necessario, ricrea la configurazione con le credenziali dal portale Poste\n` +
+                    `4. Assicurati che l'applicazione sia registrata nel tenant "Poste Italiane S.p.A."`
+                );
+            }
+            
             throw lastError || new Error('Authentication failed: All endpoints failed');
         } catch (error: any) {
             const errorData = error.response?.data || {};
