@@ -13,10 +13,11 @@ import DashboardNav from '@/components/dashboard-nav'
 import IntegrationCard from '@/components/integrazioni/integration-card'
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
 import SpedisciOnlineConfigMulti from '@/components/integrazioni/spedisci-online-config-multi'
+import CourierAPIConfig from '@/components/integrazioni/courier-api-config'
 import Link from 'next/link'
-import { 
-  ShoppingBag, 
-  Store, 
+import {
+  ShoppingBag,
+  Store,
   Zap,
   Code
 } from 'lucide-react'
@@ -113,13 +114,13 @@ const containerVariants = {
 
 // Varianti animazione card
 const cardVariants = {
-  hidden: { 
-    opacity: 0, 
+  hidden: {
+    opacity: 0,
     y: 20,
     scale: 0.95,
   },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     scale: 1,
     transition: {
@@ -157,7 +158,7 @@ export default function IntegrazioniPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
-      <DashboardNav 
+      <DashboardNav
         title="Integrazioni Store & Widget"
         subtitle="Collega il tuo e-commerce o usa il nostro Universal Widget per importare ordini in 1 click"
       />
@@ -181,8 +182,7 @@ export default function IntegrazioniPage() {
           className="mb-12"
         >
           <SpedisciOnlineConfigMulti />
-          
-          {/* Link Automation */}
+
           <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -201,6 +201,16 @@ export default function IntegrazioniPage() {
           </div>
         </motion.div>
 
+        {/* Configurazione API Corrieri (Poste, GLS, BRT) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mb-12"
+        >
+          <CourierAPIConfig />
+        </motion.div>
+
         {/* Grid Integrazioni */}
         <motion.div
           variants={containerVariants}
@@ -211,7 +221,7 @@ export default function IntegrazioniPage() {
           {platforms.map((platform) => {
             const Icon = platform.icon
             const status = getIntegrationStatus(platform.id)
-            
+
             return (
               <motion.div
                 key={platform.id}
