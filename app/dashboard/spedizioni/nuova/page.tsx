@@ -485,12 +485,29 @@ export default function NuovaSpedizionePage() {
             downloadCSV(csvContent, filename);
           } else {
             // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
-            if (result.ldv && result.ldv.success && result.ldv.label_url) {
-              console.log('📄 Apertura etichetta originale:', result.ldv.label_url);
-              window.open(result.ldv.label_url, '_blank');
+            // L'API restituisce ldv al livello root, non dentro data
+            const ldvResult = result.ldv || result.data?.ldv;
+            console.log('🔍 [CLIENT] Verifica LDV:', {
+              'result.ldv': result.ldv,
+              'result.data?.ldv': result.data?.ldv,
+              'ldvResult': ldvResult,
+              'ldvResult?.success': ldvResult?.success,
+              'ldvResult?.label_url': ldvResult?.label_url,
+              'ldvResult?.error': ldvResult?.error,
+              'ldvResult?.method': ldvResult?.method
+            });
+            
+            if (ldvResult && ldvResult.success && ldvResult.label_url) {
+              console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
+              window.open(ldvResult.label_url, '_blank');
             } else {
               // FALLBACK: Genera Ticket interno se non c'è etichetta reale
               console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
+              console.log('   - ldvResult:', ldvResult);
+              console.log('   - ldvResult?.success:', ldvResult?.success);
+              console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
+              console.log('   - ldvResult?.error:', ldvResult?.error);
+              console.log('   - ldvResult?.method:', ldvResult?.method);
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
               const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
               downloadPDF(pdfDoc, filename);
