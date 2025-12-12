@@ -875,8 +875,8 @@ export default function NuovaSpedizionePage() {
                     <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
                       Corriere
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['GLS', 'SDA', 'Bartolini'] as Corriere[]).map((corriere) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['GLS', 'SDA', 'Bartolini', 'Poste Italiane'] as Corriere[]).map((corriere) => (
                         <button
                           key={corriere}
                           type="button"
