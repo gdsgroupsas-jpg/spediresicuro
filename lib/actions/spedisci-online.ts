@@ -264,29 +264,35 @@ export async function createShipmentWithOrchestrator(
     // 4.5 Tentativo registrazione Adapter Diretto per il corriere richiesto
     // Mappa codici UI -> Provider ID
     const providerMap: Record<string, string> = {
-      'sda': 'poste',
       'poste': 'poste',
       'poste italiane': 'poste',
+      'posteitaliane': 'poste',
       'brt': 'brt',
       'bartolini': 'brt',
-      'gls': 'gls'
+      'gls': 'gls',
+      'sda': 'sda' // SDA è un corriere separato, non mappare a Poste
     };
 
     const normalizedCourier = courierCode.toLowerCase();
     const providerId = providerMap[normalizedCourier] || normalizedCourier;
 
-    console.log(`🔍 [ORCHESTRATOR] Cerco adapter diretto per ${courierCode} (Provider: ${providerId})...`);
+    console.log(`🔍 [ORCHESTRATOR] Cerco adapter diretto per ${courierCode} (normalizzato: ${normalizedCourier}, provider: ${providerId})...`);
 
     if (userId) {
       try {
         const directProvider = await getShippingProvider(userId, providerId, shipmentData);
         if (directProvider) {
+          // Registra con la chiave normalizzata (usata dall'orchestrator per cercare)
           orchestrator.registerDirectAdapter(normalizedCourier, directProvider);
-          // Registra anche con il codice originale per sicurezza
-          if (normalizedCourier !== courierCode) {
-            orchestrator.registerDirectAdapter(courierCode, directProvider);
+          // Registra anche con il providerId per sicurezza (es: "poste")
+          if (normalizedCourier !== providerId) {
+            orchestrator.registerDirectAdapter(providerId, directProvider);
           }
-          console.log(`✅ [ORCHESTRATOR] Adapter diretto (${providerId}) registrato con successo`);
+          // Registra anche con il codice originale (con maiuscole) per sicurezza
+          if (normalizedCourier !== courierCode.toLowerCase()) {
+            orchestrator.registerDirectAdapter(courierCode.toLowerCase(), directProvider);
+          }
+          console.log(`✅ [ORCHESTRATOR] Adapter diretto (${providerId}) registrato con chiavi: ${normalizedCourier}, ${providerId}`);
         } else {
           console.log(`ℹ️ [ORCHESTRATOR] Nessun adapter diretto trovato per ${providerId}`);
         }
