@@ -488,9 +488,14 @@ export default function NuovaSpedizionePage() {
               // FALLBACK: Genera Ticket interno se non c'è etichetta reale
               console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
 
-              // ⚠️ MOSTRA ERRORE ALL'UTENTE (Fix step 505)
-              if (result.ldv && result.ldv.method === 'fallback' && result.ldv.error) {
-                alert(`⚠️ ATTENZIONE: La creazione dell'etichetta con il corriere è fallita.\n\nErrore: ${result.ldv.error}\n\nÈ stato generato un ticket di riserva.`);
+              // ⚠️ MOSTRA ERRORE ALL'UTENTE - VERSIONE AGGRESSIVA
+              // Se c'è un errore nell'oggetto LDV, mostralo SEMPRE
+              const errorMsg = result.ldv?.error || result.ldv?.message;
+              if (errorMsg) {
+                alert(`⚠️ ERRORE POSTE/SDA:\n\n${errorMsg}\n\nÈ stato generato un ticket di riserva.`);
+              } else if (!result.ldv) {
+                // Caso raro: ldv null (errore server interno prima dell'orchestrator)
+                console.warn('Oggetto LDV mancante nella risposta');
               }
 
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
