@@ -44,9 +44,9 @@ export class PosteAdapter extends CourierAdapter {
             
             const authPayload = {
                 clientId: this.credentials.client_id,
-                secretId: this.credentials.client_secret, // Note: Manual says 'secretId' in body
+                secretId: this.credentials.client_secret,
                 grantType: 'client_credentials',
-                scope: 'api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default' // Valore corretto come da documentazione Poste Delivery Business
+                scope: 'https://postemarketplace.onmicrosoft.com/d6a78063-5570-487-bbd7-07326e6855d1/.default' // Scope corretto secondo manuale v1.9
             };
             
             const authHeaders = {
@@ -203,17 +203,62 @@ export class PosteAdapter extends CourierAdapter {
 
     /**
      * Mappa il codice servizio al codice prodotto Poste Delivery Business
+     * Secondo manuale v1.9:
+     * - APT000901: PosteDelivery Business Express
+     * - APT000902: PosteDelivery Business Standard
+     * - APT000903: PosteDelivery Business Internazionale Express
+     * - APT000904: PosteDelivery Business Internazionale Standard
+     * - APT001013: PosteDelivery Business International Plus
      */
     private getProductCode(service: string): string {
-        // Mapping servizi -> codici prodotto Poste
         const productCodeMap: Record<string, string> = {
-            'express': 'APT000901',      // Crono Express
+            'express': 'APT000901',      // Express
             'standard': 'APT000902',      // Standard
-            'economy': 'APT000903',       // Economy
-            'international': 'APT000904' // Internazionale
+            'international_express': 'APT000903', // Internazionale Express
+            'international_standard': 'APT000904', // Internazionale Standard
+            'international_plus': 'APT001013', // International Plus
+            'economy': 'APT000902',      // Economy mappato a Standard
+            'international': 'APT000904'  // Internazionale mappato a Standard
         };
         
         return productCodeMap[service] || 'APT000902'; // Default: Standard
+    }
+
+    /**
+     * Converte codice paese da ISO2/ISO3 a ISO4 (richiesto da Poste)
+     * IT -> ITA1, DE -> DEU1, FR -> FRA1, US -> USA1, ecc.
+     */
+    private convertCountryToISO4(country: string): string {
+        const countryMap: Record<string, string> = {
+            'IT': 'ITA1', 'ITA': 'ITA1',
+            'DE': 'DEU1', 'DEU': 'DEU1', 'GER': 'DEU1',
+            'FR': 'FRA1', 'FRA': 'FRA1',
+            'ES': 'ESP1', 'ESP': 'ESP1',
+            'GB': 'GBR1', 'GBR': 'GBR1', 'UK': 'GBR1',
+            'US': 'USA1', 'USA': 'USA1',
+            'CH': 'CHE1', 'CHE': 'CHE1',
+            'AT': 'AUT1', 'AUT': 'AUT1',
+            'BE': 'BEL1', 'BEL': 'BEL1',
+            'NL': 'NLD1', 'NLD': 'NLD1',
+            'PT': 'PRT1', 'PRT': 'PRT1'
+        };
+        
+        const upper = country.toUpperCase();
+        return countryMap[upper] || upper.endsWith('1') ? upper : `${upper}1`;
+    }
+
+    /**
+     * Formatta data in formato UTC richiesto da Poste: YYYY-MM-DDTHH:mm:ss.SSS+0000
+     */
+    private formatShipmentDate(date?: Date): string {
+        const d = date || new Date();
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const hours = String(d.getUTCHours()).padStart(2, '0');
+        const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(d.getUTCSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000+0000`;
     }
 
     async createShipment(data: any): Promise<ShippingLabel> {
@@ -225,66 +270,104 @@ export class PosteAdapter extends CourierAdapter {
         // Determina codice prodotto in base al servizio
         const codiceProdotto = this.getProductCode(normalizedData.service);
 
-        // Estrai servizi accessori (contrassegno, assicurazione)
-        const serviziAccessori: any = {};
+        // Estrai CDC (Cost Center Code) - formato: CDC-00038791-0 o CDC-00038791
+        const cdc = this.credentials.cost_center_code || 'CDC-DEFAULT';
+        // Rimuovi eventuale suffisso -0 se presente (il manuale mostra CDC-000xxxxx)
+        const cleanCdc = cdc.replace(/-0$/, '');
+
+        // Estrai servizi accessori secondo formato manuale
+        // Contrassegno: APT000918 con { amount, paymentMode: "CON" }
+        const services: any = {};
         if (data.cash_on_delivery || data.contrassegno) {
-            serviziAccessori.contrassegno = {
-                importo: data.cash_on_delivery_amount || data.contrassegno || 0
-            };
-        }
-        if (data.insurance || data.assicurazione) {
-            serviziAccessori.assicurazione = {
-                valore: data.declared_value || data.assicurazione || 0
+            const amount = Math.round((data.cash_on_delivery_amount || data.contrassegno || 0) * 100); // Converti in centesimi
+            services['APT000918'] = {
+                amount: String(amount),
+                paymentMode: 'CON'
             };
         }
 
-        // Costruisci payload secondo specifiche API Poste Delivery Business
-        // Struttura: spedizione.mittente, spedizione.destinatario, spedizione.dati_spedizione
-        const payload = {
-            spedizione: {
-                mittente: {
-                    nome: normalizedData.sender.name,
-                    indirizzo: normalizedData.sender.address,
-                    cap: normalizedData.sender.zip,
-                    citta: normalizedData.sender.city,
-                    provincia: normalizedData.sender.province,
-                    paese: normalizedData.sender.country || 'IT',
-                    telefono: data.mittenteTelefono || data.sender?.phone || '',
-                    email: data.mittenteEmail || data.sender?.email || ''
-                },
-                destinatario: {
-                    nome: normalizedData.recipient_name,
-                    indirizzo: normalizedData.recipient_address,
-                    cap: normalizedData.recipient_postal_code,
-                    citta: normalizedData.recipient_city,
-                    provincia: normalizedData.recipient_province,
-                    paese: normalizedData.recipient_country || 'IT',
-                    telefono: data.destinatarioTelefono || data.recipient_phone || '',
-                    email: data.destinatarioEmail || data.recipient_email || ''
-                },
-                dati_spedizione: {
-                    codice_prodotto: codiceProdotto,
-                    peso: normalizedData.weight, // Kg
-                    colli: data.colli || data.packages_count || 1,
-                    contenuto: data.contenuto || data.content || 'Spedizione e-commerce',
-                    // Dimensioni (se disponibili)
-                    ...(normalizedData.dimensions.length > 0 && {
-                        lunghezza: Math.ceil(normalizedData.dimensions.length), // cm
-                        larghezza: Math.ceil(normalizedData.dimensions.width), // cm
-                        altezza: Math.ceil(normalizedData.dimensions.height) // cm
-                    })
-                },
-                // Servizi accessori (se presenti)
-                ...(Object.keys(serviziAccessori).length > 0 && {
-                    servizi_accessori: serviziAccessori
-                })
+        // Peso in grammi (intero) - il manuale richiede grammi, non kg
+        const weightGrams = Math.round((normalizedData.weight || 0) * 1000);
+
+        // Dimensioni in cm (interi)
+        const dimensions = normalizedData.dimensions || {};
+        const length = Math.ceil(dimensions.length || 0);
+        const width = Math.ceil(dimensions.width || 0);
+        const height = Math.ceil(dimensions.height || 0);
+
+        // Estrai numero civico da indirizzo (se presente)
+        const extractStreetNumber = (address: string): { street: string; number: string } => {
+            // Cerca pattern tipo "Via Roma 123" o "Via Roma, 123"
+            const match = address.match(/(.+?)\s*,?\s*(\d+)\s*$/);
+            if (match) {
+                return { street: match[1].trim(), number: match[2] };
             }
+            // Se non trova, prova a estrarre dall'inizio
+            const match2 = address.match(/^(\d+)\s+(.+)$/);
+            if (match2) {
+                return { street: match2[2].trim(), number: match2[1] };
+            }
+            return { street: address, number: '1' }; // Default
+        };
+
+        const senderAddress = extractStreetNumber(normalizedData.sender.address);
+        const receiverAddress = extractStreetNumber(normalizedData.recipient_address);
+
+        // Costruisci payload secondo manuale v1.9
+        // Struttura: costCenterCode, paperless, shipmentDate, waybills[]
+        const payload = {
+            costCenterCode: cleanCdc,
+            paperless: 'false', // true o false (stringa)
+            shipmentDate: this.formatShipmentDate(),
+            waybills: [
+                {
+                    clientReferenceId: data.order_id || data.order_reference || data.rif_mittente || `REF_${Date.now()}`,
+                    printFormat: 'A4', // Valori: "A4", "1011", "ZPL"
+                    product: codiceProdotto,
+                    data: {
+                        sender: {
+                            nameSurname: normalizedData.sender.name,
+                            streetNumber: senderAddress.number,
+                            address: senderAddress.street,
+                            city: normalizedData.sender.city,
+                            province: normalizedData.sender.province,
+                            zipCode: normalizedData.sender.zip,
+                            country: this.convertCountryToISO4(normalizedData.sender.country || 'IT'),
+                            email: data.mittenteEmail || data.sender?.email || '',
+                            phone: data.mittenteTelefono || data.sender?.phone || '',
+                            ...(data.mittenteNote && { note1: data.mittenteNote })
+                        },
+                        receiver: {
+                            nameSurname: normalizedData.recipient_name,
+                            ...(data.destinatarioContactName && { contactName: data.destinatarioContactName }),
+                            streetNumber: receiverAddress.number,
+                            address: receiverAddress.street,
+                            city: normalizedData.recipient_city,
+                            province: normalizedData.recipient_province,
+                            zipCode: normalizedData.recipient_postal_code,
+                            country: this.convertCountryToISO4(normalizedData.recipient_country || 'IT'),
+                            email: data.destinatarioEmail || data.recipient_email || '',
+                            phone: data.destinatarioTelefono || data.recipient_phone || '', // Obbligatorio per Internazionale
+                            ...(data.destinatarioNote && { note1: data.destinatarioNote })
+                        },
+                        declared: [
+                            {
+                                weight: String(weightGrams), // Grammi (stringa)
+                                width: String(width), // cm (stringa)
+                                height: String(height), // cm (stringa)
+                                length: String(length) // cm (stringa)
+                            }
+                        ],
+                        content: data.contenuto || data.content || 'Spedizione e-commerce',
+                        ...(Object.keys(services).length > 0 && { services })
+                    }
+                }
+            ]
         };
 
         try {
-            // Endpoint per creazione waybill (da verificare con credenziali reali)
-            // Possibili endpoint: /waybill, /spedizioni, /parcel/waybill
-            const endpoint = `${this.credentials.base_url}/waybill`; // Endpoint standard secondo manuale
+            // Endpoint secondo manuale v1.9: /postalandlogistics/parcel/waybill
+            const endpoint = `${this.credentials.base_url}/postalandlogistics/parcel/waybill`;
             
             const response = await axios.post(
                 endpoint,
@@ -300,45 +383,67 @@ export class PosteAdapter extends CourierAdapter {
                 }
             );
 
-            // Gestione errori 4xx (dati mancanti, indirizzo errato)
-            if (response.status >= 400 && response.status < 500) {
-                const errorMsg = response.data?.error || response.data?.message || 'Errore validazione dati';
-                throw new Error(`Errore API Poste (${response.status}): ${errorMsg}`);
-            }
-
-            // Estrai dati risposta
-            // La risposta dovrebbe contenere: waybill_number, label_pdf_url (o base64)
+            // Gestione errori secondo manuale: controlla errorCode nella risposta
+            // Le API Poste ritornano spesso 200 OK anche in caso di errore logico
             const responseData = response.data;
             
-            // Supporta diversi formati di risposta
-            const waybillNumber = responseData.waybill_number || 
-                                 responseData.waybill?.numero || 
-                                 responseData.numero ||
-                                 responseData.tracking_number;
-            
-            const labelUrl = responseData.label_pdf_url || 
-                           responseData.label_url ||
-                           responseData.etichetta_url ||
-                           responseData.downloadURL;
+            // Verifica errorCode a livello root
+            if (responseData.result?.errorCode !== 0 && responseData.result?.errorCode !== undefined) {
+                const errorCode = responseData.result.errorCode;
+                const errorDesc = responseData.result.errorDescription || 'Errore sconosciuto';
+                
+                // Mappa codici errore comuni dal manuale
+                const errorMessages: Record<number, string> = {
+                    100: 'Dati obbligatori mancanti',
+                    101: 'Dati non conformi',
+                    114: 'Contratto non trovato',
+                    115: 'Centro di Costo non trovato',
+                    141: 'Servizi accessori non compatibili',
+                    142: 'Barcode duplicato'
+                };
+                
+                const userMessage = errorMessages[errorCode] || errorDesc;
+                throw new Error(`Errore API Poste (${errorCode}): ${userMessage}`);
+            }
 
-            // Se non c'è URL ma c'è base64, lo gestiamo separatamente
-            const labelBase64 = responseData.label_pdf_base64 || 
-                               responseData.etichetta_base64;
+            // Estrai dati risposta secondo formato manuale
+            // Response: { waybills: [{ code, downloadURL, errorCode, errorDescription }] }
+            if (!responseData.waybills || !Array.isArray(responseData.waybills) || responseData.waybills.length === 0) {
+                throw new Error('Nessuna waybill nella risposta API');
+            }
+
+            const waybill = responseData.waybills[0];
+            
+            // Verifica errorCode della singola waybill
+            if (waybill.errorCode !== 0 && waybill.errorCode !== undefined) {
+                throw new Error(`Errore waybill (${waybill.errorCode}): ${waybill.errorDescription || 'Errore sconosciuto'}`);
+            }
+
+            const waybillNumber = waybill.code; // Tracking Number (LDV)
+            const labelUrl = waybill.downloadURL; // Link PDF Etichetta
 
             if (!waybillNumber) {
-                throw new Error('Numero waybill non ricevuto dalla risposta API');
+                throw new Error('Numero waybill (code) non ricevuto dalla risposta API');
             }
+
+            console.log('✅ [POSTE] Waybill creata con successo:', {
+                waybillNumber,
+                hasLabelUrl: !!labelUrl,
+                productCode: codiceProdotto,
+                cdc: cleanCdc
+            });
 
             return {
                 tracking_number: waybillNumber,
                 label_url: labelUrl || undefined,
-                label_pdf: labelBase64 ? Buffer.from(labelBase64, 'base64') : undefined,
                 // Metadati aggiuntivi per salvare nel DB
                 metadata: {
                     poste_account_id: this.credentials.client_id,
                     poste_product_code: codiceProdotto,
                     waybill_number: waybillNumber,
-                    label_pdf_url: labelUrl
+                    label_pdf_url: labelUrl,
+                    contract_code: responseData.contractCode,
+                    channel: responseData.channel
                 }
             };
         } catch (error: any) {
@@ -362,12 +467,19 @@ export class PosteAdapter extends CourierAdapter {
         const token = await this.getAuthToken();
 
         try {
-            // Endpoint tracking secondo specifiche API Poste Delivery Business
-            const endpoint = `${this.credentials.base_url}/tracking?waybillNumber=${trackingNumber}`;
+            // Endpoint tracking secondo manuale v1.9: /postalandlogistics/parcel/tracking
+            // Parametri query: waybillNumber, lastTracingState (S/N), customerType (DQ), statusDescription (E)
+            const endpoint = `${this.credentials.base_url}/postalandlogistics/parcel/tracking`;
             
             const response = await axios.get(
                 endpoint,
                 {
+                    params: {
+                        waybillNumber: trackingNumber,
+                        lastTracingState: 'N', // N = storico completo, S = solo ultimo stato
+                        customerType: 'DQ',
+                        statusDescription: 'E'
+                    },
                     headers: {
                         'POSTE_clientID': this.credentials.client_id,
                         'Authorization': `Bearer ${token}`
@@ -375,30 +487,35 @@ export class PosteAdapter extends CourierAdapter {
                 }
             );
 
-            // Mappa risposta API al formato TrackingEvent
-            // La risposta dovrebbe contenere: stato_spedizione, data_evento, descrizione_evento
-            const trackingData = response.data;
+            // Mappa risposta API secondo formato manuale
+            // Response: { return: { outcome, result, shipment: [{ waybillNumber, product, tracking: [...] }] } }
+            const responseData = response.data;
             
-            // Supporta diversi formati di risposta
-            const events = Array.isArray(trackingData) 
-                ? trackingData 
-                : trackingData.eventi || trackingData.events || [trackingData];
+            if (!responseData.return || responseData.return.outcome !== 'OK') {
+                throw new Error(responseData.return?.result || 'Errore recupero tracking');
+            }
 
-            return events.map((e: any) => ({
-                status: e.stato_spedizione || e.status || e.stato || 'UNKNOWN',
-                description: e.descrizione_evento || e.description || e.descrizione || '',
-                location: e.luogo || e.location || e.localita || undefined,
-                date: e.data_evento 
-                    ? new Date(e.data_evento) 
-                    : e.date 
-                        ? new Date(e.date) 
-                        : new Date(),
-                // Campi aggiuntivi per feature Green (se presenti)
-                ...(e.tot_emissioni && { tot_emissioni: e.tot_emissioni }),
-                ...(e.media_emissioni_spedizione && { media_emissioni: e.media_emissioni_spedizione })
+            const shipments = responseData.return.shipment || [];
+            if (shipments.length === 0) {
+                return [{
+                    status: 'NOT_FOUND',
+                    description: 'Spedizione non trovata',
+                    date: new Date()
+                }];
+            }
+
+            const shipment = shipments[0];
+            const trackingEvents = shipment.tracking || [];
+
+            return trackingEvents.map((e: any) => ({
+                status: e.status || 'UNKNOWN',
+                description: e.statusDescription || e.description || '',
+                location: e.officeDescription || e.location || undefined,
+                date: e.data ? new Date(e.data.replace(' ', 'T')) : new Date(),
+                phase: e.phase || undefined
             }));
         } catch (error: any) {
-            console.error('Errore tracking Poste:', error.response?.data || error.message);
+            console.error('❌ [POSTE TRACKING] Errore:', error.response?.data || error.message);
             // In caso di errore, restituisci almeno un evento base
             return [{
                 status: 'ERROR',
