@@ -33,34 +33,65 @@ export class PosteAdapter extends CourierAdapter {
 
         try {
             const authUrl = `${this.credentials.base_url}/user/sessions`;
+            
+            const authPayload = {
+                clientId: this.credentials.client_id,
+                secretId: this.credentials.client_secret, // Note: Manual says 'secretId' in body
+                grantType: 'client_credentials',
+                scope: 'api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default' // Valore corretto come da documentazione Poste Delivery Business
+            };
+            
+            const authHeaders = {
+                'POSTE_clientID': this.credentials.client_id, // Header richiesto dal manuale
+                'Content-Type': 'application/json'
+            };
+
+            console.log('🔑 [POSTE AUTH] Chiamata autenticazione:', {
+                url: authUrl,
+                has_client_id: !!this.credentials.client_id,
+                client_id_length: this.credentials.client_id?.length,
+                has_client_secret: !!this.credentials.client_secret,
+                client_secret_length: this.credentials.client_secret?.length,
+                scope: authPayload.scope,
+                headers: Object.keys(authHeaders)
+            });
 
             const response = await axios.post(
                 authUrl,
+                authPayload,
                 {
-                    clientId: this.credentials.client_id,
-                    secretId: this.credentials.client_secret, // Note: Manual says 'secretId' in body
-                    grantType: 'client_credentials',
-                    scope: 'api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default' // Valore corretto come da documentazione Poste Delivery Business
-                },
-                {
-                    headers: {
-                        'POSTE_clientID': this.credentials.client_id, // Header richiesto dal manuale
-                        'Content-Type': 'application/json'
-                    }
+                    headers: authHeaders
                 }
             );
+
+            console.log('🔑 [POSTE AUTH] Risposta ricevuta:', {
+                status: response.status,
+                statusText: response.statusText,
+                has_data: !!response.data,
+                data_keys: response.data ? Object.keys(response.data) : [],
+                has_access_token: !!response.data?.access_token,
+                response_data: response.data
+            });
 
             if (response.data && response.data.access_token) {
                 this.token = response.data.access_token;
                 // expires_in is in seconds (usually 3599)
                 this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
+                console.log('✅ [POSTE AUTH] Token ottenuto con successo, expires_in:', response.data.expires_in);
                 return this.token!;
             } else {
+                console.error('❌ [POSTE AUTH] No access_token nella risposta:', response.data);
                 throw new Error('No access_token received');
             }
         } catch (error: any) {
-            console.error('Poste Auth Failed:', error.response?.data || error.message);
-            throw new Error('Authentication failed: ' + (error.response?.data?.errorDescription || error.message));
+            console.error('❌ [POSTE AUTH] Errore autenticazione:', {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                response_data: error.response?.data,
+                response_headers: error.response?.headers
+            });
+            throw new Error('Authentication failed: ' + (error.response?.data?.errorDescription || error.response?.data?.error || error.message));
         }
     }
 
