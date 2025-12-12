@@ -13,12 +13,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  MapPin, 
-  Package, 
-  User, 
-  Truck, 
-  CheckCircle2, 
+import {
+  MapPin,
+  Package,
+  User,
+  Truck,
+  CheckCircle2,
   AlertCircle,
   ArrowRight,
   Sparkles,
@@ -106,13 +106,12 @@ function SmartInput({
           onChange={(e) => onChange(e.target.value)}
           required={required}
           placeholder={placeholder}
-          className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
-            showError
+          className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${showError
               ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500 focus:border-red-600 bg-red-50'
               : showValid
-              ? 'border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50'
-              : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
-          } focus:outline-none placeholder:text-gray-500`}
+                ? 'border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50'
+                : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+            } focus:outline-none placeholder:text-gray-500`}
         />
         {showValid && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
@@ -360,7 +359,7 @@ export default function NuovaSpedizionePage() {
     const weightCost = parseFloat(formData.peso) * 2 || 0;
     const distanceMultiplier = formData.mittenteCitta && formData.destinatarioCitta ? 1.2 : 1;
     const typeMultiplier = formData.tipoSpedizione === 'express' ? 1.5 : formData.tipoSpedizione === 'assicurata' ? 1.3 : 1;
-    
+
     return Math.round((baseCost + weightCost) * distanceMultiplier * typeMultiplier);
   }, [formData.peso, formData.mittenteCitta, formData.destinatarioCitta, formData.tipoSpedizione]);
 
@@ -389,7 +388,7 @@ export default function NuovaSpedizionePage() {
     if (!phone) return '';
     // Rimuovi spazi, lineette, parentesi
     let clean = phone.replace(/[\s\-\(\)]/g, '');
-    
+
     // Se inizia con +39, ok
     if (clean.startsWith('+39')) {
       return clean;
@@ -402,7 +401,7 @@ export default function NuovaSpedizionePage() {
     if (clean.startsWith('0039')) {
       return `+39${clean.substring(4)}`;
     }
-    
+
     return clean;
   };
 
@@ -427,10 +426,10 @@ export default function NuovaSpedizionePage() {
         const codText = `[AUTO] Contrassegno rilevato: €${data.cash_on_delivery_amount}`;
         newData.note = newData.note ? `${newData.note}\n${codText}` : codText;
       }
-      
+
       return newData;
     });
-    
+
     console.log('Agent Data applied:', data);
   };
 
@@ -478,9 +477,17 @@ export default function NuovaSpedizionePage() {
             const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.csv`;
             downloadCSV(csvContent, filename);
           } else {
-            const pdfDoc = generateShipmentPDF(spedizioneWithDate);
-            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
-            downloadPDF(pdfDoc, filename);
+            // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
+            if (result.ldv && result.ldv.success && result.ldv.label_url) {
+              console.log('📄 Apertura etichetta originale:', result.ldv.label_url);
+              window.open(result.ldv.label_url, '_blank');
+            } else {
+              // FALLBACK: Genera Ticket interno se non c'è etichetta reale
+              console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
+              const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+              const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+              downloadPDF(pdfDoc, filename);
+            }
           }
         }, 500);
       }
@@ -490,8 +497,8 @@ export default function NuovaSpedizionePage() {
         router.push('/dashboard/spedizioni');
       }, 3000);
     } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : 'Errore durante il salvataggio. Riprova.';
       setSubmitError(errorMessage);
     } finally {
@@ -532,11 +539,10 @@ export default function NuovaSpedizionePage() {
                     type="button"
                     onClick={() => handleSetSourceMode('manual')}
                     aria-pressed={sourceMode === 'manual'}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                      sourceMode === 'manual'
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sourceMode === 'manual'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                      }`}
                   >
                     Manuale
                   </button>
@@ -544,11 +550,10 @@ export default function NuovaSpedizionePage() {
                     type="button"
                     onClick={() => handleSetSourceMode('ai')}
                     aria-pressed={sourceMode === 'ai'}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                      sourceMode === 'ai'
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sourceMode === 'ai'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                      }`}
                   >
                     <Sparkles className="w-4 h-4 inline mr-1" />
                     AI Import
@@ -567,7 +572,7 @@ export default function NuovaSpedizionePage() {
                 />
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-900">
-                    <strong>💡 Suggerimento:</strong> Carica uno screenshot WhatsApp, foto documento o immagine con i dati del destinatario. 
+                    <strong>💡 Suggerimento:</strong> Carica uno screenshot WhatsApp, foto documento o immagine con i dati del destinatario.
                     Il sistema estrarrà automaticamente nome, indirizzo, CAP, città, telefono e email.
                   </p>
                 </div>
@@ -725,13 +730,12 @@ export default function NuovaSpedizionePage() {
                         onChange={(e) => setFormData((prev) => ({ ...prev, peso: e.target.value }))}
                         required
                         placeholder="0.00"
-                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
-                          validation.peso
+                        className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${validation.peso
                             ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
                             : formData.peso
-                            ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
-                            : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
-                        } focus:outline-none placeholder:text-gray-500`}
+                              ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
+                              : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+                          } focus:outline-none placeholder:text-gray-500`}
                       />
                       {validation.peso && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
@@ -877,11 +881,10 @@ export default function NuovaSpedizionePage() {
                           key={corriere}
                           type="button"
                           onClick={() => setFormData((prev) => ({ ...prev, corriere }))}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            formData.corriere === corriere
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.corriere === corriere
                               ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
                               : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                          }`}
+                            }`}
                         >
                           {corriere}
                         </button>
@@ -935,22 +938,20 @@ export default function NuovaSpedizionePage() {
                       <button
                         type="button"
                         onClick={() => setDownloadFormat('pdf')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          downloadFormat === 'pdf'
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'pdf'
                             ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
                             : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                        }`}
+                          }`}
                       >
                         📄 PDF
                       </button>
                       <button
                         type="button"
                         onClick={() => setDownloadFormat('csv')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          downloadFormat === 'csv'
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'csv'
                             ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
                             : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                        }`}
+                          }`}
                       >
                         📊 CSV
                       </button>
