@@ -314,8 +314,17 @@ export async function POST(request: NextRequest) {
     // INVIO AUTOMATICO LDV TRAMITE ORCHESTRATOR (se configurato)
     let ldvResult = null;
     try {
+      console.log('🚀 [API] Chiamo orchestrator per corriere:', body.corriere);
       const { createShipmentWithOrchestrator } = await import('@/lib/actions/spedisci-online');
       ldvResult = await createShipmentWithOrchestrator(spedizione, body.corriere || 'GLS');
+      
+      console.log('📦 [API] Risultato orchestrator:', {
+        success: ldvResult.success,
+        method: ldvResult.method,
+        tracking: ldvResult.tracking_number,
+        has_label_url: !!ldvResult.label_url,
+        error: ldvResult.error
+      });
       
       if (ldvResult.success) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
