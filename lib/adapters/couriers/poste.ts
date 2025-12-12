@@ -32,7 +32,15 @@ export class PosteAdapter extends CourierAdapter {
         }
 
         try {
-            const authUrl = `${this.credentials.base_url}/user/sessions`;
+            // Prova prima /user/sessions, poi /oauth/token come fallback
+            // Alcune implementazioni Poste usano endpoint diversi
+            const possibleEndpoints = [
+                `${this.credentials.base_url}/user/sessions`,
+                `${this.credentials.base_url}/oauth/token`,
+                `${this.credentials.base_url}/auth/token`
+            ];
+            
+            let lastError: any = null;
             
             const authPayload = {
                 clientId: this.credentials.client_id,
@@ -46,43 +54,62 @@ export class PosteAdapter extends CourierAdapter {
                 'Content-Type': 'application/json'
             };
 
-            console.log('🔑 [POSTE AUTH] Chiamata autenticazione:', {
-                url: authUrl,
-                has_client_id: !!this.credentials.client_id,
-                client_id_length: this.credentials.client_id?.length,
-                has_client_secret: !!this.credentials.client_secret,
-                client_secret_length: this.credentials.client_secret?.length,
-                scope: authPayload.scope,
-                headers: Object.keys(authHeaders)
-            });
+            for (const authUrl of possibleEndpoints) {
+                try {
+                    console.log('🔑 [POSTE AUTH] Tentativo endpoint:', authUrl);
+                    console.log('🔑 [POSTE AUTH] Payload:', {
+                        has_client_id: !!this.credentials.client_id,
+                        client_id_length: this.credentials.client_id?.length,
+                        has_client_secret: !!this.credentials.client_secret,
+                        client_secret_length: this.credentials.client_secret?.length,
+                        scope: authPayload.scope,
+                        headers: Object.keys(authHeaders)
+                    });
 
-            const response = await axios.post(
-                authUrl,
-                authPayload,
-                {
-                    headers: authHeaders
+                    const response = await axios.post(
+                        authUrl,
+                        authPayload,
+                        {
+                            headers: authHeaders
+                        }
+                    );
+
+                    console.log('🔑 [POSTE AUTH] Risposta ricevuta:', {
+                        url: authUrl,
+                        status: response.status,
+                        statusText: response.statusText,
+                        has_data: !!response.data,
+                        data_keys: response.data ? Object.keys(response.data) : [],
+                        has_access_token: !!response.data?.access_token,
+                        response_data: response.data
+                    });
+
+                    if (response.data && response.data.access_token) {
+                        this.token = response.data.access_token;
+                        // expires_in is in seconds (usually 3599)
+                        this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
+                        console.log('✅ [POSTE AUTH] Token ottenuto con successo da:', authUrl);
+                        console.log('✅ [POSTE AUTH] expires_in:', response.data.expires_in);
+                        return this.token!;
+                    } else {
+                        console.warn('⚠️ [POSTE AUTH] No access_token nella risposta da:', authUrl);
+                        lastError = new Error('No access_token received');
+                        continue; // Prova il prossimo endpoint
+                    }
+                } catch (error: any) {
+                    console.warn(`⚠️ [POSTE AUTH] Errore con endpoint ${authUrl}:`, {
+                        message: error.message,
+                        status: error.response?.status,
+                        statusText: error.response?.statusText
+                    });
+                    lastError = error;
+                    continue; // Prova il prossimo endpoint
                 }
-            );
-
-            console.log('🔑 [POSTE AUTH] Risposta ricevuta:', {
-                status: response.status,
-                statusText: response.statusText,
-                has_data: !!response.data,
-                data_keys: response.data ? Object.keys(response.data) : [],
-                has_access_token: !!response.data?.access_token,
-                response_data: response.data
-            });
-
-            if (response.data && response.data.access_token) {
-                this.token = response.data.access_token;
-                // expires_in is in seconds (usually 3599)
-                this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
-                console.log('✅ [POSTE AUTH] Token ottenuto con successo, expires_in:', response.data.expires_in);
-                return this.token!;
-            } else {
-                console.error('❌ [POSTE AUTH] No access_token nella risposta:', response.data);
-                throw new Error('No access_token received');
             }
+            
+            // Se tutti gli endpoint hanno fallito, lancia l'ultimo errore
+            console.error('❌ [POSTE AUTH] Tutti gli endpoint hanno fallito');
+            throw lastError || new Error('Authentication failed: All endpoints failed');
         } catch (error: any) {
             console.error('❌ [POSTE AUTH] Errore autenticazione:', {
                 message: error.message,
