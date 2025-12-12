@@ -288,8 +288,9 @@ export async function createShipmentWithOrchestrator(
           if (normalizedCourier !== providerId) {
             orchestrator.registerDirectAdapter(providerId, directProvider);
           }
-          // Registra anche con il codice originale (con maiuscole) per sicurezza
-          if (normalizedCourier !== courierCode.toLowerCase()) {
+          // Registra anche con il codice originale (se diverso dalla versione normalizzata)
+          // Questo gestisce casi come "Poste Italiane" -> "poste italiane" -> "poste"
+          if (courierCode.toLowerCase() !== normalizedCourier) {
             orchestrator.registerDirectAdapter(courierCode.toLowerCase(), directProvider);
           }
           console.log(`✅ [ORCHESTRATOR] Adapter diretto (${providerId}) registrato con chiavi: ${normalizedCourier}, ${providerId}`);

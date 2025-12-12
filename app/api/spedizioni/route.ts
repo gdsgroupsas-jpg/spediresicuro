@@ -301,8 +301,11 @@ export async function POST(request: NextRequest) {
     };
 
     // Salva nel database (SOLO Supabase)
+    let savedSpedizione: any;
     try {
-      await addSpedizione(spedizione, session.user.email);
+      savedSpedizione = await addSpedizione(spedizione, session.user.email);
+      // Aggiorna spedizione con ID restituito da Supabase
+      spedizione.id = savedSpedizione.id;
     } catch (error: any) {
       console.error('❌ [API] Errore addSpedizione:', error.message);
       console.error('❌ [API] Stack:', error.stack);
@@ -316,15 +319,18 @@ export async function POST(request: NextRequest) {
       const { createShipmentWithOrchestrator } = await import('@/lib/actions/spedisci-online');
       ldvResult = await createShipmentWithOrchestrator(spedizione, body.corriere || 'GLS');
       
-      if (ldvResult.success) {
+      if (ldvResult.success && savedSpedizione?.id) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
         
+        // Prepara aggiornamenti da salvare nel database
+        const updates: any = {};
+        
         // Aggiorna tracking number se fornito dall'orchestrator
-        // Usa tipo any per permettere aggiunta proprietà dinamiche
-        const spedizioneWithLdv = spedizione as any;
         if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
-          spedizioneWithLdv.tracking = ldvResult.tracking_number;
-          spedizioneWithLdv.ldv = ldvResult.tracking_number; // Salva anche come LDV
+          updates.tracking_number = ldvResult.tracking_number;
+          updates.ldv = ldvResult.tracking_number; // Salva anche come LDV
+          spedizione.tracking = ldvResult.tracking_number;
+          spedizione.ldv = ldvResult.tracking_number;
         }
 
         // Se è una spedizione Poste, salva metadati aggiuntivi
@@ -332,13 +338,16 @@ export async function POST(request: NextRequest) {
           const { poste_account_id, poste_product_code, waybill_number, label_pdf_url } = ldvResult.metadata;
           
           // Aggiorna spedizione con metadati Poste
-          spedizioneWithLdv.external_tracking_number = waybill_number || ldvResult.tracking_number;
-          spedizioneWithLdv.poste_metadata = {
+          updates.external_tracking_number = waybill_number || ldvResult.tracking_number;
+          updates.metadata = {
             poste_account_id,
             poste_product_code,
             waybill_number,
             label_pdf_url
           };
+          
+          spedizione.external_tracking_number = updates.external_tracking_number;
+          spedizione.poste_metadata = updates.metadata;
           
           console.log('📦 Metadati Poste salvati:', {
             waybill_number,
@@ -346,8 +355,20 @@ export async function POST(request: NextRequest) {
             label_pdf_url
           });
         }
+
+        // Aggiorna la spedizione nel database con i nuovi valori
+        if (Object.keys(updates).length > 0) {
+          try {
+            const { updateShipment } = await import('@/lib/db/shipments');
+            await updateShipment(savedSpedizione.id, updates);
+            console.log('✅ Spedizione aggiornata nel database con tracking e metadati');
+          } catch (updateError: any) {
+            // Non bloccare la risposta se l'aggiornamento fallisce
+            console.warn('⚠️ Errore aggiornamento spedizione nel database (non critico):', updateError.message);
+          }
+        }
       } else {
-        console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
+        console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult?.error);
       }
     } catch (error) {
       // Non bloccare la risposta se la creazione LDV fallisce
@@ -487,4 +508,3 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-
