@@ -1,6 +1,4 @@
-'use server';
-
-import { createClient } from '@/utils/supabase/server';
+import { createServerActionClient } from '@/lib/supabase-server';
 import { CreateInvoiceDTO, Invoice, InvoiceStatus } from '@/types/invoices';
 import { revalidatePath } from 'next/cache';
 
@@ -8,7 +6,7 @@ import { revalidatePath } from 'next/cache';
  * Crea una nuova bozza di fattura
  */
 export async function createInvoice(data: CreateInvoiceDTO) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   // 1. Crea la testata (Draft)
   const { data: invoice, error: invoiceError } = await supabase
@@ -50,7 +48,7 @@ export async function createInvoice(data: CreateInvoiceDTO) {
  * Questo scatena il trigger per generare il numero progressivo
  */
 export async function issueInvoice(id: string) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   // Recupera dati cliente per snapshot
   const { data: invoice } = await supabase.from('invoices').select('user_id').eq('id', id).single();
@@ -82,7 +80,7 @@ export async function issueInvoice(id: string) {
  * Aggiorna stato pagamento
  */
 export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { error } = await supabase
     .from('invoices')
@@ -97,7 +95,7 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
  * Get fatture per admin table
  */
 export async function getInvoices(limit = 50) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { data, error } = await supabase
     .from('invoices')
@@ -113,7 +111,7 @@ export async function getInvoices(limit = 50) {
  * Get fatture per utente loggato
  */
 export async function getUserInvoices(limit = 20) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) throw new Error('Utente non autenticato');
@@ -133,7 +131,7 @@ export async function getUserInvoices(limit = 20) {
  * Get singola fattura con items
  */
 export async function getInvoiceById(id: string) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { data, error } = await supabase
     .from('invoices')
