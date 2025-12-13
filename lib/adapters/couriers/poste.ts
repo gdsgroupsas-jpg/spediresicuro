@@ -24,6 +24,8 @@ export class PosteAdapter extends CourierAdapter {
     /**
      * Authenticates with Poste API using OAuth2 client_credentials flow.
      * Returns a valid Bearer token.
+     * 
+     * FIXED: Strict adherence to manual and sanitization to prevent 401/404 errors.
      */
     private async getAuthToken(): Promise<string> {
         // Return cached token if valid (with 5 min buffer)
@@ -31,36 +33,69 @@ export class PosteAdapter extends CourierAdapter {
             return this.token;
         }
 
-        try {
-            const authUrl = `${this.credentials.base_url}/user/sessions`;
+        // 1. Sanitize Credentials (aggressive trim + remove spaces)
+        const sanitizedClientId = (this.credentials.client_id || '').trim().replace(/\s+/g, '');
+        const sanitizedSecretId = (this.credentials.client_secret || '').trim().replace(/\s+/g, '');
 
+        // 2. Logging for Debug (Safe)
+        console.log('[Poste Auth] Attempting authentication...');
+        console.log('[Poste Auth] ClientID Length:', sanitizedClientId.length);
+        console.log('[Poste Auth] SecretID Length:', sanitizedSecretId.length);
+        console.log('[Poste Auth] Preview ClientID:', sanitizedClientId.substring(0, 5) + '...');
+
+        try {
+            // 3. Endpoint: ONLY /user/sessions is valid for new API
+            // clean base_url just in case
+            const baseUrl = this.credentials.base_url.replace(/\/$/, '');
+            const authUrl = `${baseUrl}/user/sessions`;
+
+            console.log('[Poste Auth] Endpoint:', authUrl);
+
+            // 4. Request
             const response = await axios.post(
                 authUrl,
                 {
-                    clientId: this.credentials.client_id,
-                    secretId: this.credentials.client_secret, // Note: Manual says 'secretId' in body
+                    clientId: sanitizedClientId,
+                    secretId: sanitizedSecretId,
                     grantType: 'client_credentials',
-                    scope: 'default' // Using default scope needed for general access
+                    scope: 'default'
                 },
                 {
                     headers: {
-                        'POSTE_clientID': this.credentials.client_id,
+                        'POSTE_clientID': sanitizedClientId,
                         'Content-Type': 'application/json'
                     }
                 }
             );
 
+            // 5. Check & Store
             if (response.data && response.data.access_token) {
+                console.log('[Poste Auth] ✅ Access Token Received');
                 this.token = response.data.access_token;
-                // expires_in is in seconds (usually 3599)
-                this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
+                this.tokenExpiry = Date.now() + ((response.data.expires_in || 3599) * 1000);
                 return this.token!;
             } else {
-                throw new Error('No access_token received');
+                console.error('[Poste Auth] ❌ No access_token in response body:', response.data);
+                throw new Error('No access_token received from Poste API');
             }
+
         } catch (error: any) {
-            console.error('Poste Auth Failed:', error.response?.data || error.message);
-            throw new Error('Authentication failed: ' + (error.response?.data?.errorDescription || error.message));
+            console.error('[Poste Auth] ❌ Auth Failed');
+
+            // Safe Error Extraction
+            const status = error.response?.status;
+            const data = error.response?.data;
+            const errorMessage = data?.error_description || data?.error || error.message;
+
+            console.error('[Poste Auth] Status:', status);
+            console.error('[Poste Auth] Error Details:', JSON.stringify(data, null, 2));
+
+            // Specialized Error for Tenant Issue
+            if (errorMessage && errorMessage.includes('AADSTS700016')) {
+                throw new Error(`POSTE ERROR: Client ID non trovato nel tenant (AADSTS700016). Verifica credenziali PDB. Dettagli: ${errorMessage}`);
+            }
+
+            throw new Error(`Authentication failed (${status}): ${errorMessage}`);
         }
     }
 
