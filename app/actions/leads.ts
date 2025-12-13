@@ -1,3 +1,5 @@
+'use server';
+
 import { createServerActionClient } from '@/lib/supabase-server';
 import { CreateLeadDTO, Lead, LeadStatus, UpdateLeadDTO } from '@/types/leads';
 import { revalidatePath } from 'next/cache';

@@ -1,3 +1,5 @@
+'use server';
+
 import { createServerActionClient } from '@/lib/supabase-server';
 import { CreateInvoiceDTO, Invoice, InvoiceStatus } from '@/types/invoices';
 import { revalidatePath } from 'next/cache';
