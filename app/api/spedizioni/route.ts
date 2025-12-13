@@ -244,7 +244,8 @@ export async function POST(request: NextRequest) {
     const trackingNumber = `${trackingPrefix}${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     // Prepara i dati della spedizione
-    const spedizione = {
+    // Usa tipo any per permettere aggiunta proprietà dinamiche (ldv, external_tracking_number, poste_metadata)
+    const spedizione: any = {
       // Dati mittente
       mittente: {
         nome: body.mittenteNome,
@@ -313,14 +314,45 @@ export async function POST(request: NextRequest) {
     // INVIO AUTOMATICO LDV TRAMITE ORCHESTRATOR (se configurato)
     let ldvResult = null;
     try {
+      console.log('🚀 [API] Chiamo orchestrator per corriere:', body.corriere);
       const { createShipmentWithOrchestrator } = await import('@/lib/actions/spedisci-online');
       ldvResult = await createShipmentWithOrchestrator(spedizione, body.corriere || 'GLS');
       
+      console.log('📦 [API] Risultato orchestrator:', {
+        success: ldvResult.success,
+        method: ldvResult.method,
+        tracking: ldvResult.tracking_number,
+        has_label_url: !!ldvResult.label_url,
+        error: ldvResult.error
+      });
+      
       if (ldvResult.success) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
+        
         // Aggiorna tracking number se fornito dall'orchestrator
         if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
           spedizione.tracking = ldvResult.tracking_number;
+          spedizione.ldv = ldvResult.tracking_number; // Salva anche come LDV
+        }
+
+        // Se è una spedizione Poste, salva metadati aggiuntivi
+        if (body.corriere === 'Poste Italiane' && ldvResult.metadata) {
+          const { poste_account_id, poste_product_code, waybill_number, label_pdf_url } = ldvResult.metadata;
+          
+          // Aggiorna spedizione con metadati Poste
+          spedizione.external_tracking_number = waybill_number || ldvResult.tracking_number;
+          spedizione.poste_metadata = {
+            poste_account_id,
+            poste_product_code,
+            waybill_number,
+            label_pdf_url
+          };
+          
+          console.log('📦 Metadati Poste salvati:', {
+            waybill_number,
+            poste_product_code,
+            label_pdf_url
+          });
         }
       } else {
         console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
@@ -463,4 +495,3 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-

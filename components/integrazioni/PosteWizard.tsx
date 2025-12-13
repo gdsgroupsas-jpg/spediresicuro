@@ -126,6 +126,13 @@ export default function PosteWizard({ onClose, onSuccess }: PosteWizardProps) {
                                     Questo wizard ti aiuterà a collegare il tuo account Poste Italiane in pochi secondi.
                                     Tieni a portata di mano <strong>Client ID</strong> e <strong>Secret ID</strong>.
                                 </p>
+                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-sm text-blue-800">
+                                        <strong>📋 Non hai ancora le credenziali?</strong><br />
+                                        Devi prima registrare l&apos;applicazione nel portale Poste Delivery Business.
+                                        Consulta la <a href="/docs/GUIDA_REGISTRAZIONE_POSTE.md" target="_blank" className="underline font-semibold">guida completa</a> per i dettagli.
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mt-8">
@@ -147,7 +154,13 @@ export default function PosteWizard({ onClose, onSuccess }: PosteWizardProps) {
                         <div className="space-y-6 flex-1">
                             <div className="space-y-2">
                                 <h3 className="text-lg font-semibold text-gray-900">Inserisci Credenziali</h3>
-                                <p className="text-gray-500 text-sm">Inserisci i dati Client ID e Secret ID forniti dal portale Poste.</p>
+                                <p className="text-gray-500 text-sm">
+                                    Inserisci i dati Client ID e Secret ID forniti dal portale Poste.
+                                    <br />
+                                    <a href="/docs/GUIDA_REGISTRAZIONE_POSTE.md" target="_blank" className="text-blue-600 hover:underline text-xs">
+                                        📖 Non sai come ottenerli? Leggi la guida
+                                    </a>
+                                </p>
                             </div>
 
                             {error && (
