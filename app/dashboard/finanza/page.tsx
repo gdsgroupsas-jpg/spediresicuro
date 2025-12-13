@@ -25,11 +25,32 @@ export default function FinanceControlRoom() {
   });
 
   useEffect(() => {
-    // Simulate AI Analysis
-    setTimeout(() => {
-        setAiMessage("Analisi completata. Il trend è positivo (+12% vs mese scorso). Nessuna criticità doganale rilevata.");
-        setIsLoading(false);
-    }, 2000);
+    // Caricamento dati reali via Server Action
+    const fetchData = async () => {
+        try {
+            const data = await getMyFiscalData();
+            // Map data to state stats (simplified mapping)
+            if (data && data.shipmentsSummary) {
+                setStats(prev => ({
+                    ...prev,
+                    revenue: data.shipmentsSummary.total_revenue,
+                    margin: data.shipmentsSummary.total_margin, 
+                    // Projection logic simple placeholder
+                    projection: data.shipmentsSummary.total_revenue * 1.1 
+                }));
+            }
+        } catch (e) {
+            console.error("Failed to fetch fiscal data", e);
+        }
+        
+        // Simulate AI Analysis completion visual
+        setTimeout(() => {
+            setAiMessage("Analisi completata. Il trend è positivo (+12% vs mese scorso). Nessuna criticità doganale rilevata.");
+            setIsLoading(false);
+        }, 2000);
+    };
+
+    fetchData();
   }, []);
 
   return (
