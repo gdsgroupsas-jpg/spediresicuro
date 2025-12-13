@@ -297,6 +297,20 @@ const adminSection: NavSection = {
       description: 'Gestione team e sub-admin',
     },
     {
+      id: 'leads',
+      label: 'Leads (CRM)',
+      href: '/dashboard/admin/leads',
+      icon: Users,
+      description: 'Gestione potenziali clienti e opportunità',
+    },
+    {
+      id: 'finance',
+      label: 'Financial Control',
+      href: '/dashboard/finanza',
+      icon: Wallet,
+      description: 'CFO Dashboard & Fiscal Brain',
+    },
+    {
       id: 'price-lists',
       label: 'Listini Prezzi',
       href: '/dashboard/listini',
@@ -316,6 +330,13 @@ const adminSection: NavSection = {
       href: '/dashboard/distinte-contrassegni',
       icon: FileSpreadsheet,
       description: 'Distinte riepilogative contrassegni',
+    },
+    {
+      id: 'admin-invoices',
+      label: 'Gestione Fatture',
+      href: '/dashboard/admin/invoices',
+      icon: FileText,
+      description: 'Emissione e gestione fatture',
     },
     {
       id: 'cost-adjustment',
@@ -370,6 +391,13 @@ const accountSection: NavSection = {
       href: '/dashboard/wallet',
       icon: Wallet,
       description: 'Ricariche e transazioni',
+    },
+    {
+      id: 'invoices',
+      label: 'Fatture',
+      href: '/dashboard/fatture',
+      icon: FileText,
+      description: 'Storico fatture e pagamenti',
     },
     {
       id: 'profile',
