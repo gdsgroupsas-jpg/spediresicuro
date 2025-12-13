@@ -51,6 +51,12 @@ export interface Invoice {
     name: string;
     email: string;
     company_name?: string;
+    vat_number?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    zip?: string;
+    country?: string;
   };
 }
 
