@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
-import { createClient } from '@/utils/supabase/server';
+import { createServerActionClient } from '@/lib/supabase-server';
 import { getFiscalContext } from '@/lib/agent/fiscal-data';
 import { ANNE_FISCAL_SYSTEM_PROMPT } from './prompts';
 import { createFiscalTools } from '@/lib/agent/tools';
@@ -11,7 +11,7 @@ import { consultFiscalBrain } from '@/lib/knowledge/fiscal_brain'; // NEW
 export async function POST(request: NextRequest) {
   try {
     // 1. Auth & Context
-    const supabase = createClient();
+    const supabase = createServerActionClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
