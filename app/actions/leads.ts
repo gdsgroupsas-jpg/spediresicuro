@@ -1,6 +1,4 @@
-'use server';
-
-import { createClient } from '@/utils/supabase/server';
+import { createServerActionClient } from '@/lib/supabase-server';
 import { CreateLeadDTO, Lead, LeadStatus, UpdateLeadDTO } from '@/types/leads';
 import { revalidatePath } from 'next/cache';
 
@@ -8,7 +6,7 @@ import { revalidatePath } from 'next/cache';
  * Get all leads (Admin view)
  */
 export async function getLeads(limit = 100) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { data, error } = await supabase
     .from('leads')
@@ -24,7 +22,7 @@ export async function getLeads(limit = 100) {
  * Get single lead
  */
 export async function getLeadById(id: string) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { data, error } = await supabase
     .from('leads')
@@ -40,7 +38,7 @@ export async function getLeadById(id: string) {
  * Create new lead
  */
 export async function createLead(data: CreateLeadDTO) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { data: lead, error } = await supabase
     .from('leads')
@@ -58,7 +56,7 @@ export async function createLead(data: CreateLeadDTO) {
  * Update lead
  */
 export async function updateLead(id: string, data: UpdateLeadDTO) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { data: lead, error } = await supabase
     .from('leads')
@@ -77,7 +75,7 @@ export async function updateLead(id: string, data: UpdateLeadDTO) {
  * Delete lead
  */
 export async function deleteLead(id: string) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   
   const { error } = await supabase
     .from('leads')
