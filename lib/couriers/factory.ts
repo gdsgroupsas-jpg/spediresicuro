@@ -175,10 +175,13 @@ function instantiateProviderFromConfig(
         return null;
       case 'poste':
         // Instantiate Poste adapter using DB config
-        // Mapping DB fields to Adapter fields:
-        // api_key -> client_id
-        // api_secret -> client_secret
-        // contract_mapping['cdc'] -> cost_center_code
+        // ⚠️ IMPORTANTE: Mapping DB fields to Adapter fields
+        // Il database salva come api_key/api_secret (schema standard per tutti i corrieri)
+        // L'adapter Poste si aspetta client_id/client_secret
+        // Mapping:
+        //   api_key (DB) -> client_id (Adapter)
+        //   api_secret (DB) -> client_secret (Adapter)
+        //   contract_mapping['cdc'] -> cost_center_code (Adapter)
         const { api_key, api_secret, base_url, contract_mapping } = config;
 
         let cdc = 'CDC-DEFAULT';

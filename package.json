@@ -21,6 +21,7 @@
     "check:env:simple": "node scripts/check-env-simple.js",
     "verify:users": "ts-node --project tsconfig.scripts.json scripts/verifica-crea-utenti-supabase.ts",
     "verify:reseller-wallet": "ts-node --project tsconfig.scripts.json scripts/verify-supabase-reseller-wallet.ts",
+    "test:poste": "ts-node --project tsconfig.scripts.json scripts/test-poste-api.ts",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:debug": "npx playwright test --debug",
