@@ -107,10 +107,10 @@ function SmartInput({
           required={required}
           placeholder={placeholder}
           className={`w-full px-4 ${Icon ? 'pl-10' : ''} pr-10 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${showError
-              ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500 focus:border-red-600 bg-red-50'
-              : showValid
-                ? 'border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50'
-                : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+            ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500 focus:border-red-600 bg-red-50'
+            : showValid
+              ? 'border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50'
+              : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
             } focus:outline-none placeholder:text-gray-500`}
         />
         {showValid && (
@@ -484,6 +484,9 @@ export default function NuovaSpedizionePage() {
             const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.csv`;
             downloadCSV(csvContent, filename);
           } else {
+            // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
+            console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
+
             // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
             // L'API restituisce ldv al livello root, non dentro data
             const ldvResult = result.ldv || result.data?.ldv;
@@ -496,18 +499,32 @@ export default function NuovaSpedizionePage() {
               'ldvResult?.error': ldvResult?.error,
               'ldvResult?.method': ldvResult?.method
             });
-            
+
             if (ldvResult && ldvResult.success && ldvResult.label_url) {
               console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
               window.open(ldvResult.label_url, '_blank');
             } else {
               // FALLBACK: Genera Ticket interno se non c'è etichetta reale
               console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
+
+              // LOGGING DETTAGLIATO (da remote)
               console.log('   - ldvResult:', ldvResult);
               console.log('   - ldvResult?.success:', ldvResult?.success);
               console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
               console.log('   - ldvResult?.error:', ldvResult?.error);
               console.log('   - ldvResult?.method:', ldvResult?.method);
+
+              // ⚠️ MOSTRA ERRORE ALL'UTENTE - VERSIONE AGGRESSIVA (da local)
+              // Se c'è un errore nell'oggetto LDV, mostralo SEMPRE
+              const errorMsg = result.ldv?.error || result.ldv?.message;
+              if (errorMsg) {
+                alert(`⚠️ ERRORE POSTE/SDA:\n\n${errorMsg}\n\nÈ stato generato un ticket di riserva.`);
+              } else if (!result.ldv) {
+                // Caso raro: ldv null (errore server interno prima dell'orchestrator)
+                console.warn('Oggetto LDV mancante nella risposta');
+                alert('⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli.');
+              }
+
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
               const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
               downloadPDF(pdfDoc, filename);
@@ -564,8 +581,8 @@ export default function NuovaSpedizionePage() {
                     onClick={() => handleSetSourceMode('manual')}
                     aria-pressed={sourceMode === 'manual'}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sourceMode === 'manual'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
                       }`}
                   >
                     Manuale
@@ -575,8 +592,8 @@ export default function NuovaSpedizionePage() {
                     onClick={() => handleSetSourceMode('ai')}
                     aria-pressed={sourceMode === 'ai'}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sourceMode === 'ai'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
                       }`}
                   >
                     <Sparkles className="w-4 h-4 inline mr-1" />
@@ -755,10 +772,10 @@ export default function NuovaSpedizionePage() {
                         required
                         placeholder="0.00"
                         className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${validation.peso
-                            ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
-                            : formData.peso
-                              ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
-                              : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+                          ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
+                          : formData.peso
+                            ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
+                            : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
                           } focus:outline-none placeholder:text-gray-500`}
                       />
                       {validation.peso && (
@@ -906,8 +923,8 @@ export default function NuovaSpedizionePage() {
                           type="button"
                           onClick={() => setFormData((prev) => ({ ...prev, corriere }))}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.corriere === corriere
-                              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                             }`}
                         >
                           {corriere}
@@ -963,8 +980,8 @@ export default function NuovaSpedizionePage() {
                         type="button"
                         onClick={() => setDownloadFormat('pdf')}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'pdf'
-                            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                          ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                           }`}
                       >
                         📄 PDF
@@ -973,8 +990,8 @@ export default function NuovaSpedizionePage() {
                         type="button"
                         onClick={() => setDownloadFormat('csv')}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'csv'
-                            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                          ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                           }`}
                       >
                         📊 CSV
