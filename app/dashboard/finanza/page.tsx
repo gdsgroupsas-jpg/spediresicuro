@@ -5,8 +5,7 @@ import {
   TrendingUp, TrendingDown, AlertTriangle, ShieldCheck, 
   Wallet, PieChart, Activity, Zap, MessageSquare 
 } from 'lucide-react';
-import { getFiscalContext } from '@/lib/agent/fiscal-data'; // Usato lato server in realta, qui mockiamo o chiamiamo server action
-// Nota: In Next App Router, meglio chiamare Server Action. Costruiamo una Server Action wrapper.
+import { getMyFiscalData } from '@/app/actions/fiscal';
 import { getUserInvoices } from '@/app/actions/invoices';
 
 export default function FinanceControlRoom() {
