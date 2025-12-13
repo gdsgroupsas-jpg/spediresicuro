@@ -458,6 +458,13 @@ export default function NuovaSpedizionePage() {
       }
 
       const result = await response.json();
+      console.log('📦 [CLIENT] Risultato API spedizioni:', result);
+      console.log('📦 [CLIENT] LDV Result (da result.ldv):', result.ldv);
+      console.log('📦 [CLIENT] LDV Result (da result.data?.ldv):', result.data?.ldv);
+      console.log('📦 [CLIENT] Tracking:', result.data?.tracking);
+      console.log('📦 [CLIENT] Corriere:', result.data?.corriere);
+      console.log('📦 [CLIENT] Success:', result.success);
+      console.log('📦 [CLIENT] Message:', result.message);
       setSubmitSuccess(true);
       setCreatedTracking(result.data?.tracking || null);
 
@@ -481,14 +488,33 @@ export default function NuovaSpedizionePage() {
             console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
 
             // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
-            if (result.ldv && result.ldv.success && result.ldv.label_url) {
-              console.log('📄 Apertura etichetta originale:', result.ldv.label_url);
-              window.open(result.ldv.label_url, '_blank');
+            // L'API restituisce ldv al livello root, non dentro data
+            const ldvResult = result.ldv || result.data?.ldv;
+            console.log('🔍 [CLIENT] Verifica LDV:', {
+              'result.ldv': result.ldv,
+              'result.data?.ldv': result.data?.ldv,
+              'ldvResult': ldvResult,
+              'ldvResult?.success': ldvResult?.success,
+              'ldvResult?.label_url': ldvResult?.label_url,
+              'ldvResult?.error': ldvResult?.error,
+              'ldvResult?.method': ldvResult?.method
+            });
+
+            if (ldvResult && ldvResult.success && ldvResult.label_url) {
+              console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
+              window.open(ldvResult.label_url, '_blank');
             } else {
               // FALLBACK: Genera Ticket interno se non c'è etichetta reale
               console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
 
-              // ⚠️ MOSTRA ERRORE ALL'UTENTE - VERSIONE AGGRESSIVA
+              // LOGGING DETTAGLIATO (da remote)
+              console.log('   - ldvResult:', ldvResult);
+              console.log('   - ldvResult?.success:', ldvResult?.success);
+              console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
+              console.log('   - ldvResult?.error:', ldvResult?.error);
+              console.log('   - ldvResult?.method:', ldvResult?.method);
+
+              // ⚠️ MOSTRA ERRORE ALL'UTENTE - VERSIONE AGGRESSIVA (da local)
               // Se c'è un errore nell'oggetto LDV, mostralo SEMPRE
               const errorMsg = result.ldv?.error || result.ldv?.message;
               if (errorMsg) {
@@ -890,8 +916,8 @@ export default function NuovaSpedizionePage() {
                     <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
                       Corriere
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['GLS', 'SDA', 'Bartolini'] as Corriere[]).map((corriere) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['GLS', 'SDA', 'Bartolini', 'Poste Italiane'] as Corriere[]).map((corriere) => (
                         <button
                           key={corriere}
                           type="button"

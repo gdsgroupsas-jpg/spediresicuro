@@ -411,6 +411,7 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     // Tracking
     tracking_number: tracking,
     ldv: ldv || null, // Lettera di Vettura (importante per Spedisci.Online)
+    external_tracking_number: spedizione.external_tracking_number || null, // Waybill number per Poste
     status: statusSupabase,
     // Mittente
     sender_name: mittente.nome || spedizione.mittenteNome || 'Mittente Predefinito',
@@ -467,6 +468,8 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     notes: spedizione.note || '',
     // ⚠️ CRITICO: Audit Trail - created_by_user_email (per multi-tenancy quando user_id è null)
     created_by_user_email: spedizione.created_by_user_email || null,
+    // Metadati aggiuntivi (JSONB) - per salvare dati specifici corriere (es: Poste)
+    metadata: spedizione.poste_metadata || spedizione.metadata || null,
     // Campi aggiuntivi (salvati in JSONB o come note)
     // Nota: packages_count (colli) non esiste nello schema Supabase - non può essere salvato
   };
