@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
             const tool = tools.find(t => t.name === call.name);
             if (tool) {
                 console.log(`🛠️ Executing Tool: ${tool.name}`);
-                const output = await tool.invoke(call.args);
+                const output = await (tool as any).invoke(call.args);
                 toolMessages.push(new ToolMessage({
                     tool_call_id: call.id || '',
                     content: output,
