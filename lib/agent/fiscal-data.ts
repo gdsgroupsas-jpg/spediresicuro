@@ -1,6 +1,6 @@
 
-import { createClient } from '@/utils/supabase/server';
-import { UserRole } from '@/types/user'; // Assumed type, will use string if missing
+import { createServerActionClient } from '@/lib/supabase-server';
+// import { UserRole } from '@/types/user'; // Removed as it seems missing, using string for now
 
 export interface FiscalContext {
   userId: string;
@@ -16,7 +16,7 @@ export interface FiscalContext {
  * Recupera l'elenco degli ID dei sub-utenti per un reseller
  */
 async function getSubUserIds(resellerId: string): Promise<string[]> {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   const { data } = await supabase
     .from('users')
     .select('id')
@@ -34,7 +34,7 @@ export async function getShipmentsByPeriod(
   startDate: string, // ISO Date string
   endDate: string    // ISO Date string
 ) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   let query = supabase
     .from('shipments')
     .select('id, created_at, status, total_price, courier_cost, margin, cash_on_delivery, cod_status, user_id')
@@ -104,7 +104,7 @@ export function getFiscalDeadlines() {
  * Recupera stato COD (Contrassegni) per l'utente, isolato.
  */
 export async function getPendingCOD(userId: string, role: string) {
-  const supabase = createClient();
+  const supabase = createServerActionClient();
   let query = supabase
     .from('shipments')
     .select('id, created_at, cash_on_delivery, cod_status, user_id')
@@ -149,11 +149,11 @@ export async function getFiscalContext(userId: string, role: string) {
         period: { start: startDate, end: endDate },
         shipmentsSummary: {
             count: shipments?.length || 0,
-            total_margin: shipments?.reduce((acc, s) => acc + (s.margin || 0), 0) || 0,
-            total_revenue: shipments?.reduce((acc, s) => acc + (s.total_price || 0), 0) || 0,
+            total_margin: shipments?.reduce((acc: number, s: any) => acc + (s.margin || 0), 0) || 0,
+            total_revenue: shipments?.reduce((acc: number, s: any) => acc + (s.total_price || 0), 0) || 0,
         },
         pending_cod_count: cods?.length || 0,
-        pending_cod_value: cods?.reduce((acc, s) => acc + (s.cash_on_delivery || 0), 0) || 0,
+        pending_cod_value: cods?.reduce((acc: number, s: any) => acc + (s.cash_on_delivery || 0), 0) || 0,
         deadlines: deadlines.filter(d => d.date >= new Date().toISOString().split('T')[0]).slice(0, 3) // Prossime 3 scadenze
     };
 }
