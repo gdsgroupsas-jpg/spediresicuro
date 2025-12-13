@@ -1,36 +1,22 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Loader2, Wallet, Plus } from 'lucide-react'
+import { useState, useTransition, useRef } from 'react'
+import { Loader2, Wallet, Plus, CreditCard, UploadCloud, FileText, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { rechargeMyWallet } from '@/actions/wallet'
+import { initiateCardRecharge, uploadBankTransferReceipt } from '@/app/actions/wallet'
 import { formatCurrency, cn } from '@/lib/utils'
-
-// Schema validazione
-const rechargeSchema = {
-  amount: (val: number) => {
-    if (!val || val <= 0) return 'L\'importo deve essere maggiore di zero'
-    if (val > 10000) return 'L\'importo massimo è €10.000'
-    return null
-  },
-  reason: (val: string) => {
-    if (!val || val.trim().length < 3) return 'Inserisci una causale (minimo 3 caratteri)'
-    return null
-  }
-}
 
 interface RechargeWalletDialogProps {
   isOpen: boolean
@@ -39,12 +25,7 @@ interface RechargeWalletDialogProps {
   currentBalance: number
 }
 
-const QUICK_AMOUNTS = [
-  { amount: 50, label: '+50 €' },
-  { amount: 100, label: '+100 €' },
-  { amount: 250, label: '+250 €' },
-  { amount: 500, label: '+500 €' },
-]
+const QUICK_AMOUNTS = [50, 100, 250, 500]
 
 export function RechargeWalletDialog({
   isOpen,
@@ -53,216 +34,238 @@ export function RechargeWalletDialog({
   currentBalance,
 }: RechargeWalletDialogProps) {
   const [isPending, startTransition] = useTransition()
-  const [amount, setAmount] = useState<number>(0)
-  const [reason, setReason] = useState<string>('')
-  const [errors, setErrors] = useState<{ amount?: string; reason?: string }>({})
+  const [activeTab, setActiveTab] = useState('card')
+  
+  // Card Payment State
+  const [cardAmount, setCardAmount] = useState<number>(0)
+  const [feePreview, setFeePreview] = useState<{fee: number, total: number} | null>(null)
+  
+  // Transfer State
+  const [transferAmount, setTransferAmount] = useState<number>(0)
+  const [file, setFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const newBalance = currentBalance + amount
-
-  const handleQuickAmount = (quickAmount: number) => {
-    setAmount(quickAmount)
-    setErrors({})
-  }
-
-  const validateForm = (): boolean => {
-    const newErrors: { amount?: string; reason?: string } = {}
-    
-    const amountError = rechargeSchema.amount(amount)
-    if (amountError) newErrors.amount = amountError
-
-    const reasonError = rechargeSchema.reason(reason)
-    if (reasonError) newErrors.reason = reasonError
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
+  // Calculate fees locally for immediate preview (mirrors server logic)
+  const updateCardAmount = (val: number) => {
+    setCardAmount(val)
+    if (val > 0) {
+        const fee = Number(((val * 0.015) + 0.25).toFixed(2))
+        setFeePreview({ fee, total: val + fee })
+    } else {
+        setFeePreview(null)
     }
+  }
+
+  const handleCardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (cardAmount <= 0) return
 
     startTransition(async () => {
       try {
-        const result = await rechargeMyWallet(amount, reason)
-
-        if (!result.success) {
-          toast.error(result.error || 'Errore durante la ricarica')
-          return
+        const result = await initiateCardRecharge(cardAmount)
+        if (result.success && result.paymentUrl) {
+            // Create a form dynamically and submit to Intesa
+            const form = document.createElement('form')
+            form.method = 'POST'
+            form.action = result.paymentUrl
+            
+            Object.entries(result.fields).forEach(([key, value]) => {
+                const input = document.createElement('input')
+                input.type = 'hidden'
+                input.name = key
+                input.value = value as string
+                form.appendChild(input)
+            })
+            
+            document.body.appendChild(form)
+            form.submit()
+            // Dialog will close on redirect/page unload
+        } else {
+            toast.error('Errore inizializzazione pagamento')
         }
-
-        toast.success(
-          result.message || `Ricarica di ${formatCurrency(amount)} completata!`
-        )
-        
-        // Reset form
-        setAmount(0)
-        setReason('')
-        setErrors({})
-        
-        onClose()
-        onSuccess?.()
       } catch (error) {
-        toast.error('Errore imprevisto. Riprova.')
-        console.error('Wallet recharge error:', error)
+        toast.error('Errore di connessione al gateway')
       }
     })
   }
 
-  const handleClose = () => {
-    if (!isPending) {
-      setAmount(0)
-      setReason('')
-      setErrors({})
-      onClose()
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file || transferAmount <= 0) {
+        toast.error('Inserisci importo e allega ricevuta')
+        return
     }
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('amount', transferAmount.toString())
+
+    startTransition(async () => {
+        try {
+            const result = await uploadBankTransferReceipt(formData)
+            if (result.success) {
+                toast.success('Ricevuta inviata! L\'IA sta verificando i dati.')
+                onSuccess?.()
+                onClose()
+            } else {
+                toast.error(result.error || 'Errore upload')
+            }
+        } catch (error) {
+            toast.error('Errore imprevisto')
+        }
+    })
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-[#FF9500]" />
-            Ricarica Wallet
+    <Dialog open={isOpen} onOpenChange={(open) => !isPending && open && onClose()}>
+      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-slate-50">
+        <DialogHeader className="p-6 bg-white border-b border-slate-100">
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Wallet className="h-6 w-6 text-indigo-600" />
+            Ricarica Credito
           </DialogTitle>
           <DialogDescription>
-            Aggiungi credito al tuo wallet per utilizzare i servizi della piattaforma
+            Scegli il metodo di ricarica preferito. I fondi saranno subito disponibili*
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Saldo Attuale */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Saldo Attuale</span>
-              <span className="text-2xl font-bold text-green-700">
-                {formatCurrency(currentBalance)}
-              </span>
-            </div>
-          </div>
+        <div className="p-6">
+            <Tabs defaultValue="card" onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-slate-200/50 rounded-xl">
+                    <TabsTrigger value="card" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all py-2.5">
+                        <CreditCard className="w-4 h-4 mr-2" /> Carta / XPay
+                    </TabsTrigger>
+                    <TabsTrigger value="transfer" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all py-2.5">
+                        <FileText className="w-4 h-4 mr-2" /> Bonifico Smart
+                    </TabsTrigger>
+                </TabsList>
 
-          {/* Quick Amounts */}
-          <div>
-            <Label className="mb-2 block text-sm font-medium text-gray-700">
-              Importi rapidi
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_AMOUNTS.map((qa) => (
-                <Button
-                  key={qa.amount}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAmount(qa.amount)}
-                  disabled={isPending}
-                  className="flex items-center gap-1 border-2 border-gray-300 hover:border-green-500 hover:bg-green-50"
-                >
-                  <Plus className="h-3 w-3 text-green-600" />
-                  {qa.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+                {/* --- TAB CARTA --- */}
+                <TabsContent value="card" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="space-y-4">
+                        <Label>Seleziona o Inserisci Importo</Label>
+                        <div className="grid grid-cols-4 gap-3">
+                            {QUICK_AMOUNTS.map(amt => (
+                                <button
+                                    key={amt}
+                                    onClick={() => updateCardAmount(amt)}
+                                    className={cn(
+                                        "py-2 px-3 rounded-lg border text-sm font-medium transition-all",
+                                        cardAmount === amt 
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-200"
+                                            : "border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50"
+                                    )}
+                                >
+                                    {amt} €
+                                </button>
+                            ))}
+                        </div>
+                        <div className="relative">
+                            <Input 
+                                type="number" 
+                                placeholder="Altro importo..." 
+                                value={cardAmount || ''}
+                                onChange={(e) => updateCardAmount(parseFloat(e.target.value))}
+                                className="pl-8 text-lg font-semibold"
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">€</span>
+                        </div>
 
-          {/* Amount Input */}
-          <div className="space-y-2">
-            <Label htmlFor="amount" className="text-sm font-medium text-gray-700">
-              Importo <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                max="10000"
-                placeholder="0.00"
-                value={amount || ''}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0
-                  setAmount(val)
-                  if (errors.amount) {
-                    setErrors({ ...errors, amount: undefined })
-                  }
-                }}
-                error={!!errors.amount}
-                disabled={isPending}
-                className="pr-12 text-lg font-medium"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
-                €
-              </span>
-            </div>
-            {errors.amount && (
-              <p className="text-xs text-red-500">{errors.amount}</p>
-            )}
-          </div>
+                        {feePreview && (
+                            <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-2">
+                                <div className="flex justify-between text-sm text-slate-600">
+                                    <span>Credito Ricaricato</span>
+                                    <span className="font-semibold">{formatCurrency(cardAmount)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm text-slate-500">
+                                    <span>Commissioni (1.5% + 0.25€)</span>
+                                    <span>+ {formatCurrency(feePreview.fee)}</span>
+                                </div>
+                                <div className="border-t border-indigo-100 mt-2 pt-2 flex justify-between items-center">
+                                    <span className="font-bold text-indigo-900">Totale Addebito</span>
+                                    <span className="text-xl font-bold text-indigo-600">{formatCurrency(feePreview.total)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-          {/* Preview Nuovo Saldo */}
-          {amount > 0 && (
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-green-700 font-medium">Nuovo Saldo</span>
-                <span className="text-xl font-bold text-green-700">
-                  {formatCurrency(newBalance)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-green-600">Ricarica</span>
-                <span className="text-green-600 font-medium">
-                  +{formatCurrency(amount)}
-                </span>
-              </div>
-            </div>
-          )}
+                    <Button 
+                        onClick={handleCardSubmit} 
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 text-lg shadow-lg shadow-indigo-200"
+                        disabled={isPending || cardAmount <= 0}
+                    >
+                        {isPending ? <Loader2 className="animate-spin" /> : "Procedi al Pagamento Sicuro"}
+                    </Button>
+                    <p className="text-center text-xs text-slate-400 flex items-center justify-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Gestito da Intesa Sanpaolo XPay
+                    </p>
+                </TabsContent>
 
-          {/* Reason */}
-          <div className="space-y-2">
-            <Label htmlFor="reason" className="text-sm font-medium text-gray-700">
-              Causale <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="reason"
-              placeholder="Es: Ricarica mensile, Bonus, Rimborso, etc."
-              value={reason}
-              onChange={(e) => {
-                setReason(e.target.value)
-                if (errors.reason) {
-                  setErrors({ ...errors, reason: undefined })
-                }
-              }}
-              error={!!errors.reason}
-              disabled={isPending}
-              rows={3}
-            />
-            {errors.reason && (
-              <p className="text-xs text-red-500">{errors.reason}</p>
-            )}
-          </div>
+                {/* --- TAB BONIFICO --- */}
+                <TabsContent value="transfer" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-sm text-emerald-800">
+                        <p className="font-semibold mb-1">IBAN per Ricarica:</p>
+                        <p className="font-mono text-lg bg-white/50 px-2 py-1 rounded select-all mb-2">IT00 X000 0000 0000 0000 0000 000</p>
+                        <p className="text-xs opacity-80">Intestato a SpedireSicuro S.R.L.</p>
+                    </div>
 
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isPending}
-              className="border-2 border-gray-300"
-            >
-              Annulla
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending || amount <= 0 || !!errors.amount || !!errors.reason}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-            >
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isPending ? 'Elaborazione...' : 'Ricarica Wallet'}
-            </Button>
-          </DialogFooter>
-        </form>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Importo Bonificato</Label>
+                            <Input 
+                                type="number" 
+                                placeholder="0.00" 
+                                value={transferAmount || ''}
+                                onChange={(e) => setTransferAmount(parseFloat(e.target.value))}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Ricevuta (PDF/IMG)</Label>
+                            <div 
+                                onClick={() => fileInputRef.current?.click()}
+                                className={cn(
+                                    "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors bg-white",
+                                    file ? "border-emerald-500 bg-emerald-50/30" : "border-slate-200 hover:border-emerald-400 hover:bg-slate-50"
+                                )}
+                            >
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    hidden 
+                                    accept=".pdf,.jpg,.png,.jpeg"
+                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                />
+                                {file ? (
+                                    <>
+                                        <FileText className="w-10 h-10 text-emerald-600 mb-2" />
+                                        <p className="font-medium text-emerald-900">{file.name}</p>
+                                        <p className="text-xs text-emerald-600">Clicca per cambiare</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UploadCloud className="w-10 h-10 text-slate-400 mb-2" />
+                                        <p className="font-medium text-slate-600">Carica Ricevuta</p>
+                                        <p className="text-xs text-slate-400">PDF o Immagine leggibile</p>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <Button 
+                        onClick={handleTransferSubmit} 
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 shadow-lg shadow-emerald-200"
+                        disabled={isPending || !file || transferAmount <= 0}
+                    >
+                        {isPending ? <Loader2 className="animate-spin" /> : "Invia per Verifica AI"}
+                    </Button>
+                     <p className="text-center text-xs text-slate-400">
+                        *L&apos;accredito è automatico dopo la verifica intelligente (max 2h)
+                    </p>
+                </TabsContent>
+            </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   )
