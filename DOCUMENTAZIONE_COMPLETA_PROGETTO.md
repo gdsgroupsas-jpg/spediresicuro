@@ -1,7 +1,7 @@
 # 📜 MANIFESTO TECNICO DI PROGETTO - SpedireSicuro.it
 
-> **Versione:** 2.0.0 (AI-First Era)  
-> **Data Aggiornamento:** 14 Dicembre 2025  
+> **Versione:** 2.1.0 (AI-First Era + Wallet Security)  
+> **Data Aggiornamento:** Gennaio 2025  
 > **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)
 
 ---
@@ -75,16 +75,68 @@ Modulo dedicato all'acquisizione e conversione clienti (Dashboard Admin).
 
 ### 3.3 💳 Finanza & Wallet
 
-_Status: 🟢 Produzione_
+_Status: 🟢 Produzione (Sistema Sicuro e Completo)_
 
-Sistema finanziario interno per la gestione del credito prepagato.
+Sistema finanziario interno per la gestione del credito prepagato con sicurezza enterprise-grade.
+
+#### 3.3.1 Ricarica Wallet
 
 - **Ricarica XPay**: Integrazione diretta gateway Intesa Sanpaolo (Carte di Credito). Calcolo commissioni dinamico.
 - **Smart Top-Up (Bonifico)**:
   - Utente carica PDF/FOTO della distinta di bonifico.
-  - **AI Verification**: Il sistema legge l'importo e il CRO dalla ricevuta.
-  - Accredito semi-automatico (previa conferma admin o automatico su base trust).
-- **Consapevolezza Fiscale**: Il sistema traccia scadenze (F24, LIPE) e fornisce un contesto fiscale all'AI per rispondere a domande dell'utente.
+  - **AI Verification**: Il sistema legge l'importo e il CRO dalla ricevuta (Gemini Vision).
+  - **Validazioni Server-Side**:
+    - Importo: €0.01 - €10.000 (limite massimo per singola operazione)
+    - File: JPG/PNG/PDF, max 10MB
+    - Rate limiting: max 5 richieste per utente nelle ultime 24h
+    - Anti-duplicati: controllo SHA-256 del file e importo+user_id nelle ultime 24h
+  - **Workflow Approvazione**:
+    - Richiesta creata con `status = 'pending'`
+    - Admin visualizza su `/dashboard/admin/bonifici`
+    - Approvazione atomica e idempotente (previene doppio accredito)
+    - Accredito via RPC `add_wallet_credit()` (unica fonte di verità per saldo)
+
+#### 3.3.2 Sicurezza Wallet (CRITICAL)
+
+**REGOLE NON NEGOZIABILI:**
+1. ❌ **VIETATO** aggiornare `users.wallet_balance` direttamente da codice applicativo
+2. ✅ **UNICO MODO** per modificare saldo: RPC `add_wallet_credit()` / `deduct_wallet_credit()` oppure INSERT su `wallet_transactions` (trigger aggiorna balance)
+3. ❌ **Nessun fallback manuale**: Se RPC fallisce → errore e stop (no bypass)
+
+**Protezioni Implementate:**
+- ✅ Limite massimo €10.000 per singola operazione (SQL function)
+- ✅ Controllo duplicati (file_hash SHA-256 + importo+user_id/24h)
+- ✅ Approvazione atomica (UPDATE con WHERE status IN ('pending','manual_review'))
+- ✅ Rollback automatico se accredito RPC fallisce
+- ✅ Audit log completo (tutte le operazioni tracciate in `audit_logs`)
+- ✅ RLS policies per admin (UPDATE policy su `top_up_requests`)
+- ✅ SQL function `approve_top_up_request()` con SECURITY DEFINER (fallback robusto)
+
+#### 3.3.3 Pagina Admin Bonifici
+
+**Path**: `/dashboard/admin/bonifici`
+
+**Funzionalità:**
+- Visualizzazione richieste con tabs (In Attesa, Approvate, Rifiutate)
+- Dettagli richiesta: importo, utente (email/name), file ricevuta, data
+- Azioni:
+  - **Approva**: Accredita wallet (con importo personalizzabile)
+  - **Rifiuta**: Rifiuta richiesta con motivo
+  - **Elimina**: Hard delete solo per richieste pending/manual_review
+
+**File Coinvolti:**
+- `app/dashboard/admin/bonifici/page.tsx` - UI React
+- `app/actions/topups-admin.ts` - Server actions per lettura (getTopUpRequestsAdmin, getTopUpRequestAdmin)
+- `app/actions/wallet.ts` - Server actions per modifica (approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest)
+
+**⚠️ IMPORTANTE - Struttura File Corretta:**
+- `topups-admin.ts` contiene SOLO funzioni di lettura e verifica admin
+- `wallet.ts` contiene SOLO funzioni di modifica wallet (approve/reject/delete)
+- **NON duplicare funzioni** tra i due file (causa errori build Vercel)
+
+#### 3.3.4 Consapevolezza Fiscale
+
+Il sistema traccia scadenze (F24, LIPE) e fornisce un contesto fiscale all'AI per rispondere a domande dell'utente.
 
 ### 3.4 🚚 Spedizioni & Corrieri
 
@@ -110,12 +162,52 @@ _Status: 🟢 Produzione_
 
 Schema database PostgreSQL chiave per lo sviluppo:
 
-- `users`: Profili estesi, collegamenti padre-figlio (Reseller), preferenze.
+### 4.1 Tabelle Principali
+
+- `users`: Profili estesi, collegamenti padre-figlio (Reseller), preferenze, `wallet_balance` (gestito solo da trigger).
 - `shipments`: Tabella centrale spedizioni. Include campi JSONB per dettagli corrieri.
-- `leads`: (Nuova) Gestione CRM pre-acquisizione.
-- `wallet_transactions`: Storico immutabile di ricariche e spese.
-- `wallet_topups`: Richieste di ricarica (Stato: pending -> approved/rejected) con link alle ricevute.
+- `leads`: Gestione CRM pre-acquisizione.
+- `wallet_transactions`: Storico immutabile di ricariche e spese. **Trigger automatico** aggiorna `users.wallet_balance` su INSERT.
+- `top_up_requests`: Richieste di ricarica bonifico.
+  - Colonne: `id`, `user_id`, `amount`, `status` (pending/manual_review/approved/rejected)
+  - Sicurezza: `file_hash` (SHA-256), `approved_by`, `approved_at`, `approved_amount`
+  - Storage: `file_url` (Supabase Storage bucket `receipts`)
+- `payment_transactions`: Transazioni XPay (carte di credito).
+- `invoices`: Fatture emesse.
+- `invoice_items`: Righe fattura.
+- `audit_logs`: Audit completo di tutte le operazioni wallet e top-up.
 - `diagnostics_events`: Log strutturati (JSONB context) per debugging.
+
+### 4.2 Migrazioni Wallet/Top-Up (Ordine Critico)
+
+**⚠️ ORDINE OBBLIGATORIO:**
+
+1. **027_wallet_topups.sql** (PREREQUISITO)
+   - Crea tabella `top_up_requests`
+   - Crea tabella `payment_transactions`
+   - Crea bucket storage `receipts`
+   - RLS policies SELECT/INSERT
+
+2. **028_wallet_security_fixes.sql**
+   - Aggiunge colonne sicurezza: `file_hash`, `approved_by`, `approved_at`, `approved_amount`
+   - Aggiunge limite max €10.000 in `add_wallet_credit()`
+   - Indici per ricerca duplicati
+
+3. **029_add_topup_update_policy.sql**
+   - Aggiunge RLS policy UPDATE per admin/service_role
+   - Permette aggiornamenti da `supabaseAdmin` (service role key)
+
+4. **030_add_topup_approve_function.sql**
+   - Crea funzione SQL `approve_top_up_request()` con SECURITY DEFINER
+   - Fallback robusto se UPDATE diretto fallisce per RLS
+
+### 4.3 Funzioni SQL Wallet
+
+- `add_wallet_credit(p_user_id, p_amount, p_description, p_created_by)`: Accredita wallet (limite max €10.000)
+- `deduct_wallet_credit(p_user_id, p_amount, p_description, p_created_by)`: Addebita wallet
+- `approve_top_up_request(p_request_id, p_admin_user_id, p_approved_amount)`: Approva richiesta (bypassa RLS)
+
+**⚠️ IMPORTANTE**: Le funzioni `add_wallet_credit()` e `deduct_wallet_credit()` aggiornano `users.wallet_balance` tramite trigger. **NON modificare manualmente** il campo `wallet_balance`.
 
 ---
 
@@ -124,11 +216,24 @@ Schema database PostgreSQL chiave per lo sviluppo:
 ### Flusso "Smart Top-Up" (Ricarica Bonifico)
 
 1.  Utente apre dialogo Wallet -> Tab "Bonifico".
-2.  Upload PDF/JPG distinta.
-3.  Frontend invia file a Server Action.
-4.  Gemini AI analizza documento -> Estrae Importo, Data, CRO.
-5.  Record creato in `wallet_topups` (Status: `pending_verification`).
-6.  Admin riceve notifica -> Approva -> Transazione scritta in `wallet_transactions` -> Saldo aggiornato.
+2.  Upload PDF/JPG distinta (validazione: tipo, dimensione max 10MB).
+3.  Frontend invia file a Server Action `uploadBankTransferReceipt()`.
+4.  **Validazioni Server-Side**:
+    - File type: JPG/PNG/PDF
+    - File size: max 10MB
+    - Importo: €0.01 - €10.000
+    - Rate limiting: max 5 richieste/24h
+    - Anti-duplicati: controllo SHA-256 file_hash e importo+user_id/24h
+5.  Gemini AI analizza documento -> Estrae Importo, Data, CRO.
+6.  Record creato in `top_up_requests` (Status: `pending`, `file_hash` SHA-256 calcolato).
+7.  Audit log: `top_up_request_created`.
+8.  Admin visualizza su `/dashboard/admin/bonifici` (tab "In Attesa").
+9.  Admin clicca "Approva" → `approveTopUpRequest()`:
+    - UPDATE atomico: `status = 'approved'` (solo se status IN ('pending','manual_review'))
+    - RPC `add_wallet_credit()` → crea `wallet_transaction` → trigger aggiorna `users.wallet_balance`
+    - Se RPC fallisce → rollback a `pending`
+    - Audit log: `top_up_request_approved`
+10. Utente vede saldo aggiornato in dashboard wallet.
 
 ### Flusso "AI Booking" (Anne)
 
@@ -148,7 +253,7 @@ Schema database PostgreSQL chiave per lo sviluppo:
 # Core
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...  # CRITICAL: Usato per bypassare RLS in server actions admin
 
 # AI (Cervello)
 GOOGLE_API_KEY=...      # Gemini 2.0 Flash Key
@@ -159,6 +264,9 @@ XPAY_TERMINAL_ID=...    # Terminale POS Virtuale
 
 # Automation
 AUTOMATION_SERVICE_URL=http://localhost:3000
+
+# Encryption (condiviso con Automation Service)
+ENCRYPTION_KEY=...      # Chiave condivisa per crittografia password corrieri
 ```
 
 ### Comandi Utili
@@ -167,7 +275,161 @@ AUTOMATION_SERVICE_URL=http://localhost:3000
 npm run dev          # Avvio Next.js
 npm run doctor       # Avvio script diagnostico locale
 npx supabase status  # Verifica connessione DB
+npx supabase migration up  # Applica migrazioni pendenti
 ```
+
+### Applicazione Migrazioni Wallet
+
+**⚠️ ORDINE OBBLIGATORIO:**
+
+```bash
+# 1. PREREQUISITO: Assicurati che 027 sia applicata
+npx supabase migration up 027_wallet_topups
+
+# 2. Applica fix sicurezza
+npx supabase migration up 028_wallet_security_fixes
+
+# 3. Aggiungi policy UPDATE
+npx supabase migration up 029_add_topup_update_policy
+
+# 4. Aggiungi funzione SQL fallback
+npx supabase migration up 030_add_topup_approve_function
+```
+
+---
+
+## 📁 7. STRUTTURA FILE E ORGANIZZAZIONE
+
+### 7.1 Server Actions Wallet/Top-Up
+
+**⚠️ REGOLA CRITICA - NO DUPLICATI:**
+
+- **`app/actions/wallet.ts`**: 
+  - Funzioni di modifica wallet: `approveTopUpRequest()`, `rejectTopUpRequest()`, `deleteTopUpRequest()`
+  - Funzioni ricarica: `initiateCardRecharge()`, `uploadBankTransferReceipt()`
+  - **NON contiene** funzioni di lettura admin
+
+- **`app/actions/topups-admin.ts`**:
+  - Funzioni di lettura: `getTopUpRequestsAdmin()`, `getTopUpRequestAdmin()`
+  - Verifica admin: `verifyAdminAccess()`
+  - **NON contiene** funzioni di modifica (approve/reject/delete)
+
+**❌ ERRORE COMUNE**: Duplicare funzioni tra i due file causa errori build Vercel (`Module has no exported member`).
+
+**✅ SOLUZIONE**: Import separati nella UI:
+```typescript
+// ✅ CORRETTO
+import { getTopUpRequestsAdmin } from '@/app/actions/topups-admin';
+import { approveTopUpRequest } from '@/app/actions/wallet';
+
+// ❌ SBAGLIATO
+import { approveTopUpRequest } from '@/app/actions/topups-admin'; // Non esiste lì!
+```
+
+### 7.2 Pagine Dashboard
+
+- `/dashboard/wallet` - Wallet utente (ricarica, storico transazioni)
+- `/dashboard/admin/bonifici` - Gestione richieste top-up (solo admin)
+- `/dashboard/finanza` - Dashboard finanziaria (fatture, pagamenti)
+
+### 7.3 Migrazioni Supabase
+
+**Path**: `supabase/migrations/`
+
+**Naming**: `NNN_nome_descrittivo.sql` (NNN = numero progressivo)
+
+**Ordine**: Sempre verificare prerequisiti nelle migrazioni (es. 028 richiede 027).
+
+---
+
+## 🔒 8. SICUREZZA E BEST PRACTICES
+
+### 8.1 Wallet Balance (CRITICAL)
+
+**REGOLE NON NEGOZIABILI:**
+1. ❌ **MAI** fare `UPDATE users SET wallet_balance = ...` da codice applicativo
+2. ✅ **SOLO** RPC `add_wallet_credit()` / `deduct_wallet_credit()` oppure INSERT su `wallet_transactions`
+3. ❌ **Nessun fallback manuale**: Se RPC fallisce → errore e stop
+
+**Perché?**
+- Il trigger su `wallet_transactions` è l'unica fonte di verità
+- Evita race conditions e doppio accredito
+- Garantisce audit trail completo
+
+### 8.2 Approvazione Top-Up (Atomica e Idempotente)
+
+**Pattern Implementato:**
+```typescript
+// UPDATE atomico: solo se status IN ('pending','manual_review')
+UPDATE top_up_requests
+SET status = 'approved', approved_by = ..., approved_at = NOW()
+WHERE id = $1 AND status IN ('pending','manual_review')
+RETURNING *;
+
+// Se 0 righe aggiornate → già processata o non trovata
+// Se 1 riga aggiornata → procedi con RPC add_wallet_credit()
+```
+
+**Benefici:**
+- Previene doppia approvazione (race condition)
+- Idempotente: chiamare 2 volte ha stesso effetto della prima
+- Rollback automatico se RPC fallisce
+
+### 8.3 RLS (Row Level Security)
+
+- `top_up_requests`: Policy SELECT (utente vede solo le proprie), INSERT (utente può creare), UPDATE (solo admin/service_role)
+- `wallet_transactions`: Policy SELECT (utente vede solo le proprie)
+- `users.wallet_balance`: Non direttamente accessibile, solo via trigger
+
+### 8.4 Audit Log
+
+Tutte le operazioni wallet/top-up sono tracciate in `audit_logs`:
+- `top_up_request_created`
+- `top_up_request_approved`
+- `top_up_request_rejected`
+- `wallet_credit_added`
+- `wallet_credit_removed`
+
+**Metadata**: Include amount, requestId, targetUser, transactionId, correlationId.
+
+---
+
+## 🧪 9. TESTING
+
+### 9.1 Test Wallet/Top-Up
+
+**Test Manuali Obbligatori:**
+1. ✅ Creazione top_up_request valida → status pending
+2. ✅ Importo 0 o >10000 → deve fallire server-side
+3. ✅ File .exe o >10MB → deve fallire
+4. ✅ 6 richieste in 24h → la 6a deve fallire (rate limit)
+5. ✅ Approva richiesta → 1 sola wallet_transaction, balance aumenta 1 volta
+6. ✅ Doppia approva stessa richiesta → errore "già processata", nessun nuovo accredito
+7. ✅ Rifiuta richiesta → status rejected, nessuna transazione wallet
+8. ✅ Verifica audit_logs per tutti gli eventi
+
+### 9.2 Test Build Vercel
+
+**Checklist Pre-Deploy:**
+- [ ] Nessun import errato (verificare `topups-admin.ts` vs `wallet.ts`)
+- [ ] Nessun merge conflict marker (`<<<<<<<`, `=======`, `>>>>>>>`)
+- [ ] TypeScript compila senza errori
+- [ ] ESLint warnings accettabili (non errori)
+
+---
+
+## 📚 10. DOCUMENTAZIONE AGGIUNTIVA
+
+### Guide Disponibili
+
+- `RIEPILOGO_FIX_APPROVE_TOPUP.md` - Fix completo approvazione top-up (problema produzione)
+- `FIX_WALLET_SECURITY_RIEPILOGO.md` - Implementazione sicurezza wallet (PR1-PR5)
+- `INVENTARIO_SISTEMA_FINANZIARIO.md` - Inventario completo tabelle/endpoint finance
+- `TOPUPS_ADMIN_FALLBACK_AUTH.md` - Fallback auth per top-ups admin (se user non esiste in public.users)
+
+### Automation Service
+
+Vedi `automation-service/README.md` per documentazione completa del servizio Puppeteer standalone.
 
 ---
 
