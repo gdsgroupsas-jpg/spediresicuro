@@ -327,6 +327,14 @@ export async function approveTopUpRequest(
 
     // 4. UPDATE atomico e idempotente: aggiorna solo se status è pending/manual_review
     // Questo pattern previene race conditions: solo il primo UPDATE riesce
+    // Nota: supabaseAdmin usa service role key che dovrebbe bypassare RLS
+    console.info('[TOPUP_APPROVE] Attempting UPDATE', {
+      requestId,
+      adminUserId: adminCheck.userId,
+      amountToCredit,
+      usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    })
+    
     const { data: updatedRequest, error: updateError } = await supabaseAdmin
       .from('top_up_requests')
       .update({
