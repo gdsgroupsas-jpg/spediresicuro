@@ -138,7 +138,7 @@ export default function AdminBonificiPage() {
       const result = await getTopUpRequestAdmin(id);
       if (result.success && result.data) {
         setSelectedRequest(result.data);
-        // Inizializza con importo originale (campo vuoto = usa importo originale)
+        // Reset sempre a vuoto quando apri una nuova richiesta
         setApprovedAmount('');
         setRejectReason('');
         setShowDetailsModal(true);
@@ -151,40 +151,60 @@ export default function AdminBonificiPage() {
     }
   }
 
+  // Reset campo quando il modal si apre/chiude
+  useEffect(() => {
+    if (!showDetailsModal) {
+      // Quando il modal si chiude, resetta tutto
+      setApprovedAmount('');
+      setRejectReason('');
+      setSelectedRequest(null);
+    } else if (showDetailsModal && selectedRequest) {
+      // Quando il modal si apre, assicurati che il campo sia vuoto
+      setApprovedAmount('');
+    }
+  }, [showDetailsModal, selectedRequest?.id]);
+
   async function handleApprove() {
     if (!selectedRequest) {
       toast.error('Nessuna richiesta selezionata');
       return;
     }
 
-    // Se il campo è vuoto o contiene solo spazi, usa l'importo originale
-    const amountStr = approvedAmount.trim();
+    // Parsing robusto: gestisce stringa vuota, virgole, punti
+    const raw = approvedAmount.trim();
     let amountToApprove: number | undefined = undefined;
 
-    if (amountStr === '') {
-      // Campo vuoto: usa importo originale (undefined = usa amount della richiesta)
+    if (raw === '') {
+      // Campo vuoto: usa importo originale (undefined = server usa amount della richiesta)
       amountToApprove = undefined;
+      console.log('Campo vuoto → userà importo originale:', selectedRequest.amount);
     } else {
-      // Campo compilato: valida e usa quello
-      const parsedAmount = parseFloat(amountStr);
-      if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
+      // Sostituisci virgola con punto per parsing (formato italiano)
+      const normalized = raw.replace(',', '.');
+      const parsedAmount = Number(normalized);
+
+      // Validazione robusta
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
         toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
         return;
       }
-      // Se diverso dall'importo originale, passa quello specificato
+
+      // Se uguale all'importo originale, passa undefined (server userà quello)
+      // Altrimenti passa l'importo specificato
       amountToApprove = parsedAmount !== selectedRequest.amount ? parsedAmount : undefined;
+      console.log('Importo specificato:', parsedAmount, '→ amountToApprove:', amountToApprove);
     }
 
     try {
       setIsProcessing(true);
-      console.log('Approving request:', selectedRequest.id, 'with amount:', amountToApprove);
+      console.log('✅ Approving request:', selectedRequest.id, 'with amount:', amountToApprove);
       
       const result = await approveTopUpRequest(
         selectedRequest.id,
         amountToApprove
       );
 
-      console.log('Approve result:', result);
+      console.log('✅ Approve result:', result);
 
       if (result.success) {
         toast.success(result.message || 'Richiesta approvata con successo');
@@ -198,7 +218,7 @@ export default function AdminBonificiPage() {
         toast.error(result.error || 'Errore durante l\'approvazione');
       }
     } catch (error: any) {
-      console.error('Errore approvazione:', error);
+      console.error('❌ Errore approvazione:', error);
       toast.error('Errore imprevisto durante l\'approvazione: ' + (error.message || 'Errore sconosciuto'));
     } finally {
       setIsProcessing(false);
@@ -565,7 +585,10 @@ export default function AdminBonificiPage() {
                         min="0.01"
                         max="10000"
                         value={approvedAmount}
-                        onChange={(e) => setApprovedAmount(e.target.value)}
+                        onChange={(e) => {
+                          // Aggiorna sempre lo state con il valore dell'input
+                          setApprovedAmount(e.target.value);
+                        }}
                         placeholder={selectedRequest.amount.toString()}
                         className="text-lg font-semibold"
                       />
