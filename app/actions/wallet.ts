@@ -313,10 +313,26 @@ export async function approveTopUpRequest(
   error?: string
   transactionId?: string
 }> {
+  // const fs = require('fs');
+  // const path = require('path');
+  // const logFile = '...';
+  // const log = ...
+  // Disable file logging for production
+  
+  const log = (msg: string, data?: any) => {
+    console.log(`[TOPUP_APPROVE] ${msg}`, data ? JSON.stringify(data) : '');
+  };
+
+  log('START approveTopUpRequest', { requestId, approvedAmount });
+
+  log('START approveTopUpRequest', { requestId, approvedAmount });
+ 
   try {
     // 1. Verifica admin
     const adminCheck = await verifyAdminAccess()
+    log('Admin Check result', adminCheck);
     if (!adminCheck.isAdmin || !adminCheck.userId) {
+      log('Admin Access Denied');
       return {
         success: false,
         error: 'Solo gli Admin possono approvare richieste di ricarica.',
@@ -461,6 +477,7 @@ export async function approveTopUpRequest(
       // FALLBACK: Prova funzione RPC (SECURITY DEFINER)
       // Questo bypassa RLS se la policy UPDATE fallisce e se la funzione esiste
       try {
+        log('Attempting RPC fallback');
         const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('approve_top_up_request', {
           p_request_id: requestId,
           p_admin_user_id: adminCheck.userId,
@@ -468,16 +485,17 @@ export async function approveTopUpRequest(
         })
 
         if (rpcError) {
+             log('RPC Error thrown', rpcError);
              throw rpcError
         }
 
         // Se RPC ritorna array (pattern comune in PG functions) o oggetto
-        // La funzione ritorna TABLE(success bool, error_message text, updated_id uuid)
-        // Quindi rpcResult dovrebbe essere un array di 1 elemento o l'oggetto
         const resultRow = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult
+        log('RPC Result Row', resultRow);
 
         if (!resultRow || !resultRow.success) {
             console.error('[TOPUP_APPROVE] RPC fallback failed logic', resultRow)
+            log('RPC Failed Logic', resultRow);
             return {
                 success: false, 
                 error: resultRow?.error_message || 'Impossibile approvare: anche RPC fallback fallito.'
