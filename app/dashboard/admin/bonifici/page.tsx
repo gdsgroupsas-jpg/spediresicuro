@@ -171,28 +171,27 @@ export default function AdminBonificiPage() {
     }
 
     // Parsing robusto: gestisce stringa vuota, virgole, punti
+    // Fix: Se il campo è vuoto, usa l'importo originale della richiesta.
+    // Se c'è un valore, usa quello.
     const raw = approvedAmount.trim();
-    let amountToApprove: number | undefined = undefined;
+    let amountToApprove: number;
 
     if (raw === '') {
-      // Campo vuoto: usa importo originale (undefined = server usa amount della richiesta)
-      amountToApprove = undefined;
-      console.log('Campo vuoto → userà importo originale:', selectedRequest.amount);
+        // Usa importo originale
+        amountToApprove = selectedRequest.amount;
+        console.log('Campo vuoto → uso importo originale:', amountToApprove);
     } else {
-      // Sostituisci virgola con punto per parsing (formato italiano)
-      const normalized = raw.replace(',', '.');
-      const parsedAmount = Number(normalized);
+        // Sostituisci virgola con punto per parsing (formato italiano)
+        const normalized = raw.replace(',', '.');
+        const parsedAmount = Number(normalized);
 
-      // Validazione robusta
-      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
-        toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
-        return;
-      }
-
-      // Se uguale all'importo originale, passa undefined (server userà quello)
-      // Altrimenti passa l'importo specificato
-      amountToApprove = parsedAmount !== selectedRequest.amount ? parsedAmount : undefined;
-      console.log('Importo specificato:', parsedAmount, '→ amountToApprove:', amountToApprove);
+        // Validazione robusta
+        if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
+            toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
+            return;
+        }
+        amountToApprove = parsedAmount;
+        console.log('Importo specificato:', parsedAmount);
     }
 
     try {
