@@ -535,3 +535,96 @@ export async function rejectTopUpRequest(
     }
   }
 }
+
+/**
+ * Server Action: Elimina una richiesta top_up_requests
+ * 
+ * ⚠️ ATTENZIONE: Solo per richieste pending/manual_review non ancora processate
+ * 
+ * @param requestId - ID della richiesta da eliminare
+ * @returns Risultato operazione
+ */
+export async function deleteTopUpRequest(
+  requestId: string
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    // 1. Verifica admin
+    const adminCheck = await verifyAdminAccess()
+    if (!adminCheck.isAdmin || !adminCheck.userId) {
+      return {
+        success: false,
+        error: 'Solo gli Admin possono eliminare richieste di ricarica.',
+      }
+    }
+
+    // 2. Recupera richiesta per verificare status
+    const { data: request, error: requestError } = await supabaseAdmin
+      .from('top_up_requests')
+      .select('id, status, user_id, amount')
+      .eq('id', requestId)
+      .maybeSingle()
+
+    if (requestError || !request) {
+      return {
+        success: false,
+        error: 'Richiesta non trovata.',
+      }
+    }
+
+    // 3. Verifica che sia cancellabile (solo pending o manual_review)
+    if (request.status !== 'pending' && request.status !== 'manual_review') {
+      return {
+        success: false,
+        error: `Impossibile eliminare una richiesta già processata (status: ${request.status}).`,
+      }
+    }
+
+    // 4. Elimina richiesta (hard delete)
+    const { error: deleteError } = await supabaseAdmin
+      .from('top_up_requests')
+      .delete()
+      .eq('id', requestId)
+
+    if (deleteError) {
+      console.error('Errore cancellazione richiesta:', deleteError)
+      return {
+        success: false,
+        error: deleteError.message || 'Errore durante la cancellazione della richiesta.',
+      }
+    }
+
+    // 5. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'top_up_request_deleted',
+        resource_type: 'top_up_request',
+        resource_id: requestId,
+        user_email: session?.user?.email || 'unknown',
+        user_id: adminCheck.userId,
+        metadata: {
+          request_amount: request.amount,
+          request_status: request.status,
+          target_user_id: request.user_id,
+        }
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    return {
+      success: true,
+      message: 'Richiesta eliminata con successo.',
+    }
+  } catch (error: any) {
+    console.error('Errore in deleteTopUpRequest:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore durante la cancellazione.',
+    }
+  }
+}

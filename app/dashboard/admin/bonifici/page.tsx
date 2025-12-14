@@ -11,10 +11,12 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  User,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
-import DashboardNav from '@/components/dashboard-nav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -23,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getTopUpRequestsAdmin, getTopUpRequestAdmin, TopUpRequestAdmin } from '@/app/actions/topups-admin';
-import { approveTopUpRequest, rejectTopUpRequest } from '@/app/actions/wallet';
+import { approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest } from '@/app/actions/wallet';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -210,6 +212,35 @@ export default function AdminBonificiPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!selectedRequest) return;
+
+    // Conferma cancellazione
+    if (!confirm(`Sei sicuro di voler eliminare questa richiesta?\n\nQuesta azione è irreversibile e la richiesta verrà eliminata definitivamente.`)) {
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const result = await deleteTopUpRequest(selectedRequest.id);
+
+      if (result.success) {
+        toast.success(result.message || 'Richiesta eliminata con successo');
+        setShowDetailsModal(false);
+        setSelectedRequest(null);
+        loadRequests(activeTab);
+        loadAllRequestsForCounts();
+      } else {
+        toast.error(result.error || 'Errore durante la cancellazione');
+      }
+    } catch (error: any) {
+      console.error('Errore cancellazione:', error);
+      toast.error('Errore imprevisto durante la cancellazione');
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   function getStatusBadge(status: string) {
     const styles = {
       pending: 'bg-yellow-100 text-yellow-700',
@@ -258,11 +289,15 @@ export default function AdminBonificiPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <DashboardNav
-          title="Gestione Bonifici"
-          subtitle="Approvazione e rifiuto richieste di ricarica wallet"
-          showBackButton={true}
-        />
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Wallet className="w-8 h-8 text-blue-600" />
+            Gestione Bonifici
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Approvazione e rifiuto richieste di ricarica wallet
+          </p>
+        </div>
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-6">
@@ -327,70 +362,63 @@ export default function AdminBonificiPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Data
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Utente
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Importo
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Stato
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          AI Conf
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Azioni
-                        </th>
+                        <th className="px-6 py-4">Data</th>
+                        <th className="px-6 py-4">Utente</th>
+                        <th className="px-6 py-4">Importo</th>
+                        <th className="px-6 py-4">Stato</th>
+                        <th className="px-6 py-4">AI Conf</th>
+                        <th className="px-6 py-4 text-right">Azioni</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-100">
                       {requests.map((request) => (
-                        <tr key={request.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <tr key={request.id} className="hover:bg-gray-50 group transition-colors">
+                          <td className="px-6 py-4 text-gray-900">
                             {formatDate(request.created_at)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <div>
-                              <div className="font-medium">
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-gray-900">
                                 {request.user_name || 'N/A'}
-                              </div>
-                              <div className="text-gray-500 text-xs">
+                              </span>
+                              <span className="text-xs text-gray-500">
                                 {request.user_email || request.user_id}
-                              </div>
+                              </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {formatCurrency(request.amount)}
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-gray-900">
+                              {formatCurrency(request.amount)}
+                            </div>
                             {request.approved_amount && request.approved_amount !== request.amount && (
-                              <div className="text-xs text-gray-500">
-                                (Approvato: {formatCurrency(request.approved_amount)})
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                Approvato: {formatCurrency(request.approved_amount)}
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4">
                             {getStatusBadge(request.status)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 text-gray-600">
                             {request.ai_confidence !== null 
                               ? `${Math.round(request.ai_confidence * 100)}%`
-                              : 'N/A'}
+                              : '-'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <Button
-                              onClick={() => handleViewDetails(request.id)}
-                              variant="outline"
-                              size="sm"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Dettagli
-                            </Button>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                onClick={() => handleViewDetails(request.id)}
+                                variant="outline"
+                                size="sm"
+                                className="text-xs"
+                              >
+                                <Eye className="w-3 h-3 mr-1.5" />
+                                Dettagli
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -404,13 +432,16 @@ export default function AdminBonificiPage() {
 
         {/* Details Modal */}
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Dettagli Richiesta Ricarica</DialogTitle>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                Dettagli Richiesta Ricarica
+              </DialogTitle>
               <DialogDescription>
                 {selectedRequest && (
                   <>
-                    Richiesta #{selectedRequest.id.slice(0, 8)}... - {formatDate(selectedRequest.created_at)}
+                    Richiesta #{selectedRequest.id.slice(0, 8)}... · {formatDate(selectedRequest.created_at)}
                   </>
                 )}
               </DialogDescription>
@@ -418,42 +449,53 @@ export default function AdminBonificiPage() {
 
             {selectedRequest && (
               <div className="space-y-6">
-                {/* Info Utente */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-500">Utente</Label>
-                    <p className="font-medium">
-                      {selectedRequest.user_name || 'N/A'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {selectedRequest.user_email || selectedRequest.user_id}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-500">Stato</Label>
-                    <div className="mt-1">
-                      {getStatusBadge(selectedRequest.status)}
+                {/* Card: Info Principali */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                        Utente
+                      </Label>
+                      <p className="font-semibold text-gray-900">
+                        {selectedRequest.user_name || 'N/A'}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-0.5">
+                        {selectedRequest.user_email || selectedRequest.user_id}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
+                        Stato
+                      </Label>
+                      <div className="mt-1">
+                        {getStatusBadge(selectedRequest.status)}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Importo */}
-                <div>
-                  <Label className="text-gray-500">Importo Richiesto</Label>
-                  <p className="text-2xl font-bold text-gray-900">
+                {/* Card: Importo */}
+                <div className="bg-blue-50 rounded-lg p-5 border border-blue-200">
+                  <Label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">
+                    Importo Richiesto
+                  </Label>
+                  <p className="text-3xl font-bold text-blue-900">
                     {formatCurrency(selectedRequest.amount)}
                   </p>
                 </div>
 
-                {/* AI Confidence */}
-                {selectedRequest.ai_confidence !== null && (
-                  <div>
-                    <Label className="text-gray-500">Confidenza AI</Label>
-                    <div className="mt-1">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                {/* Card: Dettagli Tecnici */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* AI Confidence */}
+                  {selectedRequest.ai_confidence !== null && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">
+                        Confidenza AI
+                      </Label>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2.5">
                           <div
-                            className={`h-2 rounded-full ${
+                            className={`h-2.5 rounded-full transition-all ${
                               selectedRequest.ai_confidence > 0.8
                                 ? 'bg-green-500'
                                 : selectedRequest.ai_confidence > 0.5
@@ -463,23 +505,23 @@ export default function AdminBonificiPage() {
                             style={{ width: `${selectedRequest.ai_confidence * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-semibold text-gray-900 min-w-[3rem] text-right">
                           {Math.round(selectedRequest.ai_confidence * 100)}%
                         </span>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Ricevuta */}
-                <div>
-                  <Label className="text-gray-500">Ricevuta Bonifico</Label>
-                  <div className="mt-2">
+                  {/* Ricevuta */}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide mb-2 block">
+                      Ricevuta Bonifico
+                    </Label>
                     <a
                       href={selectedRequest.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium transition-colors"
                     >
                       <ExternalLink className="w-4 h-4" />
                       Apri ricevuta
@@ -489,9 +531,9 @@ export default function AdminBonificiPage() {
 
                 {/* Approvazione (solo se pending o manual_review) */}
                 {(selectedRequest.status === 'pending' || selectedRequest.status === 'manual_review') && (
-                  <>
+                  <div className="bg-white rounded-lg p-5 border border-gray-200 space-y-5">
                     <div>
-                      <Label htmlFor="approvedAmount">
+                      <Label htmlFor="approvedAmount" className="text-sm font-medium text-gray-900 mb-2 block">
                         Importo da Accreditare (€)
                       </Label>
                       <Input
@@ -503,15 +545,15 @@ export default function AdminBonificiPage() {
                         value={approvedAmount}
                         onChange={(e) => setApprovedAmount(e.target.value)}
                         placeholder={selectedRequest.amount.toString()}
-                        className="mt-1"
+                        className="text-lg font-semibold"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-2">
                         Lasciare vuoto per accreditare l&apos;importo richiesto ({formatCurrency(selectedRequest.amount)})
                       </p>
                     </div>
 
                     <div>
-                      <Label htmlFor="rejectReason">
+                      <Label htmlFor="rejectReason" className="text-sm font-medium text-gray-900 mb-2 block">
                         Note / Motivo Rifiuto
                       </Label>
                       <Textarea
@@ -520,15 +562,15 @@ export default function AdminBonificiPage() {
                         onChange={(e) => setRejectReason(e.target.value)}
                         placeholder="Inserisci note o motivo del rifiuto..."
                         rows={3}
-                        className="mt-1"
+                        className="resize-none"
                       />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex gap-3 pt-2 border-t border-gray-200">
                       <Button
                         onClick={handleApprove}
                         disabled={isProcessing}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium h-11"
                       >
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Approva
@@ -537,34 +579,59 @@ export default function AdminBonificiPage() {
                         onClick={handleReject}
                         disabled={isProcessing || !rejectReason.trim()}
                         variant="destructive"
-                        className="flex-1"
+                        className="flex-1 font-medium h-11"
                       >
                         <XCircle className="w-4 h-4 mr-2" />
                         Rifiuta
                       </Button>
+                      <Button
+                        onClick={handleDelete}
+                        disabled={isProcessing}
+                        variant="outline"
+                        className="font-medium h-11 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Elimina
+                      </Button>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Info Approvazione (se già approvata/rifiutata) */}
                 {selectedRequest.status === 'approved' && selectedRequest.approved_at && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-sm text-green-800">
-                      <strong>Approvata il:</strong> {formatDate(selectedRequest.approved_at)}
-                    </p>
-                    {selectedRequest.approved_amount && (
-                      <p className="text-sm text-green-800 mt-1">
-                        <strong>Importo accreditato:</strong> {formatCurrency(selectedRequest.approved_amount)}
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <p className="text-sm font-semibold text-green-900">
+                        Richiesta Approvata
                       </p>
-                    )}
+                    </div>
+                    <div className="space-y-1 text-sm text-green-800">
+                      <p>
+                        <strong>Data approvazione:</strong> {formatDate(selectedRequest.approved_at)}
+                      </p>
+                      {selectedRequest.approved_amount && (
+                        <p>
+                          <strong>Importo accreditato:</strong> {formatCurrency(selectedRequest.approved_amount)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {selectedRequest.status === 'rejected' && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-sm text-red-800">
-                      <strong>Rifiutata</strong>
-                    </p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                      <p className="text-sm font-semibold text-red-900">
+                        Richiesta Rifiutata
+                      </p>
+                    </div>
+                    {selectedRequest.approved_at && (
+                      <p className="text-sm text-red-800">
+                        <strong>Data rifiuto:</strong> {formatDate(selectedRequest.approved_at)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
