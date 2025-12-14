@@ -335,19 +335,35 @@ export async function approveTopUpRequest(
       usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     })
     
+    // Prova UPDATE con supabaseAdmin (service role key bypassa RLS)
+    // Se fallisce, potrebbe essere un problema di configurazione service role key
+    const updatePayload = {
+      status: 'approved',
+      approved_by: adminCheck.userId,
+      approved_at: new Date().toISOString(),
+      approved_amount: amountToCredit,
+      updated_at: new Date().toISOString(),
+    }
+    
     const { data: updatedRequest, error: updateError } = await supabaseAdmin
       .from('top_up_requests')
-      .update({
-        status: 'approved',
-        approved_by: adminCheck.userId,
-        approved_at: new Date().toISOString(),
-        approved_amount: amountToCredit,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', requestId)
       .in('status', ['pending', 'manual_review'])
       .select('id, user_id, approved_amount, status')
       .maybeSingle()
+    
+    // Log dettagliato per debug
+    if (updateError) {
+      console.error('[TOPUP_APPROVE] UPDATE error details', {
+        requestId,
+        updatePayload,
+        errorMessage: updateError.message,
+        errorCode: updateError.code,
+        errorDetails: updateError.details,
+        errorHint: updateError.hint,
+      })
+    }
 
     // 5. Se UPDATE non ha aggiornato righe, diagnostica il problema
     if (updateError || !updatedRequest) {
