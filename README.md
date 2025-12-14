@@ -1,120 +1,174 @@
-# 📦 SpedireSicuro AI - Logistics Brain Platform
+# 📜 MANIFESTO TECNICO DI PROGETTO - SpedireSicuro.it
 
-> **The First Logistics Operating System powered by Multimodal GenAI (Gemini 2.0 Flash)**
-
-![SpedireSicuro AI Badge](https://img.shields.io/badge/AI-Powered-purple?style=for-the-badge) ![Version](https://img.shields.io/badge/Version-Beta_2.0-blue?style=for-the-badge) ![Tech](https://img.shields.io/badge/Stack-Next.js_|_LangGraph_|_Supabase-black?style=for-the-badge)
-
-## 🚀 Overview
-
-**SpedireSicuro** non è un semplice gestionale di spedizioni. È una piattaforma **AI-First** progettata per automatizzare il flusso logistico complesso attraverso agenti intelligenti.
-
-Il cuore del sistema è **"Anne" (Logistics Brain)**, un'architettura a grafo (LangGraph) potenziata da **Google Gemini 2.0 Flash**, capace di comprendere input multimodali (foto, chat WhatsApp, audio) e trasformarli in spedizioni pronte per i corrieri.
-
-### ✨ Key Capabilities
-
-1.  **🧠 Multimodal AI Ingestion**:
-    - Carica uno screenshot di WhatsApp o una foto di un'etichetta.
-    - L'IA "guarda" l'immagine, estrae indirizzi, capisce il contesto (es. "urgente", "contrassegno").
-    - Formatta i dati, corregge i telefoni (`+39...`) e compila il form.
-2.  **🤖 Agentic Workflow (LangGraph)**:
-    - Non semplici chiamate API, ma un grafo decisionale.
-    - **Nodi**: `Extraction` -> `Validation` -> `CourierSelection` -> `Booking`.
-    - L'agente può "ragionare" e chiedere feedback se i dati sono ambigui.
-3.  **🚚 Smart Routing Algorithm**:
-    - Algoritmo interno che suggerisce il corriere migliore (SDA, GLS, BRT) basandosi su:
-      - Performance storica (Capacità di consegna nella zona).
-      - Costo (Listini dinamici per Reseller).
-      - Tempi previsti.
-4.  **⚡ Premium DX & UX**:
-    - Frontend **Next.js 14** velocissimo.
-    - Interfaccia "Glassmorphism" con animazioni **Framer Motion**.
-    - **Mobile-First**: Ottimizzata per l'uso in mobilità (Touch targets, responsive).
+> **Versione:** 2.0.0 (AI-First Era)  
+> **Data Aggiornamento:** 14 Dicembre 2025  
+> **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🎯 1. LA VISIONE (Il "Perché")
 
-### Frontend Layer
+**SpedireSicuro non è un semplice gestionale.** È un **Sistema Operativo Logistico** guidato dall'Intelligenza Artificiale.
 
-- **Framework**: Next.js 14 (App Router)
-- **Styling**: TailwindCSS + Framer Motion (Animations)
-- **State**: React Hooks + Server Actions
-- **Auth**: NextAuth.js (Role Based: Superadmin, Reseller, User)
+L'obiettivo non è solo permettere agli utenti di spedire pacchi, ma di **azzerare la frizione** tra l'intenzione ("Devo spedire questo") e l'azione (Etichetta stampata e corriere prenotato).
 
-### AI Brain Layer (The "Black Box")
+### I Pilastri del Manifesto
 
-- **Orchestrator**: LangGraph (State Machine for Agents)
-- **LLM**: Google Gemini 2.0 Flash (Multimodal Vision + Text)
-- **Tools**: Custom OCR tools, Geocoding API, Courier APIs
-
-### Backend & Data
-
-- **DB**: Supabase (PostgreSQL)
-- **API**: REST Endpoints (Next.js Route Handlers)
-- **Storage**: Supabase Storage (Shipping labels, invoices)
+1.  **AI-First, non AI-Added**: L'AI non è una feature accessoria, è il cuore. Il sistema è costruito attorno a un grafo decisionale (LangGraph) e modelli multimodali (Gemini 2.0) che vedono, ragionano e agiscono.
+2.  **Automazione Radicale**: Se un umano deve fare copia-incolla, abbiamo fallito. Screenshot, PDF, email vengono ingeriti e processati automaticamente.
+3.  **Doctor Service (Self-Healing)**: Il sistema si monitora da solo. Se una chiamata API fallisce, il sistema se ne accorge, notifica e tenta di riparare o suggerire fix.
+4.  **Ecosistema Finanziario**: Non solo logistica, ma gestione del credito. Wallet ricaricabile, pagamenti diretti (XPay) e gestione fiscale integrata.
 
 ---
 
-## 📂 Project Structure
+## 🏗️ 2. SKILLSET & STACK TECNOLOGICO
+
+Per operare su questo progetto è richiesto il seguente profilo tecnico "Full Stack AI Engineer":
+
+### Core Stack
+
+- **Frontend**: Next.js 14 (App Router), React Server Components, TypeScript.
+- **Styling**: Tailwind CSS, Shadcn/UI, Framer Motion (Glassmorphism UI).
+- **Backend**: Next.js API Routes (Edge/Node), Supabase (PostgreSQL).
+- **Auth**: NextAuth.js v5 (Role-Based Access Control).
+
+### AI & Automation Stack
+
+- **LLM Provider**: **Google Gemini 2.0 Flash** (Multimodale: Testo + Vision).
+- **Agent Framework**: LangGraph (Orchestrazione a stati: Extraction -> Validation -> Action).
+- **Browser Automation**: Puppeteer (su servizio Express standalone) per interazione con portali corrieri legacy.
+- **OCR Strategy**: Ibrida (Tesseract.js locale + Gemini Vision per comprensione semantica).
+
+### Infrastructure
+
+- **Database**: Supabase (PostgreSQL con pgvector).
+- **Hosting**: Vercel (Frontend), Railway/VPS (Automation Service).
+- **Payments**: Integrazione Banca Intesa XPay, Bonifici Smart (Parsing ricevute).
+
+---
+
+## 📦 3. STATO DEL PROGETTO E MODULI
+
+Il sistema è diviso in moduli interconnessi. Ecco lo stato dell'arte attuale:
+
+### 3.1 🧠 Il Cervello: AI "Anne"
+
+_Status: 🟡 Beta Avanzata_
+
+- **Chat Interface**: Assistente virtuale sempre presente in dashboard.
+- **Multimodal Input**: Accetta foto di etichette, screenshot di chat WhatsApp.
+- **LangGraph Workflow**:
+  1.  **Ingestione**: Analisi visuale dell'input.
+  2.  **Estrazione**: Identificazione Mittente/Destinatario/Misure.
+  3.  **Validazione**: Check CAP/Città, normalizzazione telefoni (+39...).
+  4.  **Booking**: Selezione corriere migliore (algoritmo interno smart-routing).
+
+### 3.2 💼 CRM: Sistema Leads
+
+_Status: 🟢 Produzione_
+
+Modulo dedicato all'acquisizione e conversione clienti (Dashboard Admin).
+
+- **Workflow Stati**: New -> Contacted -> Qualified -> Negotiation -> Won/Lost.
+- **Gestione**: Assegnazione lead a contatto commerciale, stima valore, note.
+- **Conversion**: Un click per convertire un Lead "Won" in un Utente attivo della piattaforma.
+
+### 3.3 💳 Finanza & Wallet
+
+_Status: 🟢 Produzione_
+
+Sistema finanziario interno per la gestione del credito prepagato.
+
+- **Ricarica XPay**: Integrazione diretta gateway Intesa Sanpaolo (Carte di Credito). Calcolo commissioni dinamico.
+- **Smart Top-Up (Bonifico)**:
+  - Utente carica PDF/FOTO della distinta di bonifico.
+  - **AI Verification**: Il sistema legge l'importo e il CRO dalla ricevuta.
+  - Accredito semi-automatico (previa conferma admin o automatico su base trust).
+- **Consapevolezza Fiscale**: Il sistema traccia scadenze (F24, LIPE) e fornisce un contesto fiscale all'AI per rispondere a domande dell'utente.
+
+### 3.4 🚚 Spedizioni & Corrieri
+
+_Status: 🟢 Produzione (Core)_
+
+- **Multi-Corriere**: Integrazione con Spedisci.Online, GLS, BRT, Poste.
+- **Comparatore Prezzi**: Listini dinamici basati su ruolo utente (Reseller vs User).
+- **Reseller System**:
+  - Gerarchia: Superadmin -> Reseller -> User.
+  - I Reseller vedono solo i propri utenti e guadagnano sui margini configurati.
+
+### 3.5 🛡️ Doctor Service & Diagnostica
+
+_Status: 🟢 Produzione_
+
+- **Self-Monitoring**: Tabella `diagnostics_events` che traccia errori, warning e performance.
+- **Automation**: Se l'Automation Service crasha o un login corriere fallisce, il Doctor notifica.
+- **AI Analysis**: L'AI può analizzare i log per suggerire fix al codice o alla configurazione.
+
+---
+
+## 🗄️ 4. ARCHITETTURA DATI (Supabase)
+
+Schema database PostgreSQL chiave per lo sviluppo:
+
+- `users`: Profili estesi, collegamenti padre-figlio (Reseller), preferenze.
+- `shipments`: Tabella centrale spedizioni. Include campi JSONB per dettagli corrieri.
+- `leads`: (Nuova) Gestione CRM pre-acquisizione.
+- `wallet_transactions`: Storico immutabile di ricariche e spese.
+- `wallet_topups`: Richieste di ricarica (Stato: pending -> approved/rejected) con link alle ricevute.
+- `diagnostics_events`: Log strutturati (JSONB context) per debugging.
+
+---
+
+## 🚀 5. FLUSSI OPERATIVI CHIAVE
+
+### Flusso "Smart Top-Up" (Ricarica Bonifico)
+
+1.  Utente apre dialogo Wallet -> Tab "Bonifico".
+2.  Upload PDF/JPG distinta.
+3.  Frontend invia file a Server Action.
+4.  Gemini AI analizza documento -> Estrae Importo, Data, CRO.
+5.  Record creato in `wallet_topups` (Status: `pending_verification`).
+6.  Admin riceve notifica -> Approva -> Transazione scritta in `wallet_transactions` -> Saldo aggiornato.
+
+### Flusso "AI Booking" (Anne)
+
+1.  Utente incolla screenshot WhatsApp in chat.
+2.  Gemini Vision analizza immagine -> Estrae indirizzo dest e mittente nascosto.
+3.  LangGraph valida indirizzi (Geocoding check).
+4.  L'AI chiede: "Vuoi assicurare il pacco per 500€ come scritto nella chat?".
+5.  Utente conferma -> Spedizione creata in bozza.
+
+---
+
+## 🛠️ 6. SETUP & SVILUPPO
+
+### Variabili d'Ambiente Critiche (.env.local)
 
 ```bash
-/app
-  /api              # Server-side API Routes (Agent entry points)
-  /dashboard        # Protected Application Area
-    /spedizioni     # Shipment Management
-    /ocr-scanner    # Legacy OCR tools
-/lib
-  /agent            # LangGraph Nodes & Edges definition
-  /adapters         # Courier integrations (SDA, GLS...)
-/components
-  /ocr              # AI Components (Thinking visualizations)
+# Core
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+
+# AI (Cervello)
+GOOGLE_API_KEY=...      # Gemini 2.0 Flash Key
+
+# Payments
+XPAY_BO_API_KEY=...     # Banca Intesa Backoffice
+XPAY_TERMINAL_ID=...    # Terminale POS Virtuale
+
+# Automation
+AUTOMATION_SERVICE_URL=http://localhost:3000
 ```
 
-## 🚀 Getting Started
+### Comandi Utili
 
-### Prerequisites
-
-- Node.js 18+
-- Supabase Account
-- Google AI Studio Key (Gemini)
-
-### Installation
-
-1. **Clone & Install**
-
-   ```bash
-   git clone https://github.com/gdsgroupsas-jpg/spediresicuro.git
-   cd spediresicuro
-   npm install
-   ```
-
-2. **Environment Setup (.env.local)**
-
-   ```env
-   # Storage & DB
-   NEXT_PUBLIC_SUPABASE_URL=...
-   SUPABASE_SERVICE_ROLE_KEY=...
-
-   # AI Brain
-   GOOGLE_API_KEY=AIza... (Gemini 2.0 Key)
-
-   # Auth
-   NEXTAUTH_SECRET=...
-   ```
-
-3. **Run Development**
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev          # Avvio Next.js
+npm run doctor       # Avvio script diagnostico locale
+npx supabase status  # Verifica connessione DB
+```
 
 ---
 
-## 🔮 Future Roadmap (AI Team Focus)
-
-- **Voice Agent**: Integrazione STT (Speech-to-Text) per dettare spedizioni mentre si guida.
-- **Predictive Logistics**: Modello ML per prevedere "Giacenze" prima che accadano basandosi sullo storico indirizzi.
-- **WhatsApp Bot**: Portare l'agente direttamente su WA (Twilio wrapper attorno all'Agente LangGraph).
-
----
-
-_Built with ❤️ by the SpedireSicuro AI Team_
+_Questo documento è la Verità. Se il codice differisce da questo documento, il codice deve essere aggiornato o questo documento emendato tramite PR._
