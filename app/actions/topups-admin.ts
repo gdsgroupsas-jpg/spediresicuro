@@ -337,3 +337,251 @@ export async function getTopUpRequestAdmin(
     }
   }
 }
+
+/**
+ * Server Action: Approva una top_up_request
+ * 
+ * @param id - ID della richiesta
+ * @param approvedAmount - Importo da approvare
+ * @returns Risultato operazione
+ */
+export async function approveTopUpRequest(
+  id: string,
+  approvedAmount: number
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    // 1. Verifica admin
+    const adminCheck = await verifyAdminAccess()
+    if (!adminCheck.isAdmin) {
+      return {
+        success: false,
+        error: 'Solo gli Admin possono approvare richieste.',
+      }
+    }
+
+    // 2. Valida importo
+    if (approvedAmount <= 0) {
+      return {
+        success: false,
+        error: 'L\'importo approvato deve essere positivo.',
+      }
+    }
+
+    // 3. Aggiorna status della richiesta
+    const { data, error } = await supabaseAdmin
+      .from('top_up_requests')
+      .update({
+        status: 'approved',
+        approved_amount: approvedAmount,
+        approved_by: adminCheck.userId,
+        approved_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select('user_id')
+      .single()
+
+    if (error || !data) {
+      console.error('Errore aggiornamento status:', error)
+      return {
+        success: false,
+        error: error?.message || 'Errore durante l\'approvazione della richiesta.',
+      }
+    }
+
+    // 4. Aggiungi credito al wallet dell'utente
+    const { error: creditError } = await supabaseAdmin.rpc('add_wallet_credit', {
+      p_user_id: data.user_id,
+      p_amount: approvedAmount,
+      p_description: `Ricarica approvata da admin - Richiesta ${id.slice(0, 8)}...`,
+      p_created_by: adminCheck.userId,
+    })
+
+    if (creditError) {
+      console.error('Errore add_wallet_credit:', creditError)
+      return {
+        success: false,
+        error: creditError.message || 'Errore durante l\'accredito del wallet.',
+      }
+    }
+
+    // 5. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'top_up_request_approved',
+        resource_type: 'top_up_request',
+        resource_id: id,
+        user_email: session?.user?.email || 'unknown',
+        user_id: adminCheck.userId,
+        metadata: {
+          approved_amount: approvedAmount,
+          target_user_id: data.user_id,
+        },
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    return {
+      success: true,
+      message: `Richiesta approvata con successo. € ${approvedAmount} accreditati al wallet.`,
+    }
+  } catch (error: any) {
+    console.error('Errore in approveTopUpRequest:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'approvazione della richiesta.',
+    }
+  }
+}
+
+/**
+ * Server Action: Rifiuta una top_up_request
+ * 
+ * @param id - ID della richiesta
+ * @param reason - Motivo del rifiuto
+ * @returns Risultato operazione
+ */
+export async function rejectTopUpRequest(
+  id: string,
+  reason: string
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    // 1. Verifica admin
+    const adminCheck = await verifyAdminAccess()
+    if (!adminCheck.isAdmin) {
+      return {
+        success: false,
+        error: 'Solo gli Admin possono rifiutare richieste.',
+      }
+    }
+
+    // 2. Valida motivo
+    if (!reason || !reason.trim()) {
+      return {
+        success: false,
+        error: 'Inserisci un motivo per il rifiuto.',
+      }
+    }
+
+    // 3. Aggiorna status della richiesta
+    const { error } = await supabaseAdmin
+      .from('top_up_requests')
+      .update({
+        status: 'rejected',
+        approved_by: adminCheck.userId,
+        approved_at: new Date().toISOString(),
+        admin_notes: reason,
+      })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Errore aggiornamento status:', error)
+      return {
+        success: false,
+        error: error.message || 'Errore durante il rifiuto della richiesta.',
+      }
+    }
+
+    // 4. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'top_up_request_rejected',
+        resource_type: 'top_up_request',
+        resource_id: id,
+        user_email: session?.user?.email || 'unknown',
+        user_id: adminCheck.userId,
+        metadata: {
+          reason: reason,
+        },
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    return {
+      success: true,
+      message: 'Richiesta rifiutata con successo.',
+    }
+  } catch (error: any) {
+    console.error('Errore in rejectTopUpRequest:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore durante il rifiuto della richiesta.',
+    }
+  }
+}
+
+/**
+ * Server Action: Elimina una top_up_request
+ * 
+ * @param id - ID della richiesta
+ * @returns Risultato operazione
+ */
+export async function deleteTopUpRequest(
+  id: string
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    // 1. Verifica admin
+    const adminCheck = await verifyAdminAccess()
+    if (!adminCheck.isAdmin) {
+      return {
+        success: false,
+        error: 'Solo gli Admin possono eliminare richieste.',
+      }
+    }
+
+    // 2. Elimina la richiesta
+    const { error } = await supabaseAdmin
+      .from('top_up_requests')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Errore eliminazione:', error)
+      return {
+        success: false,
+        error: error.message || 'Errore durante l\'eliminazione della richiesta.',
+      }
+    }
+
+    // 3. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'top_up_request_deleted',
+        resource_type: 'top_up_request',
+        resource_id: id,
+        user_email: session?.user?.email || 'unknown',
+        user_id: adminCheck.userId,
+        metadata: {},
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    return {
+      success: true,
+      message: 'Richiesta eliminata con successo.',
+    }
+  } catch (error: any) {
+    console.error('Errore in deleteTopUpRequest:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'eliminazione della richiesta.',
+    }
+  }
+      }
