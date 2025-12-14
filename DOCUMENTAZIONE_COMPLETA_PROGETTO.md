@@ -1,6 +1,6 @@
 # 📜 MANIFESTO TECNICO DI PROGETTO - SpedireSicuro.it
 
-> **Versione:** 2.1.0 (AI-First Era + Wallet Security)  
+> **Versione:** 2.2.0 (Complete Documentation Update)  
 > **Data Aggiornamento:** Gennaio 2025  
 > **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)
 
@@ -75,9 +75,15 @@ Modulo dedicato all'acquisizione e conversione clienti (Dashboard Admin).
 
 ### 3.3 💳 Finanza & Wallet
 
-_Status: 🟢 Produzione (Sistema Sicuro e Completo)_
+_Status: 🟢 Produzione (Sistema Sicuro Enterprise-Grade)_
 
-Sistema finanziario interno per la gestione del credito prepagato con sicurezza enterprise-grade.
+Sistema finanziario completo per la gestione del credito prepagato con sicurezza enterprise-grade.
+
+**Componenti**:
+- Wallet ricaricabile (XPay + Bonifici Smart)
+- Sistema fatturazione integrato
+- Audit log completo
+- Sicurezza multi-livello
 
 #### 3.3.1 Ricarica Wallet
 
@@ -134,19 +140,62 @@ Sistema finanziario interno per la gestione del credito prepagato con sicurezza 
 - `wallet.ts` contiene SOLO funzioni di modifica wallet (approve/reject/delete)
 - **NON duplicare funzioni** tra i due file (causa errori build Vercel)
 
-#### 3.3.4 Consapevolezza Fiscale
+#### 3.3.4 Sistema Fatturazione
+
+_Status: 🟢 Produzione_
+
+- Generazione fatture automatica
+- Gestione stato (draft, issued, paid, overdue, cancelled, refunded)
+- Integrazione con SDI (Sistema di Interscambio)
+- PDF generation automatica
+- Tracking pagamenti
+
+**Pagine**: `/dashboard/fatture`, `/dashboard/admin/invoices`  
+**Actions**: `app/actions/invoices.ts`  
+**Migration**: `025_add_invoices_system.sql`
+
+#### 3.3.5 Consapevolezza Fiscale
 
 Il sistema traccia scadenze (F24, LIPE) e fornisce un contesto fiscale all'AI per rispondere a domande dell'utente.
+
+**Actions**: `app/actions/fiscal.ts`
 
 ### 3.4 🚚 Spedizioni & Corrieri
 
 _Status: 🟢 Produzione (Core)_
 
-- **Multi-Corriere**: Integrazione con Spedisci.Online, GLS, BRT, Poste.
+- **Multi-Corriere**: Integrazione con Spedisci.Online, GLS, BRT, Poste Italiane.
 - **Comparatore Prezzi**: Listini dinamici basati su ruolo utente (Reseller vs User).
-- **Reseller System**:
-  - Gerarchia: Superadmin -> Reseller -> User.
-  - I Reseller vedono solo i propri utenti e guadagnano sui margini configurati.
+- **Tracking**: Monitoraggio spedizioni in tempo reale
+- **Resi**: Gestione resi e scanner resi
+- **Contrassegni**: Gestione contrassegni
+
+**Pagine**: 
+- `/dashboard/spedizioni` - Lista spedizioni
+- `/dashboard/spedizioni/nuova` - Crea nuova spedizione
+- `/dashboard/spedizioni/[id]` - Dettaglio spedizione
+- `/dashboard/resi` - Gestione resi
+- `/dashboard/scanner-resi` - Scanner resi
+- `/dashboard/contrassegni` - Gestione contrassegni
+
+**Actions**: `actions/logistics.ts`, `actions/returns.ts`, `actions/contrassegni.ts`
+
+#### 3.4.1 Reseller System
+
+_Status: 🟢 Produzione_
+
+- Gerarchia: Superadmin -> Reseller -> User
+- Reseller vedono solo i propri utenti
+- Margini configurabili per reseller
+- Wallet separato per reseller
+
+**Pagine**: 
+- `/dashboard/super-admin` - Gestione superadmin
+- `/dashboard/reseller-team` - Gestione team reseller
+- `/dashboard/team` - Gestione team utente
+
+**Actions**: `actions/admin-reseller.ts`, `actions/super-admin.ts`  
+**Migration**: `019_reseller_system_and_wallet.sql`
 
 ### 3.5 🛡️ Doctor Service & Diagnostica
 
@@ -164,19 +213,35 @@ Schema database PostgreSQL chiave per lo sviluppo:
 
 ### 4.1 Tabelle Principali
 
+#### Tabelle Utenti e Autenticazione
 - `users`: Profili estesi, collegamenti padre-figlio (Reseller), preferenze, `wallet_balance` (gestito solo da trigger).
+
+#### Tabelle Spedizioni
 - `shipments`: Tabella centrale spedizioni. Include campi JSONB per dettagli corrieri.
-- `leads`: Gestione CRM pre-acquisizione.
+
+#### Tabelle CRM
+- `leads`: Gestione CRM pre-acquisizione (stati: new, contacted, qualified, negotiation, won, lost).
+
+#### Tabelle Wallet e Pagamenti
 - `wallet_transactions`: Storico immutabile di ricariche e spese. **Trigger automatico** aggiorna `users.wallet_balance` su INSERT.
 - `top_up_requests`: Richieste di ricarica bonifico.
   - Colonne: `id`, `user_id`, `amount`, `status` (pending/manual_review/approved/rejected)
   - Sicurezza: `file_hash` (SHA-256), `approved_by`, `approved_at`, `approved_amount`
   - Storage: `file_url` (Supabase Storage bucket `receipts`)
 - `payment_transactions`: Transazioni XPay (carte di credito).
-- `invoices`: Fatture emesse.
+
+#### Tabelle Fatturazione
+- `invoices`: Fatture emesse (stati: draft, issued, paid, overdue, cancelled, refunded).
 - `invoice_items`: Righe fattura.
+
+#### Tabelle Audit e Diagnostica
 - `audit_logs`: Audit completo di tutte le operazioni wallet e top-up.
 - `diagnostics_events`: Log strutturati (JSONB context) per debugging.
+
+#### Tabelle Corrieri e Configurazioni
+- `courier_configs`: Configurazioni corrieri con automation (session_data, automation_settings).
+- `price_lists`: Listini prezzi.
+- `price_list_entries`: Voci listino prezzi.
 
 ### 4.2 Migrazioni Wallet/Top-Up (Ordine Critico)
 
@@ -263,19 +328,37 @@ XPAY_BO_API_KEY=...     # Banca Intesa Backoffice
 XPAY_TERMINAL_ID=...    # Terminale POS Virtuale
 
 # Automation
-AUTOMATION_SERVICE_URL=http://localhost:3000
+AUTOMATION_SERVICE_URL=http://localhost:3000  # o URL Railway in produzione
+ENCRYPTION_KEY=...      # Chiave condivisa per crittografia password corrieri (64 caratteri hex)
+AUTOMATION_SERVICE_TOKEN=...  # Token autenticazione automation service
+CRON_SECRET_TOKEN=...  # Token cron job
 
-# Encryption (condiviso con Automation Service)
-ENCRYPTION_KEY=...      # Chiave condivisa per crittografia password corrieri
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=...  # Genera con: openssl rand -base64 32
 ```
 
 ### Comandi Utili
 
 ```bash
-npm run dev          # Avvio Next.js
-npm run doctor       # Avvio script diagnostico locale
-npx supabase status  # Verifica connessione DB
+# Sviluppo
+npm run dev              # Avvio Next.js in sviluppo
+npm run build            # Build produzione
+npm run start            # Avvio produzione
+
+# Database
+npx supabase status      # Verifica connessione DB
 npx supabase migration up  # Applica migrazioni pendenti
+
+# Testing
+npm run test:e2e         # Test end-to-end (Playwright)
+npm run test:e2e:ui      # Test con UI interattiva
+npm run test:e2e:debug   # Test in modalità debug
+
+# Verifica
+npm run type-check       # Verifica TypeScript
+npm run lint             # Lint codice
+npm run check:env        # Verifica variabili ambiente
 ```
 
 ### Applicazione Migrazioni Wallet
@@ -328,9 +411,37 @@ import { approveTopUpRequest } from '@/app/actions/topups-admin'; // Non esiste 
 
 ### 7.2 Pagine Dashboard
 
+#### Dashboard Utente
+- `/dashboard` - Dashboard principale
 - `/dashboard/wallet` - Wallet utente (ricarica, storico transazioni)
-- `/dashboard/admin/bonifici` - Gestione richieste top-up (solo admin)
-- `/dashboard/finanza` - Dashboard finanziaria (fatture, pagamenti)
+- `/dashboard/spedizioni` - Lista spedizioni
+- `/dashboard/spedizioni/nuova` - Crea nuova spedizione
+- `/dashboard/spedizioni/[id]` - Dettaglio spedizione
+- `/dashboard/fatture` - Fatture utente
+- `/dashboard/fatture/[id]` - Dettaglio fattura
+- `/dashboard/resi` - Gestione resi
+- `/dashboard/scanner-resi` - Scanner resi
+- `/dashboard/contrassegni` - Gestione contrassegni
+- `/dashboard/integrazioni` - Configurazione integrazioni
+- `/dashboard/impostazioni` - Impostazioni utente
+- `/dashboard/dati-cliente` - Dati cliente
+- `/dashboard/listini` - Listini prezzi
+- `/dashboard/listini/[id]` - Dettaglio listino
+
+#### Dashboard Admin
+- `/dashboard/admin` - Dashboard admin
+- `/dashboard/admin/bonifici` - Gestione richieste top-up
+- `/dashboard/admin/leads` - Gestione leads CRM
+- `/dashboard/admin/invoices` - Gestione fatture
+- `/dashboard/admin/automation` - Gestione automation
+- `/dashboard/admin/configurations` - Configurazioni corrieri
+- `/dashboard/admin/logs` - Log diagnostici
+- `/dashboard/admin/features` - Gestione feature flags
+
+#### Dashboard Reseller/Superadmin
+- `/dashboard/super-admin` - Gestione superadmin
+- `/dashboard/reseller-team` - Gestione team reseller
+- `/dashboard/team` - Gestione team utente
 
 ### 7.3 Migrazioni Supabase
 
@@ -429,7 +540,29 @@ Tutte le operazioni wallet/top-up sono tracciate in `audit_logs`:
 
 ### Automation Service
 
-Vedi `automation-service/README.md` per documentazione completa del servizio Puppeteer standalone.
+**Documentazione Completa**: [`docs/AUTOMATION_AGENT_COMPLETA.md`](./docs/AUTOMATION_AGENT_COMPLETA.md)
+
+**Quick Start**: [`automation-service/README.md`](./automation-service/README.md)
+
+**Guide Operative**:
+- [`docs/AUTOMATION_SPEDISCI_ONLINE.md`](./docs/AUTOMATION_SPEDISCI_ONLINE.md) - Guida operativa e troubleshooting
+- [`automation-service/SICUREZZA.md`](./automation-service/SICUREZZA.md) - Sicurezza e best practices
+- [`automation-service/DEPLOY-RAILWAY.md`](./automation-service/DEPLOY-RAILWAY.md) - Deploy su Railway
+
+**Componenti Principali**:
+- `automation-service/src/agent.ts` - Classe SOA (agent principale)
+- `automation-service/src/index.ts` - Server Express con endpoint
+- `lib/automation/spedisci-online-agent.ts` - Versione Next.js integrata
+- `actions/automation.ts` - Server Actions per dashboard
+- `app/dashboard/admin/automation/page.tsx` - Dashboard UI admin
+
+**Funzionalità**:
+- ✅ Estrazione automatica session cookies da Spedisci.Online
+- ✅ Gestione login con 2FA (email IMAP o manuale)
+- ✅ Sincronizzazione spedizioni dal portale
+- ✅ Sistema lock anti-conflitto
+- ✅ Crittografia password (AES-256-GCM)
+- ✅ Rate limiting e autenticazione endpoint
 
 ---
 
