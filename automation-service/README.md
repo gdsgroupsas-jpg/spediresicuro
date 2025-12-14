@@ -1,7 +1,7 @@
 # 🤖 Automation Service - Spedisci.Online
 
 > **Versione:** 2.0  
-> **Data Aggiornamento:** Gennaio 2025  
+> **Data Aggiornamento:** Dicembre 2025  
 > **Status:** 🟢 Produzione
 
 Servizio standalone per automation browser con Puppeteer, deployato su Railway.
@@ -152,7 +152,7 @@ GET /health
 {
   "status": "ok",
   "service": "automation-service",
-  "timestamp": "2025-01-15T10:00:00Z"
+  "timestamp": "2025-12-14T10:00:00Z"
 }
 ```
 
@@ -176,7 +176,7 @@ Content-Type: application/json
   "message": "Sync completata",
   "session_data": { ... },
   "contracts": { ... },
-  "timestamp": "2025-01-15T10:00:00Z"
+  "timestamp": "2025-12-14T10:00:00Z"
 }
 ```
 
@@ -213,7 +213,7 @@ Content-Type: application/json
   "shipments_created": 5,
   "errors": [],
   "message": "Sincronizzate 10 spedizioni",
-  "timestamp": "2025-01-15T10:00:00Z"
+  "timestamp": "2025-12-14T10:00:00Z"
 }
 ```
 
@@ -360,5 +360,5 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ---
 
-**Ultimo aggiornamento:** Gennaio 2025  
+**Ultimo aggiornamento:** Dicembre 2025  
 **Versione:** 2.0
