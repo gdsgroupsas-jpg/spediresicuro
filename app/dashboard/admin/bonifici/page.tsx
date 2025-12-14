@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getTopUpRequestsAdmin, getTopUpRequestAdmin, TopUpRequestAdmin } from '@/app/actions/topups-admin';
-import { approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest } from '@/app/actions/wallet';
+import { approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest } from '@/app/actions/topups-admin';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
