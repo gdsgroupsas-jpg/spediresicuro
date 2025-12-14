@@ -108,66 +108,34 @@ export async function rechargeMyWallet(
       })
 
       if (txError) {
-        // Fallback: inserisci transazione manualmente
-        const { data: user } = await supabaseAdmin
-          .from('users')
-          .select('wallet_balance')
-          .eq('id', userId)
-          .single()
-
-        const { data: tx, error: insertError } = await supabaseAdmin
-          .from('wallet_transactions')
-          .insert([
-            {
-              user_id: userId,
-              amount: amount,
-              type: 'self_recharge',
-              description: reason,
-              created_by: userId,
-            },
-          ])
-          .select('id')
-          .single()
-
-        if (insertError) {
-          console.error('Errore creazione transazione:', insertError)
-          return {
-            success: false,
-            error: insertError.message || 'Errore durante la creazione della transazione.',
-          }
-        }
-
-        // Aggiorna wallet_balance
-        const { error: updateError } = await supabaseAdmin
-          .from('users')
-          .update({
-            wallet_balance: (user?.wallet_balance || 0) + amount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId)
-
-        if (updateError) {
-          console.error('Errore aggiornamento wallet:', updateError)
-          return {
-            success: false,
-            error: updateError.message || 'Errore durante l\'aggiornamento del wallet.',
-          }
-        }
-
-        const { data: updatedUser } = await supabaseAdmin
-          .from('users')
-          .select('wallet_balance')
-          .eq('id', userId)
-          .single()
-
+        // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
+        console.error('Errore RPC add_wallet_credit:', txError)
         return {
-          success: true,
-          message: `Ricarica di €${amount} completata con successo.`,
-          transactionId: tx.id,
-          newBalance: updatedUser?.wallet_balance || 0,
+          success: false,
+          error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
         }
       } else {
         // Funzione SQL ha funzionato
+        // Audit log
+        try {
+          const session = await auth()
+          await supabaseAdmin.from('audit_logs').insert({
+            action: 'wallet_credit_added',
+            resource_type: 'wallet',
+            resource_id: userId,
+            user_email: session?.user?.email || 'unknown',
+            user_id: userId,
+            metadata: {
+              amount: amount,
+              reason: reason,
+              transaction_id: txData,
+              type: 'self_recharge',
+            }
+          })
+        } catch (auditError) {
+          console.warn('Errore audit log:', auditError)
+        }
+
         const { data: updatedUser } = await supabaseAdmin
           .from('users')
           .select('wallet_balance')
