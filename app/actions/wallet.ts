@@ -338,33 +338,88 @@ export async function approveTopUpRequest(
       })
       .eq('id', requestId)
       .in('status', ['pending', 'manual_review'])
-      .select('id, user_id, approved_amount')
+      .select('id, user_id, approved_amount, status')
       .maybeSingle()
 
-    // 5. Se UPDATE restituisce 0 righe (RETURNING null), la richiesta è già processata o non esiste
+    // 5. Se UPDATE non ha aggiornato righe, diagnostica il problema
     if (updateError || !updatedRequest) {
-      // Verifica se esiste ma con status diverso
-      const { data: existingRequest } = await supabaseAdmin
+      console.error('[TOPUP_APPROVE] UPDATE failed', {
+        requestId,
+        updateError: updateError?.message || 'No error but no rows updated',
+        updateErrorCode: updateError?.code,
+        updateErrorDetails: updateError?.details,
+      })
+
+      // Verifica stato reale della richiesta per capire il motivo
+      const { data: existingRequest, error: selectError } = await supabaseAdmin
         .from('top_up_requests')
-        .select('status')
+        .select('id, status, approved_by, approved_at, approved_amount, updated_at')
         .eq('id', requestId)
-        .limit(1)
         .maybeSingle()
 
-      if (existingRequest) {
+      if (selectError) {
+        console.error('[TOPUP_APPROVE] SELECT failed after UPDATE failure', {
+          requestId,
+          selectError: selectError.message,
+          selectErrorCode: selectError.code,
+        })
         return {
           success: false,
-          error: 'Richiesta già processata.',
+          error: 'Errore durante la verifica della richiesta.',
         }
-      } else {
+      }
+
+      // Caso 1: Richiesta non esiste
+      if (!existingRequest) {
+        console.info('[TOPUP_APPROVE] Request not found', { requestId })
         return {
           success: false,
           error: 'Richiesta non trovata.',
         }
       }
+
+      // Caso 2: Richiesta esiste ma status NON è pending/manual_review → già processata
+      if (existingRequest.status !== 'pending' && existingRequest.status !== 'manual_review') {
+        console.info('[TOPUP_APPROVE] Request already processed', {
+          requestId,
+          currentStatus: existingRequest.status,
+          approvedBy: existingRequest.approved_by,
+          approvedAt: existingRequest.approved_at,
+        })
+        return {
+          success: false,
+          error: 'Richiesta già processata.',
+        }
+      }
+
+      // Caso 3: Richiesta esiste e status è ancora pending/manual_review → UPDATE fallito per altri motivi
+      console.error('[TOPUP_APPROVE] UPDATE failed but status still pending/manual_review', {
+        requestId,
+        currentStatus: existingRequest.status,
+        approvedBy: existingRequest.approved_by,
+        approvedAt: existingRequest.approved_at,
+        approvedAmount: existingRequest.approved_amount,
+        updatedAt: existingRequest.updated_at,
+        updateError: updateError?.message,
+        updateErrorCode: updateError?.code,
+        updateErrorDetails: updateError?.details,
+        adminUserId: adminCheck.userId,
+      })
+      return {
+        success: false,
+        error: 'Impossibile approvare: UPDATE fallito (permessi/policy/RLS/trigger).',
+      }
     }
 
-    // 6. Accredita wallet usando RPC (no fallback manuale)
+    // 6. UPDATE riuscito: log e procedi con accredito wallet
+    console.info('[TOPUP_APPROVE] UPDATE successful', {
+      requestId,
+      userId: updatedRequest.user_id,
+      approvedAmount: amountToCredit,
+      adminUserId: adminCheck.userId,
+    })
+
+    // 7. Accredita wallet usando RPC (no fallback manuale)
     const { data: txId, error: creditError } = await supabaseAdmin.rpc('add_wallet_credit', {
       p_user_id: updatedRequest.user_id,
       p_amount: amountToCredit,
@@ -373,7 +428,14 @@ export async function approveTopUpRequest(
     })
 
     if (creditError) {
-      console.error('Errore accredito wallet:', creditError)
+      console.error('[TOPUP_APPROVE] RPC add_wallet_credit failed', {
+        requestId,
+        userId: updatedRequest.user_id,
+        amount: amountToCredit,
+        creditError: creditError.message,
+        creditErrorCode: creditError.code,
+        creditErrorDetails: creditError.details,
+      })
       
       // Rollback: ripristina richiesta a status pending
       const { error: rollbackError } = await supabaseAdmin
@@ -388,8 +450,15 @@ export async function approveTopUpRequest(
         .eq('id', requestId)
 
       if (rollbackError) {
-        console.error('Errore rollback richiesta:', rollbackError)
+        console.error('[TOPUP_APPROVE] Rollback failed - CRITICAL: request in inconsistent state', {
+          requestId,
+          rollbackError: rollbackError.message,
+          rollbackErrorCode: rollbackError.code,
+          rollbackErrorDetails: rollbackError.details,
+        })
         // Log critico: richiesta in stato inconsistente
+      } else {
+        console.info('[TOPUP_APPROVE] Rollback successful', { requestId })
       }
 
       return {
@@ -398,7 +467,14 @@ export async function approveTopUpRequest(
       }
     }
 
-    // 7. Audit log
+    console.info('[TOPUP_APPROVE] Wallet credit successful', {
+      requestId,
+      transactionId: txId,
+      userId: updatedRequest.user_id,
+      amount: amountToCredit,
+    })
+
+    // 8. Audit log (non bloccante)
     try {
       const session = await auth()
       // Recupera amount originale per audit (se non già noto)
@@ -419,8 +495,12 @@ export async function approveTopUpRequest(
           transaction_id: txId,
         }
       })
+      console.info('[TOPUP_APPROVE] Audit log inserted', { requestId })
     } catch (auditError) {
-      console.warn('Errore audit log:', auditError)
+      console.warn('[TOPUP_APPROVE] Audit log failed (non-blocking)', {
+        requestId,
+        auditError: auditError instanceof Error ? auditError.message : 'Unknown error',
+      })
     }
 
     return {
@@ -429,7 +509,11 @@ export async function approveTopUpRequest(
       transactionId: txId,
     }
   } catch (error: any) {
-    console.error('Errore in approveTopUpRequest:', error)
+    console.error('[TOPUP_APPROVE] Unexpected error', {
+      requestId,
+      error: error.message,
+      errorStack: error.stack,
+    })
     return {
       success: false,
       error: error.message || 'Errore durante l\'approvazione.',
