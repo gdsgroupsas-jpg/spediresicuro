@@ -159,4 +159,4 @@ Documentazione tecnica completa dell'agent automation:
 
 ---
 
-**Ultimo aggiornamento:** Gennaio 2025
+**Ultimo aggiornamento:** Dicembre 2025
