@@ -1,7 +1,7 @@
 # 🤖 Agent Automation - Documentazione Completa
 
 > **Versione:** 2.0  
-> **Data Aggiornamento:** Gennaio 2025  
+> **Data Aggiornamento:** Dicembre 2025  
 > **Status:** 🟢 Produzione
 
 ---
@@ -569,6 +569,6 @@ Vedi sezione [Deploy](#deploy) per lista completa variabili.
 
 ---
 
-**Ultimo aggiornamento:** Gennaio 2025  
+**Ultimo aggiornamento:** Dicembre 2025  
 **Versione:** 2.0  
 **Autore:** Sistema Automation SpedireSicuro

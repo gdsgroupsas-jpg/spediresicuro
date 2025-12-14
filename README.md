@@ -1,7 +1,7 @@
 # 🚀 SpedireSicuro.it - Sistema Operativo Logistico AI-First
 
 > **Versione:** 2.2.0 (Complete Documentation Update)  
-> **Data Aggiornamento:** Gennaio 2025  
+> **Data Aggiornamento:** Dicembre 2025  
 > **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)  
 > **Repo:** gdsgroupsas-jpg/spediresicuro  
 > **Branch:** master
@@ -629,7 +629,7 @@ Prima di iniziare a lavorare sul progetto:
 
 ---
 
-**Ultimo aggiornamento:** Gennaio 2025  
+**Ultimo aggiornamento:** Dicembre 2025  
 **Versione:** 2.2.0  
 **Repo:** gdsgroupsas-jpg/spediresicuro  
 **Branch:** master

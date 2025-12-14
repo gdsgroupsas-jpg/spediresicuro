@@ -1,7 +1,7 @@
 # 📜 MANIFESTO TECNICO DI PROGETTO - SpedireSicuro.it
 
 > **Versione:** 2.2.0 (Complete Documentation Update)  
-> **Data Aggiornamento:** Gennaio 2025  
+> **Data Aggiornamento:** Dicembre 2025  
 > **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)
 
 ---
