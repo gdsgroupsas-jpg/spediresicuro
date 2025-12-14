@@ -171,8 +171,44 @@ export async function uploadBankTransferReceipt(formData: FormData) {
     })
     .select()
     .single();
+
+  // ============================================
+  // AI ANALYSIS (ASYNC / BLOCKING for MVP)
+  // ============================================
+  
+  // Per MVP facciamo attendere l'utente qualche secondo per dargli feedback immediato
+  // In futuro: spostare in background job (Inngest/Queue)
+  let aiConfidence = 0;
+  let aiNotes = '';
+
+  try {
+    const { analyzeBankReceipt } = await import('@/lib/ai/vision');
+    const arrayBuffer = await file.arrayBuffer(); // Rileggiamo buffer
     
-  if (dbError) return { success: false, error: dbError.message };
+    console.log('🤖 Avvio analisi AI ricevuta...');
+    const analysis = await analyzeBankReceipt(arrayBuffer, file.type);
+    console.log('🤖 Risultato AI:', analysis);
+
+    aiConfidence = analysis.confidence;
+    
+    // Aggiorna subito il record con i dati AI
+    if (analysis.confidence > 0) {
+        await supabase
+            .from('top_up_requests')
+            .update({
+                ai_confidence: analysis.confidence,
+                // Salviamo i dati estratti in un campo metadata (se esiste) o in admin_notes per ora
+                admin_notes: `[AI EXTRACTION]\nImporto rilevato: ${analysis.amount}\nCRO: ${analysis.cro}\nData: ${analysis.date}\nConfidenza: ${analysis.confidence}`,
+                // Se l'importo rilevato differisce molto da quello dichiarato, flaggiamo
+                status: (analysis.amount && Math.abs(analysis.amount - declaredAmount) > 0.1) ? 'manual_review' : 'pending'
+            })
+            .eq('id', req.id);
+    }
+
+  } catch (aiError) {
+    console.error('Errore AI Pipeline:', aiError);
+    // Non blocchiamo il flusso se l'AI fallisce
+  }
 
   // ============================================
   // AUDIT LOG
@@ -417,21 +453,109 @@ export async function approveTopUpRequest(
       }
 
       // Caso 3: Richiesta esiste e status è ancora pending/manual_review → UPDATE fallito per altri motivi
-      console.error('[TOPUP_APPROVE] UPDATE failed but status still pending/manual_review', {
+      console.warn('[TOPUP_APPROVE] UPDATE failed but status still pending/manual_review. Attempting RPC fallback.', {
         requestId,
-        currentStatus: existingRequest.status,
-        approvedBy: existingRequest.approved_by,
-        approvedAt: existingRequest.approved_at,
-        approvedAmount: existingRequest.approved_amount,
-        updatedAt: existingRequest.updated_at,
-        updateError: updateError?.message,
-        updateErrorCode: updateError?.code,
-        updateErrorDetails: updateError?.details,
-        adminUserId: adminCheck.userId,
+        updateError: updateError?.message
       })
-      return {
-        success: false,
-        error: 'Impossibile approvare: UPDATE fallito (permessi/policy/RLS/trigger).',
+      
+      // FALLBACK: Prova funzione RPC (SECURITY DEFINER)
+      // Questo bypassa RLS se la policy UPDATE fallisce e se la funzione esiste
+      try {
+        const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('approve_top_up_request', {
+          p_request_id: requestId,
+          p_admin_user_id: adminCheck.userId,
+          p_approved_amount: amountToCredit
+        })
+
+        if (rpcError) {
+             throw rpcError
+        }
+
+        // Se RPC ritorna array (pattern comune in PG functions) o oggetto
+        // La funzione ritorna TABLE(success bool, error_message text, updated_id uuid)
+        // Quindi rpcResult dovrebbe essere un array di 1 elemento o l'oggetto
+        const resultRow = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult
+
+        if (!resultRow || !resultRow.success) {
+            console.error('[TOPUP_APPROVE] RPC fallback failed logic', resultRow)
+            return {
+                success: false, 
+                error: resultRow?.error_message || 'Impossibile approvare: anche RPC fallback fallito.'
+            }
+        }
+
+        // Se RPC ha successo, consideriamo l'update fatto.
+        // Dobbiamo però recuperare i dati aggiornati per proseguire col wallet credit?
+        // La funzione RPC in migration 030 fa SOLO l'update dello status.
+        // NON fa l'accredito wallet (quello lo facciamo noi qui sotto).
+        // Quindi dobbiamo solo assicurarci che RPC abbia settato approved_amount ecc.
+        
+        // Recuperiamo request aggiornata per sicurezza e per avere user_id
+        const { data: refreshedRequest, error: refreshError } = await supabaseAdmin
+            .from('top_up_requests')
+            .select('id, user_id, approved_amount, status')
+            .eq('id', requestId)
+            .single()
+            
+        if (refreshError || !refreshedRequest) {
+            return { success: false, error: 'Errore post-RPC: impossibile rileggere la richiesta.' }
+        }
+        
+        // Aggiorniamo updatedRequest per usarlo nello step successivo (accredito wallet)
+        // ATTENZIONE: updatedRequest era const, ma qui siamo in un blocco dove updatedRequest era nullo.
+        // Dobbiamo restituire il controllo al flusso principale?
+        // Il codice originale faceva "return { error }" qui. 
+        // Invece di ritornare, impostiamo una variabile flag o proseguiamo duplicando logica?
+        // Per pulizia, eseguiamo accredito wallet QUI e ritorniamo.
+        
+         console.info('[TOPUP_APPROVE] RPC fallback successful', {
+          requestId,
+          userId: refreshedRequest.user_id,
+          approvedAmount: refreshedRequest.approved_amount,
+        })
+        
+        // 7. Accredita wallet usando RPC (no fallback manuale)
+        const { data: txId, error: creditError } = await supabaseAdmin.rpc('add_wallet_credit', {
+          p_user_id: refreshedRequest.user_id,
+          p_amount: refreshedRequest.approved_amount, // Usa quello salvato nel DB
+          p_description: `Approvazione richiesta ricarica #${requestId}`,
+          p_created_by: adminCheck.userId,
+        })
+        
+        if (creditError) {
+             console.error('[TOPUP_APPROVE] RPC add_wallet_credit failed (in fallback)', creditError)
+             return { success: false, error: 'Status aggiornato ma accredito wallet fallito. Contattare supporto.' }
+        }
+        
+        // Audit log (non bloccante)
+        try {
+          const session = await auth()
+          await supabaseAdmin.from('audit_logs').insert({
+            action: 'top_up_request_approved_rpc',
+            resource_type: 'top_up_request',
+            resource_id: requestId,
+            user_email: session?.user?.email || 'unknown',
+            user_id: adminCheck.userId,
+            metadata: {
+               method: 'rpc_fallback',
+               amount: refreshedRequest.approved_amount,
+               target: refreshedRequest.user_id
+            }
+          })
+        } catch (e) {}
+
+        return {
+            success: true,
+            message: `Richiesta approvata (RPC). Credito di €${refreshedRequest.approved_amount} accreditato.`,
+            transactionId: txId
+        }
+
+      } catch (rpcErr: any) {
+          console.error('[TOPUP_APPROVE] RPC fallback exception', rpcErr)
+          return {
+            success: false,
+            error: 'Impossibile approvare: UPDATE fallito e RPC errore: ' + rpcErr.message,
+          }
       }
     }
 
