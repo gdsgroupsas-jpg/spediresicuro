@@ -1,8 +1,21 @@
 # 📜 MANIFESTO TECNICO DI PROGETTO - SpedireSicuro.it
 
-> **Versione:** 2.0.0 (AI-First Era)  
-> **Data Aggiornamento:** 14 Dicembre 2025  
+> **Versione:** 2.1.0 (AI-First Era + Wallet Security)  
+> **Data Aggiornamento:** Gennaio 2025  
 > **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)
+
+---
+
+## 📚 DOCUMENTAZIONE PRINCIPALE
+
+**👉 LEGGI PRIMA**: [`DOCUMENTAZIONE_COMPLETA_PROGETTO.md`](./DOCUMENTAZIONE_COMPLETA_PROGETTO.md)
+
+Questo README è un riepilogo. La documentazione completa contiene:
+- ✅ Architettura completa del sistema
+- ✅ Flussi operativi dettagliati
+- ✅ Struttura file e organizzazione
+- ✅ Sicurezza wallet e best practices
+- ✅ Guide testing e deployment
 
 ---
 
@@ -168,6 +181,45 @@ npm run dev          # Avvio Next.js
 npm run doctor       # Avvio script diagnostico locale
 npx supabase status  # Verifica connessione DB
 ```
+
+---
+
+## 🔗 DOCUMENTAZIONE AGGIUNTIVA
+
+### Guide Essenziali
+
+- **[DOCUMENTAZIONE_COMPLETA_PROGETTO.md](./DOCUMENTAZIONE_COMPLETA_PROGETTO.md)** - Documentazione tecnica completa
+- **[docs/GUIDA_ANTI_DUPLICATI.md](./docs/GUIDA_ANTI_DUPLICATI.md)** - Come evitare errori build e codice duplicato
+- **[RIEPILOGO_FIX_APPROVE_TOPUP.md](./RIEPILOGO_FIX_APPROVE_TOPUP.md)** - Fix completo approvazione top-up
+- **[FIX_WALLET_SECURITY_RIEPILOGO.md](./FIX_WALLET_SECURITY_RIEPILOGO.md)** - Implementazione sicurezza wallet
+
+### Sistema Finanziario
+
+- **[INVENTARIO_SISTEMA_FINANZIARIO.md](./INVENTARIO_SISTEMA_FINANZIARIO.md)** - Inventario completo tabelle/endpoint finance
+- **[ANALISI_RISCHI_WALLET.md](./ANALISI_RISCHI_WALLET.md)** - Analisi rischi e mitigazioni
+
+### Automation Service
+
+- **[automation-service/README.md](./automation-service/README.md)** - Documentazione servizio Puppeteer
+
+---
+
+## ⚠️ REGOLE CRITICHE
+
+### Wallet Balance (NON NEGOZIABILE)
+
+1. ❌ **MAI** fare `UPDATE users SET wallet_balance = ...` da codice
+2. ✅ **SOLO** RPC `add_wallet_credit()` / `deduct_wallet_credit()` oppure INSERT su `wallet_transactions`
+3. ❌ **Nessun fallback manuale**: Se RPC fallisce → errore e stop
+
+### Struttura File (NO DUPLICATI)
+
+- `app/actions/wallet.ts` → Funzioni di modifica (approve/reject/delete)
+- `app/actions/topups-admin.ts` → Funzioni di lettura (getTopUpRequestsAdmin)
+
+**❌ NON duplicare funzioni** tra i due file (causa errori build Vercel)
+
+Vedi: [docs/GUIDA_ANTI_DUPLICATI.md](./docs/GUIDA_ANTI_DUPLICATI.md)
 
 ---
 
