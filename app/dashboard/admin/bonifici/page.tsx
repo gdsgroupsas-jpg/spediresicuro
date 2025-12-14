@@ -138,7 +138,8 @@ export default function AdminBonificiPage() {
       const result = await getTopUpRequestAdmin(id);
       if (result.success && result.data) {
         setSelectedRequest(result.data);
-        setApprovedAmount(result.data.amount.toString());
+        // Inizializza con importo originale (campo vuoto = usa importo originale)
+        setApprovedAmount('');
         setRejectReason('');
         setShowDetailsModal(true);
       } else {
@@ -151,25 +152,46 @@ export default function AdminBonificiPage() {
   }
 
   async function handleApprove() {
-    if (!selectedRequest) return;
-
-    const amount = parseFloat(approvedAmount);
-    if (isNaN(amount) || amount <= 0 || amount > 10000) {
-      toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
+    if (!selectedRequest) {
+      toast.error('Nessuna richiesta selezionata');
       return;
+    }
+
+    // Se il campo è vuoto o contiene solo spazi, usa l'importo originale
+    const amountStr = approvedAmount.trim();
+    let amountToApprove: number | undefined = undefined;
+
+    if (amountStr === '') {
+      // Campo vuoto: usa importo originale (undefined = usa amount della richiesta)
+      amountToApprove = undefined;
+    } else {
+      // Campo compilato: valida e usa quello
+      const parsedAmount = parseFloat(amountStr);
+      if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
+        toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
+        return;
+      }
+      // Se diverso dall'importo originale, passa quello specificato
+      amountToApprove = parsedAmount !== selectedRequest.amount ? parsedAmount : undefined;
     }
 
     try {
       setIsProcessing(true);
+      console.log('Approving request:', selectedRequest.id, 'with amount:', amountToApprove);
+      
       const result = await approveTopUpRequest(
         selectedRequest.id,
-        amount !== selectedRequest.amount ? amount : undefined
+        amountToApprove
       );
+
+      console.log('Approve result:', result);
 
       if (result.success) {
         toast.success(result.message || 'Richiesta approvata con successo');
         setShowDetailsModal(false);
         setSelectedRequest(null);
+        setApprovedAmount('');
+        setRejectReason('');
         loadRequests(activeTab);
         loadAllRequestsForCounts();
       } else {
@@ -177,7 +199,7 @@ export default function AdminBonificiPage() {
       }
     } catch (error: any) {
       console.error('Errore approvazione:', error);
-      toast.error('Errore imprevisto durante l\'approvazione');
+      toast.error('Errore imprevisto durante l\'approvazione: ' + (error.message || 'Errore sconosciuto'));
     } finally {
       setIsProcessing(false);
     }
