@@ -1,8 +1,24 @@
-# 🤖 Automation Spedisci.Online - Documentazione Completa
+# 🤖 Automation Spedisci.Online - Guida Operativa
 
-**Data Creazione:** 2025-12-03  
-**Versione:** 1.0  
-**Status:** ✅ Pronto per implementazione
+> **Versione:** 1.0  
+> **Data Creazione:** 2025-12-03  
+> **Status:** ✅ Produzione
+
+---
+
+## 📚 DOCUMENTAZIONE COMPLETA
+
+**👉 Per documentazione tecnica completa, vedi**: [`AUTOMATION_AGENT_COMPLETA.md`](./AUTOMATION_AGENT_COMPLETA.md)
+
+La documentazione completa include:
+- ✅ Architettura dettagliata
+- ✅ Componenti e file chiave
+- ✅ Database e migrazioni
+- ✅ Sicurezza e crittografia
+- ✅ Deploy e configurazione
+- ✅ Monitoraggio e troubleshooting
+
+Questa guida si concentra su **utilizzo operativo** e **troubleshooting**.
 
 ---
 
