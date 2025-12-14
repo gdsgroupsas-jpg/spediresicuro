@@ -80,6 +80,7 @@ export default function AdminBonificiPage() {
     }
 
     checkPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router]);
 
   // Carica richieste quando cambia tab
@@ -89,6 +90,7 @@ export default function AdminBonificiPage() {
       // Carica anche tutti i conteggi per i tab
       loadAllRequestsForCounts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthorized]);
 
   async function loadAllRequestsForCounts() {
@@ -504,7 +506,7 @@ export default function AdminBonificiPage() {
                         className="mt-1"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Lasciare vuoto per accreditare l'importo richiesto ({formatCurrency(selectedRequest.amount)})
+                        Lasciare vuoto per accreditare l&apos;importo richiesto ({formatCurrency(selectedRequest.amount)})
                       </p>
                     </div>
 
