@@ -373,6 +373,13 @@ const adminSection: NavSection = {
       icon: Activity,
       description: 'Visualizzazione eventi diagnostici e monitoring',
     },
+    {
+      id: 'admin-bonifici',
+      label: 'Gestione Bonifici',
+      href: '/dashboard/admin/bonifici',
+      icon: Wallet,
+      description: 'Approvazione e rifiuto richieste ricarica wallet',
+    },
   ],
 };
 
