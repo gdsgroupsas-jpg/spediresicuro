@@ -443,46 +443,11 @@ export async function manageSubUserWallet(
       })
 
       if (txError) {
-        // Fallback: inserisci transazione manualmente
-        const { data: tx, error: insertError } = await supabaseAdmin
-          .from('wallet_transactions')
-          .insert([
-            {
-              user_id: subUserId,
-              amount: amount,
-              type: 'reseller_recharge',
-              description: reason,
-              created_by: resellerCheck.userId,
-            },
-          ])
-          .select('id')
-          .single()
-
-        if (insertError) {
-          console.error('Errore creazione transazione:', insertError)
-          return {
-            success: false,
-            error: insertError.message || 'Errore durante la creazione della transazione.',
-          }
-        }
-
-        transactionId = tx.id
-
-        // Aggiorna wallet_balance manualmente se la funzione SQL non esiste
-        const { error: updateError } = await supabaseAdmin
-          .from('users')
-          .update({
-            wallet_balance: (subUser.wallet_balance || 0) + amount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', subUserId)
-
-        if (updateError) {
-          console.error('Errore aggiornamento wallet:', updateError)
-          return {
-            success: false,
-            error: updateError.message || 'Errore durante l\'aggiornamento del wallet.',
-          }
+        // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
+        console.error('Errore RPC add_wallet_credit:', txError)
+        return {
+          success: false,
+          error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
         }
       } else {
         transactionId = txData
@@ -495,7 +460,28 @@ export async function manageSubUserWallet(
       }
     }
 
-    // 5. Ottieni nuovo balance
+    // 5. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'wallet_credit_added',
+        resource_type: 'wallet',
+        resource_id: subUserId,
+        user_email: session?.user?.email || 'unknown',
+        user_id: resellerCheck.userId,
+        metadata: {
+          amount: amount,
+          reason: reason,
+          transaction_id: transactionId,
+          type: 'reseller_recharge',
+          target_user_id: subUserId,
+        }
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    // 6. Ottieni nuovo balance
     const { data: updatedUser } = await supabaseAdmin
       .from('users')
       .select('wallet_balance')

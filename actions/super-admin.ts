@@ -198,30 +198,12 @@ export async function manageWallet(
       })
 
       if (txError) {
-        // Fallback: inserisci transazione manualmente
-        const { data: tx, error: insertError } = await supabaseAdmin
-          .from('wallet_transactions')
-          .insert([
-            {
-              user_id: userId,
-              amount: amount,
-              type: transactionType,
-              description: reason,
-              created_by: superAdminCheck.userId,
-            },
-          ])
-          .select('id')
-          .single()
-
-        if (insertError) {
-          console.error('Errore creazione transazione:', insertError)
-          return {
-            success: false,
-            error: insertError.message || 'Errore durante la creazione della transazione.',
-          }
+        // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
+        console.error('Errore RPC add_wallet_credit:', txError)
+        return {
+          success: false,
+          error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
         }
-
-        transactionId = tx.id
       } else {
         transactionId = txData
       }
@@ -235,36 +217,39 @@ export async function manageWallet(
       })
 
       if (txError) {
-        // Fallback: inserisci transazione manualmente
-        const { data: tx, error: insertError } = await supabaseAdmin
-          .from('wallet_transactions')
-          .insert([
-            {
-              user_id: userId,
-              amount: amount, // Negativo
-              type: transactionType,
-              description: reason,
-              created_by: superAdminCheck.userId,
-            },
-          ])
-          .select('id')
-          .single()
-
-        if (insertError) {
-          console.error('Errore creazione transazione:', insertError)
-          return {
-            success: false,
-            error: insertError.message || 'Errore durante la creazione della transazione.',
-          }
+        // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
+        console.error('Errore RPC deduct_wallet_credit:', txError)
+        return {
+          success: false,
+          error: txError.message || 'Errore durante la rimozione del credito. Riprova più tardi.',
         }
-
-        transactionId = tx.id
       } else {
         transactionId = txData
       }
     }
 
-    // 7. Ottieni nuovo balance
+    // 7. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: amount > 0 ? 'wallet_credit_added' : 'wallet_credit_removed',
+        resource_type: 'wallet',
+        resource_id: userId,
+        user_email: session?.user?.email || 'unknown',
+        user_id: superAdminCheck.userId,
+        metadata: {
+          amount: Math.abs(amount),
+          reason: reason,
+          transaction_id: transactionId,
+          type: transactionType,
+          target_user_id: userId,
+        }
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    // 8. Ottieni nuovo balance
     const { data: updatedUser } = await supabaseAdmin
       .from('users')
       .select('wallet_balance')
