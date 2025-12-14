@@ -25,10 +25,17 @@ BEGIN
     DROP POLICY IF EXISTS "Admins can update top-up requests" ON top_up_requests;
     
     -- Crea policy UPDATE per admin
-    -- Admin = account_type IN ('admin', 'superadmin') OR role = 'admin'
+    -- Nota: Service role key bypassa RLS, ma questa policy è per chiarezza
+    -- La policy permette UPDATE se:
+    -- 1. auth.uid() è NULL (service role key) - bypassa RLS
+    -- 2. auth.uid() corrisponde a un admin nella tabella users
     CREATE POLICY "Admins can update top-up requests" 
     ON top_up_requests FOR UPDATE 
     USING (
+      -- Service role key (auth.uid() è NULL) bypassa automaticamente
+      auth.uid() IS NULL
+      OR
+      -- Oppure utente autenticato che è admin
       EXISTS (
         SELECT 1 FROM users 
         WHERE users.id = auth.uid() 
@@ -39,6 +46,9 @@ BEGIN
       )
     )
     WITH CHECK (
+      -- Stessa logica per WITH CHECK
+      auth.uid() IS NULL
+      OR
       EXISTS (
         SELECT 1 FROM users 
         WHERE users.id = auth.uid() 
