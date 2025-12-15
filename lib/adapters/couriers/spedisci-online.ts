@@ -497,7 +497,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
     // Normalizza nomi corrieri comuni
     const courierAliases: Record<string, string[]> = {
-      'poste': ['poste', 'poste italiane', 'posteitaliane', 'postedeliverybusiness', 'poste delivery business'],
+      'poste': ['poste', 'poste italiane', 'posteitaliane', 'postedeliverybusiness', 'poste delivery business', 'postedelivery'],
       'gls': ['gls'],
       'brt': ['brt', 'bartolini'],
       'sda': ['sda'],
@@ -522,10 +522,23 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     // 2. nome corriere -> codice contratto (es: "SDA" -> "sda-123-456")
     
     // STRATEGIA 1: Cerca match esatto nel VALORE (nome corriere nel mapping)
+    // Es: "Poste Italiane" -> cerca valore "PosteDeliveryBusiness" o simile
     for (const [contractCode, courierName] of Object.entries(this.CONTRACT_MAPPING)) {
       const normalizedCourierName = String(courierName).toLowerCase().trim();
+      
+      // Match esatto
       if (normalizedCourierName === courier || normalizedCourierName === normalizedCourier) {
-        console.log(`✅ Codice contratto trovato per ${courier}: ${contractCode}`);
+        console.log(`✅ Codice contratto trovato (match esatto valore) per ${courier}: ${contractCode}`);
+        return contractCode;
+      }
+      
+      // Match per Poste: se il corriere è "poste" e il valore contiene "poste" o "delivery"
+      if (normalizedCourier === 'poste' && (
+        normalizedCourierName.includes('poste') || 
+        normalizedCourierName.includes('delivery') ||
+        normalizedCourierName.includes('posteitaliane')
+      )) {
+        console.log(`✅ Codice contratto trovato (match Poste) per ${courier}: ${contractCode} (valore: ${courierName})`);
         return contractCode;
       }
     }
@@ -560,10 +573,20 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     }
 
     // STRATEGIA 4: Cerca match parziale nel nome corriere (es: "SDA Express" contiene "sda")
+    // IMPORTANTE: Per Poste, cerca anche "PosteDeliveryBusiness" quando il corriere è "Poste Italiane"
     for (const [contractCode, courierName] of Object.entries(this.CONTRACT_MAPPING)) {
       const normalizedCourierName = String(courierName).toLowerCase();
+      
+      // Match parziale standard
       if (normalizedCourierName.includes(courier) || courier.includes(normalizedCourierName.split(' ')[0])) {
         console.log(`✅ Codice contratto trovato (match parziale nome) per ${courier}: ${contractCode}`);
+        return contractCode;
+      }
+      
+      // Match speciale per Poste: se corriere contiene "poste" e valore contiene "poste" o "delivery"
+      if ((courier.includes('poste') || normalizedCourier === 'poste') && 
+          (normalizedCourierName.includes('poste') || normalizedCourierName.includes('delivery'))) {
+        console.log(`✅ Codice contratto trovato (match Poste speciale) per ${courier}: ${contractCode} (valore: ${courierName})`);
         return contractCode;
       }
     }
