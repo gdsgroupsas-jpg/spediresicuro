@@ -23,32 +23,56 @@ export interface SpedisciOnlineCredentials extends CourierCredentials {
   contract_mapping?: Record<string, string>; // Mapping: codice contratto completo -> nome corriere
 }
 
+// Formato payload CORRETTO da API v2 (OpenAPI Spec)
 export interface SpedisciOnlineShipmentPayload {
-  destinatario: string;
-  indirizzo: string;
-  cap: string;
-  localita: string;
-  provincia: string;
-  country: string;
-  peso: number | string;
-  colli: number | string;
-  contrassegno?: number | string;
-  rif_mittente?: string;
-  rif_destinatario?: string;
-  note?: string;
-  telefono?: string;
-  email_destinatario?: string;
-  contenuto?: string;
-  order_id?: string;
-  totale_ordine?: number | string;
-  codice_contratto?: string; // Codice contratto completo (es: "gls-NN6-STANDARD-(TR-VE)")
+  carrierCode: string; // es: "brt", "gls", "poste"
+  contractCode: string; // es: "brt-Test"
+  packages: Array<{
+    length: number;
+    width: number;
+    height: number;
+    weight: number;
+  }>;
+  shipFrom: {
+    name: string;
+    company?: string;
+    street1: string;
+    street2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone?: string | null;
+    email?: string;
+  };
+  shipTo: {
+    name: string;
+    company?: string;
+    street1: string;
+    street2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone?: string | null;
+    email?: string;
+  };
+  notes?: string;
+  insuranceValue?: number;
+  codValue?: number;
+  accessoriServices?: string[];
+  label_format?: 'PDF' | 'ZPL';
 }
 
+// Formato risposta CORRETTO da API v2 (OpenAPI Spec)
 export interface SpedisciOnlineResponse {
   success: boolean;
-  tracking_number: string;
-  label_url?: string;
-  label_pdf?: string; // Base64 encoded
+  shipmentId?: number;
+  trackingNumber: string; // NOTA: API usa camelCase, non snake_case
+  shipmentCost?: string;
+  labelData?: string; // Base64 encoded PDF
+  labelZPL?: string; // ZPL format (opzionale)
+  packages?: Array<any>;
   error?: string;
   message?: string;
 }
@@ -127,11 +151,14 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       console.log('🔍 [SPEDISCI.ONLINE] RISULTATO: Codice contratto trovato:', contractCode || '❌ NESSUNO');
       console.log('🔍 [SPEDISCI.ONLINE] ========================================');
       
-      // 2. Mappatura Dati nel formato Spedisci.Online (include codice contratto)
+      // 2. Mappatura Dati nel formato Spedisci.Online API v2 (include codice contratto)
       const payload = this.mapToSpedisciOnlineFormat(data, contractCode);
-      console.log('📦 [SPEDISCI.ONLINE] Payload preparato:', {
-        destinatario: payload.destinatario,
-        codice_contratto: payload.codice_contratto,
+      console.log('📦 [SPEDISCI.ONLINE] Payload preparato (API v2):', {
+        carrierCode: payload.carrierCode,
+        contractCode: payload.contractCode,
+        shipTo_name: payload.shipTo.name,
+        shipTo_city: payload.shipTo.city,
+        packages_count: payload.packages.length,
         base_url: this.BASE_URL,
       });
 
@@ -141,15 +168,16 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         const result = await this.createShipmentJSON(payload);
         console.log('✅ [SPEDISCI.ONLINE] Chiamata API JSON riuscita!', {
           success: result.success,
-          tracking_number: result.tracking_number,
-          has_label: !!result.label_pdf,
+          trackingNumber: result.trackingNumber,
+          shipmentId: result.shipmentId,
+          has_label: !!result.labelData,
         });
-        
+
         if (result.success) {
           return {
-            tracking_number: result.tracking_number,
-            label_url: result.label_url,
-            label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+            tracking_number: result.trackingNumber,
+            label_url: undefined, // API v2 non restituisce URL ma solo Base64
+            label_pdf: result.labelData ? Buffer.from(result.labelData, 'base64') : undefined,
           };
         }
       } catch (jsonError: any) {
@@ -163,34 +191,29 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       }
 
       // 3. PRIORITÀ 2: Upload CSV (se JSON non disponibile)
+      // ⚠️ DEPRECATO: Con API v2 usiamo solo endpoint JSON /shipping/create
+      // Upload CSV e fallback CSV locale commentati perché ora abbiamo API reale
+      /*
       try {
         const csvContent = this.generateCSV(payload);
         const result = await this.uploadCSV(csvContent);
-        
+
         if (result.success) {
           return {
-            tracking_number: result.tracking_number || this.generateTrackingNumber(),
+            tracking_number: result.trackingNumber || this.generateTrackingNumber(),
             label_url: result.label_url,
-            label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+            label_pdf: result.labelData ? Buffer.from(result.labelData, 'base64') : undefined,
           };
         }
       } catch (csvError: any) {
         console.warn('Upload CSV fallito:', csvError.message);
         // Continua con fallback
       }
+      */
 
-      // 4. FALLBACK: Genera CSV locale (solo se tutto fallisce)
-      console.warn('⚠️ [SPEDISCI.ONLINE] TUTTE LE CHIAMATE API FALLITE - Genero CSV locale come fallback');
-      const csvContent = this.generateCSV(payload);
-      const trackingNumber = this.extractTrackingNumber(data) || this.generateTrackingNumber();
-      
-      console.warn('⚠️ [SPEDISCI.ONLINE] CSV locale generato. Tracking:', trackingNumber);
-      
-      return {
-        tracking_number: trackingNumber,
-        label_url: undefined, // Non disponibile senza upload riuscito
-        label_pdf: Buffer.from(csvContent, 'utf-8'), // CSV come fallback
-      };
+      // 4. FALLBACK: Se arriviamo qui, l'API JSON è fallita
+      console.error('❌ [SPEDISCI.ONLINE] API JSON fallita - Nessun fallback disponibile');
+      throw new Error('Impossibile creare spedizione: API Spedisci.Online non disponibile o credenziali non valide');
     } catch (error) {
       console.error('Errore creazione spedizione spedisci.online:', error);
       
@@ -256,7 +279,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    */
   private async createShipmentJSON(payload: SpedisciOnlineShipmentPayload): Promise<SpedisciOnlineResponse> {
     console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));
-    console.log('📡 [SPEDISCI.ONLINE] Codice contratto nel payload:', payload.codice_contratto || 'MANCANTE');
+    console.log('📡 [SPEDISCI.ONLINE] Carrier Code:', payload.carrierCode || 'MANCANTE');
+    console.log('📡 [SPEDISCI.ONLINE] Contract Code:', payload.contractCode || 'MANCANTE');
     
     // Genera lista di endpoint da provare in ordine di probabilità
     const endpointsToTry = this.generateEndpointVariations();
@@ -308,24 +332,24 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           console.log('✅ [SPEDISCI.ONLINE] RISPOSTA COMPLETA (INTERO OGGETTO):');
           console.log(JSON.stringify(result, null, 2));
           console.log('✅ [SPEDISCI.ONLINE] ========================================');
-          console.log('✅ [SPEDISCI.ONLINE] Analisi campi:');
-          console.log('  - result.tracking_number:', result.tracking_number);
-          console.log('  - result.tracking:', result.tracking);
-          console.log('  - result.label_url:', result.label_url);
-          console.log('  - result.label_pdf_url:', result.label_pdf_url);
-          console.log('  - result.label_pdf:', result.label_pdf ? `(${result.label_pdf.length} caratteri)` : 'UNDEFINED');
-          console.log('  - result.pdf:', result.pdf ? `(${result.pdf.length} caratteri)` : 'undefined');
-          console.log('  - result.waybill:', result.waybill);
+          console.log('✅ [SPEDISCI.ONLINE] Analisi campi (OpenAPI format):');
+          console.log('  - result.shipmentId:', result.shipmentId);
+          console.log('  - result.trackingNumber:', result.trackingNumber);
+          console.log('  - result.shipmentCost:', result.shipmentCost);
+          console.log('  - result.labelData:', result.labelData ? `(${result.labelData.length} caratteri Base64)` : 'UNDEFINED');
+          console.log('  - result.labelZPL:', result.labelZPL ? '(presente)' : 'undefined');
           console.log('  - result.message:', result.message);
           console.log('  - Tutte le chiavi:', Object.keys(result));
           console.log('✅ [SPEDISCI.ONLINE] ========================================');
 
           return {
             success: true,
-            tracking_number: result.tracking_number || result.tracking || result.waybill || this.generateTrackingNumber(),
-            label_url: result.label_url || result.label_pdf_url || result.pdf_url,
-            label_pdf: result.label_pdf || result.pdf, // Base64 encoded - prova anche "pdf"
-            message: result.message || 'LDV creata con successo',
+            shipmentId: result.shipmentId,
+            trackingNumber: result.trackingNumber || this.generateTrackingNumber(),
+            shipmentCost: result.shipmentCost,
+            labelData: result.labelData, // Base64 encoded PDF
+            labelZPL: result.labelZPL,
+            message: result.message || 'LDV creata con successo tramite Spedisci.Online',
           };
         }
 
@@ -379,42 +403,26 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
   /**
    * Genera variazioni di endpoint da provare in ordine di probabilità
+   *
+   * ⚠️ CORRETTO: Usa /shipping/create (non /shipments) come da OpenAPI spec
    */
   private generateEndpointVariations(): string[] {
     const baseUrl = this.BASE_URL;
     const endpoints: string[] = [];
-    
-    // Estrai il dominio base (senza /api/v2 o /api/v1)
-    let domainBase = baseUrl;
-    if (baseUrl.includes('/api/v2')) {
-      domainBase = baseUrl.replace('/api/v2', '');
-    } else if (baseUrl.includes('/api/v1')) {
-      domainBase = baseUrl.replace('/api/v1', '');
-    } else if (baseUrl.includes('/api')) {
-      domainBase = baseUrl.replace('/api', '');
-    }
-    
+
     // Lista di endpoint da provare in ordine di probabilità
+    // ENDPOINT CORRETTO da OpenAPI: /api/v2/shipping/create
     if (baseUrl.includes('/api/v2')) {
-      // Se BASE_URL contiene /api/v2, prova queste combinazioni:
-      endpoints.push('/api/v2/shipments');           // 1. Senza /v1 (più probabile)
-      endpoints.push('/api/v2/v1/shipments');         // 2. Con /v1 (attuale)
-      endpoints.push('/v1/shipments');                 // 3. Solo /v1 (senza /api/v2)
-      endpoints.push('/shipments');                    // 4. Solo /shipments
-      endpoints.push('/api/v1/shipments');             // 5. /api/v1 invece di /api/v2
-    } else if (baseUrl.includes('/api/v1')) {
-      // Se BASE_URL contiene /api/v1
-      endpoints.push('/api/v1/shipments');
-      endpoints.push('/v1/shipments');
-      endpoints.push('/shipments');
+      // Se BASE_URL contiene già /api/v2, aggiungi solo /shipping/create
+      endpoints.push('/shipping/create');
+    } else if (baseUrl.includes('/api')) {
+      // Se BASE_URL contiene /api ma non /v2, prova /v2/shipping/create
+      endpoints.push('/v2/shipping/create');
     } else {
-      // Se BASE_URL è il dominio base
-      endpoints.push('/api/v2/shipments');
-      endpoints.push('/api/v1/shipments');
-      endpoints.push('/v1/shipments');
-      endpoints.push('/shipments');
+      // Se BASE_URL è il dominio base, usa percorso completo
+      endpoints.push('/api/v2/shipping/create');
     }
-    
+
     // Rimuovi duplicati mantenendo l'ordine
     return [...new Set(endpoints)];
   }
@@ -669,73 +677,121 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * ===========================================
    * METODO PRIVATO: MAPPATURA DATI
    * ===========================================
-   * 
-   * Mappa i dati interni (Shipment/CreateShipmentInput) al formato Spedisci.Online
+   *
+   * Mappa i dati interni (Shipment/CreateShipmentInput) al formato Spedisci.Online API v2
+   * Formato corretto da OpenAPI specification
    */
   private mapToSpedisciOnlineFormat(
     data: Shipment | CreateShipmentInput | any,
     contractCode?: string
   ): SpedisciOnlineShipmentPayload {
     // Normalizza dati da diverse fonti
-    const recipientName = 'recipient_name' in data 
-      ? data.recipient_name 
+    const recipientName = 'recipient_name' in data
+      ? data.recipient_name
       : data.destinatario?.nome || data.recipient?.nome || '';
-    
-    const recipientAddress = 'recipient_address' in data 
-      ? data.recipient_address 
+
+    const recipientCompany = data.destinatario?.azienda || data.recipient?.azienda || '';
+
+    const recipientAddress = 'recipient_address' in data
+      ? data.recipient_address
       : data.destinatario?.indirizzo || data.recipient?.indirizzo || '';
-    
-    const recipientCity = 'recipient_city' in data 
-      ? data.recipient_city 
+
+    const recipientCity = 'recipient_city' in data
+      ? data.recipient_city
       : data.destinatario?.citta || data.recipient?.citta || '';
-    
-    const recipientZip = 'recipient_zip' in data 
-      ? data.recipient_zip 
+
+    const recipientZip = 'recipient_zip' in data
+      ? data.recipient_zip
       : data.destinatario?.cap || data.recipient?.cap || '';
-    
-    const recipientProvince = 'recipient_province' in data 
-      ? data.recipient_province 
+
+    const recipientProvince = 'recipient_province' in data
+      ? data.recipient_province
       : data.destinatario?.provincia || data.recipient?.provincia || '';
-    
-    const weight = 'weight' in data ? data.weight : data.peso || 0;
+
+    const weight = 'weight' in data ? data.weight : data.peso || 1;
     const cashOnDelivery = 'cash_on_delivery' in data ? data.cash_on_delivery : false;
     const cashOnDeliveryAmount = 'cash_on_delivery_amount' in data ? data.cash_on_delivery_amount : 0;
     const notes = 'notes' in data ? data.notes : data.note || '';
     const recipientPhone = 'recipient_phone' in data ? data.recipient_phone : data.destinatario?.telefono || data.recipient?.telefono || '';
     const recipientEmail = 'recipient_email' in data ? data.recipient_email : data.destinatario?.email || data.recipient?.email || '';
     const senderName = 'sender_name' in data ? data.sender_name : data.mittente?.nome || data.sender?.nome || '';
-    const tracking = 'tracking_number' in data ? data.tracking_number : data.tracking || '';
-    const finalPrice = 'final_price' in data ? data.final_price : data.prezzoFinale || 0;
+    const senderCompany = data.mittente?.azienda || data.sender?.azienda || '';
+    const senderAddress = data.mittente?.indirizzo || data.sender?.indirizzo || 'Via Sender 1';
+    const senderCity = data.mittente?.citta || data.sender?.citta || 'Milano';
+    const senderZip = data.mittente?.cap || data.sender?.cap || '20100';
+    const senderProvince = data.mittente?.provincia || data.sender?.provincia || 'MI';
+    const senderPhone = data.mittente?.telefono || data.sender?.telefono || '';
+    const senderEmail = data.mittente?.email || data.sender?.email || '';
 
-    // Helper per formattare valori (virgola -> punto per decimali)
-    const formatValue = (value: any): string => {
-      if (value === null || value === undefined || value === '') return '';
-      if (typeof value === 'number') return String(value).replace(',', '.');
-      if (typeof value === 'string' && /^\d+,\d+$/.test(value)) {
-        return value.replace(',', '.');
+    // Estrai codice corriere dal contract code o dai dati
+    // Es: "postedeliverybusiness-Solution-and-Shipment" -> "poste"
+    // Es: "gls-NN6-STANDARD" -> "gls"
+    let carrierCode = data.corriere || data.courier_id || '';
+    if (contractCode) {
+      // Estrai carrier code dal contract code (prima parte prima del trattino)
+      const parts = contractCode.toLowerCase().split('-');
+      if (parts.length > 0) {
+        const firstPart = parts[0];
+        // Mappa carrier names comuni
+        if (firstPart.includes('poste')) carrierCode = 'poste';
+        else if (firstPart.includes('gls')) carrierCode = 'gls';
+        else if (firstPart.includes('brt')) carrierCode = 'brt';
+        else if (firstPart.includes('sda')) carrierCode = 'sda';
+        else if (firstPart.includes('ups')) carrierCode = 'ups';
+        else if (firstPart.includes('dhl')) carrierCode = 'dhl';
+        else carrierCode = firstPart;
       }
-      return String(value);
-    };
+    }
 
+    // Normalizza carrier code
+    carrierCode = carrierCode.toLowerCase().trim();
+    if (carrierCode === 'poste italiane' || carrierCode === 'posteitaliane') {
+      carrierCode = 'poste';
+    } else if (carrierCode === 'bartolini') {
+      carrierCode = 'brt';
+    }
+
+    // Formato payload corretto da OpenAPI v2
     return {
-      destinatario: recipientName,
-      indirizzo: recipientAddress,
-      cap: recipientZip,
-      localita: recipientCity,
-      provincia: recipientProvince.toUpperCase().slice(0, 2),
-      country: 'IT',
-      peso: formatValue(weight),
-      colli: '1', // Default 1 collo
-      contrassegno: cashOnDelivery ? formatValue(cashOnDeliveryAmount) : undefined,
-      rif_mittente: senderName,
-      rif_destinatario: recipientName,
-      note: notes,
-      telefono: recipientPhone,
-      email_destinatario: recipientEmail,
-      contenuto: '',
-      order_id: tracking,
-      totale_ordine: formatValue(finalPrice),
-      codice_contratto: contractCode, // Codice contratto completo (es: "gls-NN6-STANDARD-(TR-VE)")
+      carrierCode: carrierCode,
+      contractCode: contractCode || '',
+      packages: [
+        {
+          length: 1,
+          width: 1,
+          height: 1,
+          weight: Number(weight) || 1,
+        }
+      ],
+      shipFrom: {
+        name: senderName || 'Mittente',
+        company: senderCompany || undefined,
+        street1: senderAddress,
+        street2: '',
+        city: senderCity,
+        state: senderProvince.toUpperCase().slice(0, 2),
+        postalCode: senderZip,
+        country: 'IT',
+        phone: senderPhone || null,
+        email: senderEmail || undefined,
+      },
+      shipTo: {
+        name: recipientName,
+        company: recipientCompany || undefined,
+        street1: recipientAddress,
+        street2: '',
+        city: recipientCity,
+        state: recipientProvince.toUpperCase().slice(0, 2),
+        postalCode: recipientZip,
+        country: 'IT',
+        phone: recipientPhone || null,
+        email: recipientEmail || undefined,
+      },
+      notes: notes,
+      insuranceValue: 0,
+      codValue: cashOnDelivery ? Number(cashOnDeliveryAmount) || 0 : 0,
+      accessoriServices: [],
+      label_format: 'PDF',
     };
   }
 
