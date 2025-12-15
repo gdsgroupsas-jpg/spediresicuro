@@ -183,9 +183,19 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       };
     } catch (error) {
       console.error('Errore creazione spedizione spedisci.online:', error);
-      throw new Error(
-        `Errore creazione spedizione: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
-      );
+      
+      // Messaggio di errore più dettagliato
+      let errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      
+      // Verifica se è un errore di contratto mancante
+      const courier = (data.corriere || data.courier_id || '').toLowerCase().trim();
+      if (!this.CONTRACT_MAPPING || Object.keys(this.CONTRACT_MAPPING).length === 0) {
+        errorMessage = `Nessun contratto configurato. Configura i contratti nel wizard Spedisci.online.`;
+      } else if (courier && !this.findContractCode(data)) {
+        errorMessage = `Contratto non trovato per corriere "${courier}". Verifica il mapping contratti nel wizard Spedisci.online. Contratti disponibili: ${Object.keys(this.CONTRACT_MAPPING).join(', ')}`;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -481,8 +491,30 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     ).toLowerCase().trim();
 
     if (!courier || !this.CONTRACT_MAPPING || Object.keys(this.CONTRACT_MAPPING).length === 0) {
+      console.warn('⚠️ [SPEDISCI.ONLINE] Nessun contratto configurato o corriere mancante');
       return undefined;
     }
+
+    // Normalizza nomi corrieri comuni
+    const courierAliases: Record<string, string[]> = {
+      'poste': ['poste', 'poste italiane', 'posteitaliane', 'postedeliverybusiness', 'poste delivery business'],
+      'gls': ['gls'],
+      'brt': ['brt', 'bartolini'],
+      'sda': ['sda'],
+      'ups': ['ups'],
+      'dhl': ['dhl'],
+    };
+
+    // Trova il nome base del corriere
+    let normalizedCourier = courier;
+    for (const [baseName, aliases] of Object.entries(courierAliases)) {
+      if (aliases.some(alias => courier.includes(alias) || alias.includes(courier))) {
+        normalizedCourier = baseName;
+        break;
+      }
+    }
+
+    console.log(`🔍 [SPEDISCI.ONLINE] Cerca contratto per corriere: "${courier}" (normalizzato: "${normalizedCourier}")`);
 
     // Cerca un contratto che corrisponde al corriere
     // Il mapping può essere in due formati:
@@ -492,7 +524,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     // STRATEGIA 1: Cerca match esatto nel VALORE (nome corriere nel mapping)
     for (const [contractCode, courierName] of Object.entries(this.CONTRACT_MAPPING)) {
       const normalizedCourierName = String(courierName).toLowerCase().trim();
-      if (normalizedCourierName === courier) {
+      if (normalizedCourierName === courier || normalizedCourierName === normalizedCourier) {
         console.log(`✅ Codice contratto trovato per ${courier}: ${contractCode}`);
         return contractCode;
       }
@@ -501,7 +533,10 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     // STRATEGIA 2: Cerca match esatto nella CHIAVE (codice contratto che contiene il nome corriere)
     for (const [contractCode] of Object.entries(this.CONTRACT_MAPPING)) {
       const normalizedContractCode = contractCode.toLowerCase();
-      if (normalizedContractCode === courier || normalizedContractCode.startsWith(courier + '-')) {
+      if (normalizedContractCode === courier || 
+          normalizedContractCode === normalizedCourier ||
+          normalizedContractCode.startsWith(courier + '-') ||
+          normalizedContractCode.startsWith(normalizedCourier + '-')) {
         console.log(`✅ Codice contratto trovato (match chiave) per ${courier}: ${contractCode}`);
         return contractCode;
       }
@@ -511,12 +546,14 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     for (const [contractCode] of Object.entries(this.CONTRACT_MAPPING)) {
       const normalizedContractCode = contractCode.toLowerCase();
       // Cerca se il codice contratto inizia con il nome del corriere o lo contiene dopo un trattino
-      if (normalizedContractCode.includes(courier) && (
-        normalizedContractCode.startsWith(courier) ||
-        normalizedContractCode.includes('-' + courier + '-') ||
-        normalizedContractCode.endsWith('-' + courier)
-      )) {
-        console.log(`✅ Codice contratto trovato (parziale) per ${courier}: ${contractCode}`);
+      if (normalizedContractCode.includes(courier) || normalizedContractCode.includes(normalizedCourier)) {
+        if (normalizedContractCode.startsWith(courier) ||
+            normalizedContractCode.startsWith(normalizedCourier) ||
+            normalizedContractCode.includes('-' + courier + '-') ||
+            normalizedContractCode.includes('-' + normalizedCourier + '-') ||
+            normalizedContractCode.endsWith('-' + courier) ||
+            normalizedContractCode.endsWith('-' + normalizedCourier)) {
+          console.log(`✅ Codice contratto trovato (parziale) per ${courier}: ${contractCode}`);
         return contractCode;
       }
     }

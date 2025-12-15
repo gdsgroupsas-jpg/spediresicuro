@@ -514,11 +514,44 @@ export default function NuovaSpedizionePage() {
               console.log('   - ldvResult?.error:', ldvResult?.error);
               console.log('   - ldvResult?.method:', ldvResult?.method);
 
-              // ⚠️ MOSTRA ERRORE ALL'UTENTE - VERSIONE AGGRESSIVA (da local)
-              // Se c'è un errore nell'oggetto LDV, mostralo SEMPRE
+              // ⚠️ MOSTRA ERRORE ALL'UTENTE - MESSAGGIO MIGLIORATO
+              // Se c'è un errore nell'oggetto LDV, mostralo con dettagli utili
               const errorMsg = result.ldv?.error || result.ldv?.message;
+              const method = result.ldv?.method || 'sconosciuto';
+              
               if (errorMsg) {
-                alert(`⚠️ ERRORE POSTE/SDA:\n\n${errorMsg}\n\nÈ stato generato un ticket di riserva.`);
+                // Messaggio più specifico in base al metodo usato
+                let title = '⚠️ Errore Creazione LDV';
+                let details = errorMsg;
+                
+                if (method === 'broker') {
+                  title = '⚠️ Errore Spedisci.online';
+                  // Verifica se è un errore di contratto mancante
+                  if (errorMsg.toLowerCase().includes('contratto') || errorMsg.toLowerCase().includes('contract')) {
+                    details = `Contratto non configurato per ${body.corriere || 'questo corriere'}.\n\n` +
+                             `Configura il contratto nel wizard Spedisci.online:\n` +
+                             `1. Vai su Integrazioni\n` +
+                             `2. Apri il wizard Spedisci.online\n` +
+                             `3. Aggiungi il contratto per ${body.corriere || 'questo corriere'}\n\n` +
+                             `Errore tecnico: ${errorMsg}`;
+                  } else if (errorMsg.toLowerCase().includes('401') || errorMsg.toLowerCase().includes('unauthorized')) {
+                    details = `API Key non valida o scaduta.\n\n` +
+                             `Verifica le credenziali nel wizard Spedisci.online.\n\n` +
+                             `Errore tecnico: ${errorMsg}`;
+                  } else if (errorMsg.toLowerCase().includes('404') || errorMsg.toLowerCase().includes('not found')) {
+                    details = `Endpoint non trovato.\n\n` +
+                             `Verifica che il Base URL sia corretto nel wizard Spedisci.online.\n\n` +
+                             `Errore tecnico: ${errorMsg}`;
+                  } else {
+                    details = `Errore durante la creazione della spedizione tramite Spedisci.online.\n\n` +
+                             `Errore: ${errorMsg}\n\n` +
+                             `La spedizione è stata salvata localmente. Puoi provare a crearla manualmente dal pannello Spedisci.online.`;
+                  }
+                } else {
+                  details = `Errore: ${errorMsg}\n\nLa spedizione è stata salvata localmente.`;
+                }
+                
+                alert(`${title}\n\n${details}\n\nÈ stato generato un ticket di riserva (PDF locale).`);
               } else if (!result.ldv) {
                 // Caso raro: ldv null (errore server interno prima dell'orchestrator)
                 console.warn('Oggetto LDV mancante nella risposta');
