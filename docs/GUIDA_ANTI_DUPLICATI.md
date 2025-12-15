@@ -199,3 +199,4 @@ Prima di push su `master`:
 
 **Ultimo aggiornamento**: Gennaio 2025  
 **Versione**: 1.0.0
+
