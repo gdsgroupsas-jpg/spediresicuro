@@ -541,8 +541,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       
       // Match intelligente generico: se il corriere contiene parte del nome corriere nel mapping
       // Es: "GLS" trova "Gls", "GLS Express", ecc.
-      const courierWords = courier.split(/\s+/).filter(w => w.length > 2); // Parole significative
-      const courierNameWords = normalizedCourierName.split(/\s+/).filter(w => w.length > 2);
+      const courierWords = courier.split(/\s+/).filter((w: string) => w.length > 2); // Parole significative
+      const courierNameWords = normalizedCourierName.split(/\s+/).filter((w: string) => w.length > 2);
       
       // Se una parola significativa del corriere è nel nome corriere del mapping
       if (courierWords.some(word => normalizedCourierName.includes(word.toLowerCase())) ||
