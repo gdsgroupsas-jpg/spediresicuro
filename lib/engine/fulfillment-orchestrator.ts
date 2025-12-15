@@ -203,6 +203,9 @@ export class FulfillmentOrchestrator {
           message: error?.message,
           stack: error?.stack,
         });
+        
+        // Salva l'errore per passarlo al fallback
+        directError = error?.message || 'Errore durante la creazione tramite Spedisci.online';
         // Continua con fallback
       }
     } else {
