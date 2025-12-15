@@ -356,6 +356,101 @@ export async function savePersonalConfiguration(
 }
 
 /**
+ * Server Action: Elimina configurazione personale (per utenti non-admin)
+ * 
+ * Permette agli utenti di eliminare la propria configurazione personale.
+ * 
+ * @param id - ID configurazione da eliminare
+ * @returns Risultato operazione
+ */
+export async function deletePersonalConfiguration(
+  id: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  message?: string;
+}> {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    // Verifica che la configurazione esista e appartenga all'utente
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('id, name, provider_id, created_by, is_default')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    // Verifica che la configurazione appartenga all'utente corrente
+    if (config.created_by !== session.user.email) {
+      return {
+        success: false,
+        error: 'Non hai i permessi per eliminare questa configurazione',
+      };
+    }
+
+    // Non permettere eliminazione se è default
+    if (config.is_default) {
+      return {
+        success: false,
+        error: 'Impossibile eliminare la configurazione default. Imposta prima un\'altra configurazione come default.',
+      };
+    }
+
+    // Rimuovi assegnazione dall'utente se presente
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('id, assigned_config_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (userData?.assigned_config_id === id) {
+      await supabaseAdmin
+        .from('users')
+        .update({ assigned_config_id: null })
+        .eq('id', userData.id);
+    }
+
+    // Elimina configurazione
+    const { error: deleteError } = await supabaseAdmin
+      .from('courier_configs')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Errore eliminazione configurazione personale:', deleteError);
+      return {
+        success: false,
+        error: deleteError.message || 'Errore durante l\'eliminazione',
+      };
+    }
+
+    console.log(`✅ Configurazione personale eliminata:`, id);
+
+    return {
+      success: true,
+      message: 'Configurazione eliminata con successo',
+    };
+  } catch (error: any) {
+    console.error('Errore deletePersonalConfiguration:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'eliminazione',
+    };
+  }
+}
+
+/**
  * Server Action: Elimina configurazione
  * 
  * ⚠️ Verifica se la configurazione è in uso prima di eliminare
@@ -532,6 +627,89 @@ export async function updateConfigurationStatus(
     };
   } catch (error: any) {
     console.error('Errore updateConfigurationStatus:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante l\'aggiornamento',
+    };
+  }
+}
+
+/**
+ * Server Action: Imposta configurazione personale come default
+ * 
+ * Permette agli utenti di impostare la propria configurazione come default.
+ * 
+ * @param id - ID configurazione
+ * @returns Risultato operazione
+ */
+export async function setPersonalConfigurationAsDefault(
+  id: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  message?: string;
+}> {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    // Verifica che la configurazione esista e appartenga all'utente
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('id, name, provider_id, created_by')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    // Verifica che la configurazione appartenga all'utente corrente
+    if (config.created_by !== session.user.email) {
+      return {
+        success: false,
+        error: 'Non hai i permessi per modificare questa configurazione',
+      };
+    }
+
+    // Rimuovi default da altre configurazioni dello stesso provider
+    await supabaseAdmin
+      .from('courier_configs')
+      .update({ is_default: false })
+      .eq('provider_id', config.provider_id)
+      .neq('id', id);
+
+    // Imposta questa configurazione come default
+    const { error: updateError } = await supabaseAdmin
+      .from('courier_configs')
+      .update({
+        is_default: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Errore impostazione default:', updateError);
+      return {
+        success: false,
+        error: updateError.message || 'Errore durante l\'aggiornamento',
+      };
+    }
+
+    console.log(`✅ Configurazione impostata come default:`, id);
+
+    return {
+      success: true,
+      message: 'Configurazione impostata come default con successo',
+    };
+  } catch (error: any) {
+    console.error('Errore setPersonalConfigurationAsDefault:', error);
     return {
       success: false,
       error: error.message || 'Errore durante l\'aggiornamento',
