@@ -106,16 +106,26 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * 3. Fallback CSV locale (solo se tutto fallisce)
    */
   async createShipment(data: Shipment | CreateShipmentInput | any): Promise<ShippingLabel> {
-    console.log('🚀 [SPEDISCI.ONLINE] Inizio creazione spedizione...');
+    console.log('🚀 [SPEDISCI.ONLINE] ========================================');
+    console.log('🚀 [SPEDISCI.ONLINE] INIZIO CREAZIONE SPEDIZIONE');
+    console.log('🚀 [SPEDISCI.ONLINE] ========================================');
     console.log('🚀 [SPEDISCI.ONLINE] BASE_URL:', this.BASE_URL);
     console.log('🚀 [SPEDISCI.ONLINE] API_KEY presente:', !!this.API_KEY);
-    console.log('🚀 [SPEDISCI.ONLINE] CONTRACT_MAPPING:', Object.keys(this.CONTRACT_MAPPING || {}).length, 'contratti');
-    
+    console.log('🚀 [SPEDISCI.ONLINE] API_KEY lunghezza:', this.API_KEY?.length || 0);
+    console.log('🚀 [SPEDISCI.ONLINE] CONTRACT_MAPPING disponibili:', Object.keys(this.CONTRACT_MAPPING || {}).length);
+    console.log('🚀 [SPEDISCI.ONLINE] Contratti configurati:', JSON.stringify(this.CONTRACT_MAPPING, null, 2));
+
     try {
       // 1. Trova codice contratto basato sul corriere selezionato
-      console.log('🔍 [SPEDISCI.ONLINE] Cerco codice contratto per corriere:', data.corriere || data.courier_id || 'non trovato');
+      const corriereDaData = data.corriere || data.courier_id || 'NON TROVATO';
+      console.log('🔍 [SPEDISCI.ONLINE] ========================================');
+      console.log('🔍 [SPEDISCI.ONLINE] RICERCA CONTRATTO');
+      console.log('🔍 [SPEDISCI.ONLINE] ========================================');
+      console.log('🔍 [SPEDISCI.ONLINE] Corriere richiesto:', corriereDaData);
       const contractCode = this.findContractCode(data);
-      console.log('🔍 [SPEDISCI.ONLINE] Codice contratto trovato:', contractCode || 'NESSUNO');
+      console.log('🔍 [SPEDISCI.ONLINE] ========================================');
+      console.log('🔍 [SPEDISCI.ONLINE] RISULTATO: Codice contratto trovato:', contractCode || '❌ NESSUNO');
+      console.log('🔍 [SPEDISCI.ONLINE] ========================================');
       
       // 2. Mappatura Dati nel formato Spedisci.Online (include codice contratto)
       const payload = this.mapToSpedisciOnlineFormat(data, contractCode);
@@ -259,6 +269,18 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       console.log(`🔍 [SPEDISCI.ONLINE] Tentativo endpoint: ${url}`);
       
       try {
+        console.log('📡 [SPEDISCI.ONLINE] ========================================');
+        console.log('📡 [SPEDISCI.ONLINE] CHIAMATA API IN CORSO');
+        console.log('📡 [SPEDISCI.ONLINE] ========================================');
+        console.log('📡 [SPEDISCI.ONLINE] URL:', url);
+        console.log('📡 [SPEDISCI.ONLINE] Method: POST');
+        console.log('📡 [SPEDISCI.ONLINE] Headers:', {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.API_KEY.substring(0, 20)}...`,
+          'Accept': 'application/json',
+        });
+        console.log('📡 [SPEDISCI.ONLINE] Payload (JSON):', JSON.stringify(payload, null, 2));
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -269,12 +291,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           body: JSON.stringify(payload),
         });
 
-        console.log('📡 [SPEDISCI.ONLINE] Risposta ricevuta:', {
-          url,
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-        });
+        console.log('📡 [SPEDISCI.ONLINE] ========================================');
+        console.log('📡 [SPEDISCI.ONLINE] RISPOSTA API');
+        console.log('📡 [SPEDISCI.ONLINE] ========================================');
+        console.log('📡 [SPEDISCI.ONLINE] Status:', response.status, response.statusText);
+        console.log('📡 [SPEDISCI.ONLINE] OK:', response.ok);
+        console.log('📡 [SPEDISCI.ONLINE] Headers:', Object.fromEntries(response.headers.entries()));
 
         // Se la risposta è OK (200-299), abbiamo trovato l'endpoint corretto!
         if (response.ok) {
@@ -297,19 +319,28 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         // Se non è OK, salva l'errore e prova il prossimo endpoint
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         let errorBody = null;
-        
+
         try {
           errorBody = await response.json();
+          console.log('📡 [SPEDISCI.ONLINE] Body errore (JSON):', JSON.stringify(errorBody, null, 2));
           errorMessage = errorBody.message || errorBody.error || errorMessage;
         } catch {
           const textError = await response.text();
+          console.log('📡 [SPEDISCI.ONLINE] Body errore (Text):', textError);
           errorMessage = textError || errorMessage;
         }
-        
+
         // Se è un errore diverso da 404, potrebbe essere un problema di autenticazione o payload
         // In questo caso, fermiamo qui e restituiamo l'errore
         if (response.status !== 404) {
-          console.error(`❌ [SPEDISCI.ONLINE] Errore ${response.status} su ${url}:`, errorMessage);
+          console.error('❌ [SPEDISCI.ONLINE] ========================================');
+          console.error('❌ [SPEDISCI.ONLINE] ERRORE API');
+          console.error('❌ [SPEDISCI.ONLINE] ========================================');
+          console.error(`❌ [SPEDISCI.ONLINE] Status: ${response.status}`);
+          console.error(`❌ [SPEDISCI.ONLINE] URL: ${url}`);
+          console.error(`❌ [SPEDISCI.ONLINE] Errore: ${errorMessage}`);
+          console.error(`❌ [SPEDISCI.ONLINE] Body completo:`, errorBody);
+          console.error('❌ [SPEDISCI.ONLINE] ========================================');
           throw new Error(`Spedisci.Online Error (${response.status}): ${errorMessage}`);
         }
         
