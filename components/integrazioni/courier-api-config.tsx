@@ -393,6 +393,37 @@ export default function CourierAPIConfig() {
         </div>
       </div>
 
+      {/* Banner Wizard per Spedisci.Online - Solo Wizard, no form manuale */}
+      {selectedAPI === 'spedisci_online' && (
+        <div className={`mb-6 rounded-xl p-6 shadow-lg border ${hasExistingConfig
+            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-900'
+            : 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-400 text-white'
+          }`}>
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Zap className={`w-6 h-6 ${hasExistingConfig ? 'text-blue-600' : 'text-white'}`} />
+                {hasExistingConfig ? 'Aggiorna Configurazione Spedisci.Online' : 'Configurazione Guidata'}
+              </h3>
+              <p className={`font-medium ${hasExistingConfig ? 'opacity-90' : 'opacity-95'}`}>
+                {hasExistingConfig
+                  ? 'Usa il Wizard per aggiornare API Key e Base URL in modo sicuro.'
+                  : 'Configura il tuo account Spedisci.Online in pochi secondi con il nostro nuovo Wizard automatizzato.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowSpedisciOnlineWizard(true)}
+              className={`px-6 py-2.5 font-bold rounded-lg transition-colors shadow-md ${hasExistingConfig
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-white text-blue-900 hover:bg-blue-50'
+                }`}
+            >
+              {hasExistingConfig ? 'Apri Wizard' : 'Avvia Wizard'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Lista Configurazioni Esistenti per Spedisci.Online */}
       {selectedAPI === 'spedisci_online' && existingConfigs.filter(c => c.provider_id === 'spedisci_online' && c.is_active).length > 0 && (
         <div className="mb-6 bg-gray-50 rounded-xl border border-gray-200 p-4">
@@ -491,7 +522,8 @@ export default function CourierAPIConfig() {
       )}
 
       {/* Form Credenziali */}
-      {currentAPI && (
+      {/* ⚠️ Spedisci.online usa solo il wizard, non mostrare il form manuale */}
+      {currentAPI && selectedAPI !== 'spedisci_online' && (
         <div className="space-y-6">
 
           {/* Banner Wizard per Poste Italiane */}
@@ -525,36 +557,6 @@ export default function CourierAPIConfig() {
             </div>
           )}
 
-          {/* Banner Wizard per Spedisci.Online */}
-          {selectedAPI === 'spedisci_online' && (
-            <div className={`mb-6 rounded-xl p-6 shadow-lg border ${hasExistingConfig
-                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-900'
-                : 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-400 text-white'
-              }`}>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold flex items-center gap-2">
-                    <Zap className={`w-6 h-6 ${hasExistingConfig ? 'text-blue-600' : 'text-white'}`} />
-                    {hasExistingConfig ? 'Aggiorna Configurazione Spedisci.Online' : 'Configurazione Guidata'}
-                  </h3>
-                  <p className={`font-medium ${hasExistingConfig ? 'opacity-90' : 'opacity-95'}`}>
-                    {hasExistingConfig
-                      ? 'Usa il Wizard per aggiornare API Key e Base URL in modo sicuro.'
-                      : 'Configura il tuo account Spedisci.Online in pochi secondi con il nostro nuovo Wizard automatizzato.'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowSpedisciOnlineWizard(true)}
-                  className={`px-6 py-2.5 font-bold rounded-lg transition-colors shadow-md ${hasExistingConfig
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-white text-blue-900 hover:bg-blue-50'
-                    }`}
-                >
-                  {hasExistingConfig ? 'Apri Wizard' : 'Avvia Wizard'}
-                </button>
-              </div>
-            </div>
-          )}
 
           {hasExistingConfig && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
