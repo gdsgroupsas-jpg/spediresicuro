@@ -545,8 +545,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       const courierNameWords = normalizedCourierName.split(/\s+/).filter((w: string) => w.length > 2);
       
       // Se una parola significativa del corriere è nel nome corriere del mapping
-      if (courierWords.some(word => normalizedCourierName.includes(word.toLowerCase())) ||
-          courierNameWords.some(word => courier.includes(word.toLowerCase()))) {
+      if (courierWords.some((word: string) => normalizedCourierName.includes(word.toLowerCase())) ||
+          courierNameWords.some((word: string) => courier.includes(word.toLowerCase()))) {
         console.log(`✅ Codice contratto trovato (match parziale parole) per ${courier}: ${contractCode} (valore: ${courierName})`);
         return contractCode;
       }
