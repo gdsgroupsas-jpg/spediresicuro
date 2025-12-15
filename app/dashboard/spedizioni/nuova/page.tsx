@@ -500,9 +500,69 @@ export default function NuovaSpedizionePage() {
               'ldvResult?.method': ldvResult?.method
             });
 
-            if (ldvResult && ldvResult.success && ldvResult.label_url) {
-              console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
-              window.open(ldvResult.label_url, '_blank');
+            if (ldvResult && ldvResult.success && (ldvResult.label_url || ldvResult.label_pdf)) {
+              console.log('📄 [PDF] Gestione etichetta API...');
+              console.log('📄 [PDF] label_url:', ldvResult.label_url);
+              console.log('📄 [PDF] label_pdf:', ldvResult.label_pdf);
+
+              // PRIORITÀ 1: Se c'è label_url, aprila direttamente
+              if (ldvResult.label_url) {
+                console.log('📄 [PDF] Apertura etichetta da URL:', ldvResult.label_url);
+                window.open(ldvResult.label_url, '_blank');
+              }
+              // PRIORITÀ 2: Se c'è label_pdf come Buffer, convertilo e scaricalo
+              else if (ldvResult.label_pdf) {
+                console.log('📄 [PDF] Conversione Buffer in PDF...');
+                try {
+                  let pdfBlob: Blob;
+
+                  // Se è un Buffer serializzato da Node.js (formato {type: 'Buffer', data: [...]})
+                  if (ldvResult.label_pdf.type === 'Buffer' && Array.isArray(ldvResult.label_pdf.data)) {
+                    console.log('📄 [PDF] Buffer Node.js rilevato - conversione in Uint8Array...');
+                    const uint8Array = new Uint8Array(ldvResult.label_pdf.data);
+                    pdfBlob = new Blob([uint8Array], { type: 'application/pdf' });
+                  }
+                  // Se è già un Blob o ArrayBuffer
+                  else if (ldvResult.label_pdf instanceof Blob) {
+                    console.log('📄 [PDF] Blob già presente');
+                    pdfBlob = ldvResult.label_pdf;
+                  }
+                  // Se è una stringa Base64
+                  else if (typeof ldvResult.label_pdf === 'string') {
+                    console.log('📄 [PDF] String Base64 rilevata - decodifica...');
+                    const base64 = ldvResult.label_pdf.includes('base64,')
+                      ? ldvResult.label_pdf.split('base64,')[1]
+                      : ldvResult.label_pdf;
+                    const binaryString = atob(base64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                      bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+                  }
+                  else {
+                    throw new Error('Formato label_pdf non riconosciuto');
+                  }
+
+                  // Scarica il PDF
+                  const url = URL.createObjectURL(pdfBlob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `etichetta_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                  console.log('✅ [PDF] Etichetta scaricata con successo!');
+                } catch (pdfError) {
+                  console.error('❌ [PDF] Errore conversione PDF:', pdfError);
+                  alert('⚠️ Errore nel download dell\'etichetta. Verrà generato un PDF di riserva.');
+                  // Fallback al PDF interno
+                  const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+                  const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+                  downloadPDF(pdfDoc, filename);
+                }
+              }
             } else {
               // FALLBACK: Genera Ticket interno se non c'è etichetta reale
               console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
