@@ -23,6 +23,7 @@ import {
 import dynamic from 'next/dynamic'
 
 const PosteWizard = dynamic(() => import('./PosteWizard'))
+const SpedisciOnlineWizard = dynamic(() => import('./SpedisciOnlineWizard'))
 
 interface CourierAPI {
   id: string
@@ -137,6 +138,7 @@ const availableAPIs: CourierAPI[] = [
 export default function CourierAPIConfig() {
   const [selectedAPI, setSelectedAPI] = useState<string>('spedisci_online')
   const [showPosteWizard, setShowPosteWizard] = useState(false)
+  const [showSpedisciOnlineWizard, setShowSpedisciOnlineWizard] = useState(false)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [isSaving, setIsSaving] = useState(false)
@@ -353,6 +355,16 @@ export default function CourierAPIConfig() {
         />
       )}
 
+      {showSpedisciOnlineWizard && (
+        <SpedisciOnlineWizard
+          onClose={() => setShowSpedisciOnlineWizard(false)}
+          onSuccess={() => {
+            setShowSpedisciOnlineWizard(false)
+            loadConfigurations() // Reload to show new config
+          }}
+        />
+      )}
+
       {/* Selezione Corriere */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -421,6 +433,37 @@ export default function CourierAPIConfig() {
                 </div>
                 <button
                   onClick={() => setShowPosteWizard(true)}
+                  className={`px-6 py-2.5 font-bold rounded-lg transition-colors shadow-md ${hasExistingConfig
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-white text-blue-900 hover:bg-blue-50'
+                    }`}
+                >
+                  {hasExistingConfig ? 'Apri Wizard' : 'Avvia Wizard'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Banner Wizard per Spedisci.Online */}
+          {selectedAPI === 'spedisci_online' && (
+            <div className={`mb-6 rounded-xl p-6 shadow-lg border ${hasExistingConfig
+                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-900'
+                : 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-400 text-white'
+              }`}>
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Zap className={`w-6 h-6 ${hasExistingConfig ? 'text-blue-600' : 'text-white'}`} />
+                    {hasExistingConfig ? 'Aggiorna Configurazione Spedisci.Online' : 'Configurazione Guidata'}
+                  </h3>
+                  <p className={`font-medium ${hasExistingConfig ? 'opacity-90' : 'opacity-95'}`}>
+                    {hasExistingConfig
+                      ? 'Usa il Wizard per aggiornare API Key e Base URL in modo sicuro.'
+                      : 'Configura il tuo account Spedisci.Online in pochi secondi con il nostro nuovo Wizard automatizzato.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowSpedisciOnlineWizard(true)}
                   className={`px-6 py-2.5 font-bold rounded-lg transition-colors shadow-md ${hasExistingConfig
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-white text-blue-900 hover:bg-blue-50'

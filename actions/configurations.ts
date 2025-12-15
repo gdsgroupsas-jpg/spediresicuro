@@ -215,6 +215,141 @@ export async function saveConfiguration(
 }
 
 /**
+ * Server Action: Salva configurazione personale (per utenti non-admin)
+ * 
+ * Permette agli utenti di salvare la propria configurazione personale per Spedisci.Online.
+ * La configurazione viene automaticamente assegnata all'utente corrente.
+ * 
+ * @param data - Dati configurazione
+ * @returns Risultato operazione
+ */
+export async function savePersonalConfiguration(
+  data: Omit<CourierConfigInput, 'is_default'> & { is_default?: never }
+): Promise<{
+  success: boolean;
+  config?: CourierConfig;
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    // 2. Validazione input
+    if (!data.name || !data.provider_id || !data.api_key || !data.base_url) {
+      return {
+        success: false,
+        error: 'Campi obbligatori mancanti: name, provider_id, api_key, base_url',
+      };
+    }
+
+    // 3. Trova o crea configurazione personale per questo utente
+    const user = await findUserByEmail(session.user.email);
+    if (!user) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    // Cerca configurazione esistente per questo utente e provider
+    let existingConfigId: string | null = null;
+    if (user.assigned_config_id) {
+      const { data: existingConfig } = await supabaseAdmin
+        .from('courier_configs')
+        .select('id, created_by')
+        .eq('id', user.assigned_config_id)
+        .eq('provider_id', data.provider_id)
+        .single();
+      
+      if (existingConfig && existingConfig.created_by === session.user.email) {
+        existingConfigId = existingConfig.id;
+      }
+    }
+
+    // 4. Prepara dati per insert/update
+    // ⚠️ SICUREZZA: Cripta credenziali sensibili prima di salvare
+    const configData: any = {
+      name: data.name,
+      provider_id: data.provider_id,
+      api_key: isEncrypted(data.api_key) ? data.api_key : encryptCredential(data.api_key),
+      base_url: data.base_url,
+      contract_mapping: data.contract_mapping || {},
+      is_active: data.is_active ?? true,
+      is_default: false, // Mai default per configurazioni personali
+      description: data.description || null,
+      notes: data.notes || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Aggiungi api_secret se fornito (criptato)
+    if (data.api_secret) {
+      configData.api_secret = isEncrypted(data.api_secret) 
+        ? data.api_secret 
+        : encryptCredential(data.api_secret);
+    }
+
+    // 5. Esegui insert o update
+    let result;
+    if (existingConfigId) {
+      // Update configurazione esistente
+      const { data: updatedConfig, error: updateError } = await supabaseAdmin
+        .from('courier_configs')
+        .update(configData)
+        .eq('id', existingConfigId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Errore update configurazione personale:', updateError);
+        return {
+          success: false,
+          error: updateError.message || 'Errore durante l\'aggiornamento',
+        };
+      }
+
+      result = updatedConfig;
+    } else {
+      // Insert nuova configurazione personale
+      configData.created_by = session.user.email;
+      const { data: newConfig, error: insertError } = await supabaseAdmin
+        .from('courier_configs')
+        .insert(configData)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Errore inserimento configurazione personale:', insertError);
+        return {
+          success: false,
+          error: insertError.message || 'Errore durante la creazione',
+        };
+      }
+
+      result = newConfig;
+
+      // Assegna automaticamente la configurazione all'utente
+      await supabaseAdmin
+        .from('users')
+        .update({ assigned_config_id: result.id })
+        .eq('id', user.id);
+    }
+
+    console.log(`✅ Configurazione personale ${existingConfigId ? 'aggiornata' : 'creata'}:`, result.id);
+
+    return {
+      success: true,
+      config: result as CourierConfig,
+    };
+  } catch (error: any) {
+    console.error('Errore savePersonalConfiguration:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante il salvataggio',
+    };
+  }
+}
+
+/**
  * Server Action: Elimina configurazione
  * 
  * ⚠️ Verifica se la configurazione è in uso prima di eliminare
