@@ -246,18 +246,24 @@ export async function savePersonalConfiguration(
     }
 
     // 3. Trova o crea configurazione personale per questo utente
-    const user = await findUserByEmail(session.user.email);
-    if (!user) {
+    // Recupera user_id e assigned_config_id direttamente da Supabase
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, assigned_config_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (userError || !userData) {
       return { success: false, error: 'Utente non trovato' };
     }
 
     // Cerca configurazione esistente per questo utente e provider
     let existingConfigId: string | null = null;
-    if (user.assigned_config_id) {
+    if (userData.assigned_config_id) {
       const { data: existingConfig } = await supabaseAdmin
         .from('courier_configs')
         .select('id, created_by')
-        .eq('id', user.assigned_config_id)
+        .eq('id', userData.assigned_config_id)
         .eq('provider_id', data.provider_id)
         .single();
       
@@ -331,7 +337,7 @@ export async function savePersonalConfiguration(
       await supabaseAdmin
         .from('users')
         .update({ assigned_config_id: result.id })
-        .eq('id', user.id);
+        .eq('id', userData.id);
     }
 
     console.log(`✅ Configurazione personale ${existingConfigId ? 'aggiornata' : 'creata'}:`, result.id);
