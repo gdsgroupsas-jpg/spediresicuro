@@ -528,11 +528,12 @@ export default function NuovaSpedizionePage() {
                   title = '⚠️ Errore Spedisci.online';
                   // Verifica se è un errore di contratto mancante
                   if (errorMsg.toLowerCase().includes('contratto') || errorMsg.toLowerCase().includes('contract')) {
-                    details = `Contratto non configurato per ${body.corriere || 'questo corriere'}.\n\n` +
+                    const corriereName = formData.corriere || spedizioneData?.corriere || 'questo corriere';
+                    details = `Contratto non configurato per ${corriereName}.\n\n` +
                              `Configura il contratto nel wizard Spedisci.online:\n` +
                              `1. Vai su Integrazioni\n` +
                              `2. Apri il wizard Spedisci.online\n` +
-                             `3. Aggiungi il contratto per ${body.corriere || 'questo corriere'}\n\n` +
+                             `3. Aggiungi il contratto per ${corriereName}\n\n` +
                              `Errore tecnico: ${errorMsg}`;
                   } else if (errorMsg.toLowerCase().includes('401') || errorMsg.toLowerCase().includes('unauthorized')) {
                     details = `API Key non valida o scaduta.\n\n` +
