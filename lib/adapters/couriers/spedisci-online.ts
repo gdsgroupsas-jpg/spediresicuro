@@ -429,11 +429,13 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
   /**
    * ===========================================
-   * METODO PRIVATO: UPLOAD CSV (PRIORITÀ 2)
+   * METODO PRIVATO: UPLOAD CSV (DEPRECATO)
    * ===========================================
-   * 
-   * Prova automaticamente diversi endpoint per l'upload CSV
+   *
+   * ⚠️ DEPRECATO: Non più necessario con API v2 JSON
+   * Commentato per evitare errori di compilazione
    */
+  /*
   private async uploadCSV(csvContent: string): Promise<SpedisciOnlineResponse> {
     const formData = new FormData();
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
@@ -442,14 +444,14 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
     // Genera lista di endpoint per upload CSV
     const uploadEndpoints = this.generateUploadEndpointVariations();
-    
+
     let lastError: Error | null = null;
-    
+
     // Prova ogni endpoint fino a trovare uno che funziona
     for (const endpoint of uploadEndpoints) {
       const url = `${this.BASE_URL}${endpoint}`;
       console.log(`🔍 [SPEDISCI.ONLINE] Tentativo upload CSV su: ${url}`);
-      
+
       try {
         const response = await fetch(url, {
           method: 'POST',
@@ -469,12 +471,11 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         if (response.ok) {
           const result = await response.json();
           console.log('✅ [SPEDISCI.ONLINE] Upload CSV riuscito su:', url);
-          
+
           return {
             success: true,
-            tracking_number: result.tracking_number || this.generateTrackingNumber(),
-            label_url: result.label_url,
-            label_pdf: result.label_pdf,
+            trackingNumber: result.trackingNumber || this.generateTrackingNumber(),
+            labelData: result.labelData,
             message: result.message || 'CSV caricato con successo',
           };
         }
@@ -484,10 +485,10 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           const errorText = await response.text();
           throw new Error(`Upload CSV fallito (${response.status}): ${errorText}`);
         }
-        
+
         console.warn(`⚠️ [SPEDISCI.ONLINE] Endpoint upload ${url} restituisce 404, provo il prossimo...`);
         lastError = new Error(`Endpoint upload ${url} non trovato (404)`);
-        
+
       } catch (error: any) {
         if (error.message && !error.message.includes('404') && !error.message.includes('not found')) {
           throw error;
@@ -496,19 +497,22 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         console.warn(`⚠️ [SPEDISCI.ONLINE] Errore upload su ${url}:`, error.message);
       }
     }
-    
+
     // Se arriviamo qui, tutti gli endpoint hanno fallito
-    console.error('❌ [SPEDISCI.ONLINE] Tutti gli endpoint upload CSV hanno fallito');
+    console.error('❌ [SPEDISCI.ONLINE] Tutti gli endpoint upload CSV hanno falliti');
     throw lastError || new Error('Spedisci.Online: Nessun endpoint upload CSV valido trovato');
   }
+  */
 
   /**
    * Genera variazioni di endpoint per upload CSV
+   * ⚠️ DEPRECATO: Non più necessario con API v2 JSON
    */
+  /*
   private generateUploadEndpointVariations(): string[] {
     const baseUrl = this.BASE_URL;
     const endpoints: string[] = [];
-    
+
     if (baseUrl.includes('/api/v2')) {
       endpoints.push('/api/v2/shipments/upload');
       endpoints.push('/api/v2/v1/shipments/upload');
@@ -525,9 +529,10 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       endpoints.push('/v1/shipments/upload');
       endpoints.push('/shipments/upload');
     }
-    
+
     return [...new Set(endpoints)];
   }
+  */
 
   /**
    * Trova il codice contratto basato sul corriere selezionato
@@ -797,10 +802,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
   /**
    * Genera CSV nel formato spedisci.online (solo per fallback)
+   * ⚠️ DEPRECATO: Non più necessario con API v2 JSON che usa payload strutturato
    */
+  /*
   private generateCSV(payload: SpedisciOnlineShipmentPayload): string {
     const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
-    
+
     // Helper per escape CSV
     const escapeCSV = (value: string | undefined): string => {
       if (!value) return '';
@@ -811,27 +818,28 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     };
 
     const row = [
-      escapeCSV(payload.destinatario),
-      escapeCSV(payload.indirizzo),
-      payload.cap,
-      escapeCSV(payload.localita),
-      payload.provincia,
-      payload.country,
-      payload.peso,
-      payload.colli,
-      payload.contrassegno || '',
-      escapeCSV(payload.rif_mittente || ''),
-      escapeCSV(payload.rif_destinatario || ''),
-      escapeCSV(payload.note || ''),
-      payload.telefono || '',
-      payload.email_destinatario || '',
-      escapeCSV(payload.contenuto || ''),
-      escapeCSV(payload.order_id || ''),
-      payload.totale_ordine || '',
+      escapeCSV(payload.shipTo.name),
+      escapeCSV(payload.shipTo.street1),
+      payload.shipTo.postalCode,
+      escapeCSV(payload.shipTo.city),
+      payload.shipTo.state,
+      payload.shipTo.country,
+      payload.packages[0]?.weight || 1,
+      payload.packages.length,
+      payload.codValue || '',
+      escapeCSV(payload.shipFrom.name || ''),
+      escapeCSV(payload.shipTo.name || ''),
+      escapeCSV(payload.notes || ''),
+      payload.shipTo.phone || '',
+      payload.shipTo.email || '',
+      escapeCSV(''),
+      escapeCSV(''),
+      '',
     ].join(';') + ';';
 
     return header + '\n' + row;
   }
+  */
 
   /**
    * Estrae tracking number dai dati
