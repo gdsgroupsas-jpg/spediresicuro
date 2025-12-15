@@ -106,32 +106,51 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
             await new Promise(resolve => setTimeout(resolve, 500))
 
             // Parse contract_mapping se presente
-            // Supporta formato tabella: "Codice Contratto - Corriere" (come nello screenshot)
+            // Supporta formato tabella: "Codice Contratto - Corriere" (dalla dashboard Spedisci.online)
             let contractMappingObj: Record<string, string> = {}
             if (formData.contractMapping.trim()) {
                 try {
                     // Prova prima come JSON
                     contractMappingObj = JSON.parse(formData.contractMapping)
                 } catch {
-                    // Se non è JSON, parsa formato tabella (come nello screenshot)
-                    // Formato supportato:
-                    // - "interno-Interno" -> Interno
-                    // - "postedeliverybusiness-Solution-and-Shipment" -> PosteDeliveryBusiness
-                    // - "ups-UPS5-INTERNAZIONALE-(F)-[CM14]" -> UPS
+                    // Se non è JSON, parsa formato tabella (come nella dashboard Spedisci.online)
+                    // Formato supportato (copia e incolla dalla tabella Spedisci.online):
+                    // "postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness"
+                    // "interno-Interno Interno"
+                    // "ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS"
+                    //
+                    // IMPORTANTE: Usa SPAZI MULTIPLI o TAB per separare codice contratto e nome corriere
+                    // NON usare il trattino finale come separatore (fa parte del codice contratto)
                     const lines = formData.contractMapping.split('\n').filter(l => l.trim())
                     lines.forEach(line => {
                         const trimmed = line.trim()
                         if (!trimmed) return
-                        
-                        // Supporta separatori: "-", ":", "\t" o spazi multipli
-                        // Prende tutto prima dell'ultimo separatore come codice contratto
-                        // e l'ultima parte come corriere
-                        const parts = trimmed.split(/[-:\t]+/).map(p => p.trim()).filter(p => p)
+
+                        // Split per spazi multipli o tab (separatore tra codice e corriere)
+                        // Esempio: "postedeliverybusiness-Solution-and-Shipment   PosteDeliveryBusiness"
+                        //          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^
+                        //          Codice Contratto (può contenere -)               Nome Corriere
+                        const parts = trimmed.split(/\s{2,}|\t+/).map(p => p.trim()).filter(p => p)
+
                         if (parts.length >= 2) {
-                            // Il codice contratto è tutto tranne l'ultimo elemento
-                            const contractCode = parts.slice(0, -1).join('-')
+                            // Primo elemento = codice contratto completo
+                            // Ultimo elemento = nome corriere
+                            const contractCode = parts[0]
                             const courier = parts[parts.length - 1]
                             contractMappingObj[contractCode] = courier
+                            console.log(`📝 Contratto mappato: "${contractCode}" -> "${courier}"`)
+                        } else if (parts.length === 1) {
+                            // Se c'è una sola parte, prova a dividere per spazio singolo (fallback)
+                            // Cerca l'ultimo spazio come separatore
+                            const lastSpaceIndex = trimmed.lastIndexOf(' ')
+                            if (lastSpaceIndex > 0) {
+                                const contractCode = trimmed.substring(0, lastSpaceIndex).trim()
+                                const courier = trimmed.substring(lastSpaceIndex + 1).trim()
+                                if (contractCode && courier) {
+                                    contractMappingObj[contractCode] = courier
+                                    console.log(`📝 Contratto mappato (fallback): "${contractCode}" -> "${courier}"`)
+                                }
+                            }
                         }
                     })
                 }
@@ -325,25 +344,27 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                                     <textarea
                                         value={formData.contractMapping}
                                         onChange={e => setFormData(prev => ({ ...prev, contractMapping: e.target.value }))}
-                                        placeholder={`codicecontratto1-Corriere1
-codicecontratto2-Corriere2
-codicecontratto3-Corriere3`}
+                                        placeholder={`postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness
+interno-Interno Interno
+ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS`}
                                         rows={6}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                                     />
                                     <div className="mt-2 space-y-2">
                                         <p className="text-xs text-gray-500">
-                                            <strong>📋 Copia dalla tabella &quot;Contratti&quot; del tuo pannello Spedisci.Online:</strong>
+                                            <strong>📋 Formato richiesto:</strong> Inserisci una riga per contratto, separando <strong>Codice Contratto</strong> e <strong>Corriere</strong> con uno <strong>SPAZIO</strong>
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            Formato: <strong>Codice Contratto - Corriere</strong> (una riga per contratto)<br />
-                                            Esempi:<br />
-                                            <code className="bg-gray-100 px-1 rounded block mt-1">codicecontratto1-Corriere1</code>
-                                            <code className="bg-gray-100 px-1 rounded block">codicecontratto2-Corriere2</code>
-                                            <code className="bg-gray-100 px-1 rounded block">codicecontratto3-Corriere3</code>
+                                            <strong>Esempi corretti:</strong><br />
+                                            <code className="bg-gray-100 px-1 rounded block mt-1">postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness</code>
+                                            <code className="bg-gray-100 px-1 rounded block">interno-Interno Interno</code>
+                                            <code className="bg-gray-100 px-1 rounded block">ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS</code>
                                         </p>
                                         <p className="text-xs text-blue-600 mt-2">
-                                            💡 <strong>Suggerimento:</strong> Copia direttamente dalla colonna &quot;Codice Contratto&quot; e &quot;Corriere&quot; della tabella nel tuo pannello, separati da un trattino.
+                                            💡 <strong>Suggerimento:</strong> Vai su Spedisci.Online → Contratti. Copia il <strong>Codice Contratto</strong> dalla tabella, aggiungi uno spazio, poi copia il <strong>Corriere</strong>. Una riga per contratto.
+                                        </p>
+                                        <p className="text-xs text-orange-600 mt-2 font-semibold">
+                                            ⚠️ <strong>IMPORTANTE:</strong> Usa SPAZIO per separare codice e corriere, NON il trattino (il trattino fa parte del codice contratto).
                                         </p>
                                     </div>
                                 </div>
