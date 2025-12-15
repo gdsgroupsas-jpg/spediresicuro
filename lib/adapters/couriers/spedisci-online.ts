@@ -301,17 +301,30 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         // Se la risposta è OK (200-299), abbiamo trovato l'endpoint corretto!
         if (response.ok) {
           const result = await response.json();
-          console.log('✅ [SPEDISCI.ONLINE] Endpoint corretto trovato!', url);
-          console.log('✅ [SPEDISCI.ONLINE] Risposta API successo:', {
-            has_tracking: !!result.tracking_number,
-            has_label: !!result.label_pdf,
-          });
-          
+          console.log('✅ [SPEDISCI.ONLINE] ========================================');
+          console.log('✅ [SPEDISCI.ONLINE] ENDPOINT CORRETTO TROVATO!');
+          console.log('✅ [SPEDISCI.ONLINE] ========================================');
+          console.log('✅ [SPEDISCI.ONLINE] URL:', url);
+          console.log('✅ [SPEDISCI.ONLINE] RISPOSTA COMPLETA (INTERO OGGETTO):');
+          console.log(JSON.stringify(result, null, 2));
+          console.log('✅ [SPEDISCI.ONLINE] ========================================');
+          console.log('✅ [SPEDISCI.ONLINE] Analisi campi:');
+          console.log('  - result.tracking_number:', result.tracking_number);
+          console.log('  - result.tracking:', result.tracking);
+          console.log('  - result.label_url:', result.label_url);
+          console.log('  - result.label_pdf_url:', result.label_pdf_url);
+          console.log('  - result.label_pdf:', result.label_pdf ? `(${result.label_pdf.length} caratteri)` : 'UNDEFINED');
+          console.log('  - result.pdf:', result.pdf ? `(${result.pdf.length} caratteri)` : 'undefined');
+          console.log('  - result.waybill:', result.waybill);
+          console.log('  - result.message:', result.message);
+          console.log('  - Tutte le chiavi:', Object.keys(result));
+          console.log('✅ [SPEDISCI.ONLINE] ========================================');
+
           return {
             success: true,
-            tracking_number: result.tracking_number || result.tracking || this.generateTrackingNumber(),
-            label_url: result.label_url || result.label_pdf_url,
-            label_pdf: result.label_pdf, // Base64 encoded
+            tracking_number: result.tracking_number || result.tracking || result.waybill || this.generateTrackingNumber(),
+            label_url: result.label_url || result.label_pdf_url || result.pdf_url,
+            label_pdf: result.label_pdf || result.pdf, // Base64 encoded - prova anche "pdf"
             message: result.message || 'LDV creata con successo',
           };
         }

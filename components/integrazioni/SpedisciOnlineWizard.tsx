@@ -344,9 +344,9 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                                     <textarea
                                         value={formData.contractMapping}
                                         onChange={e => setFormData(prev => ({ ...prev, contractMapping: e.target.value }))}
-                                        placeholder={`postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness
-interno-Interno Interno
-ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS`}
+                                        placeholder={`tuocodice-contratto-poste NomeCorrierePoste
+tuocodice-contratto-gls GLS
+tuocodice-contratto-ups UPS`}
                                         rows={6}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                                     />
@@ -355,10 +355,10 @@ ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS`}
                                             <strong>📋 Formato richiesto:</strong> Inserisci una riga per contratto, separando <strong>Codice Contratto</strong> e <strong>Corriere</strong> con uno <strong>SPAZIO</strong>
                                         </p>
                                         <p className="text-xs text-gray-400">
-                                            <strong>Esempi corretti:</strong><br />
-                                            <code className="bg-gray-100 px-1 rounded block mt-1">postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness</code>
-                                            <code className="bg-gray-100 px-1 rounded block">interno-Interno Interno</code>
-                                            <code className="bg-gray-100 px-1 rounded block">ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS</code>
+                                            <strong>Esempi (usa i TUOI codici dalla dashboard Spedisci.online):</strong><br />
+                                            <code className="bg-gray-100 px-1 rounded block mt-1">tuocodice-ABC-123 NomeCorrePosteTuoAccount</code>
+                                            <code className="bg-gray-100 px-1 rounded block">tuocodice-GLS-456 GLS</code>
+                                            <code className="bg-gray-100 px-1 rounded block">tuocodice-UPS-789 UPS</code>
                                         </p>
                                         <p className="text-xs text-blue-600 mt-2">
                                             💡 <strong>Suggerimento:</strong> Vai su Spedisci.Online → Contratti. Copia il <strong>Codice Contratto</strong> dalla tabella, aggiungi uno spazio, poi copia il <strong>Corriere</strong>. Una riga per contratto.
