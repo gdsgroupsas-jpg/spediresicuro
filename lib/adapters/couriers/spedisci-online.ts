@@ -554,7 +554,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
             normalizedContractCode.endsWith('-' + courier) ||
             normalizedContractCode.endsWith('-' + normalizedCourier)) {
           console.log(`✅ Codice contratto trovato (parziale) per ${courier}: ${contractCode}`);
-        return contractCode;
+          return contractCode;
+        }
       }
     }
 
