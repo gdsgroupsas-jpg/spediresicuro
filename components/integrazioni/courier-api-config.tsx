@@ -18,7 +18,10 @@ import {
   Copy,
   Eye,
   EyeOff,
-  Zap
+  Zap,
+  Trash2,
+  Star,
+  StarOff
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -54,14 +57,14 @@ const availableAPIs: CourierAPI[] = [
         key: 'dominio',
         label: 'Dominio',
         type: 'text',
-        placeholder: 'ecommerceitalia.spedisci.online',
+        placeholder: 'tuodominio.spedisci.online',
         required: true
       },
       {
         key: 'base_url',
         label: 'Endpoint (Base URL)',
         type: 'url',
-        placeholder: 'https://ecommerceitalia.spedisci.online/api/v2/',
+        placeholder: 'https://tuodominio.spedisci.online/api/v2/',
         required: true
       },
       {
@@ -390,6 +393,84 @@ export default function CourierAPIConfig() {
         </div>
       </div>
 
+      {/* Lista Configurazioni Esistenti per Spedisci.Online */}
+      {selectedAPI === 'spedisci_online' && existingConfigs.filter(c => c.provider_id === 'spedisci_online' && c.is_active).length > 0 && (
+        <div className="mb-6 bg-gray-50 rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Configurazioni Spedisci.Online</h3>
+          <div className="space-y-2">
+            {existingConfigs
+              .filter(c => c.provider_id === 'spedisci_online' && c.is_active)
+              .map((config) => (
+                <div key={config.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-3 flex-1">
+                    {config.is_default && (
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{config.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{config.base_url || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!config.is_default && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm('Impostare questa configurazione come default?')) return
+                          try {
+                            const { setPersonalConfigurationAsDefault } = await import('@/actions/configurations')
+                            const result = await setPersonalConfigurationAsDefault(config.id)
+                            if (result.success) {
+                              await loadConfigurations()
+                              setResult({ success: true, message: 'Configurazione impostata come default' })
+                              setTimeout(() => setResult(null), 3000)
+                            } else {
+                              setResult({ success: false, error: result.error || 'Errore' })
+                              setTimeout(() => setResult(null), 3000)
+                            }
+                          } catch (error: any) {
+                            setResult({ success: false, error: error.message || 'Errore' })
+                            setTimeout(() => setResult(null), 3000)
+                          }
+                        }}
+                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                        title="Imposta come default"
+                      >
+                        <StarOff className="w-4 h-4 text-gray-400" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm('Sei sicuro di voler eliminare questa configurazione?')) return
+                        try {
+                          const { deletePersonalConfiguration } = await import('@/actions/configurations')
+                          const result = await deletePersonalConfiguration(config.id)
+                          if (result.success) {
+                            await loadConfigurations()
+                            setResult({ success: true, message: 'Configurazione eliminata' })
+                            setTimeout(() => setResult(null), 3000)
+                          } else {
+                            setResult({ success: false, error: result.error || 'Errore' })
+                            setTimeout(() => setResult(null), 3000)
+                          }
+                        } catch (error: any) {
+                          setResult({ success: false, error: error.message || 'Errore' })
+                          setTimeout(() => setResult(null), 3000)
+                        }
+                      }}
+                      className="p-1.5 hover:bg-red-50 rounded transition-colors text-red-600"
+                      title="Elimina configurazione"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {result && (
         <div className={`mb-6 p-4 rounded-xl border ${result.success
           ? 'bg-green-50 border-green-200 text-green-800'
@@ -560,12 +641,12 @@ export default function CourierAPIConfig() {
               )}
               {field.key === 'dominio' && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Esempio: ecommerceitalia.spedisci.online
+                  Esempio: tuodominio.spedisci.online
                 </p>
               )}
               {field.key === 'base_url' && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Esempio: https://ecommerceitalia.spedisci.online/api/v2/
+                  Esempio: https://tuodominio.spedisci.online/api/v2/
                 </p>
               )}
             </div>
