@@ -27,7 +27,7 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
     const [step, setStep] = useState<WizardStep>('welcome')
     const [formData, setFormData] = useState({
         apiKey: '',
-        dominio: '', // Es: ecommerceitalia.spedisci.online
+        dominio: '', // Es: tuodominio.spedisci.online
         baseUrl: '', // Generato automaticamente da dominio
         contractMapping: '' // Formato: "codicecontratto-Corriere" (una riga per contratto)
     })
@@ -172,8 +172,8 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-300 my-auto">
 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 flex justify-between items-start">
@@ -192,7 +192,7 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                 </div>
 
                 {/* Content */}
-                <div className="p-8 min-h-[400px] flex flex-col">
+                <div className="p-8 min-h-[400px] flex flex-col overflow-y-auto flex-1">
 
                     {step === 'welcome' && (
                         <div className="space-y-6 flex-1 flex flex-col justify-center">
@@ -267,12 +267,12 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                                                 : ''
                                             setFormData(prev => ({ ...prev, dominio, baseUrl }))
                                         }}
-                                        placeholder="ecommerceitalia.spedisci.online"
+                                        placeholder="tuodominio.spedisci.online"
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                                         autoFocus
                                     />
                                     <p className="text-xs text-gray-400 mt-1">
-                                        Il tuo dominio Spedisci.Online (es: <code className="bg-gray-100 px-1 rounded">ecommerceitalia.spedisci.online</code>). L&apos;Endpoint verrà generato automaticamente.
+                                        Il tuo dominio Spedisci.Online (es: <code className="bg-gray-100 px-1 rounded">tuodominio.spedisci.online</code>). L&apos;Endpoint verrà generato automaticamente.
                                     </p>
                                 </div>
 
@@ -325,9 +325,9 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                                     <textarea
                                         value={formData.contractMapping}
                                         onChange={e => setFormData(prev => ({ ...prev, contractMapping: e.target.value }))}
-                                        placeholder={`interno-Interno
-postedeliverybusiness-Solution-and-Shipment-PosteDeliveryBusiness
-ups-UPS5-INTERNAZIONALE-(F)-[CM14]-UPS`}
+                                        placeholder={`codicecontratto1-Corriere1
+codicecontratto2-Corriere2
+codicecontratto3-Corriere3`}
                                         rows={6}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                                     />
@@ -338,9 +338,9 @@ ups-UPS5-INTERNAZIONALE-(F)-[CM14]-UPS`}
                                         <p className="text-xs text-gray-400">
                                             Formato: <strong>Codice Contratto - Corriere</strong> (una riga per contratto)<br />
                                             Esempi:<br />
-                                            <code className="bg-gray-100 px-1 rounded block mt-1">interno-Interno</code>
-                                            <code className="bg-gray-100 px-1 rounded block">postedeliverybusiness-Solution-and-Shipment-PosteDeliveryBusiness</code>
-                                            <code className="bg-gray-100 px-1 rounded block">ups-UPS5-INTERNAZIONALE-(F)-[CM14]-UPS</code>
+                                            <code className="bg-gray-100 px-1 rounded block mt-1">codicecontratto1-Corriere1</code>
+                                            <code className="bg-gray-100 px-1 rounded block">codicecontratto2-Corriere2</code>
+                                            <code className="bg-gray-100 px-1 rounded block">codicecontratto3-Corriere3</code>
                                         </p>
                                         <p className="text-xs text-blue-600 mt-2">
                                             💡 <strong>Suggerimento:</strong> Copia direttamente dalla colonna &quot;Codice Contratto&quot; e &quot;Corriere&quot; della tabella nel tuo pannello, separati da un trattino.
@@ -393,7 +393,7 @@ ups-UPS5-INTERNAZIONALE-(F)-[CM14]-UPS`}
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center flex-shrink-0 sticky bottom-0">
                     {step !== 'success' && step !== 'testing' && (
                         <button
                             onClick={onClose}
