@@ -688,13 +688,27 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       : data.destinatario?.provincia || data.recipient?.provincia || '';
     
     const weight = 'weight' in data ? data.weight : data.peso || 0;
-    const cashOnDelivery = 'cash_on_delivery' in data ? data.cash_on_delivery : 
-                          'contrassegno' in data ? (data.contrassegno === true || data.contrassegno === 'true') : false;
-    const cashOnDeliveryAmount = 'cash_on_delivery_amount' in data ? data.cash_on_delivery_amount : 
-                                'contrassegnoAmount' in data ? parseFloat(data.contrassegnoAmount) || 0 :
-                                'contrassegno' in data && typeof data.contrassegno === 'number' ? data.contrassegno : 0;
+    
+    // Determina importo COD leggendo in ordine: codValue -> contrassegnoAmount -> cash_on_delivery_amount -> contrassegno (se numero)
+    let codAmount = 0;
+    if ('codValue' in data && data.codValue != null) {
+      codAmount = Number(data.codValue) || 0;
+    } else if ('contrassegnoAmount' in data && data.contrassegnoAmount != null) {
+      codAmount = parseFloat(String(data.contrassegnoAmount)) || 0;
+    } else if ('cash_on_delivery_amount' in data && data.cash_on_delivery_amount != null) {
+      codAmount = Number(data.cash_on_delivery_amount) || 0;
+    } else if ('contrassegno' in data && typeof data.contrassegno === 'number') {
+      codAmount = Number(data.contrassegno) || 0;
+    } else if ('cash_on_delivery' in data && data.cash_on_delivery === true) {
+      // Se cash_on_delivery è true ma non c'è importo, usa 0
+      codAmount = 0;
+    }
+    
+    // cashOnDelivery è true se l'importo COD > 0
+    const cashOnDelivery = codAmount > 0;
+    
     // codValue: REQUIRED, sempre presente (0 se non attivo, importo se attivo)
-    const codValue = cashOnDelivery && cashOnDeliveryAmount > 0 ? Number(cashOnDeliveryAmount) : 0;
+    const codValue = cashOnDelivery ? Number(codAmount) : 0;
     
     // insuranceValue: REQUIRED, sempre presente (0 se non presente)
     const insuranceValue = 'declared_value' in data && data.declared_value 
