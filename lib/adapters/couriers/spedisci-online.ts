@@ -113,22 +113,10 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       throw new Error('Spedisci.Online: API Key mancante per la creazione LDV.');
     }
     
-    // HARD FAIL GUARD: Verifica che la key NON sia un token demo/legacy
-    const expectedPrefix = 'c6HE'; // Prefix atteso per la key corretta
-    const knownInvalidPrefixes = ['8ZZm', 'qCL7', 'demo', 'test', 'example'];
+    // FIX: Trim API key prima di usarla
+    const trimmedApiKey = credentials.api_key.trim();
     
-    const apiKeyPrefix = credentials.api_key?.substring(0, 4) || '';
-    const isInvalidPrefix = knownInvalidPrefixes.some(prefix => 
-      apiKeyPrefix.toLowerCase().startsWith(prefix.toLowerCase())
-    );
-    
-    if (isInvalidPrefix) {
-      console.error('❌ [SPEDISCI.ONLINE] API Key mismatch - using invalid or legacy token');
-      console.error(`❌ [SPEDISCI.ONLINE] Key prefix: "${apiKeyPrefix}" (expected: "${expectedPrefix}")`);
-      throw new Error(`Spedisci.Online API key mismatch – using invalid or legacy token. Key starts with "${apiKeyPrefix}" but expected "${expectedPrefix}". Please update the configuration in /dashboard/admin/configurations`);
-    }
-    
-    // Guard aggiuntiva: Verifica che non sia un token demo/example (pattern matching)
+    // Guard: Verifica che non sia un token demo/example + min length
     const knownDemoTokens = [
       'qCL7FN2RKFQDngWb6kJ7',
       '8ZZmDdwA',
@@ -137,40 +125,35 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       'test',
     ];
     
-    const apiKeyLower = credentials.api_key.toLowerCase();
+    const apiKeyLower = trimmedApiKey.toLowerCase();
     const isDemoToken = knownDemoTokens.some(demo => 
       apiKeyLower.includes(demo.toLowerCase()) || 
-      credentials.api_key.startsWith(demo)
+      trimmedApiKey.startsWith(demo)
     );
     
     if (isDemoToken) {
       throw new Error('Spedisci.Online API key not configured correctly (using demo token). Please configure a valid API key in /dashboard/integrazioni');
     }
     
+    // Min length check
+    if (trimmedApiKey.length < 10) {
+      throw new Error('Spedisci.Online API key too short. Please configure a valid API key in /dashboard/integrazioni');
+    }
+    
     // Genera fingerprint SHA256 della key per log production-safe
     const crypto = require('crypto');
-    const keyFingerprint = credentials.api_key 
-      ? crypto.createHash('sha256').update(credentials.api_key).digest('hex').substring(0, 8)
+    const keyFingerprint = trimmedApiKey 
+      ? crypto.createHash('sha256').update(trimmedApiKey).digest('hex').substring(0, 8)
       : 'N/A';
     
     // Log production-safe: sempre (dev + production)
     console.log(`🔑 [SPEDISCI.ONLINE] API Key loaded:`, {
       apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
-      apiKeyLength: credentials.api_key.length,
+      apiKeyLength: trimmedApiKey.length,
       baseUrl: credentials.base_url || 'default',
     });
     
-    // TEMP log: solo in dev (NODE_ENV !== production) - primi 4 caratteri
-    if (process.env.NODE_ENV !== 'production') {
-      const keyPreview = credentials.api_key.length > 4 
-        ? `${credentials.api_key.substring(0, 4)}***` 
-        : '****';
-      const expectedPrefix = 'c6HE';
-      console.log(`🔑 [SPEDISCI.ONLINE] TEMP Dev preview (first 4 chars): ${keyPreview}`);
-      console.log(`🔑 [SPEDISCI.ONLINE] Expected prefix: ${expectedPrefix}, Match: ${keyPreview.startsWith(expectedPrefix)}`);
-    }
-    
-    this.API_KEY = credentials.api_key;
+    this.API_KEY = trimmedApiKey; // Usa la key trimmed
     // Normalizza BASE_URL: mantieni trailing slash se presente (serve per new URL())
     // Esempio: https://demo1.spedisci.online/api/v2/ -> mantieni slash finale
     const baseUrl = credentials.base_url || 'https://api.spedisci.online/api/v2';
@@ -365,80 +348,124 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     const baseUrlNormalized = this.BASE_URL.endsWith('/') ? this.BASE_URL : `${this.BASE_URL}/`;
     const url = new URL('shipping/create', baseUrlNormalized).toString();
     
-    // Log sicuro (NON loggare Authorization)
-    console.log('📡 [SPEDISCI.ONLINE] ========================================');
-    console.log('📡 [SPEDISCI.ONLINE] CHIAMATA API OPENAPI');
-    console.log('📡 [SPEDISCI.ONLINE] ========================================');
-    console.log('📡 [SPEDISCI.ONLINE] URL:', url);
-    console.log('📡 [SPEDISCI.ONLINE] Method: POST');
-    console.log('📡 [SPEDISCI.ONLINE] Status: In corso...');
-    console.log('📡 [SPEDISCI.ONLINE] Payload keys:', Object.keys(payload));
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.API_KEY}`,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log('📡 [SPEDISCI.ONLINE] ========================================');
-      console.log('📡 [SPEDISCI.ONLINE] RISPOSTA API');
-      console.log('📡 [SPEDISCI.ONLINE] ========================================');
-      console.log('📡 [SPEDISCI.ONLINE] Status:', response.status, response.statusText);
-      console.log('📡 [SPEDISCI.ONLINE] OK:', response.ok);
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ [SPEDISCI.ONLINE] Label creata con successo!');
-        console.log('✅ [SPEDISCI.ONLINE] Tracking:', result.trackingNumber || result.tracking_number || 'N/A');
-        console.log('✅ [SPEDISCI.ONLINE] Has label:', !!result.labelData || !!result.label_pdf || !!result.label);
-        
-        // Parsing risposta OpenAPI
-        const trackingNumber = result.trackingNumber || result.tracking_number || this.generateTrackingNumber();
-        // labelData può essere in diversi formati nella risposta
-        const labelData = result.labelData || result.label_pdf || result.label || result.labelPdf; // Base64 encoded
-        
-        return {
-          success: true,
-          tracking_number: trackingNumber,
-          label_url: result.labelUrl || result.label_url,
-          label_pdf: labelData, // Base64 encoded, sarà convertito in Buffer in createShipment
-          message: result.message || 'LDV creata con successo',
-        };
-      }
-
-      // Gestione errore
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      let errorBody = null;
-
-      try {
-        errorBody = await response.json();
-        errorMessage = errorBody.message || errorBody.error || errorMessage;
-      } catch {
-        const textError = await response.text();
-        errorMessage = textError || errorMessage;
-      }
-
-      console.error('❌ [SPEDISCI.ONLINE] ========================================');
-      console.error('❌ [SPEDISCI.ONLINE] ERRORE API');
-      console.error('❌ [SPEDISCI.ONLINE] ========================================');
-      console.error(`❌ [SPEDISCI.ONLINE] Status: ${response.status}`);
-      console.error(`❌ [SPEDISCI.ONLINE] URL: ${url}`);
-      console.error(`❌ [SPEDISCI.ONLINE] Errore: ${errorMessage}`);
-      console.error('❌ [SPEDISCI.ONLINE] ========================================');
+    // Genera fingerprint SHA256 per log production-safe
+    const crypto = require('crypto');
+    const keyFingerprint = this.API_KEY 
+      ? crypto.createHash('sha256').update(this.API_KEY).digest('hex').substring(0, 8)
+      : 'N/A';
+    
+    // Auth strategies fallback (se 401, prova la successiva)
+    const authStrategies = [
+      { name: 'Bearer', header: 'Authorization', value: `Bearer ${this.API_KEY}` },
+      { name: 'Token', header: 'Authorization', value: this.API_KEY },
+      { name: 'X-API-KEY', header: 'X-API-KEY', value: this.API_KEY },
+    ];
+    
+    let lastError: Error | null = null;
+    let lastResponse: Response | null = null;
+    
+    for (let i = 0; i < authStrategies.length; i++) {
+      const strategy = authStrategies[i];
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        [strategy.header]: strategy.value,
+      };
       
-      throw new Error(`Spedisci.Online Error (${response.status}): ${errorMessage}`);
-    } catch (error: any) {
-      if (error.message && error.message.includes('Spedisci.Online Error')) {
-        throw error;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        // Log production-safe: status + strategy + fingerprint
+        console.log('📡 [SPEDISCI.ONLINE] API call:', {
+          status: response.status,
+          statusText: response.statusText,
+          strategy: strategy.name,
+          apiKeyFingerprint: keyFingerprint,
+          url: url,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Log successo production-safe
+          console.log('✅ [SPEDISCI.ONLINE] Success:', {
+            status: response.status,
+            strategy: strategy.name,
+            apiKeyFingerprint: keyFingerprint,
+            hasTracking: !!(result.trackingNumber || result.tracking_number),
+            hasLabel: !!(result.labelData || result.label_pdf || result.label),
+          });
+          
+          // Parsing risposta OpenAPI
+          const trackingNumber = result.trackingNumber || result.tracking_number || this.generateTrackingNumber();
+          // labelData può essere in diversi formati nella risposta
+          const labelData = result.labelData || result.label_pdf || result.label || result.labelPdf; // Base64 encoded
+          
+          return {
+            success: true,
+            tracking_number: trackingNumber,
+            label_url: result.labelUrl || result.label_url,
+            label_pdf: labelData, // Base64 encoded, sarà convertito in Buffer in createShipment
+            message: result.message || 'LDV creata con successo',
+          };
+        }
+
+        // Se 401 e non è l'ultima strategy, prova la successiva
+        if (response.status === 401 && i < authStrategies.length - 1) {
+          console.log(`⚠️ [SPEDISCI.ONLINE] Strategy "${strategy.name}" returned 401, trying next strategy...`);
+          lastResponse = response;
+          continue;
+        }
+
+        // Se non è 401 o è l'ultima strategy, gestisci errore
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorBody = null;
+
+        try {
+          errorBody = await response.json();
+          errorMessage = errorBody.message || errorBody.error || errorMessage;
+        } catch {
+          const textError = await response.text();
+          errorMessage = textError || errorMessage;
+        }
+
+        // Log errore production-safe
+        console.error('❌ [SPEDISCI.ONLINE] API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          strategy: strategy.name,
+          apiKeyFingerprint: keyFingerprint,
+          error: errorMessage,
+        });
+        
+        lastError = new Error(`Spedisci.Online Error (${response.status}): ${errorMessage}`);
+        lastResponse = response;
+        
+        // Se non è 401, non provare altre strategies
+        if (response.status !== 401) {
+          break;
+        }
+      } catch (error: any) {
+        // Errore di rete - non provare altre strategies
+        console.error('❌ [SPEDISCI.ONLINE] Network error:', {
+          strategy: strategy.name,
+          apiKeyFingerprint: keyFingerprint,
+          error: error.message,
+        });
+        throw new Error(`Errore di connessione: ${error.message}`);
       }
-      console.error('❌ [SPEDISCI.ONLINE] Errore di rete:', error.message);
-      throw new Error(`Errore di connessione: ${error.message}`);
     }
+    
+    // Se arriviamo qui, tutte le strategies hanno fallito
+    if (lastError) {
+      throw lastError;
+    }
+    
+    throw new Error('Spedisci.Online: Tutte le auth strategies hanno fallito');
   }
 
 

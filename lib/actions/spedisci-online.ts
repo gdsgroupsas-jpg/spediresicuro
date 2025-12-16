@@ -207,20 +207,24 @@ export async function createShipmentWithOrchestrator(
           // Decripta se necessario
           if (api_key && isEncrypted(api_key)) {
             try {
-              api_key = decryptCredential(api_key)
+              api_key = decryptCredential(api_key).trim() // FIX: trim dopo decrypt
             } catch (decryptError) {
               console.error('❌ Errore decriptazione api_key:', decryptError)
               throw new Error('Impossibile decriptare credenziali')
             }
+          } else if (api_key) {
+            api_key = api_key.trim() // FIX: trim anche se non criptata
           }
 
           if (api_secret && isEncrypted(api_secret)) {
             try {
-              api_secret = decryptCredential(api_secret)
+              api_secret = decryptCredential(api_secret).trim() // FIX: trim dopo decrypt
             } catch (decryptError) {
               console.error('❌ Errore decriptazione api_secret:', decryptError)
               // api_secret è opzionale, continua senza
             }
+          } else if (api_secret) {
+            api_secret = api_secret.trim() // FIX: trim anche se non criptata
           }
 
           // Prepara contract_mapping
@@ -246,21 +250,25 @@ export async function createShipmentWithOrchestrator(
             contract_mapping: contractMapping, // Passa il mapping completo
           }
 
-          // HARD FAIL GUARD: Verifica che la key NON sia un token demo/legacy
-          const expectedPrefix = 'c6HE'; // Prefix atteso per la key corretta
-          const knownInvalidPrefixes = ['8ZZm', 'qCL7', 'demo', 'test', 'example'];
+          // FIX: Trim API key dopo decrypt
+          if (credentials.api_key) {
+            credentials.api_key = credentials.api_key.trim();
+          }
           
-          const apiKeyPrefix = credentials.api_key?.substring(0, 4) || '';
-          const isInvalidPrefix = knownInvalidPrefixes.some(prefix => 
-            apiKeyPrefix.toLowerCase().startsWith(prefix.toLowerCase())
+          // Guard: Verifica che non sia un token demo/example + min length
+          const knownDemoTokens = ['qCL7FN2RKFQDngWb6kJ7', '8ZZmDdwA', 'demo', 'example', 'test'];
+          const apiKeyLower = credentials.api_key?.toLowerCase() || '';
+          const isDemoToken = knownDemoTokens.some(demo => 
+            apiKeyLower.includes(demo.toLowerCase()) || 
+            credentials.api_key?.startsWith(demo)
           );
           
-          if (isInvalidPrefix) {
-            console.error('❌ [BROKER] API Key mismatch - using invalid or legacy token');
-            console.error(`❌ [BROKER] Key prefix: "${apiKeyPrefix}" (expected: "${expectedPrefix}")`);
-            console.error(`❌ [BROKER] Config ID: ${defaultConfig.id}`);
-            console.error(`❌ [BROKER] Config Name: ${defaultConfig.name}`);
-            throw new Error(`Spedisci.Online API key mismatch – using invalid or legacy token. Key starts with "${apiKeyPrefix}" but expected "${expectedPrefix}". Please update the configuration in /dashboard/admin/configurations`);
+          if (isDemoToken) {
+            throw new Error('Spedisci.Online API key not configured correctly (using demo token). Please configure a valid API key in /dashboard/integrazioni');
+          }
+          
+          if (!credentials.api_key || credentials.api_key.length < 10) {
+            throw new Error('Spedisci.Online API key too short. Please configure a valid API key in /dashboard/integrazioni');
           }
           
           // Genera fingerprint SHA256 della key per log production-safe
@@ -279,18 +287,6 @@ export async function createShipmentWithOrchestrator(
             apiKeyLength: credentials.api_key?.length || 0,
             contract_mapping_count: Object.keys(credentials.contract_mapping || {}).length,
           });
-          
-          // TEMP log: solo in dev (NODE_ENV !== production) - primi 4 caratteri
-          if (process.env.NODE_ENV !== 'production') {
-            const keyPreview = credentials.api_key && credentials.api_key.length > 4 
-              ? `${credentials.api_key.substring(0, 4)}***` 
-              : '****';
-            console.log('🔧 [BROKER] TEMP Dev preview (first 4 chars):', {
-              apiKeyPreview: keyPreview,
-              expectedPrefix: expectedPrefix,
-              match: keyPreview.startsWith(expectedPrefix),
-            });
-          }
 
           const provider = new SpedisciOnlineAdapter(credentials)
           orchestrator.registerBrokerAdapter(provider)

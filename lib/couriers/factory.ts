@@ -178,10 +178,29 @@ function instantiateProviderFromConfig(
           }
         }
 
+        // FIX: Trim API key PRIMA di tutto
+        const trimmedApiKey = config.api_key?.trim() || '';
+        
+        // Guard: Verifica che non sia un token demo/example + min length
+        const knownDemoTokens = ['qCL7FN2RKFQDngWb6kJ7', '8ZZmDdwA', 'demo', 'example', 'test'];
+        const apiKeyLower = trimmedApiKey.toLowerCase();
+        const isDemoToken = knownDemoTokens.some(demo => 
+          apiKeyLower.includes(demo.toLowerCase()) || 
+          trimmedApiKey.startsWith(demo)
+        );
+        
+        if (isDemoToken) {
+          throw new Error('Spedisci.Online API key not configured correctly (using demo token). Please configure a valid API key in /dashboard/integrazioni');
+        }
+        
+        if (trimmedApiKey.length < 10) {
+          throw new Error('Spedisci.Online API key too short. Please configure a valid API key in /dashboard/integrazioni');
+        }
+        
         // Genera fingerprint SHA256 della key per log production-safe
         const crypto = require('crypto');
-        const keyFingerprint = config.api_key 
-          ? crypto.createHash('sha256').update(config.api_key).digest('hex').substring(0, 8)
+        const keyFingerprint = trimmedApiKey 
+          ? crypto.createHash('sha256').update(trimmedApiKey).digest('hex').substring(0, 8)
           : 'N/A';
         
         // Log sicuro: sempre (dev + production)
@@ -191,41 +210,12 @@ function instantiateProviderFromConfig(
           providerId: config.provider_id,
           baseUrl: config.base_url,
           apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
-          apiKeyLength: config.api_key?.length || 0,
+          apiKeyLength: trimmedApiKey.length,
         });
-        
-        // HARD FAIL GUARD: Verifica che la key NON sia un token demo/legacy
-        const expectedPrefix = 'c6HE'; // Prefix atteso per la key corretta
-        const knownInvalidPrefixes = ['8ZZm', 'qCL7', 'demo', 'test', 'example'];
-        
-        const apiKeyPrefix = config.api_key?.substring(0, 4) || '';
-        const isInvalidPrefix = knownInvalidPrefixes.some(prefix => 
-          apiKeyPrefix.toLowerCase().startsWith(prefix.toLowerCase())
-        );
-        
-        if (isInvalidPrefix) {
-          console.error('❌ [FACTORY] API Key mismatch - using invalid or legacy token');
-          console.error(`❌ [FACTORY] Key prefix: "${apiKeyPrefix}" (expected: "${expectedPrefix}")`);
-          console.error(`❌ [FACTORY] Config ID: ${config.id}`);
-          console.error(`❌ [FACTORY] Config Name: ${config.name}`);
-          throw new Error(`Spedisci.Online API key mismatch – using invalid or legacy token. Key starts with "${apiKeyPrefix}" but expected "${expectedPrefix}". Please update the configuration in /dashboard/admin/configurations`);
-        }
-        
-        // TEMP log: solo in dev (NODE_ENV !== production) - primi 4 caratteri
-        if (process.env.NODE_ENV !== 'production') {
-          const keyPreview = config.api_key && config.api_key.length > 4 
-            ? `${config.api_key.substring(0, 4)}***` 
-            : '****';
-          console.log(`🔑 [FACTORY] TEMP Dev preview (first 4 chars):`, {
-            apiKeyPreview: keyPreview,
-            expectedPrefix: expectedPrefix,
-            match: keyPreview.startsWith(expectedPrefix),
-          });
-        }
 
         const credentials: SpedisciOnlineCredentials = {
-          api_key: config.api_key,
-          api_secret: config.api_secret,
+          api_key: trimmedApiKey, // Usa la key trimmed
+          api_secret: config.api_secret?.trim(),
           base_url: config.base_url,
           customer_code: contractMapping['default'] || undefined,
           contract_mapping: contractMapping, // Passa il mapping completo
