@@ -34,7 +34,7 @@ export interface CourierConfig {
  *
  * ⚠️ SICUREZZA:
  * - Decripta solo in memoria server-side
- * - Log solo fingerprint (primi 8 char), mai token completi
+ * - NO LOG di token o fingerprint
  * - Gestisce retrocompatibilità (plain text se non cifrato)
  *
  * @param config - Configurazione dal DB (credenziali cifrate)
@@ -47,16 +47,11 @@ function decryptConfigCredentials(config: CourierConfig): CourierConfig {
     // Decripta api_key se cifrata
     if (config.api_key && isEncrypted(config.api_key)) {
       decrypted.api_key = decryptCredential(config.api_key);
-      const fingerprint = decrypted.api_key.substring(0, 8) + '***';
-      console.log(`🔓 [Factory] api_key decifrata per ${config.provider_id} (fingerprint: ${fingerprint})`);
-    } else {
-      console.warn(`⚠️ [Factory] api_key NON cifrata per ${config.provider_id} (retrocompatibilità)`);
     }
 
     // Decripta api_secret se presente e cifrata
     if (config.api_secret && isEncrypted(config.api_secret)) {
       decrypted.api_secret = decryptCredential(config.api_secret);
-      console.log(`🔓 [Factory] api_secret decifrata per ${config.provider_id}`);
     }
   } catch (error: any) {
     console.error('❌ [Factory] Errore decifrazione credenziali:', error.message);
