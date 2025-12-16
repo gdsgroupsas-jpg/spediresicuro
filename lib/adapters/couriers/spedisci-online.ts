@@ -113,6 +113,46 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       throw new Error('Spedisci.Online: API Key mancante per la creazione LDV.');
     }
     
+    // Guard: Verifica che non sia un token demo/example
+    const knownDemoTokens = [
+      'qCL7FN2RKFQDngWb6kJ7',
+      '8ZZmDdwA',
+      'demo',
+      'example',
+      'test',
+    ];
+    
+    const apiKeyLower = credentials.api_key.toLowerCase();
+    const isDemoToken = knownDemoTokens.some(demo => 
+      apiKeyLower.includes(demo.toLowerCase()) || 
+      credentials.api_key.startsWith(demo)
+    );
+    
+    if (isDemoToken) {
+      throw new Error('Spedisci.Online API key not configured correctly (using demo token). Please configure a valid API key in /dashboard/integrazioni');
+    }
+    
+    // Genera fingerprint SHA256 della key per log production-safe
+    const crypto = require('crypto');
+    const keyFingerprint = credentials.api_key 
+      ? crypto.createHash('sha256').update(credentials.api_key).digest('hex').substring(0, 8)
+      : 'N/A';
+    
+    // Log production-safe: sempre (dev + production)
+    console.log(`🔑 [SPEDISCI.ONLINE] API Key loaded:`, {
+      apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
+      apiKeyLength: credentials.api_key.length,
+      baseUrl: credentials.base_url || 'default',
+    });
+    
+    // Log aggiuntivo solo in dev con preview
+    if (process.env.NODE_ENV !== 'production') {
+      const keyPreview = credentials.api_key.length > 4 
+        ? `${credentials.api_key.substring(0, 4)}***` 
+        : '****';
+      console.log(`🔑 [SPEDISCI.ONLINE] Dev preview: ${keyPreview}`);
+    }
+    
     this.API_KEY = credentials.api_key;
     // Normalizza BASE_URL: mantieni trailing slash se presente (serve per new URL())
     // Esempio: https://demo1.spedisci.online/api/v2/ -> mantieni slash finale

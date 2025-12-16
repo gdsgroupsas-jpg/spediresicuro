@@ -144,7 +144,8 @@ export async function createShipmentWithOrchestrator(
         const provider = await getShippingProvider(userId, 'spedisci_online', shipmentData)
         if (provider && provider instanceof SpedisciOnlineAdapter) {
           orchestrator.registerBrokerAdapter(provider)
-          console.log('✅ Broker adapter (Spedisci.Online) registrato tramite configurazione DB')
+          console.log('✅ [BROKER] Broker adapter (Spedisci.Online) registrato tramite configurazione DB')
+          console.log('✅ [BROKER] Questo adapter verrà usato quando l\'utente seleziona corrieri come "Poste Italiane" (fallback broker)')
         } else {
           console.warn('⚠️ Spedisci.Online non configurato per questo utente. Provo configurazione default...')
           // Continua - proveremo a recuperare config default
@@ -240,16 +241,44 @@ export async function createShipmentWithOrchestrator(
             contract_mapping: contractMapping, // Passa il mapping completo
           }
 
-          console.log('🔧 [SPEDISCI.ONLINE] Istanzio adapter con credenziali:', {
-            has_api_key: !!credentials.api_key,
-            base_url: credentials.base_url,
+          // Genera fingerprint SHA256 della key per log production-safe
+          const crypto = require('crypto');
+          const keyFingerprint = credentials.api_key 
+            ? crypto.createHash('sha256').update(credentials.api_key).digest('hex').substring(0, 8)
+            : 'N/A';
+          
+          // Log production-safe: sempre (dev + production)
+          console.log('🔧 [BROKER] Spedisci.Online adapter istanziato:', {
+            configId: defaultConfig.id,
+            configName: defaultConfig.name,
+            providerId: defaultConfig.provider_id,
+            baseUrl: defaultConfig.base_url,
+            apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
+            apiKeyLength: credentials.api_key?.length || 0,
             contract_mapping_count: Object.keys(credentials.contract_mapping || {}).length,
           });
+          
+          // Log aggiuntivo solo in dev con preview
+          if (process.env.NODE_ENV !== 'production') {
+            const keyPreview = credentials.api_key && credentials.api_key.length > 4 
+              ? `${credentials.api_key.substring(0, 4)}***` 
+              : '****';
+            console.log('🔧 [BROKER] Dev preview:', {
+              apiKeyPreview: keyPreview,
+            });
+          }
 
           const provider = new SpedisciOnlineAdapter(credentials)
           orchestrator.registerBrokerAdapter(provider)
-          console.log('✅ [SPEDISCI.ONLINE] Broker adapter registrato tramite configurazione DEFAULT')
-          console.log('✅ [SPEDISCI.ONLINE] Contratti configurati:', Object.keys(credentials.contract_mapping || {}))
+          console.log('✅ [BROKER] Broker adapter registrato tramite configurazione DEFAULT')
+          console.log('✅ [BROKER] Questo adapter verrà usato quando l\'utente seleziona corrieri come "Poste Italiane" (fallback broker)')
+          console.log('✅ [BROKER] Config usata:', {
+            configId: defaultConfig.id,
+            providerId: defaultConfig.provider_id,
+            baseUrl: defaultConfig.base_url,
+            apiKeyFingerprint: keyFingerprint,
+          })
+          console.log('✅ [BROKER] Contratti configurati:', Object.keys(credentials.contract_mapping || {}))
         } else {
           console.warn('⚠️ Spedisci.Online non configurato (né per utente né default).')
           console.warn('⚠️ Configura Spedisci.Online in /dashboard/integrazioni per abilitare chiamate API reali.')

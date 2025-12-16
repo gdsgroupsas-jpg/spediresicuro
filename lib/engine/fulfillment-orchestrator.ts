@@ -173,6 +173,7 @@ export class FulfillmentOrchestrator {
 
     if (this.config.allowBroker && this.brokerAdapter) {
       console.log('✅ [ORCHESTRATOR] Broker adapter disponibile, uso Spedisci.Online');
+      console.log('✅ [ORCHESTRATOR] Broker path: Utente ha selezionato corriere "' + courierCode + '" → Orchestrator usa broker Spedisci.Online (stessa config DB)');
       try {
         // Assicura che il corriere sia presente nei dati per il mapping del codice contratto
         const shipmentDataWithCourier = {
@@ -182,6 +183,7 @@ export class FulfillmentOrchestrator {
         };
 
         console.log('📦 [ORCHESTRATOR] Chiamo broker adapter con corriere:', courierCode);
+        console.log('📦 [ORCHESTRATOR] Broker adapter usa la STESSA configurazione DB caricata all\'avvio (configId/providerId/baseUrl visibili nei log precedenti)');
         const result = await this.brokerAdapter.createShipment(shipmentDataWithCourier);
 
         console.log('✅ [ORCHESTRATOR] Broker adapter ha restituito:', {
