@@ -19,9 +19,15 @@ GIT:
 - Repository: https://github.com/gdsgroupsas-jpg/spediresicuro.git
 - Account GitHub: gdsgroupsas-jpg
 - Branch principale: master
-- ⚠️ SEMPRE verificare account Git prima di commit/push manuali: git config user.name (deve essere "gdsgroupsas-jpg")
-- ⚠️⚠️⚠️ REPOSITORY UNICO: Usare SOLO C:\spediresicuro-master - NON creare mai cartelle duplicate o repository annidati!
+- ⚠️ SEMPRE verificare account Git prima di commit/push manuali: git config user.email (deve essere "gdsgroupsas@gmail.com") e user.name coerente (es. "GDS Group SAS")
+- ⚠️⚠️⚠️ REPO UNICO: /home/sigorn/projects/spediresicuro (WSL), evitare copie su C:\
 - 📖 LEGGERE PRIMA: ISTRUZIONI_REPOSITORY.md per dettagli completi
+
+DOCUMENTAZIONE:
+- 📦 docs/archive/ contiene SOLO documentazione STORICA (non usare per sviluppo attivo)
+- 🔍 Quando cerchi documentazione: usa PRIMA README.md e docs/ (escludendo archive/)
+- 📚 Usa docs/archive/ SOLO se richiesto esplicitamente dall'utente
+- ✅ Documentazione attiva: README.md (root), docs/README.md (indice), docs/*.md (escluso archive/)
 
 VERCEL:
 - Deploy automatico attivo: ogni push su master → deploy automatico su Vercel
