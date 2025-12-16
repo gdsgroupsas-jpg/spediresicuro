@@ -61,6 +61,9 @@ interface FormData {
   tipoSpedizione: string;
   corriere: string;
   note: string;
+  // Contrassegno (COD)
+  contrassegno: boolean;
+  contrassegnoAmount: string;
 }
 
 // Componente Input con validazione
@@ -250,6 +253,8 @@ export default function NuovaSpedizionePage() {
     tipoSpedizione: 'standard',
     corriere: 'GLS',
     note: '',
+    contrassegno: false,
+    contrassegnoAmount: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -321,6 +326,7 @@ export default function NuovaSpedizionePage() {
 
   // Validazione campi
   const validation = useMemo(() => {
+    const contrassegnoAttivo = formData.contrassegno && parseFloat(formData.contrassegnoAmount) > 0;
     return {
       mittenteNome: formData.mittenteNome.length >= 2,
       mittenteIndirizzo: formData.mittenteIndirizzo.length >= 5,
@@ -330,9 +336,12 @@ export default function NuovaSpedizionePage() {
       destinatarioNome: formData.destinatarioNome.length >= 2,
       destinatarioIndirizzo: formData.destinatarioIndirizzo.length >= 5,
       destinatarioCitta: formData.destinatarioCitta.length >= 2,
-      destinatarioTelefono: /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono),
+      destinatarioTelefono: contrassegnoAttivo 
+        ? /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono)
+        : /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono),
       destinatarioEmail: !formData.destinatarioEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.destinatarioEmail),
       peso: parseFloat(formData.peso) > 0,
+      contrassegnoAmount: !formData.contrassegno || (parseFloat(formData.contrassegnoAmount) > 0),
     };
   }, [formData]);
 
@@ -423,8 +432,8 @@ export default function NuovaSpedizionePage() {
 
       // 2. Gestione Contrassegno (COD)
       if (data.cash_on_delivery_amount) {
-        const codText = `[AUTO] Contrassegno rilevato: €${data.cash_on_delivery_amount}`;
-        newData.note = newData.note ? `${newData.note}\n${codText}` : codText;
+        newData.contrassegno = true;
+        newData.contrassegnoAmount = String(data.cash_on_delivery_amount);
       }
 
       return newData;
@@ -895,6 +904,68 @@ export default function NuovaSpedizionePage() {
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium hover:border-gray-400 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md focus:outline-none placeholder:text-gray-500 resize-none"
                     />
                   </div>
+                </div>
+
+                {/* Contrassegno (COD) */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <input
+                      type="checkbox"
+                      id="contrassegno"
+                      checked={formData.contrassegno}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          contrassegno: e.target.checked,
+                          contrassegnoAmount: e.target.checked ? prev.contrassegnoAmount : '',
+                        }));
+                      }}
+                      className="w-5 h-5 text-[#FFD700] border-gray-300 rounded focus:ring-[#FFD700] focus:ring-2"
+                    />
+                    <label htmlFor="contrassegno" className="text-sm font-semibold text-gray-900 cursor-pointer">
+                      💰 Contrassegno (COD - Cash On Delivery)
+                    </label>
+                  </div>
+                  {formData.contrassegno && (
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
+                        Importo Contrassegno (€) <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.contrassegnoAmount}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, contrassegnoAmount: e.target.value }))}
+                          required={formData.contrassegno}
+                          placeholder="0.00"
+                          className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
+                            validation.contrassegnoAmount
+                              ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
+                              : formData.contrassegnoAmount
+                                ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
+                                : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
+                          } focus:outline-none placeholder:text-gray-500`}
+                        />
+                        {validation.contrassegnoAmount && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                            <CheckCircle2 className="w-5 h-5" />
+                          </div>
+                        )}
+                        {formData.contrassegnoAmount && !validation.contrassegnoAmount && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+                            <AlertCircle className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
+                      {formData.contrassegno && !formData.destinatarioTelefono && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          ⚠️ Il telefono destinatario è obbligatorio per il contrassegno
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </SmartCard>
