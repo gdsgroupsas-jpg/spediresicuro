@@ -194,13 +194,32 @@ function instantiateProviderFromConfig(
           apiKeyLength: config.api_key?.length || 0,
         });
         
-        // Log aggiuntivo solo in dev con preview
+        // HARD FAIL GUARD: Verifica che la key NON sia un token demo/legacy
+        const expectedPrefix = 'c6HE'; // Prefix atteso per la key corretta
+        const knownInvalidPrefixes = ['8ZZm', 'qCL7', 'demo', 'test', 'example'];
+        
+        const apiKeyPrefix = config.api_key?.substring(0, 4) || '';
+        const isInvalidPrefix = knownInvalidPrefixes.some(prefix => 
+          apiKeyPrefix.toLowerCase().startsWith(prefix.toLowerCase())
+        );
+        
+        if (isInvalidPrefix) {
+          console.error('❌ [FACTORY] API Key mismatch - using invalid or legacy token');
+          console.error(`❌ [FACTORY] Key prefix: "${apiKeyPrefix}" (expected: "${expectedPrefix}")`);
+          console.error(`❌ [FACTORY] Config ID: ${config.id}`);
+          console.error(`❌ [FACTORY] Config Name: ${config.name}`);
+          throw new Error(`Spedisci.Online API key mismatch – using invalid or legacy token. Key starts with "${apiKeyPrefix}" but expected "${expectedPrefix}". Please update the configuration in /dashboard/admin/configurations`);
+        }
+        
+        // TEMP log: solo in dev (NODE_ENV !== production) - primi 4 caratteri
         if (process.env.NODE_ENV !== 'production') {
           const keyPreview = config.api_key && config.api_key.length > 4 
             ? `${config.api_key.substring(0, 4)}***` 
             : '****';
-          console.log(`🔑 [FACTORY] Dev preview:`, {
+          console.log(`🔑 [FACTORY] TEMP Dev preview (first 4 chars):`, {
             apiKeyPreview: keyPreview,
+            expectedPrefix: expectedPrefix,
+            match: keyPreview.startsWith(expectedPrefix),
           });
         }
 

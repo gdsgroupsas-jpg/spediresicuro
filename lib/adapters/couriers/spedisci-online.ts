@@ -113,7 +113,22 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       throw new Error('Spedisci.Online: API Key mancante per la creazione LDV.');
     }
     
-    // Guard: Verifica che non sia un token demo/example
+    // HARD FAIL GUARD: Verifica che la key NON sia un token demo/legacy
+    const expectedPrefix = 'c6HE'; // Prefix atteso per la key corretta
+    const knownInvalidPrefixes = ['8ZZm', 'qCL7', 'demo', 'test', 'example'];
+    
+    const apiKeyPrefix = credentials.api_key?.substring(0, 4) || '';
+    const isInvalidPrefix = knownInvalidPrefixes.some(prefix => 
+      apiKeyPrefix.toLowerCase().startsWith(prefix.toLowerCase())
+    );
+    
+    if (isInvalidPrefix) {
+      console.error('❌ [SPEDISCI.ONLINE] API Key mismatch - using invalid or legacy token');
+      console.error(`❌ [SPEDISCI.ONLINE] Key prefix: "${apiKeyPrefix}" (expected: "${expectedPrefix}")`);
+      throw new Error(`Spedisci.Online API key mismatch – using invalid or legacy token. Key starts with "${apiKeyPrefix}" but expected "${expectedPrefix}". Please update the configuration in /dashboard/admin/configurations`);
+    }
+    
+    // Guard aggiuntiva: Verifica che non sia un token demo/example (pattern matching)
     const knownDemoTokens = [
       'qCL7FN2RKFQDngWb6kJ7',
       '8ZZmDdwA',
@@ -145,12 +160,14 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       baseUrl: credentials.base_url || 'default',
     });
     
-    // Log aggiuntivo solo in dev con preview
+    // TEMP log: solo in dev (NODE_ENV !== production) - primi 4 caratteri
     if (process.env.NODE_ENV !== 'production') {
       const keyPreview = credentials.api_key.length > 4 
         ? `${credentials.api_key.substring(0, 4)}***` 
         : '****';
-      console.log(`🔑 [SPEDISCI.ONLINE] Dev preview: ${keyPreview}`);
+      const expectedPrefix = 'c6HE';
+      console.log(`🔑 [SPEDISCI.ONLINE] TEMP Dev preview (first 4 chars): ${keyPreview}`);
+      console.log(`🔑 [SPEDISCI.ONLINE] Expected prefix: ${expectedPrefix}, Match: ${keyPreview.startsWith(expectedPrefix)}`);
     }
     
     this.API_KEY = credentials.api_key;
