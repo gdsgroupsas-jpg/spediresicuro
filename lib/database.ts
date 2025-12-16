@@ -445,9 +445,11 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
                    spedizione.tipoSpedizione === 'economy' ? 'economy' : 
                    spedizione.tipoSpedizione === 'same_day' ? 'same_day' : 
                    spedizione.tipoSpedizione === 'next_day' ? 'next_day' : 'standard'),
-    cash_on_delivery: !!spedizione.contrassegno,
+    cash_on_delivery: !!spedizione.contrassegno || (spedizione.contrassegnoAmount && parseFloat(spedizione.contrassegnoAmount) > 0),
     // ⚠️ CRITICO: Assicura che cash_on_delivery_amount sia sempre un numero o null, mai false
-    cash_on_delivery_amount: toNumberOrNull(spedizione.contrassegno),
+    cash_on_delivery_amount: spedizione.contrassegnoAmount 
+      ? toNumberOrNull(spedizione.contrassegnoAmount) 
+      : toNumberOrNull(spedizione.contrassegno),
     insurance: !!spedizione.assicurazione,
     // ⚠️ CRITICO: Assicura che declared_value sia sempre un numero o null, mai false
     declared_value: toNumberOrNull(spedizione.valoreDichiarato) || toNumberOrNull(spedizione.assicurazione),
