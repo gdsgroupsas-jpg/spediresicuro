@@ -15,6 +15,7 @@ import { SpedisciOnlineAdapter, type SpedisciOnlineCredentials } from '@/lib/ada
 import { PosteAdapter } from '@/lib/adapters/couriers/poste';
 import { CourierAdapter } from '@/lib/adapters/couriers/base';
 import type { Shipment, CreateShipmentInput } from '@/types/shipments';
+import { decryptCredential, isEncrypted } from '@/lib/security/encryption';
 
 // Tipo per configurazione corriere dal DB
 export interface CourierConfig {
@@ -26,6 +27,43 @@ export interface CourierConfig {
   base_url: string;
   contract_mapping: Record<string, string>;
   is_active: boolean;
+}
+
+/**
+ * Decifra credenziali sensibili da configurazione DB
+ *
+ * ⚠️ SICUREZZA:
+ * - Decripta solo in memoria server-side
+ * - Log solo fingerprint (primi 8 char), mai token completi
+ * - Gestisce retrocompatibilità (plain text se non cifrato)
+ *
+ * @param config - Configurazione dal DB (credenziali cifrate)
+ * @returns Configurazione con credenziali decifrate
+ */
+function decryptConfigCredentials(config: CourierConfig): CourierConfig {
+  const decrypted = { ...config };
+
+  try {
+    // Decripta api_key se cifrata
+    if (config.api_key && isEncrypted(config.api_key)) {
+      decrypted.api_key = decryptCredential(config.api_key);
+      const fingerprint = decrypted.api_key.substring(0, 8) + '***';
+      console.log(`🔓 [Factory] api_key decifrata per ${config.provider_id} (fingerprint: ${fingerprint})`);
+    } else {
+      console.warn(`⚠️ [Factory] api_key NON cifrata per ${config.provider_id} (retrocompatibilità)`);
+    }
+
+    // Decripta api_secret se presente e cifrata
+    if (config.api_secret && isEncrypted(config.api_secret)) {
+      decrypted.api_secret = decryptCredential(config.api_secret);
+      console.log(`🔓 [Factory] api_secret decifrata per ${config.provider_id}`);
+    }
+  } catch (error: any) {
+    console.error('❌ [Factory] Errore decifrazione credenziali:', error.message);
+    throw new Error(`Impossibile decifrare credenziali per ${config.provider_id}: ${error.message}`);
+  }
+
+  return decrypted;
 }
 
 /**
@@ -133,33 +171,38 @@ export async function getShippingProvider(
 
 /**
  * Istanzia provider da configurazione DB
+ *
+ * ⚠️ SICUREZZA: Decifra credenziali prima di istanziare adapter
  */
 function instantiateProviderFromConfig(
   providerId: string,
   config: CourierConfig
 ): CourierAdapter | null {
   try {
+    // 🔓 DECRYPT CENTRALE: Decifra credenziali prima di usarle
+    const decryptedConfig = decryptConfigCredentials(config);
+
     switch (providerId.toLowerCase()) {
       case 'spedisci_online':
       case 'spedisci-online': {
         // Prepara contract_mapping (può essere già un oggetto o una stringa JSON)
         let contractMapping: Record<string, string> = {};
-        if (config.contract_mapping) {
-          if (typeof config.contract_mapping === 'string') {
+        if (decryptedConfig.contract_mapping) {
+          if (typeof decryptedConfig.contract_mapping === 'string') {
             try {
-              contractMapping = JSON.parse(config.contract_mapping);
+              contractMapping = JSON.parse(decryptedConfig.contract_mapping);
             } catch {
               console.warn('Errore parsing contract_mapping come JSON, provo formato semplice');
             }
-          } else if (typeof config.contract_mapping === 'object') {
-            contractMapping = config.contract_mapping;
+          } else if (typeof decryptedConfig.contract_mapping === 'object') {
+            contractMapping = decryptedConfig.contract_mapping;
           }
         }
 
         const credentials: SpedisciOnlineCredentials = {
-          api_key: config.api_key,
-          api_secret: config.api_secret,
-          base_url: config.base_url,
+          api_key: decryptedConfig.api_key,
+          api_secret: decryptedConfig.api_secret,
+          base_url: decryptedConfig.base_url,
           customer_code: contractMapping['default'] || undefined,
           contract_mapping: contractMapping, // Passa il mapping completo
         };
@@ -179,10 +222,10 @@ function instantiateProviderFromConfig(
         // Il database salva come api_key/api_secret (schema standard per tutti i corrieri)
         // L'adapter Poste si aspetta client_id/client_secret
         // Mapping:
-        //   api_key (DB) -> client_id (Adapter)
-        //   api_secret (DB) -> client_secret (Adapter)
+        //   api_key (DB, decifrato) -> client_id (Adapter)
+        //   api_secret (DB, decifrato) -> client_secret (Adapter)
         //   contract_mapping['cdc'] -> cost_center_code (Adapter)
-        const { api_key, api_secret, base_url, contract_mapping } = config;
+        const { api_key, api_secret, base_url, contract_mapping } = decryptedConfig;
 
         let cdc = 'CDC-DEFAULT';
         if (contract_mapping) {

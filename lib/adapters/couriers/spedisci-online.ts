@@ -276,7 +276,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         console.log('📡 [SPEDISCI.ONLINE] Method: POST');
         console.log('📡 [SPEDISCI.ONLINE] Headers:', {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.API_KEY.substring(0, 20)}...`,
+          'Authorization': `Bearer ${this.API_KEY.substring(0, 8)}...`,
           'Accept': 'application/json',
         });
         console.log('📡 [SPEDISCI.ONLINE] Payload (JSON):', JSON.stringify(payload, null, 2));
