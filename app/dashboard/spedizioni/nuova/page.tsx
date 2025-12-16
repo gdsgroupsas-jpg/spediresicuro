@@ -337,8 +337,8 @@ export default function NuovaSpedizionePage() {
       destinatarioIndirizzo: formData.destinatarioIndirizzo.length >= 5,
       destinatarioCitta: formData.destinatarioCitta.length >= 2,
       destinatarioTelefono: contrassegnoAttivo 
-        ? /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono)
-        : /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono),
+        ? /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono) // REQUIRED se contrassegno attivo
+        : !formData.destinatarioTelefono || /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono), // Opzionale altrimenti
       destinatarioEmail: !formData.destinatarioEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.destinatarioEmail),
       peso: parseFloat(formData.peso) > 0,
       contrassegnoAmount: !formData.contrassegno || (parseFloat(formData.contrassegnoAmount) > 0),
