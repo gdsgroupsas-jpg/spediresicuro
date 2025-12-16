@@ -169,27 +169,32 @@ export async function createShipmentWithOrchestrator(
 
     if (!brokerRegistered) {
       try {
-        // Prova a recuperare configurazione default (is_default = true) o qualsiasi configurazione attiva
-        let { data: defaultConfig } = await supabaseAdmin
+        // FIX: Usa getCourierConfigForUser con userId null per ottenere config default
+        // Questo garantisce che la priorità sia rispettata (default, non prima config attiva)
+        // Se userId è null, la funzione RPC restituirà la config default
+        const { getCourierConfigForUser } = await import('@/lib/couriers/factory')
+        
+        // Prova prima con un userId dummy per vedere se c'è una default
+        // Se non c'è userId, usa query diretta ma SOLO per default
+        let defaultConfig = null
+        
+        // Prova a recuperare configurazione default (is_default = true) - PRIORITÀ ASSOLUTA
+        const { data: defaultConfigData } = await supabaseAdmin
           .from('courier_configs')
           .select('*')
-          .eq('provider_id', 'spedisci_online')
+          .eq('provider_id', 'spedisci_online') // Normalizzato
           .eq('is_active', true)
           .eq('is_default', true)
           .single()
 
-        // Se non c'è default, prova qualsiasi configurazione attiva
-        if (!defaultConfig) {
-          const { data: activeConfigs } = await supabaseAdmin
-            .from('courier_configs')
-            .select('*')
-            .eq('provider_id', 'spedisci_online')
-            .eq('is_active', true)
-            .limit(1)
-
-          if (activeConfigs && activeConfigs.length > 0) {
-            defaultConfig = activeConfigs[0]
-          }
+        if (defaultConfigData) {
+          defaultConfig = defaultConfigData
+        } else {
+          // HARD FAIL: Se non c'è default, NON prendere la prima config attiva
+          // Questo potrebbe essere una config con token vecchio
+          console.error('❌ [BROKER] Nessuna configurazione DEFAULT trovata per spedisci_online')
+          console.error('❌ [BROKER] Configura una config con is_default=true in /dashboard/admin/configurations')
+          throw new Error('Spedisci.Online: Nessuna configurazione default trovata. Configura una config default in /dashboard/admin/configurations')
         }
 
         if (defaultConfig) {
@@ -241,6 +246,23 @@ export async function createShipmentWithOrchestrator(
             contract_mapping: contractMapping, // Passa il mapping completo
           }
 
+          // HARD FAIL GUARD: Verifica che la key NON sia un token demo/legacy
+          const expectedPrefix = 'c6HE'; // Prefix atteso per la key corretta
+          const knownInvalidPrefixes = ['8ZZm', 'qCL7', 'demo', 'test', 'example'];
+          
+          const apiKeyPrefix = credentials.api_key?.substring(0, 4) || '';
+          const isInvalidPrefix = knownInvalidPrefixes.some(prefix => 
+            apiKeyPrefix.toLowerCase().startsWith(prefix.toLowerCase())
+          );
+          
+          if (isInvalidPrefix) {
+            console.error('❌ [BROKER] API Key mismatch - using invalid or legacy token');
+            console.error(`❌ [BROKER] Key prefix: "${apiKeyPrefix}" (expected: "${expectedPrefix}")`);
+            console.error(`❌ [BROKER] Config ID: ${defaultConfig.id}`);
+            console.error(`❌ [BROKER] Config Name: ${defaultConfig.name}`);
+            throw new Error(`Spedisci.Online API key mismatch – using invalid or legacy token. Key starts with "${apiKeyPrefix}" but expected "${expectedPrefix}". Please update the configuration in /dashboard/admin/configurations`);
+          }
+          
           // Genera fingerprint SHA256 della key per log production-safe
           const crypto = require('crypto');
           const keyFingerprint = credentials.api_key 
@@ -258,13 +280,15 @@ export async function createShipmentWithOrchestrator(
             contract_mapping_count: Object.keys(credentials.contract_mapping || {}).length,
           });
           
-          // Log aggiuntivo solo in dev con preview
+          // TEMP log: solo in dev (NODE_ENV !== production) - primi 4 caratteri
           if (process.env.NODE_ENV !== 'production') {
             const keyPreview = credentials.api_key && credentials.api_key.length > 4 
               ? `${credentials.api_key.substring(0, 4)}***` 
               : '****';
-            console.log('🔧 [BROKER] Dev preview:', {
+            console.log('🔧 [BROKER] TEMP Dev preview (first 4 chars):', {
               apiKeyPreview: keyPreview,
+              expectedPrefix: expectedPrefix,
+              match: keyPreview.startsWith(expectedPrefix),
             });
           }
 
