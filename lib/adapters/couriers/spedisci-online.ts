@@ -32,7 +32,9 @@ export interface SpedisciOnlineShipmentPayload {
   country: string;
   peso: number | string;
   colli: number | string;
-  contrassegno?: number | string;
+  codValue: number; // REQUIRED: Cash on delivery amount (0 if not active)
+  insuranceValue: number; // REQUIRED: Insurance value (0 if not present)
+  accessoriServices: any[]; // REQUIRED: Accessory services (empty array if none)
   rif_mittente?: string;
   rif_destinatario?: string;
   note?: string;
@@ -42,6 +44,7 @@ export interface SpedisciOnlineShipmentPayload {
   order_id?: string;
   totale_ordine?: number | string;
   codice_contratto?: string; // Codice contratto completo (es: "gls-NN6-STANDARD-(TR-VE)")
+  label_format?: string; // Optional: "PDF" for /shipping/create
 }
 
 export interface SpedisciOnlineResponse {
@@ -690,6 +693,18 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     const cashOnDeliveryAmount = 'cash_on_delivery_amount' in data ? data.cash_on_delivery_amount : 
                                 'contrassegnoAmount' in data ? parseFloat(data.contrassegnoAmount) || 0 :
                                 'contrassegno' in data && typeof data.contrassegno === 'number' ? data.contrassegno : 0;
+    // codValue: REQUIRED, sempre presente (0 se non attivo, importo se attivo)
+    const codValue = cashOnDelivery && cashOnDeliveryAmount > 0 ? Number(cashOnDeliveryAmount) : 0;
+    
+    // insuranceValue: REQUIRED, sempre presente (0 se non presente)
+    const insuranceValue = 'declared_value' in data && data.declared_value 
+      ? Number(data.declared_value) 
+      : ('assicurazione' in data && data.assicurazione && typeof data.assicurazione === 'number')
+        ? Number(data.assicurazione)
+        : ('insurance' in data && data.insurance && typeof data.insurance === 'number')
+          ? Number(data.insurance)
+          : 0;
+    
     const notes = 'notes' in data ? data.notes : data.note || '';
     const recipientPhone = 'recipient_phone' in data ? data.recipient_phone : data.destinatario?.telefono || data.recipient?.telefono || '';
     const recipientEmail = 'recipient_email' in data ? data.recipient_email : data.destinatario?.email || data.recipient?.email || '';
@@ -716,7 +731,9 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       country: 'IT',
       peso: formatValue(weight),
       colli: '1', // Default 1 collo
-      contrassegno: cashOnDelivery && cashOnDeliveryAmount > 0 ? formatValue(cashOnDeliveryAmount) : '0',
+      codValue: codValue, // REQUIRED: number, sempre presente (0 se non attivo)
+      insuranceValue: insuranceValue, // REQUIRED: number, sempre presente (0 se non presente)
+      accessoriServices: [], // REQUIRED: array, sempre presente (vuoto se non ci sono servizi aggiuntivi)
       rif_mittente: senderName,
       rif_destinatario: recipientName,
       note: notes,
@@ -726,6 +743,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       order_id: tracking,
       totale_ordine: formatValue(finalPrice),
       codice_contratto: contractCode, // Codice contratto completo (es: "gls-NN6-STANDARD-(TR-VE)")
+      label_format: 'PDF', // Optional: formato etichetta per /shipping/create
     };
   }
 
@@ -744,6 +762,9 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       return value;
     };
 
+    // Mappa codValue a contrassegno per formato CSV legacy
+    const contrassegnoValue = payload.codValue > 0 ? String(payload.codValue) : '0';
+    
     const row = [
       escapeCSV(payload.destinatario),
       escapeCSV(payload.indirizzo),
@@ -753,7 +774,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       payload.country,
       payload.peso,
       payload.colli,
-      payload.contrassegno || '',
+      contrassegnoValue,
       escapeCSV(payload.rif_mittente || ''),
       escapeCSV(payload.rif_destinatario || ''),
       escapeCSV(payload.note || ''),

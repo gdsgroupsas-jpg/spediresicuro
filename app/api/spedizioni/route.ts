@@ -236,23 +236,23 @@ export async function POST(request: NextRequest) {
     const costoContrassegno = contrassegno > 0 ? 3 : 0; // Costo fisso per gestione contrassegno
     const costoAssicurazione = assicurazione > 0 ? (assicurazione * 0.02) : 0; // 2% del valore assicurato
     
+    // Validazione: codValue >= 0 (codValue è il campo OpenAPI per contrassegno)
+    if (contrassegno < 0) {
+      return NextResponse.json(
+        {
+          error: 'Validazione fallita',
+          message: 'L\'importo del contrassegno (codValue) non può essere negativo',
+        },
+        { status: 400 }
+      );
+    }
+    
     // Validazione: se contrassegno attivo, telefono destinatario obbligatorio
     if (contrassegno > 0 && !body.destinatarioTelefono) {
       return NextResponse.json(
         {
           error: 'Validazione fallita',
           message: 'Il telefono destinatario è obbligatorio quando è attivo il contrassegno',
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Validazione: importo contrassegno non negativo
-    if (contrassegno < 0) {
-      return NextResponse.json(
-        {
-          error: 'Validazione fallita',
-          message: 'L\'importo del contrassegno non può essere negativo',
         },
         { status: 400 }
       );
