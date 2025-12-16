@@ -78,6 +78,9 @@ next-env.d.ts
 spediresicuro-master/
 pediresicuro-masterspediresicuro
 codice/
+# ⚠️ IMPORTANTE: Non creare mai una cartella "spediresicuro" dentro questo repository
+# Il repository principale È già "spediresicuro-master" - non serve duplicazione!
+spediresicuro/
 
 # File temporanei Windows
 Thumbs.db
