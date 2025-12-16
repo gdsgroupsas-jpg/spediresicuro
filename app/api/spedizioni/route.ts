@@ -229,10 +229,34 @@ export async function POST(request: NextRequest) {
     const prezzoBase = (basePrice + pesoPrice) * expressMultiplier;
     
     // Costi aggiuntivi
-    const contrassegno = parseFloat(body.contrassegno) || 0;
+    const contrassegno = body.contrassegno && body.contrassegnoAmount 
+      ? parseFloat(body.contrassegnoAmount) || 0 
+      : 0;
     const assicurazione = parseFloat(body.assicurazione) || 0;
     const costoContrassegno = contrassegno > 0 ? 3 : 0; // Costo fisso per gestione contrassegno
     const costoAssicurazione = assicurazione > 0 ? (assicurazione * 0.02) : 0; // 2% del valore assicurato
+    
+    // Validazione: se contrassegno attivo, telefono destinatario obbligatorio
+    if (contrassegno > 0 && !body.destinatarioTelefono) {
+      return NextResponse.json(
+        {
+          error: 'Validazione fallita',
+          message: 'Il telefono destinatario è obbligatorio quando è attivo il contrassegno',
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Validazione: importo contrassegno non negativo
+    if (contrassegno < 0) {
+      return NextResponse.json(
+        {
+          error: 'Validazione fallita',
+          message: 'L\'importo del contrassegno non può essere negativo',
+        },
+        { status: 400 }
+      );
+    }
     
     // Margine configurabile (default 15%)
     const marginePercentuale = 15;

@@ -685,8 +685,11 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       : data.destinatario?.provincia || data.recipient?.provincia || '';
     
     const weight = 'weight' in data ? data.weight : data.peso || 0;
-    const cashOnDelivery = 'cash_on_delivery' in data ? data.cash_on_delivery : false;
-    const cashOnDeliveryAmount = 'cash_on_delivery_amount' in data ? data.cash_on_delivery_amount : 0;
+    const cashOnDelivery = 'cash_on_delivery' in data ? data.cash_on_delivery : 
+                          'contrassegno' in data ? (data.contrassegno === true || data.contrassegno === 'true') : false;
+    const cashOnDeliveryAmount = 'cash_on_delivery_amount' in data ? data.cash_on_delivery_amount : 
+                                'contrassegnoAmount' in data ? parseFloat(data.contrassegnoAmount) || 0 :
+                                'contrassegno' in data && typeof data.contrassegno === 'number' ? data.contrassegno : 0;
     const notes = 'notes' in data ? data.notes : data.note || '';
     const recipientPhone = 'recipient_phone' in data ? data.recipient_phone : data.destinatario?.telefono || data.recipient?.telefono || '';
     const recipientEmail = 'recipient_email' in data ? data.recipient_email : data.destinatario?.email || data.recipient?.email || '';
@@ -713,7 +716,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       country: 'IT',
       peso: formatValue(weight),
       colli: '1', // Default 1 collo
-      contrassegno: cashOnDelivery ? formatValue(cashOnDeliveryAmount) : undefined,
+      contrassegno: cashOnDelivery && cashOnDeliveryAmount > 0 ? formatValue(cashOnDeliveryAmount) : '0',
       rif_mittente: senderName,
       rif_destinatario: recipientName,
       note: notes,
