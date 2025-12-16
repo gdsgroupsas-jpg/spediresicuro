@@ -20,6 +20,8 @@ GIT:
 - Account GitHub: gdsgroupsas-jpg
 - Branch principale: master
 - ⚠️ SEMPRE verificare account Git prima di commit/push manuali: git config user.name (deve essere "gdsgroupsas-jpg")
+- ⚠️⚠️⚠️ REPOSITORY UNICO: Usare SOLO C:\spediresicuro-master - NON creare mai cartelle duplicate o repository annidati!
+- 📖 LEGGERE PRIMA: ISTRUZIONI_REPOSITORY.md per dettagli completi
 
 VERCEL:
 - Deploy automatico attivo: ogni push su master → deploy automatico su Vercel
