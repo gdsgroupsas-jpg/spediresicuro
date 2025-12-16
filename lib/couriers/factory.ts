@@ -46,10 +46,13 @@ export async function getCourierConfigForUser(
   providerId: string
 ): Promise<CourierConfig | null> {
   try {
+    // Normalizza provider_id per matching esatto
+    const normalizedProviderId = providerId.toLowerCase().trim();
+    
     // Usa funzione SQL helper se disponibile
     const { data: configs, error } = await supabaseAdmin.rpc('get_courier_config_for_user', {
       p_user_id: userId,
-      p_provider_id: providerId,
+      p_provider_id: normalizedProviderId,
     });
 
     if (error) {
@@ -62,10 +65,13 @@ export async function getCourierConfigForUser(
         .eq('id', userId)
         .single();
 
+      // Normalizza provider_id per matching esatto (case-insensitive ma match esatto)
+      const normalizedProviderId = providerId.toLowerCase().trim();
+      
       let query = supabaseAdmin
         .from('courier_configs')
         .select('*')
-        .eq('provider_id', providerId)
+        .eq('provider_id', normalizedProviderId)
         .eq('is_active', true);
 
       if (user?.assigned_config_id) {
@@ -80,6 +86,14 @@ export async function getCourierConfigForUser(
 
       if (configError || !configData) {
         console.error('❌ Nessuna configurazione trovata nel DB');
+        console.error(`   - Provider ID cercato: "${normalizedProviderId}"`);
+        console.error(`   - User ID: ${userId}`);
+        return null;
+      }
+      
+      // Verifica che provider_id corrisponda esattamente (case-insensitive)
+      if (configData.provider_id?.toLowerCase() !== normalizedProviderId) {
+        console.error(`❌ Provider ID mismatch: config ha "${configData.provider_id}" ma cercato "${normalizedProviderId}"`);
         return null;
       }
 
@@ -87,7 +101,15 @@ export async function getCourierConfigForUser(
     }
 
     if (configs && configs.length > 0) {
-      return configs[0] as CourierConfig;
+      const config = configs[0] as CourierConfig;
+      
+      // Verifica che provider_id corrisponda esattamente
+      if (config.provider_id?.toLowerCase() !== normalizedProviderId) {
+        console.error(`❌ Provider ID mismatch: config ha "${config.provider_id}" ma cercato "${normalizedProviderId}"`);
+        return null;
+      }
+      
+      return config;
     }
 
     return null;
@@ -154,6 +176,32 @@ function instantiateProviderFromConfig(
           } else if (typeof config.contract_mapping === 'object') {
             contractMapping = config.contract_mapping;
           }
+        }
+
+        // Genera fingerprint SHA256 della key per log production-safe
+        const crypto = require('crypto');
+        const keyFingerprint = config.api_key 
+          ? crypto.createHash('sha256').update(config.api_key).digest('hex').substring(0, 8)
+          : 'N/A';
+        
+        // Log sicuro: sempre (dev + production)
+        console.log(`🔑 [FACTORY] Spedisci.Online config loaded:`, {
+          configId: config.id,
+          configName: config.name,
+          providerId: config.provider_id,
+          baseUrl: config.base_url,
+          apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
+          apiKeyLength: config.api_key?.length || 0,
+        });
+        
+        // Log aggiuntivo solo in dev con preview
+        if (process.env.NODE_ENV !== 'production') {
+          const keyPreview = config.api_key && config.api_key.length > 4 
+            ? `${config.api_key.substring(0, 4)}***` 
+            : '****';
+          console.log(`🔑 [FACTORY] Dev preview:`, {
+            apiKeyPreview: keyPreview,
+          });
         }
 
         const credentials: SpedisciOnlineCredentials = {
