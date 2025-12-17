@@ -179,6 +179,29 @@ export default function ConfigurationsPage() {
     setShowDeleteModal(true);
   }
 
+  // Integration Hub: Testa credenziali
+  async function handleTestCredentials(configId: string) {
+    try {
+      const response = await fetch('/api/integrations/test-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config_id: configId }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('✅ Credenziali valide');
+        await loadConfigurations(); // Refresh per aggiornare status
+      } else {
+        alert(`❌ Errore: ${result.error || 'Test fallito'}`);
+        await loadConfigurations(); // Refresh anche in caso di errore per aggiornare status
+      }
+    } catch (error: any) {
+      console.error('Errore test credenziali:', error);
+      alert('Errore durante test credenziali');
+    }
+  }
+
   // Salva configurazione
   async function handleSave() {
     if (!formData.name || !formData.provider_id || !formData.api_key || !formData.base_url) {
@@ -461,6 +484,24 @@ export default function ConfigurationsPage() {
                             Inattiva
                           </span>
                         )}
+                        {/* Integration Hub: Status Badge */}
+                        {(config as any).status && (config as any).status !== 'active' && (
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            (config as any).status === 'error' ? 'bg-red-100 text-red-800' :
+                            (config as any).status === 'testing' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {(config as any).status === 'error' ? '⚠️ Errore' :
+                             (config as any).status === 'testing' ? '🧪 Test' :
+                             '⏸️ Inattiva'}
+                          </span>
+                        )}
+                        {/* Integration Hub: Account Type Badge */}
+                        {(config as any).account_type && (config as any).account_type !== 'admin' && (
+                          <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                            {(config as any).account_type === 'byoc' ? '🔑 BYOC' : '🏢 Reseller'}
+                          </span>
+                        )}
                       </div>
                       <div className="space-y-1 text-sm text-gray-600">
                         <p>
@@ -501,6 +542,14 @@ export default function ConfigurationsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
+                      {/* Integration Hub: Test Credentials Button */}
+                      <button
+                        onClick={() => handleTestCredentials(config.id)}
+                        className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                        title="Testa credenziali"
+                      >
+                        🧪 Test
+                      </button>
                       <button
                         onClick={() => handleEdit(config)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
