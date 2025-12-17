@@ -26,6 +26,10 @@ export interface CourierConfigInput {
   is_default?: boolean;
   description?: string;
   notes?: string;
+  // Integration Hub: nuovi campi (opzionali per backward compatibility)
+  status?: 'active' | 'error' | 'testing' | 'inactive';
+  account_type?: 'admin' | 'byoc' | 'reseller';
+  owner_user_id?: string;
 }
 
 export interface CourierConfig {
@@ -43,6 +47,23 @@ export interface CourierConfig {
   created_at: string;
   updated_at: string;
   created_by?: string;
+  // Integration Hub: nuovi campi (opzionali per backward compatibility)
+  status?: 'active' | 'error' | 'testing' | 'inactive';
+  last_tested_at?: string;
+  test_result?: {
+    success: boolean;
+    error?: string;
+    tested_at: string;
+    response_time_ms?: number;
+  };
+  account_type?: 'admin' | 'byoc' | 'reseller';
+  owner_user_id?: string;
+  // Automation (già esistenti da migration 015)
+  automation_enabled?: boolean;
+  automation_settings?: any;
+  session_data?: any;
+  last_automation_sync?: string;
+  automation_encrypted?: boolean;
 }
 
 /**
@@ -138,6 +159,10 @@ export async function saveConfiguration(
       description: data.description || null,
       notes: data.notes || null,
       updated_at: new Date().toISOString(),
+      // Integration Hub: nuovi campi (opzionali)
+      ...(data.status && { status: data.status }),
+      ...(data.account_type && { account_type: data.account_type }),
+      ...(data.owner_user_id && { owner_user_id: data.owner_user_id }),
     };
 
     // Aggiungi api_secret se fornito (criptato)
