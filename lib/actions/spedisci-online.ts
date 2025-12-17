@@ -127,9 +127,15 @@ export async function createShipmentWithOrchestrator(
       // Prova a recuperare da user_profiles o auth.users
       try {
         const { getSupabaseUserIdFromEmail } = await import('@/lib/database')
-        userId = await getSupabaseUserIdFromEmail(session.user.email)
+        // FIX: Passa NextAuth user.id come fallback
+        userId = await getSupabaseUserIdFromEmail(session.user.email, session.user.id)
       } catch (error) {
         console.warn('⚠️ Impossibile recuperare user_id:', error)
+        // FALLBACK: Usa NextAuth ID se disponibile
+        if (session.user.id) {
+          userId = session.user.id
+          console.log(`ℹ️ [ORCHESTRATOR] Usando NextAuth user.id come fallback: ${userId.substring(0, 8)}...`)
+        }
       }
     }
 
@@ -208,8 +214,14 @@ export async function createShipmentWithOrchestrator(
           if (api_key && isEncrypted(api_key)) {
             try {
               api_key = decryptCredential(api_key).trim() // FIX: trim dopo decrypt
-            } catch (decryptError) {
-              console.error('❌ Errore decriptazione api_key:', decryptError)
+            } catch (decryptError: any) {
+              const errorMsg = decryptError?.message || 'Unknown decryption error'
+              // Gestione ENCRYPTION_KEY rotation: errore gestibile
+              if (errorMsg.includes('CREDENTIAL_DECRYPT_FAILED')) {
+                console.error('❌ [BROKER] Errore decriptazione api_key (ENCRYPTION_KEY rotation):', errorMsg)
+                throw new Error('CREDENTIAL_DECRYPT_FAILED: Impossibile decriptare credenziali API. La chiave di criptazione potrebbe essere stata cambiata. Ricontrolla le credenziali dell\'integrazione Spedisci.Online in /dashboard/admin/configurations')
+              }
+              console.error('❌ Errore decriptazione api_key:', errorMsg)
               throw new Error('Impossibile decriptare credenziali')
             }
           } else if (api_key) {
@@ -219,8 +231,14 @@ export async function createShipmentWithOrchestrator(
           if (api_secret && isEncrypted(api_secret)) {
             try {
               api_secret = decryptCredential(api_secret).trim() // FIX: trim dopo decrypt
-            } catch (decryptError) {
-              console.error('❌ Errore decriptazione api_secret:', decryptError)
+            } catch (decryptError: any) {
+              const errorMsg = decryptError?.message || 'Unknown decryption error'
+              // api_secret è opzionale, ma logga l'errore
+              if (errorMsg.includes('CREDENTIAL_DECRYPT_FAILED')) {
+                console.warn('⚠️ [BROKER] Errore decriptazione api_secret (ENCRYPTION_KEY rotation) - continuo senza secret')
+              } else {
+                console.warn('⚠️ [BROKER] Errore decriptazione api_secret - continuo senza secret:', errorMsg)
+              }
               // api_secret è opzionale, continua senza
             }
           } else if (api_secret) {

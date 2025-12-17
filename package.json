@@ -25,6 +25,8 @@
     "create:smoke-test-user": "ts-node --project tsconfig.scripts.json scripts/create-smoke-test-user.ts",
     "test:supabase:smoke": "ts-node --project tsconfig.scripts.json scripts/smoke-test-supabase.ts",
     "test:supabase:smoke:ci": "node scripts/smoke-test-ci.js",
+    "verify:schema": "ts-node --project tsconfig.scripts.json scripts/verify-shipments-schema.ts",
+    "check:rls": "ts-node --project tsconfig.scripts.json scripts/check-supabase-rls.ts",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:debug": "npx playwright test --debug",
