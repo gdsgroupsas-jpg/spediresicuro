@@ -56,7 +56,17 @@ export async function getCourierConfigForUser(
     });
 
     if (error) {
-      console.warn('Errore recupero config tramite RPC, provo query diretta:', error);
+      // Gestione errore RPC 42702 (ambiguous column reference)
+      const isAmbiguousError = error.code === '42702' || error.message?.includes('ambiguous') || error.message?.includes('column reference "id"');
+      if (isAmbiguousError) {
+        console.warn('⚠️ [FACTORY] Errore RPC 42702 (ambiguous id) - applica migrazione 031_fix_ambiguous_id_rpc.sql. Uso fallback query diretta.');
+      } else {
+        console.warn('⚠️ [FACTORY] Errore recupero config tramite RPC, provo query diretta:', {
+          code: error.code,
+          message: error.message,
+          hint: error.hint
+        });
+      }
 
       // Fallback: query diretta
       const { data: user } = await supabaseAdmin

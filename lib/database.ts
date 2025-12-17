@@ -278,7 +278,20 @@ function mapStatusFromSupabase(status: string): string {
  * 2. Se non trovato, cerca in auth.users e crea/aggiorna il profilo
  * 3. Crea automaticamente il profilo se l'utente esiste in auth.users
  */
-export async function getSupabaseUserIdFromEmail(email: string): Promise<string | null> {
+/**
+ * Helper: Ottiene user_id Supabase da email NextAuth
+ * Usa la tabella user_profiles per mappare email -> UUID
+ * 
+ * ⚠️ IMPORTANTE: Ora che user_profiles esiste, questa funzione:
+ * 1. Cerca prima in user_profiles (veloce, indicizzato)
+ * 2. Se non trovato, cerca in auth.users e crea/aggiorna il profilo
+ * 3. Crea automaticamente il profilo se l'utente esiste in auth.users
+ * 4. FALLBACK: Se non trova nulla, usa NextAuth session.user.id se disponibile
+ */
+export async function getSupabaseUserIdFromEmail(
+  email: string,
+  nextAuthUserId?: string | null
+): Promise<string | null> {
   try {
     // 1. Cerca prima in user_profiles (veloce grazie all'indice su email)
     const { data: profile, error } = await supabaseAdmin
@@ -332,8 +345,29 @@ export async function getSupabaseUserIdFromEmail(email: string): Promise<string 
       }
     }
 
-    // 3. Se non esiste né in user_profiles né in auth.users, crea profilo senza supabase_user_id
-    // Questo permette di tracciare utenti NextAuth anche senza Supabase Auth
+    // 3. FALLBACK: Usa NextAuth session.user.id se disponibile
+    if (nextAuthUserId) {
+      console.log(`ℹ️ [SUPABASE] Usando NextAuth user.id come fallback: ${nextAuthUserId.substring(0, 8)}...`);
+      // Crea/aggiorna profilo con NextAuth ID come riferimento temporaneo
+      try {
+        await supabaseAdmin
+          .from('user_profiles')
+          .upsert(
+            {
+              email,
+              supabase_user_id: null, // Non abbiamo UUID Supabase, ma abbiamo NextAuth ID
+              // Salva NextAuth ID in un campo custom se disponibile, altrimenti usa email come riferimento
+            },
+            { onConflict: 'email' }
+          );
+      } catch (createError: any) {
+        console.warn('⚠️ [SUPABASE] Impossibile creare profilo con NextAuth ID:', createError.message);
+      }
+      // Restituisci NextAuth ID come fallback (non è UUID Supabase, ma è meglio di null)
+      return nextAuthUserId;
+    }
+
+    // 4. Se non esiste né in user_profiles né in auth.users né NextAuth ID, crea profilo senza supabase_user_id
     try {
       const { data: newProfile, error: createError } = await supabaseAdmin
         .from('user_profiles')
@@ -361,6 +395,11 @@ export async function getSupabaseUserIdFromEmail(email: string): Promise<string 
     return null;
   } catch (error: any) {
     console.error('❌ [SUPABASE] Errore getSupabaseUserIdFromEmail:', error.message);
+    // FALLBACK: Se tutto fallisce, usa NextAuth ID se disponibile
+    if (nextAuthUserId) {
+      console.log(`ℹ️ [SUPABASE] Fallback a NextAuth user.id dopo errore: ${nextAuthUserId.substring(0, 8)}...`);
+      return nextAuthUserId;
+    }
     return null;
   }
 }
@@ -675,14 +714,38 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     console.log('🔄 [SUPABASE] Salvataggio spedizione...');
     
     // Ottieni user_id Supabase da email NextAuth
+    // FIX: Usa NextAuth session.user.id come fallback se supabase_user_id non trovato
     let supabaseUserId: string | null = null;
+    let nextAuthUserId: string | null = null;
+    
+    // Prova a ottenere NextAuth user.id dalla sessione se disponibile
+    try {
+      const { auth } = await import('@/lib/auth-config');
+      const session = await auth();
+      if (session?.user?.id) {
+        nextAuthUserId = session.user.id;
+      }
+    } catch (error) {
+      // Ignora errori - non critico
+    }
+    
     if (userEmail) {
-      supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
+      supabaseUserId = await getSupabaseUserIdFromEmail(userEmail, nextAuthUserId);
       if (!supabaseUserId) {
-        console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per email: ${userEmail}. La spedizione sarà salvata senza user_id.`);
+        // FALLBACK: Usa NextAuth ID se disponibile
+        if (nextAuthUserId) {
+          supabaseUserId = nextAuthUserId;
+          console.log(`ℹ️ [SUPABASE] Usando NextAuth user.id come fallback: ${supabaseUserId.substring(0, 8)}...`);
+        } else {
+          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per email: ${userEmail}. La spedizione sarà salvata senza user_id.`);
+        }
       } else {
         console.log(`✅ [SUPABASE] User ID trovato: ${supabaseUserId.substring(0, 8)}...`);
       }
+    } else if (nextAuthUserId) {
+      // Se non abbiamo email ma abbiamo NextAuth ID, usalo
+      supabaseUserId = nextAuthUserId;
+      console.log(`ℹ️ [SUPABASE] Usando NextAuth user.id (email non disponibile): ${supabaseUserId.substring(0, 8)}...`);
     }
 
     const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
@@ -753,8 +816,19 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
       return value;
     }));
     
-    // Log del payload per debug (sempre in produzione per troubleshooting)
-    console.log('📋 [SUPABASE] Payload FINALE da inserire:', JSON.stringify(finalPayload, null, 2));
+    // Log del payload per debug (SICUREZZA: non loggare in produzione per evitare esposizione dati sensibili)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📋 [SUPABASE] Payload FINALE da inserire:', JSON.stringify(finalPayload, null, 2));
+    } else {
+      // In produzione, logga solo struttura (no valori sensibili)
+      const safePayload = Object.keys(finalPayload).reduce((acc, key) => {
+        const sensitiveFields = ['api_key', 'api_secret', 'password', 'token', 'secret', 'credential'];
+        const isSensitive = sensitiveFields.some(field => key.toLowerCase().includes(field));
+        acc[key] = isSensitive ? '[REDACTED]' : (typeof finalPayload[key] === 'object' ? '[OBJECT]' : finalPayload[key]);
+        return acc;
+      }, {} as any);
+      console.log('📋 [SUPABASE] Payload struttura (valori sensibili redatti):', JSON.stringify(safePayload, null, 2));
+    }
     
     console.log('🔄 [SUPABASE] Esecuzione INSERT...');
     const { data: supabaseData, error: supabaseError } = await supabaseAdmin

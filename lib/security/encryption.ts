@@ -136,9 +136,26 @@ export function decryptCredential(encryptedData: string): string {
     decrypted = Buffer.concat([decrypted, decipher.final()])
     
     return decrypted.toString('utf8')
-  } catch (error) {
-    console.error('Errore decriptazione credenziale:', error)
-    throw new Error('Errore durante la decriptazione della credenziale')
+  } catch (error: any) {
+    // Gestione ENCRYPTION_KEY rotation: se decrypt fallisce, potrebbe essere chiave cambiata
+    const errorMessage = error?.message || 'Unknown decryption error'
+    const isDecryptionError = 
+      errorMessage.includes('Unsupported state') ||
+      errorMessage.includes('unable to authenticate') ||
+      errorMessage.includes('bad decrypt') ||
+      errorMessage.includes('Invalid authentication tag')
+    
+    if (isDecryptionError) {
+      console.error('❌ [ENCRYPTION] Errore decriptazione credenziale (possibile ENCRYPTION_KEY rotation):', {
+        error: errorMessage,
+        hint: 'La chiave di criptazione potrebbe essere stata cambiata. Ricontrolla le credenziali dell\'integrazione.'
+      })
+      // Non lanciare errore fatale - restituisci errore gestibile
+      throw new Error('CREDENTIAL_DECRYPT_FAILED: Impossibile decriptare credenziali. La chiave di criptazione potrebbe essere stata cambiata. Ricontrolla le credenziali dell\'integrazione.')
+    }
+    
+    console.error('❌ [ENCRYPTION] Errore decriptazione credenziale:', errorMessage)
+    throw new Error(`Errore durante la decriptazione della credenziale: ${errorMessage}`)
   }
 }
 
