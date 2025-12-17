@@ -156,9 +156,27 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     this.API_KEY = trimmedApiKey; // Usa la key trimmed
     // Normalizza BASE_URL: mantieni trailing slash se presente (serve per new URL())
     // Esempio: https://demo1.spedisci.online/api/v2/ -> mantieni slash finale
+    // FIX: Valida baseUrl per evitare mismatch demo vs production
     const baseUrl = credentials.base_url || 'https://api.spedisci.online/api/v2';
-    this.BASE_URL = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    const normalizedBaseUrl = baseUrl.trim().endsWith('/') ? baseUrl.trim() : `${baseUrl.trim()}/`;
+    
+    // Validazione baseUrl: deve contenere spedisci.online e /api/v2
+    if (!normalizedBaseUrl.includes('spedisci.online')) {
+      console.warn('⚠️ [SPEDISCI.ONLINE] Base URL potrebbe essere errato:', normalizedBaseUrl);
+    }
+    if (!normalizedBaseUrl.includes('/api/v2')) {
+      console.warn('⚠️ [SPEDISCI.ONLINE] Base URL potrebbe mancare /api/v2:', normalizedBaseUrl);
+    }
+    
+    this.BASE_URL = normalizedBaseUrl;
     this.CONTRACT_MAPPING = credentials.contract_mapping || {};
+    
+    // Log baseUrl per debug (production-safe)
+    console.log('🔧 [SPEDISCI.ONLINE] Base URL configurato:', {
+      baseUrl: this.BASE_URL,
+      isDemo: this.BASE_URL.includes('demo'),
+      isProduction: this.BASE_URL.includes('api.spedisci.online') && !this.BASE_URL.includes('demo'),
+    });
   }
 
   /**
@@ -354,118 +372,118 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       ? crypto.createHash('sha256').update(this.API_KEY).digest('hex').substring(0, 8)
       : 'N/A';
     
-    // Auth strategies fallback (se 401, prova la successiva)
-    const authStrategies = [
-      { name: 'Bearer', header: 'Authorization', value: `Bearer ${this.API_KEY}` },
-      { name: 'Token', header: 'Authorization', value: this.API_KEY },
-      { name: 'X-API-KEY', header: 'X-API-KEY', value: this.API_KEY },
-    ];
+    // FIX: OpenAPI spec richiede SOLO Bearer token - rimuove strategie fallback
+    // Secondo documentazione: Authorization: Bearer {api_key}
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${this.API_KEY}`,
+    };
     
-    let lastError: Error | null = null;
-    let lastResponse: Response | null = null;
+    // Log pre-request per debug (production-safe)
+    console.log('📡 [SPEDISCI.ONLINE] API call:', {
+      method: 'POST',
+      url: url,
+      baseUrl: this.BASE_URL,
+      apiKeyFingerprint: keyFingerprint,
+      apiKeyLength: this.API_KEY.length,
+      authHeader: 'Bearer [REDACTED]', // Non loggare API key
+    });
     
-    for (let i = 0; i < authStrategies.length; i++) {
-      const strategy = authStrategies[i];
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        [strategy.header]: strategy.value,
-      };
-      
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
 
-        // Log production-safe: status + strategy + fingerprint
-        console.log('📡 [SPEDISCI.ONLINE] API call:', {
+      // Log response production-safe
+      console.log('📡 [SPEDISCI.ONLINE] API response:', {
+        status: response.status,
+        statusText: response.statusText,
+        apiKeyFingerprint: keyFingerprint,
+        url: url,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Log successo production-safe
+        console.log('✅ [SPEDISCI.ONLINE] Success:', {
           status: response.status,
-          statusText: response.statusText,
-          strategy: strategy.name,
           apiKeyFingerprint: keyFingerprint,
-          url: url,
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          
-          // Log successo production-safe
-          console.log('✅ [SPEDISCI.ONLINE] Success:', {
-            status: response.status,
-            strategy: strategy.name,
-            apiKeyFingerprint: keyFingerprint,
-            hasTracking: !!(result.trackingNumber || result.tracking_number),
-            hasLabel: !!(result.labelData || result.label_pdf || result.label),
-          });
-          
-          // Parsing risposta OpenAPI
-          const trackingNumber = result.trackingNumber || result.tracking_number || this.generateTrackingNumber();
-          // labelData può essere in diversi formati nella risposta
-          const labelData = result.labelData || result.label_pdf || result.label || result.labelPdf; // Base64 encoded
-          
-          return {
-            success: true,
-            tracking_number: trackingNumber,
-            label_url: result.labelUrl || result.label_url,
-            label_pdf: labelData, // Base64 encoded, sarà convertito in Buffer in createShipment
-            message: result.message || 'LDV creata con successo',
-          };
-        }
-
-        // Se 401 e non è l'ultima strategy, prova la successiva
-        if (response.status === 401 && i < authStrategies.length - 1) {
-          console.log(`⚠️ [SPEDISCI.ONLINE] Strategy "${strategy.name}" returned 401, trying next strategy...`);
-          lastResponse = response;
-          continue;
-        }
-
-        // Se non è 401 o è l'ultima strategy, gestisci errore
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        let errorBody = null;
-
-        try {
-          errorBody = await response.json();
-          errorMessage = errorBody.message || errorBody.error || errorMessage;
-        } catch {
-          const textError = await response.text();
-          errorMessage = textError || errorMessage;
-        }
-
-        // Log errore production-safe
-        console.error('❌ [SPEDISCI.ONLINE] API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          strategy: strategy.name,
-          apiKeyFingerprint: keyFingerprint,
-          error: errorMessage,
+          hasTracking: !!(result.trackingNumber || result.tracking_number),
+          hasLabel: !!(result.labelData || result.label_pdf || result.label),
         });
         
-        lastError = new Error(`Spedisci.Online Error (${response.status}): ${errorMessage}`);
-        lastResponse = response;
+        // Parsing risposta OpenAPI
+        const trackingNumber = result.trackingNumber || result.tracking_number || this.generateTrackingNumber();
+        // labelData può essere in diversi formati nella risposta
+        const labelData = result.labelData || result.label_pdf || result.label || result.labelPdf; // Base64 encoded
         
-        // Se non è 401, non provare altre strategies
-        if (response.status !== 401) {
-          break;
-        }
-      } catch (error: any) {
-        // Errore di rete - non provare altre strategies
-        console.error('❌ [SPEDISCI.ONLINE] Network error:', {
-          strategy: strategy.name,
-          apiKeyFingerprint: keyFingerprint,
-          error: error.message,
-        });
-        throw new Error(`Errore di connessione: ${error.message}`);
+        return {
+          success: true,
+          tracking_number: trackingNumber,
+          label_url: result.labelUrl || result.label_url,
+          label_pdf: labelData, // Base64 encoded, sarà convertito in Buffer in createShipment
+          message: result.message || 'LDV creata con successo',
+        };
       }
+
+      // Gestisci errore
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      let errorBody = null;
+
+      try {
+        errorBody = await response.json();
+        errorMessage = errorBody.message || errorBody.error || errorMessage;
+      } catch {
+        const textError = await response.text();
+        errorMessage = textError || errorMessage;
+      }
+
+      // Log errore production-safe con dettagli diagnostici
+      console.error('❌ [SPEDISCI.ONLINE] API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        apiKeyFingerprint: keyFingerprint,
+        apiKeyLength: this.API_KEY.length,
+        baseUrl: this.BASE_URL,
+        url: url,
+        error: errorMessage,
+        hint: response.status === 401 
+          ? 'Verifica: 1) API key valida, 2) Base URL corretto (demo vs production), 3) Bearer token formato corretto'
+          : undefined,
+      });
+      
+      // Messaggio errore più dettagliato per 401
+      if (response.status === 401) {
+        throw new Error(
+          `Spedisci.Online Authentication Failed (401): ${errorMessage}\n` +
+          `Verifica:\n` +
+          `1. API Key valida e aggiornata\n` +
+          `2. Base URL corretto: ${this.BASE_URL}\n` +
+          `3. Formato Authorization header: Bearer {api_key}`
+        );
+      }
+      
+      throw new Error(`Spedisci.Online Error (${response.status}): ${errorMessage}`);
+    } catch (error: any) {
+      // Errore di rete o parsing
+      console.error('❌ [SPEDISCI.ONLINE] Request error:', {
+        apiKeyFingerprint: keyFingerprint,
+        baseUrl: this.BASE_URL,
+        url: url,
+        error: error.message,
+      });
+      
+      // Se è già un errore formattato, rilancialo
+      if (error.message?.includes('Spedisci.Online')) {
+        throw error;
+      }
+      
+      throw new Error(`Errore di connessione Spedisci.Online: ${error.message}`);
     }
-    
-    // Se arriviamo qui, tutte le strategies hanno fallito
-    if (lastError) {
-      throw lastError;
-    }
-    
-    throw new Error('Spedisci.Online: Tutte le auth strategies hanno fallito');
   }
 
 
