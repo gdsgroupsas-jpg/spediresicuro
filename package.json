@@ -22,11 +22,17 @@
     "verify:users": "ts-node --project tsconfig.scripts.json scripts/verifica-crea-utenti-supabase.ts",
     "verify:reseller-wallet": "ts-node --project tsconfig.scripts.json scripts/verify-supabase-reseller-wallet.ts",
     "test:poste": "ts-node --project tsconfig.scripts.json scripts/test-poste-api.ts",
+    "create:smoke-test-user": "ts-node --project tsconfig.scripts.json scripts/create-smoke-test-user.ts",
+    "test:supabase:smoke": "ts-node --project tsconfig.scripts.json scripts/smoke-test-supabase.ts",
+    "test:supabase:smoke:ci": "node scripts/smoke-test-ci.js",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:debug": "npx playwright test --debug",
     "test:e2e:headed": "npx playwright test --headed",
-    "test:e2e:auto-fix": "node scripts/auto-fix-playwright-test.js"
+    "test:e2e:auto-fix": "node scripts/auto-fix-playwright-test.js",
+    "vercel": "vercel",
+    "vercel:login": "vercel login",
+    "vercel:deploy": "vercel --prod"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
@@ -81,6 +87,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.3.0",
+    "vercel": "^40.0.0",
     "wait-on": "^8.0.1"
   }
 }
