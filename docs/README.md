@@ -25,6 +25,7 @@ Questa cartella contiene **solo documentazione attiva** necessaria per:
 ## 🔐 Sicurezza
 
 ### Guide Sicurezza
+- **[SMOKE_TEST_SECURITY_BASELINE.md](SMOKE_TEST_SECURITY_BASELINE.md)** - ⭐ Baseline sicurezza: smoke test Supabase e gate CI/CD
 - **[SICUREZZA_AUTOMATION.md](SICUREZZA_AUTOMATION.md)** - Sicurezza sistema automation
 - **[SICUREZZA_CRITICA_PASSWORD.md](SICUREZZA_CRITICA_PASSWORD.md)** - Gestione password critiche
 - **[SICUREZZA_GEO_LOCATIONS.md](SICUREZZA_GEO_LOCATIONS.md)** - Sicurezza geo locations
@@ -56,6 +57,7 @@ Questa cartella contiene **solo documentazione attiva** necessaria per:
 
 ## 🧪 Testing
 
+- **[SMOKE_TEST_SECURITY_BASELINE.md](SMOKE_TEST_SECURITY_BASELINE.md)** - ⭐ Smoke test Supabase e gate sicurezza CI/CD
 - **[E2E_TEST_COMPLETED.md](E2E_TEST_COMPLETED.md)** - Test end-to-end completati
 
 ---
@@ -79,6 +81,7 @@ docs/
 │   └── MICROSOFT_AUTHENTICATOR_SETUP.md
 │
 ├── Security/                     # Documentazione sicurezza
+│   ├── SMOKE_TEST_SECURITY_BASELINE.md  # ⭐ Baseline sicurezza
 │   ├── SICUREZZA_*.md
 │   ├── CSP_SECURITY_POLICY.md
 │   ├── CONFIGURAZIONE_ENCRYPTION_KEY.md
@@ -93,6 +96,7 @@ docs/
 │   └── API_VERSIONING.md
 │
 ├── Testing/                      # Testing
+│   ├── SMOKE_TEST_SECURITY_BASELINE.md  # ⭐ Smoke test Supabase
 │   └── E2E_TEST_COMPLETED.md
 │
 └── archive/                      # 📦 Documentazione storica
