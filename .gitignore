@@ -29,6 +29,10 @@ yarn-error.log*
 .env
 .env.production
 .env.development
+.env.railway
+.env.vercel
+.env.*
+!/.env.example
 env.local
 # automation-service env
 automation-service/.env
@@ -102,6 +106,9 @@ TEST-OUTPUT-GIT.bat
 VEDI-ULTIMO-COMMIT.bat
 setup.bat
 SPIEGAZIONE-PROBLEMA-OUTPUT.md
+
+.vercel
+.env*.local
 
 .vercel
 .env*.local
