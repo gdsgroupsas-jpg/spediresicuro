@@ -153,10 +153,25 @@ export class FulfillmentOrchestrator {
             message: 'LDV creata tramite adapter diretto',
             metadata: result.metadata, // Passa metadati aggiuntivi (es: poste_account_id, waybill_number)
           };
-        } catch (error) {
+        } catch (error: any) {
           console.error(`❌ [ORCHESTRATOR] Adapter diretto ${courierCode} fallito:`, error);
+          
+          // ⚠️ SICUREZZA: 401/403 = Hard fail (no fallback CSV)
+          const isAuthError = error?.message?.includes('401') || 
+                             error?.message?.includes('403') ||
+                             error?.message?.includes('Authentication Failed') ||
+                             error?.message?.includes('Unauthorized');
+          
+          if (isAuthError) {
+            console.error('🔐 [SECURITY] Errore autenticazione adapter diretto - HARD FAIL (no fallback)');
+            throw new Error(
+              `Errore autenticazione corriere ${courierCode}: ${error?.message || 'Credenziali invalide'}\n` +
+              `Verifica le credenziali API nella configurazione.`
+            );
+          }
+          
           directError = error instanceof Error ? error.message : 'Errore sconosciuto';
-          // Continua con broker
+          // Continua con broker solo se non è errore auth
         }
       } else {
         console.log(`ℹ️ [ORCHESTRATOR] Nessun adapter diretto trovato per "${normalizedCourier}"`);
@@ -206,9 +221,23 @@ export class FulfillmentOrchestrator {
           stack: error?.stack,
         });
         
-        // Salva l'errore per passarlo al fallback
+        // ⚠️ SICUREZZA: 401/403 = Hard fail (no fallback CSV)
+        const isAuthError = error?.message?.includes('401') || 
+                           error?.message?.includes('403') ||
+                           error?.message?.includes('Authentication Failed') ||
+                           error?.message?.includes('Unauthorized');
+        
+        if (isAuthError) {
+          console.error('🔐 [SECURITY] Errore autenticazione provider - HARD FAIL (no fallback)');
+          throw new Error(
+            `Errore autenticazione Spedisci.Online: ${error?.message || 'Credenziali invalide'}\n` +
+            `Verifica le credenziali API nella configurazione.`
+          );
+        }
+        
+        // Salva l'errore per passarlo al fallback (solo per errori non-auth)
         directError = error?.message || 'Errore durante la creazione tramite Spedisci.online';
-        // Continua con fallback
+        // Continua con fallback solo se non è errore auth
       }
     } else {
       console.warn('⚠️ [ORCHESTRATOR] Broker adapter NON disponibile:', {

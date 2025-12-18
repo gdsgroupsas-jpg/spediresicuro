@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
+import { createAuthContextFromSession } from '@/lib/auth-context';
 
 /**
  * Handler GET - Ottiene tutte le spedizioni
@@ -31,7 +32,8 @@ export async function GET(request: NextRequest) {
       // Restituisci singola spedizione (filtrata per utente autenticato)
       let spedizioni: any[] = [];
       try {
-        spedizioni = await getSpedizioni(session.user.email);
+        const authContext = await createAuthContextFromSession(session);
+        spedizioni = await getSpedizioni(authContext);
       } catch (error: any) {
         console.error('❌ [API] Errore getSpedizioni (singola):', error.message);
         if (error.message?.includes('Supabase non configurato')) {
@@ -89,7 +91,8 @@ export async function GET(request: NextRequest) {
     // Ottieni spedizioni filtrate per utente autenticato (multi-tenancy)
     let spedizioni: any[] = [];
     try {
-      spedizioni = await getSpedizioni(session.user.email);
+      const authContext = await createAuthContextFromSession(session);
+      spedizioni = await getSpedizioni(authContext);
     } catch (error: any) {
       console.error('❌ [API] Errore getSpedizioni:', error.message);
       // Se Supabase non è configurato, ritorna array vuoto con messaggio
@@ -327,7 +330,8 @@ export async function POST(request: NextRequest) {
 
     // Salva nel database (SOLO Supabase)
     try {
-      await addSpedizione(spedizione, session.user.email);
+      const authContext = await createAuthContextFromSession(session);
+      await addSpedizione(spedizione, authContext);
     } catch (error: any) {
       console.error('❌ [API] Errore addSpedizione:', error.message);
       console.error('❌ [API] Stack:', error.stack);
