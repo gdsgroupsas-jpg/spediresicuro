@@ -15,8 +15,11 @@ import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Carica env vars
-dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+// Carica env vars solo in sviluppo locale (non in CI)
+// In CI, GitHub Actions passa le env vars direttamente via secrets
+if (!process.env.CI) {
+  dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+}
 
 const PROD_URL = 'https://spediresicuro.vercel.app';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
