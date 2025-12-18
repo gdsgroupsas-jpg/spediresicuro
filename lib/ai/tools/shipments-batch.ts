@@ -10,6 +10,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { assertValidUserId } from '@/lib/validators';
 
 interface ShipmentRow {
   // Mittente
@@ -314,6 +315,9 @@ export async function createBatchShipments(
   userId: string,
   defaultSender?: any
 ): Promise<BatchShipmentResult> {
+  // ⚠️ SICUREZZA: Valida userId prima di inserire
+  assertValidUserId(userId);
+  
   const result: BatchShipmentResult = {
     success: true,
     totalShipments: shipments.length,
