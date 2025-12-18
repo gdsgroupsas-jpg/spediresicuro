@@ -7,12 +7,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeCorrieriPerformance, generateRoutingSuggestion } from '@/lib/corrieri-performance';
 import { Corriere } from '@/types/corrieri';
+import { auth } from '@/lib/auth-config';
+import { createAuthContextFromSession } from '@/lib/auth-context';
 
 // Forza rendering dinamico (usa nextUrl.searchParams)
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    // Verifica autenticazione
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Non autenticato' },
+        { status: 401 }
+      );
+    }
+
+    const authContext = await createAuthContextFromSession(session);
+
     const searchParams = request.nextUrl.searchParams;
     const citta = searchParams.get('citta');
     const provincia = searchParams.get('provincia');
@@ -27,7 +40,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const performances = await analyzeCorrieriPerformance(citta, provincia);
+    const performances = await analyzeCorrieriPerformance(citta, provincia, authContext);
 
     return NextResponse.json(
       {
@@ -51,6 +64,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verifica autenticazione
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Non autenticato' },
+        { status: 401 }
+      );
+    }
+
+    const authContext = await createAuthContextFromSession(session);
+
     const body = await request.json();
     const { citta, provincia, corriereScelto, prezzoCorriereScelto } = body;
 
@@ -68,7 +92,8 @@ export async function POST(request: NextRequest) {
       citta,
       provincia,
       prezzoCorriereScelto,
-      corriereScelto as Corriere
+      corriereScelto as Corriere,
+      authContext
     );
 
     return NextResponse.json(

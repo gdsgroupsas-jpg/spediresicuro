@@ -6,6 +6,7 @@
 
 import { Corriere, CorrierePerformance, RoutingSuggestion } from '@/types/corrieri';
 import { getSpedizioni } from './database';
+import type { AuthContext } from './auth-context';
 
 /**
  * Calcola il Reliability Score di un corriere per una zona
@@ -35,13 +36,16 @@ export function calculateReliabilityScore(
 
 /**
  * Analizza le performance dei corrieri per una zona specifica
+ * 
+ * ⚠️ IMPORTANTE: Richiede AuthContext per sicurezza (service_role per vedere tutte le spedizioni)
  */
 export async function analyzeCorrieriPerformance(
   citta: string,
-  provincia: string
+  provincia: string,
+  authContext: AuthContext
 ): Promise<CorrierePerformance[]> {
-  // Ottieni tutte le spedizioni
-  const spedizioni = await getSpedizioni();
+  // Ottieni tutte le spedizioni (service_role vede tutto, user vede solo le proprie)
+  const spedizioni = await getSpedizioni(authContext);
 
   // Filtra per zona (ultime 2 settimane)
   const dueSettimaneFa = new Date();
@@ -177,9 +181,10 @@ export async function generateRoutingSuggestion(
   citta: string,
   provincia: string,
   prezzoCorriereScelto: number,
-  corriereScelto: Corriere
+  corriereScelto: Corriere,
+  authContext: AuthContext
 ): Promise<RoutingSuggestion | null> {
-  const performances = await analyzeCorrieriPerformance(citta, provincia);
+  const performances = await analyzeCorrieriPerformance(citta, provincia, authContext);
 
   if (performances.length === 0) {
     return null;
