@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { auth } from '@/lib/auth-config';
 import { getSpedizioni } from '@/lib/database';
+import { createAuthContextFromSession } from '@/lib/auth-context';
 
 // Disabilita cache statica per garantire dati sempre aggiornati
 export const dynamic = 'force-dynamic';
@@ -84,7 +85,8 @@ export async function GET() {
     if (!isSupabaseConfigured()) {
       console.log('📁 [JSON] Supabase non configurato, uso database JSON locale per export');
       // Usa getSpedizioni che gestisce automaticamente il fallback
-      const tutteSpedizioni = await getSpedizioni(session.user.email);
+      const authContext = await createAuthContextFromSession(session);
+      const tutteSpedizioni = await getSpedizioni(authContext);
       // Filtra solo quelle con status 'pending' o 'in_preparazione'
       spedizioni = tutteSpedizioni.filter((s: any) => 
         (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
@@ -118,7 +120,8 @@ export async function GET() {
         console.error('❌ [SUPABASE] Errore query:', error.message);
         console.log('📁 [FALLBACK] Uso database JSON locale');
         // Fallback a JSON se errore Supabase
-        const tutteSpedizioni = await getSpedizioni(session.user.email);
+        const authContext = await createAuthContextFromSession(session);
+        const tutteSpedizioni = await getSpedizioni(authContext);
         spedizioni = tutteSpedizioni.filter((s: any) => 
           (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
         );
