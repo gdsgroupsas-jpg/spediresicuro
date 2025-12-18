@@ -13,6 +13,11 @@ import DashboardNav from '@/components/dashboard-nav'
 import { RefreshButton } from './refresh-button'
 import { LogRow } from './log-row'
 
+// ⚠️ FORZA RENDERING DINAMICO: Questa pagina usa cookies (createServerActionClient)
+// per autenticazione, quindi non può essere pre-renderizzata staticamente
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 /**
  * Pagina principale - Server Component
  */
