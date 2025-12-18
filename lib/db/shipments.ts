@@ -6,6 +6,7 @@
 
 import { supabase, supabaseAdmin } from './client';
 import type { Shipment, ShipmentFilters, CreateShipmentInput, UpdateShipmentInput } from '@/types/shipments';
+import { assertValidUserId } from '@/lib/validators';
 
 /**
  * Genera tracking number univoco
@@ -21,6 +22,9 @@ export function generateTrackingNumber(): string {
  * Crea una nuova spedizione
  */
 export async function createShipment(data: CreateShipmentInput, userId: string): Promise<Shipment> {
+  // ⚠️ SICUREZZA: Valida userId prima di inserire
+  assertValidUserId(userId);
+  
   const trackingNumber = generateTrackingNumber();
 
   const shipmentData = {

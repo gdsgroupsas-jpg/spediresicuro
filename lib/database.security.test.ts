@@ -4,6 +4,7 @@
  * Verifica che:
  * 1. User A non vede shipments user B
  * 2. Select shipments where user_id is null non ritorna nulla per user normale
+ * 3. assertValidUserId blocca userId invalidi
  * 
  * ⚠️ IMPORTANTE: Questi test verificano i fix di sicurezza HIGH
  */
@@ -11,6 +12,7 @@
 import { getSpedizioni, addSpedizione } from './database';
 import { createAuthContextFromSession, createServiceRoleContext } from './auth-context';
 import { supabaseAdmin } from './supabase';
+import { assertValidUserId } from './validators';
 
 /**
  * Test 1: User A non vede shipments user B
@@ -214,6 +216,88 @@ export async function testUserCannotCreateNullUserId(): Promise<boolean> {
 }
 
 /**
+ * Test 5: assertValidUserId blocca userId invalidi
+ */
+export async function testAssertValidUserId(): Promise<boolean> {
+  console.log('🧪 [TEST] Test assertValidUserId...');
+  
+  try {
+    const validUUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    
+    // Test: UUID valido deve passare
+    try {
+      assertValidUserId(validUUID);
+      console.log('✅ [TEST] UUID valido accettato');
+    } catch (error: any) {
+      console.error('❌ [TEST] FAIL: UUID valido rifiutato:', error.message);
+      return false;
+    }
+    
+    // Test: undefined deve throw
+    try {
+      assertValidUserId(undefined as any);
+      console.error('❌ [TEST] FAIL: undefined non bloccato!');
+      return false;
+    } catch (error: any) {
+      if (error.message?.includes('USER_ID_REQUIRED')) {
+        console.log('✅ [TEST] undefined bloccato correttamente');
+      } else {
+        console.error('❌ [TEST] FAIL: Messaggio errore errato per undefined:', error.message);
+        return false;
+      }
+    }
+    
+    // Test: null deve throw
+    try {
+      assertValidUserId(null as any);
+      console.error('❌ [TEST] FAIL: null non bloccato!');
+      return false;
+    } catch (error: any) {
+      if (error.message?.includes('USER_ID_REQUIRED')) {
+        console.log('✅ [TEST] null bloccato correttamente');
+      } else {
+        console.error('❌ [TEST] FAIL: Messaggio errore errato per null:', error.message);
+        return false;
+      }
+    }
+    
+    // Test: stringa vuota deve throw
+    try {
+      assertValidUserId('');
+      console.error('❌ [TEST] FAIL: stringa vuota non bloccata!');
+      return false;
+    } catch (error: any) {
+      if (error.message?.includes('USER_ID_REQUIRED')) {
+        console.log('✅ [TEST] stringa vuota bloccata correttamente');
+      } else {
+        console.error('❌ [TEST] FAIL: Messaggio errore errato per stringa vuota:', error.message);
+        return false;
+      }
+    }
+    
+    // Test: non-UUID deve throw
+    try {
+      assertValidUserId('not-a-uuid');
+      console.error('❌ [TEST] FAIL: non-UUID non bloccato!');
+      return false;
+    } catch (error: any) {
+      if (error.message?.includes('INVALID_USER_ID')) {
+        console.log('✅ [TEST] non-UUID bloccato correttamente');
+      } else {
+        console.error('❌ [TEST] FAIL: Messaggio errore errato per non-UUID:', error.message);
+        return false;
+      }
+    }
+    
+    console.log('✅ [TEST] PASS: assertValidUserId funziona correttamente');
+    return true;
+  } catch (error: any) {
+    console.error('❌ [TEST] Errore test assertValidUserId:', error.message);
+    return false;
+  }
+}
+
+/**
  * Esegue tutti i test di sicurezza
  */
 export async function runSecurityTests(): Promise<{
@@ -228,6 +312,7 @@ export async function runSecurityTests(): Promise<{
   results.noNullUserId = await testNoNullUserIdForUsers();
   results.anonymousBlocked = await testAnonymousBlocked();
   results.userCannotCreateNull = await testUserCannotCreateNullUserId();
+  results.assertValidUserId = await testAssertValidUserId();
   
   const allPassed = Object.values(results).every((passed) => passed);
   
@@ -236,6 +321,7 @@ export async function runSecurityTests(): Promise<{
   console.log('  - No user_id null per utenti:', results.noNullUserId ? '✅' : '❌');
   console.log('  - Anonymous bloccato:', results.anonymousBlocked ? '✅' : '❌');
   console.log('  - User non può creare null:', results.userCannotCreateNull ? '✅' : '❌');
+  console.log('  - assertValidUserId funziona:', results.assertValidUserId ? '✅' : '❌');
   console.log('\n' + (allPassed ? '✅ TUTTI I TEST PASSATI' : '❌ ALCUNI TEST FALLITI'));
   
   return { allPassed, results };

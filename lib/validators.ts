@@ -61,6 +61,36 @@ export function validateUUID(uuid: string): boolean {
 }
 
 /**
+ * Asserisce che userId sia valido (definito, non vuoto, UUID valido)
+ * 
+ * ⚠️ SICUREZZA: Previene inserimenti con user_id null o invalido
+ * 
+ * @param userId - User ID da validare
+ * @throws Error con codice USER_ID_REQUIRED o INVALID_USER_ID se invalido
+ * 
+ * @example
+ * assertValidUserId(userId); // throw se invalido
+ * // userId è garantito essere string valida non vuota
+ */
+export function assertValidUserId(userId: string): asserts userId is string {
+  if (userId === undefined || userId === null) {
+    throw new Error('USER_ID_REQUIRED: userId è obbligatorio e non può essere null o undefined');
+  }
+  
+  if (typeof userId !== 'string') {
+    throw new Error(`USER_ID_REQUIRED: userId deve essere una stringa, ricevuto: ${typeof userId}`);
+  }
+  
+  if (userId.trim() === '') {
+    throw new Error('USER_ID_REQUIRED: userId non può essere una stringa vuota');
+  }
+  
+  if (!validateUUID(userId)) {
+    throw new Error(`INVALID_USER_ID: userId deve essere un UUID valido, ricevuto: ${userId.substring(0, 20)}...`);
+  }
+}
+
+/**
  * Valida un numero di telefono (formato italiano e internazionale)
  *
  * @param phone - Numero di telefono da validare
