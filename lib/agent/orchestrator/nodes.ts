@@ -5,6 +5,8 @@ import { addSpedizione } from '../../database';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { CourierServiceType } from '@/types/shipments';
+import { getSupabaseUserIdFromEmail } from '../../database';
+import type { AuthContext } from '../../auth-context';
 
 // Helper to get LLM instance (returns null if no key)
 const getLLM = () => {
@@ -281,9 +283,13 @@ export async function selectCourier(state: AgentState): Promise<Partial<AgentSta
   const { recipient_city, recipient_province, weight = 1 } = state.shipmentData;
 
   try {
+      // Crea AuthContext da stato per analisi performance
+      const authContext = await createAuthContextFromState(state);
+      
       const performances = await analyzeCorrieriPerformance(
           recipient_city || '', 
-          recipient_province || ''
+          recipient_province || '',
+          authContext
       );
 
       // Simple Selection Logic (can be expanded)
@@ -357,6 +363,36 @@ export async function calculateMargins(state: AgentState): Promise<Partial<Agent
  * Node: Save Shipment
  * Persists data to Supabase
  */
+/**
+ * Helper: Crea AuthContext da AgentState
+ */
+async function createAuthContextFromState(state: AgentState): Promise<AuthContext> {
+    if (!state.userEmail) {
+        throw new Error('userEmail mancante nello stato - impossibile creare AuthContext');
+    }
+
+    // Prova a ottenere userId Supabase da email
+    let supabaseUserId: string | null = null;
+    try {
+        supabaseUserId = await getSupabaseUserIdFromEmail(state.userEmail, state.userId || undefined);
+    } catch (error: any) {
+        console.warn('⚠️ [NODES] Errore recupero userId Supabase:', error.message);
+    }
+
+    // Se non abbiamo userId Supabase, NON possiamo permettere operazioni
+    if (!supabaseUserId) {
+        console.error('❌ [NODES] Impossibile ottenere userId Supabase per:', state.userEmail);
+        throw new Error('Impossibile ottenere userId Supabase - verifica autenticazione');
+    }
+
+    return {
+        type: 'user',
+        userId: supabaseUserId,
+        userEmail: state.userEmail,
+        isAdmin: false, // Default, può essere verificato se necessario
+    };
+}
+
 export async function saveShipment(state: AgentState): Promise<Partial<AgentState>> {
     console.log('🔄 Executing Node: saveShipment');
     
@@ -368,8 +404,11 @@ export async function saveShipment(state: AgentState): Promise<Partial<AgentStat
             ocr_confidence_score: state.confidenceScore,
         };
 
+        // Crea AuthContext da stato
+        const authContext = await createAuthContextFromState(state);
+
         // Note: addSpedizione handles ID generation and some defaults
-        const result = await addSpedizione(shipmentInput, state.userEmail);
+        const result = await addSpedizione(shipmentInput, authContext);
         
         return {
             shipmentId: result ? result.id : undefined,
@@ -404,7 +443,9 @@ export async function humanReview(state: AgentState): Promise<Partial<AgentState
                 internal_notes: `Review required. Errors: ${state.validationErrors.join(', ')}`
             };
             
-            const result = await addSpedizione(shipmentInput, state.userEmail);
+            // Crea AuthContext da stato
+            const authContext = await createAuthContextFromState(state);
+            const result = await addSpedizione(shipmentInput, authContext);
             return {
                 shipmentId: result ? result.id : undefined,
                 processingStatus: 'error', 
