@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import { addSpedizione } from '@/lib/database';
+import { createAuthContextFromSession } from '@/lib/auth-context';
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,7 +113,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Crea spedizione
-    const nuovaSpedizione = addSpedizione(spedizioneData, session.user.email);
+    const authContext = await createAuthContextFromSession(session);
+    const nuovaSpedizione = await addSpedizione(spedizioneData, authContext);
 
     return NextResponse.json(
       {

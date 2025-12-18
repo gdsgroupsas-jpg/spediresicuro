@@ -509,6 +509,9 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     notes: spedizione.note || '',
     // ⚠️ CRITICO: Audit Trail - created_by_user_email (per multi-tenancy quando user_id è null)
     created_by_user_email: spedizione.created_by_user_email || null,
+    // ⚠️ NUOVO: Audit metadata per service_role operations
+    created_by_admin_id: spedizione.created_by_admin_id || null,
+    admin_operation_reason: spedizione.admin_operation_reason || null,
     // Metadati aggiuntivi (JSONB) - per salvare dati specifici corriere (es: Poste)
     metadata: spedizione.poste_metadata || spedizione.metadata || null,
     // Campi aggiuntivi (salvati in JSONB o come note)
@@ -620,6 +623,7 @@ function mapSpedizioneFromSupabase(s: any): any {
  * Aggiunge una nuova spedizione
  * 
  * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
+ * ⚠️ SICUREZZA: Richiede AuthContext esplicito - non permette user_id=null per utenti normali
  * Se Supabase non è configurato o fallisce, viene lanciato un errore
  *
  * Gestisce correttamente ldv (Lettera di Vettura) e tracking
@@ -627,13 +631,23 @@ function mapSpedizioneFromSupabase(s: any): any {
  * - Se ldv è presente, viene usato anche come tracking
  * - Se tracking non è presente, usa ldv come fallback
  */
-export async function addSpedizione(spedizione: any, userEmail?: string): Promise<any> {
+export async function addSpedizione(
+  spedizione: any,
+  authContext: import('./auth-context').AuthContext
+): Promise<any> {
   // ⚠️ CRITICO: Verifica che Supabase sia configurato
   if (!isSupabaseConfigured()) {
     const errorMsg = 'Supabase non configurato. Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY';
     console.error('❌ [SUPABASE]', errorMsg);
     throw new Error(errorMsg);
   }
+
+  // ⚠️ SICUREZZA: Blocca anonymous
+  if (authContext.type === 'anonymous') {
+    console.error('❌ [SECURITY] Tentativo addSpedizione senza autenticazione');
+    throw new Error('Non autenticato: accesso negato');
+  }
+
   // ⚠️ CRITICO: Normalizza tracking/ldv
   // PRIORITÀ: ldv > tracking > generato automaticamente
   const ldv = spedizione.ldv || '';
@@ -652,7 +666,7 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
     ...spedizione,
     id: spedizione.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
     createdAt: spedizione.createdAt || spedizione.created_at || new Date().toISOString(),
-    created_by_user_email: userEmail || '',
+    created_by_user_email: authContext.userEmail || '',
     // Assicura struttura destinatario (priorità: struttura esistente > campi separati)
     // ⚠️ IMPORTANTE: Se esiste già destinatario con nome, mantienilo, altrimenti costruiscilo
     destinatario: (spedizione.destinatario && spedizione.destinatario.nome) 
@@ -713,39 +727,35 @@ export async function addSpedizione(spedizione: any, userEmail?: string): Promis
   try {
     console.log('🔄 [SUPABASE] Salvataggio spedizione...');
     
-    // Ottieni user_id Supabase da email NextAuth
-    // FIX: Usa NextAuth session.user.id come fallback se supabase_user_id non trovato
+    // ⚠️ SICUREZZA: Determina user_id in base al contesto
     let supabaseUserId: string | null = null;
-    let nextAuthUserId: string | null = null;
     
-    // Prova a ottenere NextAuth user.id dalla sessione se disponibile
-    try {
-      const { auth } = await import('@/lib/auth-config');
-      const session = await auth();
-      if (session?.user?.id) {
-        nextAuthUserId = session.user.id;
+    if (authContext.type === 'user') {
+      // Utente normale: user_id è OBBLIGATORIO
+      if (!authContext.userId) {
+        console.error('❌ [SECURITY] addSpedizione chiamato con user context senza userId');
+        throw new Error('Impossibile salvare spedizione: userId mancante. Verifica autenticazione.');
       }
-    } catch (error) {
-      // Ignora errori - non critico
-    }
-    
-    if (userEmail) {
-      supabaseUserId = await getSupabaseUserIdFromEmail(userEmail, nextAuthUserId);
-      if (!supabaseUserId) {
-        // FALLBACK: Usa NextAuth ID se disponibile
-        if (nextAuthUserId) {
-          supabaseUserId = nextAuthUserId;
-          console.log(`ℹ️ [SUPABASE] Usando NextAuth user.id come fallback: ${supabaseUserId.substring(0, 8)}...`);
-        } else {
-          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per email: ${userEmail}. La spedizione sarà salvata senza user_id.`);
-        }
-      } else {
-        console.log(`✅ [SUPABASE] User ID trovato: ${supabaseUserId.substring(0, 8)}...`);
-      }
-    } else if (nextAuthUserId) {
-      // Se non abbiamo email ma abbiamo NextAuth ID, usalo
-      supabaseUserId = nextAuthUserId;
-      console.log(`ℹ️ [SUPABASE] Usando NextAuth user.id (email non disponibile): ${supabaseUserId.substring(0, 8)}...`);
+      supabaseUserId = authContext.userId;
+      console.log(`✅ [SUPABASE] User ID: ${supabaseUserId.substring(0, 8)}... (user: ${authContext.userEmail || 'N/A'})`);
+    } else if (authContext.type === 'service_role') {
+      // Service role: user_id può essere null (con audit metadata)
+      // Se fornito, usalo; altrimenti null è permesso
+      supabaseUserId = authContext.userId || null;
+      
+      // Log audit per operazioni service_role
+      const { logServiceRoleOperation } = await import('./auth-context');
+      logServiceRoleOperation(authContext, 'addSpedizione', {
+        user_id: supabaseUserId || 'null',
+        created_by_admin_id: authContext.serviceRoleMetadata?.adminId,
+        reason: authContext.serviceRoleMetadata?.reason,
+      });
+      
+      console.log(`🔐 [SUPABASE] Service role: salvataggio spedizione${supabaseUserId ? ` con user_id: ${supabaseUserId.substring(0, 8)}...` : ' con user_id=null (admin operation)'}`);
+      
+      // Aggiungi metadati di audit per service_role
+      nuovaSpedizione.created_by_admin_id = authContext.serviceRoleMetadata?.adminId || null;
+      nuovaSpedizione.admin_operation_reason = authContext.serviceRoleMetadata?.reason || null;
     }
 
     const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
@@ -891,10 +901,11 @@ export function addPreventivo(preventivo: any): void {
  * Ottiene tutte le spedizioni
  * 
  * ⚠️ IMPORTANTE: Usa SOLO Supabase - nessun fallback JSON
+ * ⚠️ SICUREZZA: Richiede AuthContext esplicito - nessun percorso può chiamare senza contesto valido
  * 
- * @param userEmail Email utente per filtrare le spedizioni (multi-tenancy)
+ * @param authContext Contesto di autenticazione (obbligatorio)
  */
-export async function getSpedizioni(userEmail?: string): Promise<any[]> {
+export async function getSpedizioni(authContext: import('./auth-context').AuthContext): Promise<any[]> {
   // ⚠️ CRITICO: Verifica che Supabase sia configurato
   if (!isSupabaseConfigured()) {
     const errorMsg = 'Supabase non configurato. Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY';
@@ -905,38 +916,38 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
     throw new Error(errorMsg);
   }
 
+  // ⚠️ SICUREZZA: Blocca anonymous
+  if (authContext.type === 'anonymous') {
+    console.error('❌ [SECURITY] Tentativo accesso getSpedizioni senza autenticazione');
+    throw new Error('Non autenticato: accesso negato');
+  }
+
   try {
-    console.log(`🔍 [SUPABASE] Recupero spedizioni${userEmail ? ` per ${userEmail}` : ' (tutte)'}`);
-    
-    // Se abbiamo email, filtra per user_id
+    // ⚠️ SICUREZZA: Filtra per user_id per utenti normali
     let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .order('created_at', { ascending: false });
 
-    // ⚠️ IMPORTANTE: Filtra per user_id se email fornita (multi-tenancy)
-    if (userEmail) {
-      try {
-        const supabaseUserId = await getSupabaseUserIdFromEmail(userEmail);
-        if (supabaseUserId) {
-          // Filtra per user_id OPPURE (user_id null E created_by_user_email corrispondente)
-          // Usa sintassi PostgREST corretta: or(user_id.eq.uuid,and(user_id.is.null,created_by_user_email.eq.email))
-          query = query.or(`user_id.eq.${supabaseUserId},and(user_id.is.null,created_by_user_email.eq.${userEmail})`);
-          console.log(`✅ [SUPABASE] Filtro per user_id: ${supabaseUserId.substring(0, 8)}... (include anche user_id null con email corrispondente)`);
-        } else {
-          // Se non trovato user_id, filtra SOLO per email (le spedizioni con user_id null avranno created_by_user_email)
-          query = query.eq('created_by_user_email', userEmail);
-          console.warn(`⚠️ [SUPABASE] Nessun user_id trovato per ${userEmail}, filtro per created_by_user_email`);
-        }
-      } catch (userIdError: any) {
-        console.warn(`⚠️ [SUPABASE] Errore recupero user_id per ${userEmail}:`, userIdError.message);
-        // Continua senza filtro user_id, filtra solo per email
-        query = query.eq('created_by_user_email', userEmail);
-        console.log(`🔄 [SUPABASE] Filtro fallback: created_by_user_email = ${userEmail}`);
+    if (authContext.type === 'user') {
+      // Utente normale: filtra SOLO per user_id (NON include user_id IS NULL)
+      if (!authContext.userId) {
+        console.error('❌ [SECURITY] getSpedizioni chiamato con user context senza userId');
+        throw new Error('Contesto utente invalido: userId mancante');
       }
-    } else {
-      // Se non c'è email, mostra tutte le spedizioni (solo per admin)
-      console.log('⚠️ [SUPABASE] Nessuna email fornita, recupero tutte le spedizioni (solo per admin)');
+
+      // ⚠️ CRITICO: Filtra SOLO per user_id (NON permettere user_id IS NULL)
+      query = query.eq('user_id', authContext.userId);
+      console.log(`✅ [SUPABASE] Filtro per user_id: ${authContext.userId.substring(0, 8)}... (user: ${authContext.userEmail || 'N/A'})`);
+    } else if (authContext.type === 'service_role') {
+      // Service role: bypass RLS e recupera tutto (con audit log)
+      const { logServiceRoleOperation } = await import('./auth-context');
+      logServiceRoleOperation(authContext, 'getSpedizioni', {
+        scope: 'all_shipments',
+        bypass_rls: true,
+      });
+      console.log('🔐 [SUPABASE] Service role: recupero tutte le spedizioni (bypass RLS)');
+      // Nessun filtro: service_role vede tutto
     }
 
     console.log('🔄 [SUPABASE] Esecuzione query...');
@@ -964,7 +975,7 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
 
     // Se non ci sono spedizioni, ritorna array vuoto (non è un errore)
     if (!supabaseSpedizioni || supabaseSpedizioni.length === 0) {
-      console.log(`ℹ️ [SUPABASE] Nessuna spedizione trovata${userEmail ? ` per ${userEmail}` : ''}`);
+      console.log(`ℹ️ [SUPABASE] Nessuna spedizione trovata${authContext.type === 'user' ? ` per ${authContext.userEmail || 'N/A'}` : ' (service_role)'}`);
       return [];
     }
 
@@ -985,7 +996,7 @@ export async function getSpedizioni(userEmail?: string): Promise<any[]> {
         }
       });
       
-      console.log(`✅ [SUPABASE] Recuperate ${spedizioniJSON.length} spedizioni attive su ${supabaseSpedizioni.length} totali${userEmail ? ` per ${userEmail}` : ''}`);
+      console.log(`✅ [SUPABASE] Recuperate ${spedizioniJSON.length} spedizioni attive su ${supabaseSpedizioni.length} totali${authContext.type === 'user' ? ` per ${authContext.userEmail || 'N/A'}` : ' (service_role)'}`);
       return spedizioniJSON;
     } catch (mapError: any) {
       console.error('❌ [SUPABASE] Errore mapping generale:', mapError.message);
