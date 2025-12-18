@@ -150,6 +150,10 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000  # ⚠️ Solo per sviluppo locale
+NEXTAUTH_SECRET=...
+
 # AI (Cervello)
 GOOGLE_API_KEY=...      # Gemini 2.0 Flash Key
 
@@ -161,12 +165,86 @@ XPAY_TERMINAL_ID=...    # Terminale POS Virtuale
 AUTOMATION_SERVICE_URL=http://localhost:3000
 ```
 
-### Comandi Utili
+### 🚀 Percorsi di Sviluppo
+
+Il progetto supporta **due percorsi di sviluppo** a seconda delle tue esigenze:
+
+#### **Percorso 1: Sviluppo con Supabase Cloud** (Consigliato per iniziare)
+
+**Requisiti:**
+- ✅ Account Supabase Cloud (gratuito)
+- ✅ File `.env.local` configurato con credenziali Supabase Cloud
+- ❌ **NON richiede Docker**
+
+**Setup:**
+```bash
+# 1. Verifica configurazione
+npm run setup:check
+
+# 2. Avvia sviluppo
+npm run dev
+```
+
+**Verifiche:**
+- ✅ `npm run check:env:simple` → PASS
+- ✅ `npm run check:errors` → PASS
+- ⚠️ `npx supabase status` → WARN (Docker non necessario)
+
+**Vantaggi:**
+- Setup rapido (no Docker)
+- Database cloud sempre disponibile
+- Ideale per sviluppo collaborativo
+
+---
+
+#### **Percorso 2: Sviluppo con Supabase Locale**
+
+**Requisiti:**
+- ✅ Docker Desktop installato e in esecuzione
+- ✅ File `.env.local` configurato
+- ✅ Supabase CLI installato (`npm install -g supabase`)
+
+**Setup:**
+```bash
+# 1. Avvia Supabase locale
+npx supabase start
+
+# 2. Verifica configurazione
+npm run setup:check
+
+# 3. Avvia sviluppo
+npm run dev
+```
+
+**Verifiche:**
+- ✅ `npm run check:env:simple` → PASS
+- ✅ `npm run check:errors` → PASS
+- ✅ `npx supabase status` → PASS
+
+**Vantaggi:**
+- Database locale isolato
+- Controllo completo su migrations
+- Ideale per test offline
+
+---
+
+### 📋 Comandi Utili
 
 ```bash
+# Verifica setup completo (consigliato prima di iniziare)
+npm run setup:check
+
+# Sviluppo
 npm run dev          # Avvio Next.js
-npm run doctor       # Avvio script diagnostico locale
-npx supabase status  # Verifica connessione DB
+
+# Verifiche
+npm run check:env:simple  # Verifica variabili .env.local
+npm run check:errors      # Verifica errori nel log
+
+# Supabase (solo se locale)
+npx supabase status      # Verifica Supabase locale
+npx supabase start       # Avvia Supabase locale
+npx supabase stop        # Ferma Supabase locale
 ```
 
 ---
