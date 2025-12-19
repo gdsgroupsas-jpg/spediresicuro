@@ -9,6 +9,8 @@
  * logger.error('Errore creazione spedizione', error, { shipmentId: '123' });
  */
 
+import { createHash } from 'crypto';
+
 export interface LogContext {
   requestId?: string;
   userId?: string;
@@ -32,7 +34,7 @@ export interface Logger {
 export function createLogger(requestId?: string, userId?: string): Logger {
   const baseContext: LogContext = {
     requestId: requestId || 'unknown',
-    userId: userId || 'anonymous',
+    userId: hashUserId(userId), // Pseudo-anonimizzato per GDPR
     timestamp: new Date().toISOString(),
   };
 
@@ -103,6 +105,20 @@ export function createLogger(requestId?: string, userId?: string): Logger {
       }
     },
   };
+}
+
+/**
+ * Hash userId per pseudo-anonimizzazione GDPR
+ * 
+ * @param userId - ID utente in chiaro
+ * @returns Hash corto (primi 8 caratteri) o 'anonymous' se undefined
+ */
+function hashUserId(userId?: string): string {
+  if (!userId) {
+    return 'anonymous';
+  }
+  const hash = createHash('sha256').update(userId).digest('hex');
+  return hash.substring(0, 8);
 }
 
 /**
