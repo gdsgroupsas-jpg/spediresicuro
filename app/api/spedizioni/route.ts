@@ -20,12 +20,13 @@ import { handleApiError } from '@/lib/api-responses';
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
+  let session: any = null;
   
   try {
     logger.info('GET /api/spedizioni - Richiesta lista spedizioni');
     
     // Autenticazione
-    const session = await auth();
+    session = await auth();
 
     if (!session?.user?.email) {
       logger.warn('GET /api/spedizioni - Non autenticato');
@@ -188,12 +189,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
+  let session: any = null;
   
   try {
     logger.info('POST /api/spedizioni - Richiesta creazione spedizione');
     
     // Autenticazione
-    const session = await auth();
+    session = await auth();
 
     if (!session?.user?.email) {
       logger.warn('POST /api/spedizioni - Non autenticato');
@@ -401,7 +403,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    const session = await auth();
     const userId = session?.user?.id;
     return handleApiError(error, 'POST /api/spedizioni', requestId, userId);
   }
@@ -415,12 +416,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
+  let session: any = null;
   
   try {
     logger.info('DELETE /api/spedizioni - Richiesta eliminazione spedizione');
     
     // Autenticazione
-    const session = await auth();
+    session = await auth();
 
     if (!session?.user?.email) {
       logger.warn('DELETE /api/spedizioni - Non autenticato');
@@ -500,7 +502,6 @@ export async function DELETE(request: NextRequest) {
       message: 'Spedizione eliminata con successo',
     });
   } catch (error) {
-    const session = await auth();
     const userId = session?.user?.id;
     return handleApiError(error, 'DELETE /api/spedizioni', requestId, userId);
   }
