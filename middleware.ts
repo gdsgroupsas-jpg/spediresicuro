@@ -146,7 +146,27 @@ export default async function middleware(request: NextRequest) {
       method: request.method,
     });
 
-    // In caso di errore, ritorna response con requestId
+    // ⚠️ SECURITY: FAIL-CLOSED - In caso di errore, nega accesso a route protette
+    // Se pathname inizia con /dashboard → redirect a /login
+    if (pathname.startsWith('/dashboard')) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      const response = NextResponse.redirect(loginUrl);
+      response.headers.set('X-Request-ID', requestId);
+      return response;
+    }
+
+    // Se pathname inizia con /api → return 503 (Service Unavailable)
+    if (isApiRoute(pathname)) {
+      const response = NextResponse.json(
+        { error: 'Service temporarily unavailable' },
+        { status: 503 }
+      );
+      response.headers.set('X-Request-ID', requestId);
+      return response;
+    }
+
+    // Per altre route pubbliche → NextResponse.next() è OK (già verificate come pubbliche)
     const response = NextResponse.next();
     response.headers.set('X-Request-ID', requestId);
     return response;
