@@ -13,6 +13,9 @@
  * - /api/auth/** (NextAuth endpoints)
  * - /api/health (health check)
  * - /api/cron/** (webhook endpoints with token auth)
+ * - Marketing: /come-funziona, /contatti, /prezzi, /preventivi, /preventivo, /manuale
+ * - Legal: /privacy-policy, /terms-conditions, /cookie-policy
+ * - Tracking: /track/** (tracking endpoints)
  * - Static assets (_next, favicon, images)
  */
 
@@ -30,6 +33,19 @@ const PUBLIC_ROUTES = [
   '/api/auth', // NextAuth routes
   '/api/health', // Health check endpoint
   '/api/cron', // Webhook endpoints (have own token auth)
+  // Marketing routes
+  '/come-funziona',
+  '/contatti',
+  '/prezzi',
+  '/preventivi',
+  '/preventivo',
+  '/manuale',
+  // Legal routes
+  '/privacy-policy',
+  '/terms-conditions',
+  '/cookie-policy',
+  // Tracking routes
+  '/track', // Tracking prefix
 ];
 
 /**
