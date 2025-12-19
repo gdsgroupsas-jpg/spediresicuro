@@ -6,6 +6,9 @@
  */
 
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { createLogger } from './logger';
+import { trackApiError } from './error-tracker';
 
 /**
  * Crea una response di successo
@@ -119,25 +122,33 @@ export const ApiErrors = {
  *
  * @param error - Errore da gestire
  * @param context - Contesto dell'errore (per logging)
+ * @param requestId - ID richiesta (opzionale, da header X-Request-ID)
+ * @param userId - ID utente (opzionale, da sessione)
  * @returns NextResponse con errore 500
  *
  * @example
  * try {
  *   // ... operazione
  * } catch (error: any) {
- *   return handleApiError(error, 'GET /api/user/info');
+ *   return handleApiError(error, 'GET /api/user/info', requestId, userId);
  * }
  */
 export function handleApiError(
   error: any,
-  context: string
+  context: string,
+  requestId?: string,
+  userId?: string
 ): NextResponse {
+  // Crea logger con requestId e userId
+  const logger = createLogger(requestId, userId);
+
+  // Traccia errore con contesto completo
+  trackApiError(error, requestId || 'unknown', userId, context);
+
   // Log strutturato dell'errore
-  console.error(`[${context}] Error:`, {
-    message: error?.message,
-    code: error?.code,
-    name: error?.name,
-    stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+  logger.error(`Error in ${context}`, error, {
+    errorCode: error?.code,
+    errorName: error?.name,
   });
 
   // Gestione errori Supabase specifici
@@ -158,4 +169,14 @@ export function handleApiError(
 
   // Errore generico
   return ApiErrors.SERVER_ERROR();
+}
+
+/**
+ * Estrae requestId da header o genera nuovo
+ * 
+ * @param request - NextRequest
+ * @returns RequestId
+ */
+export function getRequestId(request: NextRequest): string {
+  return request.headers.get('X-Request-ID') || `api-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
