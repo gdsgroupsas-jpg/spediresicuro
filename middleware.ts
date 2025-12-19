@@ -22,6 +22,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth-config';
+import { generateRequestId, createLogger } from '@/lib/logger';
+import { trackMiddlewareError } from '@/lib/error-tracker';
 
 /**
  * Public routes that DON'T require authentication
@@ -81,41 +83,74 @@ function isApiRoute(pathname: string): boolean {
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static assets immediately
-  if (isStaticAsset(pathname)) {
-    return NextResponse.next();
-  }
+  // Genera requestId univoco per tracciabilità
+  const requestId = generateRequestId();
+  const logger = createLogger(requestId);
 
-  // Allow public routes immediately
-  if (isPublicRoute(pathname)) {
-    return NextResponse.next();
-  }
-
-  // ⚠️ SECURITY: Get session (NextAuth v5)
-  const session = await auth();
-
-  // Check if route requires authentication
-  const requiresAuth = pathname.startsWith('/dashboard') || isApiRoute(pathname);
-
-  if (requiresAuth && !session) {
-    // ❌ UNAUTHORIZED ACCESS ATTEMPT
-
-    if (isApiRoute(pathname)) {
-      // API routes → return 401 JSON
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Authentication required' },
-        { status: 401 }
-      );
+  try {
+    // Allow static assets immediately
+    if (isStaticAsset(pathname)) {
+      const response = NextResponse.next();
+      response.headers.set('X-Request-ID', requestId);
+      return response;
     }
 
-    // UI routes → redirect to login
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+    // Allow public routes immediately
+    if (isPublicRoute(pathname)) {
+      const response = NextResponse.next();
+      response.headers.set('X-Request-ID', requestId);
+      return response;
+    }
 
-  // ✅ AUTHORIZED: User is authenticated or route is public
-  return NextResponse.next();
+    // ⚠️ SECURITY: Get session (NextAuth v5)
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // Aggiorna logger con userId se disponibile
+    if (userId) {
+      logger.debug('User authenticated', { userId, pathname });
+    }
+
+    // Check if route requires authentication
+    const requiresAuth = pathname.startsWith('/dashboard') || isApiRoute(pathname);
+
+    if (requiresAuth && !session) {
+      // ❌ UNAUTHORIZED ACCESS ATTEMPT
+      logger.warn('Unauthorized access attempt', { pathname, method: request.method });
+
+      if (isApiRoute(pathname)) {
+        // API routes → return 401 JSON
+        const response = NextResponse.json(
+          { error: 'Unauthorized', message: 'Authentication required' },
+          { status: 401 }
+        );
+        response.headers.set('X-Request-ID', requestId);
+        return response;
+      }
+
+      // UI routes → redirect to login
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      const response = NextResponse.redirect(loginUrl);
+      response.headers.set('X-Request-ID', requestId);
+      return response;
+    }
+
+    // ✅ AUTHORIZED: User is authenticated or route is public
+    const response = NextResponse.next();
+    response.headers.set('X-Request-ID', requestId);
+    return response;
+  } catch (error: any) {
+    // Traccia errori middleware
+    trackMiddlewareError(error, requestId, pathname, {
+      method: request.method,
+    });
+
+    // In caso di errore, ritorna response con requestId
+    const response = NextResponse.next();
+    response.headers.set('X-Request-ID', requestId);
+    return response;
+  }
 }
 
 /**
