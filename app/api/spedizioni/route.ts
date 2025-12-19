@@ -11,16 +11,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
 import { createAuthContextFromSession } from '@/lib/auth-context';
+import { createApiLogger, getRequestId } from '@/lib/api-helpers';
+import { handleApiError } from '@/lib/api-responses';
 
 /**
  * Handler GET - Ottiene tutte le spedizioni
  */
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+  const logger = await createApiLogger(request);
+  
   try {
+    logger.info('GET /api/spedizioni - Richiesta lista spedizioni');
+    
     // Autenticazione
     const session = await auth();
 
     if (!session?.user?.email) {
+      logger.warn('GET /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
@@ -169,22 +177,8 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('❌ [API] Errore API spedizioni GET:', error);
-    console.error('❌ [API] Stack:', error instanceof Error ? error.stack : 'N/A');
-    
-    // Messaggio errore più dettagliato
-    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-    const isSupabaseError = errorMessage.includes('Supabase') || errorMessage.includes('supabase');
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: isSupabaseError ? 'Errore database Supabase' : 'Errore interno del server',
-        message: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
-      },
-      { status: isSupabaseError ? 503 : 500 }
-    );
+    const userId = session?.user?.id;
+    return handleApiError(error, 'GET /api/spedizioni', requestId, userId);
   }
 }
 
@@ -192,11 +186,17 @@ export async function GET(request: NextRequest) {
  * Handler POST - Crea una nuova spedizione
  */
 export async function POST(request: NextRequest) {
+  const requestId = getRequestId(request);
+  const logger = await createApiLogger(request);
+  
   try {
+    logger.info('POST /api/spedizioni - Richiesta creazione spedizione');
+    
     // Autenticazione
     const session = await auth();
 
     if (!session?.user?.email) {
+      logger.warn('POST /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
@@ -401,22 +401,9 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('❌ [API] Errore API spedizioni POST:', error);
-    console.error('❌ [API] Stack:', error instanceof Error ? error.stack : 'N/A');
-    
-    // Messaggio errore più dettagliato
-    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-    const isSupabaseError = errorMessage.includes('Supabase') || errorMessage.includes('supabase') || errorMessage.includes('column') || errorMessage.includes('schema');
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: isSupabaseError ? 'Errore database Supabase' : 'Errore interno del server',
-        message: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
-      },
-      { status: isSupabaseError ? 503 : 500 }
-    );
+    const session = await auth();
+    const userId = session?.user?.id;
+    return handleApiError(error, 'POST /api/spedizioni', requestId, userId);
   }
 }
 
@@ -426,11 +413,17 @@ export async function POST(request: NextRequest) {
  * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
  */
 export async function DELETE(request: NextRequest) {
+  const requestId = getRequestId(request);
+  const logger = await createApiLogger(request);
+  
   try {
+    logger.info('DELETE /api/spedizioni - Richiesta eliminazione spedizione');
+    
     // Autenticazione
     const session = await auth();
 
     if (!session?.user?.email) {
+      logger.warn('DELETE /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
@@ -507,19 +500,8 @@ export async function DELETE(request: NextRequest) {
       message: 'Spedizione eliminata con successo',
     });
   } catch (error) {
-    console.error('❌ [API] Errore DELETE spedizione:', error);
-    console.error('❌ [API] Stack:', error instanceof Error ? error.stack : 'N/A');
-    
-    const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-    const isSupabaseError = errorMessage.includes('Supabase') || errorMessage.includes('supabase');
-    
-    return NextResponse.json(
-      {
-        error: isSupabaseError ? 'Errore database Supabase' : 'Errore interno del server',
-        message: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
-      },
-      { status: isSupabaseError ? 503 : 500 }
-    );
+    const session = await auth();
+    const userId = session?.user?.id;
+    return handleApiError(error, 'DELETE /api/spedizioni', requestId, userId);
   }
 }
