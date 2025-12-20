@@ -123,13 +123,19 @@ export default function DatiClientePage() {
           });
           if (response.ok) {
             const data = await response.json();
-            // Se i dati sono già completati nel database, reindirizza alla dashboard
+            // Se i dati sono già completati nel database, NON reindirizzare automaticamente
+            // Questo previene loop infiniti se il Server Layout (Source of Truth) ci ha mandato qui
             if (data.datiCliente && data.datiCliente.datiCompletati) {
-              console.log('✅ [DATI CLIENTE] Dati già completati nel database, salvo in localStorage e reindirizzamento a dashboard');
+              console.log('✅ [DATI CLIENTE] Dati completi, ma rimango qui per evitare loop. Utente può rivedere i dati.', {
+                email: session?.user?.email
+              });
+              
               if (typeof window !== 'undefined' && session?.user?.email) {
                 localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
               }
-              router.push('/dashboard');
+              
+              // ⚠️ P0 FIX: Carica comunque i dati nel form invece di redirect
+              loadExistingData();
               return;
             }
           }
