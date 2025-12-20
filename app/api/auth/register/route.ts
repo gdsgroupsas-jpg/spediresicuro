@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
       accountType: validAccountType 
     });
     
+    // ⚠️ CRITICO: emailRedirectTo deve puntare a /auth/callback per pulire URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const callbackUrl = `${baseUrl}/auth/callback`;
+    
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.toLowerCase().trim(),
       password: password,
@@ -77,7 +81,7 @@ export async function POST(request: NextRequest) {
           name: name.trim(),
           full_name: name.trim(),
         },
-        emailRedirectTo: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        emailRedirectTo: callbackUrl, // Redirect a /auth/callback per pulire URL
       },
     });
 

@@ -169,6 +169,20 @@ export default function LoginPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
     const errorDescription = urlParams.get('error_description');
+    const confirmed = urlParams.get('confirmed');
+    
+    // ⚠️ CRITICO: Gestione conferma email (da callback Supabase)
+    if (confirmed === '1') {
+      console.log('✅ [LOGIN] Email confermata - mostra messaggio successo');
+      setSuccess('Email confermata con successo! Ora puoi accedere.');
+      // Rimuovi parametro confirmed dall'URL
+      urlParams.delete('confirmed');
+      const newUrl = urlParams.toString() 
+        ? `${window.location.pathname}?${urlParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      return; // Esci, non processare altri parametri
+    }
     
     if (errorParam) {
       const errorDetails = {
