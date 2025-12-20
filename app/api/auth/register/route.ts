@@ -70,8 +70,18 @@ export async function POST(request: NextRequest) {
     });
     
     // ⚠️ CRITICO: emailRedirectTo deve puntare a /auth/callback per pulire URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // ⚠️ P0 FIX: Forza dominio canonico (produzione) anche in preview per garantire redirect corretto
+    // NON usare VERCEL_URL (preview domain) per emailRedirectTo - causa redirect a root invece che callback
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (process.env.NODE_ENV === 'production' ? 'https://spediresicuro.vercel.app' : 'http://localhost:3000');
     const callbackUrl = `${baseUrl}/auth/callback`;
+    
+    console.log('🔗 [REGISTER] emailRedirectTo configurato:', {
+      baseUrl,
+      callbackUrl,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      NODE_ENV: process.env.NODE_ENV,
+    });
     
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.toLowerCase().trim(),
