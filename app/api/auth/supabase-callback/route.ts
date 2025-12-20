@@ -119,7 +119,8 @@ export async function POST(request: NextRequest) {
     console.log('✅ [SUPABASE CALLBACK] Token temporaneo generato per auto-login');
 
     // Determina redirect (dashboard o dati-cliente se onboarding necessario)
-    let redirectTo = '/dashboard';
+    // ⚠️ P0 FIX: Default fail-safe a /dashboard/dati-cliente (evita flash di dashboard)
+    let redirectTo = '/dashboard/dati-cliente';
     
     // Verifica dati cliente per determinare redirect
     const { data: userData, error: userDataError } = await supabaseAdmin
@@ -128,9 +129,15 @@ export async function POST(request: NextRequest) {
       .eq('email', email)
       .single();
     
-    // ⚠️ P0-1 FIX: Se dati_cliente è NULL o datiCompletati è false → redirect a dati-cliente
-    if (userDataError || !userData?.dati_cliente || !userData.dati_cliente.datiCompletati) {
-      redirectTo = '/dashboard/dati-cliente';
+    // ⚠️ P0 FIX: Verifica esplicita che dati_cliente esista e datiCompletati sia true
+    // Solo se dati sono completati → redirect a /dashboard
+    if (!userDataError && userData?.dati_cliente) {
+      const hasDatiCliente = userData.dati_cliente && typeof userData.dati_cliente === 'object';
+      const datiCompletati = hasDatiCliente && userData.dati_cliente.datiCompletati === true;
+      
+      if (datiCompletati) {
+        redirectTo = '/dashboard';
+      }
     }
 
     // ⚠️ IMPORTANTE: Restituisci token temporaneo e redirect
