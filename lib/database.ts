@@ -1446,6 +1446,120 @@ export async function verifyUserCredentials(
   email: string,
   password: string
 ): Promise<User | null> {
+  // ⚠️ PRIORITÀ 0: Verifica se password è token Supabase temporaneo (auto-login post conferma)
+  if (password.startsWith('SUPABASE_TOKEN:')) {
+    console.log('🔐 [SUPABASE AUTH] Token temporaneo rilevato per auto-login');
+    const tokenParts = password.split(':');
+    if (tokenParts.length >= 3) {
+      const accessToken = tokenParts[1];
+      const timestamp = parseInt(tokenParts[2], 10);
+      
+      // Verifica che token non sia scaduto (60 secondi)
+      if (Date.now() - timestamp > 60000) {
+        console.error('❌ [SUPABASE AUTH] Token temporaneo scaduto');
+        return null;
+      }
+      
+      // Verifica token Supabase
+      try {
+        const { data: { user: supabaseUser }, error: tokenError } = await supabaseAdmin.auth.getUser(accessToken);
+        
+        if (tokenError || !supabaseUser) {
+          console.error('❌ [SUPABASE AUTH] Token Supabase non valido:', tokenError?.message);
+          return null;
+        }
+        
+        // Verifica che email corrisponda
+        if (supabaseUser.email?.toLowerCase() !== email.toLowerCase()) {
+          console.error('❌ [SUPABASE AUTH] Email non corrisponde al token');
+          return null;
+        }
+        
+        // Verifica che email sia confermata
+        if (!supabaseUser.email_confirmed_at) {
+          console.error('❌ [SUPABASE AUTH] Email non confermata');
+          return null;
+        }
+        
+        console.log('✅ [SUPABASE AUTH] Token temporaneo verificato, auto-login per:', email);
+        
+        // Ottieni dati utente dal database
+        const { data: dbUser, error: dbError } = await supabaseAdmin
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .single();
+        
+        if (dbError || !dbUser) {
+          // Crea record se non esiste
+          const { data: newDbUser, error: createError } = await supabaseAdmin
+            .from('users')
+            .upsert({
+              id: supabaseUser.id,
+              email: supabaseUser.email,
+              password: null,
+              name: supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || email.split('@')[0],
+              role: supabaseUser.app_metadata?.role || 'user',
+              account_type: supabaseUser.app_metadata?.account_type || 'user',
+              provider: 'email',
+              provider_id: null,
+              image: null,
+              admin_level: supabaseUser.app_metadata?.account_type === 'admin' ? 1 : 0,
+            }, { onConflict: 'id' })
+            .select()
+            .single();
+          
+          if (createError || !newDbUser) {
+            console.error('❌ [SUPABASE AUTH] Errore creazione record users:', createError?.message);
+            return null;
+          }
+          
+          const user: User = {
+            id: newDbUser.id,
+            email: newDbUser.email || email,
+            password: '',
+            name: newDbUser.name,
+            role: newDbUser.role || 'user',
+            provider: newDbUser.provider || 'email',
+            providerId: undefined,
+            image: newDbUser.image || undefined,
+            createdAt: newDbUser.created_at || new Date().toISOString(),
+            updatedAt: newDbUser.updated_at || new Date().toISOString(),
+          };
+          
+          return user;
+        }
+        
+        // Restituisci utente esistente
+        let effectiveRole = dbUser.role || 'user';
+        if (dbUser.account_type === 'superadmin' || dbUser.account_type === 'admin') {
+          effectiveRole = 'admin';
+        }
+        
+        const user: User = {
+          id: dbUser.id,
+          email: dbUser.email,
+          password: '',
+          name: dbUser.name,
+          role: effectiveRole,
+          provider: dbUser.provider || 'email',
+          providerId: dbUser.provider_id || undefined,
+          image: dbUser.image || undefined,
+          datiCliente: dbUser.dati_cliente || undefined,
+          defaultSender: dbUser.default_sender || undefined,
+          integrazioni: dbUser.integrazioni || undefined,
+          createdAt: dbUser.created_at || new Date().toISOString(),
+          updatedAt: dbUser.updated_at || new Date().toISOString(),
+        };
+        
+        return user;
+      } catch (error: any) {
+        console.error('❌ [SUPABASE AUTH] Errore verifica token temporaneo:', error.message);
+        return null;
+      }
+    }
+  }
+  
   // ⚠️ PRIORITÀ 1: Verifica con Supabase Auth (gestisce password e email confirmation)
   if (isSupabaseConfigured()) {
     try {
