@@ -32,8 +32,9 @@ export default function AuthCallbackPage() {
         const isSignup = hash.includes('type=signup') || hash.includes('type=recovery');
         
         if (!hasAccessToken && !hasRefreshToken && !isSignup) {
-          console.log('ℹ️ [AUTH CALLBACK] Nessun token rilevato, redirect a /login');
-          router.replace('/login');
+          console.error('❌ [AUTH CALLBACK] Nessun token rilevato nel hash, redirect a /login');
+          // ⚠️ P0: Fail-safe - redirect a /login (NON "/") se hash non contiene token
+          router.replace('/login?error=no_token');
           return;
         }
 
