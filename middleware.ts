@@ -136,6 +136,62 @@ export default async function middleware(request: NextRequest) {
       return response;
     }
 
+    // ⚠️ P0: SERVER-AUTHORITATIVE ONBOARDING GATE
+    // Controlla onboarding per utenti autenticati PRIMA di permettere accesso
+    if (session?.user?.email) {
+      try {
+        // Import dinamico per evitare problemi Edge Runtime
+        const { findUserByEmail } = await import('@/lib/database');
+        const user = await findUserByEmail(session.user.email);
+        
+        const userEmail = session.user.email?.toLowerCase() || '';
+        const isTestUser = userEmail === 'test@spediresicuro.it';
+        
+        // Per utente test, bypass controllo onboarding
+        if (!isTestUser) {
+          const hasDatiCliente = !!user?.datiCliente;
+          const datiCompletati = user?.datiCliente?.datiCompletati === true;
+          const onboardingCompleted = hasDatiCliente && datiCompletati;
+          
+          // Se onboarding NON completato
+          if (!onboardingCompleted) {
+            // Blocca accesso a route pubbliche (home) se autenticato ma onboarding non completato
+            if (pathname === '/' || (isPublicRoute(pathname) && pathname !== '/login' && pathname !== '/api/auth')) {
+              logger.warn('Authenticated user without onboarding trying to access public route', {
+                email: session.user.email,
+                pathname,
+              });
+              const onboardingUrl = new URL('/dashboard/dati-cliente', request.url);
+              const response = NextResponse.redirect(onboardingUrl);
+              response.headers.set('X-Request-ID', requestId);
+              return response;
+            }
+            
+            // Blocca accesso a /dashboard se non su onboarding
+            if (pathname.startsWith('/dashboard') && pathname !== '/dashboard/dati-cliente') {
+              logger.warn('Authenticated user without onboarding trying to access dashboard', {
+                email: session.user.email,
+                pathname,
+              });
+              const onboardingUrl = new URL('/dashboard/dati-cliente', request.url);
+              const response = NextResponse.redirect(onboardingUrl);
+              response.headers.set('X-Request-ID', requestId);
+              return response;
+            }
+          }
+        }
+      } catch (error: any) {
+        // Fail-closed: se errore query → assume onboarding non completato → redirect a onboarding
+        logger.error('Error checking onboarding status, fail-closed:', error);
+        if (pathname !== '/dashboard/dati-cliente' && pathname !== '/login' && !pathname.startsWith('/api/auth')) {
+          const onboardingUrl = new URL('/dashboard/dati-cliente', request.url);
+          const response = NextResponse.redirect(onboardingUrl);
+          response.headers.set('X-Request-ID', requestId);
+          return response;
+        }
+      }
+    }
+
     // ✅ AUTHORIZED: User is authenticated or route is public
     // ⚠️ P0-1 FIX: Passa pathname al layout per evitare loop infiniti
     const response = NextResponse.next();
