@@ -19,42 +19,42 @@
  * - Static assets (_next, favicon, images)
  */
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { auth } from '@/lib/auth-config';
-import { generateRequestId, createLogger } from '@/lib/logger';
-import { trackMiddlewareError } from '@/lib/error-tracker';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { auth } from "@/lib/auth-config";
+import { generateRequestId, createLogger } from "@/lib/logger";
+import { trackMiddlewareError } from "@/lib/error-tracker";
 
 /**
  * Public routes that DON'T require authentication
  * These are explicitly allowed without session check
  */
 const PUBLIC_ROUTES = [
-  '/',
-  '/login',
-  '/api/auth', // NextAuth routes
-  '/api/health', // Health check endpoint
-  '/api/cron', // Webhook endpoints (have own token auth)
+  "/",
+  "/login",
+  "/api/auth", // NextAuth routes
+  "/api/health", // Health check endpoint
+  "/api/cron", // Webhook endpoints (have own token auth)
   // Marketing routes
-  '/come-funziona',
-  '/contatti',
-  '/prezzi',
-  '/preventivi',
-  '/preventivo',
-  '/manuale',
+  "/come-funziona",
+  "/contatti",
+  "/prezzi",
+  "/preventivi",
+  "/preventivo",
+  "/manuale",
   // Legal routes
-  '/privacy-policy',
-  '/terms-conditions',
-  '/cookie-policy',
+  "/privacy-policy",
+  "/terms-conditions",
+  "/cookie-policy",
   // Tracking routes
-  '/track', // Tracking prefix
+  "/track", // Tracking prefix
 ];
 
 /**
  * Check if a path matches public routes
  */
 function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+  return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 }
 
 /**
@@ -62,10 +62,10 @@ function isPublicRoute(pathname: string): boolean {
  */
 function isStaticAsset(pathname: string): boolean {
   return (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/robots.txt') ||
-    pathname.startsWith('/sitemap.xml') ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/robots.txt") ||
+    pathname.startsWith("/sitemap.xml") ||
     /\.(svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$/i.test(pathname)
   );
 }
@@ -74,7 +74,7 @@ function isStaticAsset(pathname: string): boolean {
  * Check if a path is an API route
  */
 function isApiRoute(pathname: string): boolean {
-  return pathname.startsWith('/api/');
+  return pathname.startsWith("/api/");
 }
 
 /**
@@ -91,14 +91,14 @@ export default async function middleware(request: NextRequest) {
     // Allow static assets immediately
     if (isStaticAsset(pathname)) {
       const response = NextResponse.next();
-      response.headers.set('X-Request-ID', requestId);
+      response.headers.set("X-Request-ID", requestId);
       return response;
     }
 
     // Allow public routes immediately
     if (isPublicRoute(pathname)) {
       const response = NextResponse.next();
-      response.headers.set('X-Request-ID', requestId);
+      response.headers.set("X-Request-ID", requestId);
       return response;
     }
 
@@ -108,31 +108,35 @@ export default async function middleware(request: NextRequest) {
 
     // Aggiorna logger con userId se disponibile
     if (userId) {
-      logger.debug('User authenticated', { userId, pathname });
+      logger.debug("User authenticated", { userId, pathname });
     }
 
     // Check if route requires authentication
-    const requiresAuth = pathname.startsWith('/dashboard') || isApiRoute(pathname);
+    const requiresAuth =
+      pathname.startsWith("/dashboard") || isApiRoute(pathname);
 
     if (requiresAuth && !session) {
       // ❌ UNAUTHORIZED ACCESS ATTEMPT
-      logger.warn('Unauthorized access attempt', { pathname, method: request.method });
+      logger.warn("Unauthorized access attempt", {
+        pathname,
+        method: request.method,
+      });
 
       if (isApiRoute(pathname)) {
         // API routes → return 401 JSON
         const response = NextResponse.json(
-          { error: 'Unauthorized', message: 'Authentication required' },
+          { error: "Unauthorized", message: "Authentication required" },
           { status: 401 }
         );
-        response.headers.set('X-Request-ID', requestId);
+        response.headers.set("X-Request-ID", requestId);
         return response;
       }
 
       // UI routes → redirect to login
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
       const response = NextResponse.redirect(loginUrl);
-      response.headers.set('X-Request-ID', requestId);
+      response.headers.set("X-Request-ID", requestId);
       return response;
     }
 
@@ -141,52 +145,76 @@ export default async function middleware(request: NextRequest) {
     if (session?.user?.email) {
       try {
         // Import dinamico per evitare problemi Edge Runtime
-        const { findUserByEmail } = await import('@/lib/database');
+        const { findUserByEmail } = await import("@/lib/database");
         const user = await findUserByEmail(session.user.email);
-        
-        const userEmail = session.user.email?.toLowerCase() || '';
-        const isTestUser = userEmail === 'test@spediresicuro.it';
-        
+
+        const userEmail = session.user.email?.toLowerCase() || "";
+        const isTestUser = userEmail === "test@spediresicuro.it";
+
         // Per utente test, bypass controllo onboarding
         if (!isTestUser) {
           const hasDatiCliente = !!user?.datiCliente;
           const datiCompletati = user?.datiCliente?.datiCompletati === true;
           const onboardingCompleted = hasDatiCliente && datiCompletati;
-          
+
           // Se onboarding NON completato
           if (!onboardingCompleted) {
             // Blocca accesso a route pubbliche (home) se autenticato ma onboarding non completato
-            if (pathname === '/' || (isPublicRoute(pathname) && pathname !== '/login' && pathname !== '/api/auth')) {
-              logger.warn('Authenticated user without onboarding trying to access public route', {
-                email: session.user.email,
-                pathname,
-              });
-              const onboardingUrl = new URL('/dashboard/dati-cliente', request.url);
+            if (
+              pathname === "/" ||
+              (isPublicRoute(pathname) &&
+                pathname !== "/login" &&
+                pathname !== "/api/auth")
+            ) {
+              logger.warn(
+                "Authenticated user without onboarding trying to access public route",
+                {
+                  email: session.user.email,
+                  pathname,
+                }
+              );
+              const onboardingUrl = new URL(
+                "/dashboard/dati-cliente",
+                request.url
+              );
               const response = NextResponse.redirect(onboardingUrl);
-              response.headers.set('X-Request-ID', requestId);
+              response.headers.set("X-Request-ID", requestId);
               return response;
             }
-            
+
             // Blocca accesso a /dashboard se non su onboarding
-            if (pathname.startsWith('/dashboard') && pathname !== '/dashboard/dati-cliente') {
-              logger.warn('Authenticated user without onboarding trying to access dashboard', {
-                email: session.user.email,
-                pathname,
-              });
-              const onboardingUrl = new URL('/dashboard/dati-cliente', request.url);
+            if (
+              pathname.startsWith("/dashboard") &&
+              pathname !== "/dashboard/dati-cliente"
+            ) {
+              logger.warn(
+                "Authenticated user without onboarding trying to access dashboard",
+                {
+                  email: session.user.email,
+                  pathname,
+                }
+              );
+              const onboardingUrl = new URL(
+                "/dashboard/dati-cliente",
+                request.url
+              );
               const response = NextResponse.redirect(onboardingUrl);
-              response.headers.set('X-Request-ID', requestId);
+              response.headers.set("X-Request-ID", requestId);
               return response;
             }
           }
         }
       } catch (error: any) {
         // Fail-closed: se errore query → assume onboarding non completato → redirect a onboarding
-        logger.error('Error checking onboarding status, fail-closed:', error);
-        if (pathname !== '/dashboard/dati-cliente' && pathname !== '/login' && !pathname.startsWith('/api/auth')) {
-          const onboardingUrl = new URL('/dashboard/dati-cliente', request.url);
+        logger.error("Error checking onboarding status, fail-closed:", error);
+        if (
+          pathname !== "/dashboard/dati-cliente" &&
+          pathname !== "/login" &&
+          !pathname.startsWith("/api/auth")
+        ) {
+          const onboardingUrl = new URL("/dashboard/dati-cliente", request.url);
           const response = NextResponse.redirect(onboardingUrl);
-          response.headers.set('X-Request-ID', requestId);
+          response.headers.set("X-Request-ID", requestId);
           return response;
         }
       }
@@ -194,11 +222,26 @@ export default async function middleware(request: NextRequest) {
 
     // ✅ AUTHORIZED: User is authenticated or route is public
     // ⚠️ P0-1 FIX: Passa pathname al layout per evitare loop infiniti
-    const response = NextResponse.next();
-    response.headers.set('X-Request-ID', requestId);
-    if (pathname.startsWith('/dashboard')) {
-      response.headers.set('x-pathname', pathname);
+
+    // Clona headers dalla request e aggiungi quelli custom
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-request-id", requestId);
+
+    // Passa il pathname corrente al Layout (Server Component)
+    if (pathname.startsWith("/dashboard")) {
+      requestHeaders.set("x-pathname", pathname);
     }
+
+    // Crea la response passando i nuovi headers della request
+    const response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+
+    // Imposta anche headers sulla response (opzionale, per il client)
+    response.headers.set("X-Request-ID", requestId);
+
     return response;
   } catch (error: any) {
     // Traccia errori middleware
@@ -208,27 +251,27 @@ export default async function middleware(request: NextRequest) {
 
     // ⚠️ SECURITY: FAIL-CLOSED - In caso di errore, nega accesso a route protette
     // Se pathname inizia con /dashboard → redirect a /login
-    if (pathname.startsWith('/dashboard')) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
+    if (pathname.startsWith("/dashboard")) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
       const response = NextResponse.redirect(loginUrl);
-      response.headers.set('X-Request-ID', requestId);
+      response.headers.set("X-Request-ID", requestId);
       return response;
     }
 
     // Se pathname inizia con /api → return 503 (Service Unavailable)
     if (isApiRoute(pathname)) {
       const response = NextResponse.json(
-        { error: 'Service temporarily unavailable' },
+        { error: "Service temporarily unavailable" },
         { status: 503 }
       );
-      response.headers.set('X-Request-ID', requestId);
+      response.headers.set("X-Request-ID", requestId);
       return response;
     }
 
     // Per altre route pubbliche → NextResponse.next() è OK (già verificate come pubbliche)
     const response = NextResponse.next();
-    response.headers.set('X-Request-ID', requestId);
+    response.headers.set("X-Request-ID", requestId);
     return response;
   }
 }
@@ -250,6 +293,6 @@ export const config = {
      * - favicon.ico, robots.txt, sitemap.xml
      * - static assets (images, fonts, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$).*)",
   ],
 };
