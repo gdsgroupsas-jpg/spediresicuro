@@ -1,26 +1,47 @@
-# ⚙️ Configurazione Supabase Auth Callback
+# ⚙️ Configurazione Supabase Auth Callback - Auto-login Post Conferma
 
 ## 📋 Modifiche Implementate
 
-Implementato callback `/auth/callback` per gestire redirect Supabase dopo conferma email, pulendo URL da token.
+Implementato callback `/auth/callback` per gestire auto-login dopo conferma email:
+- Imposta sessione Supabase dai token nel hash
+- Sincronizza con NextAuth usando token temporaneo
+- Pulisce URL da token (nessun token visibile)
+- Redirect automatico a `/dashboard` (o `/dashboard/dati-cliente` se onboarding necessario)
+- Feedback chiaro: "Email confermata ✅ Accesso effettuato"
 
 ## 🔧 File Modificati
 
-### 1. `app/auth/callback/page.tsx` (NUOVO)
-**Motivazione**: Gestisce callback Supabase dopo click link conferma email, pulisce URL da token.
+### 1. `app/auth/callback/page.tsx`
+**Motivazione**: Gestisce auto-login dopo conferma email, sincronizza Supabase con NextAuth, pulisce URL.
 
 **Funzionalità**:
-- Legge `window.location.hash` per token Supabase
-- Rimuove hash dall'URL (pulisce token)
-- Redirect a `/login?confirmed=1`
+- Legge `window.location.hash` per token Supabase (`access_token`, `refresh_token`)
+- Imposta sessione Supabase usando `supabase.auth.setSession()`
+- Richiede token temporaneo da `/api/auth/supabase-callback`
+- Usa token temporaneo come password per `signIn('credentials')` NextAuth
+- Pulisce URL (rimuove hash) prima del login
+- Redirect automatico a `/dashboard` (o `/dashboard/dati-cliente` se onboarding necessario)
+- Mostra feedback: "Email confermata ✅ Accesso effettuato"
 
-### 2. `app/login/page.tsx`
-**Motivazione**: Mostra messaggio successo quando email è confermata.
+### 2. `app/api/auth/supabase-callback/route.ts` (NUOVO)
+**Motivazione**: Genera token temporaneo per auto-login NextAuth dopo verifica token Supabase.
+
+**Funzionalità**:
+- Verifica token Supabase (`accessToken`, `refreshToken`)
+- Verifica che email sia confermata
+- Sincronizza record in tabella `users` (idempotente)
+- Genera token temporaneo valido 60 secondi (formato: `SUPABASE_TOKEN:{accessToken}:{timestamp}`)
+- Determina redirect (`/dashboard` o `/dashboard/dati-cliente`)
+- Restituisce token temporaneo e redirect
+
+### 3. `lib/database.ts`
+**Motivazione**: Riconosce token temporaneo Supabase per bypassare verifica password in auto-login.
 
 **Cambiamenti**:
-- Legge parametro `confirmed=1` dall'URL
-- Mostra banner: "Email confermata con successo! Ora puoi accedere."
-- Rimuove parametro dall'URL dopo lettura
+- `verifyUserCredentials()` verifica se password inizia con `SUPABASE_TOKEN:`
+- Se token temporaneo: verifica token Supabase, verifica email confermata, restituisce utente
+- Token valido solo 60 secondi (timestamp check)
+- Bypassa verifica password normale per questo caso specifico
 
 ### 3. `app/api/auth/register/route.ts`
 **Motivazione**: Configura `emailRedirectTo` per puntare a `/auth/callback`.
@@ -64,7 +85,27 @@ Implementato callback `/auth/callback` per gestire redirect Supabase dopo confer
 
 ## 🔐 Flusso Completo
 
-### Dopo Click Link Email
+### Dopo Click Link Email (Auto-login)
+
+1. **Utente clicca link conferma email** → Supabase reindirizza a `/auth/callback#access_token=...&refresh_token=...&type=signup`
+2. **`/auth/callback` legge hash** → Estrae `access_token` e `refresh_token`
+3. **Imposta sessione Supabase** → `supabase.auth.setSession({ access_token, refresh_token })`
+4. **Richiede token temporaneo** → `POST /api/auth/supabase-callback` con token Supabase
+5. **API verifica token** → Verifica token Supabase, verifica email confermata, sincronizza `users`
+6. **API genera token temporaneo** → `SUPABASE_TOKEN:{accessToken}:{timestamp}` (valido 60s)
+7. **Pulisce URL** → `window.history.replaceState()` rimuove hash (URL pulito)
+8. **Auto-login NextAuth** → `signIn('credentials', { email, password: tempToken })`
+9. **NextAuth verifica token** → `verifyUserCredentials()` riconosce token temporaneo e bypassa password
+10. **Redirect dashboard** → `/dashboard` (o `/dashboard/dati-cliente` se onboarding necessario)
+11. **Feedback utente** → "Email confermata ✅ Accesso effettuato"
+
+### Vantaggi
+
+- ✅ **URL pulito**: Nessun token visibile nell'URL
+- ✅ **Auto-login**: Utente loggato automaticamente dopo conferma
+- ✅ **Sicurezza**: Token temporaneo valido solo 60 secondi, verifica token Supabase
+- ✅ **Sincronizzazione**: Supabase Auth e NextAuth sincronizzati
+- ✅ **UX fluida**: Nessun passaggio manuale, redirect diretto a dashboard
 1. Utente clicca link in email di conferma
 2. Supabase conferma email → `email_confirmed_at` valorizzato
 3. Supabase reindirizza a: `https://spediresicuro.vercel.app/auth/callback#access_token=...&refresh_token=...&type=signup`
@@ -73,24 +114,36 @@ Implementato callback `/auth/callback` per gestire redirect Supabase dopo confer
 6. `/login` mostra: "Email confermata con successo! Ora puoi accedere."
 7. URL finale: `/login` (pulito, senza token)
 
-## ✅ Checklist QA (Incognito)
+## ✅ Checklist QA (Incognito - Produzione)
 
-### Test Conferma Email
-- [ ] Registra nuovo utente
-- [ ] Apri email di conferma
-- [ ] Clicca link di conferma
-- [ ] **VERIFICA**: Redirect a `/auth/callback` (breve, non visibile)
-- [ ] **VERIFICA**: Redirect finale a `/login?confirmed=1`
-- [ ] **VERIFICA**: URL finale è `/login` (senza token, senza hash)
-- [ ] **VERIFICA**: Banner mostra "Email confermata con successo! Ora puoi accedere."
-- [ ] **VERIFICA**: Nessun token visibile nell'URL
-- [ ] **VERIFICA**: Login funziona dopo conferma
+### Test Auto-login Post Conferma Email
+1. **Registrazione**:
+   - [ ] Apri browser in modalità incognito
+   - [ ] Vai su `https://spediresicuro.vercel.app/login`
+   - [ ] Registra nuovo utente (email+password)
+   - [ ] **VERIFICA**: Messaggio mostra "Ti abbiamo inviato una email di conferma..."
+   - [ ] **VERIFICA**: Nessun accesso immediato (non si vede dashboard)
 
-### Test URL Pulito
-- [ ] Dopo conferma, verifica URL browser
-- [ ] **VERIFICA**: Nessun `#access_token` nell'URL
-- [ ] **VERIFICA**: Nessun `#refresh_token` nell'URL
-- [ ] **VERIFICA**: URL è pulito: `/login` o `/login?callbackUrl=...`
+2. **Conferma Email**:
+   - [ ] Apri email di conferma (controlla anche spam)
+   - [ ] Clicca link "Confirm your signup"
+   - [ ] **VERIFICA**: Redirect a `/auth/callback` (breve, non visibile)
+   - [ ] **VERIFICA**: Messaggio mostra "Email confermata ✅ Accesso effettuato"
+   - [ ] **VERIFICA**: URL finale è `/dashboard` (o `/dashboard/dati-cliente` se onboarding necessario)
+   - [ ] **VERIFICA**: Nessun token visibile nell'URL (nessun `#access_token`, nessun `#refresh_token`)
+   - [ ] **VERIFICA**: Utente è loggato automaticamente (vede dashboard)
+
+3. **URL Pulito**:
+   - [ ] Dopo conferma, verifica URL browser
+   - [ ] **VERIFICA**: URL è pulito: `/dashboard` o `/dashboard/dati-cliente`
+   - [ ] **VERIFICA**: Nessun hash (`#`) nell'URL
+   - [ ] **VERIFICA**: Nessun parametro query token nell'URL
+
+4. **Sessione Attiva**:
+   - [ ] **VERIFICA**: Dashboard carica correttamente
+   - [ ] **VERIFICA**: Utente può navigare tra pagine
+   - [ ] **VERIFICA**: Refresh pagina mantiene sessione
+   - [ ] **VERIFICA**: Logout funziona correttamente
 
 ## 🐛 Troubleshooting
 
