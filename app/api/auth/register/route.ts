@@ -1,13 +1,15 @@
 /**
  * API Route per Registrazione Utenti
  * 
- * Gestisce la registrazione di nuovi utenti.
+ * Gestisce la registrazione di nuovi utenti usando Supabase Auth
+ * con conferma email obbligatoria.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createUser, findUserByEmail } from '@/lib/database';
+import { findUserByEmail } from '@/lib/database';
 import { validateEmail, validatePassword } from '@/lib/validators';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
+import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,43 +36,171 @@ export async function POST(request: NextRequest) {
       return ApiErrors.VALIDATION_ERROR('La password deve essere di almeno 6 caratteri');
     }
 
-    // Verifica se l'utente esiste già
-    console.log('🔍 [REGISTER] Verifica se utente esiste già...');
+    // ⚠️ CRITICO: Verifica che Supabase sia configurato
+    if (!isSupabaseConfigured()) {
+      console.error('❌ [REGISTER] Supabase non configurato');
+      return NextResponse.json(
+        { error: 'Sistema di registrazione temporaneamente non disponibile. Contatta il supporto.' },
+        { status: 503 }
+      );
+    }
+
+    // Verifica se l'utente esiste già (verifica rapida, auth.signUp gestirà già registrato)
+    console.log('🔍 [REGISTER] Verifica rapida se utente esiste già...');
     try {
       const existingUser = await findUserByEmail(email);
       if (existingUser) {
-        console.log('⚠️ [REGISTER] Utente già esistente:', email);
+        console.log('⚠️ [REGISTER] Utente già esistente nella tabella users:', email);
         return ApiErrors.CONFLICT('Questa email è già registrata. Usa il login invece della registrazione.');
       }
     } catch (checkError: any) {
-      console.error('❌ [REGISTER] Errore verifica utente esistente:', checkError.message);
-      // Continua comunque, potrebbe essere un errore temporaneo
+      console.warn('⚠️ [REGISTER] Errore verifica utente esistente (non critico):', checkError.message);
+      // Continua, auth.signUp gestirà il caso "already registered"
     }
 
     // Validazione accountType
     const validAccountType = accountType === 'admin' ? 'admin' : 'user';
     const role = validAccountType === 'admin' ? 'admin' : 'user';
 
-    // Crea nuovo utente
-    console.log('➕ [REGISTER] Creazione nuovo utente...', { email, accountType: validAccountType });
-    const newUser = await createUser({
-      email,
-      password, // TODO: Hash con bcrypt in produzione
-      name,
-      role,
-      accountType: validAccountType,
+    // ⚠️ CRITICO: Usa auth.signUp() (flusso reale) invece di admin.createUser()
+    // auth.signUp() invia automaticamente email di conferma se "Enable email confirmations" è ON
+    console.log('➕ [REGISTER] Creazione utente con auth.signUp() (flusso reale, email confirmation automatica)...', { 
+      email, 
+      accountType: validAccountType 
+    });
+    
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: email.toLowerCase().trim(),
+      password: password,
+      options: {
+        data: {
+          name: name.trim(),
+          full_name: name.trim(),
+        },
+        emailRedirectTo: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      },
     });
 
-    console.log('✅ [REGISTER] Utente creato con successo:', newUser.email);
+    if (signUpError) {
+      console.error('❌ [REGISTER] Errore signUp:', {
+        message: signUpError.message,
+        status: signUpError.status,
+      });
+      
+      // Gestione errori specifici Supabase
+      if (signUpError.message?.includes('already registered') || 
+          signUpError.message?.includes('already exists') ||
+          signUpError.message?.includes('User already registered')) {
+        return ApiErrors.CONFLICT('Questa email è già registrata. Usa il login invece della registrazione.');
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Errore durante la registrazione. Riprova più tardi.',
+          details: process.env.NODE_ENV === 'development' ? signUpError.message : undefined
+        },
+        { status: 500 }
+      );
+    }
 
-    // Rimuovi password dalla risposta
-    const { password: _, ...userWithoutPassword } = newUser;
+    if (!signUpData?.user) {
+      console.error('❌ [REGISTER] Utente creato ma dati non disponibili');
+      return NextResponse.json(
+        { error: 'Errore durante la registrazione. Riprova più tardi.' },
+        { status: 500 }
+      );
+    }
 
+    const supabaseUserId = signUpData.user.id;
+    console.log('✅ [REGISTER] Utente creato con auth.signUp():', {
+      id: supabaseUserId,
+      email: signUpData.user.email,
+      email_confirmed_at: signUpData.user.email_confirmed_at, // DEVE essere null
+      confirmation_sent_at: signUpData.user.confirmation_sent_at, // DEVE essere valorizzato
+    });
+
+    // ⚠️ CRITICO: Verifica che confirmation_sent_at sia valorizzato
+    if (!signUpData.user.confirmation_sent_at) {
+      console.error('❌ [REGISTER] confirmation_sent_at NON valorizzato dopo signUp!');
+      console.error('   Questo significa che "Enable email confirmations" è OFF o SMTP non configurato');
+      // Non blocchiamo la registrazione, ma loggiamo l'errore
+    } else {
+      console.log('✅ [REGISTER] confirmation_sent_at valorizzato:', signUpData.user.confirmation_sent_at);
+    }
+
+    // Verifica che email_confirmed_at sia NULL (email non confermata)
+    if (signUpData.user.email_confirmed_at) {
+      console.warn('⚠️ [REGISTER] ATTENZIONE: email_confirmed_at non è NULL dopo signUp!', {
+        email_confirmed_at: signUpData.user.email_confirmed_at,
+      });
+    }
+
+    // Aggiorna app_metadata con role e account_type usando admin API
+    try {
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        supabaseUserId,
+        {
+          app_metadata: {
+            provider: 'email',
+            role: role,
+            account_type: validAccountType,
+          },
+        }
+      );
+      
+      if (updateError) {
+        console.warn('⚠️ [REGISTER] Errore aggiornamento app_metadata (non critico):', updateError.message);
+      } else {
+        console.log('✅ [REGISTER] app_metadata aggiornato con role e account_type');
+      }
+    } catch (updateError: any) {
+      console.warn('⚠️ [REGISTER] Errore aggiornamento app_metadata (non critico):', updateError.message);
+    }
+
+    // Sincronizza con la tabella users (idempotente - upsert)
+    try {
+      const { data: dbUser, error: dbError } = await supabaseAdmin
+        .from('users')
+        .upsert(
+          {
+            id: supabaseUserId, // Usa l'ID di Supabase Auth
+            email: email.toLowerCase().trim(),
+            password: null, // Password gestita da Supabase Auth
+            name: name.trim(),
+            role: role,
+            account_type: validAccountType,
+            provider: 'email',
+            provider_id: null,
+            image: null,
+            admin_level: validAccountType === 'admin' ? 1 : 0,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'id', // Idempotente: se esiste già, aggiorna
+          }
+        )
+        .select()
+        .single();
+
+      if (dbError) {
+        console.warn('⚠️ [REGISTER] Errore sincronizzazione tabella users (non critico):', dbError.message);
+        // Non blocchiamo la registrazione se la sincronizzazione fallisce
+      } else if (dbUser) {
+        console.log('✅ [REGISTER] Utente sincronizzato nella tabella users (idempotente)');
+      }
+    } catch (syncError: any) {
+      console.warn('⚠️ [REGISTER] Errore sincronizzazione tabella users (non critico):', syncError.message);
+      // Non blocchiamo la registrazione se la sincronizzazione fallisce
+    }
+
+    console.log('✅ [REGISTER] Registrazione completata - email di conferma inviata');
+
+    // ⚠️ IMPORTANTE: Non restituire dati sensibili, solo conferma che email è stata inviata
     return NextResponse.json(
       {
         success: true,
-        user: userWithoutPassword,
-        message: 'Registrazione completata con successo',
+        message: 'email_confirmation_required', // Flag per UI
+        email: email.toLowerCase().trim(), // Solo per mostrare all'utente
       },
       { status: 201 }
     );
