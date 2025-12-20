@@ -112,18 +112,7 @@ export default function DatiClientePage() {
   // Carica dati esistenti se presenti e verifica se sono già completati
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      // Controlla se i dati sono già completati (localStorage)
-      const datiGiàCompletati = typeof window !== 'undefined' 
-        ? localStorage.getItem(`datiCompletati_${session.user.email}`) === 'true'
-        : false;
-      
-      if (datiGiàCompletati) {
-        console.log('✅ [DATI CLIENTE] Dati già completati in localStorage, reindirizzamento a dashboard');
-        router.push('/dashboard');
-        return;
-      }
-      
-      // Carica dati esistenti e verifica se sono completati nel database
+      // ⚠️ P0-4 FIX: Controlla database PRIMA di localStorage (rimuove bypass)
       async function checkAndLoad() {
         try {
           const response = await fetch('/api/user/dati-cliente', {
@@ -145,7 +134,7 @@ export default function DatiClientePage() {
           loadExistingData();
         } catch (err) {
           console.error('❌ [DATI CLIENTE] Errore verifica dati:', err);
-          // In caso di errore, carica comunque i dati esistenti
+          // In caso di errore, carica comunque i dati esistenti (utente può compilare form)
           loadExistingData();
         }
       }
