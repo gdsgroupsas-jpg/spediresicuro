@@ -348,21 +348,37 @@ export default function DatiClientePage() {
   }
 
   if (status === 'loading') {
-    return <div className="p-8">Caricamento...</div>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center p-4">
+        <div className="bg-white/50 p-8 rounded-2xl shadow-sm border border-white/60 backdrop-blur-sm flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-600 font-medium">Caricamento sessione...</p>
+        </div>
+      </div>
+    );
   }
 
   if (status === 'unauthenticated') {
-    // ⚠️ P0 FIX: Evita redirect loop (Server Auth ha già validato accesso)
-    // Se NextAuth client non ha ancora sessione, mostra messaggio invece di redirect
+    // ⚠️ P0 FIX: UI Visibile per stato transitorio 'unauthenticated'
+    // Usa lo stesso background della pagina principale per evitare "schermo nero"
     return (
-      <div className="p-8 text-center">
-        <p className="text-gray-600">Sincronizzazione sessione in corso...</p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="mt-4 text-blue-600 hover:underline"
-        >
-          Ricarica pagina
-        </button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl border border-yellow-400/30 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-yellow-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Verifica credenziali corso...</h2>
+          <p className="text-gray-600 mb-6">
+            La tua sessione è in fase di sincronizzazione con il server.
+            Se la pagina non cambia entro pochi secondi, prova a ricaricare.
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+          >
+            Ricarica Pagina
+          </button>
+        </div>
       </div>
     );
   }
