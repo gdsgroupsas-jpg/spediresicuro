@@ -131,10 +131,11 @@ export default function AuthCallbackPage() {
         const { getSession } = await import('next-auth/react');
         await getSession();
 
-        // ⚠️ P0-1 FIX: Rimuove delay - redirect immediato (no flash di dashboard)
-        // ⚠️ P0-2 FIX: Fallback a /dashboard/dati-cliente invece di /dashboard (fail-safe)
-        router.refresh();
-        router.replace(redirectTo || '/dashboard/dati-cliente');
+        // ⚠️ P0 FIX: Usa window.location.href per forzare redirect (bypass NextAuth redirect automatico)
+        // Questo evita che NextAuth faccia redirect a / anche con redirect: false
+        const finalRedirect = redirectTo || '/dashboard/dati-cliente';
+        console.log('🔄 [AUTH CALLBACK] Redirect forzato a:', finalRedirect);
+        window.location.href = finalRedirect;
 
       } catch (error: any) {
         console.error('❌ [AUTH CALLBACK] Errore:', error);
