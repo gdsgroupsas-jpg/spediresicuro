@@ -327,7 +327,21 @@ export default function LoginPage() {
           return;
         }
 
-        // Registrazione completata, passa al login
+        // ⚠️ CRITICO: Se email confirmation è richiesta, mostra messaggio dedicato
+        if (data.message === 'email_confirmation_required' || !data.user) {
+          // Email di conferma inviata - NON permettere accesso immediato
+          setSuccess('Ti abbiamo inviato una email di conferma. Devi cliccare il link nell\'email prima di accedere. Controlla anche la cartella spam.');
+          // NON passare a login mode - l'utente deve confermare l'email prima
+          setPassword('');
+          setConfirmPassword('');
+          setName('');
+          setAccountType('user');
+          setIsLoading(false);
+          // Mantieni email nel campo per riferimento
+          return;
+        }
+
+        // Fallback per compatibilità (non dovrebbe mai arrivare qui con il nuovo sistema)
         setSuccess('Registrazione completata! Ora puoi accedere.');
         setMode('login');
         setPassword('');
@@ -345,7 +359,13 @@ export default function LoginPage() {
 
         if (result?.error) {
           console.error('❌ [LOGIN] Errore login:', result.error);
-          setError('Credenziali non valide. Riprova.');
+          
+          // ⚠️ CRITICO: Gestione errore email non confermata
+          if (result.error === 'EMAIL_NOT_CONFIRMED' || result.error?.includes('Email non confermata')) {
+            setError('Email non confermata. Controlla la posta e clicca il link di conferma prima di accedere. Controlla anche la cartella spam.');
+          } else {
+            setError('Credenziali non valide. Riprova.');
+          }
           setIsLoading(false);
         } else if (result?.ok) {
           console.log('✅ [LOGIN] Login riuscito, aggiornamento sessione...');
