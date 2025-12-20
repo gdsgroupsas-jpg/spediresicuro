@@ -1513,14 +1513,19 @@ export async function verifyUserCredentials(
           }
           
           // Restituisci utente basato su authUser
+          const providerValue = authUser.app_metadata?.provider;
+          const validProvider = (providerValue === 'google' || providerValue === 'github' || providerValue === 'facebook' || providerValue === 'credentials')
+            ? providerValue
+            : 'credentials' as 'credentials' | 'google' | 'github' | 'facebook';
+          
           const user: User = {
             id: authUser.id,
-            email: authUser.email,
+            email: authUser.email || email, // Fallback a email passata se authUser.email è undefined
             password: '', // Password gestita da Supabase Auth
             name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || email.split('@')[0],
             role: authUser.app_metadata?.role || 'user',
-            provider: authUser.app_metadata?.provider || 'email',
-            providerId: null,
+            provider: validProvider,
+            providerId: undefined, // null non valido per tipo User
             image: authUser.user_metadata?.avatar_url || undefined,
             createdAt: authUser.created_at || new Date().toISOString(),
             updatedAt: authUser.updated_at || new Date().toISOString(),
