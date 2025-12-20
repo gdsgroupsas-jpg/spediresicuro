@@ -74,28 +74,8 @@ export default function DatiClientePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   
-  // ⚠️ P0 FIX: CSS inline per sovrascrivere globals.css che forza color: #111827
-  // Assicura che gli input con bg-gray-800 abbiano testo bianco visibile
-  useEffect(() => {
-    const style = document.createElement('style')
-    style.textContent = `
-      /* Fix P0: Forza testo bianco su input con sfondo scuro */
-      input.bg-gray-800,
-      input[class*="bg-gray-800"] {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-      }
-      input.bg-gray-800::placeholder,
-      input[class*="bg-gray-800"]::placeholder {
-        color: #9ca3af !important;
-        opacity: 0.7 !important;
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      document.head.removeChild(style)
-    }
-  }, [])
+  // ⚠️ NOTA: CSS inline rimosso - fix definitivo in app/globals.css
+  // Il CSS globale ora esclude input con bg-gray-800 e forza testo bianco
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)

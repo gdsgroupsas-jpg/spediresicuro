@@ -130,13 +130,11 @@ export default function AuthCallbackPage() {
         // Forza refresh sessione
         const { getSession } = await import('next-auth/react');
         await getSession();
-        
-        // Piccolo delay per assicurarsi che la sessione sia salvata
-        await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Redirect a dashboard (o dati-cliente se onboarding necessario)
+        // ⚠️ P0-1 FIX: Rimuove delay - redirect immediato (no flash di dashboard)
+        // ⚠️ P0-2 FIX: Fallback a /dashboard/dati-cliente invece di /dashboard (fail-safe)
         router.refresh();
-        router.replace(redirectTo || '/dashboard');
+        router.replace(redirectTo || '/dashboard/dati-cliente');
 
       } catch (error: any) {
         console.error('❌ [AUTH CALLBACK] Errore:', error);
