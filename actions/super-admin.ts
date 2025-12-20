@@ -500,10 +500,10 @@ export async function createReseller(data: {
     }
 
     // Validazione password
-    if (data.password.length < 6) {
+    if (data.password.length < 8) {
       return {
         success: false,
-        error: 'La password deve essere di almeno 6 caratteri.',
+        error: 'La password deve essere di almeno 8 caratteri.',
       }
     }
 

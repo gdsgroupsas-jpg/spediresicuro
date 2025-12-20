@@ -313,8 +313,8 @@ export default function LoginPage() {
           return;
         }
 
-        if (password.length < 6) {
-          setError('La password deve essere di almeno 6 caratteri');
+        if (password.length < 8) {
+          setError('La password deve essere di almeno 8 caratteri');
           setIsLoading(false);
           return;
         }
@@ -546,7 +546,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder={mode === 'register' ? 'Minimo 6 caratteri' : '••••••••'}
+                  placeholder={mode === 'register' ? 'Minimo 8 caratteri' : '••••••••'}
                   className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
                   disabled={isLoading}
                 />

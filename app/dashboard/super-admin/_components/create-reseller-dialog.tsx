@@ -27,7 +27,7 @@ import { formatCurrency } from '@/lib/utils'
 const createResellerSchema = z.object({
   email: z.string().email('Email non valida'),
   name: z.string().min(2, 'Nome troppo corto'),
-  password: z.string().min(6, 'Password minimo 6 caratteri'),
+  password: z.string().min(8, 'Password minimo 8 caratteri'),
   initialCredit: z.number().min(0, 'Credito non valido').max(10000, 'Credito massimo €10,000'),
   notes: z.string().optional(),
 })
@@ -193,7 +193,7 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
                       id="password"
                       type="text"
                       {...register('password')}
-                      placeholder="Minimo 6 caratteri"
+                      placeholder="Minimo 8 caratteri"
                       className="pl-10"
                       disabled={isPending}
                     />
