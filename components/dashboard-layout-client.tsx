@@ -12,7 +12,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { PilotModal } from '@/components/ai/pilot/pilot-modal';
 import { AnneProvider, AnneAssistant } from '@/components/anne';
 import AnneDoctorBridge from '@/components/anne/AnneDoctorBridge';
@@ -22,11 +22,63 @@ interface DashboardLayoutClientProps {
 }
 
 export default function DashboardLayoutClient({ children }: DashboardLayoutClientProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [accountType, setAccountType] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  // ⚠️ P0: CLIENT-SIDE ONBOARDING GATE (Backup del middleware)
+  // Questo è un FAIL-SAFE che si attiva se il middleware non blocca per qualche motivo
+  // (es: soft navigation, cache, edge cases)
+  useEffect(() => {
+    async function checkOnboarding() {
+      // Non fare nulla se:
+      // 1. Session non ancora caricata
+      // 2. Già controllato
+      // 3. Siamo già su /dashboard/dati-cliente (anti-loop)
+      if (status === 'loading') return;
+      if (!session?.user?.email) return;
+      if (onboardingChecked) return;
+      if (pathname === '/dashboard/dati-cliente') {
+        setOnboardingChecked(true);
+        return;
+      }
+
+      try {
+        // Verifica stato onboarding
+        const response = await fetch('/api/user/dati-cliente', {
+          cache: 'no-store',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const datiCompletati = data?.datiCliente?.datiCompletati === true;
+
+          // Se dati NON completati → redirect a onboarding
+          if (!datiCompletati) {
+            console.warn('🔒 [CLIENT GUARD] Dati cliente non completati, redirect a onboarding', {
+              email: session.user.email,
+              pathname,
+            });
+            router.push('/dashboard/dati-cliente');
+            return;
+          }
+
+          // Dati completati → ok
+          setOnboardingChecked(true);
+        }
+      } catch (error) {
+        console.error('❌ [CLIENT GUARD] Errore verifica onboarding:', error);
+        // Fail-open: se errore, permetti accesso (il middleware ha già bloccato se necessario)
+        setOnboardingChecked(true);
+      }
+    }
+
+    checkOnboarding();
+  }, [session, status, pathname, onboardingChecked, router]);
 
   // Carica il tipo di account e ruolo
   // ⚠️ OTTIMIZZAZIONE: Usa cache per evitare fetch duplicati (già fatto nella sidebar)
