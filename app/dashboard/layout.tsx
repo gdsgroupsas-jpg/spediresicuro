@@ -69,61 +69,12 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // ⚠️ P0-1 FIX: Gate server-authoritative per onboarding
-  // Controlla dati_cliente.datiCompletati PRIMA di renderizzare
-  // Se dati non completati e NON siamo già su /dashboard/dati-cliente → redirect
-  if (session?.user?.email && !isTestMode) {
-    try {
-      // Ottieni pathname corrente dal middleware (header custom)
-      const headersList = headers();
-      const currentPathname = headersList.get('x-pathname') || '';
-      const isOnOnboardingPage = currentPathname === '/dashboard/dati-cliente';
-      
-      const user = await findUserByEmail(session.user.email);
-      const userEmail = session.user.email?.toLowerCase() || '';
-      const isTestUser = userEmail === 'test@spediresicuro.it';
-      
-      // Per utente test, bypass controllo onboarding
-      if (!isTestUser) {
-        // Verifica se dati cliente sono completati
-        const datiCompletati = user?.datiCliente?.datiCompletati === true;
-        const hasDatiCliente = !!user?.datiCliente;
-        
-        // Se dati NON completati (NULL o datiCompletati !== true)
-        if (!datiCompletati || !hasDatiCliente) {
-          // ⚠️ CRITICO: Redirect solo se NON siamo già su onboarding page (evita loop infiniti)
-          if (!isOnOnboardingPage) {
-            console.log('🔄 [DASHBOARD LAYOUT] Dati cliente non completati, redirect a /dashboard/dati-cliente', {
-              email: session.user.email,
-              hasDatiCliente,
-              datiCompletati,
-              currentPathname,
-            });
-            redirect('/dashboard/dati-cliente');
-          } else {
-            // Siamo già su onboarding page, non fare redirect (evita loop)
-            console.log('ℹ️ [DASHBOARD LAYOUT] Dati cliente non completati ma già su /dashboard/dati-cliente, skip redirect', {
-              email: session.user.email,
-              currentPathname,
-            });
-          }
-        }
-      }
-    } catch (error: any) {
-      // Fail-closed: se errore query DB → redirect a dati-cliente (solo se non siamo già lì)
-      console.error('❌ [DASHBOARD LAYOUT] Errore verifica dati cliente, fail-closed:', error);
-      try {
-        const headersList = headers();
-        const currentPathname = headersList.get('x-pathname') || '';
-        if (currentPathname !== '/dashboard/dati-cliente') {
-          redirect('/dashboard/dati-cliente');
-        }
-      } catch (e) {
-        // Se non possiamo determinare pathname, redirect comunque (fail-closed)
-        redirect('/dashboard/dati-cliente');
-      }
-    }
-  }
+  // ⚠️ P0 FIX: Onboarding check RIMOSSO dal Layout
+  // Il middleware (middleware.ts) è la UNICA fonte di verità per il controllo onboarding
+  // Se la request arriva qui, significa che il middleware ha già verificato e permesso l'accesso
+  // Duplicare la logica nel layout causava 307 self-redirect loop quando x-pathname header
+  // non era disponibile o null (es. document request vs RSC request)
+  console.log('✅ [DASHBOARD LAYOUT] Rendering layout - middleware has authorized access');
 
   return (
     <DashboardLayoutClient>
