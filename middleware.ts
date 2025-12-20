@@ -137,8 +137,12 @@ export default async function middleware(request: NextRequest) {
     }
 
     // ✅ AUTHORIZED: User is authenticated or route is public
+    // ⚠️ P0-1 FIX: Passa pathname al layout per evitare loop infiniti
     const response = NextResponse.next();
     response.headers.set('X-Request-ID', requestId);
+    if (pathname.startsWith('/dashboard')) {
+      response.headers.set('x-pathname', pathname);
+    }
     return response;
   } catch (error: any) {
     // Traccia errori middleware
