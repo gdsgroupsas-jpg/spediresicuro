@@ -162,7 +162,7 @@ export const authOptions = {
         try {
           // Verifica credenziali dal database
           console.log('🔍 [AUTH] Importazione verifyUserCredentials...');
-          const { verifyUserCredentials } = await import('@/lib/database');
+          const { verifyUserCredentials, EmailNotConfirmedError } = await import('@/lib/database');
 
           console.log('🔍 [AUTH] Verifica credenziali per:', credentials.email);
           const user = await verifyUserCredentials(
@@ -192,6 +192,13 @@ export const authOptions = {
             }
           }
         } catch (error: any) {
+          // ⚠️ CRITICO: Gestione errore email non confermata
+          if (error instanceof EmailNotConfirmedError || error.name === 'EmailNotConfirmedError') {
+            console.log('❌ [AUTH] Email non confermata per:', credentials.email);
+            // Rilancia l'errore con un messaggio che NextAuth può gestire
+            throw new Error('EMAIL_NOT_CONFIRMED');
+          }
+          
           console.error('❌ [AUTH] Errore durante verifica credenziali:', {
             message: error?.message,
             stack: error?.stack,
