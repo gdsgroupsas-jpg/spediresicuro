@@ -555,6 +555,14 @@ export const authOptions = {
         ? correctBaseUrl 
         : baseUrl;
       
+      // ⚠️ P0 FIX: Gestione esplicita per URL vuoto o '/' (fail-safe a onboarding)
+      // Questo evita redirect a home quando NextAuth chiama redirect con URL vuoto
+      if (!url || url === '/' || url === '') {
+        const redirectUrl = `${finalBaseUrl}/dashboard/dati-cliente`;
+        console.log('⚠️ [NEXTAUTH] URL vuoto o /, redirect fail-safe a onboarding:', redirectUrl);
+        return redirectUrl;
+      }
+      
       // ⚠️ IMPORTANTE: Se l'URL è /login, reindirizza sempre al dashboard
       // Questo evita loop di redirect dopo OAuth callback
       if (url === '/login' || url.startsWith('/login')) {
