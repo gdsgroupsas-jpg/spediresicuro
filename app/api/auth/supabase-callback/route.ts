@@ -128,7 +128,8 @@ export async function POST(request: NextRequest) {
       .eq('email', email)
       .single();
     
-    if (!userDataError && userData?.dati_cliente && !userData.dati_cliente.datiCompletati) {
+    // ⚠️ P0-1 FIX: Se dati_cliente è NULL o datiCompletati è false → redirect a dati-cliente
+    if (userDataError || !userData?.dati_cliente || !userData.dati_cliente.datiCompletati) {
       redirectTo = '/dashboard/dati-cliente';
     }
 
