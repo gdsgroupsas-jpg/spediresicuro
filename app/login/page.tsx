@@ -285,10 +285,8 @@ export default function LoginPage() {
         }
       }
       
-      // Piccolo delay per assicurarsi che la sessione sia completamente caricata
-      setTimeout(() => {
-        checkAndRedirect();
-      }, 300);
+      // ⚠️ P0 FIX: Rimuove delay, esegue controllo immediato (no flash di dashboard)
+      checkAndRedirect();
     }
   }, [status, session]);
 
