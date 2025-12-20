@@ -346,8 +346,19 @@ export default function DatiClientePage() {
   }
 
   if (status === 'unauthenticated') {
-    router.push('/login')
-    return null
+    // ⚠️ P0 FIX: Evita redirect loop (Server Auth ha già validato accesso)
+    // Se NextAuth client non ha ancora sessione, mostra messaggio invece di redirect
+    return (
+      <div className="p-8 text-center">
+        <p className="text-gray-600">Sincronizzazione sessione in corso...</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 text-blue-600 hover:underline"
+        >
+          Ricarica pagina
+        </button>
+      </div>
+    );
   }
 
   return (
