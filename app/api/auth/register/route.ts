@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
       return ApiErrors.VALIDATION_ERROR('Email non valida');
     }
 
-    // Validazione password (minimo 6 caratteri)
-    if (!validatePassword(password, 6)) {
+    // Validazione password (minimo 8 caratteri)
+    if (!validatePassword(password, 8)) {
       console.log('❌ [REGISTER] Password troppo corta');
-      return ApiErrors.VALIDATION_ERROR('La password deve essere di almeno 6 caratteri');
+      return ApiErrors.VALIDATION_ERROR('La password deve essere di almeno 8 caratteri');
     }
 
     // ⚠️ CRITICO: Verifica che Supabase sia configurato
