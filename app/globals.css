@@ -66,12 +66,25 @@ html {
 /* ============================================
    FIX: SELEZIONE TESTO NEGLI INPUT
    ============================================ */
-/* FORZA TESTO VISIBILE IN TUTTI GLI INPUT */
-input,
-textarea,
-select {
+/* ⚠️ P0-3 FIX: Input con sfondo chiaro: testo nero */
+/* Input con sfondo scuro sono esclusi e usano testo bianco */
+input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]),
+textarea:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]),
+select:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]) {
   color: #111827 !important; /* Grigio scuro/nero - sempre visibile */
   -webkit-text-fill-color: #111827 !important;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ⚠️ P0-3 FIX: Input con sfondo scuro: testo bianco (override) */
+input[class*="bg-gray-800"],
+input[class*="bg-gray-900"],
+input[class*="bg-\[#0f0f11\]"],
+input[class*="bg-slate-800"],
+input[class*="bg-slate-900"] {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   -webkit-user-select: text;
   user-select: text;
 }
