@@ -123,7 +123,7 @@ export default function AuthCallbackPage() {
           throw new Error('Login fallito');
         }
 
-        console.log('✅ [AUTH CALLBACK] Auto-login completato');
+        console.log('✅ [AUTH CALLBACK] Auto-login completato, redirect a:', redirectTo);
         setStatus('success');
         setMessage('Email confermata ✅ Accesso effettuato');
 
@@ -131,15 +131,14 @@ export default function AuthCallbackPage() {
         const { getSession } = await import('next-auth/react');
         await getSession();
 
-        // ⚠️ P0 FIX: Rimuove redirect client-side - middleware gestisce redirect server-authoritative
-        // Dopo signIn(), il middleware controllerà onboarding e farà redirect appropriato
-        // Non fare redirect qui - lasciare che middleware gestisca redirect server-side
-        console.log('🔄 [AUTH CALLBACK] Refresh per triggerare middleware (redirect server-authoritative)');
+        // ⚠️ P0 FIX: Usa redirectTo ricevuto dal server (decisione server-authoritative)
+        // Il server (/api/auth/supabase-callback) ha già deciso il redirect basato su onboarding
+        // Fallback a /dashboard/dati-cliente (fail-safe)
+        // Middleware intercetterà comunque se necessario (doppia protezione)
+        const finalRedirect = redirectTo || '/dashboard/dati-cliente';
+        console.log('🔄 [AUTH CALLBACK] Redirect a:', finalRedirect, '(server-authoritative)');
         router.refresh();
-        
-        // Redirect minimo a /dashboard - middleware intercetterà e farà redirect a onboarding se necessario
-        // Usa router.push invece di window.location.href per permettere a middleware di intercettare
-        router.push('/dashboard');
+        router.push(finalRedirect);
 
       } catch (error: any) {
         console.error('❌ [AUTH CALLBACK] Errore:', error);
