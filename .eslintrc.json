@@ -1,4 +1,31 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "overrides": [
+    {
+      "files": [
+        "app/api/**/*.ts",
+        "app/api/**/*.tsx",
+        "actions/**/*.ts",
+        "actions/**/*.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "name": "@/lib/auth-config",
+            "message": "❌ SECURITY: Direct auth() import is forbidden in API routes and Server Actions. Use requireSafeAuth() from @/lib/safe-auth to support impersonation (Acting Context)."
+          },
+          {
+            "name": "next-auth",
+            "message": "❌ SECURITY: Direct next-auth import is forbidden in API routes and Server Actions. Use requireSafeAuth() from @/lib/safe-auth to support impersonation (Acting Context)."
+          },
+          {
+            "name": "next-auth/react",
+            "message": "❌ SECURITY: next-auth/react is client-side only. Use requireSafeAuth() from @/lib/safe-auth for server-side authentication."
+          }
+        ]
+      }
+    }
+  ]
 }
 

@@ -3,47 +3,46 @@
 /**
  * Server Actions per Gestione Wallet Utente
  * 
+ * CRITICAL: Migrato a Acting Context (Impersonation Support)
+ * - Usa requireSafeAuth() per supportare impersonation
+ * - Opera sempre su context.target (chi paga), non su actor (chi clicca)
+ * - Audit log completo con actor + target
+ * 
  * Permette all'utente di:
  * - Richiedere una ricarica wallet (se non è admin)
  * - Ricaricare direttamente il proprio wallet (se è admin/superadmin)
  * - Visualizzare le proprie transazioni
  */
 
-import { auth } from '@/lib/auth-config'
+import { requireSafeAuth, getSafeAuth, isSuperAdmin } from '@/lib/safe-auth'
 import { supabaseAdmin } from '@/lib/db/client'
+import { writeWalletAuditLog } from '@/lib/security/audit-log'
+import { AUDIT_ACTIONS } from '@/lib/security/audit-actions'
 
 /**
- * Verifica se l'utente corrente è Admin o Super Admin
+ * DEPRECATED: Legacy function, migrato a getSafeAuth() + isSuperAdmin()
+ * Mantenuto per compatibilità temporanea, ma NON usare in nuovo codice
  */
-async function isCurrentUserAdmin(): Promise<{ isAdmin: boolean; userId?: string; isSuperAdmin?: boolean }> {
+async function isCurrentUserAdmin_DEPRECATED(): Promise<{ isAdmin: boolean; userId?: string; isSuperAdmin?: boolean }> {
+  console.warn('⚠️ [DEPRECATED] isCurrentUserAdmin() is deprecated. Use getSafeAuth() + isSuperAdmin() instead.');
+  
   try {
-    const session = await auth()
+    const context = await getSafeAuth();
     
-    if (!session?.user?.email) {
-      return { isAdmin: false }
+    if (!context) {
+      return { isAdmin: false };
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', session.user.email)
-      .single()
-
-    if (error || !user) {
-      return { isAdmin: false }
-    }
-
-    const isSuperAdmin = user.account_type === 'superadmin'
-    const isAdmin = isSuperAdmin || user.account_type === 'admin'
+    const isAdmin = isSuperAdmin(context);
 
     return { 
       isAdmin,
-      isSuperAdmin,
-      userId: user.id 
-    }
+      isSuperAdmin: isAdmin,
+      userId: context.target.id 
+    };
   } catch (error: any) {
-    console.error('Errore verifica Admin:', error)
-    return { isAdmin: false }
+    console.error('Errore verifica Admin:', error);
+    return { isAdmin: false };
   }
 }
 
@@ -68,17 +67,15 @@ export async function rechargeMyWallet(
   newBalance?: number
 }> {
   try {
-    // 1. Verifica autenticazione
-    const session = await auth()
+    // 1. Get Safe Auth (Acting Context)
+    const context = await requireSafeAuth();
     
-    if (!session?.user?.email) {
-      return {
-        success: false,
-        error: 'Non autenticato.',
-      }
-    }
+    // 2. Extract target and actor (target = who receives credit, actor = who clicked)
+    const targetId = context.target.id;
+    const actorId = context.actor.id;
+    const impersonationActive = context.isImpersonating;
 
-    // 2. Valida importo
+    // 3. Valida importo
     if (amount <= 0) {
       return {
         success: false,
@@ -86,25 +83,17 @@ export async function rechargeMyWallet(
       }
     }
 
-    // 3. Verifica se l'utente è admin
-    const adminCheck = await isCurrentUserAdmin()
-    const userId = adminCheck.userId
+    // 4. Verifica se l'actor è admin/superadmin
+    const isAdmin = isSuperAdmin(context);
 
-    if (!userId) {
-      return {
-        success: false,
-        error: 'Utente non trovato.',
-      }
-    }
-
-    // 4. Se l'utente è admin/superadmin, ricarica direttamente
-    if (adminCheck.isAdmin) {
+    // 5. Se l'actor è admin/superadmin, ricarica direttamente il wallet del target
+    if (isAdmin) {
       // Usa la funzione SQL per aggiungere credito
       const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
-        p_user_id: userId,
+        p_user_id: targetId, // Target ID (who receives credit)
         p_amount: amount,
         p_description: reason,
-        p_created_by: userId,
+        p_created_by: actorId, // Actor ID (who clicked)
       })
 
       if (txError) {
@@ -115,31 +104,26 @@ export async function rechargeMyWallet(
           error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
         }
       } else {
-        // Funzione SQL ha funzionato
-        // Audit log
+        // Funzione SQL ha funzionato - Audit log con Acting Context
         try {
-          const session = await auth()
-          await supabaseAdmin.from('audit_logs').insert({
-            action: 'wallet_credit_added',
-            resource_type: 'wallet',
-            resource_id: userId,
-            user_email: session?.user?.email || 'unknown',
-            user_id: userId,
-            metadata: {
-              amount: amount,
-              reason: reason,
-              transaction_id: txData,
-              type: 'self_recharge',
+          await writeWalletAuditLog(
+            context,
+            AUDIT_ACTIONS.WALLET_RECHARGE,
+            amount,
+            txData,
+            {
+              reason,
+              type: impersonationActive ? 'admin_recharge_for_user' : 'self_recharge',
             }
-          })
+          );
         } catch (auditError) {
-          console.warn('Errore audit log:', auditError)
+          console.warn('⚠️ [AUDIT] Errore audit log (fail-open):', auditError);
         }
 
         const { data: updatedUser } = await supabaseAdmin
           .from('users')
           .select('wallet_balance')
-          .eq('id', userId)
+          .eq('id', targetId) // Target ID (who received credit)
           .single()
 
         return {
@@ -156,11 +140,11 @@ export async function rechargeMyWallet(
         .from('wallet_transactions')
         .insert([
           {
-            user_id: userId,
+            user_id: targetId, // Target ID (who receives credit)
             amount: amount,
             type: 'recharge_request',
             description: reason,
-            created_by: userId,
+            created_by: actorId, // Actor ID (who clicked)
           },
         ])
         .select('id')
@@ -171,6 +155,23 @@ export async function rechargeMyWallet(
           success: false,
           error: insertError.message || 'Errore durante la creazione della richiesta.',
         }
+      }
+
+      // Audit log
+      try {
+        await writeWalletAuditLog(
+          context,
+          AUDIT_ACTIONS.WALLET_RECHARGE,
+          amount,
+          tx.id,
+          {
+            reason,
+            type: 'user_recharge_request',
+            status: 'pending_approval',
+          }
+        );
+      } catch (auditError) {
+        console.warn('⚠️ [AUDIT] Errore audit log (fail-open):', auditError);
       }
 
       return {
@@ -190,6 +191,10 @@ export async function rechargeMyWallet(
 
 /**
  * Server Action: Ottieni transazioni wallet dell'utente corrente
+ * 
+ * CRITICAL: Migrato a Acting Context (Impersonation Support)
+ * - Usa requireSafeAuth() per supportare impersonation
+ * - Ritorna transazioni del TARGET (non dell'actor se impersonating)
  */
 export async function getMyWalletTransactions(): Promise<{
   success: boolean
@@ -197,32 +202,17 @@ export async function getMyWalletTransactions(): Promise<{
   error?: string
 }> {
   try {
-    const session = await auth()
+    // Get Safe Auth (Acting Context)
+    const context = await requireSafeAuth();
     
-    if (!session?.user?.email) {
-      return {
-        success: false,
-        error: 'Non autenticato.',
-      }
-    }
+    // Extract target ID (who owns the wallet)
+    const targetId = context.target.id;
 
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (!user) {
-      return {
-        success: false,
-        error: 'Utente non trovato.',
-      }
-    }
-
+    // Query transactions del TARGET (non dell'actor)
     const { data: transactions, error } = await supabaseAdmin
       .from('wallet_transactions')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', targetId) // Target ID (wallet owner)
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -231,6 +221,21 @@ export async function getMyWalletTransactions(): Promise<{
         success: false,
         error: error.message || 'Errore durante il caricamento delle transazioni.',
       }
+    }
+
+    // Audit log (view wallet transactions)
+    try {
+      await writeWalletAuditLog(
+        context,
+        AUDIT_ACTIONS.VIEW_WALLET_TRANSACTIONS,
+        0, // No amount for view operation
+        'N/A',
+        {
+          transactions_count: transactions?.length || 0,
+        }
+      );
+    } catch (auditError) {
+      console.warn('⚠️ [AUDIT] Errore audit log (fail-open):', auditError);
     }
 
     return {
