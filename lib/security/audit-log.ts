@@ -208,3 +208,97 @@ export async function writeShipmentAuditLog(
     metadata: additionalMetadata,
   });
 }
+
+/**
+ * LEGACY COMPAT: logAuditEvent
+ * 
+ * ⚠️ DEPRECATED: Use writeAuditLog() instead for Acting Context support.
+ * 
+ * Questo wrapper è mantenuto per backward compatibility con codice legacy
+ * che non è stato ancora migrato a requireSafeAuth() + writeAuditLog().
+ * 
+ * MIGRATION PATH:
+ * 1. Migrare caller a requireSafeAuth()
+ * 2. Sostituire logAuditEvent() con writeAuditLog()
+ * 3. Rimuovere questo wrapper quando tutti i caller sono migrati
+ * 
+ * @param action - Azione audit (es: 'credential_updated')
+ * @param resourceType - Tipo risorsa (es: 'courier_config')
+ * @param resourceId - ID risorsa
+ * @param metadata - Metadata opzionale (default: {})
+ */
+export async function logAuditEvent(
+  action: string,
+  resourceType: string,
+  resourceId: string,
+  metadata: Record<string, any> = {}
+): Promise<void> {
+  try {
+    // Tenta di ottenere context corrente (se disponibile)
+    let context: ActingContext | null = null;
+    
+    try {
+      const { getSafeAuth } = await import('@/lib/safe-auth');
+      context = await getSafeAuth();
+    } catch (error: any) {
+      // getSafeAuth non disponibile o fallito (es: no session)
+      console.warn('⚠️ [AUDIT LEGACY] getSafeAuth not available, using system context');
+    }
+    
+    // Se abbiamo context, usa writeAuditLog (preferred)
+    if (context) {
+      await writeAuditLog({
+        context,
+        action,
+        resourceType,
+        resourceId,
+        metadata,
+      });
+      return;
+    }
+    
+    // Fallback: insert diretto DB senza context (sistema/background job)
+    const logEntry = {
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      
+      // No actor/target (operazione di sistema)
+      actor_id: null,
+      target_id: null,
+      impersonation_active: false,
+      
+      // Legacy compatibility
+      user_id: null,
+      user_email: 'system',
+      
+      // Metadata
+      audit_metadata: {
+        ...metadata,
+        legacy_caller: true,
+        migration_needed: true,
+      },
+      
+      // Timestamp
+      created_at: new Date().toISOString(),
+    };
+    
+    const { error: insertError } = await supabaseAdmin
+      .from('audit_logs')
+      .insert([logEntry]);
+    
+    if (insertError) {
+      throw insertError;
+    }
+    
+    console.log('✅ [AUDIT LEGACY]', {
+      action,
+      resource: `${resourceType}:${resourceId.substring(0, 8)}...`,
+      mode: 'system (no context)',
+    });
+  } catch (error: any) {
+    // FAIL-OPEN: non bloccare operazione se log fallisce
+    console.error('❌ [AUDIT LEGACY] Logging failed (fail-open):', error.message);
+    console.log('📋 [AUDIT LEGACY] (fallback console)', JSON.stringify({ action, resourceType, resourceId, metadata }, null, 2));
+  }
+}
