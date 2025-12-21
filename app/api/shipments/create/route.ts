@@ -134,11 +134,25 @@ export async function POST(request: Request) {
     // ============================================
     // CHIAMATA CORRIERE
     // ============================================
+    // Normalize recipient email (TypeScript fix - fail-safe fallback)
+    // Email is optional in Zod schema but some couriers require it
+    const recipientEmailFallback = 
+      validated.recipient.email ||
+      context.target.email ||
+      `noemail+${targetId}@spediresicuro.local`;
+    
+    const recipientNormalized = {
+      ...validated.recipient,
+      email: recipientEmailFallback,
+    };
+    
+    const usedEmailFallback = !validated.recipient.email;
+    
     let courierResponse
     try {
       courierResponse = await courierClient.createShipping({
         sender: validated.sender,
-        recipient: validated.recipient,
+        recipient: recipientNormalized, // Use normalized recipient (with email guaranteed)
         packages: validated.packages,
         insurance: validated.insurance?.value,
         cod: validated.cod?.value,
@@ -328,6 +342,7 @@ export async function POST(request: Request) {
           tracking_number: shipment.tracking_number,
           cost: finalCost,
           provider: validated.provider,
+          recipient_email_fallback: usedEmailFallback, // Track if email fallback was used
         }
       );
     } catch (auditError) {
