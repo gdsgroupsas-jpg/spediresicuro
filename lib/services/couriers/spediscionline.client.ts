@@ -14,7 +14,7 @@ interface SpedisciOnlineRawResponse {
 }
 
 export class SpedisciOnlineClient extends BaseCourierClient {
-  private carrier: string  // GLS, POSTE, BRT, UPS, etc
+  protected carrier: string  // GLS, POSTE, BRT, UPS, etc (aligned with base class)
   
   constructor(config: {
     apiKey: string
