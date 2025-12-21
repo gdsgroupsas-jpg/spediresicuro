@@ -1,252 +1,277 @@
-# 📜 MANIFESTO TECNICO DI PROGETTO - SpedireSicuro.it
+# 📜 SpedireSicuro.it - Shipping Management Platform
 
-> **Versione:** 2.0.0 (AI-First Era)  
-> **Data Aggiornamento:** 14 Dicembre 2025  
-> **Stato:** 🟢 Produzione / 🟡 Beta (Moduli AI)
-
----
-
-## 🎯 1. LA VISIONE (Il "Perché")
-
-**SpedireSicuro non è un semplice gestionale.** È un **Sistema Operativo Logistico** guidato dall'Intelligenza Artificiale.
-
-L'obiettivo non è solo permettere agli utenti di spedire pacchi, ma di **azzerare la frizione** tra l'intenzione ("Devo spedire questo") e l'azione (Etichetta stampata e corriere prenotato).
-
-### I Pilastri del Manifesto
-
-1.  **AI-First, non AI-Added**: L'AI non è una feature accessoria, è il cuore. Il sistema è costruito attorno a un grafo decisionale (LangGraph) e modelli multimodali (Gemini 2.0) che vedono, ragionano e agiscono.
-2.  **Automazione Radicale**: Se un umano deve fare copia-incolla, abbiamo fallito. Screenshot, PDF, email vengono ingeriti e processati automaticamente.
-3.  **Doctor Service (Self-Healing)**: Il sistema si monitora da solo. Se una chiamata API fallisce, il sistema se ne accorge, notifica e tenta di riparare o suggerire fix.
-4.  **Ecosistema Finanziario**: Non solo logistica, ma gestione del credito. Wallet ricaricabile, pagamenti diretti (XPay) e gestione fiscale integrata.
+> **Version:** 3.0.0 (Production-Ready Architecture)  
+> **Last Updated:** December 21, 2025  
+> **Status:** 🟢 Production (Core Features) / 🟡 Development (AI Modules)
 
 ---
 
-## 🏗️ 2. SKILLSET & STACK TECNOLOGICO
+## 🎯 What is SpedireSicuro?
 
-Per operare su questo progetto è richiesto il seguente profilo tecnico "Full Stack AI Engineer":
+**SpedireSicuro** is a modern shipping management platform that simplifies logistics for businesses and individuals.
 
-### Core Stack
+### Core Value Proposition
 
-- **Frontend**: Next.js 14 (App Router), React Server Components, TypeScript.
-- **Styling**: Tailwind CSS, Shadcn/UI, Framer Motion (Glassmorphism UI).
-- **Backend**: Next.js API Routes (Edge/Node), Supabase (PostgreSQL).
-- **Auth**: NextAuth.js v5 (Role-Based Access Control).
+- **Multi-Carrier Management** - Compare prices and ship with GLS, BRT, Poste Italiane from one dashboard
+- **Prepaid Wallet System** - Pay-as-you-go with transparent pricing, no monthly fees
+- **Reseller Support** - Build your own shipping business with custom pricing tiers
+- **Enterprise Security** - Multi-tenant architecture with impersonation support for customer service
 
-### AI & Automation Stack
+### Design Principles
 
-- **LLM Provider**: **Google Gemini 2.0 Flash** (Multimodale: Testo + Vision).
-- **Agent Framework**: LangGraph (Orchestrazione a stati: Extraction -> Validation -> Action).
-- **Browser Automation**: Puppeteer (su servizio Express standalone) per interazione con portali corrieri legacy.
-- **OCR Strategy**: Ibrida (Tesseract.js locale + Gemini Vision per comprensione semantica).
+1. **Security First** - Row-level security (RLS), audit logging, GDPR compliance
+2. **Financial Integrity** - Immutable wallet ledger, fraud prevention, manual approval workflow
+3. **Operational Excellence** - Comprehensive monitoring, incident playbooks, fail-safe recovery
+4. **Developer Experience** - Type-safe APIs, extensive documentation, clear architecture
+
+---
+
+## 🏗️ Technology Stack
+
+### Frontend
+- **Next.js 14** - App Router with React Server Components
+- **TypeScript** - Strict type checking
+- **Tailwind CSS + Shadcn/UI** - Modern component library
+- **Framer Motion** - Smooth animations
+
+### Backend
+- **Next.js API Routes** - RESTful endpoints
+- **Server Actions** - Type-safe RPC calls
+- **Supabase** - PostgreSQL with Row Level Security (RLS)
+- **NextAuth.js v5** - Authentication and session management
 
 ### Infrastructure
-
-- **Database**: Supabase (PostgreSQL con pgvector).
-- **Hosting**: Vercel (Frontend), Railway/VPS (Automation Service).
-- **Payments**: Integrazione Banca Intesa XPay, Bonifici Smart (Parsing ricevute).
-
----
-
-## 📦 3. STATO DEL PROGETTO E MODULI
-
-Il sistema è diviso in moduli interconnessi. Ecco lo stato dell'arte attuale:
-
-### 3.1 🧠 Il Cervello: AI "Anne"
-
-_Status: 🟡 Beta Avanzata_
-
-- **Chat Interface**: Assistente virtuale sempre presente in dashboard.
-- **Multimodal Input**: Accetta foto di etichette, screenshot di chat WhatsApp.
-- **LangGraph Workflow**:
-  1.  **Ingestione**: Analisi visuale dell'input.
-  2.  **Estrazione**: Identificazione Mittente/Destinatario/Misure.
-  3.  **Validazione**: Check CAP/Città, normalizzazione telefoni (+39...).
-  4.  **Booking**: Selezione corriere migliore (algoritmo interno smart-routing).
-
-### 3.2 💼 CRM: Sistema Leads
-
-_Status: 🟢 Produzione_
-
-Modulo dedicato all'acquisizione e conversione clienti (Dashboard Admin).
-
-- **Workflow Stati**: New -> Contacted -> Qualified -> Negotiation -> Won/Lost.
-- **Gestione**: Assegnazione lead a contatto commerciale, stima valore, note.
-- **Conversion**: Un click per convertire un Lead "Won" in un Utente attivo della piattaforma.
-
-### 3.3 💳 Finanza & Wallet
-
-_Status: 🟢 Produzione_
-
-Sistema finanziario interno per la gestione del credito prepagato.
-
-- **Ricarica XPay**: Integrazione diretta gateway Intesa Sanpaolo (Carte di Credito). Calcolo commissioni dinamico.
-- **Smart Top-Up (Bonifico)**:
-  - Utente carica PDF/FOTO della distinta di bonifico.
-  - **AI Verification**: Il sistema legge l'importo e il CRO dalla ricevuta.
-  - Accredito semi-automatico (previa conferma admin o automatico su base trust).
-- **Consapevolezza Fiscale**: Il sistema traccia scadenze (F24, LIPE) e fornisce un contesto fiscale all'AI per rispondere a domande dell'utente.
-
-### 3.4 🚚 Spedizioni & Corrieri
-
-_Status: 🟢 Produzione (Core)_
-
-- **Multi-Corriere**: Integrazione con Spedisci.Online, GLS, BRT, Poste.
-- **Comparatore Prezzi**: Listini dinamici basati su ruolo utente (Reseller vs User).
-- **Reseller System**:
-  - Gerarchia: Superadmin -> Reseller -> User.
-  - I Reseller vedono solo i propri utenti e guadagnano sui margini configurati.
-
-### 3.5 🛡️ Doctor Service & Diagnostica
-
-_Status: 🟢 Produzione_
-
-- **Self-Monitoring**: Tabella `diagnostics_events` che traccia errori, warning e performance.
-- **Automation**: Se l'Automation Service crasha o un login corriere fallisce, il Doctor notifica.
-- **AI Analysis**: L'AI può analizzare i log per suggerire fix al codice o alla configurazione.
+- **Database:** Supabase (PostgreSQL 15+)
+- **Hosting:** Vercel (Edge Network)
+- **Monitoring:** Vercel Analytics + Custom diagnostics
+- **Payments:** Bank Transfer (Manual) + XPay integration (Ready, not live)
 
 ---
 
-## 🗄️ 4. ARCHITETTURA DATI (Supabase)
+## 📦 Features
 
-Schema database PostgreSQL chiave per lo sviluppo:
+### ✅ Live in Production
 
-- `users`: Profili estesi, collegamenti padre-figlio (Reseller), preferenze.
-- `shipments`: Tabella centrale spedizioni. Include campi JSONB per dettagli corrieri.
-- `leads`: (Nuova) Gestione CRM pre-acquisizione.
-- `wallet_transactions`: Storico immutabile di ricariche e spese.
-- `wallet_topups`: Richieste di ricarica (Stato: pending -> approved/rejected) con link alle ricevute.
-- `diagnostics_events`: Log strutturati (JSONB context) per debugging.
+#### 🚚 Shipment Management
+- Multi-carrier support (GLS, BRT, Poste via Spedisci.Online)
+- Real-time tracking
+- Label generation and download
+- Shipment history and search
+
+#### 💰 Wallet System
+- Prepaid credit model (€10k max per transaction)
+- Bank transfer top-ups (manual admin approval)
+- Immutable transaction ledger
+- Negative balance prevention
+- Daily balance reconciliation
+
+#### 👥 User Management
+- Role-based access control (User, Admin, SuperAdmin)
+- Reseller hierarchy (parent-child relationships)
+- Custom pricing per reseller
+- Acting Context (Impersonation for customer support)
+
+#### 🔒 Security & Compliance
+- Multi-tenant isolation (Row Level Security)
+- Comprehensive audit logging (all sensitive operations)
+- GDPR data export and anonymization
+- Encrypted courier credentials
+- Session management with TTL
+
+#### 💼 CRM
+- Lead management (New → Contacted → Qualified → Won/Lost)
+- Lead assignment to sales team
+- One-click conversion to active user
+
+### 🟡 Partially Implemented (Backend Ready, UI Missing)
+
+#### 🤖 AI Features
+- **Infrastructure:** Gemini 2.0 Flash integration ready
+- **Missing:** Chat UI interface for "Anne" assistant
+- **Use Case:** Automated shipment data extraction from images
+
+#### 💳 Payment Processing
+- **Infrastructure:** XPay (Intesa Sanpaolo) integration ready
+- **Missing:** Payment flow UI, testing in production
+- **Current:** Manual bank transfer only
+
+#### 📊 Diagnostics Dashboard
+- **Infrastructure:** `diagnostics_events` table logging active
+- **Missing:** Admin UI to view and analyze events
+- **Current:** SQL queries for diagnostics
+
+#### 📄 Invoice System
+- **Infrastructure:** Tables and schema created
+- **Missing:** PDF generation, email delivery
+- **Current:** Manual invoice creation
 
 ---
 
-## 🚀 5. FLUSSI OPERATIVI CHIAVE
+## 🚀 Quick Start
 
-### Flusso "Smart Top-Up" (Ricarica Bonifico)
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account (cloud or local)
+- Basic understanding of Next.js and TypeScript
 
-1.  Utente apre dialogo Wallet -> Tab "Bonifico".
-2.  Upload PDF/JPG distinta.
-3.  Frontend invia file a Server Action.
-4.  Gemini AI analizza documento -> Estrae Importo, Data, CRO.
-5.  Record creato in `wallet_topups` (Status: `pending_verification`).
-6.  Admin riceve notifica -> Approva -> Transazione scritta in `wallet_transactions` -> Saldo aggiornato.
+### Local Development Setup
 
-### Flusso "AI Booking" (Anne)
-
-1.  Utente incolla screenshot WhatsApp in chat.
-2.  Gemini Vision analizza immagine -> Estrae indirizzo dest e mittente nascosto.
-3.  LangGraph valida indirizzi (Geocoding check).
-4.  L'AI chiede: "Vuoi assicurare il pacco per 500€ come scritto nella chat?".
-5.  Utente conferma -> Spedizione creata in bozza.
-
----
-
-## 🛠️ 6. SETUP & SVILUPPO
-
-### Variabili d'Ambiente Critiche (.env.local)
-
+**Option 1: Supabase Cloud (Recommended for getting started)**
 ```bash
-# Core
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+# 1. Clone repository
+git clone https://github.com/gdsgroupsas-jpg/spediresicuro.git
+cd spediresicuro
 
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000  # ⚠️ Solo per sviluppo locale
-NEXTAUTH_SECRET=...
+# 2. Install dependencies
+npm install
 
-# AI (Cervello)
-GOOGLE_API_KEY=...      # Gemini 2.0 Flash Key
+# 3. Configure environment
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
 
-# Payments
-XPAY_BO_API_KEY=...     # Banca Intesa Backoffice
-XPAY_TERMINAL_ID=...    # Terminale POS Virtuale
-
-# Automation
-AUTOMATION_SERVICE_URL=http://localhost:3000
-```
-
-### 🚀 Percorsi di Sviluppo
-
-Il progetto supporta **due percorsi di sviluppo** a seconda delle tue esigenze:
-
-#### **Percorso 1: Sviluppo con Supabase Cloud** (Consigliato per iniziare)
-
-**Requisiti:**
-- ✅ Account Supabase Cloud (gratuito)
-- ✅ File `.env.local` configurato con credenziali Supabase Cloud
-- ❌ **NON richiede Docker**
-
-**Setup:**
-```bash
-# 1. Verifica configurazione
+# 4. Verify setup
 npm run setup:check
 
-# 2. Avvia sviluppo
+# 5. Start development server
 npm run dev
 ```
 
-**Verifiche:**
-- ✅ `npm run check:env:simple` → PASS
-- ✅ `npm run check:errors` → PASS
-- ⚠️ `npx supabase status` → WARN (Docker non necessario)
-
-**Vantaggi:**
-- Setup rapido (no Docker)
-- Database cloud sempre disponibile
-- Ideale per sviluppo collaborativo
-
----
-
-#### **Percorso 2: Sviluppo con Supabase Locale**
-
-**Requisiti:**
-- ✅ Docker Desktop installato e in esecuzione
-- ✅ File `.env.local` configurato
-- ✅ Supabase CLI installato (`npm install -g supabase`)
-
-**Setup:**
+**Option 2: Supabase Local (Advanced)**
 ```bash
-# 1. Avvia Supabase locale
+# 1-2. Same as above
+
+# 3. Start Supabase locally (requires Docker)
 npx supabase start
 
-# 2. Verifica configurazione
-npm run setup:check
+# 4. Configure .env.local with local URLs
+# (Provided by supabase start command)
 
-# 3. Avvia sviluppo
-npm run dev
+# 5-6. Same as above
 ```
 
-**Verifiche:**
-- ✅ `npm run check:env:simple` → PASS
-- ✅ `npm run check:errors` → PASS
-- ✅ `npx supabase status` → PASS
+### Environment Variables
 
-**Vantaggi:**
-- Database locale isolato
-- Controllo completo su migrations
-- Ideale per test offline
-
----
-
-### 📋 Comandi Utili
+Copy `.env.example` to `.env.local` and configure:
 
 ```bash
-# Verifica setup completo (consigliato prima di iniziare)
-npm run setup:check
+# Required
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_random_secret_32_chars
+ENCRYPTION_KEY=your_encryption_key_32_chars
 
-# Sviluppo
-npm run dev          # Avvio Next.js
+# Optional (for full functionality)
+GOOGLE_API_KEY=your_gemini_api_key
+GOOGLE_CLIENT_ID=your_google_oauth_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_secret
+```
 
-# Verifiche
-npm run check:env:simple  # Verifica variabili .env.local
-npm run check:errors      # Verifica errori nel log
+See [`.env.example`](.env.example) for complete list.
 
-# Supabase (solo se locale)
-npx supabase status      # Verifica Supabase locale
-npx supabase start       # Avvia Supabase locale
-npx supabase stop        # Ferma Supabase locale
+---
+
+## 📚 Documentation
+
+### Essential Reading (New Production-Ready Docs!)
+- **[SECURITY.md](docs/SECURITY.md)** - Multi-tenant architecture, Acting Context, RLS policies
+- **[MONEY_FLOWS.md](docs/MONEY_FLOWS.md)** - Wallet system, anti-fraud, idempotency
+- **[OPS_RUNBOOK.md](docs/OPS_RUNBOOK.md)** - Deployment, incident response, monitoring
+- **[DB_SCHEMA.md](docs/DB_SCHEMA.md)** - Database tables, RLS policies, invariants
+- **[MIGRATIONS.md](docs/MIGRATIONS.md)** - Migration history (49 migrations), rollback procedures
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Technical deep dive, patterns, performance
+
+### Additional Resources
+- **[ROADMAP.md](ROADMAP.md)** - Planned features and backlog
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Developer guidelines and PR checklist
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run type checking
+npm run type-check
+
+# Run linting
+npm run lint
+
+# Run tests (when available)
+npm test
+
+# E2E tests with Playwright
+npm run test:e2e
 ```
 
 ---
 
-_Questo documento è la Verità. Se il codice differisce da questo documento, il codice deve essere aggiornato o questo documento emendato tramite PR._
+## 🚢 Deployment
+
+### Vercel (Recommended)
+
+1. Push code to GitHub
+2. Import project in Vercel dashboard
+3. Configure environment variables
+4. Deploy automatically on every push to `main`
+
+See [OPS_RUNBOOK.md](docs/OPS_RUNBOOK.md) for detailed deployment checklist.
+
+---
+
+## 🔐 Security
+
+- **Multi-Tenant Isolation:** Row Level Security (RLS) on all tenant tables
+- **Audit Logging:** All sensitive operations logged with actor/target tracking
+- **Impersonation:** SuperAdmin can act on behalf of users (fully audited)
+- **Encryption:** Courier credentials encrypted at rest
+- **GDPR:** Data export and anonymization support
+
+See [SECURITY.md](docs/SECURITY.md) for security architecture details.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Code review checklist
+- Security gate requirements
+- Migration best practices
+- ESLint rules (no direct `auth()` usage)
+
+---
+
+## 📋 Project Commands
+
+```bash
+# Development
+npm run dev                 # Start development server
+
+# Verification
+npm run setup:check         # Verify complete setup
+npm run check:env:simple    # Check environment variables
+npm run check:errors        # Check for errors in logs
+npm run type-check          # TypeScript validation
+npm run lint                # ESLint validation
+
+# Database (if using local Supabase)
+npx supabase start          # Start local Supabase
+npx supabase stop           # Stop local Supabase
+npx supabase status         # Check Supabase status
+npx supabase db reset       # Reset and apply migrations
+
+# Testing
+npm run test:e2e            # Run Playwright E2E tests
+```
+
+---
+
+## 📞 Support
+
+- **Documentation:** See `docs/` folder for comprehensive guides
+- **Issues:** [GitHub Issues](https://github.com/gdsgroupsas-jpg/spediresicuro/issues)
+- **Security:** Report security issues privately via GitHub Security Advisories
+
+---
+
+_Last updated: December 21, 2025_
