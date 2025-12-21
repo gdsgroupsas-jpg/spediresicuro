@@ -312,6 +312,54 @@ export default function ListaSpedizioniPage() {
     fetchSpedizioni();
   }, []);
 
+  // ⚠️ P0-1 FIX: Forza refresh se arriviamo da creazione spedizione
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('refresh') === 'true') {
+      // Guard anti-doppia esecuzione (protezione contro StrictMode/doppio render)
+      const refreshKey = 'spedizioni_refreshed';
+      if (sessionStorage.getItem(refreshKey) === '1') {
+        console.log('🔄 [REFRESH] Skip: già eseguito in questa sessione');
+        // Rimuovi query param comunque
+        window.history.replaceState({}, '', '/dashboard/spedizioni');
+        return;
+      }
+
+      // Marca come in esecuzione
+      sessionStorage.setItem(refreshKey, '1');
+
+      // Forza refresh immediato delle spedizioni
+      async function refreshSpedizioni() {
+        try {
+          setIsLoading(true);
+          // ⚠️ Cache bypass: forza fetch fresco (no cache browser/CDN)
+          const response = await fetch('/api/spedizioni', {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            },
+          });
+          if (response.ok) {
+            const result = await response.json();
+            const spedizioniCaricate = result.data || [];
+            setSpedizioni(spedizioniCaricate);
+            console.log('🔄 [REFRESH] Spedizioni ricaricate dopo creazione');
+          }
+        } catch (err) {
+          console.error('Errore refresh spedizioni:', err);
+        } finally {
+          setIsLoading(false);
+          // Rimuovi query param per pulizia URL
+          window.history.replaceState({}, '', '/dashboard/spedizioni');
+          // Rimuovi guard dopo successo
+          sessionStorage.removeItem(refreshKey);
+        }
+      }
+      refreshSpedizioni();
+    }
+  }, []);
+
   // Listener Real-Time per aggiornamenti automatici (mobile → desktop)
   useRealtimeShipments({
     userId: userId || '',
