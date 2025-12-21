@@ -28,27 +28,24 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [accountType, setAccountType] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   // ⚠️ P0: CLIENT-SIDE ONBOARDING GATE (Backup del middleware)
   // Questo è un FAIL-SAFE che si attiva se il middleware non blocca per qualche motivo
   // (es: soft navigation, cache, edge cases)
+  // IMPORTANTE: Controlla su OGNI cambio pathname (non solo la prima volta)
   useEffect(() => {
     async function checkOnboarding() {
       // Non fare nulla se:
       // 1. Session non ancora caricata
-      // 2. Già controllato
-      // 3. Siamo già su /dashboard/dati-cliente (anti-loop)
+      // 2. Siamo già su /dashboard/dati-cliente (anti-loop)
       if (status === 'loading') return;
       if (!session?.user?.email) return;
-      if (onboardingChecked) return;
       if (pathname === '/dashboard/dati-cliente') {
-        setOnboardingChecked(true);
         return;
       }
 
       try {
-        // Verifica stato onboarding
+        // Verifica stato onboarding su OGNI navigazione
         const response = await fetch('/api/user/dati-cliente', {
           cache: 'no-store',
         });
@@ -62,23 +59,26 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
             console.warn('🔒 [CLIENT GUARD] Dati cliente non completati, redirect a onboarding', {
               email: session.user.email,
               pathname,
+              datiCompletati,
             });
             router.push('/dashboard/dati-cliente');
             return;
           }
 
-          // Dati completati → ok
-          setOnboardingChecked(true);
+          // Dati completati → ok, continua
+          console.log('✅ [CLIENT GUARD] Dati cliente completati, accesso consentito', {
+            email: session.user.email,
+            pathname,
+          });
         }
       } catch (error) {
         console.error('❌ [CLIENT GUARD] Errore verifica onboarding:', error);
         // Fail-open: se errore, permetti accesso (il middleware ha già bloccato se necessario)
-        setOnboardingChecked(true);
       }
     }
 
     checkOnboarding();
-  }, [session, status, pathname, onboardingChecked, router]);
+  }, [session, status, pathname, router]);
 
   // Carica il tipo di account e ruolo
   // ⚠️ OTTIMIZZAZIONE: Usa cache per evitare fetch duplicati (già fatto nella sidebar)
