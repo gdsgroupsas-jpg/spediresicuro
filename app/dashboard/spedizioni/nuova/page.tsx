@@ -577,8 +577,9 @@ export default function NuovaSpedizionePage() {
       }
 
       // Reindirizza alla lista dopo 3 secondi
+      // ⚠️ P0-1 FIX: Aggiungi query param per forzare refresh lista
       setTimeout(() => {
-        router.push('/dashboard/spedizioni');
+        router.push('/dashboard/spedizioni?refresh=true');
       }, 3000);
     } catch (error) {
       const errorMessage = error instanceof Error
