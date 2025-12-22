@@ -79,6 +79,10 @@ export function useManageWallet() {
       await queryClient.cancelQueries({ queryKey: ['all-users'] })
       const previousUsers = queryClient.getQueryData(['all-users'])
 
+      // ⚠️ OPTIMISTIC UPDATE: Client-side cache ONLY
+      // This does NOT update database directly
+      // Real update happens via increment_wallet_balance() RPC on server
+      // This is just for immediate UI feedback
       queryClient.setQueryData(['all-users'], (old: any[] | undefined) => {
         if (!old) return old
         return old.map((user: any) =>
