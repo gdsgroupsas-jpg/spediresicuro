@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const validated = createShipmentSchema.parse(body)
 
     // ============================================
-    // IDEMPOTENCY CHECK
+    // IDEMPOTENCY KEY GENERATION
     // ============================================
     const idempotencyKey = crypto
       .createHash('sha256')
@@ -45,26 +45,118 @@ export async function POST(request: Request) {
       }))
       .digest('hex')
 
-    const oneMinuteAgo = new Date(Date.now() - 60000)
-    const { data: recentDuplicate } = await supabaseAdmin
-      .from('shipments')
-      .select('id')
-      .eq('user_id', targetId) // Target ID (who pays)
-      .eq('idempotency_key', idempotencyKey)
-      .gte('created_at', oneMinuteAgo.toISOString())
-      .limit(1)
-      .maybeSingle()
+    // ============================================
+    // CRASH-SAFE IDEMPOTENCY LOCK
+    // ============================================
+    // ⚠️ CRITICAL: Acquire lock BEFORE wallet debit
+    // Prevents double debit even if crash occurs after debit but before shipment creation
+    // Migration: 044_idempotency_locks.sql
+    
+    const { data: lockResult, error: lockError } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
+      p_idempotency_key: idempotencyKey,
+      p_user_id: targetId,
+      p_ttl_minutes: 10
+    })
 
-    if (recentDuplicate) {
+    if (lockError) {
+      console.error('❌ [IDEMPOTENCY] Lock acquisition failed:', lockError)
       return Response.json(
-        { 
-          error: 'DUPLICATE_REQUEST',
-          message: 'Richiesta duplicata. Attendere.',
-          shipment_id: recentDuplicate.id
-        },
-        { status: 409 }
+        { error: 'Errore sistema idempotency. Riprova.' },
+        { status: 500 }
       )
     }
+
+    const lock = lockResult?.[0]
+    if (!lock) {
+      return Response.json(
+        { error: 'Errore acquisizione lock idempotency.' },
+        { status: 500 }
+      )
+    }
+
+    // Handle lock states
+    if (!lock.acquired) {
+      if (lock.status === 'completed' && lock.result_shipment_id) {
+        // Idempotent replay: shipment già creato
+        const { data: existingShipment } = await supabaseAdmin
+          .from('shipments')
+          .select('id, tracking_number, carrier, total_cost, label_data, sender_name, sender_address, sender_city, sender_province, sender_zip, sender_country, recipient_name, recipient_address, recipient_city, recipient_province, recipient_zip, recipient_country')
+          .eq('id', lock.result_shipment_id)
+          .single()
+
+        if (existingShipment) {
+          return Response.json({
+            success: true,
+            shipment: {
+              id: existingShipment.id,
+              tracking_number: existingShipment.tracking_number,
+              carrier: existingShipment.carrier,
+              cost: existingShipment.total_cost,
+              label_data: existingShipment.label_data,
+              sender: {
+                name: existingShipment.sender_name,
+                address: existingShipment.sender_address,
+                city: existingShipment.sender_city,
+                province: existingShipment.sender_province,
+                postalCode: existingShipment.sender_zip,
+                country: existingShipment.sender_country
+              },
+              recipient: {
+                name: existingShipment.recipient_name,
+                address: existingShipment.recipient_address,
+                city: existingShipment.recipient_city,
+                province: existingShipment.recipient_province,
+                postalCode: existingShipment.recipient_zip,
+                country: existingShipment.recipient_country
+              }
+            },
+            idempotent_replay: true
+          })
+        }
+      } else if (lock.status === 'in_progress') {
+        // Operation already in progress: don't debit again
+        // Log strutturato per observability
+        console.log(JSON.stringify({
+          event_type: 'idempotency_lock_in_progress',
+          idempotency_key: idempotencyKey,
+          user_id: targetId,
+          message: 'Lock already in progress, preventing duplicate request',
+          timestamp: new Date().toISOString()
+        }))
+        
+        return Response.json(
+          { 
+            error: 'DUPLICATE_REQUEST',
+            message: 'Richiesta già in elaborazione. Attendere.',
+            retry_after: 5
+          },
+          { status: 409 }
+        )
+      } else if (lock.status === 'failed') {
+        // Previous attempt failed after debit: don't re-debit
+        // Log strutturato per observability
+        console.log(JSON.stringify({
+          event_type: 'idempotency_lock_failed',
+          idempotency_key: idempotencyKey,
+          user_id: targetId,
+          error_message: lock.error_message || 'Previous attempt failed',
+          requires_manual_review: true,
+          timestamp: new Date().toISOString()
+        }))
+        
+        return Response.json(
+          { 
+            error: 'PREVIOUS_ATTEMPT_FAILED',
+            message: lock.error_message || 'Tentativo precedente fallito. Contattare supporto.',
+            requires_manual_review: true
+          },
+          { status: 409 }
+        )
+      }
+    }
+
+    // Lock acquired: proceed with operation
+    // ⚠️ From this point, if we crash, retry will see status='in_progress' and won't re-debit
 
     // ============================================
     // CONFIGURAZIONE CORRIERE
@@ -302,7 +394,41 @@ export async function POST(request: Request) {
 
       shipment = newShipment
 
+      // ============================================
+      // COMPLETE IDEMPOTENCY LOCK
+      // ============================================
+      // Mark lock as completed after successful shipment creation
+      await supabaseAdmin.rpc('complete_idempotency_lock', {
+        p_idempotency_key: idempotencyKey,
+        p_shipment_id: shipment.id,
+        p_status: 'completed'
+      })
+
     } catch (dbError: any) {
+      // ============================================
+      // FAIL IDEMPOTENCY LOCK
+      // ============================================
+      // Mark lock as failed if error occurred after debit
+      // This prevents re-debit on retry
+      try {
+        await supabaseAdmin.rpc('fail_idempotency_lock', {
+          p_idempotency_key: idempotencyKey,
+          p_error_message: dbError.message || 'Database error after wallet debit'
+        })
+        
+        // Log strutturato per observability
+        console.log(JSON.stringify({
+          event_type: 'idempotency_lock_marked_failed',
+          idempotency_key: idempotencyKey,
+          user_id: targetId,
+          error_message: dbError.message || 'Database error after wallet debit',
+          note: 'Lock marked as failed after wallet debit, preventing re-debit on retry',
+          timestamp: new Date().toISOString()
+        }))
+      } catch (failError: any) {
+        // Fail-open: log but don't block error response
+        console.error('⚠️ [IDEMPOTENCY] Failed to mark lock as failed:', failError)
+      }
       
       // COMPENSAZIONE
       try {
