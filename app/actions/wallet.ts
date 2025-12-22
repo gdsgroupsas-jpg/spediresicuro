@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/db/client';
+import { withConcurrencyRetry } from '@/lib/wallet/retry';
 
 /**
  * Inizia una ricarica con Carta (Intesa XPay)
@@ -533,12 +534,16 @@ export async function approveTopUpRequest(
         })
         
         // 7. Accredita wallet usando RPC (no fallback manuale)
-        const { data: txId, error: creditError } = await supabaseAdmin.rpc('add_wallet_credit', {
-          p_user_id: refreshedRequest.user_id,
-          p_amount: refreshedRequest.approved_amount, // Usa quello salvato nel DB
-          p_description: `Approvazione richiesta ricarica #${requestId}`,
-          p_created_by: adminCheck.userId,
-        })
+        // Smart retry per lock contention (55P03)
+        const { data: txId, error: creditError } = await withConcurrencyRetry(
+          async () => await supabaseAdmin.rpc('add_wallet_credit', {
+            p_user_id: refreshedRequest.user_id,
+            p_amount: refreshedRequest.approved_amount, // Usa quello salvato nel DB
+            p_description: `Approvazione richiesta ricarica #${requestId}`,
+            p_created_by: adminCheck.userId,
+          }),
+          { operationName: 'topup_credit_fallback' }
+        )
         
         if (creditError) {
              console.error('[TOPUP_APPROVE] RPC add_wallet_credit failed (in fallback)', creditError)
@@ -586,12 +591,16 @@ export async function approveTopUpRequest(
     })
 
     // 7. Accredita wallet usando RPC (no fallback manuale)
-    const { data: txId, error: creditError } = await supabaseAdmin.rpc('add_wallet_credit', {
-      p_user_id: updatedRequest.user_id,
-      p_amount: amountToCredit,
-      p_description: `Approvazione richiesta ricarica #${requestId}`,
-      p_created_by: adminCheck.userId,
-    })
+    // Smart retry per lock contention (55P03)
+    const { data: txId, error: creditError } = await withConcurrencyRetry(
+      async () => await supabaseAdmin.rpc('add_wallet_credit', {
+        p_user_id: updatedRequest.user_id,
+        p_amount: amountToCredit,
+        p_description: `Approvazione richiesta ricarica #${requestId}`,
+        p_created_by: adminCheck.userId,
+      }),
+      { operationName: 'topup_credit' }
+    )
 
     if (creditError) {
       console.error('[TOPUP_APPROVE] RPC add_wallet_credit failed', {
