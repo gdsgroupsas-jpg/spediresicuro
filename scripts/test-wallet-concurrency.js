@@ -296,6 +296,108 @@ async function testLockTimeout() {
 }
 
 // ============================================
+// TEST: No Double Credit (P0 - Migration 041)
+// ============================================
+
+async function testNoDoubleCredit() {
+  console.log('\n\n🧪 TEST: No Double Credit (add_wallet_credit)')
+  console.log('=' .repeat(50))
+  
+  let testUser = null
+  
+  try {
+    // Setup: Create test user with €0 balance
+    console.log('\n📝 Setup: Creating test user with €0 balance...')
+    testUser = await createTestUser()
+    
+    // Set balance to €0
+    await supabase
+      .from('users')
+      .update({ wallet_balance: 0.00 })
+      .eq('id', testUser.id)
+    
+    const initialBalance = await getWalletBalance(testUser.id)
+    console.log(`✅ Test user created: ${testUser.email}`)
+    console.log(`   Initial balance: €${initialBalance}`)
+    
+    // Test: Call add_wallet_credit for €100
+    console.log('\n⚡ Calling add_wallet_credit(€100.00)...')
+    console.log('   Expected: Balance = €100.00 (NOT €200.00)')
+    console.log('   Verifies: No double credit from legacy trigger')
+    
+    const { data: txId, error } = await supabase.rpc('add_wallet_credit', {
+      p_user_id: testUser.id,
+      p_amount: 100.00,
+      p_description: 'Test credit - double credit check',
+      p_created_by: testUser.id
+    })
+    
+    if (error) {
+      console.error(`\n❌ add_wallet_credit failed: ${error.message}`)
+      return false
+    }
+    
+    console.log(`   Transaction ID: ${txId}`)
+    
+    // Wait a bit for any async triggers (should be none after migration 041)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Check final balance
+    const finalBalance = await getWalletBalance(testUser.id)
+    console.log(`\n💰 Final balance: €${finalBalance}`)
+    
+    // Check wallet_transactions sum
+    const { data: transactions } = await supabase
+      .from('wallet_transactions')
+      .select('amount')
+      .eq('user_id', testUser.id)
+    
+    const transactionsSum = transactions
+      ? transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0)
+      : 0
+    
+    console.log(`📊 Sum of transactions: €${transactionsSum}`)
+    
+    // Validation
+    console.log('\n✅ Validation:')
+    
+    const checks = {
+      'Balance is €100.00 (NOT €200)': Math.abs(finalBalance - 100.00) < 0.01,
+      'Balance NOT doubled': finalBalance < 150.00,
+      'Transactions sum = balance': Math.abs(finalBalance - transactionsSum) < 0.01,
+      'No double credit detected': Math.abs(finalBalance - 100.00) < 0.01
+    }
+    
+    let allPassed = true
+    for (const [check, passed] of Object.entries(checks)) {
+      console.log(`   ${passed ? '✅' : '❌'} ${check}`)
+      if (!passed) allPassed = false
+    }
+    
+    if (allPassed) {
+      console.log('\n🎉 TEST PASSED: No double credit - Migration 041 working!')
+      return true
+    } else {
+      console.log('\n❌ TEST FAILED: Double credit detected!')
+      console.log(`   Expected: €100.00`)
+      console.log(`   Got: €${finalBalance}`)
+      console.log('\n⚠️  CRITICAL: Run migration 041 to remove trigger_update_wallet_balance')
+      return false
+    }
+    
+  } catch (error) {
+    console.error('\n❌ Test error:', error.message)
+    return false
+  } finally {
+    if (testUser) {
+      console.log('\n🧹 Cleanup: Removing test user...')
+      await cleanupTestUser(testUser.id)
+      console.log('✅ Cleanup complete')
+    }
+  }
+}
+
+// ============================================
 // MAIN
 // ============================================
 
@@ -307,13 +409,15 @@ async function main() {
   const results = {
     concurrentDebit: false,
     insufficientBalance: false,
-    lockTimeout: false
+    lockTimeout: false,
+    noDoubleCredit: false
   }
   
   // Run tests
   results.concurrentDebit = await testConcurrentDebit()
   results.insufficientBalance = await testInsufficientBalance()
   results.lockTimeout = await testLockTimeout()
+  results.noDoubleCredit = await testNoDoubleCredit()
   
   // Summary
   console.log('\n\n╔════════════════════════════════════════════╗')

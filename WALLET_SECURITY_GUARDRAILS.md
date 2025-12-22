@@ -2,7 +2,9 @@
 
 **Data:** 22 Dicembre 2025  
 **Stato:** ✅ ATTIVO - NON BYPASSABILE  
-**Migration:** `040_wallet_atomic_operations.sql`
+**Migrations:**
+- `040_wallet_atomic_operations.sql` (funzioni atomiche)
+- `041_remove_wallet_balance_trigger.sql` (rimozione trigger legacy)
 
 ---
 
@@ -97,6 +99,42 @@ if (error) {
 // Procedi SOLO se successo
 await createShipment(...)
 ```
+
+---
+
+### ⚠️ REGOLA #5: MAI RICREARE TRIGGER LEGACY
+
+**TRIGGER RIMOSSO:** `trigger_update_wallet_balance` (migration 041)
+
+```sql
+-- ❌ ASSOLUTAMENTE VIETATO RICREARE QUESTO
+CREATE TRIGGER trigger_update_wallet_balance
+  AFTER INSERT ON wallet_transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_wallet_balance();
+```
+
+**Perché era pericoloso:**
+```
+1. add_wallet_credit() chiama increment_wallet_balance()
+   → UPDATE wallet_balance +€100
+
+2. add_wallet_credit() fa INSERT wallet_transactions
+   → TRIGGER si attiva
+   → UPDATE wallet_balance +€100 (DI NUOVO!)
+
+RISULTATO: +€200 invece di +€100 ❌
+```
+
+**Soluzione (migration 041):**
+- ✅ Trigger RIMOSSO
+- ✅ Funzione `update_wallet_balance()` RIMOSSA
+- ✅ Saldo aggiornato SOLO da funzioni atomiche
+
+**Se qualcuno propone di ricrearlo:**
+- 🚫 NO. Il trigger causa DOUBLE CREDIT
+- 🚫 Le funzioni atomiche gestiscono già il saldo
+- 🚫 Wallet_transactions è SOLO audit trail
 
 ---
 
