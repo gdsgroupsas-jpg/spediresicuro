@@ -16,6 +16,9 @@
  *   node scripts/test-wallet-concurrency.js
  */
 
+// Load environment variables from .env.local
+require('dotenv').config({ path: '.env.local' })
+
 const { createClient } = require('@supabase/supabase-js')
 
 // ============================================
