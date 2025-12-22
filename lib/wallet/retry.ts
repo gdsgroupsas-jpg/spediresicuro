@@ -80,9 +80,18 @@ export async function withConcurrencyRetry<T = any>(
       
       // Se successo (no error), ritorna immediatamente
       if (!result.error) {
-        if (attempt > 0) {
-          console.info(`✅ [WALLET_RETRY] ${operationName} succeeded on retry ${attempt}/${maxRetries}`)
-        }
+      if (attempt > 0) {
+        // Log strutturato per observability
+        console.log(JSON.stringify({
+          event_type: 'wallet_retry_success',
+          operation_name: operationName,
+          attempt: attempt,
+          max_retries: maxRetries,
+          timestamp: new Date().toISOString()
+        }))
+        
+        console.info(`✅ [WALLET_RETRY] ${operationName} succeeded on retry ${attempt}/${maxRetries}`)
+      }
         return result
       }
       
@@ -98,6 +107,16 @@ export async function withConcurrencyRetry<T = any>(
       
       if (isLastAttempt) {
         // Ultimo tentativo fallito: ritorna errore
+        // Log strutturato per observability
+        console.log(JSON.stringify({
+          event_type: 'wallet_retry_failed',
+          operation_name: operationName,
+          max_retries: maxRetries,
+          error_code: result.error.code,
+          error_message: result.error.message,
+          timestamp: new Date().toISOString()
+        }))
+        
         console.error(`❌ [WALLET_RETRY] ${operationName} failed after ${maxRetries} retries (lock contention)`, {
           error: result.error.message,
           code: result.error.code
@@ -107,6 +126,19 @@ export async function withConcurrencyRetry<T = any>(
       
       // Lock contention: retry con backoff
       const delay = backoffDelays[attempt] || 300
+      
+      // Log strutturato per observability
+      console.log(JSON.stringify({
+        event_type: 'wallet_retry',
+        operation_name: operationName,
+        attempt: attempt + 1,
+        max_retries: maxRetries,
+        delay_ms: delay,
+        error_code: result.error.code,
+        error_message: result.error.message,
+        timestamp: new Date().toISOString()
+      }))
+      
       console.warn(`⚠️ [WALLET_RETRY] ${operationName} lock contention, retry ${attempt + 1}/${maxRetries} in ${delay}ms`, {
         error: result.error.message,
         code: result.error.code
