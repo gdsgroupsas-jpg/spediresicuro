@@ -6,6 +6,7 @@ import { getCourierConfigForUser } from '@/lib/couriers/factory'
 import crypto from 'crypto'
 import { writeShipmentAuditLog } from '@/lib/security/audit-log'
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions'
+import { withConcurrencyRetry } from '@/lib/wallet/retry'
 
 export async function POST(request: Request) {
   // CRITICAL: Use requireSafeAuth() to support impersonation (Acting Context)
@@ -214,10 +215,14 @@ export async function POST(request: Request) {
       
       if (!isSuperadmin) {
         // ATOMIC DEBIT: Uses SELECT FOR UPDATE NOWAIT
-        const { error: walletError } = await supabaseAdmin.rpc('decrement_wallet_balance', {
-          p_user_id: targetId, // Target ID (who pays)
-          p_amount: finalCost
-        })
+        // Smart retry per lock contention (55P03)
+        const { error: walletError } = await withConcurrencyRetry(
+          async () => await supabaseAdmin.rpc('decrement_wallet_balance', {
+            p_user_id: targetId, // Target ID (who pays)
+            p_amount: finalCost
+          }),
+          { operationName: 'shipment_debit' }
+        )
 
         // FAIL-FAST: No fallback, no manual UPDATE
         // If RPC fails, entire operation must fail
