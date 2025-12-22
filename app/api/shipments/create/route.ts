@@ -205,26 +205,41 @@ export async function POST(request: Request) {
     try {
       // Inizia transazione (Supabase non supporta transazioni esplicite, usiamo try/catch)
       
-      // 1. Aggiorna wallet (se non superadmin)
+      // ============================================
+      // 1. WALLET DEBIT - ATOMIC OPERATION
+      // ============================================
+      // ⚠️ CRITICAL: Never UPDATE users.wallet_balance directly
+      // ⚠️ Always use decrement_wallet_balance() RPC for atomic safety
+      // ⚠️ Migration: 040_wallet_atomic_operations.sql
+      
       if (!isSuperadmin) {
+        // ATOMIC DEBIT: Uses SELECT FOR UPDATE NOWAIT
         const { error: walletError } = await supabaseAdmin.rpc('decrement_wallet_balance', {
           p_user_id: targetId, // Target ID (who pays)
           p_amount: finalCost
         })
 
+        // FAIL-FAST: No fallback, no manual UPDATE
+        // If RPC fails, entire operation must fail
         if (walletError) {
-          // Fallback: update diretto
-          const { error: updateError } = await supabaseAdmin
-            .from('users')
-            .update({ wallet_balance: (user.wallet_balance || 0) - finalCost })
-            .eq('id', targetId) // Target ID (who pays)
-
-          if (updateError) {
-            throw new Error(`Wallet update failed: ${updateError.message}`)
-          }
+          console.error('❌ [WALLET] Atomic debit failed:', {
+            userId: targetId,
+            amount: finalCost,
+            error: walletError.message,
+            code: walletError.code
+          })
+          
+          throw new Error(`Wallet debit failed: ${walletError.message}`)
         }
 
-        // Crea transazione wallet
+        // SUCCESS: Log wallet debit
+        console.log('✅ [WALLET] Atomic debit successful:', {
+          userId: targetId,
+          amount: finalCost,
+          trackingNumber: courierResponse.trackingNumber
+        })
+
+        // Create wallet transaction record for audit trail
         await supabaseAdmin
           .from('wallet_transactions')
           .insert({
