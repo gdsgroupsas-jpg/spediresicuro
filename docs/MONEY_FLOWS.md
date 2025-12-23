@@ -1,7 +1,38 @@
 # 💰 Money Flows & Financial Architecture
 
+> **Allineamento Costituzione:** ✅ Questo documento implementa il Financial Core ("No Credit, No Label") definito in README.md
+
+---
+
+## 📜 Riferimento Costituzione
+
+**Prima di leggere questo documento, leggi OBBLIGATORIAMENTE:**
+- [README.md](../README.md) - Costituzione del sistema (Financial Core, "No Credit, No Label")
+
+**Principi Inderogabili (da README.md):**
+- 🚫 **"No Credit, No Label"** - Nessuna etichetta senza credito
+- ✅ **Atomicità** - Solo funzioni SQL atomiche
+- ✅ **Idempotenza** - Ogni addebito ha idempotency_key
+- ✅ **Audit Trail** - Ogni movimento ha transazione
+
+---
+
+## 💰 Financial Dogma: "No Credit, No Label"
+
+**Il cuore del sistema non è la spedizione, è il WALLET.**
+
+**Regola Fondamentale:** Nessuna etichetta viene generata senza credito disponibile nel wallet.
+
+**Eccezioni:**
+- SuperAdmin può bypassare (per testing/emergenze)
+- Modello BYOC: Wallet NON toccato (cliente paga direttamente corriere)
+
+---
+
 ## Overview
 SpedireSicuro uses a **prepaid wallet system** with manual top-up approval to prevent fraud and ensure liquidity control.
+
+**IMPORTANTE:** Questo sistema si applica SOLO al modello Broker/Arbitraggio. Per BYOC, il wallet NON viene utilizzato per la spedizione.
 
 ---
 
