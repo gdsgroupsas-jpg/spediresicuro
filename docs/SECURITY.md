@@ -1,8 +1,39 @@
 # 🔒 Security Architecture
 
+> **Allineamento Costituzione:** ✅ Questo documento descrive l'implementazione sicurezza per i 3 modelli operativi (Broker, SaaS/BYOC, Web Reseller) definiti in README.md
+
+---
+
+## 📜 Riferimento Costituzione
+
+**Prima di leggere questo documento, leggi OBBLIGATORIAMENTE:**
+- [README.md](../README.md) - Costituzione del sistema (3 modelli operativi, Financial Core)
+
+**Questo documento implementa:**
+- Isolamento multi-tenant per tutti i 3 modelli operativi
+- Acting Context per supporto impersonation (B2B)
+- RLS policies che rispettano Broker/BYOC/Web Reseller
+
+---
+
 ## Multi-Tenant Enforcement
 
-### RLS (Row Level Security) Pattern
+### Business Models & Security Implications
+
+**SpedireSicuro supporta 3 modelli operativi (vedi README.md):**
+
+1. **Broker/Arbitraggio (B2B Core):** Cliente usa nostri contratti → Wallet interno obbligatorio
+2. **SaaS/BYOC:** Cliente usa suoi contratti → Wallet NON toccato (solo fee SaaS)
+3. **Web Reseller (B2C):** Utente finale → Wallet "Web Channel" (non personale)
+
+**Implicazioni Sicurezza:**
+- RLS deve isolare dati per tenant (user_id)
+- BYOC: Config corriere isolata per owner_user_id
+- Web Reseller: Trattato come tenant speciale
+
+---
+
+## RLS (Row Level Security) Pattern
 **ALL tenant tables MUST have RLS enabled**
 
 Policy Template:
