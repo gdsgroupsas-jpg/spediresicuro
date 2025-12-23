@@ -1,8 +1,26 @@
 # 🏗️ Technical Architecture Deep Dive
 
+> **Allineamento Costituzione:** ✅ Questo documento descrive l'implementazione tecnica dei pattern definiti in README.md (Courier Adapter, 3 modelli operativi)
+
+---
+
+## 📜 Riferimento Costituzione
+
+**Prima di leggere questo documento, leggi OBBLIGATORIAMENTE:**
+- [README.md](../README.md) - Costituzione del sistema (Courier Adapter pattern, 3 modelli operativi)
+
+**Questo documento implementa:**
+- Pattern Courier Adapter (sistema agnostico rispetto al fornitore)
+- Stack tecnologico per i 3 modelli operativi
+- Patterns architetturali (Acting Context, Wallet, RLS)
+
+---
+
 ## System Overview
 
 SpedireSicuro is a **Next.js 14** application with **App Router** architecture, using **Supabase** (PostgreSQL) as the database and **Vercel** for hosting.
+
+**Architettura:** Logistics Operating System (Logistics OS) - Non è un comparatore prezzi, è un'infrastruttura B2B che orchestra spedizioni, pagamenti e corrieri.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -221,7 +239,58 @@ if (duplicate) {
 
 ---
 
-### 4. RLS (Row Level Security)
+### 4. Courier Adapter Pattern (Provider Agnostic)
+
+**Problem:** System must support multiple courier providers (Spedisci.Online, Poste, GLS, etc.) without hardcoding provider-specific logic.
+
+**Solution:** Abstract adapter interface with provider-specific implementations.
+
+**Core Interface:**
+```typescript
+// lib/adapters/couriers/base.ts
+export abstract class CourierAdapter {
+  abstract connect(): Promise<boolean>;
+  abstract createShipment(data: any): Promise<ShippingLabel>;
+  abstract getTracking(trackingNumber: string): Promise<TrackingEvent[]>;
+  abstract cancelShipment?(trackingNumber: string): Promise<void>;
+}
+```
+
+**Implementations:**
+- `SpedisciOnlineAdapter` - Spedisci.Online API (JSON + CSV fallback)
+- `PosteAdapter` - Poste Italiane API
+- `MockCourierAdapter` - Testing
+
+**Factory Pattern:**
+```typescript
+// lib/couriers/factory.ts
+export async function getShippingProvider(
+  userId: string,
+  providerId: string
+): Promise<CourierAdapter | null> {
+  // 1. Load config from DB (courier_configs)
+  // 2. Decrypt credentials
+  // 3. Instantiate adapter based on providerId
+  // 4. Return adapter or null
+}
+```
+
+**Key Insight:** Business logic (shipment creation, tracking) NEVER calls courier APIs directly. Always uses `CourierAdapter` interface.
+
+**Benefits:**
+- ✅ Easy to add new couriers (just implement adapter)
+- ✅ Testing with MockCourierAdapter
+- ✅ BYOC support (user provides own credentials)
+- ✅ Multi-tenant isolation (each user can have different config)
+
+**Files:**
+- `lib/adapters/couriers/base.ts` - Abstract base class
+- `lib/adapters/couriers/spedisci-online.ts` - Spedisci.Online implementation
+- `lib/couriers/factory.ts` - Factory for instantiating adapters
+
+---
+
+### 5. RLS (Row Level Security)
 
 **Problem:** Ensure users can only see their own data.
 
@@ -254,7 +323,7 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 
 ---
 
-### 5. Listini Avanzati (Advanced Price Lists)
+### 6. Listini Avanzati (Advanced Price Lists)
 
 **Problem:** Resellers need custom pricing per customer.
 
@@ -275,7 +344,7 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 
 ---
 
-### 6. Compensation Queue (Failure Recovery)
+### 7. Compensation Queue (Failure Recovery)
 
 **Problem:** Shipment created on courier API, but DB insert fails → orphan.
 
