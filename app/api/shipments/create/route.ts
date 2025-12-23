@@ -52,10 +52,12 @@ export async function POST(request: Request) {
     // Prevents double debit even if crash occurs after debit but before shipment creation
     // Migration: 044_idempotency_locks.sql
     
+    // ⚠️ FIX P0: TTL aumentato da 10 a 30 minuti per prevenire TOCTOU (audit 2025-12-22)
+    // Se lock scade prima del retry, potrebbe causare doppio debit
     const { data: lockResult, error: lockError } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
       p_idempotency_key: idempotencyKey,
       p_user_id: targetId,
-      p_ttl_minutes: 10
+      p_ttl_minutes: 30
     })
 
     if (lockError) {
@@ -128,7 +130,8 @@ export async function POST(request: Request) {
           { 
             error: 'DUPLICATE_REQUEST',
             message: 'Richiesta già in elaborazione. Attendere.',
-            retry_after: 5
+            retry_after: 5,
+            idempotency_key: idempotencyKey
           },
           { status: 409 }
         )
@@ -148,7 +151,8 @@ export async function POST(request: Request) {
           { 
             error: 'PREVIOUS_ATTEMPT_FAILED',
             message: lock.error_message || 'Tentativo precedente fallito. Contattare supporto.',
-            requires_manual_review: true
+            requires_manual_review: true,
+            idempotency_key: idempotencyKey
           },
           { status: 409 }
         )
@@ -337,14 +341,14 @@ export async function POST(request: Request) {
         })
 
         // Create wallet transaction record for audit trail
+        // ⚠️ FIX P0: Rimosso campo 'status' inesistente (audit 2025-12-22)
         await supabaseAdmin
           .from('wallet_transactions')
           .insert({
             user_id: targetId, // Target ID (who pays)
             amount: -finalCost,
             type: 'SHIPMENT_CHARGE',
-            description: `Spedizione ${courierResponse.trackingNumber}`,
-            status: 'COMPLETED'
+            description: `Spedizione ${courierResponse.trackingNumber}`
           })
       }
 
