@@ -266,12 +266,14 @@ async function main() {
       throw new Error(`❌ TEST FAILED: System did not reject zero balance user. Status: ${testResult.statusCode}, Error: ${testResult.error}`)
     }
     
-    if (testResult.statusCode !== 402 && testResult.statusCode !== 400) {
-      throw new Error(`❌ TEST FAILED: Wrong status code. Expected 400/402, got ${testResult.statusCode}`)
-    }
-    
+    // Verifica esplicita: NON deve crashare (500)
     if (testResult.statusCode === 500) {
       throw new Error(`❌ TEST FAILED: System crashed (500). This is a critical error!`)
+    }
+
+    // Aspettativa: deve essere 400/402
+    if (testResult.statusCode !== 402 && testResult.statusCode !== 400) {
+      throw new Error(`❌ TEST FAILED: Wrong status code. Expected 400/402, got ${testResult.statusCode}`)
     }
     
     console.log(`✅ System correctly returned error ${testResult.statusCode}`)
