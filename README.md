@@ -465,6 +465,23 @@ npm run test:e2e            # Esegui test Playwright E2E
 
 ## 🧪 Testing & Validazione
 
+### Wallet & Label Invariants (Governance)
+
+**⚠️ INVARIANTE: “No Credit, No Label” (bidirezionale).**  
+Questo flusso è considerato **chiuso** (bugfix completato) e protetto da test automatici.
+
+- **No Credit, No Label**: nessuna label/spedizione deve essere generata senza credito disponibile.
+- **No Label, No Credit**: se la label non viene creata o la spedizione non viene salvata a DB, il credito **non deve restare scalato** (refund/compensation).
+- **Regola di governance**: qualsiasi modifica al flusso wallet/spedizioni/corriere deve mantenere verdi gli smoke test wallet.
+
+Esegui sempre:
+
+```bash
+npm run smoke:wallet
+```
+
+Nota CI: esiste un job `wallet-smoke` (attualmente **non bloccante**) che diventerà blocking dopo un periodo di stabilizzazione.
+
 ### Wallet Security Tests
 
 ```bash
