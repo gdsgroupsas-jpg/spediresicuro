@@ -227,6 +227,15 @@ export async function createShipmentCore(params: {
   // ============================================
   // WALLET DEBIT PRIMA DELLA CHIAMATA CORRIERE
   // ============================================
+  /**
+   * ⚠️ INVARIANTE (GOVERNANCE): No Credit, No Label (bidirezionale)
+   *
+   * - Debit wallet PRIMA della chiamata corriere (nessuna label senza credito)
+   * - Se corriere/DB falliscono, eseguire refund o enqueue in compensation_queue
+   *
+   * Qualsiasi modifica a questo flusso DEVE mantenere VERDI gli smoke test wallet:
+   *   - `npm run smoke:wallet`
+   */
   let walletDebited = false
   let walletDebitAmount = 0
 
