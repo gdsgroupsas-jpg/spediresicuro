@@ -237,6 +237,15 @@ export async function POST(request: Request) {
     // ============================================
     // WALLET DEBIT PRIMA DELLA CHIAMATA CORRIERE
     // ============================================
+    /**
+     * ⚠️ INVARIANTE (GOVERNANCE): No Credit, No Label (bidirezionale)
+     *
+     * - Nessuna etichetta/spedizione deve essere generata senza credito disponibile
+     * - Se la label NON viene creata/salvata, il credito NON deve restare scalato (refund/compensation)
+     *
+     * Qualsiasi modifica a questo flusso DEVE mantenere VERDI gli smoke test wallet:
+     *   - `npm run smoke:wallet`
+     */
     // ⚠️ CRITICAL: "No Credit, No Label" - Debit PRIMA di creare etichetta
     // ⚠️ CRITICAL: "No Label, No Credit" - Se etichetta non creata, compensa debit
     // ⚠️ CRITICAL: Never UPDATE users.wallet_balance directly
