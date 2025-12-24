@@ -42,6 +42,16 @@ jobs:
   wallet-smoke:
     name: Wallet Smoke Tests (non-blocking)
     runs-on: ubuntu-latest
+    # Governance:
+    # - Questo job è intenzionalmente NON bloccante durante il periodo di stabilizzazione.
+    # - Diventerà BLOCKING dopo stabilizzazione (rimuovere continue-on-error e/o fallire la pipeline).
+    #
+    # (Opzionale - hardening futuro): limitare l'esecuzione ai soli path rilevanti:
+    # - app/api/shipments/**
+    # - lib/shipments/**
+    # - lib/wallet/**
+    # - lib/services/couriers/**
+    # - scripts/smoke-*.ts
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -61,4 +71,6 @@ jobs:
 
       - name: Run wallet smoke tests (non-blocking)
         run: npm run smoke:wallet
+        # ⏳ Stabilizzazione: non bloccare ancora il merge/deploy.
+        # Dopo stabilizzazione: rimuovere continue-on-error (diventa blocking).
         continue-on-error: true
