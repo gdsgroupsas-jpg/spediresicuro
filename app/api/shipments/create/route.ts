@@ -213,7 +213,13 @@ export async function POST(request: Request) {
       return Response.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const estimatedCost = 8.50 // TODO: Calcolo reale
+    // ============================================
+    // STIMA COSTO (con buffer di sicurezza)
+    // ============================================
+    // ⚠️ CRITICAL: Stima con buffer +20% per gestire variazioni costo reale
+    // Il costo reale viene solo dopo la chiamata API corriere
+    const baseEstimatedCost = 8.50 // TODO: Calcolo reale basato su peso/destinazione
+    const estimatedCost = baseEstimatedCost * 1.20 // Buffer 20% per sicurezza
     const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin'
 
     if (!isSuperadmin && (user.wallet_balance || 0) < estimatedCost) {
@@ -229,7 +235,63 @@ export async function POST(request: Request) {
     }
 
     // ============================================
-    // CHIAMATA CORRIERE
+    // WALLET DEBIT PRIMA DELLA CHIAMATA CORRIERE
+    // ============================================
+    // ⚠️ CRITICAL: "No Credit, No Label" - Debit PRIMA di creare etichetta
+    // ⚠️ CRITICAL: "No Label, No Credit" - Se etichetta non creata, compensa debit
+    // ⚠️ CRITICAL: Never UPDATE users.wallet_balance directly
+    // ⚠️ Always use decrement_wallet_balance() RPC for atomic safety
+    // ⚠️ Migration: 040_wallet_atomic_operations.sql
+    
+    let walletDebited = false
+    let walletDebitAmount = 0
+    
+    if (!isSuperadmin) {
+      // ATOMIC DEBIT: Uses SELECT FOR UPDATE NOWAIT
+      // Smart retry per lock contention (55P03)
+      const { error: walletError } = await withConcurrencyRetry(
+        async () => await supabaseAdmin.rpc('decrement_wallet_balance', {
+          p_user_id: targetId, // Target ID (who pays)
+          p_amount: estimatedCost
+        }),
+        { operationName: 'shipment_debit_estimate' }
+      )
+
+      // FAIL-FAST: No fallback, no manual UPDATE
+      // If RPC fails, entire operation must fail (no label created)
+      if (walletError) {
+        console.error('❌ [WALLET] Atomic debit failed (before courier call):', {
+          userId: targetId,
+          amount: estimatedCost,
+          error: walletError.message,
+          code: walletError.code
+        })
+        
+        // ⚠️ CRITICAL: Se debit fallisce, NON creare etichetta
+        return Response.json(
+          { 
+            error: 'INSUFFICIENT_CREDIT',
+            required: estimatedCost,
+            available: user.wallet_balance || 0,
+            message: `Credito insufficiente. Disponibile: €${(user.wallet_balance || 0).toFixed(2)}`
+          },
+          { status: 402 }
+        )
+      }
+
+      walletDebited = true
+      walletDebitAmount = estimatedCost
+
+      // SUCCESS: Log wallet debit
+      console.log('✅ [WALLET] Atomic debit successful (before courier call):', {
+        userId: targetId,
+        amount: estimatedCost,
+        note: 'Debit with estimate, will adjust after courier response'
+      })
+    }
+
+    // ============================================
+    // CHIAMATA CORRIERE (dopo wallet debit)
     // ============================================
     // Normalize recipient email (TypeScript fix - fail-safe fallback)
     // Email is optional in Zod schema but some couriers require it
@@ -257,6 +319,53 @@ export async function POST(request: Request) {
       }, { timeout: 30000 })
 
     } catch (courierError: any) {
+      // ============================================
+      // COMPENSAZIONE: Etichetta non creata → ripristina wallet
+      // ============================================
+      // ⚠️ CRITICAL: "No Label, No Credit" - Se etichetta non creata, compensa debit
+      if (walletDebited && !isSuperadmin) {
+        try {
+          const { error: compensateError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            p_user_id: targetId,
+            p_amount: walletDebitAmount
+          })
+          
+          if (compensateError) {
+            console.error('❌ [WALLET] Compensation failed after courier error:', {
+              userId: targetId,
+              amount: walletDebitAmount,
+              error: compensateError.message,
+              courier_error: courierError.message
+            })
+            
+            // ⚠️ CRITICAL: Se compensazione fallisce, accoda per retry manuale
+            await supabaseAdmin
+              .from('compensation_queue')
+              .insert({
+                user_id: targetId,
+                provider_id: validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
+                carrier: validated.carrier,
+                action: 'REFUND',
+                original_cost: walletDebitAmount,
+                error_context: {
+                  courier_error: courierError.message,
+                  compensation_error: compensateError.message,
+                  retry_strategy: 'MANUAL',
+                  actor_id: actorId,
+                  impersonation_active: impersonationActive
+                },
+                status: 'PENDING'
+              })
+          } else {
+            console.log('✅ [WALLET] Compensation successful after courier error:', {
+              userId: targetId,
+              amount: walletDebitAmount
+            })
+          }
+        } catch (compError) {
+          console.error('❌ [WALLET] Compensation exception:', compError)
+        }
+      }
       
       await supabaseAdmin
         .from('diagnostics_events')
@@ -269,7 +378,8 @@ export async function POST(request: Request) {
             impersonation_active: impersonationActive,
             carrier: validated.carrier,
             error: courierError.message,
-            status_code: courierError.statusCode
+            status_code: courierError.statusCode,
+            wallet_compensated: walletDebited
           }
         })
 
@@ -303,42 +413,83 @@ export async function POST(request: Request) {
       // Inizia transazione (Supabase non supporta transazioni esplicite, usiamo try/catch)
       
       // ============================================
-      // 1. WALLET DEBIT - ATOMIC OPERATION
+      // 1. AGGIUSTAMENTO WALLET (differenza costo reale vs stimato)
       // ============================================
-      // ⚠️ CRITICAL: Never UPDATE users.wallet_balance directly
-      // ⚠️ Always use decrement_wallet_balance() RPC for atomic safety
-      // ⚠️ Migration: 040_wallet_atomic_operations.sql
-      
-      if (!isSuperadmin) {
-        // ATOMIC DEBIT: Uses SELECT FOR UPDATE NOWAIT
-        // Smart retry per lock contention (55P03)
-        const { error: walletError } = await withConcurrencyRetry(
-          async () => await supabaseAdmin.rpc('decrement_wallet_balance', {
-            p_user_id: targetId, // Target ID (who pays)
-            p_amount: finalCost
-          }),
-          { operationName: 'shipment_debit' }
-        )
-
-        // FAIL-FAST: No fallback, no manual UPDATE
-        // If RPC fails, entire operation must fail
-        if (walletError) {
-          console.error('❌ [WALLET] Atomic debit failed:', {
-            userId: targetId,
-            amount: finalCost,
-            error: walletError.message,
-            code: walletError.code
-          })
-          
-          throw new Error(`Wallet debit failed: ${walletError.message}`)
+      if (!isSuperadmin && walletDebited) {
+        const costDifference = finalCost - walletDebitAmount
+        
+        if (Math.abs(costDifference) > 0.01) { // Solo se differenza > 1 centesimo
+          if (costDifference > 0) {
+            // Costo reale > stimato: debit aggiuntivo
+            const { error: adjustError } = await withConcurrencyRetry(
+              async () => await supabaseAdmin.rpc('decrement_wallet_balance', {
+                p_user_id: targetId,
+                p_amount: costDifference
+              }),
+              { operationName: 'shipment_debit_adjustment' }
+            )
+            
+            if (adjustError) {
+              console.error('❌ [WALLET] Adjustment debit failed:', {
+                userId: targetId,
+                amount: costDifference,
+                error: adjustError.message
+              })
+              // ⚠️ CRITICAL: Se aggiustamento fallisce, dobbiamo compensare tutto
+              // (etichetta creata ma debit incompleto)
+              throw new Error(`Wallet adjustment failed: ${adjustError.message}`)
+            }
+            
+            walletDebitAmount = finalCost // Aggiorna totale debitato
+            console.log('✅ [WALLET] Adjustment debit successful:', {
+              userId: targetId,
+              amount: costDifference,
+              total: finalCost
+            })
+          } else {
+            // Costo reale < stimato: credit differenza
+            const { error: adjustError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+              p_user_id: targetId,
+              p_amount: Math.abs(costDifference)
+            })
+            
+            if (adjustError) {
+              console.error('⚠️ [WALLET] Adjustment credit failed (non-blocking):', {
+                userId: targetId,
+                amount: Math.abs(costDifference),
+                error: adjustError.message
+              })
+              // Non blocchiamo: utente ha pagato di più, ma etichetta è creata
+              // Accodiamo per retry manuale
+              await supabaseAdmin
+                .from('compensation_queue')
+                .insert({
+                  user_id: targetId,
+                  provider_id: validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
+                  carrier: validated.carrier,
+                  action: 'REFUND',
+                  original_cost: Math.abs(costDifference),
+                  error_context: {
+                    adjustment_error: adjustError.message,
+                    estimated: walletDebitAmount,
+                    actual: finalCost,
+                    retry_strategy: 'MANUAL'
+                  },
+                  status: 'PENDING'
+                })
+            } else {
+              walletDebitAmount = finalCost // Aggiorna totale debitato
+              console.log('✅ [WALLET] Adjustment credit successful:', {
+                userId: targetId,
+                amount: Math.abs(costDifference),
+                total: finalCost
+              })
+            }
+          }
+        } else {
+          // Nessun aggiustamento necessario (differenza < 1 centesimo)
+          walletDebitAmount = finalCost
         }
-
-        // SUCCESS: Log wallet debit
-        console.log('✅ [WALLET] Atomic debit successful:', {
-          userId: targetId,
-          amount: finalCost,
-          trackingNumber: courierResponse.trackingNumber
-        })
 
         // Create wallet transaction record for audit trail
         // ⚠️ FIX P0: Rimosso campo 'status' inesistente (audit 2025-12-22)
@@ -357,7 +508,9 @@ export async function POST(request: Request) {
         .from('shipments')
         .insert({
           user_id: targetId, // Target ID (who pays, owner of shipment)
-          status: 'confirmed',
+          // NOTE: il DB applica un CHECK constraint su shipments.status.
+          // In produzione il valore valido è 'pending' (vedi errore shipments_status_check).
+          status: 'pending',
           idempotency_key: idempotencyKey,
           carrier: validated.carrier,
           tracking_number: courierResponse.trackingNumber,
@@ -434,7 +587,58 @@ export async function POST(request: Request) {
         console.error('⚠️ [IDEMPOTENCY] Failed to mark lock as failed:', failError)
       }
       
-      // COMPENSAZIONE
+      // ============================================
+      // COMPENSAZIONE: DB Insert fallito → ripristina wallet
+      // ============================================
+      // ⚠️ CRITICAL: "No Label, No Credit" - Se DB insert fallisce, compensa wallet
+      // (etichetta creata ma non salvata nel DB)
+      if (walletDebited && !isSuperadmin) {
+        try {
+          const { error: compensateError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            p_user_id: targetId,
+            p_amount: walletDebitAmount
+          })
+          
+          if (compensateError) {
+            console.error('❌ [WALLET] Compensation failed after DB error:', {
+              userId: targetId,
+              amount: walletDebitAmount,
+              error: compensateError.message,
+              db_error: dbError.message
+            })
+            
+            // ⚠️ CRITICAL: Se compensazione fallisce, accoda per retry manuale
+            await supabaseAdmin
+              .from('compensation_queue')
+              .insert({
+                user_id: targetId,
+                provider_id: validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
+                carrier: validated.carrier,
+                action: 'REFUND',
+                original_cost: walletDebitAmount,
+                error_context: {
+                  db_error: dbError.message,
+                  compensation_error: compensateError.message,
+                  retry_strategy: 'MANUAL',
+                  actor_id: actorId,
+                  impersonation_active: impersonationActive
+                },
+                status: 'PENDING'
+              })
+          } else {
+            console.log('✅ [WALLET] Compensation successful after DB error:', {
+              userId: targetId,
+              amount: walletDebitAmount
+            })
+          }
+        } catch (compError) {
+          console.error('❌ [WALLET] Compensation exception:', compError)
+        }
+      }
+      
+      // ============================================
+      // COMPENSAZIONE: Cancella etichetta dal corriere
+      // ============================================
       try {
         await courierClient.deleteShipping({
           shipmentId: courierResponse.shipmentId
