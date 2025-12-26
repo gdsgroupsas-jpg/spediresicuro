@@ -1,12 +1,13 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 COMPLETE | Sprint 2.4 OCR Worker COMPLETATO | 🟡 Sprint 2.5 PROSSIMO (OCR immagini)
+# STATO: 🟢 FASE 1-2 COMPLETE | Sprint 2.6 Booking Worker COMPLETATO | 🟡 Sprint 2.5 PROSSIMO (OCR immagini)
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
 2. **Single Source of Truth:** Logica di calcolo condivisa in `lib/pricing/calculator.ts`.
 3. **Test First:** Ogni nuovo worker deve avere il suo test.
 4. **No PII nei log:** Mai loggare indirizzi, nomi, telefoni. Solo user_id_hash e trace_id.
+5. **Mai più feature irreversibili senza test P0 prima.**
 
 ---
 
@@ -92,16 +93,48 @@
 - [x] **Test:** 39 test integration nel file `tests/integration/ocr-worker.test.ts`
 - [x] **Build:** TypeScript type-check passa (`npx tsc --noEmit` exit 0)
 
+### ✅ P0 AUDIT: ADDRESS TEST COVERAGE — RESOLVED
+- [x] **Audit Issue:** Nessun test per Address Worker e normalize-it-address (~395 LOC)
+- [x] **Resolution:** Creati 107 test unitari:
+  - `tests/unit/normalize-it-address.test.ts` (67 test)
+  - `tests/unit/address-worker.test.ts` (40 test)
+- [x] **Copertura:**
+  - Normalizzazione: CAP, provincia (lowercase→uppercase), città, via, peso
+  - Merge non distruttivo: stato esistente + input parziale
+  - missingFields: calcolo corretto campi mancanti
+  - Edge cases: input rumoroso, unicode, casing, spazi, province lowercase, CAP invalido
+- [x] **Build:** TypeScript type-check passa, 193 test unit verdi
+
+### ✅ FASE 2.6: BOOKING WORKER (COMPLETATA)
+- [x] **Booking Worker (`lib/agent/workers/booking.ts`):**
+  - Wrapper sopra `SpedisciOnlineAdapter.createShipment()`
+  - NON riscrive logica booking esistente
+  - Pre-flight check obbligatori: recipient, parcel, pricing_option, idempotency_key
+- [x] **BookingResult type:**
+  - `status: 'success' | 'failed' | 'retryable'`
+  - `shipment_id`, `carrier_reference`, `error_code`, `user_message`, `retry_after_ms`
+- [x] **Conferma esplicita obbligatoria:**
+  - Pattern: "procedi", "conferma", "ok prenota", "sì procedi"
+  - `containsBookingConfirmation()` rileva conferma
+  - Nessun booking silenzioso
+- [x] **Routing:**
+  - Supervisor: `hasPricingOptions + hasBookingConfirmation + preflightPassed → booking_worker`
+  - Booking sempre termina con `next_step='END'`
+- [x] **Telemetria (NO PII):**
+  - `bookingAttempt`, `bookingSuccess`, `bookingFailed`
+  - Campi: `trace_id`, `carrier`, `shipment_id`, `duration_ms`, `failure_reason`
+- [x] **Test:** 30 test integration nel file `tests/integration/booking-worker.test.ts`
+- [x] **Build:** TypeScript type-check passa
+
 ### 🟡 FASE 2.5: OCR IMMAGINI (NEXT)
 - [ ] **Vision Support:**
   - Implementare processamento immagini in `ocrWorker` (attualmente placeholder)
   - Riusare `extractData()` con input immagine base64/buffer
   - Confidence score per campo estratto
 
-### FASE 3: BOOKING WORKER (FUTURE)
-- [ ] **Booking Worker:** integrazione `spedisci-online`
-- [ ] **Stato:** `booking_result`, `booking_status`
-- [ ] **Routing:** Address completo + conferma utente -> Booking Worker
+### FASE 3: ADVANCED FEATURES (FUTURE)
+- [ ] **Checkpointer:** Memoria conversazione multi-turn
+- [ ] **Wallet Integration:** Verifica credito prima di booking
 
 ---
 
@@ -109,11 +142,13 @@
 
 | Suite | Passati | Totale |
 |-------|---------|--------|
-| Unit | 86 | 86 |
-| Integration | 74 | 74 |
-| **Totale** | **160** | **160** |
+| Unit | 193 | 193 |
+| Integration | 104 | 104 |
+| **Totale** | **297** | **297** |
 
-> Nota: Integration include 39 test OCR worker aggiunti in Sprint 2.4
+> Nota: 
+> - Unit include 67 test normalize-it-address + 40 test address-worker (P0 audit)
+> - Integration include 39 test OCR + 30 test Booking
 
 ---
 
@@ -125,26 +160,32 @@ app/api/ai/agent-chat/route.ts
            ▼
   supervisorRouter()  ← Entry point UNICO
            │
-           ├─── Intent Detection + OCR Pattern Detection
+           ├─── Intent + OCR + Booking Confirmation Detection
            │
            ▼
     decideNextStep()  ← Funzione pura (SINGLE DECISION POINT)
            │
-     ┌─────┼─────┬─────────┬─────────┐
-     ▼     ▼     ▼         ▼         ▼
-  legacy  END  ocr     address   pricing
-           │  _worker  _worker   _worker
-           │     │        │         │
-           │     ▼        ▼         ▼
-           │  ShipmentDraft (merge non distruttivo)
-           │  + missingFields
-           │  + clarification_request
-           │     │        │         │
-           └─────┴────────┴─────────┘
+     ┌─────┼─────┬─────────┬─────────┬─────────┐
+     ▼     ▼     ▼         ▼         ▼         ▼
+  legacy  END  ocr     address   pricing   booking
+           │  _worker  _worker   _worker   _worker
+           │     │        │         │         │
+           │     ▼        ▼         ▼         ▼
+           │  ShipmentDraft ───────────> BookingResult
+           │  + missingFields              + shipment_id
+           │  + clarification_request      + carrier_reference
+           │     │        │         │         │
+           └─────┴────────┴─────────┴─────────┘
                         │
                         ▼
                 Response to client
 ```
+
+**FLOW TIPICO:**
+1. OCR/Address estrae dati → shipmentDraft
+2. Pricing calcola opzioni → pricing_options  
+3. Utente conferma ("procedi") → booking_worker
+4. Booking prenota → booking_result + shipment_id
 
 ---
 
@@ -154,15 +195,16 @@ app/api/ai/agent-chat/route.ts
 |------|----------------|
 | `lib/agent/orchestrator/supervisor-router.ts` | Entry point, telemetria finale, rileva OCR patterns |
 | `lib/agent/orchestrator/supervisor.ts` | `decideNextStep()` funzione pura (SINGLE DECISION POINT) |
-| `lib/agent/orchestrator/pricing-graph.ts` | LangGraph con nodi supervisor/ocr/address/pricing |
-| `lib/agent/orchestrator/state.ts` | `AgentState` con `shipmentDraft`, `next_step` include `'ocr_worker'` |
+| `lib/agent/orchestrator/pricing-graph.ts` | LangGraph con nodi supervisor/ocr/address/pricing/booking |
+| `lib/agent/orchestrator/state.ts` | `AgentState` con `shipmentDraft`, `booking_result`, `next_step` include `'booking_worker'` |
 | `lib/agent/workers/pricing.ts` | Calcolo preventivi |
 | `lib/agent/workers/address.ts` | Normalizzazione indirizzi |
 | `lib/agent/workers/ocr.ts` | Wrapper OCR: parsing testo, output `ShipmentDraft` + `missingFields` |
+| `lib/agent/workers/booking.ts` | Prenotazione spedizione: preflight + SpedisciOnline + BookingResult |
 | `lib/address/shipment-draft.ts` | Schema Zod `ShipmentDraft` |
 | `lib/address/normalize-it-address.ts` | Estrazione regex indirizzi IT |
 | `lib/pricing/calculator.ts` | Single source of truth calcolo prezzi |
-| `lib/telemetry/logger.ts` | Log strutturati (no PII), include metriche OCR |
+| `lib/telemetry/logger.ts` | Log strutturati (no PII), include metriche OCR + Booking |
 | `lib/security/rate-limit.ts` | Rate limiting distribuito (Upstash Redis) |
 
 ---
@@ -174,10 +216,9 @@ app/api/ai/agent-chat/route.ts
    - Riusare `extractData()` / Gemini Vision per input base64/buffer
    - Aggiungere confidence score per campo
 
-2. **Booking Worker (Sprint 2.6)**
-   - Integrazione SpedisciOnline per prenotazione
-   - Stato `booking_result` con tracking
-   - Routing: address completo + conferma utente → booking
+2. **Wallet Integration (Sprint 2.7)**
+   - Verifica credito prima di booking
+   - `INSUFFICIENT_CREDIT` error handling migliorato
 
 3. **Checkpointer (Future)**
    - Memoria conversazione multi-turn
@@ -189,6 +230,8 @@ app/api/ai/agent-chat/route.ts
 
 | Versione | Cambiamento |
 |----------|-------------|
+| Sprint 2.6 | Aggiunto `'booking_worker'` a `next_step`, `booking_result: BookingResult` in `AgentState` |
+| Sprint 2.6 | Nuovo telemetria: `bookingAttempt`, `bookingSuccess`, `bookingFailed` |
 | Sprint 2.4 | Aggiunto `'ocr_worker'` a `next_step` in `AgentState`. Routing OCR centralizzato in `supervisor.ts` |
 | Sprint 2.3 | `request_clarification` DEPRECATO → usa `next_step: 'END'` + `clarification_request` |
 | Sprint 2.2 | Rate limiting ora distribuito (Upstash Redis) |
