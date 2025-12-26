@@ -301,7 +301,7 @@ export async function getShippingProvider(
 User Input (messaggio)
     │
     ▼
-supervisorRouter()  ← Entry point UNICO
+supervisorRouter()  ← Entry point UNICO (/api/ai/agent-chat)
     │
     ├─── Intent Detection (pricing vs non-pricing)
     ├─── OCR Pattern Detection
@@ -310,13 +310,25 @@ supervisorRouter()  ← Entry point UNICO
     ▼
 supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
     │
-    ├─── next_step: 'ocr_worker' → OCR Worker
-    ├─── next_step: 'address_worker' → Address Worker
-    ├─── next_step: 'pricing_worker' → Pricing Worker
-    ├─── next_step: 'booking_worker' → Booking Worker
+    ├─── next_step: 'ocr_worker' → OCR Worker → arricchisce shipmentDraft
+    ├─── next_step: 'address_worker' → Address Worker → normalizza indirizzi
+    ├─── next_step: 'pricing_worker' → Pricing Worker → calcola preventivi
+    ├─── next_step: 'booking_worker' → Booking Worker → prenota spedizione
     ├─── next_step: 'legacy' → Claude Legacy Handler
-    └─── next_step: 'END' → Risposta finale
+    └─── next_step: 'END' → Risposta finale al client
+    │
+    ▼ (dopo ogni worker, torna a supervisor)
+supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
+    │
+    └─── ... (loop fino a END o MAX_ITERATIONS raggiunto)
 ```
+
+**Data Flow Pattern:**
+1. **Input Utente** → `supervisorRouter()` rileva intent/pattern
+2. **Supervisor Decision** → `decideNextStep()` (funzione pura) decide routing basato su stato
+3. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
+4. **Loop Back** → Torna a supervisor, valuta nuovo stato
+5. **Termination** → `next_step: 'END'` → Risposta al client o azione DB (booking)
 
 **Componenti:**
 
@@ -328,9 +340,10 @@ supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
 
 2. **Supervisor** (`lib/agent/orchestrator/supervisor.ts`)
    - `decideNextStep()` - Funzione pura, SINGLE DECISION POINT
+   - `supervisor()` - Node LangGraph che estrae dati e decide routing
    - Estrae dati spedizione dal messaggio (LLM opzionale, fallback regex)
    - Determina routing basato su stato e intent
-   - **Nessun altro componente decide routing**
+   - **Nessun altro componente decide routing** (verificabile con grep)
 
 3. **Pricing Graph** (`lib/agent/orchestrator/pricing-graph.ts`)
    - LangGraph StateGraph con nodi: supervisor, ocr_worker, address_worker, pricing_worker, booking_worker
