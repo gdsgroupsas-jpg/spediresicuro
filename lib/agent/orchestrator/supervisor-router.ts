@@ -11,6 +11,11 @@
  * - La route chiama SOLO supervisorRouter()
  * - Il router decide internamente se usare pricing graph o legacy
  * - Nessun branching sparso nella route
+ * 
+ * GUARDRAIL (Step 2.2):
+ * - Se intent = pricing → SEMPRE pricing_graph (legacy solo se graph_error)
+ * - Se intent != pricing → legacy (temporaneo, vedi TODO Sprint 3)
+ * - 1 evento telemetria finale per ogni richiesta
  */
 
 import { AgentState } from './state';
@@ -23,7 +28,12 @@ import {
   logUsingPricingGraph, 
   logGraphFailed, 
   logFallbackToLegacy,
-  logSupervisorDecision 
+  logSupervisorDecision,
+  logSupervisorRouterComplete,
+  type IntentType,
+  type BackendUsed,
+  type FallbackReason,
+  type SupervisorRouterTelemetry,
 } from '@/lib/telemetry/logger';
 
 // ==================== TIPI ====================
@@ -45,6 +55,9 @@ export interface SupervisorResult {
   // Non restituiamo nulla, la route gestirà
   executionTimeMs: number;
   source: 'pricing_graph' | 'supervisor_only';
+  
+  // Telemetria Step 2.2 (per test e monitoring)
+  telemetry: SupervisorRouterTelemetry;
 }
 
 // ==================== ROUTER ====================
@@ -73,6 +86,11 @@ function hasEnoughDataForPricing(details?: AgentState['shipment_details']): bool
  * 3. Se non-pricing -> ritorna 'legacy' (la route chiamerà Claude)
  * 4. Se graph fallisce -> ritorna 'legacy' (fallback safe)
  * 
+ * GUARDRAIL Step 2.2:
+ * - Pricing intent → SEMPRE pricing_graph prima
+ * - Legacy solo se graph_error o non-pricing
+ * - 1 evento telemetria finale SEMPRE
+ * 
  * @param input - Dati dalla route
  * @returns Risultato con decisione e eventuali dati
  */
@@ -80,19 +98,58 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
   const startTime = Date.now();
   const { message, userId, userEmail, traceId } = input;
   
+  // Telemetria da costruire progressivamente
+  let intentDetected: IntentType = 'unknown';
+  let supervisorDecision: 'pricing_worker' | 'legacy' | 'end' = 'legacy';
+  let backendUsed: BackendUsed = 'legacy';
+  let fallbackToLegacy = false;
+  let fallbackReason: FallbackReason = null;
+  let pricingOptionsCount = 0;
+  let hasClarification = false;
+  let success = true;
+  
+  // Helper per emettere evento finale e restituire risultato
+  const emitFinalTelemetryAndReturn = (result: Omit<SupervisorResult, 'telemetry'>): SupervisorResult => {
+    const telemetryData: SupervisorRouterTelemetry = {
+      intentDetected,
+      supervisorDecision,
+      backendUsed,
+      fallbackToLegacy,
+      fallbackReason,
+      duration_ms: Date.now() - startTime,
+      pricingOptionsCount,
+      hasClarification,
+      success,
+    };
+    
+    // Emetti SEMPRE 1 evento finale per request
+    logSupervisorRouterComplete(traceId, userId, telemetryData);
+    
+    return {
+      ...result,
+      telemetry: telemetryData,
+    };
+  };
+  
   // 1. Rileva intent
   let isPricingIntent = false;
   try {
     isPricingIntent = await detectPricingIntent(message, false);
+    intentDetected = isPricingIntent ? 'pricing' : 'non_pricing';
     logIntentDetected(traceId, userId, isPricingIntent);
   } catch (error) {
     console.error('❌ [Supervisor Router] Errore intent detection, fallback legacy');
+    intentDetected = 'unknown';
+    fallbackToLegacy = true;
+    fallbackReason = 'intent_error';
     logIntentDetected(traceId, userId, false);
-    return {
+    
+    // LEGACY PATH (temporary). Remove after Sprint 3 when all intents are handled.
+    return emitFinalTelemetryAndReturn({
       decision: 'legacy',
       executionTimeMs: Date.now() - startTime,
       source: 'supervisor_only',
-    };
+    });
   }
   
   // 2. Decisione iniziale (prima di invocare graph)
@@ -107,16 +164,24 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
   logSupervisorDecision(traceId, userId, decision, 0);
   
   // Se non è pricing intent -> legacy subito
+  // LEGACY PATH (temporary). Remove after Sprint 3 when all intents are handled.
   if (decision === 'legacy') {
+    supervisorDecision = 'legacy';
+    backendUsed = 'legacy';
+    fallbackToLegacy = true;
+    fallbackReason = 'non_pricing';
+    
     logFallbackToLegacy(traceId, userId, 'no_pricing_intent');
-    return {
+    return emitFinalTelemetryAndReturn({
       decision: 'legacy',
       executionTimeMs: Date.now() - startTime,
       source: 'supervisor_only',
-    };
+    });
   }
   
-  // 3. È pricing intent -> invoca il pricing graph
+  // 3. È pricing intent -> DEVE usare pricing_graph (GUARDRAIL)
+  // Legacy è consentito SOLO se pricing_graph fallisce
+  supervisorDecision = 'pricing_worker';
   console.log('💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph');
   
   try {
@@ -136,51 +201,71 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
     const graphExecutionTime = Date.now() - graphStartTime;
     
-    // Log telemetria
-    const optionsCount = result.pricing_options?.length ?? 0;
-    logUsingPricingGraph(traceId, userId, graphExecutionTime, optionsCount);
+    // Pricing graph usato con successo
+    backendUsed = 'pricing_graph';
+    pricingOptionsCount = result.pricing_options?.length ?? 0;
+    hasClarification = !!result.clarification_request;
+    
+    // Log telemetria intermedia
+    logUsingPricingGraph(traceId, userId, graphExecutionTime, pricingOptionsCount);
     
     // 4. Valuta risultato del graph
     if (result.pricing_options && result.pricing_options.length > 0) {
       // Abbiamo preventivi!
-      return {
+      supervisorDecision = 'end';
+      return emitFinalTelemetryAndReturn({
         decision: 'END',
         pricingOptions: result.pricing_options,
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
-      };
+      });
     }
     
     if (result.clarification_request) {
-      // Serve chiarimento
-      return {
+      // Serve chiarimento (gestito dal graph, non legacy)
+      supervisorDecision = 'end';
+      return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: result.clarification_request,
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
-      };
+      });
     }
     
-    // Nessun risultato chiaro -> fallback legacy
+    // Graph completato ma senza risultati utili -> fallback legacy
+    // LEGACY PATH (temporary). Remove after Sprint 3 when graph handles all cases.
     console.warn('⚠️ [Supervisor Router] Graph completato senza risultati, fallback legacy');
+    supervisorDecision = 'legacy';
+    backendUsed = 'legacy';
+    fallbackToLegacy = true;
+    fallbackReason = 'graph_error'; // No results = graph didn't handle correctly
+    
     logFallbackToLegacy(traceId, userId, 'graph_failed');
-    return {
+    return emitFinalTelemetryAndReturn({
       decision: 'legacy',
       executionTimeMs: Date.now() - startTime,
       source: 'pricing_graph',
-    };
+    });
     
   } catch (error: any) {
-    // Graph fallito -> fallback legacy
+    // Graph fallito -> fallback legacy (UNICO CASO LEGITTIMO per pricing intent)
+    // LEGACY PATH (temporary). Remove after Sprint 3 when graph is stable.
     console.error('❌ [Supervisor Router] Errore pricing graph:', error.message);
+    
+    supervisorDecision = 'legacy';
+    backendUsed = 'legacy';
+    fallbackToLegacy = true;
+    fallbackReason = 'graph_error';
+    success = true; // La richiesta non fallirà, useremo legacy
+    
     logGraphFailed(traceId, error, userId);
     logFallbackToLegacy(traceId, userId, 'graph_failed');
     
-    return {
+    return emitFinalTelemetryAndReturn({
       decision: 'legacy',
       executionTimeMs: Date.now() - startTime,
       source: 'pricing_graph',
-    };
+    });
   }
 }
 
