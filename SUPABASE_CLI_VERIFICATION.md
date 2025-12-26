@@ -178,3 +178,4 @@ Il Supabase CLI è configurato correttamente e può essere utilizzato per:
 **Nessun intervento manuale necessario per il workflow database!** 🎉
 
 
+

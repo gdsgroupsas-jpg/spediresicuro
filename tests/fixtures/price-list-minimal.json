@@ -1,0 +1,74 @@
+{
+  "id": "test-price-list-1",
+  "courier_id": "test-courier-1",
+  "name": "Test Price List",
+  "version": "1.0",
+  "status": "active",
+  "entries": [
+    {
+      "id": "entry-1",
+      "price_list_id": "test-price-list-1",
+      "weight_from": 0.1,
+      "weight_to": 2.0,
+      "service_type": "economy",
+      "base_price": 8.50,
+      "fuel_surcharge_percent": 5.0,
+      "island_surcharge": 0,
+      "ztl_surcharge": 0,
+      "cash_on_delivery_surcharge": 2.50,
+      "insurance_rate_percent": 0.5,
+      "estimated_delivery_days_min": 5,
+      "estimated_delivery_days_max": 7,
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "entry-2",
+      "price_list_id": "test-price-list-1",
+      "weight_from": 2.1,
+      "weight_to": 5.0,
+      "service_type": "economy",
+      "base_price": 12.00,
+      "fuel_surcharge_percent": 5.0,
+      "island_surcharge": 0,
+      "ztl_surcharge": 0,
+      "cash_on_delivery_surcharge": 2.50,
+      "insurance_rate_percent": 0.5,
+      "estimated_delivery_days_min": 5,
+      "estimated_delivery_days_max": 7,
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "entry-3",
+      "price_list_id": "test-price-list-1",
+      "weight_from": 0.1,
+      "weight_to": 2.0,
+      "service_type": "express",
+      "base_price": 15.00,
+      "fuel_surcharge_percent": 5.0,
+      "island_surcharge": 0,
+      "ztl_surcharge": 0,
+      "cash_on_delivery_surcharge": 3.00,
+      "insurance_rate_percent": 0.5,
+      "estimated_delivery_days_min": 1,
+      "estimated_delivery_days_max": 2,
+      "created_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "entry-4",
+      "price_list_id": "test-price-list-1",
+      "weight_from": 2.1,
+      "weight_to": 5.0,
+      "service_type": "express",
+      "base_price": 20.00,
+      "fuel_surcharge_percent": 5.0,
+      "island_surcharge": 0,
+      "ztl_surcharge": 0,
+      "cash_on_delivery_surcharge": 3.00,
+      "insurance_rate_percent": 0.5,
+      "estimated_delivery_days_min": 1,
+      "estimated_delivery_days_max": 2,
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+
