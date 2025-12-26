@@ -13,6 +13,7 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
+import { containsBookingConfirmation, preflightCheck } from '@/lib/agent/workers/booking';
 
 // Helper per ottenere LLM (stesso pattern di nodes.ts)
 const getLLM = () => {
@@ -138,9 +139,9 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
   console.log('🧠 [Supervisor] Decisione routing...');
   
   try {
-    // Se abbiamo già preventivi calcolati, termina
-    if (state.pricing_options && state.pricing_options.length > 0) {
-      console.log('✅ [Supervisor] Preventivi già calcolati, termino');
+    // Sprint 2.6: Se abbiamo già un booking result, termina
+    if (state.booking_result) {
+      console.log('✅ [Supervisor] Booking già eseguito, termino');
       return {
         next_step: 'END',
         processingStatus: 'complete',
@@ -152,6 +153,45 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
     const messageText = lastMessage && 'content' in lastMessage 
       ? String(lastMessage.content) 
       : '';
+    
+    // Sprint 2.6: Controlla se l'utente sta confermando un booking
+    // REQUISITI per booking_worker:
+    // 1. Abbiamo preventivi calcolati
+    // 2. L'utente ha confermato esplicitamente
+    // 3. I dati sono completi (preflight check)
+    if (state.pricing_options && state.pricing_options.length > 0 && containsBookingConfirmation(messageText)) {
+      console.log('📦 [Supervisor] Conferma booking rilevata, verifico preflight...');
+      
+      // Verifica pre-flight
+      const selectedOption = state.pricing_options[0]; // TODO: permettere selezione
+      const idempotencyKey = state.shipmentId || `booking-${state.userId}-${Date.now()}`;
+      const preflight = preflightCheck(state.shipmentDraft, selectedOption, idempotencyKey);
+      
+      if (preflight.passed) {
+        console.log('✅ [Supervisor] Preflight OK, routing a booking_worker');
+        return {
+          next_step: 'booking_worker',
+          processingStatus: 'calculating',
+          iteration_count: (state.iteration_count || 0) + 1,
+        };
+      } else {
+        console.log('⚠️ [Supervisor] Preflight fallito, mancano:', preflight.missing);
+        return {
+          clarification_request: `Per procedere con la prenotazione, ho bisogno di: ${preflight.missing.join(', ')}.`,
+          next_step: 'END',
+          processingStatus: 'idle',
+        };
+      }
+    }
+    
+    // Se abbiamo già preventivi calcolati MA non c'è conferma, termina (aspetta conferma)
+    if (state.pricing_options && state.pricing_options.length > 0) {
+      console.log('✅ [Supervisor] Preventivi già calcolati, attendo conferma utente');
+      return {
+        next_step: 'END',
+        processingStatus: 'complete',
+      };
+    }
     
     // Sprint 2.4: UNICO PUNTO DECISIONALE per OCR routing
     // Il supervisor è l'autorità ESCLUSIVA per decidere next_step='ocr_worker'
@@ -220,28 +260,45 @@ export interface DecisionInput {
   hasPartialAddressData?: boolean;
   /** Sprint 2.4: true se il messaggio contiene pattern OCR tipici */
   hasOcrPatterns?: boolean;
+  /** Sprint 2.6: true se l'utente ha confermato esplicitamente il booking */
+  hasBookingConfirmation?: boolean;
+  /** Sprint 2.6: true se il booking è già stato eseguito */
+  hasBookingResult?: boolean;
+  /** Sprint 2.6: true se il preflight check è passato */
+  preflightPassed?: boolean;
 }
 
-export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'END';
+export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'legacy' | 'END';
 
 /**
  * Funzione PURA per decidere il prossimo step.
  * Facile da testare senza mock di LLM/DB.
  * 
  * @param input - Dati di input per la decisione
- * @returns 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'END'
+ * @returns 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'legacy' | 'END'
  * 
- * ROUTING LOGIC (Sprint 2.4):
- * - hasPricingOptions → END
+ * ROUTING LOGIC (Sprint 2.6):
+ * - hasBookingResult → END (booking già fatto)
+ * - hasPricingOptions + hasBookingConfirmation + preflightPassed → booking_worker
+ * - hasPricingOptions → END (aspetta conferma utente)
  * - hasClarificationRequest → END
  * - hasOcrPatterns → ocr_worker (Sprint 2.4)
  * - !isPricingIntent → legacy
  * - isPricingIntent + hasEnoughData → pricing_worker
- * - isPricingIntent + !hasEnoughData + hasPartialAddressData → address_worker
- * - isPricingIntent + !hasEnoughData + !hasPartialAddressData → address_worker (try extract)
+ * - isPricingIntent + !hasEnoughData → address_worker
  */
 export function decideNextStep(input: DecisionInput): SupervisorDecision {
-  // Se abbiamo già preventivi calcolati -> END
+  // Sprint 2.6: Se booking già eseguito -> END
+  if (input.hasBookingResult) {
+    return 'END';
+  }
+  
+  // Sprint 2.6: Se abbiamo preventivi + conferma utente + preflight OK -> booking_worker
+  if (input.hasPricingOptions && input.hasBookingConfirmation && input.preflightPassed) {
+    return 'booking_worker';
+  }
+  
+  // Se abbiamo già preventivi calcolati -> END (aspetta conferma)
   if (input.hasPricingOptions) {
     return 'END';
   }
