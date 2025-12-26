@@ -20,7 +20,7 @@ test.describe('Nuova Spedizione - Happy Path (No Auth)', () => {
       const url = new URL(route.request().url());
       const query = url.searchParams.get('q') || '';
       
-      let results = [];
+      let results: Array<{ city: string; province: string; cap: string; caps: string[]; displayText: string }> = [];
       if (query.toLowerCase().includes('milan')) {
         results = [{
           city: 'Milano',
