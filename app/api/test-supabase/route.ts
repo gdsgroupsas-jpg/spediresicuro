@@ -15,27 +15,21 @@ import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    // 1. Verifica variabili ambiente
+    // 1. Verifica variabili ambiente (⚠️ SEC-1: NO log di chiavi, solo presenza)
     const envCheck = {
       NEXT_PUBLIC_SUPABASE_URL: {
         present: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        value: process.env.NEXT_PUBLIC_SUPABASE_URL 
-          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 30)}...` 
-          : 'MISSING',
+        // ⚠️ SEC-1: NO value parziale - rischio exposure
         isPlaceholder: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('xxxxxxxxxxxxx') || false,
       },
       NEXT_PUBLIC_SUPABASE_ANON_KEY: {
         present: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        value: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
-          ? `${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.substring(0, 20)}...` 
-          : 'MISSING',
+        // ⚠️ SEC-1: NO value parziale - rischio exposure
         isPlaceholder: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.includes('placeholder') || false,
       },
       SUPABASE_SERVICE_ROLE_KEY: {
         present: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        value: process.env.SUPABASE_SERVICE_ROLE_KEY 
-          ? `${process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...` 
-          : 'MISSING',
+        // ⚠️ SEC-1: NO value parziale - rischio exposure
         isPlaceholder: process.env.SUPABASE_SERVICE_ROLE_KEY?.includes('placeholder') || false,
       },
     };
