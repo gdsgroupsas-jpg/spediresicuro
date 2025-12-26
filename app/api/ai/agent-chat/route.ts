@@ -13,6 +13,10 @@ import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
 import { getCachedContext, setCachedContext, getContextCacheKey } from '@/lib/ai/cache';
 import { supabaseAdmin } from '@/lib/db/client';
+import { detectPricingIntent } from '@/lib/agent/intent-detector';
+import { pricingGraph } from '@/lib/agent/orchestrator/pricing-graph';
+import { AgentState } from '@/lib/agent/orchestrator/state';
+import { HumanMessage } from '@langchain/core/messages';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
@@ -148,6 +152,94 @@ export async function POST(request: NextRequest) {
     const userMessage = body.message || '';
     const messages = body.messages || []; // Storia conversazione
     const isVoiceInput = userMessage.startsWith('[VOX]');
+    const cleanMessage = isVoiceInput ? userMessage.replace('[VOX]', '') : userMessage;
+
+    // ===== FASE 5: INTEGRAZIONE PRICING GRAPH =====
+    // Rileva se l'intento è "preventivo" (SAFE: con try/catch)
+    let isPricingIntent = false;
+    try {
+      isPricingIntent = await detectPricingIntent(cleanMessage, false); // Usa pattern matching veloce
+    } catch (intentError: any) {
+      console.error('❌ [Anne] Errore intent detector, fallback a legacy:', intentError);
+      isPricingIntent = false; // SAFE: In caso di errore, usa legacy
+    }
+    
+    if (isPricingIntent) {
+      console.log('💰 [Anne] Rilevato intento preventivo, uso Pricing Graph');
+      
+      try {
+        // Prepara stato iniziale per il grafo (formato canali LangGraph)
+        const initialState = {
+          messages: [new HumanMessage(cleanMessage)],
+          userId: userId,
+          userEmail: session.user.email || '',
+          shipmentData: {},
+          processingStatus: 'idle' as const,
+          validationErrors: [],
+          confidenceScore: 0,
+          needsHumanReview: false,
+          iteration_count: 0,
+        };
+        
+        // Esegui il grafo
+        const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+        
+        // Formatta risposta
+        let responseMessage = '';
+        
+        if (result.pricing_options && Array.isArray(result.pricing_options) && result.pricing_options.length > 0) {
+          // Abbiamo preventivi!
+          const bestOption = result.pricing_options[0];
+          const otherOptions = result.pricing_options.slice(1, 4); // Mostra max 3 alternative
+          
+          responseMessage = `💰 **Preventivo Spedizione**\n\n`;
+          responseMessage += `**Opzione Consigliata:**\n`;
+          responseMessage += `• Corriere: ${bestOption.courier}\n`;
+          responseMessage += `• Servizio: ${bestOption.serviceType}\n`;
+          responseMessage += `• Prezzo: €${bestOption.finalPrice.toFixed(2)}\n`;
+          responseMessage += `• Consegna stimata: ${bestOption.estimatedDeliveryDays.min}-${bestOption.estimatedDeliveryDays.max} giorni\n\n`;
+          
+          if (otherOptions.length > 0) {
+            responseMessage += `**Altre opzioni disponibili:**\n`;
+            otherOptions.forEach((opt: typeof bestOption, idx: number) => {
+              responseMessage += `${idx + 2}. ${opt.courier} (${opt.serviceType}): €${opt.finalPrice.toFixed(2)}\n`;
+            });
+          }
+          
+          responseMessage += `\n💡 *Prezzi calcolati con margine applicato. I dati sono indicativi.*`;
+        } else if (result.clarification_request && typeof result.clarification_request === 'string') {
+          // Serve chiarimento
+          responseMessage = result.clarification_request;
+        } else {
+          // Errore generico
+          responseMessage = 'Mi dispiace, non sono riuscito a calcolare un preventivo. Puoi fornirmi peso, CAP e provincia di destinazione?';
+        }
+        
+        // Restituisci risposta
+        return NextResponse.json({
+          success: true,
+          message: responseMessage,
+          metadata: {
+            userId,
+            userRole,
+            timestamp: new Date().toISOString(),
+            isMock: false,
+            toolCalls: 0,
+            executionTime: Date.now() - startTime,
+            rateLimitRemaining: rateLimit.remaining,
+            usingPricingGraph: true,
+            pricingOptionsCount: (result.pricing_options && Array.isArray(result.pricing_options)) ? result.pricing_options.length : 0,
+          }
+        });
+        
+      } catch (pricingError: any) {
+        console.error('❌ [Anne] Errore Pricing Graph:', pricingError);
+        // Fallback a codice legacy se il grafo fallisce
+        console.log('⚠️ [Anne] Fallback a codice legacy dopo errore Pricing Graph');
+        // Continua con il codice legacy sotto
+      }
+    }
+    // ===== FINE INTEGRAZIONE PRICING GRAPH =====
 
     // Costruisci contesto (con cache)
     let context: any = null;
