@@ -56,6 +56,13 @@ vi.mock('@/lib/db/client', () => ({
   },
 }));
 
+// Mock rate-limit per test deterministici
+const mockCheckRateLimit = vi.fn();
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: mockCheckRateLimit,
+  resetRateLimitForTesting: vi.fn(),
+}));
+
 // Mock Anthropic come classe costruttore (deterministic)
 const mockMessagesCreate = vi.fn().mockResolvedValue({
   content: [{ type: 'text', text: 'Default legacy response' }],
@@ -80,7 +87,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 });
 
 describe('Agent Chat API - Pricing Flow Integration', () => {
-  // POST viene re-importato dinamicamente in ogni beforeEach per resettare rateLimitMap
+  // POST viene re-importato dinamicamente in ogni beforeEach per resettare stato
   let POST: typeof import('@/app/api/ai/agent-chat/route').POST;
   let auth: ReturnType<typeof vi.fn>;
   let detectPricingIntent: ReturnType<typeof vi.fn>;
@@ -89,7 +96,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
   let getCachedContext: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    // Reset moduli per reinizializzare rateLimitMap in route.ts
+    // Reset moduli per reinizializzare stato
     vi.resetModules();
     
     // Re-importa i moduli mockati dopo reset
@@ -105,12 +112,19 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     buildContext = contextModule.buildContext as ReturnType<typeof vi.fn>;
     getCachedContext = cacheModule.getCachedContext as ReturnType<typeof vi.fn>;
     
-    // Re-importa la route (con rateLimitMap nuovo)
+    // Re-importa la route
     const routeModule = await import('@/app/api/ai/agent-chat/route');
     POST = routeModule.POST;
     
     // Clear mocks
     vi.clearAllMocks();
+    
+    // Reset mock rate limiter - default: allowed
+    mockCheckRateLimit.mockResolvedValue({
+      allowed: true,
+      remaining: 19,
+      limit: 20,
+    });
     
     // Reset mock Anthropic messages.create
     mockMessagesCreate.mockResolvedValue({
@@ -293,22 +307,24 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     });
 
     it('should return 429 when rate limit exceeded', async () => {
-      // Simula rate limit: chiama POST 21 volte per superare limite
+      // Mock rate limiter per simulare limite superato (deterministico)
+      mockCheckRateLimit.mockResolvedValueOnce({
+        allowed: false,
+        remaining: 0,
+        limit: 20,
+      });
+
       const request = createMockRequest({
         message: 'Test',
         messages: [],
       });
-
-      // Chiama multiple volte per superare rate limit
-      for (let i = 0; i < 21; i++) {
-        await POST(request);
-      }
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(429);
       expect(data.success).toBe(false);
+      expect(data.error).toContain('Troppe richieste');
     });
 
     it('should not crash on empty input', async () => {
