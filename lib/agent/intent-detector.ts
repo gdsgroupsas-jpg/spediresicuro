@@ -7,6 +7,7 @@
 
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage } from '@langchain/core/messages';
+import { defaultLogger } from './logger';
 
 /**
  * Pattern chiave per rilevare richieste di preventivo
@@ -105,7 +106,7 @@ Rispondi ESCLUSIVAMENTE con JSON:
     return parsed.is_pricing_request === true && (parsed.confidence || 0) > 70;
     
   } catch (error) {
-    console.warn('⚠️ [Intent Detector] Errore LLM, uso pattern matching:', error);
+    defaultLogger.warn('⚠️ [Intent Detector] Errore LLM, uso pattern matching:', error);
     return detectPricingIntentSimple(message);
   }
 }
@@ -113,14 +114,16 @@ Rispondi ESCLUSIVAMENTE con JSON:
 /**
  * Helper per ottenere LLM
  */
+import { llmConfig } from '@/lib/config';
+
 function getLLM() {
   if (!process.env.GOOGLE_API_KEY) {
     return null;
   }
   return new ChatGoogleGenerativeAI({
-    model: 'gemini-2.0-flash-001',
-    maxOutputTokens: 256,
-    temperature: 0.1,
+    model: llmConfig.MODEL,
+    maxOutputTokens: llmConfig.INTENT_DETECTOR_MAX_OUTPUT_TOKENS,
+    temperature: llmConfig.SUPERVISOR_TEMPERATURE,
     apiKey: process.env.GOOGLE_API_KEY,
   });
 }
