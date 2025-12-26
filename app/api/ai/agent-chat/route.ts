@@ -31,26 +31,13 @@ import {
 
 // Debug: Verifica API key (verrà eseguito ad ogni richiesta)
 function getAnthropicClient() {
-  // ⚠️ Leggi la variabile ad ogni chiamata (per locale, assicura che sia sempre aggiornata)
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   
-  // ⚠️ LOGGING DETTAGLIATO per debug
-  console.log('🔍 [Anne] Verifica Environment Variables (runtime):');
-  console.log('   ANTHROPIC_API_KEY presente:', !!anthropicApiKey);
-  console.log('   ANTHROPIC_API_KEY lunghezza:', anthropicApiKey?.length || 0);
-  console.log('   ANTHROPIC_API_KEY primi 20 char:', anthropicApiKey?.substring(0, 20) || 'NESSUNA');
-  console.log('   NODE_ENV:', process.env.NODE_ENV);
-  console.log('   Tutte le env keys con ANTHROPIC:', Object.keys(process.env).filter(k => k.includes('ANTHROPIC') || k.includes('CLAUDE')));
-  
   if (anthropicApiKey) {
-    console.log('✅ [Anne] ANTHROPIC_API_KEY trovata, creo client');
+    // ⚠️ SEC-1: NO log di API key (anche parziale)
     return new Anthropic({ apiKey: anthropicApiKey });
   } else {
-    console.error('❌ [Anne] ANTHROPIC_API_KEY NON TROVATA!');
-    console.error('   Verifica:');
-    console.error('   1. File .env.local esiste nella root del progetto');
-    console.error('   2. Riga: ANTHROPIC_API_KEY=sk-ant-... (senza spazi, non commentata)');
-    console.error('   3. Server riavviato dopo aver aggiunto la chiave');
+    console.error('❌ [Anne] ANTHROPIC_API_KEY non configurata');
     return null;
   }
 }
@@ -385,15 +372,10 @@ export async function POST(request: NextRequest) {
 
     if (claudeClient && anthropicApiKey) {
       try {
+        // ⚠️ SEC-1: NO log di API key - solo info non sensibili
         console.log('🤖 [Anne] Chiamata Claude API in corso...');
-        console.log('   API Key presente:', anthropicApiKey ? 'SI (lunghezza: ' + anthropicApiKey.length + ')' : 'NO');
-        console.log('   API Key inizia con:', anthropicApiKey?.substring(0, 15) || 'NESSUNA');
-        console.log('   Model:', 'claude-3-haiku-20240307');
-        console.log('   Messages count:', claudeMessages.length);
-        console.log('   System prompt length:', systemPrompt.length);
-        console.log('   User message:', userMessage.substring(0, 100) + (userMessage.length > 100 ? '...' : ''));
         
-        // Chiama Claude 3 Haiku con tools (3.5 Sonnet non disponibile con questa API key)
+        // Chiama Claude 3 Haiku con tools
         // ⚠️ Verifica che systemPrompt e claudeMessages siano validi
         if (!systemPrompt || systemPrompt.trim().length === 0) {
           throw new Error('System prompt vuoto o non valido');
@@ -575,15 +557,12 @@ export async function POST(request: NextRequest) {
         errorDetails.error = errorDetails.message;
         
         // Log sicuro
+        // ⚠️ SEC-1: NO log di API key - solo info non sensibili
         console.error('❌ [Anne] Errore Claude API:', {
           message: errorDetails.message,
           status: errorDetails.status,
           type: errorDetails.type,
         });
-        
-        console.error('❌ [Anne] API Key presente:', !!anthropicApiKey);
-        console.error('❌ [Anne] API Key lunghezza:', anthropicApiKey?.length || 0);
-        console.error('❌ [Anne] API Key inizia con:', anthropicApiKey?.substring(0, 10) || 'NESSUNA');
         
         // ⚠️ Messaggio di errore più specifico in base al tipo di errore
         let errorMessage = '';
@@ -609,12 +588,8 @@ export async function POST(request: NextRequest) {
       // Fallback mock se Claude non configurato
       const userName = (session?.user?.name || 'utente').split(' ')[0];
       
-      console.warn('⚠️ [Anne] Claude non disponibile:', {
-        hasClient: !!claudeClient,
-        hasApiKey: !!anthropicApiKey,
-        apiKeyLength: anthropicApiKey?.length || 0,
-        nodeEnv: process.env.NODE_ENV,
-      });
+      // ⚠️ SEC-1: NO log di API key info
+      console.warn('⚠️ [Anne] Claude non disponibile - verificare configurazione');
       
       isMock = true;
       if (!userMessage.trim()) {
@@ -692,13 +667,8 @@ export async function POST(request: NextRequest) {
       stack: error?.stack,
       cause: error?.cause,
     });
-    console.error('❌ [Anne] Context:', {
-      hasSession: !!session,
-      userId: session?.user?.id,
-      userRole: (session?.user as any)?.role,
-      hasApiKey: !!anthropicApiKey,
-      apiKeyLength: anthropicApiKey?.length || 0,
-    });
+    // ⚠️ SEC-1: NO log di API key info o userId (PII)
+    console.error('❌ [Anne] Context: hasSession:', !!session, 'userRole:', (session?.user as any)?.role);
     
     // ⚠️ In sviluppo, mostra dettagli completi dell'errore
     const errorDetails = process.env.NODE_ENV === 'development' 
