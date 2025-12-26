@@ -24,6 +24,7 @@ import {
   logGraphFailed, 
   logFallbackToLegacy 
 } from '@/lib/telemetry/logger';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
@@ -42,31 +43,7 @@ function getAnthropicClient() {
   }
 }
 
-// Rate limiting semplice (in-memory, per produzione usare Redis)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 20; // Max 20 richieste
-const RATE_LIMIT_WINDOW = 60 * 1000; // Per finestra di 1 minuto
-
-/**
- * Verifica rate limiting
- */
-function checkRateLimit(userId: string): { allowed: boolean; remaining: number } {
-  const now = Date.now();
-  const userLimit = rateLimitMap.get(userId);
-  
-  if (!userLimit || now > userLimit.resetAt) {
-    // Reset o nuova finestra
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
-  }
-  
-  if (userLimit.count >= RATE_LIMIT_MAX) {
-    return { allowed: false, remaining: 0 };
-  }
-  
-  userLimit.count++;
-  return { allowed: true, remaining: RATE_LIMIT_MAX - userLimit.count };
-}
+// Rate limiting distribuito (Upstash Redis) - importato da @/lib/rate-limit
 
 /**
  * Converte tools Anne in formato Anthropic
@@ -116,8 +93,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting
-    const rateLimit = checkRateLimit(userId as string);
+    // Rate limiting distribuito (Upstash Redis con fallback in-memory)
+    const rateLimit = await checkRateLimit(userId as string, 'agent-chat');
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { 
