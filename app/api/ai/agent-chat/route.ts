@@ -13,18 +13,12 @@ import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
 import { getCachedContext, setCachedContext, getContextCacheKey } from '@/lib/ai/cache';
 import { supabaseAdmin } from '@/lib/db/client';
-import { detectPricingIntent } from '@/lib/agent/intent-detector';
-import { pricingGraph } from '@/lib/agent/orchestrator/pricing-graph';
-import { AgentState } from '@/lib/agent/orchestrator/state';
-import { HumanMessage } from '@langchain/core/messages';
 import { 
   generateTraceId, 
-  logIntentDetected, 
-  logUsingPricingGraph, 
-  logGraphFailed, 
   logFallbackToLegacy 
 } from '@/lib/telemetry/logger';
 import { rateLimit } from '@/lib/security/rate-limit';
+import { supervisorRouter, formatPricingResponse } from '@/lib/agent/orchestrator/supervisor-router';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
@@ -129,108 +123,51 @@ export async function POST(request: NextRequest) {
     const isVoiceInput = userMessage.startsWith('[VOX]');
     const cleanMessage = isVoiceInput ? userMessage.replace('[VOX]', '') : userMessage;
 
-    // ===== FASE 5: INTEGRAZIONE PRICING GRAPH =====
-    // Rileva se l'intento è "preventivo" (SAFE: con try/catch)
-    let isPricingIntent = false;
-    try {
-      isPricingIntent = await detectPricingIntent(cleanMessage, false); // Usa pattern matching veloce
-      // Telemetria: log intent detection
-      logIntentDetected(traceId, userId as string, isPricingIntent);
-    } catch (intentError: any) {
-      console.error('❌ [Anne] Errore intent detector, fallback a legacy:', intentError);
-      isPricingIntent = false; // SAFE: In caso di errore, usa legacy
-      logIntentDetected(traceId, userId as string, false);
+    // ===== SUPERVISOR ROUTER (Entry Point Unico) =====
+    // Il supervisor decide se usare pricing graph o legacy handler
+    const supervisorResult = await supervisorRouter({
+      message: cleanMessage,
+      userId: userId as string,
+      userEmail: session.user.email || '',
+      traceId,
+    });
+    
+    // Se il supervisor ha una risposta pronta (END con pricing o clarification)
+    if (supervisorResult.decision === 'END') {
+      let responseMessage = '';
+      
+      if (supervisorResult.pricingOptions && supervisorResult.pricingOptions.length > 0) {
+        // Formatta risposta pricing
+        responseMessage = formatPricingResponse(supervisorResult.pricingOptions);
+      } else if (supervisorResult.clarificationRequest) {
+        // Serve chiarimento
+        responseMessage = supervisorResult.clarificationRequest;
+      } else {
+        // Fallback
+        responseMessage = 'Mi dispiace, non sono riuscita a elaborare la richiesta. Come posso aiutarti?';
+      }
+      
+      return NextResponse.json({
+        success: true,
+        message: responseMessage,
+        metadata: {
+          trace_id: traceId,
+          userRole,
+          timestamp: new Date().toISOString(),
+          isMock: false,
+          toolCalls: 0,
+          executionTime: Date.now() - startTime,
+          rateLimitRemaining: rateLimitResult.remaining,
+          usingPricingGraph: supervisorResult.source === 'pricing_graph',
+          pricingOptionsCount: supervisorResult.pricingOptions?.length ?? 0,
+          supervisorDecision: supervisorResult.decision,
+        }
+      });
     }
     
-    if (isPricingIntent) {
-      console.log('💰 [Anne] Rilevato intento preventivo, uso Pricing Graph');
-      
-      try {
-        // Prepara stato iniziale per il grafo (formato canali LangGraph)
-        const initialState = {
-          messages: [new HumanMessage(cleanMessage)],
-          userId: userId,
-          userEmail: session.user.email || '',
-          shipmentData: {},
-          processingStatus: 'idle' as const,
-          validationErrors: [],
-          confidenceScore: 0,
-          needsHumanReview: false,
-          iteration_count: 0,
-        };
-        
-        // Esegui il grafo
-        const graphStartTime = Date.now();
-        const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
-        const graphExecutionTime = Date.now() - graphStartTime;
-        
-        // Telemetria: log uso pricing graph
-        const pricingOptionsCount = (result.pricing_options && Array.isArray(result.pricing_options)) 
-          ? result.pricing_options.length 
-          : 0;
-        logUsingPricingGraph(traceId, userId as string, graphExecutionTime, pricingOptionsCount);
-        
-        // Formatta risposta
-        let responseMessage = '';
-        
-        if (result.pricing_options && Array.isArray(result.pricing_options) && result.pricing_options.length > 0) {
-          // Abbiamo preventivi!
-          const bestOption = result.pricing_options[0];
-          const otherOptions = result.pricing_options.slice(1, 4); // Mostra max 3 alternative
-          
-          responseMessage = `💰 **Preventivo Spedizione**\n\n`;
-          responseMessage += `**Opzione Consigliata:**\n`;
-          responseMessage += `• Corriere: ${bestOption.courier}\n`;
-          responseMessage += `• Servizio: ${bestOption.serviceType}\n`;
-          responseMessage += `• Prezzo: €${bestOption.finalPrice.toFixed(2)}\n`;
-          responseMessage += `• Consegna stimata: ${bestOption.estimatedDeliveryDays.min}-${bestOption.estimatedDeliveryDays.max} giorni\n\n`;
-          
-          if (otherOptions.length > 0) {
-            responseMessage += `**Altre opzioni disponibili:**\n`;
-            otherOptions.forEach((opt: typeof bestOption, idx: number) => {
-              responseMessage += `${idx + 2}. ${opt.courier} (${opt.serviceType}): €${opt.finalPrice.toFixed(2)}\n`;
-            });
-          }
-          
-          responseMessage += `\n💡 *Prezzi calcolati con margine applicato. I dati sono indicativi.*`;
-        } else if (result.clarification_request && typeof result.clarification_request === 'string') {
-          // Serve chiarimento
-          responseMessage = result.clarification_request;
-        } else {
-          // Errore generico
-          responseMessage = 'Mi dispiace, non sono riuscito a calcolare un preventivo. Puoi fornirmi peso, CAP e provincia di destinazione?';
-        }
-        
-        // Restituisci risposta (NO PII nei metadata)
-        return NextResponse.json({
-          success: true,
-          message: responseMessage,
-          metadata: {
-            trace_id: traceId, // Trace ID per telemetria
-            userRole, // Role è OK (non PII)
-            timestamp: new Date().toISOString(),
-            isMock: false,
-            toolCalls: 0,
-            executionTime: Date.now() - startTime,
-            rateLimitRemaining: rateLimitResult.remaining,
-            usingPricingGraph: true,
-            pricingOptionsCount: pricingOptionsCount,
-            // NO userId, NO email nei metadata (PII)
-          }
-        });
-        
-      } catch (pricingError: any) {
-        console.error('❌ [Anne] Errore Pricing Graph:', pricingError);
-        // Telemetria: log errore graph
-        logGraphFailed(traceId, pricingError, userId as string);
-        // Fallback a codice legacy se il grafo fallisce
-        console.log('⚠️ [Anne] Fallback a codice legacy dopo errore Pricing Graph');
-        // Telemetria: log fallback
-        logFallbackToLegacy(traceId, userId as string, 'graph_failed');
-        // Continua con il codice legacy sotto
-      }
-    }
-    // ===== FINE INTEGRAZIONE PRICING GRAPH =====
+    // Se decision === 'legacy' o 'pricing_worker' senza risultato -> continua con legacy handler
+    // (Il supervisor ha già loggato il fallback)
+    // ===== FINE SUPERVISOR ROUTER =====
 
     // Costruisci contesto (con cache)
     let context: any = null;
@@ -611,10 +548,7 @@ export async function POST(request: NextRequest) {
       aiResponse = `Ciao ${userName}! 👋\n\nMi dispiace, non sono riuscita a generare una risposta. Riprova tra qualche secondo.`;
     }
 
-    // Telemetria: log fallback legacy (se non è già stato loggato)
-    if (!isPricingIntent) {
-      logFallbackToLegacy(traceId, userId as string, 'no_pricing_intent');
-    }
+    // Telemetria: log fallback legacy (supervisor ha già loggato)
     
     // Restituisci risposta JSON (NO PII nei metadata)
     return NextResponse.json({

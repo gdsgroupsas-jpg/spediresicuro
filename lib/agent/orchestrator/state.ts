@@ -51,7 +51,10 @@ export interface AgentState {
   pricing_options?: PricingResult[];
   
   // Prossimo step da eseguire (deciso dal supervisor)
-  next_step?: 'pricing_worker' | 'request_clarification' | 'END';
+  // 'pricing_worker' = calcola preventivo con pricing graph
+  // 'legacy' = usa handler Claude legacy (non-pricing o fallback)
+  // 'END' = risposta pronta, termina
+  next_step?: 'pricing_worker' | 'legacy' | 'END';
   
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;
