@@ -282,24 +282,54 @@ Il motore decide quale Adapter usare e quali credenziali iniettare (Master vs Ut
 Anne è un **AI Agent Orchestrator** basato su **LangGraph Supervisor** che coordina worker specializzati per gestire richieste di preventivi e prenotazioni spedizioni.
 
 **Architettura:**
-- **Supervisor Router** (`lib/agent/orchestrator/supervisor-router.ts`) - Entry point unico
-- **Supervisor** (`lib/agent/orchestrator/supervisor.ts`) - Single Decision Point per routing
-- **LangGraph Pricing Graph** (`lib/agent/orchestrator/pricing-graph.ts`) - Orchestrazione workflow
+- **Supervisor Router** (`lib/agent/orchestrator/supervisor-router.ts`) - Entry point unico per `/api/ai/agent-chat`
+- **Supervisor** (`lib/agent/orchestrator/supervisor.ts`) - Single Decision Point per routing (`decideNextStep()`)
+- **LangGraph Pricing Graph** (`lib/agent/orchestrator/pricing-graph.ts`) - Orchestrazione workflow con conditional edges
+
+**Data Flow:**
+```
+User Input (messaggio)
+    │
+    ▼
+supervisorRouter()  ← Entry point UNICO
+    │
+    ├─── Intent Detection (pricing vs non-pricing)
+    ├─── OCR Pattern Detection
+    ├─── Booking Confirmation Detection
+    │
+    ▼
+supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
+    │
+    ├─── next_step: 'ocr_worker' → OCR Worker → arricchisce shipmentDraft
+    ├─── next_step: 'address_worker' → Address Worker → normalizza indirizzi
+    ├─── next_step: 'pricing_worker' → Pricing Worker → calcola preventivi
+    ├─── next_step: 'booking_worker' → Booking Worker → prenota spedizione
+    ├─── next_step: 'legacy' → Claude Legacy Handler
+    └─── next_step: 'END' → Risposta finale al client
+    │
+    ▼ (torna a supervisor dopo ogni worker)
+supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
+    │
+    └─── ... (loop fino a END o MAX_ITERATIONS)
+```
+
+**Pattern Chiave:** L'input utente passa dal Supervisor, viene arricchito dai Worker (merge non distruttivo in `shipmentDraft`), e **solo alla fine** diventa un'azione DB (booking) o risposta al client.
 
 **Worker Attivi:**
-1. **Address Worker** (`lib/agent/workers/address.ts`) - Normalizzazione indirizzi italiani
+1. **Address Worker** (`lib/agent/workers/address.ts`) - Normalizzazione indirizzi italiani (CAP, provincia, città)
 2. **Pricing Worker** (`lib/agent/workers/pricing.ts`) - Calcolo preventivi multi-corriere
-3. **OCR Worker** (`lib/agent/workers/ocr.ts`) - Estrazione dati da testo/screenshot
-4. **Booking Worker** (`lib/agent/workers/booking.ts`) - Prenotazione spedizioni
+3. **OCR Worker** (`lib/agent/workers/ocr.ts`) - Estrazione dati da testo/screenshot (immagini: placeholder)
+4. **Booking Worker** (`lib/agent/workers/booking.ts`) - Prenotazione spedizioni (preflight + adapter)
 
 **Safety Invariants (CRITICO):**
-- **No Silent Booking:** Nessuna prenotazione senza conferma esplicita utente
-- **Pre-flight Checks:** Validazione obbligatoria prima di chiamate API esterne
-- **Single Decision Point:** Solo Supervisor decide routing, worker non decidono autonomamente
-- **No PII nei Log:** Mai loggare indirizzi, nomi, telefoni (solo trace_id, user_id_hash)
+- **No Silent Booking:** Nessuna prenotazione senza conferma esplicita utente (`containsBookingConfirmation()`)
+- **Pre-flight Checks:** Validazione obbligatoria prima di chiamate API esterne (`preflightCheck()`)
+- **Single Decision Point:** Solo `supervisor.ts` imposta `next_step`, worker non decidono routing autonomamente
+- **No PII nei Log:** Mai loggare `addressLine1`, `postalCode`, `fullName`, `phone` (solo `trace_id`, `user_id_hash`)
 
 **Documentazione:**
-- `MIGRATION_MEMORY.md` - Stato migrazione e architettura dettagliata
+- `MIGRATION_MEMORY.md` - Stato migrazione e architettura dettagliata (Single Source of Truth)
+- `docs/ARCHITECTURE.md` - Deep dive tecnico con diagrammi e verifiche
 - `lib/agent/orchestrator/` - Implementazione orchestrator
 
 ---
