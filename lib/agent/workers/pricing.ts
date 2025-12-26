@@ -7,8 +7,22 @@
  */
 
 import { AgentState } from '../orchestrator/state';
-import { calculateOptimalPrice, PricingRequest } from '@/lib/ai/pricing-engine';
+import { calculateOptimalPrice, PricingRequest, PricingResult } from '@/lib/ai/pricing-engine';
 import { defaultLogger, type ILogger } from '../logger';
+import { DEFAULT_PLATFORM_FEE } from '@/lib/services/pricing/platform-fee';
+
+/**
+ * Aggiunge la platform fee (MVP hardcoded) ai risultati pricing.
+ * La fee reale viene calcolata al momento del booking.
+ */
+function addPlatformFeeToResults(results: PricingResult[]): PricingResult[] {
+  return results.map(option => ({
+    ...option,
+    // Aggiungi la platform fee al prezzo finale
+    // NOTA: La fee reale potrebbe essere diversa per utenti con override
+    finalPrice: option.finalPrice + DEFAULT_PLATFORM_FEE,
+  }));
+}
 
 /**
  * Valida se abbiamo abbastanza dati per calcolare un preventivo
@@ -103,13 +117,20 @@ export async function pricingWorker(
       };
     }
     
-    logger.log(`✅ [Pricing Worker] Trovati ${pricingOptions.length} preventivi`);
+    // Sprint 2.7: Aggiungi platform fee (MVP hardcoded) ai preventivi
+    const optionsWithFee = addPlatformFeeToResults(pricingOptions);
     
-    // Restituisci i preventivi e indica che il supervisor deve decidere il prossimo step
+    logger.log(`✅ [Pricing Worker] Trovati ${optionsWithFee.length} preventivi (+ fee €${DEFAULT_PLATFORM_FEE.toFixed(2)})`);
+    
+    // Restituisci i preventivi con fee inclusa
+    // NOTA: Il preventivo include già la platform fee MVP (€0.50)
+    // La fee reale potrebbe essere diversa per utenti con tariffe personalizzate
     return {
-      pricing_options: pricingOptions,
+      pricing_options: optionsWithFee,
       next_step: 'END', // Il supervisor deciderà se servono più iterazioni
       processingStatus: 'complete',
+      // Disclaimer per l'utente: la fee potrebbe variare
+      // Questo non è un clarification_request ma un'info aggiuntiva
     };
     
   } catch (error: unknown) {

@@ -22,6 +22,7 @@ import { logBookingAttempt, logBookingSuccess, logBookingFailed } from '@/lib/te
 import { generateTraceId } from '@/lib/telemetry/logger';
 import { defaultLogger, type ILogger } from '../logger';
 import { bookingConfig, parcelDefaults } from '@/lib/config';
+import { getPlatformFeeSafe, DEFAULT_PLATFORM_FEE } from '@/lib/services/pricing/platform-fee';
 
 // ==================== TYPES ====================
 
@@ -50,6 +51,13 @@ export interface BookingResult {
   /** Label PDF/ZPL (se disponibile) */
   label_data?: string;
   label_format?: 'PDF' | 'ZPL';
+  
+  /** Breakdown costi (Sprint 2.7: Platform Fee) */
+  cost_breakdown?: {
+    courier_cost: number;
+    platform_fee: number;
+    total_charged: number;
+  };
 }
 
 /**
@@ -235,6 +243,21 @@ export async function bookingWorker(
     // 3. Log tentativo
     logBookingAttempt(traceId, state.userId, selectedOption?.courier || 'unknown');
     
+    // ========================================
+    // 3.5 PLATFORM FEE (Sprint 2.7)
+    // ========================================
+    // Recupera platform fee dinamica per l'utente
+    const courierCost = selectedOption?.finalPrice || 0;
+    const platformFee = await getPlatformFeeSafe(state.userId);
+    const totalWalletDebit = courierCost + platformFee;
+    
+    logger.log('💰 [Booking Worker] Cost breakdown:', {
+      courierCost,
+      platformFee,
+      totalWalletDebit,
+      userId: state.userId?.substring(0, 8) + '...', // NO PII: solo prefix
+    });
+    
     // 4. Prepara dati per l'adapter
     const shipmentData = mapDraftToShipmentData(
       state.shipmentDraft!,
@@ -242,6 +265,10 @@ export async function bookingWorker(
       state.userId,
       state.userEmail
     );
+    
+    // Aggiungi platform fee ai dati per wallet debit
+    shipmentData.platform_fee = platformFee;
+    shipmentData.total_wallet_debit = totalWalletDebit;
     
     // 5. Chiama adapter SpedisciOnline
     // NOTA: Usiamo import dinamico per evitare dipendenze circolari
@@ -262,8 +289,19 @@ export async function bookingWorker(
         durationMs
       );
       
+      // Aggiungi cost breakdown al risultato
+      const bookingResultWithCosts: BookingResult = {
+        ...result,
+        cost_breakdown: {
+          courier_cost: courierCost,
+          platform_fee: platformFee,
+          total_charged: totalWalletDebit,
+        },
+        user_message: `Spedizione prenotata con successo! Tracking: ${result.carrier_reference || result.shipment_id}. Addebitato: €${totalWalletDebit.toFixed(2)} (corriere: €${courierCost.toFixed(2)} + fee: €${platformFee.toFixed(2)})`,
+      };
+      
       return {
-        booking_result: result,
+        booking_result: bookingResultWithCosts,
         shipmentId: result.shipment_id,
         next_step: 'END',
         processingStatus: 'complete',
