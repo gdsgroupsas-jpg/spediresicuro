@@ -101,7 +101,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     
     auth = authModule.auth as ReturnType<typeof vi.fn>;
     detectPricingIntent = intentModule.detectPricingIntent as ReturnType<typeof vi.fn>;
-    pricingGraph = graphModule.pricingGraph as { invoke: ReturnType<typeof vi.fn> };
+    pricingGraph = graphModule.pricingGraph as unknown as { invoke: ReturnType<typeof vi.fn> };
     buildContext = contextModule.buildContext as ReturnType<typeof vi.fn>;
     getCachedContext = cacheModule.getCachedContext as ReturnType<typeof vi.fn>;
     

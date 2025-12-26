@@ -17,6 +17,13 @@ import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { pricingGraph } from '@/lib/agent/orchestrator/pricing-graph';
 import { AgentState } from '@/lib/agent/orchestrator/state';
 import { HumanMessage } from '@langchain/core/messages';
+import { 
+  generateTraceId, 
+  logIntentDetected, 
+  logUsingPricingGraph, 
+  logGraphFailed, 
+  logFallbackToLegacy 
+} from '@/lib/telemetry/logger';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
@@ -87,6 +94,7 @@ function formatToolsForAnthropic() {
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const traceId = generateTraceId(); // Genera trace_id per telemetria
   let session: any = null;
   let anthropicApiKey: string | undefined = undefined;
   
@@ -159,9 +167,12 @@ export async function POST(request: NextRequest) {
     let isPricingIntent = false;
     try {
       isPricingIntent = await detectPricingIntent(cleanMessage, false); // Usa pattern matching veloce
+      // Telemetria: log intent detection
+      logIntentDetected(traceId, userId as string, isPricingIntent);
     } catch (intentError: any) {
       console.error('❌ [Anne] Errore intent detector, fallback a legacy:', intentError);
       isPricingIntent = false; // SAFE: In caso di errore, usa legacy
+      logIntentDetected(traceId, userId as string, false);
     }
     
     if (isPricingIntent) {
@@ -182,7 +193,15 @@ export async function POST(request: NextRequest) {
         };
         
         // Esegui il grafo
+        const graphStartTime = Date.now();
         const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+        const graphExecutionTime = Date.now() - graphStartTime;
+        
+        // Telemetria: log uso pricing graph
+        const pricingOptionsCount = (result.pricing_options && Array.isArray(result.pricing_options)) 
+          ? result.pricing_options.length 
+          : 0;
+        logUsingPricingGraph(traceId, userId as string, graphExecutionTime, pricingOptionsCount);
         
         // Formatta risposta
         let responseMessage = '';
@@ -215,27 +234,32 @@ export async function POST(request: NextRequest) {
           responseMessage = 'Mi dispiace, non sono riuscito a calcolare un preventivo. Puoi fornirmi peso, CAP e provincia di destinazione?';
         }
         
-        // Restituisci risposta
+        // Restituisci risposta (NO PII nei metadata)
         return NextResponse.json({
           success: true,
           message: responseMessage,
           metadata: {
-            userId,
-            userRole,
+            trace_id: traceId, // Trace ID per telemetria
+            userRole, // Role è OK (non PII)
             timestamp: new Date().toISOString(),
             isMock: false,
             toolCalls: 0,
             executionTime: Date.now() - startTime,
             rateLimitRemaining: rateLimit.remaining,
             usingPricingGraph: true,
-            pricingOptionsCount: (result.pricing_options && Array.isArray(result.pricing_options)) ? result.pricing_options.length : 0,
+            pricingOptionsCount: pricingOptionsCount,
+            // NO userId, NO email nei metadata (PII)
           }
         });
         
       } catch (pricingError: any) {
         console.error('❌ [Anne] Errore Pricing Graph:', pricingError);
+        // Telemetria: log errore graph
+        logGraphFailed(traceId, pricingError, userId as string);
         // Fallback a codice legacy se il grafo fallisce
         console.log('⚠️ [Anne] Fallback a codice legacy dopo errore Pricing Graph');
+        // Telemetria: log fallback
+        logFallbackToLegacy(traceId, userId as string, 'graph_failed');
         // Continua con il codice legacy sotto
       }
     }
@@ -604,6 +628,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log audit (solo se admin o in caso di errori)
+    // NOTA: user_id nel DB è OK (necessario per audit), ma non va nei log strutturati
     if (isAdmin || !isMock) {
       try {
         await supabaseAdmin.from('audit_logs').insert({
@@ -611,10 +636,12 @@ export async function POST(request: NextRequest) {
           severity: 'info',
           message: 'Anne conversation completed',
           metadata: {
-            userRole,
+            trace_id: traceId, // Trace ID per telemetria
+            userRole, // Role è OK (non PII)
             isMock,
             toolCallsCount: toolCalls.length,
             executionTime: Date.now() - startTime,
+            // NO email, NO userName nei metadata (PII)
           },
         });
       } catch (logError) {
@@ -629,19 +656,26 @@ export async function POST(request: NextRequest) {
       aiResponse = `Ciao ${userName}! 👋\n\nMi dispiace, non sono riuscita a generare una risposta. Riprova tra qualche secondo.`;
     }
 
-    // Restituisci risposta JSON
+    // Telemetria: log fallback legacy (se non è già stato loggato)
+    if (!isPricingIntent) {
+      logFallbackToLegacy(traceId, userId as string, 'no_pricing_intent');
+    }
+    
+    // Restituisci risposta JSON (NO PII nei metadata)
     return NextResponse.json({
       success: true,
       message: aiResponse,
       metadata: {
-        userId,
-        userRole,
+        trace_id: traceId, // Trace ID per telemetria
+        userRole, // Role è OK (non PII)
         timestamp: new Date().toISOString(),
         isMock,
         toolCalls: toolCalls.length,
         executionTime: Date.now() - startTime,
         rateLimitRemaining: rateLimit.remaining,
         usingClaude: !isMock && !!claudeClient,
+        usingPricingGraph: false, // Legacy path
+        // NO userId, NO email nei metadata (PII)
       }
     }, {
       // ⚠️ Assicura che la risposta sia sempre JSON valido
