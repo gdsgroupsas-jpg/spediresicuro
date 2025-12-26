@@ -77,7 +77,7 @@ SpedireSicuro is a **Next.js 14** application with **App Router** architecture, 
 
 ### AI/Automation
 - **Google Gemini 2.0 Flash** - Multimodal AI (text + vision)
-- **LangGraph** - AI workflow orchestration (planned, not live)
+- **LangGraph** - AI workflow orchestration (LIVE - Agent Orchestrator)
 - **Puppeteer** - Browser automation (external service)
 
 ### Payments
@@ -290,7 +290,117 @@ export async function getShippingProvider(
 
 ---
 
-### 5. RLS (Row Level Security)
+### 5. Agent Orchestrator (LangGraph Supervisor)
+
+**Problem:** Gestire richieste complesse multi-step (preventivi, normalizzazione indirizzi, booking) con decisioni dinamiche basate su stato.
+
+**Solution:** Architettura LangGraph Supervisor con worker specializzati e Single Decision Point.
+
+**Architettura Logica:**
+```
+User Input (messaggio)
+    │
+    ▼
+supervisorRouter()  ← Entry point UNICO
+    │
+    ├─── Intent Detection (pricing vs non-pricing)
+    ├─── OCR Pattern Detection
+    ├─── Booking Confirmation Detection
+    │
+    ▼
+supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
+    │
+    ├─── next_step: 'ocr_worker' → OCR Worker
+    ├─── next_step: 'address_worker' → Address Worker
+    ├─── next_step: 'pricing_worker' → Pricing Worker
+    ├─── next_step: 'booking_worker' → Booking Worker
+    ├─── next_step: 'legacy' → Claude Legacy Handler
+    └─── next_step: 'END' → Risposta finale
+```
+
+**Componenti:**
+
+1. **Supervisor Router** (`lib/agent/orchestrator/supervisor-router.ts`)
+   - Entry point unico per `/api/ai/agent-chat`
+   - Rileva intent, pattern OCR, conferma booking
+   - Invoca pricing graph o legacy handler
+   - Emette telemetria finale (`supervisorRouterComplete`)
+
+2. **Supervisor** (`lib/agent/orchestrator/supervisor.ts`)
+   - `decideNextStep()` - Funzione pura, SINGLE DECISION POINT
+   - Estrae dati spedizione dal messaggio (LLM opzionale, fallback regex)
+   - Determina routing basato su stato e intent
+   - **Nessun altro componente decide routing**
+
+3. **Pricing Graph** (`lib/agent/orchestrator/pricing-graph.ts`)
+   - LangGraph StateGraph con nodi: supervisor, ocr_worker, address_worker, pricing_worker, booking_worker
+   - Conditional edges basati su `next_step` dallo stato
+   - MAX_ITERATIONS guard (2) per prevenire loop infiniti
+   - Configurazione: `lib/config.ts` (`graphConfig.MAX_ITERATIONS`)
+
+4. **Worker Specializzati:**
+   - **Address Worker** (`lib/agent/workers/address.ts`) - Normalizza indirizzi italiani (CAP, provincia, città)
+   - **Pricing Worker** (`lib/agent/workers/pricing.ts`) - Calcola preventivi multi-corriere
+   - **OCR Worker** (`lib/agent/workers/ocr.ts`) - Estrae dati da testo OCR (immagini: placeholder)
+   - **Booking Worker** (`lib/agent/workers/booking.ts`) - Prenota spedizioni (preflight + adapter)
+
+**State Management:**
+- `AgentState` (`lib/agent/orchestrator/state.ts`) - Stato centralizzato con:
+  - `shipmentDraft` - Bozza progressiva (merge non distruttivo)
+  - `pricing_options` - Risultati calcolo preventivi
+  - `booking_result` - Risultato prenotazione
+  - `next_step` - Prossimo worker da eseguire
+  - `clarification_request` - Richiesta dati mancanti
+
+**Safety Invariants (CRITICO):**
+
+1. **No Silent Booking**
+   - Booking richiede conferma esplicita utente (`containsBookingConfirmation()`)
+   - Pattern: "procedi", "conferma", "ok prenota", "sì procedi"
+   - Verifica: `grep -r "containsBookingConfirmation\|booking_worker" lib/agent/orchestrator/supervisor.ts`
+
+2. **Pre-flight Check Obbligatorio**
+   - Booking worker esegue `preflightCheck()` prima di chiamare adapter
+   - Verifica: recipient completo, parcel completo, pricing_option, idempotency_key
+   - Se fallisce: ritorna `PREFLIGHT_FAILED`, no adapter call
+   - Verifica: `grep -A5 "preflightCheck" lib/agent/workers/booking.ts`
+
+3. **Single Decision Point**
+   - Solo `supervisor.ts` imposta `next_step`
+   - Altri componenti non decidono routing autonomamente
+   - Verifica: `grep -r "next_step.*=" lib/agent/orchestrator/ lib/agent/workers/ | grep -v "supervisor.ts"`
+
+4. **No PII nei Log**
+   - Mai loggare `addressLine1`, `postalCode`, `fullName`, `phone`, testo OCR raw
+   - Solo `trace_id`, `user_id_hash`, conteggi
+   - Verifica: `grep -r "logger\.\(log\|info\|warn\|error\)" lib/agent/ | grep -i "addressLine\|postalCode\|fullName\|phone"`
+
+**Known Limits:**
+- LangGraph typing constraints: alcuni cast `as any` necessari per nomi nodi (documentati in codice)
+- OCR immagini: placeholder, ritorna clarification request (TODO Sprint 2.5)
+- MAX_ITERATIONS: limite hardcoded a 2 (configurabile in `lib/config.ts`)
+
+**Files:**
+- `lib/agent/orchestrator/supervisor-router.ts` - Entry point
+- `lib/agent/orchestrator/supervisor.ts` - Decision logic
+- `lib/agent/orchestrator/pricing-graph.ts` - LangGraph workflow
+- `lib/agent/orchestrator/state.ts` - AgentState type
+- `lib/agent/workers/*.ts` - Worker implementations
+- `lib/config.ts` - Configurazione centralizzata (MAX_ITERATIONS, etc.)
+- `MIGRATION_MEMORY.md` - Documentazione completa migrazione e stato
+
+**Verifica Componenti:**
+```bash
+# Windows PowerShell
+Get-ChildItem lib/agent/orchestrator/ | Select-Object Name
+Get-ChildItem lib/agent/workers/ | Select-Object Name
+# Expected: supervisor-router.ts, supervisor.ts, pricing-graph.ts, state.ts
+# Expected: address.ts, pricing.ts, ocr.ts, booking.ts
+```
+
+---
+
+### 6. RLS (Row Level Security)
 
 **Problem:** Ensure users can only see their own data.
 
@@ -323,7 +433,7 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 
 ---
 
-### 6. Listini Avanzati (Advanced Price Lists)
+### 7. Listini Avanzati (Advanced Price Lists)
 
 **Problem:** Resellers need custom pricing per customer.
 
@@ -344,7 +454,7 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 
 ---
 
-### 7. Compensation Queue (Failure Recovery)
+### 8. Compensation Queue (Failure Recovery)
 
 **Problem:** Shipment created on courier API, but DB insert fails → orphan.
 
@@ -393,14 +503,14 @@ try {
 - ✅ **Courier Configs** - Encrypted credential storage
 
 ### Partially Implemented (Infrastructure Ready, UI Missing)
-- 🟡 **AI Anne Chat** - Backend ready, chat UI not built
+- 🟡 **AI Anne Chat UI** - Backend orchestrator completo, chat UI non costruita
 - 🟡 **Smart Top-Up OCR** - Gemini Vision integration exists, not exposed
 - 🟡 **Invoice System** - Tables exist, PDF generation missing
 - 🟡 **XPay Payments** - Integration ready, not enabled
 - 🟡 **Doctor Service** - Diagnostics logging active, UI dashboard missing
 
 ### Planned (Backlog)
-- 📋 **LangGraph Workflows** - AI agent orchestration
+- 📋 **OCR Immagini** - Supporto completo per estrazione dati da immagini (attualmente placeholder)
 - 📋 **Fiscal Brain** - F24, LIPE tracking
 - 📋 **Multi-Region** - Database sharding
 - 📋 **Mobile App** - React Native
