@@ -126,6 +126,25 @@
 - [x] **Test:** 30 test integration nel file `tests/integration/booking-worker.test.ts`
 - [x] **Build:** TypeScript type-check passa
 
+### ✅ REFACTORING SPRINT: DEBITO ARCHITETTURALE P1 (COMPLETATO)
+- [x] **P1-1: Logging Disaccoppiato**
+  - Creata interfaccia `ILogger` in `lib/agent/logger.ts`
+  - Implementazione default `ConsoleLogger` e `NullLogger` per test
+  - Sostituiti tutti i `console.log/warn/error` nei worker con `logger.*`
+  - Worker ora accettano `logger` come parametro opzionale (default: `defaultLogger`)
+  - Wrapper per LangGraph che passano solo `state` (LangGraph non supporta parametri aggiuntivi)
+- [x] **P1-2: Rimozione Duplicazione Sync/Async**
+  - Estratta logica core condivisa in `processAddressCore()` e `processOcrCore()`
+  - `processAddressSync()` e `processOcrSync()` ora usano la stessa logica dei worker async
+  - Eliminata duplicazione di codice tra versioni sync e async
+- [x] **P1-3: Type Safety Hardening**
+  - Migliorato cast in `supervisor-router.ts` con commento esplicativo
+  - Sostituito `as any` in `nodes.ts` con tipo esplicito `CorrierePerformance`
+  - Documentati `as any` necessari in `pricing-graph.ts` (limiti LangGraph)
+  - Sostituiti `error: any` con `error: unknown` e type guards appropriati
+- [x] **Test Suite:** 193 unit + 90 integration = 283 test, tutti verdi
+- [x] **Type Check:** `tsc --noEmit` passa senza errori
+
 ### 🟡 FASE 2.5: OCR IMMAGINI (NEXT)
 - [ ] **Vision Support:**
   - Implementare processamento immagini in `ocrWorker` (attualmente placeholder)
