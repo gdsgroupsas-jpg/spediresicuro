@@ -2,6 +2,7 @@ import { BaseMessage } from '@langchain/core/messages';
 import { Shipment, CourierServiceType, RecipientType } from '@/types/shipments';
 import { PricingResult } from '@/lib/ai/pricing-engine';
 import { ShipmentDraft } from '@/lib/address/shipment-draft';
+import { BookingResult } from '@/lib/agent/workers/booking';
 
 export interface AgentState {
   // Messaggi della conversazione (per debugging e chat history)
@@ -55,9 +56,10 @@ export interface AgentState {
   // 'pricing_worker' = calcola preventivo con pricing graph
   // 'address_worker' = normalizza indirizzi e raccoglie dati mancanti (Sprint 2.3)
   // 'ocr_worker' = estrai dati da immagine/testo OCR (Sprint 2.4)
+  // 'booking_worker' = prenota spedizione dopo conferma utente (Sprint 2.6)
   // 'legacy' = usa handler Claude legacy (non-pricing o fallback)
   // 'END' = risposta pronta, termina
-  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'END';
+  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'legacy' | 'END';
   
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;
@@ -73,4 +75,12 @@ export interface AgentState {
    * Contiene missingFields per sapere cosa manca.
    */
   shipmentDraft?: ShipmentDraft;
+  
+  // ===== SPRINT 2.6: BOOKING =====
+  
+  /**
+   * Risultato della prenotazione.
+   * Popolato da booking_worker dopo tentativo di prenotazione.
+   */
+  booking_result?: BookingResult;
 }

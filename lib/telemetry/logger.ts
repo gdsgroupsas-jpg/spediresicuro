@@ -233,12 +233,12 @@ export function logRequestCompleted(
 export type IntentType = 'pricing' | 'non_pricing' | 'unknown';
 export type BackendUsed = 'pricing_graph' | 'legacy';
 export type FallbackReason = 'graph_error' | 'non_pricing' | 'unknown_intent' | 'intent_error' | 'address_unparsable' | null;
-export type WorkerRun = 'address' | 'pricing' | 'ocr' | null;
+export type WorkerRun = 'address' | 'pricing' | 'ocr' | 'booking' | null;
 export type OcrSource = 'image' | 'text' | null;
 
 export interface SupervisorRouterTelemetry {
   intentDetected: IntentType;
-  supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'end';
+  supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'legacy' | 'end';
   backendUsed: BackendUsed;
   fallbackToLegacy: boolean;
   fallbackReason: FallbackReason;
@@ -255,6 +255,9 @@ export interface SupervisorRouterTelemetry {
   // Sprint 2.4: OCR Worker telemetry
   ocrSource?: OcrSource;
   ocrExtractedFieldsCount?: number;
+  
+  // Sprint 2.6: Booking Worker telemetry
+  bookingStatus?: 'success' | 'failed' | 'retryable' | null;
 }
 
 /**
@@ -294,6 +297,68 @@ export function logSupervisorRouterComplete(
   });
 }
 
+// ====== EVENTI BOOKING (Sprint 2.6) ======
+
+/**
+ * Log: Booking Attempt
+ * Evento quando si tenta una prenotazione
+ */
+export function logBookingAttempt(
+  traceId: string,
+  userId: string,
+  carrier: string
+): void {
+  logStructured('info', {
+    event: 'bookingAttempt',
+    trace_id: traceId,
+    timestamp: new Date().toISOString(),
+    user_id_hash: hashUserId(userId),
+    carrier,
+  });
+}
+
+/**
+ * Log: Booking Success
+ * Evento quando la prenotazione ha successo
+ */
+export function logBookingSuccess(
+  traceId: string,
+  userId: string,
+  carrier: string,
+  shipmentId: string,
+  durationMs: number
+): void {
+  logStructured('info', {
+    event: 'bookingSuccess',
+    trace_id: traceId,
+    timestamp: new Date().toISOString(),
+    user_id_hash: hashUserId(userId),
+    carrier,
+    shipment_id: shipmentId,
+    duration_ms: durationMs,
+  });
+}
+
+/**
+ * Log: Booking Failed
+ * Evento quando la prenotazione fallisce
+ */
+export function logBookingFailed(
+  traceId: string,
+  userId: string,
+  failureReason: string,
+  durationMs: number
+): void {
+  logStructured('warn', {
+    event: 'bookingFailed',
+    trace_id: traceId,
+    timestamp: new Date().toISOString(),
+    user_id_hash: hashUserId(userId),
+    failure_reason: failureReason,
+    duration_ms: durationMs,
+  });
+}
+
 // ====== EXPORT AGGREGATO ======
 export const telemetry = {
   generateTraceId,
@@ -305,6 +370,10 @@ export const telemetry = {
   logSupervisorDecision,
   logRequestCompleted,
   logSupervisorRouterComplete,
+  // Sprint 2.6: Booking
+  logBookingAttempt,
+  logBookingSuccess,
+  logBookingFailed,
 };
 
 export default telemetry;
