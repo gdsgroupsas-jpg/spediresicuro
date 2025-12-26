@@ -32,16 +32,6 @@ describe('Supervisor Decision - decideNextStep', () => {
       expect(decideNextStep(input)).toBe('END');
     });
 
-    it('should return END when isPricingIntent but NOT hasEnoughData', () => {
-      const input: DecisionInput = {
-        isPricingIntent: true,
-        hasPricingOptions: false,
-        hasClarificationRequest: false,
-        hasEnoughData: false,
-      };
-      
-      expect(decideNextStep(input)).toBe('END');
-    });
   });
 
   describe('pricing_worker routing', () => {
@@ -54,6 +44,31 @@ describe('Supervisor Decision - decideNextStep', () => {
       };
       
       expect(decideNextStep(input)).toBe('pricing_worker');
+    });
+  });
+
+  describe('address_worker routing (Sprint 2.3)', () => {
+    it('should return address_worker when isPricingIntent but NOT hasEnoughData', () => {
+      const input: DecisionInput = {
+        isPricingIntent: true,
+        hasPricingOptions: false,
+        hasClarificationRequest: false,
+        hasEnoughData: false,
+      };
+      
+      expect(decideNextStep(input)).toBe('address_worker');
+    });
+
+    it('should return address_worker when isPricingIntent and hasPartialAddressData but NOT hasEnoughData', () => {
+      const input: DecisionInput = {
+        isPricingIntent: true,
+        hasPricingOptions: false,
+        hasClarificationRequest: false,
+        hasEnoughData: false,
+        hasPartialAddressData: true,
+      };
+      
+      expect(decideNextStep(input)).toBe('address_worker');
     });
   });
 

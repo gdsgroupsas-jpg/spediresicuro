@@ -1,6 +1,7 @@
 import { BaseMessage } from '@langchain/core/messages';
 import { Shipment, CourierServiceType, RecipientType } from '@/types/shipments';
 import { PricingResult } from '@/lib/ai/pricing-engine';
+import { ShipmentDraft } from '@/lib/address/shipment-draft';
 
 export interface AgentState {
   // Messaggi della conversazione (per debugging e chat history)
@@ -52,13 +53,23 @@ export interface AgentState {
   
   // Prossimo step da eseguire (deciso dal supervisor)
   // 'pricing_worker' = calcola preventivo con pricing graph
+  // 'address_worker' = normalizza indirizzi e raccoglie dati mancanti (Sprint 2.3)
   // 'legacy' = usa handler Claude legacy (non-pricing o fallback)
   // 'END' = risposta pronta, termina
-  next_step?: 'pricing_worker' | 'legacy' | 'END';
+  next_step?: 'pricing_worker' | 'address_worker' | 'legacy' | 'END';
   
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;
   
   // Contatore iterazioni per prevenire loop infiniti
   iteration_count?: number;
+  
+  // ===== SPRINT 2.3: SHIPMENT DRAFT =====
+  
+  /**
+   * Bozza spedizione con dati normalizzati.
+   * Usato da address_worker per raccogliere dati progressivamente.
+   * Contiene missingFields per sapere cosa manca.
+   */
+  shipmentDraft?: ShipmentDraft;
 }
