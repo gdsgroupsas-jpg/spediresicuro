@@ -87,7 +87,7 @@ describe('Pricing Graph Routing', () => {
 
       vi.mocked(supervisor).mockResolvedValueOnce({
         clarification_request: clarificationMsg,
-        next_step: 'request_clarification',
+        next_step: 'END', // Ora supervisor ritorna END con clarification_request
         processingStatus: 'idle',
       });
 
