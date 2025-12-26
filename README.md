@@ -1,7 +1,7 @@
 # 📦 SpedireSicuro.it - Logistics Operating System
 
 > **Version:** 3.0.0 (Logistics OS Architecture)  
-> **Last Updated:** December 23, 2025  
+> **Last Updated:** December 26, 2025  
 > **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared
 
 ---
@@ -608,6 +608,6 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 
 ---
 
-_Last updated: December 23, 2025_  
+_Last updated: December 26, 2025_  
 _Architecture Version: 3.0.0 (Logistics OS)_  
 _Status: 🟡 In Development / Testing_
