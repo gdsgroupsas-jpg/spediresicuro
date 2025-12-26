@@ -20,6 +20,7 @@ import {
   hasEnoughDataForPricing,
 } from '@/lib/address/shipment-draft';
 import { extractAndMerge, extractAddressDataFromText } from '@/lib/address/normalize-it-address';
+import { defaultLogger, type ILogger } from '../logger';
 
 // ==================== TIPI ====================
 
@@ -66,6 +67,34 @@ function generateClarificationQuestion(missingFields: string[]): string {
   return `Per procedere ho bisogno di: **${missingLabels.join(', ')}** e **${lastLabel}**.`;
 }
 
+// ==================== CORE LOGIC (CONSOLIDATA) ====================
+
+/**
+ * Logica core condivisa per estrazione e decisione next step.
+ * Elimina duplicazione tra versione async e sync.
+ */
+function processAddressCore(
+  messageText: string,
+  existingDraft?: ShipmentDraft
+): {
+  updatedDraft: ShipmentDraft;
+  missingFields: string[];
+  extractedAnything: boolean;
+  readyForPricing: boolean;
+} {
+  const updatedDraft = extractAndMerge(messageText, existingDraft);
+  const { extractedAnything } = extractAddressDataFromText(messageText);
+  const missingFields = calculateMissingFieldsForPricing(updatedDraft);
+  const readyForPricing = hasEnoughDataForPricing(updatedDraft);
+  
+  return {
+    updatedDraft,
+    missingFields,
+    extractedAnything,
+    readyForPricing,
+  };
+}
+
 // ==================== MAIN WORKER ====================
 
 /**
@@ -75,8 +104,11 @@ function generateClarificationQuestion(missingFields: string[]): string {
  * Merge con dati esistenti (non distruttivo).
  * Determina se procedere a pricing o chiedere chiarimenti.
  */
-export async function addressWorker(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('📍 [Address Worker] Esecuzione...');
+export async function addressWorker(
+  state: AgentState,
+  logger: ILogger = defaultLogger
+): Promise<Partial<AgentState>> {
+  logger.log('📍 [Address Worker] Esecuzione...');
   
   try {
     // Estrai ultimo messaggio utente
@@ -86,30 +118,28 @@ export async function addressWorker(state: AgentState): Promise<Partial<AgentSta
       : '';
     
     if (!messageText.trim()) {
-      console.warn('⚠️ [Address Worker] Messaggio vuoto');
+      logger.warn('⚠️ [Address Worker] Messaggio vuoto');
       return {
         clarification_request: 'Non ho ricevuto informazioni. Puoi indicarmi CAP, città e peso del pacco?',
         next_step: 'END',
       };
     }
     
-    // Estrai dati dal messaggio e merge con esistenti
-    const existingDraft = state.shipmentDraft;
-    const updatedDraft = extractAndMerge(messageText, existingDraft);
-    
-    // Verifica cosa è stato estratto
-    const { extractedAnything } = extractAddressDataFromText(messageText);
+    // Usa logica core condivisa
+    const { updatedDraft, missingFields, extractedAnything } = processAddressCore(
+      messageText,
+      state.shipmentDraft
+    );
     
     // Log telemetria (NO PII)
-    console.log(`📍 [Address Worker] Estratto: ${extractedAnything ? 'sì' : 'no'}, campi mancanti: ${updatedDraft.missingFields.length}`);
+    logger.log(`📍 [Address Worker] Estratto: ${extractedAnything ? 'sì' : 'no'}, campi mancanti: ${updatedDraft.missingFields.length}`);
     
-    // Calcola campi mancanti per pricing
-    const missingFields = calculateMissingFieldsForPricing(updatedDraft);
+    // Decidi prossimo step usando logica core
+    const readyForPricing = hasEnoughDataForPricing(updatedDraft);
     
-    // Decidi prossimo step
-    if (hasEnoughDataForPricing(updatedDraft)) {
+    if (readyForPricing) {
       // Abbiamo abbastanza dati -> pricing worker
-      console.log('✅ [Address Worker] Dati sufficienti, routing a pricing_worker');
+      logger.log('✅ [Address Worker] Dati sufficienti, routing a pricing_worker');
       
       // Sincronizza shipment_details per compatibilità con pricing worker
       return {
@@ -126,7 +156,7 @@ export async function addressWorker(state: AgentState): Promise<Partial<AgentSta
     
     // Mancano dati -> genera clarification
     const clarificationQuestion = generateClarificationQuestion(missingFields);
-    console.log(`⚠️ [Address Worker] Dati insufficienti, chiedo: ${missingFields.join(', ')}`);
+    logger.log(`⚠️ [Address Worker] Dati insufficienti, chiedo: ${missingFields.join(', ')}`);
     
     return {
       shipmentDraft: updatedDraft,
@@ -135,28 +165,28 @@ export async function addressWorker(state: AgentState): Promise<Partial<AgentSta
       processingStatus: 'idle',
     };
     
-  } catch (error: any) {
-    console.error('❌ [Address Worker] Errore:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [Address Worker] Errore:', errorMessage);
     return {
       clarification_request: 'Mi dispiace, non sono riuscita a elaborare i dati. Puoi riprovare indicando CAP, città e peso?',
       next_step: 'END',
       processingStatus: 'error',
-      validationErrors: [...(state.validationErrors || []), error.message],
+      validationErrors: [...(state.validationErrors || []), errorMessage],
     };
   }
 }
 
 /**
  * Versione sincrona per uso in unit test o pre-elaborazione
+ * Usa la stessa logica core della versione async
  */
 export function processAddressSync(
   message: string, 
   existingDraft?: ShipmentDraft
 ): AddressWorkerResult {
-  const updatedDraft = extractAndMerge(message, existingDraft);
-  const { extractedAnything } = extractAddressDataFromText(message);
-  const missingFields = calculateMissingFieldsForPricing(updatedDraft);
-  const readyForPricing = hasEnoughDataForPricing(updatedDraft);
+  const { updatedDraft, missingFields, extractedAnything, readyForPricing } = 
+    processAddressCore(message, existingDraft);
   
   return {
     shipmentDraft: updatedDraft,

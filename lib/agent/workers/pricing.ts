@@ -8,6 +8,7 @@
 
 import { AgentState } from '../orchestrator/state';
 import { calculateOptimalPrice, PricingRequest } from '@/lib/ai/pricing-engine';
+import { defaultLogger, type ILogger } from '../logger';
 
 /**
  * Valida se abbiamo abbastanza dati per calcolare un preventivo
@@ -69,8 +70,11 @@ function extractPricingDataFromState(state: AgentState): PricingRequest | null {
  * Calcola i preventivi usando il pricing-engine esistente.
  * Se mancano dati, restituisce una richiesta di chiarimento.
  */
-export async function pricingWorker(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('🔄 [Pricing Worker] Esecuzione...');
+export async function pricingWorker(
+  state: AgentState,
+  logger: ILogger = defaultLogger
+): Promise<Partial<AgentState>> {
+  logger.log('🔄 [Pricing Worker] Esecuzione...');
   
   try {
     // Estrai dati per il preventivo
@@ -88,7 +92,7 @@ export async function pricingWorker(state: AgentState): Promise<Partial<AgentSta
     }
     
     // Chiama il pricing-engine legacy
-    console.log('💰 [Pricing Worker] Calcolo preventivo con:', pricingRequest);
+    logger.log('💰 [Pricing Worker] Calcolo preventivo con:', pricingRequest);
     const pricingOptions = await calculateOptimalPrice(pricingRequest);
     
     if (pricingOptions.length === 0) {
@@ -99,7 +103,7 @@ export async function pricingWorker(state: AgentState): Promise<Partial<AgentSta
       };
     }
     
-    console.log(`✅ [Pricing Worker] Trovati ${pricingOptions.length} preventivi`);
+    logger.log(`✅ [Pricing Worker] Trovati ${pricingOptions.length} preventivi`);
     
     // Restituisci i preventivi e indica che il supervisor deve decidere il prossimo step
     return {
@@ -108,13 +112,14 @@ export async function pricingWorker(state: AgentState): Promise<Partial<AgentSta
       processingStatus: 'complete',
     };
     
-  } catch (error: any) {
-    console.error('❌ [Pricing Worker] Errore:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [Pricing Worker] Errore:', errorMessage);
     return {
-      clarification_request: `Errore nel calcolo preventivo: ${error.message}. Riprova o contatta il supporto.`,
+      clarification_request: `Errore nel calcolo preventivo: ${errorMessage}. Riprova o contatta il supporto.`,
       next_step: 'END', // Termina con clarification_request popolato
       processingStatus: 'error',
-      validationErrors: [...(state.validationErrors || []), error.message],
+      validationErrors: [...(state.validationErrors || []), errorMessage],
     };
   }
 }

@@ -20,6 +20,7 @@ import { ShipmentDraft } from '@/lib/address/shipment-draft';
 import { PricingResult } from '@/lib/ai/pricing-engine';
 import { logBookingAttempt, logBookingSuccess, logBookingFailed } from '@/lib/telemetry/logger';
 import { generateTraceId } from '@/lib/telemetry/logger';
+import { defaultLogger, type ILogger } from '../logger';
 
 // ==================== TYPES ====================
 
@@ -184,8 +185,11 @@ export function containsBookingConfirmation(text: string): boolean {
  * @param state - Stato corrente dell'agente
  * @returns Partial<AgentState> con booking_result e next_step
  */
-export async function bookingWorker(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('📦 [Booking Worker] Inizio prenotazione...');
+export async function bookingWorker(
+  state: AgentState,
+  logger: ILogger = defaultLogger
+): Promise<Partial<AgentState>> {
+  logger.log('📦 [Booking Worker] Inizio prenotazione...');
   
   const traceId = generateTraceId();
   const startTime = Date.now();
@@ -209,7 +213,7 @@ export async function bookingWorker(state: AgentState): Promise<Partial<AgentSta
     );
     
     if (!preflight.passed) {
-      console.log('⚠️ [Booking Worker] Pre-flight fallito:', preflight.missing);
+      logger.log('⚠️ [Booking Worker] Pre-flight fallito:', preflight.missing);
       
       const bookingResult: BookingResult = {
         status: 'failed',
@@ -241,13 +245,13 @@ export async function bookingWorker(state: AgentState): Promise<Partial<AgentSta
     // 5. Chiama adapter SpedisciOnline
     // NOTA: Usiamo import dinamico per evitare dipendenze circolari
     // e per permettere il mock nei test
-    const result = await callBookingAdapter(shipmentData, idempotencyKey);
+    const result = await callBookingAdapter(shipmentData, idempotencyKey, logger);
     
     const durationMs = Date.now() - startTime;
     
     // 6. Mappa risultato
     if (result.status === 'success') {
-      console.log('✅ [Booking Worker] Prenotazione riuscita:', result.shipment_id);
+      logger.log('✅ [Booking Worker] Prenotazione riuscita:', result.shipment_id);
       
       logBookingSuccess(
         traceId, 
@@ -265,7 +269,7 @@ export async function bookingWorker(state: AgentState): Promise<Partial<AgentSta
         clarification_request: undefined, // Clear any previous clarification
       };
     } else if (result.status === 'retryable') {
-      console.log('⚠️ [Booking Worker] Errore temporaneo, riprovare:', result.error_code);
+      logger.log('⚠️ [Booking Worker] Errore temporaneo, riprovare:', result.error_code);
       
       logBookingFailed(traceId, state.userId, result.error_code || 'UNKNOWN_ERROR', durationMs);
       
@@ -276,7 +280,7 @@ export async function bookingWorker(state: AgentState): Promise<Partial<AgentSta
         processingStatus: 'error',
       };
     } else {
-      console.log('❌ [Booking Worker] Prenotazione fallita:', result.error_code);
+      logger.log('❌ [Booking Worker] Prenotazione fallita:', result.error_code);
       
       logBookingFailed(traceId, state.userId, result.error_code || 'UNKNOWN_ERROR', durationMs);
       
@@ -288,8 +292,9 @@ export async function bookingWorker(state: AgentState): Promise<Partial<AgentSta
       };
     }
     
-  } catch (error: any) {
-    console.error('❌ [Booking Worker] Errore:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [Booking Worker] Errore:', errorMessage);
     
     const durationMs = Date.now() - startTime;
     logBookingFailed(traceId, state.userId, 'UNKNOWN_ERROR', durationMs);
@@ -305,7 +310,7 @@ export async function bookingWorker(state: AgentState): Promise<Partial<AgentSta
       clarification_request: bookingResult.user_message,
       next_step: 'END',
       processingStatus: 'error',
-      validationErrors: [...(state.validationErrors || []), error.message],
+      validationErrors: [...(state.validationErrors || []), errorMessage],
     };
   }
 }
@@ -368,7 +373,8 @@ export function mapDraftToShipmentData(
  */
 async function callBookingAdapter(
   shipmentData: Record<string, any>,
-  idempotencyKey: string
+  idempotencyKey: string,
+  logger: ILogger = defaultLogger
 ): Promise<BookingResult> {
   try {
     // Import dinamico per evitare dipendenze circolari
@@ -425,15 +431,16 @@ async function callBookingAdapter(
       };
     }
     
-  } catch (error: any) {
-    console.error('❌ [Booking Adapter] Errore:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [Booking Adapter] Errore:', errorMessage);
     
     // Analizza errore per determinare se retryable
-    const isRetryable = isRetryableError(error.message);
+    const isRetryable = isRetryableError(errorMessage);
     
     return {
       status: isRetryable ? 'retryable' : 'failed',
-      error_code: mapAdapterError(error.message),
+      error_code: mapAdapterError(errorMessage),
       user_message: 'Errore durante la connessione al servizio di spedizione.',
       retry_after_ms: isRetryable ? 30000 : undefined,
     };
@@ -450,7 +457,8 @@ async function getBookingCredentials(userId: string): Promise<any | null> {
   const apiKey = process.env.SPEDISCI_ONLINE_API_KEY;
   
   if (!apiKey) {
-    console.warn('⚠️ [Booking] SPEDISCI_ONLINE_API_KEY non configurata');
+    // Usa defaultLogger qui perché questa funzione non riceve logger come parametro
+    defaultLogger.warn('⚠️ [Booking] SPEDISCI_ONLINE_API_KEY non configurata');
     return null;
   }
   
