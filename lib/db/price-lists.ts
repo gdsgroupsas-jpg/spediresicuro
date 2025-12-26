@@ -6,6 +6,7 @@
 
 import { supabase, supabaseAdmin } from './client';
 import type { PriceList, PriceListEntry, CreatePriceListInput, UpdatePriceListInput } from '@/types/listini';
+import { calculatePriceFromList } from '@/lib/pricing/calculator';
 
 // Re-export funzioni avanzate
 export { 
@@ -194,70 +195,25 @@ export async function calculatePrice(
 } | null> {
   const priceList = await getActivePriceList(courierId);
 
-  if (!priceList || !priceList.entries) {
+  // Usa la funzione pura per calcolare il prezzo (Single Source of Truth)
+  const result = calculatePriceFromList(
+    priceList,
+    weight,
+    destinationZip,
+    serviceType,
+    options
+  );
+
+  if (!result) {
     return null;
   }
 
-  // Trova la riga corrispondente
-  const entry = (priceList.entries as PriceListEntry[]).find(e => {
-    const weightMatch = weight >= e.weight_from && weight <= e.weight_to;
-    const serviceMatch = e.service_type === serviceType;
-
-    // Match ZIP se specificato
-    let zipMatch = true;
-    if (e.zip_code_from && e.zip_code_to) {
-      zipMatch = destinationZip >= e.zip_code_from && destinationZip <= e.zip_code_to;
-    }
-
-    return weightMatch && serviceMatch && zipMatch;
-  });
-
-  if (!entry) {
-    return null;
-  }
-
-  // Calcola prezzo
-  let basePrice = parseFloat(entry.base_price as any);
-  let surcharges = 0;
-
-  // Supplemento carburante
-  if (entry.fuel_surcharge_percent) {
-    surcharges += basePrice * (parseFloat(entry.fuel_surcharge_percent as any) / 100);
-  }
-
-  // Supplemento isole
-  if (entry.island_surcharge) {
-    surcharges += parseFloat(entry.island_surcharge as any);
-  }
-
-  // Supplemento ZTL
-  if (entry.ztl_surcharge) {
-    surcharges += parseFloat(entry.ztl_surcharge as any);
-  }
-
-  // Supplemento contrassegno
-  if (options?.cashOnDelivery && entry.cash_on_delivery_surcharge) {
-    surcharges += parseFloat(entry.cash_on_delivery_surcharge as any);
-  }
-
-  // Assicurazione
-  if (options?.insurance && options?.declaredValue && entry.insurance_rate_percent) {
-    surcharges += options.declaredValue * (parseFloat(entry.insurance_rate_percent as any) / 100);
-  }
-
-  const totalCost = basePrice + surcharges;
-
+  // Mappa il risultato al formato atteso dalla funzione async
   return {
-    basePrice,
-    surcharges,
-    totalCost,
-    details: {
-      entry,
-      estimatedDeliveryDays: {
-        min: entry.estimated_delivery_days_min,
-        max: entry.estimated_delivery_days_max,
-      },
-    },
+    basePrice: result.basePrice,
+    surcharges: result.surcharges,
+    totalCost: result.totalCost,
+    details: result.details,
   };
 }
 

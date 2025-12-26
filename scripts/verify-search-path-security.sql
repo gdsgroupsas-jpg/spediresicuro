@@ -131,3 +131,4 @@ WHERE p.prosecdef = true  -- SECURITY DEFINER
   AND n.nspname = 'public'  -- Solo schema public
 ORDER BY n.nspname, p.proname;
 
+
