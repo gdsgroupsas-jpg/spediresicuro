@@ -276,16 +276,31 @@ Il motore decide quale Adapter usare e quali credenziali iniettare (Master vs Ut
 - **Row Level Security (RLS)** - Isolamento multi-tenant
 - **Functions SQL** - Operazioni atomiche (SECURITY DEFINER)
 
-#### AI Agent ("Anne")
+#### AI Agent Orchestrator ("Anne")
 **Anne NON è un chatbot generico.**
 
-Anne è un operatore che ha:
-- **Accesso in lettura:** Log, diagnostica, audit trail
-- **Accesso in scrittura:** Solo tramite "Draft/Approval" (admin deve approvare)
+Anne è un **AI Agent Orchestrator** basato su **LangGraph Supervisor** che coordina worker specializzati per gestire richieste di preventivi e prenotazioni spedizioni.
 
-**Implementazione:**
-- `lib/ai/anne.ts` - Logica Anne
-- `docs/ANNE_IMPLEMENTATION.md` - Documentazione completa
+**Architettura:**
+- **Supervisor Router** (`lib/agent/orchestrator/supervisor-router.ts`) - Entry point unico
+- **Supervisor** (`lib/agent/orchestrator/supervisor.ts`) - Single Decision Point per routing
+- **LangGraph Pricing Graph** (`lib/agent/orchestrator/pricing-graph.ts`) - Orchestrazione workflow
+
+**Worker Attivi:**
+1. **Address Worker** (`lib/agent/workers/address.ts`) - Normalizzazione indirizzi italiani
+2. **Pricing Worker** (`lib/agent/workers/pricing.ts`) - Calcolo preventivi multi-corriere
+3. **OCR Worker** (`lib/agent/workers/ocr.ts`) - Estrazione dati da testo/screenshot
+4. **Booking Worker** (`lib/agent/workers/booking.ts`) - Prenotazione spedizioni
+
+**Safety Invariants (CRITICO):**
+- **No Silent Booking:** Nessuna prenotazione senza conferma esplicita utente
+- **Pre-flight Checks:** Validazione obbligatoria prima di chiamate API esterne
+- **Single Decision Point:** Solo Supervisor decide routing, worker non decidono autonomamente
+- **No PII nei Log:** Mai loggare indirizzi, nomi, telefoni (solo trace_id, user_id_hash)
+
+**Documentazione:**
+- `MIGRATION_MEMORY.md` - Stato migrazione e architettura dettagliata
+- `lib/agent/orchestrator/` - Implementazione orchestrator
 
 ---
 
