@@ -228,6 +228,54 @@ export function logRequestCompleted(
   });
 }
 
+// ====== TIPI TELEMETRIA STEP 2.2 ======
+
+export type IntentType = 'pricing' | 'non_pricing' | 'unknown';
+export type BackendUsed = 'pricing_graph' | 'legacy';
+export type FallbackReason = 'graph_error' | 'non_pricing' | 'unknown_intent' | 'intent_error' | null;
+
+export interface SupervisorRouterTelemetry {
+  intentDetected: IntentType;
+  supervisorDecision: 'pricing_worker' | 'legacy' | 'end';
+  backendUsed: BackendUsed;
+  fallbackToLegacy: boolean;
+  fallbackReason: FallbackReason;
+  duration_ms: number;
+  pricingOptionsCount?: number;
+  hasClarification?: boolean;
+  success: boolean;
+}
+
+/**
+ * Log: Supervisor Router Complete (EVENTO FINALE UNIFICATO)
+ * 
+ * Emesso SEMPRE 1 volta per richiesta, anche in caso di errore.
+ * Contiene tutti i campi per tracciare il flusso decisionale.
+ * 
+ * ⚠️ NO PII: userId è hashato, no payload utente
+ */
+export function logSupervisorRouterComplete(
+  traceId: string,
+  userId: string,
+  telemetry: SupervisorRouterTelemetry
+): void {
+  logStructured('info', {
+    event: 'supervisorRouterComplete',
+    trace_id: traceId,
+    timestamp: new Date().toISOString(),
+    user_id_hash: hashUserId(userId),
+    intent_detected: telemetry.intentDetected,
+    supervisor_decision: telemetry.supervisorDecision,
+    backend_used: telemetry.backendUsed,
+    fallback_to_legacy: telemetry.fallbackToLegacy,
+    fallback_reason: telemetry.fallbackReason,
+    duration_ms: telemetry.duration_ms,
+    pricing_options_count: telemetry.pricingOptionsCount ?? 0,
+    has_clarification: telemetry.hasClarification ?? false,
+    success: telemetry.success,
+  });
+}
+
 // ====== EXPORT AGGREGATO ======
 export const telemetry = {
   generateTraceId,
@@ -238,6 +286,7 @@ export const telemetry = {
   logPricingWorkerExecuted,
   logSupervisorDecision,
   logRequestCompleted,
+  logSupervisorRouterComplete,
 };
 
 export default telemetry;
