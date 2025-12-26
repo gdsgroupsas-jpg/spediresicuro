@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ActingContext } from '@/lib/safe-auth'
 import type { CreateShipmentInput } from '@/lib/validations/shipment'
 import { withConcurrencyRetry } from '@/lib/wallet/retry'
+import { getPlatformFeeSafe, DEFAULT_PLATFORM_FEE } from '@/lib/services/pricing/platform-fee'
 
 export interface CourierCreateShippingInput {
   sender: CreateShipmentInput['sender']
@@ -206,10 +207,22 @@ export async function createShipmentCore(params: {
   }
 
   // ============================================
-  // STIMA COSTO (buffer 20%)
+  // STIMA COSTO (buffer 20%) + PLATFORM FEE (Sprint 2.7)
   // ============================================
   const baseEstimatedCost = 8.5
-  const estimatedCost = baseEstimatedCost * 1.2
+  const courierEstimate = baseEstimatedCost * 1.2
+  
+  // Platform fee dinamica per utente (fail-safe: usa default se errore)
+  const platformFee = await getPlatformFeeSafe(targetId)
+  const estimatedCost = courierEstimate + platformFee
+  
+  console.log('💰 [CreateShipment] Cost estimate:', {
+    courierEstimate,
+    platformFee,
+    estimatedCost,
+    userId: targetId?.substring(0, 8) + '...', // NO PII
+  })
+  
   const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin'
 
   if (!isSuperadmin && (user.wallet_balance || 0) < estimatedCost) {
@@ -351,7 +364,15 @@ export async function createShipmentCore(params: {
   // ============================================
   // TRANSAZIONE DB (best-effort)
   // ============================================
-  const finalCost = courierResponse.cost
+  // Sprint 2.7: Costo finale = corriere + platform fee
+  const courierFinalCost = courierResponse.cost
+  const finalCost = courierFinalCost + platformFee
+  
+  console.log('💰 [CreateShipment] Final cost breakdown:', {
+    courierFinalCost,
+    platformFee,
+    finalCost,
+  })
 
   let shipment: any
   try {
