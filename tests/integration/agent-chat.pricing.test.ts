@@ -57,10 +57,10 @@ vi.mock('@/lib/db/client', () => ({
 }));
 
 // Mock rate-limit per test deterministici
-const mockCheckRateLimit = vi.fn();
-vi.mock('@/lib/rate-limit', () => ({
-  checkRateLimit: mockCheckRateLimit,
-  resetRateLimitForTesting: vi.fn(),
+const mockRateLimit = vi.fn();
+vi.mock('@/lib/security/rate-limit', () => ({
+  rateLimit: mockRateLimit,
+  resetForTesting: vi.fn(),
 }));
 
 // Mock Anthropic come classe costruttore (deterministic)
@@ -120,10 +120,11 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     vi.clearAllMocks();
     
     // Reset mock rate limiter - default: allowed
-    mockCheckRateLimit.mockResolvedValue({
+    mockRateLimit.mockResolvedValue({
       allowed: true,
       remaining: 19,
-      limit: 20,
+      resetAt: Date.now() + 60000,
+      source: 'memory',
     });
     
     // Reset mock Anthropic messages.create
@@ -308,10 +309,11 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
 
     it('should return 429 when rate limit exceeded', async () => {
       // Mock rate limiter per simulare limite superato (deterministico)
-      mockCheckRateLimit.mockResolvedValueOnce({
+      mockRateLimit.mockResolvedValueOnce({
         allowed: false,
         remaining: 0,
-        limit: 20,
+        resetAt: Date.now() + 60000,
+        source: 'memory',
       });
 
       const request = createMockRequest({

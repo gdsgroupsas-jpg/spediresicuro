@@ -24,7 +24,7 @@ import {
   logGraphFailed, 
   logFallbackToLegacy 
 } from '@/lib/telemetry/logger';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
@@ -94,8 +94,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limiting distribuito (Upstash Redis con fallback in-memory)
-    const rateLimit = await checkRateLimit(userId as string, 'agent-chat');
-    if (!rateLimit.allowed) {
+    const rateLimitResult = await rateLimit('agent-chat', userId as string);
+    if (!rateLimitResult.allowed) {
+      // Log structured event (no PII)
+      console.log(`[TELEMETRY] {"event":"rateLimited","trace_id":"${traceId}","route":"agent-chat","source":"${rateLimitResult.source}"}`);
+      
       return NextResponse.json(
         { 
           success: false, 
@@ -209,7 +212,7 @@ export async function POST(request: NextRequest) {
             isMock: false,
             toolCalls: 0,
             executionTime: Date.now() - startTime,
-            rateLimitRemaining: rateLimit.remaining,
+            rateLimitRemaining: rateLimitResult.remaining,
             usingPricingGraph: true,
             pricingOptionsCount: pricingOptionsCount,
             // NO userId, NO email nei metadata (PII)
@@ -624,7 +627,7 @@ export async function POST(request: NextRequest) {
         isMock,
         toolCalls: toolCalls.length,
         executionTime: Date.now() - startTime,
-        rateLimitRemaining: rateLimit.remaining,
+        rateLimitRemaining: rateLimitResult.remaining,
         usingClaude: !isMock && !!claudeClient,
         usingPricingGraph: false, // Legacy path
         // NO userId, NO email nei metadata (PII)
