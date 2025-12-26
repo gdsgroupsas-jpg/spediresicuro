@@ -251,12 +251,23 @@ const pricingWorkflow = new StateGraph<AgentState>({
   },
 });
 
+// Wrapper per i worker che usano logger (LangGraph non supporta parametri opzionali aggiuntivi)
+const pricingWorkerWrapper = (state: AgentState) => pricingWorker(state);
+const addressWorkerWrapper = (state: AgentState) => addressWorker(state);
+const ocrWorkerWrapper = (state: AgentState) => ocrWorker(state);
+const bookingWorkerWrapper = (state: AgentState) => bookingWorker(state);
+
 // Aggiungi nodi
 pricingWorkflow.addNode('supervisor', supervisor);
-pricingWorkflow.addNode('pricing_worker', pricingWorker);
-pricingWorkflow.addNode('address_worker', addressWorker); // Sprint 2.3
-pricingWorkflow.addNode('ocr_worker', ocrWorker); // Sprint 2.4
-pricingWorkflow.addNode('booking_worker', bookingWorker); // Sprint 2.6
+pricingWorkflow.addNode('pricing_worker', pricingWorkerWrapper);
+pricingWorkflow.addNode('address_worker', addressWorkerWrapper); // Sprint 2.3
+pricingWorkflow.addNode('ocr_worker', ocrWorkerWrapper); // Sprint 2.4
+pricingWorkflow.addNode('booking_worker', bookingWorkerWrapper); // Sprint 2.6
+
+// NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
+// LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
+// Il comportamento runtime è corretto, ma TypeScript richiede questi cast.
+// TODO: Rimuovere quando LangGraph migliorerà i tipi.
 
 // Entry point: supervisor
 pricingWorkflow.setEntryPoint('supervisor' as any);
