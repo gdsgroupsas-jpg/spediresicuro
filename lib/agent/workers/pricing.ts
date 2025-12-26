@@ -82,7 +82,7 @@ export async function pricingWorker(state: AgentState): Promise<Partial<AgentSta
       
       return {
         clarification_request: `Per calcolare un preventivo preciso, ho bisogno di: ${validation.missingFields.join(', ')}. Puoi fornirmi questi dati?`,
-        next_step: 'request_clarification',
+        next_step: 'END', // Termina con clarification_request popolato
         processingStatus: 'error',
       };
     }
@@ -94,7 +94,7 @@ export async function pricingWorker(state: AgentState): Promise<Partial<AgentSta
     if (pricingOptions.length === 0) {
       return {
         clarification_request: 'Non sono riuscito a calcolare preventivi per questa destinazione. Verifica che il CAP e la provincia siano corretti.',
-        next_step: 'request_clarification',
+        next_step: 'END', // Termina con clarification_request popolato
         processingStatus: 'error',
       };
     }
@@ -112,7 +112,7 @@ export async function pricingWorker(state: AgentState): Promise<Partial<AgentSta
     console.error('❌ [Pricing Worker] Errore:', error);
     return {
       clarification_request: `Errore nel calcolo preventivo: ${error.message}. Riprova o contatta il supporto.`,
-      next_step: 'request_clarification',
+      next_step: 'END', // Termina con clarification_request popolato
       processingStatus: 'error',
       validationErrors: [...(state.validationErrors || []), error.message],
     };
