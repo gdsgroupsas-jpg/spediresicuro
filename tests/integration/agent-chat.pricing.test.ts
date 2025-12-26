@@ -1,8 +1,9 @@
 /**
- * Integration Tests: Agent Chat API - Pricing Flow
+ * Integration Tests: Agent Chat API - Supervisor Router Flow
  * 
- * Test end-to-end del flusso preventivo nella route API
- * Mock completo: auth, supabase, Anthropic, pricingGraph, context builder
+ * Test end-to-end del flusso routing nella route API.
+ * Il supervisor router decide tra pricing graph e legacy handler.
+ * Mock completo: auth, supabase, Anthropic, supervisorRouter, context builder
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -13,14 +14,12 @@ vi.mock('@/lib/auth-config', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/lib/agent/intent-detector', () => ({
-  detectPricingIntent: vi.fn(),
-}));
-
-vi.mock('@/lib/agent/orchestrator/pricing-graph', () => ({
-  pricingGraph: {
-    invoke: vi.fn(),
-  },
+// Mock supervisor-router (entry point unico)
+const mockSupervisorRouter = vi.fn();
+const mockFormatPricingResponse = vi.fn();
+vi.mock('@/lib/agent/orchestrator/supervisor-router', () => ({
+  supervisorRouter: mockSupervisorRouter,
+  formatPricingResponse: mockFormatPricingResponse,
 }));
 
 vi.mock('@/lib/ai/context-builder', () => ({
@@ -90,8 +89,6 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
   // POST viene re-importato dinamicamente in ogni beforeEach per resettare stato
   let POST: typeof import('@/app/api/ai/agent-chat/route').POST;
   let auth: ReturnType<typeof vi.fn>;
-  let detectPricingIntent: ReturnType<typeof vi.fn>;
-  let pricingGraph: { invoke: ReturnType<typeof vi.fn> };
   let buildContext: ReturnType<typeof vi.fn>;
   let getCachedContext: ReturnType<typeof vi.fn>;
 
@@ -101,14 +98,10 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     
     // Re-importa i moduli mockati dopo reset
     const authModule = await import('@/lib/auth-config');
-    const intentModule = await import('@/lib/agent/intent-detector');
-    const graphModule = await import('@/lib/agent/orchestrator/pricing-graph');
     const contextModule = await import('@/lib/ai/context-builder');
     const cacheModule = await import('@/lib/ai/cache');
     
     auth = authModule.auth as ReturnType<typeof vi.fn>;
-    detectPricingIntent = intentModule.detectPricingIntent as ReturnType<typeof vi.fn>;
-    pricingGraph = graphModule.pricingGraph as unknown as { invoke: ReturnType<typeof vi.fn> };
     buildContext = contextModule.buildContext as ReturnType<typeof vi.fn>;
     getCachedContext = cacheModule.getCachedContext as ReturnType<typeof vi.fn>;
     
@@ -127,9 +120,22 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       source: 'memory',
     });
     
+    // Default mock supervisor router - decision: legacy (default)
+    mockSupervisorRouter.mockResolvedValue({
+      decision: 'legacy',
+      executionTimeMs: 10,
+      source: 'supervisor_only',
+    });
+    
     // Reset mock Anthropic messages.create
     mockMessagesCreate.mockResolvedValue({
       content: [{ type: 'text', text: 'Default legacy response' }],
+    });
+    
+    // Mock format pricing response
+    mockFormatPricingResponse.mockImplementation((options) => {
+      if (!options || options.length === 0) return 'Nessun preventivo';
+      return `💰 Preventivo: €${options[0].finalPrice.toFixed(2)}`;
     });
     
     // Default mock: sessione valida
@@ -161,8 +167,8 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     } as any;
   }
 
-  describe('Pricing Intent - Success Cases', () => {
-    it('should use pricingGraph when pricing intent detected and graph succeeds', async () => {
+  describe('Supervisor Router - Success Cases', () => {
+    it('should return pricing when supervisor returns END with pricing_options', async () => {
       const mockPricingOptions = [
         {
           courier: 'BRT',
@@ -177,12 +183,13 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
         },
       ];
 
-      vi.mocked(detectPricingIntent).mockResolvedValue(true);
-      vi.mocked(pricingGraph.invoke).mockResolvedValue({
-        pricing_options: mockPricingOptions,
-        next_step: 'END',
-        processingStatus: 'complete',
-      } as any);
+      // Mock supervisor che ritorna END con pricing options
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'END',
+        pricingOptions: mockPricingOptions,
+        executionTimeMs: 50,
+        source: 'pricing_graph',
+      });
 
       const request = createMockRequest({
         message: 'Preventivo per 2 kg a 00100 Roma',
@@ -195,19 +202,18 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.metadata.usingPricingGraph).toBe(true);
-      expect(data.message).toContain('Preventivo');
-      expect(data.message).toContain('BRT');
-      expect(data.message).toContain('€11.50');
-      expect(pricingGraph.invoke).toHaveBeenCalledTimes(1);
+      expect(data.metadata.supervisorDecision).toBe('END');
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
     });
 
-    it('should return clarification_request when pricingGraph asks for clarification', async () => {
-      vi.mocked(detectPricingIntent).mockResolvedValue(true);
-      vi.mocked(pricingGraph.invoke).mockResolvedValue({
-        clarification_request: 'Per calcolare un preventivo preciso, ho bisogno di: peso, CAP destinazione.',
-        next_step: 'request_clarification',
-        processingStatus: 'idle',
-      } as any);
+    it('should return clarification when supervisor returns END with clarification_request', async () => {
+      // Mock supervisor che ritorna END con clarification
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'END',
+        clarificationRequest: 'Per calcolare un preventivo preciso, ho bisogno di: peso, CAP destinazione.',
+        executionTimeMs: 20,
+        source: 'pricing_graph',
+      });
 
       const request = createMockRequest({
         message: 'Preventivo per 00100', // Manca peso
@@ -219,16 +225,19 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.metadata.usingPricingGraph).toBe(true);
       expect(data.message).toContain('ho bisogno di');
-      expect(pricingGraph.invoke).toHaveBeenCalledTimes(1);
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Pricing Intent - Fallback Cases', () => {
-    it('should fallback to legacy when pricingGraph throws error', async () => {
-      vi.mocked(detectPricingIntent).mockResolvedValue(true);
-      vi.mocked(pricingGraph.invoke).mockRejectedValue(new Error('Graph error'));
+  describe('Supervisor Router - Fallback Cases', () => {
+    it('should fallback to legacy when supervisor returns decision: legacy', async () => {
+      // Mock supervisor che ritorna legacy (graph fallito o non-pricing)
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'legacy',
+        executionTimeMs: 10,
+        source: 'pricing_graph',
+      });
 
       // Mock Anthropic client per legacy path (deterministic)
       mockMessagesCreate.mockResolvedValueOnce({
@@ -244,18 +253,21 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       const response = await POST(request);
       const data = await response.json();
 
-      // Verifica: NON deve essere 500, deve fallback a legacy
+      // Verifica: NON deve essere 500, deve usare legacy
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // Verifica che legacy path sia stato usato (Anthropic chiamato o usingPricingGraph false)
-      // Nota: potrebbe essere usingPricingGraph false se fallback funziona
-      expect(pricingGraph.invoke).toHaveBeenCalledTimes(1);
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Non-Pricing Intent', () => {
-    it('should NOT call pricingGraph when intent is not pricing', async () => {
-      vi.mocked(detectPricingIntent).mockResolvedValue(false);
+    it('should use legacy handler when supervisor decides legacy', async () => {
+      // Mock supervisor che ritorna legacy (non-pricing)
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'legacy',
+        executionTimeMs: 5,
+        source: 'supervisor_only',
+      });
 
       // Mock Anthropic per legacy path (deterministic)
       mockMessagesCreate.mockResolvedValueOnce({
@@ -273,8 +285,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // Verifica che pricingGraph NON sia stato chiamato
-      expect(pricingGraph.invoke).not.toHaveBeenCalled();
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -330,7 +341,12 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     });
 
     it('should not crash on empty input', async () => {
-      vi.mocked(detectPricingIntent).mockResolvedValue(false);
+      // Mock supervisor per legacy
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'legacy',
+        executionTimeMs: 5,
+        source: 'supervisor_only',
+      });
 
       // Mock Anthropic per legacy path (deterministic)
       mockMessagesCreate.mockResolvedValueOnce({
@@ -354,17 +370,20 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
   describe('Test Matrix - Parametrized Tests', () => {
     PRICING_TEST_MATRIX.forEach((testCase) => {
       it(`Matrix: ${testCase.description}`, async () => {
-        vi.mocked(detectPricingIntent).mockResolvedValue(testCase.shouldUsePricingGraph);
-
         if (testCase.shouldUsePricingGraph) {
           if (testCase.shouldAskClarification) {
-            vi.mocked(pricingGraph.invoke).mockResolvedValue({
-              clarification_request: 'Chiarimento necessario',
-              next_step: 'request_clarification',
-            } as any);
+            // Mock supervisor con clarification
+            mockSupervisorRouter.mockResolvedValue({
+              decision: 'END',
+              clarificationRequest: 'Chiarimento necessario',
+              executionTimeMs: 20,
+              source: 'pricing_graph',
+            });
           } else {
-            vi.mocked(pricingGraph.invoke).mockResolvedValue({
-              pricing_options: [
+            // Mock supervisor con pricing options
+            mockSupervisorRouter.mockResolvedValue({
+              decision: 'END',
+              pricingOptions: [
                 {
                   courier: 'BRT',
                   serviceType: 'standard',
@@ -372,9 +391,17 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
                   estimatedDeliveryDays: { min: 3, max: 5 },
                 },
               ],
-            } as any);
+              executionTimeMs: 50,
+              source: 'pricing_graph',
+            });
           }
         } else {
+          // Mock supervisor con legacy
+          mockSupervisorRouter.mockResolvedValue({
+            decision: 'legacy',
+            executionTimeMs: 5,
+            source: 'supervisor_only',
+          });
           // Legacy path (deterministic)
           mockMessagesCreate.mockResolvedValueOnce({
             content: [{ type: 'text', text: 'Legacy' }],
@@ -391,21 +418,23 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
         const data = await response.json();
 
         expect(response.status).toBe(testCase.expectedStatus);
+        expect(mockSupervisorRouter).toHaveBeenCalled();
         
         if (testCase.shouldUsePricingGraph) {
-          expect(pricingGraph.invoke).toHaveBeenCalled();
           expect(data.metadata?.usingPricingGraph).toBe(true);
-        } else {
-          expect(pricingGraph.invoke).not.toHaveBeenCalled();
         }
       });
     });
   });
 
   describe('Fail-Injection Test', () => {
-    it('should handle pricingGraph.invoke throwing error safely', async () => {
-      vi.mocked(detectPricingIntent).mockResolvedValue(true);
-      vi.mocked(pricingGraph.invoke).mockRejectedValue(new Error('boom'));
+    it('should handle supervisor returning legacy on graph error safely', async () => {
+      // Mock supervisor che ritorna legacy dopo errore graph
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'legacy',
+        executionTimeMs: 100,
+        source: 'pricing_graph', // Source è graph ma decision è legacy
+      });
 
       // Mock legacy path (deterministic)
       mockMessagesCreate.mockResolvedValueOnce({
@@ -424,8 +453,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Verifica: NON 500, fallback funziona
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // Verifica che pricingGraph sia stato chiamato (e fallito)
-      expect(pricingGraph.invoke).toHaveBeenCalled();
+      expect(mockSupervisorRouter).toHaveBeenCalled();
     });
   });
 });

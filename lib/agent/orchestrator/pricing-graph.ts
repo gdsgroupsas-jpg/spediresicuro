@@ -34,8 +34,8 @@ const routeAfterSupervisor = (state: AgentState): string => {
     return 'pricing_worker';
   }
   
-  // Se serve chiarimento o errore, termina (l'API gestirà la risposta)
-  if (state.next_step === 'request_clarification' || state.next_step === 'END') {
+  // Se il supervisor dice END o legacy, termina (l'API gestirà la risposta)
+  if (state.next_step === 'END' || state.next_step === 'legacy') {
     return 'END';
   }
   
