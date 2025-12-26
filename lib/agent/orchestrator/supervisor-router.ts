@@ -36,6 +36,7 @@ import {
   type FallbackReason,
   type SupervisorRouterTelemetry,
 } from '@/lib/telemetry/logger';
+import { defaultLogger, type ILogger } from '../logger';
 
 // ==================== TIPI ====================
 
@@ -95,7 +96,10 @@ function hasEnoughDataForPricing(details?: AgentState['shipment_details']): bool
  * @param input - Dati dalla route
  * @returns Risultato con decisione e eventuali dati
  */
-export async function supervisorRouter(input: SupervisorInput): Promise<SupervisorResult> {
+export async function supervisorRouter(
+  input: SupervisorInput,
+  logger: ILogger = defaultLogger
+): Promise<SupervisorResult> {
   const startTime = Date.now();
   const { message, userId, userEmail, traceId } = input;
   
@@ -152,14 +156,14 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     // Sprint 2.4: Rileva pattern OCR nel messaggio
     hasOcrPatterns = containsOcrPatterns(message);
     if (hasOcrPatterns) {
-      console.log('📸 [Supervisor Router] Pattern OCR rilevati nel messaggio');
+      logger.log('📸 [Supervisor Router] Pattern OCR rilevati nel messaggio');
     }
     
     isPricingIntent = await detectPricingIntent(message, false);
     intentDetected = isPricingIntent ? 'pricing' : 'non_pricing';
     logIntentDetected(traceId, userId, isPricingIntent);
   } catch (error) {
-    console.error('❌ [Supervisor Router] Errore intent detection, fallback legacy');
+    logger.error('❌ [Supervisor Router] Errore intent detection, fallback legacy');
     intentDetected = 'unknown';
     fallbackToLegacy = true;
     fallbackReason = 'intent_error';
@@ -206,12 +210,12 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
   // Qui registriamo solo la decisione iniziale per telemetria.
   if (decision === 'ocr_worker') {
     supervisorDecision = 'ocr_worker';
-    console.log('📸 [Supervisor Router] Pattern OCR rilevati, invoco pricing graph (supervisor deciderà routing)');
+    logger.log('📸 [Supervisor Router] Pattern OCR rilevati, invoco pricing graph (supervisor deciderà routing)');
   } else {
     // 3. È pricing intent -> DEVE usare pricing_graph (GUARDRAIL)
     // Legacy è consentito SOLO se pricing_graph fallisce
     supervisorDecision = 'pricing_worker';
-    console.log('💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph (supervisor deciderà routing)');
+    logger.log('💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph (supervisor deciderà routing)');
   }
   
   try {
@@ -289,7 +293,7 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     
     // Graph completato ma senza risultati utili -> fallback legacy
     // LEGACY PATH (temporary). Remove after Sprint 3 when graph handles all cases.
-    console.warn('⚠️ [Supervisor Router] Graph completato senza risultati, fallback legacy');
+    logger.warn('⚠️ [Supervisor Router] Graph completato senza risultati, fallback legacy');
     supervisorDecision = 'legacy';
     backendUsed = 'legacy';
     fallbackToLegacy = true;
@@ -302,10 +306,11 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
       source: 'pricing_graph',
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Graph fallito -> fallback legacy (UNICO CASO LEGITTIMO per pricing intent)
     // LEGACY PATH (temporary). Remove after Sprint 3 when graph is stable.
-    console.error('❌ [Supervisor Router] Errore pricing graph:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [Supervisor Router] Errore pricing graph:', errorMessage);
     
     supervisorDecision = 'legacy';
     backendUsed = 'legacy';

@@ -8,9 +8,7 @@ import {
   saveShipment, 
   humanReview 
 } from './nodes';
-
-// Global recursion limit to prevent infinite loops (as requested)
-const RECURSION_LIMIT = 5;
+import { graphConfig } from '@/lib/config';
 
 // Define the Conditional Logic
 const checkConfidence = (state: AgentState) => {
@@ -20,8 +18,8 @@ const checkConfidence = (state: AgentState) => {
     }
 
     // If confidence is too low, go to review
-    if (state.confidenceScore < 80) {
-        return 'human_review';
+    if (state.confidenceScore < graphConfig.MIN_CONFIDENCE) {
+      return 'human_review';
     }
 
     // Otherwise proceed to save
@@ -65,6 +63,11 @@ workflow.addNode('select_courier', selectCourier);
 workflow.addNode('calculate_margins', calculateMargins);
 workflow.addNode('save_shipment', saveShipment);
 workflow.addNode('human_review', humanReview);
+
+// NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
+// LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
+// Il comportamento runtime è corretto, ma TypeScript richiede questi cast.
+// TODO: Rimuovere quando LangGraph migliorerà i tipi.
 
 // Add Edges
 workflow.setEntryPoint('extract_data' as any);

@@ -372,8 +372,10 @@ function generateClarificationQuestion(missingFields: string[]): string {
 /**
  * Logica core condivisa per estrazione OCR e decisione next step.
  * Elimina duplicazione tra versione async e sync.
+ * 
+ * Esportata per test unitari diretti.
  */
-function processOcrCore(
+export function processOcrCore(
   text: string,
   existingDraft?: ShipmentDraft
 ): {

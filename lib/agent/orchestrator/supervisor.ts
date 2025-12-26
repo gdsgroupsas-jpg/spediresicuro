@@ -14,17 +14,19 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { containsBookingConfirmation, preflightCheck } from '@/lib/agent/workers/booking';
+import { defaultLogger, type ILogger } from '../logger';
+import { llmConfig } from '@/lib/config';
 
 // Helper per ottenere LLM (stesso pattern di nodes.ts)
-const getLLM = () => {
+const getLLM = (logger: ILogger = defaultLogger) => {
   if (!process.env.GOOGLE_API_KEY) {
-    console.warn('⚠️ GOOGLE_API_KEY mancante - Supervisor userà logica base');
+    logger.warn('⚠️ GOOGLE_API_KEY mancante - Supervisor userà logica base');
     return null;
   }
   return new ChatGoogleGenerativeAI({
-    model: 'gemini-2.0-flash-001',
-    maxOutputTokens: 512,
-    temperature: 0.1,
+    model: llmConfig.MODEL,
+    maxOutputTokens: llmConfig.SUPERVISOR_MAX_OUTPUT_TOKENS,
+    temperature: llmConfig.SUPERVISOR_TEMPERATURE,
     apiKey: process.env.GOOGLE_API_KEY,
   });
 };
@@ -34,9 +36,10 @@ const getLLM = () => {
  */
 async function extractShipmentDetailsFromMessage(
   message: string,
-  existingDetails?: AgentState['shipment_details']
+  existingDetails?: AgentState['shipment_details'],
+  logger: ILogger = defaultLogger
 ): Promise<AgentState['shipment_details']> {
-  const llm = getLLM();
+  const llm = getLLM(logger);
   
   // Se abbiamo già dati completi, non serve ri-estrarre
   if (existingDetails?.weight && existingDetails?.destinationZip && existingDetails?.destinationProvince) {
@@ -81,7 +84,7 @@ Se un dato non è presente, usa null.`;
         insurance: extracted.insurance ?? existingDetails?.insurance,
       };
     } catch (error) {
-      console.warn('⚠️ [Supervisor] Errore estrazione LLM, uso logica base:', error);
+      logger.warn('⚠️ [Supervisor] Errore estrazione LLM, uso logica base:', error);
     }
   }
   
@@ -135,13 +138,16 @@ function hasEnoughDataForPricing(details?: AgentState['shipment_details']): bool
  * - Se abbiamo abbastanza dati -> pricing_worker
  * - Se mancano dati -> END (con clarification_request)
  */
-export async function supervisor(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('🧠 [Supervisor] Decisione routing...');
+export async function supervisor(
+  state: AgentState,
+  logger: ILogger = defaultLogger
+): Promise<Partial<AgentState>> {
+  logger.log('🧠 [Supervisor] Decisione routing...');
   
   try {
     // Sprint 2.6: Se abbiamo già un booking result, termina
     if (state.booking_result) {
-      console.log('✅ [Supervisor] Booking già eseguito, termino');
+      logger.log('✅ [Supervisor] Booking già eseguito, termino');
       return {
         next_step: 'END',
         processingStatus: 'complete',
@@ -160,7 +166,7 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
     // 2. L'utente ha confermato esplicitamente
     // 3. I dati sono completi (preflight check)
     if (state.pricing_options && state.pricing_options.length > 0 && containsBookingConfirmation(messageText)) {
-      console.log('📦 [Supervisor] Conferma booking rilevata, verifico preflight...');
+      logger.log('📦 [Supervisor] Conferma booking rilevata, verifico preflight...');
       
       // Verifica pre-flight
       const selectedOption = state.pricing_options[0]; // TODO: permettere selezione
@@ -168,14 +174,14 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
       const preflight = preflightCheck(state.shipmentDraft, selectedOption, idempotencyKey);
       
       if (preflight.passed) {
-        console.log('✅ [Supervisor] Preflight OK, routing a booking_worker');
+        logger.log('✅ [Supervisor] Preflight OK, routing a booking_worker');
         return {
           next_step: 'booking_worker',
           processingStatus: 'calculating',
           iteration_count: (state.iteration_count || 0) + 1,
         };
       } else {
-        console.log('⚠️ [Supervisor] Preflight fallito, mancano:', preflight.missing);
+        logger.log('⚠️ [Supervisor] Preflight fallito, mancano:', preflight.missing);
         return {
           clarification_request: `Per procedere con la prenotazione, ho bisogno di: ${preflight.missing.join(', ')}.`,
           next_step: 'END',
@@ -186,7 +192,7 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
     
     // Se abbiamo già preventivi calcolati MA non c'è conferma, termina (aspetta conferma)
     if (state.pricing_options && state.pricing_options.length > 0) {
-      console.log('✅ [Supervisor] Preventivi già calcolati, attendo conferma utente');
+      logger.log('✅ [Supervisor] Preventivi già calcolati, attendo conferma utente');
       return {
         next_step: 'END',
         processingStatus: 'complete',
@@ -196,7 +202,7 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
     // Sprint 2.4: UNICO PUNTO DECISIONALE per OCR routing
     // Il supervisor è l'autorità ESCLUSIVA per decidere next_step='ocr_worker'
     if (containsOcrPatterns(messageText)) {
-      console.log('📸 [Supervisor] Pattern OCR rilevati, routing a ocr_worker');
+      logger.log('📸 [Supervisor] Pattern OCR rilevati, routing a ocr_worker');
       return {
         next_step: 'ocr_worker',
         processingStatus: 'extracting',
@@ -207,14 +213,15 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
     // Estrai/aggiorna dati spedizione dal messaggio
     const shipmentDetails = await extractShipmentDetailsFromMessage(
       messageText,
-      state.shipment_details
+      state.shipment_details,
+      logger
     );
     
     // Verifica se abbiamo abbastanza dati
     const hasEnoughData = hasEnoughDataForPricing(shipmentDetails);
     
     if (hasEnoughData) {
-      console.log('✅ [Supervisor] Dati sufficienti, routing a pricing_worker');
+      logger.log('✅ [Supervisor] Dati sufficienti, routing a pricing_worker');
       return {
         shipment_details: shipmentDetails,
         next_step: 'pricing_worker',
@@ -228,7 +235,7 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
       if (!shipmentDetails?.destinationZip || shipmentDetails.destinationZip.length !== 5) missing.push('CAP destinazione');
       if (!shipmentDetails?.destinationProvince || shipmentDetails.destinationProvince.length !== 2) missing.push('provincia destinazione');
       
-      console.log(`⚠️ [Supervisor] Dati insufficienti, mancano: ${missing.join(', ')}`);
+      logger.log(`⚠️ [Supervisor] Dati insufficienti, mancano: ${missing.join(', ')}`);
       
       return {
         shipment_details: shipmentDetails,
@@ -238,13 +245,14 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
       };
     }
     
-  } catch (error: any) {
-    console.error('❌ [Supervisor] Errore:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [Supervisor] Errore:', errorMessage);
     return {
-      clarification_request: `Errore nell'analisi della richiesta: ${error.message}. Riprova.`,
+      clarification_request: `Errore nell'analisi della richiesta: ${errorMessage}. Riprova.`,
       next_step: 'legacy', // Fallback a legacy in caso di errore
       processingStatus: 'error',
-      validationErrors: [...(state.validationErrors || []), error.message],
+      validationErrors: [...(state.validationErrors || []), errorMessage],
     };
   }
 }

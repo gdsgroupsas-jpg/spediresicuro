@@ -18,9 +18,8 @@ import { pricingWorker } from '../workers/pricing';
 import { addressWorker } from '../workers/address';
 import { ocrWorker } from '../workers/ocr';
 import { bookingWorker } from '../workers/booking';
-
-// Limite iterazioni per prevenire loop infiniti
-const MAX_ITERATIONS = 2;
+import { defaultLogger, type ILogger } from '../logger';
+import { graphConfig } from '@/lib/config';
 
 /**
  * Router dopo Supervisor: decide se andare a pricing_worker, address_worker, ocr_worker, o END
@@ -28,8 +27,8 @@ const MAX_ITERATIONS = 2;
 const routeAfterSupervisor = (state: AgentState): string => {
   // SAFE: Controlla limite iterazioni
   const iterationCount = (state.iteration_count || 0) + 1;
-  if (iterationCount > MAX_ITERATIONS) {
-    console.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
+  if (iterationCount > graphConfig.MAX_ITERATIONS) {
+    defaultLogger.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
     return 'END';
   }
   
@@ -73,8 +72,8 @@ const routeAfterSupervisor = (state: AgentState): string => {
 const routeAfterPricingWorker = (state: AgentState): string => {
   // SAFE: Controlla limite iterazioni
   const iterationCount = (state.iteration_count || 0) + 1;
-  if (iterationCount > MAX_ITERATIONS) {
-    console.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
+  if (iterationCount > graphConfig.MAX_ITERATIONS) {
+    defaultLogger.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
     return 'END';
   }
   
@@ -102,8 +101,8 @@ const routeAfterPricingWorker = (state: AgentState): string => {
 const routeAfterAddressWorker = (state: AgentState): string => {
   // SAFE: Controlla limite iterazioni
   const iterationCount = (state.iteration_count || 0) + 1;
-  if (iterationCount > MAX_ITERATIONS) {
-    console.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
+  if (iterationCount > graphConfig.MAX_ITERATIONS) {
+    defaultLogger.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
     return 'END';
   }
   
@@ -136,8 +135,8 @@ const routeAfterAddressWorker = (state: AgentState): string => {
 const routeAfterOcrWorker = (state: AgentState): string => {
   // SAFE: Controlla limite iterazioni
   const iterationCount = (state.iteration_count || 0) + 1;
-  if (iterationCount > MAX_ITERATIONS) {
-    console.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
+  if (iterationCount > graphConfig.MAX_ITERATIONS) {
+    defaultLogger.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
     return 'END';
   }
   
@@ -251,14 +250,15 @@ const pricingWorkflow = new StateGraph<AgentState>({
   },
 });
 
-// Wrapper per i worker che usano logger (LangGraph non supporta parametri opzionali aggiuntivi)
+// Wrapper per i worker e supervisor che usano logger (LangGraph non supporta parametri opzionali aggiuntivi)
+const supervisorWrapper = (state: AgentState) => supervisor(state);
 const pricingWorkerWrapper = (state: AgentState) => pricingWorker(state);
 const addressWorkerWrapper = (state: AgentState) => addressWorker(state);
 const ocrWorkerWrapper = (state: AgentState) => ocrWorker(state);
 const bookingWorkerWrapper = (state: AgentState) => bookingWorker(state);
 
 // Aggiungi nodi
-pricingWorkflow.addNode('supervisor', supervisor);
+pricingWorkflow.addNode('supervisor', supervisorWrapper);
 pricingWorkflow.addNode('pricing_worker', pricingWorkerWrapper);
 pricingWorkflow.addNode('address_worker', addressWorkerWrapper); // Sprint 2.3
 pricingWorkflow.addNode('ocr_worker', ocrWorkerWrapper); // Sprint 2.4

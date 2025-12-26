@@ -21,6 +21,7 @@ import { PricingResult } from '@/lib/ai/pricing-engine';
 import { logBookingAttempt, logBookingSuccess, logBookingFailed } from '@/lib/telemetry/logger';
 import { generateTraceId } from '@/lib/telemetry/logger';
 import { defaultLogger, type ILogger } from '../logger';
+import { bookingConfig, parcelDefaults } from '@/lib/config';
 
 // ==================== TYPES ====================
 
@@ -370,8 +371,10 @@ export function mapDraftToShipmentData(
  * 
  * NOTA: ShippingLabel ha { tracking_number, label_url?, label_pdf?, metadata? }
  * Il successo è determinato dalla presenza di tracking_number (non da success boolean)
+ * 
+ * Esportata per test unitari.
  */
-async function callBookingAdapter(
+export async function callBookingAdapter(
   shipmentData: Record<string, any>,
   idempotencyKey: string,
   logger: ILogger = defaultLogger
@@ -403,7 +406,7 @@ async function callBookingAdapter(
         status: 'retryable',
         error_code: 'NETWORK_ERROR',
         user_message: 'Impossibile connettersi al servizio di spedizione. Riprova tra qualche minuto.',
-        retry_after_ms: 30000,
+        retry_after_ms: bookingConfig.RETRY_AFTER_MS,
       };
     }
     
@@ -442,7 +445,7 @@ async function callBookingAdapter(
       status: isRetryable ? 'retryable' : 'failed',
       error_code: mapAdapterError(errorMessage),
       user_message: 'Errore durante la connessione al servizio di spedizione.',
-      retry_after_ms: isRetryable ? 30000 : undefined,
+      retry_after_ms: isRetryable ? bookingConfig.RETRY_AFTER_MS : undefined,
     };
   }
 }

@@ -72,8 +72,10 @@ function generateClarificationQuestion(missingFields: string[]): string {
 /**
  * Logica core condivisa per estrazione e decisione next step.
  * Elimina duplicazione tra versione async e sync.
+ * 
+ * Esportata per test unitari diretti.
  */
-function processAddressCore(
+export function processAddressCore(
   messageText: string,
   existingDraft?: ShipmentDraft
 ): {
