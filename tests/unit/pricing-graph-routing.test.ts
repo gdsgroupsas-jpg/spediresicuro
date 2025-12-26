@@ -108,7 +108,7 @@ describe('Pricing Graph Routing', () => {
       expect(supervisor).toHaveBeenCalledTimes(1);
       expect(pricingWorker).not.toHaveBeenCalled();
       expect(result.clarification_request).toBe(clarificationMsg);
-      expect(result.next_step).toBe('request_clarification');
+      expect(result.next_step).toBe('END'); // Ora supervisor ritorna END con clarification
     });
   });
 
