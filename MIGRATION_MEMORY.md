@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 COMPLETE | Sprint 2.6 Booking Worker COMPLETATO | 🟡 Sprint 2.5 PROSSIMO (OCR immagini)
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.6 DONE | P0-P1 Refactoring DONE | 🟡 Sprint 2.5 NEXT (OCR immagini)
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -59,91 +59,115 @@
 - [x] Guardrail: pricing intent → SEMPRE pricing_graph prima
 - [x] Legacy path marcato con commenti `// LEGACY PATH (temporary)`
 
-### ✅ FASE 2.3: ADDRESS WORKER (COMPLETATA)
-- [x] **Schema `ShipmentDraft`:** `lib/address/shipment-draft.ts`
-  - Zod validation per CAP (5 cifre), provincia (2 lettere)
-  - `missingFields` array per tracking campi mancanti
-- [x] **Normalizzatore IT:** `lib/address/normalize-it-address.ts`
-  - Estrazione regex: CAP, provincia, città, via, peso
-  - Nessuna dipendenza esterna (no LLM, no API)
-- [x] **Address Worker:** `lib/agent/workers/address.ts`
-  - Input: messaggio utente + state esistente
-  - Output: `shipmentDraft` aggiornato + `next_step`
-  - Merge non distruttivo dei dati
-- [x] **State evoluto:** `shipmentDraft` in `AgentState`
-- [x] **Telemetria:** `worker_run`, `missing_fields_count`, `address_normalized`
-- [x] **Test:** 3 integration test per address worker
+### ✅ FASE 2.3: ADDRESS WORKER (DONE)
+- [x] **Evidenza:**
+  - File: `lib/address/shipment-draft.ts` (schema Zod), `lib/address/normalize-it-address.ts` (regex extraction)
+  - Core esportato: `processAddressCore()` esportata per test diretti (`lib/agent/workers/address.ts:78`)
+  - Merge non distruttivo: `extractAndMerge()` preserva dati esistenti
+  - Verifica: `npm run test:unit -- tests/unit/address-worker.test.ts tests/unit/normalize-it-address.test.ts` → 107 test passati
+- [x] **Come verificare:**
+  ```bash
+  grep -r "export.*processAddressCore" lib/agent/workers/address.ts
+  # Expected: 1 match
+  npm run test:unit -- tests/unit/normalize-it-address.test.ts
+  # Expected: 67 test passed
+  ```
 
-### ✅ FASE 2.4: OCR WORKER (COMPLETATA)
-- [x] **OCR Worker (`lib/agent/workers/ocr.ts`):**
-  - Wrapper sopra pipeline OCR esistente (`extractData()` / adapters). **NON riscritto sistema OCR.**
-  - Input: testo OCR raw (immagini: placeholder con TODO per Sprint 2.5)
-  - Output standard: `shipmentDraft` + `missingFields` + `clarification_request`
-  - Parsing deterministico regex: CAP, provincia, città, via, peso (no LLM per inventare dati)
-- [x] **Routing (Single Decision Point):**
-  - `supervisor-router.ts` rileva pattern OCR (`hasOcrPatterns`) ma NON decide routing
-  - `supervisor.ts` è l'UNICA autorità che imposta `next_step='ocr_worker'`
-  - `pricing-graph.ts` esegue nodi, non decide routing
-- [x] **Semantica clarification:** `next_step='END'` + `clarification_request` se mancano campi (es. CAP)
-- [x] **Telemetria (NO PII):**
-  - `worker_run='ocr'`
-  - `ocr_source='image'|'text'`
-  - `ocr_extracted_fields_count`
-  - `missing_fields_count`
-- [x] **Test:** 39 test integration nel file `tests/integration/ocr-worker.test.ts`
-- [x] **Build:** TypeScript type-check passa (`npx tsc --noEmit` exit 0)
+### ✅ FASE 2.4: OCR WORKER (DONE)
+- [x] **Evidenza:**
+  - File: `lib/agent/workers/ocr.ts` (544 righe)
+  - Parsing deterministico: funzioni `extractPostalCode`, `extractProvince`, `extractCity`, `extractWeight` (regex, no LLM)
+  - Core esportato: `processOcrCore()` esportata per test diretti
+  - Immagini: placeholder con TODO (linea 427-437)
+  - Verifica: `npm run test:integration -- tests/integration/ocr-worker.test.ts` → 25 test passati
+- [x] **Come verificare:**
+  ```bash
+  grep -r "extractPostalCode\|extractProvince\|extractCity" lib/agent/workers/ocr.ts
+  # Expected: funzioni con implementazione regex
+  grep -r "TODO Sprint 2.5" lib/agent/workers/ocr.ts
+  # Expected: 1 match (placeholder immagini)
+  ```
 
-### ✅ P0 AUDIT: ADDRESS TEST COVERAGE — RESOLVED
-- [x] **Audit Issue:** Nessun test per Address Worker e normalize-it-address (~395 LOC)
-- [x] **Resolution:** Creati 107 test unitari:
-  - `tests/unit/normalize-it-address.test.ts` (67 test)
-  - `tests/unit/address-worker.test.ts` (40 test)
-- [x] **Copertura:**
-  - Normalizzazione: CAP, provincia (lowercase→uppercase), città, via, peso
-  - Merge non distruttivo: stato esistente + input parziale
-  - missingFields: calcolo corretto campi mancanti
-  - Edge cases: input rumoroso, unicode, casing, spazi, province lowercase, CAP invalido
-- [x] **Build:** TypeScript type-check passa, 193 test unit verdi
+### ✅ P0 AUDIT: ADDRESS TEST COVERAGE (DONE)
+- [x] **Evidenza:**
+  - File: `tests/unit/normalize-it-address.test.ts` (552 righe, 67 test), `tests/unit/address-worker.test.ts` (527 righe, 40 test)
+  - Verifica: `npm run test:unit -- tests/unit/normalize-it-address.test.ts tests/unit/address-worker.test.ts` → 107 test passati
+- [x] **Come verificare:**
+  ```bash
+  wc -l tests/unit/normalize-it-address.test.ts tests/unit/address-worker.test.ts
+  # Expected: ~1079 righe totali
+  npm run test:unit -- tests/unit/normalize-it-address.test.ts
+  # Expected: 67 test passed
+  ```
 
-### ✅ FASE 2.6: BOOKING WORKER (COMPLETATA)
-- [x] **Booking Worker (`lib/agent/workers/booking.ts`):**
-  - Wrapper sopra `SpedisciOnlineAdapter.createShipment()`
-  - NON riscrive logica booking esistente
-  - Pre-flight check obbligatori: recipient, parcel, pricing_option, idempotency_key
-- [x] **BookingResult type:**
-  - `status: 'success' | 'failed' | 'retryable'`
-  - `shipment_id`, `carrier_reference`, `error_code`, `user_message`, `retry_after_ms`
-- [x] **Conferma esplicita obbligatoria:**
-  - Pattern: "procedi", "conferma", "ok prenota", "sì procedi"
-  - `containsBookingConfirmation()` rileva conferma
-  - Nessun booking silenzioso
-- [x] **Routing:**
-  - Supervisor: `hasPricingOptions + hasBookingConfirmation + preflightPassed → booking_worker`
-  - Booking sempre termina con `next_step='END'`
-- [x] **Telemetria (NO PII):**
-  - `bookingAttempt`, `bookingSuccess`, `bookingFailed`
-  - Campi: `trace_id`, `carrier`, `shipment_id`, `duration_ms`, `failure_reason`
-- [x] **Test:** 30 test integration nel file `tests/integration/booking-worker.test.ts`
-- [x] **Build:** TypeScript type-check passa
+### ✅ FASE 2.6: BOOKING WORKER (DONE)
+- [x] **Evidenza:**
+  - File: `lib/agent/workers/booking.ts` (527 righe)
+  - Pre-flight check: `preflightCheck()` esportata, verifica recipient/parcel/pricing_option/idempotency_key
+  - Conferma esplicita: `containsBookingConfirmation()` esportata, pattern regex in `BOOKING_CONFIRMATION_PATTERNS`
+  - Verifica: `npm run test:integration -- tests/integration/booking-worker.test.ts` → 30 test passati
+- [x] **Come verificare:**
+  ```bash
+  grep -r "preflightCheck\|containsBookingConfirmation" lib/agent/workers/booking.ts
+  # Expected: funzioni esportate con implementazione
+  npm run test:integration -- tests/integration/booking-worker.test.ts
+  # Expected: 30 test passed
+  ```
 
-### ✅ REFACTORING SPRINT: DEBITO ARCHITETTURALE P1 (COMPLETATO)
+### ✅ P0: TEST UNITARI REALI (DONE)
+- [x] **Evidenza:**
+  - File: `tests/unit/processAddressCore.test.ts` (26 test)
+  - File: `tests/unit/ocr-worker.test.ts` (21 test)
+  - File: `tests/unit/booking-worker.test.ts` (24 test)
+  - Funzioni esportate per test diretti: `processAddressCore`, `processOcrCore`, `callBookingAdapter`
+  - Verifica: `npm run test:unit` → `Test Files 11 passed (11), Tests 264 passed (264)`
+- [x] **Come verificare:**
+  ```bash
+  npm run test:unit
+  # Expected: Test Files 11 passed (11), Tests 264 passed (264)
+  grep -r "export.*processAddressCore\|export.*processOcrCore\|export.*callBookingAdapter" lib/agent/workers/
+  # Expected: 3 matches (address.ts, ocr.ts, booking.ts)
+  ```
+
+### ✅ P1: CONFIGURAZIONE ESTERNA (DONE)
+- [x] **Evidenza:**
+  - File: `lib/config.ts` (122 righe)
+  - Costanti spostate: 15 da 6 file
+  - Sezioni: `graphConfig`, `llmConfig`, `bookingConfig`, `pricingConfig`, `parcelDefaults`
+  - Verifica: `grep -r "MAX_ITERATIONS\|RECURSION_LIMIT\|MIN_CONFIDENCE" lib/agent/orchestrator/` → solo import da config
+- [x] **Come verificare:**
+  ```bash
+  cat lib/config.ts | grep -E "MAX_ITERATIONS|RECURSION_LIMIT|MIN_CONFIDENCE|RETRY_AFTER_MS|DEFAULT_MARGIN_PERCENT"
+  # Expected: tutte le costanti presenti
+  grep -r "const MAX_ITERATIONS\|const RECURSION_LIMIT" lib/agent/orchestrator/
+  # Expected: 0 matches (tutte sostituite con import)
+  ```
+
+### ✅ REFACTORING SPRINT: DEBITO ARCHITETTURALE P1 (DONE)
 - [x] **P1-1: Logging Disaccoppiato**
-  - Creata interfaccia `ILogger` in `lib/agent/logger.ts`
-  - Implementazione default `ConsoleLogger` e `NullLogger` per test
-  - Sostituiti tutti i `console.log/warn/error` nei worker con `logger.*`
-  - Worker ora accettano `logger` come parametro opzionale (default: `defaultLogger`)
-  - Wrapper per LangGraph che passano solo `state` (LangGraph non supporta parametri aggiuntivi)
+  - Evidenza: `lib/agent/logger.ts` (51 righe), interfaccia `ILogger` esportata
+  - Verifica: `grep -r "console\.\(log\|warn\|error\)" lib/agent/orchestrator/` → 0 matches
+  - Come verificare:
+    ```bash
+    grep -r "console\.\(log\|warn\|error\)" lib/agent/orchestrator/ lib/agent/workers/
+    # Expected: 0 matches (solo in lib/agent/logger.ts come implementazione ConsoleLogger)
+    ```
 - [x] **P1-2: Rimozione Duplicazione Sync/Async**
-  - Estratta logica core condivisa in `processAddressCore()` e `processOcrCore()`
-  - `processAddressSync()` e `processOcrSync()` ora usano la stessa logica dei worker async
-  - Eliminata duplicazione di codice tra versioni sync e async
+  - Evidenza: `lib/agent/workers/address.ts:78` (`export function processAddressCore`), `lib/agent/workers/ocr.ts:378` (`export function processOcrCore`)
+  - Verifica: `grep -A5 "function processAddressSync\|function processOcrSync" lib/agent/workers/*.ts` → chiamano core
+  - Come verificare:
+    ```bash
+    grep -A3 "function processAddressSync" lib/agent/workers/address.ts
+    # Expected: chiama processAddressCore
+    ```
 - [x] **P1-3: Type Safety Hardening**
-  - Migliorato cast in `supervisor-router.ts` con commento esplicativo
-  - Sostituito `as any` in `nodes.ts` con tipo esplicito `CorrierePerformance`
-  - Documentati `as any` necessari in `pricing-graph.ts` (limiti LangGraph)
-  - Sostituiti `error: any` con `error: unknown` e type guards appropriati
-- [x] **Test Suite:** 193 unit + 90 integration = 283 test, tutti verdi
-- [x] **Type Check:** `tsc --noEmit` passa senza errori
+  - Evidenza: `lib/agent/orchestrator/pricing-graph.ts` contiene commenti `// NOTE: I cast 'as any'` con spiegazione LangGraph
+  - Verifica: `npm run type-check` → exit code 0
+  - Come verificare:
+    ```bash
+    npm run type-check
+    # Expected: exit code 0, no errors
+    ```
 
 ### 🟡 FASE 2.5: OCR IMMAGINI (NEXT)
 - [ ] **Vision Support:**
@@ -157,17 +181,29 @@
 
 ---
 
-## 📊 METRICHE TEST ATTUALI
+## 📊 METRICHE TEST (VERIFICABILE)
 
-| Suite | Passati | Totale |
-|-------|---------|--------|
-| Unit | 193 | 193 |
-| Integration | 104 | 104 |
-| **Totale** | **297** | **297** |
+**Come verificare:**
+```bash
+npm run test:unit
+npm run test:integration
+```
 
-> Nota: 
-> - Unit include 67 test normalize-it-address + 40 test address-worker (P0 audit)
-> - Integration include 39 test OCR + 30 test Booking
+**Output atteso (ultima esecuzione verificata):**
+- Unit: `Test Files 11 passed (11), Tests 264 passed (264)`
+- Integration: `Test Files 3 passed (3), Tests 90 passed (90)`
+
+**File test verificabili:**
+- `tests/unit/processAddressCore.test.ts` (26 test)
+- `tests/unit/ocr-worker.test.ts` (21 test)
+- `tests/unit/booking-worker.test.ts` (24 test)
+- `tests/unit/normalize-it-address.test.ts` (67 test)
+- `tests/unit/address-worker.test.ts` (40 test)
+- `tests/integration/ocr-worker.test.ts` (25 test)
+- `tests/integration/booking-worker.test.ts` (30 test)
+- `tests/integration/agent-chat.pricing.test.ts` (35 test)
+
+**Nota:** I numeri possono variare tra esecuzioni. Verificare sempre con i comandi sopra.
 
 ---
 
@@ -261,6 +297,106 @@ app/api/ai/agent-chat/route.ts
 ## 📝 NOTE OPERATIVE
 
 - **Rate Limit:** 20 req/min per user, distribuito via Upstash Redis. Fallback in-memory se Redis down.
+  - Verifica: `grep -r "rateLimit\|RATE_LIMIT" lib/security/rate-limit.ts`
 - **Telemetria:** Ogni request emette 1 evento `supervisorRouterComplete`. Query con `trace_id`.
+  - Verifica: `grep -r "supervisorRouterComplete" lib/agent/orchestrator/supervisor-router.ts`
 - **Legacy Path:** Sempre disponibile. Usato se `!isPricingIntent` o `graph_error`.
+  - Verifica: `grep -r "LEGACY PATH" lib/agent/orchestrator/supervisor-router.ts`
 - **Test Isolation:** `vi.resetModules()` in `beforeEach` per reset rate limiter tra test.
+  - Verifica: `grep -r "resetModules" tests/`
+
+---
+
+## ⚠️ KNOWN LIMITS / NON-GARANTITO
+
+### Dipendenze Esterne
+- **LangGraph typing constraints:** Alcuni cast `as any` necessari per nomi nodi (vedi `lib/agent/orchestrator/pricing-graph.ts:269-272`)
+  - Verifica: `grep -r "as any" lib/agent/orchestrator/pricing-graph.ts`
+  - Motivo: LangGraph non ha tipi perfetti per string literal types dei nomi nodi
+  - Status: Documentato con commenti, da rimuovere quando LangGraph migliorerà i tipi
+
+- **Google Gemini API:** Dipendenza esterna per LLM. Fallback a logica base se `GOOGLE_API_KEY` mancante.
+  - Verifica: `grep -r "GOOGLE_API_KEY" lib/agent/orchestrator/supervisor.ts`
+  - Comportamento: Se API key mancante, usa estrazione regex invece di LLM
+
+- **SpedisciOnlineAdapter:** Dipendenza esterna per booking. Errore di rete → `retryable` status.
+  - Verifica: `grep -r "SpedisciOnlineAdapter\|NETWORK_ERROR" lib/agent/workers/booking.ts`
+  - Comportamento: `retry_after_ms: 30000` (configurabile in `lib/config.ts`)
+
+### Limiti Runtime
+- **MAX_ITERATIONS:** Limite hardcoded a 2 iterazioni per pricing graph (configurabile in `lib/config.ts`)
+  - Verifica: `grep -r "MAX_ITERATIONS" lib/config.ts`
+  - Comportamento: Se superato, grafo termina con `END` e log warning
+
+- **OCR immagini:** Non implementato (placeholder in `lib/agent/workers/ocr.ts:427-437`)
+  - Verifica: `grep -r "TODO Sprint 2.5\|Immagine rilevata" lib/agent/workers/ocr.ts`
+  - Status: Ritorna clarification request per immagini
+
+### Non Verificabile Automaticamente
+- **Performance:** [DATO NON DISPONIBILE] Nessun benchmark automatizzato
+- **Coverage:** [DATO NON DISPONIBILE] Nessuno strumento di coverage configurato
+- **Production metrics:** [DATO NON DISPONIBILE] Nessun sistema di monitoring production configurato
+
+---
+
+## 🔒 SAFETY INVARIANTS
+
+### 1. NO PII nei Log
+**Invariante:** Mai loggare `addressLine1`, `postalCode`, `fullName`, `phone`, testo OCR raw.
+
+**Evidenza:**
+- `lib/agent/logger.ts` definisce interfaccia, ma non garantisce contenuto
+- Test verificano: `tests/unit/ocr-worker.test.ts` contiene test "should not log addressLine1 in logs"
+
+**Come verificare:**
+```bash
+grep -r "logger\.\(log\|info\|warn\|error\)" lib/agent/workers/ lib/agent/orchestrator/ | grep -i "addressLine\|postalCode\|fullName\|phone"
+# Expected: 0 matches (o solo in commenti)
+```
+
+**Limite:** Verifica statica non garantisce runtime. Test unitari verificano spy logger.
+
+### 2. Single Decision Point
+**Invariante:** Solo `supervisor.ts` imposta `next_step`. Altri componenti non decidono routing.
+
+**Evidenza:**
+- `lib/agent/orchestrator/supervisor.ts` contiene `decideNextStep()` (funzione pura)
+- `lib/agent/orchestrator/supervisor-router.ts` rileva pattern ma non decide (vedi commento `// UNICO PUNTO DECISIONALE`)
+
+**Come verificare:**
+```bash
+grep -r "next_step.*=" lib/agent/orchestrator/ lib/agent/workers/ | grep -v "supervisor.ts"
+# Expected: solo letture o assegnazioni in base a decisione supervisor
+```
+
+**Limite:** Verifica statica. Test integration verificano comportamento end-to-end.
+
+### 3. No Silent Booking
+**Invariante:** Booking richiede conferma esplicita utente (`containsBookingConfirmation()`).
+
+**Evidenza:**
+- `lib/agent/workers/booking.ts:164` contiene `containsBookingConfirmation()`
+- `lib/agent/orchestrator/supervisor.ts` verifica conferma prima di routing a `booking_worker`
+
+**Come verificare:**
+```bash
+grep -r "containsBookingConfirmation\|booking_worker" lib/agent/orchestrator/supervisor.ts
+# Expected: booking_worker solo se hasBookingConfirmation === true
+```
+
+**Limite:** Pattern matching regex può avere falsi positivi/negativi. Test unitari verificano pattern.
+
+### 4. Pre-flight Check Obbligatorio
+**Invariante:** Booking worker esegue `preflightCheck()` prima di chiamare adapter.
+
+**Evidenza:**
+- `lib/agent/workers/booking.ts:209` chiama `preflightCheck()`
+- Se fallisce, ritorna `PREFLIGHT_FAILED` senza chiamare adapter
+
+**Come verificare:**
+```bash
+grep -A5 "preflightCheck" lib/agent/workers/booking.ts
+# Expected: se !preflight.passed, return con PREFLIGHT_FAILED, no adapter call
+```
+
+**Limite:** Verifica statica. Test integration verificano comportamento.
