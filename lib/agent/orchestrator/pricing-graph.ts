@@ -16,12 +16,13 @@ import { AgentState } from './state';
 import { supervisor } from './supervisor';
 import { pricingWorker } from '../workers/pricing';
 import { addressWorker } from '../workers/address';
+import { ocrWorker } from '../workers/ocr';
 
 // Limite iterazioni per prevenire loop infiniti
 const MAX_ITERATIONS = 2;
 
 /**
- * Router dopo Supervisor: decide se andare a pricing_worker, address_worker, o END
+ * Router dopo Supervisor: decide se andare a pricing_worker, address_worker, ocr_worker, o END
  */
 const routeAfterSupervisor = (state: AgentState): string => {
   // SAFE: Controlla limite iterazioni
@@ -39,6 +40,11 @@ const routeAfterSupervisor = (state: AgentState): string => {
   // Se il supervisor dice di andare a pricing_worker, vai
   if (state.next_step === 'pricing_worker') {
     return 'pricing_worker';
+  }
+  
+  // Sprint 2.4: Se il supervisor dice di andare a ocr_worker, vai
+  if (state.next_step === 'ocr_worker') {
+    return 'ocr_worker';
   }
   
   // Sprint 2.3: Se il supervisor dice di andare a address_worker, vai
@@ -111,6 +117,45 @@ const routeAfterAddressWorker = (state: AgentState): string => {
   }
   
   // Default: termina (l'address_worker avrà impostato next_step = END)
+  return 'END';
+};
+
+/**
+ * Router dopo OCR Worker (Sprint 2.4)
+ * 
+ * Se ocr_worker ha estratto abbastanza dati → address_worker (per normalizzazione)
+ * Se ocr_worker ha generato clarification → END
+ * Se ocr_worker non ha trovato nulla → END con clarification
+ */
+const routeAfterOcrWorker = (state: AgentState): string => {
+  // SAFE: Controlla limite iterazioni
+  const iterationCount = (state.iteration_count || 0) + 1;
+  if (iterationCount > MAX_ITERATIONS) {
+    console.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
+    return 'END';
+  }
+  
+  // Se ocr_worker dice di andare a address_worker
+  if (state.next_step === 'address_worker') {
+    return 'address_worker';
+  }
+  
+  // Se ocr_worker dice di andare direttamente a pricing_worker
+  if (state.next_step === 'pricing_worker') {
+    return 'pricing_worker';
+  }
+  
+  // Se c'è richiesta chiarimento, termina
+  if (state.clarification_request) {
+    return 'END';
+  }
+  
+  // Se c'è errore, termina
+  if (state.processingStatus === 'error') {
+    return 'END';
+  }
+  
+  // Default: termina
   return 'END';
 };
 
@@ -187,6 +232,7 @@ const pricingWorkflow = new StateGraph<AgentState>({
 pricingWorkflow.addNode('supervisor', supervisor);
 pricingWorkflow.addNode('pricing_worker', pricingWorker);
 pricingWorkflow.addNode('address_worker', addressWorker); // Sprint 2.3
+pricingWorkflow.addNode('ocr_worker', ocrWorker); // Sprint 2.4
 
 // Entry point: supervisor
 pricingWorkflow.setEntryPoint('supervisor' as any);
@@ -198,6 +244,7 @@ pricingWorkflow.addConditionalEdges(
   {
     pricing_worker: 'pricing_worker',
     address_worker: 'address_worker', // Sprint 2.3
+    ocr_worker: 'ocr_worker', // Sprint 2.4
     END: END,
   } as any
 );
@@ -217,6 +264,17 @@ pricingWorkflow.addConditionalEdges(
   'address_worker' as any,
   routeAfterAddressWorker,
   {
+    pricing_worker: 'pricing_worker',
+    END: END,
+  } as any
+);
+
+// Sprint 2.4: Conditional edge dopo ocr_worker
+pricingWorkflow.addConditionalEdges(
+  'ocr_worker' as any,
+  routeAfterOcrWorker,
+  {
+    address_worker: 'address_worker',
     pricing_worker: 'pricing_worker',
     END: END,
   } as any

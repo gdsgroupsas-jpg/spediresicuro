@@ -22,6 +22,7 @@ import { AgentState } from './state';
 import { pricingGraph } from './pricing-graph';
 import { decideNextStep, DecisionInput, SupervisorDecision } from './supervisor';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
+import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { HumanMessage } from '@langchain/core/messages';
 import { 
   logIntentDetected, 
@@ -100,7 +101,7 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
   
   // Telemetria da costruire progressivamente
   let intentDetected: IntentType = 'unknown';
-  let supervisorDecision: 'pricing_worker' | 'address_worker' | 'legacy' | 'end' = 'legacy';
+  let supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'end' = 'legacy';
   let backendUsed: BackendUsed = 'legacy';
   let fallbackToLegacy = false;
   let fallbackReason: FallbackReason = null;
@@ -108,9 +109,13 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
   let hasClarification = false;
   let success = true;
   // Sprint 2.3: Address Worker telemetry
-  let workerRun: 'address' | 'pricing' | null = null;
+  let workerRun: 'address' | 'pricing' | 'ocr' | null = null;
   let missingFieldsCount = 0;
   let addressNormalized = false;
+  
+  // Sprint 2.4: OCR telemetry
+  let ocrSource: 'image' | 'text' | null = null;
+  let ocrExtractedFieldsCount = 0;
   
   // Helper per emettere evento finale e restituire risultato
   const emitFinalTelemetryAndReturn = (result: Omit<SupervisorResult, 'telemetry'>): SupervisorResult => {
@@ -139,9 +144,17 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     };
   };
   
-  // 1. Rileva intent
+  // 1. Rileva intent + pattern OCR
   let isPricingIntent = false;
+  let hasOcrPatterns = false;
+  
   try {
+    // Sprint 2.4: Rileva pattern OCR nel messaggio
+    hasOcrPatterns = containsOcrPatterns(message);
+    if (hasOcrPatterns) {
+      console.log('📸 [Supervisor Router] Pattern OCR rilevati nel messaggio');
+    }
+    
     isPricingIntent = await detectPricingIntent(message, false);
     intentDetected = isPricingIntent ? 'pricing' : 'non_pricing';
     logIntentDetected(traceId, userId, isPricingIntent);
@@ -166,12 +179,13 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     hasPricingOptions: false,
     hasClarificationRequest: false,
     hasEnoughData: false, // Non sappiamo ancora, il graph lo valuterà
+    hasOcrPatterns, // Sprint 2.4
   };
   
   const decision = decideNextStep(initialDecision);
   logSupervisorDecision(traceId, userId, decision, 0);
   
-  // Se non è pricing intent -> legacy subito
+  // Se non è pricing intent e non ha OCR patterns -> legacy subito
   // LEGACY PATH (temporary). Remove after Sprint 3 when all intents are handled.
   if (decision === 'legacy') {
     supervisorDecision = 'legacy';
@@ -187,12 +201,23 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     });
   }
   
-  // 3. È pricing intent -> DEVE usare pricing_graph (GUARDRAIL)
-  // Legacy è consentito SOLO se pricing_graph fallisce
-  supervisorDecision = 'pricing_worker';
-  console.log('💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph');
+  // Sprint 2.4: Traccia decisione per telemetria
+  // NOTA: Il routing effettivo è deciso da supervisor.ts, non qui.
+  // Qui registriamo solo la decisione iniziale per telemetria.
+  if (decision === 'ocr_worker') {
+    supervisorDecision = 'ocr_worker';
+    console.log('📸 [Supervisor Router] Pattern OCR rilevati, invoco pricing graph (supervisor deciderà routing)');
+  } else {
+    // 3. È pricing intent -> DEVE usare pricing_graph (GUARDRAIL)
+    // Legacy è consentito SOLO se pricing_graph fallisce
+    supervisorDecision = 'pricing_worker';
+    console.log('💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph (supervisor deciderà routing)');
+  }
   
   try {
+    // ARCHITETTURA: supervisor-router NON imposta next_step.
+    // Il routing è deciso ESCLUSIVAMENTE da supervisor.ts basandosi sullo stato.
+    // supervisor-router rileva solo segnali (intent, OCR patterns) e li passa al graph.
     const initialState: Partial<AgentState> = {
       messages: [new HumanMessage(message)],
       userId,
@@ -203,6 +228,7 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
       confidenceScore: 0,
       needsHumanReview: false,
       iteration_count: 0,
+      // next_step è undefined: supervisor deciderà il routing
     };
     
     const graphStartTime = Date.now();
