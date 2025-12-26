@@ -162,9 +162,8 @@ export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google
     default: {
       // Priorità: Google Vision > Claude Vision > Tesseract > Mock
 
+      // ⚠️ SEC-1: NO log di presenza API key
       console.log('🔎 Selezionando OCR adapter automaticamente...');
-      console.log(`   GOOGLE_CLOUD_CREDENTIALS presente: ${!!process.env.GOOGLE_CLOUD_CREDENTIALS}`);
-      console.log(`   ANTHROPIC_API_KEY presente: ${!!process.env.ANTHROPIC_API_KEY}`);
 
       // 1. Prova Google Cloud Vision (più affidabile per OCR)
       if (process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS) {

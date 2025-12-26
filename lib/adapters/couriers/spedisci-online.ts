@@ -146,12 +146,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       ? crypto.createHash('sha256').update(trimmedApiKey).digest('hex').substring(0, 8)
       : 'N/A';
     
-    // Log production-safe: sempre (dev + production)
-    console.log(`🔑 [SPEDISCI.ONLINE] API Key loaded:`, {
-      apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
-      apiKeyLength: trimmedApiKey.length,
-      baseUrl: credentials.base_url || 'default',
-    });
+    // ⚠️ SEC-1: NO log di API key (anche fingerprint/lunghezza può essere info utile per attacco)
     
     this.API_KEY = trimmedApiKey; // Usa la key trimmed
     // Normalizza BASE_URL: mantieni trailing slash se presente (serve per new URL())
@@ -211,13 +206,9 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    */
   async createShipment(data: Shipment | CreateShipmentInput | any): Promise<ShippingLabel> {
     console.log('🚀 [SPEDISCI.ONLINE] ========================================');
+    // ⚠️ SEC-1: NO log di API key info
     console.log('🚀 [SPEDISCI.ONLINE] INIZIO CREAZIONE SPEDIZIONE');
-    console.log('🚀 [SPEDISCI.ONLINE] ========================================');
-    console.log('🚀 [SPEDISCI.ONLINE] BASE_URL:', this.BASE_URL);
-    console.log('🚀 [SPEDISCI.ONLINE] API_KEY presente:', !!this.API_KEY);
-    console.log('🚀 [SPEDISCI.ONLINE] API_KEY lunghezza:', this.API_KEY?.length || 0);
     console.log('🚀 [SPEDISCI.ONLINE] CONTRACT_MAPPING disponibili:', Object.keys(this.CONTRACT_MAPPING || {}).length);
-    console.log('🚀 [SPEDISCI.ONLINE] Contratti configurati:', JSON.stringify(this.CONTRACT_MAPPING, null, 2));
 
     try {
       // 1. Trova codice contratto basato sul corriere selezionato
