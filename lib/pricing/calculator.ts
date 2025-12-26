@@ -103,8 +103,8 @@ export function calculatePriceFromList(
     details: {
       entry,
       estimatedDeliveryDays: {
-        min: entry.estimated_delivery_days_min,
-        max: entry.estimated_delivery_days_max,
+        min: entry.estimated_delivery_days_min ?? 3,
+        max: entry.estimated_delivery_days_max ?? 5,
       },
     },
   };
