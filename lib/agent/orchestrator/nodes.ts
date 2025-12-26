@@ -8,17 +8,19 @@ import { CourierServiceType } from '@/types/shipments';
 import { getSupabaseUserIdFromEmail } from '../../database';
 import type { AuthContext } from '../../auth-context';
 import type { CorrierePerformance } from '@/types/corrieri';
+import { defaultLogger, type ILogger } from '../logger';
+import { llmConfig, pricingConfig } from '@/lib/config';
 
 // Helper to get LLM instance (returns null if no key)
-const getLLM = () => {
+const getLLM = (logger: ILogger = defaultLogger) => {
   if (!process.env.GOOGLE_API_KEY) {
-    console.warn('⚠️ GOOGLE_API_KEY mancante - Skipping LLM features');
+    logger.warn('⚠️ GOOGLE_API_KEY mancante - Skipping LLM features');
     return null;
   }
   return new ChatGoogleGenerativeAI({
-    model: 'gemini-2.0-flash-001',
-    maxOutputTokens: 2048,
-    temperature: 0.1,
+    model: llmConfig.MODEL,
+    maxOutputTokens: llmConfig.EXTRACT_DATA_MAX_OUTPUT_TOKENS,
+    temperature: llmConfig.SUPERVISOR_TEMPERATURE,
     apiKey: process.env.GOOGLE_API_KEY,
   });
 };
@@ -28,7 +30,7 @@ const getLLM = () => {
  * Extracts data from image/text using OCR and optionally LLM for structuring
  */
 export async function extractData(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('🔄 Executing Node: extractData');
+  defaultLogger.log('🔄 Executing Node: extractData');
   
   try {
     const message = state.messages[state.messages.length - 1] as HumanMessage;
@@ -47,7 +49,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
     }
 
     // Initialize LLM once
-    const llm = getLLM();
+    const llm = getLLM(defaultLogger);
 
     if (!imageBuffer) {
         return {
@@ -58,7 +60,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
 
     // 1. DIRECT GEMINI VISION (Multimodal)
     if (llm && imageBuffer) {
-        console.log('🧠 Using Gemini Vision (Multimodal) for extraction...');
+        defaultLogger.log('🧠 Using Gemini Vision (Multimodal) for extraction...');
         
         const geminiMessage = new HumanMessage({
           content: [
@@ -117,13 +119,13 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
             };
 
         } catch (e) {
-            console.warn('⚠️ Gemini Vision failed, falling back to standard OCR:', e);
+            defaultLogger.warn('⚠️ Gemini Vision failed, falling back to standard OCR:', e);
             // Fallthrough to standard OCR
         }
     }
 
     // 2. Fallback: Standard OCR (Previous Logic)
-    console.log('📸 Falling back to Standard OCR Adapter...');
+    defaultLogger.log('📸 Falling back to Standard OCR Adapter...');
     const ocr = createOCRAdapter('auto');
     const ocrResult = await ocr.extract(imageBuffer);
 
@@ -139,7 +141,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
     // 3. LLM Cleanup (Legacy/Fallback)
     // Reuse 'llm' from above if available
     if (llm && ocrResult.rawText && (!shipmentData.recipient_address || !shipmentData.recipient_zip)) {
-        console.log('🧠 Using LLM to structure raw OCR text...');
+        defaultLogger.log('🧠 Using LLM to structure raw OCR text...');
         
         const prompt = `
         Sei un esperto di logistica e analisi conversazioni. Analizza il testo estratto da una chat o documento di spedizione.
@@ -188,7 +190,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
                 cash_on_delivery: !!parsed.cash_on_delivery_amount, // Auto-enable if amount found
             };
         } catch (e) {
-            console.warn('⚠️ LLM Parsing failed:', e);
+            defaultLogger.warn('⚠️ LLM Parsing failed:', e);
         }
     }
 
@@ -201,10 +203,11 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
         confidenceScore,
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
         processingStatus: 'error',
-        validationErrors: [`Errore interno extractData: ${error.message}`],
+        validationErrors: [`Errore interno extractData: ${errorMessage}`],
     };
   }
 }
@@ -214,7 +217,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
  * Validates and normalizes address using LLM logic
  */
 export async function validateGeo(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('🔄 Executing Node: validateGeo');
+  defaultLogger.log('🔄 Executing Node: validateGeo');
   const data = state.shipmentData;
   const errors: string[] = [];
 
@@ -224,7 +227,7 @@ export async function validateGeo(state: AgentState): Promise<Partial<AgentState
   if (!data.recipient_zip) errors.push('CAP mancante');
 
   // Logic validation via LLM if fields are present but maybe fishy
-  const llm = getLLM();
+  const llm = getLLM(defaultLogger);
   if (llm && errors.length === 0) {
       const prompt = `
       Verifica questo indirizzo di spedizione italiano:
@@ -260,7 +263,7 @@ export async function validateGeo(state: AgentState): Promise<Partial<AgentState
                errors.push(`Indirizzo non valido: ${validation.reason}`);
            }
       } catch (e) {
-          console.warn('⚠️ Address Validation LLM failed, skipping advanced check');
+          defaultLogger.warn('⚠️ Address Validation LLM failed, skipping advanced check');
       }
   }
 
@@ -277,7 +280,7 @@ export async function validateGeo(state: AgentState): Promise<Partial<AgentState
  * Selects best courier based on performance and price
  */
 export async function selectCourier(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('🔄 Executing Node: selectCourier');
+  defaultLogger.log('🔄 Executing Node: selectCourier');
   
   if (state.needsHumanReview) return {}; // Skip if already flagged
 
@@ -285,7 +288,7 @@ export async function selectCourier(state: AgentState): Promise<Partial<AgentSta
 
   try {
       // Crea AuthContext da stato per analisi performance
-      const authContext = await createAuthContextFromState(state);
+      const authContext = await createAuthContextFromState(state, defaultLogger);
       
       const performances = await analyzeCorrieriPerformance(
           recipient_city || '', 
@@ -294,8 +297,8 @@ export async function selectCourier(state: AgentState): Promise<Partial<AgentSta
       );
 
       // Simple Selection Logic (can be expanded)
-      // 1. Filter reliable couriers (Score > 80)
-      const reliable = performances.filter(p => p.reliabilityScore >= 80);
+      // 1. Filter reliable couriers (Score >= MIN_RELIABILITY)
+      const reliable = performances.filter(p => p.reliabilityScore >= pricingConfig.MIN_RELIABILITY_SCORE);
       
       // 2. Select cheapest among reliable (Mock prices since we don't have full price list logic exposed as simple function)
       // In prod: await getCourierPrice(courier, weight, ...)
@@ -339,8 +342,9 @@ export async function selectCourier(state: AgentState): Promise<Partial<AgentSta
           processingStatus: 'calculating'
       };
 
-  } catch (error) {
-      console.error('Error selecting courier:', error);
+  } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      defaultLogger.error('Error selecting courier:', errorMessage);
       return { needsHumanReview: true, validationErrors: [...state.validationErrors, 'Errore selezione corriere'] };
   }
 }
@@ -350,12 +354,12 @@ export async function selectCourier(state: AgentState): Promise<Partial<AgentSta
  * Adds user margin to the base price
  */
 export async function calculateMargins(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('🔄 Executing Node: calculateMargins');
+  defaultLogger.log('🔄 Executing Node: calculateMargins');
   
   if (state.needsHumanReview || !state.selectedCourier) return {};
 
   const basePrice = state.selectedCourier.price;
-  const marginPercent = 20; // Default or fetch from user config
+  const marginPercent = pricingConfig.DEFAULT_MARGIN_PERCENT; // Default or fetch from user config
   
   // Calculate final price
   const finalPrice = basePrice * (1 + marginPercent / 100);
@@ -379,7 +383,7 @@ export async function calculateMargins(state: AgentState): Promise<Partial<Agent
 /**
  * Helper: Crea AuthContext da AgentState
  */
-async function createAuthContextFromState(state: AgentState): Promise<AuthContext> {
+async function createAuthContextFromState(state: AgentState, logger: ILogger = defaultLogger): Promise<AuthContext> {
     if (!state.userEmail) {
         throw new Error('userEmail mancante nello stato - impossibile creare AuthContext');
     }
@@ -388,13 +392,15 @@ async function createAuthContextFromState(state: AgentState): Promise<AuthContex
     let supabaseUserId: string | null = null;
     try {
         supabaseUserId = await getSupabaseUserIdFromEmail(state.userEmail, state.userId || undefined);
-    } catch (error: any) {
-        console.warn('⚠️ [NODES] Errore recupero userId Supabase:', error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('⚠️ [NODES] Errore recupero userId Supabase:', errorMessage);
     }
 
     // Se non abbiamo userId Supabase, NON possiamo permettere operazioni
     if (!supabaseUserId) {
-        console.error('❌ [NODES] Impossibile ottenere userId Supabase per:', state.userEmail);
+        // NO PII: non loggare userEmail direttamente
+        logger.error('❌ [NODES] Impossibile ottenere userId Supabase');
         throw new Error('Impossibile ottenere userId Supabase - verifica autenticazione');
     }
 
@@ -407,7 +413,7 @@ async function createAuthContextFromState(state: AgentState): Promise<AuthContex
 }
 
 export async function saveShipment(state: AgentState): Promise<Partial<AgentState>> {
-    console.log('🔄 Executing Node: saveShipment');
+    defaultLogger.log('🔄 Executing Node: saveShipment');
     
     try {
         const shipmentInput = {
@@ -418,7 +424,7 @@ export async function saveShipment(state: AgentState): Promise<Partial<AgentStat
         };
 
         // Crea AuthContext da stato
-        const authContext = await createAuthContextFromState(state);
+        const authContext = await createAuthContextFromState(state, defaultLogger);
 
         // Note: addSpedizione handles ID generation and some defaults
         const result = await addSpedizione(shipmentInput, authContext);
@@ -429,10 +435,11 @@ export async function saveShipment(state: AgentState): Promise<Partial<AgentStat
             shipmentData: { ...state.shipmentData, status: 'ready_to_ship' }
         };
 
-    } catch (error: any) {
-        console.error('Error saving shipment:', error);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        defaultLogger.error('Error saving shipment:', errorMessage);
         return {
-            validationErrors: [...state.validationErrors, `Errore salvataggio: ${error.message}`],
+            validationErrors: [...state.validationErrors, `Errore salvataggio: ${errorMessage}`],
             needsHumanReview: true
         };
     }
@@ -443,7 +450,7 @@ export async function saveShipment(state: AgentState): Promise<Partial<AgentStat
  * Flags for review and optionally saves as draft
  */
 export async function humanReview(state: AgentState): Promise<Partial<AgentState>> {
-    console.log('🔄 Executing Node: humanReview');
+    defaultLogger.log('🔄 Executing Node: humanReview');
     
     // Save as draft contextually if we have minimum data
     if (state.shipmentData.recipient_name || state.shipmentData.recipient_address) {
@@ -457,14 +464,15 @@ export async function humanReview(state: AgentState): Promise<Partial<AgentState
             };
             
             // Crea AuthContext da stato
-            const authContext = await createAuthContextFromState(state);
+            const authContext = await createAuthContextFromState(state, defaultLogger);
             const result = await addSpedizione(shipmentInput, authContext);
             return {
                 shipmentId: result ? result.id : undefined,
                 processingStatus: 'error', 
             };
-        } catch (e) {
-            console.error('Failed to save draft for review', e);
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            defaultLogger.error('Failed to save draft for review', errorMessage);
         }
     }
 
