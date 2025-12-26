@@ -7,6 +7,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { CourierServiceType } from '@/types/shipments';
 import { getSupabaseUserIdFromEmail } from '../../database';
 import type { AuthContext } from '../../auth-context';
+import type { CorrierePerformance } from '@/types/corrieri';
 
 // Helper to get LLM instance (returns null if no key)
 const getLLM = () => {
@@ -300,13 +301,25 @@ export async function selectCourier(state: AgentState): Promise<Partial<AgentSta
       // In prod: await getCourierPrice(courier, weight, ...)
       
       // MOCK LOGIC for selection
-      let bestChoice = reliable.length > 0 ? reliable[0] : performances[0];
+      let bestChoice: CorrierePerformance | undefined = reliable.length > 0 ? reliable[0] : performances[0];
       
       if (!bestChoice) {
           // Fallback if no performance data
-          bestChoice = { corriere: 'BRT', reliabilityScore: 70 } as any; 
+          bestChoice = {
+            corriere: 'Bartolini' as const, // Usa un Corriere valido dal tipo
+            zona: `${recipient_city || ''}, ${recipient_province || ''}`,
+            periodo: 'default',
+            totaleSpedizioni: 0,
+            consegneInTempo: 0,
+            consegneInRitardo: 0,
+            tempoMedioConsegna: 48,
+            tassoSuccesso: 100,
+            reliabilityScore: 70,
+            ultimoAggiornamento: new Date().toISOString(),
+          };
       }
 
+      // TypeScript ora sa che bestChoice non è undefined
       const selectedCourier = {
           id: bestChoice.corriere.toLowerCase(), // normalized id
           name: bestChoice.corriere,
