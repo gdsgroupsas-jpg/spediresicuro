@@ -232,7 +232,11 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     };
     
     const graphStartTime = Date.now();
-    const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+    // NOTE: LangGraph restituisce un tipo generico che non corrisponde esattamente ad AgentState.
+    // Il cast è sicuro perché il grafo è configurato con AgentState come tipo di stato.
+    // TODO: Migliorare quando LangGraph avrà tipi più precisi.
+    const graphResult = await pricingGraph.invoke(initialState);
+    const result = graphResult as unknown as AgentState;
     const graphExecutionTime = Date.now() - graphStartTime;
     
     // Pricing graph usato con successo
