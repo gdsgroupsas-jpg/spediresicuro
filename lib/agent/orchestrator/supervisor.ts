@@ -12,6 +12,7 @@ import { AgentState } from './state';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
+import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 
 // Helper per ottenere LLM (stesso pattern di nodes.ts)
 const getLLM = () => {
@@ -152,6 +153,17 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
       ? String(lastMessage.content) 
       : '';
     
+    // Sprint 2.4: UNICO PUNTO DECISIONALE per OCR routing
+    // Il supervisor è l'autorità ESCLUSIVA per decidere next_step='ocr_worker'
+    if (containsOcrPatterns(messageText)) {
+      console.log('📸 [Supervisor] Pattern OCR rilevati, routing a ocr_worker');
+      return {
+        next_step: 'ocr_worker',
+        processingStatus: 'extracting',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+    
     // Estrai/aggiorna dati spedizione dal messaggio
     const shipmentDetails = await extractShipmentDetailsFromMessage(
       messageText,
@@ -206,20 +218,23 @@ export interface DecisionInput {
   hasEnoughData: boolean;
   /** Sprint 2.3: true se ci sono dati indirizzo parziali da completare */
   hasPartialAddressData?: boolean;
+  /** Sprint 2.4: true se il messaggio contiene pattern OCR tipici */
+  hasOcrPatterns?: boolean;
 }
 
-export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'legacy' | 'END';
+export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'END';
 
 /**
  * Funzione PURA per decidere il prossimo step.
  * Facile da testare senza mock di LLM/DB.
  * 
  * @param input - Dati di input per la decisione
- * @returns 'pricing_worker' | 'address_worker' | 'legacy' | 'END'
+ * @returns 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'END'
  * 
- * ROUTING LOGIC (Sprint 2.3):
+ * ROUTING LOGIC (Sprint 2.4):
  * - hasPricingOptions → END
  * - hasClarificationRequest → END
+ * - hasOcrPatterns → ocr_worker (Sprint 2.4)
  * - !isPricingIntent → legacy
  * - isPricingIntent + hasEnoughData → pricing_worker
  * - isPricingIntent + !hasEnoughData + hasPartialAddressData → address_worker
@@ -234,6 +249,11 @@ export function decideNextStep(input: DecisionInput): SupervisorDecision {
   // Se c'è già una richiesta di chiarimento -> END (mostra al client)
   if (input.hasClarificationRequest) {
     return 'END';
+  }
+  
+  // Sprint 2.4: Se contiene pattern OCR tipici -> ocr_worker
+  if (input.hasOcrPatterns) {
+    return 'ocr_worker';
   }
   
   // Se NON è un intent pricing -> legacy handler (Claude)

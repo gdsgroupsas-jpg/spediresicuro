@@ -54,9 +54,10 @@ export interface AgentState {
   // Prossimo step da eseguire (deciso dal supervisor)
   // 'pricing_worker' = calcola preventivo con pricing graph
   // 'address_worker' = normalizza indirizzi e raccoglie dati mancanti (Sprint 2.3)
+  // 'ocr_worker' = estrai dati da immagine/testo OCR (Sprint 2.4)
   // 'legacy' = usa handler Claude legacy (non-pricing o fallback)
   // 'END' = risposta pronta, termina
-  next_step?: 'pricing_worker' | 'address_worker' | 'legacy' | 'END';
+  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'END';
   
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;
