@@ -22,6 +22,7 @@ import {
   mergeShipmentDraft,
   type ShipmentDraftUpdates,
 } from '@/lib/address/shipment-draft';
+import { defaultLogger, type ILogger } from '../logger';
 
 // ==================== TIPI ====================
 
@@ -366,6 +367,32 @@ function generateClarificationQuestion(missingFields: string[]): string {
   return `Ho estratto dati parziali. Mancano: **${missingLabels.join(', ')}** e **${lastLabel}**.`;
 }
 
+// ==================== CORE LOGIC (CONSOLIDATA) ====================
+
+/**
+ * Logica core condivisa per estrazione OCR e decisione next step.
+ * Elimina duplicazione tra versione async e sync.
+ */
+function processOcrCore(
+  text: string,
+  existingDraft?: ShipmentDraft
+): {
+  updatedDraft: ShipmentDraft;
+  missingFields: string[];
+  extractedFieldsCount: number;
+} {
+  const extractedUpdates = parseOcrText(text);
+  const extractedFieldsCount = countExtractedFields(extractedUpdates);
+  const updatedDraft = mergeShipmentDraft(existingDraft, extractedUpdates);
+  const missingFields = calculateMissingFieldsForPricing(updatedDraft);
+  
+  return {
+    updatedDraft,
+    missingFields,
+    extractedFieldsCount,
+  };
+}
+
 // ==================== MAIN WORKER ====================
 
 /**
@@ -378,8 +405,11 @@ function generateClarificationQuestion(missingFields: string[]): string {
  * @param state - AgentState corrente
  * @returns Partial<AgentState> con shipmentDraft aggiornato
  */
-export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('📸 [OCR Worker] Esecuzione...');
+export async function ocrWorker(
+  state: AgentState,
+  logger: ILogger = defaultLogger
+): Promise<Partial<AgentState>> {
+  logger.log('📸 [OCR Worker] Esecuzione...');
   
   try {
     // Estrai ultimo messaggio
@@ -397,7 +427,7 @@ export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>>
       // TODO Sprint 2.5: Implementare chiamata a extractData() per immagini
       // Per ora, fallback a clarification request
       ocrSource = 'image';
-      console.log('📸 [OCR Worker] Immagine rilevata - TODO: integrazione Gemini Vision');
+      logger.log('📸 [OCR Worker] Immagine rilevata - TODO: integrazione Gemini Vision');
       
       // Ritorna clarification per immagini (MVP testo first)
       return {
@@ -411,7 +441,7 @@ export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>>
     textToProcess = typeof messageContent === 'string' ? messageContent : String(messageContent);
     
     if (!textToProcess.trim()) {
-      console.warn('⚠️ [OCR Worker] Testo vuoto');
+      logger.warn('⚠️ [OCR Worker] Testo vuoto');
       return {
         clarification_request: 'Non ho ricevuto dati. Puoi incollare il testo dello screenshot o indicare i dati della spedizione?',
         next_step: 'END',
@@ -419,26 +449,19 @@ export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>>
       };
     }
     
-    // Parsing deterministico del testo
-    const extractedUpdates = parseOcrText(textToProcess);
-    const extractedFieldsCount = countExtractedFields(extractedUpdates);
+    // Usa logica core condivisa
+    const { updatedDraft, missingFields, extractedFieldsCount } = processOcrCore(
+      textToProcess,
+      state.shipmentDraft
+    );
     
     // Log telemetria (NO PII - solo conteggi)
-    console.log(`📸 [OCR Worker] Campi estratti: ${extractedFieldsCount}, source: ${ocrSource}`);
-    
-    // Merge con draft esistente
-    const existingDraft = state.shipmentDraft;
-    const updatedDraft = mergeShipmentDraft(existingDraft, extractedUpdates);
-    
-    // Calcola campi mancanti
-    const missingFields = calculateMissingFieldsForPricing(updatedDraft);
-    
-    // Log telemetria (NO PII)
-    console.log(`📸 [OCR Worker] Campi mancanti per pricing: ${missingFields.length}`);
+    logger.log(`📸 [OCR Worker] Campi estratti: ${extractedFieldsCount}, source: ${ocrSource}`);
+    logger.log(`📸 [OCR Worker] Campi mancanti per pricing: ${missingFields.length}`);
     
     // Se non abbiamo estratto nulla, chiedi chiarimenti
     if (extractedFieldsCount === 0) {
-      console.log('⚠️ [OCR Worker] Nessun dato estratto, richiedo chiarimenti');
+      logger.log('⚠️ [OCR Worker] Nessun dato estratto, richiedo chiarimenti');
       return {
         clarification_request: 'Non sono riuscita a estrarre dati dallo screenshot. Puoi indicarmi CAP, città, provincia e peso del pacco?',
         next_step: 'END',
@@ -449,7 +472,7 @@ export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>>
     // Se abbiamo estratto qualcosa
     if (missingFields.length === 0) {
       // Abbiamo tutto per il pricing -> address_worker per normalizzazione
-      console.log('✅ [OCR Worker] Dati sufficienti, routing a address_worker');
+      logger.log('✅ [OCR Worker] Dati sufficienti, routing a address_worker');
       return {
         shipmentDraft: updatedDraft,
         shipment_details: {
@@ -464,7 +487,7 @@ export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>>
     
     // Mancano dati per pricing -> clarification ma salva quello che abbiamo
     const clarificationQuestion = generateClarificationQuestion(missingFields);
-    console.log(`⚠️ [OCR Worker] Dati parziali, mancano: ${missingFields.join(', ')}`);
+    logger.log(`⚠️ [OCR Worker] Dati parziali, mancano: ${missingFields.join(', ')}`);
     
     return {
       shipmentDraft: updatedDraft,
@@ -473,28 +496,27 @@ export async function ocrWorker(state: AgentState): Promise<Partial<AgentState>>
       processingStatus: 'idle',
     };
     
-  } catch (error: any) {
-    console.error('❌ [OCR Worker] Errore:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('❌ [OCR Worker] Errore:', errorMessage);
     return {
       clarification_request: 'Mi dispiace, non sono riuscita a elaborare i dati. Puoi riprovare?',
       next_step: 'END',
       processingStatus: 'error',
-      validationErrors: [...(state.validationErrors || []), `OCR Error: ${error.message}`],
+      validationErrors: [...(state.validationErrors || []), `OCR Error: ${errorMessage}`],
     };
   }
 }
 
 /**
  * Versione sincrona per uso in unit test o pre-elaborazione
+ * Usa la stessa logica core della versione async
  */
 export function processOcrSync(
   text: string, 
   existingDraft?: ShipmentDraft
 ): OcrWorkerResult {
-  const extractedUpdates = parseOcrText(text);
-  const extractedFieldsCount = countExtractedFields(extractedUpdates);
-  const updatedDraft = mergeShipmentDraft(existingDraft, extractedUpdates);
-  const missingFields = calculateMissingFieldsForPricing(updatedDraft);
+  const { updatedDraft, missingFields, extractedFieldsCount } = processOcrCore(text, existingDraft);
   
   let nextStep: OcrWorkerResult['nextStep'] = 'END';
   let clarificationQuestion: string | undefined;
