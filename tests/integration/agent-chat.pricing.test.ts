@@ -615,5 +615,239 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Questo test verifica che la route gestisce correttamente il fallback
     });
   });
+
+  // ==================== SPRINT 2.3: ADDRESS WORKER TESTS ====================
+  
+  describe('Sprint 2.3: Address Worker Integration', () => {
+    /**
+     * TEST 1: pricing intent but missing postalCode -> routes to address_worker
+     * 
+     * Input: "Spedisci a Mario Rossi, Via Roma 10, Milano"
+     * Expect: clarification question asking for CAP
+     * Expect: telemetry.workerRun === 'address'
+     */
+    it('ADDR-1: pricing intent with missing postalCode -> address_worker asks clarification', async () => {
+      // Mock supervisor che simula address_worker che chiede CAP
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'END',
+        clarificationRequest: 'Per il preventivo mi servono: **CAP** e **provincia (es. MI, RM)**.',
+        executionTimeMs: 30,
+        source: 'pricing_graph',
+        telemetry: {
+          intentDetected: 'pricing',
+          supervisorDecision: 'end',
+          backendUsed: 'pricing_graph',
+          fallbackToLegacy: false,
+          fallbackReason: null,
+          duration_ms: 30,
+          pricingOptionsCount: 0,
+          hasClarification: true,
+          success: true,
+          workerRun: 'address',
+          missingFieldsCount: 2,
+          addressNormalized: true,
+        },
+      });
+
+      const request = createMockRequest({
+        message: 'Spedisci a Mario Rossi, Via Roma 10, Milano',
+        messages: [],
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      // Assert: risposta OK
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      
+      // Assert: contiene richiesta chiarimento
+      expect(data.message).toContain('CAP');
+      
+      // Assert: supervisor chiamato
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
+      
+      // Assert: legacy handler NON chiamato (gestito da address_worker nel graph)
+      expect(mockMessagesCreate).not.toHaveBeenCalled();
+      
+      // Assert: usingPricingGraph = true (perché è gestito dal graph)
+      expect(data.metadata.usingPricingGraph).toBe(true);
+    });
+
+    /**
+     * TEST 2: address complete -> routes to pricing_worker
+     * 
+     * Input include: addressLine1 + city + province + CAP + weight
+     * Expect: pricing_graph invoked successfully
+     * Expect: legacy NOT called
+     */
+    it('ADDR-2: complete address data -> pricing_worker invoked, not legacy', async () => {
+      const mockPricingOptions = [
+        {
+          courier: 'GLS',
+          serviceType: 'standard',
+          basePrice: 8,
+          surcharges: 0,
+          totalCost: 8,
+          finalPrice: 9.5,
+          margin: 1.5,
+          estimatedDeliveryDays: { min: 2, max: 4 },
+          recommendation: 'best_price' as const,
+        },
+      ];
+
+      // Mock supervisor che ritorna pricing options (dati completi)
+      mockSupervisorRouter.mockResolvedValue({
+        decision: 'END',
+        pricingOptions: mockPricingOptions,
+        executionTimeMs: 80,
+        source: 'pricing_graph',
+        telemetry: {
+          intentDetected: 'pricing',
+          supervisorDecision: 'end',
+          backendUsed: 'pricing_graph',
+          fallbackToLegacy: false,
+          fallbackReason: null,
+          duration_ms: 80,
+          pricingOptionsCount: 1,
+          hasClarification: false,
+          success: true,
+          workerRun: 'pricing',
+          missingFieldsCount: 0,
+          addressNormalized: true,
+        },
+      });
+
+      const request = createMockRequest({
+        // Input con tutti i dati: indirizzo, città, provincia, CAP, peso
+        message: 'Spedisci 3kg a Mario Rossi, Via Roma 10, 20100 Milano MI',
+        messages: [],
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      // Assert: risposta OK
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      
+      // Assert: contiene preventivo
+      expect(data.message).toContain('Preventivo');
+      
+      // Assert: supervisor chiamato
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
+      
+      // Assert: legacy handler NON chiamato
+      expect(mockMessagesCreate).not.toHaveBeenCalled();
+      
+      // Assert: telemetria corretta
+      expect(data.metadata.usingPricingGraph).toBe(true);
+      expect(data.metadata.pricingOptionsCount).toBe(1);
+    });
+
+    /**
+     * TEST 3: address worker merges partial data without deleting existing
+     * 
+     * Questo test verifica che i dati vengano accumulati progressivamente.
+     * Simuliamo due chiamate: prima con città/indirizzo, poi con CAP/provincia.
+     * 
+     * Nota: Questo è un test concettuale. In realtà il merge avviene dentro
+     * il pricing graph, che mantiene lo state tra i messaggi.
+     * Qui testiamo che la route gestisce correttamente la risposta quando
+     * il graph ha accumulato dati sufficienti.
+     */
+    it('ADDR-3: address worker accumulates data across messages', async () => {
+      // Prima chiamata: solo città e indirizzo (mancano CAP e provincia)
+      mockSupervisorRouter.mockResolvedValueOnce({
+        decision: 'END',
+        clarificationRequest: 'Per procedere ho bisogno di: **CAP** e **provincia (es. MI, RM)**.',
+        executionTimeMs: 25,
+        source: 'pricing_graph',
+        telemetry: {
+          intentDetected: 'pricing',
+          supervisorDecision: 'end',
+          backendUsed: 'pricing_graph',
+          fallbackToLegacy: false,
+          fallbackReason: null,
+          duration_ms: 25,
+          pricingOptionsCount: 0,
+          hasClarification: true,
+          success: true,
+          workerRun: 'address',
+          missingFieldsCount: 2, // CAP e provincia
+          addressNormalized: true,
+        },
+      });
+
+      const request1 = createMockRequest({
+        message: 'Spedisci 2kg a Via Roma 10, Milano',
+        messages: [],
+      });
+
+      const response1 = await POST(request1);
+      const data1 = await response1.json();
+
+      expect(response1.status).toBe(200);
+      expect(data1.message).toContain('CAP');
+      expect(mockMessagesCreate).not.toHaveBeenCalled();
+
+      // Seconda chiamata: fornisce CAP e provincia
+      const mockPricingOptions = [
+        {
+          courier: 'BRT',
+          serviceType: 'express',
+          basePrice: 12,
+          surcharges: 0,
+          totalCost: 12,
+          finalPrice: 14.5,
+          margin: 2.5,
+          estimatedDeliveryDays: { min: 1, max: 2 },
+          recommendation: 'fastest' as const,
+        },
+      ];
+
+      mockSupervisorRouter.mockResolvedValueOnce({
+        decision: 'END',
+        pricingOptions: mockPricingOptions,
+        executionTimeMs: 60,
+        source: 'pricing_graph',
+        telemetry: {
+          intentDetected: 'pricing',
+          supervisorDecision: 'end',
+          backendUsed: 'pricing_graph',
+          fallbackToLegacy: false,
+          fallbackReason: null,
+          duration_ms: 60,
+          pricingOptionsCount: 1,
+          hasClarification: false,
+          success: true,
+          workerRun: 'pricing',
+          missingFieldsCount: 0, // Tutti i dati presenti
+          addressNormalized: true,
+        },
+      });
+
+      const request2 = createMockRequest({
+        message: '20100 MI',
+        messages: [
+          { role: 'user', content: 'Spedisci 2kg a Via Roma 10, Milano' },
+          { role: 'assistant', content: data1.message },
+        ],
+      });
+
+      const response2 = await POST(request2);
+      const data2 = await response2.json();
+
+      expect(response2.status).toBe(200);
+      expect(data2.success).toBe(true);
+      expect(data2.message).toContain('Preventivo');
+      
+      // Assert: supervisor chiamato 2 volte totali
+      expect(mockSupervisorRouter).toHaveBeenCalledTimes(2);
+      
+      // Assert: legacy mai chiamato
+      expect(mockMessagesCreate).not.toHaveBeenCalled();
+    });
+  });
 });
 

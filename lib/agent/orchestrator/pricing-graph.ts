@@ -1,20 +1,27 @@
 /**
- * Pricing Graph
+ * Pricing Graph (Sprint 2.3)
  * 
  * Grafo LangGraph per la gestione dei preventivi:
- * Supervisor -> Pricing Worker -> Supervisor (loop fino a completamento)
+ * Supervisor -> Address Worker (se mancano dati) -> Pricing Worker -> Supervisor
+ * 
+ * FLUSSO:
+ * 1. supervisor decide next_step
+ * 2. Se address_worker: estrae/normalizza dati, poi torna a supervisor
+ * 3. Se pricing_worker: calcola preventivo
+ * 4. Se END: risposta pronta
  */
 
 import { StateGraph, END } from '@langchain/langgraph';
 import { AgentState } from './state';
 import { supervisor } from './supervisor';
 import { pricingWorker } from '../workers/pricing';
+import { addressWorker } from '../workers/address';
 
 // Limite iterazioni per prevenire loop infiniti
 const MAX_ITERATIONS = 2;
 
 /**
- * Router dopo Supervisor: decide se andare a pricing_worker o END
+ * Router dopo Supervisor: decide se andare a pricing_worker, address_worker, o END
  */
 const routeAfterSupervisor = (state: AgentState): string => {
   // SAFE: Controlla limite iterazioni
@@ -32,6 +39,11 @@ const routeAfterSupervisor = (state: AgentState): string => {
   // Se il supervisor dice di andare a pricing_worker, vai
   if (state.next_step === 'pricing_worker') {
     return 'pricing_worker';
+  }
+  
+  // Sprint 2.3: Se il supervisor dice di andare a address_worker, vai
+  if (state.next_step === 'address_worker') {
+    return 'address_worker';
   }
   
   // Se il supervisor dice END o legacy, termina (l'API gestirà la risposta)
@@ -66,6 +78,40 @@ const routeAfterPricingWorker = (state: AgentState): string => {
   
   // Altrimenti torna al supervisor per valutare
   return 'supervisor';
+};
+
+/**
+ * Router dopo Address Worker (Sprint 2.3)
+ * 
+ * Se address_worker ha raccolto abbastanza dati → pricing_worker
+ * Se address_worker ha generato clarification → END
+ * Altrimenti → supervisor per rivalutare
+ */
+const routeAfterAddressWorker = (state: AgentState): string => {
+  // SAFE: Controlla limite iterazioni
+  const iterationCount = (state.iteration_count || 0) + 1;
+  if (iterationCount > MAX_ITERATIONS) {
+    console.warn(`⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`);
+    return 'END';
+  }
+  
+  // Se address_worker dice di andare a pricing_worker
+  if (state.next_step === 'pricing_worker') {
+    return 'pricing_worker';
+  }
+  
+  // Se c'è richiesta chiarimento, termina
+  if (state.clarification_request) {
+    return 'END';
+  }
+  
+  // Se c'è errore, termina
+  if (state.processingStatus === 'error') {
+    return 'END';
+  }
+  
+  // Default: termina (l'address_worker avrà impostato next_step = END)
+  return 'END';
 };
 
 // Crea il grafo
@@ -109,6 +155,22 @@ const pricingWorkflow = new StateGraph<AgentState>({
       default: () => 0,
     },
     
+    // Sprint 2.3: Bozza spedizione (merge non distruttivo)
+    shipmentDraft: {
+      reducer: (a, b) => {
+        if (!b) return a;
+        if (!a) return b;
+        // Merge profondo
+        return {
+          sender: { ...a.sender, ...b.sender },
+          recipient: { ...a.recipient, ...b.recipient },
+          parcel: { ...a.parcel, ...b.parcel },
+          missingFields: b.missingFields ?? a.missingFields ?? [],
+        };
+      },
+      default: () => undefined,
+    },
+    
     // Campi esistenti (per compatibilità)
     shipmentId: { reducer: (a, b) => b ?? a },
     processingStatus: { reducer: (a, b) => b ?? a },
@@ -124,6 +186,7 @@ const pricingWorkflow = new StateGraph<AgentState>({
 // Aggiungi nodi
 pricingWorkflow.addNode('supervisor', supervisor);
 pricingWorkflow.addNode('pricing_worker', pricingWorker);
+pricingWorkflow.addNode('address_worker', addressWorker); // Sprint 2.3
 
 // Entry point: supervisor
 pricingWorkflow.setEntryPoint('supervisor' as any);
@@ -134,6 +197,7 @@ pricingWorkflow.addConditionalEdges(
   routeAfterSupervisor,
   {
     pricing_worker: 'pricing_worker',
+    address_worker: 'address_worker', // Sprint 2.3
     END: END,
   } as any
 );
@@ -144,6 +208,16 @@ pricingWorkflow.addConditionalEdges(
   routeAfterPricingWorker,
   {
     supervisor: 'supervisor',
+    END: END,
+  } as any
+);
+
+// Sprint 2.3: Conditional edge dopo address_worker
+pricingWorkflow.addConditionalEdges(
+  'address_worker' as any,
+  routeAfterAddressWorker,
+  {
+    pricing_worker: 'pricing_worker',
     END: END,
   } as any
 );

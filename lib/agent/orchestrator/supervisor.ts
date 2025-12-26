@@ -204,16 +204,26 @@ export interface DecisionInput {
   hasPricingOptions: boolean;
   hasClarificationRequest: boolean;
   hasEnoughData: boolean;
+  /** Sprint 2.3: true se ci sono dati indirizzo parziali da completare */
+  hasPartialAddressData?: boolean;
 }
 
-export type SupervisorDecision = 'pricing_worker' | 'legacy' | 'END';
+export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'legacy' | 'END';
 
 /**
  * Funzione PURA per decidere il prossimo step.
  * Facile da testare senza mock di LLM/DB.
  * 
  * @param input - Dati di input per la decisione
- * @returns 'pricing_worker' | 'legacy' | 'END'
+ * @returns 'pricing_worker' | 'address_worker' | 'legacy' | 'END'
+ * 
+ * ROUTING LOGIC (Sprint 2.3):
+ * - hasPricingOptions → END
+ * - hasClarificationRequest → END
+ * - !isPricingIntent → legacy
+ * - isPricingIntent + hasEnoughData → pricing_worker
+ * - isPricingIntent + !hasEnoughData + hasPartialAddressData → address_worker
+ * - isPricingIntent + !hasEnoughData + !hasPartialAddressData → address_worker (try extract)
  */
 export function decideNextStep(input: DecisionInput): SupervisorDecision {
   // Se abbiamo già preventivi calcolati -> END
@@ -236,8 +246,9 @@ export function decideNextStep(input: DecisionInput): SupervisorDecision {
     // Ha abbastanza dati -> pricing_worker
     return 'pricing_worker';
   } else {
-    // Mancano dati -> END (supervisor avrà popolato clarification_request)
-    return 'END';
+    // Mancano dati -> address_worker per provare a estrarre/chiedere
+    // Sprint 2.3: address_worker gestisce estrazione e clarification
+    return 'address_worker';
   }
 }
 

@@ -228,15 +228,16 @@ export function logRequestCompleted(
   });
 }
 
-// ====== TIPI TELEMETRIA STEP 2.2 ======
+// ====== TIPI TELEMETRIA STEP 2.2 + 2.3 ======
 
 export type IntentType = 'pricing' | 'non_pricing' | 'unknown';
 export type BackendUsed = 'pricing_graph' | 'legacy';
-export type FallbackReason = 'graph_error' | 'non_pricing' | 'unknown_intent' | 'intent_error' | null;
+export type FallbackReason = 'graph_error' | 'non_pricing' | 'unknown_intent' | 'intent_error' | 'address_unparsable' | null;
+export type WorkerRun = 'address' | 'pricing' | null;
 
 export interface SupervisorRouterTelemetry {
   intentDetected: IntentType;
-  supervisorDecision: 'pricing_worker' | 'legacy' | 'end';
+  supervisorDecision: 'pricing_worker' | 'address_worker' | 'legacy' | 'end';
   backendUsed: BackendUsed;
   fallbackToLegacy: boolean;
   fallbackReason: FallbackReason;
@@ -244,6 +245,11 @@ export interface SupervisorRouterTelemetry {
   pricingOptionsCount?: number;
   hasClarification?: boolean;
   success: boolean;
+  
+  // Sprint 2.3: Address Worker telemetry
+  workerRun?: WorkerRun;
+  missingFieldsCount?: number;
+  addressNormalized?: boolean;
 }
 
 /**
@@ -273,6 +279,10 @@ export function logSupervisorRouterComplete(
     pricing_options_count: telemetry.pricingOptionsCount ?? 0,
     has_clarification: telemetry.hasClarification ?? false,
     success: telemetry.success,
+    // Sprint 2.3: Address Worker telemetry
+    worker_run: telemetry.workerRun ?? null,
+    missing_fields_count: telemetry.missingFieldsCount ?? 0,
+    address_normalized: telemetry.addressNormalized ?? false,
   });
 }
 

@@ -100,13 +100,17 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
   
   // Telemetria da costruire progressivamente
   let intentDetected: IntentType = 'unknown';
-  let supervisorDecision: 'pricing_worker' | 'legacy' | 'end' = 'legacy';
+  let supervisorDecision: 'pricing_worker' | 'address_worker' | 'legacy' | 'end' = 'legacy';
   let backendUsed: BackendUsed = 'legacy';
   let fallbackToLegacy = false;
   let fallbackReason: FallbackReason = null;
   let pricingOptionsCount = 0;
   let hasClarification = false;
   let success = true;
+  // Sprint 2.3: Address Worker telemetry
+  let workerRun: 'address' | 'pricing' | null = null;
+  let missingFieldsCount = 0;
+  let addressNormalized = false;
   
   // Helper per emettere evento finale e restituire risultato
   const emitFinalTelemetryAndReturn = (result: Omit<SupervisorResult, 'telemetry'>): SupervisorResult => {
@@ -120,6 +124,10 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
       pricingOptionsCount,
       hasClarification,
       success,
+      // Sprint 2.3
+      workerRun,
+      missingFieldsCount,
+      addressNormalized,
     };
     
     // Emetti SEMPRE 1 evento finale per request
@@ -206,6 +214,18 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     pricingOptionsCount = result.pricing_options?.length ?? 0;
     hasClarification = !!result.clarification_request;
     
+    // Sprint 2.3: Traccia worker usati e campi mancanti
+    if (result.shipmentDraft) {
+      missingFieldsCount = result.shipmentDraft.missingFields?.length ?? 0;
+      addressNormalized = true; // Se abbiamo un draft, l'address è stato processato
+    }
+    // Determina quale worker è stato eseguito in base al risultato
+    if (pricingOptionsCount > 0) {
+      workerRun = 'pricing';
+    } else if (result.shipmentDraft || hasClarification) {
+      workerRun = 'address';
+    }
+    
     // Log telemetria intermedia
     logUsingPricingGraph(traceId, userId, graphExecutionTime, pricingOptionsCount);
     
@@ -213,6 +233,7 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     if (result.pricing_options && result.pricing_options.length > 0) {
       // Abbiamo preventivi!
       supervisorDecision = 'end';
+      workerRun = 'pricing';
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         pricingOptions: result.pricing_options,
@@ -222,8 +243,12 @@ export async function supervisorRouter(input: SupervisorInput): Promise<Supervis
     }
     
     if (result.clarification_request) {
-      // Serve chiarimento (gestito dal graph, non legacy)
+      // Serve chiarimento (gestito dal graph, potrebbe essere da address_worker)
       supervisorDecision = 'end';
+      // Se c'è shipmentDraft ma mancano campi, è address_worker che chiede
+      if (result.shipmentDraft && missingFieldsCount > 0) {
+        workerRun = 'address';
+      }
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: result.clarification_request,
