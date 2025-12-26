@@ -233,11 +233,12 @@ export function logRequestCompleted(
 export type IntentType = 'pricing' | 'non_pricing' | 'unknown';
 export type BackendUsed = 'pricing_graph' | 'legacy';
 export type FallbackReason = 'graph_error' | 'non_pricing' | 'unknown_intent' | 'intent_error' | 'address_unparsable' | null;
-export type WorkerRun = 'address' | 'pricing' | null;
+export type WorkerRun = 'address' | 'pricing' | 'ocr' | null;
+export type OcrSource = 'image' | 'text' | null;
 
 export interface SupervisorRouterTelemetry {
   intentDetected: IntentType;
-  supervisorDecision: 'pricing_worker' | 'address_worker' | 'legacy' | 'end';
+  supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'end';
   backendUsed: BackendUsed;
   fallbackToLegacy: boolean;
   fallbackReason: FallbackReason;
@@ -250,6 +251,10 @@ export interface SupervisorRouterTelemetry {
   workerRun?: WorkerRun;
   missingFieldsCount?: number;
   addressNormalized?: boolean;
+  
+  // Sprint 2.4: OCR Worker telemetry
+  ocrSource?: OcrSource;
+  ocrExtractedFieldsCount?: number;
 }
 
 /**
@@ -283,6 +288,9 @@ export function logSupervisorRouterComplete(
     worker_run: telemetry.workerRun ?? null,
     missing_fields_count: telemetry.missingFieldsCount ?? 0,
     address_normalized: telemetry.addressNormalized ?? false,
+    // Sprint 2.4: OCR Worker telemetry
+    ocr_source: telemetry.ocrSource ?? null,
+    ocr_extracted_fields_count: telemetry.ocrExtractedFieldsCount ?? 0,
   });
 }
 
