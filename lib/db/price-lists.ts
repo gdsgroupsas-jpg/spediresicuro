@@ -195,6 +195,10 @@ export async function calculatePrice(
 } | null> {
   const priceList = await getActivePriceList(courierId);
 
+  if (!priceList) {
+    return null;
+  }
+
   // Usa la funzione pura per calcolare il prezzo (Single Source of Truth)
   const result = calculatePriceFromList(
     priceList,
