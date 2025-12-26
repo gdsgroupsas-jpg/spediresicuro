@@ -2,14 +2,16 @@
  * Supervisor Node
  * 
  * Il "cervello" che decide il routing:
- * - Ha abbastanza dati per calcolare un preventivo?
- * - Se sì -> routing a pricing_worker
- * - Se no -> richiesta chiarimenti o END
+ * - Intent pricing con dati sufficienti -> pricing_worker
+ * - Intent pricing senza dati -> END (con clarification_request)
+ * - Intent non-pricing -> legacy
+ * - Risposta pronta -> END
  */
 
 import { AgentState } from './state';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { detectPricingIntent } from '@/lib/agent/intent-detector';
 
 // Helper per ottenere LLM (stesso pattern di nodes.ts)
 const getLLM = () => {
@@ -129,7 +131,7 @@ function hasEnoughDataForPricing(details?: AgentState['shipment_details']): bool
  * Decide il routing basandosi sullo stato:
  * - Se abbiamo preventivi già calcolati -> END
  * - Se abbiamo abbastanza dati -> pricing_worker
- * - Se mancano dati -> request_clarification o END
+ * - Se mancano dati -> END (con clarification_request)
  */
 export async function supervisor(state: AgentState): Promise<Partial<AgentState>> {
   console.log('🧠 [Supervisor] Decisione routing...');
@@ -179,7 +181,7 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
       return {
         shipment_details: shipmentDetails,
         clarification_request: `Per calcolare un preventivo preciso, ho bisogno di: ${missing.join(', ')}. Puoi fornirmi questi dati?`,
-        next_step: 'request_clarification',
+        next_step: 'END', // Termina con clarification_request popolato
         processingStatus: 'idle',
       };
     }
@@ -188,10 +190,54 @@ export async function supervisor(state: AgentState): Promise<Partial<AgentState>
     console.error('❌ [Supervisor] Errore:', error);
     return {
       clarification_request: `Errore nell'analisi della richiesta: ${error.message}. Riprova.`,
-      next_step: 'request_clarification',
+      next_step: 'legacy', // Fallback a legacy in caso di errore
       processingStatus: 'error',
       validationErrors: [...(state.validationErrors || []), error.message],
     };
+  }
+}
+
+// ==================== FUNZIONE PURA PER TESTING ====================
+
+export interface DecisionInput {
+  isPricingIntent: boolean;
+  hasPricingOptions: boolean;
+  hasClarificationRequest: boolean;
+  hasEnoughData: boolean;
+}
+
+export type SupervisorDecision = 'pricing_worker' | 'legacy' | 'END';
+
+/**
+ * Funzione PURA per decidere il prossimo step.
+ * Facile da testare senza mock di LLM/DB.
+ * 
+ * @param input - Dati di input per la decisione
+ * @returns 'pricing_worker' | 'legacy' | 'END'
+ */
+export function decideNextStep(input: DecisionInput): SupervisorDecision {
+  // Se abbiamo già preventivi calcolati -> END
+  if (input.hasPricingOptions) {
+    return 'END';
+  }
+  
+  // Se c'è già una richiesta di chiarimento -> END (mostra al client)
+  if (input.hasClarificationRequest) {
+    return 'END';
+  }
+  
+  // Se NON è un intent pricing -> legacy handler (Claude)
+  if (!input.isPricingIntent) {
+    return 'legacy';
+  }
+  
+  // È un intent pricing...
+  if (input.hasEnoughData) {
+    // Ha abbastanza dati -> pricing_worker
+    return 'pricing_worker';
+  } else {
+    // Mancano dati -> END (supervisor avrà popolato clarification_request)
+    return 'END';
   }
 }
 
