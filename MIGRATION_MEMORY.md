@@ -169,7 +169,36 @@
     # Expected: exit code 0, no errors
     ```
 
-### 🟡 FASE 2.5: OCR IMMAGINI (NEXT)
+### ✅ FASE 2.7: DYNAMIC PLATFORM FEES (DONE)
+- [x] **DB Migration 050:**
+  - File: `supabase/migrations/050_dynamic_platform_fees.sql`
+  - Rollback: `supabase/migrations/050_dynamic_platform_fees_rollback.sql`
+  - Colonne aggiunte a `users`: `platform_fee_override`, `platform_fee_notes`
+  - Tabella audit: `platform_fee_history`
+  - Funzioni RPC: `get_platform_fee(user_id)`, `update_user_platform_fee(user_id, fee, notes)`
+  - RLS: solo SUPERADMIN vede history
+  - Default: €0.50 per spedizione
+  - ✅ **Migrazione applicata in produzione** (2025-12-27)
+- [x] **Service Layer:** `lib/services/pricing/platform-fee.ts`
+  - Funzioni: `getPlatformFee`, `getPlatformFeeSafe`, `updatePlatformFee`, `getPlatformFeeHistory`
+  - Costante: `DEFAULT_PLATFORM_FEE = 0.50`
+  - Tipi: `PlatformFeeResult`, `PlatformFeeHistoryEntry`, etc.
+  - Type-check: ✅ passa
+- [x] **Worker Integration:** BookingWorker applica fee dinamica
+  - `lib/agent/workers/booking.ts`: calcola `getPlatformFeeSafe(userId)` prima del booking
+  - `lib/agent/workers/pricing.ts`: aggiunge fee MVP (€0.50) ai preventivi
+  - `lib/shipments/create-shipment-core.ts`: include platform fee nel wallet debit
+  - `BookingResult.cost_breakdown`: { courier_cost, platform_fee, total_charged }
+- [x] **Test:** Unit 264/264 ✅, Integration 90/90 ✅
+
+**Come verificare:**
+```bash
+npm run test:unit      # → 264 test passati
+npm run test:integration # → 90 test passati
+npm run type-check     # → 0 errori
+```
+
+### 🟡 FASE 2.5: OCR IMMAGINI (FUTURE)
 - [ ] **Vision Support:**
   - Implementare processamento immagini in `ocrWorker` (attualmente placeholder)
   - Riusare `extractData()` con input immagine base64/buffer
