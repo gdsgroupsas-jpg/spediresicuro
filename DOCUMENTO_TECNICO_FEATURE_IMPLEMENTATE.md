@@ -656,3 +656,4 @@ Tutte le funzionalità sono documentate mediante migrations SQL versionate in `s
 *Documento redatto in conformità alle linee guida tecniche per documentazione software.  
 Per informazioni tecniche dettagliate, consultare la documentazione del codice sorgente e le migrations database.*
 
+

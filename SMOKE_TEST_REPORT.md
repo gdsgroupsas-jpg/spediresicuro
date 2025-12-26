@@ -62,3 +62,4 @@ curl -i https://spediresicuro.vercel.app/api/spedizioni
 - Build locale completato con successo
 - Warning Edge Runtime sono attesi (non bloccanti)
 - Deploy Vercel automatico attivo su master
+

@@ -118,3 +118,4 @@ SELECT
   END AS service_role_status,
   'Service role (supabaseAdmin) bypasses RLS when no policies exist' AS note;
 
+

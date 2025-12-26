@@ -9,12 +9,17 @@
  * ⚠️ IMPORTANTE: Questi test verificano il fix case-insensitive per /api/cron/**
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import { NextRequest } from 'next/server';
 
 // Import middleware function (Next.js middleware export)
-// Usa require per evitare problemi con ES modules
-const middlewareModule = require('./middleware');
-const middleware = middlewareModule.middleware;
+// Usa dynamic import per compatibilità ES modules
+let middleware: any;
+beforeAll(async () => {
+  const middlewareModule = await import('./middleware');
+  // Next.js middleware è export default
+  middleware = middlewareModule.default;
+});
 
 // Mock environment
 const originalEnv = process.env;
@@ -60,91 +65,37 @@ function createMockRequest(pathname: string, authHeader?: string): NextRequest {
   } as unknown as NextRequest;
 }
 
-/**
- * Test 1: /api/cron/x senza Authorization → 401
- */
-export async function testCronWithoutAuth(): Promise<boolean> {
-  console.log('🧪 [TEST] /api/cron/x senza Authorization → 401');
-  
-  try {
+describe('Middleware Security', () => {
+  beforeEach(() => {
     setupTestEnv();
+  });
+
+  afterEach(() => {
+    cleanupTestEnv();
+  });
+
+  it('should return 401 for /api/cron/x without Authorization', async () => {
     const request = createMockRequest('/api/cron/automation-sync');
     const response = await middleware(request);
     
-    if (response.status === 401) {
-      console.log('  ✅ PASS: 401 Unauthorized');
-      return true;
-    } else {
-      console.log(`  ❌ FAIL: Expected 401, got ${response.status}`);
-      return false;
-    }
-  } catch (error: any) {
-    console.log(`  ❌ FAIL: Error: ${error.message}`);
-    return false;
-  } finally {
-    cleanupTestEnv();
-  }
-}
+    expect(response.status).toBe(401);
+  });
 
-/**
- * Test 2: /api/Cron/x senza Authorization → 401 (case variant)
- */
-export async function testCronCaseVariant1(): Promise<boolean> {
-  console.log('🧪 [TEST] /api/Cron/x senza Authorization → 401');
-  
-  try {
-    setupTestEnv();
+  it('should return 401 for /api/Cron/x without Authorization (case variant 1)', async () => {
     const request = createMockRequest('/api/Cron/automation-sync');
     const response = await middleware(request);
     
-    if (response.status === 401) {
-      console.log('  ✅ PASS: 401 Unauthorized');
-      return true;
-    } else {
-      console.log(`  ❌ FAIL: Expected 401, got ${response.status}`);
-      return false;
-    }
-  } catch (error: any) {
-    console.log(`  ❌ FAIL: Error: ${error.message}`);
-    return false;
-  } finally {
-    cleanupTestEnv();
-  }
-}
+    expect(response.status).toBe(401);
+  });
 
-/**
- * Test 3: /API/CRON/x senza Authorization → 401 (case variant)
- */
-export async function testCronCaseVariant2(): Promise<boolean> {
-  console.log('🧪 [TEST] /API/CRON/x senza Authorization → 401');
-  
-  try {
-    setupTestEnv();
+  it('should return 401 for /API/CRON/x without Authorization (case variant 2)', async () => {
     const request = createMockRequest('/API/CRON/automation-sync');
     const response = await middleware(request);
     
-    if (response.status === 401) {
-      console.log('  ✅ PASS: 401 Unauthorized');
-      return true;
-    } else {
-      console.log(`  ❌ FAIL: Expected 401, got ${response.status}`);
-      return false;
-    }
-  } catch (error: any) {
-    console.log(`  ❌ FAIL: Error: ${error.message}`);
-    return false;
-  } finally {
-    cleanupTestEnv();
-  }
-}
+    expect(response.status).toBe(401);
+  });
 
-/**
- * Test 4: /api/cron/x con Authorization corretta → 200 (pass-through)
- */
-export async function testCronWithValidAuth(): Promise<boolean> {
-  console.log('🧪 [TEST] /api/cron/x con Authorization corretta → 200');
-  
-  try {
+  it('should pass through /api/cron/x with valid Authorization', async () => {
     setupTestEnv('test-secret-valid');
     const request = createMockRequest(
       '/api/cron/automation-sync',
@@ -154,124 +105,23 @@ export async function testCronWithValidAuth(): Promise<boolean> {
     
     // NextResponse.next() dovrebbe avere status undefined o 200
     // Verifichiamo che non sia 401
-    if (response.status !== 401) {
-      console.log('  ✅ PASS: Request passa (non 401)');
-      return true;
-    } else {
-      console.log(`  ❌ FAIL: Expected pass-through, got 401`);
-      return false;
-    }
-  } catch (error: any) {
-    console.log(`  ❌ FAIL: Error: ${error.message}`);
-    return false;
-  } finally {
-    cleanupTestEnv();
-  }
-}
+    expect(response.status).not.toBe(401);
+  });
 
-/**
- * Test 5: Path traversal /api/../dashboard → 400
- */
-export async function testPathTraversal(): Promise<boolean> {
-  console.log('🧪 [TEST] Path traversal /api/../dashboard → 400');
-  
-  try {
-    setupTestEnv();
+  it('should return 400 for path traversal /api/../dashboard', async () => {
     const request = createMockRequest('/api/../dashboard');
     const response = await middleware(request);
     
-    if (response.status === 400) {
-      console.log('  ✅ PASS: 400 Bad Request');
-      return true;
-    } else {
-      console.log(`  ❌ FAIL: Expected 400, got ${response.status}`);
-      return false;
-    }
-  } catch (error: any) {
-    console.log(`  ❌ FAIL: Error: ${error.message}`);
-    return false;
-  } finally {
-    cleanupTestEnv();
-  }
-}
+    expect(response.status).toBe(400);
+  });
 
-/**
- * Test 6: Altre route /api/spedizioni non protette da cron → pass-through
- */
-export async function testOtherApiRoutes(): Promise<boolean> {
-  console.log('🧪 [TEST] Altre route /api/spedizioni → pass-through');
-  
-  try {
-    setupTestEnv();
+  it('should pass through other routes like /api/spedizioni', async () => {
     const request = createMockRequest('/api/spedizioni');
     const response = await middleware(request);
     
     // Non dovrebbe essere 401 (cron check) o 400 (path traversal)
-    if (response.status !== 401 && response.status !== 400) {
-      console.log('  ✅ PASS: Route non protetta da cron (pass-through)');
-      return true;
-    } else {
-      console.log(`  ❌ FAIL: Expected pass-through, got ${response.status}`);
-      return false;
-    }
-  } catch (error: any) {
-    console.log(`  ❌ FAIL: Error: ${error.message}`);
-    return false;
-  } finally {
-    cleanupTestEnv();
-  }
-}
-
-/**
- * Esegui tutti i test
- */
-export async function runAllTests(): Promise<void> {
-  console.log('🔒 Middleware Security Tests\n');
-  console.log('='.repeat(50));
-  console.log('');
-
-  const tests = [
-    { name: 'Cron senza auth', fn: testCronWithoutAuth },
-    { name: 'Cron case variant 1', fn: testCronCaseVariant1 },
-    { name: 'Cron case variant 2', fn: testCronCaseVariant2 },
-    { name: 'Cron con auth valida', fn: testCronWithValidAuth },
-    { name: 'Path traversal', fn: testPathTraversal },
-    { name: 'Altre route API', fn: testOtherApiRoutes },
-  ];
-
-  let passed = 0;
-  let failed = 0;
-
-  for (const test of tests) {
-    const result = await test.fn();
-    if (result) {
-      passed++;
-    } else {
-      failed++;
-    }
-    console.log('');
-  }
-
-  console.log('='.repeat(50));
-  console.log(`📊 RESULTS: ${passed} passed, ${failed} failed`);
-  console.log('');
-
-  if (failed === 0) {
-    console.log('✅ ALL TESTS PASSED');
-    process.exit(0);
-  } else {
-    console.log('❌ SOME TESTS FAILED');
-    process.exit(1);
-  }
-}
-
-// Esegui se chiamato direttamente
-if (require.main === module) {
-  runAllTests().catch((error) => {
-    console.error('❌ Fatal error:', error);
-    process.exit(1);
+    expect(response.status).not.toBe(401);
+    expect(response.status).not.toBe(400);
   });
-}
-
-
+});
 
