@@ -12,6 +12,13 @@
  * ⚠️ Richiede GOOGLE_API_KEY reale per eseguire i test
  */
 
+// Carica .env.local PRIMA di tutto
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Carica variabili da .env.local
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+
 import { vi, beforeAll, afterAll } from 'vitest';
 
 // ==================== CHECK API KEY ====================
