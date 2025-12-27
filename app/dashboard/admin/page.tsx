@@ -35,7 +35,8 @@ import {
   Power,
   PowerOff,
   Zap,
-  Cog
+  Cog,
+  ExternalLink
 } from 'lucide-react';
 import { listConfigurations, assignConfigurationToUser } from '@/actions/configurations';
 
@@ -727,6 +728,13 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
+                          <Link
+                            href={`/dashboard/admin/users/${user.id}`}
+                            className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 transition-colors"
+                            title="Dettaglio Utente / Gestione Fee"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
                           <button
                             onClick={() => handleManageFeatures(user)}
                             className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
