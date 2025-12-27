@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.6-2.8 DONE | P0-P1 Refactoring DONE | 🟡 Sprint 2.5 NEXT (OCR immagini)
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -222,11 +222,44 @@ npm run type-check     # → 0 errori
 npm run dev            # → Naviga a /dashboard/admin → click icona su utente → sezione Platform Fee
 ```
 
-### 🟡 FASE 2.5: OCR IMMAGINI (FUTURE)
-- [ ] **Vision Support:**
-  - Implementare processamento immagini in `ocrWorker` (attualmente placeholder)
-  - Riusare `extractData()` con input immagine base64/buffer
-  - Confidence score per campo estratto
+### ✅ FASE 2.5: OCR IMMAGINI (DONE - 27/12/2025)
+- [x] **Vision Support con Gemini:**
+  - File: `lib/agent/workers/ocr.ts` - integrazione con Gemini Vision
+  - File: `lib/agent/workers/vision-fallback.ts` - retry logic + clarification fallback
+  - `extractData()` con input immagine base64 → Gemini 2.0 Flash Vision
+  - Confidence score: 90% su tutte le immagini test
+- [x] **Fallback Policy:**
+  - Primary: Gemini Vision con max 1 retry per errori transient (timeout/429/5xx)
+  - Se fallisce: `clarification_request` immediata + END (no Claude Vision fallback)
+  - Claude usato SOLO per post-processing testo, MAI per Vision
+- [x] **Test Infrastructure Isolati:**
+  - `vitest.config.ocr.ts` - config unit test isolati
+  - `tests/setup-ocr-isolated.ts` - mock Supabase/database/LLM per unit test
+  - `npm run test:ocr` - comando deterministico per unit test
+- [x] **Integration Test Reali:**
+  - `vitest.config.ocr-integration.ts` - config integration test
+  - `tests/setup-ocr-integration.ts` - mock solo Supabase, LLM reale
+  - `tests/integration/ocr-vision.integration.test.ts` - 13 test con immagini reali
+  - `npm run test:ocr:integration` - richiede GOOGLE_API_KEY
+- [x] **Fixture Immagini:**
+  - 10 immagini WhatsApp reali in `tests/fixtures/ocr-images/`
+  - `expected.json` con definizioni expected fields
+- [x] **Acceptance Criteria Verificati:**
+  - Immagini processate: 10/10 ✅
+  - Clarification rate: 0% (target ≤60%) ✅
+  - Confidence: 90% su tutte ✅
+  - Zero PII nei log ✅
+
+**Come verificare:**
+```bash
+# Unit test isolati (mock, deterministici)
+npm run test:ocr
+# Expected: 6 test passed
+
+# Integration test reali (richiede GOOGLE_API_KEY in .env.local)
+npm run test:ocr:integration
+# Expected: 13 test passed, ~27 secondi
+```
 
 ### FASE 3: ADVANCED FEATURES (FUTURE)
 - [ ] **Checkpointer:** Memoria conversazione multi-turn
