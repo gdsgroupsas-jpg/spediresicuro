@@ -75,17 +75,17 @@
 
 ### ✅ FASE 2.4: OCR WORKER (DONE)
 - [x] **Evidenza:**
-  - File: `lib/agent/workers/ocr.ts` (544 righe)
+  - File: `lib/agent/workers/ocr.ts` (544+ righe)
   - Parsing deterministico: funzioni `extractPostalCode`, `extractProvince`, `extractCity`, `extractWeight` (regex, no LLM)
   - Core esportato: `processOcrCore()` esportata per test diretti
-  - Immagini: placeholder con TODO (linea 427-437)
+  - Immagini: **IMPLEMENTATO** (Sprint 2.5) - integrazione Gemini Vision con retry + fallback
   - Verifica: `npm run test:integration -- tests/integration/ocr-worker.test.ts` → 25 test passati
 - [x] **Come verificare:**
   ```bash
   grep -r "extractPostalCode\|extractProvince\|extractCity" lib/agent/workers/ocr.ts
   # Expected: funzioni con implementazione regex
-  grep -r "TODO Sprint 2.5" lib/agent/workers/ocr.ts
-  # Expected: 1 match (placeholder immagini)
+  grep -r "executeVisionWithRetry\|vision-fallback" lib/agent/workers/ocr.ts
+  # Expected: integrazione Vision implementata (Sprint 2.5)
   ```
 
 ### ✅ P0 AUDIT: ADDRESS TEST COVERAGE (DONE)
@@ -352,12 +352,7 @@ app/api/ai/agent-chat/route.ts
 
 ## 🚀 NEXT STEPS
 
-1. **OCR Immagini (Sprint 2.5)**
-   - Implementare supporto immagini in `ocrWorker` (attualmente placeholder)
-   - Riusare `extractData()` / Gemini Vision per input base64/buffer
-   - Aggiungere confidence score per campo
-
-2. **Wallet Integration (Sprint 2.7)**
+1. **Wallet Integration (Sprint 2.7)**
    - Verifica credito prima di booking
    - `INSUFFICIENT_CREDIT` error handling migliorato
 
@@ -414,9 +409,10 @@ app/api/ai/agent-chat/route.ts
   - Verifica: `grep -r "MAX_ITERATIONS" lib/config.ts`
   - Comportamento: Se superato, grafo termina con `END` e log warning
 
-- **OCR immagini:** Non implementato (placeholder in `lib/agent/workers/ocr.ts:427-437`)
-  - Verifica: `grep -r "TODO Sprint 2.5\|Immagine rilevata" lib/agent/workers/ocr.ts`
-  - Status: Ritorna clarification request per immagini
+- **OCR immagini:** ✅ **IMPLEMENTATO** (Sprint 2.5 - 27/12/2025)
+  - Verifica: `grep -r "executeVisionWithRetry\|vision-fallback" lib/agent/workers/ocr.ts`
+  - Status: Gemini Vision con retry (max 1) + clarification fallback se fallisce
+  - Test: `npm run test:ocr:integration` → 13 test passati, 10/10 immagini processate, 90% confidence
 
 ### Non Verificabile Automaticamente
 - **Performance:** [DATO NON DISPONIBILE] Nessun benchmark automatizzato
