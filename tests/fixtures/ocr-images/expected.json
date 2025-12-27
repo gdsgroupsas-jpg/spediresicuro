@@ -1,0 +1,146 @@
+{
+  "$schema": "./expected.schema.json",
+  "_comment": "Definizione expected output per immagini fixture OCR Vision. Ogni chiave è il nome file immagine.",
+  "_instructions": [
+    "Per aggiungere nuove fixture:",
+    "1. Aggiungi immagine nella cartella ocr-images/ (formato: jpeg, png, webp)",
+    "2. Aggiungi entry in questo file con expected fields",
+    "3. expectedFields: campi che DEVONO essere estratti correttamente",
+    "4. optionalFields: campi che POSSONO essere estratti (non failure se mancano)",
+    "5. expectedMissing: campi che ci aspettiamo manchino (per test fallback)"
+  ],
+  
+  "fixtures": {
+    "01_whatsapp_standard.jpg": {
+      "description": "Screenshot WhatsApp standard con indirizzo completo",
+      "category": "whatsapp",
+      "difficulty": "easy",
+      "expectedFields": {
+        "recipient_city": "Milano",
+        "recipient_zip": "20100",
+        "recipient_province": "MI"
+      },
+      "optionalFields": ["recipient_name", "recipient_address", "recipient_phone"],
+      "expectedMissing": [],
+      "notes": "Immagine placeholder - sostituire con screenshot reale"
+    },
+    
+    "02_whatsapp_compressed.jpg": {
+      "description": "Screenshot WhatsApp compresso (qualità bassa)",
+      "category": "whatsapp",
+      "difficulty": "medium",
+      "expectedFields": {
+        "recipient_city": "Roma",
+        "recipient_province": "RM"
+      },
+      "optionalFields": ["recipient_zip", "recipient_name"],
+      "expectedMissing": [],
+      "notes": "Testare resilienza a compressione JPEG aggressiva"
+    },
+    
+    "03_label_partial.png": {
+      "description": "Etichetta parzialmente visibile (ritagliata)",
+      "category": "label",
+      "difficulty": "hard",
+      "expectedFields": {
+        "recipient_zip": "00185"
+      },
+      "optionalFields": ["recipient_city"],
+      "expectedMissing": ["recipient_name", "recipient_address"],
+      "notes": "CAP deve essere estratto anche se etichetta parziale"
+    },
+    
+    "04_rotated_90.jpg": {
+      "description": "Screenshot ruotato 90 gradi",
+      "category": "rotation",
+      "difficulty": "medium",
+      "expectedFields": {
+        "recipient_province": "NA"
+      },
+      "optionalFields": ["recipient_city", "recipient_zip"],
+      "expectedMissing": [],
+      "notes": "Testare capacità di gestire rotazioni"
+    },
+    
+    "05_blurred.jpg": {
+      "description": "Immagine sfocata (motion blur)",
+      "category": "quality",
+      "difficulty": "hard",
+      "expectedFields": {},
+      "optionalFields": ["recipient_city", "recipient_zip"],
+      "expectedMissing": ["recipient_name", "recipient_address"],
+      "notes": "Ci aspettiamo fallimento o confidence basso - test fallback"
+    },
+    
+    "06_handwritten.jpg": {
+      "description": "Indirizzo scritto a mano",
+      "category": "handwritten",
+      "difficulty": "hard",
+      "expectedFields": {
+        "recipient_city": "Firenze"
+      },
+      "optionalFields": ["recipient_zip", "recipient_province"],
+      "expectedMissing": [],
+      "notes": "Testare capacità OCR su scrittura a mano"
+    },
+    
+    "07_multi_address.png": {
+      "description": "Screenshot con mittente e destinatario",
+      "category": "complex",
+      "difficulty": "medium",
+      "expectedFields": {
+        "recipient_city": "Torino",
+        "recipient_province": "TO"
+      },
+      "optionalFields": ["recipient_zip", "recipient_name"],
+      "expectedMissing": [],
+      "notes": "Deve estrarre SOLO destinatario, non mittente"
+    },
+    
+    "08_dark_mode.png": {
+      "description": "Screenshot WhatsApp in dark mode",
+      "category": "whatsapp",
+      "difficulty": "easy",
+      "expectedFields": {
+        "recipient_zip": "40100",
+        "recipient_city": "Bologna"
+      },
+      "optionalFields": ["recipient_province"],
+      "expectedMissing": [],
+      "notes": "Testare inversione colori dark mode"
+    },
+    
+    "09_low_contrast.jpg": {
+      "description": "Immagine con basso contrasto",
+      "category": "quality",
+      "difficulty": "hard",
+      "expectedFields": {},
+      "optionalFields": ["recipient_city"],
+      "expectedMissing": ["recipient_zip", "recipient_province"],
+      "notes": "Testare limiti OCR su basso contrasto"
+    },
+    
+    "10_telegram.png": {
+      "description": "Screenshot Telegram con indirizzo",
+      "category": "messaging",
+      "difficulty": "easy",
+      "expectedFields": {
+        "recipient_city": "Venezia",
+        "recipient_province": "VE",
+        "recipient_zip": "30100"
+      },
+      "optionalFields": ["recipient_name", "recipient_address"],
+      "expectedMissing": [],
+      "notes": "Screenshot da app diversa da WhatsApp"
+    }
+  },
+  
+  "acceptanceCriteria": {
+    "_comment": "Soglie per considerare il test integration passato",
+    "minFieldAccuracy": 0.7,
+    "maxClarificationRate": 0.4,
+    "requiredFields": ["recipient_zip", "recipient_city", "recipient_province"],
+    "criticalFields": ["recipient_zip"]
+  }
+}
+
