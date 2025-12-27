@@ -74,6 +74,8 @@ function createTestState(imageBase64: string): AgentState {
     confidenceScore: 0,
     shipmentData: {},
     needsHumanReview: false,
+    userId: 'test-user-id',
+    userEmail: 'test@example.com',
   };
 }
 
