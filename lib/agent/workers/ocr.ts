@@ -23,6 +23,9 @@ import {
   type ShipmentDraftUpdates,
 } from '@/lib/address/shipment-draft';
 import { defaultLogger, type ILogger } from '../logger';
+import { extractData } from '../orchestrator/nodes';
+import { ocrConfig } from '@/lib/config';
+import { HumanMessage } from '@langchain/core/messages';
 
 // ==================== TIPI ====================
 
@@ -40,6 +43,101 @@ export interface OcrWorkerResult {
   nextStep: 'address_worker' | 'pricing_worker' | 'END';
   ocrSource: 'image' | 'text';
   extractedFieldsCount: number;
+}
+
+// ==================== VISION OUTPUT MAPPING ====================
+
+/**
+ * Output di extractData() (legacy schema)
+ */
+interface VisionExtractedData {
+  recipient_name?: string;
+  recipient_address?: string;
+  recipient_city?: string;
+  recipient_zip?: string;
+  recipient_province?: string;
+  recipient_phone?: string;
+  recipient_email?: string;
+  cash_on_delivery_amount?: number | null;
+  notes?: string;
+  weight?: number; // Aggiunto per supporto peso
+}
+
+/**
+ * Mappa output di extractData() (legacy) a ShipmentDraftUpdates (nuovo schema).
+ * 
+ * NON inventa dati: se un campo è undefined/null, non viene incluso.
+ * Normalizza provincia a uppercase.
+ * Valida CAP a 5 cifre.
+ * 
+ * @param visionData - Dati estratti da Gemini Vision
+ * @returns ShipmentDraftUpdates pronto per merge
+ */
+export function mapVisionOutputToShipmentDraft(
+  visionData: VisionExtractedData
+): ShipmentDraftUpdates {
+  const recipient: ShipmentDraftUpdates['recipient'] = {};
+  const parcel: ShipmentDraftUpdates['parcel'] = {};
+  
+  // Map recipient fields (solo se presenti e non vuoti)
+  if (visionData.recipient_name?.trim()) {
+    recipient.fullName = visionData.recipient_name.trim();
+  }
+  if (visionData.recipient_address?.trim()) {
+    recipient.addressLine1 = visionData.recipient_address.trim();
+  }
+  if (visionData.recipient_city?.trim()) {
+    recipient.city = visionData.recipient_city.trim();
+  }
+  
+  // CAP: valida 5 cifre
+  if (visionData.recipient_zip?.trim()) {
+    const zip = visionData.recipient_zip.trim();
+    if (/^\d{5}$/.test(zip)) {
+      recipient.postalCode = zip;
+    }
+    // Se non valido, non includerlo (sarà chiesto come missing field)
+  }
+  
+  // Provincia: normalizza a uppercase, valida 2 lettere
+  if (visionData.recipient_province?.trim()) {
+    const prov = visionData.recipient_province.trim().toUpperCase();
+    if (/^[A-Z]{2}$/.test(prov)) {
+      recipient.province = prov;
+    }
+  }
+  
+  // Telefono: normalizza rimuovendo spazi
+  if (visionData.recipient_phone?.trim()) {
+    const phone = visionData.recipient_phone.replace(/[\s\-]/g, '');
+    if (phone.length >= 6) {
+      recipient.phone = phone;
+    }
+  }
+  
+  // Peso: se presente
+  if (visionData.weight && visionData.weight > 0 && visionData.weight <= 100) {
+    parcel.weightKg = visionData.weight;
+  }
+  
+  return {
+    recipient: Object.keys(recipient).length > 0 ? recipient : undefined,
+    parcel: Object.keys(parcel).length > 0 ? parcel : undefined,
+  };
+}
+
+/**
+ * Conta campi estratti dal mapping Vision
+ */
+function countVisionExtractedFields(updates: ShipmentDraftUpdates): number {
+  let count = 0;
+  if (updates.recipient) {
+    count += Object.values(updates.recipient).filter(v => v !== undefined).length;
+  }
+  if (updates.parcel) {
+    count += Object.values(updates.parcel).filter(v => v !== undefined).length;
+  }
+  return count;
 }
 
 // ==================== PATTERN OCR ====================
@@ -426,17 +524,119 @@ export async function ocrWorker(
     
     // Check se è un'immagine base64
     if (typeof messageContent === 'string' && messageContent.startsWith('data:image')) {
-      // TODO Sprint 2.5: Implementare chiamata a extractData() per immagini
-      // Per ora, fallback a clarification request
       ocrSource = 'image';
-      logger.log('📸 [OCR Worker] Immagine rilevata - TODO: integrazione Gemini Vision');
       
-      // Ritorna clarification per immagini (MVP testo first)
-      return {
-        clarification_request: 'Ho ricevuto un\'immagine, ma l\'estrazione automatica non è ancora attiva. Puoi incollare il testo dello screenshot?',
-        next_step: 'END',
-        processingStatus: 'idle',
-      };
+      // Feature flag: se OCR immagini disabilitato, chiedi testo
+      if (!ocrConfig.ENABLE_OCR_IMAGES) {
+        logger.log('📸 [OCR Worker] Immagine rilevata - OCR immagini disabilitato (ENABLE_OCR_IMAGES=false)');
+        return {
+          clarification_request: 'Ho ricevuto un\'immagine, ma l\'estrazione automatica non è ancora attiva. Puoi incollare il testo dello screenshot?',
+          next_step: 'END',
+          processingStatus: 'idle',
+        };
+      }
+      
+      // Sprint 2.5: Estrazione immagine via Gemini Vision
+      logger.log('📸 [OCR Worker] Immagine rilevata - avvio estrazione Vision');
+      
+      try {
+        // Crea stato per extractData con immagine come messaggio
+        const visionState: AgentState = {
+          ...state,
+          messages: [new HumanMessage({ content: messageContent })],
+        };
+        
+        // Chiama extractData (usa Gemini Vision internamente)
+        const visionResult = await extractData(visionState);
+        
+        // Se extractData ha fallito o non ha prodotto dati
+        if (visionResult.processingStatus === 'error' || !visionResult.shipmentData) {
+          const errorMsg = visionResult.validationErrors?.join(', ') || 'Errore estrazione';
+          logger.warn(`⚠️ [OCR Worker] Vision fallito: ${errorMsg}`);
+          
+          // Fallback: clarification immediata (scelta A)
+          return {
+            clarification_request: 'Non sono riuscita a leggere l\'immagine. Puoi incollare il testo dello screenshot o indicare i dati manualmente?',
+            next_step: 'END',
+            processingStatus: 'idle',
+            validationErrors: visionResult.validationErrors,
+          };
+        }
+        
+        // Mappa output Vision a ShipmentDraftUpdates
+        const visionData = visionResult.shipmentData as VisionExtractedData;
+        const visionUpdates = mapVisionOutputToShipmentDraft(visionData);
+        const extractedCount = countVisionExtractedFields(visionUpdates);
+        
+        // Log telemetria (NO PII - solo conteggi)
+        logger.log(`📸 [OCR Worker] Vision: campi estratti: ${extractedCount}`);
+        
+        // Se non abbiamo estratto nulla
+        if (extractedCount === 0) {
+          logger.log('⚠️ [OCR Worker] Vision: nessun dato estratto');
+          return {
+            clarification_request: 'Non sono riuscita a estrarre dati dall\'immagine. Puoi indicarmi CAP, città, provincia e peso del pacco?',
+            next_step: 'END',
+            processingStatus: 'idle',
+          };
+        }
+        
+        // Verifica confidence (se disponibile)
+        const confidence = (visionResult.confidenceScore || 0) / 100; // 0-1
+        if (confidence < ocrConfig.MIN_VISION_CONFIDENCE) {
+          logger.log(`⚠️ [OCR Worker] Vision: confidence basso (${(confidence * 100).toFixed(0)}% < ${(ocrConfig.MIN_VISION_CONFIDENCE * 100).toFixed(0)}%)`);
+          // Blocca e chiedi conferma (scelta C per confidence basso)
+          return {
+            clarification_request: `Ho estratto alcuni dati dall'immagine ma non sono sicura. Puoi confermare: CAP, città, provincia e peso?`,
+            next_step: 'END',
+            processingStatus: 'idle',
+          };
+        }
+        
+        // Merge con draft esistente
+        const updatedDraft = mergeShipmentDraft(state.shipmentDraft, visionUpdates);
+        const missingFields = calculateMissingFieldsForPricing(updatedDraft);
+        
+        logger.log(`📸 [OCR Worker] Vision: campi mancanti: ${missingFields.length}`);
+        
+        // Decidi next step
+        if (missingFields.length === 0) {
+          logger.log('✅ [OCR Worker] Vision: dati sufficienti, routing a address_worker');
+          return {
+            shipmentDraft: updatedDraft,
+            shipment_details: {
+              weight: updatedDraft.parcel?.weightKg,
+              destinationZip: updatedDraft.recipient?.postalCode,
+              destinationProvince: updatedDraft.recipient?.province,
+            },
+            next_step: 'address_worker',
+            processingStatus: 'extracting',
+          };
+        }
+        
+        // Mancano dati -> salva quello che abbiamo e chiedi
+        const clarificationQuestion = generateClarificationQuestion(missingFields);
+        logger.log(`⚠️ [OCR Worker] Vision: dati parziali, mancano: ${missingFields.join(', ')}`);
+        
+        return {
+          shipmentDraft: updatedDraft,
+          clarification_request: clarificationQuestion,
+          next_step: 'END',
+          processingStatus: 'idle',
+        };
+        
+      } catch (visionError: unknown) {
+        const errorMessage = visionError instanceof Error ? visionError.message : String(visionError);
+        logger.error('❌ [OCR Worker] Errore Vision:', errorMessage);
+        
+        // Fallback: clarification immediata (non mascherare errore)
+        return {
+          clarification_request: 'Si è verificato un errore nell\'analisi dell\'immagine. Puoi incollare il testo dello screenshot?',
+          next_step: 'END',
+          processingStatus: 'error',
+          validationErrors: [...(state.validationErrors || []), `Vision Error: ${errorMessage}`],
+        };
+      }
     }
     
     // Tratta come testo OCR
