@@ -89,6 +89,30 @@ export const pricingConfig = {
 } as const;
 
 /**
+ * Configurazione per OCR Vision (Sprint 2.5)
+ */
+export const ocrConfig = {
+  /**
+   * Feature flag per abilitare OCR immagini via Gemini Vision.
+   * Default: false (opt-in). Impostare ENABLE_OCR_IMAGES=true per attivare.
+   */
+  ENABLE_OCR_IMAGES: process.env.ENABLE_OCR_IMAGES === 'true',
+
+  /**
+   * Soglia minima di confidence per accettare dati estratti da immagine.
+   * Valore: 0-1 (es. 0.7 = 70%). Se confidence < soglia, chiede conferma.
+   * Configurabile via OCR_MIN_CONFIDENCE (default: 0.7 - conservativo).
+   */
+  MIN_VISION_CONFIDENCE: parseFloat(process.env.OCR_MIN_CONFIDENCE || '0.7'),
+
+  /**
+   * Timeout in ms per chiamata Gemini Vision.
+   * Default: 30 secondi.
+   */
+  VISION_TIMEOUT_MS: parseInt(process.env.OCR_VISION_TIMEOUT_MS || '30000', 10),
+} as const;
+
+/**
  * Configurazione per dimensioni default dei pacchi (quando non specificate)
  */
 export const parcelDefaults = {
@@ -117,5 +141,6 @@ export const agentConfig = {
   booking: bookingConfig,
   pricing: pricingConfig,
   parcel: parcelDefaults,
+  ocr: ocrConfig,
 } as const;
 
