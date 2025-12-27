@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.6 DONE | P0-P1 Refactoring DONE | 🟡 Sprint 2.5 NEXT (OCR immagini)
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.6-2.8 DONE | P0-P1 Refactoring DONE | 🟡 Sprint 2.5 NEXT (OCR immagini)
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -196,6 +196,30 @@
 npm run test:unit      # → 264 test passati
 npm run test:integration # → 90 test passati
 npm run type-check     # → 0 errori
+```
+
+### ✅ FASE 2.8: SUPERADMIN UI - PLATFORM FEE MANAGEMENT (DONE)
+- [x] **Componenti React:** `components/admin/platform-fee/`
+  - `CurrentFeeDisplay`: Mostra fee corrente con badge Custom/Default
+  - `UpdateFeeDialog`: Dialog modifica fee con quick presets (Enterprise €0.30, Standard €0.50, VIP €0.00, Reset)
+  - `FeeHistoryTable`: Tabella storico modifiche con audit trail
+- [x] **API Route:** `app/api/admin/platform-fee/update/route.ts`
+  - POST endpoint per aggiornare fee
+  - Verifica autenticazione + ruolo SUPERADMIN
+  - Validazione input (fee >= 0 o null per reset)
+- [x] **User Detail Page:** `app/dashboard/admin/users/[userId]/page.tsx`
+  - Mostra informazioni utente (email, ruolo, wallet, data registrazione)
+  - Sezione "Platform Fee (BYOC)" con CurrentFeeDisplay
+  - Storico modifiche con FeeHistoryTable
+- [x] **Admin Page Update:** Link da tabella utenti a pagina dettaglio
+  - Icona ExternalLink per accesso rapido a gestione fee
+
+**SuperAdmin può ora gestire le fee via UI senza SQL!**
+
+**Come verificare:**
+```bash
+npm run type-check     # → 0 errori
+npm run dev            # → Naviga a /dashboard/admin → click icona su utente → sezione Platform Fee
 ```
 
 ### 🟡 FASE 2.5: OCR IMMAGINI (FUTURE)
