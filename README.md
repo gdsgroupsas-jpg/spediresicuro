@@ -508,6 +508,60 @@ npm run test:e2e            # Esegui test Playwright E2E
 
 ---
 
+## 🗺️ Roadmap
+
+### ✅ FASE 1-2.8 — Architettura & Migrazione (COMPLETATA)
+
+**Status:** ✅ Tutte le fasi completate e validate
+
+- **FASE 1:** Pricing graph, Supervisor Router, Intent Detector, Rate limiting distribuito
+- **FASE 2.1-2.2:** Supervisor Router hardening, Telemetria strutturata, Guardrail
+- **FASE 2.3:** Address Worker (normalizzazione indirizzi italiani)
+- **FASE 2.4:** OCR Worker (estrazione dati da testo)
+- **FASE 2.5:** OCR Immagini (Gemini Vision con retry + fallback)
+- **FASE 2.6:** Booking Worker (prenotazione spedizioni)
+- **FASE 2.7:** Dynamic Platform Fees (fee configurabili per utente)
+- **FASE 2.8:** SuperAdmin UI (gestione platform fees)
+
+**Deliverable:**
+- Test unit: 264 test passati
+- Test integration: 90 test passati
+- Test E2E: Suite completa Playwright attiva
+- OCR Vision: 10/10 immagini processate, 90% confidence, 0% clarification rate
+
+**Vedi:** [MIGRATION_MEMORY.md](MIGRATION_MEMORY.md) per dettagli completi
+
+---
+
+### 🚀 FASE 3 — Rollout & Economics (IN CORSO)
+
+**Status:** 🟡 Pianificazione e setup
+
+**Obiettivo:** Validare esposizione reale, sostenibilità economica e readiness GTM senza modifiche architetturali.
+
+**Fasi:**
+- **FASE 3.1:** Controlled Rollout (Cohort 0 → 1 → 2)
+- **FASE 3.2:** Economics Observation (costi reali, alert threshold, kill switch)
+- **FASE 3.3:** GTM Readiness Gates (Prodotto, Economics, Operativo)
+
+**Vedi:** [PHASE_3_ROLLOUT_PLAN.md](PHASE_3_ROLLOUT_PLAN.md) per roadmap dettagliata
+
+---
+
+### 🔮 FASE 4 — Scaling & Optimization (FUTURE)
+
+**Status:** 📋 Pianificazione futura
+
+**Obiettivi potenziali:**
+- Pricing optimization basato su dati reali
+- Automation avanzata (scheduling, batch processing)
+- Partnership e integrazioni
+- Scaling infrastruttura
+
+**Nota:** FASE 4 sarà definita dopo validazione FASE 3.
+
+---
+
 ## 🧪 Testing & Validazione
 
 ### Wallet & Label Invariants (Governance)
