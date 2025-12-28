@@ -26,12 +26,11 @@ import {
   X,
   Loader2
 } from 'lucide-react';
-import AsyncLocationCombobox from '@/components/ui/async-location-combobox';
+import AddressFields from '@/components/ui/address-fields';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
 import { generateShipmentCSV, downloadCSV, generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
-import type { OnLocationSelect } from '@/types/geo';
 import type { Corriere } from '@/types/corrieri';
 
 interface FormData {
@@ -380,24 +379,26 @@ export default function NuovaSpedizionePage() {
     return Math.round((baseCost + weightCost) * distanceMultiplier * typeMultiplier);
   }, [formData.peso, formData.mittenteCitta, formData.destinatarioCitta, formData.tipoSpedizione]);
 
-  // Handler selezione location mittente
-  const handleMittenteLocation: OnLocationSelect = (location) => {
-    setFormData((prev) => ({
-      ...prev,
-      mittenteCitta: location.city,
-      mittenteProvincia: location.province,
-      mittenteCap: location.cap || '',
-    }));
+  // Handler per campi mittente
+  const handleMittenteCittaChange = (city: string) => {
+    setFormData((prev) => ({ ...prev, mittenteCitta: city }));
+  };
+  const handleMittenteProvinciaChange = (province: string) => {
+    setFormData((prev) => ({ ...prev, mittenteProvincia: province }));
+  };
+  const handleMittenteCapChange = (cap: string) => {
+    setFormData((prev) => ({ ...prev, mittenteCap: cap }));
   };
 
-  // Handler selezione location destinatario
-  const handleDestinatarioLocation: OnLocationSelect = (location) => {
-    setFormData((prev) => ({
-      ...prev,
-      destinatarioCitta: location.city,
-      destinatarioProvincia: location.province,
-      destinatarioCap: location.cap || '',
-    }));
+  // Handler per campi destinatario
+  const handleDestinatarioCittaChange = (city: string) => {
+    setFormData((prev) => ({ ...prev, destinatarioCitta: city }));
+  };
+  const handleDestinatarioProvinciaChange = (province: string) => {
+    setFormData((prev) => ({ ...prev, destinatarioProvincia: province }));
+  };
+  const handleDestinatarioCapChange = (cap: string) => {
+    setFormData((prev) => ({ ...prev, destinatarioCap: cap }));
   };
 
   // Helper per formattazione telefono italiana
@@ -804,27 +805,19 @@ export default function NuovaSpedizionePage() {
                   errorMessage={formData.mittenteIndirizzo && !validation.mittenteIndirizzo ? 'Indirizzo troppo corto' : undefined}
                 />
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    Città, Provincia, CAP <span className="text-red-500">*</span>
-                  </label>
-                  <AsyncLocationCombobox
-                    onSelect={handleMittenteLocation}
-                    placeholder="Cerca città..."
-                    className="w-full"
-                    isValid={validation.mittenteCitta && validation.mittenteProvincia && validation.mittenteCap}
-                    defaultValue={formData.mittenteCitta ? {
-                      city: formData.mittenteCitta,
-                      province: formData.mittenteProvincia,
-                      cap: formData.mittenteCap
-                    } : undefined}
-                  />
-                  {formData.mittenteCitta && (!validation.mittenteProvincia || !validation.mittenteCap) && (
-                    <p className="mt-1 text-xs text-red-600">
-                      ⚠️ Provincia o CAP mancante. Seleziona dall&apos;autocomplete.
-                    </p>
-                  )}
-                </div>
+                <AddressFields
+                  label=""
+                  cityValue={formData.mittenteCitta}
+                  provinceValue={formData.mittenteProvincia}
+                  postalCodeValue={formData.mittenteCap}
+                  onCityChange={handleMittenteCittaChange}
+                  onProvinceChange={handleMittenteProvinciaChange}
+                  onPostalCodeChange={handleMittenteCapChange}
+                  cityValid={validation.mittenteCitta}
+                  provinceValid={validation.mittenteProvincia}
+                  postalCodeValid={validation.mittenteCap}
+                  required
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <SmartInput
@@ -876,27 +869,19 @@ export default function NuovaSpedizionePage() {
                   errorMessage={formData.destinatarioIndirizzo && !validation.destinatarioIndirizzo ? 'Indirizzo troppo corto' : undefined}
                 />
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    Città, Provincia, CAP <span className="text-red-500">*</span>
-                  </label>
-                  <AsyncLocationCombobox
-                    onSelect={handleDestinatarioLocation}
-                    placeholder="Cerca città..."
-                    className="w-full"
-                    isValid={validation.destinatarioCitta && validation.destinatarioProvincia && validation.destinatarioCap}
-                    defaultValue={formData.destinatarioCitta ? {
-                      city: formData.destinatarioCitta,
-                      province: formData.destinatarioProvincia,
-                      cap: formData.destinatarioCap
-                    } : undefined}
-                  />
-                  {formData.destinatarioCitta && (!validation.destinatarioProvincia || !validation.destinatarioCap) && (
-                    <p className="mt-1 text-xs text-red-600">
-                      ⚠️ Provincia o CAP mancante. Seleziona dall&apos;autocomplete.
-                    </p>
-                  )}
-                </div>
+                <AddressFields
+                  label=""
+                  cityValue={formData.destinatarioCitta}
+                  provinceValue={formData.destinatarioProvincia}
+                  postalCodeValue={formData.destinatarioCap}
+                  onCityChange={handleDestinatarioCittaChange}
+                  onProvinceChange={handleDestinatarioProvinciaChange}
+                  onPostalCodeChange={handleDestinatarioCapChange}
+                  cityValid={validation.destinatarioCitta}
+                  provinceValid={validation.destinatarioProvincia}
+                  postalCodeValid={validation.destinatarioCap}
+                  required
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <SmartInput
