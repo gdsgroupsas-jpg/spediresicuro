@@ -319,22 +319,52 @@ export async function POST(request: NextRequest) {
     // Leggi i dati dal body della richiesta
     const body = await request.json();
 
-    // Validazione base dei campi obbligatori
-    if (!body.mittenteNome || !body.destinatarioNome) {
-      return NextResponse.json(
-        {
-          error: 'Dati mancanti',
-          message: 'Nome mittente e destinatario sono obbligatori',
-        },
-        { status: 400 }
-      );
+    // ⚠️ VALIDAZIONE ROBUSTA: Verifica campi obbligatori PRIMA di chiamare Supabase
+    const validationErrors: string[] = [];
+
+    // Validazione nome mittente e destinatario
+    if (!body.mittenteNome || body.mittenteNome.trim().length < 2) {
+      validationErrors.push('Nome mittente obbligatorio (minimo 2 caratteri)');
+    }
+    if (!body.destinatarioNome || body.destinatarioNome.trim().length < 2) {
+      validationErrors.push('Nome destinatario obbligatorio (minimo 2 caratteri)');
     }
 
+    // ⚠️ VALIDAZIONE PROVINCIA E CAP MITTENTE (CRITICO)
+    if (!body.mittenteProvincia || body.mittenteProvincia.trim().length !== 2) {
+      validationErrors.push('Provincia mittente obbligatoria (sigla 2 lettere, es. SA)');
+    }
+    if (!body.mittenteCap || !/^\d{5}$/.test(body.mittenteCap.trim())) {
+      validationErrors.push('CAP mittente obbligatorio (5 cifre)');
+    }
+    if (!body.mittenteCitta || body.mittenteCitta.trim().length < 2) {
+      validationErrors.push('Città mittente obbligatoria');
+    }
+
+    // ⚠️ VALIDAZIONE PROVINCIA E CAP DESTINATARIO (CRITICO)
+    if (!body.destinatarioProvincia || body.destinatarioProvincia.trim().length !== 2) {
+      validationErrors.push('Provincia destinatario obbligatoria (sigla 2 lettere, es. MI)');
+    }
+    if (!body.destinatarioCap || !/^\d{5}$/.test(body.destinatarioCap.trim())) {
+      validationErrors.push('CAP destinatario obbligatorio (5 cifre)');
+    }
+    if (!body.destinatarioCitta || body.destinatarioCitta.trim().length < 2) {
+      validationErrors.push('Città destinatario obbligatoria');
+    }
+
+    // Validazione peso
     if (!body.peso || parseFloat(body.peso) <= 0) {
+      validationErrors.push('Il peso deve essere maggiore di 0');
+    }
+
+    // Se ci sono errori di validazione, blocca la richiesta
+    if (validationErrors.length > 0) {
+      logger.warn('POST /api/spedizioni - Validazione fallita', { errors: validationErrors });
       return NextResponse.json(
         {
           error: 'Dati non validi',
-          message: 'Il peso deve essere maggiore di 0',
+          message: validationErrors.join('. '),
+          details: validationErrors,
         },
         { status: 400 }
       );
