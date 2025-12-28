@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAllUsers, toggleResellerStatus, manageWallet } from '@/actions/super-admin'
+import { getAllUsers, toggleResellerStatus, manageWallet, updateResellerRole } from '@/actions/super-admin'
 import type { UserFilters } from '@/lib/validations/user-schema'
 import type { WalletOperationInput, BulkWalletOperationInput } from '@/lib/validations/wallet-schema'
 
@@ -130,6 +130,44 @@ export function useBulkWalletOperation() {
       queryClient.invalidateQueries({ queryKey: ['all-users'] })
       queryClient.invalidateQueries({ queryKey: ['sub-users'] })
       queryClient.invalidateQueries({ queryKey: ['sub-users-stats'] })
+    },
+  })
+}
+
+/**
+ * Hook per aggiornare ruolo reseller
+ */
+export function useUpdateResellerRole() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'user' }) => {
+      const result = await updateResellerRole(userId, role)
+      if (!result.success) {
+        throw new Error(result.error || 'Errore nell\'aggiornamento del ruolo reseller')
+      }
+      return result
+    },
+    onMutate: async ({ userId, role }) => {
+      await queryClient.cancelQueries({ queryKey: ['all-users'] })
+      const previousUsers = queryClient.getQueryData(['all-users'])
+
+      queryClient.setQueryData(['all-users'], (old: any[] | undefined) => {
+        if (!old) return old
+        return old.map((user: any) =>
+          user.id === userId ? { ...user, reseller_role: role } : user
+        )
+      })
+
+      return { previousUsers }
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousUsers) {
+        queryClient.setQueryData(['all-users'], context.previousUsers)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users'] })
     },
   })
 }
