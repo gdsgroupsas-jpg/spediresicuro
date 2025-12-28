@@ -250,10 +250,12 @@ export default function SpedisciOnlineConfigMulti() {
     }
   }
 
-  // Verifica se è admin
+  // ⚠️ RBAC: Admin vedono tutte le config, Reseller vedono solo la propria
   const isAdmin = (session?.user as any)?.role === 'admin'
+  const isReseller = (session?.user as any)?.is_reseller === true
+  const canAccessConfigurations = isAdmin || isReseller
 
-  if (!isAdmin) {
+  if (!canAccessConfigurations) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-8">
         <div className="text-center py-8">
@@ -262,7 +264,7 @@ export default function SpedisciOnlineConfigMulti() {
             Accesso Negato
           </h3>
           <p className="text-gray-600">
-            Solo gli amministratori possono gestire le configurazioni Spedisci.Online.
+            Devi essere un reseller o amministratore per gestire le configurazioni Spedisci.Online.
           </p>
         </div>
       </div>
@@ -277,11 +279,18 @@ export default function SpedisciOnlineConfigMulti() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <Truck className="w-6 h-6 text-blue-600" />
-              Configurazioni Spedisci.Online (Multi-Dominio)
+              Configurazioni Spedisci.Online {isAdmin && '(Multi-Dominio)'}
             </h2>
             <p className="text-gray-600">
-              Gestisci tutte le configurazioni Spedisci.Online. Puoi avere più domini con le stesse regole.
+              {isAdmin 
+                ? 'Gestisci tutte le configurazioni Spedisci.Online. Puoi avere più domini con le stesse regole.'
+                : 'Gestisci la tua configurazione personale Spedisci.Online'}
             </p>
+            {!isAdmin && (
+              <p className="text-sm text-blue-600 mt-2">
+                💡 Stai visualizzando solo la tua configurazione personale
+              </p>
+            )}
           </div>
           {!showForm && (
             <button
