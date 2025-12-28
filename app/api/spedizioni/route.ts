@@ -501,10 +501,12 @@ export async function POST(request: NextRequest) {
     });
     
     // Salva nel database (SOLO Supabase)
+    let createdShipment: any = null;
     try {
       const authContext = await createAuthContextFromSession(session);
       // Usa payload normalizzato invece di spedizione originale
-      await addSpedizione(normalizedPayload, authContext);
+      createdShipment = await addSpedizione(normalizedPayload, authContext);
+      console.log('✅ [API] Spedizione creata con ID:', createdShipment.id);
     } catch (error: any) {
       console.error('❌ [API] Errore addSpedizione:', error.message);
       console.error('❌ [API] Stack:', error.stack);
@@ -530,30 +532,108 @@ export async function POST(request: NextRequest) {
       if (ldvResult.success) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
         
-        // Aggiorna tracking number se fornito dall'orchestrator
-        if (ldvResult.tracking_number && ldvResult.tracking_number !== spedizione.tracking) {
-          spedizione.tracking = ldvResult.tracking_number;
-          spedizione.ldv = ldvResult.tracking_number; // Salva anche come LDV
-        }
-
-        // Se è una spedizione Poste, salva metadati aggiuntivi
-        if (body.corriere === 'Poste Italiane' && ldvResult.metadata) {
-          const { poste_account_id, poste_product_code, waybill_number, label_pdf_url } = ldvResult.metadata;
-          
-          // Aggiorna spedizione con metadati Poste
-          spedizione.external_tracking_number = waybill_number || ldvResult.tracking_number;
-          spedizione.poste_metadata = {
-            poste_account_id,
-            poste_product_code,
-            waybill_number,
-            label_pdf_url
-          };
-          
-          console.log('📦 Metadati Poste salvati:', {
-            waybill_number,
-            poste_product_code,
-            label_pdf_url
-          });
+        // ⚠️ PERSISTENZA: Salva LDV, tracking e metadata in shipments SOLO se orchestrator ha successo
+        if (createdShipment?.id) {
+          try {
+            // Prepara dati da aggiornare
+            const updateData: any = {
+              updated_at: new Date().toISOString(),
+            };
+            
+            // Aggiorna tracking_number se fornito dall'orchestrator
+            if (ldvResult.tracking_number) {
+              updateData.tracking_number = ldvResult.tracking_number;
+              updateData.ldv = ldvResult.tracking_number; // LDV = tracking number
+            }
+            
+            // Aggiorna external_tracking_number se presente (es. Poste waybill_number)
+            if (ldvResult.metadata?.waybill_number) {
+              updateData.external_tracking_number = ldvResult.metadata.waybill_number;
+            }
+            
+            // Salva metadata come JSONB (carrier_metadata o poste_metadata)
+            if (ldvResult.metadata) {
+              // Normalizza metadata per schema Supabase
+              if (body.corriere === 'Poste Italiane') {
+                // Per Poste, salva come poste_metadata (se esiste colonna) o metadata
+                updateData.metadata = {
+                  poste_account_id: ldvResult.metadata.poste_account_id,
+                  poste_product_code: ldvResult.metadata.poste_product_code,
+                  waybill_number: ldvResult.metadata.waybill_number,
+                  label_pdf_url: ldvResult.metadata.label_pdf_url,
+                  carrier: 'Poste Italiane',
+                  method: ldvResult.method,
+                };
+              } else {
+                // Per altri corrieri, salva come carrier_metadata generico
+                updateData.metadata = {
+                  ...ldvResult.metadata,
+                  carrier: body.corriere || 'GLS',
+                  method: ldvResult.method,
+                  label_url: ldvResult.label_url,
+                };
+              }
+            }
+            
+            // ⚠️ LOGGING SICURO: Log struttura update senza dati sensibili
+            const safeUpdate = Object.keys(updateData).reduce((acc, key) => {
+              const sensitiveFields = ['api_key', 'api_secret', 'password', 'token', 'secret', 'credential'];
+              const isSensitive = sensitiveFields.some(field => key.toLowerCase().includes(field));
+              
+              const value = updateData[key];
+              if (isSensitive) {
+                acc[key] = '[REDACTED]';
+              } else if (typeof value === 'object' && value !== null) {
+                acc[key] = '[JSONB]';
+              } else {
+                acc[key] = value;
+              }
+              return acc;
+            }, {} as any);
+            
+            console.log('💾 [API] Aggiornamento spedizione con dati orchestrator:', {
+              shipment_id: createdShipment.id.substring(0, 8) + '...',
+              has_tracking: !!updateData.tracking_number,
+              has_ldv: !!updateData.ldv,
+              has_metadata: !!updateData.metadata,
+              update_structure: safeUpdate
+            });
+            
+            // Esegui UPDATE idempotente (usa ID come chiave)
+            const { data: updatedShipment, error: updateError } = await supabaseAdmin
+              .from('shipments')
+              .update(updateData)
+              .eq('id', createdShipment.id)
+              .select('id, tracking_number, ldv, external_tracking_number, metadata')
+              .single();
+            
+            if (updateError) {
+              console.error('❌ [API] Errore aggiornamento spedizione con dati orchestrator:', {
+                shipment_id: createdShipment.id,
+                error: updateError.message,
+                details: updateError.details
+              });
+              // Non bloccare la risposta - spedizione già creata
+            } else {
+              console.log('✅ [API] Spedizione aggiornata con dati orchestrator:', {
+                shipment_id: updatedShipment.id.substring(0, 8) + '...',
+                tracking_number: updatedShipment.tracking_number,
+                has_ldv: !!updatedShipment.ldv,
+                has_metadata: !!updatedShipment.metadata
+              });
+              
+              // Aggiorna oggetto spedizione per risposta
+              spedizione.tracking = updatedShipment.tracking_number || spedizione.tracking;
+              spedizione.ldv = updatedShipment.ldv || spedizione.ldv;
+              spedizione.external_tracking_number = updatedShipment.external_tracking_number || spedizione.external_tracking_number;
+              spedizione.metadata = updatedShipment.metadata || spedizione.metadata;
+            }
+          } catch (updateError: any) {
+            console.error('❌ [API] Errore durante aggiornamento spedizione:', updateError.message);
+            // Non bloccare la risposta - spedizione già creata
+          }
+        } else {
+          console.warn('⚠️ [API] Impossibile aggiornare spedizione: ID non disponibile');
         }
       } else {
         console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
