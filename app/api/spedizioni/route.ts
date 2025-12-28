@@ -515,10 +515,11 @@ export async function POST(request: NextRequest) {
     const sanitizedPayload = sanitizeShipmentPayloadByRole(spedizione, userRole, accountType);
     
     // ⚠️ FIX CRITICO: Mappa campi nested PRIMA di normalizzare
-    // Frontend invia: { mittente: { città, provincia, cap }, destinatario: { ... } }
+    // Frontend invia: { mittente: { citta, provincia, cap }, destinatario: { ... } }
     // DB richiede: { sender_city, sender_province, sender_zip, recipient_city, ... }
     if (sanitizedPayload.mittente && typeof sanitizedPayload.mittente === 'object') {
-      sanitizedPayload.sender_city = sanitizedPayload.mittente.città || sanitizedPayload.mittente.city || null;
+      // ⚠️ FIX: Cerca sia 'citta' (senza accento) che 'città' (con accento) per compatibilità
+      sanitizedPayload.sender_city = sanitizedPayload.mittente.citta || sanitizedPayload.mittente.città || sanitizedPayload.mittente.city || null;
       sanitizedPayload.sender_province = sanitizedPayload.mittente.provincia || sanitizedPayload.mittente.province || null;
       sanitizedPayload.sender_zip = sanitizedPayload.mittente.cap || sanitizedPayload.mittente.zip || sanitizedPayload.mittente.postal_code || null;
       console.log('📋 [PRE-NORMALIZE] Mappati campi mittente:', {
@@ -531,7 +532,8 @@ export async function POST(request: NextRequest) {
     }
     
     if (sanitizedPayload.destinatario && typeof sanitizedPayload.destinatario === 'object') {
-      sanitizedPayload.recipient_city = sanitizedPayload.destinatario.città || sanitizedPayload.destinatario.city || null;
+      // ⚠️ FIX: Cerca sia 'citta' (senza accento) che 'città' (con accento) per compatibilità
+      sanitizedPayload.recipient_city = sanitizedPayload.destinatario.citta || sanitizedPayload.destinatario.città || sanitizedPayload.destinatario.city || null;
       sanitizedPayload.recipient_province = sanitizedPayload.destinatario.provincia || sanitizedPayload.destinatario.province || null;
       sanitizedPayload.recipient_zip = sanitizedPayload.destinatario.cap || sanitizedPayload.destinatario.zip || sanitizedPayload.destinatario.postal_code || null;
       console.log('📋 [PRE-NORMALIZE] Mappati campi destinatario:', {
