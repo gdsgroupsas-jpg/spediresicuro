@@ -271,10 +271,10 @@ export async function savePersonalConfiguration(
     }
 
     // 3. Trova o crea configurazione personale per questo utente
-    // Recupera user_id e assigned_config_id direttamente da Supabase
+    // Recupera user_id, assigned_config_id e is_reseller direttamente da Supabase
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, assigned_config_id')
+      .select('id, assigned_config_id, is_reseller')
       .eq('email', session.user.email)
       .single();
 
@@ -282,20 +282,11 @@ export async function savePersonalConfiguration(
       return { success: false, error: 'Utente non trovato' };
     }
 
-    // Cerca configurazione esistente per questo utente e provider
-    let existingConfigId: string | null = null;
-    if (userData.assigned_config_id) {
-      const { data: existingConfig } = await supabaseAdmin
-        .from('courier_configs')
-        .select('id, created_by')
-        .eq('id', userData.assigned_config_id)
-        .eq('provider_id', data.provider_id)
-        .single();
-      
-      if (existingConfig && existingConfig.created_by === session.user.email) {
-        existingConfigId = existingConfig.id;
-      }
-    }
+    // ⚠️ FIX CRITICO: Forza account_type corretto per reseller
+    const isReseller = userData.is_reseller === true;
+    const accountType = isReseller ? 'reseller' : 'byoc';
+    
+    console.log(`📋 [savePersonalConfiguration] User: ${session.user.email}, is_reseller: ${isReseller}, account_type: ${accountType}`);
 
     // 4. Prepara dati per insert/update
     // ⚠️ SICUREZZA: Cripta credenziali sensibili prima di salvare
@@ -309,6 +300,8 @@ export async function savePersonalConfiguration(
       is_default: false, // Mai default per configurazioni personali
       description: data.description || null,
       notes: data.notes || null,
+      account_type: accountType, // ⚠️ FIX: Forza account_type corretto (reseller o byoc)
+      owner_user_id: userData.id, // ⚠️ FIX: Associa config all'utente
       updated_at: new Date().toISOString(),
     };
 
@@ -319,53 +312,41 @@ export async function savePersonalConfiguration(
         : encryptCredential(data.api_secret);
     }
 
-    // 5. Esegui insert o update
-    let result;
-    if (existingConfigId) {
-      // Update configurazione esistente
-      const { data: updatedConfig, error: updateError } = await supabaseAdmin
-        .from('courier_configs')
-        .update(configData)
-        .eq('id', existingConfigId)
-        .select()
-        .single();
+    // 5. Esegui UPSERT su (owner_user_id, provider_id)
+    // ⚠️ FIX: Usa upsert invece di insert/update manuale per evitare duplicati
+    configData.created_by = session.user.email;
+    
+    const { data: result, error: upsertError } = await supabaseAdmin
+      .from('courier_configs')
+      .upsert(configData, {
+        onConflict: 'owner_user_id,provider_id', // Constraint unico su questi campi
+        ignoreDuplicates: false, // Aggiorna se esiste
+      })
+      .select()
+      .single();
 
-      if (updateError) {
-        console.error('Errore update configurazione personale:', updateError);
-        return {
-          success: false,
-          error: updateError.message || 'Errore durante l\'aggiornamento',
-        };
-      }
+    if (upsertError) {
+      console.error('❌ Errore upsert configurazione personale:', upsertError);
+      return {
+        success: false,
+        error: upsertError.message || 'Errore durante il salvataggio',
+      };
+    }
 
-      result = updatedConfig;
-    } else {
-      // Insert nuova configurazione personale
-      configData.created_by = session.user.email;
-      const { data: newConfig, error: insertError } = await supabaseAdmin
-        .from('courier_configs')
-        .insert(configData)
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Errore inserimento configurazione personale:', insertError);
-        return {
-          success: false,
-          error: insertError.message || 'Errore durante la creazione',
-        };
-      }
-
-      result = newConfig;
-
-      // Assegna automaticamente la configurazione all'utente
+    // Assegna automaticamente la configurazione all'utente (se non già assegnata)
+    if (userData.assigned_config_id !== result.id) {
       await supabaseAdmin
         .from('users')
         .update({ assigned_config_id: result.id })
         .eq('id', userData.id);
     }
 
-    console.log(`✅ Configurazione personale ${existingConfigId ? 'aggiornata' : 'creata'}:`, result.id);
+    console.log(`✅ Configurazione personale salvata (upsert):`, {
+      id: result.id,
+      account_type: result.account_type,
+      owner_user_id: result.owner_user_id,
+      provider_id: result.provider_id,
+    });
 
     return {
       success: true,
