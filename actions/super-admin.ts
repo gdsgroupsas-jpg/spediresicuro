@@ -589,6 +589,7 @@ export async function createReseller(data: {
           password: null, // Password gestita da Supabase Auth (non più hash manuale)
           account_type: 'user', // Inizialmente user
           is_reseller: true, // Ma con flag reseller attivo
+          reseller_role: 'admin', // ⚠️ FIX: Reseller creati da superadmin sono automaticamente admin
           wallet_balance: data.initialCredit || 0,
           provider: 'credentials',
           created_at: new Date().toISOString(),
