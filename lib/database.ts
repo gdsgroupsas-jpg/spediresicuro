@@ -453,21 +453,23 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     external_tracking_number: spedizione.external_tracking_number || null, // Waybill number per Poste
     status: statusSupabase,
     // Mittente - ⚠️ MAPPING ESPLICITO CON FALLBACK SICURO (NO STRINGA VUOTA)
-    sender_name: mittente.nome || spedizione.mittenteNome || 'Mittente Predefinito',
-    sender_address: mittente.indirizzo || spedizione.mittenteIndirizzo || '',
-    sender_city: mittente.citta || spedizione.mittenteCitta || null, // ⚠️ null invece di '' per evitare constraint
-    sender_zip: mittente.cap || spedizione.mittenteCap || null, // ⚠️ null invece di '' per evitare constraint
-    sender_province: mittente.provincia || spedizione.mittenteProvincia || null, // ⚠️ null invece di '' per evitare constraint
+    // ⚠️ FIX: Cerca anche campi flat sender_* che arrivano da route.ts normalizzato
+    sender_name: mittente.nome || spedizione.mittenteNome || spedizione.sender_name || 'Mittente Predefinito',
+    sender_address: mittente.indirizzo || spedizione.mittenteIndirizzo || spedizione.sender_address || '',
+    sender_city: spedizione.sender_city || mittente.citta || spedizione.mittenteCitta || null, // ⚠️ FIX: sender_city ha priorità
+    sender_zip: spedizione.sender_zip || mittente.cap || spedizione.mittenteCap || null, // ⚠️ FIX: sender_zip ha priorità
+    sender_province: spedizione.sender_province || mittente.provincia || spedizione.mittenteProvincia || null, // ⚠️ FIX: sender_province ha priorità
     sender_country: 'IT', // Default Italia
-    sender_phone: mittente.telefono || spedizione.mittenteTelefono || '',
-    sender_email: mittente.email || spedizione.mittenteEmail || '',
+    sender_phone: mittente.telefono || spedizione.mittenteTelefono || spedizione.sender_phone || '',
+    sender_email: mittente.email || spedizione.mittenteEmail || spedizione.sender_email || '',
     // Destinatario - ⚠️ MAPPING ESPLICITO CON FALLBACK SICURO (NO STRINGA VUOTA)
-    recipient_name: destinatario.nome || spedizione.destinatarioNome || spedizione.nome || spedizione.nominativo || '',
+    // ⚠️ FIX: Cerca anche campi flat recipient_* che arrivano da route.ts normalizzato
+    recipient_name: destinatario.nome || spedizione.destinatarioNome || spedizione.recipient_name || spedizione.nome || spedizione.nominativo || '',
     recipient_type: 'B2C', // Default B2C (da implementare logica B2B se necessario)
-    recipient_address: destinatario.indirizzo || spedizione.destinatarioIndirizzo || spedizione.indirizzo || '',
-    recipient_city: destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || null, // ⚠️ null invece di '' per evitare constraint
-    recipient_zip: destinatario.cap || spedizione.destinatarioCap || spedizione.cap || null, // ⚠️ null invece di '' per evitare constraint
-    recipient_province: destinatario.provincia || spedizione.destinatarioProvincia || spedizione.provincia || null, // ⚠️ null invece di '' per evitare constraint
+    recipient_address: destinatario.indirizzo || spedizione.destinatarioIndirizzo || spedizione.recipient_address || spedizione.indirizzo || '',
+    recipient_city: spedizione.recipient_city || destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || null, // ⚠️ FIX: recipient_city ha priorità
+    recipient_zip: spedizione.recipient_zip || destinatario.cap || spedizione.destinatarioCap || spedizione.cap || null, // ⚠️ FIX: recipient_zip ha priorità
+    recipient_province: spedizione.recipient_province || destinatario.provincia || spedizione.destinatarioProvincia || spedizione.provincia || null, // ⚠️ FIX: recipient_province ha priorità
     recipient_country: 'IT', // Default Italia
     recipient_phone: destinatario.telefono || spedizione.destinatarioTelefono || spedizione.telefono || '',
     recipient_email: destinatario.email || spedizione.destinatarioEmail || spedizione.email_dest || spedizione.email || '',
