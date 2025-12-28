@@ -452,22 +452,22 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     ldv: ldv || null, // Lettera di Vettura (importante per Spedisci.Online)
     external_tracking_number: spedizione.external_tracking_number || null, // Waybill number per Poste
     status: statusSupabase,
-    // Mittente
+    // Mittente - ⚠️ MAPPING ESPLICITO CON FALLBACK SICURO (NO STRINGA VUOTA)
     sender_name: mittente.nome || spedizione.mittenteNome || 'Mittente Predefinito',
     sender_address: mittente.indirizzo || spedizione.mittenteIndirizzo || '',
-    sender_city: mittente.citta || spedizione.mittenteCitta || '',
-    sender_zip: mittente.cap || spedizione.mittenteCap || '',
-    sender_province: mittente.provincia || spedizione.mittenteProvincia || '',
+    sender_city: mittente.citta || spedizione.mittenteCitta || null, // ⚠️ null invece di '' per evitare constraint
+    sender_zip: mittente.cap || spedizione.mittenteCap || null, // ⚠️ null invece di '' per evitare constraint
+    sender_province: mittente.provincia || spedizione.mittenteProvincia || null, // ⚠️ null invece di '' per evitare constraint
     sender_country: 'IT', // Default Italia
     sender_phone: mittente.telefono || spedizione.mittenteTelefono || '',
     sender_email: mittente.email || spedizione.mittenteEmail || '',
-    // Destinatario
+    // Destinatario - ⚠️ MAPPING ESPLICITO CON FALLBACK SICURO (NO STRINGA VUOTA)
     recipient_name: destinatario.nome || spedizione.destinatarioNome || spedizione.nome || spedizione.nominativo || '',
     recipient_type: 'B2C', // Default B2C (da implementare logica B2B se necessario)
     recipient_address: destinatario.indirizzo || spedizione.destinatarioIndirizzo || spedizione.indirizzo || '',
-    recipient_city: destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || '',
-    recipient_zip: destinatario.cap || spedizione.destinatarioCap || spedizione.cap || '',
-    recipient_province: destinatario.provincia || spedizione.destinatarioProvincia || spedizione.provincia || '',
+    recipient_city: destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || null, // ⚠️ null invece di '' per evitare constraint
+    recipient_zip: destinatario.cap || spedizione.destinatarioCap || spedizione.cap || null, // ⚠️ null invece di '' per evitare constraint
+    recipient_province: destinatario.provincia || spedizione.destinatarioProvincia || spedizione.provincia || null, // ⚠️ null invece di '' per evitare constraint
     recipient_country: 'IT', // Default Italia
     recipient_phone: destinatario.telefono || spedizione.destinatarioTelefono || spedizione.telefono || '',
     recipient_email: destinatario.email || spedizione.destinatarioEmail || spedizione.email_dest || spedizione.email || '',
@@ -919,6 +919,47 @@ export async function addSpedizione(
       return value;
     }));
     
+    // ⚠️ GUARDRAIL FINALE: Verifica campi critici PRIMA dell'INSERT
+    const guardRailErrors: string[] = [];
+    
+    // Verifica province (CRITICO per constraint DB)
+    if (!finalPayload.sender_province || typeof finalPayload.sender_province !== 'string' || !/^[A-Z]{2}$/.test(finalPayload.sender_province)) {
+      guardRailErrors.push(`sender_province invalida: "${finalPayload.sender_province}" (deve essere sigla 2 lettere maiuscole, es. SA)`);
+    }
+    if (!finalPayload.recipient_province || typeof finalPayload.recipient_province !== 'string' || !/^[A-Z]{2}$/.test(finalPayload.recipient_province)) {
+      guardRailErrors.push(`recipient_province invalida: "${finalPayload.recipient_province}" (deve essere sigla 2 lettere maiuscole, es. MI)`);
+    }
+    
+    // Verifica CAP (CRITICO per constraint DB)
+    if (!finalPayload.sender_zip || typeof finalPayload.sender_zip !== 'string' || !/^[0-9]{5}$/.test(finalPayload.sender_zip)) {
+      guardRailErrors.push(`sender_zip invalido: "${finalPayload.sender_zip}" (deve essere 5 cifre, es. 84087)`);
+    }
+    if (!finalPayload.recipient_zip || typeof finalPayload.recipient_zip !== 'string' || !/^[0-9]{5}$/.test(finalPayload.recipient_zip)) {
+      guardRailErrors.push(`recipient_zip invalido: "${finalPayload.recipient_zip}" (deve essere 5 cifre, es. 20100)`);
+    }
+    
+    // Verifica città (CRITICO)
+    if (!finalPayload.sender_city || typeof finalPayload.sender_city !== 'string' || finalPayload.sender_city.trim().length < 2) {
+      guardRailErrors.push(`sender_city invalida: "${finalPayload.sender_city}" (deve essere almeno 2 caratteri)`);
+    }
+    if (!finalPayload.recipient_city || typeof finalPayload.recipient_city !== 'string' || finalPayload.recipient_city.trim().length < 2) {
+      guardRailErrors.push(`recipient_city invalida: "${finalPayload.recipient_city}" (deve essere almeno 2 caratteri)`);
+    }
+    
+    // Se ci sono errori, blocca INSERT
+    if (guardRailErrors.length > 0) {
+      console.error('❌ [GUARDRAIL] Payload finale NON valido:', guardRailErrors);
+      console.error('❌ [GUARDRAIL] Payload ricevuto:', {
+        sender_city: finalPayload.sender_city,
+        sender_province: finalPayload.sender_province,
+        sender_zip: finalPayload.sender_zip,
+        recipient_city: finalPayload.recipient_city,
+        recipient_province: finalPayload.recipient_province,
+        recipient_zip: finalPayload.recipient_zip,
+      });
+      throw new Error(`Guardrail fallito: ${guardRailErrors.join('; ')}`);
+    }
+    
     // ⚠️ LOGGING SICURO: Log struttura payload senza esporre dati sensibili
     const safePayload = Object.keys(finalPayload).reduce((acc, key) => {
       const sensitiveFields = ['api_key', 'api_secret', 'password', 'token', 'secret', 'credential', 'email', 'phone'];
@@ -945,6 +986,20 @@ export async function addSpedizione(
       has_admin_fields: !!(finalPayload.created_by_admin_id),
       is_admin_context: isAdminContext,
       structure: safePayload
+    });
+    
+    // ⚠️ LOGGING CRITICO: Log campi indirizzo PRIMA dell'INSERT
+    console.log('🔍 [SUPABASE] Campi indirizzo finali (PRIMA INSERT):', {
+      sender: {
+        city: finalPayload.sender_city,
+        province: finalPayload.sender_province,
+        zip: finalPayload.sender_zip,
+      },
+      recipient: {
+        city: finalPayload.recipient_city,
+        province: finalPayload.recipient_province,
+        zip: finalPayload.recipient_zip,
+      },
     });
     
     console.log('🔄 [SUPABASE] Esecuzione INSERT...');
