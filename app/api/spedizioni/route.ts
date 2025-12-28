@@ -13,6 +13,120 @@ import { addSpedizione, getSpedizioni } from '@/lib/database';
 import { createAuthContextFromSession } from '@/lib/auth-context';
 import { createApiLogger, getRequestId } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
+import { supabaseAdmin } from '@/lib/db/client';
+
+/**
+ * Sanitizza payload spedizione in base al ruolo utente
+ * Rimuove campi admin se l'utente non è superadmin
+ * 
+ * @param payload - Payload spedizione da sanitizzare
+ * @param userRole - Ruolo utente (da session.user)
+ * @param accountType - Account type utente (da database)
+ * @returns Payload sanitizzato
+ */
+function sanitizeShipmentPayloadByRole(
+  payload: any,
+  userRole: string | undefined,
+  accountType: string | undefined
+): any {
+  const isSuperAdmin = accountType === 'superadmin' || userRole === 'superadmin' || userRole === 'SUPERADMIN';
+  
+  // Se non è superadmin, rimuovi campi admin
+  if (!isSuperAdmin) {
+    const sanitized = { ...payload };
+    
+    // Rimuovi campi admin
+    delete sanitized.created_by_admin_id;
+    delete sanitized.admin_operation_reason;
+    
+    console.log('ℹ️ [SANITIZE] Campi admin rimossi (utente non superadmin)');
+    
+    return sanitized;
+  }
+  
+  // Superadmin: mantieni tutti i campi (ma admin_operation_reason viene rimosso comunque in normalizzazione)
+  return payload;
+}
+
+/**
+ * Normalizza payload spedizione per Supabase
+ * - Converte oggetti in string/uuid
+ * - Serializza metadata (JSONB)
+ * - Elimina chiavi con undefined
+ * 
+ * @param payload - Payload da normalizzare
+ * @returns Payload normalizzato
+ */
+function normalizeShipmentPayload(payload: any): any {
+  const normalized: any = {};
+  
+  // Lista campi UUID (da normalizzare a stringa)
+  const uuidFields = ['courier_id', 'user_id'];
+  
+  // Lista campi JSONB (da serializzare)
+  const jsonbFields = ['metadata', 'poste_metadata'];
+  
+  for (const [key, value] of Object.entries(payload)) {
+    // 1. Rimuovi undefined/null
+    if (value === undefined || value === null) {
+      continue; // Salta undefined/null
+    }
+    
+    // 2. Rimuovi campi non validi (non esistono nello schema)
+    if (key === 'admin_operation_reason') {
+      console.warn(`⚠️ [NORMALIZE] Campo ${key} non esiste nello schema, rimosso`);
+      continue; // Rimuovi sempre (non esiste nello schema)
+    }
+    
+    // 3. Normalizza UUID (stringa valida o null)
+    if (uuidFields.includes(key)) {
+      if (typeof value === 'string' && value.trim() !== '') {
+        normalized[key] = value.trim();
+      } else if (typeof value === 'object' && value !== null) {
+        // Se è un oggetto, prova a estrarre UUID (es. { id: "uuid" } -> "uuid")
+        const uuidValue = (value as any).id || (value as any).uuid || null;
+        if (uuidValue && typeof uuidValue === 'string') {
+          normalized[key] = uuidValue.trim();
+        } else {
+          console.warn(`⚠️ [NORMALIZE] Campo UUID ${key} è un oggetto non valido, convertito in null`);
+          normalized[key] = null;
+        }
+      } else {
+        normalized[key] = null;
+      }
+      continue;
+    }
+    
+    // 4. Normalizza JSONB (serializza oggetti)
+    if (jsonbFields.includes(key)) {
+      if (typeof value === 'object' && value !== null) {
+        normalized[key] = value; // Supabase gestisce JSONB automaticamente
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        // Se è stringa, prova a parsarla
+        try {
+          normalized[key] = JSON.parse(value);
+        } catch {
+          normalized[key] = null;
+        }
+      } else {
+        normalized[key] = null;
+      }
+      continue;
+    }
+    
+    // 5. Normalizza altri tipi (string, number, boolean)
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      // Oggetto non JSONB → rimuovi (causa "[OBJECT]" nel payload)
+      console.warn(`⚠️ [NORMALIZE] Campo ${key} è un oggetto non JSONB, rimosso per evitare "[OBJECT]"`);
+      continue; // Rimuovi oggetti non JSONB
+    }
+    
+    // 6. Mantieni valore normalizzato
+    normalized[key] = value;
+  }
+  
+  return normalized;
+}
 
 /**
  * Handler GET - Ottiene tutte le spedizioni
@@ -330,10 +444,67 @@ export async function POST(request: NextRequest) {
       deleted: false,
     };
 
+    // ⚠️ NORMALIZZAZIONE PAYLOAD: Sanitizza e normalizza prima dell'INSERT
+    // 1. Recupera ruolo utente per sanitizzazione
+    let userRole: string | undefined = (session.user as any).role;
+    let accountType: string | undefined = (session.user as any).account_type;
+    
+    // Se non disponibile in session, recupera da database
+    if (!accountType) {
+      try {
+        const { data: userData } = await supabaseAdmin
+          .from('users')
+          .select('role, account_type')
+          .eq('email', session.user.email)
+          .single();
+        
+        if (userData) {
+          userRole = userData.role || userRole;
+          accountType = userData.account_type || accountType;
+        }
+      } catch (error) {
+        console.warn('⚠️ [API] Errore recupero ruolo utente:', error);
+      }
+    }
+    
+    // 2. Sanitizza payload in base al ruolo
+    const sanitizedPayload = sanitizeShipmentPayloadByRole(spedizione, userRole, accountType);
+    
+    // 3. Normalizza payload (rimuove undefined, normalizza tipi, serializza JSONB)
+    const normalizedPayload = normalizeShipmentPayload(sanitizedPayload);
+    
+    // ⚠️ LOGGING SICURO: Log struttura payload senza esporre dati sensibili
+    const safePayload = Object.keys(normalizedPayload).reduce((acc, key) => {
+      const sensitiveFields = ['email', 'phone', 'api_key', 'api_secret', 'password', 'token', 'secret'];
+      const isSensitive = sensitiveFields.some(field => key.toLowerCase().includes(field));
+      
+      const value = normalizedPayload[key];
+      if (isSensitive) {
+        acc[key] = '[REDACTED]';
+      } else if (value === null || value === undefined) {
+        acc[key] = null;
+      } else if (typeof value === 'object' && value !== null) {
+        acc[key] = '[JSONB]'; // Indica JSONB, non "[OBJECT]"
+      } else if (typeof value === 'string' && value.length > 50) {
+        acc[key] = `${value.substring(0, 20)}... (${value.length} chars)`;
+      } else {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as any);
+    
+    console.log('📋 [API] Payload normalizzato (struttura):', {
+      fields_count: Object.keys(normalizedPayload).length,
+      is_superadmin: accountType === 'superadmin',
+      has_admin_fields: !!(normalizedPayload.created_by_admin_id),
+      structure: safePayload
+    });
+    
     // Salva nel database (SOLO Supabase)
     try {
       const authContext = await createAuthContextFromSession(session);
-      await addSpedizione(spedizione, authContext);
+      // Usa payload normalizzato invece di spedizione originale
+      await addSpedizione(normalizedPayload, authContext);
     } catch (error: any) {
       console.error('❌ [API] Errore addSpedizione:', error.message);
       console.error('❌ [API] Stack:', error.stack);
