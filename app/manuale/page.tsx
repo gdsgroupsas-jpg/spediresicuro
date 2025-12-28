@@ -5,29 +5,33 @@
  * Per aggiornare il manuale modifica `MANUALE_UTENTE.md` e riesegui la build.
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import ReactMarkdown, { Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Header from '@/components/header';
-import Footer from '@/components/footer';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth-config';
 
 export const metadata = {
-  title: 'Manuale Utente | SpediRe Sicuro',
-  description: 'Documentazione completa della piattaforma SpediRe Sicuro.',
+  title: 'Manuale Utente | SpedireSicuro',
+  description: 'Documentazione completa della piattaforma SpedireSicuro.',
 };
 
-// Forza rendering dinamico (legge file system)
+// Forza rendering dinamico
 export const dynamic = 'force-dynamic';
 
-async function getManualContent(): Promise<string> {
-  try {
-    const manualPath = path.join(process.cwd(), 'MANUALE_UTENTE.md');
-    return await fs.readFile(manualPath, 'utf-8');
-  } catch (error) {
-    console.error('Errore lettura MANUALE_UTENTE.md', error);
-    return 'Manuale non disponibile. Verifica il file MANUALE_UTENTE.md nella root del progetto.';
+/**
+ * Route pubblica /manuale - Redirect a versione protetta
+ * 
+ * Se utente è autenticato → redirect a /dashboard/manuale
+ * Se utente NON è autenticato → redirect a login
+ */
+export default async function ManualePage() {
+  const session = await auth();
+  
+  if (session) {
+    // Utente autenticato → redirect a versione protetta
+    redirect('/dashboard/manuale');
   }
+  
+  // Utente non autenticato → redirect a login con callback
+  redirect('/login?callbackUrl=/dashboard/manuale');
 }
 
 const markdownComponents: Components = {
