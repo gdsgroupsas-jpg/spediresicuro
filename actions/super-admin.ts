@@ -507,11 +507,14 @@ export async function createReseller(data: {
       }
     }
 
-    // 3. Verifica che l'email non sia già in uso
+    // 3. Verifica che l'email non sia già in uso (sia in auth.users che public.users)
+    const emailLower = data.email.toLowerCase().trim()
+    
+    // Verifica in public.users
     const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id')
-      .eq('email', data.email.toLowerCase().trim())
+      .eq('email', emailLower)
       .single()
 
     if (existingUser) {
@@ -521,25 +524,73 @@ export async function createReseller(data: {
       }
     }
 
-    // 4. Crea utente usando la funzione esistente createUser
-    // Import necessario già presente all'inizio del file
-    const bcrypt = require('bcryptjs')
-    const hashedPassword = await bcrypt.hash(data.password, 10)
+    // Verifica in auth.users
+    const { data: { users: existingAuthUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    if (listError) {
+      console.error('Errore verifica utenti auth:', listError)
+      return {
+        success: false,
+        error: 'Errore durante la verifica utente esistente.',
+      }
+    }
+    
+    const existingAuthUser = existingAuthUsers?.find((u: any) => u.email?.toLowerCase() === emailLower)
+    if (existingAuthUser) {
+      return {
+        success: false,
+        error: 'Questa email è già registrata in Supabase Auth.',
+      }
+    }
 
-    // 5. Crea utente nel database
+    // 4. Crea utente in Supabase Auth PRIMA di creare record in public.users
+    // ⚠️ STRATEGIA: Auth identity + public profile
+    // - Crea in auth.users con email_confirm: true (login immediato senza email)
+    // - Usa ID di auth come ID anche in public.users (single source of truth)
+    console.log('🔐 [CREATE RESELLER] Creazione utente in Supabase Auth...')
+    
+    const { data: authUserData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: emailLower,
+      password: data.password, // Password in plain text (Supabase la hasha automaticamente)
+      email_confirm: true, // Conferma email automaticamente (reseller creati da admin sono verificati)
+      user_metadata: {
+        name: data.name.trim(),
+      },
+      app_metadata: {
+        role: 'user',
+        account_type: 'user',
+        provider: 'credentials',
+      },
+    })
+
+    if (authError || !authUserData?.user) {
+      console.error('❌ [CREATE RESELLER] Errore creazione utente in auth.users:', authError)
+      return {
+        success: false,
+        error: authError?.message || 'Errore durante la creazione dell\'utente in Supabase Auth.',
+      }
+    }
+
+    const authUserId = authUserData.user.id
+    console.log('✅ [CREATE RESELLER] Utente creato in auth.users:', authUserId)
+
+    // 5. Crea record in public.users usando ID di auth (single source of truth)
+    // ⚠️ NOTA: Non usiamo più password hash manuale - gestita da Supabase Auth
     // ⚠️ NOTA: email_verified rimosso - campo non esiste nello schema public.users.
     // La verifica email è gestita da Supabase Auth tramite email_confirmed_at in auth.users.
-    // I reseller creati da Super Admin sono implicitamente verificati (creati da admin autorizzato).
+    console.log('💾 [CREATE RESELLER] Creazione record in public.users...')
+    
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
       .insert([
         {
-          email: data.email.toLowerCase().trim(),
+          id: authUserId, // ⚠️ CRITICO: Usa ID di auth come ID anche in public.users
+          email: emailLower,
           name: data.name.trim(),
-          password: hashedPassword,
+          password: null, // Password gestita da Supabase Auth (non più hash manuale)
           account_type: 'user', // Inizialmente user
           is_reseller: true, // Ma con flag reseller attivo
           wallet_balance: data.initialCredit || 0,
+          provider: 'credentials',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -548,7 +599,18 @@ export async function createReseller(data: {
       .single()
 
     if (createError) {
-      console.error('Errore creazione reseller:', createError)
+      console.error('❌ [CREATE RESELLER] Errore creazione record in public.users:', createError)
+      
+      // ⚠️ ROLLBACK: Se public.users fallisce, elimina utente da auth.users
+      console.log('🔄 [CREATE RESELLER] Rollback: eliminazione utente da auth.users...')
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+      if (deleteError) {
+        console.error('❌ [CREATE RESELLER] Errore rollback (eliminazione auth.users):', deleteError)
+        // Log errore ma non bloccare - cleanup manuale necessario
+      } else {
+        console.log('✅ [CREATE RESELLER] Rollback completato: utente eliminato da auth.users')
+      }
+      
       return {
         success: false,
         error: createError.message || 'Errore durante la creazione del reseller.',
@@ -556,6 +618,7 @@ export async function createReseller(data: {
     }
 
     const userId = newUser.id
+    console.log('✅ [CREATE RESELLER] Record creato in public.users:', userId)
 
     // 6. Se c'è credito iniziale, crea transazione wallet
     if (data.initialCredit && data.initialCredit > 0) {
@@ -583,7 +646,7 @@ export async function createReseller(data: {
 
     return {
       success: true,
-      message: `Reseller "${data.name}" creato con successo!`,
+      message: `Reseller "${data.name}" creato con successo! L'utente può fare login immediatamente con email e password.`,
       userId: userId,
     }
   } catch (error: any) {
