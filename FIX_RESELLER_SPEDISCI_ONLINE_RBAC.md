@@ -308,7 +308,8 @@ async function getBookingCredentials(userId: string): Promise<any | null> {
 **Logica RBAC**:
 1. **PRIORITÀ 1**: Configurazione personale (`created_by = user_email`)
 2. **PRIORITÀ 2**: Configurazione globale (`is_default = true`) - fallback
-3. **NESSUNA CONFIGURAZIONE**: Return `null` → errore chiaro all'utente
+3. **PRIORITÀ 3**: ENV (`process.env.SPEDISCI_ONLINE_API_KEY`) - fallback per test e retrocompatibilità
+4. **NESSUNA CONFIGURAZIONE**: Return `null` → errore chiaro all'utente
 
 **Risultato**:
 - ✅ Reseller usano la propria configurazione personale
