@@ -411,6 +411,7 @@ export async function getAllUsers(limit: number = 100): Promise<{
     name: string
     account_type: string
     is_reseller: boolean
+    reseller_role: string | null
     wallet_balance: number
     created_at: string
   }>
@@ -429,7 +430,7 @@ export async function getAllUsers(limit: number = 100): Promise<{
     // 2. Ottieni utenti
     const { data: users, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, account_type, is_reseller, wallet_balance, created_at')
+      .select('id, email, name, account_type, is_reseller, reseller_role, wallet_balance, created_at')
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -659,4 +660,109 @@ export async function createReseller(data: {
   }
 }
 
+/**
+ * Server Action: Aggiorna ruolo reseller (admin/user)
+ * 
+ * ⚠️ SOLO SUPER ADMIN può cambiare ruoli
+ * ⚠️ Si può cambiare ruolo solo per utenti con is_reseller=true
+ * 
+ * @param userId - ID dell'utente reseller
+ * @param role - Nuovo ruolo ('admin' | 'user')
+ * @returns Risultato operazione
+ */
+export async function updateResellerRole(
+  userId: string,
+  role: 'admin' | 'user'
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    // 1. Verifica che l'utente corrente sia Super Admin
+    const superAdminCheck = await isCurrentUserSuperAdmin()
+    if (!superAdminCheck.isSuperAdmin) {
+      return {
+        success: false,
+        error: 'Solo i Super Admin possono cambiare i ruoli reseller.',
+      }
+    }
+
+    // 2. Valida ruolo
+    if (role !== 'admin' && role !== 'user') {
+      return {
+        success: false,
+        error: 'Ruolo non valido. Deve essere "admin" o "user".',
+      }
+    }
+
+    // 3. Verifica che l'utente target esista e sia reseller
+    const { data: targetUser, error: fetchError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, is_reseller, reseller_role')
+      .eq('id', userId)
+      .single()
+
+    if (fetchError || !targetUser) {
+      return {
+        success: false,
+        error: 'Utente non trovato.',
+      }
+    }
+
+    if (!targetUser.is_reseller) {
+      return {
+        success: false,
+        error: 'Solo gli utenti reseller possono avere un ruolo reseller. Attiva prima lo status reseller.',
+      }
+    }
+
+    // 4. Aggiorna ruolo
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ reseller_role: role })
+      .eq('id', userId)
+
+    if (updateError) {
+      console.error('Errore aggiornamento reseller_role:', updateError)
+      return {
+        success: false,
+        error: updateError.message || 'Errore durante l\'aggiornamento del ruolo.',
+      }
+    }
+
+    console.log(`✅ [updateResellerRole] Ruolo aggiornato: ${targetUser.email} -> ${role}`)
+
+    // 5. Audit log
+    try {
+      const session = await auth()
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'reseller_role_updated',
+        resource_type: 'user',
+        resource_id: userId,
+        user_email: session?.user?.email || 'unknown',
+        user_id: superAdminCheck.userId,
+        metadata: {
+          target_user_email: targetUser.email,
+          target_user_name: targetUser.name,
+          old_role: targetUser.reseller_role || null,
+          new_role: role,
+        }
+      })
+    } catch (auditError) {
+      console.warn('Errore audit log:', auditError)
+    }
+
+    return {
+      success: true,
+      message: `Ruolo reseller aggiornato: ${targetUser.name} è ora "${role === 'admin' ? 'Admin Reseller' : 'User Reseller'}".`,
+    }
+  } catch (error: any) {
+    console.error('Errore in updateResellerRole:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto.',
+    }
+  }
+}
 
