@@ -843,17 +843,37 @@ export async function listConfigurations(): Promise<{
   error?: string;
 }> {
   try {
-    // 1. Verifica permessi admin
-    const { isAdmin, error: authError } = await verifyAdminAccess();
-    if (!isAdmin) {
-      return { success: false, error: authError };
+    // 1. Verifica autenticazione
+    const session = await auth();
+    if (!session?.user?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
-    // 2. Recupera tutte le configurazioni
-    const { data: configs, error: fetchError } = await supabaseAdmin
+    const user = await findUserByEmail(session.user.email);
+    if (!user) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    const isAdmin = user.role === 'admin';
+    const isReseller = (user as any).is_reseller === true;
+
+    // 2. Costruisci query con filtro RBAC
+    // ⚠️ RBAC:
+    // - Admin: vede tutte le configurazioni (globali + personali)
+    // - Reseller: vede SOLO la propria configurazione personale (created_by = email)
+    let query = supabaseAdmin
       .from('courier_configs')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (!isAdmin) {
+      // ⚠️ RBAC: Reseller e utenti normali vedono SOLO la propria configurazione
+      query = query.eq('created_by', session.user.email);
+    }
+    // Admin vedono TUTTO (nessun filtro)
+
+    // 3. Esegui query
+    const { data: configs, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Errore recupero configurazioni:', fetchError);
