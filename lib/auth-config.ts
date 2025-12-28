@@ -432,18 +432,20 @@ export const authOptions = {
             const { supabaseAdmin } = await import('@/lib/db/client');
             const { data: userData, error } = await supabaseAdmin
               .from('users')
-              .select('id, is_reseller, parent_id, wallet_balance, account_type')
+              .select('id, is_reseller, reseller_role, parent_id, wallet_balance, account_type')
               .eq('email', user.email)
               .single();
             
             if (!error && userData) {
               token.is_reseller = userData.is_reseller || false;
+              token.reseller_role = userData.reseller_role || null; // ⚠️ FIX: Aggiungi reseller_role
               token.parent_id = userData.parent_id || null;
               token.wallet_balance = parseFloat(userData.wallet_balance || '0') || 0;
               token.account_type = userData.account_type || 'user';
               
               console.log('✅ [NEXTAUTH] Campi reseller/wallet caricati:', {
                 is_reseller: token.is_reseller,
+                reseller_role: token.reseller_role,
                 parent_id: token.parent_id,
                 wallet_balance: token.wallet_balance,
                 account_type: token.account_type,
@@ -453,6 +455,7 @@ export const authOptions = {
             console.warn('⚠️ [NEXTAUTH] Errore caricamento campi reseller/wallet (non critico):', error.message);
             // Non critico, usa valori di default
             token.is_reseller = false;
+            token.reseller_role = null;
             token.parent_id = null;
             token.wallet_balance = 0;
             token.account_type = 'user';
@@ -465,6 +468,7 @@ export const authOptions = {
           role: token.role,
           provider: token.provider,
           is_reseller: token.is_reseller,
+          reseller_role: token.reseller_role,
           wallet_balance: token.wallet_balance,
         });
         
@@ -522,6 +526,7 @@ export const authOptions = {
         
         // ⚠️ NUOVO: Aggiungi campi reseller e wallet alla sessione
         (session.user as any).is_reseller = token.is_reseller || false;
+        (session.user as any).reseller_role = token.reseller_role || null; // ⚠️ FIX: Aggiungi reseller_role
         (session.user as any).parent_id = token.parent_id || null;
         (session.user as any).wallet_balance = token.wallet_balance || 0;
         (session.user as any).account_type = token.account_type || 'user';
@@ -532,6 +537,7 @@ export const authOptions = {
           role: session.user.role,
           provider: (session.user as any).provider,
           is_reseller: (session.user as any).is_reseller,
+          reseller_role: (session.user as any).reseller_role,
           wallet_balance: (session.user as any).wallet_balance,
           account_type: (session.user as any).account_type,
         });
