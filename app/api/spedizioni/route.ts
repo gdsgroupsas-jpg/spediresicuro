@@ -60,31 +60,6 @@ function sanitizeShipmentPayloadByRole(
 function normalizeShipmentPayload(payload: any): any {
   const normalized: any = {};
   
-  // ⚠️ FIX CRITICO: Estrai campi nested da mittente/destinatario PRIMA di normalizzare
-  // Frontend invia: { mittente: { città, provincia, cap }, destinatario: { ... } }
-  // DB richiede: { sender_city, sender_province, sender_zip, recipient_city, ... }
-  if (payload.mittente && typeof payload.mittente === 'object') {
-    normalized.sender_city = payload.mittente.città || payload.mittente.city || null;
-    normalized.sender_province = payload.mittente.provincia || payload.mittente.province || null;
-    normalized.sender_zip = payload.mittente.cap || payload.mittente.zip || payload.mittente.postal_code || null;
-    console.log('📋 [NORMALIZE] Estratti campi mittente:', {
-      sender_city: normalized.sender_city,
-      sender_province: normalized.sender_province,
-      sender_zip: normalized.sender_zip,
-    });
-  }
-  
-  if (payload.destinatario && typeof payload.destinatario === 'object') {
-    normalized.recipient_city = payload.destinatario.città || payload.destinatario.city || null;
-    normalized.recipient_province = payload.destinatario.provincia || payload.destinatario.province || null;
-    normalized.recipient_zip = payload.destinatario.cap || payload.destinatario.zip || payload.destinatario.postal_code || null;
-    console.log('📋 [NORMALIZE] Estratti campi destinatario:', {
-      recipient_city: normalized.recipient_city,
-      recipient_province: normalized.recipient_province,
-      recipient_zip: normalized.recipient_zip,
-    });
-  }
-  
   // Lista campi UUID (da normalizzare a stringa)
   const uuidFields = ['courier_id', 'user_id'];
   
@@ -141,11 +116,6 @@ function normalizeShipmentPayload(payload: any): any {
     
     // 5. Normalizza altri tipi (string, number, boolean)
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      // ⚠️ FIX: Rimuovi mittente/destinatario DOPO averli mappati (già fatto sopra)
-      if (key === 'mittente' || key === 'destinatario') {
-        console.log(`✅ [NORMALIZE] Campo ${key} rimosso (già mappato a campi flat)`);
-        continue; // OK: già estratto sopra
-      }
       // Oggetto non JSONB → rimuovi (causa "[OBJECT]" nel payload)
       console.warn(`⚠️ [NORMALIZE] Campo ${key} è un oggetto non JSONB, rimosso per evitare "[OBJECT]"`);
       continue; // Rimuovi oggetti non JSONB
@@ -543,6 +513,35 @@ export async function POST(request: NextRequest) {
     
     // 2. Sanitizza payload in base al ruolo
     const sanitizedPayload = sanitizeShipmentPayloadByRole(spedizione, userRole, accountType);
+    
+    // ⚠️ FIX CRITICO: Mappa campi nested PRIMA di normalizzare
+    // Frontend invia: { mittente: { città, provincia, cap }, destinatario: { ... } }
+    // DB richiede: { sender_city, sender_province, sender_zip, recipient_city, ... }
+    if (sanitizedPayload.mittente && typeof sanitizedPayload.mittente === 'object') {
+      sanitizedPayload.sender_city = sanitizedPayload.mittente.città || sanitizedPayload.mittente.city || null;
+      sanitizedPayload.sender_province = sanitizedPayload.mittente.provincia || sanitizedPayload.mittente.province || null;
+      sanitizedPayload.sender_zip = sanitizedPayload.mittente.cap || sanitizedPayload.mittente.zip || sanitizedPayload.mittente.postal_code || null;
+      console.log('📋 [PRE-NORMALIZE] Mappati campi mittente:', {
+        sender_city: sanitizedPayload.sender_city,
+        sender_province: sanitizedPayload.sender_province,
+        sender_zip: sanitizedPayload.sender_zip,
+      });
+      // Elimina oggetto mittente dopo mapping
+      delete sanitizedPayload.mittente;
+    }
+    
+    if (sanitizedPayload.destinatario && typeof sanitizedPayload.destinatario === 'object') {
+      sanitizedPayload.recipient_city = sanitizedPayload.destinatario.città || sanitizedPayload.destinatario.city || null;
+      sanitizedPayload.recipient_province = sanitizedPayload.destinatario.provincia || sanitizedPayload.destinatario.province || null;
+      sanitizedPayload.recipient_zip = sanitizedPayload.destinatario.cap || sanitizedPayload.destinatario.zip || sanitizedPayload.destinatario.postal_code || null;
+      console.log('📋 [PRE-NORMALIZE] Mappati campi destinatario:', {
+        recipient_city: sanitizedPayload.recipient_city,
+        recipient_province: sanitizedPayload.recipient_province,
+        recipient_zip: sanitizedPayload.recipient_zip,
+      });
+      // Elimina oggetto destinatario dopo mapping
+      delete sanitizedPayload.destinatario;
+    }
     
     // 3. Normalizza payload (rimuove undefined, normalizza tipi, serializza JSONB)
     const normalizedPayload = normalizeShipmentPayload(sanitizedPayload);
