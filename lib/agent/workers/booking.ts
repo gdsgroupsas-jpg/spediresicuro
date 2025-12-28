@@ -489,25 +489,104 @@ export async function callBookingAdapter(
 }
 
 /**
- * Recupera credenziali per il booking.
- * Per ora usa variabili d'ambiente, in futuro leggerà dal DB.
+ * Recupera credenziali per il booking dal database.
+ * 
+ * ⚠️ RBAC:
+ * - Cerca PRIMA la configurazione personale dell'utente (created_by = user_email)
+ * - Fallback a configurazione globale (is_default = true) se l'utente non ha config personale
+ * 
+ * @param userId - ID utente per cui recuperare le credenziali
+ * @returns Credenziali Spedisci.Online o null se non trovate
  */
 async function getBookingCredentials(userId: string): Promise<any | null> {
-  // TODO: Implementare recupero credenziali dal database per l'utente
-  // Per ora, usa credenziali da env
-  const apiKey = process.env.SPEDISCI_ONLINE_API_KEY;
-  
-  if (!apiKey) {
-    // Usa defaultLogger qui perché questa funzione non riceve logger come parametro
-    defaultLogger.warn('⚠️ [Booking] SPEDISCI_ONLINE_API_KEY non configurata');
+  try {
+    const { supabaseAdmin } = await import('@/lib/db/client');
+    const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption');
+    
+    // 1. Recupera email utente da user_id
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      defaultLogger.warn('⚠️ [Booking] Utente non trovato:', userId);
+      return null;
+    }
+    
+    const userEmail = userData.email;
+    
+    // 2. Cerca configurazione personale dell'utente (PRIORITÀ 1)
+    const { data: personalConfig, error: personalError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('created_by', userEmail)
+      .eq('is_active', true)
+      .single();
+    
+    if (personalConfig && !personalError) {
+      defaultLogger.info('✅ [Booking] Configurazione personale trovata per utente:', userEmail);
+      
+      // Decripta credenziali
+      let apiKey = personalConfig.api_key;
+      let apiSecret = personalConfig.api_secret;
+      
+      if (apiKey && isEncrypted(apiKey)) {
+        apiKey = decryptCredential(apiKey);
+      }
+      if (apiSecret && isEncrypted(apiSecret)) {
+        apiSecret = decryptCredential(apiSecret);
+      }
+      
+      return {
+        api_key: apiKey,
+        api_secret: apiSecret,
+        base_url: personalConfig.base_url || 'https://api.spedisci.online/api/v2',
+        contract_mapping: personalConfig.contract_mapping || {},
+      };
+    }
+    
+    // 3. Fallback: Cerca configurazione globale (is_default = true)
+    const { data: globalConfig, error: globalError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('is_default', true)
+      .eq('is_active', true)
+      .single();
+    
+    if (globalConfig && !globalError) {
+      defaultLogger.info('✅ [Booking] Configurazione globale trovata (fallback)');
+      
+      // Decripta credenziali
+      let apiKey = globalConfig.api_key;
+      let apiSecret = globalConfig.api_secret;
+      
+      if (apiKey && isEncrypted(apiKey)) {
+        apiKey = decryptCredential(apiKey);
+      }
+      if (apiSecret && isEncrypted(apiSecret)) {
+        apiSecret = decryptCredential(apiSecret);
+      }
+      
+      return {
+        api_key: apiKey,
+        api_secret: apiSecret,
+        base_url: globalConfig.base_url || 'https://api.spedisci.online/api/v2',
+        contract_mapping: globalConfig.contract_mapping || {},
+      };
+    }
+    
+    // 4. Nessuna configurazione trovata
+    defaultLogger.warn('⚠️ [Booking] Nessuna configurazione Spedisci.Online trovata per utente:', userEmail);
+    return null;
+    
+  } catch (error: any) {
+    defaultLogger.error('❌ [Booking] Errore recupero credenziali:', error.message);
     return null;
   }
-  
-  return {
-    api_key: apiKey,
-    base_url: process.env.SPEDISCI_ONLINE_BASE_URL || 'https://api.spedisci.online/api/v2',
-    contract_mapping: {}, // TODO: Caricare da DB
-  };
 }
 
 /**
