@@ -511,22 +511,27 @@ async function getBookingCredentials(userId: string): Promise<any | null> {
       .single();
     
     if (userError || !userData) {
-      defaultLogger.warn('⚠️ [Booking] Utente non trovato:', userId);
-      return null;
+      defaultLogger.warn('⚠️ [Booking] Utente non trovato nel DB:', userId);
+      // Non return null, continua al fallback ENV
     }
     
-    const userEmail = userData.email;
+    const userEmail = userData?.email;
     
-    // 2. Cerca configurazione personale dell'utente (PRIORITÀ 1)
-    const { data: personalConfig, error: personalError } = await supabaseAdmin
-      .from('courier_configs')
-      .select('*')
-      .eq('provider_id', 'spedisci_online')
-      .eq('created_by', userEmail)
-      .eq('is_active', true)
-      .single();
+    // 2. Cerca configurazione personale dell'utente (PRIORITÀ 1) - solo se userEmail disponibile
+    let personalConfig = null;
+    if (userEmail) {
+      const { data, error: personalError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', 'spedisci_online')
+        .eq('created_by', userEmail)
+        .eq('is_active', true)
+        .single();
+      
+      personalConfig = data;
+    }
     
-    if (personalConfig && !personalError) {
+    if (personalConfig) {
       defaultLogger.info('✅ [Booking] Configurazione personale trovata per utente:', userEmail);
       
       // Decripta credenziali
@@ -579,12 +584,38 @@ async function getBookingCredentials(userId: string): Promise<any | null> {
       };
     }
     
-    // 4. Nessuna configurazione trovata
-    defaultLogger.warn('⚠️ [Booking] Nessuna configurazione Spedisci.Online trovata per utente:', userEmail);
+    // 4. Nessuna configurazione trovata nel DB
+    defaultLogger.warn('⚠️ [Booking] Nessuna configurazione Spedisci.Online trovata nel DB per utente:', userEmail);
+    
+    // 5. Fallback finale: Usa ENV (per retrocompatibilità e test)
+    const apiKeyEnv = process.env.SPEDISCI_ONLINE_API_KEY;
+    if (apiKeyEnv) {
+      defaultLogger.info('✅ [Booking] Usando configurazione da ENV (fallback)');
+      return {
+        api_key: apiKeyEnv,
+        base_url: process.env.SPEDISCI_ONLINE_BASE_URL || 'https://api.spedisci.online/api/v2',
+        contract_mapping: {},
+      };
+    }
+    
+    // 6. Nessuna configurazione disponibile
+    defaultLogger.warn('⚠️ [Booking] Nessuna configurazione Spedisci.Online disponibile (né DB né ENV)');
     return null;
     
   } catch (error: any) {
     defaultLogger.error('❌ [Booking] Errore recupero credenziali:', error.message);
+    
+    // Fallback a ENV in caso di errore DB
+    const apiKeyEnv = process.env.SPEDISCI_ONLINE_API_KEY;
+    if (apiKeyEnv) {
+      defaultLogger.warn('⚠️ [Booking] Errore DB, usando ENV come fallback emergenza');
+      return {
+        api_key: apiKeyEnv,
+        base_url: process.env.SPEDISCI_ONLINE_BASE_URL || 'https://api.spedisci.online/api/v2',
+        contract_mapping: {},
+      };
+    }
+    
     return null;
   }
 }
