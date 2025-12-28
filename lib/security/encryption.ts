@@ -39,6 +39,27 @@ function getEncryptionKey(): Buffer {
 }
 
 /**
+ * Ottiene la chiave legacy di criptazione (per key rotation)
+ * Supporta ENCRYPTION_KEY_LEGACY per decrypt con chiave vecchia
+ */
+function getLegacyEncryptionKey(): Buffer | null {
+  const envKey = process.env.ENCRYPTION_KEY_LEGACY
+  
+  if (!envKey) {
+    return null
+  }
+  
+  // La chiave può essere una stringa esadecimale o base64
+  if (envKey.length === 64) {
+    // Esadecimale (32 bytes * 2)
+    return Buffer.from(envKey, 'hex')
+  } else {
+    // Base64 o stringa diretta - deriviamo con scrypt
+    return crypto.scryptSync(envKey, 'spediresicuro-salt', KEY_LENGTH)
+  }
+}
+
+/**
  * Cripta un valore sensibile
  * 
  * ⚠️ Se ENCRYPTION_KEY non è configurata, restituisce il testo in chiaro (con warning)
@@ -95,7 +116,46 @@ export function encryptCredential(plaintext: string): string {
 }
 
 /**
- * Decripta un valore criptato
+ * Decripta un valore criptato usando una chiave specifica
+ * Funzione interna per supportare dual decrypt (key rotation)
+ * 
+ * @param encryptedData - Stringa criptata in formato: iv:salt:tag:encrypted
+ * @param key - Chiave di criptazione da usare
+ * @returns Testo decriptato
+ */
+function decryptWithKey(encryptedData: string, key: Buffer): string {
+  const parts = encryptedData.split(':')
+  
+  if (parts.length !== 4) {
+    throw new Error('Formato dati criptati non valido')
+  }
+  
+  const [ivBase64, saltBase64, tagBase64, encryptedBase64] = parts
+  
+  const iv = Buffer.from(ivBase64, 'base64')
+  const salt = Buffer.from(saltBase64, 'base64')
+  const tag = Buffer.from(tagBase64, 'base64')
+  const encrypted = Buffer.from(encryptedBase64, 'base64')
+  
+  // Deriva chiave finale da salt
+  const derivedKey = crypto.scryptSync(key, salt, KEY_LENGTH)
+  
+  const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv)
+  decipher.setAuthTag(tag)
+  
+  let decrypted = decipher.update(encrypted)
+  decrypted = Buffer.concat([decrypted, decipher.final()])
+  
+  return decrypted.toString('utf8')
+}
+
+/**
+ * Decripta un valore criptato con supporto per key rotation (dual decrypt)
+ * 
+ * ⚠️ STRATEGIA KEY ROTATION:
+ * 1. Prova prima con ENCRYPTION_KEY corrente
+ * 2. Se fallisce, prova con ENCRYPTION_KEY_LEGACY (se configurata)
+ * 3. Se entrambe falliscono, lancia errore chiaro
  * 
  * @param encryptedData - Stringa criptata in formato: iv:salt:tag:encrypted
  * @returns Testo decriptato
@@ -107,37 +167,22 @@ export function decryptCredential(encryptedData: string): string {
 
   // Se non inizia con formato criptato, assume che sia testo in chiaro (retrocompatibilità)
   if (!encryptedData.includes(':')) {
-    console.warn('⚠️ Credenziale non criptata rilevata (retrocompatibilità)')
+    console.warn('⚠️ [ENCRYPTION] Credenziale non criptata rilevata (retrocompatibilità)')
     return encryptedData
   }
 
+  // ⚠️ LOGGING SICURO: Non loggare mai la credential completa
+  const dataHash = crypto.createHash('sha256').update(encryptedData).digest('hex').substring(0, 8)
+  
+  // Prova 1: Decrypt con chiave corrente
   try {
     const key = getEncryptionKey()
-    const parts = encryptedData.split(':')
+    const decrypted = decryptWithKey(encryptedData, key)
     
-    if (parts.length !== 4) {
-      throw new Error('Formato dati criptati non valido')
-    }
-    
-    const [ivBase64, saltBase64, tagBase64, encryptedBase64] = parts
-    
-    const iv = Buffer.from(ivBase64, 'base64')
-    const salt = Buffer.from(saltBase64, 'base64')
-    const tag = Buffer.from(tagBase64, 'base64')
-    const encrypted = Buffer.from(encryptedBase64, 'base64')
-    
-    // Deriva chiave finale da salt
-    const derivedKey = crypto.scryptSync(key, salt, KEY_LENGTH)
-    
-    const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv)
-    decipher.setAuthTag(tag)
-    
-    let decrypted = decipher.update(encrypted)
-    decrypted = Buffer.concat([decrypted, decipher.final()])
-    
-    return decrypted.toString('utf8')
+    // ✅ Decrypt riuscito con chiave corrente
+    console.log(`✅ [ENCRYPTION] Decrypt riuscito (chiave corrente) - hash: ${dataHash}`)
+    return decrypted
   } catch (error: any) {
-    // Gestione ENCRYPTION_KEY rotation: se decrypt fallisce, potrebbe essere chiave cambiata
     const errorMessage = error?.message || 'Unknown decryption error'
     const isDecryptionError = 
       errorMessage.includes('Unsupported state') ||
@@ -145,17 +190,45 @@ export function decryptCredential(encryptedData: string): string {
       errorMessage.includes('bad decrypt') ||
       errorMessage.includes('Invalid authentication tag')
     
-    if (isDecryptionError) {
-      console.error('❌ [ENCRYPTION] Errore decriptazione credenziale (possibile ENCRYPTION_KEY rotation):', {
-        error: errorMessage,
-        hint: 'La chiave di criptazione potrebbe essere stata cambiata. Ricontrolla le credenziali dell\'integrazione.'
+    if (!isDecryptionError) {
+      // Errore non di decrypt (es. formato non valido) - lancia subito
+      console.error(`❌ [ENCRYPTION] Errore decriptazione (non key rotation) - hash: ${dataHash}`, {
+        error: errorMessage
       })
-      // Non lanciare errore fatale - restituisci errore gestibile
-      throw new Error('CREDENTIAL_DECRYPT_FAILED: Impossibile decriptare credenziali. La chiave di criptazione potrebbe essere stata cambiata. Ricontrolla le credenziali dell\'integrazione.')
+      throw new Error(`Errore durante la decriptazione della credenziale: ${errorMessage}`)
     }
     
-    console.error('❌ [ENCRYPTION] Errore decriptazione credenziale:', errorMessage)
-    throw new Error(`Errore durante la decriptazione della credenziale: ${errorMessage}`)
+    // ⚠️ Decrypt fallito con chiave corrente - prova con legacy
+    console.warn(`⚠️ [ENCRYPTION] Decrypt fallito con chiave corrente - hash: ${dataHash}, tentativo con legacy...`)
+    
+    // Prova 2: Decrypt con chiave legacy (se configurata)
+    const legacyKey = getLegacyEncryptionKey()
+    if (legacyKey) {
+      try {
+        const decrypted = decryptWithKey(encryptedData, legacyKey)
+        
+        // ✅ Decrypt riuscito con chiave legacy
+        console.log(`✅ [ENCRYPTION] Decrypt riuscito (chiave legacy) - hash: ${dataHash}`)
+        console.warn(`⚠️ [ENCRYPTION] ATTENZIONE: Credenziale decriptata con ENCRYPTION_KEY_LEGACY. Considera re-criptare con chiave corrente.`)
+        return decrypted
+      } catch (legacyError: any) {
+        // Anche legacy fallisce
+        console.error(`❌ [ENCRYPTION] Decrypt fallito anche con chiave legacy - hash: ${dataHash}`, {
+          currentKeyError: errorMessage,
+          legacyKeyError: legacyError?.message || 'Unknown error'
+        })
+      }
+    } else {
+      console.warn(`⚠️ [ENCRYPTION] ENCRYPTION_KEY_LEGACY non configurata - hash: ${dataHash}`)
+    }
+    
+    // ❌ Entrambe le chiavi falliscono
+    console.error(`❌ [ENCRYPTION] CREDENTIAL_DECRYPT_FAILED - hash: ${dataHash}`, {
+      error: errorMessage,
+      hint: 'La chiave di criptazione potrebbe essere stata cambiata o la credenziale è corrotta. Ricontrolla ENCRYPTION_KEY su Vercel o re-inserisci le credenziali.'
+    })
+    
+    throw new Error('CREDENTIAL_DECRYPT_FAILED: Impossibile decriptare credenziali. La chiave di criptazione potrebbe essere stata cambiata. Verifica ENCRYPTION_KEY su Vercel (Production/Preview devono essere identiche) o re-inserisci le credenziali dell\'integrazione.')
   }
 }
 
