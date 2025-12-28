@@ -118,10 +118,19 @@ export default function AddressFields({
   }, []);
 
   const handleSelectResult = (result: LocationResult) => {
+    console.log('🔍 [AddressFields] handleSelectResult chiamato:', result);
     setCityInput(result.city);
+    
+    // ⚠️ Chiama i callback nell'ordine corretto
+    console.log('🔍 [AddressFields] Chiamando onCityChange:', result.city);
     onCityChange(result.city);
+    
+    console.log('🔍 [AddressFields] Chiamando onProvinceChange:', result.province);
     onProvinceChange(result.province);
+    
+    console.log('🔍 [AddressFields] Chiamando onPostalCodeChange:', result.postal_code);
     onPostalCodeChange(result.postal_code);
+    
     setShowResults(false);
   };
 

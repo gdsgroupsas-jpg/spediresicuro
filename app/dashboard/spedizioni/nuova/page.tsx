@@ -381,23 +381,29 @@ export default function NuovaSpedizionePage() {
 
   // Handler per campi mittente
   const handleMittenteCittaChange = (city: string) => {
+    console.log('🔍 [HANDLER] handleMittenteCittaChange:', city);
     setFormData((prev) => ({ ...prev, mittenteCitta: city }));
   };
   const handleMittenteProvinciaChange = (province: string) => {
+    console.log('🔍 [HANDLER] handleMittenteProvinciaChange:', province);
     setFormData((prev) => ({ ...prev, mittenteProvincia: province }));
   };
   const handleMittenteCapChange = (cap: string) => {
+    console.log('🔍 [HANDLER] handleMittenteCapChange:', cap);
     setFormData((prev) => ({ ...prev, mittenteCap: cap }));
   };
 
   // Handler per campi destinatario
   const handleDestinatarioCittaChange = (city: string) => {
+    console.log('🔍 [HANDLER] handleDestinatarioCittaChange:', city);
     setFormData((prev) => ({ ...prev, destinatarioCitta: city }));
   };
   const handleDestinatarioProvinciaChange = (province: string) => {
+    console.log('🔍 [HANDLER] handleDestinatarioProvinciaChange:', province);
     setFormData((prev) => ({ ...prev, destinatarioProvincia: province }));
   };
   const handleDestinatarioCapChange = (cap: string) => {
+    console.log('🔍 [HANDLER] handleDestinatarioCapChange:', cap);
     setFormData((prev) => ({ ...prev, destinatarioCap: cap }));
   };
 
@@ -547,27 +553,55 @@ export default function NuovaSpedizionePage() {
         }
       }
 
+      // ⚠️ LOG DEBUG COMPLETO: Verifica state PRIMA del mapping
+      console.log('🔍 [FORM] State formData COMPLETO:', {
+        mittenteCitta: formData.mittenteCitta,
+        mittenteProvincia: formData.mittenteProvincia,
+        mittenteCap: formData.mittenteCap,
+        destinatarioCitta: formData.destinatarioCitta,
+        destinatarioProvincia: formData.destinatarioProvincia,
+        destinatarioCap: formData.destinatarioCap,
+      });
+
+      // ⚠️ RIMUOVI UNDEFINED: Filtra campi con undefined per evitare che arrivino all'API
+      const cleanFormData = Object.fromEntries(
+        Object.entries(formData).filter(([_, value]) => value !== undefined)
+      );
+
       const payload = {
-        ...formData,
-        // Mappa esplicitamente province (assicura che non siano vuote)
-        mittenteProvincia: mittenteProvincia || '',
-        destinatarioProvincia: destinatarioProvincia || '',
-        // Mappa esplicitamente CAP
-        mittenteCap: mittenteCap || '',
-        destinatarioCap: destinatarioCap || '',
+        ...cleanFormData,
+        // ⚠️ MAPPING ESPLICITO: Sovrascrive con valori estratti o da state (NO fallback a '' che causa constraint violation)
+        mittenteCitta: formData.mittenteCitta || null,
+        mittenteProvincia: mittenteProvincia || null,
+        mittenteCap: mittenteCap || null,
+        destinatarioCitta: formData.destinatarioCitta || null,
+        destinatarioProvincia: destinatarioProvincia || null,
+        destinatarioCap: destinatarioCap || null,
       };
 
-      // ⚠️ LOG TEMPORANEO: Verifica payload prima dell'invio
-      console.log('📋 [FORM] Payload spedizione (prima invio):', {
+      // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
+      console.log('📋 [FORM] Payload COMPLETO spedizione (prima invio):', payload);
+      
+      console.log('📋 [FORM] Payload indirizzo strutturato:', {
         mittente: {
-          citta: payload.mittenteCitta,
+          città: payload.mittenteCitta,
           provincia: payload.mittenteProvincia,
           cap: payload.mittenteCap,
+          _tipi: {
+            città: typeof payload.mittenteCitta,
+            provincia: typeof payload.mittenteProvincia,
+            cap: typeof payload.mittenteCap,
+          }
         },
         destinatario: {
-          citta: payload.destinatarioCitta,
+          città: payload.destinatarioCitta,
           provincia: payload.destinatarioProvincia,
           cap: payload.destinatarioCap,
+          _tipi: {
+            città: typeof payload.destinatarioCitta,
+            provincia: typeof payload.destinatarioProvincia,
+            cap: typeof payload.destinatarioCap,
+          }
         },
       });
 
