@@ -331,11 +331,15 @@ export default function NuovaSpedizionePage() {
       mittenteNome: formData.mittenteNome.length >= 2,
       mittenteIndirizzo: formData.mittenteIndirizzo.length >= 5,
       mittenteCitta: formData.mittenteCitta.length >= 2,
+      mittenteProvincia: formData.mittenteProvincia.length >= 2, // ⚠️ VALIDAZIONE PROVINCIA MITTENTE (OBBLIGATORIA)
+      mittenteCap: formData.mittenteCap.length >= 5, // ⚠️ VALIDAZIONE CAP MITTENTE (OBBLIGATORIO)
       mittenteTelefono: /^[\d\s\+\-\(\)]{8,}$/.test(formData.mittenteTelefono),
       mittenteEmail: !formData.mittenteEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.mittenteEmail),
       destinatarioNome: formData.destinatarioNome.length >= 2,
       destinatarioIndirizzo: formData.destinatarioIndirizzo.length >= 5,
       destinatarioCitta: formData.destinatarioCitta.length >= 2,
+      destinatarioProvincia: formData.destinatarioProvincia.length >= 2, // ⚠️ VALIDAZIONE PROVINCIA DESTINATARIO (OBBLIGATORIA)
+      destinatarioCap: formData.destinatarioCap.length >= 5, // ⚠️ VALIDAZIONE CAP DESTINATARIO (OBBLIGATORIO)
       destinatarioTelefono: contrassegnoAttivo 
         ? /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono) // REQUIRED se contrassegno attivo
         : !formData.destinatarioTelefono || /^[\d\s\+\-\(\)]{8,}$/.test(formData.destinatarioTelefono), // Opzionale altrimenti
@@ -351,10 +355,14 @@ export default function NuovaSpedizionePage() {
       formData.mittenteNome,
       formData.mittenteIndirizzo,
       formData.mittenteCitta,
+      formData.mittenteProvincia, // ⚠️ PROVINCIA MITTENTE OBBLIGATORIA
+      formData.mittenteCap, // ⚠️ CAP MITTENTE OBBLIGATORIO
       formData.mittenteTelefono,
       formData.destinatarioNome,
       formData.destinatarioIndirizzo,
       formData.destinatarioCitta,
+      formData.destinatarioProvincia, // ⚠️ PROVINCIA DESTINATARIO OBBLIGATORIA
+      formData.destinatarioCap, // ⚠️ CAP DESTINATARIO OBBLIGATORIO
       formData.destinatarioTelefono,
       formData.peso,
     ];
@@ -450,6 +458,41 @@ export default function NuovaSpedizionePage() {
   // Handler submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ VALIDAZIONE PRE-SUBMIT: Blocca se provincia manca
+    const validationErrors: string[] = [];
+    
+    if (!formData.mittenteProvincia || formData.mittenteProvincia.length < 2) {
+      validationErrors.push('Provincia mittente mancante. Seleziona città dall\'autocomplete.');
+    }
+    if (!formData.mittenteCap || formData.mittenteCap.length < 5) {
+      validationErrors.push('CAP mittente mancante. Seleziona città dall\'autocomplete.');
+    }
+    if (!formData.destinatarioProvincia || formData.destinatarioProvincia.length < 2) {
+      validationErrors.push('Provincia destinatario mancante. Seleziona città dall\'autocomplete.');
+    }
+    if (!formData.destinatarioCap || formData.destinatarioCap.length < 5) {
+      validationErrors.push('CAP destinatario mancante. Seleziona città dall\'autocomplete.');
+    }
+    
+    if (validationErrors.length > 0) {
+      setSubmitError(validationErrors.join(' '));
+      console.error('❌ [FORM] Validazione fallita:', validationErrors);
+      console.error('❌ [FORM] State corrente:', {
+        mittente: {
+          citta: formData.mittenteCitta,
+          provincia: formData.mittenteProvincia,
+          cap: formData.mittenteCap,
+        },
+        destinatario: {
+          citta: formData.destinatarioCitta,
+          provincia: formData.destinatarioProvincia,
+          cap: formData.destinatarioCap,
+        },
+      });
+      return; // ⚠️ BLOCCA SUBMIT
+    }
+    
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(false);
@@ -769,13 +812,18 @@ export default function NuovaSpedizionePage() {
                     onSelect={handleMittenteLocation}
                     placeholder="Cerca città..."
                     className="w-full"
-                    isValid={validation.mittenteCitta}
+                    isValid={validation.mittenteCitta && validation.mittenteProvincia && validation.mittenteCap}
                     defaultValue={formData.mittenteCitta ? {
                       city: formData.mittenteCitta,
                       province: formData.mittenteProvincia,
                       cap: formData.mittenteCap
                     } : undefined}
                   />
+                  {formData.mittenteCitta && (!validation.mittenteProvincia || !validation.mittenteCap) && (
+                    <p className="mt-1 text-xs text-red-600">
+                      ⚠️ Provincia o CAP mancante. Seleziona dall&apos;autocomplete.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -836,13 +884,18 @@ export default function NuovaSpedizionePage() {
                     onSelect={handleDestinatarioLocation}
                     placeholder="Cerca città..."
                     className="w-full"
-                    isValid={validation.destinatarioCitta}
+                    isValid={validation.destinatarioCitta && validation.destinatarioProvincia && validation.destinatarioCap}
                     defaultValue={formData.destinatarioCitta ? {
                       city: formData.destinatarioCitta,
                       province: formData.destinatarioProvincia,
                       cap: formData.destinatarioCap
                     } : undefined}
                   />
+                  {formData.destinatarioCitta && (!validation.destinatarioProvincia || !validation.destinatarioCap) && (
+                    <p className="mt-1 text-xs text-red-600">
+                      ⚠️ Provincia o CAP mancante. Seleziona dall&apos;autocomplete.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
