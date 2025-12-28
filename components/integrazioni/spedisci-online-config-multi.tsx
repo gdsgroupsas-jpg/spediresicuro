@@ -253,6 +253,8 @@ export default function SpedisciOnlineConfigMulti() {
   // ⚠️ RBAC: Admin vedono tutte le config, Reseller vedono solo la propria
   const isAdmin = (session?.user as any)?.role === 'admin'
   const isReseller = (session?.user as any)?.is_reseller === true
+  const resellerRole = (session?.user as any)?.reseller_role
+  const isResellerAdmin = isReseller && resellerRole === 'admin'
   const canAccessConfigurations = isAdmin || isReseller
 
   if (!canAccessConfigurations) {
@@ -363,35 +365,44 @@ export default function SpedisciOnlineConfigMulti() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleActive(config.id!, config.is_active)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            config.is_active
-                              ? 'text-green-600 hover:bg-green-100'
-                              : 'text-gray-400 hover:bg-gray-100'
-                          }`}
-                          title={config.is_active ? 'Disattiva' : 'Attiva'}
-                        >
-                          {config.is_active ? (
-                            <Power className="w-5 h-5" />
-                          ) : (
-                            <PowerOff className="w-5 h-5" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleEdit(config)}
-                          className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                          title="Modifica"
-                        >
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(config.id!)}
-                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                          title="Elimina"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        {/* ⚠️ RBAC: Mostra toggle attivo/inattivo solo se super_admin o reseller_admin (propria config) */}
+                        {(isAdmin || isResellerAdmin) && (
+                          <button
+                            onClick={() => handleToggleActive(config.id!, config.is_active)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              config.is_active
+                                ? 'text-green-600 hover:bg-green-100'
+                                : 'text-gray-400 hover:bg-gray-100'
+                            }`}
+                            title={config.is_active ? 'Disattiva' : 'Attiva'}
+                          >
+                            {config.is_active ? (
+                              <Power className="w-5 h-5" />
+                            ) : (
+                              <PowerOff className="w-5 h-5" />
+                            )}
+                          </button>
+                        )}
+                        {/* ⚠️ RBAC: Mostra modifica solo se super_admin o reseller_admin (propria config) */}
+                        {(isAdmin || isResellerAdmin) && (
+                          <button
+                            onClick={() => handleEdit(config)}
+                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Modifica"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                        )}
+                        {/* ⚠️ RBAC: Mostra elimina solo se super_admin o reseller_admin (propria config) */}
+                        {(isAdmin || isResellerAdmin) && (
+                          <button
+                            onClick={() => handleDelete(config.id!)}
+                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                            title="Elimina"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
