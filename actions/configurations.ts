@@ -91,6 +91,63 @@ async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }
 }
 
 /**
+ * Verifica se l'utente può gestire una configurazione
+ * 
+ * ⚠️ RBAC:
+ * - super_admin: sempre OK (può gestire tutte le config)
+ * - reseller_admin: solo se owner_user_id === session.user.id (solo la propria config)
+ * - admin: sempre OK (può gestire tutte le config)
+ * 
+ * @param configOwnerUserId - owner_user_id della configurazione (opzionale, se null = config globale)
+ * @returns Risultato verifica permessi
+ */
+async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{ 
+  canAccess: boolean; 
+  error?: string;
+  userId?: string;
+}> {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.email) {
+      return { canAccess: false, error: 'Non autenticato' };
+    }
+
+    const user = await findUserByEmail(session.user.email);
+    if (!user) {
+      return { canAccess: false, error: 'Utente non trovato' };
+    }
+
+    const userId = (user as any).id;
+    const accountType = (user as any).account_type;
+    const isReseller = (user as any).is_reseller === true;
+    const resellerRole = (user as any).reseller_role;
+
+    // 1. Super Admin: sempre OK
+    if (accountType === 'superadmin' || user.role === 'admin') {
+      return { canAccess: true, userId };
+    }
+
+    // 2. Reseller Admin: solo se owner_user_id === session.user.id
+    if (isReseller && resellerRole === 'admin') {
+      if (!configOwnerUserId) {
+        return { canAccess: false, error: 'Accesso negato. I reseller admin possono gestire solo le proprie configurazioni.' };
+      }
+      if (configOwnerUserId !== userId) {
+        return { canAccess: false, error: 'Accesso negato. Puoi gestire solo le tue configurazioni.' };
+      }
+      return { canAccess: true, userId };
+    }
+
+    // 3. Reseller User o altri: accesso negato
+    return { canAccess: false, error: 'Accesso negato. Solo gli admin o reseller admin possono gestire le configurazioni.' };
+  } catch (error: any) {
+    console.error('Errore verifica accesso configurazione:', error);
+    return { canAccess: false, error: error.message || 'Errore verifica permessi' };
+  }
+}
+
+/**
  * Server Action: Salva configurazione (Create o Update)
  * 
  * @param data - Dati configurazione
@@ -472,16 +529,10 @@ export async function deleteConfiguration(
   message?: string;
 }> {
   try {
-    // 1. Verifica permessi admin
-    const { isAdmin, error: authError } = await verifyAdminAccess();
-    if (!isAdmin) {
-      return { success: false, error: authError };
-    }
-
-    // 2. Verifica se la configurazione esiste
+    // 1. Verifica se la configurazione esiste e recupera owner_user_id
     const { data: config, error: fetchError } = await supabaseAdmin
       .from('courier_configs')
-      .select('id, name, provider_id')
+      .select('id, name, provider_id, owner_user_id')
       .eq('id', id)
       .single();
 
@@ -490,6 +541,12 @@ export async function deleteConfiguration(
         success: false,
         error: 'Configurazione non trovata',
       };
+    }
+
+    // 2. Verifica permessi RBAC (super_admin o reseller_admin con owner_user_id match)
+    const { canAccess, error: accessError, userId } = await verifyConfigAccess(config.owner_user_id || null);
+    if (!canAccess) {
+      return { success: false, error: accessError };
     }
 
     // 3. Verifica se è in uso (assegnata ad utenti)
@@ -578,16 +635,10 @@ export async function updateConfigurationStatus(
   message?: string;
 }> {
   try {
-    // 1. Verifica permessi admin
-    const { isAdmin, error: authError } = await verifyAdminAccess();
-    if (!isAdmin) {
-      return { success: false, error: authError };
-    }
-
-    // 2. Verifica se la configurazione esiste
+    // 1. Verifica se la configurazione esiste e recupera owner_user_id
     const { data: config, error: fetchError } = await supabaseAdmin
       .from('courier_configs')
-      .select('id, name, provider_id')
+      .select('id, name, provider_id, owner_user_id')
       .eq('id', id)
       .single();
 
@@ -596,6 +647,12 @@ export async function updateConfigurationStatus(
         success: false,
         error: 'Configurazione non trovata',
       };
+    }
+
+    // 2. Verifica permessi RBAC (super_admin o reseller_admin con owner_user_id match)
+    const { canAccess, error: accessError } = await verifyConfigAccess(config.owner_user_id || null);
+    if (!canAccess) {
+      return { success: false, error: accessError };
     }
 
     // 3. Aggiorna status
