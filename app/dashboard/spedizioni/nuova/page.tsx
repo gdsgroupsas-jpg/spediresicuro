@@ -455,10 +455,82 @@ export default function NuovaSpedizionePage() {
     setSubmitSuccess(false);
 
     try {
+      // ⚠️ HELPER: Estrae provincia e CAP da stringa formattata "Città (Provincia) - CAP"
+      const extractProvinceAndCap = (formattedString: string): { province: string; cap: string } => {
+        if (!formattedString) return { province: '', cap: '' };
+        
+        // Pattern: "Città (Provincia) - CAP" o "Città (Provincia)"
+        const match = formattedString.match(/\(([A-Z]{2})\)(?:\s*-\s*(\d{5}))?/);
+        if (match) {
+          return {
+            province: match[1] || '',
+            cap: match[2] || '',
+          };
+        }
+        return { province: '', cap: '' };
+      };
+
+      // ⚠️ MAPPING ESPLICITO: Assicura che provincia e CAP siano correttamente mappati
+      // Se mancano, prova a estrarli dalla stringa formattata (fallback)
+      let mittenteProvincia = formData.mittenteProvincia;
+      let mittenteCap = formData.mittenteCap;
+      let destinatarioProvincia = formData.destinatarioProvincia;
+      let destinatarioCap = formData.destinatarioCap;
+
+      // Se provincia mittente manca, prova a estrarla (fallback)
+      if (!mittenteProvincia && formData.mittenteCitta) {
+        const extracted = extractProvinceAndCap(formData.mittenteCitta);
+        if (extracted.province) {
+          mittenteProvincia = extracted.province;
+          console.warn('⚠️ [FORM] Provincia mittente estratta da stringa formattata:', extracted.province);
+        }
+        if (extracted.cap && !mittenteCap) {
+          mittenteCap = extracted.cap;
+          console.warn('⚠️ [FORM] CAP mittente estratto da stringa formattata:', extracted.cap);
+        }
+      }
+
+      // Se provincia destinatario manca, prova a estrarla (fallback)
+      if (!destinatarioProvincia && formData.destinatarioCitta) {
+        const extracted = extractProvinceAndCap(formData.destinatarioCitta);
+        if (extracted.province) {
+          destinatarioProvincia = extracted.province;
+          console.warn('⚠️ [FORM] Provincia destinatario estratta da stringa formattata:', extracted.province);
+        }
+        if (extracted.cap && !destinatarioCap) {
+          destinatarioCap = extracted.cap;
+          console.warn('⚠️ [FORM] CAP destinatario estratto da stringa formattata:', extracted.cap);
+        }
+      }
+
+      const payload = {
+        ...formData,
+        // Mappa esplicitamente province (assicura che non siano vuote)
+        mittenteProvincia: mittenteProvincia || '',
+        destinatarioProvincia: destinatarioProvincia || '',
+        // Mappa esplicitamente CAP
+        mittenteCap: mittenteCap || '',
+        destinatarioCap: destinatarioCap || '',
+      };
+
+      // ⚠️ LOG TEMPORANEO: Verifica payload prima dell'invio
+      console.log('📋 [FORM] Payload spedizione (prima invio):', {
+        mittente: {
+          citta: payload.mittenteCitta,
+          provincia: payload.mittenteProvincia,
+          cap: payload.mittenteCap,
+        },
+        destinatario: {
+          citta: payload.destinatarioCitta,
+          provincia: payload.destinatarioProvincia,
+          cap: payload.destinatarioCap,
+        },
+      });
+
       const response = await fetch('/api/spedizioni', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
