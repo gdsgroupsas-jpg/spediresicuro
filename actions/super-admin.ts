@@ -527,6 +527,9 @@ export async function createReseller(data: {
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
     // 5. Crea utente nel database
+    // ⚠️ NOTA: email_verified rimosso - campo non esiste nello schema public.users.
+    // La verifica email è gestita da Supabase Auth tramite email_confirmed_at in auth.users.
+    // I reseller creati da Super Admin sono implicitamente verificati (creati da admin autorizzato).
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
       .insert([
@@ -537,7 +540,6 @@ export async function createReseller(data: {
           account_type: 'user', // Inizialmente user
           is_reseller: true, // Ma con flag reseller attivo
           wallet_balance: data.initialCredit || 0,
-          email_verified: true, // Auto-verificato da super admin
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
