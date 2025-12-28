@@ -27,7 +27,7 @@ import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog'
 import { ManageWalletDialog } from './manage-wallet-dialog'
 import { BulkActionsBar } from './bulk-actions-bar'
 
-import { useAllUsers, useToggleResellerStatus, useInvalidateAllUsers } from '@/lib/queries/use-all-users'
+import { useAllUsers, useToggleResellerStatus, useUpdateResellerRole, useInvalidateAllUsers } from '@/lib/queries/use-all-users'
 import { formatCurrency, formatDate, formatUuid, cn } from '@/lib/utils'
 import { useCopyToClipboard } from '@/lib/hooks'
 import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema'
@@ -38,6 +38,7 @@ interface User {
   name: string
   account_type: string
   is_reseller: boolean
+  reseller_role: string | null
   wallet_balance: number
   created_at: string
 }
@@ -50,6 +51,7 @@ const ITEMS_PER_PAGE = 50
 export function UsersTable() {
   const { data: users = [], isLoading, error } = useAllUsers()
   const toggleResellerMutation = useToggleResellerStatus()
+  const updateResellerRoleMutation = useUpdateResellerRole()
   const invalidate = useInvalidateAllUsers()
   const { copy, isCopied } = useCopyToClipboard()
 
@@ -320,6 +322,9 @@ export function UsersTable() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Reseller
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Ruolo Reseller
+                  </th>
                   <th className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleSort('wallet_balance')}
@@ -381,6 +386,34 @@ export function UsersTable() {
                         onCheckedChange={(enabled) => handleResellerToggle(user, enabled)}
                         disabled={user.account_type === 'superadmin'}
                       />
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {user.is_reseller ? (
+                        <Select
+                          value={user.reseller_role || 'user'}
+                          onChange={async (e) => {
+                            const newRole = e.target.value as 'admin' | 'user'
+                            try {
+                              await updateResellerRoleMutation.mutateAsync({
+                                userId: user.id,
+                                role: newRole,
+                              })
+                              toast.success(
+                                `${user.name} è ora ${newRole === 'admin' ? 'Admin Reseller' : 'User Reseller'}`
+                              )
+                            } catch (error: any) {
+                              toast.error(error.message || 'Errore nell\'aggiornamento del ruolo')
+                            }
+                          }}
+                          disabled={updateResellerRoleMutation.isPending || user.account_type === 'superadmin'}
+                          className="w-32 text-sm"
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </Select>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-right">
                       <button
