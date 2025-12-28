@@ -474,6 +474,20 @@ export async function POST(request: NextRequest) {
       deleted: false,
     };
 
+    // ⚠️ LOGGING CRITICO: Verifica payload PRIMA della normalizzazione
+    console.log('🔍 [API] Payload RAW dal frontend:', {
+      mittente: {
+        città: body.mittenteCitta,
+        provincia: body.mittenteProvincia,
+        cap: body.mittenteCap,
+      },
+      destinatario: {
+        città: body.destinatarioCitta,
+        provincia: body.destinatarioProvincia,
+        cap: body.destinatarioCap,
+      },
+    });
+
     // ⚠️ NORMALIZZAZIONE PAYLOAD: Sanitizza e normalizza prima dell'INSERT
     // 1. Recupera ruolo utente per sanitizzazione
     let userRole: string | undefined = (session.user as any).role;
