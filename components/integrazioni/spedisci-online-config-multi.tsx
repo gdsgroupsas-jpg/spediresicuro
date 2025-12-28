@@ -251,7 +251,8 @@ export default function SpedisciOnlineConfigMulti() {
   }
 
   // ⚠️ RBAC: Admin vedono tutte le config, Reseller vedono solo la propria
-  const isAdmin = (session?.user as any)?.role === 'admin'
+  const accountType = (session?.user as any)?.account_type
+  const isAdmin = (session?.user as any)?.role === 'admin' || accountType === 'superadmin'
   const isReseller = (session?.user as any)?.is_reseller === true
   const resellerRole = (session?.user as any)?.reseller_role
   const isResellerAdmin = isReseller && resellerRole === 'admin'

@@ -123,23 +123,42 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
     const isReseller = (user as any).is_reseller === true;
     const resellerRole = (user as any).reseller_role;
 
+    // 🔍 DEBUG LOG: Verifica permessi configurazione
+    console.log('🔍 [verifyConfigAccess] Verifica permessi:', {
+      userId,
+      email: session.user.email,
+      accountType,
+      role: user.role,
+      isReseller,
+      resellerRole,
+      configOwnerUserId,
+    });
+
     // 1. Super Admin: sempre OK
     if (accountType === 'superadmin' || user.role === 'admin') {
+      console.log('✅ [verifyConfigAccess] Accesso OK: Super Admin');
       return { canAccess: true, userId };
     }
 
     // 2. Reseller Admin: solo se owner_user_id === session.user.id
     if (isReseller && resellerRole === 'admin') {
       if (!configOwnerUserId) {
+        console.log('❌ [verifyConfigAccess] Reseller Admin: config globale, accesso negato');
         return { canAccess: false, error: 'Accesso negato. I reseller admin possono gestire solo le proprie configurazioni.' };
       }
       if (configOwnerUserId !== userId) {
+        console.log('❌ [verifyConfigAccess] Reseller Admin: owner_user_id mismatch', { configOwnerUserId, userId });
         return { canAccess: false, error: 'Accesso negato. Puoi gestire solo le tue configurazioni.' };
       }
+      console.log('✅ [verifyConfigAccess] Accesso OK: Reseller Admin, owner match');
       return { canAccess: true, userId };
     }
 
     // 3. Reseller User o altri: accesso negato
+    console.log('❌ [verifyConfigAccess] Accesso negato: né super_admin né reseller_admin', {
+      isReseller,
+      resellerRole,
+    });
     return { canAccess: false, error: 'Accesso negato. Solo gli admin o reseller admin possono gestire le configurazioni.' };
   } catch (error: any) {
     console.error('Errore verifica accesso configurazione:', error);
