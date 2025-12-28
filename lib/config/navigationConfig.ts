@@ -217,7 +217,7 @@ const supportSection: NavSection = {
     {
       id: 'manual',
       label: 'Manuale Utente',
-      href: '/manuale',
+      href: '/dashboard/manuale',
       icon: BookOpen,
       description: 'Documentazione completa',
     },
