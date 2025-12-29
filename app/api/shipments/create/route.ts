@@ -163,32 +163,96 @@ export async function POST(request: Request) {
     // ⚠️ From this point, if we crash, retry will see status='in_progress' and won't re-debit
 
     // ============================================
-    // CONFIGURAZIONE CORRIERE
+    // CONFIGURAZIONE CORRIERE (Multi-tenant aware)
     // ============================================
-    // Cerca configurazione per provider + carrier + contract_id
+    // ⚠️ FIX P0: Query corretta per supporto reseller/BYOC
+    // Logica di priorità:
+    // 1. Config personale dell'utente (owner_user_id = targetId)
+    // 2. Config assegnata all'utente (assigned_config_id)
+    // 3. Config default per il provider (is_default = true)
+    //
+    // NOTA: Il 'carrier' (GLS, Poste, etc.) è un parametro per Spedisci.Online,
+    // NON una colonna in courier_configs. Il contract_mapping JSONB contiene
+    // i codici contratto per ogni carrier.
     const providerId = validated.provider === 'spediscionline' ? 'spedisci_online' : validated.provider
     
-    const { data: courierConfigs, error: configError } = await supabaseAdmin
+    // Prima recupera assigned_config_id dell'utente
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('assigned_config_id')
+      .eq('id', targetId)
+      .single()
+    
+    // Query multi-tenant: cerca config per utente o default
+    let courierConfig = null
+    let configError = null
+    
+    // Priorità 1: Config personale (owner_user_id = targetId)
+    const { data: personalConfig, error: personalError } = await supabaseAdmin
       .from('courier_configs')
       .select('*')
       .eq('provider_id', providerId)
-      .eq('carrier', validated.carrier)
+      .eq('owner_user_id', targetId)
       .eq('is_active', true)
-      .or(validated.contract_id 
-        ? `contract_id.eq.${validated.contract_id},contract_id.is.null`
-        : 'contract_id.is.null'
-      )
       .limit(1)
+      .maybeSingle()
+    
+    if (personalConfig) {
+      courierConfig = personalConfig
+      console.log('✅ [CONFIG] Trovata config personale:', { configId: personalConfig.id, providerId, userId: targetId })
+    } else if (userData?.assigned_config_id) {
+      // Priorità 2: Config assegnata all'utente
+      const { data: assignedConfig, error: assignedError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .eq('id', userData.assigned_config_id)
+        .eq('provider_id', providerId)
+        .eq('is_active', true)
+        .maybeSingle()
+      
+      if (assignedConfig) {
+        courierConfig = assignedConfig
+        console.log('✅ [CONFIG] Trovata config assegnata:', { configId: assignedConfig.id, providerId, userId: targetId })
+      }
+      configError = assignedError
+    }
+    
+    // Priorità 3: Config default per provider
+    if (!courierConfig) {
+      const { data: defaultConfig, error: defaultError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', providerId)
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle()
+      
+      if (defaultConfig) {
+        courierConfig = defaultConfig
+        console.log('✅ [CONFIG] Trovata config default:', { configId: defaultConfig.id, providerId })
+      }
+      configError = defaultError || personalError
+    }
 
-    if (configError || !courierConfigs || courierConfigs.length === 0) {
+    if (configError || !courierConfig) {
+      console.error('❌ [CONFIG] Nessuna configurazione trovata:', {
+        providerId,
+        userId: targetId,
+        assignedConfigId: userData?.assigned_config_id,
+        error: configError?.message
+      })
       return Response.json(
-        { error: `Configurazione non trovata per ${validated.carrier} tramite ${validated.provider}. Vai su Integrazioni.` },
+        { error: `Configurazione non trovata per ${validated.carrier} tramite ${validated.provider}. Vai su Integrazioni per configurare le credenziali.` },
         { status: 400 }
       )
     }
 
-    const courierConfig = courierConfigs[0]
-    const contractId = validated.contract_id || courierConfig.contract_id || undefined
+    // Estrai contractId dal contract_mapping se presente
+    // Il carrier (GLS, POSTE, etc.) viene usato come chiave nel mapping
+    const carrierLower = validated.carrier.toLowerCase()
+    const contractMapping = courierConfig.contract_mapping || {}
+    const contractId = validated.contract_id || contractMapping[carrierLower] || contractMapping[validated.carrier] || contractMapping['default'] || undefined
 
     const courierClient = CourierFactory.getClient(
       validated.provider,
