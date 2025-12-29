@@ -749,6 +749,7 @@ export async function POST(request: NextRequest) {
  * Handler DELETE - Soft delete spedizione
  * 
  * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
+ * ⚠️ INTEGRAZIONE: Cancella anche su Spedisci.Online se configurato
  */
 export async function DELETE(request: NextRequest) {
   const requestId = getRequestId(request);
@@ -798,6 +799,57 @@ export async function DELETE(request: NextRequest) {
       console.warn('⚠️ [SUPABASE] Impossibile ottenere user_id per soft delete:', error);
     }
 
+    // ⚠️ PRIMA: Recupera la spedizione per avere il tracking number
+    const { data: shipmentData, error: fetchError } = await supabaseAdmin
+      .from('shipments')
+      .select('id, tracking_number, ldv, user_id')
+      .eq('id', id)
+      .eq('deleted', false)
+      .single();
+
+    if (fetchError || !shipmentData) {
+      console.error('❌ [SUPABASE] Spedizione non trovata:', fetchError?.message);
+      return NextResponse.json({ error: 'Spedizione non trovata o già eliminata' }, { status: 404 });
+    }
+
+    const trackingNumber = shipmentData.tracking_number || shipmentData.ldv;
+    let spedisciOnlineCancelResult: any = null;
+
+    // ⚠️ INTEGRAZIONE SPEDISCI.ONLINE: Cancella su piattaforma esterna
+    if (trackingNumber && !trackingNumber.startsWith('POS') && !trackingNumber.startsWith('GLS') && !trackingNumber.startsWith('BRT')) {
+      // Il tracking number sembra essere di Spedisci.Online, prova a cancellare
+      try {
+        console.log('🗑️ [API] Tentativo cancellazione su Spedisci.Online:', trackingNumber);
+        
+        // Recupera configurazione Spedisci.Online per l'utente
+        const userId = shipmentData.user_id || supabaseUserId;
+        if (userId) {
+          const { getShippingProvider } = await import('@/lib/couriers/factory');
+          const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
+          
+          const provider = await getShippingProvider(userId, 'spedisci_online', null);
+          
+          if (provider && provider instanceof SpedisciOnlineAdapter) {
+            spedisciOnlineCancelResult = await provider.cancelShipment(trackingNumber);
+            
+            if (spedisciOnlineCancelResult.success) {
+              console.log('✅ [API] Spedizione cancellata su Spedisci.Online:', trackingNumber);
+            } else {
+              console.warn('⚠️ [API] Cancellazione Spedisci.Online fallita:', spedisciOnlineCancelResult.error);
+              // Non blocchiamo il soft delete locale, ma logghiamo
+            }
+          } else {
+            console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
+          }
+        }
+      } catch (cancelError: any) {
+        console.warn('⚠️ [API] Errore cancellazione Spedisci.Online:', cancelError?.message);
+        // Non blocchiamo il soft delete locale
+      }
+    } else {
+      console.log('ℹ️ [API] Tracking non Spedisci.Online, skip cancellazione remota:', trackingNumber);
+    }
+
     // Soft delete - aggiorna spedizione in Supabase
     const { data, error } = await supabaseAdmin
       .from('shipments')
@@ -837,6 +889,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Spedizione eliminata con successo',
+      spedisciOnline: spedisciOnlineCancelResult ? {
+        cancelled: spedisciOnlineCancelResult.success,
+        message: spedisciOnlineCancelResult.message || spedisciOnlineCancelResult.error,
+      } : null,
     });
   } catch (error) {
     const userId = session?.user?.id;
