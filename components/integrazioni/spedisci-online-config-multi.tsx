@@ -229,8 +229,10 @@ export default function SpedisciOnlineConfigMulti() {
         result = await saveConfiguration(configInput)
       } else {
         // Reseller o utenti normali usano savePersonalConfiguration
+        // Rimuovi is_default perché non è permesso per config personali
+        const { is_default, ...personalConfigInput } = configInput
         const { savePersonalConfiguration } = await import('@/actions/configurations')
-        result = await savePersonalConfiguration(configInput)
+        result = await savePersonalConfiguration(personalConfigInput)
       }
 
       if (result.success) {
