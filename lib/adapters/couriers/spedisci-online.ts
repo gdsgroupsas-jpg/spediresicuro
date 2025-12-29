@@ -238,7 +238,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           tracking_number: result.tracking_number,
           has_label: !!result.label_pdf,
         });
-        
+
         if (result.success) {
           return {
             tracking_number: result.tracking_number,
@@ -247,11 +247,31 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           };
         }
       } catch (jsonError: any) {
+        const is401 = jsonError.message?.includes('401');
         console.error('❌ [SPEDISCI.ONLINE] Creazione JSON fallita:', {
           message: jsonError.message,
-          stack: jsonError.stack,
+          is401Unauthorized: is401,
           base_url: this.BASE_URL,
         });
+
+        // Se 401, prova endpoint /v1 invece di /v2 (alcuni account usano API v1)
+        if (is401 && this.BASE_URL.includes('/api/v2')) {
+          console.warn('⚠️ [SPEDISCI.ONLINE] Provo endpoint /v1/shipping/create (alcuni account Spedisci.Online usano v1)...');
+          try {
+            const result = await this.createShipmentJSON(openApiPayload, 'v1');
+            if (result.success) {
+              console.log('✅ [SPEDISCI.ONLINE] Successo con endpoint /v1!');
+              return {
+                tracking_number: result.tracking_number,
+                label_url: result.label_url,
+                label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+              };
+            }
+          } catch (v1Error: any) {
+            console.warn('⚠️ [SPEDISCI.ONLINE] Anche endpoint /v1 fallito:', v1Error.message);
+          }
+        }
+
         console.warn('⚠️ [SPEDISCI.ONLINE] Provo CSV upload...');
         // Continua con CSV upload
       }
@@ -347,14 +367,27 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * ===========================================
    * METODO PRIVATO: CREAZIONE JSON (OpenAPI)
    * ===========================================
-   * 
+   *
    * Usa POST /shipping/create secondo OpenAPI
+   *
+   * @param payload - Payload OpenAPI
+   * @param apiVersion - Versione API da usare ('v2' default, 'v1' fallback)
    */
-  private async createShipmentJSON(payload: SpedisciOnlineOpenAPIPayload): Promise<SpedisciOnlineResponse> {
-    // Costruisci URL corretto: BASE_URL può avere trailing slash, non duplicare /api/v2
-    // Esempio: https://demo1.spedisci.online/api/v2/ -> https://demo1.spedisci.online/api/v2/shipping/create
-    // Usa new URL() per gestire correttamente path relativi
-    const baseUrlNormalized = this.BASE_URL.endsWith('/') ? this.BASE_URL : `${this.BASE_URL}/`;
+  private async createShipmentJSON(
+    payload: SpedisciOnlineOpenAPIPayload,
+    apiVersion: 'v1' | 'v2' = 'v2'
+  ): Promise<SpedisciOnlineResponse> {
+    // Costruisci URL corretto con versione API specificata
+    // Esempio v2: https://demo1.spedisci.online/api/v2/ -> https://demo1.spedisci.online/api/v2/shipping/create
+    // Esempio v1: https://demo1.spedisci.online/api/v2/ -> https://demo1.spedisci.online/api/v1/shipping/create
+    let baseUrlNormalized = this.BASE_URL.endsWith('/') ? this.BASE_URL : `${this.BASE_URL}/`;
+
+    // Se richiesta v1 ma BASE_URL contiene v2, sostituisci
+    if (apiVersion === 'v1' && baseUrlNormalized.includes('/api/v2/')) {
+      baseUrlNormalized = baseUrlNormalized.replace('/api/v2/', '/api/v1/');
+      console.log('🔄 [SPEDISCI.ONLINE] Usando endpoint API v1:', baseUrlNormalized);
+    }
+
     const url = new URL('shipping/create', baseUrlNormalized).toString();
     
     // Genera fingerprint SHA256 per log production-safe
@@ -498,7 +531,9 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     
     // Prova ogni endpoint fino a trovare uno che funziona
     for (const endpoint of uploadEndpoints) {
-      const url = `${this.BASE_URL}${endpoint}`;
+      // FIX: Usa new URL() per evitare doppio slash
+      const baseUrlNormalized = this.BASE_URL.endsWith('/') ? this.BASE_URL : `${this.BASE_URL}/`;
+      const url = new URL(endpoint, baseUrlNormalized).toString();
       console.log(`🔍 [SPEDISCI.ONLINE] Tentativo upload CSV su: ${url}`);
       
       try {
@@ -555,28 +590,31 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
   /**
    * Genera variazioni di endpoint per upload CSV
+   * FIX: Non duplicare /api/v2 se già presente in BASE_URL
    */
   private generateUploadEndpointVariations(): string[] {
     const baseUrl = this.BASE_URL;
     const endpoints: string[] = [];
-    
+
+    // Se BASE_URL contiene già /api/v2, non duplicarlo negli endpoint
     if (baseUrl.includes('/api/v2')) {
-      endpoints.push('/api/v2/shipments/upload');
-      endpoints.push('/api/v2/v1/shipments/upload');
-      endpoints.push('/v1/shipments/upload');
-      endpoints.push('/shipments/upload');
-      endpoints.push('/api/v1/shipments/upload');
+      // BASE_URL è già https://...spedisci.online/api/v2/
+      // Quindi gli endpoint devono essere relativi senza ripetere /api/v2
+      endpoints.push('shipments/upload'); // -> /api/v2/shipments/upload
+      endpoints.push('v1/shipments/upload'); // -> /api/v2/v1/shipments/upload
+      endpoints.push('../api/v1/shipments/upload'); // -> /api/v1/shipments/upload
     } else if (baseUrl.includes('/api/v1')) {
-      endpoints.push('/api/v1/shipments/upload');
-      endpoints.push('/v1/shipments/upload');
-      endpoints.push('/shipments/upload');
+      // BASE_URL è https://...spedisci.online/api/v1/
+      endpoints.push('shipments/upload'); // -> /api/v1/shipments/upload
+      endpoints.push('../v2/shipments/upload'); // -> /v2/shipments/upload (tentativo)
     } else {
-      endpoints.push('/api/v2/shipments/upload');
-      endpoints.push('/api/v1/shipments/upload');
-      endpoints.push('/v1/shipments/upload');
-      endpoints.push('/shipments/upload');
+      // BASE_URL generico (es: https://...spedisci.online/)
+      endpoints.push('api/v2/shipments/upload');
+      endpoints.push('api/v1/shipments/upload');
+      endpoints.push('v1/shipments/upload');
+      endpoints.push('shipments/upload');
     }
-    
+
     return [...new Set(endpoints)];
   }
 
