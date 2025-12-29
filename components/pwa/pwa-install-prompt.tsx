@@ -8,6 +8,8 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+const PWA_INSTALL_PROMPT_DISMISSED_KEY = 'pwaInstallPromptDismissed';
+
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -17,14 +19,21 @@ export function PWAInstallPrompt() {
     // Safety checks per browser APIs
     if (typeof window === 'undefined') return;
     
+    // Controlla se l'utente ha già rifiutato il prompt
+    const wasDismissed = localStorage.getItem(PWA_INSTALL_PROMPT_DISMISSED_KEY) === 'true';
+    
     // Ascolta l'evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const event = e as BeforeInstallPromptEvent;
       setDeferredPrompt(event);
       
-      // Mostra il prompt solo se l'app non è già installata
-      if (window.matchMedia && !window.matchMedia('(display-mode: standalone)').matches) {
+      // Mostra il prompt solo se:
+      // 1. L'app non è già installata
+      // 2. L'utente non ha già rifiutato il prompt
+      if (window.matchMedia && 
+          !window.matchMedia('(display-mode: standalone)').matches && 
+          !wasDismissed) {
         setShowPrompt(true);
       }
     };
@@ -62,6 +71,12 @@ export function PWAInstallPrompt() {
         console.log('App installazione accettata');
         setInstalled(true);
         setShowPrompt(false);
+        // Se installata, rimuovi il flag dismissed
+        localStorage.removeItem(PWA_INSTALL_PROMPT_DISMISSED_KEY);
+      } else {
+        // Se rifiutata, salva che l'utente ha rifiutato
+        localStorage.setItem(PWA_INSTALL_PROMPT_DISMISSED_KEY, 'true');
+        setShowPrompt(false);
       }
     } catch (error) {
       console.error('Errore installazione app:', error);
@@ -71,6 +86,8 @@ export function PWAInstallPrompt() {
   };
 
   const handleClose = () => {
+    // Salva che l'utente ha chiuso il prompt
+    localStorage.setItem(PWA_INSTALL_PROMPT_DISMISSED_KEY, 'true');
     setShowPrompt(false);
   };
 
