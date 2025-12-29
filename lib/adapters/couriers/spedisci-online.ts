@@ -1030,7 +1030,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
    * @param trackingNumber - Tracking number della spedizione da cancellare
    * @returns Promise<{ success: boolean, message?: string, error?: string }>
    */
-  async cancelShipment(trackingNumber: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async cancelShipmentOnPlatform(trackingNumber: string): Promise<{ success: boolean; message?: string; error?: string }> {
     if (!trackingNumber) {
       return { success: false, error: 'Tracking number mancante' };
     }
