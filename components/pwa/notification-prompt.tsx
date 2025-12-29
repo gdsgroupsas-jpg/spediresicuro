@@ -4,13 +4,24 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import useServiceWorker from '@/lib/hooks/use-service-worker';
 
+const NOTIFICATION_PROMPT_DISMISSED_KEY = 'notificationPromptDismissed';
+
 export function NotificationPrompt() {
   const { status, requestNotificationPermission, unsubscribeFromNotifications } = useServiceWorker();
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Mostra il prompt se le notifiche sono supportate e non ancora abilitate
-    if (status.notificationsSupported && !status.notificationsEnabled) {
+    // Safety check
+    if (typeof window === 'undefined') return;
+
+    // Controlla se l'utente ha già rifiutato il prompt
+    const wasDismissed = localStorage.getItem(NOTIFICATION_PROMPT_DISMISSED_KEY) === 'true';
+    
+    // Mostra il prompt solo se:
+    // 1. Le notifiche sono supportate
+    // 2. Non sono ancora abilitate
+    // 3. L'utente non ha già rifiutato il prompt
+    if (status.notificationsSupported && !status.notificationsEnabled && !wasDismissed) {
       // Delay per non sovrapporre con altri prompt
       const timer = setTimeout(() => {
         setShowPrompt(true);
@@ -24,6 +35,8 @@ export function NotificationPrompt() {
     const granted = await requestNotificationPermission();
     if (granted) {
       setShowPrompt(false);
+      // Se abilitate, rimuovi il flag dismissed (così se disabilita può rivederlo)
+      localStorage.removeItem(NOTIFICATION_PROMPT_DISMISSED_KEY);
     }
   };
 
@@ -31,6 +44,8 @@ export function NotificationPrompt() {
     if (status.notificationsEnabled) {
       await unsubscribeFromNotifications();
     }
+    // Salva che l'utente ha rifiutato il prompt
+    localStorage.setItem(NOTIFICATION_PROMPT_DISMISSED_KEY, 'true');
     setShowPrompt(false);
   };
 
