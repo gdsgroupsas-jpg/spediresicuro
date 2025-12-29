@@ -662,6 +662,39 @@ export default function NuovaSpedizionePage() {
             if (ldvResult && ldvResult.success && ldvResult.label_url) {
               console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
               window.open(ldvResult.label_url, '_blank');
+            } else if (ldvResult && ldvResult.success && ldvResult.label_pdf) {
+              // ⚠️ FIX: Gestisci label_pdf base64 (scarica come PDF)
+              console.log('📄 [CLIENT] label_pdf base64 ricevuto, scarico PDF...');
+              try {
+                // Decodifica base64 e crea blob
+                const base64Data = ldvResult.label_pdf;
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                // Scarica il PDF
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `etichetta_${spedizioneData.tracking || 'spedizione'}_${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Cleanup
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                
+                console.log('✅ [CLIENT] PDF etichetta scaricato con successo');
+              } catch (pdfError) {
+                console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
+                // Fallback al ticket interno
+                const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+                const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+                downloadPDF(pdfDoc, filename);
+              }
             } else {
               // FALLBACK: Genera Ticket interno se non c'è etichetta reale
               console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
