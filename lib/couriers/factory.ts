@@ -15,6 +15,7 @@ import { SpedisciOnlineAdapter, type SpedisciOnlineCredentials } from '@/lib/ada
 import { PosteAdapter } from '@/lib/adapters/couriers/poste';
 import { CourierAdapter } from '@/lib/adapters/couriers/base';
 import type { Shipment, CreateShipmentInput } from '@/types/shipments';
+import { isEncrypted, decryptCredential } from '@/lib/security/encryption';
 
 // Tipo per configurazione corriere dal DB
 export interface CourierConfig {
@@ -188,8 +189,13 @@ function instantiateProviderFromConfig(
           }
         }
 
-        // FIX: Trim API key PRIMA di tutto
-        const trimmedApiKey = config.api_key?.trim() || '';
+        // FIX: Decripta API key se criptata, poi trim
+        let rawApiKey = config.api_key || '';
+        if (rawApiKey && isEncrypted(rawApiKey)) {
+          console.log('🔐 [FACTORY] API key è criptata, decripto...');
+          rawApiKey = decryptCredential(rawApiKey);
+        }
+        const trimmedApiKey = rawApiKey.trim();
         
         // Guard: Verifica che non sia un token demo/example + min length
         const knownDemoTokens = ['qCL7FN2RKFQDngWb6kJ7', '8ZZmDdwA', 'demo', 'example', 'test'];
@@ -249,22 +255,33 @@ function instantiateProviderFromConfig(
         //   api_key (DB) -> client_id (Adapter)
         //   api_secret (DB) -> client_secret (Adapter)
         //   contract_mapping['cdc'] -> cost_center_code (Adapter)
-        const { api_key, api_secret, base_url, contract_mapping } = config;
+        
+        // FIX: Decripta credenziali se criptate
+        let posteApiKey = config.api_key || '';
+        let posteApiSecret = config.api_secret || '';
+        if (posteApiKey && isEncrypted(posteApiKey)) {
+          console.log('🔐 [FACTORY] Poste API key è criptata, decripto...');
+          posteApiKey = decryptCredential(posteApiKey);
+        }
+        if (posteApiSecret && isEncrypted(posteApiSecret)) {
+          console.log('🔐 [FACTORY] Poste API secret è criptato, decripto...');
+          posteApiSecret = decryptCredential(posteApiSecret);
+        }
 
         let cdc = 'CDC-DEFAULT';
-        if (contract_mapping) {
+        if (config.contract_mapping) {
           // Check if contract_mapping is object or string JSON
-          const mapping = typeof contract_mapping === 'string'
-            ? JSON.parse(contract_mapping)
-            : contract_mapping;
+          const mapping = typeof config.contract_mapping === 'string'
+            ? JSON.parse(config.contract_mapping)
+            : config.contract_mapping;
 
           if (mapping['cdc']) cdc = mapping['cdc'];
         }
 
         const posteCreds = {
-          client_id: api_key,
-          client_secret: api_secret,
-          base_url,
+          client_id: posteApiKey.trim(),
+          client_secret: posteApiSecret.trim(),
+          base_url: config.base_url,
           cost_center_code: cdc
         } as any;
         return new PosteAdapter(posteCreds);
