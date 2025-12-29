@@ -720,13 +720,13 @@ export async function POST(request: NextRequest) {
 
     // Risposta di successo
     // ⚠️ FIX: Converti label_pdf Buffer in base64 per serializzazione JSON
-    let ldvResultSafe = ldvResult;
+    let ldvResultSafe: any = ldvResult;
     if (ldvResult && ldvResult.label_pdf && Buffer.isBuffer(ldvResult.label_pdf)) {
       ldvResultSafe = {
         ...ldvResult,
         label_pdf: ldvResult.label_pdf.toString('base64'),
         label_pdf_base64: true, // Flag per indicare al frontend che è base64
-      };
+      } as any;
       console.log('📄 [API] label_pdf convertito in base64 per frontend (size:', ldvResult.label_pdf.length, 'bytes)');
     }
     
