@@ -830,7 +830,7 @@ export async function DELETE(request: NextRequest) {
           const provider = await getShippingProvider(userId, 'spedisci_online', undefined);
           
           if (provider && provider instanceof SpedisciOnlineAdapter) {
-            spedisciOnlineCancelResult = await provider.cancelShipment(trackingNumber);
+            spedisciOnlineCancelResult = await provider.cancelShipmentOnPlatform(trackingNumber);
             
             if (spedisciOnlineCancelResult.success) {
               console.log('✅ [API] Spedizione cancellata su Spedisci.Online:', trackingNumber);
