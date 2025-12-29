@@ -827,7 +827,7 @@ export async function DELETE(request: NextRequest) {
           const { getShippingProvider } = await import('@/lib/couriers/factory');
           const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
           
-          const provider = await getShippingProvider(userId, 'spedisci_online', null);
+          const provider = await getShippingProvider(userId, 'spedisci_online', undefined);
           
           if (provider && provider instanceof SpedisciOnlineAdapter) {
             spedisciOnlineCancelResult = await provider.cancelShipment(trackingNumber);
