@@ -219,8 +219,19 @@ export default function SpedisciOnlineConfigMulti() {
         description: formData.dominio.trim() ? `Dominio: ${formData.dominio.trim()}` : undefined,
       }
 
-      const { saveConfiguration } = await import('@/actions/configurations')
-      const result = await saveConfiguration(configInput)
+      // ⚠️ FIX: Reseller usano savePersonalConfiguration, Admin usano saveConfiguration
+      const userRole = (session?.user as any)?.role
+      const isUserAdmin = userRole === 'admin' || (session?.user as any)?.account_type === 'superadmin'
+      
+      let result
+      if (isUserAdmin) {
+        const { saveConfiguration } = await import('@/actions/configurations')
+        result = await saveConfiguration(configInput)
+      } else {
+        // Reseller o utenti normali usano savePersonalConfiguration
+        const { savePersonalConfiguration } = await import('@/actions/configurations')
+        result = await savePersonalConfiguration(configInput)
+      }
 
       if (result.success) {
         await loadConfigurations()
