@@ -421,7 +421,7 @@ export async function POST(request: NextRequest) {
     const spedizione: any = {
       // Dati mittente
       mittente: {
-        nome: body.mittenteNome,
+        nome: body.mittenteNome || body.rif_mittente || '', // ⚠️ FIX: Fallback a rif_mittente
         indirizzo: body.mittenteIndirizzo || '',
         citta: body.mittenteCitta || '',
         provincia: body.mittenteProvincia || '',
@@ -431,7 +431,7 @@ export async function POST(request: NextRequest) {
       },
       // Dati destinatario
       destinatario: {
-        nome: body.destinatarioNome,
+        nome: body.destinatarioNome || body.rif_destinatario || '', // ⚠️ FIX: Fallback a rif_destinatario
         indirizzo: body.destinatarioIndirizzo || '',
         citta: body.destinatarioCitta || '',
         provincia: body.destinatarioProvincia || '',
@@ -719,12 +719,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Risposta di successo
+    // ⚠️ FIX: Converti label_pdf Buffer in base64 per serializzazione JSON
+    let ldvResultSafe = ldvResult;
+    if (ldvResult && ldvResult.label_pdf && Buffer.isBuffer(ldvResult.label_pdf)) {
+      ldvResultSafe = {
+        ...ldvResult,
+        label_pdf: ldvResult.label_pdf.toString('base64'),
+        label_pdf_base64: true, // Flag per indicare al frontend che è base64
+      };
+      console.log('📄 [API] label_pdf convertito in base64 per frontend (size:', ldvResult.label_pdf.length, 'bytes)');
+    }
+    
     return NextResponse.json(
       {
         success: true,
         message: 'Spedizione creata con successo',
         data: spedizione,
-        ldv: ldvResult, // Info creazione LDV (orchestrator)
+        ldv: ldvResultSafe, // Info creazione LDV (orchestrator)
       },
       { status: 201 }
     );
