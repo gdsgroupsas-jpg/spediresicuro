@@ -857,25 +857,26 @@ export async function DELETE(request: NextRequest) {
         try {
           console.log('🗑️ [API] Tentativo cancellazione su Spedisci.Online:', trackingNumber);
         
-        // Recupera configurazione Spedisci.Online per l'utente
-        const userId = shipmentData.user_id || supabaseUserId;
-        if (userId) {
-          const { getShippingProvider } = await import('@/lib/couriers/factory');
-          const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
-          
-          const provider = await getShippingProvider(userId, 'spedisci_online', undefined);
-          
-          if (provider && provider instanceof SpedisciOnlineAdapter) {
-            spedisciOnlineCancelResult = await provider.cancelShipmentOnPlatform(trackingNumber);
+          // Recupera configurazione Spedisci.Online per l'utente
+          const userId = shipmentData.user_id || supabaseUserId;
+          if (userId) {
+            const { getShippingProvider } = await import('@/lib/couriers/factory');
+            const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
             
-            if (spedisciOnlineCancelResult.success) {
-              console.log('✅ [API] Spedizione cancellata su Spedisci.Online:', trackingNumber);
+            const provider = await getShippingProvider(userId, 'spedisci_online', undefined);
+            
+            if (provider && provider instanceof SpedisciOnlineAdapter) {
+              spedisciOnlineCancelResult = await provider.cancelShipmentOnPlatform(trackingNumber);
+              
+              if (spedisciOnlineCancelResult.success) {
+                console.log('✅ [API] Spedizione cancellata su Spedisci.Online:', trackingNumber);
+              } else {
+                console.warn('⚠️ [API] Cancellazione Spedisci.Online fallita:', spedisciOnlineCancelResult.error);
+                // Non blocchiamo il soft delete locale, ma logghiamo
+              }
             } else {
-              console.warn('⚠️ [API] Cancellazione Spedisci.Online fallita:', spedisciOnlineCancelResult.error);
-              // Non blocchiamo il soft delete locale, ma logghiamo
+              console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
             }
-          } else {
-            console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
           }
         } catch (cancelError: any) {
           console.warn('⚠️ [API] Errore cancellazione Spedisci.Online:', cancelError?.message);
