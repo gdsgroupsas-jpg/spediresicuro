@@ -119,3 +119,4 @@ SELECT
   'Service role (supabaseAdmin) bypasses RLS when no policies exist' AS note;
 
 
+
