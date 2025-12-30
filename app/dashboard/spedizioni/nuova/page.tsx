@@ -1246,7 +1246,7 @@ export default function NuovaSpedizionePage() {
                     </div>
                   </div>
 
-                  {/* Action Area */
+                  {/* Action Area */}
                   <div className="pt-6 border-t border-gray-200 space-y-3">
                     <form onSubmit={handleSubmit}>
                       <button
