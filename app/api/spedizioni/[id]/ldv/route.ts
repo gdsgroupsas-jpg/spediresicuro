@@ -1,9 +1,11 @@
 /**
- * API Route: Download LDV (Lettera di Vettura)
+ * API Route: Download LDV (Lettera di Vettura) ORIGINALE
  * 
  * Endpoint: GET /api/spedizioni/[id]/ldv?format=pdf
  * 
- * Scarica la LDV di una spedizione in formato PDF, CSV o XLSX
+ * PRIORITÀ:
+ * 1. LDV originale dal corriere (label_url o label_pdf_url da metadata)
+ * 2. Fallback a ExportService se non disponibile etichetta originale
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,6 +16,52 @@ import { ExportService } from '@/lib/adapters/export';
 
 // Forza rendering dinamico (usa nextUrl.searchParams)
 export const dynamic = 'force-dynamic';
+
+/**
+ * Estrae URL etichetta originale dal metadata della spedizione
+ */
+function extractOriginalLabelUrl(shipment: any): string | null {
+  const metadata = shipment.metadata;
+  if (!metadata) return null;
+  
+  // Prova in ordine: label_url, label_pdf_url (per Poste)
+  return metadata.label_url || metadata.label_pdf_url || null;
+}
+
+/**
+ * Scarica PDF da URL esterno
+ */
+async function downloadPdfFromUrl(url: string): Promise<{ data: Buffer; contentType: string } | null> {
+  try {
+    console.log('📥 [LDV] Download etichetta originale da:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/pdf,*/*',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error('❌ [LDV] Errore download etichetta:', response.status, response.statusText);
+      return null;
+    }
+    
+    const contentType = response.headers.get('content-type') || 'application/pdf';
+    const arrayBuffer = await response.arrayBuffer();
+    const data = Buffer.from(arrayBuffer);
+    
+    console.log('✅ [LDV] Etichetta originale scaricata:', {
+      size: data.length,
+      contentType,
+    });
+    
+    return { data, contentType };
+  } catch (error) {
+    console.error('❌ [LDV] Errore fetch etichetta originale:', error);
+    return null;
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -30,7 +78,7 @@ export async function GET(
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    // Recupera la spedizione direttamente da Supabase (evita problemi con fetch interno)
+    // Recupera la spedizione direttamente da Supabase
     const { data: shipment, error: fetchError } = await supabaseAdmin
       .from('shipments')
       .select('*')
@@ -46,10 +94,46 @@ export async function GET(
       );
     }
 
+    console.log('📄 [LDV] Richiesta download per spedizione:', {
+      id: shipment.id?.substring(0, 8),
+      tracking: shipment.tracking_number || shipment.ldv,
+      hasMetadata: !!shipment.metadata,
+      metadataKeys: shipment.metadata ? Object.keys(shipment.metadata) : [],
+    });
+
+    // =====================================================
+    // PRIORITÀ 1: Scarica etichetta ORIGINALE dal corriere
+    // =====================================================
+    const originalLabelUrl = extractOriginalLabelUrl(shipment);
+    
+    if (originalLabelUrl && format === 'pdf') {
+      console.log('🏷️ [LDV] Trovata etichetta originale:', originalLabelUrl);
+      
+      const pdfResult = await downloadPdfFromUrl(originalLabelUrl);
+      
+      if (pdfResult) {
+        const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
+        const filename = `LDV_${trackingNumber}.pdf`;
+        
+        return new NextResponse(new Uint8Array(pdfResult.data), {
+          headers: {
+            'Content-Type': pdfResult.contentType,
+            'Content-Disposition': `attachment; filename="${filename}"`,
+          },
+        });
+      }
+      
+      console.warn('⚠️ [LDV] Download etichetta originale fallito, uso fallback');
+    }
+
+    // =====================================================
+    // FALLBACK: Genera LDV con ExportService (non originale)
+    // =====================================================
+    console.log('📋 [LDV] Uso ExportService come fallback (etichetta non originale)');
+    
     // Converti formato spedizione per ExportService
-    // ⚠️ FIX: Leggi da recipient_name (nuovo formato Supabase) oppure destinatario.nome (legacy)
     const shipmentForExport = {
-      tracking_number: shipment.tracking || shipment.ldv || shipment.id,
+      tracking_number: shipment.tracking_number || shipment.tracking || shipment.ldv || shipment.id,
       created_at: shipment.createdAt || shipment.created_at || new Date().toISOString(),
       status: shipment.status || 'in_preparazione',
       courier_name: shipment.corriere || shipment.courier_name || '',
@@ -79,7 +163,7 @@ export async function GET(
       declared_value: shipment.assicurazione || shipment.declared_value || 0,
     };
 
-    // Genera LDV
+    // Genera LDV con ExportService
     const ldvResult = await ExportService.exportLDV(shipmentForExport, format);
 
     // Converti Buffer in ArrayBuffer se necessario
