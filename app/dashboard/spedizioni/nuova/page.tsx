@@ -30,7 +30,7 @@ import AddressFields from '@/components/ui/address-fields';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
-import { generateShipmentCSV, downloadCSV, generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
+import { generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
 import type { Corriere } from '@/types/corrieri';
 
 interface FormData {
@@ -261,7 +261,6 @@ export default function NuovaSpedizionePage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
-  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'csv'>('pdf');
 
   // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
   useEffect(() => {
@@ -638,13 +637,8 @@ export default function NuovaSpedizionePage() {
 
         // Piccolo delay per assicurarsi che il download parta dopo il rendering
         setTimeout(() => {
-          if (downloadFormat === 'csv') {
-            const csvContent = generateShipmentCSV(spedizioneWithDate);
-            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.csv`;
-            downloadCSV(csvContent, filename);
-          } else {
-            // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
-            console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
+          // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
+          console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
 
             // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
             // L'API restituisce ldv al livello root, non dentro data
@@ -755,7 +749,6 @@ export default function NuovaSpedizionePage() {
               const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
               downloadPDF(pdfDoc, filename);
             }
-          }
         }, 500);
       }
 
@@ -1253,36 +1246,7 @@ export default function NuovaSpedizionePage() {
                     </div>
                   </div>
 
-                  {/* Download Format Selector */}
-                  <div className="pt-6 border-t border-gray-200">
-                    <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
-                      Formato Download
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDownloadFormat('pdf')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'pdf'
-                          ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                          }`}
-                      >
-                        📄 PDF
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDownloadFormat('csv')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'csv'
-                          ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                          }`}
-                      >
-                        📊 CSV
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Action Area */}
+                  {/* Action Area */
                   <div className="pt-6 border-t border-gray-200 space-y-3">
                     <form onSubmit={handleSubmit}>
                       <button
