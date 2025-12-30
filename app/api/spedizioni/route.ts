@@ -856,7 +856,6 @@ export async function DELETE(request: NextRequest) {
         console.log('🗑️ [API] Tentativo cancellazione su Spedisci.Online:', {
           shipmentIdExternal,
           trackingNumber,
-          provider,
         });
       
         // Recupera configurazione Spedisci.Online per l'utente
