@@ -111,9 +111,9 @@ export class PDFExporter {
         ? `${shipment.length} x ${shipment.width} x ${shipment.height}`
         : '-'],
       ['Valore Dichiarato', shipment.declared_value ? `€${shipment.declared_value}` : '-'],
-      ['Corriere', shipment.courier?.name || '-'],
+      ['Corriere', shipment.courier_name || shipment.courier?.name || '-'],
       ['Tipo Servizio', shipment.service_type || 'standard'],
-      ['Contrassegno', shipment.cash_on_delivery ? `€${shipment.cash_on_delivery_amount}` : 'No'],
+      ['Contrassegno', shipment.cash_on_delivery ? `€${shipment.cash_on_delivery_amount || 0}` : 'No'],
       ['Assicurazione', shipment.insurance ? 'Sì' : 'No'],
     ];
 
