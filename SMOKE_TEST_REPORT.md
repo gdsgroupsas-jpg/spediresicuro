@@ -63,3 +63,4 @@ curl -i https://spediresicuro.vercel.app/api/spedizioni
 - Warning Edge Runtime sono attesi (non bloccanti)
 - Deploy Vercel automatico attivo su master
 
+

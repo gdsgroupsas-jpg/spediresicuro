@@ -179,3 +179,4 @@ Il Supabase CLI è configurato correttamente e può essere utilizzato per:
 
 
 
+
