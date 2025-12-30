@@ -650,26 +650,27 @@ export async function POST(request: NextRequest) {
               updateData.external_tracking_number = ldvResult.metadata.waybill_number;
             }
             
-            // Salva metadata come JSONB (carrier_metadata o poste_metadata)
-            if (ldvResult.metadata) {
+            // ⚠️ FIX: Salva SEMPRE label_url nel metadata, anche se metadata è vuoto
+            // Questo è necessario per il download della LDV originale dal corriere
+            if (ldvResult.metadata || ldvResult.label_url) {
               // Normalizza metadata per schema Supabase
               if (body.corriere === 'Poste Italiane') {
                 // Per Poste, salva come poste_metadata (se esiste colonna) o metadata
                 updateData.metadata = {
-                  poste_account_id: ldvResult.metadata.poste_account_id,
-                  poste_product_code: ldvResult.metadata.poste_product_code,
-                  waybill_number: ldvResult.metadata.waybill_number,
-                  label_pdf_url: ldvResult.metadata.label_pdf_url,
+                  poste_account_id: ldvResult.metadata?.poste_account_id,
+                  poste_product_code: ldvResult.metadata?.poste_product_code,
+                  waybill_number: ldvResult.metadata?.waybill_number,
+                  label_pdf_url: ldvResult.metadata?.label_pdf_url || ldvResult.label_url,
                   carrier: 'Poste Italiane',
                   method: ldvResult.method,
                 };
               } else {
                 // Per altri corrieri, salva come carrier_metadata generico
                 updateData.metadata = {
-                  ...ldvResult.metadata,
+                  ...(ldvResult.metadata || {}),
                   carrier: body.corriere || 'GLS',
                   method: ldvResult.method,
-                  label_url: ldvResult.label_url,
+                  label_url: ldvResult.label_url, // ⚠️ CRITICO: URL etichetta originale
                 };
               }
             }
