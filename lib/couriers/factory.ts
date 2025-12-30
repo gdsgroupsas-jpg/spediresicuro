@@ -151,8 +151,10 @@ export async function getShippingProvider(
     const config = await getCourierConfigForUser(userId, providerId);
 
     if (!config) {
-      console.error(`❌ Configurazione DB non trovata per provider ${providerId} e utente ${userId}`);
-      console.error(`⚠️ Configura una configurazione nel database tramite /dashboard/admin/configurations`);
+      // Questo è un log informativo, non un errore critico
+      // L'orchestrator può usare il broker adapter (Spedisci.Online) come fallback
+      console.log(`ℹ️ [FACTORY] Nessuna configurazione nativa trovata per provider ${providerId}`);
+      console.log(`ℹ️ [FACTORY] Se il corriere è gestito tramite Spedisci.Online, questo è normale`);
       return null;
     }
 
