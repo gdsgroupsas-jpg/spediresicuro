@@ -850,19 +850,21 @@ export async function DELETE(request: NextRequest) {
     });
 
     // ⚠️ INTEGRAZIONE SPEDISCI.ONLINE: Cancella su piattaforma esterna
-    // Se shipment_id_external esiste, significa che è stato creato sull'aggregatore
-    if (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') {
+    // Prova a cancellare se abbiamo shipment_id_external O tracking_number
+    const canCancelRemotely = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') || 
+                              (trackingNumber && trackingNumber.trim() !== '');
+    
+    if (canCancelRemotely) {
       try {
         console.log('🗑️ [API] Tentativo cancellazione su Spedisci.Online:', {
           shipmentIdExternal,
           trackingNumber,
+          method: shipmentIdExternal ? 'by_id' : 'by_tracking',
         });
       
         // Recupera configurazione Spedisci.Online per l'utente
         const userId = shipmentData.user_id || supabaseUserId;
         if (userId) {
-          const { SpedisciOnlineClient } = await import('@/lib/services/couriers/spediscionline.client');
-          
           // Recupera credenziali dal database
           const { data: configData } = await supabaseAdmin
             .from('courier_configs')
@@ -886,22 +888,41 @@ export async function DELETE(request: NextRequest) {
               }
             }
             
-            // Crea client Spedisci.Online
-            const client = new SpedisciOnlineClient({
-              apiKey: apiKey,
-              baseUrl: configData.base_url || 'https://api.spedisco.online/v1',
-              carrier: 'GLS', // Non importa per la cancellazione
-            });
+            // Se abbiamo shipment_id_external, usa deleteShipping (più affidabile)
+            if (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') {
+              const { SpedisciOnlineClient } = await import('@/lib/services/couriers/spediscionline.client');
+              
+              const client = new SpedisciOnlineClient({
+                apiKey: apiKey,
+                baseUrl: configData.base_url || 'https://api.spedisco.online/v1',
+                carrier: 'GLS',
+              });
 
-            // Usa deleteShipping con shipment_id_external
-            await client.deleteShipping({ shipmentId: shipmentIdExternal });
-            
-            spedisciOnlineCancelResult = {
-              success: true,
-              message: 'Spedizione cancellata su Spedisci.Online',
-            };
-            
-            console.log('✅ [API] Spedizione cancellata su Spedisci.Online:', shipmentIdExternal);
+              await client.deleteShipping({ shipmentId: shipmentIdExternal });
+              
+              spedisciOnlineCancelResult = {
+                success: true,
+                message: 'Spedizione cancellata su Spedisci.Online (by ID)',
+              };
+              
+              console.log('✅ [API] Spedizione cancellata su Spedisci.Online (by ID):', shipmentIdExternal);
+            } else {
+              // Fallback: usa tracking number con cancelShipmentOnPlatform
+              const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
+              
+              const adapter = new SpedisciOnlineAdapter({
+                api_key: apiKey,
+                base_url: configData.base_url || 'https://api.spedisci.online/api/v2',
+              });
+              
+              spedisciOnlineCancelResult = await adapter.cancelShipmentOnPlatform(trackingNumber);
+              
+              if (spedisciOnlineCancelResult.success) {
+                console.log('✅ [API] Spedizione cancellata su Spedisci.Online (by tracking):', trackingNumber);
+              } else {
+                console.warn('⚠️ [API] Cancellazione per tracking fallita:', spedisciOnlineCancelResult.error);
+              }
+            }
           } else {
             console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
           }
@@ -915,7 +936,7 @@ export async function DELETE(request: NextRequest) {
         // Non blocchiamo il soft delete locale
       }
     } else {
-      console.log('⚠️ [API] shipment_id_external mancante o UNKNOWN, skip cancellazione remota (spedizione locale o non creata sull\'aggregatore)');
+      console.log('⚠️ [API] Nessun identificativo disponibile per cancellazione remota');
     }
 
     // Soft delete - aggiorna spedizione in Supabase
