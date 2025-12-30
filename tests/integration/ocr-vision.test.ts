@@ -164,7 +164,11 @@ describe('OCR Vision Integration (Sprint 2.5)', () => {
     });
 
     it('should return clarification when Vision throws exception', async () => {
-      vi.mocked(extractData).mockRejectedValueOnce(new Error('Network timeout'));
+      // Mock entrambe le chiamate (primo tentativo + retry)
+      // "Network timeout" contiene "timeout" quindi è classificato come errore transiente e viene ritentato
+      vi.mocked(extractData)
+        .mockRejectedValueOnce(new Error('Network timeout'))
+        .mockRejectedValueOnce(new Error('Network timeout'));
 
       const state = createMockAgentState(MINIMAL_IMAGE_BASE64);
       const result = await ocrWorker(state, nullLogger);
@@ -172,7 +176,11 @@ describe('OCR Vision Integration (Sprint 2.5)', () => {
       expect(result.clarification_request).toBeDefined();
       expect(result.next_step).toBe('END');
       expect(result.processingStatus).toBe('error');
-      expect(result.validationErrors).toContain('Vision Error: Network timeout');
+      // Debug: controlla che validationErrors esista e sia un array
+      expect(result.validationErrors).toBeDefined();
+      expect(Array.isArray(result.validationErrors)).toBe(true);
+      expect(result.validationErrors?.length).toBe(1);
+      expect(result.validationErrors?.[0]).toBe('Vision Error: Network timeout');
     });
 
     it('should return clarification when Vision returns empty data', async () => {
