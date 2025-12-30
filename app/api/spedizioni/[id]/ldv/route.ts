@@ -7,6 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth-config';
+import { supabaseAdmin } from '@/lib/supabase';
 // TODO: Verifica path reale ExportService, se non esiste crea stub temporaneo o correggi import.
 import { ExportService } from '@/lib/adapters/export';
 
@@ -22,19 +24,22 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const format = (searchParams.get('format') || 'pdf') as 'pdf' | 'csv' | 'xlsx';
 
-    // Recupera la spedizione dal database
-    const response = await fetch(`${request.nextUrl.origin}/api/spedizioni?id=${id}`);
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Spedizione non trovata' },
-        { status: 404 }
-      );
+    // Verifica autenticazione
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const result = await response.json();
-    const shipment = result.data;
+    // Recupera la spedizione direttamente da Supabase (evita problemi con fetch interno)
+    const { data: shipment, error: fetchError } = await supabaseAdmin
+      .from('shipments')
+      .select('*')
+      .eq('id', id)
+      .eq('deleted', false)
+      .single();
 
-    if (!shipment) {
+    if (fetchError || !shipment) {
+      console.error('Errore recupero spedizione per LDV:', fetchError?.message);
       return NextResponse.json(
         { error: 'Spedizione non trovata' },
         { status: 404 }
