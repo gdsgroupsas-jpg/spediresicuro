@@ -826,7 +826,7 @@ export async function DELETE(request: NextRequest) {
     // ⚠️ PRIMA: Recupera la spedizione per avere il tracking number E shipment_id_external
     const { data: shipmentData, error: fetchError } = await supabaseAdmin
       .from('shipments')
-      .select('id, tracking_number, ldv, user_id, shipment_id_external, provider')
+      .select('id, tracking_number, ldv, user_id, shipment_id_external')
       .eq('id', id)
       .eq('deleted', false)
       .single();
@@ -838,7 +838,6 @@ export async function DELETE(request: NextRequest) {
 
     const trackingNumber = shipmentData.tracking_number || shipmentData.ldv;
     const shipmentIdExternal = shipmentData.shipment_id_external;
-    const provider = shipmentData.provider;
     let spedisciOnlineCancelResult: any = null;
 
     // ⚠️ DEBUG: Log dati recuperati per verificare che non siano vuoti
@@ -847,13 +846,12 @@ export async function DELETE(request: NextRequest) {
       ldv: shipmentData.ldv,
       final_tracking: trackingNumber,
       shipment_id_external: shipmentIdExternal,
-      provider: provider,
       isEmpty: !trackingNumber || trackingNumber.trim() === '',
     });
 
     // ⚠️ INTEGRAZIONE SPEDISCI.ONLINE: Cancella su piattaforma esterna
-    // Solo se shipment_id_external esiste (significa che è stato creato sull'aggregatore)
-    if (shipmentIdExternal && provider && (provider === 'spediscionline' || provider === 'spedisci_online')) {
+    // Se shipment_id_external esiste, significa che è stato creato sull'aggregatore
+    if (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') {
       try {
         console.log('🗑️ [API] Tentativo cancellazione su Spedisci.Online:', {
           shipmentIdExternal,
@@ -917,10 +915,8 @@ export async function DELETE(request: NextRequest) {
         };
         // Non blocchiamo il soft delete locale
       }
-    } else if (!shipmentIdExternal) {
-      console.log('⚠️ [API] shipment_id_external mancante, skip cancellazione remota (spedizione locale o non creata sull\'aggregatore)');
-    } else if (!provider || (provider !== 'spediscionline' && provider !== 'spedisci_online')) {
-      console.log('ℹ️ [API] Provider non è Spedisci.Online, skip cancellazione remota:', provider);
+    } else {
+      console.log('⚠️ [API] shipment_id_external mancante o UNKNOWN, skip cancellazione remota (spedizione locale o non creata sull\'aggregatore)');
     }
 
     // Soft delete - aggiorna spedizione in Supabase
