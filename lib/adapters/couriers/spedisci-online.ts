@@ -96,6 +96,10 @@ export interface SpedisciOnlineResponse {
   label_pdf?: string; // Base64 encoded
   error?: string;
   message?: string;
+  shipmentId?: string; // ⚠️ CRITICO: shipmentId (increment_id) per cancellazione
+  metadata?: {
+    [key: string]: any; // Metadati aggiuntivi (es: shipmentId, increment_id, etc.)
+  };
 }
 
 export class SpedisciOnlineAdapter extends CourierAdapter {
