@@ -8,11 +8,14 @@
 
 **Prima di leggere questo documento, leggi OBBLIGATORIAMENTE:**
 - [README.md](../README.md) - Costituzione del sistema (Courier Adapter pattern, 3 modelli operativi)
+- [docs/VISION_BUSINESS.md](VISION_BUSINESS.md) - Visione business completa e modelli di ricavo
 
 **Questo documento implementa:**
 - Pattern Courier Adapter (sistema agnostico rispetto al fornitore)
 - Stack tecnologico per i 3 modelli operativi
 - Patterns architetturali (Acting Context, Wallet, RLS)
+
+**Per le AI:** Questo documento è tecnico. Per visione business, vedere `docs/VISION_BUSINESS.md`.
 
 ---
 
@@ -175,24 +178,28 @@ spediresicuro/
 
 ### 2. Wallet System (Prepaid Credit)
 
-**Problem:** Need to prevent negative balance, ensure audit trail, support refunds.
+**Problem:** Need to prevent negative balance, ensure audit trail, support refunds, prevent race conditions.
 
-**Solution:** Trigger-based balance update + immutable transaction ledger.
+**Solution:** Atomic RPC functions with pessimistic locking + immutable transaction ledger.
 
 **Tables:**
 - `users.wallet_balance` - Current balance (CHECK >= 0)
-- `wallet_transactions` - Immutable ledger (append-only)
+- `wallet_transactions` - Immutable ledger (append-only, audit trail)
 
 **Flow:**
 1. Admin approves top-up request
 2. Call `add_wallet_credit(user_id, amount, description, admin_id)`
-3. Function inserts row into `wallet_transactions`
-4. Trigger `update_wallet_balance_on_transaction` fires
-5. Trigger updates `users.wallet_balance += amount`
-6. User creates shipment → pre-check balance
-7. If sufficient, insert negative transaction → trigger debits balance
+3. Function calls `increment_wallet_balance()` (ATOMIC with FOR UPDATE NOWAIT)
+4. Function inserts row into `wallet_transactions` (audit trail only, NO trigger)
+5. User creates shipment → pre-check balance
+6. If sufficient, call `decrement_wallet_balance()` (ATOMIC) → then insert transaction
 
-**Key Insight:** Balance is NEVER updated directly, always via transaction insert.
+**Key Insight:** Balance is NEVER updated directly. Only atomic RPC functions can modify `wallet_balance`:
+- `increment_wallet_balance()` - Atomic credit with pessimistic lock
+- `decrement_wallet_balance()` - Atomic debit with pessimistic lock
+- `add_wallet_credit()` - Wrapper that calls `increment_wallet_balance()` + inserts transaction
+
+**⚠️ IMPORTANTE:** Trigger legacy rimosso in migration `041_remove_wallet_balance_trigger.sql` (causava doppio accredito).
 
 **Reconciliation:**
 ```sql
@@ -676,5 +683,5 @@ export async function createShipment(...) {
 ---
 
 **Document Owner:** Engineering Team  
-**Last Updated:** December 21, 2025  
+**Last Updated:** December 29, 2025  
 **Review Cycle:** Quarterly
