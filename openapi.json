@@ -1,0 +1,1308 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Spedisci.online API",
+    "description": "Welcome to the Spedisci.Online API! You can use our API to access Spedisci.Online API endpoints, which can get information on various data in your account (Tracking, Rates, Credit, etc) , and access to create specific objects, like Orders, Shippings Labels, and Reports..",
+    "contact": {
+      "email": "supporto@spedisci.online"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://demo1.spedisci.online/api/v2/",
+      "description": "test"
+    }
+  ],
+  "paths": {
+    "/shipping/rates": {
+      "post": {
+        "tags": [
+          "shipping"
+        ],
+        "summary": "Get Rates",
+        "description": "Get shipping rates and carriers contracts available.",
+        "operationId": "getRates",
+        "requestBody": {
+          "description": "json",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "packages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "length": {
+                          "type": "number"
+                        },
+                        "width": {
+                          "type": "number"
+                        },
+                        "height": {
+                          "type": "number"
+                        },
+                        "weight": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "length",
+                        "width",
+                        "height",
+                        "weight"
+                      ]
+                    }
+                  },
+                  "shipFrom": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "company": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "street1": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "street2": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "state": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "country": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "phone": {},
+                      "email": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "company",
+                      "street1",
+                      "street2",
+                      "city",
+                      "state",
+                      "postalCode",
+                      "country",
+                      "email"
+                    ]
+                  },
+                  "shipTo": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "company": {
+                        "type": "string"
+                      },
+                      "street1": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "street2": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "state": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "country": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "phone": {},
+                      "email": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "company",
+                      "street1",
+                      "street2",
+                      "city",
+                      "state",
+                      "postalCode",
+                      "country",
+                      "email"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "insuranceValue": {
+                    "type": "number"
+                  },
+                  "codValue": {
+                    "type": "number"
+                  },
+                  "accessoriServices": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "packages",
+                  "shipFrom",
+                  "shipTo",
+                  "notes",
+                  "insuranceValue",
+                  "codValue",
+                  "accessoriServices"
+                ],
+                "x-examples": {
+                  "example-1": {
+                    "packages": [
+                      {
+                        "length": 17,
+                        "width": 25,
+                        "height": 26,
+                        "weight": 3
+                      }
+                    ],
+                    "shipFrom": {
+                      "name": "Antonio Esposito",
+                      "company": "Spedisci.Online",
+                      "street1": "via guglielmo sanfelice 8",
+                      "street2": "",
+                      "city": "Napoli",
+                      "state": "NA",
+                      "postalCode": "80134",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "shipTo": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "notes": "test api",
+                    "insuranceValue": 0,
+                    "codValue": 0,
+                    "accessoriServices": []
+                  }
+                }
+              },
+              "examples": {
+                "example-1": {
+                  "value": {
+                    "packages": [
+                      {
+                        "length": 17,
+                        "width": 25,
+                        "height": 26,
+                        "weight": 3
+                      }
+                    ],
+                    "shipFrom": {
+                      "name": "Antonio Esposito",
+                      "company": "Spedisci.Online",
+                      "street1": "via guglielmo sanfelice 8",
+                      "street2": "",
+                      "city": "Napoli",
+                      "state": "NA",
+                      "postalCode": "80134",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "shipTo": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "notes": "test api",
+                    "insuranceValue": 0,
+                    "codValue": 0,
+                    "accessoriServices": []
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "carrierCode": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "contractCode": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "weight_price": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "insurance_price": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "cod_price": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "services_price": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "fuel": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "total_price": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "carrierCode",
+                      "contractCode",
+                      "weight_price",
+                      "insurance_price",
+                      "cod_price",
+                      "services_price",
+                      "fuel",
+                      "total_price"
+                    ]
+                  },
+                  "x-examples": {
+                    "example-1": [
+                      {
+                        "carrierCode": "gls",
+                        "contractCode": "gls-standard",
+                        "weight_price": "3.80",
+                        "insurance_price": "3.00",
+                        "cod_price": "3.00",
+                        "services_price": "0.00",
+                        "fuel": "0.00",
+                        "total_price": "9.80"
+                      },
+                      {
+                        "carrierCode": "gls",
+                        "contractCode": "gls-light",
+                        "weight_price": "5.00",
+                        "insurance_price": "3.00",
+                        "cod_price": "3.00",
+                        "services_price": "0.00",
+                        "fuel": "0.00",
+                        "total_price": "11.00"
+                      }
+                    ]
+                  }
+                },
+                "examples": {
+                  "example-1": {
+                    "value": [
+                      {
+                        "carrierCode": "gls",
+                        "contractCode": "gls-standard",
+                        "weight_price": "3.80",
+                        "insurance_price": "3.00",
+                        "cod_price": "3.00",
+                        "services_price": "0.00",
+                        "fuel": "0.00",
+                        "total_price": "9.80"
+                      },
+                      {
+                        "carrierCode": "gls",
+                        "contractCode": "gls-light",
+                        "weight_price": "5.00",
+                        "insurance_price": "3.00",
+                        "cod_price": "3.00",
+                        "services_price": "0.00",
+                        "fuel": "0.00",
+                        "total_price": "11.00"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Invalid input"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "501": {
+            "description": "Not Implemented"
+          }
+        },
+        "security": [
+          {
+            "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "https://demo1.spedisci.online/api/v2/",
+            "description": "test"
+          }
+        ]
+      }
+    },
+    "/shipping/create": {
+      "post": {
+        "tags": [
+          "shipping"
+        ],
+        "summary": "Create Label",
+        "description": "Creates a shipping label. The labelData field returned in the response is a base64 encoded PDF value. Simply decode and save the output as a PDF file to retrieve a printable label. The body of this request has the following attributes:",
+        "operationId": "createShipment",
+        "requestBody": {
+          "description": "json",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "carrierCode": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "contractCode": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "packages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Package"
+                      }
+                    }
+                  },
+                  "shipFrom": {
+                    "$ref": "#/components/schemas/Address"
+                  },
+                  "shipTo": {
+                    "$ref": "#/components/schemas/Address"
+                  },
+                  "notes": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "insuranceValue": {
+                    "type": "number"
+                  },
+                  "codValue": {
+                    "type": "number",
+                    "description": "Cash on delivery value."
+                  },
+                  "accessoriServices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "label_format": {
+                    "type": "string",
+                    "description": "\"PDF\" or \"ZPL\""
+                  }
+                },
+                "required": [
+                  "carrierCode",
+                  "contractCode",
+                  "packages",
+                  "shipFrom",
+                  "shipTo",
+                  "notes",
+                  "insuranceValue",
+                  "codValue",
+                  "accessoriServices"
+                ],
+                "x-examples": {
+                  "example-1": {
+                    "carrierCode": "liccardi",
+                    "contractCode": "liccardi-LICCARDI",
+                    "packages": [
+                      {
+                        "length": 17,
+                        "width": 25,
+                        "height": 26,
+                        "weight": 3
+                      }
+                    ],
+                    "shipFrom": {
+                      "name": "Antonio Esposito",
+                      "company": "Spedisci.Online",
+                      "street1": "via guglielmo sanfelice 8",
+                      "street2": "",
+                      "city": "Napoli",
+                      "state": "NA",
+                      "postalCode": "80134",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "shipTo": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "notes": "test api",
+                    "insuranceValue": 0,
+                    "codValue": 0,
+                    "accessoriServices": []
+                  }
+                }
+              },
+              "examples": {
+                "example-1": {
+                  "value": {
+                    "carrierCode": "brt",
+                    "contractCode": "brt-Test",
+                    "packages": [
+                      {
+                        "length": 17,
+                        "width": 25,
+                        "height": 26,
+                        "weight": 3
+                      }
+                    ],
+                    "shipFrom": {
+                      "name": "Antonio Esposito",
+                      "company": "Spedisci.Online",
+                      "street1": "via guglielmo sanfelice 8",
+                      "street2": "",
+                      "city": "Napoli",
+                      "state": "NA",
+                      "postalCode": "80134",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "shipTo": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "notes": "test api",
+                    "insuranceValue": 0,
+                    "codValue": 0,
+                    "accessoriServices": [],
+                    "label_format": "PDF"
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "shipmentId": {
+                      "type": "integer"
+                    },
+                    "trackingNumber": {
+                      "type": "string"
+                    },
+                    "shipmentCost": {
+                      "type": "string"
+                    },
+                    "packages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "pack_number": {
+                            "type": "integer"
+                          },
+                          "reference": {
+                            "nullable": true
+                          }
+                        }
+                      }
+                    },
+                    "labelData": {
+                      "type": "string"
+                    },
+                    "labelZPL": {
+                      "type": "string"
+                    }
+                  },
+                  "x-examples": {
+                    "Example 1": {
+                      "shipmentId": 4454058,
+                      "trackingNumber": "DEMO05407027",
+                      "shipmentCost": "7.00",
+                      "packages": [
+                        {
+                          "pack_number": 1,
+                          "reference": null
+                        },
+                        {
+                          "pack_number": 2,
+                          "reference": null
+                        }
+                      ],
+                      "labelData": "JVBERi0xLjcKMyAwIG9iago8PC9Ue.......",
+                      "labelZPL": "XlhBCgpeRlggQ29tcGFueSBOYW1lIH......."
+                    }
+                  }
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "shipmentId": 4454058,
+                      "trackingNumber": "DEMO05407027",
+                      "shipmentCost": "7.00",
+                      "packages": [
+                        {
+                          "pack_number": 1,
+                          "reference": null
+                        },
+                        {
+                          "pack_number": 2,
+                          "reference": null
+                        }
+                      ],
+                      "labelData": "JVBERi0xLjcKMyAwIG9iago8PC9Ue.......",
+                      "labelZPL": "XlhBCgpeRlggQ29tcGFueSBOYW1lIH......."
+                    }
+                  }
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Order"
+          }
+        },
+        "security": [
+          {
+            "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "https://demo1.spedisci.online/api/v2/",
+            "description": "test"
+          }
+        ]
+      }
+    },
+    "/shipping/delete": {
+      "post": {
+        "tags": [
+          "shipping"
+        ],
+        "summary": "Delete Label",
+        "description": "Delete a shipping label",
+        "operationId": "deleteShipment",
+        "requestBody": {
+          "description": "json",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "increment_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "increment_id"
+                ],
+                "x-examples": {
+                  "example-1": {
+                    "carrierCode": "liccardi",
+                    "contractCode": "liccardi-LICCARDI",
+                    "packages": [
+                      {
+                        "length": 17,
+                        "width": 25,
+                        "height": 26,
+                        "weight": 3
+                      }
+                    ],
+                    "shipFrom": {
+                      "name": "Antonio Esposito",
+                      "company": "Spedisci.Online",
+                      "street1": "via guglielmo sanfelice 8",
+                      "street2": "",
+                      "city": "Napoli",
+                      "state": "NA",
+                      "postalCode": "80134",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "shipTo": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "notes": "test api",
+                    "insuranceValue": 0,
+                    "codValue": 0,
+                    "accessoriServices": []
+                  }
+                }
+              },
+              "examples": {
+                "example-1": {
+                  "value": {
+                    "increment_id": 230432
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          },
+          "400": {
+            "description": "Invalid Order"
+          }
+        },
+        "security": [
+          {
+            "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "https://demo1.spedisci.online/api/v2/",
+            "description": "test"
+          }
+        ]
+      }
+    },
+    "/stock/update": {
+      "post": {
+        "tags": [
+          "stocks"
+        ],
+        "summary": "Update Stock",
+        "description": "Update shipping locked in stock.\nYou can choose for \"action\" between: \"RETRY\",\"NEWADDRESS\" or \"RETURN\".\nFor \"NEWADDRESS\" action the \"newaddress\" object is also requi  red. ",
+        "operationId": "Stock Update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ldv": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "action": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "scheduled_at": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "newaddress": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "company": {
+                        "type": "string"
+                      },
+                      "street1": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "street2": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "state": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "country": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "phone": {
+                        "type": "number"
+                      },
+                      "email": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "notes": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ldv",
+                  "action",
+                  "scheduled_at"
+                ],
+                "x-examples": {
+                  "example-1": {
+                    "ldv": "281095I072409",
+                    "action": "NEWADDRESS",
+                    "scheduled_at": "26/06/2021",
+                    "newaddress": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": 333123456,
+                      "email": "email@example.com",
+                      "notes": "al piano 2"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "example-1": {
+                  "value": {
+                    "ldv": "281095I072409",
+                    "action": "NEWADDRESS",
+                    "scheduled_at": "26/06/2021",
+                    "newaddress": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": 333123456,
+                      "email": "email@example.com",
+                      "notes": "al piano 2"
+                    },
+                    "note": "please call"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "https://demo1.spedisci.online/api/v2/",
+            "description": "test"
+          }
+        ]
+      }
+    },
+    "/shippinglist/create": {
+      "post": {
+        "tags": [
+          "shipping"
+        ],
+        "summary": "Close Day",
+        "operationId": "Confirm",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shipment_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "contract_code": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "shipment_ids",
+                  "contract_code"
+                ],
+                "x-examples": {
+                  "example-1": {
+                    "shipment_ids": [
+                      1462677
+                    ],
+                    "contract_code": "liccardi-LICCARDI"
+                  }
+                }
+              },
+              "examples": {
+                "example-1": {
+                  "value": {
+                    "shipment_ids": [
+                      7,
+                      8,
+                      9
+                    ],
+                    "contract_code": "brt-Test"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bordero": {
+                      "type": "number"
+                    },
+                    "pdf": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "bordero",
+                    "pdf"
+                  ],
+                  "x-examples": {
+                    "example-1": {
+                      "bordero": 163273,
+                      "pdf": "JVBERi...."
+                    }
+                  }
+                },
+                "examples": {
+                  "example-1": {
+                    "value": {
+                      "bordero": 163273,
+                      "pdf": "JVBERi"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "https://demo1.spedisci.online/api/v2/",
+            "description": "test"
+          }
+        ]
+      }
+    },
+    "/tracking/{ldv}": {
+      "get": {
+        "tags": [
+          "tracking"
+        ],
+        "summary": "Tracking",
+        "operationId": "get-tracking-ldv",
+        "parameters": [
+          {
+            "name": "ldv",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "TrackingDettaglio": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Data": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "Stato": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "Luogo": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "Data",
+                          "Stato",
+                          "Luogo"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "TrackingDettaglio"
+                  ],
+                  "x-examples": {
+                    "example-1": {
+                      "TrackingDettaglio": [
+                        {
+                          "Data": "22/09/2016 15:22",
+                          "Stato": "CONSEGNATA",
+                          "Luogo": "Cembra"
+                        },
+                        {
+                          "Data": "22/09/2016 15:22",
+                          "Stato": "Consegna prevista nel corso della giornata odierna",
+                          "Luogo": "Trento"
+                        },
+                        {
+                          "Data": "22/09/2016 15:22",
+                          "Stato": "Arrivata in sede destinataria",
+                          "Luogo": "Trento"
+                        },
+                        {
+                          "Data": "21/09/2016 15:22",
+                          "Stato": "Attesa in sede destinataria. Non in consegna in data odierna",
+                          "Luogo": "Trento"
+                        },
+                        {
+                          "Data": "20/09/2016 15:22",
+                          "Stato": "Partita dalla sede mittente. Attesa nella sede destinataria",
+                          "Luogo": "Caserta"
+                        },
+                        {
+                          "Data": "20/09/2016 15:22",
+                          "Stato": "Spedizione registrata nei nostri sistemi ma non ancora partita",
+                          "Luogo": "Caserta"
+                        },
+                        {
+                          "Data": "19/09/2016 17:42",
+                          "Stato": "Spedizione generata. In attesa di ritiro.",
+                          "Luogo": "MACERATA CAMPANIA"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "https://demo1.spedisci.online/api/v2/",
+            "description": "test"
+          }
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "shipping",
+      "description": "Rates,Create, Print"
+    },
+    {
+      "name": "stocks",
+      "description": "Update shippings locked in stock"
+    },
+    {
+      "name": "tracking",
+      "description": "This endpoint retrieves tracking details of a shipping by trackingNumber."
+    }
+  ],
+  "externalDocs": {
+    "url": "http://spedisci.online",
+    "description": "Find out more about Spedisci.online"
+  },
+  "components": {
+    "securitySchemes": {
+      "qCL7FN2RKFQDngWb6kJ7fwxfF1yXQt6lNLN32K1tdNxVNnpBWL4qoOEWVJ8e": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Package": {
+        "type": "object",
+        "properties": {
+          "length": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "weight": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "length",
+          "width",
+          "height"
+        ],
+        "x-examples": {
+          "example-1": {
+            "length": 17,
+            "width": 25,
+            "height": 26,
+            "weight": 3,
+            "value": {
+              "length": 0,
+              "width": 0,
+              "height": 0,
+              "weight": 1.5
+            }
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "title": "Address",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1
+          },
+          "street1": {
+            "type": "string",
+            "minLength": 1
+          },
+          "street2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1
+          },
+          "postalCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "phone": {},
+          "email": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "street2",
+          "email"
+        ],
+        "x-examples": {
+          "example-1": {
+            "name": "Antonio Esposito",
+            "company": "Spedisci.Online",
+            "street1": "via guglielmo sanfelice 8",
+            "street2": "",
+            "city": "Napoli",
+            "state": "NA",
+            "postalCode": "80134",
+            "country": "IT",
+            "phone": null,
+            "email": "email@example.com",
+            "value": {
+              "name": "Antonio Esposito",
+              "company": "Spedisci.Online",
+              "street1": "via guglielmo sanfelice 8",
+              "street2": "",
+              "city": "Napoli",
+              "state": "NA",
+              "postalCode": "80134",
+              "country": "IT",
+              "phone": null,
+              "email": "email@example.com"
+            }
+          },
+          "example-2": {
+            "value": {
+              "name": "string",
+              "company": "string",
+              "street1": "string",
+              "street2": "string",
+              "city": "string",
+              "state": "string",
+              "postalCode": "string",
+              "country": "st",
+              "phone": null,
+              "email": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

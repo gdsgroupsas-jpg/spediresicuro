@@ -665,7 +665,8 @@ export default function ListaSpedizioniPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `LDV_${id}.${format}`;
+      // ⚠️ FIX: Il filename viene già impostato correttamente dall'API (Content-Disposition header)
+      // Non serve impostare link.download, il browser userà il filename dall'header
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
