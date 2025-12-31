@@ -12,21 +12,24 @@ Riferimento dettagliato: [PHASE_3_ROLLOUT_PLAN.md](PHASE_3_ROLLOUT_PLAN.md)
 
 **Status:** ⬜ TODO | 🟡 IN PROGRESS | ✅ DONE
 
-- [ ] **Audit PII robusto completato**
+- [x] **Audit PII robusto completato** → ✅
   - Verifica: `grep -r "base64\|fullName\|phone\|address" lib/agent/workers/ocr.ts` → zero match
   - Verifica: `grep -r "console\.log.*base64\|console\.log.*fullName" lib/` → zero match
-  - Evidenza: File `docs/phase3/audit-pii-completed.md` con risultati
+  - Evidenza: File `docs/phase3/PII_AUDIT_PRE_COHORT_0.md` con risultati
 
-- [ ] **Kill switch OCR testato end-to-end**
+- [x] **Kill switch OCR testato end-to-end** → ✅
   - Test: `ENABLE_OCR_IMAGES=false` → OCR disabilitato, fallback legacy attivo
   - Test: Immagine inviata → clarification request (non Vision)
-  - Evidenza: File `docs/phase3/kill-switch-test.md` con screenshot/log
+  - Evidenza: File `docs/phase3/KILL_SWITCH_DRY_RUN_PRE_COHORT_0.md` con risultati
 
-- [ ] **Cost alert Gemini configurati**
-  - Google Cloud Console: Alert configurato per costi giornalieri > soglia
-  - Alert inviato a: [email da definire]
-  - Test alert: Trigger manuale verificato
-  - Evidenza: Screenshot configurazione alert in `docs/phase3/cost-alert-config.md`
+- [x] **Cost alert Gemini configurati** → ✅
+  - ✅ Alert automatici configurati in Google Cloud Console
+  - Budget: €10.00/mese con 3 soglie (50%, 80%, 100%) - conservativo per pre-Cohort 0
+  - Email notifications attive per utenti e amministratori
+  - Soglie preliminari definite: €5.00/giorno, €30.00/settimana
+  - Procedura reazione documentata (Kill Switch)
+  - Budget sarà aumentato a production-ready quando necessario
+  - Evidenza: File `docs/phase3/COST_ALERT_PRE_COHORT_0.md` + Screenshot Google Cloud Console
 
 - [ ] **Stato race conditions dichiarato**
   - Verifica: Race conditions in `ocrWorker` / `extractData` risolte o mitigate

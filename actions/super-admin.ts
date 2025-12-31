@@ -91,11 +91,12 @@ export async function toggleResellerStatus(
       }
     }
 
-    // 4. Aggiorna is_reseller
+    // 4. Aggiorna is_reseller e reseller_role
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
         is_reseller: isReseller,
+        reseller_role: isReseller ? 'admin' : null, // ⚠️ FIX: Setta reseller_role quando promuovi a reseller
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)

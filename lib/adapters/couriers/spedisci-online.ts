@@ -1023,4 +1023,100 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
   private generateTrackingNumber(): string {
     return `SPED${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
   }
+
+  /**
+   * Cancella una spedizione su Spedisci.Online
+   * 
+   * @param trackingNumber - Tracking number della spedizione da cancellare
+   * @returns Promise<{ success: boolean, message?: string, error?: string }>
+   */
+  async cancelShipmentOnPlatform(trackingNumber: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    if (!trackingNumber) {
+      return { success: false, error: 'Tracking number mancante' };
+    }
+
+    // Genera fingerprint per log sicuro
+    const crypto = require('crypto');
+    const keyFingerprint = this.API_KEY 
+      ? crypto.createHash('sha256').update(this.API_KEY).digest('hex').substring(0, 8)
+      : 'N/A';
+
+    console.log('🗑️ [SPEDISCI.ONLINE] Tentativo cancellazione spedizione:', {
+      trackingNumber,
+      apiKeyFingerprint: keyFingerprint,
+      baseUrl: this.BASE_URL,
+    });
+
+    try {
+      // Prova endpoint DELETE /shipping/{tracking}
+      const url = new URL(`shipping/${encodeURIComponent(trackingNumber)}`, this.BASE_URL).toString();
+      
+      console.log('📡 [SPEDISCI.ONLINE] DELETE call:', { url, trackingNumber });
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.API_KEY}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log('📡 [SPEDISCI.ONLINE] DELETE response:', {
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      if (response.ok) {
+        let result: any = {};
+        try {
+          result = await response.json();
+        } catch {
+          // Risposta vuota OK per DELETE
+        }
+        
+        console.log('✅ [SPEDISCI.ONLINE] Spedizione cancellata:', trackingNumber);
+        return { 
+          success: true, 
+          message: result.message || 'Spedizione cancellata con successo su Spedisci.Online' 
+        };
+      }
+
+      // Gestisci errori
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorBody = await response.json();
+        errorMessage = errorBody.message || errorBody.error || errorMessage;
+      } catch {
+        // Ignora errori parsing
+      }
+
+      // 404 = spedizione non trovata su Spedisci.Online (già cancellata o mai creata)
+      if (response.status === 404) {
+        console.warn('⚠️ [SPEDISCI.ONLINE] Spedizione non trovata (già cancellata?):', trackingNumber);
+        return { 
+          success: true, // Consideriamo successo se non esiste
+          message: 'Spedizione non trovata su Spedisci.Online (potrebbe essere già stata cancellata)' 
+        };
+      }
+
+      console.error('❌ [SPEDISCI.ONLINE] Errore cancellazione:', {
+        trackingNumber,
+        status: response.status,
+        error: errorMessage,
+      });
+
+      return { success: false, error: errorMessage };
+    } catch (error: any) {
+      console.error('❌ [SPEDISCI.ONLINE] Eccezione cancellazione:', {
+        trackingNumber,
+        error: error?.message || error,
+      });
+
+      return { 
+        success: false, 
+        error: error?.message || 'Errore durante la cancellazione su Spedisci.Online' 
+      };
+    }
+  }
 }

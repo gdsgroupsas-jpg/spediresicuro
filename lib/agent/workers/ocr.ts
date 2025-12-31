@@ -565,8 +565,8 @@ export async function ocrWorker(
         return {
           clarification_request: clarificationMsg,
           next_step: 'END',
-          processingStatus: 'idle',
-          validationErrors: visionResult.error ? [visionResult.error.message] : undefined,
+          processingStatus: 'error', // ⚠️ FIX: Setta 'error' quando Vision fallisce
+          validationErrors: visionResult.error ? [`Vision Error: ${visionResult.error.message}`] : undefined,
         };
       }
       

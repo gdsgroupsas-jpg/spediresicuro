@@ -30,7 +30,7 @@ import AddressFields from '@/components/ui/address-fields';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
-import { generateShipmentCSV, downloadCSV, generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
+import { generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
 import type { Corriere } from '@/types/corrieri';
 
 interface FormData {
@@ -261,7 +261,6 @@ export default function NuovaSpedizionePage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
-  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'csv'>('pdf');
 
   // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
   useEffect(() => {
@@ -638,90 +637,117 @@ export default function NuovaSpedizionePage() {
 
         // Piccolo delay per assicurarsi che il download parta dopo il rendering
         setTimeout(() => {
-          if (downloadFormat === 'csv') {
-            const csvContent = generateShipmentCSV(spedizioneWithDate);
-            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.csv`;
-            downloadCSV(csvContent, filename);
-          } else {
-            // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
-            console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
+          // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
+          console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
 
-            // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
-            // L'API restituisce ldv al livello root, non dentro data
-            const ldvResult = result.ldv || result.data?.ldv;
-            console.log('🔍 [CLIENT] Verifica LDV:', {
-              'result.ldv': result.ldv,
-              'result.data?.ldv': result.data?.ldv,
-              'ldvResult': ldvResult,
-              'ldvResult?.success': ldvResult?.success,
-              'ldvResult?.label_url': ldvResult?.label_url,
-              'ldvResult?.error': ldvResult?.error,
-              'ldvResult?.method': ldvResult?.method
-            });
+          // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
+          // L'API restituisce ldv al livello root, non dentro data
+          const ldvResult = result.ldv || result.data?.ldv;
+          console.log('🔍 [CLIENT] Verifica LDV:', {
+            'result.ldv': result.ldv,
+            'result.data?.ldv': result.data?.ldv,
+            'ldvResult': ldvResult,
+            'ldvResult?.success': ldvResult?.success,
+            'ldvResult?.label_url': ldvResult?.label_url,
+            'ldvResult?.error': ldvResult?.error,
+            'ldvResult?.method': ldvResult?.method
+          });
 
-            if (ldvResult && ldvResult.success && ldvResult.label_url) {
-              console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
-              window.open(ldvResult.label_url, '_blank');
-            } else {
-              // FALLBACK: Genera Ticket interno se non c'è etichetta reale
-              console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
-
-              // LOGGING DETTAGLIATO (da remote)
-              console.log('   - ldvResult:', ldvResult);
-              console.log('   - ldvResult?.success:', ldvResult?.success);
-              console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
-              console.log('   - ldvResult?.error:', ldvResult?.error);
-              console.log('   - ldvResult?.method:', ldvResult?.method);
-
-              // ⚠️ MOSTRA ERRORE ALL'UTENTE - MESSAGGIO MIGLIORATO
-              // Se c'è un errore nell'oggetto LDV, mostralo con dettagli utili
-              const errorMsg = result.ldv?.error || result.ldv?.message;
-              const method = result.ldv?.method || 'sconosciuto';
-              
-              if (errorMsg) {
-                // Messaggio più specifico in base al metodo usato
-                let title = '⚠️ Errore Creazione LDV';
-                let details = errorMsg;
-                
-                if (method === 'broker') {
-                  title = '⚠️ Errore Spedisci.online';
-                  // Verifica se è un errore di contratto mancante
-                  if (errorMsg.toLowerCase().includes('contratto') || errorMsg.toLowerCase().includes('contract')) {
-                    const corriereName = formData.corriere || spedizioneData?.corriere || 'questo corriere';
-                    details = `Contratto non configurato per ${corriereName}.\n\n` +
-                             `Configura il contratto nel wizard Spedisci.online:\n` +
-                             `1. Vai su Integrazioni\n` +
-                             `2. Apri il wizard Spedisci.online\n` +
-                             `3. Aggiungi il contratto per ${corriereName}\n\n` +
-                             `Errore tecnico: ${errorMsg}`;
-                  } else if (errorMsg.toLowerCase().includes('401') || errorMsg.toLowerCase().includes('unauthorized')) {
-                    details = `API Key non valida o scaduta.\n\n` +
-                             `Verifica le credenziali nel wizard Spedisci.online.\n\n` +
-                             `Errore tecnico: ${errorMsg}`;
-                  } else if (errorMsg.toLowerCase().includes('404') || errorMsg.toLowerCase().includes('not found')) {
-                    details = `Endpoint non trovato.\n\n` +
-                             `Verifica che il Base URL sia corretto nel wizard Spedisci.online.\n\n` +
-                             `Errore tecnico: ${errorMsg}`;
-                  } else {
-                    details = `Errore durante la creazione della spedizione tramite Spedisci.online.\n\n` +
-                             `Errore: ${errorMsg}\n\n` +
-                             `La spedizione è stata salvata localmente. Puoi provare a crearla manualmente dal pannello Spedisci.online.`;
-                  }
-                } else {
-                  details = `Errore: ${errorMsg}\n\nLa spedizione è stata salvata localmente.`;
-                }
-                
-                alert(`${title}\n\n${details}\n\nÈ stato generato un ticket di riserva (PDF locale).`);
-              } else if (!result.ldv) {
-                // Caso raro: ldv null (errore server interno prima dell'orchestrator)
-                console.warn('Oggetto LDV mancante nella risposta');
-                alert('⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli.');
+          if (ldvResult && ldvResult.success && ldvResult.label_url) {
+            console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
+            window.open(ldvResult.label_url, '_blank');
+          } else if (ldvResult && ldvResult.success && ldvResult.label_pdf) {
+            // ⚠️ FIX: Gestisci label_pdf base64 (scarica come PDF)
+            console.log('📄 [CLIENT] label_pdf base64 ricevuto, scarico PDF...');
+            try {
+              // Decodifica base64 e crea blob
+              const base64Data = ldvResult.label_pdf;
+              const binaryString = atob(base64Data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
               }
-
+              const blob = new Blob([bytes], { type: 'application/pdf' });
+              const blobUrl = URL.createObjectURL(blob);
+              
+              // Scarica il PDF
+              const link = document.createElement('a');
+              link.href = blobUrl;
+              link.download = `etichetta_${spedizioneData.tracking || 'spedizione'}_${new Date().toISOString().split('T')[0]}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              
+              // Cleanup
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+              
+              console.log('✅ [CLIENT] PDF etichetta scaricato con successo');
+            } catch (pdfError) {
+              console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
+              // Fallback al ticket interno
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
               const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
               downloadPDF(pdfDoc, filename);
             }
+          } else {
+            // FALLBACK: Genera Ticket interno se non c'è etichetta reale
+            console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
+
+            // LOGGING DETTAGLIATO (da remote)
+            console.log('   - ldvResult:', ldvResult);
+            console.log('   - ldvResult?.success:', ldvResult?.success);
+            console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
+            console.log('   - ldvResult?.error:', ldvResult?.error);
+            console.log('   - ldvResult?.method:', ldvResult?.method);
+
+            // ⚠️ MOSTRA ERRORE ALL'UTENTE - MESSAGGIO MIGLIORATO
+            // Se c'è un errore nell'oggetto LDV, mostralo con dettagli utili
+            const errorMsg = result.ldv?.error || result.ldv?.message;
+            const method = result.ldv?.method || 'sconosciuto';
+            
+            if (errorMsg) {
+              // Messaggio più specifico in base al metodo usato
+              let title = '⚠️ Errore Creazione LDV';
+              let details = errorMsg;
+              
+              if (method === 'broker') {
+                title = '⚠️ Errore Spedisci.online';
+                // Verifica se è un errore di contratto mancante
+                if (errorMsg.toLowerCase().includes('contratto') || errorMsg.toLowerCase().includes('contract')) {
+                  const corriereName = formData.corriere || spedizioneData?.corriere || 'questo corriere';
+                  details = `Contratto non configurato per ${corriereName}.\n\n` +
+                           `Configura il contratto nel wizard Spedisci.online:\n` +
+                           `1. Vai su Integrazioni\n` +
+                           `2. Apri il wizard Spedisci.online\n` +
+                           `3. Aggiungi il contratto per ${corriereName}\n\n` +
+                           `Errore tecnico: ${errorMsg}`;
+                } else if (errorMsg.toLowerCase().includes('401') || errorMsg.toLowerCase().includes('unauthorized')) {
+                  details = `API Key non valida o scaduta.\n\n` +
+                           `Verifica le credenziali nel wizard Spedisci.online.\n\n` +
+                           `Errore tecnico: ${errorMsg}`;
+                } else if (errorMsg.toLowerCase().includes('404') || errorMsg.toLowerCase().includes('not found')) {
+                  details = `Endpoint non trovato.\n\n` +
+                           `Verifica che il Base URL sia corretto nel wizard Spedisci.online.\n\n` +
+                           `Errore tecnico: ${errorMsg}`;
+                } else {
+                  details = `Errore durante la creazione della spedizione tramite Spedisci.online.\n\n` +
+                           `Errore: ${errorMsg}\n\n` +
+                           `La spedizione è stata salvata localmente. Puoi provare a crearla manualmente dal pannello Spedisci.online.`;
+                }
+              } else {
+                details = `Errore: ${errorMsg}\n\nLa spedizione è stata salvata localmente.`;
+              }
+              
+              alert(`${title}\n\n${details}\n\nÈ stato generato un ticket di riserva (PDF locale).`);
+            } else if (!result.ldv) {
+              // Caso raro: ldv null (errore server interno prima dell'orchestrator)
+              console.warn('Oggetto LDV mancante nella risposta');
+              alert('⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli.');
+            }
+
+            const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+            downloadPDF(pdfDoc, filename);
           }
         }, 500);
       }
@@ -1217,35 +1243,6 @@ export default function NuovaSpedizionePage() {
                           <span>+50%</span>
                         </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Download Format Selector */}
-                  <div className="pt-6 border-t border-gray-200">
-                    <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
-                      Formato Download
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDownloadFormat('pdf')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'pdf'
-                          ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                          }`}
-                      >
-                        📄 PDF
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDownloadFormat('csv')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${downloadFormat === 'csv'
-                          ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                          }`}
-                      >
-                        📊 CSV
-                      </button>
                     </div>
                   </div>
 
