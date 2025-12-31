@@ -670,10 +670,14 @@ export default function NuovaSpedizionePage() {
               const blob = new Blob([bytes], { type: 'application/pdf' });
               const blobUrl = URL.createObjectURL(blob);
               
+              // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+              const trackingNumber = ldvResult.tracking_number || spedizioneData.tracking || 'spedizione';
+              const filename = `${trackingNumber}.pdf`;
+              
               // Scarica il PDF
               const link = document.createElement('a');
               link.href = blobUrl;
-              link.download = `etichetta_${spedizioneData.tracking || 'spedizione'}_${new Date().toISOString().split('T')[0]}.pdf`;
+              link.download = filename;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
@@ -681,12 +685,13 @@ export default function NuovaSpedizionePage() {
               // Cleanup
               setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
               
-              console.log('✅ [CLIENT] PDF etichetta scaricato con successo');
+              console.log('✅ [CLIENT] PDF etichetta scaricato con successo:', filename);
             } catch (pdfError) {
               console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
               // Fallback al ticket interno
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
-              const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+              const trackingNumber = spedizioneData.tracking || 'spedizione';
+              const filename = `${trackingNumber}.pdf`;
               downloadPDF(pdfDoc, filename);
             }
           } else {
@@ -746,17 +751,90 @@ export default function NuovaSpedizionePage() {
             }
 
             const pdfDoc = generateShipmentPDF(spedizioneWithDate);
-            const filename = `spedizione_${spedizioneData.tracking}_${new Date().toISOString().split('T')[0]}.pdf`;
+            // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+            const trackingNumber = spedizioneData.tracking || 'spedizione';
+            const filename = `${trackingNumber}.pdf`;
             downloadPDF(pdfDoc, filename);
           }
         }, 500);
       }
 
-      // Reindirizza alla lista dopo 3 secondi
-      // ⚠️ P0-1 FIX: Aggiungi query param per forzare refresh lista
-      setTimeout(() => {
-        router.push('/dashboard/spedizioni?refresh=true');
-      }, 3000);
+      // ⚠️ FIX: Reset form e mostra messaggio successo invece di redirect
+      setSubmitSuccess(true);
+      setCreatedTracking(spedizioneData?.tracking || spedizioneData?.ldv || null);
+      
+      // Salva dati mittente predefiniti prima del reset
+      const currentMittente = {
+        mittenteNome: formData.mittenteNome,
+        mittenteIndirizzo: formData.mittenteIndirizzo,
+        mittenteCitta: formData.mittenteCitta,
+        mittenteProvincia: formData.mittenteProvincia,
+        mittenteCap: formData.mittenteCap,
+        mittenteTelefono: formData.mittenteTelefono,
+        mittenteEmail: formData.mittenteEmail,
+      };
+      
+      // Reset form dopo 2 secondi per permettere inserimento rapido nuova spedizione
+      setTimeout(async () => {
+        // Ricarica dati mittente predefiniti dall'API
+        let defaultMittente = currentMittente; // Fallback ai dati attuali
+        try {
+          const response = await fetch('/api/user/settings');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.defaultSender) {
+              defaultMittente = {
+                mittenteNome: data.defaultSender.nome || '',
+                mittenteIndirizzo: data.defaultSender.indirizzo || '',
+                mittenteCitta: data.defaultSender.citta || '',
+                mittenteProvincia: data.defaultSender.provincia || '',
+                mittenteCap: data.defaultSender.cap || '',
+                mittenteTelefono: data.defaultSender.telefono || '',
+                mittenteEmail: data.defaultSender.email || '',
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Errore caricamento mittente predefinito:', error);
+          // Usa i dati attuali come fallback
+        }
+        
+        // Reset form mantenendo dati mittente predefiniti
+        setFormData({
+          ...defaultMittente, // Mantieni dati mittente predefiniti
+          // Reset solo destinatario e dettagli spedizione
+          destinatarioNome: '',
+          destinatarioIndirizzo: '',
+          destinatarioCitta: '',
+          destinatarioProvincia: '',
+          destinatarioCap: '',
+          destinatarioTelefono: '',
+          destinatarioEmail: '',
+          peso: '',
+          lunghezza: '',
+          larghezza: '',
+          altezza: '',
+          tipoSpedizione: 'standard',
+          corriere: 'GLS',
+          note: '',
+          contrassegno: false,
+          contrassegnoAmount: '',
+        });
+        
+        // Reset stati
+        setSubmitSuccess(false);
+        setCreatedTracking(null);
+        setSubmitError(null);
+        
+        // Scrolla in alto per mostrare il form vuoto
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Focus sul primo campo destinatario per inserimento rapido
+        const destinatarioInput = document.querySelector('input[placeholder*="destinatario"], input[name="destinatarioNome"]') as HTMLInputElement;
+        if (destinatarioInput) {
+          setTimeout(() => destinatarioInput.focus(), 100);
+        }
+      }, 2000);
     } catch (error) {
       const errorMessage = error instanceof Error
         ? error.message
@@ -1307,7 +1385,7 @@ export default function NuovaSpedizionePage() {
                         </div>
                       )}
                       <div className="mt-2 text-xs text-green-600">
-                        Reindirizzamento alla lista spedizioni...
+                        Il form verrà resettato tra poco per inserire una nuova spedizione...
                       </div>
                     </div>
                   )}
