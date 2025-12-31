@@ -22,6 +22,7 @@ export interface ShippingLabel {
   tracking_number: string;
   label_url?: string;
   label_pdf?: Buffer;
+  shipmentId?: string; // ⚠️ CRITICO: shipmentId (increment_id) per cancellazione su Spedisci.Online
   metadata?: {
     [key: string]: any; // Metadati aggiuntivi specifici corriere (es: poste_account_id, waybill_number, ecc.)
   };
