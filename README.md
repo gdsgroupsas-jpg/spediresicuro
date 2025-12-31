@@ -1,8 +1,9 @@
 # 📦 SpedireSicuro.it - Logistics Operating System
 
-> **Version:** 3.0.0 (Logistics OS Architecture)  
+> **Version:** 0.3.0 (Logistics OS Architecture)  
 > **Last Updated:** December 29, 2025  
-> **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared
+> **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared  
+> **Next Major:** 1.0.0 (Go To Market Release)
 
 ---
 
@@ -98,20 +99,25 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 
 ### Storia & Evoluzione del Progetto
 
-**Versione 1.0-2.0 (2024):** Sistema base di gestione spedizioni con integrazione corrieri.
+**Versione 0.1-0.2 (2024):** Sistema base di gestione spedizioni con integrazione corrieri.
 
-**Versione 3.0 (2025 - Attuale):** Trasformazione in Logistics OS con:
+**Versione 0.3 (2025 - Attuale):** Trasformazione in Logistics OS con:
 - **AI-First Architecture:** LangGraph Supervisor + Gemini 2.0 Flash per automazione radicale
 - **Multi-Model Business:** Supporto formale per 3 modelli operativi (Broker, BYOC, B2C)
 - **Financial Core:** Sistema wallet atomizzato con "No Credit, No Label"
 - **Time-Saving Massivo:** OCR AI riduce inserimento da ~3 minuti a ~10 secondi per reseller
 
-**Stato Attuale (Dicembre 2025):**
+**Stato Attuale (Dicembre 2025 - Versione 0.3):**
 - ✅ FASE 1-2.8: Architettura & Migrazione completata (264 unit test, 90 integration test)
 - 🟡 FASE 3: Rollout & Economics in corso (validazione GTM)
 - 📋 FASE 4: Scaling & Optimization (futuro)
 
-**Visione Futura:**
+**Versione 1.0 (Go To Market - Futuro):**
+- Release ufficiale al momento del Go To Market
+- Tutte le feature core stabilizzate e validate
+- Production ready con SLA e supporto
+
+**Visione Futura (Post 1.0):**
 - WhatsApp Native Bot per creazione spedizioni via chat
 - Self-Healing Logistics (sistema che si auto-monitora e auto-ripara)
 - White-label ready per rivendibilità ad altri consorzi/logistici
@@ -770,8 +776,9 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 ---
 
 _Last updated: December 29, 2025_  
-_Architecture Version: 3.0.0 (Logistics OS)_  
-_Status: 🟡 In Development / Testing_
+_Architecture Version: 0.3.0 (Logistics OS)_  
+_Status: 🟡 In Development / Testing_  
+_Next Major: 1.0.0 (Go To Market Release)_
 
 ---
 
