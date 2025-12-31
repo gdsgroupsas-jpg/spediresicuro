@@ -45,6 +45,7 @@ Questa cartella contiene **solo documentazione attiva** necessaria per:
 - **[README_API_CORRIERI.md](README_API_CORRIERI.md)** - Sistema completo API corrieri
 - **[COURIER_CONFIGS_SYSTEM.md](COURIER_CONFIGS_SYSTEM.md)** - Sistema configurazioni corrieri
 - **[GUIDA_REGISTRAZIONE_POSTE.md](GUIDA_REGISTRAZIONE_POSTE.md)** - Registrazione API Poste Italiane
+- **[SPEDIZIONI_CANCELLATE.md](SPEDIZIONI_CANCELLATE.md)** - ⭐ Sistema soft delete con audit trail e cancellazione simultanea
 
 ### Automation
 - **[AUTOMATION_SPEDISCI_ONLINE.md](AUTOMATION_SPEDISCI_ONLINE.md)** - Automation SpedisciOnline
@@ -122,5 +123,6 @@ docs/
 
 ---
 
-**Ultimo aggiornamento**: Gennaio 2025  
-**Stato**: ✅ Documentazione attiva e organizzata
+**Ultimo aggiornamento**: 31 Dicembre 2025  
+**Stato**: ✅ Documentazione attiva e organizzata  
+**Feature recenti**: Sistema Spedizioni Cancellate (soft delete + audit trail)

@@ -38,6 +38,7 @@ import {
   DollarSign,
   Activity,
   type LucideIcon,
+  Trash2,
 } from 'lucide-react';
 
 /**
@@ -117,6 +118,13 @@ const logisticsSection: NavSection = {
       href: '/dashboard/spedizioni',
       icon: List,
       description: 'Elenco completo spedizioni',
+    },
+    {
+      id: 'cancelled-shipments',
+      label: 'Spedizioni Cancellate',
+      href: '/dashboard/spedizioni/cancellate',
+      icon: Trash2,
+      description: 'Tracciabilità spedizioni eliminate',
     },
     {
       id: 'giacenze',

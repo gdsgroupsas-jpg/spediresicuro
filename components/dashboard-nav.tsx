@@ -114,6 +114,8 @@ export default function DashboardNav({
         items.push({ label: 'Spedizioni', href: '/dashboard/spedizioni' });
         if (paths[2] === 'nuova') {
           items.push({ label: 'Nuova Spedizione', href: '/dashboard/spedizioni/nuova' });
+        } else if (paths[2] === 'cancellate') {
+          items.push({ label: 'Spedizioni Cancellate', href: '/dashboard/spedizioni/cancellate' });
         }
       } else if (paths[1] === 'listini') {
         items.push({ label: 'Listini', href: '/dashboard/listini' });
