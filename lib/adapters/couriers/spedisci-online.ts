@@ -251,6 +251,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
             tracking_number: result.tracking_number,
             label_url: result.label_url,
             label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+            // ⚠️ CRITICO: Includi shipmentId direttamente nel ShippingLabel (oltre che nel metadata)
+            shipmentId: result.shipmentId ? String(result.shipmentId) : undefined,
             // ⚠️ FIX: Includi metadata con shipmentId per cancellazione futura
             metadata: result.metadata || {},
           };
@@ -258,7 +260,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           console.log('📦 [SPEDISCI.ONLINE] ShippingLabel creato:', {
             has_metadata: !!shippingLabel.metadata,
             metadata_keys: shippingLabel.metadata ? Object.keys(shippingLabel.metadata) : [],
-            shipmentId_in_label: shippingLabel.metadata?.shipmentId || shippingLabel.metadata?.increment_id || 'NON TROVATO',
+            shipmentId_diretto: shippingLabel.shipmentId || 'NON TROVATO',
+            shipmentId_in_metadata: shippingLabel.metadata?.shipmentId || shippingLabel.metadata?.increment_id || 'NON TROVATO',
           });
           
           return shippingLabel;
@@ -282,6 +285,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
                 tracking_number: result.tracking_number,
                 label_url: result.label_url,
                 label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+                // ⚠️ CRITICO: Includi shipmentId direttamente nel ShippingLabel
+                shipmentId: result.shipmentId ? String(result.shipmentId) : undefined,
                 // ⚠️ FIX: Includi metadata con shipmentId per cancellazione futura
                 metadata: result.metadata || {},
               };
