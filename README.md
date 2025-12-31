@@ -1,7 +1,7 @@
 # 📦 SpedireSicuro.it - Logistics Operating System
 
 > **Version:** 3.0.0 (Logistics OS Architecture)  
-> **Last Updated:** December 26, 2025  
+> **Last Updated:** December 29, 2025  
 > **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared
 
 ---
@@ -36,6 +36,51 @@ Qualsiasi modifica al codice deve rispettare rigorosamente i principi qui descri
 
 ---
 
+## 🤖 GUIDA PER LE AI (AI Agents & Auditors)
+
+**Questa sezione è dedicata alle AI che analizzano o modificano questo codebase.**
+
+### Visione di Business in Breve
+
+SpedireSicuro è un **Logistics Operating System** che supporta **3 modelli operativi formali**:
+
+1. **Broker/Arbitraggio (B2B Core):** Target Reseller/Agenzie. Guadagno: Spread su spedizioni. Wallet interno obbligatorio.
+2. **SaaS/BYOC:** Target E-commerce/Aziende con propri contratti. Guadagno: Canone o fee per etichetta. Wallet NON toccato (solo fee SaaS).
+3. **Web Reseller (B2C):** Target Utenti privati occasionali. Guadagno: Spread (come Broker). Wallet "Web Channel" centralizzato.
+
+### Principi Architetturali Inderogabili
+
+1. **Financial Core:** "No Credit, No Label" - Nessuna etichetta senza credito nel wallet
+2. **Atomicità:** Solo funzioni SQL atomiche per wallet (`decrement_wallet_balance`, `increment_wallet_balance`)
+3. **Idempotenza:** Ogni operazione ha `idempotency_key`
+4. **Multi-Tenant:** Isolamento completo via RLS (Row Level Security)
+5. **AI-First:** LangGraph Supervisor coordina worker specializzati (OCR, Address, Pricing, Booking)
+
+### Documenti Chiave da Leggere
+
+- **README.md** (questo file) - Costituzione del sistema
+- **MIGRATION_MEMORY.md** - Stato sviluppo attuale e architettura AI
+- **docs/MONEY_FLOWS.md** - Sistema wallet e flussi finanziari
+- **docs/ARCHITECTURE.md** - Deep dive tecnico
+- **docs/SECURITY.md** - Architettura sicurezza multi-tenant
+
+### Cosa NON Fare
+
+- ❌ MAI update diretto a `wallet_balance` (solo funzioni RPC atomiche)
+- ❌ NON mischiare logica dei 3 modelli operativi
+- ❌ NON bypassare wallet per "fare prima"
+- ❌ NON loggare PII (indirizzi, nomi, telefoni) - solo `user_id_hash` e `trace_id`
+
+### Stato Sviluppo
+
+- ✅ Core architetturale completato (FASE 1-2.8)
+- 🟡 Rollout controllato in corso (FASE 3)
+- 📋 Scaling futuro (FASE 4)
+
+**Per dettagli completi, vedere sezione "Roadmap" più sotto.**
+
+---
+
 ## 🎯 1. Visione & Identità
 
 ### What SpedireSicuro IS
@@ -50,6 +95,26 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 
 - **Per il Cliente B2B:** Siamo il suo gestionale operativo.
 - **Per il Canale B2C:** Siamo il "Reseller Web" invisibile che gestisce il fulfillment.
+
+### Storia & Evoluzione del Progetto
+
+**Versione 1.0-2.0 (2024):** Sistema base di gestione spedizioni con integrazione corrieri.
+
+**Versione 3.0 (2025 - Attuale):** Trasformazione in Logistics OS con:
+- **AI-First Architecture:** LangGraph Supervisor + Gemini 2.0 Flash per automazione radicale
+- **Multi-Model Business:** Supporto formale per 3 modelli operativi (Broker, BYOC, B2C)
+- **Financial Core:** Sistema wallet atomizzato con "No Credit, No Label"
+- **Time-Saving Massivo:** OCR AI riduce inserimento da ~3 minuti a ~10 secondi per reseller
+
+**Stato Attuale (Dicembre 2025):**
+- ✅ FASE 1-2.8: Architettura & Migrazione completata (264 unit test, 90 integration test)
+- 🟡 FASE 3: Rollout & Economics in corso (validazione GTM)
+- 📋 FASE 4: Scaling & Optimization (futuro)
+
+**Visione Futura:**
+- WhatsApp Native Bot per creazione spedizioni via chat
+- Self-Healing Logistics (sistema che si auto-monitora e auto-ripara)
+- White-label ready per rivendibilità ad altri consorzi/logistici
 
 ---
 
@@ -111,11 +176,19 @@ Wallet Interno → SOLO per fee SaaS (se applicabile)
 - L'utente finale non ha dashboard. Paga al checkout.
 - Il sistema usa il wallet del "Web Channel" per generare l'etichetta.
 
+**Flusso Denaro:**
+```
+Utente B2C → Checkout (Pagamento Carta) → Wallet "Web Channel" → Pagamento Fornitore
+```
+
+**Guadagno:** Spread (Prezzo Vendita - Prezzo Acquisto), identico al modello Broker. Il margine viene applicato al prezzo mostrato all'utente B2C al checkout.
+
 **Vantaggio:** Nessuna gestione account/wallet per utenti da 1 spedizione l'anno.
 
 **Implementazione:**
 - Utente B2C → Checkout → Pagamento → Wallet "Web Channel" → Etichetta
 - Nessun wallet personale per utente B2C
+- Il "Web Channel" è un account reseller speciale con wallet prepagato
 
 ---
 
@@ -489,6 +562,10 @@ npm run test:e2e            # Esegui test Playwright E2E
 
 ### Documenti Core (Leggere PRIMA di sviluppare)
 
+**Per Visione Business:**
+- **[docs/VISION_BUSINESS.md](docs/VISION_BUSINESS.md)** - Visione business completa, modelli di ricavo, target, strategia
+
+**Per Architettura Tecnica:**
 - **[docs/SECURITY.md](docs/SECURITY.md)** - Architettura multi-tenant, Acting Context, RLS policies
 - **[docs/MONEY_FLOWS.md](docs/MONEY_FLOWS.md)** - Sistema wallet, anti-fraud, idempotency
 - **[docs/OPS_RUNBOOK.md](docs/OPS_RUNBOOK.md)** - Deployment, incident response, monitoring
@@ -692,6 +769,24 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 
 ---
 
-_Last updated: December 26, 2025_  
+_Last updated: December 29, 2025_  
 _Architecture Version: 3.0.0 (Logistics OS)_  
 _Status: 🟡 In Development / Testing_
+
+---
+
+## 📖 Per le AI: Quick Reference
+
+**Se sei un'AI che analizza questo codebase, leggi PRIMA:**
+
+1. **Sezione "GUIDA PER LE AI"** (sopra) - Visione business in breve
+2. **[docs/VISION_BUSINESS.md](docs/VISION_BUSINESS.md)** - Visione business completa
+3. **[MIGRATION_MEMORY.md](MIGRATION_MEMORY.md)** - Stato sviluppo tecnico attuale
+4. **[README.md](README.md)** (questo file) - Costituzione completa
+
+**Punti chiave da ricordare:**
+- ✅ 3 modelli operativi FORMALI (Broker, BYOC, B2C) - Non sono "idee", sono pilastri
+- ✅ Modello ricavo B2C: Spread (come Broker), non "quasi assente"
+- ✅ BYOC è business model separato con implementazione completa
+- ✅ Roadmap pragmatica: Feature "visionarie" in FASE 4 (futuro)
+- ✅ Financial Core: "No Credit, No Label" - Wallet atomizzato

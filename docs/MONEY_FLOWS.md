@@ -174,7 +174,9 @@ async function approveTopUpRequest(requestId, approvedAmount?) {
 ```
 
 ### Database Function: `add_wallet_credit()`
-**File:** `supabase/migrations/028_wallet_security_fixes.sql`
+**File:** `supabase/migrations/040_wallet_atomic_operations.sql` (aggiornata)
+
+**⚠️ IMPORTANTE:** Questa funzione ora usa `increment_wallet_balance()` internamente (atomica). Il trigger legacy è stato rimosso in migration `041_remove_wallet_balance_trigger.sql` per evitare doppio accredito.
 
 ```sql
 CREATE OR REPLACE FUNCTION add_wallet_credit(
@@ -193,7 +195,10 @@ BEGIN
     RAISE EXCEPTION 'Max €10,000 per transaction. Requested: €%', p_amount;
   END IF;
   
-  -- Insert transaction (trigger will update wallet_balance)
+  -- 1. Incrementa wallet (ATOMICO)
+  PERFORM increment_wallet_balance(p_user_id, p_amount);
+  
+  -- 2. Insert transaction (audit trail - NO trigger)
   INSERT INTO wallet_transactions (user_id, amount, type, description, created_by)
   VALUES (p_user_id, p_amount, 'deposit', p_description, p_created_by)
   RETURNING id INTO v_transaction_id;
@@ -203,26 +208,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-### Trigger: Auto-Update Balance
-**File:** `supabase/migrations/027_wallet_topups.sql` (likely)
-
-```sql
-CREATE TRIGGER update_wallet_balance_on_transaction
-AFTER INSERT ON wallet_transactions
-FOR EACH ROW
-EXECUTE FUNCTION update_wallet_balance();
-
-CREATE OR REPLACE FUNCTION update_wallet_balance()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE users
-  SET wallet_balance = wallet_balance + NEW.amount
-  WHERE id = NEW.user_id;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-```
+**Nota Storica:** 
+- ❌ **PRIMA (migration 019):** Trigger `update_wallet_balance_on_transaction` causava doppio accredito quando `add_wallet_credit()` chiamava `increment_wallet_balance()` + INSERT transaction
+- ✅ **DOPO (migration 041):** Trigger rimosso. `add_wallet_credit()` chiama `increment_wallet_balance()` (atomica) e poi INSERT transaction (solo audit)
 
 ---
 
@@ -254,44 +242,56 @@ if (!isSuperadmin && user.wallet_balance < estimatedCost) {
 ```
 
 ### Atomic Transaction
+**⚠️ REGOLA CRITICA:** Ogni movimento di denaro DEVE usare funzioni SQL atomiche. MAI update diretto a `wallet_balance`.
+
+**File:** `lib/shipments/create-shipment-core.ts`
+
 ```typescript
 // After courier API call succeeds
 const finalCost = courierResponse.cost
 
 if (!isSuperadmin) {
-  // 1. Decrement wallet (try RPC first)
+  // 1. Decrement wallet (ATOMICO - lock pessimistico)
   const { error: walletError } = await supabaseAdmin.rpc('decrement_wallet_balance', {
     p_user_id: context.target.id,
     p_amount: finalCost
   })
   
+  // ❌ VIETATO: Fallback manuale con .update()
+  // ✅ CORRETTO: Se fallisce, ritorna errore e compensa
   if (walletError) {
-    // Fallback: Direct update
-    await supabaseAdmin
-      .from('users')
-      .update({ wallet_balance: user.wallet_balance - finalCost })
-      .eq('id', context.target.id)
+    // Fail-fast: Non procedere senza debit atomico
+    // Se corriere già chiamato, eseguire refund o enqueue in compensation_queue
+    throw new Error(`Wallet debit failed: ${walletError.message}`)
   }
   
-  // 2. Record transaction
+  // 2. Record transaction (audit trail)
   await supabaseAdmin.from('wallet_transactions').insert({
     user_id: context.target.id,
     amount: -finalCost,
     type: 'SHIPMENT_CHARGE',
-    description: `Spedizione ${courierResponse.trackingNumber}`,
-    status: 'COMPLETED'
+    description: `Spedizione ${courierResponse.trackingNumber}`
   })
 }
 
 // 3. Create shipment
 const { data: shipment } = await supabaseAdmin.from('shipments').insert({
   user_id: context.target.id,
-  status: 'confirmed',
+  status: 'pending', // Nota: DB constraint richiede 'pending'
   total_cost: finalCost,
   tracking_number: courierResponse.trackingNumber,
   // ... other fields
 })
 ```
+
+**Funzioni Atomiche Disponibili:**
+- `decrement_wallet_balance(user_id, amount)` - Debit atomico con lock pessimistico (FOR UPDATE NOWAIT)
+- `increment_wallet_balance(user_id, amount)` - Credit atomico con lock pessimistico
+- `add_wallet_credit(user_id, amount, description, created_by)` - Credit con audit trail
+
+**Migrations:**
+- `040_wallet_atomic_operations.sql` - Funzioni atomiche
+- `041_remove_wallet_balance_trigger.sql` - Rimozione trigger legacy (causava doppio accredito)
 
 ---
 
@@ -547,5 +547,20 @@ ORDER BY
 ---
 
 **Document Owner:** Finance Team, Engineering  
-**Last Updated:** December 21, 2025  
+**Last Updated:** December 29, 2025  
 **Review Cycle:** Monthly
+
+---
+
+## ⚠️ CHANGELOG DOCUMENTAZIONE
+
+**2025-12-29:**
+- ✅ Rimosso esempio obsoleto con fallback manuale `.update(wallet_balance)` (VIETATO)
+- ✅ Aggiornata sezione `add_wallet_credit()` per riflettere rimozione trigger (migration 041)
+- ✅ Aggiunto riferimento a funzioni atomiche e migrations corrette
+- ✅ Chiarito che `wallet_transactions` è solo audit trail (NO trigger)
+
+**Principi Inderogabili:**
+- 🚫 MAI update diretto a `wallet_balance` (solo funzioni RPC atomiche)
+- ✅ Fail-fast se RPC fallisce (NO fallback manuali)
+- ✅ Ogni movimento ha transazione in `wallet_transactions` (audit trail)

@@ -132,3 +132,4 @@ WHERE p.prosecdef = true  -- SECURITY DEFINER
 ORDER BY n.nspname, p.proname;
 
 
+

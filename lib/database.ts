@@ -457,7 +457,7 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     sender_name: mittente.nome || spedizione.mittenteNome || spedizione.sender_name || 'Mittente Predefinito',
     sender_address: mittente.indirizzo || spedizione.mittenteIndirizzo || spedizione.sender_address || '',
     sender_city: spedizione.sender_city || mittente.citta || spedizione.mittenteCitta || null, // ⚠️ FIX: sender_city ha priorità
-    sender_zip: spedizione.sender_zip || mittente.cap || spedizione.mittenteCap || null, // ⚠️ FIX: sender_zip ha priorità
+    sender_zip: spedizione.sender_zip || spedizione.sender_postal_code || mittente.cap || spedizione.mittenteCap || null, // ⚠️ FIX: sender_zip/postal_code ha priorità
     sender_province: spedizione.sender_province || mittente.provincia || spedizione.mittenteProvincia || null, // ⚠️ FIX: sender_province ha priorità
     sender_country: 'IT', // Default Italia
     sender_phone: mittente.telefono || spedizione.mittenteTelefono || spedizione.sender_phone || '',
@@ -468,7 +468,7 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     recipient_type: 'B2C', // Default B2C (da implementare logica B2B se necessario)
     recipient_address: destinatario.indirizzo || spedizione.destinatarioIndirizzo || spedizione.recipient_address || spedizione.indirizzo || '',
     recipient_city: spedizione.recipient_city || destinatario.citta || spedizione.destinatarioCitta || spedizione.citta || spedizione.localita || null, // ⚠️ FIX: recipient_city ha priorità
-    recipient_zip: spedizione.recipient_zip || destinatario.cap || spedizione.destinatarioCap || spedizione.cap || null, // ⚠️ FIX: recipient_zip ha priorità
+    recipient_zip: spedizione.recipient_zip || spedizione.recipient_postal_code || destinatario.cap || spedizione.destinatarioCap || spedizione.cap || null, // ⚠️ FIX: recipient_zip/postal_code ha priorità
     recipient_province: spedizione.recipient_province || destinatario.provincia || spedizione.destinatarioProvincia || spedizione.provincia || null, // ⚠️ FIX: recipient_province ha priorità
     recipient_country: 'IT', // Default Italia
     recipient_phone: destinatario.telefono || spedizione.destinatarioTelefono || spedizione.telefono || '',
