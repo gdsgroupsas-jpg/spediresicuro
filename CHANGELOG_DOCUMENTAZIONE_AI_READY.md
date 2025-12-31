@@ -18,7 +18,7 @@
 
 **Sezione "Visione & Identità" - Espansa:**
 - ✅ Aggiunta "Storia & Evoluzione del Progetto"
-- ✅ Chiarito stato attuale (Versione 3.0, Dicembre 2025)
+- ✅ Chiarito stato attuale (Versione 0.3, Dicembre 2025 - 1.0 al GTM)
 - ✅ Visione futura (WhatsApp Bot, Self-Healing, White-label)
 
 **Modello "Web Reseller" (B2C) - Chiarito:**
