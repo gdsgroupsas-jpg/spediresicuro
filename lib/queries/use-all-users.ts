@@ -44,7 +44,7 @@ export function useToggleResellerStatus() {
       queryClient.setQueryData(['all-users'], (old: any[] | undefined) => {
         if (!old) return old
         return old.map((user: any) =>
-          user.id === userId ? { ...user, is_reseller: enabled } : user
+          user.id === userId ? { ...user, is_reseller: enabled, reseller_role: enabled ? 'admin' : null } : user
         )
       })
 
