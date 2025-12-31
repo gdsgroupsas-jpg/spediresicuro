@@ -631,6 +631,32 @@ export async function POST(request: NextRequest) {
       if (ldvResult.success) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
         
+        // ⚠️ CRITICO: Verifica shipmentId PRIMA di tutto
+        const shipmentIdDirect = (ldvResult as any).shipmentId;
+        const shipmentIdMetadata = ldvResult.metadata?.shipmentId || ldvResult.metadata?.increment_id;
+        const shipmentId = shipmentIdDirect || shipmentIdMetadata;
+        
+        console.log('🔍 [API] ⚠️⚠️⚠️ VERIFICA SHIPMENTID ⚠️⚠️⚠️:', {
+          shipmentId_diretto: shipmentIdDirect || 'NON TROVATO',
+          shipmentId_metadata: shipmentIdMetadata || 'NON TROVATO',
+          shipmentId_finale: shipmentId || 'NON TROVATO',
+          has_metadata: !!ldvResult.metadata,
+          metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
+          result_keys: Object.keys(ldvResult),
+        });
+        
+        console.log('📦 [API] Dettagli risultato orchestrator:', {
+          has_tracking: !!ldvResult.tracking_number,
+          has_label_url: !!ldvResult.label_url,
+          has_label_pdf: !!ldvResult.label_pdf,
+          has_metadata: !!ldvResult.metadata,
+          metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
+          method: ldvResult.method,
+          // ⚠️ DEBUG: Verifica shipmentId nel metadata
+          shipmentId_in_metadata: shipmentId || 'NON TROVATO',
+          metadata_content: ldvResult.metadata ? JSON.stringify(ldvResult.metadata).substring(0, 200) : 'null',
+        });
+        
         // ⚠️ PERSISTENZA: Salva LDV, tracking e metadata in shipments SOLO se orchestrator ha successo
         if (createdShipment?.id) {
           try {
@@ -650,30 +676,92 @@ export async function POST(request: NextRequest) {
               updateData.external_tracking_number = ldvResult.metadata.waybill_number;
             }
             
-            // ⚠️ FIX: Salva SEMPRE label_url nel metadata, anche se metadata è vuoto
-            // Questo è necessario per il download della LDV originale dal corriere
-            if (ldvResult.metadata || ldvResult.label_url) {
-              // Normalizza metadata per schema Supabase
-              if (body.corriere === 'Poste Italiane') {
-                // Per Poste, salva come poste_metadata (se esiste colonna) o metadata
-                updateData.metadata = {
-                  poste_account_id: ldvResult.metadata?.poste_account_id,
-                  poste_product_code: ldvResult.metadata?.poste_product_code,
-                  waybill_number: ldvResult.metadata?.waybill_number,
-                  label_pdf_url: ldvResult.metadata?.label_pdf_url || ldvResult.label_url,
-                  carrier: 'Poste Italiane',
-                  method: ldvResult.method,
-                };
-              } else {
-                // Per altri corrieri, salva come carrier_metadata generico
-                updateData.metadata = {
-                  ...(ldvResult.metadata || {}),
-                  carrier: body.corriere || 'GLS',
-                  method: ldvResult.method,
-                  label_url: ldvResult.label_url, // ⚠️ CRITICO: URL etichetta originale
-                };
+            // ⚠️ FIX P0: Salva SEMPRE label_data se abbiamo label_pdf (base64)
+            // Questo è necessario per avere sempre l'etichetta originale disponibile per il download
+            // Anche se c'è label_url, salviamo label_data come backup (l'URL potrebbe scadere)
+            if (ldvResult.label_pdf) {
+              if (Buffer.isBuffer(ldvResult.label_pdf)) {
+                // Converti Buffer in base64 string per salvare in database
+                updateData.label_data = ldvResult.label_pdf.toString('base64');
+                console.log('💾 [API] Salvato label_pdf come label_data (base64, size:', ldvResult.label_pdf.length, 'bytes)');
+              } else if (typeof ldvResult.label_pdf === 'string') {
+                // Già base64 string
+                updateData.label_data = ldvResult.label_pdf;
+                console.log('💾 [API] Salvato label_pdf come label_data (già base64)');
               }
             }
+            
+            // ⚠️ FIX P0: Salva SEMPRE metadata se spedizione ha successo
+            // Questo è necessario per il download della LDV originale dal corriere
+            // Anche se label_url non è disponibile, salviamo comunque le info per tracciabilità
+            // ⚠️ CRITICO: Usa JSON.stringify per assicurarsi che Supabase accetti il JSONB
+            if (body.corriere === 'Poste Italiane') {
+              // Per Poste, salva come poste_metadata (se esiste colonna) o metadata
+              const posteMetadata = {
+                poste_account_id: ldvResult.metadata?.poste_account_id || null,
+                poste_product_code: ldvResult.metadata?.poste_product_code || null,
+                waybill_number: ldvResult.metadata?.waybill_number || null,
+                label_pdf_url: ldvResult.metadata?.label_pdf_url || ldvResult.label_url || null,
+                carrier: 'Poste Italiane',
+                method: ldvResult.method || 'unknown',
+                has_label_pdf: !!ldvResult.label_pdf, // Flag per indicare se abbiamo PDF base64
+                created_at: new Date().toISOString(), // Timestamp per tracciabilità
+              };
+              // Rimuovi chiavi null per evitare oggetto troppo grande
+              Object.keys(posteMetadata).forEach(key => {
+                if ((posteMetadata as any)[key] === null) delete (posteMetadata as any)[key];
+              });
+              updateData.metadata = posteMetadata;
+            } else {
+              // Per altri corrieri, salva come carrier_metadata generico
+              const carrierMetadata = {
+                ...(ldvResult.metadata || {}),
+                carrier: body.corriere || 'GLS',
+                method: ldvResult.method || 'unknown',
+                label_url: ldvResult.label_url || null, // ⚠️ CRITICO: URL etichetta originale (può essere null)
+                has_label_pdf: !!ldvResult.label_pdf, // Flag per indicare se abbiamo PDF base64
+                created_at: new Date().toISOString(), // Timestamp per tracciabilità
+              };
+              // Rimuovi chiavi null per evitare oggetto troppo grande
+              Object.keys(carrierMetadata).forEach(key => {
+                if ((carrierMetadata as any)[key] === null) delete (carrierMetadata as any)[key];
+              });
+              updateData.metadata = carrierMetadata;
+              
+              // ⚠️ FIX: Salva shipmentId (increment_id) come shipment_id_external se presente
+              // Secondo openapi.json: POST /shipping/create restituisce "shipmentId" che è l'increment_id per cancellazione
+              // ⚠️ CRITICO: Cerca shipmentId in ordine: direttamente nel risultato > metadata.shipmentId > metadata.increment_id
+              const shipmentId = (ldvResult as any).shipmentId || // PRIORITÀ 1: Direttamente nel risultato
+                                 ldvResult.metadata?.shipmentId || // PRIORITÀ 2: Nel metadata
+                                 ldvResult.metadata?.increment_id || // PRIORITÀ 3: Alias nel metadata
+                                 null;
+              
+              console.log('🔍 [API] DEBUG shipmentId extraction:', {
+                has_metadata: !!ldvResult.metadata,
+                metadata_type: typeof ldvResult.metadata,
+                metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
+                shipmentId_from_metadata: shipmentId || 'NON TROVATO',
+                has_shipmentId_in_result: !!(ldvResult as any).shipmentId,
+                metadata_content: ldvResult.metadata ? JSON.stringify(ldvResult.metadata).substring(0, 300) : 'null',
+                full_result_keys: Object.keys(ldvResult),
+              });
+              
+              if (shipmentId) {
+                updateData.shipment_id_external = String(shipmentId);
+                console.log('💾 [API] Salvato shipmentId (increment_id) come shipment_id_external:', updateData.shipment_id_external);
+              } else {
+                console.error('❌ [API] shipmentId NON TROVATO - cancellazione futura NON funzionerà!');
+                console.error('❌ [API] Metadata completo:', JSON.stringify(ldvResult.metadata || {}, null, 2));
+                console.error('❌ [API] Risultato completo (chiavi):', Object.keys(ldvResult));
+              }
+            }
+            
+            console.log('💾 [API] Metadata preparato per salvataggio:', {
+              has_label_url: !!updateData.metadata.label_url || !!updateData.metadata.label_pdf_url,
+              has_label_pdf_flag: !!updateData.metadata.has_label_pdf,
+              method: updateData.metadata.method,
+              carrier: updateData.metadata.carrier,
+            });
             
             // ⚠️ LOGGING SICURO: Log struttura update senza dati sensibili
             const safeUpdate = Object.keys(updateData).reduce((acc, key) => {
@@ -700,18 +788,28 @@ export async function POST(request: NextRequest) {
             });
             
             // Esegui UPDATE idempotente (usa ID come chiave)
+            console.log('💾 [API] Eseguo UPDATE spedizione con:', {
+              shipment_id: createdShipment.id.substring(0, 8) + '...',
+              has_tracking: !!updateData.tracking_number,
+              has_ldv: !!updateData.ldv,
+              has_metadata: !!updateData.metadata,
+              metadata_label_url: updateData.metadata?.label_url || updateData.metadata?.label_pdf_url || 'NON DISPONIBILE',
+            });
+            
             const { data: updatedShipment, error: updateError } = await supabaseAdmin
               .from('shipments')
               .update(updateData)
               .eq('id', createdShipment.id)
-              .select('id, tracking_number, ldv, external_tracking_number, metadata')
+              .select('id, tracking_number, ldv, external_tracking_number, metadata, label_data')
               .single();
             
             if (updateError) {
               console.error('❌ [API] Errore aggiornamento spedizione con dati orchestrator:', {
                 shipment_id: createdShipment.id,
                 error: updateError.message,
-                details: updateError.details
+                details: updateError.details,
+                code: updateError.code,
+                hint: updateError.hint,
               });
               // Non bloccare la risposta - spedizione già creata
             } else {
@@ -719,7 +817,9 @@ export async function POST(request: NextRequest) {
                 shipment_id: updatedShipment.id.substring(0, 8) + '...',
                 tracking_number: updatedShipment.tracking_number,
                 has_ldv: !!updatedShipment.ldv,
-                has_metadata: !!updatedShipment.metadata
+                has_metadata: !!updatedShipment.metadata,
+                metadata_keys: updatedShipment.metadata ? Object.keys(updatedShipment.metadata) : [],
+                metadata_label_url: updatedShipment.metadata?.label_url || updatedShipment.metadata?.label_pdf_url || 'NON DISPONIBILE',
               });
               
               // Aggiorna oggetto spedizione per risposta
@@ -863,69 +963,146 @@ export async function DELETE(request: NextRequest) {
           method: shipmentIdExternal ? 'by_id' : 'by_tracking',
         });
       
-        // Recupera configurazione Spedisci.Online per l'utente
-        const userId = shipmentData.user_id || supabaseUserId;
-        if (userId) {
-          // Recupera credenziali dal database
-          const { data: configData } = await supabaseAdmin
-            .from('courier_configs')
-            .select('api_key, base_url, contract_mapping')
-            .eq('provider_id', 'spediscionline')
-            .eq('is_active', true)
-            .single();
-
-          if (configData && configData.api_key) {
-            // Decripta api_key se necessario
-            const { isEncrypted, decryptCredential } = await import('@/lib/security/encryption');
-            let apiKey = configData.api_key;
+        // ⚠️ FIX: Recupera configurazione Spedisci.Online usando funzione RPC
+        // PRIORITÀ 1: Configurazione dell'utente che cancella (se è reseller/proprietario)
+        // PRIORITÀ 2: Configurazione del proprietario della spedizione
+        // PRIORITÀ 3: Configurazione globale (is_default = true)
+        
+        let configData: any = null;
+        
+        // 1. Verifica se l'utente che cancella è un reseller e recupera la sua configurazione
+        const { data: currentUserData } = await supabaseAdmin
+          .from('users')
+          .select('id, email, is_reseller')
+          .eq('email', session.user.email)
+          .single();
+        
+        const currentUserId = currentUserData?.id || supabaseUserId;
+        
+        // Prova vari provider_id possibili (spediscionline, spedisci_online, spedisci-online)
+        const possibleProviderIds = ['spediscionline', 'spedisci_online', 'spedisci-online'];
+        
+        if (currentUserId) {
+          // Prova prima con l'utente che cancella
+          for (const providerId of possibleProviderIds) {
+            const { data: userConfig, error: userConfigError } = await supabaseAdmin.rpc('get_courier_config_for_user', {
+              p_user_id: currentUserId,
+              p_provider_id: providerId,
+            });
             
-            if (isEncrypted(apiKey)) {
-              try {
-                apiKey = decryptCredential(apiKey);
-                console.log('🔓 [API] API key decriptata per cancellazione');
-              } catch (decryptError: any) {
-                console.error('❌ [API] Errore decriptazione API key:', decryptError?.message);
-                throw new Error('Impossibile decriptare le credenziali API');
-              }
-            }
-            
-            // Se abbiamo shipment_id_external, usa deleteShipping (più affidabile)
-            if (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') {
-              const { SpedisciOnlineClient } = await import('@/lib/services/couriers/spediscionline.client');
-              
-              const client = new SpedisciOnlineClient({
-                apiKey: apiKey,
-                baseUrl: configData.base_url || 'https://api.spedisco.online/v1',
-                carrier: 'GLS',
+            if (userConfigError) {
+              console.warn(`⚠️ [API] Errore RPC per ${providerId}:`, userConfigError.message);
+            } else if (userConfig && userConfig.length > 0) {
+              configData = userConfig[0];
+              console.log('✅ [API] Usando configurazione utente che cancella:', {
+                email: session.user.email,
+                provider_id: providerId,
+                owner_user_id: configData.owner_user_id ? 'presente' : 'null',
               });
-
-              await client.deleteShipping({ shipmentId: shipmentIdExternal });
-              
-              spedisciOnlineCancelResult = {
-                success: true,
-                message: 'Spedizione cancellata su Spedisci.Online (by ID)',
-              };
-              
-              console.log('✅ [API] Spedizione cancellata su Spedisci.Online (by ID):', shipmentIdExternal);
-            } else {
-              // Fallback: usa tracking number con cancelShipmentOnPlatform
-              const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
-              
-              const adapter = new SpedisciOnlineAdapter({
-                api_key: apiKey,
-                base_url: configData.base_url || 'https://api.spedisci.online/api/v2',
+              break;
+            }
+          }
+        }
+        
+        // 2. Se non trovata, usa configurazione del proprietario della spedizione
+        if (!configData) {
+          const shipmentOwnerId = shipmentData.user_id;
+          if (shipmentOwnerId && shipmentOwnerId !== currentUserId) {
+            for (const providerId of possibleProviderIds) {
+              const { data: ownerConfig, error: ownerConfigError } = await supabaseAdmin.rpc('get_courier_config_for_user', {
+                p_user_id: shipmentOwnerId,
+                p_provider_id: providerId,
               });
               
-              spedisciOnlineCancelResult = await adapter.cancelShipmentOnPlatform(trackingNumber);
-              
-              if (spedisciOnlineCancelResult.success) {
-                console.log('✅ [API] Spedizione cancellata su Spedisci.Online (by tracking):', trackingNumber);
-              } else {
-                console.warn('⚠️ [API] Cancellazione per tracking fallita:', spedisciOnlineCancelResult.error);
+              if (ownerConfigError) {
+                console.warn(`⚠️ [API] Errore RPC per proprietario ${providerId}:`, ownerConfigError.message);
+              } else if (ownerConfig && ownerConfig.length > 0) {
+                configData = ownerConfig[0];
+                console.log('✅ [API] Usando configurazione proprietario spedizione:', {
+                  user_id: shipmentOwnerId.substring(0, 8) + '...',
+                  provider_id: providerId,
+                  owner_user_id: configData.owner_user_id ? 'presente' : 'null',
+                });
+                break;
               }
             }
+          }
+        }
+        
+        // 3. Fallback: configurazione globale (is_default = true)
+        if (!configData) {
+          for (const providerId of possibleProviderIds) {
+            const { data: globalConfig } = await supabaseAdmin
+              .from('courier_configs')
+              .select('api_key, base_url, contract_mapping')
+              .eq('provider_id', providerId)
+              .eq('is_default', true)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (globalConfig) {
+              configData = globalConfig;
+              console.log('✅ [API] Usando configurazione globale (default) per cancellazione:', providerId);
+              break;
+            }
+          }
+          
+          if (!configData) {
+            console.log('⚠️ [API] Nessuna configurazione globale trovata per Spedisci.Online (provati:', possibleProviderIds.join(', '), ')');
+          }
+        }
+        
+        // Log stato configurazione
+        if (!configData) {
+          console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
+        } else if (!configData.api_key) {
+          console.warn('⚠️ [API] Configurazione Spedisci.Online trovata ma API key mancante');
+        } else {
+          console.log('✅ [API] Configurazione Spedisci.Online trovata, procedo con cancellazione');
+          
+          // Decripta api_key se necessario
+          const { isEncrypted, decryptCredential } = await import('@/lib/security/encryption');
+          let apiKey = configData.api_key;
+          
+          if (isEncrypted(apiKey)) {
+            try {
+              apiKey = decryptCredential(apiKey);
+              console.log('🔓 [API] API key decriptata per cancellazione');
+            } catch (decryptError: any) {
+              console.error('❌ [API] Errore decriptazione API key:', decryptError?.message);
+              throw new Error('Impossibile decriptare le credenziali API');
+            }
+          }
+          
+          // ⚠️ FIX: Usa sempre SpedisciOnlineAdapter con cancelShipmentOnPlatform
+          // Priorità: shipment_id_external (increment_id) > tracking_number
+          const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
+          
+          const adapter = new SpedisciOnlineAdapter({
+            api_key: apiKey,
+            base_url: configData.base_url || 'https://api.spedisci.online/api/v2',
+          });
+          
+          // ⚠️ PRIORITÀ: Usa shipment_id_external (increment_id) se disponibile, altrimenti tracking_number
+          const idToCancel = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') 
+            ? shipmentIdExternal 
+            : trackingNumber;
+          
+          console.log('🗑️ [API] Cancellazione Spedisci.Online:', {
+            idToCancel,
+            method: (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by_increment_id' : 'by_tracking',
+            shipmentIdExternal: shipmentIdExternal || 'null',
+            trackingNumber: trackingNumber || 'null',
+          });
+          
+          spedisciOnlineCancelResult = await adapter.cancelShipmentOnPlatform(idToCancel);
+          
+          if (spedisciOnlineCancelResult.success) {
+            const method = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by increment_id' : 'by tracking';
+            console.log(`✅ [API] Spedizione cancellata su Spedisci.Online (${method}):`, idToCancel);
           } else {
-            console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
+            const method = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'increment_id' : 'tracking';
+            console.warn(`⚠️ [API] Cancellazione per ${method} fallita:`, spedisciOnlineCancelResult.error);
           }
         }
       } catch (cancelError: any) {
@@ -940,13 +1117,15 @@ export async function DELETE(request: NextRequest) {
       console.log('⚠️ [API] Nessun identificativo disponibile per cancellazione remota');
     }
 
-    // Soft delete - aggiorna spedizione in Supabase
+    // Soft delete - aggiorna spedizione in Supabase con tracking completo
+    // ⚠️ FIX: Aggiungi deleted_by_user_email per tracciabilità completa
     const { data, error } = await supabaseAdmin
       .from('shipments')
       .update({
         deleted: true,
         deleted_at: new Date().toISOString(),
         deleted_by_user_id: supabaseUserId,
+        deleted_by_user_email: session.user.email, // ⚠️ NUOVO: Traccia chi ha cancellato
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

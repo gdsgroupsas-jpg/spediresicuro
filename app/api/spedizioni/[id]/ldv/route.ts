@@ -79,9 +79,10 @@ export async function GET(
     }
 
     // Recupera la spedizione direttamente da Supabase
+    // ⚠️ IMPORTANTE: Include label_data per etichette base64 (Poste Italiane)
     const { data: shipment, error: fetchError } = await supabaseAdmin
       .from('shipments')
-      .select('*')
+      .select('*, label_data')
       .eq('id', id)
       .eq('deleted', false)
       .single();
@@ -94,26 +95,44 @@ export async function GET(
       );
     }
 
+    // ⚠️ FIX: Verifica se metadata è vuoto (null, undefined, o oggetto vuoto {})
+    const hasValidMetadata = shipment.metadata && 
+                             typeof shipment.metadata === 'object' && 
+                             Object.keys(shipment.metadata).length > 0;
+    
     console.log('📄 [LDV] Richiesta download per spedizione:', {
       id: shipment.id?.substring(0, 8),
       tracking: shipment.tracking_number || shipment.ldv,
       hasMetadata: !!shipment.metadata,
+      hasValidMetadata,
+      hasLabelData: !!shipment.label_data,
+      labelDataSize: shipment.label_data ? shipment.label_data.length : 0,
+      metadataType: typeof shipment.metadata,
       metadataKeys: shipment.metadata ? Object.keys(shipment.metadata) : [],
+      metadataContent: hasValidMetadata ? {
+        has_label_url: !!shipment.metadata.label_url,
+        has_label_pdf_url: !!shipment.metadata.label_pdf_url,
+        method: shipment.metadata.method,
+        carrier: shipment.metadata.carrier,
+      } : null,
     });
 
     // =====================================================
     // PRIORITÀ 1: Scarica etichetta ORIGINALE dal corriere
     // =====================================================
-    const originalLabelUrl = extractOriginalLabelUrl(shipment);
+    // ⚠️ FIX: Estrai URL solo se metadata è valido (non vuoto)
+    const originalLabelUrl = hasValidMetadata ? extractOriginalLabelUrl(shipment) : null;
     
+    // ⚠️ PRIORITÀ 1A: Se abbiamo label_url, scarica da URL
     if (originalLabelUrl && format === 'pdf') {
-      console.log('🏷️ [LDV] Trovata etichetta originale:', originalLabelUrl);
+      console.log('🏷️ [LDV] Trovata etichetta originale (URL):', originalLabelUrl);
       
       const pdfResult = await downloadPdfFromUrl(originalLabelUrl);
       
       if (pdfResult) {
         const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
-        const filename = `LDV_${trackingNumber}.pdf`;
+        // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+        const filename = `${trackingNumber}.pdf`;
         
         return new NextResponse(new Uint8Array(pdfResult.data), {
           headers: {
@@ -123,7 +142,47 @@ export async function GET(
         });
       }
       
-      console.warn('⚠️ [LDV] Download etichetta originale fallito, uso fallback');
+      console.warn('⚠️ [LDV] Download etichetta originale da URL fallito, provo label_data');
+    }
+    
+    // ⚠️ PRIORITÀ 1B: Se non abbiamo URL ma abbiamo label_data (base64), usa quello
+    if (!originalLabelUrl && shipment.label_data && format === 'pdf') {
+      console.log('🏷️ [LDV] Trovata etichetta originale (label_data base64)');
+      
+      try {
+        // Decodifica base64
+        const base64Data = shipment.label_data;
+        const binaryString = Buffer.from(base64Data, 'base64');
+        
+        const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
+        // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+        const filename = `${trackingNumber}.pdf`;
+        
+        console.log('✅ [LDV] Etichetta originale decodificata da label_data (size:', binaryString.length, 'bytes)');
+        
+        return new NextResponse(new Uint8Array(binaryString), {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+          },
+        });
+      } catch (error) {
+        console.error('❌ [LDV] Errore decodifica label_data:', error);
+        console.warn('⚠️ [LDV] Fallback a ExportService');
+      }
+    }
+    
+    if (!originalLabelUrl && !shipment.label_data) {
+      console.warn('⚠️ [LDV] Nessun URL etichetta originale trovato nel metadata:', {
+        hasMetadata: !!shipment.metadata,
+        hasValidMetadata,
+        hasLabelData: !!shipment.label_data,
+        metadataKeys: shipment.metadata ? Object.keys(shipment.metadata) : [],
+        metadataValue: shipment.metadata,
+        label_url: shipment.metadata?.label_url,
+        label_pdf_url: shipment.metadata?.label_pdf_url,
+        reason: !hasValidMetadata ? 'Metadata vuoto o null' : (!originalLabelUrl && !shipment.label_data ? 'URL e label_data non presenti' : 'URL non presente nel metadata'),
+      });
     }
 
     // =====================================================

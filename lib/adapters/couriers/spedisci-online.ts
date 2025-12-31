@@ -237,14 +237,27 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           success: result.success,
           tracking_number: result.tracking_number,
           has_label: !!result.label_pdf,
+          has_metadata: !!result.metadata,
+          metadata_keys: result.metadata ? Object.keys(result.metadata) : [],
+          shipmentId_in_result: result.metadata?.shipmentId || result.metadata?.increment_id || 'NON TROVATO',
         });
 
         if (result.success) {
-          return {
+          const shippingLabel = {
             tracking_number: result.tracking_number,
             label_url: result.label_url,
             label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+            // ⚠️ FIX: Includi metadata con shipmentId per cancellazione futura
+            metadata: result.metadata || {},
           };
+          
+          console.log('📦 [SPEDISCI.ONLINE] ShippingLabel creato:', {
+            has_metadata: !!shippingLabel.metadata,
+            metadata_keys: shippingLabel.metadata ? Object.keys(shippingLabel.metadata) : [],
+            shipmentId_in_label: shippingLabel.metadata?.shipmentId || shippingLabel.metadata?.increment_id || 'NON TROVATO',
+          });
+          
+          return shippingLabel;
         }
       } catch (jsonError: any) {
         const is401 = jsonError.message?.includes('401');
@@ -265,6 +278,8 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
                 tracking_number: result.tracking_number,
                 label_url: result.label_url,
                 label_pdf: result.label_pdf ? Buffer.from(result.label_pdf, 'base64') : undefined,
+                // ⚠️ FIX: Includi metadata con shipmentId per cancellazione futura
+                metadata: result.metadata || {},
               };
             }
           } catch (v1Error: any) {
@@ -432,6 +447,19 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       if (response.ok) {
         const result = await response.json();
         
+        // ⚠️ DEBUG: Log completo risposta API per verificare struttura
+        console.log('📦 [SPEDISCI.ONLINE] Risposta API completa:', {
+          status: response.status,
+          apiKeyFingerprint: keyFingerprint,
+          response_keys: Object.keys(result),
+          response_shipmentId: result.shipmentId,
+          response_increment_id: result.increment_id,
+          response_incrementId: result.incrementId,
+          response_id: result.id,
+          response_trackingNumber: result.trackingNumber || result.tracking_number,
+          response_full: JSON.stringify(result).substring(0, 500), // Primi 500 caratteri per debug
+        });
+        
         // Log successo production-safe
         console.log('✅ [SPEDISCI.ONLINE] Success:', {
           status: response.status,
@@ -445,12 +473,37 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         // labelData può essere in diversi formati nella risposta
         const labelData = result.labelData || result.label_pdf || result.label || result.labelPdf; // Base64 encoded
         
+        // ⚠️ FIX: Estrai shipmentId dalla risposta (secondo OpenAPI spec, questo è l'increment_id per cancellazione)
+        // Secondo openapi.json: POST /shipping/create restituisce "shipmentId" (integer) - riga 592-593
+        // Questo shipmentId è l'increment_id da usare per POST /shipping/delete - riga 704-705
+        const shipmentId = result.shipmentId || result.increment_id || result.incrementId || result.id || null;
+        
+        if (shipmentId) {
+          console.log('✅ [SPEDISCI.ONLINE] shipmentId (increment_id) trovato nella risposta:', {
+            shipmentId,
+            type: typeof shipmentId,
+            source: result.shipmentId ? 'shipmentId' : result.increment_id ? 'increment_id' : result.incrementId ? 'incrementId' : 'id',
+          });
+        } else {
+          console.error('❌ [SPEDISCI.ONLINE] shipmentId NON TROVATO nella risposta!', {
+            chiavi_disponibili: Object.keys(result),
+            response_sample: JSON.stringify(result).substring(0, 300),
+          });
+        }
+        
         return {
           success: true,
           tracking_number: trackingNumber,
           label_url: result.labelUrl || result.label_url,
           label_pdf: labelData, // Base64 encoded, sarà convertito in Buffer in createShipment
           message: result.message || 'LDV creata con successo',
+          // ⚠️ CRITICO: Includi shipmentId sia nel metadata che direttamente nel risultato
+          shipmentId: shipmentId ? String(shipmentId) : undefined, // Aggiunto anche direttamente
+          metadata: {
+            ...(result.metadata || {}),
+            shipmentId: shipmentId ? String(shipmentId) : undefined,
+            increment_id: shipmentId ? String(shipmentId) : undefined, // Alias per compatibilità
+          },
         };
       }
 
@@ -1048,23 +1101,82 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
     });
 
     try {
-      // Prova endpoint DELETE /shipping/{tracking}
-      const url = new URL(`shipping/${encodeURIComponent(trackingNumber)}`, this.BASE_URL).toString();
+      // ⚠️ FIX: Spedisci.Online usa POST /shipping/delete con increment_id, non DELETE /shipping/{tracking}
+      // Prova prima con endpoint POST /shipping/delete (metodo corretto)
+      const deleteUrl = new URL('shipping/delete', this.BASE_URL).toString();
       
-      console.log('📡 [SPEDISCI.ONLINE] DELETE call:', { url, trackingNumber });
+      // ⚠️ NOTA: increment_id deve essere un numero, non il tracking string
+      // ⚠️ PRIORITÀ: Se trackingNumber è già un numero puro (solo cifre), usalo direttamente
+      // Altrimenti estrai il numero alla fine del tracking (es: "3UW1LZ1549876" -> 1549876)
+      let incrementId: number | null = null;
+      
+      // ⚠️ PRIORITÀ 1: Se trackingNumber è SOLO numeri (increment_id diretto da shipment_id_external)
+      // ⚠️ FIX: Non usare parseInt() direttamente perché "3UW1LZ1549876" restituirebbe 3 invece di 1549876
+      const isPureNumber = /^\d+$/.test(trackingNumber);
+      if (isPureNumber) {
+        incrementId = parseInt(trackingNumber, 10);
+        console.log('✅ [SPEDISCI.ONLINE] Usando increment_id diretto (numero puro):', incrementId);
+      } else {
+        // ⚠️ PRIORITÀ 2: Estrai numero alla fine del tracking (es: "3UW1LZ1549876" -> 1549876)
+        // Cerca l'ultimo gruppo di cifre consecutive alla fine
+        const trackingMatch = trackingNumber.match(/(\d+)$/);
+        if (trackingMatch) {
+          incrementId = parseInt(trackingMatch[1], 10);
+          console.log('✅ [SPEDISCI.ONLINE] Estratto increment_id dal tracking (numero finale):', {
+            tracking: trackingNumber,
+            extracted_increment_id: incrementId,
+            match: trackingMatch[1],
+          });
+        } else {
+          // Fallback: trova il numero più lungo nel tracking (probabilmente l'increment_id)
+          const allNumbers = trackingNumber.match(/\d+/g);
+          if (allNumbers && allNumbers.length > 0) {
+            const longestNumber = allNumbers.reduce((a, b) => a.length > b.length ? a : b);
+            incrementId = parseInt(longestNumber, 10);
+            console.log('✅ [SPEDISCI.ONLINE] Estratto increment_id (numero più lungo):', {
+              tracking: trackingNumber,
+              extracted_increment_id: incrementId,
+              allNumbers,
+            });
+          }
+        }
+      }
+      
+      if (!incrementId || incrementId === 0) {
+        console.error('❌ [SPEDISCI.ONLINE] Impossibile estrarre increment_id valido da:', {
+          trackingNumber,
+          type: typeof trackingNumber,
+          isPureNumber: /^\d+$/.test(trackingNumber),
+          parsedValue: parseInt(trackingNumber, 10),
+        });
+        return { 
+          success: false, 
+          error: `Impossibile estrarre increment_id valido da "${trackingNumber}" per la cancellazione. Verifica che shipment_id_external sia salvato correttamente durante la creazione.` 
+        };
+      }
+      
+      console.log('📡 [SPEDISCI.ONLINE] POST /shipping/delete call:', { 
+        url: deleteUrl, 
+        trackingNumber,
+        incrementId,
+      });
 
-      const response = await fetch(url, {
-        method: 'DELETE',
+      const response = await fetch(deleteUrl, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.API_KEY}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        body: JSON.stringify({
+          increment_id: incrementId,
+        }),
       });
 
-      console.log('📡 [SPEDISCI.ONLINE] DELETE response:', {
+      console.log('📡 [SPEDISCI.ONLINE] POST /shipping/delete response:', {
         status: response.status,
         statusText: response.statusText,
+        incrementId,
       });
 
       if (response.ok) {
@@ -1092,12 +1204,27 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       }
 
       // 404 = spedizione non trovata su Spedisci.Online (già cancellata o mai creata)
-      if (response.status === 404) {
-        console.warn('⚠️ [SPEDISCI.ONLINE] Spedizione non trovata (già cancellata?):', trackingNumber);
-        return { 
-          success: true, // Consideriamo successo se non esiste
-          message: 'Spedizione non trovata su Spedisci.Online (potrebbe essere già stata cancellata)' 
-        };
+      // 400 = bad request (increment_id non valido o spedizione non trovata)
+      if (response.status === 404 || response.status === 400) {
+        const statusMsg = response.status === 404 ? 'non trovata' : 'bad request (increment_id non valido?)';
+        console.warn(`⚠️ [SPEDISCI.ONLINE] Spedizione ${statusMsg} (già cancellata?):`, {
+          trackingNumber,
+          incrementId,
+          status: response.status,
+        });
+        // ⚠️ NON consideriamo successo se è 400, potrebbe essere un errore reale
+        if (response.status === 404) {
+          return { 
+            success: true, // 404 = non esiste, consideriamo successo
+            message: 'Spedizione non trovata su Spedisci.Online (potrebbe essere già stata cancellata)' 
+          };
+        } else {
+          // 400 = errore, non consideriamo successo
+          return { 
+            success: false,
+            error: `Bad Request: increment_id ${incrementId} potrebbe non essere valido per tracking ${trackingNumber}`
+          };
+        }
       }
 
       console.error('❌ [SPEDISCI.ONLINE] Errore cancellazione:', {

@@ -521,6 +521,7 @@ try {
 - ✅ **GDPR Compliance** - Data export, anonymization
 - ✅ **CRM Leads** - Lead management, conversion
 - ✅ **Courier Configs** - Encrypted credential storage
+- ✅ **Cancelled Shipments** - Soft delete with audit trail, simultaneous deletion on Spedisci.Online, reseller visibility (31 Dicembre 2025)
 
 ### Partially Implemented (Infrastructure Ready, UI Missing)
 - 🟡 **AI Anne Chat UI** - Backend orchestrator completo, chat UI non costruita

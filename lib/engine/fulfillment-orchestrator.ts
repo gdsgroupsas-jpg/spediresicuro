@@ -25,6 +25,7 @@ export interface ShipmentResult {
   method: 'direct' | 'broker' | 'fallback';
   error?: string;
   message?: string;
+  shipmentId?: string; // ⚠️ CRITICO: shipmentId (increment_id) per cancellazione su Spedisci.Online
   metadata?: {
     [key: string]: any; // Metadati aggiuntivi specifici corriere (es: poste_account_id, waybill_number, ecc.)
   };
@@ -201,9 +202,16 @@ export class FulfillmentOrchestrator {
         console.log('📦 [ORCHESTRATOR] Broker adapter usa la STESSA configurazione DB caricata all\'avvio (configId/providerId/baseUrl visibili nei log precedenti)');
         const result = await this.brokerAdapter.createShipment(shipmentDataWithCourier);
 
+        // ⚠️ CRITICO: Estrai shipmentId dal risultato dell'adapter (può essere nel metadata o direttamente)
+        const shipmentId = (result as any).shipmentId || result.metadata?.shipmentId || result.metadata?.increment_id;
+        
         console.log('✅ [ORCHESTRATOR] Broker adapter ha restituito:', {
           has_tracking: !!result.tracking_number,
           has_label: !!result.label_pdf,
+          has_metadata: !!result.metadata,
+          metadata_keys: result.metadata ? Object.keys(result.metadata) : [],
+          shipmentId_trovato: shipmentId || 'NON TROVATO',
+          shipmentId_source: (result as any).shipmentId ? 'direct' : result.metadata?.shipmentId ? 'metadata.shipmentId' : result.metadata?.increment_id ? 'metadata.increment_id' : 'NON TROVATO',
         });
 
         return {
@@ -214,6 +222,13 @@ export class FulfillmentOrchestrator {
           carrier: courierCode,
           method: 'broker',
           message: 'LDV creata tramite broker spedisci.online',
+          // ⚠️ CRITICO: Passa shipmentId sia direttamente che nel metadata
+          shipmentId: shipmentId ? String(shipmentId) : undefined,
+          metadata: {
+            ...(result.metadata || {}),
+            shipmentId: shipmentId ? String(shipmentId) : undefined,
+            increment_id: shipmentId ? String(shipmentId) : undefined,
+          },
         };
       } catch (error: any) {
         console.error('❌ [ORCHESTRATOR] Broker spedisci.online fallito:', {

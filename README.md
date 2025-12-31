@@ -1,7 +1,7 @@
 # 📦 SpedireSicuro.it - Logistics Operating System
 
 > **Version:** 0.3.0 (Logistics OS Architecture)  
-> **Last Updated:** December 29, 2025  
+> **Last Updated:** December 31, 2025  
 > **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared  
 > **Next Major:** 1.0.0 (Go To Market Release)
 
@@ -111,6 +111,66 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 - ✅ FASE 1-2.8: Architettura & Migrazione completata (264 unit test, 90 integration test)
 - 🟡 FASE 3: Rollout & Economics in corso (validazione GTM)
 - 📋 FASE 4: Scaling & Optimization (futuro)
+
+---
+
+## 🎯 Feature Principali
+
+### ✅ Core Features (Production Ready)
+
+#### Gestione Spedizioni
+- **Creazione Spedizioni**: Form completo con validazione, supporto multi-corriere (GLS, BRT, Poste Italiane via Spedisci.Online)
+- **Tracking Spedizioni**: Monitoraggio stato spedizioni in tempo reale
+- **Download LDV**: Download etichette originali dai corrieri o fallback generato
+- **Spedizioni Cancellate**: Sistema soft delete con audit trail completo, cancellazione simultanea su Spedisci.Online, visibilità reseller per sub-user (31 Dicembre 2025)
+  - Pagina dedicata `/dashboard/spedizioni/cancellate`
+  - Tracking completo: chi, quando, come ha cancellato
+  - RBAC: Admin vede tutto, Reseller vede proprie + sub-user, User vede solo proprie
+
+#### Sistema Wallet
+- **Wallet Prepagato**: Sistema wallet atomizzato con "No Credit, No Label"
+- **Operazioni Atomiche**: Debit/Credit garantiti con funzioni SQL atomiche
+- **Idempotency**: Prevenzione doppi addebiti con sistema di lock
+- **Audit Trail**: Tutti i movimenti tracciati in `wallet_transactions`
+
+#### Multi-Corriere
+- **Integrazione Spedisci.Online**: Aggregatore per GLS, BRT, Poste Italiane, UPS, ecc.
+- **Configurazioni BYOC**: Supporto "Bring Your Own Carrier" per clienti con contratti propri
+- **Configurazioni Reseller**: Ogni reseller può avere le proprie credenziali corriere
+- **Fulfillment Orchestrator**: Routing intelligente tra adapter diretti e broker
+
+#### Sistema Reseller
+- **Gerarchia Utenti**: Reseller possono creare e gestire sub-user
+- **Visibilità Multi-Tenant**: Reseller vedono le proprie spedizioni + quelle dei sub-user
+- **Wallet Separati**: Ogni reseller ha il proprio wallet indipendente
+- **RBAC Completo**: Controllo accessi basato su ruoli (Admin, Reseller, User)
+
+#### AI Orchestrator (Anne)
+- **LangGraph Supervisor**: Orchestrazione intelligente con worker specializzati
+- **OCR Worker**: Estrazione dati da testo e immagini (Gemini Vision)
+- **Address Worker**: Normalizzazione indirizzi italiani (CAP, provincia, città)
+- **Pricing Worker**: Calcolo preventivi multi-corriere
+- **Booking Worker**: Prenotazione spedizioni con preflight checks
+- **Telemetria Strutturata**: Tracking completo di tutte le operazioni AI
+
+#### Sicurezza & Compliance
+- **Row Level Security (RLS)**: Isolamento multi-tenant a livello database
+- **Acting Context**: SuperAdmin può agire per conto utenti (completamente auditato)
+- **GDPR Compliance**: Export dati e anonimizzazione supportati
+- **Audit Logging**: Tutte le operazioni sensibili tracciate
+- **Encryption**: Credenziali corrieri criptate at rest
+
+### 🟡 Feature in Sviluppo
+
+- **AI Anne Chat UI**: Backend orchestrator completo, chat UI in sviluppo
+- **XPay Payments**: Integrazione pagamenti carta per ricarica wallet (backend ready)
+- **Invoice System**: Generazione fatture PDF (tabelle DB pronte)
+
+### 📋 Feature Pianificate
+
+- **WhatsApp Native Bot**: Creazione spedizioni via chat WhatsApp
+- **Self-Healing Logistics**: Sistema che si auto-monitora e auto-ripara
+- **White-label Ready**: Rivendibilità ad altri consorzi/logistici
 
 **Versione 1.0 (Go To Market - Futuro):**
 - Release ufficiale al momento del Go To Market
@@ -577,6 +637,8 @@ npm run test:e2e            # Esegui test Playwright E2E
 - **[docs/OPS_RUNBOOK.md](docs/OPS_RUNBOOK.md)** - Deployment, incident response, monitoring
 - **[docs/DB_SCHEMA.md](docs/DB_SCHEMA.md)** - Tabelle database, RLS policies, invarianti
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Deep dive tecnico, patterns, performance
+- **[docs/SPEDIZIONI_CANCELLATE.md](docs/SPEDIZIONI_CANCELLATE.md)** - Sistema soft delete con audit trail e cancellazione simultanea
+- **[MIGRATION_MEMORY.md](MIGRATION_MEMORY.md)** - ⭐ Architettura AI Orchestrator (LangGraph Supervisor, Workers, OCR) - Single Source of Truth per migrazione Anne → LangGraph
 
 ### Documenti Operativi
 
@@ -626,6 +688,15 @@ npm run test:e2e            # Esegui test Playwright E2E
 - **FASE 3.1:** Controlled Rollout (Cohort 0 → 1 → 2)
 - **FASE 3.2:** Economics Observation (costi reali, alert threshold, kill switch)
 - **FASE 3.3:** GTM Readiness Gates (Prodotto, Economics, Operativo)
+
+**Feature Recenti (31 Dicembre 2025):**
+- ✅ **Sistema Spedizioni Cancellate**: 
+  - Soft delete con audit trail completo (`deleted_by_user_id`, `deleted_by_user_email`, `deleted_by_user_name`)
+  - Cancellazione simultanea su Spedisci.Online (priorità configurazione: reseller → owner → default)
+  - Visibilità reseller per sub-user (RBAC completo)
+  - Pagina dedicata `/dashboard/spedizioni/cancellate` con ricerca e filtri
+  - Migration: `050_add_deleted_by_user_email.sql`
+  - Vedi [docs/SPEDIZIONI_CANCELLATE.md](docs/SPEDIZIONI_CANCELLATE.md) per documentazione completa
 
 **Vedi:** [PHASE_3_ROLLOUT_PLAN.md](PHASE_3_ROLLOUT_PLAN.md) per roadmap dettagliata
 
@@ -740,11 +811,26 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 
 ### File Critici da Conoscere
 
+#### API Routes
+- `app/api/spedizioni/route.ts` - Gestione spedizioni (creazione, cancellazione simultanea, lista)
+- `app/api/spedizioni/cancellate/route.ts` - Recupero spedizioni cancellate (RBAC, paginazione)
+- `app/api/spedizioni/[id]/ldv/route.ts` - Download LDV (etichetta originale o fallback)
 - `app/api/shipments/create/route.ts` - Creazione spedizione (wallet debit + idempotency)
+
+#### Database Migrations
 - `supabase/migrations/040_wallet_atomic_operations.sql` - Funzioni atomiche wallet
 - `supabase/migrations/044_idempotency_locks.sql` - Sistema idempotency
+- `supabase/migrations/050_add_deleted_by_user_email.sql` - Soft delete con audit trail (31 Dicembre 2025)
+
+#### Core Libraries
 - `lib/wallet/retry.ts` - Smart retry per lock contention
-- `WALLET_SECURITY_GUARDRAILS.md` - Regole critiche wallet
+- `lib/services/fulfillment/orchestrator.ts` - Fulfillment Orchestrator (routing intelligente)
+- `lib/agent/orchestrator/supervisor-router.ts` - AI Orchestrator entry point
+
+#### Documentazione
+- `WALLET_SECURITY_GUARDRAILS.md` - Regole critiche wallet (NON BYPASSABILE)
+- `docs/SPEDIZIONI_CANCELLATE.md` - Documentazione completa sistema soft delete
+- `MIGRATION_MEMORY.md` - Architettura AI Orchestrator (Single Source of Truth)
 
 ### Funzioni SQL Atomiche
 
@@ -767,15 +853,24 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 **Questo progetto è in fase di sviluppo attivo.**
 
 - ✅ **Security P0 fixes applicati** (wallet race conditions risolte)
-- 🟡 **Core features in testing** (shipment creation, wallet, idempotency)
+- ✅ **Core features implementate** (shipment creation, wallet, idempotency, soft delete, AI orchestrator)
+- 🟡 **Core features in testing** (validazione GTM in corso)
 - 🟡 **Onboarding in miglioramento** (semplificazione in corso)
 - ❌ **NON production ready** - Obiettivo: production readiness nei prossimi mesi
+
+**Feature Recenti (31 Dicembre 2025):**
+- ✅ Sistema Spedizioni Cancellate con audit trail completo
+- ✅ Cancellazione simultanea su Spedisci.Online
+- ✅ RBAC completo per visibilità reseller
+- ✅ Fix nome file PDF: ora usa solo tracking number (es: `3UW1LZ1549886.pdf` invece di `LDV_3UW1LZ1549886.pdf`)
+- ✅ Fix cancellazione Spedisci.Online: estrazione corretta `increment_id` dal tracking e salvataggio `shipmentId` durante creazione
+- ✅ Miglioramenti logging per debugging cancellazione e creazione spedizioni
 
 **Non utilizzare in produzione senza test completi e validazione business.**
 
 ---
 
-_Last updated: December 29, 2025_  
+_Last updated: December 31, 2025_  
 _Architecture Version: 0.3.0 (Logistics OS)_  
 _Status: 🟡 In Development / Testing_  
 _Next Major: 1.0.0 (Go To Market Release)_
@@ -797,3 +892,35 @@ _Next Major: 1.0.0 (Go To Market Release)_
 - ✅ BYOC è business model separato con implementazione completa
 - ✅ Roadmap pragmatica: Feature "visionarie" in FASE 4 (futuro)
 - ✅ Financial Core: "No Credit, No Label" - Wallet atomizzato
+
+---
+
+## 📝 Changelog Recente (31 Dicembre 2025)
+
+### 🐛 Fix Critici
+
+1. **Fix Cancellazione Spedisci.Online**:
+   - ✅ Salvataggio `shipmentId` (increment_id) durante creazione spedizione
+   - ✅ Estrazione corretta `increment_id` dal tracking (numero finale invece di `parseInt()`)
+   - ✅ Priorità: `shipment_id_external` > estrazione da tracking
+   - **File**: `lib/adapters/couriers/spedisci-online.ts`, `lib/engine/fulfillment-orchestrator.ts`, `app/api/spedizioni/route.ts`
+
+2. **Fix Nome File PDF**:
+   - ✅ Nome file ora usa solo tracking number (es: `3UW1LZ1549886.pdf`)
+   - ✅ Rimosso prefisso `LDV_` e suffisso data
+   - **File**: `app/dashboard/spedizioni/nuova/page.tsx`, `app/api/spedizioni/[id]/ldv/route.ts`, `lib/adapters/export/index.ts`
+
+### ✨ Feature Implementate
+
+1. **Sistema Spedizioni Cancellate**:
+   - ✅ Soft delete con audit trail completo
+   - ✅ Cancellazione simultanea su Spedisci.Online
+   - ✅ RBAC per visibilità reseller
+   - ✅ Pagina dedicata `/dashboard/spedizioni/cancellate`
+   - **File**: `app/api/spedizioni/cancellate/route.ts`, `app/dashboard/spedizioni/cancellate/page.tsx`, `supabase/migrations/050_add_deleted_by_user_email.sql`
+
+### 🔍 Miglioramenti Debugging
+
+- ✅ Log dettagliati per tracciare `shipmentId` durante creazione
+- ✅ Log dettagliati per tracciare estrazione `increment_id` durante cancellazione
+- ✅ Log migliorati per download LDV (verifica `label_data` disponibilità)
