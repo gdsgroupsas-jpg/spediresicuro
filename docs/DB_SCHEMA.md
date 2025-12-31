@@ -230,13 +230,12 @@ CREATE POLICY "wallet_tx_select" ON wallet_transactions FOR SELECT USING (
 - Every wallet debit should have corresponding operation (shipment, refund, etc.)
 - Daily reconciliation job verifies integrity
 
-**Trigger:** Auto-updates `users.wallet_balance` on INSERT
-```sql
-CREATE TRIGGER update_wallet_balance_on_transaction
-AFTER INSERT ON wallet_transactions
-FOR EACH ROW
-EXECUTE FUNCTION update_wallet_balance();
-```
+**⚠️ IMPORTANTE:** `wallet_transactions` è SOLO audit trail. Il saldo viene aggiornato da funzioni RPC atomiche:
+- `increment_wallet_balance()` - Atomic credit (migration 040)
+- `decrement_wallet_balance()` - Atomic debit (migration 040)
+- `add_wallet_credit()` - Wrapper che chiama `increment_wallet_balance()` + INSERT transaction
+
+**Trigger Legacy:** ❌ RIMOSSO in migration `041_remove_wallet_balance_trigger.sql` (causava doppio accredito quando `add_wallet_credit()` chiamava `increment_wallet_balance()` + INSERT transaction).
 
 ---
 
@@ -631,5 +630,5 @@ ORDER BY rls_enabled, tablename;
 ---
 
 **Document Owner:** Database Team  
-**Last Updated:** December 21, 2025  
+**Last Updated:** December 29, 2025  
 **Review Cycle:** After each migration
