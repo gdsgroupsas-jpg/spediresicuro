@@ -19,6 +19,7 @@ import {
 } from '@/lib/telemetry/logger';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { supervisorRouter, formatPricingResponse } from '@/lib/agent/orchestrator/supervisor-router';
+import { getSafeAuth } from '@/lib/safe-auth';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
@@ -57,10 +58,9 @@ export async function POST(request: NextRequest) {
   let anthropicApiKey: string | undefined = undefined;
   
   try {
-    // Verifica sessione utente
-    session = await auth();
-    
-    if (!session || !session.user) {
+    // ⚠️ AI AGENT: Usa getSafeAuth() per ActingContext (supporta impersonation)
+    const actingContext = await getSafeAuth();
+    if (!actingContext) {
       return NextResponse.json(
         { 
           success: false, 
@@ -70,10 +70,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Estrai dati utente dalla sessione
-    const userId = session.user.id;
-    const userRole = (session.user as any).role || 'user';
-    const userName = session.user.name || session.user.email || 'Utente';
+    // Estrai dati utente da ActingContext (usa target, non actor)
+    const userId = actingContext.target.id;
+    const userEmail = actingContext.target.email || '';
+    const userRole = (actingContext.target.role || 'user') as string;
+    const userName = actingContext.target.name || userEmail || 'Utente';
     const isAdmin = userRole === 'admin';
 
     // Verifica che userId sia definito
@@ -81,11 +82,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'ID utente non trovato nella sessione',
+          error: 'ID utente non trovato nel contesto',
         },
         { status: 401 }
       );
     }
+    
+    // Mantieni session per compatibilità con codice legacy
+    session = await auth();
 
     // Rate limiting distribuito (Upstash Redis con fallback in-memory)
     const rateLimitResult = await rateLimit('agent-chat', userId as string);
@@ -125,11 +129,13 @@ export async function POST(request: NextRequest) {
 
     // ===== SUPERVISOR ROUTER (Entry Point Unico) =====
     // Il supervisor decide se usare pricing graph o legacy handler
+    // ⚠️ AI AGENT: Passa ActingContext a supervisorRouter
     const supervisorResult = await supervisorRouter({
       message: cleanMessage,
       userId: userId as string,
-      userEmail: session.user.email || '',
+      userEmail: userEmail,
       traceId,
+      actingContext, // ⚠️ NUOVO: ActingContext iniettato
     });
     
     // Se il supervisor ha una risposta pronta (END con pricing o clarification)
