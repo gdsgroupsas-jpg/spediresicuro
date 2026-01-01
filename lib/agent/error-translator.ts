@@ -11,7 +11,7 @@
 
 import { AgentState } from './orchestrator/state';
 import { defaultLogger, type ILogger } from './logger';
-import { logStructured } from '@/lib/telemetry/logger';
+
 
 // ====== TIPI ======
 
@@ -137,11 +137,11 @@ function translateSystemError(error: string, fallbackReason?: string): HumanMess
     : `System error: ${error}`;
   
   // Log in telemetria (admin only)
-  logStructured('error', {
+  console.error('[TELEMETRY]', JSON.stringify({
     event: 'systemErrorTranslated',
     error_technical: technicalError,
     fallback_reason: fallbackReason || null,
-  });
+  }));
   
   // Messaggi utente-friendly
   if (fallbackReason === 'graph_error') {
