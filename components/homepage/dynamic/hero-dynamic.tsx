@@ -286,7 +286,7 @@ export default function HeroDynamic() {
               className="text-xl text-gray-400 max-w-xl leading-relaxed"
             >
               <span className="text-white font-semibold">Non un comparatore prezzi.</span> Un Logistics Operating System con AI.{' '}
-              <span className="text-amber-400 font-semibold">Annie</span> legge screenshot, foto, vocali.{' '}
+              <span className="text-amber-400 font-semibold">Anne</span> legge screenshot, foto, vocali.{' '}
               Compila, valida, crea etichetta.{' '}
               <span className="text-emerald-400 font-medium">90% confidence. Zero errori.</span>
             </motion.p>

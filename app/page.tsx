@@ -15,7 +15,7 @@ import {
   HeroDynamic,
   FeaturesDynamic,
   HowItWorksDynamic,
-  AnnieShowcase,
+  AnneShowcase,
   BuildingInPublic,
   CTADynamic
 } from '@/components/homepage/dynamic';
@@ -34,8 +34,8 @@ export default function Home() {
         {/* How It Works - Interactive Steps */}
         <HowItWorksDynamic />
 
-        {/* Annie AI Showcase */}
-        <AnnieShowcase />
+        {/* Anne AI Showcase */}
+        <AnneShowcase />
 
         {/* Building in Public - Transparenza */}
         <BuildingInPublic />
