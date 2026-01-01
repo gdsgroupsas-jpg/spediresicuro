@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAnneContext } from './AnneContext';
+import { AgentDebugPanel } from '@/components/agent/AgentDebugPanel';
+import type { SupervisorRouterTelemetry } from '@/lib/telemetry/logger';
 
 interface Message {
   role: 'user' | 'assistant' | 'suggestion';
@@ -62,6 +64,8 @@ export function AnneAssistant({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // P2: Telemetria per debug panel (solo admin)
+  const [lastTelemetry, setLastTelemetry] = useState<SupervisorRouterTelemetry | undefined>(undefined);
 
   // Preferenze utente (localStorage)
   const [preferences, setPreferences] = useState({
@@ -136,6 +140,22 @@ export function AnneAssistant({
     }
   }, [currentPage]);
 
+  // Ascolta evento personalizzato per aprire Anne (da mobile nav)
+  useEffect(() => {
+    const handleOpenAnne = () => {
+      if (isMinimized) {
+        setIsMinimized(false);
+        setIsExpanded(true);
+      }
+    };
+
+    window.addEventListener('openAnneAssistant', handleOpenAnne);
+
+    return () => {
+      window.removeEventListener('openAnneAssistant', handleOpenAnne);
+    };
+  }, [isMinimized]);
+
   // Aggiungi messaggio di suggerimento
   const addSuggestionMessage = (content: string) => {
     setMessages((prev) => [
@@ -181,6 +201,11 @@ export function AnneAssistant({
 
       if (!response.ok) {
         throw new Error(data.error || 'Errore di comunicazione con Anne');
+      }
+
+      // P2: Salva telemetria se disponibile (solo per admin)
+      if (data.metadata?.telemetry && (userRole === 'admin' || userRole === 'superadmin')) {
+        setLastTelemetry(data.metadata.telemetry);
       }
 
       setMessages((prev) => [
@@ -473,6 +498,11 @@ export function AnneAssistant({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* P2: Agent Debug Panel - Solo per admin/superadmin */}
+      {(userRole === 'admin' || userRole === 'superadmin') && (
+        <AgentDebugPanel telemetry={lastTelemetry} />
+      )}
     </>
   );
 }
