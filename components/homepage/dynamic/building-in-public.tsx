@@ -32,7 +32,7 @@ const roadmapItems = [
     status: 'completed',
     title: 'Core Architecture',
     items: [
-      'AI Orchestrator (LangGraph + Gemini Vision)',
+      'AI Orchestrator (Vision + Orchestration)',
       'Wallet System (atomic operations)',
       'Multi-tenant RLS',
       'Acting Context (impersonation)',
