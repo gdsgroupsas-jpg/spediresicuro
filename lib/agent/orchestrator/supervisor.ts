@@ -14,6 +14,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { containsBookingConfirmation, preflightCheck } from '@/lib/agent/workers/booking';
+import { detectMentorIntent } from '@/lib/agent/workers/mentor';
 import { defaultLogger, type ILogger } from '../logger';
 import { llmConfig } from '@/lib/config';
 
@@ -206,6 +207,16 @@ export async function supervisor(
       return {
         next_step: 'ocr_worker',
         processingStatus: 'extracting',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+    
+    // P1: Mentor Intent - Domande tecniche su architettura, wallet, RLS
+    if (detectMentorIntent(messageText)) {
+      logger.log('🎓 [Supervisor] Intent mentor rilevato, routing a mentor_worker');
+      return {
+        next_step: 'mentor_worker',
+        processingStatus: 'idle',
         iteration_count: (state.iteration_count || 0) + 1,
       };
     }
