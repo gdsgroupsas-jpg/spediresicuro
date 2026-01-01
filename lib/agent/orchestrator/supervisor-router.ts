@@ -37,6 +37,8 @@ import {
   type SupervisorRouterTelemetry,
 } from '@/lib/telemetry/logger';
 import { defaultLogger, type ILogger } from '../logger';
+import { ActingContext } from '@/lib/safe-auth';
+import { UserRole } from '@/lib/rbac';
 
 // ==================== TIPI ====================
 
@@ -45,6 +47,7 @@ export interface SupervisorInput {
   userId: string;
   userEmail: string;
   traceId: string;
+  actingContext: ActingContext; // ⚠️ NUOVO: ActingContext iniettato dalla route
 }
 
 export interface SupervisorResult {
@@ -101,7 +104,7 @@ export async function supervisorRouter(
   logger: ILogger = defaultLogger
 ): Promise<SupervisorResult> {
   const startTime = Date.now();
-  const { message, userId, userEmail, traceId } = input;
+  const { message, userId, userEmail, traceId, actingContext } = input;
   
   // Telemetria da costruire progressivamente
   let intentDetected: IntentType = 'unknown';
@@ -222,6 +225,7 @@ export async function supervisorRouter(
     // ARCHITETTURA: supervisor-router NON imposta next_step.
     // Il routing è deciso ESCLUSIVAMENTE da supervisor.ts basandosi sullo stato.
     // supervisor-router rileva solo segnali (intent, OCR patterns) e li passa al graph.
+    // ⚠️ ActingContext iniettato in agent_context per accesso worker
     const initialState: Partial<AgentState> = {
       messages: [new HumanMessage(message)],
       userId,
@@ -233,6 +237,14 @@ export async function supervisorRouter(
       needsHumanReview: false,
       iteration_count: 0,
       // next_step è undefined: supervisor deciderà il routing
+      // ⚠️ AI AGENT: Inietta ActingContext in agent_context
+      agent_context: {
+        session_id: traceId, // Usa traceId come session_id temporaneo (Task 1 aggiungerà persistenza)
+        conversation_history: [new HumanMessage(message)],
+        user_role: (actingContext.target.role || 'user') as UserRole,
+        is_impersonating: actingContext.isImpersonating,
+        acting_context: actingContext,
+      },
     };
     
     const graphStartTime = Date.now();
