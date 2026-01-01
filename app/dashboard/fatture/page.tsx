@@ -155,14 +155,21 @@ export default function FatturePage() {
                          <Link href={`/dashboard/fatture/${invoice.id}`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Dettagli">
                             <ArrowUpRight className="w-4 h-4" />
                          </Link>
-                         {/* Download Button (Mock per ora o link reale se esiste campo url) */}
-                         <button 
-                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" 
-                            title="Scarica PDF"
-                            onClick={() => alert(`Download PDF fattura ${invoice.invoice_number} non ancora implementato.`)}
-                         >
-                            <Download className="w-4 h-4" />
-                         </button>
+                         {/* Download Button */}
+                         {invoice.pdf_url || invoice.status === 'issued' ? (
+                           <a
+                             href={`/api/invoices/${invoice.id}/pdf`}
+                             download
+                             className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                             title="Scarica PDF"
+                           >
+                             <Download className="w-4 h-4" />
+                           </a>
+                         ) : (
+                           <span className="p-2 text-gray-300 cursor-not-allowed" title="PDF non disponibile">
+                             <Download className="w-4 h-4" />
+                           </span>
+                         )}
                       </div>
                     </td>
                   </tr>
