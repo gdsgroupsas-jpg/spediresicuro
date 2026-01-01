@@ -261,8 +261,32 @@ npm run test:ocr:integration
 # Expected: 13 test passed, ~27 secondi
 ```
 
+### ✅ P1: AI AGENT INTEGRATION PREREQUISITES (COMPLETATA - 1 Gennaio 2026)
+- [x] **Tabella agent_sessions:** Persistenza conversazioni multi-turn con RLS
+- [x] **ActingContext injection:** ActingContext iniettato in AgentState
+- [x] **AgentState esteso:** agent_context e mentor_response aggiunti
+- [x] **mentor_worker:** Worker Q&A tecnico con RAG su documentazione
+- [x] **API endpoints unificati:** /api/ai/agent-chat come entry point unico
+- [x] **AUDIT_ACTIONS:** Costanti per audit trail operazioni agent
+- [x] **Test completi:** 325 unit + 121 integration test passati
+- [x] **Type safety:** Type-check passa (0 errori), type guards per proprietà opzionali
+
+**Evidenza:**
+- File: `supabase/migrations/054_agent_sessions.sql`, `lib/agent/workers/mentor.ts`, `lib/agent/orchestrator/state.ts`
+- Test: `tests/unit/mentor-worker.test.ts` (13 test), `tests/integration/mentor-worker.test.ts` (8 test)
+- Commit: 11 commit atomizzati con scope chiaro
+
+**Come verificare:**
+```bash
+npm run test:unit # 325 test passed
+npm run test:integration # 121 test passed
+npm run type-check # 0 errori
+```
+
+---
+
 ### FASE 3: ADVANCED FEATURES (FUTURE)
-- [ ] **Checkpointer:** Memoria conversazione multi-turn
+- [ ] **Checkpointer:** Memoria conversazione multi-turn (base: agent_sessions ✅)
 - [ ] **Wallet Integration:** Verifica credito prima di booking
 
 ---
