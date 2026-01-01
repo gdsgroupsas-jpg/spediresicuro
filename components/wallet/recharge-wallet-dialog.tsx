@@ -45,11 +45,11 @@ export function RechargeWalletDialog({
   const [file, setFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Calculate fees locally for immediate preview (mirrors server logic)
+  // Calculate fees locally for immediate preview (Stripe: 1.4% + €0.25)
   const updateCardAmount = (val: number) => {
     setCardAmount(val)
     if (val > 0) {
-        const fee = Number(((val * 0.015) + 0.25).toFixed(2))
+        const fee = Number(((val * 0.014) + 0.25).toFixed(2)) // Stripe: 1.4% + €0.25
         setFeePreview({ fee, total: val + fee })
     } else {
         setFeePreview(null)
@@ -63,28 +63,16 @@ export function RechargeWalletDialog({
     startTransition(async () => {
       try {
         const result = await initiateCardRecharge(cardAmount)
-        if (result.success && result.paymentUrl) {
-            // Create a form dynamically and submit to Intesa
-            const form = document.createElement('form')
-            form.method = 'POST'
-            form.action = result.paymentUrl
-            
-            Object.entries(result.fields).forEach(([key, value]) => {
-                const input = document.createElement('input')
-                input.type = 'hidden'
-                input.name = key
-                input.value = value as string
-                form.appendChild(input)
-            })
-            
-            document.body.appendChild(form)
-            form.submit()
-            // Dialog will close on redirect/page unload
+        if (result.success && result.checkoutUrl) {
+            // Redirect diretto a Stripe Checkout
+            window.location.href = result.checkoutUrl
+            // Dialog will close on redirect
         } else {
             toast.error('Errore inizializzazione pagamento')
         }
-      } catch (error) {
-        toast.error('Errore di connessione al gateway')
+      } catch (error: any) {
+        console.error('Errore Stripe:', error)
+        toast.error(error.message || 'Errore di connessione al gateway')
       }
     })
   }
@@ -133,7 +121,7 @@ export function RechargeWalletDialog({
             <Tabs defaultValue="card" onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-slate-200/50 rounded-xl">
                     <TabsTrigger value="card" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm transition-all py-2.5">
-                        <CreditCard className="w-4 h-4 mr-2" /> Carta / XPay
+                        <CreditCard className="w-4 h-4 mr-2" /> Carta / Stripe
                     </TabsTrigger>
                     <TabsTrigger value="transfer" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm transition-all py-2.5">
                         <FileText className="w-4 h-4 mr-2" /> Bonifico Smart
@@ -178,7 +166,7 @@ export function RechargeWalletDialog({
                                     <span className="font-semibold">{formatCurrency(cardAmount)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm text-slate-500">
-                                    <span>Commissioni (1.5% + 0.25€)</span>
+                                    <span>Commissioni Stripe (1.4% + 0.25€)</span>
                                     <span>+ {formatCurrency(feePreview.fee)}</span>
                                 </div>
                                 <div className="border-t border-indigo-100 mt-2 pt-2 flex justify-between items-center">
@@ -197,7 +185,7 @@ export function RechargeWalletDialog({
                         {isPending ? <Loader2 className="animate-spin" /> : "Procedi al Pagamento Sicuro"}
                     </Button>
                     <p className="text-center text-xs text-slate-400 flex items-center justify-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Gestito da Intesa Sanpaolo XPay
+                        <CheckCircle2 className="w-3 h-3" /> Gestito da Stripe (PCI DSS compliant)
                     </p>
                 </TabsContent>
 

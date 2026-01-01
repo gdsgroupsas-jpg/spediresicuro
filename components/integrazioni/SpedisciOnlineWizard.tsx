@@ -84,7 +84,7 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
             
             // Chiamata tramite endpoint server-side per evitare problemi CORS
             // e mantenere l'API Key sicura (non esposta nel browser)
-            const response = await fetch('/api/test-spedisci-online', {
+            const response = await fetch('/api/integrations/validate-spedisci-online', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
