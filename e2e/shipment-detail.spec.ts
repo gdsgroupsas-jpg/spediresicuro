@@ -109,7 +109,8 @@ test.describe('Dettaglio Spedizione', () => {
         contentType: 'application/pdf',
         body: Buffer.from('Mock PDF content'),
         headers: {
-          'Content-Disposition': 'attachment; filename="etichetta-GLSTEST123456.pdf"',
+          // ⚠️ FIX: Nome file = solo tracking number (senza prefisso)
+          'Content-Disposition': 'attachment; filename="GLSTEST123456.pdf"',
         },
       });
     });
@@ -290,9 +291,13 @@ test.describe('Dettaglio Spedizione', () => {
       const download = await downloadPromise;
       
       if (download) {
-        // Accetta sia "etichetta" che "LDV" nel nome file
+        // ⚠️ FIX: Nome file = solo tracking number (senza prefisso)
+        // Verifica che il filename sia solo il tracking number con estensione .pdf
         const filename = download.suggestedFilename();
-        expect(filename.toLowerCase()).toMatch(/etichetta|ldv/);
+        // Il filename dovrebbe essere nel formato: TRACKINGNUMBER.pdf (es. GLSTEST123456.pdf)
+        expect(filename).toMatch(/^[A-Z0-9]+\.pdf$/i);
+        // Verifica che contenga il tracking number atteso (GLSTEST123456)
+        expect(filename.toLowerCase()).toContain('glstest123456');
       } else {
         // Se non c'è download, potrebbe essere un link diretto
         console.log('⚠️ Download non rilevato, potrebbe essere un link diretto');

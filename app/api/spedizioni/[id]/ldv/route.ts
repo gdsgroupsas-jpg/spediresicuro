@@ -131,8 +131,8 @@ export async function GET(
       
       if (pdfResult) {
         const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
-        // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e
-        const filename = `etichetta-${trackingNumber}.pdf`;
+        // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+        const filename = `${trackingNumber}.pdf`;
         
         return new NextResponse(new Uint8Array(pdfResult.data), {
           headers: {
@@ -155,8 +155,8 @@ export async function GET(
         const binaryString = Buffer.from(base64Data, 'base64');
         
         const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
-        // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e
-        const filename = `etichetta-${trackingNumber}.pdf`;
+        // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+        const filename = `${trackingNumber}.pdf`;
         
         console.log('✅ [LDV] Etichetta originale decodificata da label_data (size:', binaryString.length, 'bytes)');
         
