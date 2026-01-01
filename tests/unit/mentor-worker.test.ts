@@ -26,6 +26,14 @@ vi.mock('path', () => ({
   join: vi.fn((...args) => args.join('/')),
 }));
 
+// Mock cache service (P3 Task 6)
+vi.mock('@/lib/services/cache', () => ({
+  agentCache: {
+    getRAG: vi.fn(() => null), // Default: no cache hit
+    setRAG: vi.fn(),
+  },
+}));
+
 // ==================== FIXTURES ====================
 
 const createMockAgentState = (overrides: Partial<AgentState> = {}): AgentState => ({
@@ -58,10 +66,17 @@ Il wallet è un sistema di credito prepagato che permette agli utenti di addebit
 
 describe('mentor-worker', () => {
   let logger: ILogger;
+  let agentCache: any;
   
-  beforeEach(() => {
+  beforeEach(async () => {
     logger = new NullLogger();
     vi.clearAllMocks();
+    
+    // Reset cache mock per ogni test
+    const cacheModule = await import('@/lib/services/cache');
+    agentCache = cacheModule.agentCache;
+    vi.mocked(agentCache.getRAG).mockReturnValue(null); // Default: no cache
+    vi.mocked(agentCache.setRAG).mockClear();
   });
   
   afterEach(() => {
