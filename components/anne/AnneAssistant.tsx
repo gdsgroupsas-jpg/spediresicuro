@@ -163,7 +163,7 @@ export function AnneAssistant({
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/anne/chat', {
+      const response = await fetch('/api/ai/agent-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
