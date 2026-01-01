@@ -1,48 +1,50 @@
 'use server';
 
 import { createServerActionClient } from '@/lib/supabase-server';
-import { xpay } from '@/lib/payments/intesa-xpay';
+import { createStripeCheckoutSession, calculateStripeFee } from '@/lib/payments/stripe';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
+import { requireSafeAuth } from '@/lib/safe-auth';
 
 /**
- * Inizia una ricarica con Carta (Intesa XPay)
+ * Inizia una ricarica con Carta (Stripe)
+ * 
+ * Sostituisce XPay con Stripe per pagamenti più universali e migliore UX.
  */
 export async function initiateCardRecharge(amountCredit: number) {
-  const supabase = createServerActionClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  // Usa requireSafeAuth per supportare impersonation
+  const context = await requireSafeAuth();
+  const targetId = context.target.id;
+  const targetEmail = context.target.email || '';
 
-  // 1. Calcola Totale con Commissioni
-  const { fee, total } = xpay.calculateFee(amountCredit);
+  // Validazione importo
+  if (amountCredit <= 0 || amountCredit > 10000) {
+    throw new Error('Importo non valido. Deve essere tra €0.01 e €10.000');
+  }
 
-  // 2. Crea Transazione nel DB (Pending)
-  const { data: tx, error } = await supabase
-    .from('payment_transactions')
-    .insert({
-      user_id: user.id,
-      amount_credit: amountCredit,
-      amount_fee: fee,
-      amount_total: total,
-      provider: 'intesa',
-      status: 'pending'
-    })
-    .select()
-    .single();
+  // 1. Calcola Totale con Commissioni Stripe
+  const { fee, total } = calculateStripeFee(amountCredit);
 
-  if (error || !tx) throw new Error('Errore creazione transazione: ' + error?.message);
+  // 2. Crea Stripe Checkout Session
+  const { sessionId, url, transactionId } = await createStripeCheckoutSession({
+    amountCredit,
+    userId: targetId,
+    userEmail: targetEmail,
+  });
 
-  // 3. Genera parametri XPay
-  const paymentData = xpay.createPaymentSession(tx.id, total, user.email || '');
+  if (!url) {
+    throw new Error('Errore creazione sessione Stripe');
+  }
 
   return {
     success: true,
-    paymentUrl: paymentData.url,
-    fields: paymentData.fields,
-    feeInfo: { credit: amountCredit, fee, total }
+    checkoutUrl: url, // URL Stripe Checkout (redirect diretto)
+    sessionId,
+    transactionId,
+    feeInfo: { credit: amountCredit, fee, total },
   };
 }
 

@@ -2,19 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 
 /**
- * Endpoint per testare connessione Spedisci.online
+ * Endpoint per validare le credenziali Spedisci.online
  * 
  * Fa una chiamata API reale a Spedisci.online per verificare che:
  * - L'API Key sia valida
  * - L'endpoint sia corretto
  * - Le credenziali funzionino
  * 
- * POST /api/test-spedisci-online
+ * POST /api/integrations/validate-spedisci-online
  * Body: { apiKey: string, baseUrl: string }
+ * 
+ * ⚠️ SECURITY: 
+ * - Richiede autenticazione
+ * - L'API key viene validata ma mai loggata o esposta
+ * - Rate limiting gestito a livello di middleware/edge
  */
+
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verifica autenticazione
+    // 1. Verifica autenticazione (obbligatoria)
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -130,11 +136,11 @@ export async function POST(request: NextRequest) {
       data: data, // Opzionale: ritorna i dati della risposta (es: tariffe disponibili)
     });
 
-  } catch (error: any) {
-    console.error('❌ [TEST API] Errore test connessione:', error);
+  } catch (error: unknown) {
+    // Gestisci errori di rete (no PII nei log)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    // Gestisci errori di rete
-    if (error.message?.includes('fetch')) {
+    if (errorMessage.includes('fetch')) {
       return NextResponse.json(
         { 
           success: false, 
@@ -147,10 +153,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'Errore durante il test di connessione' 
+        error: errorMessage || 'Errore durante il test di connessione' 
       },
       { status: 200 }
     );
   }
 }
-

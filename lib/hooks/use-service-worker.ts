@@ -210,34 +210,42 @@ export function useServiceWorker() {
 function showUpdateNotification() {
   const message = document.createElement('div');
   message.className = 'update-notification';
-  message.innerHTML = `
-    <div style="
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #FF9500;
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      font-size: 14px;
-      z-index: 9999;
-    ">
-      <div style="margin-bottom: 8px;">📦 Aggiornamento disponibile!</div>
-      <button onclick="location.reload()" style="
-        background: white;
-        color: #FF9500;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 12px;
-      ">
-        Aggiorna
-      </button>
-    </div>
+  
+  // ⚠️ SECURITY: Usa textContent invece di innerHTML per prevenire XSS
+  // Creiamo elementi DOM programmaticamente
+  message.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #FF9500;
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    z-index: 9999;
   `;
+  
+  const textDiv = document.createElement('div');
+  textDiv.style.marginBottom = '8px';
+  textDiv.textContent = '📦 Aggiornamento disponibile!';
+  
+  const button = document.createElement('button');
+  button.style.cssText = `
+    background: white;
+    color: #FF9500;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+  `;
+  button.textContent = 'Aggiorna';
+  button.onclick = () => location.reload();
+  
+  message.appendChild(textDiv);
+  message.appendChild(button);
   document.body.appendChild(message);
 }
 
