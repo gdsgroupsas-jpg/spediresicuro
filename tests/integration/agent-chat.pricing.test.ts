@@ -14,6 +14,12 @@ vi.mock('@/lib/auth-config', () => ({
   auth: vi.fn(),
 }));
 
+// Mock getSafeAuth (ora usato dalla route invece di auth diretto)
+const mockGetSafeAuth = vi.fn();
+vi.mock('@/lib/safe-auth', () => ({
+  getSafeAuth: mockGetSafeAuth,
+}));
+
 // Mock supervisor-router (entry point unico)
 const mockSupervisorRouter = vi.fn();
 const mockFormatPricingResponse = vi.fn();
@@ -100,6 +106,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     const authModule = await import('@/lib/auth-config');
     const contextModule = await import('@/lib/ai/context-builder');
     const cacheModule = await import('@/lib/ai/cache');
+    const safeAuthModule = await import('@/lib/safe-auth');
     
     auth = authModule.auth as ReturnType<typeof vi.fn>;
     buildContext = contextModule.buildContext as ReturnType<typeof vi.fn>;
@@ -149,7 +156,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       return `💰 Preventivo: €${options[0].finalPrice.toFixed(2)}`;
     });
     
-    // Default mock: sessione valida
+    // Default mock: sessione valida (per compatibilità)
     vi.mocked(auth).mockResolvedValue({
       user: {
         id: 'test-user-id',
@@ -157,6 +164,42 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
         name: 'Test User',
       },
     } as any);
+    
+    // Default mock: getSafeAuth restituisce ActingContext valido
+    // ⚠️ IMPORTANTE: getSafeAuth è ora usato dalla route invece di auth diretto
+    mockGetSafeAuth.mockResolvedValue({
+      actor: {
+        id: 'test-user-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        role: 'user',
+      },
+      target: {
+        id: 'test-user-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        role: 'user',
+      },
+      isImpersonating: false,
+    });
+    
+    // Default mock: getSafeAuth restituisce ActingContext valido
+    // ⚠️ IMPORTANTE: getSafeAuth è ora usato dalla route invece di auth diretto
+    mockGetSafeAuth.mockResolvedValue({
+      actor: {
+        id: 'test-user-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        role: 'user',
+      },
+      target: {
+        id: 'test-user-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        role: 'user',
+      },
+      isImpersonating: false,
+    });
 
     // Default mock: no cached context
     vi.mocked(getCachedContext).mockReturnValue(null);
@@ -314,7 +357,8 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
     });
 
     it('should return 401 when no session', async () => {
-      vi.mocked(auth).mockResolvedValue(null);
+      // Mock getSafeAuth per restituire null (non autenticato)
+      mockGetSafeAuth.mockResolvedValue(null);
 
       const request = createMockRequest({
         message: 'Test',
