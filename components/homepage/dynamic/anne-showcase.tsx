@@ -1,7 +1,7 @@
 /**
- * Annie AI Showcase Section
+ * Anne AI Showcase Section
  *
- * Sezione dedicata a presentare Annie AI con:
+ * Sezione dedicata a presentare Anne AI con:
  * - Demo chat interattiva
  * - Features AI evidenziate
  * - Animazioni conversazione
@@ -69,7 +69,7 @@ const aiFeatures = [
   }
 ];
 
-export default function AnnieShowcase() {
+export default function AnneShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
   const [visibleMessages, setVisibleMessages] = useState<number>(0);
@@ -116,14 +116,14 @@ export default function AnnieShowcase() {
             className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-violet-100 to-purple-100 border border-violet-200 mb-6"
           >
             <Bot className="w-5 h-5 text-violet-600" />
-            <span className="text-sm font-semibold text-violet-700">Incontra Annie</span>
+            <span className="text-sm font-semibold text-violet-700">Incontra Anne</span>
           </motion.div>
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
             Incontra{' '}
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                Annie
+                Anne
               </span>
               <motion.div
                 initial={{ width: 0 }}
@@ -166,7 +166,7 @@ export default function AnnieShowcase() {
                     </div>
                     <div>
                       <h3 className="font-bold text-white flex items-center gap-2">
-                        Annie
+                        Anne
                         <Sparkles className="w-4 h-4 text-amber-300" />
                       </h3>
                       <p className="text-sm text-white/70">AI Logistic Assistant</p>
@@ -243,7 +243,7 @@ export default function AnnieShowcase() {
                   <div className="flex items-center gap-3">
                     <input
                       type="text"
-                      placeholder="Chiedi qualsiasi cosa ad Annie..."
+                      placeholder="Chiedi qualsiasi cosa ad Anne..."
                       className="flex-1 px-4 py-3 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       disabled
                     />
