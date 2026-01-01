@@ -213,7 +213,19 @@ export async function supervisor(
       };
     }
     
-    // P2: Explain Intent - Richieste di spiegazione business flows
+    // P1: Mentor Intent - Domande tecniche su architettura, wallet, RLS (priorità su explain)
+    // Mentor è più generico, quindi controlliamo prima per evitare conflitti
+    if (detectMentorIntent(messageText)) {
+      logger.log('🎓 [Supervisor] Intent mentor rilevato, routing a mentor_worker');
+      return {
+        next_step: 'mentor_worker',
+        processingStatus: 'idle',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+    
+    // P2: Explain Intent - Richieste di spiegazione business flows (più specifico)
+    // Controllato dopo mentor per evitare conflitti con domande tecniche
     if (detectExplainIntent(messageText)) {
       logger.log('📚 [Supervisor] Intent explain rilevato, routing a explain_worker');
       return {
@@ -228,16 +240,6 @@ export async function supervisor(
       logger.log('🐛 [Supervisor] Intent debug rilevato, routing a debug_worker');
       return {
         next_step: 'debug_worker',
-        processingStatus: 'idle',
-        iteration_count: (state.iteration_count || 0) + 1,
-      };
-    }
-    
-    // P1: Mentor Intent - Domande tecniche su architettura, wallet, RLS
-    if (detectMentorIntent(messageText)) {
-      logger.log('🎓 [Supervisor] Intent mentor rilevato, routing a mentor_worker');
-      return {
-        next_step: 'mentor_worker',
         processingStatus: 'idle',
         iteration_count: (state.iteration_count || 0) + 1,
       };
