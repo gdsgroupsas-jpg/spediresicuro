@@ -38,7 +38,7 @@ const features = [
   {
     icon: Bot,
     title: 'OCR 90% Confidence',
-    description: 'Gemini Vision estrae dati con 90% confidence. Validazione indirizzi automatica CAP/Comuni.',
+    description: 'AI Vision estrae dati con 90% confidence. Validazione indirizzi automatica CAP/Comuni.',
     gradient: 'from-violet-500 to-purple-600',
     shadowColor: 'shadow-violet-500/25',
     stat: '90%',

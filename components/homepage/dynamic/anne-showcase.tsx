@@ -49,12 +49,12 @@ const chatMessages = [
 const aiFeatures = [
   {
     icon: Brain,
-    title: 'Gemini Vision OCR',
+    title: 'AI Vision OCR',
     description: '90% confidence reale. Legge screenshot WhatsApp, foto pacchi, documenti PDF, vocali trascritti.'
   },
   {
     icon: Target,
-    title: 'LangGraph Supervisor',
+    title: 'AI Supervisor',
     description: '6 worker specializzati: OCR, Address, Pricing, Booking, Mentor, Debug. Orchestrazione intelligente.'
   },
   {
@@ -133,12 +133,12 @@ export default function AnneShowcase() {
               />
             </span>
             <br />
-            Gemini Vision + LangGraph
+            AI Vision + Orchestration
           </h2>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Non un chatbot. Un <span className="font-semibold text-gray-900">AI Supervisor</span> con 6 worker specializzati.
-            Gemini 2.0 Flash multimodal + LangGraph orchestration. <span className="font-semibold text-violet-600">90% OCR confidence</span> reale.
+            Multimodal AI (text + vision) con orchestrazione avanzata. <span className="font-semibold text-violet-600">90% OCR confidence</span> reale.
           </p>
         </motion.div>
 
@@ -268,8 +268,8 @@ export default function AnneShowcase() {
                 Architettura AI-First Reale
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                <span className="font-semibold text-violet-600">Gemini 2.0 Flash</span> multimodal (text + vision).{' '}
-                <span className="font-semibold text-violet-600">LangGraph</span> con supervisor pattern.{' '}
+                <span className="font-semibold text-violet-600">Multimodal AI</span> avanzata (text + vision).{' '}
+                <span className="font-semibold text-violet-600">Orchestrazione intelligente</span> con supervisor pattern.{' '}
                 6 worker specializzati che collaborano. Validazione indirizzi IT (CAP, comuni, frazioni).{' '}
                 <span className="font-semibold text-gray-900">In beta testing su spedizioni reali.</span>
               </p>
