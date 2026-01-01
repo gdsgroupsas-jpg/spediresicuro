@@ -27,7 +27,7 @@ const steps = [
   {
     number: '01',
     title: 'Carica Qualsiasi Cosa',
-    description: 'Screenshot WhatsApp, foto del pacco, email, documento. Annie capisce tutto.',
+    description: 'Screenshot WhatsApp, foto del pacco, email, documento. Anne capisce tutto.',
     icon: Upload,
     gradient: 'from-blue-500 to-cyan-500',
     examples: [
@@ -39,7 +39,7 @@ const steps = [
   },
   {
     number: '02',
-    title: 'Annie AI Elabora',
+    title: 'Anne AI Elabora',
     description: 'La nostra AI legge, estrae i dati, valida l\'indirizzo e trova il corriere migliore.',
     icon: Sparkles,
     gradient: 'from-violet-500 to-purple-500',
