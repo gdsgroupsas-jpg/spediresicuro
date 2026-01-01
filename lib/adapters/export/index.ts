@@ -68,8 +68,8 @@ export class ExportService {
         const data = CSVExporter.exportLDV(shipment, options);
         return {
           data: Buffer.from(data, 'utf-8'),
-          // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e
-          filename: `ldv-${shipment.tracking_number}.csv`,
+          // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+          filename: `${shipment.tracking_number}.csv`,
           mimeType: 'text/csv',
         };
       }
@@ -79,8 +79,8 @@ export class ExportService {
         const data = await XLSXExporter.exportLDV(shipment, options);
         return {
           data,
-          // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e
-          filename: `ldv-${shipment.tracking_number}.xlsx`,
+          // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+          filename: `${shipment.tracking_number}.xlsx`,
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         };
       }
@@ -90,8 +90,8 @@ export class ExportService {
         const data = await PDFExporter.exportLDV(shipment, options);
         return {
           data,
-          // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e
-          filename: `etichetta-${shipment.tracking_number}.pdf`,
+          // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+          filename: `${shipment.tracking_number}.pdf`,
           mimeType: 'application/pdf',
         };
       }

@@ -670,9 +670,9 @@ export default function NuovaSpedizionePage() {
               const blob = new Blob([bytes], { type: 'application/pdf' });
               const blobUrl = URL.createObjectURL(blob);
               
-              // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e
+              // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
               const trackingNumber = ldvResult.tracking_number || spedizioneData.tracking || 'spedizione';
-              const filename = `etichetta-${trackingNumber}.pdf`;
+              const filename = `${trackingNumber}.pdf`;
               
               // Scarica il PDF
               const link = document.createElement('a');
