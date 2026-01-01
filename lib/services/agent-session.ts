@@ -76,23 +76,31 @@ function deserializeAgentState(data: Record<string, unknown>): AgentState {
   if (data._messages_serialized && Array.isArray(data._messages_serialized)) {
     messages = (data._messages_serialized as unknown[]).map((msgJson: any) => {
       try {
-        // Usa fromJSON() di LangChain se disponibile
+        // Verifica formato LangChain
         if (msgJson.lc === 1 && msgJson.lc_kwargs) {
-          // Formato LangChain standard
-          const msgType = msgJson.getType?.() || msgJson.id?.[0] || 'human';
+          // Formato LangChain standard - ricostruisci manualmente
+          const msgType = msgJson.id?.[0] || 'human';
+          const content = msgJson.lc_kwargs?.content || '';
+          const additional_kwargs = msgJson.lc_kwargs?.additional_kwargs || {};
           
-          if (msgType === 'human' || msgType === 'HumanMessage') {
-            return HumanMessage.fromJSON(msgJson);
-          }
           if (msgType === 'ai' || msgType === 'AIMessage') {
-            return AIMessage.fromJSON(msgJson);
+            return new AIMessage({
+              content,
+              additional_kwargs,
+            });
           }
           if (msgType === 'system' || msgType === 'SystemMessage') {
-            return SystemMessage.fromJSON(msgJson);
+            return new SystemMessage({
+              content,
+              additional_kwargs,
+            });
           }
           
           // Default: HumanMessage
-          return HumanMessage.fromJSON(msgJson);
+          return new HumanMessage({
+            content,
+            additional_kwargs,
+          });
         }
         
         // Fallback: crea HumanMessage da content
