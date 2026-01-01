@@ -29,7 +29,7 @@ const features = [
   {
     icon: Zap,
     title: 'AI-First',
-    description: 'Screenshot → Etichetta in 10 secondi. Annie legge qualsiasi cosa: foto, vocali, PDF, chat.',
+    description: 'Screenshot → Etichetta in 10 secondi. Anne legge qualsiasi cosa: foto, vocali, PDF, chat.',
     gradient: 'from-amber-500 to-orange-600',
     shadowColor: 'shadow-amber-500/25',
     stat: '94%',
