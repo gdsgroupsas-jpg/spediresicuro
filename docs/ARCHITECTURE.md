@@ -714,6 +714,114 @@ export async function createShipment(...) {
 
 ---
 
+## UI/UX Components (P1/P2/P3)
+
+### Anne Assistant Chat UI
+
+**Status:** ✅ **IMPLEMENTATO** (P2 completato)
+
+**Componenti:**
+- `components/anne/AnneAssistant.tsx` - Chat UI principale
+  - Floating ghost icon in basso a destra
+  - Chat panel espandibile con animazioni Framer Motion
+  - Integrazione con `/api/ai/agent-chat` endpoint
+  - Persistenza preferenze utente (localStorage)
+  - Auto-greet basato su preferenze utente
+  - Supporto markdown per risposte AI
+
+**Features:**
+- Conversazioni multi-turn (P1: `agent_sessions` table)
+- State persistence (P3: LangGraph checkpointer)
+- Telemetria integrata per debugging
+- Responsive design (mobile + desktop)
+
+**Integrazione:**
+```typescript
+// In layout.tsx o page.tsx
+<AnneAssistant
+  userId={userId}
+  userRole={userRole}
+  userName={userName}
+  currentPage={currentPage}
+/>
+```
+
+**Riferimenti:**
+- `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 4: Mobile Anne
+- `STATO_P1_P2_P3.md` - P2 completato
+
+---
+
+### Agent Debug Panel
+
+**Status:** ✅ **IMPLEMENTATO** (P2 completato)
+
+**Componenti:**
+- `components/agent/AgentDebugPanel.tsx` - Debug panel per admin
+  - Visibile solo per admin/superadmin
+  - Mostra routing decisions del supervisor
+  - Telemetria in tempo reale
+  - Toggle on/off con localStorage
+
+**Features:**
+- Mostra: `intent_detected`, `supervisor_decision`, `backend_used`
+- Mostra: `iteration_count`, `processingStatus`, `confidenceScore`
+- Mostra: `mentor_response` con sources e confidence
+- Animazioni Framer Motion per expand/collapse
+
+**Integrazione:**
+```typescript
+// In AnneAssistant.tsx
+{(userRole === 'admin' || userRole === 'superadmin') && (
+  <AgentDebugPanel telemetry={lastTelemetry} agentState={currentAgentState} />
+)}
+```
+
+**Riferimenti:**
+- `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 1: AgentDebugPanel
+- `STATO_P1_P2_P3.md` - P2 completato
+
+---
+
+### Mobile Anne Integration
+
+**Status:** ✅ **IMPLEMENTATO** (P2 completato)
+
+**Componenti:**
+- Icona ghost nel menu mobile per aprire Anne Assistant
+- Accessibilità migliorata su dispositivi mobili
+
+**Riferimenti:**
+- `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 4: Mobile Anne
+- `STATO_P1_P2_P3.md` - P2 completato
+
+---
+
+### UI/UX Alignment Status
+
+**P1 (Prerequisiti):**
+- ✅ Backend infrastructure completa
+- ✅ API endpoints unificati
+- ✅ Database schema per conversazioni
+
+**P2 (UX e Debugging):**
+- ✅ Chat UI completa (AnneAssistant)
+- ✅ Debug panel per admin (AgentDebugPanel)
+- ✅ Mobile integration (Mobile Anne)
+- ✅ Persistenza preferenze utente
+
+**P3 (Architecture & Technical Debt):**
+- ✅ State persistence (checkpointer)
+- ✅ Performance optimization (cache)
+- ✅ Type safety improvements
+- ⚠️ Nessun nuovo componente UI (focus su backend)
+
+**Conclusione:**
+- **UI/UX allineata:** ✅ Sì, tutti i componenti P1/P2/P3 sono implementati e funzionanti
+- **Documentazione:** ✅ Completa - Componenti documentati in questa sezione
+
+---
+
 **Document Owner:** Engineering Team  
-**Last Updated:** December 29, 2025  
+**Last Updated:** January 1, 2026 (UI/UX section added)  
 **Review Cycle:** Quarterly
