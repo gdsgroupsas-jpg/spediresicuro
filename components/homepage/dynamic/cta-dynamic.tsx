@@ -167,7 +167,7 @@ export default function CTADynamic() {
             {/* Tech Stack */}
             <div className="flex items-center gap-3">
               <span className="text-white/80 text-sm">
-                Powered by <span className="font-semibold text-white">Gemini Vision + LangGraph</span>
+                Powered by <span className="font-semibold text-white">AI Vision + Orchestration</span>
               </span>
             </div>
 
