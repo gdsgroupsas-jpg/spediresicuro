@@ -130,8 +130,9 @@ export async function GET(
       const pdfResult = await downloadPdfFromUrl(originalLabelUrl);
       
       if (pdfResult) {
-        const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
         // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+        // Fallback: tracking_number -> ldv -> tracking -> id (per compatibilità con test e API legacy)
+        const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.tracking || shipment.id;
         const filename = `${trackingNumber}.pdf`;
         
         return new NextResponse(new Uint8Array(pdfResult.data), {
@@ -154,8 +155,9 @@ export async function GET(
         const base64Data = shipment.label_data;
         const binaryString = Buffer.from(base64Data, 'base64');
         
-        const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.id;
         // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
+        // Fallback: tracking_number -> ldv -> tracking -> id (per compatibilità con test e API legacy)
+        const trackingNumber = shipment.tracking_number || shipment.ldv || shipment.tracking || shipment.id;
         const filename = `${trackingNumber}.pdf`;
         
         console.log('✅ [LDV] Etichetta originale decodificata da label_data (size:', binaryString.length, 'bytes)');
@@ -191,6 +193,7 @@ export async function GET(
     console.log('📋 [LDV] Uso ExportService come fallback (etichetta non originale)');
     
     // Converti formato spedizione per ExportService
+    // ⚠️ FIX: Fallback completo per tracking number (compatibilità con test e API legacy)
     const shipmentForExport = {
       tracking_number: shipment.tracking_number || shipment.tracking || shipment.ldv || shipment.id,
       created_at: shipment.createdAt || shipment.created_at || new Date().toISOString(),
