@@ -15,6 +15,7 @@ import { AgentState } from '../orchestrator/state';
 import { defaultLogger, type ILogger } from '../logger';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { agentCache } from '@/lib/services/cache';
 
 /**
  * Documenti disponibili per RAG (business flows)
@@ -314,11 +315,25 @@ export async function explainWorker(
     const query = lastMessage.content.toString();
     logger.log(`🔍 [Explain] Cerca spiegazione per: "${query.substring(0, 50)}..."`);
     
+    // P3 Task 6: Check cache RAG
+    const cachedResult = agentCache.getRAG(query, 'explain');
+    
+    if (cachedResult) {
+      logger.log(`✅ [Explain] Risultato da cache`);
+      return {
+        explain_response: cachedResult,
+        next_step: 'END',
+      };
+    }
+    
     // Cerca documenti rilevanti
     const documents = await searchDocuments(query, logger);
     
     // Genera spiegazione
     const { explanation, diagram } = generateExplanation(query, documents);
+    
+    // P3 Task 6: Salva in cache
+    agentCache.setRAG(query, { explanation, diagram }, 'explain');
     
     logger.log(`✅ [Explain] Spiegazione generata (${documents.length} documenti trovati)`);
     

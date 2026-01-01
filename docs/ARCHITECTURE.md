@@ -405,6 +405,33 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 - `lib/agent/orchestrator/supervisor.ts` - Decision logic
 - `lib/agent/orchestrator/pricing-graph.ts` - LangGraph workflow
 - `lib/agent/orchestrator/state.ts` - AgentState type
+
+**P3 Architecture Improvements (1 Gennaio 2026):**
+
+**State Persistence:**
+- `lib/agent/orchestrator/checkpointer.ts` - LangGraph checkpointer per persistenza stato
+- `lib/services/agent-session.ts` - Service layer con cache in-memory (TTL 5 min)
+- Persistenza conversazioni multi-turn in `agent_sessions` table
+- Ripristino stato da checkpoint quando utente riapre chat
+
+**Wallet Integration:**
+- `lib/wallet/credit-check.ts` - Verifica credito pre-booking
+- Check in `supervisor.ts` prima di routing a `booking_worker`
+- Prevenzione tentativi booking con credito insufficiente
+
+**Tool Registry:**
+- `lib/agent/tools/registry.ts` - Registry centralizzato per tools
+- Auto-discovery e validazione input/output con Zod
+- Compatibilità con tools esistenti
+
+**Type Safety:**
+- `lib/agent/orchestrator/type-guards.ts` - Type guards per AgentState
+- Rimossi TODO, migliorata type safety senza `as any` non gestiti
+
+**Performance:**
+- `lib/services/cache.ts` - Cache in-memory per RAG (TTL 1 ora) e pricing (TTL 5 min)
+- Integrato in `mentor_worker.ts`, `explain_worker.ts`, `pricing_worker.ts`
+- Query Supabase ottimizzate (select solo campi necessari)
 - `lib/agent/workers/*.ts` - Worker implementations
 - `lib/config.ts` - Configurazione centralizzata (MAX_ITERATIONS, etc.)
 - `MIGRATION_MEMORY.md` - Documentazione completa migrazione e stato
