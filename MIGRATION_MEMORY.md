@@ -283,12 +283,12 @@ npm run test:integration # 121 test passed
 npm run type-check # 0 errori
 ```
 
-### ✅ P2: AI AGENT FEATURES - UX E DEBUGGING (IN CORSO - 1 Gennaio 2026)
+### ✅ P2: AI AGENT FEATURES - UX E DEBUGGING (COMPLETATA - 1 Gennaio 2026)
 - [x] **Task 4: Mobile Anne** - Icona ghost nel menu mobile per aprire Anne Assistant
 - [x] **Task 1: AgentDebugPanel** - Componente UI per telemetria (solo admin/superadmin)
 - [x] **Task 2: debug_worker** - Worker per analisi errori e troubleshooting
 - [x] **Task 3: explain_worker** - Worker per spiegare business flows (wallet, spedizioni, margini)
-- [ ] **Task 5: compensation_queue processor** - CRON job per cleanup orphan records
+- [x] **Task 5: compensation_queue processor** - CRON job per cleanup orphan records
 
 **Evidenza:**
 - File: `components/agent/AgentDebugPanel.tsx`, `lib/agent/workers/debug.ts`, `components/dashboard-mobile-nav.tsx`
@@ -300,6 +300,7 @@ npm run type-check # 0 errori
 - **AgentDebugPanel:** Toggle localStorage, mostra telemetria supervisor (intent, decision, backend, fallback), agent state (iterations, status, confidence), mentor response (sources, confidence)
 - **debug_worker:** Analizza `validationErrors`, `processingStatus`, `confidenceScore`; suggerisce fix comuni, link documentazione, retry strategies; restituisce `debug_response` con analysis, suggestions, links
 - **explain_worker:** RAG su documentazione business (MONEY_FLOWS.md, ARCHITECTURE.md, DB_SCHEMA.md, README.md); spiega flussi wallet, processo spedizione, calcolo margini; genera diagrammi testuali; restituisce `explain_response` con explanation e diagram
+- **compensation_queue processor:** CRON job `/api/cron/compensation-queue` per cleanup automatico; verifica records con `status='pending'` e `created_at > 7 giorni`; marca come `expired` (mantiene audit trail); logga tutte le operazioni con `SYSTEM_MAINTENANCE` audit action; Authorization Bearer token obbligatorio (fail-closed)
 
 **Come verificare:**
 ```bash
