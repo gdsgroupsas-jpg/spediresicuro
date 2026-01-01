@@ -16,10 +16,35 @@
 import Stripe from 'stripe';
 import { supabaseAdmin } from '@/lib/db/client';
 
-// Inizializza Stripe client
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
-});
+// Lazy initialization per evitare errori a build-time
+let _stripe: Stripe | null = null;
+
+/**
+ * Ottiene l'istanza Stripe (lazy init)
+ * 
+ * Inizializza Stripe solo quando effettivamente necessario,
+ * evitando errori durante il build di Next.js.
+ */
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured');
+    }
+    _stripe = new Stripe(secretKey, {
+      apiVersion: '2025-12-15.clover',
+    });
+  }
+  return _stripe;
+}
+
+// Export per backward compatibility (deprecato)
+// ⚠️ Usare getStripe() nelle nuove implementazioni
+export const stripe = {
+  get webhooks() { return getStripe().webhooks; },
+  get checkout() { return getStripe().checkout; },
+  get paymentIntents() { return getStripe().paymentIntents; },
+};
 
 /**
  * Configurazione pagamento Stripe
