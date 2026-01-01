@@ -75,6 +75,7 @@ export const AUDIT_ACTIONS = {
   // SYSTEM EVENTS
   // ============================================
   SYSTEM_ERROR: 'system_error',
+  SYSTEM_MAINTENANCE: 'system_maintenance', // P2: Cleanup automatico (compensation_queue, etc.)
   UNAUTHORIZED_ACCESS: 'unauthorized_access',
   SECURITY_VIOLATION: 'security_violation',
   
@@ -98,6 +99,7 @@ export type AuditAction = typeof AUDIT_ACTIONS[keyof typeof AUDIT_ACTIONS];
  */
 export const AUDIT_RESOURCE_TYPES = {
   SHIPMENT: 'shipment',
+  COMPENSATION_QUEUE: 'compensation_queue', // P2: Compensation queue records
   WALLET: 'wallet',
   WALLET_TRANSACTION: 'wallet_transaction',
   IMPERSONATION: 'impersonation',
