@@ -288,6 +288,20 @@ export async function supervisorRouter(
       });
     }
     
+    // P2: Se abbiamo risposta debug, restituiscila
+    if (result.debug_response) {
+      supervisorDecision = 'end';
+      workerRun = null; // Debug non è un worker standard
+      // Formatta risposta debug con analysis e suggestions
+      const debugMessage = `${result.debug_response.analysis}\n\n**Suggerimenti:**\n${result.debug_response.suggestions.map(s => `• ${s}`).join('\n')}`;
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: debugMessage,
+        executionTimeMs: Date.now() - startTime,
+        source: 'pricing_graph',
+      });
+    }
+    
     // P1: Se abbiamo risposta mentor, restituiscila
     if (result.mentor_response) {
       supervisorDecision = 'end';

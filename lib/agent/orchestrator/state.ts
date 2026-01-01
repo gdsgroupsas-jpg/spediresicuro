@@ -111,4 +111,14 @@ export interface AgentState {
     sources: string[]; // File paths referenziati (es. docs/MONEY_FLOWS.md)
     confidence: number; // 0-100
   };
+
+  /**
+   * Risposta del debug worker (analisi errori e troubleshooting).
+   * Popolato da debug_worker quando l'utente chiede aiuto per errori o problemi.
+   */
+  debug_response?: {
+    analysis: string;
+    suggestions: string[];
+    links: string[]; // File paths referenziati per documentazione
+  };
 }
