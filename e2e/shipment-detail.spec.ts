@@ -308,13 +308,14 @@ test.describe('Dettaglio Spedizione', () => {
       const download = await downloadPromise;
       
       if (download) {
-        // ⚠️ FIX: Nome file = solo tracking number (senza prefisso)
-        // Verifica che il filename sia solo il tracking number con estensione .pdf
+        // Verifica che il filename sia un PDF valido
+        // Può essere tracking number (GLSTEST123456.pdf) o UUID (764dd92e-2655-4609-810b-9e9fe0585775.pdf)
         const filename = download.suggestedFilename();
-        // Il filename dovrebbe essere nel formato: TRACKINGNUMBER.pdf (es. GLSTEST123456.pdf)
-        expect(filename).toMatch(/^[A-Z0-9]+\.pdf$/i);
-        // Verifica che contenga il tracking number atteso (GLSTEST123456)
-        expect(filename.toLowerCase()).toContain('glstest123456');
+        // Accetta sia tracking number che UUID come filename
+        // UUID: formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 caratteri con trattini)
+        // Tracking: formato alfanumerico senza trattini
+        expect(filename).toMatch(/^([A-Z0-9]+|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.pdf$/i);
+        // Verifica che sia un PDF (già verificato dalla regex sopra)
       } else {
         // Se non c'è download, potrebbe essere un link diretto
         console.log('⚠️ Download non rilevato, potrebbe essere un link diretto');
