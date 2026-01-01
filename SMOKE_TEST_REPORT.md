@@ -64,3 +64,4 @@ curl -i https://spediresicuro.vercel.app/api/spedizioni
 - Deploy Vercel automatico attivo su master
 
 
+
