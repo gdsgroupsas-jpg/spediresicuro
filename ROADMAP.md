@@ -4,11 +4,40 @@
 
 This document tracks planned features and improvements for SpedireSicuro. Features are prioritized based on business value, technical complexity, and user demand.
 
-**Last Updated:** December 21, 2025
+**Last Updated:** January 1, 2026
 
 ---
 
 ## 🚀 Active Development (Q1 2026)
+
+### AI Agent Features P2 - UX & Debugging
+**Status:** In Progress (3/5 tasks completed)  
+**Priority:** Medium  
+**Effort:** ~11 days (estimated)
+
+**Description:**  
+Miglioramenti UX e debugging per AI Agent Integration. Feature "nice to have" per migliorare esperienza utente e debugging.
+
+**Completed:**
+- ✅ **Mobile Anne:** Icona ghost nel menu mobile per aprire Anne Assistant
+- ✅ **AgentDebugPanel:** Componente UI per telemetria supervisor (solo admin/superadmin)
+- ✅ **debug_worker:** Worker per analisi errori e suggerimenti fix
+
+**In Progress:**
+- 🔄 **explain_worker:** Worker per spiegare business flows (wallet, spedizioni, margini)
+- ⏳ **compensation_queue processor:** CRON job per cleanup orphan records
+
+**Dependencies:**
+- ✅ P1 prerequisites (complete)
+- ✅ LangGraph supervisor pattern (complete)
+- ✅ Telemetria strutturata (complete)
+
+**Success Metrics:**
+- Debug panel utilizzato da admin per troubleshooting
+- debug_worker riduce tempo risoluzione errori utente
+- Mobile Anne migliora accessibilità su dispositivi mobili
+
+---
 
 ### AI Anne Chat UI
 **Status:** Backend Ready → Building UI  
@@ -27,7 +56,7 @@ Build chat interface for AI assistant "Anne" that helps users create shipments f
 
 **Dependencies:**
 - ✅ Gemini 2.0 Flash integration (complete)
-- ❌ LangGraph orchestration (needs implementation)
+- ✅ LangGraph orchestration (complete - P1)
 - ✅ Database tables for conversations (complete)
 
 **Success Metrics:**

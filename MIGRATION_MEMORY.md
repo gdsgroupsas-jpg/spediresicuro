@@ -283,6 +283,29 @@ npm run test:integration # 121 test passed
 npm run type-check # 0 errori
 ```
 
+### ✅ P2: AI AGENT FEATURES - UX E DEBUGGING (IN CORSO - 1 Gennaio 2026)
+- [x] **Task 4: Mobile Anne** - Icona ghost nel menu mobile per aprire Anne Assistant
+- [x] **Task 1: AgentDebugPanel** - Componente UI per telemetria (solo admin/superadmin)
+- [x] **Task 2: debug_worker** - Worker per analisi errori e troubleshooting
+- [ ] **Task 3: explain_worker** - Worker per spiegare business flows (wallet, spedizioni, margini)
+- [ ] **Task 5: compensation_queue processor** - CRON job per cleanup orphan records
+
+**Evidenza:**
+- File: `components/agent/AgentDebugPanel.tsx`, `lib/agent/workers/debug.ts`, `components/dashboard-mobile-nav.tsx`
+- Modifiche: `components/anne/AnneAssistant.tsx` (listener evento), `app/api/ai/agent-chat/route.ts` (telemetria admin)
+- Routing: `lib/agent/orchestrator/supervisor.ts` (intent detection), `lib/agent/orchestrator/pricing-graph.ts` (routing)
+
+**Dettagli implementazione:**
+- **Mobile Anne:** Evento `openAnneAssistant` dispatchato da menu mobile, listener in AnneAssistant
+- **AgentDebugPanel:** Toggle localStorage, mostra telemetria supervisor (intent, decision, backend, fallback), agent state (iterations, status, confidence), mentor response (sources, confidence)
+- **debug_worker:** Analizza `validationErrors`, `processingStatus`, `confidenceScore`; suggerisce fix comuni, link documentazione, retry strategies; restituisce `debug_response` con analysis, suggestions, links
+
+**Come verificare:**
+```bash
+npm run type-check # 0 errori
+# Test manuale: aprire Anne Assistant su mobile, verificare debug panel (admin), testare debug_worker con messaggi tipo "perché non funziona"
+```
+
 ---
 
 ### FASE 3: ADVANCED FEATURES (FUTURE)
