@@ -15,6 +15,7 @@ import { AgentState } from '../orchestrator/state';
 import { defaultLogger, type ILogger } from '../logger';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { agentCache } from '@/lib/services/cache';
 
 /**
  * Documenti disponibili per RAG
@@ -173,11 +174,26 @@ export async function mentorWorker(
     const query = lastMessage.content.toString();
     logger.log(`🔍 [Mentor] Cerca risposta per: "${query.substring(0, 50)}..."`);
     
+    // P3 Task 6: Check cache RAG
+    const cacheKey = `mentor:${query}`;
+    const cachedResult = agentCache.getRAG(query, 'mentor');
+    
+    if (cachedResult) {
+      logger.log(`✅ [Mentor] Risultato da cache`);
+      return {
+        mentor_response: cachedResult,
+        next_step: 'END',
+      };
+    }
+    
     // Cerca documenti rilevanti
     const documents = await searchDocuments(query, logger);
     
     // Genera risposta
     const { answer, sources, confidence } = generateAnswer(query, documents);
+    
+    // P3 Task 6: Salva in cache
+    agentCache.setRAG(query, { answer, sources, confidence }, 'mentor');
     
     logger.log(`✅ [Mentor] Risposta generata (confidence: ${confidence}%, sources: ${sources.length})`);
     

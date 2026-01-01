@@ -19,6 +19,8 @@ import { detectDebugIntent } from '@/lib/agent/workers/debug';
 import { detectExplainIntent } from '@/lib/agent/workers/explain';
 import { defaultLogger, type ILogger } from '../logger';
 import { llmConfig } from '@/lib/config';
+import { checkCreditBeforeBooking, formatInsufficientCreditMessage } from '@/lib/wallet/credit-check';
+import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
 
 // Helper per ottenere LLM (stesso pattern di nodes.ts)
 const getLLM = (logger: ILogger = defaultLogger) => {
@@ -177,12 +179,46 @@ export async function supervisor(
       const preflight = preflightCheck(state.shipmentDraft, selectedOption, idempotencyKey);
       
       if (preflight.passed) {
-        logger.log('✅ [Supervisor] Preflight OK, routing a booking_worker');
-        return {
-          next_step: 'booking_worker',
-          processingStatus: 'calculating',
-          iteration_count: (state.iteration_count || 0) + 1,
-        };
+        // P3 Task 2: Verifica credito PRIMA di routing a booking_worker
+        try {
+          // Calcola costo stimato (prezzo corriere + platform fee)
+          const courierCost = selectedOption.finalPrice || 0;
+          const platformFee = await getPlatformFeeSafe(state.userId);
+          const estimatedCost = courierCost + platformFee;
+          
+          // Verifica credito disponibile
+          const creditCheck = await checkCreditBeforeBooking(
+            state.userId,
+            estimatedCost,
+            state.agent_context?.acting_context
+          );
+          
+          if (!creditCheck.sufficient) {
+            logger.log(`⚠️ [Supervisor] Credito insufficiente: €${creditCheck.currentBalance.toFixed(2)} disponibili, €${creditCheck.required.toFixed(2)} richiesti`);
+            return {
+              clarification_request: formatInsufficientCreditMessage(creditCheck),
+              next_step: 'END',
+              processingStatus: 'idle',
+            };
+          }
+          
+          logger.log(`✅ [Supervisor] Preflight OK + credito sufficiente (€${creditCheck.currentBalance.toFixed(2)}), routing a booking_worker`);
+          return {
+            next_step: 'booking_worker',
+            processingStatus: 'calculating',
+            iteration_count: (state.iteration_count || 0) + 1,
+          };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logger.error(`❌ [Supervisor] Errore verifica credito: ${errorMessage}`);
+          // In caso di errore, procedi comunque (booking_worker farà il check)
+          logger.warn('⚠️ [Supervisor] Procedo comunque, booking_worker farà il check');
+          return {
+            next_step: 'booking_worker',
+            processingStatus: 'calculating',
+            iteration_count: (state.iteration_count || 0) + 1,
+          };
+        }
       } else {
         logger.log('⚠️ [Supervisor] Preflight fallito, mancano:', preflight.missing);
         return {
