@@ -61,9 +61,10 @@ export interface AgentState {
   // 'booking_worker' = prenota spedizione dopo conferma utente (Sprint 2.6)
   // 'mentor_worker' = risponde a domande tecniche con RAG su documentazione (P1)
   // 'debug_worker' = analizza errori e suggerisce fix (P2)
+  // 'explain_worker' = spiega business flows (wallet, spedizioni, margini) (P2)
   // 'legacy' = usa handler Claude legacy (non-pricing o fallback)
   // 'END' = risposta pronta, termina
-  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'mentor_worker' | 'debug_worker' | 'legacy' | 'END';
+  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'mentor_worker' | 'debug_worker' | 'explain_worker' | 'legacy' | 'END';
   
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;
@@ -121,5 +122,14 @@ export interface AgentState {
     analysis: string;
     suggestions: string[];
     links: string[]; // File paths referenziati per documentazione
+  };
+
+  /**
+   * Risposta del explain worker (spiegazione business flows).
+   * Popolato da explain_worker quando l'utente chiede spiegazioni su wallet, spedizioni, margini.
+   */
+  explain_response?: {
+    explanation: string;
+    diagram: string; // Diagramma testuale del flusso
   };
 }
