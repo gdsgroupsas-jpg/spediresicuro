@@ -269,7 +269,7 @@ export default function BuildingInPublic() {
 
                 <p className="text-gray-700 leading-relaxed mb-4">
                   &quot;Elimino 3 minuti per ogni spedizione al banco. Prima scrivevo a mano i dati dal
-                  cliente, ora faccio screenshot del documento e Annie compila tutto.
+                  cliente, ora faccio screenshot del documento e Anne compila tutto.
                   <span className="font-semibold text-violet-700"> Zero errori di battitura.</span>
                   &quot;
                 </p>
