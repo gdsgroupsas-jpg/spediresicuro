@@ -265,12 +265,39 @@ export function translateError(
       return translateValidationError(firstError, field);
     }
     
-    // 2. Confidence score basso
+    // 2. Booking result con errori (prioritÃ  alta, piÃ¹ specifico)
+    if (state.booking_result?.status === 'failed') {
+      const errorCode = state.booking_result.error_code;
+      
+      if (errorCode === 'INSUFFICIENT_CREDIT') {
+        return {
+          message: 'Il saldo del wallet non Ã¨ sufficiente per questa spedizione. Vuoi ricaricare?',
+          actionable: true,
+          severity: 'error',
+        };
+      }
+      
+      if (errorCode === 'PREFLIGHT_FAILED') {
+        return {
+          message: 'Ci sono dati mancanti per completare la prenotazione. Controlla i campi obbligatori.',
+          actionable: true,
+          severity: 'warning',
+        };
+      }
+      
+      return {
+        message: state.booking_result.user_message || 'La prenotazione non Ã¨ andata a buon fine. Riprova.',
+        actionable: true,
+          severity: 'error',
+      };
+    }
+    
+    // 3. Confidence score basso (solo se non ci sono altri errori specifici)
     if (state.confidenceScore !== undefined && state.confidenceScore < 50) {
       return translateLowConfidence(state.confidenceScore);
     }
     
-    // 3. Processing status error
+    // 4. Processing status error (fallback generico)
     if (state.processingStatus === 'error') {
       // Cerca fallbackReason in telemetria (se disponibile)
       // Per ora usiamo un messaggio generico
@@ -281,7 +308,7 @@ export function translateError(
       };
     }
     
-    // 4. Booking result con errori
+
     if (state.booking_result?.status === 'failed') {
       const errorCode = state.booking_result.error_code;
       
