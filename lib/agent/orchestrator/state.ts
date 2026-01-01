@@ -60,9 +60,10 @@ export interface AgentState {
   // 'ocr_worker' = estrai dati da immagine/testo OCR (Sprint 2.4)
   // 'booking_worker' = prenota spedizione dopo conferma utente (Sprint 2.6)
   // 'mentor_worker' = risponde a domande tecniche con RAG su documentazione (P1)
+  // 'debug_worker' = analizza errori e suggerisce fix (P2)
   // 'legacy' = usa handler Claude legacy (non-pricing o fallback)
   // 'END' = risposta pronta, termina
-  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'mentor_worker' | 'legacy' | 'END';
+  next_step?: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'mentor_worker' | 'debug_worker' | 'legacy' | 'END';
   
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;
