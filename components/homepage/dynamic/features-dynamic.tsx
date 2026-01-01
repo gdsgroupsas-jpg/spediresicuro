@@ -28,35 +28,35 @@ import {
 const features = [
   {
     icon: Zap,
-    title: '10 Secondi',
-    description: 'Da screenshot a etichetta pronta. Zero form da compilare, zero stress, zero errori.',
+    title: 'AI-First',
+    description: 'Screenshot → Etichetta in 10 secondi. Anne legge qualsiasi cosa: foto, vocali, PDF, chat.',
     gradient: 'from-amber-500 to-orange-600',
     shadowColor: 'shadow-amber-500/25',
-    stat: '90%',
-    statLabel: 'tempo risparmiato'
+    stat: '94%',
+    statLabel: 'time-saving reale'
   },
   {
     icon: Bot,
-    title: 'Annie AI',
-    description: 'La tua assistente personale che legge, comprende e compila automaticamente ogni spedizione.',
+    title: 'OCR 90% Confidence',
+    description: 'AI Vision estrae dati con 90% confidence. Validazione indirizzi automatica CAP/Comuni.',
     gradient: 'from-violet-500 to-purple-600',
     shadowColor: 'shadow-violet-500/25',
-    stat: '99.7%',
-    statLabel: 'accuratezza'
+    stat: '90%',
+    statLabel: 'OCR confidence'
   },
   {
-    icon: Camera,
-    title: 'OCR Avanzato',
-    description: 'Riconosce testo da foto, screenshot, documenti. Anche scritte a mano.',
+    icon: TrendingUp,
+    title: '3 Modelli Business',
+    description: 'Broker (spread 29%) per agenzie. BYOC per e-commerce. Web B2C per privati. Multi-target.',
     gradient: 'from-cyan-500 to-blue-600',
     shadowColor: 'shadow-cyan-500/25',
-    stat: '50+',
-    statLabel: 'formati supportati'
+    stat: '3',
+    statLabel: 'revenue streams'
   },
   {
     icon: Shield,
-    title: '100% Sicuro',
-    description: 'Dati protetti GDPR, crittografia end-to-end, server in Europa. Privacy garantita.',
+    title: 'Security-First',
+    description: 'RLS multi-tenant, audit trail, acting context. GDPR compliant. Dati in Europa.',
     gradient: 'from-emerald-500 to-green-600',
     shadowColor: 'shadow-emerald-500/25',
     stat: 'GDPR',
@@ -64,21 +64,21 @@ const features = [
   },
   {
     icon: Globe,
-    title: 'Tutta Italia',
-    description: 'Validazione automatica di ogni indirizzo italiano. CAP, comuni, frazioni inclusi.',
+    title: 'Multi-Corriere',
+    description: 'GLS, BRT, Poste via Spedisci.Online. Courier adapter pattern = plug & play nuovi corrieri.',
     gradient: 'from-rose-500 to-pink-600',
     shadowColor: 'shadow-rose-500/25',
-    stat: '8.000+',
-    statLabel: 'comuni coperti'
+    stat: '3+',
+    statLabel: 'corrieri integrati'
   },
   {
-    icon: TrendingUp,
-    title: 'Risparmia',
-    description: 'Confronta prezzi di tutti i corrieri in tempo reale. Scegli sempre il migliore.',
+    icon: FileText,
+    title: 'White-Label Ready',
+    description: 'Architettura pensata per rivendita. Consorzi logistici possono brandizzare e rivendere.',
     gradient: 'from-indigo-500 to-blue-600',
     shadowColor: 'shadow-indigo-500/25',
-    stat: '-35%',
-    statLabel: 'sui costi medi'
+    stat: 'B2B2C',
+    statLabel: 'scalabile'
   },
 ];
 
@@ -136,14 +136,21 @@ export default function FeaturesDynamic() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 mb-6"
           >
             <Sparkles className="w-4 h-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-700">Funzionalita Premium</span>
+            <span className="text-sm font-semibold text-amber-700">Logistics Operating System</span>
           </motion.div>
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-            Tutto cio di cui hai{' '}
+            Non un{' '}
+            <span className="relative">
+              <span className="bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent line-through">
+                comparatore
+              </span>
+            </span>
+            <br />
+            Un{' '}
             <span className="relative">
               <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                bisogno
+                Logistics OS
               </span>
               <svg
                 className="absolute -bottom-2 left-0 w-full"
@@ -171,7 +178,7 @@ export default function FeaturesDynamic() {
           </h2>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Strumenti potenti, interfaccia semplice. Tutto progettato per farti risparmiare tempo.
+            Architettura AI-First. Multi-tenant nativo. White-label ready. 3 modelli business in uno.
           </p>
         </motion.div>
 
