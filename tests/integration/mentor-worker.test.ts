@@ -114,6 +114,8 @@ describe('Mentor Worker Integration', () => {
       // Mock readFile per restituire contenuto documento
       vi.mocked(readFile).mockResolvedValue(MOCK_MONEY_FLOWS);
 
+      // NOTA P2: "Come funziona il wallet?" va a mentor_worker (non explain_worker)
+      // perché mentor ha priorità su explain nel supervisor (mentor è più generico)
       const state = createTestState('Come funziona il wallet?');
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
@@ -134,6 +136,7 @@ describe('Mentor Worker Integration', () => {
     it('dovrebbe terminare con END dopo mentor_worker', async () => {
       vi.mocked(readFile).mockResolvedValue(MOCK_MONEY_FLOWS);
 
+      // NOTA P2: "Come funziona il wallet?" va a mentor_worker (priorità su explain)
       const state = createTestState('Come funziona il wallet?');
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature

@@ -311,7 +311,7 @@ export interface DecisionInput {
   preflightPassed?: boolean;
 }
 
-export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'legacy' | 'END';
+export type SupervisorDecision = 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'mentor_worker' | 'explain_worker' | 'debug_worker' | 'legacy' | 'END';
 
 /**
  * Funzione PURA per decidere il prossimo step.
