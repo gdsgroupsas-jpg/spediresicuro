@@ -288,6 +288,20 @@ export async function supervisorRouter(
       });
     }
     
+    // P2: Se abbiamo risposta explain, restituiscila
+    if (result.explain_response) {
+      supervisorDecision = 'end';
+      workerRun = null; // Explain non è un worker standard
+      // Formatta risposta explain con explanation e diagram
+      const explainMessage = `${result.explain_response.explanation}${result.explain_response.diagram ? `\n\n${result.explain_response.diagram}` : ''}`;
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: explainMessage,
+        executionTimeMs: Date.now() - startTime,
+        source: 'pricing_graph',
+      });
+    }
+    
     // P2: Se abbiamo risposta debug, restituiscila
     if (result.debug_response) {
       supervisorDecision = 'end';
