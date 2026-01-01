@@ -123,6 +123,7 @@
 | **P1** | ✅ Completato | 446/446 | ✅ 0 errori | Prerequisiti base |
 | **P2** | ✅ Completato | 446/446 | ✅ 0 errori | UX e debugging |
 | **P3** | ✅ Completato | 325/325 | ✅ 0 errori | Architecture & Technical Debt |
+| **P4** | 📋 Pianificato | - | - | Business Value & User Experience |
 
 ---
 
@@ -134,7 +135,23 @@
 - ✅ **Performance Optimization** - Cache RAG e pricing implementata
 - ✅ **Type Safety** - Type guards e rimozione TODO completati
 
-### Prossime Feature (Future)
+### 📋 P4: AI AGENT BUSINESS VALUE (PIANIFICATO)
+
+**Status:** 📋 **PIANIFICATO** (non ancora implementato)
+
+**Obiettivo:** Trasformare telemetria in valore utente misurabile, eliminare friction, validare monetizzazione
+
+**Task Pianificati (4 task):**
+- [ ] **Task 1: Value Dashboard** - "Hai risparmiato X minuti" (3 giorni)
+- [ ] **Task 2: Auto-Proceed** - Kill Friction (4 giorni)
+- [ ] **Task 3: Human Error Messages** - Errori spiegati come umani (2 giorni)
+- [ ] **Task 4: Smart Suggestions** - Suggerimenti proattivi (2 giorni)
+
+**Totale stimato:** ~11 giorni (opzione full) o ~5 giorni (opzione hybrid)
+
+**Vedi:** `PROMPT_P4_AI_AGENT_BUSINESS_VALUE.md` per dettagli completi
+
+**Prossime Feature (Future - Post P4)**
 1. **Ottimizzazioni avanzate** - Monitoring, metrics, alerting
 2. **Feature business** - XPay, Invoice, reporting avanzato
 3. **Scalabilità** - Ottimizzazioni per carico elevato
