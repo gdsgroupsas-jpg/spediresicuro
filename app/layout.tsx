@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import Providers from '@/components/providers'
 import CookieBanner from '@/components/legal/CookieBanner'
 import PWAInstallPrompt from '@/components/pwa/pwa-install-prompt'
@@ -92,6 +93,7 @@ export default function RootLayout({
           <CookieBanner />
           <PWAInstallPrompt />
           <NotificationPrompt />
+          <SpeedInsights />
         </Providers>
       </body>
     </html>
