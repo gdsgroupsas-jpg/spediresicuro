@@ -551,7 +551,11 @@ try {
 - ✅ **Cancelled Shipments** - Soft delete with audit trail, simultaneous deletion on Spedisci.Online, reseller visibility (31 Dicembre 2025)
 
 ### Partially Implemented (Infrastructure Ready, UI Missing)
-- 🟡 **AI Anne Chat UI** - Backend orchestrator completo, chat UI non costruita
+- ✅ **AI Anne Chat UI** - Backend orchestrator completo, chat UI implementata (P2 completato)
+  - `components/anne/AnneAssistant.tsx` - Chat UI completa con floating ghost icon
+  - `components/agent/AgentDebugPanel.tsx` - Debug panel per admin/superadmin (P2)
+  - Mobile Anne - Icona ghost nel menu mobile (P2)
+  - Integrazione completa con LangGraph supervisor router
 - 🟡 **Smart Top-Up OCR** - Gemini Vision integration exists, not exposed
 - 🟡 **Invoice System** - Tables exist, PDF generation missing
 - 🟡 **XPay Payments** - Integration ready, not enabled
