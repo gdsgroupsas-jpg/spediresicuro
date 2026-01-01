@@ -78,6 +78,14 @@ export const AUDIT_ACTIONS = {
   UNAUTHORIZED_ACCESS: 'unauthorized_access',
   SECURITY_VIOLATION: 'security_violation',
   
+  // ============================================
+  // AI AGENT OPERATIONS
+  // ============================================
+  AGENT_QUERY: 'agent_query',
+  AGENT_MENTOR_RESPONSE: 'agent_mentor_response',
+  AGENT_SESSION_CREATED: 'agent_session_created',
+  AGENT_SESSION_UPDATED: 'agent_session_updated',
+  
 } as const;
 
 /**
@@ -97,6 +105,7 @@ export const AUDIT_RESOURCE_TYPES = {
   COURIER_CONFIG: 'courier_config',
   SECURITY_EVENT: 'security_event',
   SYSTEM: 'system',
+  AGENT_SESSION: 'agent_session',
 } as const;
 
 /**
