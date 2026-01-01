@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
     // Estrai dati utente da ActingContext (usa target, non actor)
     const userId = actingContext.target.id;
     const userEmail = actingContext.target.email || '';
-    const userRole = (actingContext.target.role || 'user') as string;
+    // Converti UserRole a 'admin' | 'user' per buildContext
+    const targetRole = actingContext.target.role || 'user';
+    const userRole: 'admin' | 'user' = (targetRole === 'admin' || targetRole === 'superadmin' || targetRole === 'reseller') ? 'admin' : 'user';
     const userName = actingContext.target.name || userEmail || 'Utente';
     const isAdmin = userRole === 'admin';
 
