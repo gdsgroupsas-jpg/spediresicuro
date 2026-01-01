@@ -384,3 +384,4 @@ console.log('📋 [SUPABASE] Payload normalizzato (struttura):', {
 Senior Backend Engineer  
 Data: 2025-01-XX
 
+
