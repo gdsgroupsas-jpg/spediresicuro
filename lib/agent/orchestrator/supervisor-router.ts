@@ -288,6 +288,18 @@ export async function supervisorRouter(
       });
     }
     
+    // P1: Se abbiamo risposta mentor, restituiscila
+    if (result.mentor_response) {
+      supervisorDecision = 'end';
+      workerRun = null; // Mentor non è un worker standard
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: result.mentor_response.answer, // Usa answer come messaggio
+        executionTimeMs: Date.now() - startTime,
+        source: 'pricing_graph',
+      });
+    }
+    
     if (result.clarification_request) {
       // Serve chiarimento (gestito dal graph, potrebbe essere da address_worker)
       supervisorDecision = 'end';
