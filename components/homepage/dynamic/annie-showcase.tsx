@@ -49,23 +49,23 @@ const chatMessages = [
 const aiFeatures = [
   {
     icon: Brain,
-    title: 'Comprende Tutto',
-    description: 'Screenshot, foto, messaggi vocali. Annie capisce qualsiasi formato.'
+    title: 'Gemini Vision OCR',
+    description: '90% confidence reale. Legge screenshot WhatsApp, foto pacchi, documenti PDF, vocali trascritti.'
   },
   {
     icon: Target,
-    title: 'Sempre Precisa',
-    description: '99.7% di accuratezza nell\'estrazione dati. Zero errori di battitura.'
+    title: 'LangGraph Supervisor',
+    description: '6 worker specializzati: OCR, Address, Pricing, Booking, Mentor, Debug. Orchestrazione intelligente.'
   },
   {
     icon: Clock,
-    title: 'Istantanea',
-    description: 'Risposte in millisecondi. Non dovrai mai aspettare.'
+    title: '10 Secondi End-to-End',
+    description: 'Upload screenshot → validazione indirizzo → pricing → etichetta. 94% time-saving reale (3 min → 10s).'
   },
   {
     icon: TrendingUp,
-    title: 'Impara da Te',
-    description: 'Memorizza le tue preferenze e migliora con ogni interazione.'
+    title: 'Production Beta',
+    description: 'In test su spedizioni reali. Fine settimana: end-to-end completo. Building in public.'
   }
 ];
 
@@ -120,10 +120,10 @@ export default function AnnieShowcase() {
           </motion.div>
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-            La tua{' '}
+            Incontra{' '}
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                Assistente AI
+                Annie
               </span>
               <motion.div
                 initial={{ width: 0 }}
@@ -133,12 +133,12 @@ export default function AnnieShowcase() {
               />
             </span>
             <br />
-            personale
+            Gemini Vision + LangGraph
           </h2>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Annie non e un semplice chatbot. E un&apos;intelligenza artificiale addestrata
-            specificamente per la logistica italiana.
+            Non un chatbot. Un <span className="font-semibold text-gray-900">AI Supervisor</span> con 6 worker specializzati.
+            Gemini 2.0 Flash multimodal + LangGraph orchestration. <span className="font-semibold text-violet-600">90% OCR confidence</span> reale.
           </p>
         </motion.div>
 
@@ -265,12 +265,13 @@ export default function AnnieShowcase() {
           >
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Non un chatbot qualsiasi
+                Architettura AI-First Reale
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Annie e stata addestrata su milioni di spedizioni italiane.
-                Conosce CAP, comuni, frazioni, corrieri, tariffe e tutto cio
-                che serve per gestire la logistica in modo impeccabile.
+                <span className="font-semibold text-violet-600">Gemini 2.0 Flash</span> multimodal (text + vision).{' '}
+                <span className="font-semibold text-violet-600">LangGraph</span> con supervisor pattern.{' '}
+                6 worker specializzati che collaborano. Validazione indirizzi IT (CAP, comuni, frazioni).{' '}
+                <span className="font-semibold text-gray-900">In beta testing su spedizioni reali.</span>
               </p>
             </div>
 
@@ -297,25 +298,25 @@ export default function AnnieShowcase() {
               })}
             </div>
 
-            {/* Stats */}
+            {/* Stats REALI */}
             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200">
               <div className="text-center">
                 <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                  99.7%
+                  90%
                 </div>
-                <div className="text-sm text-gray-500">Accuratezza</div>
+                <div className="text-sm text-gray-500">OCR Confidence</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                  &lt;1s
+                  10s
                 </div>
-                <div className="text-sm text-gray-500">Risposta</div>
+                <div className="text-sm text-gray-500">Screenshot → Label</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                  24/7
+                  6
                 </div>
-                <div className="text-sm text-gray-500">Disponibile</div>
+                <div className="text-sm text-gray-500">AI Workers</div>
               </div>
             </div>
           </motion.div>

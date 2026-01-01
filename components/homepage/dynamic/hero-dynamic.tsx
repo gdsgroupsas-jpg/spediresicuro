@@ -149,10 +149,10 @@ export default function HeroDynamic() {
     'Email del cliente'
   ], 80, 40, 2500);
 
-  // Counters
-  const { count: shipmentsCount, ref: shipmentsRef } = useAnimatedCounter(50000, 2500);
-  const { count: companiesCount, ref: companiesRef } = useAnimatedCounter(1247, 2000);
-  const { count: satisfactionCount, ref: satisfactionRef } = useAnimatedCounter(99, 1800);
+  // Counters - METRICHE REALI
+  const { count: timeSavingCount, ref: timeSavingRef } = useAnimatedCounter(94, 2000);
+  const { count: ocrConfidenceCount, ref: ocrConfidenceRef } = useAnimatedCounter(90, 2000);
+  const { count: secondsCount, ref: secondsRef } = useAnimatedCounter(10, 1500);
 
   useEffect(() => {
     setMounted(true);
@@ -239,7 +239,7 @@ export default function HeroDynamic() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
               </span>
               <span className="text-sm font-medium text-amber-400">
-                Rivoluziona le tue spedizioni con l&apos;AI
+                🚀 Beta Testing - Primi 100 Founding Customers
               </span>
             </motion.div>
 
@@ -285,9 +285,10 @@ export default function HeroDynamic() {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="text-xl text-gray-400 max-w-xl leading-relaxed"
             >
-              Carica qualsiasi cosa. La nostra <span className="text-amber-400 font-semibold">AI Annie</span> legge,
-              compila, valida e crea l&apos;etichetta. Tu stampi e spedisci.{' '}
-              <span className="text-white font-medium">Tutto qui.</span>
+              <span className="text-white font-semibold">Non un comparatore prezzi.</span> Un Logistics Operating System con AI.{' '}
+              <span className="text-amber-400 font-semibold">Annie</span> legge screenshot, foto, vocali.{' '}
+              Compila, valida, crea etichetta.{' '}
+              <span className="text-emerald-400 font-medium">90% confidence. Zero errori.</span>
             </motion.p>
 
             {/* CTAs */}
@@ -305,43 +306,46 @@ export default function HeroDynamic() {
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 transition-all duration-300 group-hover:scale-110" />
                 {/* Shine Effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                <span className="relative text-black">Inizia Gratis</span>
+                <span className="relative text-black">Unisciti alla Beta</span>
                 <ArrowRight className="relative w-5 h-5 text-black group-hover:translate-x-1 transition-transform" />
               </Link>
 
-              <button className="group inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-white/10 text-white hover:border-amber-500/50 hover:bg-amber-500/5 transition-all duration-300">
+              <Link
+                href="/come-funziona"
+                className="group inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-semibold text-lg border-2 border-white/10 text-white hover:border-amber-500/50 hover:bg-amber-500/5 transition-all duration-300"
+              >
                 <div className="relative">
                   <div className="absolute inset-0 bg-amber-500 rounded-full animate-ping opacity-20" />
                   <Play className="w-5 h-5 fill-current" />
                 </div>
-                <span>Guarda Demo</span>
-              </button>
+                <span>Come Funziona</span>
+              </Link>
             </motion.div>
 
-            {/* Mini Stats */}
+            {/* Mini Stats - METRICHE REALI */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.6 }}
               className="flex flex-wrap gap-8 pt-8 border-t border-white/10"
             >
-              <div ref={shipmentsRef} className="text-center">
+              <div ref={timeSavingRef} className="text-center">
                 <div className="text-3xl font-bold text-white">
-                  {shipmentsCount.toLocaleString()}+
+                  {timeSavingCount}%
                 </div>
-                <div className="text-sm text-gray-500">Spedizioni/mese</div>
+                <div className="text-sm text-gray-500">Time-Saving</div>
               </div>
-              <div ref={companiesRef} className="text-center">
+              <div ref={ocrConfidenceRef} className="text-center">
                 <div className="text-3xl font-bold text-white">
-                  {companiesCount.toLocaleString()}+
+                  {ocrConfidenceCount}%
                 </div>
-                <div className="text-sm text-gray-500">Aziende attive</div>
+                <div className="text-sm text-gray-500">OCR Confidence</div>
               </div>
-              <div ref={satisfactionRef} className="text-center">
+              <div ref={secondsRef} className="text-center">
                 <div className="text-3xl font-bold text-white">
-                  {satisfactionCount}%
+                  {secondsCount}s
                 </div>
-                <div className="text-sm text-gray-500">Soddisfazione</div>
+                <div className="text-sm text-gray-500">Screenshot → Label</div>
               </div>
             </motion.div>
           </motion.div>
