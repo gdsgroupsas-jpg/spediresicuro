@@ -18,6 +18,7 @@ import { pricingWorker } from '../workers/pricing';
 import { addressWorker } from '../workers/address';
 import { ocrWorker } from '../workers/ocr';
 import { bookingWorker } from '../workers/booking';
+import { mentorWorker } from '../workers/mentor';
 import { defaultLogger, type ILogger } from '../logger';
 import { graphConfig } from '@/lib/config';
 
@@ -50,6 +51,11 @@ const routeAfterSupervisor = (state: AgentState): string => {
   // Sprint 2.6: Se il supervisor dice di andare a booking_worker, vai
   if (state.next_step === 'booking_worker') {
     return 'booking_worker';
+  }
+  
+  // P1: Se il supervisor dice di andare a mentor_worker, vai
+  if (state.next_step === 'mentor_worker') {
+    return 'mentor_worker';
   }
   
   // Sprint 2.3: Se il supervisor dice di andare a address_worker, vai
@@ -122,6 +128,26 @@ const routeAfterAddressWorker = (state: AgentState): string => {
   }
   
   // Default: termina (l'address_worker avrà impostato next_step = END)
+  return 'END';
+};
+
+/**
+ * Router dopo Mentor Worker (P1)
+ * 
+ * Mentor worker termina sempre (risposta pronta) → END
+ */
+const routeAfterMentorWorker = (state: AgentState): string => {
+  // Mentor worker termina sempre (ha già impostato next_step = END)
+  if (state.mentor_response) {
+    return 'END';
+  }
+  
+  // Se c'è errore o clarification, termina
+  if (state.clarification_request || state.processingStatus === 'error') {
+    return 'END';
+  }
+  
+  // Default: termina
   return 'END';
 };
 
@@ -238,6 +264,12 @@ const pricingWorkflow = new StateGraph<AgentState>({
       default: () => undefined,
     },
     
+    // P1: Risposta mentor worker
+    mentor_response: {
+      reducer: (a, b) => b ?? a,
+      default: () => undefined,
+    },
+    
     // Campi esistenti (per compatibilità)
     shipmentId: { reducer: (a, b) => b ?? a },
     processingStatus: { reducer: (a, b) => b ?? a },
@@ -256,6 +288,7 @@ const pricingWorkerWrapper = (state: AgentState) => pricingWorker(state);
 const addressWorkerWrapper = (state: AgentState) => addressWorker(state);
 const ocrWorkerWrapper = (state: AgentState) => ocrWorker(state);
 const bookingWorkerWrapper = (state: AgentState) => bookingWorker(state);
+const mentorWorkerWrapper = (state: AgentState) => mentorWorker(state); // P1
 
 // Aggiungi nodi
 pricingWorkflow.addNode('supervisor', supervisorWrapper);
@@ -263,6 +296,7 @@ pricingWorkflow.addNode('pricing_worker', pricingWorkerWrapper);
 pricingWorkflow.addNode('address_worker', addressWorkerWrapper); // Sprint 2.3
 pricingWorkflow.addNode('ocr_worker', ocrWorkerWrapper); // Sprint 2.4
 pricingWorkflow.addNode('booking_worker', bookingWorkerWrapper); // Sprint 2.6
+pricingWorkflow.addNode('mentor_worker', mentorWorkerWrapper); // P1
 
 // NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
 // LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
@@ -281,6 +315,7 @@ pricingWorkflow.addConditionalEdges(
     address_worker: 'address_worker', // Sprint 2.3
     ocr_worker: 'ocr_worker', // Sprint 2.4
     booking_worker: 'booking_worker', // Sprint 2.6
+    mentor_worker: 'mentor_worker', // P1
     END: END,
   } as any
 );
@@ -320,6 +355,15 @@ pricingWorkflow.addConditionalEdges(
 pricingWorkflow.addConditionalEdges(
   'booking_worker' as any,
   routeAfterBookingWorker,
+  {
+    END: END,
+  } as any
+);
+
+// P1: Conditional edge dopo mentor_worker
+pricingWorkflow.addConditionalEdges(
+  'mentor_worker' as any,
+  routeAfterMentorWorker,
   {
     END: END,
   } as any
