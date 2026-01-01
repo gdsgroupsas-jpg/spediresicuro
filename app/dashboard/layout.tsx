@@ -23,21 +23,25 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   // Verifica autenticazione
-  // ⚠️ BYPASS IN TEST MODE: Controlla header HTTP o variabile d'ambiente
-  // Playwright può impostare header HTTP facilmente, più affidabile delle env vars
+  // ⚠️ SECURITY: Test mode bypass SOLO in sviluppo, MAI in produzione
+  const isProductionEnv = process.env.NODE_ENV === 'production';
   let isTestMode = false;
   let testHeaderValue = null;
-  try {
-    const headersList = headers();
-    testHeaderValue = headersList.get('x-test-mode');
-    isTestMode = testHeaderValue === 'playwright' || process.env.PLAYWRIGHT_TEST_MODE === 'true';
-    if (testHeaderValue) {
-      console.log('🧪 [DASHBOARD LAYOUT] Header x-test-mode trovato:', testHeaderValue);
+  
+  // SECURITY: In produzione, NESSUN bypass è permesso
+  if (!isProductionEnv) {
+    try {
+      const headersList = headers();
+      testHeaderValue = headersList.get('x-test-mode');
+      isTestMode = testHeaderValue === 'playwright' || process.env.PLAYWRIGHT_TEST_MODE === 'true';
+      if (testHeaderValue) {
+        console.log('🧪 [DASHBOARD LAYOUT] Header x-test-mode trovato:', testHeaderValue);
+      }
+    } catch (e) {
+      // Se headers() non è disponibile, usa solo env var
+      isTestMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
+      console.log('🧪 [DASHBOARD LAYOUT] headers() non disponibile, uso solo env var:', isTestMode);
     }
-  } catch (e) {
-    // Se headers() non è disponibile, usa solo env var
-    isTestMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
-    console.log('🧪 [DASHBOARD LAYOUT] headers() non disponibile, uso solo env var:', isTestMode);
   }
   
   let session = null;

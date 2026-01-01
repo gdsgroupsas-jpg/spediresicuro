@@ -1,9 +1,19 @@
 {
   "recommendations": [
+    // Testing Extensions (REQUIRED)
+    "vitest.explorer",
+    "ms-playwright.playwright",
+    
+    // Development Extensions
     "ms-vscode.PowerShell",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "bradlc.vscode-tailwindcss",
-    "ms-vscode.vscode-typescript-next"
-  ]
+    "ms-vscode.vscode-typescript-next",
+    
+    // Optional but useful
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense"
+  ],
+  "unwantedRecommendations": []
 }
