@@ -155,21 +155,29 @@ export async function POST(request: NextRequest) {
         responseMessage = 'Mi dispiace, non sono riuscita a elaborare la richiesta. Come posso aiutarti?';
       }
       
+      // P2: Aggiungi telemetria per admin/superadmin
+      const responseMetadata: any = {
+        trace_id: traceId,
+        userRole,
+        timestamp: new Date().toISOString(),
+        isMock: false,
+        toolCalls: 0,
+        executionTime: Date.now() - startTime,
+        rateLimitRemaining: rateLimitResult.remaining,
+        usingPricingGraph: supervisorResult.source === 'pricing_graph',
+        pricingOptionsCount: supervisorResult.pricingOptions?.length ?? 0,
+        supervisorDecision: supervisorResult.decision,
+      };
+
+      // Aggiungi telemetria completa solo per admin/superadmin
+      if (isAdmin) {
+        responseMetadata.telemetry = supervisorResult.telemetry;
+      }
+
       return NextResponse.json({
         success: true,
         message: responseMessage,
-        metadata: {
-          trace_id: traceId,
-          userRole,
-          timestamp: new Date().toISOString(),
-          isMock: false,
-          toolCalls: 0,
-          executionTime: Date.now() - startTime,
-          rateLimitRemaining: rateLimitResult.remaining,
-          usingPricingGraph: supervisorResult.source === 'pricing_graph',
-          pricingOptionsCount: supervisorResult.pricingOptions?.length ?? 0,
-          supervisorDecision: supervisorResult.decision,
-        }
+        metadata: responseMetadata,
       });
     }
     
@@ -558,22 +566,31 @@ export async function POST(request: NextRequest) {
 
     // Telemetria: log fallback legacy (supervisor ha già loggato)
     
+    // P2: Aggiungi telemetria per admin/superadmin (se disponibile da supervisor)
+    const legacyMetadata: any = {
+      trace_id: traceId, // Trace ID per telemetria
+      userRole, // Role è OK (non PII)
+      timestamp: new Date().toISOString(),
+      isMock,
+      toolCalls: toolCalls.length,
+      executionTime: Date.now() - startTime,
+      rateLimitRemaining: rateLimitResult.remaining,
+      usingClaude: !isMock && !!claudeClient,
+      usingPricingGraph: false, // Legacy path
+      // NO userId, NO email nei metadata (PII)
+    };
+
+    // Aggiungi telemetria completa solo per admin/superadmin (se supervisorResult esiste)
+    // Nota: Nel path legacy puro, supervisorResult potrebbe non esistere
+    if (isAdmin && typeof supervisorResult !== 'undefined' && supervisorResult?.telemetry) {
+      legacyMetadata.telemetry = supervisorResult.telemetry;
+    }
+
     // Restituisci risposta JSON (NO PII nei metadata)
     return NextResponse.json({
       success: true,
       message: aiResponse,
-      metadata: {
-        trace_id: traceId, // Trace ID per telemetria
-        userRole, // Role è OK (non PII)
-        timestamp: new Date().toISOString(),
-        isMock,
-        toolCalls: toolCalls.length,
-        executionTime: Date.now() - startTime,
-        rateLimitRemaining: rateLimitResult.remaining,
-        usingClaude: !isMock && !!claudeClient,
-        usingPricingGraph: false, // Legacy path
-        // NO userId, NO email nei metadata (PII)
-      }
+      metadata: legacyMetadata,
     }, {
       // ⚠️ Assicura che la risposta sia sempre JSON valido
       headers: {

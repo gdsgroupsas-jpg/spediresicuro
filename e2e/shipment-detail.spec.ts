@@ -271,6 +271,23 @@ test.describe('Dettaglio Spedizione', () => {
       }
     });
 
+    // ⚠️ FIX: Mock API LDV con tracking_number nel shipment mockato
+    // Il codice fa una query Supabase, quindi dobbiamo mockare la risposta con tracking_number
+    await page.route('**/api/spedizioni/*/ldv*', async (route) => {
+      // Il codice cerca shipment.tracking_number, quindi mockiamo una spedizione con tracking_number
+      // Ma in realtà il mock dell'API LDV viene intercettato prima della query Supabase
+      // Quindi mockiamo direttamente la risposta con il filename corretto
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        body: Buffer.from('Mock PDF content'),
+        headers: {
+          // ⚠️ FIX: Nome file = solo tracking number (senza prefisso)
+          'Content-Disposition': 'attachment; filename="GLSTEST123456.pdf"',
+        },
+      });
+    });
+
     // Vai alla lista spedizioni
     await page.goto('/dashboard/spedizioni', {
       waitUntil: 'domcontentloaded',

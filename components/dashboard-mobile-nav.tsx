@@ -32,6 +32,7 @@ import {
   LogOut,
   ChevronRight,
   BookOpen,
+  Ghost,
 } from 'lucide-react';
 
 export default function DashboardMobileNav() {
@@ -236,6 +237,17 @@ export default function DashboardMobileNav() {
                   >
                     <Bot className="w-5 h-5" />
                     <span>AI Assistant</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      const event = new CustomEvent('openAnneAssistant');
+                      window.dispatchEvent(event);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:shadow-lg transition-all duration-200"
+                  >
+                    <Ghost className="w-5 h-5" />
+                    <span>Anne Assistant</span>
                   </button>
                 </div>
               </div>
