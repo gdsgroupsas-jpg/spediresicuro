@@ -337,7 +337,7 @@ pricingWorkflow.addNode('explain_worker', explainWorkerWrapper); // P2
 // NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
 // LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
 // Il comportamento runtime è corretto, ma TypeScript richiede questi cast.
-// TODO: Rimuovere quando LangGraph migliorerà i tipi.
+// P3 Task 5: Manteniamo cast per compatibilità LangGraph API, ma documentati.
 
 // Entry point: supervisor
 pricingWorkflow.setEntryPoint('supervisor' as any);
@@ -426,5 +426,15 @@ pricingWorkflow.addConditionalEdges(
 );
 
 // Compila il grafo
+// P3 Task 1: Checkpointer opzionale per persistenza stato
+// Il checkpointer viene passato al compile() quando disponibile (da supervisor-router)
 export const pricingGraph = pricingWorkflow.compile();
+
+/**
+ * Factory per creare graph con checkpointer (P3 Task 1).
+ * Usa checkpointer per persistenza stato conversazioni multi-turn.
+ */
+export function createPricingGraphWithCheckpointer(checkpointer: any) {
+  return pricingWorkflow.compile({ checkpointer });
+}
 

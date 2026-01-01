@@ -19,8 +19,11 @@
  */
 
 import { AgentState } from './state';
-import { pricingGraph } from './pricing-graph';
+import { pricingGraph, createPricingGraphWithCheckpointer } from './pricing-graph';
 import { decideNextStep, DecisionInput, SupervisorDecision } from './supervisor';
+import { createCheckpointer } from './checkpointer';
+import { agentSessionService } from '@/lib/services/agent-session';
+import { assertAgentState } from './type-guards';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { HumanMessage } from '@langchain/core/messages';
@@ -226,7 +229,12 @@ export async function supervisorRouter(
     // Il routing è deciso ESCLUSIVAMENTE da supervisor.ts basandosi sullo stato.
     // supervisor-router rileva solo segnali (intent, OCR patterns) e li passa al graph.
     // ⚠️ ActingContext iniettato in agent_context per accesso worker
-    const initialState: Partial<AgentState> = {
+    const sessionId = traceId; // Usa traceId come session_id
+    
+    // P3 Task 1: Recupera stato esistente se presente (checkpoint)
+    let existingState = await agentSessionService.getSession(userId, sessionId);
+    
+    const initialState: Partial<AgentState> = existingState || {
       messages: [new HumanMessage(message)],
       userId,
       userEmail,
@@ -239,7 +247,7 @@ export async function supervisorRouter(
       // next_step è undefined: supervisor deciderà il routing
       // ⚠️ AI AGENT: Inietta ActingContext in agent_context
       agent_context: {
-        session_id: traceId, // Usa traceId come session_id temporaneo (Task 1 aggiungerà persistenza)
+        session_id: sessionId,
         conversation_history: [new HumanMessage(message)],
         user_role: (actingContext.target.role || 'user') as UserRole,
         is_impersonating: actingContext.isImpersonating,
@@ -247,12 +255,25 @@ export async function supervisorRouter(
       },
     };
     
+    // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio
+    if (existingState) {
+      initialState.messages = [...(existingState.messages || []), new HumanMessage(message)];
+    }
+    
+    // P3 Task 1: Crea checkpointer e graph con persistenza
+    const checkpointer = createCheckpointer();
+    const graphWithCheckpointer = createPricingGraphWithCheckpointer(checkpointer);
+    
     const graphStartTime = Date.now();
-    // NOTE: LangGraph restituisce un tipo generico che non corrisponde esattamente ad AgentState.
-    // Il cast è sicuro perché il grafo è configurato con AgentState come tipo di stato.
-    // TODO: Migliorare quando LangGraph avrà tipi più precisi.
-    const graphResult = await pricingGraph.invoke(initialState);
-    const result = graphResult as unknown as AgentState;
+    // P3 Task 1: Usa graph con checkpointer, passa thread_id e user_id in config
+    const graphResult = await graphWithCheckpointer.invoke(initialState, {
+      configurable: {
+        thread_id: sessionId,
+        user_id: userId,
+      },
+    });
+    // P3 Task 5: Usa type guard per validazione type-safe invece di cast diretto
+    const result = assertAgentState(graphResult);
     const graphExecutionTime = Date.now() - graphStartTime;
     
     // Pricing graph usato con successo

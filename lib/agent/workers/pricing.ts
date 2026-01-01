@@ -10,6 +10,7 @@ import { AgentState } from '../orchestrator/state';
 import { calculateOptimalPrice, PricingRequest, PricingResult } from '@/lib/ai/pricing-engine';
 import { defaultLogger, type ILogger } from '../logger';
 import { DEFAULT_PLATFORM_FEE } from '@/lib/services/pricing/platform-fee';
+import { agentCache } from '@/lib/services/cache';
 
 /**
  * Aggiunge la platform fee (MVP hardcoded) ai risultati pricing.
@@ -105,9 +106,36 @@ export async function pricingWorker(
       };
     }
     
-    // Chiama il pricing-engine legacy
-    logger.log('💰 [Pricing Worker] Calcolo preventivo con:', pricingRequest);
-    const pricingOptions = await calculateOptimalPrice(pricingRequest);
+    // P3 Task 6: Check cache pricing
+    const cachedPricing = agentCache.getPricing({
+      weight: pricingRequest.weight,
+      destinationZip: pricingRequest.destinationZip,
+      destinationProvince: pricingRequest.destinationProvince,
+      serviceType: pricingRequest.serviceType,
+      cashOnDelivery: pricingRequest.cashOnDelivery,
+      declaredValue: pricingRequest.declaredValue,
+    });
+    
+    let pricingOptions: PricingResult[];
+    
+    if (cachedPricing) {
+      logger.log('✅ [Pricing Worker] Risultato da cache');
+      pricingOptions = cachedPricing;
+    } else {
+      // Chiama il pricing-engine legacy
+      logger.log('💰 [Pricing Worker] Calcolo preventivo con:', pricingRequest);
+      pricingOptions = await calculateOptimalPrice(pricingRequest);
+      
+      // P3 Task 6: Salva in cache
+      agentCache.setPricing({
+        weight: pricingRequest.weight,
+        destinationZip: pricingRequest.destinationZip,
+        destinationProvince: pricingRequest.destinationProvince,
+        serviceType: pricingRequest.serviceType,
+        cashOnDelivery: pricingRequest.cashOnDelivery,
+        declaredValue: pricingRequest.declaredValue,
+      }, pricingOptions);
+    }
     
     if (pricingOptions.length === 0) {
       return {

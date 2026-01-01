@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -399,15 +399,73 @@ app/api/ai/agent-chat/route.ts
 
 ---
 
+## ✅ P3: AI AGENT ARCHITECTURE (COMPLETATO - 1 Gennaio 2026)
+
+### Task 1: LangGraph Checkpointer - State Persistence
+- [x] **Checkpointer:** `lib/agent/orchestrator/checkpointer.ts` - Estende MemorySaver, salva in Supabase
+- [x] **Service Layer:** `lib/services/agent-session.ts` - Abstraction layer con cache in-memory (TTL 5 min)
+- [x] **Integrazione:** Checkpointer integrato in `pricing-graph.ts` e `supervisor-router.ts`
+- [x] **Persistenza:** Stato completo salvato in `agent_sessions` table (migration 054)
+- [x] **Ripristino:** Conversazioni multi-turn riprendono da checkpoint
+
+### Task 2: Wallet Integration - Verifica Credito Pre-Booking
+- [x] **Credit Check:** `lib/wallet/credit-check.ts` - Verifica credito prima di booking
+- [x] **Integrazione:** Check in `supervisor.ts` prima di routing a `booking_worker`
+- [x] **Prevenzione:** Blocca tentativi booking con credito insufficiente (risparmio API calls)
+- [x] **Messaggi:** Formattazione chiara per utente ("Credito insufficiente: €X disponibili, €Y richiesti")
+
+### Task 3: AgentSession Service - Abstraction Layer
+- [x] **Service:** `lib/services/agent-session.ts` - Metodi: `createSession()`, `getSession()`, `updateSession()`, `listSessions()`
+- [x] **Cache:** In-memory cache con TTL 5 minuti per sessioni attive
+- [x] **Serializzazione:** Supporto BaseMessage[] serialization/deserialization
+- [x] **Type Safety:** Type-safe con AgentState serialization
+
+### Task 4: AgentTool Registry - Unificazione Tools
+- [x] **Registry:** `lib/agent/tools/registry.ts` - Registry centralizzato con type safety
+- [x] **Auto-discovery:** Supporto per decorator pattern (preparato)
+- [x] **Validazione:** Input/output con Zod schema
+- [x] **Compatibilità:** Mantenuta compatibilità con tools esistenti (`lib/ai/tools.ts`, `lib/agent/tools.ts`)
+
+### Task 5: Type Safety Improvements - Rimuovere TODO
+- [x] **Type Guards:** `lib/agent/orchestrator/type-guards.ts` - Type guards per AgentState
+- [x] **TODO Risolti:** Rimossi tutti i TODO identificati (pricing-graph.ts, graph.ts, supervisor-router.ts)
+- [x] **Type Safety:** Sostituiti cast `as any` con type guards dove possibile
+- [x] **Documentazione:** Cast necessari documentati (compatibilità LangGraph API)
+
+### Task 6: Performance Optimization - Query & Caching
+- [x] **Cache Service:** `lib/services/cache.ts` - Cache in-memory per RAG e pricing
+- [x] **RAG Cache:** Integrato in `mentor_worker.ts` e `explain_worker.ts` (TTL 1 ora)
+- [x] **Pricing Cache:** Integrato in `pricing_worker.ts` (TTL 5 minuti)
+- [x] **Query Optimization:** Select specifici in `agent-session.ts` (solo campi necessari)
+
+**Evidenza:**
+- File: `lib/services/agent-session.ts`, `lib/agent/orchestrator/checkpointer.ts`, `lib/wallet/credit-check.ts`
+- File: `lib/agent/tools/registry.ts`, `lib/agent/orchestrator/type-guards.ts`, `lib/services/cache.ts`
+- Integrazione cache: `lib/agent/workers/mentor.ts`, `lib/agent/workers/explain.ts`, `lib/agent/workers/pricing.ts`
+
+**Come verificare:**
+```bash
+# Checkpointer
+grep -r "SupabaseCheckpointer\|createCheckpointer" lib/agent/orchestrator/
+# Expected: checkpointer.ts, pricing-graph.ts, supervisor-router.ts
+
+# Credit Check
+grep -r "checkCreditBeforeBooking" lib/agent/orchestrator/supervisor.ts
+# Expected: check prima di booking_worker routing
+
+# Cache
+grep -r "agentCache\.\(get\|set\)" lib/agent/workers/
+# Expected: mentor.ts, explain.ts, pricing.ts
+```
+
+---
+
 ## 🚀 NEXT STEPS
 
-1. **Wallet Integration (Sprint 2.7)**
-   - Verifica credito prima di booking
-   - `INSUFFICIENT_CREDIT` error handling migliorato
-
-3. **Checkpointer (Future)**
-   - Memoria conversazione multi-turn
-   - Persistenza stato tra messaggi
+1. **Ottimizzazioni Future (Opzionali)**
+   - Batch reads Supabase quando possibile
+   - Lazy loading documentazione (carica solo se necessario)
+   - Metriche cache hit rate per monitoring
 
 ---
 
