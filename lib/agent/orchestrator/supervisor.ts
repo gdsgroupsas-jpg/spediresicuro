@@ -15,6 +15,7 @@ import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { containsBookingConfirmation, preflightCheck } from '@/lib/agent/workers/booking';
 import { detectMentorIntent } from '@/lib/agent/workers/mentor';
+import { detectDebugIntent } from '@/lib/agent/workers/debug';
 import { defaultLogger, type ILogger } from '../logger';
 import { llmConfig } from '@/lib/config';
 
@@ -207,6 +208,16 @@ export async function supervisor(
       return {
         next_step: 'ocr_worker',
         processingStatus: 'extracting',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+    
+    // P2: Debug Intent - Richieste di debug e troubleshooting
+    if (detectDebugIntent(messageText)) {
+      logger.log('🐛 [Supervisor] Intent debug rilevato, routing a debug_worker');
+      return {
+        next_step: 'debug_worker',
+        processingStatus: 'idle',
         iteration_count: (state.iteration_count || 0) + 1,
       };
     }
