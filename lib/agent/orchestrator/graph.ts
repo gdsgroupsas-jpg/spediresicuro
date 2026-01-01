@@ -67,7 +67,7 @@ workflow.addNode('human_review', humanReview);
 // NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
 // LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
 // Il comportamento runtime è corretto, ma TypeScript richiede questi cast.
-// TODO: Rimuovere quando LangGraph migliorerà i tipi.
+// P3 Task 5: Manteniamo cast per compatibilità LangGraph API, ma documentati.
 
 // Add Edges
 workflow.setEntryPoint('extract_data' as any);
