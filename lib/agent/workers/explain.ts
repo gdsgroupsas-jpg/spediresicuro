@@ -342,33 +342,72 @@ export async function explainWorker(
 }
 
 /**
- * Detect Explain Intent - Verifica se il messaggio è una richiesta di spiegazione business
+ * Detect Explain Intent - Verifica se il messaggio è una richiesta di spiegazione business flows
  * 
- * Pattern: "spiega come", "come funziona il business", "flusso", "processo"
+ * Pattern specifici per business flows (wallet, spedizioni, margini).
+ * Più specifico di mentor (che gestisce domande tecniche generali).
+ * 
+ * Esempi: "spiega il flusso del wallet", "come funziona il processo di spedizione", "spiega il calcolo dei margini"
  */
 export function detectExplainIntent(message: string): boolean {
+  const messageLower = message.toLowerCase();
+  
+  // Pattern specifici per business flows espliciti
   const explainPatterns = [
-    /spiega come/i,
-    /come funziona/i,
-    /come si/i,
-    /flusso/i,
-    /processo/i,
-    /workflow/i,
-    /business flow/i,
-    /spiega il/i,
-    /spiega la/i,
-    /spiega lo/i,
-    /spiega un/i,
-    /spiega una/i,
-    /spiega/i,
-    /dimmi come/i,
-    /raccontami come/i,
-    /wallet/i,
-    /margine/i,
-    /spread/i,
-    /ricavo/i,
+    // Flussi espliciti
+    /flusso.*wallet/i,
+    /flusso.*spedizione/i,
+    /flusso.*pagamento/i,
+    /flusso.*business/i,
+    /processo.*spedizione/i,
+    /processo.*wallet/i,
+    /processo.*pagamento/i,
+    /workflow.*spedizione/i,
+    /workflow.*wallet/i,
+    
+    // Spiegazioni esplicite di business flows
+    /spiega.*flusso/i,
+    /spiega.*processo/i,
+    /spiega.*workflow/i,
+    /spiega.*business flow/i,
+    /spiega.*calcolo.*margine/i,
+    /spiega.*calcolo.*spread/i,
+    /spiega.*calcolo.*ricavo/i,
+    /spiega.*modello.*business/i,
+    /spiega.*modello.*ricavo/i,
+    
+    // Margini e ricavi (business-specific)
+    /come.*calcolo.*margine/i,
+    /come.*calcolo.*spread/i,
+    /come.*calcolo.*ricavo/i,
+    /come.*funziona.*margine/i,
+    /come.*funziona.*spread/i,
+    /come.*funziona.*ricavo/i,
+    
+    // Processi business espliciti
+    /come.*funziona.*processo.*spedizione/i,
+    /come.*funziona.*processo.*wallet/i,
+    /come.*funziona.*processo.*pagamento/i,
   ];
   
-  return explainPatterns.some(pattern => pattern.test(message));
+  // Verifica pattern specifici
+  const hasSpecificPattern = explainPatterns.some(pattern => pattern.test(message));
+  
+  // Se ha pattern specifici, è explain
+  if (hasSpecificPattern) {
+    return true;
+  }
+  
+  // Altrimenti, verifica se è una domanda generica su business (non tecnica)
+  // Esclude domande tecniche che vanno a mentor
+  const isBusinessQuestion = 
+    (messageLower.includes('business') || messageLower.includes('modello') || messageLower.includes('ricavo')) &&
+    !messageLower.includes('architettura') &&
+    !messageLower.includes('database') &&
+    !messageLower.includes('schema') &&
+    !messageLower.includes('rls') &&
+    !messageLower.includes('sicurezza');
+  
+  return isBusinessQuestion;
 }
 
