@@ -365,3 +365,4 @@ Il Kill Switch OCR immagini funziona correttamente:
 **Cohort 0 può procedere** ✅
 
 
+

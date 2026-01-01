@@ -126,10 +126,12 @@ export async function generateInternalLDV(
       const pdfDoc = generateShipmentPDF(spedizioneData);
       const pdfOutput = pdfDoc.output('arraybuffer');
       fileData = Buffer.from(pdfOutput);
+      // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e (manteniamo LDV_ per compatibilità)
       filename = `LDV_${shipment.tracking_number || shipment.id}_${new Date().toISOString().split('T')[0]}.pdf`;
     } else {
       const csvContent = generateShipmentCSV(spedizioneData);
       fileData = Buffer.from(csvContent, 'utf-8');
+      // ⚠️ FIX: Nome file deve contenere "etichetta" o "ldv" per test e2e (manteniamo LDV_ per compatibilità)
       filename = `LDV_${shipment.tracking_number || shipment.id}_${new Date().toISOString().split('T')[0]}.csv`;
     }
 

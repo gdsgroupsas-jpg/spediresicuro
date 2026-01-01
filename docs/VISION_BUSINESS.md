@@ -256,3 +256,4 @@ Utente B2C → Checkout (Pagamento Carta) → Wallet "Web Channel" → Pagamento
 **Last Updated:** December 29, 2025  
 **Review Cycle:** Quarterly
 
+
