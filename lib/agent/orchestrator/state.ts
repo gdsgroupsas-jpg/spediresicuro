@@ -3,6 +3,8 @@ import { Shipment, CourierServiceType, RecipientType } from '@/types/shipments';
 import { PricingResult } from '@/lib/ai/pricing-engine';
 import { ShipmentDraft } from '@/lib/address/shipment-draft';
 import { BookingResult } from '@/lib/agent/workers/booking';
+import { UserRole } from '@/lib/rbac';
+import { ActingContext } from '@/lib/safe-auth';
 
 export interface AgentState {
   // Messaggi della conversazione (per debugging e chat history)
@@ -83,4 +85,29 @@ export interface AgentState {
    * Popolato da booking_worker dopo tentativo di prenotazione.
    */
   booking_result?: BookingResult;
+  
+  // ===== AI AGENT CONTEXT (P1 Prerequisites) =====
+  
+  /**
+   * Contesto AI Agent per conversazioni multi-turn e mentor.
+   * Popolato da supervisor-router con ActingContext.
+   */
+  agent_context?: {
+    session_id: string;
+    conversation_history: BaseMessage[];
+    user_role: UserRole;
+    current_page?: string;
+    is_impersonating: boolean;
+    acting_context?: ActingContext; // Iniettato da supervisor-router
+  };
+  
+  /**
+   * Risposta del mentor worker (Q&A tecnico).
+   * Popolato da mentor_worker quando l'utente chiede spiegazioni tecniche.
+   */
+  mentor_response?: {
+    answer: string;
+    sources: string[]; // File paths referenziati (es. docs/MONEY_FLOWS.md)
+    confidence: number; // 0-100
+  };
 }
