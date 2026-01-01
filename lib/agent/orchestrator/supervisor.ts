@@ -16,6 +16,7 @@ import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { containsBookingConfirmation, preflightCheck } from '@/lib/agent/workers/booking';
 import { detectMentorIntent } from '@/lib/agent/workers/mentor';
 import { detectDebugIntent } from '@/lib/agent/workers/debug';
+import { detectExplainIntent } from '@/lib/agent/workers/explain';
 import { defaultLogger, type ILogger } from '../logger';
 import { llmConfig } from '@/lib/config';
 
@@ -208,6 +209,16 @@ export async function supervisor(
       return {
         next_step: 'ocr_worker',
         processingStatus: 'extracting',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+    
+    // P2: Explain Intent - Richieste di spiegazione business flows
+    if (detectExplainIntent(messageText)) {
+      logger.log('📚 [Supervisor] Intent explain rilevato, routing a explain_worker');
+      return {
+        next_step: 'explain_worker',
+        processingStatus: 'idle',
         iteration_count: (state.iteration_count || 0) + 1,
       };
     }
