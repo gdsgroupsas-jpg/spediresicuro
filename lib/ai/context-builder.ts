@@ -15,6 +15,7 @@ export interface UserContext {
   userRole: 'admin' | 'user';
   userName: string;
   recentShipments: any[];
+  walletBalance?: number; // ⚠️ NUOVO: Wallet balance
   monthlyStats?: {
     totalShipments: number;
     totalRevenue: number;
@@ -54,10 +55,27 @@ export async function buildContext(
       userRole,
       userName,
       recentShipments: [],
+      walletBalance: 0, // ⚠️ NUOVO: Wallet balance
     },
   };
   
   try {
+    // 0. Recupera wallet_balance dell'utente
+    try {
+      const { data: userData, error: walletError } = await supabaseAdmin
+        .from('users')
+        .select('wallet_balance')
+        .eq('id', userId)
+        .single();
+      
+      if (!walletError && userData) {
+        context.user.walletBalance = parseFloat(userData.wallet_balance || '0') || 0;
+      }
+    } catch (walletErr: any) {
+      console.warn('⚠️ [ContextBuilder] Errore recupero wallet_balance (non critico):', walletErr.message);
+      // Continua anche se il wallet fallisce
+    }
+    
     // 1. Recupera spedizioni recenti dell'utente (ultime 10)
     const { data: shipments, error: shipmentsError } = await supabaseAdmin
       .from('shipments')
@@ -174,6 +192,11 @@ export function formatContextForPrompt(context: {
   let prompt = `**CONTESTO UTENTE:**\n`;
   prompt += `- Nome: ${context.user.userName}\n`;
   prompt += `- Ruolo: ${context.user.userRole}\n`;
+  
+  // ⚠️ NUOVO: Mostra wallet balance se disponibile
+  if (context.user.walletBalance !== undefined) {
+    prompt += `- Saldo Wallet: €${context.user.walletBalance.toFixed(2)}\n`;
+  }
   
   if (context.user.recentShipments.length > 0) {
     prompt += `\n**SPEDIZIONI RECENTI (${context.user.recentShipments.length}):**\n`;
