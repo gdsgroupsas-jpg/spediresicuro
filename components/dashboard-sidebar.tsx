@@ -64,8 +64,9 @@ export default function DashboardSidebar() {
   const navigationConfig = useMemo(() => {
     return getNavigationForUser(userRole, {
       isReseller,
+      accountType: accountType || undefined,
     });
-  }, [userRole, isReseller]);
+  }, [userRole, isReseller, accountType]);
   
   const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
 
