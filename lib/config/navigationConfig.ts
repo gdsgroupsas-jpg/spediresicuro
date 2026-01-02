@@ -268,6 +268,20 @@ const resellerSection: NavSection = {
       icon: Users,
       description: 'Gestisci il tuo portfolio clienti',
     },
+    {
+      id: 'reseller-listini-fornitore',
+      label: 'Listini Fornitore',
+      href: '/dashboard/reseller/listini-fornitore',
+      icon: Package,
+      description: 'Gestisci i tuoi listini fornitore',
+    },
+    {
+      id: 'reseller-listini-personalizzati',
+      label: 'Listini Personalizzati',
+      href: '/dashboard/reseller/listini-personalizzati',
+      icon: FileText,
+      description: 'Listini personalizzati per i tuoi clienti',
+    },
   ],
 };
 
@@ -439,6 +453,25 @@ const accountSection: NavSection = {
 };
 
 /**
+ * BYOC - Solo per BYOC (Bring Your Own Carrier)
+ */
+const byocSection: NavSection = {
+  id: 'byoc',
+  label: 'BYOC',
+  collapsible: true,
+  defaultExpanded: true,
+  items: [
+    {
+      id: 'byoc-listini-fornitore',
+      label: 'Listini Fornitore',
+      href: '/dashboard/byoc/listini-fornitore',
+      icon: Package,
+      description: 'Gestisci i tuoi listini fornitore',
+    },
+  ],
+};
+
+/**
  * Filtra le sezioni in base al ruolo utente e feature flags
  */
 export function getNavigationForUser(
@@ -446,9 +479,10 @@ export function getNavigationForUser(
   features: {
     isReseller?: boolean;
     hasTeam?: boolean;
+    accountType?: string;
   } = {}
 ): NavigationConfig {
-  const { isReseller = false, hasTeam = false } = features;
+  const { isReseller = false, hasTeam = false, accountType } = features;
 
   // Filtra le sezioni in base ai permessi
   // ⚠️ Ordine logico: Spedizioni → Resi → Strumenti → Finanze → Admin → Account → Comunicazioni → Supporto
@@ -457,6 +491,11 @@ export function getNavigationForUser(
     returnsSection,
     toolsSection,
   ];
+
+  // Aggiungi sezione BYOC se account_type è 'byoc'
+  if (accountType === 'byoc') {
+    sections.push(byocSection);
+  }
 
   // Aggiungi sezione finanze se reseller o se ha wallet
   if (isReseller) {

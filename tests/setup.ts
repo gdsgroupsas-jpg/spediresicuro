@@ -10,8 +10,19 @@
  * - Setup/teardown globale
  */
 
-// Esempio: Mock variabili d'ambiente se necessario
-// process.env.NODE_ENV = 'test';
+// ⚠️ IMPORTANTE: Carica variabili d'ambiente PRIMA di qualsiasi import
+// Questo assicura che i moduli che leggono process.env abbiano i valori corretti
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Carica .env.local se esiste
+try {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  dotenv.config({ path: envPath });
+  console.log('✅ Variabili d\'ambiente caricate da .env.local (setup.ts)');
+} catch (error) {
+  // Ignora errori, le variabili potrebbero essere già configurate
+}
 
 import { vi } from 'vitest';
 

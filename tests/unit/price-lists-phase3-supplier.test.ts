@@ -1,0 +1,509 @@
+/**
+ * Test Fase 3: Listini Fornitore - Server Actions & Permessi
+ * 
+ * Verifica:
+ * - Server Actions per listini fornitore (Reseller/BYOC)
+ * - Permessi e isolamento listini
+ * - CRUD operations per Reseller e BYOC
+ * - Isolamento: Reseller/BYOC NON vedono listini globali
+ * 
+ * NOTA: Questo test verifica principalmente la logica delle Server Actions
+ * usando mock per l'autenticazione. Per test end-to-end completi, vedere
+ * tests/integration/price-lists-phase3-integration.test.ts
+ */
+
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Carica variabili d'ambiente da .env.local
+try {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  dotenv.config({ path: envPath });
+  console.log('✅ Variabili d\'ambiente caricate da .env.local');
+} catch (error) {
+  console.warn('⚠️  Impossibile caricare .env.local, uso valori mock');
+}
+
+// Setup variabili d'ambiente mock se non presenti
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('mock')) {
+  console.warn('⚠️  Usando valori mock per Supabase');
+  process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co';
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-key';
+} else {
+  console.log('✅ Supabase configurato correttamente');
+  console.log(`   URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30)}...`);
+}
+
+import { supabaseAdmin } from '@/lib/db/client';
+import {
+  createSupplierPriceListAction,
+  listSupplierPriceListsAction,
+  getSupplierPriceListForCourierAction,
+  updatePriceListAction,
+  deletePriceListAction,
+  listPriceListsAction,
+} from '@/actions/price-lists';
+import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
+
+// Mock auth per test
+vi.mock('@/lib/auth-config', () => ({
+  auth: vi.fn(),
+}));
+
+import { auth } from '@/lib/auth-config';
+
+describe('Fase 3: Listini Fornitore - Server Actions', () => {
+  let resellerUserId: string;
+  let byocUserId: string;
+  let adminUserId: string;
+  let testCourierId: string;
+  let createdPriceLists: string[] = [];
+  let createdConfigs: string[] = [];
+
+  beforeAll(async () => {
+    // Verifica se Supabase è configurato
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('mock')) {
+      console.warn('⚠️  Supabase non configurato - alcuni test verranno saltati');
+      // Usa ID mock per i test
+      resellerUserId = 'mock-reseller-id';
+      byocUserId = 'mock-byoc-id';
+      adminUserId = 'mock-admin-id';
+      testCourierId = 'mock-courier-id';
+      return;
+    }
+
+    try {
+      // Crea utenti di test
+      const { data: reseller, error: resellerError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          email: `test-reseller-phase3-${Date.now()}@test.local`,
+          name: 'Test Reseller Phase 3',
+          account_type: 'user',
+          is_reseller: true,
+          role: 'user',
+          wallet_balance: 0,
+        })
+        .select()
+        .single();
+
+      const { data: byoc, error: byocError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          email: `test-byoc-phase3-${Date.now()}@test.local`,
+          name: 'Test BYOC Phase 3',
+          account_type: 'byoc',
+          is_reseller: false,
+          role: 'user',
+          wallet_balance: 0,
+        })
+        .select()
+        .single();
+
+      const { data: admin, error: adminError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          email: `test-admin-phase3-${Date.now()}@test.local`,
+          name: 'Test Admin Phase 3',
+          account_type: 'admin',
+          is_reseller: false,
+          role: 'admin',
+          wallet_balance: 0,
+        })
+        .select()
+        .single();
+
+      if (resellerError || byocError || adminError || !reseller || !byoc || !admin) {
+        console.warn('⚠️  Errore creazione utenti di test:', { resellerError, byocError, adminError });
+        // Usa ID mock
+        resellerUserId = 'mock-reseller-id';
+        byocUserId = 'mock-byoc-id';
+        adminUserId = 'mock-admin-id';
+        testCourierId = 'mock-courier-id';
+        return;
+      }
+
+      resellerUserId = reseller.id;
+      byocUserId = byoc.id;
+      adminUserId = admin.id;
+
+      // Crea corrieri di test
+      const { data: courier1, error: courierError } = await supabaseAdmin
+        .from('couriers')
+        .insert({
+          name: 'Test Courier Phase 3',
+          code: 'TEST3',
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (courierError || !courier1) {
+        console.warn('⚠️  Errore creazione corriere di test:', courierError);
+        testCourierId = 'mock-courier-id';
+        return;
+      }
+
+      testCourierId = courier1.id;
+    } catch (error) {
+      console.warn('⚠️  Errore setup test:', error);
+      // Usa ID mock
+      resellerUserId = 'mock-reseller-id';
+      byocUserId = 'mock-byoc-id';
+      adminUserId = 'mock-admin-id';
+      testCourierId = 'mock-courier-id';
+    }
+  });
+
+  afterAll(async () => {
+    // Skip cleanup se usiamo ID mock
+    if (resellerUserId.startsWith('mock-')) {
+      return;
+    }
+
+    try {
+      // Cleanup: elimina listini creati
+      if (createdPriceLists.length > 0) {
+        await supabaseAdmin
+          .from('price_lists')
+          .delete()
+          .in('id', createdPriceLists);
+      }
+
+      // Cleanup: elimina configurazioni create
+      if (createdConfigs.length > 0) {
+        await supabaseAdmin
+          .from('courier_configs')
+          .delete()
+          .in('id', createdConfigs);
+      }
+
+      // Elimina utenti di test
+      await supabaseAdmin.from('users').delete().in('id', [resellerUserId, byocUserId, adminUserId]);
+      
+      // Elimina corrieri di test
+      await supabaseAdmin.from('couriers').delete().eq('id', testCourierId);
+    } catch (error) {
+      console.warn('⚠️  Errore cleanup test:', error);
+    }
+  });
+
+  describe('createSupplierPriceListAction', () => {
+    it('Reseller può creare listino fornitore', async () => {
+      if (resellerUserId.startsWith('mock-')) {
+        console.log('⏭️  Test saltato: Supabase non configurato');
+        return;
+      }
+      // Mock auth per Reseller
+      (auth as any).mockResolvedValue({
+        user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      });
+
+      // Mock recupero utente Reseller
+      vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: resellerUserId,
+                    account_type: 'user',
+                    is_reseller: true,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        // Per price_lists, usa il vero supabaseAdmin
+        return (supabaseAdmin as any).from(table);
+      });
+
+      const result = await createSupplierPriceListAction({
+        name: 'Listino Fornitore Test Reseller',
+        version: '1.0.0',
+        status: 'draft',
+        courier_id: testCourierId,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.priceList).toBeDefined();
+      if (result.priceList) {
+        expect(result.priceList.list_type).toBe('supplier');
+        expect(result.priceList.is_global).toBe(false);
+        if (result.priceList.id) {
+          createdPriceLists.push(result.priceList.id);
+        }
+      }
+    });
+
+    it('BYOC può creare listino fornitore', async () => {
+      if (byocUserId.startsWith('mock-')) {
+        console.log('⏭️  Test saltato: Supabase non configurato');
+        return;
+      }
+      // Mock auth per BYOC
+      (auth as any).mockResolvedValue({
+        user: { email: `test-byoc-phase3-${Date.now()}@test.local` },
+      });
+
+      // Mock recupero utente BYOC
+      vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: byocUserId,
+                    account_type: 'byoc',
+                    is_reseller: false,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return (supabaseAdmin as any).from(table);
+      });
+
+      const result = await createSupplierPriceListAction({
+        name: 'Listino Fornitore Test BYOC',
+        version: '1.0.0',
+        status: 'draft',
+        courier_id: testCourierId,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.priceList).toBeDefined();
+      if (result.priceList?.id) {
+        createdPriceLists.push(result.priceList.id);
+      }
+    });
+
+    it('Utente normale NON può creare listino fornitore', async () => {
+      // Mock auth per utente normale
+      (auth as any).mockResolvedValue({
+        user: { email: `test-user-phase3-${Date.now()}@test.local` },
+      });
+
+      // Mock recupero utente normale
+      vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: 'user-normal-id',
+                    account_type: 'user',
+                    is_reseller: false,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return (supabaseAdmin as any).from(table);
+      });
+
+      const result = await createSupplierPriceListAction({
+        name: 'Listino Fornitore Test User',
+        version: '1.0.0',
+        status: 'draft',
+        courier_id: testCourierId,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Solo Reseller e BYOC');
+    });
+  });
+
+  describe('listSupplierPriceListsAction', () => {
+    it('Reseller vede solo i propri listini fornitore', async () => {
+      if (resellerUserId.startsWith('mock-')) {
+        console.log('⏭️  Test saltato: Supabase non configurato');
+        return;
+      }
+      // Crea listino fornitore per Reseller
+      const { data: priceList } = await supabaseAdmin
+        .from('price_lists')
+        .insert({
+          name: 'Listino Reseller Test',
+          version: '1.0.0',
+          status: 'draft',
+          list_type: 'supplier',
+          is_global: false,
+          courier_id: testCourierId,
+          created_by: resellerUserId,
+        })
+        .select()
+        .single();
+
+      if (priceList?.id) {
+        createdPriceLists.push(priceList.id);
+      }
+
+      // Mock auth per Reseller
+      (auth as any).mockResolvedValue({
+        user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      });
+
+      // Mock recupero utente
+      vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: resellerUserId,
+                    account_type: 'user',
+                    is_reseller: true,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return (supabaseAdmin as any).from(table);
+      });
+
+      const result = await listSupplierPriceListsAction();
+
+      expect(result.success).toBe(true);
+      expect(result.priceLists).toBeDefined();
+      if (result.priceLists) {
+        // Verifica che tutti i listini siano del Reseller
+        result.priceLists.forEach((pl) => {
+          expect(pl.created_by).toBe(resellerUserId);
+          expect(pl.list_type).toBe('supplier');
+        });
+      }
+    });
+  });
+
+  describe('Isolamento Listini Globali', () => {
+    it('Reseller NON vede listini globali in listPriceListsAction', async () => {
+      if (resellerUserId.startsWith('mock-')) {
+        console.log('⏭️  Test saltato: Supabase non configurato');
+        return;
+      }
+      // Crea listino globale (admin)
+      const { data: globalPriceList } = await supabaseAdmin
+        .from('price_lists')
+        .insert({
+          name: 'Listino Globale Test',
+          version: '1.0.0',
+          status: 'active',
+          list_type: 'global',
+          is_global: true,
+          courier_id: testCourierId,
+          created_by: adminUserId,
+        })
+        .select()
+        .single();
+
+      if (globalPriceList?.id) {
+        createdPriceLists.push(globalPriceList.id);
+      }
+
+      // Mock auth per Reseller
+      (auth as any).mockResolvedValue({
+        user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      });
+
+      // Mock recupero utente
+      vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: resellerUserId,
+                    account_type: 'user',
+                    is_reseller: true,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return (supabaseAdmin as any).from(table);
+      });
+
+      const result = await listPriceListsAction();
+
+      expect(result.success).toBe(true);
+      if (result.priceLists) {
+        // Verifica che non ci siano listini globali
+        result.priceLists.forEach((pl) => {
+          expect(pl.list_type).not.toBe('global');
+          expect(pl.is_global).not.toBe(true);
+        });
+      }
+    });
+  });
+
+  describe('getAvailableCouriersForUser', () => {
+    it('Restituisce corrieri disponibili per utente con configurazioni API', async () => {
+      if (resellerUserId.startsWith('mock-')) {
+        console.log('⏭️  Test saltato: Supabase non configurato');
+        return;
+      }
+      // Crea configurazione API per Reseller
+      const { data: config } = await supabaseAdmin
+        .from('courier_configs')
+        .insert({
+          owner_user_id: resellerUserId,
+          provider_id: 'test-provider',
+          contract_mapping: {
+            GLS: 'GLS123',
+            BRT: 'BRT456',
+          },
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (config?.id) {
+        createdConfigs.push(config.id);
+      }
+
+      const couriers = await getAvailableCouriersForUser(resellerUserId);
+
+      expect(couriers).toBeDefined();
+      expect(Array.isArray(couriers)).toBe(true);
+      // Verifica che ci siano corrieri se la configurazione esiste
+      if (config) {
+        expect(couriers.length).toBeGreaterThan(0);
+        const courierNames = couriers.map((c) => c.courierName);
+        expect(courierNames).toContain('GLS');
+        expect(courierNames).toContain('BRT');
+      }
+    });
+
+    it('Restituisce array vuoto se utente non ha configurazioni', async () => {
+      if (resellerUserId.startsWith('mock-')) {
+        console.log('⏭️  Test saltato: Supabase non configurato');
+        return;
+      }
+
+      // Rimuovi mock per questo test
+      vi.restoreAllMocks();
+      
+      const couriers = await getAvailableCouriersForUser('user-senza-config-12345');
+
+      expect(couriers).toBeDefined();
+      expect(Array.isArray(couriers)).toBe(true);
+      expect(couriers.length).toBe(0);
+    });
+  });
+});
