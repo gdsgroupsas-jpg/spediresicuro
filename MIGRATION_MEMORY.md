@@ -265,6 +265,7 @@ npm run test:ocr:integration
 - [x] **Tabella agent_sessions:** Persistenza conversazioni multi-turn con RLS
 - [x] **ActingContext injection:** ActingContext iniettato in AgentState
 - [x] **AgentState esteso:** agent_context e mentor_response aggiunti
+- [x] **Wallet Balance nel contesto:** Aggiunto wallet_balance al contesto fiscale e context-builder per Anne (commit 2b892af)
 - [x] **mentor_worker:** Worker Q&A tecnico con RAG su documentazione
 - [x] **API endpoints unificati:** /api/ai/agent-chat come entry point unico
 - [x] **AUDIT_ACTIONS:** Costanti per audit trail operazioni agent
@@ -697,3 +698,33 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 ```
 
 **Limite:** Verifica statica. Test integration verificano comportamento.
+
+---
+
+## 🔧 MODIFICHE RECENTI
+
+### ✅ Wallet Balance nel Contesto Anne (2 Gennaio 2026 - Commit 2b892af)
+
+**Problema:** Anne non poteva rispondere a domande sul wallet perché non aveva accesso al `wallet_balance` nel contesto.
+
+**Soluzione:**
+- Aggiunto `wallet_balance` al contesto fiscale (`lib/agent/fiscal-data.ts` - `getFiscalContext()`)
+- Aggiunto `walletBalance` al context-builder (`lib/ai/context-builder.ts` - `buildContext()`)
+- Aggiornato prompt base (`lib/ai/prompts.ts`) per menzionare accesso al wallet balance
+- Aggiornato `formatContextForPrompt()` per includere wallet balance nel contesto formattato
+
+**File modificati:**
+- `lib/agent/fiscal-data.ts`: Recupero wallet_balance da database e inclusione nel contesto fiscale
+- `lib/ai/context-builder.ts`: Aggiunto walletBalance a UserContext e recupero da database
+- `lib/ai/prompts.ts`: Aggiornato prompt per indicare ad Anne di usare walletBalance dal contesto
+
+**Come verificare:**
+```bash
+# Test manuale: chiedere ad Anne "quanto ho nel wallet"
+# Expected: Anne risponde con il saldo reale dell'utente dal contesto
+```
+
+**Note:**
+- Il wallet_balance viene recuperato dal database ad ogni chiamata (non cached)
+- Gestione errori: se il recupero fallisce, continua con valore 0 (non critico)
+- Il wallet balance è disponibile sia nel contesto fiscale che nel context-builder standard
