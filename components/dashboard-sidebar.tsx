@@ -155,7 +155,7 @@ export default function DashboardSidebar() {
           </Link>
         )}
 
-        {/* AI Assistant - Azione rapida prominente */}
+        {/* Anne AI - Azione rapida prominente */}
         {navigationConfig.mainActions.map((action) => {
           if (action.href === '#ai-assistant') {
             return (
@@ -165,7 +165,7 @@ export default function DashboardSidebar() {
                   const event = new CustomEvent('openAiAssistant');
                   window.dispatchEvent(event);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 transition-all shadow-sm hover:shadow-md"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white hover:from-purple-600 hover:via-purple-700 hover:to-pink-600 transition-all shadow-sm hover:shadow-md"
               >
                 <action.icon className="w-4 h-4" />
                 <span>{action.label}</span>
