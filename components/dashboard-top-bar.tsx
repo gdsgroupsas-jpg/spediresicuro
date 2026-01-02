@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Bot,
+  Ghost,
   Sparkles,
   Bell,
 } from 'lucide-react';
@@ -86,7 +87,7 @@ export default function DashboardTopBar({
     return items;
   })();
 
-  const handleOpenAiAssistant = () => {
+  const handleOpenAnne = () => {
     const event = new CustomEvent('openAiAssistant');
     window.dispatchEvent(event);
   };
@@ -143,27 +144,27 @@ export default function DashboardTopBar({
 
           {/* Right Side - Actions */}
           <div className="flex items-center gap-2">
-            {/* AI Assistant Button */}
+            {/* Anne AI Button */}
             {showAiButton && (
               <button
-                onClick={handleOpenAiAssistant}
-                className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
-                title="Apri AI Assistant"
+                onClick={handleOpenAnne}
+                className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
+                title="Apri Anne"
               >
-                <Bot className="w-5 h-5" />
-                <span>AI Assistant</span>
+                <Ghost className="w-5 h-5" />
+                <span>Anne</span>
                 <Sparkles className="w-4 h-4" />
               </button>
             )}
 
-            {/* Mobile: AI Button (icon only) */}
+            {/* Mobile: Anne Button (icon only) */}
             {showAiButton && (
               <button
-                onClick={handleOpenAiAssistant}
-                className="lg:hidden p-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                title="Apri AI Assistant"
+                onClick={handleOpenAnne}
+                className="lg:hidden p-2.5 rounded-xl bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                title="Apri Anne"
               >
-                <Bot className="w-5 h-5" />
+                <Ghost className="w-5 h-5" />
               </button>
             )}
 
