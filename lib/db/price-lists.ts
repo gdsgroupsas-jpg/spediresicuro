@@ -253,3 +253,76 @@ export async function deletePriceList(id: string): Promise<void> {
     throw new Error(`Errore eliminazione listino: ${error.message}`);
   }
 }
+
+/**
+ * Recupera corrieri disponibili per un utente
+ * 
+ * Basato su:
+ * 1. Configurazioni API (courier_configs) con owner_user_id = userId
+ * 2. contract_mapping JSONB per estrarre corrieri (GLS, BRT, SDA, ecc.)
+ * 
+ * @param userId - ID utente
+ * @returns Array di oggetti { courierId: string, courierName: string, providerId: string }
+ */
+export async function getAvailableCouriersForUser(
+  userId: string
+): Promise<Array<{ courierId: string; courierName: string; providerId: string }>> {
+  try {
+    // 1. Recupera configurazioni API dell'utente
+    const { data: configs, error } = await supabaseAdmin
+      .from('courier_configs')
+      .select('id, provider_id, contract_mapping')
+      .eq('owner_user_id', userId)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Errore recupero configurazioni:', error);
+      return [];
+    }
+
+    if (!configs || configs.length === 0) {
+      return [];
+    }
+
+    // 2. Estrai corrieri da contract_mapping
+    const couriersMap = new Map<string, { courierName: string; providerId: string }>();
+
+    for (const config of configs) {
+      const contractMapping = (config.contract_mapping as Record<string, string>) || {};
+      const providerId = config.provider_id;
+
+      // Le chiavi del mapping sono i corrieri
+      for (const [courierName, contractCode] of Object.entries(contractMapping)) {
+        if (!couriersMap.has(courierName)) {
+          couriersMap.set(courierName, {
+            courierName,
+            providerId,
+          });
+        }
+      }
+    }
+
+    // 3. Converti in array e prova a recuperare courier_id da tabella couriers
+    const result = [];
+    for (const [courierName, data] of Array.from(couriersMap.entries())) {
+      // Prova a trovare courier_id nella tabella couriers
+      const { data: courier } = await supabaseAdmin
+        .from('couriers')
+        .select('id, name')
+        .ilike('name', `%${courierName}%`)
+        .limit(1)
+        .maybeSingle();
+
+      result.push({
+        courierId: courier?.id || courierName, // Fallback a nome se non trovato
+        courierName,
+        providerId: data.providerId,
+      });
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('Errore getAvailableCouriersForUser:', error);
+    return [];
+  }
+}
