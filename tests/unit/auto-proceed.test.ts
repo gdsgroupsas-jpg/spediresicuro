@@ -92,9 +92,13 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
           {
             courier: 'GLS',
             serviceType: 'standard',
+            basePrice: 8.0,
+            surcharges: 0,
+            totalCost: 8.0,
             finalPrice: 10.0,
+            margin: 2.0,
             estimatedDeliveryDays: { min: 2, max: 4 },
-            reliabilityScore: 90,
+            recommendation: 'best_price',
           },
         ],
         confidenceScore: 90,
@@ -103,6 +107,7 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
 
       const mockLogger = {
         log: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
       };
@@ -120,9 +125,13 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
           {
             courier: 'GLS',
             serviceType: 'standard',
+            basePrice: 8.0,
+            surcharges: 0,
+            totalCost: 8.0,
             finalPrice: 10.0,
+            margin: 2.0,
             estimatedDeliveryDays: { min: 2, max: 4 },
-            reliabilityScore: 90,
+            recommendation: 'best_price',
           },
         ],
         confidenceScore: 75,
@@ -131,6 +140,7 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
 
       const mockLogger = {
         log: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
       };
@@ -148,9 +158,13 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
           {
             courier: 'GLS',
             serviceType: 'standard',
+            basePrice: 8.0,
+            surcharges: 0,
+            totalCost: 8.0,
             finalPrice: 10.0,
+            margin: 2.0,
             estimatedDeliveryDays: { min: 2, max: 4 },
-            reliabilityScore: 90,
+            recommendation: 'best_price',
           },
         ],
         confidenceScore: 90,
@@ -159,6 +173,7 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
 
       const mockLogger = {
         log: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
       };
@@ -175,9 +190,13 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
           {
             courier: 'GLS',
             serviceType: 'standard',
+            basePrice: 8.0,
+            surcharges: 0,
+            totalCost: 8.0,
             finalPrice: 10.0,
+            margin: 2.0,
             estimatedDeliveryDays: { min: 2, max: 4 },
-            reliabilityScore: 90,
+            recommendation: 'best_price',
           },
         ],
         confidenceScore: 50,
@@ -186,6 +205,7 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
 
       const mockLogger = {
         log: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
       };
@@ -208,9 +228,13 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
           {
             courier: 'GLS',
             serviceType: 'standard',
+            basePrice: 8.0,
+            surcharges: 0,
+            totalCost: 8.0,
             finalPrice: 10.0,
+            margin: 2.0,
             estimatedDeliveryDays: { min: 2, max: 4 },
-            reliabilityScore: 90,
+            recommendation: 'best_price',
           },
         ],
         confidenceScore: 95,
@@ -219,6 +243,7 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
 
       const mockLogger = {
         log: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
       };

@@ -62,11 +62,13 @@ describe('Auto-Proceed Integration (P4 Task 2)', () => {
     actor: {
       id: 'admin-id',
       email: 'admin@test.com',
+      name: 'Admin User',
       role: 'admin',
     },
     target: {
       id: 'user-id',
       email: 'user@test.com',
+      name: 'Test User',
       role: 'user',
     },
     isImpersonating: false,
