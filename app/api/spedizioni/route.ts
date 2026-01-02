@@ -727,30 +727,54 @@ export async function POST(request: NextRequest) {
                 if ((carrierMetadata as any)[key] === null) delete (carrierMetadata as any)[key];
               });
               updateData.metadata = carrierMetadata;
-              
-              // ⚠️ FIX: Salva shipmentId (increment_id) come shipment_id_external se presente
-              // Secondo openapi.json: POST /shipping/create restituisce "shipmentId" che è l'increment_id per cancellazione
-              // ⚠️ CRITICO: Cerca shipmentId in ordine: direttamente nel risultato > metadata.shipmentId > metadata.increment_id
-              const shipmentId = (ldvResult as any).shipmentId || // PRIORITÀ 1: Direttamente nel risultato
-                                 ldvResult.metadata?.shipmentId || // PRIORITÀ 2: Nel metadata
-                                 ldvResult.metadata?.increment_id || // PRIORITÀ 3: Alias nel metadata
-                                 null;
-              
-              console.log('🔍 [API] DEBUG shipmentId extraction:', {
-                has_metadata: !!ldvResult.metadata,
-                metadata_type: typeof ldvResult.metadata,
-                metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
-                shipmentId_from_metadata: shipmentId || 'NON TROVATO',
-                has_shipmentId_in_result: !!(ldvResult as any).shipmentId,
-                metadata_content: ldvResult.metadata ? JSON.stringify(ldvResult.metadata).substring(0, 300) : 'null',
-                full_result_keys: Object.keys(ldvResult),
-              });
-              
-              if (shipmentId) {
-                updateData.shipment_id_external = String(shipmentId);
-                console.log('💾 [API] Salvato shipmentId (increment_id) come shipment_id_external:', updateData.shipment_id_external);
+            }
+            
+            // ⚠️ FIX CRITICO: Salva shipmentId per TUTTI i corrieri (incluso Poste Italiane)
+            // Prima era dentro il blocco else e non veniva eseguito per Poste Italiane!
+            // Secondo openapi.json: POST /shipping/create restituisce "shipmentId" che è l'increment_id per cancellazione
+            // ⚠️ CRITICO: Cerca shipmentId in ordine: direttamente nel risultato > metadata.shipmentId > metadata.increment_id
+            const shipmentId = (ldvResult as any).shipmentId || // PRIORITÀ 1: Direttamente nel risultato
+                               ldvResult.metadata?.shipmentId || // PRIORITÀ 2: Nel metadata
+                               ldvResult.metadata?.increment_id || // PRIORITÀ 3: Alias nel metadata
+                               null;
+            
+            console.log('🔍 [API] DEBUG shipmentId extraction (per TUTTI i corrieri):', {
+              corriere: body.corriere,
+              has_metadata: !!ldvResult.metadata,
+              metadata_type: typeof ldvResult.metadata,
+              metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
+              shipmentId_from_metadata: shipmentId || 'NON TROVATO',
+              has_shipmentId_in_result: !!(ldvResult as any).shipmentId,
+              metadata_content: ldvResult.metadata ? JSON.stringify(ldvResult.metadata).substring(0, 300) : 'null',
+              full_result_keys: Object.keys(ldvResult),
+            });
+            
+            if (shipmentId) {
+              updateData.shipment_id_external = String(shipmentId);
+              console.log('💾 [API] ✅ Salvato shipmentId (increment_id) come shipment_id_external:', updateData.shipment_id_external);
+            } else {
+              // ⚠️ FALLBACK: Se shipmentId non è nel risultato, prova a estrarlo dal tracking number
+              const trackingForExtraction = ldvResult.tracking_number || trackingNumber;
+              if (trackingForExtraction) {
+                const trackingMatch = trackingForExtraction.match(/(\d+)$/);
+                if (trackingMatch) {
+                  const extractedShipmentId = trackingMatch[1];
+                  updateData.shipment_id_external = extractedShipmentId;
+                  console.warn('⚠️ [API] shipmentId NON nel risultato, estratto dal tracking come fallback:', {
+                    extracted_shipment_id: extractedShipmentId,
+                    tracking: trackingForExtraction,
+                    corriere: body.corriere,
+                    warning: 'Questo potrebbe non essere corretto se il tracking number non contiene l\'increment_id reale',
+                  });
+                } else {
+                  console.error('❌ [API] shipmentId NON TROVATO e impossibile estrarlo dal tracking - cancellazione futura NON funzionerà!');
+                  console.error('❌ [API] Corriere:', body.corriere);
+                  console.error('❌ [API] Metadata completo:', JSON.stringify(ldvResult.metadata || {}, null, 2));
+                  console.error('❌ [API] Risultato completo (chiavi):', Object.keys(ldvResult));
+                }
               } else {
-                console.error('❌ [API] shipmentId NON TROVATO - cancellazione futura NON funzionerà!');
+                console.error('❌ [API] shipmentId NON TROVATO e tracking number non disponibile - cancellazione futura NON funzionerà!');
+                console.error('❌ [API] Corriere:', body.corriere);
                 console.error('❌ [API] Metadata completo:', JSON.stringify(ldvResult.metadata || {}, null, 2));
                 console.error('❌ [API] Risultato completo (chiavi):', Object.keys(ldvResult));
               }
@@ -793,6 +817,8 @@ export async function POST(request: NextRequest) {
               has_tracking: !!updateData.tracking_number,
               has_ldv: !!updateData.ldv,
               has_metadata: !!updateData.metadata,
+              has_shipment_id_external: !!updateData.shipment_id_external, // ⚠️ CRITICO per cancellazione
+              shipment_id_external: updateData.shipment_id_external || 'NON SALVATO!',
               metadata_label_url: updateData.metadata?.label_url || updateData.metadata?.label_pdf_url || 'NON DISPONIBILE',
             });
             
@@ -948,6 +974,10 @@ export async function DELETE(request: NextRequest) {
       final_tracking: trackingNumber,
       shipment_id_external: shipmentIdExternal,
       isEmpty: !trackingNumber || trackingNumber.trim() === '',
+      hasShipmentIdExternal: !!(shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN'),
+      warning: !shipmentIdExternal || shipmentIdExternal === 'UNKNOWN' 
+        ? '⚠️ ATTENZIONE: shipment_id_external non disponibile, verrà estratto increment_id dal tracking (potrebbe non essere corretto)'
+        : '✅ shipment_id_external disponibile, verrà usato direttamente',
     });
 
     // ⚠️ INTEGRAZIONE SPEDISCI.ONLINE: Cancella su piattaforma esterna
@@ -1084,25 +1114,84 @@ export async function DELETE(request: NextRequest) {
           });
           
           // ⚠️ PRIORITÀ: Usa shipment_id_external (increment_id) se disponibile, altrimenti tracking_number
+          // Se shipment_id_external è null, il metodo cancelShipmentOnPlatform proverà a recuperarlo da Spedisci.Online
           const idToCancel = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') 
             ? shipmentIdExternal 
             : trackingNumber;
           
           console.log('🗑️ [API] Cancellazione Spedisci.Online:', {
             idToCancel,
-            method: (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by_increment_id' : 'by_tracking',
+            method: (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by_increment_id' : 'by_tracking_with_fallback',
             shipmentIdExternal: shipmentIdExternal || 'null',
             trackingNumber: trackingNumber || 'null',
+            note: shipmentIdExternal ? 'Usando shipment_id_external diretto' : 'Proverà a recuperare increment_id da Spedisci.Online, poi fallback su estrazione dal tracking',
           });
           
           spedisciOnlineCancelResult = await adapter.cancelShipmentOnPlatform(idToCancel);
           
           if (spedisciOnlineCancelResult.success) {
             const method = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by increment_id' : 'by tracking';
-            console.log(`✅ [API] Spedizione cancellata su Spedisci.Online (${method}):`, idToCancel);
+            const hasDirectId = !!(shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN');
+            console.log(`✅ [API] Spedizione cancellata su Spedisci.Online (${method}):`, {
+              idToCancel,
+              method,
+              hasDirectId,
+              message: spedisciOnlineCancelResult.message,
+            });
+            
+            // ⚠️ FALLBACK: Se la cancellazione è riuscita ma shipment_id_external era null,
+            // salva l'increment_id estratto per le prossime volte (se disponibile)
+            if (!hasDirectId && trackingNumber) {
+              try {
+                // Estrai increment_id dal tracking (stessa logica usata in cancelShipmentOnPlatform)
+                const trackingMatch = trackingNumber.match(/(\d+)$/);
+                if (trackingMatch) {
+                  const extractedIncrementId = trackingMatch[1];
+                  console.log('💾 [API] Salvo increment_id estratto come fallback per prossime volte:', {
+                    shipment_id: id,
+                    extracted_increment_id: extractedIncrementId,
+                    tracking: trackingNumber,
+                  });
+                  
+                  // Salva come shipment_id_external per le prossime volte
+                  await supabaseAdmin
+                    .from('shipments')
+                    .update({
+                      shipment_id_external: extractedIncrementId,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', id);
+                  
+                  console.log('✅ [API] shipment_id_external salvato come fallback');
+                }
+              } catch (fallbackError: any) {
+                console.warn('⚠️ [API] Errore salvataggio fallback shipment_id_external:', fallbackError?.message);
+                // Non bloccare il flusso
+              }
+            }
           } else {
             const method = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'increment_id' : 'tracking';
-            console.warn(`⚠️ [API] Cancellazione per ${method} fallita:`, spedisciOnlineCancelResult.error);
+            const hasDirectId = !!(shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN');
+            
+            // ⚠️ CRITICO: Se la cancellazione fallisce e non abbiamo shipment_id_external,
+            // la spedizione potrebbe esistere ancora su Spedisci.Online
+            if (!hasDirectId && spedisciOnlineCancelResult.error?.includes('increment_id estratto')) {
+              console.error(`❌ [API] CRITICO: Cancellazione fallita - la spedizione potrebbe esistere ancora su Spedisci.Online!`, {
+                idToCancel,
+                method,
+                error: spedisciOnlineCancelResult.error,
+                action_required: 'Verifica manualmente su Spedisci.Online e cancella se necessario',
+                reason: 'shipment_id_external non disponibile, increment_id estratto dal tracking potrebbe non corrispondere',
+                tracking_number: trackingNumber,
+                suggestion: 'L\'increment_id estratto dal tracking number potrebbe non corrispondere all\'increment_id reale su Spedisci.Online. Verifica manualmente la spedizione su Spedisci.Online usando il tracking number.',
+              });
+            } else {
+              console.warn(`⚠️ [API] Cancellazione per ${method} fallita:`, {
+                idToCancel,
+                method,
+                error: spedisciOnlineCancelResult.error,
+              });
+            }
           }
         }
       } catch (cancelError: any) {
