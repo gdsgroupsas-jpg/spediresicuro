@@ -6,8 +6,9 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
-export type AIProvider = 'anthropic' | 'deepseek';
+export type AIProvider = 'anthropic' | 'deepseek' | 'gemini';
 export type AIModel = string;
 
 export interface AIMessage {
@@ -225,17 +226,119 @@ export class DeepSeekClient implements AIClient {
 }
 
 /**
+ * Gemini Client Adapter (Google Generative AI)
+ */
+export class GeminiClient implements AIClient {
+  private client: GoogleGenerativeAI;
+  private model: string;
+
+  constructor(apiKey: string, model: string = 'gemini-2.0-flash-exp') {
+    this.client = new GoogleGenerativeAI(apiKey);
+    this.model = model;
+  }
+
+  async chat(params: {
+    model: AIModel;
+    messages: AIMessage[];
+    system?: string;
+    tools?: AITool[];
+    maxTokens?: number;
+  }): Promise<AIResponse> {
+    const genModel = this.client.getGenerativeModel({
+      model: params.model || this.model,
+      generationConfig: {
+        maxOutputTokens: params.maxTokens || 4096,
+        temperature: 0.7,
+      },
+      systemInstruction: params.system || undefined,
+    });
+
+    // Converte messaggi per Gemini
+    // Gemini usa formato: contents array con role e parts
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+    
+    // Converte messaggi conversazione (escludi system, gestito via systemInstruction)
+    for (const msg of params.messages) {
+      if (msg.role === 'system') {
+        // System già gestito via systemInstruction
+        continue;
+      }
+      
+      // Gemini usa 'user' e 'model' (non 'assistant')
+      const geminiRole = msg.role === 'user' ? 'user' : 'model';
+      contents.push({
+        role: geminiRole,
+        parts: [{ text: msg.content }],
+      });
+    }
+
+    // Formatta tools per Gemini (Function Calling)
+    const tools = params.tools && params.tools.length > 0 ? [{
+      functionDeclarations: params.tools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: tool.input_schema.properties || {},
+          required: tool.input_schema.required || [],
+        },
+      })),
+    }] : undefined;
+
+    try {
+      const result = await genModel.generateContent({
+        contents,
+        tools,
+      });
+
+      const response = result.response;
+      const text = response.text();
+      
+      // Estrae tool calls se presenti
+      const toolCalls: Array<{ name: string; arguments: any }> = [];
+      
+      // functionCalls() è una funzione che ritorna FunctionCall[]
+      const functionCalls = response.functionCalls();
+      if (functionCalls && functionCalls.length > 0) {
+        for (const funcCall of functionCalls) {
+          toolCalls.push({
+            name: funcCall.name,
+            arguments: funcCall.args || {},
+          });
+        }
+      }
+
+      return {
+        content: text,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        model: params.model || this.model,
+        provider: 'gemini',
+      };
+    } catch (error: any) {
+      let errorMessage = `Gemini API error: ${error.message || 'Unknown error'}`;
+      if (error.status) {
+        errorMessage += ` (status: ${error.status})`;
+      }
+      throw new Error(errorMessage);
+    }
+  }
+}
+
+/**
  * Factory per creare il client AI corretto
  */
 export async function createAIClient(
   provider: AIProvider,
-  apiKey: string
+  apiKey: string,
+  model?: string
 ): Promise<AIClient> {
   switch (provider) {
     case 'anthropic':
       return new AnthropicClient(apiKey);
     case 'deepseek':
       return new DeepSeekClient(apiKey);
+    case 'gemini':
+      return new GeminiClient(apiKey, model);
     default:
       throw new Error(`Provider AI non supportato: ${provider}`);
   }
@@ -265,9 +368,24 @@ export async function getConfiguredAIProvider(): Promise<{
   }
 
   const value = data.setting_value as any;
+  const provider = (value.provider || 'anthropic') as AIProvider;
+  
+  // Determina model default basato su provider
+  let defaultModel: string;
+  switch (provider) {
+    case 'deepseek':
+      defaultModel = 'deepseek-chat';
+      break;
+    case 'gemini':
+      defaultModel = 'gemini-2.0-flash-exp';
+      break;
+    default:
+      defaultModel = 'claude-3-haiku-20240307';
+  }
+  
   return {
-    provider: (value.provider || 'anthropic') as AIProvider,
-    model: value.model || (value.provider === 'deepseek' ? 'deepseek-chat' : 'claude-3-haiku-20240307'),
+    provider,
+    model: value.model || defaultModel,
   };
 }
 
@@ -280,6 +398,8 @@ export function getAPIKeyForProvider(provider: AIProvider): string | undefined {
       return process.env.ANTHROPIC_API_KEY;
     case 'deepseek':
       return process.env.DEEPSEEK_API_KEY;
+    case 'gemini':
+      return process.env.GOOGLE_API_KEY;
     default:
       return undefined;
   }

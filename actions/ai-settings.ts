@@ -77,7 +77,7 @@ export async function getAIProviderSetting() {
  * Aggiorna la configurazione AI provider (solo Superadmin)
  */
 export async function updateAIProviderSetting(
-  provider: 'anthropic' | 'deepseek',
+  provider: 'anthropic' | 'deepseek' | 'gemini',
   model?: string
 ) {
   try {
@@ -98,6 +98,8 @@ export async function updateAIProviderSetting(
     const defaultModel = model || (
       provider === 'deepseek' 
         ? 'deepseek-chat' 
+        : provider === 'gemini'
+        ? 'gemini-2.0-flash-exp'
         : 'claude-3-haiku-20240307'
     );
 
@@ -163,6 +165,13 @@ export async function getAvailableAIProviders() {
         description: 'DeepSeek Chat - Alternativa performante',
         model: 'deepseek-chat',
         hasApiKey: !!process.env.DEEPSEEK_API_KEY,
+      },
+      {
+        id: 'gemini',
+        name: 'Google Gemini',
+        description: 'Gemini 2.0 Flash - Multimodale e performante',
+        model: 'gemini-2.0-flash-exp',
+        hasApiKey: !!process.env.GOOGLE_API_KEY,
       },
     ],
   };

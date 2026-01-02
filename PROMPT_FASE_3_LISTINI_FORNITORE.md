@@ -4,7 +4,7 @@
 
 ---
 
-```
+````
 Ciao! Sto implementando il sistema Listini Fornitore per Reseller e BYOC.
 
 ## 📊 CONTESTO
@@ -105,7 +105,7 @@ La Fase 2 è stata completata con successo:
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Package, Truck, Plus, Edit, Trash, Search } from 'lucide-react';
-import { 
+import {
   listSupplierPriceListsAction,
   createSupplierPriceListAction,
   updatePriceListAction,
@@ -119,7 +119,7 @@ export default function ResellerListiniFornitorePage() {
   // Funzioni per CRUD operations
   // Render UI
 }
-```
+````
 
 ---
 
@@ -135,6 +135,7 @@ export default function ResellerListiniFornitorePage() {
   - Validazione: BYOC non può cambiare `list_type`
 
 **Differenze rispetto a Reseller:**
+
 - Menu più semplice (solo "Listini Fornitore")
 - Nessuna sezione per listini personalizzati
 - Messaggi di errore specifici per BYOC
@@ -148,11 +149,13 @@ export default function ResellerListiniFornitorePage() {
 **Funzionalità richieste:**
 
 1. **Lista listini personalizzati:**
+
    - Tabella con listini personalizzati creati dal Reseller
    - Colonne: Nome, Utente assegnato, Versione, Status, Data creazione, Azioni
    - Filtri: per utente assegnato, status
 
 2. **Creazione listino personalizzato:**
+
    - Modal/form per creare nuovo listino personalizzato
    - Campi obbligatori:
      - Nome listino
@@ -165,6 +168,7 @@ export default function ResellerListiniFornitorePage() {
    - Stessa logica della pagina listini fornitore
 
 **Note:**
+
 - Solo Reseller può accedere a questa pagina
 - BYOC non ha accesso (non ha sub-users)
 
@@ -186,6 +190,7 @@ interface SupplierPriceListFormProps {
 ```
 
 **Funzionalità:**
+
 - Form con validazione
 - Select corriere (da `availableCouriers`)
 - Campi: nome, versione, status, descrizione, note
@@ -211,6 +216,7 @@ interface SupplierPriceListTableProps {
 ```
 
 **Funzionalità:**
+
 - Tabella responsive con colonne: Nome, Corriere, Versione, Status, Data, Azioni
 - Badge per status (draft/active/archived)
 - Pulsanti azioni: Modifica, Elimina, Dettagli
@@ -235,6 +241,7 @@ interface CustomPriceListFormProps {
 ```
 
 **Funzionalità:**
+
 - Form simile a `supplier-price-list-form` ma con:
   - Select utente assegnato (da `subUsers`)
   - `list_type = 'custom'` automatico
@@ -247,6 +254,7 @@ interface CustomPriceListFormProps {
 **File da modificare:** `components/dashboard-nav.tsx` o equivalente
 
 **Aggiungere:**
+
 - Per Reseller: Link "Listini Fornitore" e "Listini Personalizzati"
 - Per BYOC: Link "Listini Fornitore"
 
@@ -254,25 +262,29 @@ interface CustomPriceListFormProps {
 
 ```typescript
 // In dashboard-nav.tsx
-{user.is_reseller && (
-  <>
-    <NavLink href="/dashboard/reseller/listini-fornitore">
+{
+  user.is_reseller && (
+    <>
+      <NavLink href="/dashboard/reseller/listini-fornitore">
+        <Package className="w-5 h-5" />
+        Listini Fornitore
+      </NavLink>
+      <NavLink href="/dashboard/reseller/listini-personalizzati">
+        <FileText className="w-5 h-5" />
+        Listini Personalizzati
+      </NavLink>
+    </>
+  );
+}
+
+{
+  user.account_type === "byoc" && (
+    <NavLink href="/dashboard/byoc/listini-fornitore">
       <Package className="w-5 h-5" />
       Listini Fornitore
     </NavLink>
-    <NavLink href="/dashboard/reseller/listini-personalizzati">
-      <FileText className="w-5 h-5" />
-      Listini Personalizzati
-    </NavLink>
-  </>
-)}
-
-{user.account_type === 'byoc' && (
-  <NavLink href="/dashboard/byoc/listini-fornitore">
-    <Package className="w-5 h-5" />
-    Listini Fornitore
-  </NavLink>
-)}
+  );
+}
 ```
 
 ---
@@ -282,12 +294,14 @@ interface CustomPriceListFormProps {
 Dopo aver completato i task, verifica:
 
 1. **UI Accessibilità:**
+
    - ✅ Reseller può accedere a `/dashboard/reseller/listini-fornitore`
    - ✅ Reseller può accedere a `/dashboard/reseller/listini-personalizzati`
    - ✅ BYOC può accedere a `/dashboard/byoc/listini-fornitore`
    - ✅ Altri utenti NON possono accedere a queste pagine
 
 2. **Funzionalità:**
+
    - ✅ Creazione listino fornitore funziona
    - ✅ Modifica listino funziona
    - ✅ Eliminazione listino funziona
@@ -295,6 +309,7 @@ Dopo aver completato i task, verifica:
    - ✅ Listini globali NON sono visibili
 
 3. **Permessi:**
+
    - ✅ BYOC può creare solo listini fornitore
    - ✅ Reseller può creare listini fornitore e personalizzati
    - ✅ Modifica/eliminazione solo per listini propri
@@ -312,6 +327,7 @@ Dopo aver completato i task, verifica:
 Dopo aver completato, aggiorna:
 
 1. **`IMPLEMENTAZIONE_LISTINI_FORNITORE.md`**
+
    - Spunta task completati nella sezione FASE 3
    - Aggiungi note tecniche se necessario
 
@@ -336,6 +352,7 @@ Dopo aver completato, aggiorna:
 4. ✅ Aggiorna documentazione (`IMPLEMENTAZIONE_LISTINI_FORNITORE.md`)
 5. ✅ Spunta TODO completati
 6. ✅ **Commit e push:**
+
    ```bash
    git add .
    git commit -m "feat: Fase 3 - UI per Listini Fornitore
@@ -358,6 +375,7 @@ Dopo aver completato, aggiorna:
 Se qualcosa non è chiaro o hai bisogno di chiarimenti, chiedi pure!
 
 **Riferimenti:**
+
 - `ANALISI_LISTINI_COMPLETA.md` - Analisi completa permessi
 - `IMPLEMENTAZIONE_LISTINI_FORNITORE.md` - Piano completo implementazione
 - `actions/price-lists.ts` - Server Actions disponibili
@@ -367,9 +385,11 @@ Se qualcosa non è chiaro o hai bisogno di chiarimenti, chiedi pure!
 ---
 
 **Inizia con la pagina Reseller listini fornitore, poi BYOC, poi listini personalizzati. Buon lavoro! 🚀**
+
 ```
 
 ---
 
 **Prompt creato e pronto per essere incollato in una nuova chat Cursor!**
 
+```

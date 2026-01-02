@@ -1,8 +1,8 @@
-# 🚀 Setup DeepSeek AI Provider
+# 🚀 Setup AI Provider Selection
 
 ## 📋 Riepilogo
 
-Sistema implementato per permettere al Superadmin di selezionare quale provider AI usare per Anne (Anthropic Claude o DeepSeek).
+Sistema implementato per permettere al Superadmin di selezionare quale provider AI usare per Anne (Anthropic Claude, DeepSeek o Google Gemini).
 
 ## ✅ Cosa è stato implementato
 
@@ -12,9 +12,9 @@ Sistema implementato per permettere al Superadmin di selezionare quale provider 
    - RLS policies (solo superadmin può modificare)
 
 2. **Adapter Pattern** (`lib/ai/provider-adapter.ts`)
-   - Supporto per Anthropic Claude e DeepSeek
-   - Interfaccia unificata per entrambi i provider
-   - Gestione automatica del formato API
+   - Supporto per Anthropic Claude, DeepSeek e Google Gemini
+   - Interfaccia unificata per tutti i provider
+   - Gestione automatica del formato API (Anthropic, OpenAI-compatible, Gemini)
 
 3. **Server Actions** (`actions/ai-settings.ts`)
    - `getAIProviderSetting()` - Legge configurazione corrente
@@ -34,10 +34,17 @@ Sistema implementato per permettere al Superadmin di selezionare quale provider 
 
 ### 1. Locale (.env.local)
 
-Aggiungi questa riga al file `.env.local`:
+Aggiungi queste righe al file `.env.local`:
 
 ```bash
-DEEPSEEK_API_KEY=sk-...  # Ottieni la chiave da https://platform.deepseek.com/
+# Anthropic Claude (obbligatorio per default)
+ANTHROPIC_API_KEY=sk-ant-api03-...  # Ottieni da https://console.anthropic.com/
+
+# DeepSeek (opzionale)
+DEEPSEEK_API_KEY=sk-...  # Ottieni da https://platform.deepseek.com/
+
+# Google Gemini (opzionale)
+GOOGLE_API_KEY=...  # Ottieni da https://ai.google.dev/
 ```
 
 **Nota:** Il file `.env.local` è già nel `.gitignore`, quindi non verrà committato.
@@ -61,9 +68,11 @@ echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
 1. Vai su https://vercel.com/dashboard
 2. Seleziona il progetto `spediresicuro`
 3. Vai su **Settings** → **Environment Variables**
-4. Aggiungi:
-   - **Name**: `DEEPSEEK_API_KEY`
-   - **Value**: Ottieni la chiave da https://platform.deepseek.com/
+4. Aggiungi per ogni provider:
+   - **Name**: `ANTHROPIC_API_KEY` (obbligatorio)
+   - **Name**: `DEEPSEEK_API_KEY` (opzionale)
+   - **Name**: `GOOGLE_API_KEY` (opzionale, per Gemini)
+   - **Value**: Ottieni le chiavi dai rispettivi provider
    - **Environments**: Seleziona Production, Preview, Development
 
 ## 🎯 Utilizzo
@@ -78,6 +87,7 @@ echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
    - Nella sezione "Provider AI per Anne" vedrai:
      - **Anthropic Claude** (default)
      - **DeepSeek**
+     - **Google Gemini**
    - Clicca sul provider che vuoi usare
    - Il sistema salverà automaticamente la preferenza
 
@@ -90,7 +100,7 @@ echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
 1. **All'avvio di una conversazione con Anne:**
    - Il sistema legge la preferenza dal database (`system_settings`)
    - Crea il client AI appropriato usando l'adapter
-   - Usa l'API key corretta (ANTHROPIC_API_KEY o DEEPSEEK_API_KEY)
+   - Usa l'API key corretta (ANTHROPIC_API_KEY, DEEPSEEK_API_KEY o GOOGLE_API_KEY)
 
 2. **Fallback:**
    - Se il provider configurato non ha API key → fallback a mock response
@@ -147,6 +157,7 @@ echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
 │  (lib/ai/provider-adapter.ts)          │
 │  - AnthropicClient                     │
 │  - DeepSeekClient                       │
+│  - GeminiClient                         │
 └─────────────────────────────────────────┘
 ```
 
@@ -173,7 +184,7 @@ echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
 ## 🐛 Troubleshooting
 
 ### "API Key non configurata"
-- Verifica che `DEEPSEEK_API_KEY` sia in `.env.local` (locale)
+- Verifica che l'API key del provider selezionato sia in `.env.local` (locale)
 - Verifica che sia su Vercel (produzione)
 - Riavvia il server dopo aver aggiunto la variabile
 
@@ -182,20 +193,22 @@ echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
 - Controlla i log del server per errori
 - Verifica che la migration `058_ai_provider_preferences.sql` sia stata eseguita
 
-### "Errore API DeepSeek"
-- Verifica che l'API key sia valida
+### "Errore API Provider"
+- Verifica che l'API key sia valida e non scaduta
 - Controlla i log del server per dettagli errore
-- Verifica che DeepSeek API sia raggiungibile
+- Verifica che l'API del provider sia raggiungibile
+- Per Gemini: verifica che `GOOGLE_API_KEY` sia configurata correttamente
 
 ## 📝 Prossimi Passi (Opzionali)
 
 - [ ] Cache della preferenza provider (evitare query DB ad ogni richiesta)
-- [ ] Supporto per altri provider (OpenAI, Gemini, etc.)
+- [ ] Supporto per altri provider (OpenAI, etc.)
 - [ ] Metriche per confrontare performance provider
 - [ ] A/B testing automatico tra provider
 
 ---
 
-**Implementato il:** 2026-01-XX
+**Implementato il:** 2026-01-03
+**Ultimo aggiornamento:** 2026-01-03 (aggiunto supporto Gemini)
 **Autore:** AI Agent (Auto)
 

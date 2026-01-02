@@ -705,7 +705,7 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 
 ### ✅ AI Provider Selection - Supporto Multi-Provider (Gennaio 2026)
 
-**Feature:** Sistema per selezionare il provider AI (Anthropic Claude o DeepSeek) per Anne tramite UI Superadmin.
+**Feature:** Sistema per selezionare il provider AI (Anthropic Claude, DeepSeek o Google Gemini) per Anne tramite UI Superadmin.
 
 **Implementazione:**
 - **Migration Database:** `058_ai_provider_preferences.sql`
@@ -714,9 +714,9 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
   - RLS policies (solo superadmin può modificare)
   
 - **Adapter Pattern:** `lib/ai/provider-adapter.ts`
-  - Supporto per Anthropic Claude e DeepSeek
-  - Interfaccia unificata `AIClient` per entrambi i provider
-  - Gestione automatica del formato API (Anthropic vs OpenAI-compatible)
+  - Supporto per Anthropic Claude, DeepSeek e Google Gemini
+  - Interfaccia unificata `AIClient` per tutti i provider
+  - Gestione automatica del formato API (Anthropic, OpenAI-compatible, Gemini)
   
 - **Server Actions:** `actions/ai-settings.ts`
   - `getAIProviderSetting()` - Legge configurazione corrente
@@ -740,12 +740,15 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 - `app/dashboard/super-admin/_components/ai-provider-selector.tsx` - UI componente
 - `app/api/ai/agent-chat/route.ts` - Route modificata per usare adapter
 - `app/dashboard/super-admin/page.tsx` - Aggiunto componente AI selector
-- `SETUP_DEEPSEEK_AI_PROVIDER.md` - Documentazione setup
+- `SETUP_DEEPSEEK_AI_PROVIDER.md` - Documentazione setup (aggiornata con Gemini)
 - `VERIFICA_DEEPSEEK_IMPLEMENTATION.md` - Verifica conformità DeepSeek
+- `VERIFICA_API_KEYS_AI.md` - Guida verifica API keys (include Gemini)
+- `scripts/verify-ai-api-keys.ts` - Script verifica automatica API keys
 
 **Variabili d'ambiente:**
-- `ANTHROPIC_API_KEY` - Chiave API Anthropic (già presente)
-- `DEEPSEEK_API_KEY` - Chiave API DeepSeek (aggiunta)
+- `ANTHROPIC_API_KEY` - Chiave API Anthropic (obbligatorio per default)
+- `DEEPSEEK_API_KEY` - Chiave API DeepSeek (opzionale)
+- `GOOGLE_API_KEY` - Chiave API Google Gemini (opzionale)
 
 **Come usare:**
 1. Vai su `/dashboard/super-admin`
