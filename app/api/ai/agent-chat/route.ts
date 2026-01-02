@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
         console.log(`🤖 [Anne] Chiamata ${aiProvider.toUpperCase()} API in corso...`);
         
         // Crea client AI usando adapter
-        aiClient = await createAIClient(aiProvider, apiKey);
+        aiClient = await createAIClient(aiProvider, apiKey, aiModel);
         
         // ⚠️ Verifica che systemPrompt e claudeMessages siano validi
         if (!systemPrompt || systemPrompt.trim().length === 0) {

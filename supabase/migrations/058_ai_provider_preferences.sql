@@ -37,7 +37,7 @@ INSERT INTO public.system_settings (setting_key, setting_value, description)
 VALUES (
   'ai_provider',
   '{"provider": "anthropic", "model": "claude-3-haiku-20240307"}'::jsonb,
-  'Provider AI utilizzato per Anne. Valori: anthropic, deepseek'
+  'Provider AI utilizzato per Anne. Valori: anthropic, deepseek, gemini'
 )
 ON CONFLICT (setting_key) DO NOTHING;
 
@@ -112,6 +112,7 @@ BEGIN
     model_value,
     CASE 
       WHEN get_ai_provider() = 'deepseek' THEN 'deepseek-chat'
+      WHEN get_ai_provider() = 'gemini' THEN 'gemini-2.0-flash-exp'
       ELSE 'claude-3-haiku-20240307'
     END
   );
