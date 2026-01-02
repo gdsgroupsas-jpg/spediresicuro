@@ -104,6 +104,12 @@ export interface AgentState {
    */
   suggestProceed?: boolean;
   
+  /**
+   * Messaggio utente per auto-proceed o suggest-proceed (P4 Task 2).
+   * Impostato dal supervisor insieme a autoProceed o suggestProceed.
+   */
+  userMessage?: string;
+  
   // ===== AI AGENT CONTEXT (P1 Prerequisites) =====
   
   /**
