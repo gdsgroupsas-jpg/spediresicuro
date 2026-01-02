@@ -21,6 +21,7 @@ import { defaultLogger, type ILogger } from '../logger';
 import { llmConfig } from '@/lib/config';
 import { checkCreditBeforeBooking, formatInsufficientCreditMessage } from '@/lib/wallet/credit-check';
 import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
+import { autoProceedConfig } from '@/lib/config';
 
 // Helper per ottenere LLM (stesso pattern di nodes.ts)
 const getLLM = (logger: ILogger = defaultLogger) => {
@@ -229,8 +230,45 @@ export async function supervisor(
       }
     }
     
-    // Se abbiamo già preventivi calcolati MA non c'è conferma, termina (aspetta conferma)
+    // Se abbiamo già preventivi calcolati MA non c'è conferma, verifica auto-proceed (P4 Task 2)
     if (state.pricing_options && state.pricing_options.length > 0) {
+      // P4 Task 2: Auto-Proceed per operazioni sicure (pricing)
+      // ⚠️ CRITICO: Auto-proceed SOLO per pricing (calcolo preventivi), MAI per booking/wallet/LDV
+      const confidenceScore = state.confidenceScore || 0;
+      const hasValidationErrors = state.validationErrors && state.validationErrors.length > 0;
+      
+      // Auto-proceed se confidence > soglia E nessun errore di validazione
+      if (
+        confidenceScore >= autoProceedConfig.AUTO_PROCEED_CONFIDENCE_THRESHOLD &&
+        !hasValidationErrors
+      ) {
+        logger.log(`✅ [Supervisor] Auto-proceed attivato (confidence: ${confidenceScore}%, no errors)`);
+        return {
+          next_step: 'END',
+          processingStatus: 'complete',
+          // Flag per UI: mostra banner auto-proceed
+          autoProceed: true,
+          userMessage: '✅ Dati verificati, procedo automaticamente',
+        };
+      }
+      
+      // Suggerimento se confidence > soglia suggerimento ma < auto-proceed
+      if (
+        confidenceScore >= autoProceedConfig.SUGGEST_PROCEED_CONFIDENCE_THRESHOLD &&
+        confidenceScore < autoProceedConfig.AUTO_PROCEED_CONFIDENCE_THRESHOLD &&
+        !hasValidationErrors
+      ) {
+        logger.log(`💡 [Supervisor] Suggerimento procedura (confidence: ${confidenceScore}%)`);
+        return {
+          next_step: 'END',
+          processingStatus: 'complete',
+          // Flag per UI: mostra suggerimento
+          suggestProceed: true,
+          userMessage: '💡 Dati quasi completi, vuoi procedere?',
+        };
+      }
+      
+      // Comportamento standard: attendo conferma utente
       logger.log('✅ [Supervisor] Preventivi già calcolati, attendo conferma utente');
       return {
         next_step: 'END',

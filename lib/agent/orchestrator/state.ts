@@ -89,6 +89,21 @@ export interface AgentState {
    */
   booking_result?: BookingResult;
   
+  // ===== P4 TASK 2: AUTO-PROCEED =====
+  
+  /**
+   * Flag per auto-proceed (P4 Task 2).
+   * Impostato dal supervisor quando confidence > soglia e nessun errore.
+   * ⚠️ CRITICO: Auto-proceed SOLO per operazioni sicure (pricing), MAI per booking/wallet/LDV.
+   */
+  autoProceed?: boolean;
+  
+  /**
+   * Flag per suggerimento procedura (P4 Task 2).
+   * Impostato dal supervisor quando confidence > soglia suggerimento ma < auto-proceed.
+   */
+  suggestProceed?: boolean;
+  
   // ===== AI AGENT CONTEXT (P1 Prerequisites) =====
   
   /**

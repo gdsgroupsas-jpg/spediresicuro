@@ -64,6 +64,9 @@ export interface SupervisorResult {
   executionTimeMs: number;
   source: 'pricing_graph' | 'supervisor_only';
   
+  // P4: AgentState finale (per componenti P4)
+  agentState?: AgentState;
+  
   // Telemetria Step 2.2 (per test e monitoring)
   telemetry: SupervisorRouterTelemetry;
 }
@@ -304,6 +307,7 @@ export async function supervisorRouter(
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         pricingOptions: result.pricing_options,
+        agentState: result, // P4: Includi AgentState per componenti P4
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
       });
@@ -318,6 +322,7 @@ export async function supervisorRouter(
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: explainMessage,
+        agentState: result, // P4: Includi AgentState per componenti P4
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
       });
@@ -332,6 +337,7 @@ export async function supervisorRouter(
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: debugMessage,
+        agentState: result, // P4: Includi AgentState per componenti P4
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
       });
@@ -344,6 +350,7 @@ export async function supervisorRouter(
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: result.mentor_response.answer, // Usa answer come messaggio
+        agentState: result, // P4: Includi AgentState per componenti P4
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
       });
@@ -359,6 +366,7 @@ export async function supervisorRouter(
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: result.clarification_request,
+        agentState: result, // P4: Includi AgentState per componenti P4
         executionTimeMs: Date.now() - startTime,
         source: 'pricing_graph',
       });
