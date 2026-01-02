@@ -8,11 +8,22 @@ Anne mostra questo errore da mobile/produzione:
 🔑 Errore autenticazione API: verifica che ANTHROPIC_API_KEY sia corretta
 ```
 
+**Oppure nei log Vercel vedi**:
+
+```
+❌ [Anne] Errore Claude API: {
+  message: '401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}',
+  status: 401,
+  type: 'api_error'
+}
+```
+
 **Possibili cause**:
 
-1. La variabile `ANTHROPIC_API_KEY` non è configurata su Vercel (o è configurata male)
-2. Problemi di connessione/timeout su mobile (gestione errori migliorata nel fix)
-3. Errori di parsing JSON su mobile (gestione errori migliorata nel fix)
+1. ❌ **CHIAVE INVALIDA/SCADUTA** (più comune) - La chiave su Vercel è invalida o scaduta
+2. La variabile `ANTHROPIC_API_KEY` non è configurata su Vercel (o è configurata male)
+3. Problemi di connessione/timeout su mobile (gestione errori migliorata nel fix)
+4. Errori di parsing JSON su mobile (gestione errori migliorata nel fix)
 
 ## ✅ Fix Applicato
 
@@ -27,26 +38,34 @@ Anne mostra questo errore da mobile/produzione:
 
 **Nota**: Se su desktop funziona, la variabile è probabilmente configurata. Il problema era nella gestione degli errori su mobile.
 
-## ✅ Soluzione: Aggiungi ANTHROPIC_API_KEY su Vercel
+## ✅ Soluzione: Aggiorna ANTHROPIC_API_KEY su Vercel
 
-### Passo 1: Ottieni la Chiave API di Anthropic
+### ⚠️ IMPORTANTE: Se vedi errore 401 "invalid x-api-key"
 
-Se non hai ancora una chiave API di Anthropic:
+**La chiave su Vercel è invalida o scaduta!** Devi aggiornarla.
 
-1. Vai su: https://console.anthropic.com/
-2. Accedi con il tuo account
-3. Vai su **API Keys** (o **Settings** > **API Keys**)
-4. Clicca **"Create Key"** o **"New Key"**
-5. Copia la chiave (inizia con `sk-ant-api03-...`)
-6. **⚠️ IMPORTANTE**: Salvala subito, non la vedrai più!
+### Passo 1: Ottieni una Nuova Chiave API di Anthropic
 
-Se hai già la chiave in `.env.local`:
+1. **Vai su**: https://console.anthropic.com/
+2. **Accedi** con il tuo account
+3. **Vai su API Keys** (o **Settings** > **API Keys**)
+4. **Verifica chiavi esistenti**:
+   - Se vedi una chiave esistente, controlla se è attiva
+   - Se è scaduta o non funziona, **creane una nuova**
+5. **Crea nuova chiave**:
+   - Clicca **"Create Key"** o **"New Key"**
+   - Dai un nome descrittivo (es: "SpedireSicuro Production")
+   - Copia la chiave (inizia con `sk-ant-api03-...`)
+   - **⚠️ IMPORTANTE**: Salvala subito, non la vedrai più!
+
+**Se hai già la chiave in `.env.local` e funziona in locale**:
 
 1. Apri il file `.env.local` nella root del progetto
 2. Cerca la riga: `ANTHROPIC_API_KEY=sk-ant-api03-...`
 3. Copia il valore (senza il nome della variabile)
+4. **Usa questa stessa chiave** su Vercel (se funziona in locale, funzionerà anche in produzione)
 
-### Passo 2: Aggiungi la Variabile su Vercel
+### Passo 2: Aggiorna la Variabile su Vercel
 
 #### Metodo A: Vercel Dashboard (Consigliato)
 
@@ -64,16 +83,25 @@ Se hai già la chiave in `.env.local`:
    - Clicca su **Settings** (⚙️) nella barra superiore
    - Nel menu laterale, clicca su **Environment Variables**
 
-4. **Aggiungi la Variabile**
+4. **Trova e Aggiorna la Variabile**
 
-   - Clicca su **"Add New"** o **"Add"**
-   - **Name**: `ANTHROPIC_API_KEY`
-   - **Value**: Incolla la chiave API (es: `sk-ant-api03-ABC123XYZ789...`)
-   - **Environment**: Seleziona **tutte e tre** le opzioni:
-     - ✅ Production
-     - ✅ Preview
-     - ✅ Development
-   - Clicca **"Save"**
+   - **Se `ANTHROPIC_API_KEY` esiste già** (caso più comune - chiave invalida):
+
+     - Clicca sui **3 puntini** (⋮) accanto a `ANTHROPIC_API_KEY`
+     - Clicca **"Edit"**
+     - **Sostituisci il valore** con la nuova chiave valida
+     - Verifica che **Environment** includa tutte e tre: Production, Preview, Development
+     - Clicca **"Save"**
+
+   - **Se `ANTHROPIC_API_KEY` NON esiste**:
+     - Clicca su **"Add New"** o **"Add"**
+     - **Name**: `ANTHROPIC_API_KEY`
+     - **Value**: Incolla la chiave API (es: `sk-ant-api03-ABC123XYZ789...`)
+     - **Environment**: Seleziona **tutte e tre** le opzioni:
+       - ✅ Production
+       - ✅ Preview
+       - ✅ Development
+     - Clicca **"Save"**
 
 5. **Verifica**
    - Dovresti vedere `ANTHROPIC_API_KEY` nella lista
@@ -81,18 +109,23 @@ Se hai già la chiave in `.env.local`:
 
 #### Metodo B: Vercel CLI (Alternativo)
 
+**⚠️ IMPORTANTE**: Se la variabile esiste già, devi prima rimuoverla e poi aggiungerla di nuovo.
+
 ```bash
-# Aggiungi per Production
+# 1. Rimuovi la variabile esistente (per tutti gli ambienti)
+npx vercel env rm ANTHROPIC_API_KEY production
+npx vercel env rm ANTHROPIC_API_KEY preview
+npx vercel env rm ANTHROPIC_API_KEY development
+
+# 2. Aggiungi la nuova chiave valida
 npx vercel env add ANTHROPIC_API_KEY production
-# Quando richiesto, incolla la chiave e premi Enter
+# Quando richiesto, incolla la nuova chiave valida e premi Enter
 
-# Aggiungi per Preview
 npx vercel env add ANTHROPIC_API_KEY preview
-# Quando richiesto, incolla la chiave e premi Enter
+# Quando richiesto, incolla la stessa chiave e premi Enter
 
-# Aggiungi per Development
 npx vercel env add ANTHROPIC_API_KEY development
-# Quando richiesto, incolla la chiave e premi Enter
+# Quando richiesto, incolla la stessa chiave e premi Enter
 ```
 
 ### Passo 3: Riavvia il Deploy
@@ -145,11 +178,27 @@ Dovresti vedere `ANTHROPIC_API_KEY` nella lista con scope Production, Preview, D
 
 ## 🐛 Se Ancora Non Funziona
 
-### Verifica 1: Chiave Valida
+### Verifica 1: Chiave Valida (⚠️ PIÙ IMPORTANTE)
 
-- Vai su https://console.anthropic.com/
-- Verifica che la chiave sia attiva e non scaduta
-- Se necessario, crea una nuova chiave
+**Se vedi errore 401 "invalid x-api-key", la chiave è sicuramente invalida!**
+
+1. **Vai su** https://console.anthropic.com/
+2. **Verifica chiavi esistenti**:
+   - Controlla se la chiave è attiva
+   - Se è scaduta o revocata, **creane una nuova**
+3. **Crea nuova chiave** se necessario:
+   - Clicca "Create Key"
+   - Copia la nuova chiave
+   - **Aggiorna su Vercel** con la nuova chiave
+4. **Testa la chiave** (opzionale):
+   ```bash
+   curl https://api.anthropic.com/v1/messages \
+     -H "x-api-key: TUA_NUOVA_CHIAVE" \
+     -H "anthropic-version: 2023-06-01" \
+     -H "content-type: application/json" \
+     -d '{"model":"claude-3-haiku-20240307","max_tokens":10,"messages":[{"role":"user","content":"Hi"}]}'
+   ```
+   Se funziona, riceverai una risposta JSON. Se non funziona, la chiave è invalida.
 
 ### Verifica 2: Deploy Completato
 
