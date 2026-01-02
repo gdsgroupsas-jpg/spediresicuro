@@ -164,7 +164,7 @@ export function AIProviderSelector() {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            <strong>Nota:</strong> Il cambio di provider richiede che le variabili d'ambiente 
+            <strong>Nota:</strong> Il cambio di provider richiede che le variabili d&apos;ambiente 
             (<code className="bg-blue-100 px-1 rounded">ANTHROPIC_API_KEY</code> o{' '}
             <code className="bg-blue-100 px-1 rounded">DEEPSEEK_API_KEY</code>) 
             siano configurate correttamente su Vercel.
