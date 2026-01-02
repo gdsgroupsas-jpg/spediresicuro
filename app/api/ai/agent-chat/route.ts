@@ -7,7 +7,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
-import Anthropic from '@anthropic-ai/sdk';
 import { buildContext } from '@/lib/ai/context-builder';
 import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from '@/lib/ai/prompts';
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
@@ -20,30 +19,24 @@ import {
 import { rateLimit } from '@/lib/security/rate-limit';
 import { supervisorRouter, formatPricingResponse } from '@/lib/agent/orchestrator/supervisor-router';
 import { getSafeAuth } from '@/lib/safe-auth';
+import { 
+  createAIClient, 
+  getConfiguredAIProvider, 
+  getAPIKeyForProvider,
+  type AIMessage,
+  type AITool 
+} from '@/lib/ai/provider-adapter';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
 // Non possiamo inizializzare il client qui perché process.env potrebbe non essere ancora disponibile
 // Inizializziamo il client dentro la funzione POST
 
-// Debug: Verifica API key (verrà eseguito ad ogni richiesta)
-function getAnthropicClient() {
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  
-  if (anthropicApiKey) {
-    // ⚠️ SEC-1: NO log di API key (anche parziale)
-    return new Anthropic({ apiKey: anthropicApiKey });
-  } else {
-    console.error('❌ [Anne] ANTHROPIC_API_KEY non configurata');
-    return null;
-  }
-}
-
 // Rate limiting distribuito (Upstash Redis) - importato da @/lib/rate-limit
 
 /**
- * Converte tools Anne in formato Anthropic
+ * Converte tools Anne in formato standard per adapter
  */
-function formatToolsForAnthropic() {
+function formatToolsForAdapter(): AITool[] {
   return ANNE_TOOLS.map(tool => ({
     name: tool.name,
     description: tool.description,
@@ -299,63 +292,62 @@ export async function POST(request: NextRequest) {
       claudeMessages[claudeMessages.length - 1].content = 'Ciao Anne, come va?';
     }
 
-    // ⚠️ Ottieni il client Anthropic (inizializzato ad ogni richiesta per locale)
-    anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    const claudeClient = getAnthropicClient();
-
-    // Usa Claude AI se disponibile
+    // ⚠️ Ottieni provider AI configurato dal database
+    const { provider: aiProvider, model: aiModel } = await getConfiguredAIProvider();
+    const apiKey = getAPIKeyForProvider(aiProvider);
+    
+    // Usa AI se disponibile
     let aiResponse = '';
     let toolCalls: any[] = [];
     let isMock = false;
+    let aiClient = null;
 
-    if (claudeClient && anthropicApiKey) {
+    if (apiKey) {
       try {
         // ⚠️ SEC-1: NO log di API key - solo info non sensibili
-        console.log('🤖 [Anne] Chiamata Claude API in corso...');
+        console.log(`🤖 [Anne] Chiamata ${aiProvider.toUpperCase()} API in corso...`);
         
-        // Chiama Claude 3 Haiku con tools
+        // Crea client AI usando adapter
+        aiClient = await createAIClient(aiProvider, apiKey);
+        
         // ⚠️ Verifica che systemPrompt e claudeMessages siano validi
         if (!systemPrompt || systemPrompt.trim().length === 0) {
           throw new Error('System prompt vuoto o non valido');
         }
         if (!claudeMessages || claudeMessages.length === 0) {
-          throw new Error('Nessun messaggio da inviare a Claude');
+          throw new Error('Nessun messaggio da inviare all\'AI');
         }
         
-        const response = await claudeClient.messages.create({
-          model: 'claude-3-haiku-20240307',
-          max_tokens: 4096,
+        // Converte messaggi in formato adapter
+        const adapterMessages: AIMessage[] = claudeMessages.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+        }));
+        
+        // Chiama AI con adapter
+        const response = await aiClient.chat({
+          model: aiModel,
+          maxTokens: 4096,
           system: systemPrompt,
-          messages: claudeMessages,
-          tools: formatToolsForAnthropic(),
+          messages: adapterMessages,
+          tools: formatToolsForAdapter(),
         });
         
         // ⚠️ Verifica che response sia valida
         if (!response || !response.content) {
-          throw new Error('Risposta Claude non valida: content mancante');
+          throw new Error('Risposta AI non valida: content mancante');
         }
         
-        console.log('✅ [Anne] Risposta Claude ricevuta:', response.content.length, 'blocks');
+        console.log(`✅ [Anne] Risposta ${aiProvider.toUpperCase()} ricevuta`);
 
-        // Processa risposta
-        // ⚠️ Verifica che response.content esista
-        if (!response || !response.content || !Array.isArray(response.content)) {
-          throw new Error('Risposta Claude non valida: content mancante o non array');
-        }
-        
-        const contentBlocks = response.content;
-        
-        for (const block of contentBlocks) {
-          if (block && block.type === 'text' && (block as any).text) {
-            aiResponse += (block as any).text;
-          } else if (block && block.type === 'tool_use') {
-            // Anne vuole usare un tool
-            toolCalls.push({
-              id: (block as any).id,
-              name: (block as any).name,
-              arguments: (block as any).input || {},
-            });
-          }
+        // Estrae contenuto e tool calls dalla risposta
+        aiResponse = response.content;
+        if (response.toolCalls && response.toolCalls.length > 0) {
+          toolCalls = response.toolCalls.map((tc, index) => ({
+            id: `tool_${index}_${Date.now()}`,
+            name: tc.name,
+            arguments: tc.arguments || {},
+          }));
         }
 
         // Esegui tool calls se presenti
@@ -412,57 +404,42 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Seconda chiamata a Claude con risultati tools
-          // ⚠️ Verifica che contentBlocks sia definito prima di usarlo
-          const textBlocks = contentBlocks
-            .filter((b: any) => b && b.type === 'text' && b.text)
-            .map((b: any) => ({
-              type: 'text',
-              text: b.text,
-            }));
-
-          // ⚠️ Formatta correttamente i tool results per Claude API
-          const formattedToolResults = toolResults.map(result => ({
-            type: 'tool_result',
-            tool_use_id: result.tool_use_id,
-            content: result.content,
-          }));
-
-          const followUpResponse = await claudeClient.messages.create({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 4096,
-            system: systemPrompt,
-            messages: [
-              ...claudeMessages,
+          // Seconda chiamata all'AI con risultati tools
+          if (aiClient) {
+            // Aggiungi messaggio assistant con tool calls e risultati
+            const followUpMessages: AIMessage[] = [
+              ...adapterMessages,
               {
                 role: 'assistant',
-                content: contentBlocks, // Usa contentBlocks originali (include tool_use)
+                content: `Ho eseguito ${toolCalls.length} tool(s).`,
               },
               {
                 role: 'user',
-                content: formattedToolResults,
+                content: `Risultati tools:\n${toolResults.map(r => r.content).join('\n\n')}`,
               },
-            ],
-          });
+            ];
 
-          // Aggiungi risposta finale
-          // ⚠️ Verifica che followUpResponse.content esista
-          if (followUpResponse && followUpResponse.content && Array.isArray(followUpResponse.content)) {
-            const finalText = followUpResponse.content
-              .filter((b: any) => b && b.type === 'text' && b.text)
-              .map((b: any) => b.text)
-              .join('\n');
-            
-            aiResponse = finalText || aiResponse;
+            const followUpResponse = await aiClient.chat({
+              model: aiModel,
+              maxTokens: 4096,
+              system: systemPrompt,
+              messages: followUpMessages,
+            });
+
+            // Aggiungi risposta finale
+            if (followUpResponse && followUpResponse.content) {
+              aiResponse = followUpResponse.content || aiResponse;
+            }
           }
         }
 
         isMock = false;
-      } catch (claudeError: any) {
+      } catch (aiError: any) {
         // ⚠️ LOGGING DETTAGLIATO per debug locale
         // ⚠️ APPROCCIO ULTRA-SICURO: Zero accesso diretto a proprietà potenzialmente problematiche
+        const apiKeyEnv = aiProvider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY';
         const errorDetails: any = {
-          message: 'Errore API Claude',
+          message: `Errore API ${aiProvider}`,
           status: undefined,
           statusCode: undefined,
           type: 'unknown',
@@ -487,16 +464,16 @@ export async function POST(request: NextRequest) {
         };
         
         // Estrai proprietà in modo sicuro
-        errorDetails.message = safeGetProp(claudeError, 'message', 'Errore API Claude');
-        errorDetails.status = safeGetProp(claudeError, 'status', safeGetProp(claudeError, 'statusCode', undefined));
+        errorDetails.message = safeGetProp(aiError, 'message', `Errore API ${aiProvider}`);
+        errorDetails.status = safeGetProp(aiError, 'status', safeGetProp(aiError, 'statusCode', undefined));
         errorDetails.statusCode = errorDetails.status;
-        errorDetails.type = safeGetProp(claudeError, 'type', 'api_error');
-        errorDetails.name = safeGetProp(claudeError, 'name', 'APIError');
+        errorDetails.type = safeGetProp(aiError, 'type', 'api_error');
+        errorDetails.name = safeGetProp(aiError, 'name', 'APIError');
         errorDetails.error = errorDetails.message;
         
         // Log sicuro
         // ⚠️ SEC-1: NO log di API key - solo info non sensibili
-        console.error('❌ [Anne] Errore Claude API:', {
+        console.error(`❌ [Anne] Errore ${aiProvider.toUpperCase()} API:`, {
           message: errorDetails.message,
           status: errorDetails.status,
           type: errorDetails.type,
@@ -507,7 +484,7 @@ export async function POST(request: NextRequest) {
         const statusCode = errorDetails.statusCode || errorDetails.status;
         
         if (statusCode === 401) {
-          errorMessage = '🔑 Errore autenticazione API: verifica che ANTHROPIC_API_KEY sia corretta';
+          errorMessage = `🔑 Errore autenticazione API: verifica che ${apiKeyEnv} sia corretta`;
         } else if (statusCode === 429) {
           errorMessage = '⏱️ Troppe richieste: hai raggiunto il limite di rate. Riprova tra qualche minuto.';
         } else if (statusCode === 400) {
@@ -520,23 +497,24 @@ export async function POST(request: NextRequest) {
         // Fallback a risposta mock con messaggio di errore più utile
         isMock = true;
         const userName = (session?.user?.name || 'utente').split(' ')[0];
-        aiResponse = `Ciao ${userName}! 👋 Sono Anne, il tuo Executive Business Partner.\n\n${errorMessage}\n\n💡 Suggerimenti:\n- Verifica che ANTHROPIC_API_KEY sia configurata correttamente\n- Riavvia il server dopo modifiche alle variabili d'ambiente\n- Controlla che la chiave sia valida e non scaduta\n\nCome posso aiutarti?`;
+        aiResponse = `Ciao ${userName}! 👋 Sono Anne, il tuo Executive Business Partner.\n\n${errorMessage}\n\n💡 Suggerimenti:\n- Verifica che ${apiKeyEnv} sia configurata correttamente\n- Riavvia il server dopo modifiche alle variabili d'ambiente\n- Controlla che la chiave sia valida e non scaduta\n\nCome posso aiutarti?`;
       }
     } else {
-      // Fallback mock se Claude non configurato
+      // Fallback mock se AI non configurato
       const userName = (session?.user?.name || 'utente').split(' ')[0];
+      const apiKeyEnv = aiProvider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY';
       
       // ⚠️ SEC-1: NO log di API key info
-      console.warn('⚠️ [Anne] Claude non disponibile - verificare configurazione');
+      console.warn(`⚠️ [Anne] ${aiProvider.toUpperCase()} non disponibile - verificare configurazione`);
       
       isMock = true;
       if (!userMessage.trim()) {
         const roleMessage = isAdmin 
           ? '\n\nMonitoro business, finanza e sistemi. Posso analizzare margini, diagnosticare errori tecnici e proporre strategie di ottimizzazione.' 
           : '\n\nSono qui per aiutarti con le tue spedizioni, calcolare costi ottimali e risolvere problemi operativi.';
-        aiResponse = `Ciao ${userName}! 👋 Sono Anne, il tuo Executive Business Partner.${roleMessage}\n\n💡 Per attivare l'AI avanzata, configura ANTHROPIC_API_KEY e riavvia il server.\n\nCome posso aiutarti oggi?`;
+        aiResponse = `Ciao ${userName}! 👋 Sono Anne, il tuo Executive Business Partner.${roleMessage}\n\n💡 Per attivare l'AI avanzata, configura ${apiKeyEnv} e riavvia il server.\n\nCome posso aiutarti oggi?`;
       } else {
-        aiResponse = `Ciao ${userName}! 👋\n\nHo capito la tua richiesta: "${userMessage}".\n\n💡 Per darti una risposta più precisa, configura ANTHROPIC_API_KEY e riavvia il server.`;
+        aiResponse = `Ciao ${userName}! 👋\n\nHo capito la tua richiesta: "${userMessage}".\n\n💡 Per darti una risposta più precisa, configura ${apiKeyEnv} e riavvia il server.`;
       }
     }
 
@@ -580,7 +558,8 @@ export async function POST(request: NextRequest) {
       toolCalls: toolCalls.length,
       executionTime: Date.now() - startTime,
       rateLimitRemaining: rateLimitResult.remaining,
-      usingClaude: !isMock && !!claudeClient,
+      usingAI: !isMock && !!aiClient,
+      aiProvider: aiProvider,
       usingPricingGraph: false, // Legacy path
       // NO userId, NO email nei metadata (PII)
     };
@@ -630,7 +609,7 @@ export async function POST(request: NextRequest) {
         details: errorDetails,
         // ⚠️ In sviluppo, aggiungi suggerimenti
         hint: process.env.NODE_ENV === 'development' 
-          ? 'Controlla i log del server per dettagli completi. Verifica che ANTHROPIC_API_KEY sia corretta e che il server sia stato riavviato.'
+          ? 'Controlla i log del server per dettagli completi. Verifica che le variabili d\'ambiente API siano corrette e che il server sia stato riavviato.'
           : undefined
       },
       { status: 500 }
