@@ -3,7 +3,7 @@
 # Script per configurare variabili d'ambiente DeepSeek
 # Uso: ./scripts/setup-deepseek-env.sh
 
-DEEPSEEK_API_KEY="***REDACTED_DEEPSEEK_KEY***"
+DEEPSEEK_API_KEY="YOUR_DEEPSEEK_API_KEY_HERE"  # Ottieni da https://platform.deepseek.com/
 
 echo "🔧 Configurazione variabili d'ambiente DeepSeek..."
 
