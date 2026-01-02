@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -460,9 +460,117 @@ grep -r "agentCache\.\(get\|set\)" lib/agent/workers/
 
 ---
 
+## ✅ P4: AI AGENT BUSINESS VALUE & USER EXPERIENCE (COMPLETATO - 2 Gennaio 2026)
+
+### Task 1: Value Dashboard - "Hai risparmiato X minuti"
+- [x] **Componente UI:** `components/anne/ValueDashboard.tsx` - Mostra minuti risparmiati, errori evitati, confidence media
+- [x] **API Route:** `app/api/ai/value-stats/route.ts` - Endpoint GET per statistiche utente
+- [x] **Service:** `lib/services/value-stats.ts` - Logica calcolo statistiche (separato per testabilità)
+- [x] **Cache:** localStorage con TTL 5 minuti (non query ogni render)
+- [x] **Soglia:** Mostra solo dopo 3+ richieste utente (configurabile via env)
+- [x] **Calcolo:** Minuti risparmiati = (tempo manuale * richieste) - (tempo Anne stimato)
+- [x] **Errori evitati:** Conta validationErrors gestiti da Anne
+- [x] **Confidence media:** Aggregazione confidenceScore da sessioni
+
+### Task 2: Auto-Proceed - Kill Friction
+- [x] **Logica Supervisor:** `lib/agent/orchestrator/supervisor.ts` - Auto-proceed per pricing (operazione sicura)
+- [x] **Guardrail Critico:** MAI auto-proceed per booking/wallet/LDV/giacenze (sempre conferma umana)
+- [x] **Componente UI:** `components/anne/AutoProceedBanner.tsx` - Banner con countdown annullamento
+- [x] **Configurazione:** `lib/config.ts` - Soglie configurabili (85% auto-proceed, 70% suggerimento)
+- [x] **State:** `lib/agent/orchestrator/state.ts` - Campi `autoProceed` e `suggestProceed` aggiunti
+- [x] **Finestra annullamento:** 5 secondi (configurabile via env)
+- [x] **Soglie:** 
+  - `AUTO_PROCEED_CONFIDENCE_THRESHOLD = 85` (default)
+  - `SUGGEST_PROCEED_CONFIDENCE_THRESHOLD = 70` (default)
+- [x] **Integrazione:** SupervisorRouter restituisce `agentState` con flag auto-proceed
+
+### Task 3: Human Error Messages - Errori spiegati come umani
+- [x] **Service:** `lib/agent/error-translator.ts` - Traduzione errori tecnici in messaggi umani (già implementato)
+- [x] **Componente UI:** `components/anne/HumanError.tsx` - Mostra messaggi errori comprensibili
+- [x] **Traduzione:** Errori validazione, sistema, preflight, confidence → messaggi user-friendly
+- [x] **Auto-risoluzione:** Nasconde errore quando risolto (timeout 2 secondi)
+- [x] **Severity:** Info, warning, error (colori diversi)
+- [x] **Actionable:** Indica campo mancante per auto-focus UI
+
+### Task 4: Smart Suggestions - Suggerimenti proattivi
+- [x] **Service:** `lib/agent/smart-suggestions.ts` - Pattern detection e generazione suggerimenti (già implementato)
+- [x] **Componente UI:** `components/anne/SmartSuggestions.tsx` - Mostra suggerimenti proattivi
+- [x] **Pattern Detection:** Analizza spedizioni recenti per pattern ricorrenti (recipient, courier, weight)
+- [x] **Priorità:** recipient > courier > weight
+- [x] **Rate Limiting:** Max 1 suggerimento ogni 24h per tipo (localStorage)
+- [x] **RLS Enforcement:** Query Supabase con RLS (usa `user_id` da `requireSafeAuth()`)
+- [x] **NO PII:** Mai mostrare indirizzi completi, solo "destinatario a Milano"
+
+### Integrazione
+- [x] **AnneAssistant:** `components/anne/AnneAssistant.tsx` - Tutti i componenti P4 integrati
+- [x] **AgentState:** Passato ai componenti dalla risposta API (`metadata.agentState`)
+- [x] **SupervisorRouter:** Restituisce `agentState` nel risultato per componenti P4
+- [x] **API Route:** `app/api/ai/agent-chat/route.ts` - Include `agentState` nei metadata
+
+### Test
+- [x] **29 test P4** passati (25 unit + 3 integration + 1 esistente)
+  - `tests/unit/error-translator.test.ts` - 8 test (già esistente)
+  - `tests/unit/smart-suggestions.test.ts` - 8 test (nuovo)
+  - `tests/unit/auto-proceed.test.ts` - 6 test (nuovo)
+  - `tests/unit/value-stats.test.ts` - 4 test (nuovo)
+  - `tests/integration/p4-auto-proceed.test.ts` - 3 test (nuovo)
+- [x] **Type-check:** 0 errori
+- [x] **Build:** passato su Vercel
+- [x] **Nessuna regressione:** Test esistenti passano
+
+### Guardrail Implementati
+- [x] **Auto-proceed SOLO per operazioni sicure:** Pricing (calcolo preventivi), address normalization
+- [x] **MAI auto-proceed per:** Booking, wallet, LDV, giacenze (sempre conferma umana)
+- [x] **RLS enforcement:** Query Supabase con RLS (usa `user_id` da `requireSafeAuth()`)
+- [x] **NO PII nei log:** Solo aggregazioni, mai dati raw (indirizzi, nomi, telefoni)
+- [x] **Type safety:** Zero `any` non gestiti, type guards dove necessario
+
+**Evidenza:**
+- File: `components/anne/ValueDashboard.tsx`, `components/anne/AutoProceedBanner.tsx`, `components/anne/HumanError.tsx`, `components/anne/SmartSuggestions.tsx`
+- File: `lib/services/value-stats.ts`, `lib/agent/error-translator.ts`, `lib/agent/smart-suggestions.ts`
+- File: `lib/agent/orchestrator/supervisor.ts` (auto-proceed logic), `lib/config.ts` (configurazioni)
+- File: `lib/agent/orchestrator/state.ts` (campi autoProceed/suggestProceed)
+- Test: `tests/unit/auto-proceed.test.ts`, `tests/unit/smart-suggestions.test.ts`, `tests/unit/value-stats.test.ts`, `tests/integration/p4-auto-proceed.test.ts`
+- Commit: `037590a` - "feat(P4): Implementazione completa Business Value & User Experience"
+
+**Come verificare:**
+```bash
+# Auto-proceed logic
+grep -r "autoProceed\|AUTO_PROCEED" lib/agent/orchestrator/supervisor.ts lib/config.ts
+# Expected: logica auto-proceed solo per pricing, mai per booking
+
+# Value Dashboard
+grep -r "ValueDashboard\|value-stats" components/anne/AnneAssistant.tsx
+# Expected: componente integrato
+
+# Human Error
+grep -r "HumanError\|translateError" components/anne/AnneAssistant.tsx
+# Expected: componente integrato
+
+# Smart Suggestions
+grep -r "SmartSuggestions\|getSmartSuggestion" components/anne/AnneAssistant.tsx
+# Expected: componente integrato
+```
+
+---
+
 ## 🚀 NEXT STEPS
 
-1. **Ottimizzazioni Future (Opzionali)**
+1. **P4 Post-Launch (Opzionali)**
+   - A/B testing per soglie auto-proceed (85% vs 80% vs 90%)
+   - Metriche reali: minuti risparmiati da telemetria (non stima)
+   - Feedback utenti: survey per valutare messaggi errori
+   - Smart suggestions: salvataggio destinatari/corrieri predefiniti
+
+2. **Ottimizzazioni Future (Opzionali)**
+
+1. **P4 Post-Launch (Opzionali)**
+   - A/B testing per soglie auto-proceed (85% vs 80% vs 90%)
+   - Metriche reali: minuti risparmiati da telemetria (non stima)
+   - Feedback utenti: survey per valutare messaggi errori
+   - Smart suggestions: salvataggio destinatari/corrieri predefiniti
+
+2. **Ottimizzazioni Future (Opzionali)**
    - Batch reads Supabase quando possibile
    - Lazy loading documentazione (carica solo se necessario)
    - Metriche cache hit rate per monitoring
