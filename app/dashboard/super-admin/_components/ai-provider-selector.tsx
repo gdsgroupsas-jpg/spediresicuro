@@ -54,12 +54,17 @@ export function AIProviderSelector() {
     try {
       setIsSaving(true);
       const result = await updateAIProviderSetting(
-        providerId as 'anthropic' | 'deepseek'
+        providerId as 'anthropic' | 'deepseek' | 'gemini'
       );
 
       if (result.success) {
         setCurrentProvider(providerId);
-        toast.success(`Provider AI cambiato a ${providerId === 'anthropic' ? 'Anthropic Claude' : 'DeepSeek'}`);
+        const providerNames: Record<string, string> = {
+          anthropic: 'Anthropic Claude',
+          deepseek: 'DeepSeek',
+          gemini: 'Google Gemini',
+        };
+        toast.success(`Provider AI cambiato a ${providerNames[providerId] || providerId}`);
       } else {
         toast.error(result.error || 'Errore aggiornamento provider');
       }
