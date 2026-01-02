@@ -37,7 +37,7 @@ Sistema implementato per permettere al Superadmin di selezionare quale provider 
 Aggiungi questa riga al file `.env.local`:
 
 ```bash
-DEEPSEEK_API_KEY=***REDACTED_DEEPSEEK_KEY***
+DEEPSEEK_API_KEY=sk-...  # Ottieni la chiave da https://platform.deepseek.com/
 ```
 
 **Nota:** Il file `.env.local` è già nel `.gitignore`, quindi non verrà committato.
@@ -48,13 +48,13 @@ Usa Vercel CLI per aggiungere la variabile:
 
 ```bash
 # Production
-echo "***REDACTED_DEEPSEEK_KEY***" | vercel env add DEEPSEEK_API_KEY production
+echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY production
 
 # Preview
-echo "***REDACTED_DEEPSEEK_KEY***" | vercel env add DEEPSEEK_API_KEY preview
+echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY preview
 
 # Development
-echo "***REDACTED_DEEPSEEK_KEY***" | vercel env add DEEPSEEK_API_KEY development
+echo "YOUR_DEEPSEEK_API_KEY" | vercel env add DEEPSEEK_API_KEY development
 ```
 
 **Alternativa:** Aggiungi manualmente su Vercel Dashboard:
@@ -63,7 +63,7 @@ echo "***REDACTED_DEEPSEEK_KEY***" | vercel env add DEEPSEEK_API_KEY development
 3. Vai su **Settings** → **Environment Variables**
 4. Aggiungi:
    - **Name**: `DEEPSEEK_API_KEY`
-   - **Value**: `***REDACTED_DEEPSEEK_KEY***`
+   - **Value**: Ottieni la chiave da https://platform.deepseek.com/
    - **Environments**: Seleziona Production, Preview, Development
 
 ## 🎯 Utilizzo
