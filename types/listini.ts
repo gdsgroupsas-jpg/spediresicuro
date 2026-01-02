@@ -88,6 +88,7 @@ export interface PriceList {
   priority: PriceListPriority; // 'global' | 'partner' | 'client' | 'default'
   is_global: boolean; // Se true, listino globale (admin)
   assigned_to_user_id?: string; // Se specificato, listino personalizzato per utente
+  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   
   // Versionamento
   valid_from?: string;
@@ -161,6 +162,7 @@ export interface CreatePriceListInput {
   priority?: PriceListPriority;
   is_global?: boolean;
   assigned_to_user_id?: string;
+  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   valid_from?: string;
   valid_until?: string;
   rules?: PriceRule[]; // Regole avanzate
@@ -181,6 +183,7 @@ export interface UpdatePriceListInput {
   version?: string;
   status?: PriceListStatus;
   priority?: PriceListPriority;
+  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   valid_from?: string;
   valid_until?: string;
   rules?: PriceRule[];
