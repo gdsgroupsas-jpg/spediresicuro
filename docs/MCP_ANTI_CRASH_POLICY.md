@@ -24,10 +24,10 @@ File `.cursorrules` contiene regole per evitare l'uso automatico dei tool MCP pe
 #### ✅ CORRETTO: Usa le funzioni del codice
 
 ```typescript
-import { getSystemLogs } from '@/actions/get-logs'
+import { getSystemLogs } from "@/actions/get-logs";
 
 // Limite sicuro (max 100)
-const logs = await getSystemLogs(50)
+const logs = await getSystemLogs(50);
 ```
 
 #### ❌ SBAGLIATO: Non usare MCP automaticamente
@@ -53,14 +53,15 @@ I tool MCP possono essere usati **SOLO** se:
 I limiti sono definiti nelle funzioni:
 
 ```typescript
-const MAX_LOG_LIMIT = 100      // Massimo log per query
-const DEFAULT_LIMIT = 50       // Default limit
-const QUERY_TIMEOUT_MS = 5000  // Timeout in millisecondi
+const MAX_LOG_LIMIT = 100; // Massimo log per query
+const DEFAULT_LIMIT = 50; // Default limit
+const QUERY_TIMEOUT_MS = 5000; // Timeout in millisecondi
 ```
 
 ### Modificare i Limiti
 
 Se necessario, modifica questi valori in:
+
 - `actions/get-logs.ts`
 - `actions/logs.ts`
 
@@ -88,7 +89,7 @@ Per testare la robustezza:
 
 ```typescript
 // Test con limite alto (dovrebbe essere limitato a 100)
-const logs = await getSystemLogs(1000) // Diventa 100 automaticamente
+const logs = await getSystemLogs(1000); // Diventa 100 automaticamente
 
 // Test con timeout (simula query lenta)
 // La query viene interrotta dopo 5 secondi
@@ -118,4 +119,3 @@ const logs = await getSystemLogs(1000) // Diventa 100 automaticamente
 
 **Ultimo aggiornamento**: 2025-02-01
 **Versione**: 1.0.0
-
