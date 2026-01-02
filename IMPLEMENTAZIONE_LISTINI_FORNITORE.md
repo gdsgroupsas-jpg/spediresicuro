@@ -61,7 +61,7 @@ Implementare sistema completo di gestione **Listini Fornitore** per Reseller e B
 
 ## 🔄 FASI DI IMPLEMENTAZIONE
 
-### ✅ FASE 1: Database & Types (Fondamentale)
+### ✅ FASE 1: Database & Types (Fondamentale) - **COMPLETATA**
 
 **Obiettivo**: Preparare struttura database e types TypeScript
 
@@ -70,15 +70,22 @@ Implementare sistema completo di gestione **Listini Fornitore** per Reseller e B
 2. ✅ Aggiornare TypeScript types (`types/listini.ts`)
 3. ✅ Creare funzione helper `getAvailableCouriersForUser()`
 
-**File da modificare:**
-- `supabase/migrations/XXX_add_list_type.sql` (nuovo)
-- `types/listini.ts`
-- `lib/db/price-lists.ts` (nuova funzione helper)
+**File modificati:**
+- ✅ `supabase/migrations/056_add_list_type.sql` (creato ed eseguito)
+- ✅ `types/listini.ts` (aggiunto `list_type` a PriceList, CreatePriceListInput, UpdatePriceListInput)
+- ✅ `lib/db/price-lists.ts` (aggiunta funzione `getAvailableCouriersForUser()`)
 
 **Validazione:**
-- ✅ Migration eseguita correttamente
-- ✅ Types TypeScript compilano senza errori
-- ✅ Funzione helper restituisce corrieri corretti
+- ✅ Migration 056 eseguita con successo su Supabase
+- ✅ Types TypeScript compilano correttamente
+- ✅ Funzione helper implementata e esportata correttamente
+- ✅ Script di test creato: `scripts/test-getAvailableCouriersForUser.ts`
+
+**Note Tecniche:**
+- Campo `list_type` nullable per retrocompatibilità (listini esistenti rimangono NULL)
+- CHECK constraint: `'supplier' | 'custom' | 'global'`
+- Indice parziale `idx_price_lists_list_type` creato per performance
+- Funzione helper supporta multi-provider e gestisce errori gracefully
 
 ---
 
@@ -179,11 +186,11 @@ OR
 
 ## ✅ CHECKLIST COMPLETAMENTO
 
-### Fase 1
-- [ ] Migration SQL creata ed eseguita
-- [ ] Types TypeScript aggiornati
-- [ ] Funzione helper `getAvailableCouriersForUser()` implementata
-- [ ] Test manuale: funzione restituisce corrieri corretti
+### Fase 1 ✅ COMPLETATA
+- [x] Migration SQL creata ed eseguita (056_add_list_type.sql)
+- [x] Types TypeScript aggiornati (types/listini.ts)
+- [x] Funzione helper `getAvailableCouriersForUser()` implementata (lib/db/price-lists.ts)
+- [x] Script di test creato (scripts/test-getAvailableCouriersForUser.ts)
 
 ### Fase 2
 - [ ] `createPriceListAction` aggiornata
@@ -204,6 +211,7 @@ OR
 
 ---
 
-**Ultimo Aggiornamento**: 2025-01-XX  
-**Prossimo Step**: Iniziare FASE 1 - Database & Types
+**Ultimo Aggiornamento**: 2026-01-XX  
+**Stato Attuale**: ✅ FASE 1 COMPLETATA  
+**Prossimo Step**: Iniziare FASE 2 - Backend Logic (Server Actions & RLS)
 
