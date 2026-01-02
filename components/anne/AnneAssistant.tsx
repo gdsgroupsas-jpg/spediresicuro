@@ -31,6 +31,12 @@ import ReactMarkdown from 'react-markdown';
 import { useAnneContext } from './AnneContext';
 import { AgentDebugPanel } from '@/components/agent/AgentDebugPanel';
 import type { SupervisorRouterTelemetry } from '@/lib/telemetry/logger';
+import { ValueDashboard } from './ValueDashboard';
+import { HumanError } from './HumanError';
+import { SmartSuggestions } from './SmartSuggestions';
+import { AutoProceedBanner } from './AutoProceedBanner';
+import type { AgentState } from '@/lib/agent/orchestrator/state';
+import { autoProceedConfig } from '@/lib/config';
 
 interface Message {
   role: 'user' | 'assistant' | 'suggestion';
@@ -66,6 +72,10 @@ export function AnneAssistant({
   const [showSettings, setShowSettings] = useState(false);
   // P2: Telemetria per debug panel (solo admin)
   const [lastTelemetry, setLastTelemetry] = useState<SupervisorRouterTelemetry | undefined>(undefined);
+  
+  // P4: AgentState corrente (per componenti P4)
+  const [currentAgentState, setCurrentAgentState] = useState<AgentState | null>(null);
+  const [showAutoProceed, setShowAutoProceed] = useState(false);
 
   // Preferenze utente (localStorage)
   const [preferences, setPreferences] = useState({
@@ -206,6 +216,16 @@ export function AnneAssistant({
       // P2: Salva telemetria se disponibile (solo per admin)
       if (data.metadata?.telemetry && (userRole === 'admin' || userRole === 'superadmin')) {
         setLastTelemetry(data.metadata.telemetry);
+      }
+
+      // P4: Salva AgentState corrente (per componenti P4)
+      if (data.metadata?.agentState) {
+        setCurrentAgentState(data.metadata.agentState);
+        
+        // P4 Task 2: Mostra auto-proceed banner se attivato
+        if (data.metadata.agentState.autoProceed) {
+          setShowAutoProceed(true);
+        }
       }
 
       setMessages((prev) => [
@@ -413,6 +433,48 @@ export function AnneAssistant({
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* P4: Componenti Business Value */}
+                {isExpanded && (
+                  <>
+                    {/* P4 Task 1: Value Dashboard */}
+                    <ValueDashboard userId={userId} />
+                    
+                    {/* P4 Task 3: Human Error Messages */}
+                    <HumanError
+                      agentState={currentAgentState}
+                      onResolved={() => setCurrentAgentState(null)}
+                    />
+                    
+                    {/* P4 Task 2: Auto-Proceed Banner */}
+                    {showAutoProceed && currentAgentState?.autoProceed && (
+                      <AutoProceedBanner
+                        message={currentAgentState.userMessage || '✅ Dati verificati, procedo automaticamente'}
+                        cancellationWindowMs={autoProceedConfig.CANCELLATION_WINDOW_MS}
+                        onCancel={() => {
+                          setShowAutoProceed(false);
+                          // TODO: Invia richiesta di annullamento al backend
+                        }}
+                        onComplete={() => {
+                          setShowAutoProceed(false);
+                        }}
+                        operationType="pricing"
+                      />
+                    )}
+                    
+                    {/* P4 Task 4: Smart Suggestions */}
+                    <SmartSuggestions
+                      userId={userId}
+                      onAccept={(suggestion) => {
+                        // TODO: Implementare logica accettazione suggerimento
+                        console.log('Suggerimento accettato:', suggestion);
+                      }}
+                      onDismiss={(suggestion) => {
+                        console.log('Suggerimento rifiutato:', suggestion);
+                      }}
+                    />
+                  </>
+                )}
+
                 {messages.length === 0 && (
                   <div className="text-center text-gray-500 text-sm mt-8">
                     <Ghost className="w-12 h-12 mx-auto mb-3 text-purple-300" />
