@@ -703,6 +703,68 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 
 ## 🔧 MODIFICHE RECENTI
 
+### ✅ AI Provider Selection - Supporto Multi-Provider (Gennaio 2026)
+
+**Feature:** Sistema per selezionare il provider AI (Anthropic Claude o DeepSeek) per Anne tramite UI Superadmin.
+
+**Implementazione:**
+- **Migration Database:** `058_ai_provider_preferences.sql`
+  - Tabella `system_settings` per preferenze globali
+  - Funzioni helper `get_ai_provider()` e `get_ai_model()`
+  - RLS policies (solo superadmin può modificare)
+  
+- **Adapter Pattern:** `lib/ai/provider-adapter.ts`
+  - Supporto per Anthropic Claude e DeepSeek
+  - Interfaccia unificata `AIClient` per entrambi i provider
+  - Gestione automatica del formato API (Anthropic vs OpenAI-compatible)
+  
+- **Server Actions:** `actions/ai-settings.ts`
+  - `getAIProviderSetting()` - Legge configurazione corrente
+  - `updateAIProviderSetting()` - Aggiorna provider (solo superadmin)
+  - `getAvailableAIProviders()` - Lista provider disponibili con stato API keys
+  
+- **UI Superadmin:** `app/dashboard/super-admin/_components/ai-provider-selector.tsx`
+  - Componente per selezionare provider AI
+  - Mostra stato API keys (configurata/non configurata)
+  - Feedback visivo per provider selezionato
+  
+- **Route Agent Chat:** `app/api/ai/agent-chat/route.ts`
+  - Modificata per usare adapter invece di chiamare direttamente Anthropic
+  - Supporto automatico per provider configurato dal database
+  - Fallback automatico se provider non disponibile
+
+**File creati/modificati:**
+- `supabase/migrations/058_ai_provider_preferences.sql` - Migration database
+- `lib/ai/provider-adapter.ts` - Adapter per provider AI
+- `actions/ai-settings.ts` - Server actions
+- `app/dashboard/super-admin/_components/ai-provider-selector.tsx` - UI componente
+- `app/api/ai/agent-chat/route.ts` - Route modificata per usare adapter
+- `app/dashboard/super-admin/page.tsx` - Aggiunto componente AI selector
+- `SETUP_DEEPSEEK_AI_PROVIDER.md` - Documentazione setup
+- `VERIFICA_DEEPSEEK_IMPLEMENTATION.md` - Verifica conformità DeepSeek
+
+**Variabili d'ambiente:**
+- `ANTHROPIC_API_KEY` - Chiave API Anthropic (già presente)
+- `DEEPSEEK_API_KEY` - Chiave API DeepSeek (aggiunta)
+
+**Come usare:**
+1. Vai su `/dashboard/super-admin`
+2. Nella sezione "Provider AI per Anne" seleziona il provider desiderato
+3. Il sistema salva automaticamente la preferenza nel database
+4. Le prossime conversazioni con Anne useranno il provider selezionato
+
+**Note:**
+- Retrocompatibile: se non configurato, default a Anthropic
+- Fallback automatico se provider selezionato non ha API key configurata
+- Solo superadmin può modificare il provider
+- La preferenza viene letta dal database ad ogni richiesta (cacheable in futuro)
+
+**Verifica:**
+```bash
+# Test locale: riavvia server e vai su /dashboard/super-admin
+# Expected: Componente AI Provider Selector visibile e funzionante
+```
+
 ### ✅ Wallet Balance nel Contesto Anne (2 Gennaio 2026 - Commit 2b892af)
 
 **Problema:** Anne non poteva rispondere a domande sul wallet perché non aveva accesso al `wallet_balance` nel contesto.
