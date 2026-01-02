@@ -1,7 +1,7 @@
 # 📦 SpedireSicuro.it - Logistics Operating System
 
-> **Version:** 0.3.0 (Logistics OS Architecture)  
-> **Last Updated:** December 31, 2025  
+> **Version:** 0.3.1 (Logistics OS Architecture)  
+> **Last Updated:** January 2, 2026  
 > **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared  
 > **Next Major:** 1.0.0 (Go To Market Release)
 
@@ -858,20 +858,23 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 - 🟡 **Onboarding in miglioramento** (semplificazione in corso)
 - ❌ **NON production ready** - Obiettivo: production readiness nei prossimi mesi
 
-**Feature Recenti (31 Dicembre 2025):**
+**Feature Recenti (2 Gennaio 2026):**
+- ✅ **FIX CRITICO**: Salvataggio `shipment_id_external` ora funziona per TUTTI i corrieri (incluso Poste Italiane)
+- ✅ Cancellazione spedizioni su Spedisci.Online ora funziona correttamente
+- ✅ Metodo `getIncrementIdByTracking()` per recupero increment_id da tracking
+
+**Feature (31 Dicembre 2025):**
 - ✅ Sistema Spedizioni Cancellate con audit trail completo
 - ✅ Cancellazione simultanea su Spedisci.Online
 - ✅ RBAC completo per visibilità reseller
-- ✅ Fix nome file PDF: ora usa solo tracking number (es: `3UW1LZ1549886.pdf` invece di `LDV_3UW1LZ1549886.pdf`)
-- ✅ Fix cancellazione Spedisci.Online: estrazione corretta `increment_id` dal tracking e salvataggio `shipmentId` durante creazione
-- ✅ Miglioramenti logging per debugging cancellazione e creazione spedizioni
+- ✅ Fix nome file PDF: ora usa solo tracking number
 
 **Non utilizzare in produzione senza test completi e validazione business.**
 
 ---
 
-_Last updated: December 31, 2025_  
-_Architecture Version: 0.3.0 (Logistics OS)_  
+_Last updated: January 2, 2026_  
+_Architecture Version: 0.3.1 (Logistics OS)_  
 _Status: 🟡 In Development / Testing_  
 _Next Major: 1.0.0 (Go To Market Release)_
 
@@ -895,9 +898,24 @@ _Next Major: 1.0.0 (Go To Market Release)_
 
 ---
 
-## 📝 Changelog Recente (31 Dicembre 2025)
+## 📝 Changelog Recente
 
-### 🐛 Fix Critici
+### 🐛 Fix Critici (2 Gennaio 2026)
+
+1. **FIX CRITICO: Cancellazione Spedisci.Online per Poste Italiane**:
+   - ✅ **BUG RISOLTO**: Il salvataggio di `shipment_id_external` era dentro un blocco `else` e NON veniva eseguito per "Poste Italiane"
+   - ✅ Spostato salvataggio `shipment_id_external` FUORI dal blocco condizionale corriere
+   - ✅ Ora `shipment_id_external` viene salvato per TUTTI i corrieri (Poste Italiane, GLS, BRT, UPS, ecc.)
+   - ✅ Cancellazione su Spedisci.Online ora funziona correttamente
+   - **File**: `app/api/spedizioni/route.ts`
+
+2. **Miglioramenti Logging e Debugging**:
+   - ✅ Aggiunto metodo `getIncrementIdByTracking()` in SpedisciOnlineAdapter
+   - ✅ Log dettagliati per `shipment_id_external` durante UPDATE spedizione
+   - ✅ Migliorata gestione errori 404 durante cancellazione
+   - **File**: `lib/adapters/couriers/spedisci-online.ts`
+
+### 🐛 Fix Critici (31 Dicembre 2025)
 
 1. **Fix Cancellazione Spedisci.Online**:
    - ✅ Salvataggio `shipmentId` (increment_id) durante creazione spedizione
