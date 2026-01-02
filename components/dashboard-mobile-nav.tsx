@@ -233,21 +233,10 @@ export default function DashboardMobileNav() {
                       const event = new CustomEvent('openAiAssistant');
                       window.dispatchEvent(event);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg transition-all duration-200"
-                  >
-                    <Bot className="w-5 h-5" />
-                    <span>AI Assistant</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      const event = new CustomEvent('openAnneAssistant');
-                      window.dispatchEvent(event);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:shadow-lg transition-all duration-200"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white font-semibold hover:shadow-lg transition-all duration-200"
                   >
                     <Ghost className="w-5 h-5" />
-                    <span>Anne Assistant</span>
+                    <span>Anne</span>
                   </button>
                 </div>
               </div>
