@@ -60,6 +60,18 @@ Quando vedi "Errore interno del server", **guarda immediatamente la console del 
 2. Controlla se ci sono firewall o proxy che bloccano le richieste
 3. Prova a riavviare il server
 
+#### Errore: "Errore autenticazione API" (solo su Mobile)
+**Causa**: Problema di timeout o connessione instabile su mobile.
+
+**Soluzione**:
+1. Verifica che `ANTHROPIC_API_KEY` sia configurata su Vercel (se funziona su desktop, è già configurata)
+2. Il problema è probabilmente nella gestione degli errori su mobile
+3. **Fix applicato (2025-01-17)**: Migliorata gestione errori con timeout e parsing JSON robusto
+4. Verifica la connessione internet mobile
+5. Prova a fare hard refresh del browser mobile
+
+**Nota**: Se Anne funziona su desktop ma non su mobile, il problema è nella gestione degli errori su mobile, non nella configurazione della variabile.
+
 ### 3. **Verifica Configurazione Completa**
 
 ```bash
