@@ -790,10 +790,23 @@ export async function createShipment(...) {
 **Componenti:**
 - Icona ghost nel menu mobile per aprire Anne Assistant
 - Accessibilità migliorata su dispositivi mobili
+- Gestione errori robusta per connessioni mobile instabili
+
+**Features Mobile:**
+- ✅ Timeout esplicito di 60 secondi per evitare richieste bloccate
+- ✅ Gestione robusta errori di rete (timeout, connessione instabile)
+- ✅ Parsing JSON più sicuro (legge testo prima di fare parse)
+- ✅ Messaggi di errore specifici per mobile
+
+**Fix Applicato (2025-01-17):**
+- Migliorata gestione errori in `components/anne/AnneAssistant.tsx`
+- Timeout controller per evitare richieste bloccate su mobile
+- Gestione specifica per errori di rete e timeout
 
 **Riferimenti:**
 - `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 4: Mobile Anne
 - `STATO_P1_P2_P3.md` - P2 completato
+- `FIX_ANTHROPIC_API_KEY_VERCEL.md` - Fix mobile errori (2025-01-17)
 
 ---
 
