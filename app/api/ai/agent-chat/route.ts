@@ -174,6 +174,11 @@ export async function POST(request: NextRequest) {
         responseMetadata.telemetry = supervisorResult.telemetry;
       }
 
+      // P4: Includi AgentState nei metadata (per componenti P4)
+      if (supervisorResult.agentState) {
+        responseMetadata.agentState = supervisorResult.agentState;
+      }
+
       return NextResponse.json({
         success: true,
         message: responseMessage,

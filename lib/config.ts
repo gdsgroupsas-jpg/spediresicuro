@@ -133,6 +133,45 @@ export const parcelDefaults = {
 } as const;
 
 /**
+ * Configurazione per Auto-Proceed (P4 Task 2)
+ */
+export const autoProceedConfig = {
+  /**
+   * Soglia di confidence per auto-proceed completo (senza chiedere conferma).
+   * Valore: 0-100. Se confidenceScore >= AUTO_PROCEED_THRESHOLD e validationErrors.length === 0,
+   * procede automaticamente (solo per operazioni sicure: pricing, address normalization).
+   * 
+   * ⚠️ CRITICO: Auto-proceed NON si applica mai a:
+   * - booking_worker (creazione LDV/spedizione)
+   * - Operazioni wallet (ricarica, addebito, svincolo giacenza)
+   * - Qualsiasi operazione finanziaria
+   */
+  AUTO_PROCEED_CONFIDENCE_THRESHOLD: parseInt(
+    process.env.AUTO_PROCEED_CONFIDENCE_THRESHOLD || '85',
+    10
+  ),
+
+  /**
+   * Soglia di confidence per suggerire procedura (1 click invece di form completo).
+   * Valore: 0-100. Se confidenceScore >= SUGGEST_PROCEED_THRESHOLD ma < AUTO_PROCEED_THRESHOLD,
+   * mostra suggerimento "Dati quasi completi, procedi?".
+   */
+  SUGGEST_PROCEED_CONFIDENCE_THRESHOLD: parseInt(
+    process.env.SUGGEST_PROCEED_CONFIDENCE_THRESHOLD || '70',
+    10
+  ),
+
+  /**
+   * Finestra di annullamento per auto-proceed (in millisecondi).
+   * L'utente può annullare l'auto-proceed entro questo tempo.
+   */
+  CANCELLATION_WINDOW_MS: parseInt(
+    process.env.AUTO_PROCEED_CANCELLATION_WINDOW_MS || '5000',
+    10
+  ),
+} as const;
+
+/**
  * Export di tutte le configurazioni per facilità di import
  */
 export const agentConfig = {
@@ -142,5 +181,6 @@ export const agentConfig = {
   pricing: pricingConfig,
   parcel: parcelDefaults,
   ocr: ocrConfig,
+  autoProceed: autoProceedConfig,
 } as const;
 
