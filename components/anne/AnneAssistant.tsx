@@ -192,6 +192,10 @@ export function AnneAssistant({
     setInput('');
     setIsLoading(true);
 
+    // Timeout controller per gestire richieste lente su mobile
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 secondi timeout
+
     try {
       const response = await fetch('/api/ai/agent-chat', {
         method: 'POST',
@@ -205,12 +209,34 @@ export function AnneAssistant({
             previousMessages: messages.slice(-5), // Ultimi 5 messaggi per contesto
           },
         }),
+        signal: controller.signal, // Timeout support
       });
 
-      const data = await response.json();
-
+      // Verifica che la risposta sia valida prima di fare parse JSON
       if (!response.ok) {
-        throw new Error(data.error || 'Errore di comunicazione con Anne');
+        // Prova a leggere il JSON anche se la risposta non è OK
+        let errorData;
+        try {
+          const text = await response.text();
+          errorData = text ? JSON.parse(text) : {};
+        } catch {
+          errorData = { error: `Errore HTTP ${response.status}` };
+        }
+        throw new Error(errorData.error || `Errore di comunicazione con Anne (${response.status})`);
+      }
+
+      // Leggi il testo prima di fare parse JSON per evitare errori su mobile
+      const responseText = await response.text();
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error('Risposta vuota dal server. Riprova tra qualche secondo.');
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Errore parsing JSON:', parseError);
+        throw new Error('Risposta non valida dal server. Riprova tra qualche secondo.');
       }
 
       // P2: Salva telemetria se disponibile (solo per admin)
@@ -232,21 +258,35 @@ export function AnneAssistant({
         ...prev,
         {
           role: 'assistant',
-          content: data.message,
+          content: data.message || 'Nessuna risposta ricevuta.',
           timestamp: new Date(),
         },
       ]);
     } catch (error: any) {
       console.error('Errore Anne:', error);
+      
+      // Gestione errori più specifica per mobile
+      let errorMessage = 'Mi dispiace, ho avuto un problema tecnico.';
+      
+      if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+        errorMessage = '⏱️ La richiesta è scaduta. Verifica la connessione internet e riprova.';
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+        errorMessage = '📡 Errore di connessione. Verifica la connessione internet e riprova.';
+      } else if (error.message) {
+        // Usa il messaggio di errore originale se disponibile
+        errorMessage = error.message;
+      }
+      
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: `Mi dispiace, ho avuto un problema tecnico. ${error.message}`,
+          content: errorMessage,
           timestamp: new Date(),
         },
       ]);
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
