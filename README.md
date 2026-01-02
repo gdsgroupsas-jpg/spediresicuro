@@ -152,6 +152,7 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 - **Pricing Worker**: Calcolo preventivi multi-corriere
 - **Booking Worker**: Prenotazione spedizioni con preflight checks
 - **Telemetria Strutturata**: Tracking completo di tutte le operazioni AI
+- **Multi-Provider AI**: Supporto per Anthropic Claude e DeepSeek (selezione tramite UI Superadmin)
 
 #### Sicurezza & Compliance
 - **Row Level Security (RLS)**: Isolamento multi-tenant a livello database

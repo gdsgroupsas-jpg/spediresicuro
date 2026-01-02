@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { UsersTable } from './_components/users-table'
 import { CreateResellerDialog } from './_components/create-reseller-dialog'
+import { AIProviderSelector } from './_components/ai-provider-selector'
 
 export default function SuperAdminDashboard() {
   const { data: session, status } = useSession()
@@ -102,6 +103,11 @@ export default function SuperAdminDashboard() {
         </header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* AI Provider Selector */}
+          <div className="mb-8">
+            <AIProviderSelector />
+          </div>
+
           {/* Users Table - Self-contained component with filters, sorting, bulk actions */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-200">
