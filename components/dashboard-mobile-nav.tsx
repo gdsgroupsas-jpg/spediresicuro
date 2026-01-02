@@ -39,6 +39,7 @@ export default function DashboardMobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [accountType, setAccountType] = useState<string | null>(null);
+  const [isResellerFlag, setIsResellerFlag] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Carica il tipo di account
@@ -51,6 +52,7 @@ export default function DashboardMobileNav() {
             const data = await response.json();
             const userData = data.user || data;
             setAccountType(userData.account_type || null);
+            setIsResellerFlag(userData.is_reseller === true);
           }
         } catch (error) {
           console.error('Errore caricamento account type:', error);
@@ -85,6 +87,8 @@ export default function DashboardMobileNav() {
   };
 
   const isAdmin = accountType === 'admin' || accountType === 'superadmin';
+  const isReseller = isResellerFlag || accountType === 'reseller' || accountType === 'byoc';
+  const isByoc = accountType === 'byoc';
   const isSuperAdmin = accountType === 'superadmin';
 
   return (
@@ -291,6 +295,78 @@ export default function DashboardMobileNav() {
                   </Link>
                 </nav>
               </div>
+
+              {/* Reseller - Solo per Reseller */}
+              {isReseller && !isByoc && (
+                <div>
+                  <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    Reseller
+                  </h3>
+                  <nav className="space-y-1">
+                    <Link
+                      href="/dashboard/reseller/listini-fornitore"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive('/dashboard/reseller/listini-fornitore')
+                          ? 'bg-orange-50 text-orange-600 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Package className="w-5 h-5" />
+                      <span>Listini Fornitore</span>
+                    </Link>
+
+                    <Link
+                      href="/dashboard/reseller/listini-personalizzati"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive('/dashboard/reseller/listini-personalizzati')
+                          ? 'bg-orange-50 text-orange-600 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FileText className="w-5 h-5" />
+                      <span>Listini Personalizzati</span>
+                    </Link>
+
+                    <Link
+                      href="/dashboard/reseller-team"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive('/dashboard/reseller-team')
+                          ? 'bg-orange-50 text-orange-600 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Users className="w-5 h-5" />
+                      <span>I Miei Clienti</span>
+                    </Link>
+                  </nav>
+                </div>
+              )}
+
+              {/* BYOC - Solo per BYOC */}
+              {isByoc && (
+                <div>
+                  <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                    BYOC
+                  </h3>
+                  <nav className="space-y-1">
+                    <Link
+                      href="/dashboard/byoc/listini-fornitore"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isActive('/dashboard/byoc/listini-fornitore')
+                          ? 'bg-orange-50 text-orange-600 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Package className="w-5 h-5" />
+                      <span>Listini Fornitore</span>
+                    </Link>
+                  </nav>
+                </div>
+              )}
 
               {/* Amministrazione - Solo Admin */}
               {isAdmin && (
