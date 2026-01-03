@@ -26,6 +26,31 @@ import { generateRequestId, createLogger } from "@/lib/logger";
 import { trackMiddlewareError } from "@/lib/error-tracker";
 
 /**
+ * ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
+ * 
+ * Quando l'header 'x-test-mode: playwright' è presente E siamo in CI,
+ * bypassa l'autenticazione per permettere i test E2E.
+ * 
+ * SICUREZZA: Funziona SOLO se:
+ * - CI=true (GitHub Actions)
+ * - PLAYWRIGHT_TEST_BASE_URL è impostato
+ * - O siamo in development
+ */
+function isPlaywrightTestBypass(request: NextRequest): boolean {
+  const testHeader = request.headers.get('x-test-mode');
+  if (testHeader !== 'playwright') {
+    return false;
+  }
+  
+  // Verifica che siamo in ambiente test (CI o dev)
+  const isCI = process.env.CI === 'true';
+  const isTestEnv = !!process.env.PLAYWRIGHT_TEST_BASE_URL;
+  const isDev = process.env.NODE_ENV === 'development';
+  
+  return isCI || isTestEnv || isDev;
+}
+
+/**
  * Public routes that DON'T require authentication
  * These are explicitly allowed without session check
  */
@@ -99,6 +124,15 @@ export default async function middleware(request: NextRequest) {
     if (isPublicRoute(pathname)) {
       const response = NextResponse.next();
       response.headers.set("X-Request-ID", requestId);
+      return response;
+    }
+
+    // ⚠️ E2E TEST BYPASS: Permette accesso senza autenticazione in test mode
+    if (isPlaywrightTestBypass(request)) {
+      logger.debug("Playwright test bypass active", { pathname });
+      const response = NextResponse.next();
+      response.headers.set("X-Request-ID", requestId);
+      response.headers.set("X-Test-Mode", "playwright-bypass");
       return response;
     }
 
