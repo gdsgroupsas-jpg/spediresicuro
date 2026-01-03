@@ -12,9 +12,7 @@ import { motion } from 'framer-motion'
 import DashboardNav from '@/components/dashboard-nav'
 import IntegrationCard from '@/components/integrazioni/integration-card'
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
-import SpedisciOnlineConfigMulti from '@/components/integrazioni/spedisci-online-config-multi'
 import CourierAPIConfig from '@/components/integrazioni/courier-api-config'
-import Link from 'next/link'
 import {
   ShoppingBag,
   Store,
@@ -174,34 +172,7 @@ export default function IntegrazioniPage() {
           <UniversalWidgetCard />
         </motion.div>
 
-        {/* Sezione API Corrieri - Configurazione Credenziali Spedisci.Online */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mb-12"
-        >
-          <SpedisciOnlineConfigMulti />
-
-          <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-purple-900 mb-1">🤖 Automation Spedisci.Online</h3>
-                <p className="text-sm text-purple-700">
-                  Configura automazione per estrazione automatica di session cookies e contratti
-                </p>
-              </div>
-              <Link
-                href="/dashboard/admin/automation"
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
-              >
-                Gestisci Automation →
-              </Link>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Configurazione API Corrieri (Poste, GLS, BRT) */}
+        {/* Configurazione API Corrieri (Spedisci.Online, GLS, BRT, Poste) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
