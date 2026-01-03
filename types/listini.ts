@@ -155,7 +155,7 @@ export interface PriceListEntry {
 }
 
 export interface CreatePriceListInput {
-  courier_id?: string; // Opzionale per listini multi-corriere
+  courier_id?: string | null; // Opzionale per listini multi-corriere o quando tabella couriers non disponibile
   name: string;
   version: string;
   status?: PriceListStatus;
