@@ -292,8 +292,16 @@ export class GeminiClient implements AIClient {
       });
 
       const response = result.response;
-      const text = response.text();
-      
+
+      // Gestione robusta di response.text() - può lanciare eccezione se ci sono solo tool calls
+      let text = '';
+      try {
+        text = response.text();
+      } catch (textError) {
+        console.warn('[Gemini] No text in response (tool calls only?)', textError);
+        // Continua comunque, potrebbe esserci solo tool call
+      }
+
       // Estrae tool calls se presenti
       const toolCalls: Array<{ name: string; arguments: any }> = [];
       
