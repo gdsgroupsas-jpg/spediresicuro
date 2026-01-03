@@ -3,12 +3,15 @@
 -- Eseguire in Supabase SQL Editor
 -- ============================================
 
+-- NOTA: account_type enum ha valori: user, admin, superadmin, byoc
+-- Il reseller è indicato dal campo is_reseller, NON da account_type
+
 -- Trova e aggiorna l'utente test
 UPDATE users
 SET 
   is_reseller = true,
-  reseller_role = 'admin',  -- Admin può eliminare listini
-  account_type = 'reseller'::account_type
+  reseller_role = 'admin'  -- Admin può eliminare listini
+  -- account_type rimane invariato (user, admin, ecc.)
 WHERE email = 'testspediresicuro+postaexpress@gmail.com';
 
 -- Verifica aggiornamento
