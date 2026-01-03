@@ -41,6 +41,7 @@ export default function ResellerListiniFornitorePage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
   const [userId, setUserId] = useState<string | null>(null);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [isResellerAdmin, setIsResellerAdmin] = useState(false); // Solo admin reseller può eliminare
 
   // Verifica permessi e carica dati
   useEffect(() => {
@@ -63,6 +64,9 @@ export default function ResellerListiniFornitorePage() {
           }
 
           setUserId(userData.id);
+          
+          // Controlla se è admin reseller (può eliminare listini)
+          setIsResellerAdmin(userData.reseller_role === 'admin' || userData.account_type === 'superadmin' || userData.account_type === 'admin');
           
           // Carica corrieri disponibili
           const couriers = await getAvailableCouriersForUser(userData.id);
@@ -140,7 +144,7 @@ export default function ResellerListiniFornitorePage() {
   };
 
   const handleViewDetails = (priceListId: string) => {
-    router.push(`/dashboard/listini/${priceListId}`);
+    router.push(`/dashboard/reseller/listini-fornitore/${priceListId}`);
   };
 
   const handleFormSuccess = () => {
@@ -227,6 +231,7 @@ export default function ResellerListiniFornitorePage() {
             onDelete={handleDelete}
             onViewDetails={handleViewDetails}
             isLoading={isLoading}
+            canDelete={isResellerAdmin}
           />
         </div>
 
