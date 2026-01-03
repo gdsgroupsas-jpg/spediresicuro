@@ -41,11 +41,21 @@ jobs:
         env:
           NODE_ENV: production
           PORT: 3000
+          CI: 'true'
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
 
       - name: Wait for server
         run: npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: 'true'
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
+          PLAYWRIGHT_TEST_MODE: 'true'
+          NODE_ENV: test
 
       - name: Stop server
         if: always()
@@ -54,13 +64,6 @@ jobs:
             kill $(cat server.pid) || true
             rm server.pid
           fi
-
-      - name: Run E2E tests
-        run: npm run test:e2e
-        env:
-          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
-          PLAYWRIGHT_TEST_MODE: 'true'
-          NODE_ENV: test
 
       - name: Upload test results
         if: always()
