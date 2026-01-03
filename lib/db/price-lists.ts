@@ -262,11 +262,11 @@ export async function deletePriceList(id: string): Promise<void> {
  * 2. contract_mapping JSONB per estrarre corrieri (GLS, BRT, SDA, ecc.)
  * 
  * @param userId - ID utente
- * @returns Array di oggetti { courierId: string, courierName: string, providerId: string }
+ * @returns Array di oggetti { courierId: string, courierName: string, providerId: string, contractCode: string }
  */
 export async function getAvailableCouriersForUser(
   userId: string
-): Promise<Array<{ courierId: string; courierName: string; providerId: string }>> {
+): Promise<Array<{ courierId: string; courierName: string; providerId: string; contractCode: string }>> {
   try {
     // 1. Recupera configurazioni API dell'utente
     const { data: configs, error } = await supabaseAdmin
@@ -285,18 +285,21 @@ export async function getAvailableCouriersForUser(
     }
 
     // 2. Estrai corrieri da contract_mapping
-    const couriersMap = new Map<string, { courierName: string; providerId: string }>();
+    // NOTA: Le CHIAVI sono i codici contratto (es. "gls-*", "postedeliverybusiness-SDA---Express---H24+")
+    //       I VALORI sono i nomi corriere (es. "Gls", "PosteDeliveryBusiness")
+    const couriersMap = new Map<string, { courierName: string; providerId: string; contractCode: string }>();
 
     for (const config of configs) {
       const contractMapping = (config.contract_mapping as Record<string, string>) || {};
       const providerId = config.provider_id;
 
-      // Le chiavi del mapping sono i corrieri
-      for (const [courierName, contractCode] of Object.entries(contractMapping)) {
+      // contractCode = chiave (codice contratto), courierName = valore (nome corriere)
+      for (const [contractCode, courierName] of Object.entries(contractMapping)) {
         if (!couriersMap.has(courierName)) {
           couriersMap.set(courierName, {
             courierName,
             providerId,
+            contractCode,
           });
         }
       }
@@ -317,6 +320,7 @@ export async function getAvailableCouriersForUser(
         courierId: courier?.id || courierName, // Fallback a nome se non trovato
         courierName,
         providerId: data.providerId,
+        contractCode: data.contractCode,
       });
     }
 
