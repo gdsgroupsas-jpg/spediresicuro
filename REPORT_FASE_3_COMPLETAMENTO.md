@@ -153,3 +153,4 @@ Queste sono feature future, non parte della Fase 3 o 4.
 **Ultimo Aggiornamento**: 2026-01-XX  
 **Prossimo Step**: Implementare UI seguendo `PROMPT_FASE_3_LISTINI_FORNITORE.md`
 
+

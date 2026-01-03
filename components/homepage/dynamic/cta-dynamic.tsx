@@ -112,7 +112,7 @@ export default function CTADynamic() {
             <div className="absolute inset-0 bg-white" />
             {/* Shine Effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-200/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            <span className="relative text-violet-700">Unisciti alla Beta</span>
+            <span className="relative text-violet-700">Inizia Ora - È Gratis</span>
             <ArrowRight className="relative w-5 h-5 text-violet-700 group-hover:translate-x-1 transition-transform" />
           </Link>
 

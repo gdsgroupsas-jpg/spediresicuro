@@ -87,3 +87,4 @@ Dopo setup, l'utente può:
 **Versione:** 1.0  
 **Data:** 1 Gennaio 2026
 
+

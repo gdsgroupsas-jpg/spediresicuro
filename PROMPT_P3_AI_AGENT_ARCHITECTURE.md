@@ -428,3 +428,4 @@ Ogni task è considerato completo quando:
 *Data: 1 Gennaio 2026*  
 *Prerequisiti: P1 e P2 completati*
 
+

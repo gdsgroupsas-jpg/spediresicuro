@@ -366,3 +366,4 @@ Il Kill Switch OCR immagini funziona correttamente:
 
 
 
+
