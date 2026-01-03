@@ -18,6 +18,12 @@ import type { Shipment, CreateShipmentInput } from '@/types/shipments'
 
 /**
  * Recupera credenziali spedisci.online dell'utente
+ * 
+ * ⚠️ PRIORITÀ:
+ * 1. Configurazione personale in courier_configs (created_by = user_email)
+ * 2. Configurazione globale in courier_configs (is_default = true)
+ * 3. user_integrations (legacy)
+ * 4. Database locale (legacy)
  */
 export async function getSpedisciOnlineCredentials() {
   try {
@@ -27,7 +33,85 @@ export async function getSpedisciOnlineCredentials() {
       return { success: false, error: 'Non autenticato' }
     }
 
-    // Prova Supabase prima
+    const userEmail = session.user.email
+
+    // ============================================
+    // PRIORITÀ 1: Configurazione API Corriere (courier_configs)
+    // ============================================
+    const { supabaseAdmin } = await import('@/lib/db/client')
+    const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption')
+
+    // 1.1. Cerca configurazione personale dell'utente
+    const { data: personalConfig } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('created_by', userEmail)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (personalConfig) {
+      console.log('✅ [SPEDISCI.ONLINE] Configurazione personale trovata in courier_configs')
+      
+      // Decripta credenziali se necessario
+      let apiKey = personalConfig.api_key
+      let apiSecret = personalConfig.api_secret
+      
+      if (apiKey && isEncrypted(apiKey)) {
+        apiKey = decryptCredential(apiKey)
+      }
+      if (apiSecret && isEncrypted(apiSecret)) {
+        apiSecret = decryptCredential(apiSecret)
+      }
+      
+      return {
+        success: true,
+        credentials: {
+          api_key: apiKey,
+          api_secret: apiSecret,
+          base_url: personalConfig.base_url || 'https://api.spedisci.online/api/v2',
+          contract_mapping: personalConfig.contract_mapping || {},
+        },
+      }
+    }
+
+    // 1.2. Fallback: Configurazione globale
+    const { data: globalConfig } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('is_default', true)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (globalConfig) {
+      console.log('✅ [SPEDISCI.ONLINE] Configurazione globale trovata in courier_configs')
+      
+      // Decripta credenziali se necessario
+      let apiKey = globalConfig.api_key
+      let apiSecret = globalConfig.api_secret
+      
+      if (apiKey && isEncrypted(apiKey)) {
+        apiKey = decryptCredential(apiKey)
+      }
+      if (apiSecret && isEncrypted(apiSecret)) {
+        apiSecret = decryptCredential(apiSecret)
+      }
+      
+      return {
+        success: true,
+        credentials: {
+          api_key: apiKey,
+          api_secret: apiSecret,
+          base_url: globalConfig.base_url || 'https://api.spedisci.online/api/v2',
+          contract_mapping: globalConfig.contract_mapping || {},
+        },
+      }
+    }
+
+    // ============================================
+    // PRIORITÀ 2: user_integrations (legacy)
+    // ============================================
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (supabaseUrl) {
       const supabase = createServerActionClient()
@@ -42,6 +126,7 @@ export async function getSpedisciOnlineCredentials() {
           .single()
 
         if (!error && data) {
+          console.log('✅ [SPEDISCI.ONLINE] Credenziali trovate in user_integrations (legacy)')
           return {
             success: true,
             credentials: data.credentials,
@@ -50,13 +135,16 @@ export async function getSpedisciOnlineCredentials() {
       }
     }
 
-    // Fallback: database locale
-    const user = await findUserByEmail(session.user.email)
+    // ============================================
+    // PRIORITÀ 3: Database locale (legacy)
+    // ============================================
+    const user = await findUserByEmail(userEmail)
     if (user?.integrazioni) {
       const spedisciOnlineIntegration = user.integrazioni.find(
         (i: any) => i.platform === 'spedisci_online' || i.platform === 'spedisci-online'
       )
       if (spedisciOnlineIntegration) {
+        console.log('✅ [SPEDISCI.ONLINE] Credenziali trovate in database locale (legacy)')
         return {
           success: true,
           credentials: spedisciOnlineIntegration.credentials,
@@ -66,7 +154,7 @@ export async function getSpedisciOnlineCredentials() {
 
     return {
       success: false,
-      error: 'Credenziali spedisci.online non configurate',
+      error: 'Credenziali spedisci.online non configurate. Configura le credenziali in /dashboard/integrazioni',
     }
   } catch (error) {
     console.error('Errore recupero credenziali spedisci.online:', error)
