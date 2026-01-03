@@ -117,7 +117,6 @@ export interface PriceList {
   created_at: string;
   updated_at: string;
   created_by?: string;
-  created_by_user_id?: string; // Nome alternativo per compatibilità
   updated_by?: string;
   
   // Statistiche

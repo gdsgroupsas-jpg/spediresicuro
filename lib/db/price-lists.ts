@@ -23,7 +23,6 @@ export async function createPriceList(data: CreatePriceListInput, userId: string
     .insert({
       ...data,
       created_by: userId,
-      created_by_user_id: userId, // Compatibilità
     })
     .select()
     .single();
