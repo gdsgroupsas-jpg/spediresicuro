@@ -196,7 +196,7 @@ export function SyncSpedisciOnlineDialog({
             Sincronizza Listini da Spedisci.Online
           </DialogTitle>
           <DialogDescription>
-            Testa l'endpoint /shipping/rates e sincronizza i listini prezzi nel database
+            Testa l&apos;endpoint /shipping/rates e sincronizza i listini prezzi nel database
           </DialogDescription>
         </DialogHeader>
 
