@@ -647,6 +647,13 @@ npm run test:e2e            # Esegui test Playwright E2E
 - **[WALLET_SECURITY_GUARDRAILS.md](WALLET_SECURITY_GUARDRAILS.md)** - Regole critiche wallet (NON BYPASSABILE)
 - **[AUDIT_GO_NOGO_PIVOT.md](AUDIT_GO_NOGO_PIVOT.md)** - Audit strategico GO/NO-GO/PIVOT
 
+**Deploy e Pre-Launch:**
+- **[DEPLOY_READINESS_CHECKLIST.md](DEPLOY_READINESS_CHECKLIST.md)** - Checklist pratica per deploy production
+- **[PRE_LAUNCH_CHECKLIST_CORRETTA.md](PRE_LAUNCH_CHECKLIST_CORRETTA.md)** - Checklist pre-launch corretta e allineata al codebase
+- **[VERIFICA_CHECKLIST_PRE_LAUNCH.md](VERIFICA_CHECKLIST_PRE_LAUNCH.md)** - Report completo verifica checklist pre-launch
+- **[ANALISI_SICUREZZA_FIX_REGRESSIONI.md](ANALISI_SICUREZZA_FIX_REGRESSIONI.md)** - Analisi sicurezza fix - verifica regressioni
+- **[RIEPILOGO_CORREZIONI_DEPLOY.md](RIEPILOGO_CORREZIONI_DEPLOY.md)** - Riepilogo correzioni e preparazione deploy
+
 ### Documenti AI/Validazione
 
 - **[WALLET_AUDIT_REPORT.md](WALLET_AUDIT_REPORT.md)** - Audit wallet completo (P0 fixes applicati)
