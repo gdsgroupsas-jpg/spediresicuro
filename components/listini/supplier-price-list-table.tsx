@@ -17,6 +17,7 @@ interface SupplierPriceListTableProps {
   onDelete: (priceListId: string) => void;
   onViewDetails: (priceListId: string) => void;
   isLoading?: boolean;
+  canDelete?: boolean; // Se true, mostra il bottone elimina (default: true)
 }
 
 export function SupplierPriceListTable({
@@ -25,6 +26,7 @@ export function SupplierPriceListTable({
   onDelete,
   onViewDetails,
   isLoading = false,
+  canDelete = true,
 }: SupplierPriceListTableProps) {
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '-';
@@ -133,15 +135,17 @@ export function SupplierPriceListTable({
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(priceList.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                    title="Elimina"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(priceList.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      title="Elimina"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>
