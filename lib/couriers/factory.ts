@@ -69,7 +69,8 @@ export async function getCourierConfigForUser(
         });
       }
 
-      // Fallback: query diretta
+      // Fallback: query diretta con stessa priorità della RPC (migration 053)
+      // Priorità: 1) Config personale (owner_user_id), 2) Config assegnata, 3) Config default
       const { data: user } = await supabaseAdmin
         .from('users')
         .select('assigned_config_id')
@@ -79,36 +80,69 @@ export async function getCourierConfigForUser(
       // Normalizza provider_id per matching esatto (case-insensitive ma match esatto)
       const normalizedProviderId = providerId.toLowerCase().trim();
       
-      let query = supabaseAdmin
+      // 🔧 FIX: Cerca prima configurazione personale (owner_user_id = userId)
+      // Questa è la priorità più alta, come nella RPC migration 053
+      console.log(`🔍 [FACTORY] Fallback query: cerco config per userId=${userId}, provider=${normalizedProviderId}`);
+      
+      // PRIORITÀ 1: Configurazione personale (owner_user_id = userId)
+      const { data: personalConfig, error: personalError } = await supabaseAdmin
         .from('courier_configs')
         .select('*')
         .eq('provider_id', normalizedProviderId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('owner_user_id', userId)
+        .single();
 
-      if (user?.assigned_config_id) {
-        // Cerca config assegnata
-        query = query.eq('id', user.assigned_config_id);
-      } else {
-        // Cerca config default
-        query = query.eq('is_default', true);
-      }
-
-      const { data: configData, error: configError } = await query.single();
-
-      if (configError || !configData) {
-        console.error('❌ Nessuna configurazione trovata nel DB');
-        console.error(`   - Provider ID cercato: "${normalizedProviderId}"`);
-        console.error(`   - User ID: ${userId}`);
-        return null;
+      if (!personalError && personalConfig) {
+        console.log(`✅ [FACTORY] Trovata config personale (owner_user_id match):`, {
+          id: personalConfig.id,
+          name: personalConfig.name,
+          owner_user_id: personalConfig.owner_user_id,
+        });
+        return personalConfig as CourierConfig;
       }
       
-      // Verifica che provider_id corrisponda esattamente (case-insensitive)
-      if (configData.provider_id?.toLowerCase() !== normalizedProviderId) {
-        console.error(`❌ Provider ID mismatch: config ha "${configData.provider_id}" ma cercato "${normalizedProviderId}"`);
-        return null;
+      // PRIORITÀ 2: Configurazione assegnata (assigned_config_id)
+      if (user?.assigned_config_id) {
+        const { data: assignedConfig, error: assignedError } = await supabaseAdmin
+          .from('courier_configs')
+          .select('*')
+          .eq('id', user.assigned_config_id)
+          .eq('provider_id', normalizedProviderId)
+          .eq('is_active', true)
+          .single();
+
+        if (!assignedError && assignedConfig) {
+          console.log(`✅ [FACTORY] Trovata config assegnata (assigned_config_id):`, {
+            id: assignedConfig.id,
+            name: assignedConfig.name,
+          });
+          return assignedConfig as CourierConfig;
+        }
+      }
+      
+      // PRIORITÀ 3: Configurazione default
+      const { data: defaultConfig, error: defaultError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', normalizedProviderId)
+        .eq('is_active', true)
+        .eq('is_default', true)
+        .single();
+
+      if (!defaultError && defaultConfig) {
+        console.log(`ℹ️ [FACTORY] Nessuna config personale/assegnata, uso config default:`, {
+          id: defaultConfig.id,
+          name: defaultConfig.name,
+        });
+        return defaultConfig as CourierConfig;
       }
 
-      return configData as CourierConfig;
+      console.error('❌ Nessuna configurazione trovata nel DB');
+      console.error(`   - Provider ID cercato: "${normalizedProviderId}"`);
+      console.error(`   - User ID: ${userId}`);
+      console.error(`   - Cercate: personale (owner_user_id), assegnata (assigned_config_id), default (is_default)`);
+      return null;
     }
 
     if (configs && configs.length > 0) {
@@ -229,7 +263,15 @@ function instantiateProviderFromConfig(
           baseUrl: config.base_url,
           apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
           apiKeyLength: trimmedApiKey.length,
+          // 🔍 AUDIT: Log contract_mapping per debug cambio contratti
+          contractMappingKeys: Object.keys(contractMapping),
+          contractMappingCount: Object.keys(contractMapping).length,
         });
+        
+        // 🔍 AUDIT: Log dettagliato contract_mapping (solo in development)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔍 [FACTORY] Contract mapping dettaglio:`, contractMapping);
+        }
 
         const credentials: SpedisciOnlineCredentials = {
           api_key: trimmedApiKey, // Usa la key trimmed
