@@ -57,6 +57,14 @@ vi.mock('@/lib/db/client', () => ({
         data: null,
         error: null,
       })),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => ({
+            data: null,
+            error: null,
+          })),
+        })),
+      })),
     })),
   },
 }));
@@ -69,9 +77,40 @@ vi.mock('@/lib/security/rate-limit', () => ({
 }));
 
 // Mock Anthropic come classe costruttore (deterministic)
+// ⚠️ Questo mock è anche usato dal mockCreateAIClient per mantenere compatibilità
 const mockMessagesCreate = vi.fn().mockResolvedValue({
   content: [{ type: 'text', text: 'Default legacy response' }],
 });
+
+// Mock provider-adapter per evitare query a system_settings
+// ⚠️ createAIClient usa mockMessagesCreate internamente per compatibilità con test esistenti
+const mockCreateAIClient = vi.fn().mockImplementation(async () => ({
+  chat: vi.fn().mockImplementation(async (params: any) => {
+    // Delega a mockMessagesCreate per compatibilità con test che verificano chiamate
+    const result = await mockMessagesCreate({
+      model: params.model,
+      max_tokens: params.maxTokens,
+      system: params.system,
+      messages: params.messages,
+    });
+    return {
+      content: result.content?.[0]?.text || 'Mock AI response',
+      toolCalls: [],
+    };
+  }),
+}));
+
+vi.mock('@/lib/ai/provider-adapter', () => ({
+  getConfiguredAIProvider: vi.fn().mockResolvedValue({
+    provider: 'anthropic',
+    model: 'claude-3-haiku-20240307',
+  }),
+  getAPIKeyForProvider: vi.fn((provider: string) => {
+    if (provider === 'anthropic') return process.env.ANTHROPIC_API_KEY || 'mock-key';
+    return undefined;
+  }),
+  createAIClient: mockCreateAIClient,
+}));
 
 vi.mock('@anthropic-ai/sdk', () => {
   class MockAnthropic {
