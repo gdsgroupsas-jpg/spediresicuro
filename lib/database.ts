@@ -1563,14 +1563,18 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
           updatedAt: supabaseUser.updated_at || new Date().toISOString(),
         };
         
-        // ⚠️ IMPORTANTE: Aggiungi account_type come proprietà estesa per compatibilità
+        // ⚠️ IMPORTANTE: Aggiungi account_type, is_reseller, reseller_role come proprietà estese per compatibilità
         (user as any).account_type = supabaseUser.account_type || effectiveRole;
+        (user as any).is_reseller = supabaseUser.is_reseller === true;
+        (user as any).reseller_role = supabaseUser.reseller_role || undefined;
         
         console.log('✅ [SUPABASE] Utente trovato in Supabase', {
           hasDatiCliente: !!user.datiCliente,
           datiCompletati: user.datiCliente?.datiCompletati,
           role: effectiveRole,
           account_type: supabaseUser.account_type,
+          is_reseller: supabaseUser.is_reseller,
+          reseller_role: supabaseUser.reseller_role,
         });
         return user;
       } else {
