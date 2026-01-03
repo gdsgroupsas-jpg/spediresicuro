@@ -61,8 +61,13 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
   let testCourierId: string;
   let createdPriceLists: string[] = [];
   let createdConfigs: string[] = [];
+  // Salva riferimento originale per evitare ricorsione nei mock
+  let originalSupabaseFrom: typeof supabaseAdmin.from;
 
   beforeAll(async () => {
+    // Salva riferimento originale prima di qualsiasi mock
+    originalSupabaseFrom = supabaseAdmin.from.bind(supabaseAdmin);
+
     // Verifica se Supabase è configurato
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -204,7 +209,9 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
-      // Mock recupero utente Reseller
+      const mockPriceListId = `test-pricelist-${Date.now()}`;
+
+      // Mock completo per users e price_lists
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
         if (table === 'users') {
           return {
@@ -221,8 +228,28 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
             }),
           } as any;
         }
-        // Per price_lists, usa il vero supabaseAdmin
-        return (supabaseAdmin as any).from(table);
+        if (table === 'price_lists') {
+          return {
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: mockPriceListId,
+                    name: 'Listino Fornitore Test Reseller',
+                    version: '1.0.0',
+                    status: 'draft',
+                    list_type: 'supplier',
+                    is_global: false,
+                    courier_id: testCourierId,
+                    created_by: resellerUserId,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        // Per altre tabelle, usa il riferimento originale
+        return originalSupabaseFrom(table);
       });
 
       const result = await createSupplierPriceListAction({
@@ -253,7 +280,9 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         user: { email: `test-byoc-phase3-${Date.now()}@test.local` },
       });
 
-      // Mock recupero utente BYOC
+      const mockPriceListId = `test-pricelist-byoc-${Date.now()}`;
+
+      // Mock completo per users e price_lists
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
         if (table === 'users') {
           return {
@@ -270,7 +299,27 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
             }),
           } as any;
         }
-        return (supabaseAdmin as any).from(table);
+        if (table === 'price_lists') {
+          return {
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: {
+                    id: mockPriceListId,
+                    name: 'Listino Fornitore Test BYOC',
+                    version: '1.0.0',
+                    status: 'draft',
+                    list_type: 'supplier',
+                    is_global: false,
+                    courier_id: testCourierId,
+                    created_by: byocUserId,
+                  },
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return originalSupabaseFrom(table);
       });
 
       const result = await createSupplierPriceListAction({
@@ -310,7 +359,7 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
             }),
           } as any;
         }
-        return (supabaseAdmin as any).from(table);
+        return originalSupabaseFrom(table);
       });
 
       const result = await createSupplierPriceListAction({
@@ -331,31 +380,15 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         console.log('⏭️  Test saltato: Supabase non configurato');
         return;
       }
-      // Crea listino fornitore per Reseller
-      const { data: priceList } = await supabaseAdmin
-        .from('price_lists')
-        .insert({
-          name: 'Listino Reseller Test',
-          version: '1.0.0',
-          status: 'draft',
-          list_type: 'supplier',
-          is_global: false,
-          courier_id: testCourierId,
-          created_by: resellerUserId,
-        })
-        .select()
-        .single();
 
-      if (priceList?.id) {
-        createdPriceLists.push(priceList.id);
-      }
+      const mockPriceListId = `test-pricelist-list-${Date.now()}`;
 
       // Mock auth per Reseller
       (auth as any).mockResolvedValue({
         user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
-      // Mock recupero utente
+      // Mock completo per users e price_lists
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
         if (table === 'users') {
           return {
@@ -372,7 +405,31 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
             }),
           } as any;
         }
-        return (supabaseAdmin as any).from(table);
+        if (table === 'price_lists') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  order: vi.fn().mockResolvedValue({
+                    data: [
+                      {
+                        id: mockPriceListId,
+                        name: 'Listino Reseller Test',
+                        version: '1.0.0',
+                        status: 'draft',
+                        list_type: 'supplier',
+                        is_global: false,
+                        courier_id: testCourierId,
+                        created_by: resellerUserId,
+                      },
+                    ],
+                  }),
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return originalSupabaseFrom(table);
       });
 
       const result = await listSupplierPriceListsAction();
@@ -395,31 +452,14 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         console.log('⏭️  Test saltato: Supabase non configurato');
         return;
       }
-      // Crea listino globale (admin)
-      const { data: globalPriceList } = await supabaseAdmin
-        .from('price_lists')
-        .insert({
-          name: 'Listino Globale Test',
-          version: '1.0.0',
-          status: 'active',
-          list_type: 'global',
-          is_global: true,
-          courier_id: testCourierId,
-          created_by: adminUserId,
-        })
-        .select()
-        .single();
-
-      if (globalPriceList?.id) {
-        createdPriceLists.push(globalPriceList.id);
-      }
 
       // Mock auth per Reseller
       (auth as any).mockResolvedValue({
         user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
-      // Mock recupero utente
+      // Mock completo per users e price_lists - ritorna solo listini non globali del reseller
+      // listPriceListsAction usa: .select().order().or()
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
         if (table === 'users') {
           return {
@@ -436,7 +476,33 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
             }),
           } as any;
         }
-        return (supabaseAdmin as any).from(table);
+        if (table === 'price_lists') {
+          const mockData = {
+            data: [
+              {
+                id: 'test-pricelist-supplier',
+                name: 'Listino Supplier Test',
+                version: '1.0.0',
+                status: 'draft',
+                list_type: 'supplier',
+                is_global: false,
+                courier_id: testCourierId,
+                created_by: resellerUserId,
+              },
+            ],
+          };
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                or: vi.fn().mockResolvedValue(mockData),
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockResolvedValue(mockData),
+                }),
+              }),
+            }),
+          } as any;
+        }
+        return originalSupabaseFrom(table);
       });
 
       const result = await listPriceListsAction();
