@@ -262,6 +262,10 @@ export default function NuovaSpedizionePage() {
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
 
+  // Corrieri disponibili caricati dinamicamente dal DB
+  const [availableCouriers, setAvailableCouriers] = useState<Array<{ displayName: string; courierName: string }>>([]);
+  const [couriersLoading, setCouriersLoading] = useState(true);
+
   // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
   useEffect(() => {
     try {
@@ -292,6 +296,43 @@ export default function NuovaSpedizionePage() {
       // no-op if storage fails
     }
   };
+
+  // Carica corrieri disponibili dal DB (basato su contract_mapping dell'utente)
+  useEffect(() => {
+    async function loadAvailableCouriers() {
+      try {
+        setCouriersLoading(true);
+        const response = await fetch('/api/couriers/available');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.couriers && data.couriers.length > 0) {
+            setAvailableCouriers(data.couriers);
+            // Se il corriere selezionato non è tra quelli disponibili, seleziona il primo
+            const displayNames = data.couriers.map((c: { displayName: string }) => c.displayName);
+            setFormData((prev) => ({
+              ...prev,
+              corriere: displayNames.includes(prev.corriere) ? prev.corriere : displayNames[0] || 'GLS',
+            }));
+          } else {
+            // Fallback: nessun corriere configurato, mostra default
+            console.warn('Nessun corriere configurato per l\'utente, usando default');
+            setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
+          }
+        } else {
+          console.error('Errore caricamento corrieri:', response.status);
+          // Fallback in caso di errore
+          setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
+        }
+      } catch (error) {
+        console.error('Errore caricamento corrieri disponibili:', error);
+        // Fallback in caso di errore
+        setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
+      } finally {
+        setCouriersLoading(false);
+      }
+    }
+    loadAvailableCouriers();
+  }, []);
 
   // Carica mittente predefinito all'avvio
   useEffect(() => {
@@ -1270,21 +1311,28 @@ export default function NuovaSpedizionePage() {
                     <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
                       Corriere
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['GLS', 'SDA', 'Bartolini', 'Poste Italiane'] as Corriere[]).map((corriere) => (
-                        <button
-                          key={corriere}
-                          type="button"
-                          onClick={() => setFormData((prev) => ({ ...prev, corriere }))}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.corriere === corriere
-                            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                            }`}
-                        >
-                          {corriere}
-                        </button>
-                      ))}
-                    </div>
+                    {couriersLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                        <span className="ml-2 text-sm text-gray-500">Caricamento corrieri...</span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableCouriers.map((courier) => (
+                          <button
+                            key={courier.displayName}
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, corriere: courier.displayName }))}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.corriere === courier.displayName
+                              ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
+                              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                              }`}
+                          >
+                            {courier.displayName}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Cost Calculator */}
