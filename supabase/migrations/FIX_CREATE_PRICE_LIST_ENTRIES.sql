@@ -75,9 +75,9 @@ CREATE POLICY "price_list_entries_insert_owner" ON price_list_entries
           pl.created_by = auth.uid()
           OR pl.assigned_to_user_id = auth.uid()
           OR EXISTS (
-            SELECT 1 FROM user_profiles up
-            WHERE up.user_id = auth.uid()
-              AND up.account_type IN ('admin', 'superadmin')
+            SELECT 1 FROM users u
+            WHERE u.id = auth.uid()
+              AND u.account_type IN ('admin', 'superadmin')
           )
         )
     )
@@ -93,9 +93,9 @@ CREATE POLICY "price_list_entries_update_owner" ON price_list_entries
           pl.created_by = auth.uid()
           OR pl.assigned_to_user_id = auth.uid()
           OR EXISTS (
-            SELECT 1 FROM user_profiles up
-            WHERE up.user_id = auth.uid()
-              AND up.account_type IN ('admin', 'superadmin')
+            SELECT 1 FROM users u
+            WHERE u.id = auth.uid()
+              AND u.account_type IN ('admin', 'superadmin')
           )
         )
     )
@@ -111,9 +111,9 @@ CREATE POLICY "price_list_entries_delete_owner" ON price_list_entries
           pl.created_by = auth.uid()
           OR pl.assigned_to_user_id = auth.uid()
           OR EXISTS (
-            SELECT 1 FROM user_profiles up
-            WHERE up.user_id = auth.uid()
-              AND up.account_type IN ('admin', 'superadmin')
+            SELECT 1 FROM users u
+            WHERE u.id = auth.uid()
+              AND u.account_type IN ('admin', 'superadmin')
           )
         )
     )
