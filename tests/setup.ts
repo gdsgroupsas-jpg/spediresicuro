@@ -13,15 +13,55 @@
 // ⚠️ IMPORTANTE: Carica variabili d'ambiente PRIMA di qualsiasi import
 // Questo assicura che i moduli che leggono process.env abbiano i valori corretti
 import * as dotenv from 'dotenv';
-import path from 'path';
+import { resolve } from 'node:path';
+
+// Silenzio log verbosi durante i test (solo in CI o se esplicito)
+const SILENT_TEST_LOGS = process.env.CI === 'true' || process.env.VITEST_SILENT === 'true';
 
 // Carica .env.local se esiste
 try {
-  const envPath = path.resolve(process.cwd(), '.env.local');
+  const envPath = resolve(process.cwd(), '.env.local');
   dotenv.config({ path: envPath });
-  console.log('✅ Variabili d\'ambiente caricate da .env.local (setup.ts)');
+  if (!SILENT_TEST_LOGS) {
+    console.log('✅ Variabili d\'ambiente caricate da .env.local');
+  }
 } catch (error) {
   // Ignora errori, le variabili potrebbero essere già configurate
+}
+
+// Mock console per silenziare warning attesi durante i test
+if (SILENT_TEST_LOGS) {
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  
+  console.warn = (...args: unknown[]) => {
+    const msg = String(args[0] || '');
+    // Silenzio warning attesi durante i test
+    if (
+      msg.includes('[RATE-LIMIT]') ||
+      msg.includes('[Booking]') ||
+      msg.includes('[PlatformFee]') ||
+      msg.includes('[Value Stats]') ||
+      msg.includes('[Pricing Graph]')
+    ) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+  
+  console.error = (...args: unknown[]) => {
+    const msg = String(args[0] || '');
+    // Silenzio errori attesi durante i test (mock/fallback)
+    if (
+      msg.includes('PGRST202') ||
+      msg.includes('PGRST205') ||
+      msg.includes('get_platform_fee') ||
+      msg.includes('Errore recupero corrieri')
+    ) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
 }
 
 import { vi } from 'vitest';
