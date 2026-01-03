@@ -141,9 +141,7 @@ export async function updatePriceListAction(
     // Verifica permessi: admin, creatore, O proprietario (assigned_to_user_id)
     const isAdmin =
       user.account_type === "admin" || user.account_type === "superadmin";
-    const isOwner =
-      existingPriceList.created_by === user.id ||
-      existingPriceList.created_by_user_id === user.id;
+    const isOwner = existingPriceList.created_by === user.id;
     const isAssignedOwner = existingPriceList.assigned_to_user_id === user.id;
 
     if (!isAdmin && !isOwner && !isAssignedOwner) {
@@ -394,9 +392,7 @@ export async function deletePriceListAction(id: string): Promise<{
     // Verifica permessi: admin, creatore, O proprietario (assigned_to_user_id)
     const isAdmin =
       user.account_type === "admin" || user.account_type === "superadmin";
-    const isOwner =
-      existingPriceList.created_by === user.id ||
-      existingPriceList.created_by_user_id === user.id;
+    const isOwner = existingPriceList.created_by === user.id;
     const isAssignedOwner = existingPriceList.assigned_to_user_id === user.id;
 
     if (!isAdmin && !isOwner && !isAssignedOwner) {
