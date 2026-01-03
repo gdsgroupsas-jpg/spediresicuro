@@ -32,7 +32,8 @@ import {
   Calendar,
   CheckCircle2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import DashboardNav from '@/components/dashboard-nav'
@@ -47,6 +48,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { listPriceListsAction, createPriceListAction } from '@/actions/price-lists'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { SyncSpedisciOnlineDialog } from '@/components/listini/sync-spedisci-online-dialog'
 
 interface PriceList {
   id: string
@@ -71,6 +73,7 @@ export default function PriceListsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showSyncDialog, setShowSyncDialog] = useState(false)
   const [accountType, setAccountType] = useState<string | null>(null)
 
   // Verifica permessi superadmin/admin
@@ -178,10 +181,20 @@ export default function PriceListsPage() {
             title="Gestione Listini Prezzi"
             subtitle="Sistema avanzato di pricing con regole dinamiche - Crea, modifica e gestisci listini"
             actions={
-              <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nuovo Listino
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowSyncDialog(true)}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Sincronizza da Spedisci.Online
+                </Button>
+                <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nuovo Listino
+                </Button>
+              </div>
             }
           />
 
@@ -342,6 +355,15 @@ export default function PriceListsPage() {
               </div>
             </div>
           )}
+
+          {/* Dialog Sincronizzazione Spedisci.Online */}
+          <SyncSpedisciOnlineDialog
+            open={showSyncDialog}
+            onOpenChange={setShowSyncDialog}
+            onSyncComplete={() => {
+              loadPriceLists();
+            }}
+          />
 
           {/* Dialog Creazione Listino */}
           {showCreateDialog && (

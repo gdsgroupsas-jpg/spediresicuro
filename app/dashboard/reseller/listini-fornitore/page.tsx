@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Package, Plus, Search } from 'lucide-react';
+import { Package, Plus, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -26,6 +26,7 @@ import {
 import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
 import { toast } from 'sonner';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
+import { SyncSpedisciOnlineDialog } from '@/components/listini/sync-spedisci-online-dialog';
 import type { PriceList } from '@/types/listini';
 
 export default function ResellerListiniFornitorePage() {
@@ -39,6 +40,7 @@ export default function ResellerListiniFornitorePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
   const [userId, setUserId] = useState<string | null>(null);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
 
   // Verifica permessi e carica dati
   useEffect(() => {
@@ -173,10 +175,20 @@ export default function ResellerListiniFornitorePage() {
               Gestisci i tuoi listini fornitore per ogni corriere configurato
             </p>
           </div>
-          <Button onClick={handleCreate} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Crea Listino Fornitore
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowSyncDialog(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Sincronizza da Spedisci.Online
+            </Button>
+            <Button onClick={handleCreate} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Crea Listino Fornitore
+            </Button>
+          </div>
         </div>
 
         {/* Filtri */}
@@ -247,6 +259,15 @@ export default function ResellerListiniFornitorePage() {
             />
           </DialogContent>
         </Dialog>
+
+        {/* Dialog Sincronizzazione Spedisci.Online */}
+        <SyncSpedisciOnlineDialog
+          open={showSyncDialog}
+          onOpenChange={setShowSyncDialog}
+          onSyncComplete={() => {
+            loadPriceLists();
+          }}
+        />
 
         {/* Dialog Eliminazione */}
         <ConfirmActionDialog

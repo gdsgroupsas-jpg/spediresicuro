@@ -1866,4 +1866,171 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       };
     }
   }
+
+  /**
+   * ===========================================
+   * METODO: GET RATES (Preventivi/Tariffe)
+   * ===========================================
+   *
+   * Ottiene i prezzi disponibili per una spedizione specifica
+   * usando l'endpoint POST /shipping/rates
+   *
+   * @param params - Parametri per il calcolo dei rates
+   * @returns Array di tariffe disponibili con prezzi dettagliati
+   */
+  async getRates(params: {
+    packages: Array<{
+      length: number;
+      width: number;
+      height: number;
+      weight: number;
+    }>;
+    shipFrom: {
+      name: string;
+      company?: string;
+      street1: string;
+      street2?: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+      phone?: string;
+      email?: string;
+    };
+    shipTo: {
+      name: string;
+      company?: string;
+      street1: string;
+      street2?: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+      phone?: string;
+      email?: string;
+    };
+    notes: string;
+    insuranceValue?: number;
+    codValue?: number;
+    accessoriServices?: string[];
+  }): Promise<{
+    success: boolean;
+    rates?: Array<{
+      carrierCode: string;
+      contractCode: string;
+      weight_price: string;
+      insurance_price: string;
+      cod_price: string;
+      services_price: string;
+      fuel: string;
+      total_price: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const url = new URL("shipping/rates", this.BASE_URL).toString();
+
+      // Prepara payload secondo OpenAPI spec
+      const payload = {
+        packages: params.packages,
+        shipFrom: {
+          name: params.shipFrom.name,
+          company: params.shipFrom.company || params.shipFrom.name,
+          street1: params.shipFrom.street1,
+          street2: params.shipFrom.street2 || "",
+          city: params.shipFrom.city,
+          state: params.shipFrom.state,
+          postalCode: params.shipFrom.postalCode,
+          country: params.shipFrom.country,
+          phone: params.shipFrom.phone || null,
+          email: params.shipFrom.email || "email@example.com",
+        },
+        shipTo: {
+          name: params.shipTo.name,
+          company: params.shipTo.company || "",
+          street1: params.shipTo.street1,
+          street2: params.shipTo.street2 || "",
+          city: params.shipTo.city,
+          state: params.shipTo.state,
+          postalCode: params.shipTo.postalCode,
+          country: params.shipTo.country,
+          phone: params.shipTo.phone || null,
+          email: params.shipTo.email || "email@example.com",
+        },
+        notes: params.notes || "N/A",
+        insuranceValue: params.insuranceValue || 0,
+        codValue: params.codValue || 0,
+        accessoriServices: params.accessoriServices || [],
+      };
+
+      console.log("📊 [SPEDISCI.ONLINE] Chiamata GET RATES:", {
+        url,
+        packages_count: payload.packages.length,
+        shipFrom: payload.shipFrom.city,
+        shipTo: payload.shipTo.city,
+      });
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.API_KEY}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log("📊 [SPEDISCI.ONLINE] GET RATES response:", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      if (response.ok) {
+        const rates = await response.json();
+
+        console.log("✅ [SPEDISCI.ONLINE] Rates ottenuti:", {
+          count: Array.isArray(rates) ? rates.length : 0,
+          carriers: Array.isArray(rates)
+            ? rates
+                .map((r: any) => r.carrierCode)
+                .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i)
+            : [],
+        });
+
+        return {
+          success: true,
+          rates: Array.isArray(rates) ? rates : [],
+        };
+      }
+
+      // Gestisci errori
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorBody = await response.json();
+        errorMessage = errorBody.message || errorBody.error || errorMessage;
+      } catch {
+        const textError = await response.text();
+        errorMessage = textError || errorMessage;
+      }
+
+      console.error("❌ [SPEDISCI.ONLINE] Errore GET RATES:", {
+        status: response.status,
+        error: errorMessage,
+      });
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    } catch (error: any) {
+      console.error("❌ [SPEDISCI.ONLINE] Eccezione GET RATES:", {
+        error: error?.message || error,
+      });
+
+      return {
+        success: false,
+        error: error?.message || "Errore durante il recupero dei rates",
+      };
+    }
+  }
 }
