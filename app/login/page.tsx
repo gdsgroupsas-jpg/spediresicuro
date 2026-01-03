@@ -480,10 +480,8 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* OAuth Providers - Solo per Login */}
-          {mode === 'login' && (
-            <OAuthButtons isLoading={isLoading} />
-          )}
+          {/* OAuth Providers - Disponibile sia per Login che Registrazione */}
+          <OAuthButtons isLoading={isLoading} />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nome (solo per registrazione) */}
@@ -563,7 +561,42 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Tipo Account (solo per registrazione) */}
+            {/* Conferma Password (solo per registrazione) - subito dopo Password */}
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Conferma Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="Ripeti la password"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tipo Account (solo per registrazione) - prima del pulsante Registrati */}
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -632,41 +665,6 @@ export default function LoginPage() {
                         </div>
                       )}
                     </div>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Conferma Password (solo per registrazione) */}
-            {mode === 'register' && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Conferma Password
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    placeholder="Ripeti la password"
-                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD700]/20 focus:border-[#FF9500] transition-all bg-gray-50 hover:bg-white text-gray-900 placeholder:text-gray-400"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
                   </button>
                 </div>
               </div>

@@ -197,3 +197,4 @@
 
 **Report generato:** 2 Gennaio 2026  
 **Analisi completata:** ✅
+

@@ -108,3 +108,4 @@ Per dettagli completi, vedi: `docs/VS_CODE_TEST_SETUP.md`
 
 **Pronto!** Ora puoi eseguire test direttamente da VS Code senza aprire il terminale! 🎉
 
+

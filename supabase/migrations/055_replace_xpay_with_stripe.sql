@@ -38,3 +38,4 @@ COMMENT ON TABLE payment_transactions IS 'Transazioni pagamento: Stripe (default
 -- Transazioni esistenti con provider='intesa' rimangono accessibili
 -- per audit e storico, ma nuovi pagamenti usano Stripe.
 
+
