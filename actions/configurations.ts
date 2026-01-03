@@ -422,7 +422,15 @@ export async function savePersonalConfiguration(
       account_type: result.account_type,
       owner_user_id: result.owner_user_id,
       provider_id: result.provider_id,
+      // 🔍 AUDIT: Log contract_mapping per debug cambio contratti
+      contract_mapping_keys: Object.keys(result.contract_mapping || {}),
+      contract_mapping_count: Object.keys(result.contract_mapping || {}).length,
     });
+    
+    // 🔍 AUDIT: Log dettagliato contract_mapping (solo in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`💾 [SAVE] Contract mapping dettaglio:`, result.contract_mapping);
+    }
 
     return {
       success: true,
@@ -587,7 +595,8 @@ export async function deleteConfiguration(
       };
     }
 
-    // 4. Se è default, non permettere eliminazione (o richiedere conferma speciale)
+    // 4. Se è default, verifica se è l'unica configurazione dell'utente
+    // Se è l'unica, permetti eliminazione; altrimenti blocca
     if (config.provider_id) {
       const { data: defaultCheck } = await supabaseAdmin
         .from('courier_configs')
@@ -596,10 +605,21 @@ export async function deleteConfiguration(
         .single();
 
       if (defaultCheck?.is_default) {
-        return {
-          success: false,
-          error: 'Impossibile eliminare la configurazione default. Imposta prima un\'altra configurazione come default.',
-        };
+        // Conta quante configurazioni ha l'utente
+        const { count: userConfigCount } = await supabaseAdmin
+          .from('courier_configs')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner_user_id', config.owner_user_id);
+
+        // Se ha più di una configurazione, non permettere eliminazione della default
+        if (userConfigCount && userConfigCount > 1) {
+          return {
+            success: false,
+            error: 'Impossibile eliminare la configurazione default. Imposta prima un\'altra configurazione come default.',
+          };
+        }
+        // Se è l'unica configurazione, permetti eliminazione
+        console.log('✅ Configurazione default eliminabile: è l\'unica dell\'utente');
       }
     }
 
@@ -645,6 +665,217 @@ export async function deleteConfiguration(
  * @param isActive - Nuovo stato (true = attiva, false = inattiva)
  * @returns Risultato operazione
  */
+/**
+ * Server Action: Rimuove contratto Spedisci.Online
+ * 
+ * Rimuove un contratto dal contract_mapping
+ * Utile quando un contratto non è più disponibile su Spedisci.Online
+ */
+export async function removeSpedisciOnlineContract(
+  configId: string,
+  contractCode: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // 1. Recupera configurazione
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('id', configId)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    // 2. Verifica permessi
+    const { canAccess, error: accessError } = await verifyConfigAccess(config.owner_user_id || null);
+    if (!canAccess) {
+      return {
+        success: false,
+        error: accessError || 'Accesso negato',
+      };
+    }
+
+    // 3. Verifica che sia Spedisci.Online
+    if (config.provider_id !== 'spedisci_online') {
+      return {
+        success: false,
+        error: 'Questa funzione è solo per configurazioni Spedisci.Online',
+      };
+    }
+
+    // 4. Recupera contract_mapping attuale
+    let contractMapping: Record<string, string> = {};
+    if (config.contract_mapping) {
+      if (typeof config.contract_mapping === 'string') {
+        try {
+          contractMapping = JSON.parse(config.contract_mapping);
+        } catch {
+          return {
+            success: false,
+            error: 'Errore parsing contract_mapping',
+          };
+        }
+      } else {
+        contractMapping = config.contract_mapping as Record<string, string>;
+      }
+    }
+
+    // 5. Rimuovi contratto
+    if (contractMapping[contractCode]) {
+      delete contractMapping[contractCode];
+      console.log(`✅ Rimosso contratto: ${contractCode}`);
+    } else {
+      return {
+        success: false,
+        error: `Contratto "${contractCode}" non trovato nel mapping`,
+      };
+    }
+
+    // 6. Aggiorna database
+    const { error: updateError } = await supabaseAdmin
+      .from('courier_configs')
+      .update({
+        contract_mapping: contractMapping,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', configId);
+
+    if (updateError) {
+      console.error('❌ Errore rimozione contratto:', updateError);
+      return {
+        success: false,
+        error: updateError.message || 'Errore durante rimozione',
+      };
+    }
+
+    return {
+      success: true,
+      message: `Contratto "${contractCode}" rimosso con successo`,
+    };
+  } catch (error: any) {
+    console.error('❌ Errore removeSpedisciOnlineContract:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto',
+    };
+  }
+}
+
+/**
+ * Server Action: Aggiorna contratto Spedisci.Online
+ * 
+ * Rimuove un contratto vecchio e aggiunge un nuovo contratto per lo stesso corriere
+ * Utile quando un contratto non è più disponibile su Spedisci.Online
+ */
+export async function updateSpedisciOnlineContract(
+  configId: string,
+  oldContractCode: string,
+  newContractCode: string,
+  courierName: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // 1. Recupera configurazione (per verificare owner_user_id)
+    const { data: config, error: fetchError } = await supabaseAdmin
+      .from('courier_configs')
+      .select('*')
+      .eq('id', configId)
+      .single();
+
+    if (fetchError || !config) {
+      return {
+        success: false,
+        error: 'Configurazione non trovata',
+      };
+    }
+
+    // 2. Verifica permessi (reseller può modificare solo le proprie config)
+    const { canAccess, error: accessError } = await verifyConfigAccess(config.owner_user_id || null);
+    if (!canAccess) {
+      return {
+        success: false,
+        error: accessError || 'Accesso negato',
+      };
+    }
+
+    // 3. Verifica che sia Spedisci.Online
+    if (config.provider_id !== 'spedisci_online') {
+      return {
+        success: false,
+        error: 'Questa funzione è solo per configurazioni Spedisci.Online',
+      };
+    }
+
+    // 4. Recupera contract_mapping attuale
+    let contractMapping: Record<string, string> = {};
+    if (config.contract_mapping) {
+      if (typeof config.contract_mapping === 'string') {
+        try {
+          contractMapping = JSON.parse(config.contract_mapping);
+        } catch {
+          return {
+            success: false,
+            error: 'Errore parsing contract_mapping',
+          };
+        }
+      } else {
+        contractMapping = config.contract_mapping as Record<string, string>;
+      }
+    }
+
+    // 5. Rimuovi contratto vecchio
+    if (contractMapping[oldContractCode]) {
+      delete contractMapping[oldContractCode];
+      console.log(`✅ Rimosso contratto vecchio: ${oldContractCode}`);
+    } else {
+      console.warn(`⚠️ Contratto vecchio non trovato nel mapping: ${oldContractCode}`);
+    }
+
+    // 6. Aggiungi nuovo contratto
+    contractMapping[newContractCode] = courierName;
+    console.log(`✅ Aggiunto nuovo contratto: ${newContractCode} -> ${courierName}`);
+
+    // 7. Aggiorna database
+    const { error: updateError } = await supabaseAdmin
+      .from('courier_configs')
+      .update({
+        contract_mapping: contractMapping,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', configId);
+
+    if (updateError) {
+      console.error('❌ Errore aggiornamento contratto:', updateError);
+      return {
+        success: false,
+        error: updateError.message || 'Errore durante aggiornamento',
+      };
+    }
+
+    return {
+      success: true,
+      message: `Contratto aggiornato: rimosso "${oldContractCode}", aggiunto "${newContractCode}"`,
+    };
+  } catch (error: any) {
+    console.error('❌ Errore updateSpedisciOnlineContract:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto',
+    };
+  }
+}
+
 export async function updateConfigurationStatus(
   id: string,
   isActive: boolean
