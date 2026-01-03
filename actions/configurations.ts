@@ -489,12 +489,22 @@ export async function deletePersonalConfiguration(
       };
     }
 
-    // Non permettere eliminazione se è default
+    // Verifica ruolo reseller per eliminazione config default
+    // Solo reseller_role = 'admin' può eliminare configurazioni default
     if (config.is_default) {
-      return {
-        success: false,
-        error: 'Impossibile eliminare la configurazione default. Imposta prima un\'altra configurazione come default.',
-      };
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('id, reseller_role, is_reseller')
+        .eq('email', session.user.email)
+        .single();
+
+      // Se è un membro team (non admin), blocca eliminazione config default
+      if (userData?.is_reseller && userData?.reseller_role !== 'admin') {
+        return {
+          success: false,
+          error: 'Solo l\'amministratore reseller può eliminare configurazioni default.',
+        };
+      }
     }
 
     // Rimuovi assegnazione dall'utente se presente
@@ -595,8 +605,7 @@ export async function deleteConfiguration(
       };
     }
 
-    // 4. Se è default, verifica se è l'unica configurazione dell'utente
-    // Se è l'unica, permetti eliminazione; altrimenti blocca
+    // 4. Se è default, verifica permessi e se è l'unica configurazione
     if (config.provider_id) {
       const { data: defaultCheck } = await supabaseAdmin
         .from('courier_configs')
@@ -605,21 +614,43 @@ export async function deleteConfiguration(
         .single();
 
       if (defaultCheck?.is_default) {
-        // Conta quante configurazioni ha l'utente
-        const { count: userConfigCount } = await supabaseAdmin
-          .from('courier_configs')
-          .select('id', { count: 'exact', head: true })
-          .eq('owner_user_id', config.owner_user_id);
+        // Verifica ruolo reseller: solo admin può eliminare config default
+        const session = await auth();
+        if (session?.user?.email) {
+          const { data: currentUser } = await supabaseAdmin
+            .from('users')
+            .select('id, reseller_role, is_reseller, account_type')
+            .eq('email', session.user.email)
+            .single();
 
-        // Se ha più di una configurazione, non permettere eliminazione della default
-        if (userConfigCount && userConfigCount > 1) {
-          return {
-            success: false,
-            error: 'Impossibile eliminare la configurazione default. Imposta prima un\'altra configurazione come default.',
-          };
+          // Se è membro team reseller (non admin), blocca
+          if (currentUser?.is_reseller && currentUser?.reseller_role !== 'admin' && currentUser?.account_type !== 'superadmin') {
+            return {
+              success: false,
+              error: 'Solo l\'amministratore reseller può eliminare configurazioni default.',
+            };
+          }
         }
-        // Se è l'unica configurazione, permetti eliminazione
-        console.log('✅ Configurazione default eliminabile: è l\'unica dell\'utente');
+
+        // Se ha owner_user_id, è una configurazione personale - permetti eliminazione per admin
+        if (config.owner_user_id) {
+          console.log('✅ Configurazione default personale eliminabile (owner_user_id presente, utente è admin)');
+        } else {
+          // Configurazione globale (senza owner) - blocca eliminazione se è l'unica
+          const { count: globalConfigCount } = await supabaseAdmin
+            .from('courier_configs')
+            .select('id', { count: 'exact', head: true })
+            .eq('provider_id', config.provider_id)
+            .is('owner_user_id', null);
+
+          if (globalConfigCount && globalConfigCount <= 1) {
+            return {
+              success: false,
+              error: 'Impossibile eliminare l\'unica configurazione globale default.',
+            };
+          }
+          console.log('✅ Configurazione default globale eliminabile: esistono altre config');
+        }
       }
     }
 
