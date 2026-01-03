@@ -46,8 +46,10 @@ function isPlaywrightTestBypass(request: NextRequest): boolean {
   const isCI = process.env.CI === 'true';
   const isTestEnv = !!process.env.PLAYWRIGHT_TEST_BASE_URL;
   const isDev = process.env.NODE_ENV === 'development';
+  const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
   
-  return isCI || isTestEnv || isDev;
+  // Permetti bypass se: CI, test env variable, dev mode, o explicit playwright mode
+  return isCI || isTestEnv || isDev || isPlaywrightMode;
 }
 
 /**
