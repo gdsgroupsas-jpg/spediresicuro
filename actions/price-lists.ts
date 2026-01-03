@@ -455,7 +455,7 @@ export async function listPriceListsAction(filters?: {
 
     let query = supabaseAdmin
       .from("price_lists")
-      .select("*, courier:couriers(*)")
+      .select("*")
       .order("created_at", { ascending: false });
 
     // Filtri
@@ -492,6 +492,31 @@ export async function listPriceListsAction(filters?: {
 
     if (error) {
       return { success: false, error: error.message };
+    }
+
+    // Recupera i corrieri separatamente se necessario
+    if (data && data.length > 0) {
+      const courierIds = data
+        .map((pl: any) => pl.courier_id)
+        .filter((id: string | null) => id !== null);
+      
+      if (courierIds.length > 0) {
+        const { data: couriers } = await supabaseAdmin
+          .from("couriers")
+          .select("id, code, name")
+          .in("id", courierIds);
+
+        // Aggiungi i dati del corriere ai listini
+        const courierMap = new Map(
+          couriers?.map((c) => [c.id, c]) || []
+        );
+        
+        data.forEach((pl: any) => {
+          if (pl.courier_id && courierMap.has(pl.courier_id)) {
+            pl.courier = courierMap.get(pl.courier_id);
+          }
+        });
+      }
     }
 
     return { success: true, priceLists: data || [] };
@@ -597,7 +622,7 @@ export async function listSupplierPriceListsAction(): Promise<{
     // Recupera solo listini fornitore dell'utente
     const { data: priceLists, error } = await supabaseAdmin
       .from("price_lists")
-      .select("*, courier:couriers(*)")
+      .select("*")
       .eq("list_type", "supplier")
       .eq("created_by", user.id)
       .order("created_at", { ascending: false });
@@ -605,6 +630,31 @@ export async function listSupplierPriceListsAction(): Promise<{
     if (error) {
       console.error("Errore recupero listini fornitore:", error);
       return { success: false, error: error.message };
+    }
+
+    // Recupera i corrieri separatamente se necessario
+    if (priceLists && priceLists.length > 0) {
+      const courierIds = priceLists
+        .map((pl: any) => pl.courier_id)
+        .filter((id: string | null) => id !== null);
+      
+      if (courierIds.length > 0) {
+        const { data: couriers } = await supabaseAdmin
+          .from("couriers")
+          .select("id, code, name")
+          .in("id", courierIds);
+
+        // Aggiungi i dati del corriere ai listini
+        const courierMap = new Map(
+          couriers?.map((c) => [c.id, c]) || []
+        );
+        
+        priceLists.forEach((pl: any) => {
+          if (pl.courier_id && courierMap.has(pl.courier_id)) {
+            pl.courier = courierMap.get(pl.courier_id);
+          }
+        });
+      }
     }
 
     return { success: true, priceLists: priceLists || [] };
@@ -656,7 +706,7 @@ export async function getSupplierPriceListForCourierAction(
     // Recupera listino fornitore per corriere
     const { data: priceList, error } = await supabaseAdmin
       .from("price_lists")
-      .select("*, courier:couriers(*)")
+      .select("*")
       .eq("list_type", "supplier")
       .eq("courier_id", courierId)
       .eq("created_by", user.id)
@@ -667,6 +717,19 @@ export async function getSupplierPriceListForCourierAction(
     if (error) {
       console.error("Errore recupero listino fornitore:", error);
       return { success: false, error: error.message };
+    }
+
+    // Recupera il corriere separatamente se necessario
+    if (priceList && priceList.courier_id) {
+      const { data: courier } = await supabaseAdmin
+        .from("couriers")
+        .select("id, code, name")
+        .eq("id", priceList.courier_id)
+        .single();
+
+      if (courier) {
+        priceList.courier = courier;
+      }
     }
 
     return { success: true, priceList: priceList || null };
