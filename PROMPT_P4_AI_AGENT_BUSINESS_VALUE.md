@@ -584,3 +584,4 @@ Opzione C (ship oggi MVP):
 **Prerequisiti:** ✅ P1, P2, P3 completati  
 **Classificazione:** **P4** (Business Value Layer)
 
+

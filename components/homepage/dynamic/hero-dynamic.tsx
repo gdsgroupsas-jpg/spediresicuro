@@ -128,18 +128,22 @@ export default function HeroDynamic() {
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Mouse tracking
-  const mouseX = useMotionValue(0);
+  // Mouse tracking - SOLO asse Y con movimento molto ridotto per evitare effetto "ballerino"
   const mouseY = useMotionValue(0);
-  const springConfig = { damping: 25, stiffness: 150 };
-  const mouseXSpring = useSpring(mouseX, springConfig);
+  const springConfig = { damping: 30, stiffness: 100 }; // Damping aumentato per movimento più fluido
   const mouseYSpring = useSpring(mouseY, springConfig);
 
-  // Parallax transforms
-  const layer1X = useTransform(mouseXSpring, [0, 1], [-20, 20]);
-  const layer1Y = useTransform(mouseYSpring, [0, 1], [-20, 20]);
-  const layer2X = useTransform(mouseXSpring, [0, 1], [-10, 10]);
-  const layer2Y = useTransform(mouseYSpring, [0, 1], [-10, 10]);
+  // Parallax transforms - SOLO verticale, movimento ridotto (max ±8px invece di ±20px)
+  const layer1Y = useTransform(mouseYSpring, [0, 1], [-8, 8]);
+  const layer2Y = useTransform(mouseYSpring, [0, 1], [-4, 4]);
+
+  // Detect se è un dispositivo touch (mobile)
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    // Rileva dispositivi touch
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   // Typing effect per tagline
   const typingText = useTypingEffect([
@@ -159,13 +163,14 @@ export default function HeroDynamic() {
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current) return;
+    // Disabilita parallax su dispositivi touch (mobile)
+    if (isTouchDevice || !containerRef.current) return;
+
     const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
+    // Solo asse Y per evitare effetto "ballerino"
     const y = (e.clientY - rect.top) / rect.height;
-    mouseX.set(x);
     mouseY.set(y);
-  }, [mouseX, mouseY]);
+  }, [mouseY, isTouchDevice]);
 
   return (
     <section
@@ -224,7 +229,7 @@ export default function HeroDynamic() {
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left Content */}
           <motion.div
-            style={{ x: layer1X, y: layer1Y }}
+            style={{ y: isTouchDevice ? 0 : layer1Y }}
             className="space-y-8"
           >
             {/* Badge */}
@@ -352,7 +357,7 @@ export default function HeroDynamic() {
 
           {/* Right Visual */}
           <motion.div
-            style={{ x: layer2X, y: layer2Y }}
+            style={{ y: isTouchDevice ? 0 : layer2Y }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}

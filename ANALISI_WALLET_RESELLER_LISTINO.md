@@ -165,3 +165,4 @@ Se un Reseller crea una spedizione per **se stesso** (non per sub-user):
 **Ultimo Aggiornamento**: 2026-01-XX  
 **Stato**: ⚠️ **COMPORTAMENTO ATTUALE DOCUMENTATO - RICHIESTA CONFERMA BUSINESS**
 
+

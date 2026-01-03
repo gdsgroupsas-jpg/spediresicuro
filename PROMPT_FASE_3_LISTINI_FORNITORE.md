@@ -393,3 +393,4 @@ Se qualcosa non è chiaro o hai bisogno di chiarimenti, chiedi pure!
 **Prompt creato e pronto per essere incollato in una nuova chat Cursor!**
 
 ```
+
