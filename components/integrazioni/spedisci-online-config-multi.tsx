@@ -199,9 +199,22 @@ export default function SpedisciOnlineConfigMulti() {
         return
       }
 
+      // ⚠️ FIX: Aggiungi automaticamente il contratto se presente nei campi input ma non ancora aggiunto
+      let contractsToSave = [...formData.contracts]
+      if (newContract.codice.trim() && newContract.corriere.trim()) {
+        // Verifica se il contratto non è già nella lista
+        const alreadyExists = contractsToSave.some(
+          c => c.codice === newContract.codice && c.corriere === newContract.corriere
+        )
+        if (!alreadyExists) {
+          contractsToSave.push({ ...newContract })
+          console.log('✅ Contratto aggiunto automaticamente:', newContract)
+        }
+      }
+
       // Prepara contract_mapping
       const contractMapping: Record<string, string> = {}
-      formData.contracts.forEach(contract => {
+      contractsToSave.forEach(contract => {
         if (contract.codice.trim() && contract.corriere.trim()) {
           contractMapping[contract.codice] = contract.corriere
         }
