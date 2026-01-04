@@ -42,6 +42,27 @@ Miglioramenti UX e debugging per AI Agent Integration. Feature "nice to have" pe
 - debug_worker riduce tempo risoluzione errori utente
 - Mobile Anne migliora accessibilità su dispositivi mobili
 
+- Debug panel utilizzato da admin per troubleshooting
+- debug_worker riduce tempo risoluzione errori utente
+- Mobile Anne migliora accessibilità su dispositivi mobili
+
+---
+
+### Multi-Account Support & Security
+
+**Status:** Completed ✅
+**Priority:** High
+**Effort:** 1 week
+
+**Description:**
+Abilitare l'uso simultaneo di multipli account Spedisci.Online per lo stesso utente e rafforzare la sicurezza delle credenziali.
+
+**Completed:**
+
+- ✅ **Multi-Account UI:** Selezione account in fase di sync
+- ✅ **Secure Factory:** Routing intelligente basato su ID configurazione
+- ✅ **Security Hardening:** Data masking completo per API credenziali (P0)
+
 ---
 
 ### AI Anne Chat UI

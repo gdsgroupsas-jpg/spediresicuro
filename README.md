@@ -102,12 +102,14 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 **Versione 0.1-0.2 (2024):** Sistema base di gestione spedizioni con integrazione corrieri.
 
 **Versione 0.3 (2025 - Attuale):** Trasformazione in Logistics OS con:
+
 - **AI-First Architecture:** LangGraph Supervisor + Gemini 2.0 Flash per automazione radicale
 - **Multi-Model Business:** Supporto formale per 3 modelli operativi (Broker, BYOC, B2C)
 - **Financial Core:** Sistema wallet atomizzato con "No Credit, No Label"
 - **Time-Saving Massivo:** OCR AI riduce inserimento da ~3 minuti a ~10 secondi per reseller
 
 **Stato Attuale (Dicembre 2025 - Versione 0.3):**
+
 - ✅ FASE 1-2.8: Architettura & Migrazione completata (264 unit test, 90 integration test)
 - 🟡 FASE 3: Rollout & Economics in corso (validazione GTM)
 - 📋 FASE 4: Scaling & Optimization (futuro)
@@ -119,6 +121,7 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 ### ✅ Core Features (Production Ready)
 
 #### Gestione Spedizioni
+
 - **Creazione Spedizioni**: Form completo con validazione, supporto multi-corriere (GLS, BRT, Poste Italiane via Spedisci.Online)
 - **Tracking Spedizioni**: Monitoraggio stato spedizioni in tempo reale
 - **Download LDV**: Download etichette originali dai corrieri o fallback generato
@@ -128,24 +131,29 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
   - RBAC: Admin vede tutto, Reseller vede proprie + sub-user, User vede solo proprie
 
 #### Sistema Wallet
+
 - **Wallet Prepagato**: Sistema wallet atomizzato con "No Credit, No Label"
 - **Operazioni Atomiche**: Debit/Credit garantiti con funzioni SQL atomiche
 - **Idempotency**: Prevenzione doppi addebiti con sistema di lock
 - **Audit Trail**: Tutti i movimenti tracciati in `wallet_transactions`
 
 #### Multi-Corriere
+
 - **Integrazione Spedisci.Online**: Aggregatore per GLS, BRT, Poste Italiane, UPS, ecc.
+- **Multi-Account Support**: Gestione simultanea di multipli account Spedisci.Online per utente con routing intelligente.
 - **Configurazioni BYOC**: Supporto "Bring Your Own Carrier" per clienti con contratti propri
 - **Configurazioni Reseller**: Ogni reseller può avere le proprie credenziali corriere
 - **Fulfillment Orchestrator**: Routing intelligente tra adapter diretti e broker
 
 #### Sistema Reseller
+
 - **Gerarchia Utenti**: Reseller possono creare e gestire sub-user
 - **Visibilità Multi-Tenant**: Reseller vedono le proprie spedizioni + quelle dei sub-user
 - **Wallet Separati**: Ogni reseller ha il proprio wallet indipendente
 - **RBAC Completo**: Controllo accessi basato su ruoli (Admin, Reseller, User)
 
 #### AI Orchestrator (Anne)
+
 - **LangGraph Supervisor**: Orchestrazione intelligente con worker specializzati
 - **OCR Worker**: Estrazione dati da testo e immagini (Gemini Vision)
 - **Address Worker**: Normalizzazione indirizzi italiani (CAP, provincia, città)
@@ -155,6 +163,7 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 - **Multi-Provider AI**: Supporto per Anthropic Claude e DeepSeek (selezione tramite UI Superadmin)
 
 #### Sicurezza & Compliance
+
 - **Row Level Security (RLS)**: Isolamento multi-tenant a livello database
 - **Acting Context**: SuperAdmin può agire per conto utenti (completamente auditato)
 - **GDPR Compliance**: Export dati e anonimizzazione supportati
@@ -174,11 +183,13 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 - **White-label Ready**: Rivendibilità ad altri consorzi/logistici
 
 **Versione 1.0 (Go To Market - Futuro):**
+
 - Release ufficiale al momento del Go To Market
 - Tutte le feature core stabilizzate e validate
 - Production ready con SLA e supporto
 
 **Visione Futura (Post 1.0):**
+
 - WhatsApp Native Bot per creazione spedizioni via chat
 - Self-Healing Logistics (sistema che si auto-monitora e auto-ripara)
 - White-label ready per rivendibilità ad altri consorzi/logistici
@@ -194,10 +205,12 @@ Il sistema supporta **TRE modalità operative** che convivono sulla stessa codeb
 **Target:** Agenzie, CAF, Reseller.
 
 **Funzionamento:**
+
 - Il cliente usa i **NOSTRI contratti corriere** (es. Spedisci.online Master).
 - Il sistema gestisce credenziali e contratti centralmente.
 
 **Flusso Denaro:**
+
 ```
 Cliente → Wallet Interno → Pagamento Fornitore
 ```
@@ -205,6 +218,7 @@ Cliente → Wallet Interno → Pagamento Fornitore
 **Guadagno:** Spread (Prezzo Vendita - Prezzo Acquisto).
 
 **Implementazione:**
+
 - `courier_configs.is_default = true` (configurazione master)
 - Wallet interno DEVE essere utilizzato per ogni spedizione
 - `decrement_wallet_balance()` chiamato PRIMA di creare spedizione
@@ -216,10 +230,12 @@ Cliente → Wallet Interno → Pagamento Fornitore
 **Target:** E-commerce strutturati, Aziende con propri contratti.
 
 **Funzionamento:**
+
 - Il cliente inserisce le **SUE credenziali** (es. API Key Spedisci.online, Credenziali Poste).
 - Il sistema usa le credenziali del cliente per chiamare il corriere.
 
 **Flusso Denaro:**
+
 ```
 Cliente → Pagamento Diretto Corriere
 Wallet Interno → SOLO per fee SaaS (se applicabile)
@@ -228,6 +244,7 @@ Wallet Interno → SOLO per fee SaaS (se applicabile)
 **Guadagno:** Canone Software o Fee per etichetta.
 
 **Implementazione:**
+
 - `courier_configs.owner_user_id = user_id` (configurazione BYOC)
 - Wallet interno **NON viene toccato** per la spedizione (solo fee SaaS)
 - Credenziali criptate con `ENCRYPTION_KEY`
@@ -239,11 +256,13 @@ Wallet Interno → SOLO per fee SaaS (se applicabile)
 **Target:** Utente privato occasionale (sito pubblico).
 
 **Funzionamento:**
+
 - Architetturalmente, il B2C è trattato come **UN UNICO GRANDE RESELLER** ("Web Channel").
 - L'utente finale non ha dashboard. Paga al checkout.
 - Il sistema usa il wallet del "Web Channel" per generare l'etichetta.
 
 **Flusso Denaro:**
+
 ```
 Utente B2C → Checkout (Pagamento Carta) → Wallet "Web Channel" → Pagamento Fornitore
 ```
@@ -253,6 +272,7 @@ Utente B2C → Checkout (Pagamento Carta) → Wallet "Web Channel" → Pagamento
 **Vantaggio:** Nessuna gestione account/wallet per utenti da 1 spedizione l'anno.
 
 **Implementazione:**
+
 - Utente B2C → Checkout → Pagamento → Wallet "Web Channel" → Etichetta
 - Nessun wallet personale per utente B2C
 - Il "Web Channel" è un account reseller speciale con wallet prepagato
@@ -277,24 +297,26 @@ Nessuna etichetta viene generata senza credito disponibile nel wallet.
 
 ```typescript
 // ✅ CORRETTO
-await supabaseAdmin.rpc('decrement_wallet_balance', {
+await supabaseAdmin.rpc("decrement_wallet_balance", {
   p_user_id: userId,
-  p_amount: cost
-})
+  p_amount: cost,
+});
 
 // ❌ VIETATO ASSOLUTAMENTE
 await supabaseAdmin
-  .from('users')
+  .from("users")
   .update({ wallet_balance: newBalance })
-  .eq('id', userId)
+  .eq("id", userId);
 ```
 
 **Funzioni Atomiche Disponibili:**
+
 - `decrement_wallet_balance(user_id, amount)` - Debit atomico con lock pessimistico
 - `increment_wallet_balance(user_id, amount)` - Credit atomico con lock pessimistico
 - `add_wallet_credit(user_id, amount, description, created_by)` - Credit con audit trail
 
 **Migrations:**
+
 - `040_wallet_atomic_operations.sql` - Funzioni atomiche
 - `041_remove_wallet_balance_trigger.sql` - Rimozione trigger legacy
 
@@ -307,26 +329,32 @@ await supabaseAdmin
 ```typescript
 // Genera idempotency key
 const idempotencyKey = crypto
-  .createHash('sha256')
-  .update(JSON.stringify({
-    userId: targetId,
-    recipient: validated.recipient,
-    packages: validated.packages,
-    timestamp: Math.floor(Date.now() / 5000)
-  }))
-  .digest('hex')
+  .createHash("sha256")
+  .update(
+    JSON.stringify({
+      userId: targetId,
+      recipient: validated.recipient,
+      packages: validated.packages,
+      timestamp: Math.floor(Date.now() / 5000),
+    })
+  )
+  .digest("hex");
 
 // Acquire lock PRIMA di debit
-const { data: lockResult } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
-  p_idempotency_key: idempotencyKey,
-  p_user_id: targetId,
-  p_ttl_minutes: 30
-})
+const { data: lockResult } = await supabaseAdmin.rpc(
+  "acquire_idempotency_lock",
+  {
+    p_idempotency_key: idempotencyKey,
+    p_user_id: targetId,
+    p_ttl_minutes: 30,
+  }
+);
 ```
 
 **Tabella:** `idempotency_locks` (migration `044_idempotency_locks.sql`)
 
 **Stati Lock:**
+
 - `in_progress` - Operazione in corso
 - `completed` - Spedizione creata (idempotent replay)
 - `failed` - Errore dopo debit (non ri-debitare)
@@ -361,11 +389,13 @@ await supabaseAdmin.from('wallet_transactions').insert({
 **Nessun "Pay as you go" con carta per singola etichetta B2B.**
 
 **Flusso Obbligatorio:**
+
 1. Cliente ricarica wallet (bonifico o carta)
 2. Admin approva ricarica (se bonifico)
 3. Cliente crea spedizione (debit da wallet)
 
 **NON è permesso:**
+
 - Pagamento diretto carta per singola spedizione B2B
 - "Credito automatico" senza approvazione
 
@@ -381,13 +411,17 @@ Il `FulfillmentEngine` non deve sapere se sta chiamando Spedisci.online, Poste o
 
 ```typescript
 interface CourierAdapter {
-  createShipping(payload: ShipmentPayload, credentials: CourierCredentials): Promise<ShipmentResult>
-  deleteShipping(shipmentId: string): Promise<void>
-  trackShipment(trackingNumber: string): Promise<TrackingResult>
+  createShipping(
+    payload: ShipmentPayload,
+    credentials: CourierCredentials
+  ): Promise<ShipmentResult>;
+  deleteShipping(shipmentId: string): Promise<void>;
+  trackShipment(trackingNumber: string): Promise<TrackingResult>;
 }
 ```
 
 **Implementazioni:**
+
 - `SpedisciOnlineAdapter` - Adapter per Spedisci.online
 - `PosteAdapter` - Adapter per Poste Italiane (se implementato)
 - `GLSAdapter` - Adapter per GLS (se implementato)
@@ -402,31 +436,37 @@ Il motore decide quale Adapter usare e quali credenziali iniettare (Master vs Ut
 ### Stack Tecnologico
 
 #### Backend
+
 - **Next.js 14** - App Router con Server Actions
 - **TypeScript** - Strict type checking
 - **Supabase** - PostgreSQL con RLS (Row Level Security) stretta
 
 #### Frontend
+
 - **React 18** - Server Components + Client Components
 - **Tailwind CSS + Shadcn/UI** - Component library
 - **Framer Motion** - Animazioni
 
 #### Database
+
 - **PostgreSQL 15+** (via Supabase)
 - **Row Level Security (RLS)** - Isolamento multi-tenant
 - **Functions SQL** - Operazioni atomiche (SECURITY DEFINER)
 
 #### AI Agent Orchestrator ("Anne")
+
 **Anne NON è un chatbot generico.**
 
 Anne è un **AI Agent Orchestrator** basato su **LangGraph Supervisor** che coordina worker specializzati per gestire richieste di preventivi e prenotazioni spedizioni.
 
 **Architettura:**
+
 - **Supervisor Router** (`lib/agent/orchestrator/supervisor-router.ts`) - Entry point unico per `/api/ai/agent-chat`
 - **Supervisor** (`lib/agent/orchestrator/supervisor.ts`) - Single Decision Point per routing (`decideNextStep()`)
 - **LangGraph Pricing Graph** (`lib/agent/orchestrator/pricing-graph.ts`) - Orchestrazione workflow con conditional edges
 
 **Data Flow:**
+
 ```
 User Input (messaggio)
     │
@@ -456,18 +496,21 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 **Pattern Chiave:** L'input utente passa dal Supervisor, viene arricchito dai Worker (merge non distruttivo in `shipmentDraft`), e **solo alla fine** diventa un'azione DB (booking) o risposta al client.
 
 **Worker Attivi:**
+
 1. **Address Worker** (`lib/agent/workers/address.ts`) - Normalizzazione indirizzi italiani (CAP, provincia, città)
 2. **Pricing Worker** (`lib/agent/workers/pricing.ts`) - Calcolo preventivi multi-corriere
 3. **OCR Worker** (`lib/agent/workers/ocr.ts`) - Estrazione dati da testo/screenshot (immagini: placeholder)
 4. **Booking Worker** (`lib/agent/workers/booking.ts`) - Prenotazione spedizioni (preflight + adapter)
 
 **Safety Invariants (CRITICO):**
+
 - **No Silent Booking:** Nessuna prenotazione senza conferma esplicita utente (`containsBookingConfirmation()`)
 - **Pre-flight Checks:** Validazione obbligatoria prima di chiamate API esterne (`preflightCheck()`)
 - **Single Decision Point:** Solo `supervisor.ts` imposta `next_step`, worker non decidono routing autonomamente
 - **No PII nei Log:** Mai loggare `addressLine1`, `postalCode`, `fullName`, `phone` (solo `trace_id`, `user_id_hash`)
 
 **Documentazione:**
+
 - `MIGRATION_MEMORY.md` - Stato migrazione e architettura dettagliata (Single Source of Truth)
 - `docs/ARCHITECTURE.md` - Deep dive tecnico con diagrammi e verifiche
 - `lib/agent/orchestrator/` - Implementazione orchestrator
@@ -480,13 +523,13 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 
 ```typescript
 // ❌ VIETATO
-const price = 8.50 // Hardcoded nel frontend
+const price = 8.5; // Hardcoded nel frontend
 
 // ✅ CORRETTO
-const { data: price } = await fetch('/api/shipments/estimate', {
-  method: 'POST',
-  body: JSON.stringify(shipmentData)
-})
+const { data: price } = await fetch("/api/shipments/estimate", {
+  method: "POST",
+  body: JSON.stringify(shipmentData),
+});
 ```
 
 **Il prezzo viene sempre dal Backend/API.**
@@ -630,9 +673,11 @@ npm run test:e2e            # Esegui test Playwright E2E
 ### Documenti Core (Leggere PRIMA di sviluppare)
 
 **Per Visione Business:**
+
 - **[docs/VISION_BUSINESS.md](docs/VISION_BUSINESS.md)** - Visione business completa, modelli di ricavo, target, strategia
 
 **Per Architettura Tecnica:**
+
 - **[docs/SECURITY.md](docs/SECURITY.md)** - Architettura multi-tenant, Acting Context, RLS policies
 - **[docs/MONEY_FLOWS.md](docs/MONEY_FLOWS.md)** - Sistema wallet, anti-fraud, idempotency
 - **[docs/OPS_RUNBOOK.md](docs/OPS_RUNBOOK.md)** - Deployment, incident response, monitoring
@@ -648,6 +693,7 @@ npm run test:e2e            # Esegui test Playwright E2E
 - **[AUDIT_GO_NOGO_PIVOT.md](AUDIT_GO_NOGO_PIVOT.md)** - Audit strategico GO/NO-GO/PIVOT
 
 **Deploy e Pre-Launch:**
+
 - **[DEPLOY_READINESS_CHECKLIST.md](DEPLOY_READINESS_CHECKLIST.md)** - Checklist pratica per deploy production
 - **[PRE_LAUNCH_CHECKLIST_CORRETTA.md](PRE_LAUNCH_CHECKLIST_CORRETTA.md)** - Checklist pre-launch corretta e allineata al codebase
 - **[VERIFICA_CHECKLIST_PRE_LAUNCH.md](VERIFICA_CHECKLIST_PRE_LAUNCH.md)** - Report completo verifica checklist pre-launch
@@ -677,6 +723,7 @@ npm run test:e2e            # Esegui test Playwright E2E
 - **FASE 2.8:** SuperAdmin UI (gestione platform fees)
 
 **Deliverable:**
+
 - Test unit: 264 test passati
 - Test integration: 90 test passati
 - Test E2E: Suite completa Playwright attiva
@@ -693,12 +740,14 @@ npm run test:e2e            # Esegui test Playwright E2E
 **Obiettivo:** Validare esposizione reale, sostenibilità economica e readiness GTM senza modifiche architetturali.
 
 **Fasi:**
+
 - **FASE 3.1:** Controlled Rollout (Cohort 0 → 1 → 2)
 - **FASE 3.2:** Economics Observation (costi reali, alert threshold, kill switch)
 - **FASE 3.3:** GTM Readiness Gates (Prodotto, Economics, Operativo)
 
 **Feature Recenti (31 Dicembre 2025):**
-- ✅ **Sistema Spedizioni Cancellate**: 
+
+- ✅ **Sistema Spedizioni Cancellate**:
   - Soft delete con audit trail completo (`deleted_by_user_id`, `deleted_by_user_email`, `deleted_by_user_name`)
   - Cancellazione simultanea su Spedisci.Online (priorità configurazione: reseller → owner → default)
   - Visibilità reseller per sub-user (RBAC completo)
@@ -715,6 +764,7 @@ npm run test:e2e            # Esegui test Playwright E2E
 **Status:** 📋 Pianificazione futura
 
 **Obiettivi potenziali:**
+
 - Pricing optimization basato su dati reali
 - Automation avanzata (scheduling, batch processing)
 - Partnership e integrazioni
@@ -751,6 +801,7 @@ node scripts/test-wallet-fix-validation.js
 ```
 
 **Output Atteso:**
+
 - ✅ deduct_wallet_credit atomica
 - ✅ wallet_transactions senza status
 - ✅ No race condition
@@ -800,6 +851,7 @@ npm run lint
 ## 🤝 Contributing
 
 Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
+
 - Checklist code review
 - Requisiti security gate
 - Best practices migrations
@@ -820,22 +872,26 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 ### File Critici da Conoscere
 
 #### API Routes
+
 - `app/api/spedizioni/route.ts` - Gestione spedizioni (creazione, cancellazione simultanea, lista)
 - `app/api/spedizioni/cancellate/route.ts` - Recupero spedizioni cancellate (RBAC, paginazione)
 - `app/api/spedizioni/[id]/ldv/route.ts` - Download LDV (etichetta originale o fallback)
 - `app/api/shipments/create/route.ts` - Creazione spedizione (wallet debit + idempotency)
 
 #### Database Migrations
+
 - `supabase/migrations/040_wallet_atomic_operations.sql` - Funzioni atomiche wallet
 - `supabase/migrations/044_idempotency_locks.sql` - Sistema idempotency
 - `supabase/migrations/050_add_deleted_by_user_email.sql` - Soft delete con audit trail (31 Dicembre 2025)
 
 #### Core Libraries
+
 - `lib/wallet/retry.ts` - Smart retry per lock contention
 - `lib/services/fulfillment/orchestrator.ts` - Fulfillment Orchestrator (routing intelligente)
 - `lib/agent/orchestrator/supervisor-router.ts` - AI Orchestrator entry point
 
 #### Documentazione
+
 - `WALLET_SECURITY_GUARDRAILS.md` - Regole critiche wallet (NON BYPASSABILE)
 - `docs/SPEDIZIONI_CANCELLATE.md` - Documentazione completa sistema soft delete
 - `MIGRATION_MEMORY.md` - Architettura AI Orchestrator (Single Source of Truth)
@@ -867,11 +923,13 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per:
 - ❌ **NON production ready** - Obiettivo: production readiness nei prossimi mesi
 
 **Feature Recenti (2 Gennaio 2026):**
+
 - ✅ **FIX CRITICO**: Salvataggio `shipment_id_external` ora funziona per TUTTI i corrieri (incluso Poste Italiane)
 - ✅ Cancellazione spedizioni su Spedisci.Online ora funziona correttamente
 - ✅ Metodo `getIncrementIdByTracking()` per recupero increment_id da tracking
 
 **Feature (31 Dicembre 2025):**
+
 - ✅ Sistema Spedizioni Cancellate con audit trail completo
 - ✅ Cancellazione simultanea su Spedisci.Online
 - ✅ RBAC completo per visibilità reseller
@@ -898,6 +956,7 @@ _Next Major: 1.0.0 (Go To Market Release)_
 4. **[README.md](README.md)** (questo file) - Costituzione completa
 
 **Punti chiave da ricordare:**
+
 - ✅ 3 modelli operativi FORMALI (Broker, BYOC, B2C) - Non sono "idee", sono pilastri
 - ✅ Modello ricavo B2C: Spread (come Broker), non "quasi assente"
 - ✅ BYOC è business model separato con implementazione completa
@@ -911,6 +970,7 @@ _Next Major: 1.0.0 (Go To Market Release)_
 ### 🐛 Fix Critici (2 Gennaio 2026)
 
 1. **FIX CRITICO: Cancellazione Spedisci.Online per Poste Italiane**:
+
    - ✅ **BUG RISOLTO**: Il salvataggio di `shipment_id_external` era dentro un blocco `else` e NON veniva eseguito per "Poste Italiane"
    - ✅ Spostato salvataggio `shipment_id_external` FUORI dal blocco condizionale corriere
    - ✅ Ora `shipment_id_external` viene salvato per TUTTI i corrieri (Poste Italiane, GLS, BRT, UPS, ecc.)
@@ -926,6 +986,7 @@ _Next Major: 1.0.0 (Go To Market Release)_
 ### 🐛 Fix Critici (31 Dicembre 2025)
 
 1. **Fix Cancellazione Spedisci.Online**:
+
    - ✅ Salvataggio `shipmentId` (increment_id) durante creazione spedizione
    - ✅ Estrazione corretta `increment_id` dal tracking (numero finale invece di `parseInt()`)
    - ✅ Priorità: `shipment_id_external` > estrazione da tracking

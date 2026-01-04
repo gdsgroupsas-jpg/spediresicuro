@@ -1291,30 +1291,30 @@ export async function listConfigurations(): Promise<{
       };
     }
 
-    // ⚠️ SICUREZZA: Decripta credenziali solo se necessario (per visualizzazione)
-    // In produzione, considerare di non esporre mai le credenziali decriptate
-    const decryptedConfigs = (configs || []).map((config: any) => {
-      const decrypted: any = { ...config };
+    // ⚠️ SICUREZZA: NON esporre credenziali in chiaro al frontend
+    // Maschera sempre api_key e api_secret
+    const maskedConfigs = (configs || []).map((config: any) => {
+      const masked: any = { ...config };
 
-      // Decripta solo se richiesto (per ora decriptiamo sempre, ma potremmo aggiungere un flag)
-      try {
-        if (config.api_key && isEncrypted(config.api_key)) {
-          decrypted.api_key = decryptCredential(config.api_key);
-        }
-        if (config.api_secret && isEncrypted(config.api_secret)) {
-          decrypted.api_secret = decryptCredential(config.api_secret);
-        }
-      } catch (error) {
-        console.error("Errore decriptazione credenziali:", error);
-        // In caso di errore, mantieni criptato
+      // Mascheramento aggressivo: mostra solo ultimi 4 caratteri se possibile
+      if (config.api_key) {
+        masked.api_key =
+          config.api_key.length > 4
+            ? `...${config.api_key.slice(-4)}`
+            : "********";
       }
 
-      return decrypted;
+      // Secret sempre completamente oscurato
+      if (config.api_secret) {
+        masked.api_secret = "********";
+      }
+
+      return masked;
     }) as CourierConfig[];
 
     return {
       success: true,
-      configs: decryptedConfigs,
+      configs: maskedConfigs,
     };
   } catch (error: any) {
     console.error("Errore listConfigurations:", error);
