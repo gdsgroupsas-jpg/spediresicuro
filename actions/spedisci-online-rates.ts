@@ -703,6 +703,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       // Nota: I rates di spedisci.online sono per una spedizione specifica,
       // quindi creiamo entries basate su questi dati
       
+      if (!carrierRates || carrierRates.length === 0) {
+        console.warn(
+          `⚠️ [SYNC] [${carrierIndex}/${totalCarriers}] Nessun rate per ${carrierCode}, salto`
+        );
+        continue;
+      }
+      
       // Rimuovi duplicati basati su (weight_to, zone_code, service_type)
       const seenEntries = new Set<string>();
       const uniqueRates = carrierRates.filter((rate) => {
