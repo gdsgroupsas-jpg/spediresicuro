@@ -661,7 +661,26 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       // Converti rates in entries del listino
       // Nota: I rates di spedisci.online sono per una spedizione specifica,
       // quindi creiamo entries basate su questi dati
-      const entries = carrierRates.map((rate) => {
+      
+      // Rimuovi duplicati basati su (weight_to, zone_code, service_type)
+      const seenEntries = new Set<string>();
+      const uniqueRates = carrierRates.filter((rate) => {
+        const probeWeight = (rate as any)._probe_weight || 0;
+        const probeZone = (rate as any)._probe_zone || "IT";
+        const contractCode = rate.contractCode || "standard";
+        const key = `${probeWeight}-${probeZone}-${contractCode}`;
+        if (seenEntries.has(key)) {
+          return false;
+        }
+        seenEntries.add(key);
+        return true;
+      });
+
+      console.log(
+        `📊 [SYNC] ${carrierRates.length} rates totali, ${uniqueRates.length} unici per ${carrierCode}`
+      );
+
+      const entries = uniqueRates.map((rate) => {
         // Parsing sicuro con validazione
         const basePrice = Math.max(0, parseFloat(rate.weight_price) || 0);
         const insurancePrice = Math.max(
