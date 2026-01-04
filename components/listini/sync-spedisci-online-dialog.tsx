@@ -181,9 +181,23 @@ export function SyncSpedisciOnlineDialog({
   }
 
   async function handleSync() {
-    console.log("🔄 [UI] handleSync chiamato, testResult:", testResult);
-    if (!testResult?.success) {
-      console.warn("⚠️ [UI] Test non passato, sync bloccata");
+    console.log("🔄 [UI] handleSync chiamato", {
+      testResult,
+      testResultSuccess: testResult?.success,
+      testResultRates: testResult?.rates?.length,
+      isSyncing,
+    });
+    
+    if (!testResult) {
+      console.warn("⚠️ [UI] testResult è null, sync bloccata");
+      toast.error("Esegui prima un test per verificare la connessione");
+      return;
+    }
+    
+    if (!testResult.success) {
+      console.warn("⚠️ [UI] Test non passato, sync bloccata", {
+        testResultError: testResult.error,
+      });
       toast.error("Esegui prima un test per verificare la connessione");
       return;
     }
@@ -630,7 +644,18 @@ export function SyncSpedisciOnlineDialog({
                 </div>
 
                 <Button
-                  onClick={handleSync}
+                  onClick={(e) => {
+                    console.log("🖱️ [UI] Pulsante Sincronizza cliccato", {
+                      isSyncing,
+                      testResult,
+                      testResultSuccess: testResult?.success,
+                    });
+                    e.preventDefault();
+                    handleSync().catch((err) => {
+                      console.error("❌ [UI] Errore in handleSync:", err);
+                      toast.error(`Errore durante la sincronizzazione: ${err.message}`);
+                    });
+                  }}
                   disabled={isSyncing}
                   className="w-full"
                 >
