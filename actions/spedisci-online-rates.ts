@@ -56,7 +56,9 @@ export async function testSpedisciOnlineRates(testParams?: {
   notes?: string;
   insuranceValue?: number;
   codValue?: number;
+
   accessoriServices?: string[];
+  configId?: string; // ID configurazione opzionale per multi-account
 }): Promise<{
   success: boolean;
   rates?: any[];
@@ -74,8 +76,10 @@ export async function testSpedisciOnlineRates(testParams?: {
       return { success: false, error: "Non autenticato" };
     }
 
-    // Recupera credenziali
-    const credentialsResult = await getSpedisciOnlineCredentials();
+    // Recupera credenziali (usa configId se fornito)
+    const credentialsResult = await getSpedisciOnlineCredentials(
+      testParams?.configId
+    );
     if (!credentialsResult.success || !credentialsResult.credentials) {
       return {
         success: false,
@@ -194,6 +198,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   testParams?: Parameters<typeof testSpedisciOnlineRates>[0];
   priceListName?: string;
   overwriteExisting?: boolean;
+  configId?: string; // ID configurazione opzionale
 }): Promise<{
   success: boolean;
   priceListsCreated?: number;
@@ -272,6 +277,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             postalCode: zone.sampleAddress.postalCode,
             country: zone.sampleAddress.country,
           },
+          configId: options?.configId, // Pass config ID for multi-account support
         };
 
         // Call API (using existing test function logic but we need to inject credentials efficiently)
@@ -471,6 +477,16 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         priceListId = existingPriceList.id;
         priceListsUpdated++;
 
+        // Aggiorna metadati listino esistente se configId è presente
+        if (options?.configId) {
+          await supabaseAdmin
+            .from("price_lists")
+            .update({
+              metadata: { courier_config_id: options.configId },
+            })
+            .eq("id", priceListId);
+        }
+
         // Elimina entries esistenti
         await supabaseAdmin
           .from("price_list_entries")
@@ -488,6 +504,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           is_global: false,
           source_type: "api",
           notes: `Corriere: ${carrierCode.toUpperCase()} | Sincronizzato da spedisci.online il ${new Date().toISOString()}`,
+          metadata: options?.configId
+            ? { courier_config_id: options.configId }
+            : undefined,
         };
 
         const newPriceList = await createPriceList(priceListData, user.id);
