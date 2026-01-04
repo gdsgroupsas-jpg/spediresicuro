@@ -833,6 +833,15 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         // Non bloccare la sync se alcune entries falliscono
         // Logga l'errore ma continua
       }
+      } catch (carrierError: any) {
+        // Errore durante creazione/aggiornamento listino per questo corriere
+        console.error(
+          `❌ [SYNC] Errore processamento corriere ${carrierCode}:`,
+          carrierError.message || carrierError
+        );
+        // Continua con il prossimo corriere invece di interrompere tutto
+        continue;
+      }
     }
 
     const result = {
