@@ -852,18 +852,23 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         // Logga l'errore ma continua
       }
       console.log(
-        `✅ [SYNC] Corriere ${carrierCode} processato con successo (${entries.length} entries)`
+        `✅ [SYNC] [${carrierIndex}/${totalCarriers}] Corriere ${carrierCode} processato con successo: listino "${priceListName}", ${entries.length} entries`
       );
       } catch (carrierError: any) {
         // Errore durante creazione/aggiornamento listino per questo corriere
         console.error(
-          `❌ [SYNC] Errore processamento corriere ${carrierCode}:`,
-          carrierError.message || carrierError
+          `❌ [SYNC] [${carrierIndex}/${totalCarriers}] Errore processamento corriere ${carrierCode}:`,
+          carrierError.message || carrierError,
+          carrierError.stack
         );
         // Continua con il prossimo corriere invece di interrompere tutto
         continue;
       }
     }
+    
+    console.log(
+      `📊 [SYNC] Riepilogo finale: ${priceListsCreated} listini creati, ${priceListsUpdated} aggiornati, ${entriesAdded} entries totali su ${totalCarriers} corrieri`
+    );
 
     const result = {
       success: true,
