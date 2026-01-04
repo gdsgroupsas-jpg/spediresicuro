@@ -605,16 +605,12 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           //   : undefined,
         };
 
-        // Rimuovi metadata se presente (per evitare errore PGRST204 se colonna non esiste)
-        // IMPORTANTE: rimuovi anche se undefined, perché Supabase potrebbe provare a inserirlo
-        const { metadata, ...dataWithoutMetadata } = priceListData as any;
-        // Assicurati che metadata non sia presente nemmeno come undefined
-        delete (dataWithoutMetadata as any).metadata;
+        // Metadata ora esiste (migration 059 applicata), possiamo includerlo direttamente
         console.log(
           `📝 [SYNC] Creazione listino: ${priceListName}, courier_id=${courierId}, list_type=supplier, created_by=${user.id}`
         );
         const newPriceList = await createPriceList(
-          dataWithoutMetadata as CreatePriceListInput,
+          priceListData as CreatePriceListInput,
           user.id
         );
         console.log(
