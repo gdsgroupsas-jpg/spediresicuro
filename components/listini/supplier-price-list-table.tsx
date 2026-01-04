@@ -89,6 +89,7 @@ export function SupplierPriceListTable({
             <th className="px-6 py-4 font-medium text-gray-500">Nome</th>
             <th className="px-6 py-4 font-medium text-gray-500">Corriere</th>
             <th className="px-6 py-4 font-medium text-gray-500">Versione</th>
+            <th className="px-6 py-4 font-medium text-gray-500">Tariffe</th>
             <th className="px-6 py-4 font-medium text-gray-500">Status</th>
             <th className="px-6 py-4 font-medium text-gray-500">Data Creazione</th>
             <th className="px-6 py-4 font-medium text-gray-500 text-right">Azioni</th>
@@ -105,6 +106,11 @@ export function SupplierPriceListTable({
               </td>
               <td className="px-6 py-4 text-gray-600">
                 {priceList.version}
+              </td>
+              <td className="px-6 py-4 text-gray-600">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                  {(priceList as any).entries_count || 0} tariffe
+                </span>
               </td>
               <td className="px-6 py-4">
                 {getStatusBadge(priceList.status)}
