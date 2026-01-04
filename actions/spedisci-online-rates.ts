@@ -367,8 +367,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           }
         }
 
-        // Small delay to avoid rate limiting (fast mode più aggressivo)
-        await new Promise((r) => setTimeout(r, mode === "matrix" ? 200 : 50));
+        // Small delay to avoid rate limiting (balanced mode più veloce ma sicuro)
+        await new Promise((r) =>
+          setTimeout(
+            r,
+            mode === "matrix" ? 200 : mode === "balanced" ? 100 : 50
+          )
+        );
       }
     }
 
