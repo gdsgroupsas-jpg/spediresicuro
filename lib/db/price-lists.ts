@@ -26,10 +26,14 @@ export async function createPriceList(
   data: CreatePriceListInput,
   userId: string
 ): Promise<PriceList> {
+  // Rimuovi metadata se presente (per evitare errore PGRST204 se colonna non esiste)
+  const { metadata, ...dataWithoutMetadata } = data as any;
+  delete (dataWithoutMetadata as any).metadata;
+
   const { data: priceList, error } = await supabaseAdmin
     .from("price_lists")
     .insert({
-      ...data,
+      ...dataWithoutMetadata,
       created_by: userId,
     })
     .select()
