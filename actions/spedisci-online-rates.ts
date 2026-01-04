@@ -380,17 +380,39 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       ratesByCarrier[carrierCode].push(rate);
     }
     
+    const groupingSummary = Object.keys(ratesByCarrier).map((code) => ({
+      carrierCode: code,
+      ratesCount: ratesByCarrier[code].length,
+      sampleRate: ratesByCarrier[code][0] ? {
+        carrierCode: ratesByCarrier[code][0].carrierCode,
+        contractCode: ratesByCarrier[code][0].contractCode,
+      } : null,
+      // Verifica che tutti i rates nel gruppo abbiano lo stesso carrierCode
+      allRatesHaveSameCarrierCode: ratesByCarrier[code].every(
+        (r) => r.carrierCode === code
+      ),
+    }));
+    
     console.log(
       `📊 [SYNC] Raggruppamento rates completato:`,
-      Object.keys(ratesByCarrier).map((code) => ({
-        carrierCode: code,
-        ratesCount: ratesByCarrier[code].length,
-        sampleRate: ratesByCarrier[code][0] ? {
-          carrierCode: ratesByCarrier[code][0].carrierCode,
-          contractCode: ratesByCarrier[code][0].contractCode,
-        } : null,
-      }))
+      JSON.stringify(groupingSummary, null, 2)
     );
+    
+    // Verifica mismatch nel raggruppamento
+    for (const summary of groupingSummary) {
+      if (!summary.allRatesHaveSameCarrierCode) {
+        console.error(
+          `❌ [SYNC] ERRORE RAGGRUPPAMENTO: Il gruppo "${summary.carrierCode}" contiene rates con carrierCode diversi!`
+        );
+        // Mostra i carrierCode unici nel gruppo
+        const uniqueCarrierCodes = [
+          ...new Set(ratesByCarrier[summary.carrierCode].map((r) => r.carrierCode)),
+        ];
+        console.error(
+          `   CarrierCode trovati nel gruppo: ${uniqueCarrierCodes.join(", ")}`
+        );
+      }
+    }
 
     // 3. Per ogni corriere, crea/aggiorna listino
     // NOTA: Non dipendiamo più dalla tabella 'couriers' che potrebbe non esistere
