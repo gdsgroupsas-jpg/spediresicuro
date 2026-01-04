@@ -433,10 +433,21 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     console.log(
       `📊 [SYNC] Corrieri da processare: ${Object.keys(ratesByCarrier).join(", ")} (totale: ${Object.keys(ratesByCarrier).length})`
     );
+    console.log(
+      `📊 [SYNC] Dettagli ratesByCarrier:`,
+      Object.keys(ratesByCarrier).map((code) => ({
+        carrierCode: code,
+        ratesCount: ratesByCarrier[code].length,
+      }))
+    );
 
+    let carrierIndex = 0;
+    const totalCarriers = Object.keys(ratesByCarrier).length;
+    
     for (const [carrierCode, carrierRates] of Object.entries(ratesByCarrier)) {
+      carrierIndex++;
       console.log(
-        `🔄 [SYNC] Processando corriere: ${carrierCode} (${carrierRates.length} rates)`
+        `🔄 [SYNC] [${carrierIndex}/${totalCarriers}] Processando corriere: ${carrierCode} (${carrierRates.length} rates)`
       );
       try {
         // Prova a trovare courier_id se abbiamo la tabella couriers
