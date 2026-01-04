@@ -180,6 +180,28 @@ await writeAuditLog({
 | `compensation_queue` | ❌ | None | System table |
 | `courier_configs` | ✅ | SELECT, INSERT, UPDATE | Admin-only on sensitive fields |
 
+---
+
+## Multi-Account Courier Config Security (P1 Hardening)
+
+### Problema
+Quando il backend usa `supabaseAdmin` (service role), **RLS è bypassata**.  
+Questo è corretto per molte operazioni server-side, ma richiede **validazione esplicita** quando si accetta un input come `configId` / `specificConfigId`.
+
+### Regola
+- **Se arriva `configId`/`specificConfigId` dal client/UI**: il server deve verificare che la configurazione sia:
+  - di proprietà dell’utente (`owner_user_id = userId`) **oppure**
+  - legacy compat (`created_by = userEmail`) **oppure**
+  - una config default globale (`is_default = true AND owner_user_id IS NULL`) **oppure**
+  - l’actor è `admin/superadmin`.
+
+### Implementazione
+- `lib/actions/spedisci-online.ts` → validazione accesso su `configId`
+- `lib/couriers/factory.ts` → validazione accesso su `specificConfigId`
+
+### Logging
+- Evitare log di UUID completi delle configurazioni: usare hash breve o prefisso (`8 chars`).
+
 ### Verification Query
 ```sql
 -- Check all tables with RLS status

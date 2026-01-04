@@ -771,9 +771,15 @@ export async function syncAllEnabledConfigs(): Promise<void> {
     for (const config of configs) {
       try {
         await syncCourierConfig(config.id);
-        console.log(`✅ [SYNC] Config ${config.id} sincronizzata`);
+        // P1-3: evita log di UUID completi
+        console.log(
+          `✅ [SYNC] Config ${String(config.id).slice(0, 8)}... sincronizzata`
+        );
       } catch (error: any) {
-        console.error(`❌ [SYNC] Errore sync config ${config.id}:`, error);
+        console.error(
+          `❌ [SYNC] Errore sync config ${String(config.id).slice(0, 8)}...:`,
+          error
+        );
       }
     }
   } catch (error: any) {
