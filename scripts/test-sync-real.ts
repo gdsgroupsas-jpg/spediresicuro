@@ -104,8 +104,8 @@ async function main() {
     
     // Prova api_key (può essere criptata)
     if ((cfgData as any).api_key) {
-      testApiKey = (cfgData as any).api_key;
-      if (isEncrypted(testApiKey)) {
+      testApiKey = (cfgData as any).api_key as string;
+      if (testApiKey && isEncrypted(testApiKey)) {
         console.log(`   API Key è criptata, decripto...`);
         testApiKey = decryptCredential(testApiKey);
       }
