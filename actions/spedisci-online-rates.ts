@@ -199,7 +199,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   priceListName?: string;
   overwriteExisting?: boolean;
   configId?: string; // ID configurazione opzionale
-  mode?: "fast" | "matrix"; // fast = adatto a Vercel (pochi probe), matrix = scansione completa (può essere lenta)
+  mode?: "fast" | "balanced" | "matrix"; // fast = 2 zone x 3 pesi (6 entries), balanced = 5 zone x 11 pesi (55 entries), matrix = tutte le zone x tutti i pesi (può essere lenta)
 }): Promise<{
   success: boolean;
   priceListsCreated?: number;
@@ -294,12 +294,17 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     const processedCombinations = new Set<string>();
 
     // ⚠️ Importante: su Vercel (piano free) le azioni server-side possono essere limitate come tempo.
-    // Per UX/affidabilità, default = "fast": pochi probe ma salva comunque listini.
-    const mode: "fast" | "matrix" = options?.mode ?? "fast";
+    // Per UX/affidabilità, default = "balanced": buon compromesso tra completezza e velocità.
+    const mode: "fast" | "balanced" | "matrix" = options?.mode ?? "balanced";
 
     const zones =
       mode === "matrix"
-        ? PRICING_MATRIX.ZONES
+        ? PRICING_MATRIX.ZONES // Tutte le zone (8 zone)
+        : mode === "balanced"
+        ? // BALANCED: zone principali italiane (5 zone) - buon compromesso
+          PRICING_MATRIX.ZONES.filter((z: any) =>
+            ["IT-STD", "IT-CAL", "IT-SIC", "IT-SAR", "IT-LIV"].includes(z.code)
+          )
         : // FAST: 2 zone rappresentative (standard + sud) per restare sotto timeout
           PRICING_MATRIX.ZONES.filter((z: any) =>
             ["IT-STD", "IT-CAL"].includes(z.code)
@@ -307,7 +312,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
     const weightsToProbe =
       mode === "matrix"
-        ? // Matrix V2: pesi chiave (copre gli scaglioni principali)
+        ? // Matrix: tutti i pesi (1-100kg + 105kg = 101 pesi)
+          PRICING_MATRIX.WEIGHTS
+        : mode === "balanced"
+        ? // BALANCED: pesi chiave che coprono gli scaglioni principali (11 pesi)
           [1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105]
         : // FAST: 3 pesi chiave per ridurre chiamate
           [1, 10, 30];
@@ -720,13 +728,14 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         const probeWeight = (rate as any)._probe_weight || 999.999;
         const probeZone = (rate as any)._probe_zone || "IT";
 
-        // Weights used in the probe loop
-        const probedWeights = [1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105];
+        // Weights used in the probe loop - usa gli stessi pesi effettivamente probati
+        // Questo garantisce che weight_from e weight_to siano corretti per ogni modalità
+        const probedWeights = weightsToProbe.sort((a, b) => a - b);
         const currentIndex = probedWeights.indexOf(probeWeight);
         const weightFrom =
           currentIndex > 0 ? probedWeights[currentIndex - 1] : 0; // Start from exact previous weight
         // Note: Logic handles intervals (e.g. >10 to <=20).
-        // Sync logic is simplified: "From previous breakpoint to current breakpoint".
+        // Sync logic: "From previous breakpoint to current breakpoint".
 
         return {
           weight_from: weightFrom,
