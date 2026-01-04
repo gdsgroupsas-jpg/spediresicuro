@@ -50,7 +50,6 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
 
     // PRIORITÀ 1: Configurazione API Corriere (courier_configs)
     // ============================================
-    const { supabaseAdmin } = await import("@/lib/db/client");
     const { decryptCredential, isEncrypted } = await import(
       "@/lib/security/encryption"
     );
