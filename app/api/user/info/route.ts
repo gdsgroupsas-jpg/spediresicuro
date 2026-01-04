@@ -30,11 +30,12 @@ export async function GET(request: NextRequest) {
     // 3. Recupera anche account_type e is_reseller da Supabase se disponibile
     let accountType = user.role; // Fallback a role
     let isReseller = false;
+    let resellerRole = null;
     try {
       const { supabaseAdmin } = await import("@/lib/db/client");
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from("users")
-        .select("account_type, role, is_reseller")
+        .select("account_type, role, is_reseller, reseller_role")
         .eq("email", session.user.email)
         .single();
 
@@ -47,11 +48,14 @@ export async function GET(request: NextRequest) {
         accountType =
           supabaseUser.account_type || supabaseUser.role || user.role;
         isReseller = supabaseUser.is_reseller === true;
+        resellerRole = supabaseUser.reseller_role;
         console.log(
           "Account Type recuperato da Supabase:",
           accountType,
           "is_reseller:",
           isReseller,
+          "reseller_role:",
+          resellerRole,
           "per email:",
           session.user.email
         );
@@ -69,6 +73,7 @@ export async function GET(request: NextRequest) {
       role: user.role,
       account_type: accountType,
       is_reseller: isReseller,
+      reseller_role: resellerRole,
       provider: user.provider,
       image: user.image,
       company_name: (user as any).company_name,
@@ -95,6 +100,7 @@ export async function GET(request: NextRequest) {
       account_type: userData.account_type,
       accountType: userData.account_type, // Alias per compatibilità
       is_reseller: userData.is_reseller,
+      reseller_role: userData.reseller_role,
       provider: userData.provider,
       image: userData.image,
     });
