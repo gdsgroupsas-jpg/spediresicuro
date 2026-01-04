@@ -7,6 +7,7 @@
  * per la creazione automatica delle LDV con routing ottimale.
  */
 
+import crypto from "crypto";
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
 import { auth } from "@/lib/auth-config";
 import { getShippingProvider } from "@/lib/couriers/factory";
@@ -37,6 +38,15 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     }
 
     const userEmail = session.user.email;
+    const { data: currentUser } = await supabaseAdmin
+      .from("users")
+      .select("id, account_type")
+      .eq("email", userEmail)
+      .maybeSingle();
+    const currentUserId = currentUser?.id ?? null;
+    const isAdmin =
+      currentUser?.account_type === "admin" ||
+      currentUser?.account_type === "superadmin";
 
     // PRIORITÀ 1: Configurazione API Corriere (courier_configs)
     // ============================================
@@ -56,8 +66,32 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         .single();
 
       if (specificConfig) {
+        // 🔒 P1-1 SECURITY: supabaseAdmin bypassa RLS → validazione esplicita accesso.
+        // Consentito se:
+        // - config default globale (is_default=true, owner_user_id NULL)
+        // - config di proprietà dell'utente (owner_user_id = currentUserId)
+        // - config creata dall'utente (created_by = userEmail) [legacy/backward-compat]
+        // - admin/superadmin (operazioni amministrative)
+        const isDefaultVisible =
+          specificConfig.is_default === true && !specificConfig.owner_user_id;
+        const isOwner =
+          !!currentUserId && specificConfig.owner_user_id === currentUserId;
+        const isCreator = specificConfig.created_by === userEmail;
+
+        if (!isAdmin && !isDefaultVisible && !isOwner && !isCreator) {
+          return {
+            success: false,
+            error: "Configurazione non trovata o non autorizzata",
+          };
+        }
+
+        const configIdHash = crypto
+          .createHash("sha256")
+          .update(String(specificConfig.id))
+          .digest("hex")
+          .substring(0, 8);
         console.log(
-          `✅ [SPEDISCI.ONLINE] Configurazione specifica trovata: ${specificConfig.name} (${specificConfig.id})`
+          `✅ [SPEDISCI.ONLINE] Configurazione specifica trovata (id_hash=${configIdHash})`
         );
 
         let apiKey = specificConfig.api_key;

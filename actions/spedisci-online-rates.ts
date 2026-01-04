@@ -210,6 +210,11 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     carriersProcessed?: string[];
   };
 }> {
+  // 🔒 P1-2: Lock best-effort per evitare sync concorrenti (riduce duplicati/consistenza).
+  // Nota: se RPC non disponibile in un ambiente, continuiamo senza lock (no regressioni).
+  let lockKey: string | null = null;
+  let lockAcquired = false;
+  let lockErrorMessage: string | null = null;
   try {
     const session = await auth();
     if (!session?.user?.email) {
@@ -237,6 +242,47 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         success: false,
         error: "Solo admin, reseller e BYOC possono sincronizzare listini",
       };
+    }
+
+    // Acquisisci lock (best-effort)
+    lockKey = `sync_price_lists:${user.id}:${options?.configId || "default"}:${
+      options?.courierId || "all"
+    }`;
+    try {
+      const { data: lockData, error: lockError } = await supabaseAdmin.rpc(
+        "acquire_idempotency_lock",
+        {
+          p_idempotency_key: lockKey,
+          p_user_id: user.id,
+          p_ttl_minutes: 30,
+        }
+      );
+
+      if (lockError) {
+        console.warn(
+          "⚠️ [LISTINI][SYNC] Impossibile acquisire lock (procedo senza lock):",
+          {
+            code: lockError.code,
+            message: lockError.message,
+          }
+        );
+      } else {
+        // RPC returns TABLE → Supabase spesso ritorna array con una riga
+        const row = Array.isArray(lockData) ? lockData[0] : (lockData as any);
+        if (row?.acquired === true) {
+          lockAcquired = true;
+        } else {
+          const msg =
+            row?.error_message ||
+            "Sincronizzazione già in corso. Attendi il completamento.";
+          return { success: false, error: msg };
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "⚠️ [LISTINI][SYNC] Errore lock inatteso (procedo senza lock):",
+        e
+      );
     }
 
     // 1. Matrix Sync Logic
@@ -512,7 +558,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         const newPriceList = await createPriceList(priceListData, user.id);
         priceListId = newPriceList.id;
         priceListsCreated++;
-        console.log(`✅ Listino creato: ${priceListName} (ID: ${priceListId})`);
+        // P1-3: evita log di UUID completi (riduce leakage in log condivisi)
+        console.log(
+          `✅ Listino creato: ${priceListName} (id=${String(priceListId).slice(
+            0,
+            8
+          )}...)`
+        );
       }
 
       // 4. Aggiungi entries al listino
@@ -632,9 +684,31 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     };
   } catch (error: any) {
     console.error("Errore sincronizzazione listini da spedisci.online:", error);
+    lockErrorMessage = error?.message || "Errore durante la sincronizzazione";
     return {
       success: false,
       error: error.message || "Errore durante la sincronizzazione",
     };
+  } finally {
+    if (lockAcquired && lockKey) {
+      try {
+        if (lockErrorMessage) {
+          await supabaseAdmin.rpc("fail_idempotency_lock", {
+            p_idempotency_key: lockKey,
+            p_error_message: String(lockErrorMessage).slice(0, 500),
+          });
+        } else {
+          await supabaseAdmin.rpc("complete_idempotency_lock", {
+            p_idempotency_key: lockKey,
+            // Per questo lock non abbiamo shipment_id: usiamo NULL (ammesso dal tipo UUID).
+            p_shipment_id: null,
+            p_status: "completed",
+          });
+        }
+      } catch (e) {
+        // Best-effort: non blocchiamo il flusso per errori lock-release
+        console.warn("⚠️ [LISTINI][SYNC] Impossibile chiudere lock:", e);
+      }
+    }
   }
 }
