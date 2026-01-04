@@ -550,7 +550,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               .eq("id", priceListId);
           } catch (err: any) {
             // Fallback: usa source_metadata se metadata non esiste
-            if (err?.code === "PGRST204" || err?.message?.includes("metadata")) {
+            if (
+              err?.code === "PGRST204" ||
+              err?.message?.includes("metadata")
+            ) {
               await supabaseAdmin
                 .from("price_lists")
                 .update({
@@ -588,9 +591,15 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
         // Rimuovi metadata se presente (per evitare errore PGRST204 se colonna non esiste)
         const { metadata, ...dataWithoutMetadata } = priceListData as any;
+        console.log(
+          `📝 [SYNC] Creazione listino: ${priceListName}, courier_id=${courierId}, list_type=supplier, created_by=${user.id}`
+        );
         const newPriceList = await createPriceList(
           dataWithoutMetadata as CreatePriceListInput,
           user.id
+        );
+        console.log(
+          `✅ [SYNC] Listino creato con successo: id=${newPriceList.id}, name=${newPriceList.name}`
         );
 
         // Se configId è presente, prova ad aggiungere metadata dopo la creazione (se colonna esiste)
@@ -604,7 +613,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               .eq("id", newPriceList.id);
           } catch (err: any) {
             // Fallback: usa source_metadata se metadata non esiste
-            if (err?.code === "PGRST204" || err?.message?.includes("metadata")) {
+            if (
+              err?.code === "PGRST204" ||
+              err?.message?.includes("metadata")
+            ) {
               await supabaseAdmin
                 .from("price_lists")
                 .update({
@@ -731,7 +743,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       entriesAdded += entries.length;
     }
 
-    return {
+    const result = {
       success: true,
       priceListsCreated,
       priceListsUpdated,
@@ -741,6 +753,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         carriersProcessed,
       },
     };
+    console.log(
+      `✅ [SYNC] Sincronizzazione completata: ${priceListsCreated} creati, ${priceListsUpdated} aggiornati, ${entriesAdded} entries aggiunte`
+    );
+    return result;
   } catch (error: any) {
     console.error("Errore sincronizzazione listini da spedisci.online:", error);
     lockErrorMessage = error?.message || "Errore durante la sincronizzazione";
