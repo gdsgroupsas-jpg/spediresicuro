@@ -229,6 +229,8 @@ export function SyncSpedisciOnlineDialog({
         priceListName: syncOptions.priceListName || undefined,
         overwriteExisting: syncOptions.overwriteExisting,
         configId: selectedConfigId || undefined,
+        // FAST per evitare timeout in produzione (Vercel free). Per scansioni complete usare automazione dedicata.
+        mode: "fast",
       });
 
       if (result.success) {

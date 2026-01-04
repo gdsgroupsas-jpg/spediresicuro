@@ -199,6 +199,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   priceListName?: string;
   overwriteExisting?: boolean;
   configId?: string; // ID configurazione opzionale
+  mode?: "fast" | "matrix"; // fast = adatto a Vercel (pochi probe), matrix = scansione completa (può essere lenta)
 }): Promise<{
   success: boolean;
   priceListsCreated?: number;
@@ -292,13 +293,27 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     const allRates: any[] = [];
     const processedCombinations = new Set<string>();
 
-    const zones = PRICING_MATRIX.ZONES;
-    // Use a simplified set of weights to avoid timeout, but ensure we cover key brackets
-    // 1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105
-    const weightsToProbe = [1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105];
+    // ⚠️ Importante: su Vercel (piano free) le azioni server-side possono essere limitate come tempo.
+    // Per UX/affidabilità, default = "fast": pochi probe ma salva comunque listini.
+    const mode: "fast" | "matrix" = options?.mode ?? "fast";
+
+    const zones =
+      mode === "matrix"
+        ? PRICING_MATRIX.ZONES
+        : // FAST: 2 zone rappresentative (standard + sud) per restare sotto timeout
+          PRICING_MATRIX.ZONES.filter((z: any) =>
+            ["IT-STD", "IT-CAL"].includes(z.code)
+          );
+
+    const weightsToProbe =
+      mode === "matrix"
+        ? // Matrix V2: pesi chiave (copre gli scaglioni principali)
+          [1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105]
+        : // FAST: 3 pesi chiave per ridurre chiamate
+          [1, 10, 30];
 
     console.log(
-      `🚀 Starting High-Fidelity Sync: ${zones.length} Zones x ${weightsToProbe.length} Weights`
+      `🚀 Starting Price List Sync (${mode}): ${zones.length} Zones x ${weightsToProbe.length} Weights`
     );
 
     // Loop through Zones and Weights
@@ -344,8 +359,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           }
         }
 
-        // Small delay to avoid rate limiting
-        await new Promise((r) => setTimeout(r, 200));
+        // Small delay to avoid rate limiting (fast mode più aggressivo)
+        await new Promise((r) => setTimeout(r, mode === "matrix" ? 200 : 50));
       }
     }
 
