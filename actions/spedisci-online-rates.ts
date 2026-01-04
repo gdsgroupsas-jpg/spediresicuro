@@ -945,9 +945,29 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         carriersProcessed,
       },
     };
+    
     console.log(
       `✅ [SYNC] Sincronizzazione completata: ${priceListsCreated} creati, ${priceListsUpdated} aggiornati, ${entriesAdded} entries aggiunte`
     );
+    console.log(
+      `📊 [SYNC] Riepilogo finale:`,
+      {
+        totalCarriers: totalCarriers,
+        carriersProcessed: carriersProcessed.length,
+        carriersProcessedList: carriersProcessed,
+        priceListsCreated,
+        priceListsUpdated,
+        entriesAdded,
+      }
+    );
+    
+    // Verifica che tutti i corrieri siano stati processati
+    if (carriersProcessed.length !== totalCarriers) {
+      console.warn(
+        `⚠️ [SYNC] ATTENZIONE: ${totalCarriers} corrieri trovati ma solo ${carriersProcessed.length} processati!`
+      );
+    }
+    
     return result;
   } catch (error: any) {
     console.error("Errore sincronizzazione listini da spedisci.online:", error);
