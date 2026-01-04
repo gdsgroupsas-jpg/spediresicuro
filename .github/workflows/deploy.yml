@@ -1,10 +1,6 @@
 name: Deploy Automation
 
 on:
-  push:
-    branches: [ master ]
-    paths:
-      - 'automation-service/**'
   workflow_dispatch:
 
 jobs:
