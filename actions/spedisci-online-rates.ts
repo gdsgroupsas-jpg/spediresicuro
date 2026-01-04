@@ -260,10 +260,21 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         .maybeSingle();
 
       if (existingLock) {
-        const isExpired = new Date(existingLock.expires_at) < new Date();
-        const isOld = 
-          new Date(existingLock.created_at) < 
-          new Date(Date.now() - 10 * 60 * 1000); // Più di 10 minuti fa
+        const now = new Date();
+        const expiresAt = new Date(existingLock.expires_at);
+        const createdAt = new Date(existingLock.created_at);
+        const isExpired = expiresAt < now;
+        const isOld = createdAt < new Date(now.getTime() - 2 * 60 * 1000); // Più di 2 minuti fa (ridotto da 10)
+
+        console.log(`🔍 [SYNC] Lock esistente trovato:`, {
+          lockKey,
+          status: existingLock.status,
+          expires_at: existingLock.expires_at,
+          created_at: existingLock.created_at,
+          isExpired,
+          isOld,
+          now: now.toISOString(),
+        });
 
         if (isExpired || (isOld && existingLock.status === "in_progress")) {
           // Lock scaduto o vecchio: rilascialo e procedi
@@ -273,15 +284,28 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               status: existingLock.status,
               expires_at: existingLock.expires_at,
               created_at: existingLock.created_at,
+              isExpired,
+              isOld,
             }
           );
           try {
-            await supabaseAdmin.rpc("fail_idempotency_lock", {
-              p_idempotency_key: lockKey,
-              p_error_message: "Lock scaduto, sostituito da nuova sync",
-            });
+            // Prova a rilasciare il lock vecchio
+            await supabaseAdmin
+              .from("idempotency_locks")
+              .delete()
+              .eq("idempotency_key", lockKey);
+            console.log(`✅ [SYNC] Lock vecchio rimosso: ${lockKey}`);
           } catch (e) {
-            // Ignora errori di rilascio
+            console.warn(`⚠️ [SYNC] Errore rimozione lock vecchio:`, e);
+            // Prova anche con RPC
+            try {
+              await supabaseAdmin.rpc("fail_idempotency_lock", {
+                p_idempotency_key: lockKey,
+                p_error_message: "Lock scaduto, sostituito da nuova sync",
+              });
+            } catch (e2) {
+              // Ignora errori di rilascio
+            }
           }
         } else if (existingLock.status === "in_progress" && !isExpired) {
           // Lock ancora attivo: non procedere
@@ -290,10 +314,15 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           console.warn(`⚠️ [SYNC] Lock attivo per ${lockKey}:`, {
             status: existingLock.status,
             expires_at: existingLock.expires_at,
+            created_at: existingLock.created_at,
+            isExpired,
+            isOld,
           });
           return { success: false, error: msg };
         }
         // Se status è "completed" o "failed", possiamo procedere (lock verrà sovrascritto)
+      } else {
+        console.log(`✅ [SYNC] Nessun lock esistente, procedo: ${lockKey}`);
       }
 
       // Prova ad acquisire lock
