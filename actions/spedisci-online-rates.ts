@@ -1,24 +1,24 @@
-'use server';
+"use server";
 
 /**
  * Server Actions per Gestione Rates e Listini Prezzi da Spedisci.Online
- * 
+ *
  * Funzionalità:
  * 1. Test endpoint /shipping/rates
  * 2. Sincronizzazione listini prezzi da spedisci.online
  * 3. Popolamento automatico listini nel database
  */
 
-import { auth } from '@/lib/auth-config';
-import { supabaseAdmin } from '@/lib/db/client';
-import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
-import { getSpedisciOnlineCredentials } from '@/lib/actions/spedisci-online';
-import { createPriceList, addPriceListEntries } from '@/lib/db/price-lists';
-import type { CreatePriceListInput } from '@/types/listini';
+import { getSpedisciOnlineCredentials } from "@/lib/actions/spedisci-online";
+import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
+import { auth } from "@/lib/auth-config";
+import { supabaseAdmin } from "@/lib/db/client";
+import { addPriceListEntries, createPriceList } from "@/lib/db/price-lists";
+import type { CreatePriceListInput } from "@/types/listini";
 
 /**
  * Test endpoint /shipping/rates con parametri di esempio
- * 
+ *
  * @param testParams - Parametri opzionali per il test (se non forniti, usa valori di default)
  * @returns Risultato del test con rates ottenuti
  */
@@ -71,7 +71,7 @@ export async function testSpedisciOnlineRates(testParams?: {
   try {
     const session = await auth();
     if (!session?.user?.email) {
-      return { success: false, error: 'Non autenticato' };
+      return { success: false, error: "Non autenticato" };
     }
 
     // Recupera credenziali
@@ -79,7 +79,8 @@ export async function testSpedisciOnlineRates(testParams?: {
     if (!credentialsResult.success || !credentialsResult.credentials) {
       return {
         success: false,
-        error: 'Credenziali spedisci.online non configurate. Configura le credenziali in /dashboard/integrazioni',
+        error:
+          "Credenziali spedisci.online non configurate. Configura le credenziali in /dashboard/integrazioni",
       };
     }
 
@@ -89,7 +90,7 @@ export async function testSpedisciOnlineRates(testParams?: {
     const adapter = new SpedisciOnlineAdapter({
       api_key: credentials.api_key,
       api_secret: credentials.api_secret,
-      base_url: credentials.base_url || 'https://api.spedisci.online/api/v2',
+      base_url: credentials.base_url || "https://api.spedisci.online/api/v2",
       contract_mapping: credentials.contract_mapping || {},
     });
 
@@ -104,28 +105,28 @@ export async function testSpedisciOnlineRates(testParams?: {
         },
       ],
       shipFrom: {
-        name: 'Mittente Test',
-        company: 'Azienda Test',
-        street1: 'Via Roma 1',
-        street2: '',
-        city: 'Roma',
-        state: 'RM',
-        postalCode: '00100',
-        country: 'IT',
-        email: 'mittente@example.com',
+        name: "Mittente Test",
+        company: "Azienda Test",
+        street1: "Via Roma 1",
+        street2: "",
+        city: "Roma",
+        state: "RM",
+        postalCode: "00100",
+        country: "IT",
+        email: "mittente@example.com",
       },
       shipTo: {
-        name: 'Destinatario Test',
-        company: '',
-        street1: 'Via Milano 2',
-        street2: '',
-        city: 'Milano',
-        state: 'MI',
-        postalCode: '20100',
-        country: 'IT',
-        email: 'destinatario@example.com',
+        name: "Destinatario Test",
+        company: "",
+        street1: "Via Milano 2",
+        street2: "",
+        city: "Milano",
+        state: "MI",
+        postalCode: "20100",
+        country: "IT",
+        email: "destinatario@example.com",
       },
-      notes: 'Test API rates',
+      notes: "Test API rates",
       insuranceValue: 0,
       codValue: 0,
       accessoriServices: [],
@@ -136,9 +137,11 @@ export async function testSpedisciOnlineRates(testParams?: {
       shipFrom: testParams?.shipFrom || defaultParams.shipFrom,
       shipTo: testParams?.shipTo || defaultParams.shipTo,
       notes: testParams?.notes || defaultParams.notes,
-      insuranceValue: testParams?.insuranceValue ?? defaultParams.insuranceValue,
+      insuranceValue:
+        testParams?.insuranceValue ?? defaultParams.insuranceValue,
       codValue: testParams?.codValue ?? defaultParams.codValue,
-      accessoriServices: testParams?.accessoriServices || defaultParams.accessoriServices,
+      accessoriServices:
+        testParams?.accessoriServices || defaultParams.accessoriServices,
     };
 
     // Misura tempo di risposta
@@ -149,7 +152,7 @@ export async function testSpedisciOnlineRates(testParams?: {
     if (!result.success || !result.rates) {
       return {
         success: false,
-        error: result.error || 'Errore sconosciuto durante il test',
+        error: result.error || "Errore sconosciuto durante il test",
         details: {
           responseTime,
         },
@@ -157,9 +160,7 @@ export async function testSpedisciOnlineRates(testParams?: {
     }
 
     // Estrai informazioni utili
-    const carriersFound = [
-      ...new Set(result.rates.map((r) => r.carrierCode)),
-    ];
+    const carriersFound = [...new Set(result.rates.map((r) => r.carrierCode))];
     const contractsFound = result.rates.map((r) => r.contractCode);
 
     return {
@@ -172,19 +173,19 @@ export async function testSpedisciOnlineRates(testParams?: {
       },
     };
   } catch (error: any) {
-    console.error('Errore test rates spedisci.online:', error);
+    console.error("Errore test rates spedisci.online:", error);
     return {
       success: false,
-      error: error.message || 'Errore durante il test dei rates',
+      error: error.message || "Errore durante il test dei rates",
     };
   }
 }
 
 /**
  * Sincronizza listini prezzi da spedisci.online
- * 
+ *
  * Crea o aggiorna listini nel database basandosi sui rates ottenuti da spedisci.online
- * 
+ *
  * @param options - Opzioni per la sincronizzazione
  * @returns Risultato della sincronizzazione
  */
@@ -207,45 +208,105 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   try {
     const session = await auth();
     if (!session?.user?.email) {
-      return { success: false, error: 'Non autenticato' };
+      return { success: false, error: "Non autenticato" };
     }
 
     // Verifica permessi: solo admin, reseller e BYOC possono sincronizzare
     const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', session.user.email)
+      .from("users")
+      .select("id, account_type, is_reseller")
+      .eq("email", session.user.email)
       .single();
 
     if (!user) {
-      return { success: false, error: 'Utente non trovato' };
+      return { success: false, error: "Utente non trovato" };
     }
 
     const isAdmin =
-      user.account_type === 'admin' || user.account_type === 'superadmin';
+      user.account_type === "admin" || user.account_type === "superadmin";
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
+    const isBYOC = user.account_type === "byoc";
 
     if (!isAdmin && !isReseller && !isBYOC) {
       return {
         success: false,
-        error: 'Solo admin, reseller e BYOC possono sincronizzare listini',
+        error: "Solo admin, reseller e BYOC possono sincronizzare listini",
       };
     }
 
-    // 1. Ottieni rates da spedisci.online
-    const testResult = await testSpedisciOnlineRates(options?.testParams);
-    if (!testResult.success || !testResult.rates || testResult.rates.length === 0) {
+    // 1. Matrix Sync Logic
+    const { PRICING_MATRIX } = await import("@/lib/constants/pricing-matrix");
+
+    // Preparazione array risultati
+    const allRates: any[] = [];
+    const processedCombinations = new Set<string>();
+
+    const zones = PRICING_MATRIX.ZONES;
+    // Use a simplified set of weights to avoid timeout, but ensure we cover key brackets
+    // 1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105
+    const weightsToProbe = [1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105];
+
+    console.log(
+      `🚀 Starting High-Fidelity Sync: ${zones.length} Zones x ${weightsToProbe.length} Weights`
+    );
+
+    // Loop through Zones and Weights
+    for (const zone of zones) {
+      for (const weight of weightsToProbe) {
+        // Validation params for this iteration
+        const currentParams = {
+          packages: [{ length: 30, width: 20, height: 15, weight }],
+          shipFrom: {
+            name: "Mittente Test",
+            city: "Roma",
+            state: "RM",
+            postalCode: "00100",
+            country: "IT",
+            street1: "Via Roma 1",
+          },
+          shipTo: {
+            name: "Destinatario Test",
+            street1: "Via Test 123",
+            city: zone.sampleAddress.city,
+            state: zone.sampleAddress.state,
+            postalCode: zone.sampleAddress.postalCode,
+            country: zone.sampleAddress.country,
+          },
+        };
+
+        // Call API (using existing test function logic but we need to inject credentials efficiently)
+        // Optimization: We re-use getSpedisciOnlineCredentials only once outside loop if possible,
+        // but testSpedisciOnlineRates fetches it every time.
+        // For now, to keep it robust, we call testSpedisciOnlineRates but we need to be mindful of rate limits.
+        // In a real prod scenario, we'd refactor to pass the adapter instance.
+
+        // Call the test function (which instantiates a new adapter each time - inefficient but safe for now)
+        const result = await testSpedisciOnlineRates(currentParams);
+
+        if (result.success && result.rates) {
+          for (const rate of result.rates) {
+            // Enrich rate with our probe metadata
+            (rate as any)._probe_weight = weight;
+            (rate as any)._probe_zone = zone.code;
+            allRates.push(rate);
+          }
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+
+    if (allRates.length === 0) {
       return {
         success: false,
-        error: testResult.error || 'Nessun rate ottenuto da spedisci.online',
+        error:
+          "Nessun rate ottenuto durante il Matrix Scan. Verifica credenziali.",
       };
     }
 
-    const rates = testResult.rates;
-    const carriersProcessed = [
-      ...new Set(rates.map((r) => r.carrierCode)),
-    ];
+    const rates = allRates;
+    const carriersProcessed = [...new Set(rates.map((r) => r.carrierCode))];
 
     // 2. Raggruppa rates per corriere
     const ratesByCarrier: Record<
@@ -259,6 +320,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         services_price: string;
         fuel: string;
         total_price: string;
+        _probe_weight?: number;
+        _probe_zone?: string;
       }>
     > = {};
 
@@ -277,28 +340,37 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     let entriesAdded = 0;
 
     // Prova a recuperare corrieri esistenti (opzionale, non blocca se fallisce)
-    let couriers: Array<{ id: string; code: string | null; name: string | null }> | null = null;
+    let couriers: Array<{
+      id: string;
+      code: string | null;
+      name: string | null;
+    }> | null = null;
     try {
       const { data, error } = await supabaseAdmin
-        .from('couriers')
-        .select('id, code, name');
-      
+        .from("couriers")
+        .select("id, code, name");
+
       if (!error && data) {
         couriers = data;
       }
     } catch (e) {
-      console.log('ℹ️ Tabella couriers non accessibile, proseguo senza matching corrieri');
+      console.log(
+        "ℹ️ Tabella couriers non accessibile, proseguo senza matching corrieri"
+      );
     }
 
     // Crea mappa per matching intelligente (se abbiamo corrieri)
-    const courierMap = new Map<string, { id: string; code: string | null; name: string | null }>();
+    const courierMap = new Map<
+      string,
+      { id: string; code: string | null; name: string | null }
+    >();
     if (couriers) {
       couriers.forEach((c) => {
         if (c.code) {
           courierMap.set(c.code.toLowerCase(), c);
         }
         if (c.name) {
-          const normalizedName = c.name.toLowerCase().replace(/\s+/g, '');
+          const normalizedName = c.name.toLowerCase().replace(/\s+/g, "");
           courierMap.set(normalizedName, c);
         }
       });
@@ -306,39 +378,41 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
     // Mappa alias corrieri da spedisci.online a nomi DB
     const courierAliases: Record<string, string[]> = {
-      'postedeliverybusiness': ['poste', 'posteitaliane', 'sda'],
-      'poste': ['poste', 'posteitaliane'],
-      'sda': ['sda'],
-      'gls': ['gls'],
-      'brt': ['bartolini', 'brt'],
-      'bartolini': ['bartolini', 'brt'],
-      'dhl': ['dhl'],
-      'ups': ['ups'],
-      'fedex': ['fedex', 'fdx'],
-      'tnt': ['tnt'],
+      postedeliverybusiness: ["poste", "posteitaliane", "sda"],
+      poste: ["poste", "posteitaliane"],
+      sda: ["sda"],
+      gls: ["gls"],
+      brt: ["bartolini", "brt"],
+      bartolini: ["bartolini", "brt"],
+      dhl: ["dhl"],
+      ups: ["ups"],
+      fedex: ["fedex", "fdx"],
+      tnt: ["tnt"],
     };
 
     for (const [carrierCode, carrierRates] of Object.entries(ratesByCarrier)) {
       // Prova a trovare courier_id se abbiamo la tabella couriers
       let courierId: string | undefined = undefined;
       const courierName = carrierCode;
-      
+
       if (options?.courierId) {
         courierId = options.courierId;
       } else if (courierMap.size > 0) {
         // Prova matching intelligente
-        const normalizedCarrierCode = carrierCode.toLowerCase().replace(/\s+/g, '');
+        const normalizedCarrierCode = carrierCode
+          .toLowerCase()
+          .replace(/\s+/g, "");
         let courier = courierMap.get(normalizedCarrierCode);
-        
+
         // Prova con gli alias
         if (!courier) {
           const aliases = courierAliases[normalizedCarrierCode] || [];
           for (const alias of aliases) {
-            courier = courierMap.get(alias.toLowerCase().replace(/\s+/g, ''));
+            courier = courierMap.get(alias.toLowerCase().replace(/\s+/g, ""));
             if (courier) break;
           }
         }
-        
+
         if (courier) {
           courierId = courier.id;
         }
@@ -348,35 +422,37 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       if (courierId) {
         console.log(`✅ Corriere ${carrierCode} associato a ID: ${courierId}`);
       } else {
-        console.log(`ℹ️ Corriere ${carrierCode}: creazione listino senza courier_id (tabella couriers non disponibile o corriere non trovato)`);
+        console.log(
+          `ℹ️ Corriere ${carrierCode}: creazione listino senza courier_id (tabella couriers non disponibile o corriere non trovato)`
+        );
       }
 
       // Verifica se esiste già un listino per questo corriere
       // Cerca sia per courier_id (se disponibile) che per nome (per fallback)
       let existingPriceList: { id: string } | null = null;
-      
+
       if (courierId) {
         const { data } = await supabaseAdmin
-          .from('price_lists')
-          .select('id')
-          .eq('courier_id', courierId)
-          .eq('created_by', user.id)
-          .eq('list_type', 'supplier')
-          .order('created_at', { ascending: false })
+          .from("price_lists")
+          .select("id")
+          .eq("courier_id", courierId)
+          .eq("created_by", user.id)
+          .eq("list_type", "supplier")
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
         existingPriceList = data;
       }
-      
+
       // Se non trovato per courier_id, cerca per nome contenente il carrier code
       if (!existingPriceList) {
         const { data } = await supabaseAdmin
-          .from('price_lists')
-          .select('id')
-          .eq('created_by', user.id)
-          .eq('list_type', 'supplier')
-          .ilike('name', `%${carrierCode}%`)
-          .order('created_at', { ascending: false })
+          .from("price_lists")
+          .select("id")
+          .eq("created_by", user.id)
+          .eq("list_type", "supplier")
+          .ilike("name", `%${carrierCode}%`)
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
         existingPriceList = data;
@@ -384,7 +460,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
       const priceListName =
         options?.priceListName ||
-        `Listino ${carrierCode.toUpperCase()} - ${new Date().toLocaleDateString('it-IT')}`;
+        `Listino ${carrierCode.toUpperCase()} - ${new Date().toLocaleDateString(
+          "it-IT"
+        )}`;
 
       let priceListId: string;
 
@@ -395,20 +473,20 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
         // Elimina entries esistenti
         await supabaseAdmin
-          .from('price_list_entries')
+          .from("price_list_entries")
           .delete()
-          .eq('price_list_id', priceListId);
+          .eq("price_list_id", priceListId);
       } else {
         // Crea nuovo listino
         // courier_id può essere undefined, quindi usiamo null esplicitamente
         const priceListData: CreatePriceListInput = {
           name: priceListName,
-          version: '1.0',
-          status: 'draft',
+          version: "1.0",
+          status: "draft",
           courier_id: courierId || null,
-          list_type: 'supplier',
+          list_type: "supplier",
           is_global: false,
-          source_type: 'api',
+          source_type: "api",
           notes: `Corriere: ${carrierCode.toUpperCase()} | Sincronizzato da spedisci.online il ${new Date().toISOString()}`,
         };
 
@@ -425,7 +503,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       const entries = carrierRates.map((rate) => {
         // Parsing sicuro con validazione
         const basePrice = Math.max(0, parseFloat(rate.weight_price) || 0);
-        const insurancePrice = Math.max(0, parseFloat(rate.insurance_price) || 0);
+        const insurancePrice = Math.max(
+          0,
+          parseFloat(rate.insurance_price) || 0
+        );
         const codPrice = Math.max(0, parseFloat(rate.cod_price) || 0);
         const fuelPrice = Math.max(0, parseFloat(rate.fuel) || 0);
 
@@ -444,31 +525,68 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         // Mappa contractCode a CourierServiceType
         // Esempi: "gls-standard" -> "standard", "gls-express" -> "express"
         const contractCodeLower = rate.contractCode.toLowerCase();
-        let serviceType: 'standard' | 'express' | 'economy' | 'same_day' | 'next_day' = 'standard';
-        
-        if (contractCodeLower.includes('express') || contractCodeLower.includes('rapid')) {
-          serviceType = 'express';
-        } else if (contractCodeLower.includes('economy') || contractCodeLower.includes('economico')) {
-          serviceType = 'economy';
-        } else if (contractCodeLower.includes('same_day') || contractCodeLower.includes('stesso_giorno')) {
-          serviceType = 'same_day';
-        } else if (contractCodeLower.includes('next_day') || contractCodeLower.includes('giorno_successivo')) {
-          serviceType = 'next_day';
+        let serviceType:
+          | "standard"
+          | "express"
+          | "economy"
+          | "same_day"
+          | "next_day" = "standard";
+
+        if (
+          contractCodeLower.includes("express") ||
+          contractCodeLower.includes("rapid")
+        ) {
+          serviceType = "express";
+        } else if (
+          contractCodeLower.includes("economy") ||
+          contractCodeLower.includes("economico")
+        ) {
+          serviceType = "economy";
+        } else if (
+          contractCodeLower.includes("same_day") ||
+          contractCodeLower.includes("stesso_giorno")
+        ) {
+          serviceType = "same_day";
+        } else if (
+          contractCodeLower.includes("next_day") ||
+          contractCodeLower.includes("giorno_successivo")
+        ) {
+          serviceType = "next_day";
         }
 
         // Validazione valori per compatibilità DECIMAL
         // DECIMAL(10,2) = max 99999999.99
         // DECIMAL(5,2) = max 999.99
         // DECIMAL(10,3) = max 9999999.999
-        const validatedBasePrice = Math.min(99999999.99, Math.max(0, basePrice));
+        const validatedBasePrice = Math.min(
+          99999999.99,
+          Math.max(0, basePrice)
+        );
         const validatedCodPrice = Math.min(99999999.99, Math.max(0, codPrice));
-        const validatedFuelPercent = Math.min(999.99, Math.max(0, fuelSurchargePercent));
-        const validatedInsurancePercent = Math.min(999.99, Math.max(0, insuranceRatePercent));
+        const validatedFuelPercent = Math.min(
+          999.99,
+          Math.max(0, fuelSurchargePercent)
+        );
+        const validatedInsurancePercent = Math.min(
+          999.99,
+          Math.max(0, insuranceRatePercent)
+        );
+
+        const probeWeight = (rate as any)._probe_weight || 999.999;
+        const probeZone = (rate as any)._probe_zone || "IT";
+
+        // Weights used in the probe loop
+        const probedWeights = [1, 2, 3, 5, 10, 20, 30, 50, 70, 100, 105];
+        const currentIndex = probedWeights.indexOf(probeWeight);
+        const weightFrom =
+          currentIndex > 0 ? probedWeights[currentIndex - 1] : 0; // Start from exact previous weight
+        // Note: Logic handles intervals (e.g. >10 to <=20).
+        // Sync logic is simplified: "From previous breakpoint to current breakpoint".
 
         return {
-          weight_from: 0, // I rates sono per un peso specifico, usiamo 0 come minimo
-          weight_to: 999.999, // Massimo per DECIMAL(10,3)
-          zone_code: 'IT', // Default Italia
+          weight_from: weightFrom,
+          weight_to: probeWeight,
+          zone_code: probeZone,
           base_price: validatedBasePrice,
           service_type: serviceType,
           fuel_surcharge_percent: validatedFuelPercent,
@@ -494,11 +612,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       },
     };
   } catch (error: any) {
-    console.error('Errore sincronizzazione listini da spedisci.online:', error);
+    console.error("Errore sincronizzazione listini da spedisci.online:", error);
     return {
       success: false,
-      error: error.message || 'Errore durante la sincronizzazione',
+      error: error.message || "Errore durante la sincronizzazione",
     };
   }
 }
-

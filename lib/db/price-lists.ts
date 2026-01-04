@@ -4,22 +4,30 @@
  * CRUD operations per listini prezzi corrieri
  */
 
-import { supabase, supabaseAdmin } from './client';
-import type { PriceList, PriceListEntry, CreatePriceListInput, UpdatePriceListInput } from '@/types/listini';
-import { calculatePriceFromList } from '@/lib/pricing/calculator';
+import { calculatePriceFromList } from "@/lib/pricing/calculator";
+import type {
+  CreatePriceListInput,
+  PriceList,
+  PriceListEntry,
+  UpdatePriceListInput,
+} from "@/types/listini";
+import { supabase, supabaseAdmin } from "./client";
 
 // Re-export funzioni avanzate
-export { 
-  getApplicablePriceList, 
-  calculatePriceWithRules 
-} from './price-lists-advanced';
+export {
+  calculatePriceWithRules,
+  getApplicablePriceList,
+} from "./price-lists-advanced";
 
 /**
  * Crea nuovo listino
  */
-export async function createPriceList(data: CreatePriceListInput, userId: string): Promise<PriceList> {
+export async function createPriceList(
+  data: CreatePriceListInput,
+  userId: string
+): Promise<PriceList> {
   const { data: priceList, error } = await supabaseAdmin
-    .from('price_lists')
+    .from("price_lists")
     .insert({
       ...data,
       created_by: userId,
@@ -28,7 +36,7 @@ export async function createPriceList(data: CreatePriceListInput, userId: string
     .single();
 
   if (error) {
-    console.error('Error creating price list:', error);
+    console.error("Error creating price list:", error);
     throw new Error(`Errore creazione listino: ${error.message}`);
   }
 
@@ -44,18 +52,18 @@ export async function updatePriceList(
   userId: string
 ): Promise<PriceList> {
   const { data: priceList, error } = await supabaseAdmin
-    .from('price_lists')
+    .from("price_lists")
     .update({
       ...data,
       updated_at: new Date().toISOString(),
       updated_by: userId,
     })
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating price list:', error);
+    console.error("Error updating price list:", error);
     throw new Error(`Errore aggiornamento listino: ${error.message}`);
   }
 
@@ -67,23 +75,36 @@ export async function updatePriceList(
  */
 export async function getPriceListById(id: string): Promise<PriceList | null> {
   const { data, error } = await supabaseAdmin
-    .from('price_lists')
-    .select('*, courier:couriers(*), entries:price_list_entries(*)')
-    .eq('id', id)
+    .from("price_lists")
+    .select("*, entries:price_list_entries(*)")
+    .eq("id", id)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') return null;
-    console.error('Error fetching price list:', error);
+    if (error.code === "PGRST116") return null;
+    console.error("Error fetching price list:", error);
     return null;
   }
 
+  // Manual fetch for courier to avoid missing FK relationship error (PGRST200)
+  if (data && data.courier_id) {
+    const { data: courier } = await supabaseAdmin
+      .from("couriers")
+      .select("*")
+      .eq("id", data.courier_id)
+      .single();
+
+    if (courier) {
+      (data as any).courier = courier;
+    }
+  }
+
   // Parse rules JSONB se presente
-  if (data.rules && typeof data.rules === 'string') {
+  if (data.rules && typeof data.rules === "string") {
     try {
-      data.rules = JSON.parse(data.rules)
+      data.rules = JSON.parse(data.rules);
     } catch {
-      data.rules = []
+      data.rules = [];
     }
   }
 
@@ -95,13 +116,13 @@ export async function getPriceListById(id: string): Promise<PriceList | null> {
  */
 export async function listPriceListsByCourier(courierId: string) {
   const { data, error } = await supabase
-    .from('price_lists')
-    .select('*, courier:couriers(*)')
-    .eq('courier_id', courierId)
-    .order('created_at', { ascending: false });
+    .from("price_lists")
+    .select("*, courier:couriers(*)")
+    .eq("courier_id", courierId)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Error listing price lists:', error);
+    console.error("Error listing price lists:", error);
     throw new Error(`Errore recupero listini: ${error.message}`);
   }
 
@@ -113,12 +134,12 @@ export async function listPriceListsByCourier(courierId: string) {
  */
 export async function listAllPriceLists() {
   const { data, error } = await supabase
-    .from('price_lists')
-    .select('*, courier:couriers(*)')
-    .order('created_at', { ascending: false });
+    .from("price_lists")
+    .select("*, courier:couriers(*)")
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error('Error listing all price lists:', error);
+    console.error("Error listing all price lists:", error);
     throw new Error(`Errore recupero listini: ${error.message}`);
   }
 
@@ -128,23 +149,25 @@ export async function listAllPriceLists() {
 /**
  * Ottieni listino attivo per corriere
  */
-export async function getActivePriceList(courierId: string): Promise<PriceList | null> {
-  const now = new Date().toISOString().split('T')[0];
+export async function getActivePriceList(
+  courierId: string
+): Promise<PriceList | null> {
+  const now = new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
-    .from('price_lists')
-    .select('*, entries:price_list_entries(*)')
-    .eq('courier_id', courierId)
-    .eq('status', 'active')
-    .lte('valid_from', now)
+    .from("price_lists")
+    .select("*, entries:price_list_entries(*)")
+    .eq("courier_id", courierId)
+    .eq("status", "active")
+    .lte("valid_from", now)
     .or(`valid_until.is.null,valid_until.gte.${now}`)
-    .order('created_at', { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(1)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') return null;
-    console.error('Error fetching active price list:', error);
+    if (error.code === "PGRST116") return null;
+    console.error("Error fetching active price list:", error);
     return null;
   }
 
@@ -156,19 +179,19 @@ export async function getActivePriceList(courierId: string): Promise<PriceList |
  */
 export async function addPriceListEntries(
   priceListId: string,
-  entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[]
+  entries: Omit<PriceListEntry, "id" | "price_list_id" | "created_at">[]
 ): Promise<void> {
-  const entriesWithListId = entries.map(entry => ({
+  const entriesWithListId = entries.map((entry) => ({
     ...entry,
     price_list_id: priceListId,
   }));
 
-  const { error } = await supabase
-    .from('price_list_entries')
+  const { error } = await supabaseAdmin
+    .from("price_list_entries")
     .insert(entriesWithListId);
 
   if (error) {
-    console.error('Error adding price list entries:', error);
+    console.error("Error adding price list entries:", error);
     throw new Error(`Errore aggiunta righe listino: ${error.message}`);
   }
 }
@@ -180,7 +203,7 @@ export async function calculatePrice(
   courierId: string,
   weight: number,
   destinationZip: string,
-  serviceType: string = 'standard',
+  serviceType: string = "standard",
   options?: {
     declaredValue?: number;
     cashOnDelivery?: boolean;
@@ -225,15 +248,15 @@ export async function calculatePrice(
  */
 export async function updatePriceListStatus(
   id: string,
-  status: 'draft' | 'active' | 'archived'
+  status: "draft" | "active" | "archived"
 ): Promise<void> {
   const { error } = await supabase
-    .from('price_lists')
+    .from("price_lists")
     .update({ status })
-    .eq('id', id);
+    .eq("id", id);
 
   if (error) {
-    console.error('Error updating price list status:', error);
+    console.error("Error updating price list status:", error);
     throw new Error(`Errore aggiornamento status listino: ${error.message}`);
   }
 }
@@ -242,40 +265,45 @@ export async function updatePriceListStatus(
  * Elimina listino
  */
 export async function deletePriceList(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('price_lists')
+  const { error } = await supabaseAdmin
+    .from("price_lists")
     .delete()
-    .eq('id', id);
+    .eq("id", id);
 
   if (error) {
-    console.error('Error deleting price list:', error);
+    console.error("Error deleting price list:", error);
     throw new Error(`Errore eliminazione listino: ${error.message}`);
   }
 }
 
 /**
  * Recupera corrieri disponibili per un utente
- * 
+ *
  * Basato su:
  * 1. Configurazioni API (courier_configs) con owner_user_id = userId
  * 2. contract_mapping JSONB per estrarre corrieri (GLS, BRT, SDA, ecc.)
- * 
+ *
  * @param userId - ID utente
  * @returns Array di oggetti { courierId: string, courierName: string, providerId: string, contractCode: string }
  */
-export async function getAvailableCouriersForUser(
-  userId: string
-): Promise<Array<{ courierId: string; courierName: string; providerId: string; contractCode: string }>> {
+export async function getAvailableCouriersForUser(userId: string): Promise<
+  Array<{
+    courierId: string;
+    courierName: string;
+    providerId: string;
+    contractCode: string;
+  }>
+> {
   try {
     // 1. Recupera configurazioni API dell'utente
     const { data: configs, error } = await supabaseAdmin
-      .from('courier_configs')
-      .select('id, provider_id, contract_mapping')
-      .eq('owner_user_id', userId)
-      .eq('is_active', true);
+      .from("courier_configs")
+      .select("id, provider_id, contract_mapping")
+      .eq("owner_user_id", userId)
+      .eq("is_active", true);
 
     if (error) {
-      console.error('Errore recupero configurazioni:', error);
+      console.error("Errore recupero configurazioni:", error);
       return [];
     }
 
@@ -286,14 +314,20 @@ export async function getAvailableCouriersForUser(
     // 2. Estrai corrieri da contract_mapping
     // NOTA: Le CHIAVI sono i codici contratto (es. "gls-*", "postedeliverybusiness-SDA---Express---H24+")
     //       I VALORI sono i nomi corriere (es. "Gls", "PosteDeliveryBusiness")
-    const couriersMap = new Map<string, { courierName: string; providerId: string; contractCode: string }>();
+    const couriersMap = new Map<
+      string,
+      { courierName: string; providerId: string; contractCode: string }
+    >();
 
     for (const config of configs) {
-      const contractMapping = (config.contract_mapping as Record<string, string>) || {};
+      const contractMapping =
+        (config.contract_mapping as Record<string, string>) || {};
       const providerId = config.provider_id;
 
       // contractCode = chiave (codice contratto), courierName = valore (nome corriere)
-      for (const [contractCode, courierName] of Object.entries(contractMapping)) {
+      for (const [contractCode, courierName] of Object.entries(
+        contractMapping
+      )) {
         if (!couriersMap.has(courierName)) {
           couriersMap.set(courierName, {
             courierName,
@@ -309,9 +343,9 @@ export async function getAvailableCouriersForUser(
     for (const [courierName, data] of Array.from(couriersMap.entries())) {
       // Prova a trovare courier_id nella tabella couriers
       const { data: courier } = await supabaseAdmin
-        .from('couriers')
-        .select('id, name')
-        .ilike('name', `%${courierName}%`)
+        .from("couriers")
+        .select("id, name")
+        .ilike("name", `%${courierName}%`)
         .limit(1)
         .maybeSingle();
 
@@ -325,7 +359,7 @@ export async function getAvailableCouriersForUser(
 
     return result;
   } catch (error: any) {
-    console.error('Errore getAvailableCouriersForUser:', error);
+    console.error("Errore getAvailableCouriersForUser:", error);
     return [];
   }
 }
