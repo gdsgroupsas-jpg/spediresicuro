@@ -211,11 +211,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     carriersProcessed?: string[];
   };
 }> {
-  // 🔒 P1-2: Lock best-effort per evitare sync concorrenti (riduce duplicati/consistenza).
-  // Nota: se RPC non disponibile in un ambiente, continuiamo senza lock (no regressioni).
-  let lockKey: string | null = null;
-  let lockAcquired = false;
-  let lockErrorMessage: string | null = null;
+  // ⚠️ RIMOZIONE LOCK: Le sync dei listini non sono critiche come le spedizioni.
+  // Non c'è rischio finanziario, quindi il lock causa più problemi che benefici.
+  // Se necessario, possiamo aggiungere un semplice flag in-memory per prevenire sync simultanee.
   try {
     const session = await auth();
     if (!session?.user?.email) {
@@ -243,134 +241,6 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         success: false,
         error: "Solo admin, reseller e BYOC possono sincronizzare listini",
       };
-    }
-
-    // Acquisisci lock (best-effort)
-    // TTL ridotto a 5 minuti per sync listini (non critico come spedizioni)
-    // Se la sync fallisce, il lock scade rapidamente permettendo retry
-    lockKey = `sync_price_lists:${user.id}:${options?.configId || "default"}:${
-      options?.courierId || "all"
-    }`;
-    try {
-      // Prima verifica se c'è un lock esistente e se è scaduto
-      const { data: existingLock } = await supabaseAdmin
-        .from("idempotency_locks")
-        .select("status, expires_at, created_at")
-        .eq("idempotency_key", lockKey)
-        .maybeSingle();
-
-      if (existingLock) {
-        const now = new Date();
-        const expiresAt = new Date(existingLock.expires_at);
-        const createdAt = new Date(existingLock.created_at);
-        const isExpired = expiresAt < now;
-        const isOld = createdAt < new Date(now.getTime() - 2 * 60 * 1000); // Più di 2 minuti fa (ridotto da 10)
-
-        console.log(`🔍 [SYNC] Lock esistente trovato:`, {
-          lockKey,
-          status: existingLock.status,
-          expires_at: existingLock.expires_at,
-          created_at: existingLock.created_at,
-          isExpired,
-          isOld,
-          now: now.toISOString(),
-        });
-
-        if (isExpired || (isOld && existingLock.status === "in_progress")) {
-          // Lock scaduto o vecchio: rilascialo e procedi
-          console.log(
-            `🔄 [SYNC] Lock esistente scaduto/vecchio, rilascio e procedo:`,
-            {
-              status: existingLock.status,
-              expires_at: existingLock.expires_at,
-              created_at: existingLock.created_at,
-              isExpired,
-              isOld,
-            }
-          );
-          try {
-            // Prova a rilasciare il lock vecchio
-            await supabaseAdmin
-              .from("idempotency_locks")
-              .delete()
-              .eq("idempotency_key", lockKey);
-            console.log(`✅ [SYNC] Lock vecchio rimosso: ${lockKey}`);
-          } catch (e) {
-            console.warn(`⚠️ [SYNC] Errore rimozione lock vecchio:`, e);
-            // Prova anche con RPC
-            try {
-              await supabaseAdmin.rpc("fail_idempotency_lock", {
-                p_idempotency_key: lockKey,
-                p_error_message: "Lock scaduto, sostituito da nuova sync",
-              });
-            } catch (e2) {
-              // Ignora errori di rilascio
-            }
-          }
-        } else if (existingLock.status === "in_progress" && !isExpired) {
-          // Lock ancora attivo: non procedere
-          const msg =
-            "Sincronizzazione già in corso. Attendi il completamento o riprova tra qualche minuto.";
-          console.warn(`⚠️ [SYNC] Lock attivo per ${lockKey}:`, {
-            status: existingLock.status,
-            expires_at: existingLock.expires_at,
-            created_at: existingLock.created_at,
-            isExpired,
-            isOld,
-          });
-          return { success: false, error: msg };
-        }
-        // Se status è "completed" o "failed", possiamo procedere (lock verrà sovrascritto)
-      } else {
-        console.log(`✅ [SYNC] Nessun lock esistente, procedo: ${lockKey}`);
-      }
-
-      // Prova ad acquisire lock
-      const { data: lockData, error: lockError } = await supabaseAdmin.rpc(
-        "acquire_idempotency_lock",
-        {
-          p_idempotency_key: lockKey,
-          p_user_id: user.id,
-          p_ttl_minutes: 5, // Ridotto da 30 a 5 minuti per sync listini
-        }
-      );
-
-      if (lockError) {
-        console.warn(
-          "⚠️ [LISTINI][SYNC] Impossibile acquisire lock (procedo senza lock):",
-          {
-            code: lockError.code,
-            message: lockError.message,
-          }
-        );
-      } else {
-        // RPC returns TABLE → Supabase spesso ritorna array con una riga
-        const row = Array.isArray(lockData) ? lockData[0] : (lockData as any);
-        if (row?.acquired === true) {
-          lockAcquired = true;
-          console.log(`✅ [SYNC] Lock acquisito: ${lockKey}`);
-        } else {
-          // Lock non acquisito: verifica se è scaduto o in corso
-          const msg =
-            row?.error_message ||
-            "Sincronizzazione già in corso. Attendi il completamento o riprova tra qualche minuto.";
-          
-          console.warn(
-            `⚠️ [SYNC] Lock non acquisito per ${lockKey}:`,
-            {
-              status: row?.status,
-              error_message: row?.error_message,
-            }
-          );
-          
-          return { success: false, error: msg };
-        }
-      }
-    } catch (e) {
-      console.warn(
-        "⚠️ [LISTINI][SYNC] Errore lock inatteso (procedo senza lock):",
-        e
-      );
     }
 
     // 1. Matrix Sync Logic
