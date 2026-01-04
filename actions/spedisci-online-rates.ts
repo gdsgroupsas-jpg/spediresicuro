@@ -252,6 +252,51 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       options?.courierId || "all"
     }`;
     try {
+      // Prima verifica se c'è un lock esistente e se è scaduto
+      const { data: existingLock } = await supabaseAdmin
+        .from("idempotency_locks")
+        .select("status, expires_at, created_at")
+        .eq("idempotency_key", lockKey)
+        .maybeSingle();
+
+      if (existingLock) {
+        const isExpired = new Date(existingLock.expires_at) < new Date();
+        const isOld = 
+          new Date(existingLock.created_at) < 
+          new Date(Date.now() - 10 * 60 * 1000); // Più di 10 minuti fa
+
+        if (isExpired || (isOld && existingLock.status === "in_progress")) {
+          // Lock scaduto o vecchio: rilascialo e procedi
+          console.log(
+            `🔄 [SYNC] Lock esistente scaduto/vecchio, rilascio e procedo:`,
+            {
+              status: existingLock.status,
+              expires_at: existingLock.expires_at,
+              created_at: existingLock.created_at,
+            }
+          );
+          try {
+            await supabaseAdmin.rpc("fail_idempotency_lock", {
+              p_idempotency_key: lockKey,
+              p_error_message: "Lock scaduto, sostituito da nuova sync",
+            });
+          } catch (e) {
+            // Ignora errori di rilascio
+          }
+        } else if (existingLock.status === "in_progress" && !isExpired) {
+          // Lock ancora attivo: non procedere
+          const msg =
+            "Sincronizzazione già in corso. Attendi il completamento o riprova tra qualche minuto.";
+          console.warn(`⚠️ [SYNC] Lock attivo per ${lockKey}:`, {
+            status: existingLock.status,
+            expires_at: existingLock.expires_at,
+          });
+          return { success: false, error: msg };
+        }
+        // Se status è "completed" o "failed", possiamo procedere (lock verrà sovrascritto)
+      }
+
+      // Prova ad acquisire lock
       const { data: lockData, error: lockError } = await supabaseAdmin.rpc(
         "acquire_idempotency_lock",
         {
@@ -274,6 +319,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         const row = Array.isArray(lockData) ? lockData[0] : (lockData as any);
         if (row?.acquired === true) {
           lockAcquired = true;
+          console.log(`✅ [SYNC] Lock acquisito: ${lockKey}`);
         } else {
           // Lock non acquisito: verifica se è scaduto o in corso
           const msg =
