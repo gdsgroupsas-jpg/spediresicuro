@@ -181,15 +181,22 @@ export function SyncSpedisciOnlineDialog({
   }
 
   async function handleSync() {
-    // Nota: il test non è più obbligatorio, ma consigliato per verificare la connessione
-    // if (!testResult?.success) {
-    //   toast.error("Esegui prima un test per verificare la connessione");
-    //   return;
-    // }
+    console.log("🔄 [UI] handleSync chiamato, testResult:", testResult);
+    if (!testResult?.success) {
+      console.warn("⚠️ [UI] Test non passato, sync bloccata");
+      toast.error("Esegui prima un test per verificare la connessione");
+      return;
+    }
 
+    console.log("✅ [UI] Test passato, avvio sync...");
     setIsSyncing(true);
 
     try {
+      console.log("📡 [UI] Chiamata syncPriceListsFromSpedisciOnline con:", {
+        configId: selectedConfigId,
+        mode: "fast",
+        overwriteExisting: syncOptions.overwriteExisting,
+      });
       const result = await syncPriceListsFromSpedisciOnline({
         testParams: {
           packages: [
@@ -234,7 +241,9 @@ export function SyncSpedisciOnlineDialog({
         mode: "fast",
       });
 
+      console.log("📥 [UI] Risultato sync ricevuto:", result);
       if (result.success) {
+        console.log("✅ [UI] Sync completata con successo!");
         toast.success(
           `Sincronizzazione completata! Creati ${
             result.priceListsCreated || 0
@@ -245,9 +254,11 @@ export function SyncSpedisciOnlineDialog({
         onSyncComplete?.();
         onOpenChange(false);
       } else {
+        console.error("❌ [UI] Sync fallita:", result.error);
         toast.error(result.error || "Errore durante la sincronizzazione");
       }
     } catch (error: any) {
+      console.error("💥 [UI] Errore durante sync:", error);
       toast.error(error.message || "Errore durante la sincronizzazione");
     } finally {
       setIsSyncing(false);
