@@ -89,7 +89,7 @@ test.describe('Stripe Payment Flow', () => {
     });
 
     // Cerca e clicca button ricarica
-    const rechargeButton = page.locator('button:has-text("Ricarica"), button:has-text("Ricarica Credito")').first();
+    const rechargeButton = page.locator('button:has-text("Ricarica Wallet"), button:has-text("Ricarica")').first();
     await expect(rechargeButton).toBeVisible({ timeout: 10000 });
     await rechargeButton.click();
 
@@ -141,7 +141,7 @@ test.describe('Stripe Payment Flow', () => {
     });
 
     // Apri dialog ricarica
-    const rechargeButton = page.locator('button:has-text("Ricarica")').first();
+    const rechargeButton = page.locator('button:has-text("Ricarica Wallet"), button:has-text("Ricarica")').first();
     await expect(rechargeButton).toBeVisible({ timeout: 10000 });
     await rechargeButton.click();
 
