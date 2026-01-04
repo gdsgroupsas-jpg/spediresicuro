@@ -246,6 +246,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     }
 
     // Acquisisci lock (best-effort)
+    // TTL ridotto a 5 minuti per sync listini (non critico come spedizioni)
+    // Se la sync fallisce, il lock scade rapidamente permettendo retry
     lockKey = `sync_price_lists:${user.id}:${options?.configId || "default"}:${
       options?.courierId || "all"
     }`;
@@ -255,7 +257,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         {
           p_idempotency_key: lockKey,
           p_user_id: user.id,
-          p_ttl_minutes: 30,
+          p_ttl_minutes: 5, // Ridotto da 30 a 5 minuti per sync listini
         }
       );
 
@@ -273,9 +275,19 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         if (row?.acquired === true) {
           lockAcquired = true;
         } else {
+          // Lock non acquisito: verifica se è scaduto o in corso
           const msg =
             row?.error_message ||
-            "Sincronizzazione già in corso. Attendi il completamento.";
+            "Sincronizzazione già in corso. Attendi il completamento o riprova tra qualche minuto.";
+          
+          console.warn(
+            `⚠️ [SYNC] Lock non acquisito per ${lockKey}:`,
+            {
+              status: row?.status,
+              error_message: row?.error_message,
+            }
+          );
+          
           return { success: false, error: msg };
         }
       }
