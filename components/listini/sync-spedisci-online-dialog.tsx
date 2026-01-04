@@ -1,22 +1,40 @@
 /**
  * Componente: Dialog Sincronizzazione Listini da Spedisci.Online
- * 
+ *
  * Permette di:
  * 1. Testare l'endpoint /shipping/rates
  * 2. Sincronizzare listini prezzi da spedisci.online
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { RefreshCw, TestTube, CheckCircle2, XCircle, Loader2, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { testSpedisciOnlineRates, syncPriceListsFromSpedisciOnline } from '@/actions/spedisci-online-rates';
+import { listConfigurations } from "@/actions/configurations";
+import {
+  syncPriceListsFromSpedisciOnline,
+  testSpedisciOnlineRates,
+} from "@/actions/spedisci-online-rates";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  Loader2,
+  RefreshCw,
+  TestTube,
+  XCircle,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface SyncSpedisciOnlineDialogProps {
   open: boolean;
@@ -44,20 +62,58 @@ export function SyncSpedisciOnlineDialog({
     length: 30,
     width: 20,
     height: 15,
-    fromCity: 'Roma',
-    fromProvince: 'RM',
-    fromZip: '00100',
-    toCity: 'Milano',
-    toProvince: 'MI',
-    toZip: '20100',
+    fromCity: "Roma",
+    fromProvince: "RM",
+    fromZip: "00100",
+    toCity: "Milano",
+    toProvince: "MI",
+    toZip: "20100",
     insuranceValue: 0,
     codValue: 0,
   });
 
+  const [configurations, setConfigurations] = useState<any[]>([]);
+  const [selectedConfigId, setSelectedConfigId] = useState<string>("");
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
+
   const [syncOptions, setSyncOptions] = useState({
-    priceListName: '',
+    priceListName: "",
     overwriteExisting: false,
   });
+
+  // Carica le configurazioni all'apertura
+  useEffect(() => {
+    if (open) {
+      loadConfigs();
+    }
+  }, [open]);
+
+  const loadConfigs = async () => {
+    setIsLoadingConfigs(true);
+    try {
+      const result = await listConfigurations();
+      if (result.success && result.configs) {
+        // Filtra solo Spedisci.Online
+        const spedisciConfigs = result.configs.filter(
+          (c: any) => c.provider_id === "spedisci_online" && c.is_active
+        );
+        setConfigurations(spedisciConfigs);
+
+        // Seleziona default o il primo
+        const defaultConfig = spedisciConfigs.find((c: any) => c.is_default);
+        if (defaultConfig) {
+          setSelectedConfigId(defaultConfig.id);
+        } else if (spedisciConfigs.length > 0) {
+          setSelectedConfigId(spedisciConfigs[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Errore caricamento configurazioni", error);
+      toast.error("Impossibile caricare le configurazioni");
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  };
 
   async function handleTest() {
     setIsTesting(true);
@@ -74,47 +130,50 @@ export function SyncSpedisciOnlineDialog({
           },
         ],
         shipFrom: {
-          name: 'Mittente Test',
-          company: 'Azienda Test',
-          street1: 'Via Roma 1',
-          street2: '',
+          name: "Mittente Test",
+          company: "Azienda Test",
+          street1: "Via Roma 1",
+          street2: "",
           city: testParams.fromCity,
           state: testParams.fromProvince,
           postalCode: testParams.fromZip,
-          country: 'IT',
-          email: 'mittente@example.com',
+          country: "IT",
+          email: "mittente@example.com",
         },
         shipTo: {
-          name: 'Destinatario Test',
-          company: '',
-          street1: 'Via Milano 2',
-          street2: '',
+          name: "Destinatario Test",
+          company: "",
+          street1: "Via Milano 2",
+          street2: "",
           city: testParams.toCity,
           state: testParams.toProvince,
           postalCode: testParams.toZip,
-          country: 'IT',
-          email: 'destinatario@example.com',
+          country: "IT",
+          email: "destinatario@example.com",
         },
-        notes: 'Test API rates',
+        notes: "Test API rates",
         insuranceValue: testParams.insuranceValue,
         codValue: testParams.codValue,
         accessoriServices: [],
+        configId: selectedConfigId || undefined,
       });
 
       setTestResult(result);
 
       if (result.success) {
         toast.success(
-          `Test completato! Trovati ${result.rates?.length || 0} rates disponibili`
+          `Test completato! Trovati ${
+            result.rates?.length || 0
+          } rates disponibili`
         );
       } else {
-        toast.error(result.error || 'Errore durante il test');
+        toast.error(result.error || "Errore durante il test");
       }
     } catch (error: any) {
-      toast.error(error.message || 'Errore durante il test');
+      toast.error(error.message || "Errore durante il test");
       setTestResult({
         success: false,
-        error: error.message || 'Errore sconosciuto',
+        error: error.message || "Errore sconosciuto",
       });
     } finally {
       setIsTesting(false);
@@ -123,7 +182,7 @@ export function SyncSpedisciOnlineDialog({
 
   async function handleSync() {
     if (!testResult?.success) {
-      toast.error('Esegui prima un test per verificare la connessione');
+      toast.error("Esegui prima un test per verificare la connessione");
       return;
     }
 
@@ -141,47 +200,52 @@ export function SyncSpedisciOnlineDialog({
             },
           ],
           shipFrom: {
-            name: 'Mittente Test',
-            company: 'Azienda Test',
-            street1: 'Via Roma 1',
-            street2: '',
+            name: "Mittente Test",
+            company: "Azienda Test",
+            street1: "Via Roma 1",
+            street2: "",
             city: testParams.fromCity,
             state: testParams.fromProvince,
             postalCode: testParams.fromZip,
-            country: 'IT',
-            email: 'mittente@example.com',
+            country: "IT",
+            email: "mittente@example.com",
           },
           shipTo: {
-            name: 'Destinatario Test',
-            company: '',
-            street1: 'Via Milano 2',
-            street2: '',
+            name: "Destinatario Test",
+            company: "",
+            street1: "Via Milano 2",
+            street2: "",
             city: testParams.toCity,
             state: testParams.toProvince,
             postalCode: testParams.toZip,
-            country: 'IT',
-            email: 'destinatario@example.com',
+            country: "IT",
+            email: "destinatario@example.com",
           },
-          notes: 'Sincronizzazione listini',
+          notes: "Sincronizzazione listini",
           insuranceValue: testParams.insuranceValue,
           codValue: testParams.codValue,
           accessoriServices: [],
         },
         priceListName: syncOptions.priceListName || undefined,
         overwriteExisting: syncOptions.overwriteExisting,
+        configId: selectedConfigId || undefined,
       });
 
       if (result.success) {
         toast.success(
-          `Sincronizzazione completata! Creati ${result.priceListsCreated || 0} listini, aggiornati ${result.priceListsUpdated || 0}, aggiunte ${result.entriesAdded || 0} entries`
+          `Sincronizzazione completata! Creati ${
+            result.priceListsCreated || 0
+          } listini, aggiornati ${result.priceListsUpdated || 0}, aggiunte ${
+            result.entriesAdded || 0
+          } entries`
         );
         onSyncComplete?.();
         onOpenChange(false);
       } else {
-        toast.error(result.error || 'Errore durante la sincronizzazione');
+        toast.error(result.error || "Errore durante la sincronizzazione");
       }
     } catch (error: any) {
-      toast.error(error.message || 'Errore durante la sincronizzazione');
+      toast.error(error.message || "Errore durante la sincronizzazione");
     } finally {
       setIsSyncing(false);
     }
@@ -196,7 +260,8 @@ export function SyncSpedisciOnlineDialog({
             Sincronizza Listini da Spedisci.Online
           </DialogTitle>
           <DialogDescription>
-            Testa l&apos;endpoint /shipping/rates e sincronizza i listini prezzi nel database
+            Testa l&apos;endpoint /shipping/rates e sincronizza i listini prezzi
+            nel database
           </DialogDescription>
         </DialogHeader>
 
@@ -208,6 +273,55 @@ export function SyncSpedisciOnlineDialog({
               1. Test Connessione
             </h3>
 
+            {/* Selezione Account */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+              <Label className="mb-2 block text-blue-900 font-semibold">
+                Seleziona Account Spedisci.Online
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedConfigId}
+                  onChange={(e) => setSelectedConfigId(e.target.value)}
+                  disabled={isLoadingConfigs || configurations.length === 0}
+                  className="w-full bg-white border-blue-200"
+                >
+                  {isLoadingConfigs ? (
+                    <option>Caricamento...</option>
+                  ) : configurations.length === 0 ? (
+                    <option value="">Nessuna configurazione trovata</option>
+                  ) : (
+                    configurations.map((config) => (
+                      <option key={config.id} value={config.id}>
+                        {config.name || `Config ${config.id.substring(0, 6)}`}{" "}
+                        {config.is_default && "(Default)"}
+                      </option>
+                    ))
+                  )}
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={loadConfigs}
+                  title="Ricarica configurazioni"
+                  className="bg-white border-blue-200 hover:bg-blue-50 text-blue-600"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${
+                      isLoadingConfigs ? "animate-spin" : ""
+                    }`}
+                  />
+                </Button>
+              </div>
+              {configurations.length === 0 && !isLoadingConfigs && (
+                <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Nessuna configurazione trovata. Vai in Integrazioni per
+                  aggiungerne una.
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Peso (kg)</Label>
@@ -215,7 +329,10 @@ export function SyncSpedisciOnlineDialog({
                   type="number"
                   value={testParams.weight}
                   onChange={(e) =>
-                    setTestParams({ ...testParams, weight: parseFloat(e.target.value) || 0 })
+                    setTestParams({
+                      ...testParams,
+                      weight: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -227,7 +344,10 @@ export function SyncSpedisciOnlineDialog({
                     placeholder="L"
                     value={testParams.length}
                     onChange={(e) =>
-                      setTestParams({ ...testParams, length: parseFloat(e.target.value) || 0 })
+                      setTestParams({
+                        ...testParams,
+                        length: parseFloat(e.target.value) || 0,
+                      })
                     }
                   />
                   <Input
@@ -235,7 +355,10 @@ export function SyncSpedisciOnlineDialog({
                     placeholder="W"
                     value={testParams.width}
                     onChange={(e) =>
-                      setTestParams({ ...testParams, width: parseFloat(e.target.value) || 0 })
+                      setTestParams({
+                        ...testParams,
+                        width: parseFloat(e.target.value) || 0,
+                      })
                     }
                   />
                   <Input
@@ -243,7 +366,10 @@ export function SyncSpedisciOnlineDialog({
                     placeholder="H"
                     value={testParams.height}
                     onChange={(e) =>
-                      setTestParams({ ...testParams, height: parseFloat(e.target.value) || 0 })
+                      setTestParams({
+                        ...testParams,
+                        height: parseFloat(e.target.value) || 0,
+                      })
                     }
                   />
                 </div>
@@ -263,7 +389,10 @@ export function SyncSpedisciOnlineDialog({
                     className="w-20"
                     value={testParams.fromProvince}
                     onChange={(e) =>
-                      setTestParams({ ...testParams, fromProvince: e.target.value.toUpperCase().slice(0, 2) })
+                      setTestParams({
+                        ...testParams,
+                        fromProvince: e.target.value.toUpperCase().slice(0, 2),
+                      })
                     }
                   />
                   <Input
@@ -291,7 +420,10 @@ export function SyncSpedisciOnlineDialog({
                     className="w-20"
                     value={testParams.toProvince}
                     onChange={(e) =>
-                      setTestParams({ ...testParams, toProvince: e.target.value.toUpperCase().slice(0, 2) })
+                      setTestParams({
+                        ...testParams,
+                        toProvince: e.target.value.toUpperCase().slice(0, 2),
+                      })
                     }
                   />
                   <Input
@@ -310,7 +442,10 @@ export function SyncSpedisciOnlineDialog({
                   type="number"
                   value={testParams.insuranceValue}
                   onChange={(e) =>
-                    setTestParams({ ...testParams, insuranceValue: parseFloat(e.target.value) || 0 })
+                    setTestParams({
+                      ...testParams,
+                      insuranceValue: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -320,7 +455,10 @@ export function SyncSpedisciOnlineDialog({
                   type="number"
                   value={testParams.codValue}
                   onChange={(e) =>
-                    setTestParams({ ...testParams, codValue: parseFloat(e.target.value) || 0 })
+                    setTestParams({
+                      ...testParams,
+                      codValue: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -349,8 +487,8 @@ export function SyncSpedisciOnlineDialog({
               <div
                 className={`p-4 rounded-lg border ${
                   testResult.success
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-red-50 border-red-200'
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
                 }`}
               >
                 <div className="flex items-start gap-2">
@@ -362,46 +500,59 @@ export function SyncSpedisciOnlineDialog({
                   <div className="flex-1">
                     <p
                       className={`font-semibold ${
-                        testResult.success ? 'text-green-900' : 'text-red-900'
+                        testResult.success ? "text-green-900" : "text-red-900"
                       }`}
                     >
-                      {testResult.success ? 'Test Completato' : 'Test Fallito'}
+                      {testResult.success ? "Test Completato" : "Test Fallito"}
                     </p>
                     {testResult.success ? (
                       <div className="mt-2 space-y-1 text-sm text-green-800">
                         <p>
-                          Trovati <strong>{testResult.rates?.length || 0}</strong> rates disponibili
+                          Trovati{" "}
+                          <strong>{testResult.rates?.length || 0}</strong> rates
+                          disponibili
                         </p>
                         {testResult.details?.carriersFound && (
                           <p>
-                            Corrieri: <strong>{testResult.details.carriersFound.join(', ')}</strong>
+                            Corrieri:{" "}
+                            <strong>
+                              {testResult.details.carriersFound.join(", ")}
+                            </strong>
                           </p>
                         )}
                         {testResult.details?.responseTime && (
-                          <p>Tempo di risposta: {testResult.details.responseTime}ms</p>
+                          <p>
+                            Tempo di risposta: {testResult.details.responseTime}
+                            ms
+                          </p>
                         )}
                         {testResult.rates && testResult.rates.length > 0 && (
                           <div className="mt-3">
-                            <p className="font-semibold mb-2">Rates disponibili:</p>
+                            <p className="font-semibold mb-2">
+                              Rates disponibili:
+                            </p>
                             <div className="space-y-2">
-                              {testResult.rates.slice(0, 5).map((rate: any, idx: number) => (
-                                <div
-                                  key={idx}
-                                  className="bg-white p-2 rounded border border-green-200 text-xs"
-                                >
-                                  <div className="flex justify-between">
-                                    <span className="font-semibold">
-                                      {rate.carrierCode} - {rate.contractCode}
-                                    </span>
-                                    <span className="text-green-700 font-bold">
-                                      €{rate.total_price}
-                                    </span>
+                              {testResult.rates
+                                .slice(0, 5)
+                                .map((rate: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="bg-white p-2 rounded border border-green-200 text-xs"
+                                  >
+                                    <div className="flex justify-between">
+                                      <span className="font-semibold">
+                                        {rate.carrierCode} - {rate.contractCode}
+                                      </span>
+                                      <span className="text-green-700 font-bold">
+                                        €{rate.total_price}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
                               {testResult.rates.length > 5 && (
                                 <p className="text-xs text-gray-600">
-                                  ... e altri {testResult.rates.length - 5} rates
+                                  ... e altri {testResult.rates.length - 5}{" "}
+                                  rates
                                 </p>
                               )}
                             </div>
@@ -409,7 +560,9 @@ export function SyncSpedisciOnlineDialog({
                         )}
                       </div>
                     ) : (
-                      <p className="mt-2 text-sm text-red-800">{testResult.error}</p>
+                      <p className="mt-2 text-sm text-red-800">
+                        {testResult.error}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -432,7 +585,10 @@ export function SyncSpedisciOnlineDialog({
                     placeholder="Es: Listino GLS - Gennaio 2025"
                     value={syncOptions.priceListName}
                     onChange={(e) =>
-                      setSyncOptions({ ...syncOptions, priceListName: e.target.value })
+                      setSyncOptions({
+                        ...syncOptions,
+                        priceListName: e.target.value,
+                      })
                     }
                   />
                   <p className="text-xs text-gray-500">
@@ -446,7 +602,10 @@ export function SyncSpedisciOnlineDialog({
                     id="overwrite"
                     checked={syncOptions.overwriteExisting}
                     onChange={(e) =>
-                      setSyncOptions({ ...syncOptions, overwriteExisting: e.target.checked })
+                      setSyncOptions({
+                        ...syncOptions,
+                        overwriteExisting: e.target.checked,
+                      })
                     }
                     className="rounded"
                   />
@@ -480,4 +639,3 @@ export function SyncSpedisciOnlineDialog({
     </Dialog>
   );
 }
-

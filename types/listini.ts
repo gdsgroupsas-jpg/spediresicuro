@@ -1,19 +1,19 @@
 /**
  * Types: Price Lists (Listini)
- * 
+ *
  * Sistema avanzato di gestione listini prezzi con regole complesse,
  * gerarchia multi-utente, versionamento e supporto multi-formato.
  */
 
-import type { CourierServiceType } from './shipments';
+import type { CourierServiceType } from "./shipments";
 
-export type PriceListStatus = 'draft' | 'active' | 'archived';
-export type PriceListPriority = 'global' | 'partner' | 'client' | 'default';
+export type PriceListStatus = "draft" | "active" | "archived";
+export type PriceListPriority = "global" | "partner" | "client" | "default";
 export type { CourierServiceType };
 
 /**
  * Regola di calcolo prezzi avanzata
- * 
+ *
  * Ogni regola definisce come calcolare il prezzo in base a:
  * - Fascia di peso/volume
  * - Area geografica (zone, CAP, province, regioni)
@@ -24,17 +24,17 @@ export type { CourierServiceType };
  */
 export interface PriceRule {
   id?: string; // ID univoco della regola (generato se non fornito)
-  
+
   // Identificazione
   name?: string; // Nome descrittivo della regola
   description?: string; // Descrizione opzionale
-  
+
   // Condizioni di applicabilità
   weight_from?: number; // Peso minimo (kg)
   weight_to?: number; // Peso massimo (kg)
   volume_from?: number; // Volume minimo (m³)
   volume_to?: number; // Volume massimo (m³)
-  
+
   // Area geografica
   zone_codes?: string[]; // Codici zona (es. ["Z1", "Z2", "ISOLE"])
   zip_code_from?: string; // CAP minimo
@@ -42,16 +42,16 @@ export interface PriceRule {
   province_codes?: string[]; // Sigle province (es. ["MI", "RM"])
   regions?: string[]; // Nomi regioni (es. ["Lombardia", "Lazio"])
   countries?: string[]; // Codici paese ISO (es. ["IT", "FR"])
-  
+
   // Corriere e servizio
   courier_ids?: string[]; // ID corrieri applicabili (vuoto = tutti)
   service_types?: CourierServiceType[]; // Tipi servizio (vuoto = tutti)
-  
+
   // Calcolo prezzo
-  margin_type: 'percent' | 'fixed' | 'none'; // Tipo margine
+  margin_type: "percent" | "fixed" | "none"; // Tipo margine
   margin_value?: number; // Valore margine (percentuale o fisso in €)
   base_price_override?: number; // Prezzo base fisso (sovrascrive calcolo)
-  
+
   // Sovrapprezzi
   fuel_surcharge_percent?: number; // Supplemento carburante (%)
   insurance_rate_percent?: number; // Tasso assicurazione (%)
@@ -59,15 +59,15 @@ export interface PriceRule {
   island_surcharge?: number; // Supplemento isole (€)
   ztl_surcharge?: number; // Supplemento ZTL (€)
   express_surcharge?: number; // Supplemento express (€)
-  
+
   // Priorità e matching
   priority: number; // Priorità regola (maggiore = applicata per prima, default: 0)
   is_active: boolean; // Se false, regola ignorata
-  
+
   // Validità temporale
   valid_from?: string; // Data inizio validità (ISO string)
   valid_until?: string; // Data fine validità (ISO string)
-  
+
   // Metadati
   metadata?: Record<string, any>; // Dati aggiuntivi personalizzati
 }
@@ -83,42 +83,42 @@ export interface PriceList {
   name: string;
   version: string;
   status: PriceListStatus;
-  
+
   // Gerarchia e priorità
   priority: PriceListPriority; // 'global' | 'partner' | 'client' | 'default'
   is_global: boolean; // Se true, listino globale (admin)
   assigned_to_user_id?: string; // Se specificato, listino personalizzato per utente
-  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
-  
+  list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
+
   // Versionamento
   valid_from?: string;
   valid_until?: string;
   parent_version_id?: string; // ID versione precedente (per storico)
-  
+
   // Sistema regole avanzato
   rules?: PriceRule[]; // Array di regole di calcolo (JSONB nel DB)
   default_margin_percent?: number; // Margine di default se nessuna regola matcha
   default_margin_fixed?: number; // Margine fisso di default
-  
+
   // Sorgente dati
-  source_type?: 'csv' | 'excel' | 'pdf' | 'manual' | 'api' | 'ocr';
+  source_type?: "csv" | "excel" | "pdf" | "manual" | "api" | "ocr";
   source_file_url?: string;
   source_file_name?: string;
   source_metadata?: Record<string, any>; // Metadati file sorgente
-  
+
   // Note e descrizione
   description?: string;
   notes?: string;
-  
+
   // Compatibilità con sistema legacy
   entries?: PriceListEntry[]; // Righe listino legacy (per retrocompatibilità)
-  
+
   // Audit
   created_at: string;
   updated_at: string;
   created_by?: string;
   updated_by?: string;
-  
+
   // Statistiche
   usage_count?: number; // Numero di volte utilizzato
   last_used_at?: string; // Ultima volta utilizzato
@@ -161,17 +161,18 @@ export interface CreatePriceListInput {
   priority?: PriceListPriority;
   is_global?: boolean;
   assigned_to_user_id?: string;
-  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
+  list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   valid_from?: string;
   valid_until?: string;
   rules?: PriceRule[]; // Regole avanzate
   default_margin_percent?: number;
   default_margin_fixed?: number;
-  source_type?: 'csv' | 'excel' | 'pdf' | 'manual' | 'api' | 'ocr';
+  source_type?: "csv" | "excel" | "pdf" | "manual" | "api" | "ocr";
   source_file_url?: string;
   source_file_name?: string;
   description?: string;
   notes?: string;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -182,7 +183,7 @@ export interface UpdatePriceListInput {
   version?: string;
   status?: PriceListStatus;
   priority?: PriceListPriority;
-  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
+  list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   valid_from?: string;
   valid_until?: string;
   rules?: PriceRule[];
@@ -190,6 +191,7 @@ export interface UpdatePriceListInput {
   default_margin_fixed?: number;
   description?: string;
   notes?: string;
+  metadata?: Record<string, any>;
 }
 
 /**
