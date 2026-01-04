@@ -474,9 +474,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     };
 
     for (const [carrierCode, carrierRates] of Object.entries(ratesByCarrier)) {
-      // Prova a trovare courier_id se abbiamo la tabella couriers
-      let courierId: string | undefined = undefined;
-      const courierName = carrierCode;
+      try {
+        // Prova a trovare courier_id se abbiamo la tabella couriers
+        let courierId: string | undefined = undefined;
+        const courierName = carrierCode;
 
       if (options?.courierId) {
         courierId = options.courierId;
