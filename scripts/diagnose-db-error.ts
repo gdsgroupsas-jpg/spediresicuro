@@ -44,10 +44,14 @@ async function main() {
 
   if (e1) {
     console.log("Insert 1 Failed:", JSON.stringify(e1, null, 2));
-    if (c1) await supabase.from("courier_configs").delete().eq("id", c1.id);
+    if (c1)
+      await supabase
+        .from("courier_configs")
+        .delete()
+        .eq("id", (c1 as any).id);
     return;
   }
-  console.log("Insert 1 Success:", c1.id);
+  console.log("Insert 1 Success:", (c1 as any).id);
 
   // 2. Insert duplicate
   console.log("Attempting Insert 2 (Duplicate)...");
@@ -62,11 +66,19 @@ async function main() {
     console.log(JSON.stringify(e2, null, 2));
   } else {
     console.log("✅ Insert 2 Success! Constraint is GONE.");
-    if (c2) await supabase.from("courier_configs").delete().eq("id", c2.id);
+    if (c2)
+      await supabase
+        .from("courier_configs")
+        .delete()
+        .eq("id", (c2 as any).id);
   }
 
   // Cleanup
-  if (c1) await supabase.from("courier_configs").delete().eq("id", c1.id);
+  if (c1)
+    await supabase
+      .from("courier_configs")
+      .delete()
+      .eq("id", (c1 as any).id);
 }
 
 main().catch(console.error);
