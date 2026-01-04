@@ -379,6 +379,29 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     let priceListsUpdated = 0;
     let entriesAdded = 0;
 
+    // Recupera nome configurazione se configId è presente (per nome listino)
+    let configName: string | null = null;
+    if (options?.configId) {
+      try {
+        const { data: configData } = await supabaseAdmin
+          .from("courier_configs")
+          .select("name")
+          .eq("id", options.configId)
+          .maybeSingle();
+        if (configData?.name) {
+          configName = configData.name;
+          console.log(
+            `📋 [SYNC] Nome configurazione trovato: "${configName}" per configId ${options.configId.substring(0, 8)}...`
+          );
+        }
+      } catch (e) {
+        console.warn(
+          `⚠️ [SYNC] Errore recupero nome configurazione:`,
+          e
+        );
+      }
+    }
+
     // Prova a recuperare corrieri esistenti (opzionale, non blocca se fallisce)
     let couriers: Array<{
       id: string;
@@ -559,12 +582,15 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         }
       }
 
-      // Nome listino: include configId se presente per distinguere configurazioni multiple
+      // Nome listino: formato CARRIER_NOMECONFIG per distinguere configurazioni multiple
+      // Esempio: POSTEDELIVERY_NOMELISTINO o GLS_AccountStandard
       const priceListName =
         options?.priceListName ||
-        (options?.configId
-          ? `Listino ${carrierCode.toUpperCase()} (Config ${options.configId.substring(0, 8)}) - ${new Date().toLocaleDateString("it-IT")}`
-          : `Listino ${carrierCode.toUpperCase()} - ${new Date().toLocaleDateString("it-IT")}`);
+        (configName
+          ? `${carrierCode.toUpperCase()}_${configName}`
+          : options?.configId
+          ? `${carrierCode.toUpperCase()}_Config${options.configId.substring(0, 8)}`
+          : `${carrierCode.toUpperCase()}_${new Date().toLocaleDateString("it-IT")}`);
 
       let priceListId: string;
 
