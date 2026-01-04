@@ -11,6 +11,7 @@
  * - Corrieri diretti (futuro)
  */
 
+import { syncPriceListsFromSpedisciOnline } from "@/actions/spedisci-online-rates";
 import { auth } from "@/lib/auth-config";
 import { supabaseAdmin } from "@/lib/db/client";
 
@@ -78,7 +79,7 @@ export async function autoSyncPriceListsAfterConfig(
           // Per ora sincronizziamo tutti i corrieri disponibili
         }
 
-        const syncResult = await syncPriceListsFromSpedisciOnlineMatrix({
+        const syncResult = await syncPriceListsFromSpedisciOnline({
           courierId,
           overwriteExisting: true, // Matrix V2 prefers full overwrite to keep data clean
         });
