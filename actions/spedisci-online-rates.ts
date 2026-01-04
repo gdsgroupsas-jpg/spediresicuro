@@ -539,13 +539,28 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         priceListsUpdated++;
 
         // Aggiorna metadati listino esistente se configId è presente
+        // Nota: metadata potrebbe non esistere in produzione, quindi usiamo source_metadata come fallback
         if (options?.configId) {
-          await supabaseAdmin
-            .from("price_lists")
-            .update({
-              metadata: { courier_config_id: options.configId },
-            })
-            .eq("id", priceListId);
+          try {
+            await supabaseAdmin
+              .from("price_lists")
+              .update({
+                metadata: { courier_config_id: options.configId },
+              })
+              .eq("id", priceListId);
+          } catch (err: any) {
+            // Fallback: usa source_metadata se metadata non esiste
+            if (err?.code === "PGRST204" || err?.message?.includes("metadata")) {
+              await supabaseAdmin
+                .from("price_lists")
+                .update({
+                  source_metadata: { courier_config_id: options.configId },
+                })
+                .eq("id", priceListId);
+            } else {
+              throw err;
+            }
+          }
         }
 
         // Elimina entries esistenti
@@ -565,12 +580,41 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           is_global: false,
           source_type: "api",
           notes: `Corriere: ${carrierCode.toUpperCase()} | Sincronizzato da spedisci.online il ${new Date().toISOString()}`,
-          metadata: options?.configId
-            ? { courier_config_id: options.configId }
-            : undefined,
+          // Nota: metadata potrebbe non esistere in produzione, quindi lo aggiungiamo solo se disponibile
+          // metadata: options?.configId
+          //   ? { courier_config_id: options.configId }
+          //   : undefined,
         };
 
-        const newPriceList = await createPriceList(priceListData, user.id);
+        // Rimuovi metadata se presente (per evitare errore PGRST204 se colonna non esiste)
+        const { metadata, ...dataWithoutMetadata } = priceListData as any;
+        const newPriceList = await createPriceList(
+          dataWithoutMetadata as CreatePriceListInput,
+          user.id
+        );
+
+        // Se configId è presente, prova ad aggiungere metadata dopo la creazione (se colonna esiste)
+        if (options?.configId) {
+          try {
+            await supabaseAdmin
+              .from("price_lists")
+              .update({
+                metadata: { courier_config_id: options.configId },
+              })
+              .eq("id", newPriceList.id);
+          } catch (err: any) {
+            // Fallback: usa source_metadata se metadata non esiste
+            if (err?.code === "PGRST204" || err?.message?.includes("metadata")) {
+              await supabaseAdmin
+                .from("price_lists")
+                .update({
+                  source_metadata: { courier_config_id: options.configId },
+                })
+                .eq("id", newPriceList.id);
+            }
+            // Ignora errore se entrambi falliscono (non critico)
+          }
+        }
         priceListId = newPriceList.id;
         priceListsCreated++;
         // P1-3: evita log di UUID completi (riduce leakage in log condivisi)
