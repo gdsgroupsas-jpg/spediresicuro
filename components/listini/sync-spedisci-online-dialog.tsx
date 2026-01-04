@@ -181,10 +181,11 @@ export function SyncSpedisciOnlineDialog({
   }
 
   async function handleSync() {
-    if (!testResult?.success) {
-      toast.error("Esegui prima un test per verificare la connessione");
-      return;
-    }
+    // Nota: il test non è più obbligatorio, ma consigliato per verificare la connessione
+    // if (!testResult?.success) {
+    //   toast.error("Esegui prima un test per verificare la connessione");
+    //   return;
+    // }
 
     setIsSyncing(true);
 

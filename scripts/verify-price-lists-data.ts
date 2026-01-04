@@ -40,9 +40,10 @@ async function main() {
   // 2. Recupera Listini
   const { data: priceLists, error: plError } = await supabase
     .from("price_lists")
-    .select("id, name, status, courier_id, updated_at")
+    .select("id, name, status, courier_id, created_at, updated_at")
     .eq("created_by", userId)
-    .eq("list_type", "supplier");
+    .eq("list_type", "supplier")
+    .order("created_at", { ascending: false });
 
   if (plError) {
     console.error("❌ Errore recupero listini:", plError.message);
@@ -55,6 +56,19 @@ async function main() {
     console.log(
       "⚠️ Nessun listino trovato. Assicurati di aver eseguito la sincronizzazione."
     );
+    // Verifica se ci sono listini di altri tipi per debug
+    const { data: allLists } = await supabase
+      .from("price_lists")
+      .select("id, name, list_type, created_by, created_at")
+      .eq("created_by", userId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (allLists && allLists.length > 0) {
+      console.log("\n🔍 Listini trovati (tutti i tipi):");
+      allLists.forEach((l) => {
+        console.log(`   - ${l.name} (${l.list_type || "null"}) creato: ${new Date(l.created_at).toLocaleString("it-IT")}`);
+      });
+    }
     return;
   }
 
