@@ -795,8 +795,23 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         };
       });
 
-      await addPriceListEntries(priceListId, entries);
-      entriesAdded += entries.length;
+      console.log(
+        `📝 [SYNC] Aggiungo ${entries.length} entries al listino ${priceListId.substring(0, 8)}...`
+      );
+      try {
+        await addPriceListEntries(priceListId, entries);
+        entriesAdded += entries.length;
+        console.log(
+          `✅ [SYNC] ${entries.length} entries aggiunte con successo per ${carrierCode}`
+        );
+      } catch (err: any) {
+        console.error(
+          `❌ [SYNC] Errore aggiunta entries per ${carrierCode}:`,
+          err.message || err
+        );
+        // Non bloccare la sync se alcune entries falliscono
+        // Logga l'errore ma continua
+      }
     }
 
     const result = {
