@@ -827,31 +827,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     return result;
   } catch (error: any) {
     console.error("Errore sincronizzazione listini da spedisci.online:", error);
-    lockErrorMessage = error?.message || "Errore durante la sincronizzazione";
     return {
       success: false,
       error: error.message || "Errore durante la sincronizzazione",
     };
-  } finally {
-    if (lockAcquired && lockKey) {
-      try {
-        if (lockErrorMessage) {
-          await supabaseAdmin.rpc("fail_idempotency_lock", {
-            p_idempotency_key: lockKey,
-            p_error_message: String(lockErrorMessage).slice(0, 500),
-          });
-        } else {
-          await supabaseAdmin.rpc("complete_idempotency_lock", {
-            p_idempotency_key: lockKey,
-            // Per questo lock non abbiamo shipment_id: usiamo NULL (ammesso dal tipo UUID).
-            p_shipment_id: null,
-            p_status: "completed",
-          });
-        }
-      } catch (e) {
-        // Best-effort: non blocchiamo il flusso per errori lock-release
-        console.warn("⚠️ [LISTINI][SYNC] Impossibile chiudere lock:", e);
-      }
-    }
   }
 }
