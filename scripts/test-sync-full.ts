@@ -161,11 +161,11 @@ async function main() {
         const priceListData = {
           name: priceListName,
           version: "1.0",
-          status: "draft",
+          status: "draft" as const,
           courier_id: null,
           list_type: "supplier" as const,
           is_global: false,
-          source_type: "api",
+          source_type: "api" as const,
           notes: `Corriere: ${carrierCode.toUpperCase()} | Test sync ${new Date().toISOString()}`,
           source_metadata: {
             synced_from: "spedisci.online",
