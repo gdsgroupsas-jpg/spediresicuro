@@ -475,42 +475,85 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         );
       }
 
-      // Verifica se esiste già un listino per questo corriere
-      // Cerca sia per courier_id (se disponibile) che per nome (per fallback)
+      // Verifica se esiste già un listino per questo corriere E configurazione
+      // IMPORTANTE: Se ci sono più configurazioni per lo stesso corriere, ogni configurazione
+      // deve avere il suo listino separato (identificato da metadata->courier_config_id)
       let existingPriceList: { id: string } | null = null;
 
-      if (courierId) {
-        const { data } = await supabaseAdmin
+      // Se configId è presente, cerca listino specifico per questa configurazione
+      if (options?.configId) {
+        // Cerca per metadata->courier_config_id
+        const { data: dataByMetadata } = await supabaseAdmin
           .from("price_lists")
-          .select("id")
-          .eq("courier_id", courierId)
+          .select("id, metadata, source_metadata")
           .eq("created_by", user.id)
           .eq("list_type", "supplier")
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        existingPriceList = data;
+          .limit(10); // Prendi più risultati per filtrare in memoria
+
+        if (dataByMetadata) {
+          // Filtra in memoria per courier_config_id (può essere in metadata o source_metadata)
+          const matchingList = dataByMetadata.find((pl: any) => {
+            const metadata = pl.metadata || pl.source_metadata || {};
+            return metadata.courier_config_id === options.configId;
+          });
+          if (matchingList) {
+            existingPriceList = { id: matchingList.id };
+            console.log(
+              `🔍 [SYNC] Trovato listino esistente per configId ${options.configId.substring(0, 8)}...`
+            );
+          }
+        }
+
+        // Se non trovato per metadata, cerca anche per courier_id + nome (per retrocompatibilità)
+        if (!existingPriceList && courierId) {
+          const { data } = await supabaseAdmin
+            .from("price_lists")
+            .select("id")
+            .eq("courier_id", courierId)
+            .eq("created_by", user.id)
+            .eq("list_type", "supplier")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          existingPriceList = data;
+        }
+      } else {
+        // Se configId non è presente, usa la logica originale (cerca per courier_id o nome)
+        if (courierId) {
+          const { data } = await supabaseAdmin
+            .from("price_lists")
+            .select("id")
+            .eq("courier_id", courierId)
+            .eq("created_by", user.id)
+            .eq("list_type", "supplier")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          existingPriceList = data;
+        }
+
+        // Se non trovato per courier_id, cerca per nome contenente il carrier code
+        if (!existingPriceList) {
+          const { data } = await supabaseAdmin
+            .from("price_lists")
+            .select("id")
+            .eq("created_by", user.id)
+            .eq("list_type", "supplier")
+            .ilike("name", `%${carrierCode}%`)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          existingPriceList = data;
+        }
       }
 
-      // Se non trovato per courier_id, cerca per nome contenente il carrier code
-      if (!existingPriceList) {
-        const { data } = await supabaseAdmin
-          .from("price_lists")
-          .select("id")
-          .eq("created_by", user.id)
-          .eq("list_type", "supplier")
-          .ilike("name", `%${carrierCode}%`)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        existingPriceList = data;
-      }
-
+      // Nome listino: include configId se presente per distinguere configurazioni multiple
       const priceListName =
         options?.priceListName ||
-        `Listino ${carrierCode.toUpperCase()} - ${new Date().toLocaleDateString(
-          "it-IT"
-        )}`;
+        (options?.configId
+          ? `Listino ${carrierCode.toUpperCase()} (Config ${options.configId.substring(0, 8)}) - ${new Date().toLocaleDateString("it-IT")}`
+          : `Listino ${carrierCode.toUpperCase()} - ${new Date().toLocaleDateString("it-IT")}`);
 
       let priceListId: string;
 
