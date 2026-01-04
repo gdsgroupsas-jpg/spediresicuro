@@ -237,8 +237,9 @@ export function SyncSpedisciOnlineDialog({
         priceListName: syncOptions.priceListName || undefined,
         overwriteExisting: syncOptions.overwriteExisting,
         configId: selectedConfigId || undefined,
-        // FAST per evitare timeout in produzione (Vercel free). Per scansioni complete usare automazione dedicata.
-        mode: "fast",
+        // BALANCED: buon compromesso tra completezza (5 zone x 11 pesi = 55 entries) e velocità
+        // Per scansioni complete (tutte le zone x tutti i pesi) usare automazione dedicata con mode: "matrix"
+        mode: "balanced",
       });
 
       console.log("📥 [UI] Risultato sync ricevuto:", result);
