@@ -111,8 +111,8 @@ async function main() {
       }
     } else if (cfgData.credentials_encrypted) {
       try {
-        const { decrypt } = await import("../lib/security/encryption");
-        const decrypted = JSON.parse(decrypt(cfgData.credentials_encrypted));
+        const decryptedStr = decryptCredential(cfgData.credentials_encrypted);
+        const decrypted = JSON.parse(decryptedStr);
         testApiKey = decrypted.api_key;
       } catch {}
     }
