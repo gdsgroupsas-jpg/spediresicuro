@@ -728,12 +728,54 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           Math.max(0, insuranceRatePercent)
         );
 
-        const probeWeight = (rate as any)._probe_weight || 999.999;
+        const probeWeight = (rate as any)._probe_weight;
         const probeZone = (rate as any)._probe_zone || "IT";
 
         // Weights used in the probe loop - usa gli stessi pesi effettivamente probati
         // Questo garantisce che weight_from e weight_to siano corretti per ogni modalità
+        if (!probeWeight || probeWeight === 999.999) {
+          console.warn(
+            `⚠️ [SYNC] Rate senza _probe_weight valido, uso fallback: ${JSON.stringify(rate)}`
+          );
+          // Fallback: usa il primo peso probato come weight_to
+          return {
+            weight_from: 0,
+            weight_to: probedWeightsSorted[0] || 1,
+            zone_code: probeZone,
+            base_price: validatedBasePrice,
+            service_type: serviceType,
+            fuel_surcharge_percent: validatedFuelPercent,
+            cash_on_delivery_surcharge: validatedCodPrice,
+            insurance_rate_percent: validatedInsurancePercent,
+          };
+        }
+
         const currentIndex = probedWeightsSorted.indexOf(probeWeight);
+        if (currentIndex === -1) {
+          console.warn(
+            `⚠️ [SYNC] probeWeight ${probeWeight} non trovato in probedWeightsSorted, uso fallback`
+          );
+          // Fallback: trova il peso più vicino
+          const closestWeight = probedWeightsSorted.reduce((prev, curr) =>
+            Math.abs(curr - probeWeight) < Math.abs(prev - probeWeight)
+              ? curr
+              : prev
+          );
+          const closestIndex = probedWeightsSorted.indexOf(closestWeight);
+          const weightFrom =
+            closestIndex > 0 ? probedWeightsSorted[closestIndex - 1] : 0;
+          return {
+            weight_from: weightFrom,
+            weight_to: closestWeight,
+            zone_code: probeZone,
+            base_price: validatedBasePrice,
+            service_type: serviceType,
+            fuel_surcharge_percent: validatedFuelPercent,
+            cash_on_delivery_surcharge: validatedCodPrice,
+            insurance_rate_percent: validatedInsurancePercent,
+          };
+        }
+
         const weightFrom =
           currentIndex > 0 ? probedWeightsSorted[currentIndex - 1] : 0; // Start from exact previous weight
         // Note: Logic handles intervals (e.g. >10 to <=20).
