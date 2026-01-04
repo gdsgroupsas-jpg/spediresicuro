@@ -82,6 +82,8 @@ export async function autoSyncPriceListsAfterConfig(
         const syncResult = await syncPriceListsFromSpedisciOnline({
           courierId,
           overwriteExisting: true, // Matrix V2 prefers full overwrite to keep data clean
+          // FAST per evitare timeout in produzione (Vercel free).
+          mode: "fast",
         });
 
         if (syncResult.success) {
