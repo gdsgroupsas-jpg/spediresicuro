@@ -616,6 +616,9 @@ export async function listSupplierPriceListsAction(): Promise<{
     }
 
     // Recupera solo listini fornitore dell'utente
+    console.log(
+      `🔍 [LISTINI] Cerca listini fornitore: user.id=${user.id}, list_type=supplier`
+    );
     const { data: priceLists, error } = await supabaseAdmin
       .from("price_lists")
       .select("*")
@@ -627,6 +630,10 @@ export async function listSupplierPriceListsAction(): Promise<{
       console.error("Errore recupero listini fornitore:", error);
       return { success: false, error: error.message };
     }
+
+    console.log(
+      `📊 [LISTINI] Trovati ${priceLists?.length || 0} listini fornitore per user.id=${user.id}`
+    );
 
     // Recupera i corrieri separatamente se necessario
     if (priceLists && priceLists.length > 0) {
