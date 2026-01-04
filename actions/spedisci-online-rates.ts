@@ -556,27 +556,39 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       // deve avere il suo listino separato (identificato da metadata->courier_config_id)
       let existingPriceList: { id: string } | null = null;
 
-      // Se configId è presente, cerca listino specifico per questa configurazione
+      // Se configId è presente, cerca listino specifico per questa configurazione E questo carrierCode
       if (options?.configId) {
-        // Cerca per metadata->courier_config_id
+        // Cerca per metadata->carrier_code + courier_config_id
+        // IMPORTANTE: Filtra per ENTRAMBI carrier_code E courier_config_id per evitare di matchare
+        // listini di corrieri diversi della stessa configurazione API
         const { data: dataByMetadata } = await supabaseAdmin
           .from("price_lists")
-          .select("id, metadata, source_metadata")
+          .select("id, name, metadata, source_metadata")
           .eq("created_by", user.id)
           .eq("list_type", "supplier")
           .order("created_at", { ascending: false })
-          .limit(10); // Prendi più risultati per filtrare in memoria
+          .limit(20); // Prendi più risultati per filtrare in memoria
 
         if (dataByMetadata) {
-          // Filtra in memoria per courier_config_id (può essere in metadata o source_metadata)
+          // Filtra in memoria per:
+          // 1. courier_config_id (può essere in metadata o source_metadata)
+          // 2. carrier_code DEVE corrispondere al corriere corrente
           const matchingList = dataByMetadata.find((pl: any) => {
             const metadata = pl.metadata || pl.source_metadata || {};
-            return metadata.courier_config_id === options.configId;
+            const matchesConfigId = metadata.courier_config_id === options.configId;
+            const matchesCarrierCode = 
+              metadata.carrier_code?.toLowerCase() === carrierCode.toLowerCase() ||
+              pl.name?.toLowerCase().startsWith(carrierCode.toLowerCase());
+            return matchesConfigId && matchesCarrierCode;
           });
           if (matchingList) {
             existingPriceList = { id: matchingList.id };
             console.log(
-              `🔍 [SYNC] Trovato listino esistente per configId ${options.configId.substring(0, 8)}...`
+              `🔍 [SYNC] Trovato listino esistente per configId ${options.configId.substring(0, 8)} e carrierCode ${carrierCode}`
+            );
+          } else {
+            console.log(
+              `ℹ️ [SYNC] Nessun listino esistente per configId ${options.configId.substring(0, 8)} e carrierCode ${carrierCode}`
             );
           }
         }
@@ -704,30 +716,35 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           `✅ [SYNC] Listino creato con successo: id=${newPriceList.id}, name=${newPriceList.name}`
         );
 
-        // Se configId è presente, prova ad aggiungere metadata dopo la creazione (se colonna esiste)
-        if (options?.configId) {
-          try {
+        // Aggiungi metadata con carrier_code e courier_config_id per tracciabilità
+        // IMPORTANTE: carrier_code è fondamentale per distinguere listini di corrieri diversi
+        // dalla stessa configurazione API
+        const metadataToSave = {
+          carrier_code: carrierCode,
+          ...(options?.configId && { courier_config_id: options.configId }),
+          synced_at: new Date().toISOString(),
+        };
+        
+        try {
+          await supabaseAdmin
+            .from("price_lists")
+            .update({ metadata: metadataToSave })
+            .eq("id", newPriceList.id);
+          console.log(
+            `✅ [SYNC] Metadata salvati: carrier_code=${carrierCode}, configId=${options?.configId?.substring(0, 8) || "N/A"}`
+          );
+        } catch (err: any) {
+          // Fallback: usa source_metadata se metadata non esiste
+          if (
+            err?.code === "PGRST204" ||
+            err?.message?.includes("metadata")
+          ) {
             await supabaseAdmin
               .from("price_lists")
-              .update({
-                metadata: { courier_config_id: options.configId },
-              })
+              .update({ source_metadata: metadataToSave })
               .eq("id", newPriceList.id);
-          } catch (err: any) {
-            // Fallback: usa source_metadata se metadata non esiste
-            if (
-              err?.code === "PGRST204" ||
-              err?.message?.includes("metadata")
-            ) {
-              await supabaseAdmin
-                .from("price_lists")
-                .update({
-                  source_metadata: { courier_config_id: options.configId },
-                })
-                .eq("id", newPriceList.id);
-            }
-            // Ignora errore se entrambi falliscono (non critico)
           }
+          // Ignora errore se entrambi falliscono (non critico)
         }
         priceListId = newPriceList.id;
         priceListsCreated++;
