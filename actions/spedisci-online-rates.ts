@@ -366,11 +366,31 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     > = {};
 
     for (const rate of rates) {
-      if (!ratesByCarrier[rate.carrierCode]) {
-        ratesByCarrier[rate.carrierCode] = [];
+      const carrierCode = rate.carrierCode;
+      if (!carrierCode) {
+        console.warn(
+          `⚠️ [SYNC] Rate senza carrierCode, salto:`,
+          JSON.stringify(rate).substring(0, 200)
+        );
+        continue;
       }
-      ratesByCarrier[rate.carrierCode].push(rate);
+      if (!ratesByCarrier[carrierCode]) {
+        ratesByCarrier[carrierCode] = [];
+      }
+      ratesByCarrier[carrierCode].push(rate);
     }
+    
+    console.log(
+      `📊 [SYNC] Raggruppamento rates completato:`,
+      Object.keys(ratesByCarrier).map((code) => ({
+        carrierCode: code,
+        ratesCount: ratesByCarrier[code].length,
+        sampleRate: ratesByCarrier[code][0] ? {
+          carrierCode: ratesByCarrier[code][0].carrierCode,
+          contractCode: ratesByCarrier[code][0].contractCode,
+        } : null,
+      }))
+    );
 
     // 3. Per ogni corriere, crea/aggiorna listino
     // NOTA: Non dipendiamo più dalla tabella 'couriers' che potrebbe non esistere
@@ -729,6 +749,18 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       );
 
       const entries = uniqueRates.map((rate) => {
+        // Verifica che il rate appartenga al corriere corretto
+        if (rate.carrierCode !== carrierCode) {
+          console.error(
+            `❌ [SYNC] MISMATCH: Rate con carrierCode=${rate.carrierCode} trovato in gruppo ${carrierCode}!`,
+            {
+              rateCarrierCode: rate.carrierCode,
+              expectedCarrierCode: carrierCode,
+              contractCode: rate.contractCode,
+            }
+          );
+        }
+        
         // Parsing sicuro con validazione
         const basePrice = Math.max(0, parseFloat(rate.weight_price) || 0);
         const insurancePrice = Math.max(
