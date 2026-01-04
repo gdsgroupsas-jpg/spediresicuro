@@ -657,9 +657,44 @@ export async function listSupplierPriceListsAction(): Promise<{
             pl.courier = courierMap.get(pl.courier_id);
           }
         });
+        console.log(
+          `📦 [LISTINI] Corrieri popolati: ${couriers?.length || 0} trovati per ${courierIds.length} listini`
+        );
+      } else {
+        console.warn(
+          `⚠️ [LISTINI] Nessun courier_id trovato nei listini (${priceLists.length} listini)`
+        );
+      }
+
+      // Recupera il conteggio delle entries per ogni listino
+      const priceListIds = priceLists.map((pl: any) => pl.id);
+      if (priceListIds.length > 0) {
+        const { data: entriesCounts } = await supabaseAdmin
+          .from("price_list_entries")
+          .select("price_list_id")
+          .in("price_list_id", priceListIds);
+
+        // Conta entries per listino
+        const entriesMap = new Map<string, number>();
+        entriesCounts?.forEach((entry: any) => {
+          const count = entriesMap.get(entry.price_list_id) || 0;
+          entriesMap.set(entry.price_list_id, count + 1);
+        });
+
+        // Aggiungi conteggio entries a ogni listino
+        priceLists.forEach((pl: any) => {
+          pl.entries_count = entriesMap.get(pl.id) || 0;
+        });
+
+        console.log(
+          `📊 [LISTINI] Entries contate: ${entriesCounts?.length || 0} totali per ${priceLists.length} listini`
+        );
       }
     }
 
+    console.log(
+      `✅ [LISTINI] Ritorno ${priceLists?.length || 0} listini con dati corriere popolati`
+    );
     return { success: true, priceLists: priceLists || [] };
   } catch (error: any) {
     console.error("Errore listino fornitore:", error);
