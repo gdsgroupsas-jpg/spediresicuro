@@ -1,3 +1,9 @@
+import { auth } from "@/lib/auth-config";
+import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
+import { supabaseAdmin } from "@/lib/db/client";
+import { createPriceList } from "@/lib/db/price-lists";
+import { testSpedisciOnlineRates } from "./spedisci-online-rates";
+
 /**
  * Sincronizza listini completi (Matrice Pesi x Zone) da spedisci.online
  *
