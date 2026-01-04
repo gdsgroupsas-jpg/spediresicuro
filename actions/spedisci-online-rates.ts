@@ -383,6 +383,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     const rates = allRates;
     const carriersProcessed = [...new Set(rates.map((r) => r.carrierCode))];
 
+    // Salva weightsToProbe per usarlo nella creazione delle entries
+    const probedWeightsSorted = [...weightsToProbe].sort((a, b) => a - b);
+
     // 2. Raggruppa rates per corriere
     const ratesByCarrier: Record<
       string,
@@ -730,10 +733,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
         // Weights used in the probe loop - usa gli stessi pesi effettivamente probati
         // Questo garantisce che weight_from e weight_to siano corretti per ogni modalità
-        const probedWeights = weightsToProbe.sort((a, b) => a - b);
-        const currentIndex = probedWeights.indexOf(probeWeight);
+        const currentIndex = probedWeightsSorted.indexOf(probeWeight);
         const weightFrom =
-          currentIndex > 0 ? probedWeights[currentIndex - 1] : 0; // Start from exact previous weight
+          currentIndex > 0 ? probedWeightsSorted[currentIndex - 1] : 0; // Start from exact previous weight
         // Note: Logic handles intervals (e.g. >10 to <=20).
         // Sync logic: "From previous breakpoint to current breakpoint".
 
