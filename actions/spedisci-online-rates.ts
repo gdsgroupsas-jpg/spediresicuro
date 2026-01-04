@@ -840,6 +840,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         // Non bloccare la sync se alcune entries falliscono
         // Logga l'errore ma continua
       }
+      console.log(
+        `✅ [SYNC] Corriere ${carrierCode} processato con successo (${entries.length} entries)`
+      );
       } catch (carrierError: any) {
         // Errore durante creazione/aggiornamento listino per questo corriere
         console.error(
