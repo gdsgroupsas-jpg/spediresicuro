@@ -25,11 +25,12 @@ async function runTest() {
     "@/lib/adapters/couriers/spedisci-online"
   );
 
-  // 1. Get a distinct real user
+  // 1. Get the test user (reseller account)
+  const TEST_EMAIL = "testspediresicuro+postaexpress@gmail.com";
   const { data: user, error: userError } = await supabaseAdmin
     .from("users")
     .select("id, email")
-    .limit(1)
+    .eq("email", TEST_EMAIL)
     .single();
 
   if (userError || !user) {
