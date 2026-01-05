@@ -78,7 +78,7 @@ export async function getSupplierPriceListConfig(
     // Se non esiste, restituisci struttura vuota
     if (!config) {
       // Estrai carrier_code e contract_code dai metadata del listino
-      const metadata = priceList.metadata || priceList.source_metadata || {};
+      const metadata = priceList.source_metadata || {};
       const carrierCode = metadata.carrier_code || "";
       const contractCode = metadata.contract_code || "";
       const courierConfigId = metadata.courier_config_id || null;
