@@ -321,7 +321,7 @@ export async function upsertSupplierPriceListConfig(
       .single();
 
     if (fetchError) {
-      return { success: false, error: fetchError.message };
+      return { success: false, error: fetchError?.message || "Errore recupero configurazione" };
     }
 
     return {
