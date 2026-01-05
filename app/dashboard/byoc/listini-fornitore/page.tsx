@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardNav from '@/components/dashboard-nav';
 import { SupplierPriceListForm } from '@/components/listini/supplier-price-list-form';
 import { SupplierPriceListTable } from '@/components/listini/supplier-price-list-table';
+import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog';
 import {
   listSupplierPriceListsAction,
   deletePriceListAction,
@@ -38,6 +39,8 @@ export default function ByocListiniFornitorePage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [priceListToDelete, setPriceListToDelete] = useState<string | null>(null);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [configPriceList, setConfigPriceList] = useState<PriceList | null>(null);
 
   // Verifica permessi e carica dati
   useEffect(() => {
@@ -135,6 +138,11 @@ export default function ByocListiniFornitorePage() {
     router.push(`/dashboard/listini/${priceListId}`);
   };
 
+  const handleConfigure = (priceList: PriceList) => {
+    setConfigPriceList(priceList);
+    setShowConfigDialog(true);
+  };
+
   const handleFormSuccess = () => {
     setShowCreateDialog(false);
     setEditingPriceList(null);
@@ -208,6 +216,7 @@ export default function ByocListiniFornitorePage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewDetails={handleViewDetails}
+            onConfigure={handleConfigure}
             isLoading={isLoading}
           />
         </div>
@@ -256,6 +265,23 @@ export default function ByocListiniFornitorePage() {
           cancelText="Annulla"
           variant="destructive"
         />
+
+        {/* Dialog Configurazione Manuale */}
+        {configPriceList && (
+          <SupplierPriceListConfigDialog
+            open={showConfigDialog}
+            onOpenChange={(open) => {
+              setShowConfigDialog(open);
+              if (!open) {
+                setConfigPriceList(null);
+              }
+            }}
+            priceList={configPriceList}
+            onSaveComplete={() => {
+              loadPriceLists();
+            }}
+          />
+        )}
       </div>
     </div>
   );
