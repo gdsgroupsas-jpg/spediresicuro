@@ -7,7 +7,6 @@
  * per la creazione automatica delle LDV con routing ottimale.
  */
 
-import crypto from "crypto";
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
 import { auth } from "@/lib/auth-config";
 import { getShippingProvider } from "@/lib/couriers/factory";
@@ -19,6 +18,7 @@ import {
 } from "@/lib/engine/fulfillment-orchestrator";
 import { createServerActionClient } from "@/lib/supabase-server";
 import type { CreateShipmentInput, Shipment } from "@/types/shipments";
+import crypto from "crypto";
 
 /**
  * Recupera credenziali spedisci.online dell'utente
