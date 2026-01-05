@@ -54,7 +54,13 @@ export function SyncSpedisciOnlineDialog({
     current: number;
     total: number;
     currentConfig: string;
-    results: Array<{ configName: string; success: boolean; error?: string; created?: number; updated?: number }>;
+    results: Array<{
+      configName: string;
+      success: boolean;
+      error?: string;
+      created?: number;
+      updated?: number;
+    }>;
   } | null>(null);
   const [testResult, setTestResult] = useState<{
     success: boolean;
@@ -87,6 +93,49 @@ export function SyncSpedisciOnlineDialog({
     priceListName: "",
     overwriteExisting: false,
   });
+
+  // Modalità di sincronizzazione
+  const [syncMode, setSyncMode] = useState<"fast" | "balanced" | "matrix">(
+    "balanced"
+  );
+
+  // Configurazioni per ogni modalità di sync (allineate con PRICING_MATRIX)
+  const SYNC_MODES = {
+    fast: {
+      label: "⚡ Veloce",
+      description: "Solo destinazioni principali (Italia standard + Sardegna)",
+      zones: 2,
+      weights: 3,
+      calls: 6,
+      timeEstimate: "~10 sec",
+      color: "bg-green-50 border-green-200 text-green-800",
+      badgeColor: "bg-green-100 text-green-700",
+      icon: "⚡",
+    },
+    balanced: {
+      label: "⚖️ Bilanciato",
+      description: "Zone Italia complete (9 zone × 9 pesi = 63 combinazioni)",
+      zones: 7,
+      weights: 9,
+      calls: 63,
+      timeEstimate: "~2-3 min",
+      color: "bg-blue-50 border-blue-200 text-blue-800",
+      badgeColor: "bg-blue-100 text-blue-700",
+      icon: "⚖️",
+    },
+    matrix: {
+      label: "📊 Matrice Completa",
+      description:
+        "Tutte le zone × tutti i pesi (9 zone × 101 pesi = 909 combinazioni)",
+      zones: 9,
+      weights: 101,
+      calls: 909,
+      timeEstimate: "~15-20 min",
+      color: "bg-purple-50 border-purple-200 text-purple-800",
+      badgeColor: "bg-purple-100 text-purple-700",
+      icon: "📊",
+    },
+  } as const;
 
   // Carica le configurazioni all'apertura
   useEffect(() => {
@@ -194,13 +243,13 @@ export function SyncSpedisciOnlineDialog({
       testResultRates: testResult?.rates?.length,
       isSyncing,
     });
-    
+
     if (!testResult) {
       console.warn("⚠️ [UI] testResult è null, sync bloccata");
       toast.error("Esegui prima un test per verificare la connessione");
       return;
     }
-    
+
     if (!testResult.success) {
       console.warn("⚠️ [UI] Test non passato, sync bloccata", {
         testResultError: testResult.error,
@@ -215,7 +264,7 @@ export function SyncSpedisciOnlineDialog({
     try {
       console.log("📡 [UI] Chiamata syncPriceListsFromSpedisciOnline con:", {
         configId: selectedConfigId,
-        mode: "fast",
+        mode: syncMode,
         overwriteExisting: syncOptions.overwriteExisting,
       });
       const result = await syncPriceListsFromSpedisciOnline({
@@ -258,9 +307,8 @@ export function SyncSpedisciOnlineDialog({
         priceListName: syncOptions.priceListName || undefined,
         overwriteExisting: syncOptions.overwriteExisting,
         configId: selectedConfigId || undefined,
-        // BALANCED: buon compromesso tra completezza (5 zone x 11 pesi = 55 entries) e velocità
-        // Per scansioni complete (tutte le zone x tutti i pesi) usare automazione dedicata con mode: "matrix"
-        mode: "balanced",
+        // Usa la modalità selezionata dall'utente
+        mode: syncMode,
       });
 
       console.log("📥 [UI] Risultato sync ricevuto:", result);
@@ -309,11 +357,17 @@ export function SyncSpedisciOnlineDialog({
       results: [],
     });
 
-    const results: Array<{ configName: string; success: boolean; error?: string; created?: number; updated?: number }> = [];
+    const results: Array<{
+      configName: string;
+      success: boolean;
+      error?: string;
+      created?: number;
+      updated?: number;
+    }> = [];
 
     for (let i = 0; i < configurations.length; i++) {
       const config = configurations[i];
-      
+
       setSyncAllProgress({
         current: i + 1,
         total: configurations.length,
@@ -321,7 +375,9 @@ export function SyncSpedisciOnlineDialog({
         results: [...results],
       });
 
-      console.log(`📡 [UI] Sync config ${i + 1}/${configurations.length}: ${config.name}`);
+      console.log(
+        `📡 [UI] Sync config ${i + 1}/${configurations.length}: ${config.name}`
+      );
 
       try {
         const result = await syncPriceListsFromSpedisciOnline({
@@ -499,14 +555,17 @@ export function SyncSpedisciOnlineDialog({
                 <div className="mt-3 pt-3 border-t border-blue-200">
                   <Button
                     onClick={handleSyncAll}
-                    disabled={isSyncingAll || isSyncing || configurations.length === 0}
+                    disabled={
+                      isSyncingAll || isSyncing || configurations.length === 0
+                    }
                     variant="outline"
                     className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 hover:from-blue-600 hover:to-indigo-600"
                   >
                     {isSyncingAll ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Sync {syncAllProgress?.current}/{syncAllProgress?.total}: {syncAllProgress?.currentConfig}
+                        Sync {syncAllProgress?.current}/{syncAllProgress?.total}
+                        : {syncAllProgress?.currentConfig}
                       </>
                     ) : (
                       <>
@@ -526,7 +585,9 @@ export function SyncSpedisciOnlineDialog({
                         <div
                           key={idx}
                           className={`text-xs p-1 rounded flex items-center gap-1 ${
-                            r.success ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                            r.success
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
                           }`}
                         >
                           {r.success ? (
@@ -536,7 +597,9 @@ export function SyncSpedisciOnlineDialog({
                           )}
                           <span className="font-medium">{r.configName}:</span>
                           {r.success
-                            ? `${r.created || 0} creati, ${r.updated || 0} aggiornati`
+                            ? `${r.created || 0} creati, ${
+                                r.updated || 0
+                              } aggiornati`
                             : r.error}
                         </div>
                       ))}
@@ -838,6 +901,74 @@ export function SyncSpedisciOnlineDialog({
                   </Label>
                 </div>
 
+                {/* Selettore Modalità Sync */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">
+                    Modalità Sincronizzazione
+                  </Label>
+                  <div className="grid gap-2">
+                    {(
+                      Object.entries(SYNC_MODES) as [
+                        keyof typeof SYNC_MODES,
+                        (typeof SYNC_MODES)[keyof typeof SYNC_MODES]
+                      ][]
+                    ).map(([mode, config]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setSyncMode(mode)}
+                        className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                          syncMode === mode
+                            ? `${config.color} border-current ring-2 ring-offset-2 ring-current`
+                            : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{config.icon}</span>
+                            <span className="font-semibold">
+                              {config.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${config.badgeColor}`}
+                            >
+                              {config.calls} chiamate
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {config.timeEstimate}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs mt-1 opacity-80">
+                          {config.description}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Avviso per matrix mode */}
+                  {syncMode === "matrix" && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-amber-800 font-medium">
+                            Attenzione: Sincronizzazione Completa
+                          </p>
+                          <p className="text-xs text-amber-700 mt-1">
+                            Questa modalità esegue {SYNC_MODES.matrix.calls}{" "}
+                            chiamate API e può richiedere{" "}
+                            {SYNC_MODES.matrix.timeEstimate}. Raccomandata per
+                            uso notturno o con automazione.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   onClick={(e) => {
                     console.log("🖱️ [UI] Pulsante Sincronizza cliccato", {
@@ -848,7 +979,9 @@ export function SyncSpedisciOnlineDialog({
                     e.preventDefault();
                     handleSync().catch((err) => {
                       console.error("❌ [UI] Errore in handleSync:", err);
-                      toast.error(`Errore durante la sincronizzazione: ${err.message}`);
+                      toast.error(
+                        `Errore durante la sincronizzazione: ${err.message}`
+                      );
                     });
                   }}
                   disabled={isSyncing}

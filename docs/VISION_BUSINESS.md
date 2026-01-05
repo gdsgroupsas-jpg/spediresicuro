@@ -258,3 +258,4 @@ Utente B2C → Checkout (Pagamento Carta) → Wallet "Web Channel" → Pagamento
 
 
 
+

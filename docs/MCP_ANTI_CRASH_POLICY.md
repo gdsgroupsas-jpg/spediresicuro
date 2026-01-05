@@ -120,3 +120,4 @@ const logs = await getSystemLogs(1000); // Diventa 100 automaticamente
 **Ultimo aggiornamento**: 2025-02-01
 **Versione**: 1.0.0
 
+

@@ -74,3 +74,4 @@ verifyMetadataColumn()
     process.exit(1);
   });
 
+
