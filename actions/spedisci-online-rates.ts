@@ -374,6 +374,20 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         );
         continue;
       }
+
+      // SECURITY: Validazione carrierCode per prevenire injection nei metadata
+      // CarrierCode deve essere alfanumerico (può contenere underscore/trattini)
+      const sanitizedCarrierCode = String(carrierCode)
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '');
+
+      if (!sanitizedCarrierCode || sanitizedCarrierCode !== carrierCode.toLowerCase()) {
+        console.warn(
+          `⚠️ [SYNC] CarrierCode non valido/sanitizzato: "${carrierCode}" → "${sanitizedCarrierCode}", salto per sicurezza`
+        );
+        continue;
+      }
+
       if (!ratesByCarrier[carrierCode]) {
         ratesByCarrier[carrierCode] = [];
       }
@@ -558,37 +572,46 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
       // Se configId è presente, cerca listino specifico per questa configurazione E questo carrierCode
       if (options?.configId) {
-        // Cerca per metadata->carrier_code + courier_config_id
-        // IMPORTANTE: Filtra per ENTRAMBI carrier_code E courier_config_id per evitare di matchare
+        // SECURITY: Filtra per ENTRAMBI carrier_code E courier_config_id per evitare di matchare
         // listini di corrieri diversi della stessa configurazione API
+        //
+        // PERFORMANCE: Aumentato limit a 100 per evitare falsi negativi in utenti con molti listini
+        // In futuro: usare Postgres JSONB operators per filtro SQL diretto
         const { data: dataByMetadata } = await supabaseAdmin
           .from("price_lists")
           .select("id, name, metadata, source_metadata")
           .eq("created_by", user.id)
           .eq("list_type", "supplier")
           .order("created_at", { ascending: false })
-          .limit(20); // Prendi più risultati per filtrare in memoria
+          .limit(100);
 
         if (dataByMetadata) {
-          // Filtra in memoria per:
-          // 1. courier_config_id (può essere in metadata o source_metadata)
-          // 2. carrier_code DEVE corrispondere al corriere corrente
+          // Filtra in memoria con logica STRICT (no fallback su nome se metadata presente)
           const matchingList = dataByMetadata.find((pl: any) => {
             const metadata = pl.metadata || pl.source_metadata || {};
+
+            // 1. ConfigId DEVE matchare esattamente
             const matchesConfigId = metadata.courier_config_id === options.configId;
-            const matchesCarrierCode = 
-              metadata.carrier_code?.toLowerCase() === carrierCode.toLowerCase() ||
-              pl.name?.toLowerCase().startsWith(carrierCode.toLowerCase());
-            return matchesConfigId && matchesCarrierCode;
+            if (!matchesConfigId) return false;
+
+            // 2. CarrierCode: usa metadata se presente (dopo il fix sarà sempre presente)
+            //    Fallback su nome SOLO se metadata.carrier_code è assente (listini vecchi pre-fix)
+            const metadataCarrierCode = metadata.carrier_code?.toLowerCase();
+            const matchesCarrierCode = metadataCarrierCode
+              ? metadataCarrierCode === carrierCode.toLowerCase()
+              : pl.name?.toLowerCase().startsWith(carrierCode.toLowerCase()); // Fallback legacy
+
+            return matchesCarrierCode;
           });
+
           if (matchingList) {
             existingPriceList = { id: matchingList.id };
             console.log(
-              `🔍 [SYNC] Trovato listino esistente per configId ${options.configId.substring(0, 8)} e carrierCode ${carrierCode}`
+              `🔍 [SYNC] Trovato listino esistente: id=${matchingList.id.substring(0, 8)}... configId=${options.configId.substring(0, 8)}... carrier=${carrierCode}`
             );
           } else {
             console.log(
-              `ℹ️ [SYNC] Nessun listino esistente per configId ${options.configId.substring(0, 8)} e carrierCode ${carrierCode}`
+              `ℹ️ [SYNC] Nessun listino esistente per configId=${options.configId.substring(0, 8)}... carrier=${carrierCode} → creo nuovo`
             );
           }
         }
@@ -653,26 +676,63 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         priceListId = existingPriceList.id;
         priceListsUpdated++;
 
-        // Aggiorna metadati listino esistente se configId è presente
-        // Nota: metadata potrebbe non esistere in produzione, quindi usiamo source_metadata come fallback
+        // SECURITY & DATA INTEGRITY: Recupera metadata esistente per fare MERGE invece di REPLACE
+        // Questo previene la perdita di carrier_code durante re-sync dello stesso account
         if (options?.configId) {
           try {
+            // 1. Recupera metadata esistente
+            const { data: existingList } = await supabaseAdmin
+              .from("price_lists")
+              .select("metadata, source_metadata")
+              .eq("id", priceListId)
+              .single();
+
+            const existingMetadata = existingList?.metadata || existingList?.source_metadata || {};
+
+            // 2. MERGE con metadata esistente (preserva carrier_code!)
+            const mergedMetadata = {
+              ...existingMetadata,
+              carrier_code: carrierCode, // Immutabile, sempre presente
+              courier_config_id: options.configId,
+              synced_at: new Date().toISOString(),
+            };
+
+            // 3. Update con metadata completo
             await supabaseAdmin
               .from("price_lists")
               .update({
-                metadata: { courier_config_id: options.configId },
+                metadata: mergedMetadata,
               })
               .eq("id", priceListId);
+
+            console.log(
+              `✅ [SYNC] Metadata aggiornati (MERGE): carrier_code=${carrierCode}, configId=${options.configId.substring(0, 8)}...`
+            );
           } catch (err: any) {
             // Fallback: usa source_metadata se metadata non esiste
             if (
               err?.code === "PGRST204" ||
               err?.message?.includes("metadata")
             ) {
+              const { data: existingList } = await supabaseAdmin
+                .from("price_lists")
+                .select("source_metadata")
+                .eq("id", priceListId)
+                .single();
+
+              const existingMetadata = existingList?.source_metadata || {};
+
+              const mergedMetadata = {
+                ...existingMetadata,
+                carrier_code: carrierCode,
+                courier_config_id: options.configId,
+                synced_at: new Date().toISOString(),
+              };
+
               await supabaseAdmin
                 .from("price_lists")
                 .update({
-                  source_metadata: { courier_config_id: options.configId },
+                  source_metadata: mergedMetadata,
                 })
                 .eq("id", priceListId);
             } else {
