@@ -83,8 +83,8 @@ async function runDiagnosis() {
         const reqToApprove = requests[0];
         console.log(`\n--- 3. TENTATIVO APPROVAZIONE FORZATA (ID: ${reqToApprove.id}) ---`);
         
-        // Fetch admin user ID (assuming sigorn@hotmail.it is the admin)
-        const { data: adminUser } = await supabase.from('users').select('id').eq('email', 'sigorn@hotmail.it').single();
+        // Fetch admin user ID (test reseller account)
+        const { data: adminUser } = await supabase.from('users').select('id').eq('email', 'testspediresicuro+postaexpress@gmail.com').single();
         const adminId = adminUser ? adminUser.id : '00000000-0000-0000-0000-000000000000';
         
         console.log(`Approving as Admin ID: ${adminId}`);
