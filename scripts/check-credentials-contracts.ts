@@ -112,7 +112,7 @@ async function main() {
       });
 
       // Fai una chiamata di test
-      const rates = await adapter.getRates({
+      const result = await adapter.getRates({
         packages: [{ length: 30, width: 20, height: 15, weight: 2 }],
         shipFrom: {
           name: "Test",
@@ -130,9 +130,11 @@ async function main() {
           postalCode: "20100",
           country: "IT",
         },
+        notes: "Test contratti",
       });
 
       // Estrai i corrieri unici
+      const rates = result.rates || [];
       const carriers = [
         ...new Set(rates.map((r: any) => r.carrier_code || r.carrierCode)),
       ];
