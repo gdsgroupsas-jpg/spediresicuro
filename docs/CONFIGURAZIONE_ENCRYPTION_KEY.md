@@ -4,13 +4,14 @@
 
 Il sistema di criptazione delle credenziali API richiede la variabile d'ambiente `ENCRYPTION_KEY` per funzionare in sicurezza.
 
-**ATTENZIONE**: Se `ENCRYPTION_KEY` non è configurata, le credenziali verranno salvate **in chiaro** nel database. Questo è **NON SICURO** e dovresti configurarla il prima possibile.
+**ATTENZIONE**: In produzione (`NODE_ENV=production`), se `ENCRYPTION_KEY` non è configurata, il sistema **bloccherà il salvataggio con un ERRORE CRITICO** per prevenire il salvataggio di dati in chiaro. In ambiente di sviluppo, verrà mostrato un warning e salvato in chiaro.
 
 ---
 
 ## 🎯 COSA FA ENCRYPTION_KEY
 
 La chiave `ENCRYPTION_KEY` viene usata per criptare le credenziali API dei corrieri prima di salvarle nel database. Questo protegge:
+
 - API Key dei corrieri (GLS, BRT, Poste, ecc.)
 - API Secret (se presente)
 - Altri dati sensibili
@@ -35,11 +36,12 @@ Oppure, se hai Node.js installato:
 
 ```javascript
 // Apri la console Node.js e esegui:
-const crypto = require('crypto');
-console.log(crypto.randomBytes(32).toString('hex'));
+const crypto = require("crypto");
+console.log(crypto.randomBytes(32).toString("hex"));
 ```
 
 Questo genererà una stringa di 64 caratteri esadecimali, tipo:
+
 ```
 a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
 ```
@@ -60,8 +62,8 @@ Puoi anche usare una qualsiasi stringa lunga e casuale (minimo 32 caratteri, con
 
 4. **Clicca "Add New"** e aggiungi:
 
-   | Nome | Valore | Ambiente |
-   |------|--------|----------|
+   | Nome             | Valore                            | Ambiente                                     |
+   | ---------------- | --------------------------------- | -------------------------------------------- |
    | `ENCRYPTION_KEY` | `[la chiave generata al passo 1]` | **Production**, **Preview**, **Development** |
 
    ⚠️ **IMPORTANTE**: Seleziona tutti e tre gli ambienti (Production, Preview, Development) per assicurarti che funzioni ovunque.
@@ -102,7 +104,8 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 2. **Aggiungi la nuova chiave** su Vercel
 3. **⚠️ PROBLEMA**: Le credenziali già criptate con la vecchia chiave non potranno più essere decriptate!
 
-   **Soluzione**: 
+   **Soluzione**:
+
    - Prima di cambiare chiave, decripta tutte le credenziali esistenti (se possibile)
    - Dopo aver cambiato chiave, riconfigura tutte le credenziali API degli utenti
 
@@ -125,6 +128,7 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 **Causa**: La variabile non è stata aggiunta su Vercel o non è stata applicata correttamente.
 
 **Soluzione**:
+
 1. Verifica su Vercel Dashboard → Settings → Environment Variables che `ENCRYPTION_KEY` sia presente
 2. Assicurati che sia selezionata per "Production"
 3. Fai un redeploy completo (non solo rebuild)
@@ -134,6 +138,7 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 **Causa**: Le credenziali sono state criptate con una chiave diversa.
 
 **Soluzione**:
+
 1. Verifica che la `ENCRYPTION_KEY` su Vercel sia quella corretta
 2. Se hai cambiato chiave, riconfigura tutte le credenziali API
 
@@ -142,6 +147,7 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 **Causa**: `ENCRYPTION_KEY` non è configurata o c'è un errore nella criptazione.
 
 **Soluzione**:
+
 1. Verifica che `ENCRYPTION_KEY` sia presente su Vercel
 2. Controlla i log per eventuali errori di criptazione
 3. Dopo aver configurato la chiave, le nuove credenziali verranno criptate automaticamente
@@ -157,14 +163,3 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 ---
 
 **Ultimo aggiornamento**: 3 Dicembre 2025
-
-
-
-
-
-
-
-
-
-
-
