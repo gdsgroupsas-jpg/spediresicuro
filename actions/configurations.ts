@@ -1039,6 +1039,51 @@ export async function updateConfigurationStatus(
       };
     }
 
+    // 4. AUTO-DISABLE LISTINI: Quando la config diventa inattiva,
+    // disabilita automaticamente i listini associati per prevenire
+    // l'uso di prezzi obsoleti o non più validi.
+    if (!isActive) {
+      try {
+        // Trova listini con metadata.courier_config_id === id
+        const { data: priceLists } = await supabaseAdmin
+          .from("price_lists")
+          .select("id, name, metadata, source_metadata")
+          .eq("list_type", "supplier")
+          .in("status", ["active", "draft"]);
+
+        if (priceLists && priceLists.length > 0) {
+          // Filtra listini di questa configurazione
+          const listsToDisable = priceLists.filter((pl: any) => {
+            const metadata = pl.metadata || pl.source_metadata || {};
+            return metadata.courier_config_id === id;
+          });
+
+          if (listsToDisable.length > 0) {
+            const listIds = listsToDisable.map((pl: any) => pl.id);
+            
+            const { error: disableError } = await supabaseAdmin
+              .from("price_lists")
+              .update({
+                status: "archived",
+                notes: `Listino archiviato automaticamente: configurazione "${config.name}" disattivata il ${new Date().toISOString()}`,
+                updated_at: new Date().toISOString(),
+              })
+              .in("id", listIds);
+
+            if (disableError) {
+              console.warn("Errore disabilitazione listini:", disableError);
+              // Non blocchiamo l'operazione principale
+            } else {
+              console.log(`✅ [AUTO-DISABLE] Archiviati ${listsToDisable.length} listini per config ${id.substring(0, 8)}...`);
+            }
+          }
+        }
+      } catch (listError: any) {
+        console.warn("Errore durante auto-disable listini:", listError.message);
+        // Non blocchiamo l'operazione principale
+      }
+    }
+
     // Audit log
     await logAuditEvent(
       isActive ? "credential_activated" : "credential_deactivated",
