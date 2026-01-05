@@ -6,7 +6,7 @@
 
 'use client';
 
-import { Package, Edit, Trash2, Eye, Calendar } from 'lucide-react';
+import { Package, Edit, Trash2, Eye, Calendar, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { PriceList } from '@/types/listini';
@@ -16,6 +16,7 @@ interface SupplierPriceListTableProps {
   onEdit: (priceList: PriceList) => void;
   onDelete: (priceListId: string) => void;
   onViewDetails: (priceListId: string) => void;
+  onConfigure?: (priceList: PriceList) => void; // Nuovo: configurazione manuale
   isLoading?: boolean;
   canDelete?: boolean; // Se true, mostra il bottone elimina (default: true)
 }
@@ -25,6 +26,7 @@ export function SupplierPriceListTable({
   onEdit,
   onDelete,
   onViewDetails,
+  onConfigure,
   isLoading = false,
   canDelete = true,
 }: SupplierPriceListTableProps) {
@@ -132,6 +134,17 @@ export function SupplierPriceListTable({
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
+                  {onConfigure && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onConfigure(priceList)}
+                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50"
+                      title="Configura (Assicurazione, Contrassegni, Servizi, etc.)"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"

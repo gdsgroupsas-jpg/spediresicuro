@@ -265,10 +265,167 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       `🚀 Starting Price List Sync (${mode}): ${estimate.zones} Zones x ${estimate.weights} Weights = ${estimate.totalCalls} calls (~${estimate.estimatedMinutes} min)`
     );
 
-    // Loop through Zones and Weights
+    // ============================================
+    // OTTIMIZZAZIONE 1: Cache intelligente
+    // ============================================
+    // Verifica se esiste già un listino sincronizzato di recente (< 7 giorni)
+    let shouldSkipSync = false;
+    if (!options?.overwriteExisting && options?.configId) {
+      const { data: recentPriceLists } = await supabaseAdmin
+        .from("price_lists")
+        .select("id, updated_at, metadata, source_metadata")
+        .eq("created_by", user.id)
+        .eq("list_type", "supplier")
+        .order("updated_at", { ascending: false })
+        .limit(100);
+
+      if (recentPriceLists) {
+        // Filtra in memoria per courier_config_id
+        const matchingList = recentPriceLists.find((pl: any) => {
+          const metadata = pl.metadata || pl.source_metadata || {};
+          return metadata.courier_config_id === options.configId;
+        });
+
+        if (matchingList) {
+          const lastSync = new Date(matchingList.updated_at);
+          const daysSinceSync = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60 * 24);
+          
+          if (daysSinceSync < 7) {
+            console.log(
+              `⏭️ [CACHE] Skip sync: listino sincronizzato ${Math.round(daysSinceSync)} giorni fa (< 7 giorni)`
+            );
+            shouldSkipSync = true;
+          }
+        }
+      }
+    }
+
+    // Se skip sync, ritorna early (ma solo se non è overwriteExisting)
+    // IMPORTANTE: Se overwriteExisting=true, bypassa la cache per forzare sync completa
+    if (shouldSkipSync && !options?.overwriteExisting) {
+      console.log(
+        `⏭️ [CACHE] Skip sync completo: listino recente e overwriteExisting=false`
+      );
+      return {
+        success: true,
+        priceListsCreated: 0,
+        priceListsUpdated: 0,
+        entriesAdded: 0,
+        details: {
+          ratesProcessed: 0,
+          carriersProcessed: [],
+        },
+      };
+    } else if (shouldSkipSync && options?.overwriteExisting) {
+      console.log(
+        `🔄 [CACHE] Cache bypassata: overwriteExisting=true, procedo con sync completa`
+      );
+    }
+
+    // ============================================
+    // OTTIMIZZAZIONE 2: Sync incrementale
+    // ============================================
+    // Recupera combinazioni già presenti nel database
+    const existingCombinations = new Set<string>();
+    if (!options?.overwriteExisting && options?.configId) {
+      // Prima trova i price_list_id per questa configurazione
+      const { data: priceListsForConfig } = await supabaseAdmin
+        .from("price_lists")
+        .select("id, metadata, source_metadata")
+        .eq("created_by", user.id)
+        .eq("list_type", "supplier")
+        .limit(100);
+
+      if (priceListsForConfig) {
+        // Filtra in memoria per courier_config_id
+        const matchingPriceListIds = priceListsForConfig
+          .filter((pl: any) => {
+            const metadata = pl.metadata || pl.source_metadata || {};
+            return metadata.courier_config_id === options.configId;
+          })
+          .map((pl: any) => pl.id);
+
+        if (matchingPriceListIds.length > 0) {
+          const { data: existingEntries } = await supabaseAdmin
+            .from("price_list_entries")
+            .select("zone_code, weight_from, weight_to")
+            .in("price_list_id", matchingPriceListIds);
+
+          if (existingEntries) {
+            for (const entry of existingEntries) {
+              // Crea chiave combinazione: zone_weightRange
+              const weightKey = `${entry.weight_from}-${entry.weight_to}`;
+              existingCombinations.add(`${entry.zone_code}_${weightKey}`);
+            }
+            console.log(
+              `📊 [INCREMENTALE] Trovate ${existingCombinations.size} combinazioni esistenti`
+            );
+          }
+        }
+      }
+    }
+
+    // ============================================
+    // OTTIMIZZAZIONE 3: Parallelizzazione
+    // ============================================
+    // Prepara tutte le combinazioni da processare
+    const combinations: Array<{ zone: typeof zones[0]; weight: number }> = [];
     for (const zone of zones) {
       for (const weight of weightsToProbe) {
-        // Validation params for this iteration
+        // Skip se combinazione già presente (sync incrementale)
+        if (!options?.overwriteExisting) {
+          const combinationKey = `${zone.code}_${weight}`;
+          // Verifica se esiste già una entry che copre questo peso
+          const exists = Array.from(existingCombinations).some((key) => {
+            const [entryZone, weightRange] = key.split("_");
+            if (entryZone !== zone.code) return false;
+            const [from, to] = weightRange.split("-").map(Number);
+            return weight >= from && weight <= to;
+          });
+          
+          if (exists) {
+            console.log(
+              `⏭️ [INCREMENTALE] Skip ${zone.code}/${weight}kg: già presente`
+            );
+            continue;
+          }
+        }
+        
+        combinations.push({ zone, weight });
+      }
+    }
+
+    console.log(
+      `🔄 [PARALLEL] Processando ${combinations.length} combinazioni (${combinations.length} nuove, ${estimate.totalCalls - combinations.length} già presenti)`
+    );
+
+    // Se non ci sono combinazioni da processare, ritorna early
+    if (combinations.length === 0) {
+      console.log(
+        `✅ [SYNC] Nessuna combinazione nuova da sincronizzare (tutte già presenti)`
+      );
+      return {
+        success: true,
+        priceListsCreated: 0,
+        priceListsUpdated: 0,
+        entriesAdded: 0,
+        details: {
+          ratesProcessed: 0,
+          carriersProcessed: [],
+        },
+      };
+    }
+
+    // Batch size per parallelizzazione (3-5 chiamate simultanee)
+    const BATCH_SIZE = mode === "matrix" ? 3 : mode === "balanced" ? 4 : 5;
+    const delayBetweenBatches = mode === "matrix" ? 200 : mode === "balanced" ? 100 : 50;
+
+    // Processa in batch paralleli
+    for (let i = 0; i < combinations.length; i += BATCH_SIZE) {
+      const batch = combinations.slice(i, i + BATCH_SIZE);
+      
+      // Esegui batch in parallelo
+      const batchPromises = batch.map(async ({ zone, weight }) => {
         const currentParams = {
           packages: [{ length: 30, width: 20, height: 15, weight }],
           shipFrom: {
@@ -287,34 +444,40 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             postalCode: zone.sampleAddress.postalCode,
             country: zone.sampleAddress.country,
           },
-          configId: options?.configId, // Pass config ID for multi-account support
+          configId: options?.configId,
         };
 
-        // Call API (using existing test function logic but we need to inject credentials efficiently)
-        // Optimization: We re-use getSpedisciOnlineCredentials only once outside loop if possible,
-        // but testSpedisciOnlineRates fetches it every time.
-        // For now, to keep it robust, we call testSpedisciOnlineRates but we need to be mindful of rate limits.
-        // In a real prod scenario, we'd refactor to pass the adapter instance.
-
-        // Call the test function (which instantiates a new adapter each time - inefficient but safe for now)
-        const result = await testSpedisciOnlineRates(currentParams);
-
-        if (result.success && result.rates) {
-          for (const rate of result.rates) {
-            // Enrich rate with our probe metadata
-            (rate as any)._probe_weight = weight;
-            (rate as any)._probe_zone = zone.code;
-            allRates.push(rate);
+        try {
+          const result = await testSpedisciOnlineRates(currentParams);
+          
+          if (result.success && result.rates) {
+            for (const rate of result.rates) {
+              (rate as any)._probe_weight = weight;
+              (rate as any)._probe_zone = zone.code;
+              allRates.push(rate);
+            }
+            return { success: true, zone: zone.code, weight };
           }
+          return { success: false, zone: zone.code, weight, error: result.error };
+        } catch (error: any) {
+          console.error(
+            `❌ [BATCH] Errore ${zone.code}/${weight}kg:`,
+            error.message
+          );
+          return { success: false, zone: zone.code, weight, error: error.message };
         }
+      });
 
-        // Small delay to avoid rate limiting (balanced mode più veloce ma sicuro)
-        await new Promise((r) =>
-          setTimeout(
-            r,
-            mode === "matrix" ? 200 : mode === "balanced" ? 100 : 50
-          )
-        );
+      // Attendi completamento batch
+      const batchResults = await Promise.all(batchPromises);
+      const successCount = batchResults.filter((r) => r.success).length;
+      console.log(
+        `✅ [BATCH ${Math.floor(i / BATCH_SIZE) + 1}] Completato: ${successCount}/${batch.length} successi`
+      );
+
+      // Delay tra batch (non tra singole chiamate)
+      if (i + BATCH_SIZE < combinations.length) {
+        await new Promise((r) => setTimeout(r, delayBetweenBatches));
       }
     }
 
