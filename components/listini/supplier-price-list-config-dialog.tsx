@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -92,44 +92,9 @@ export function SupplierPriceListConfigDialog({
   const [pickupConfig, setPickupConfig] = useState<PickupServiceConfig[]>([]);
   const [extraConfig, setExtraConfig] = useState<Record<string, any>>({});
 
-  // Carica configurazione esistente
-  useEffect(() => {
-    if (open && priceList.id) {
-      loadConfig();
-    }
-  }, [open, priceList.id]);
-
-  async function loadConfig() {
-    setIsLoading(true);
-    try {
-      const result = await getSupplierPriceListConfig(priceList.id);
-      if (result.success && result.config) {
-        const config = result.config;
-        setInsuranceConfig(config.insurance_config);
-        setCodConfig(config.cod_config || []);
-        setAccessoryServicesConfig(config.accessory_services_config || []);
-        setStorageConfig(config.storage_config || {
-          services: [],
-          dossier_opening_cost: 0,
-        });
-        setPickupConfig(config.pickup_config || []);
-        setExtraConfig(config.extra_config || {});
-      } else {
-        // Inizializza con valori di default basati sul corriere
-        initializeDefaults();
-      }
-    } catch (error) {
-      console.error("Errore caricamento configurazione:", error);
-      toast.error("Errore caricamento configurazione");
-      initializeDefaults();
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  function initializeDefaults() {
+  const initializeDefaults = useCallback(() => {
     // Estrai carrier_code dai metadata
-    const metadata = priceList.metadata || priceList.source_metadata || {};
+    const metadata = priceList.source_metadata || {};
     let carrierCode = (metadata.carrier_code || "").toLowerCase();
 
     // Normalizza alias comuni per Poste
@@ -137,7 +102,6 @@ export function SupplierPriceListConfigDialog({
       poste: "postedeliverybusiness",
       posteitaliane: "postedeliverybusiness",
       "poste italiane": "postedeliverybusiness",
-      "posteitaliane": "postedeliverybusiness",
     };
 
     // Se c'è un alias, usa quello
@@ -173,12 +137,47 @@ export function SupplierPriceListConfigDialog({
         percent_of_freight: 0,
       },
     ]);
-  }
+  }, [priceList.source_metadata]);
+
+  const loadConfig = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await getSupplierPriceListConfig(priceList.id);
+      if (result.success && result.config) {
+        const config = result.config;
+        setInsuranceConfig(config.insurance_config);
+        setCodConfig(config.cod_config || []);
+        setAccessoryServicesConfig(config.accessory_services_config || []);
+        setStorageConfig(config.storage_config || {
+          services: [],
+          dossier_opening_cost: 0,
+        });
+        setPickupConfig(config.pickup_config || []);
+        setExtraConfig(config.extra_config || {});
+      } else {
+        // Inizializza con valori di default basati sul corriere
+        initializeDefaults();
+      }
+    } catch (error) {
+      console.error("Errore caricamento configurazione:", error);
+      toast.error("Errore caricamento configurazione");
+      initializeDefaults();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [priceList.id, initializeDefaults]);
+
+  // Carica configurazione esistente
+  useEffect(() => {
+    if (open && priceList.id) {
+      loadConfig();
+    }
+  }, [open, priceList.id, loadConfig]);
 
   async function handleSave() {
     setIsSaving(true);
     try {
-      const metadata = priceList.metadata || priceList.source_metadata || {};
+      const metadata = priceList.source_metadata || {};
       const result = await upsertSupplierPriceListConfig({
         price_list_id: priceList.id,
         carrier_code: metadata.carrier_code || "",
@@ -480,7 +479,7 @@ export function SupplierPriceListConfigDialog({
               ))}
               {codConfig.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessuna riga configurata. Clicca "Aggiungi riga" per iniziare.
+                  Nessuna riga configurata. Clicca &quot;Aggiungi riga&quot; per iniziare.
                 </p>
               )}
             </div>
@@ -560,7 +559,7 @@ export function SupplierPriceListConfigDialog({
               ))}
               {accessoryServicesConfig.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessun servizio configurato. Clicca "Aggiungi servizio" per
+                  Nessun servizio configurato. Clicca &quot;Aggiungi servizio&quot; per
                   iniziare.
                 </p>
               )}
@@ -641,7 +640,7 @@ export function SupplierPriceListConfigDialog({
               ))}
               {storageConfig.services.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessun servizio configurato. Clicca "Aggiungi servizio" per
+                  Nessun servizio configurato. Clicca &quot;Aggiungi servizio&quot; per
                   iniziare.
                 </p>
               )}
