@@ -269,3 +269,4 @@ Dopo questa configurazione:
 **Versione:** 2.0  
 **Data:** 1 Gennaio 2026
 
+

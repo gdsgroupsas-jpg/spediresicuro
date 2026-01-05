@@ -1,17 +1,17 @@
 /**
  * API: List Configurations for Booking
- * 
+ *
  * GET /api/configurations/list-for-booking
- * 
+ *
  * Restituisce le configurazioni Spedisci.Online attive dell'utente
  * per la selezione durante il booking.
- * 
+ *
  * @security Solo dati necessari alla UI (no API keys)
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { requireSafeAuth } from "@/lib/safe-auth";
 import { supabaseAdmin } from "@/lib/db/client";
+import { requireSafeAuth } from "@/lib/safe-auth";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
     // Recupera configurazioni attive dell'utente
     const { data: configs, error } = await supabaseAdmin
       .from("courier_configs")
-      .select("id, name, is_default, status, contract_mapping, automation_settings")
+      .select(
+        "id, name, is_default, status, contract_mapping, automation_settings"
+      )
       .eq("owner_user_id", userId)
       .eq("provider_id", "spedisci_online")
       .eq("is_active", true)
@@ -44,10 +46,12 @@ export async function GET(request: NextRequest) {
       // Estrai corrieri da contract_mapping
       const contractMapping = config.contract_mapping || {};
       const allCouriers = Object.keys(contractMapping);
-      
+
       // Se ci sono corrieri abilitati in automation_settings, usa quelli
-      const automationSettings = (config.automation_settings as Record<string, unknown>) || {};
-      const enabledCouriers = (automationSettings.enabled_carriers as string[]) || allCouriers;
+      const automationSettings =
+        (config.automation_settings as Record<string, unknown>) || {};
+      const enabledCouriers =
+        (automationSettings.enabled_carriers as string[]) || allCouriers;
 
       return {
         id: config.id,

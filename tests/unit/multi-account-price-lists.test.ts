@@ -1,13 +1,13 @@
 /**
  * Test Unit: Multi-Account Price Lists
- * 
+ *
  * Test per le funzionalità multi-account dei listini fornitore:
  * 1. CourierSelector - abilitazione/disabilitazione corrieri
  * 2. Auto-disable listini quando config diventa inattiva
  * 3. AccountSelector - selezione account per booking
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock Supabase
 vi.mock("@/lib/db/client", () => ({
@@ -16,7 +16,9 @@ vi.mock("@/lib/db/client", () => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+          maybeSingle: vi.fn(() =>
+            Promise.resolve({ data: null, error: null })
+          ),
           order: vi.fn(() => ({
             limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
           })),
@@ -31,7 +33,9 @@ vi.mock("@/lib/db/client", () => ({
       })),
       insert: vi.fn(() => ({
         select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: { id: "test-id" }, error: null })),
+          single: vi.fn(() =>
+            Promise.resolve({ data: { id: "test-id" }, error: null })
+          ),
         })),
       })),
     })),
@@ -50,31 +54,47 @@ describe("Multi-Account Price Lists", () => {
     it("should validate enabled_carriers is not empty", () => {
       const enabledCouriers: string[] = [];
       expect(enabledCouriers.length).toBe(0);
-      
+
       // Logica: almeno un corriere deve essere abilitato
       const isValid = enabledCouriers.length > 0;
       expect(isValid).toBe(false);
     });
 
     it("should sanitize courier codes", () => {
-      const rawCouriers = ["GLS", "PosteDeliveryBusiness", "INVALID@CHAR", "  spaces  "];
-      
+      const rawCouriers = [
+        "GLS",
+        "PosteDeliveryBusiness",
+        "INVALID@CHAR",
+        "  spaces  ",
+      ];
+
       const sanitized = rawCouriers
         .filter((c): c is string => typeof c === "string")
-        .map((c) => c.toLowerCase().replace(/[^a-z0-9_-]/g, "").trim())
+        .map((c) =>
+          c
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]/g, "")
+            .trim()
+        )
         .filter((c) => c.length > 0);
 
-      expect(sanitized).toEqual(["gls", "postedeliverybusiness", "invalidchar", "spaces"]);
+      expect(sanitized).toEqual([
+        "gls",
+        "postedeliverybusiness",
+        "invalidchar",
+        "spaces",
+      ]);
     });
 
     it("should not allow disabling all couriers", () => {
       const currentSelection = new Set(["gls"]);
       const courierToRemove = "gls";
-      
+
       // Logica: se rimuovendo questo corriere la selezione diventa vuota, blocca
-      const wouldBeEmpty = currentSelection.size === 1 && currentSelection.has(courierToRemove);
+      const wouldBeEmpty =
+        currentSelection.size === 1 && currentSelection.has(courierToRemove);
       expect(wouldBeEmpty).toBe(true);
-      
+
       // Non deve permettere la rimozione
       if (!wouldBeEmpty) {
         currentSelection.delete(courierToRemove);
@@ -95,8 +115,9 @@ describe("Multi-Account Price Lists", () => {
       };
 
       const configIdToDisable = "config-123";
-      const shouldDisable = priceList.metadata?.courier_config_id === configIdToDisable;
-      
+      const shouldDisable =
+        priceList.metadata?.courier_config_id === configIdToDisable;
+
       expect(shouldDisable).toBe(true);
     });
 
@@ -111,8 +132,9 @@ describe("Multi-Account Price Lists", () => {
       };
 
       const configIdToDisable = "config-123";
-      const shouldDisable = priceList.metadata?.courier_config_id === configIdToDisable;
-      
+      const shouldDisable =
+        priceList.metadata?.courier_config_id === configIdToDisable;
+
       expect(shouldDisable).toBe(false);
     });
 
@@ -126,7 +148,9 @@ describe("Multi-Account Price Lists", () => {
 
       const disableableStatuses = ["active", "draft"];
       const toDisable = priceLists.filter(
-        (pl) => disableableStatuses.includes(pl.status) && pl.metadata.courier_config_id === "cfg"
+        (pl) =>
+          disableableStatuses.includes(pl.status) &&
+          pl.metadata.courier_config_id === "cfg"
       );
 
       expect(toDisable.length).toBe(2);
@@ -154,7 +178,7 @@ describe("Multi-Account Price Lists", () => {
 
       const defaultAccount = accounts.find((a) => a.isDefault);
       const selectedAccount = defaultAccount || accounts[0];
-      
+
       expect(selectedAccount.id).toBe("acc-1");
     });
 

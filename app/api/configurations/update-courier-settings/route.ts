@@ -1,16 +1,16 @@
 /**
  * API: Aggiorna preferenze corrieri per configurazione
- * 
+ *
  * POST /api/configurations/update-courier-settings
- * 
+ *
  * Salva la lista dei corrieri abilitati in courier_configs.automation_settings.enabled_carriers
- * 
+ *
  * @security Solo owner della configurazione o admin può modificare
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { requireSafeAuth } from "@/lib/safe-auth";
 import { supabaseAdmin } from "@/lib/db/client";
+import { requireSafeAuth } from "@/lib/safe-auth";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
 
     // RBAC: Solo owner o admin può modificare
     const isOwner = config.owner_user_id === userId;
-    const isAdmin = actorAccountType === "admin" || 
-                    actorAccountType === "superadmin";
+    const isAdmin =
+      actorAccountType === "admin" || actorAccountType === "superadmin";
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
@@ -77,7 +77,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Merge con automation_settings esistenti
-    const existingSettings = (config.automation_settings as Record<string, unknown>) || {};
+    const existingSettings =
+      (config.automation_settings as Record<string, unknown>) || {};
     const updatedSettings = {
       ...existingSettings,
       enabled_carriers: sanitizedCouriers,
@@ -101,10 +102,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ [COURIER-SETTINGS] Aggiornato config ${configId.substring(0, 8)}...`, {
-      enabledCouriers: sanitizedCouriers,
-      userId,
-    });
+    console.log(
+      `✅ [COURIER-SETTINGS] Aggiornato config ${configId.substring(0, 8)}...`,
+      {
+        enabledCouriers: sanitizedCouriers,
+        userId,
+      }
+    );
 
     return NextResponse.json({
       success: true,

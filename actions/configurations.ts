@@ -1060,12 +1060,14 @@ export async function updateConfigurationStatus(
 
           if (listsToDisable.length > 0) {
             const listIds = listsToDisable.map((pl: any) => pl.id);
-            
+
             const { error: disableError } = await supabaseAdmin
               .from("price_lists")
               .update({
                 status: "archived",
-                notes: `Listino archiviato automaticamente: configurazione "${config.name}" disattivata il ${new Date().toISOString()}`,
+                notes: `Listino archiviato automaticamente: configurazione "${
+                  config.name
+                }" disattivata il ${new Date().toISOString()}`,
                 updated_at: new Date().toISOString(),
               })
               .in("id", listIds);
@@ -1074,7 +1076,11 @@ export async function updateConfigurationStatus(
               console.warn("Errore disabilitazione listini:", disableError);
               // Non blocchiamo l'operazione principale
             } else {
-              console.log(`✅ [AUTO-DISABLE] Archiviati ${listsToDisable.length} listini per config ${id.substring(0, 8)}...`);
+              console.log(
+                `✅ [AUTO-DISABLE] Archiviati ${
+                  listsToDisable.length
+                } listini per config ${id.substring(0, 8)}...`
+              );
             }
           }
         }

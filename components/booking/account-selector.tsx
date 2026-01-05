@@ -1,19 +1,18 @@
 /**
  * Account Selector per Booking Multi-Account
- * 
+ *
  * Quando l'utente ha più configurazioni Spedisci.Online attive,
  * questo componente permette di scegliere quale account usare per il booking.
- * 
+ *
  * @security Mostra solo configurazioni attive dell'utente corrente
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Building2, CheckCircle2, Server } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Building2, CheckCircle2, Loader2, Server } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface AccountConfig {
   id: string;
@@ -54,7 +53,9 @@ export function AccountSelector({
   const [accounts, setAccounts] = useState<AccountConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | undefined>(selectedAccountId);
+  const [selectedId, setSelectedId] = useState<string | undefined>(
+    selectedAccountId
+  );
 
   // Carica configurazioni
   useEffect(() => {
@@ -62,19 +63,21 @@ export function AccountSelector({
       try {
         setIsLoading(true);
         const response = await fetch("/api/configurations/list-for-booking");
-        
+
         if (!response.ok) {
           throw new Error("Errore caricamento account");
         }
 
         const data = await response.json();
-        
+
         if (data.configs && data.configs.length > 0) {
           setAccounts(data.configs);
-          
+
           // Seleziona default o il primo
           if (!selectedId) {
-            const defaultAccount = data.configs.find((c: AccountConfig) => c.isDefault);
+            const defaultAccount = data.configs.find(
+              (c: AccountConfig) => c.isDefault
+            );
             const firstAccount = data.configs[0];
             const toSelect = defaultAccount || firstAccount;
             setSelectedId(toSelect.id);
@@ -111,7 +114,9 @@ export function AccountSelector({
 
   if (isLoading) {
     return (
-      <div className={`flex items-center gap-2 p-4 bg-gray-50 rounded-lg ${className}`}>
+      <div
+        className={`flex items-center gap-2 p-4 bg-gray-50 rounded-lg ${className}`}
+      >
         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
         <span className="text-sm text-gray-500">Caricamento account...</span>
       </div>
@@ -120,7 +125,9 @@ export function AccountSelector({
 
   if (error) {
     return (
-      <div className={`p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 ${className}`}>
+      <div
+        className={`p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 ${className}`}
+      >
         {error}
       </div>
     );
@@ -136,7 +143,7 @@ export function AccountSelector({
         <Server className="h-3.5 w-3.5" />
         Account Spedizioni ({accounts.length})
       </Label>
-      
+
       <div className="grid gap-2">
         {accounts.map((account) => {
           const isSelected = selectedId === account.id;
@@ -150,17 +157,26 @@ export function AccountSelector({
               onClick={() => handleSelect(account)}
               className={`
                 relative p-3 rounded-lg border-2 cursor-pointer transition-all
-                ${isSelected
-                  ? "border-amber-400 bg-amber-50 ring-2 ring-amber-200"
-                  : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                ${
+                  isSelected
+                    ? "border-amber-400 bg-amber-50 ring-2 ring-amber-200"
+                    : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
                 }
               `}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <Building2 className={`h-4 w-4 ${isSelected ? "text-amber-600" : "text-gray-400"}`} />
-                    <span className={`font-medium ${isSelected ? "text-amber-900" : "text-gray-700"}`}>
+                    <Building2
+                      className={`h-4 w-4 ${
+                        isSelected ? "text-amber-600" : "text-gray-400"
+                      }`}
+                    />
+                    <span
+                      className={`font-medium ${
+                        isSelected ? "text-amber-900" : "text-gray-700"
+                      }`}
+                    >
                       {account.name}
                     </span>
                     {account.isDefault && (
