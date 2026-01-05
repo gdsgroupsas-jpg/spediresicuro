@@ -616,19 +616,14 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           }
         }
 
-        // Se non trovato per metadata, cerca anche per courier_id + nome (per retrocompatibilità)
-        if (!existingPriceList && courierId) {
-          const { data } = await supabaseAdmin
-            .from("price_lists")
-            .select("id")
-            .eq("courier_id", courierId)
-            .eq("created_by", user.id)
-            .eq("list_type", "supplier")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          existingPriceList = data;
-        }
+        // REMOVED FALLBACK: Non cercare per courier_id quando configId è specificato
+        // Se la ricerca per metadata non ha trovato nulla, significa che è un nuovo contratto
+        // e deve essere creato un nuovo listino, NON aggiornato uno esistente di altro contratto
+        //
+        // PREVIOUS BUG: Il fallback per courier_id causava che il secondo contratto matchasse
+        // erroneamente il listino del primo contratto, causando sovrascrittura invece di creazione
+        //
+        // if (!existingPriceList && courierId) { ... } ← RIMOSSO (era causa del bug)
       } else {
         // Se configId non è presente, usa la logica originale (cerca per courier_id o nome)
         if (courierId) {
