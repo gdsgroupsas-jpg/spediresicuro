@@ -1,19 +1,25 @@
 /**
  * Courier Selector per Account Spedisci.Online
- * 
+ *
  * Permette di abilitare/disabilitare corrieri specifici per ogni configurazione.
  * I corrieri disabilitati non vengono sincronizzati nel listino.
- * 
+ *
  * @security Le preferenze sono salvate in courier_configs.automation_settings.enabled_carriers
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Truck, CheckCircle2, AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Save, Truck } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface CourierSelectorProps {
@@ -57,17 +63,17 @@ export function CourierSelector({
   useEffect(() => {
     const initial = new Set(initialEnabled ?? availableCouriers);
     const current = selectedCouriers;
-    
-    const isDifferent = 
+
+    const isDifferent =
       initial.size !== current.size ||
-      [...initial].some(c => !current.has(c)) ||
-      [...current].some(c => !initial.has(c));
-    
+      [...initial].some((c) => !current.has(c)) ||
+      [...current].some((c) => !initial.has(c));
+
     setHasChanges(isDifferent);
   }, [selectedCouriers, initialEnabled, availableCouriers]);
 
   const handleToggle = (courier: string) => {
-    setSelectedCouriers(prev => {
+    setSelectedCouriers((prev) => {
       const next = new Set(prev);
       if (next.has(courier)) {
         // Non permettere di disabilitare tutti
@@ -97,14 +103,17 @@ export function CourierSelector({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch("/api/configurations/update-courier-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          configId,
-          enabledCouriers: [...selectedCouriers],
-        }),
-      });
+      const response = await fetch(
+        "/api/configurations/update-courier-settings",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            configId,
+            enabledCouriers: [...selectedCouriers],
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -129,7 +138,8 @@ export function CourierSelector({
           <div className="flex items-center gap-2 text-yellow-700">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">
-              Nessun corriere rilevato. Esegui un test per rilevare i corrieri disponibili.
+              Nessun corriere rilevato. Esegui un test per rilevare i corrieri
+              disponibili.
             </span>
           </div>
         </CardContent>
@@ -182,16 +192,18 @@ export function CourierSelector({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {availableCouriers.map((courier) => {
             const isChecked = selectedCouriers.has(courier);
-            const displayName = COURIER_DISPLAY_NAMES[courier.toLowerCase()] || courier;
+            const displayName =
+              COURIER_DISPLAY_NAMES[courier.toLowerCase()] || courier;
 
             return (
               <div
                 key={courier}
                 className={`
                   flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors
-                  ${isChecked 
-                    ? "bg-green-50 border-green-200 hover:bg-green-100" 
-                    : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                  ${
+                    isChecked
+                      ? "bg-green-50 border-green-200 hover:bg-green-100"
+                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
                   }
                 `}
                 onClick={() => handleToggle(courier)}
@@ -220,7 +232,8 @@ export function CourierSelector({
         {/* Info e salvataggio */}
         <div className="flex items-center justify-between pt-2 border-t">
           <span className="text-sm text-muted-foreground">
-            {selectedCouriers.size} di {availableCouriers.length} corrieri selezionati
+            {selectedCouriers.size} di {availableCouriers.length} corrieri
+            selezionati
           </span>
           <Button
             onClick={handleSave}

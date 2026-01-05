@@ -1,13 +1,13 @@
 /**
  * ESEGUI SYNC REALE dei listini
- * 
+ *
  * Questo script esegue la sincronizzazione vera usando l'action server
  */
 
-import { config } from "dotenv";
-import { createClient } from "@supabase/supabase-js";
-import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
+import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
+import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
@@ -21,8 +21,20 @@ const TEST_EMAIL = "testspediresicuro+postaexpress@gmail.com";
 
 // Zone di test (subset per velocità)
 const TEST_ZONES = [
-  { code: "IT-STD", city: "Milano", state: "MI", postalCode: "20100", country: "IT" },
-  { code: "IT-CAL", city: "Reggio Calabria", state: "RC", postalCode: "89100", country: "IT" },
+  {
+    code: "IT-STD",
+    city: "Milano",
+    state: "MI",
+    postalCode: "20100",
+    country: "IT",
+  },
+  {
+    code: "IT-CAL",
+    city: "Reggio Calabria",
+    state: "RC",
+    postalCode: "89100",
+    country: "IT",
+  },
 ];
 
 // Pesi di test
@@ -30,7 +42,7 @@ const TEST_WEIGHTS = [1, 5, 10, 20, 30];
 
 async function executeSyncForConfig(cfg: any, apiKey: string) {
   console.log(`\n📡 Sync per: ${cfg.name}`);
-  
+
   const adapter = new SpedisciOnlineAdapter({
     api_key: apiKey,
     api_secret: cfg.api_secret || "",
@@ -39,7 +51,7 @@ async function executeSyncForConfig(cfg: any, apiKey: string) {
   });
 
   const allRates: any[] = [];
-  
+
   // Raccogli rates per diverse zone e pesi
   for (const zone of TEST_ZONES) {
     for (const weight of TEST_WEIGHTS) {
@@ -77,9 +89,9 @@ async function executeSyncForConfig(cfg: any, apiKey: string) {
       } catch (e) {
         // Ignora errori singoli
       }
-      
+
       // Piccola pausa
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 
@@ -108,14 +120,17 @@ async function executeSyncForConfig(cfg: any, apiKey: string) {
   // Crea/aggiorna listino per ogni corriere
   for (const [carrierCode, rates] of carrierRates) {
     const listName = `Listino ${carrierCode.toUpperCase()} - ${cfg.name}`;
-    
+
     // Cerca listino esistente
     const { data: existing } = await supabase
       .from("price_lists")
       .select("id")
       .eq("created_by", TEST_USER_ID)
       .eq("list_type", "supplier")
-      .contains("metadata", { carrier_code: carrierCode, courier_config_id: cfg.id })
+      .contains("metadata", {
+        carrier_code: carrierCode,
+        courier_config_id: cfg.id,
+      })
       .maybeSingle();
 
     let priceListId: string;
@@ -125,7 +140,7 @@ async function executeSyncForConfig(cfg: any, apiKey: string) {
       priceListId = existing.id;
       await supabase
         .from("price_lists")
-        .update({ 
+        .update({
           name: listName,
           updated_at: new Date().toISOString(),
         })
@@ -156,7 +171,7 @@ async function executeSyncForConfig(cfg: any, apiKey: string) {
         console.log(`   ❌ Errore creazione listino: ${error.message}`);
         continue;
       }
-      
+
       priceListId = newList.id;
       created++;
       console.log(`   ✅ Creato: ${listName}`);
@@ -240,10 +255,10 @@ async function main() {
     .eq("list_type", "supplier");
 
   console.log(`\n📦 Listini nel DB: ${lists?.length || 0}`);
-  
+
   for (const list of lists || []) {
     const meta = (list.metadata as any) || {};
-    
+
     const { count } = await supabase
       .from("price_list_entries")
       .select("*", { count: "exact", head: true })
@@ -253,7 +268,9 @@ async function main() {
   }
 
   console.log("\n" + "═".repeat(70));
-  console.log(`✅ SYNC COMPLETATA: ${totalCreated} creati, ${totalUpdated} aggiornati`);
+  console.log(
+    `✅ SYNC COMPLETATA: ${totalCreated} creati, ${totalUpdated} aggiornati`
+  );
   console.log("═".repeat(70));
 }
 

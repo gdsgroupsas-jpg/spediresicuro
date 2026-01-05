@@ -1,13 +1,13 @@
 /**
  * TEST REALE: Sincronizzazione Listini da Spedisci.Online
- * 
+ *
  * Questo script testa la sync REALE usando le credenziali nel DB
  */
 
-import { config } from "dotenv";
-import { createClient } from "@supabase/supabase-js";
-import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
+import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
+import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
@@ -86,9 +86,11 @@ async function testRealSync() {
         console.log(`   ✅ API OK - ${result.rates.length} rates ricevuti`);
 
         // Estrai corrieri unici
-        const carriers = [...new Set(result.rates.map((r: any) => 
-          r.carrier_code || r.carrierCode
-        ))];
+        const carriers = [
+          ...new Set(
+            result.rates.map((r: any) => r.carrier_code || r.carrierCode)
+          ),
+        ];
         console.log(`   🚚 Corrieri: ${carriers.join(", ")}`);
 
         // Mostra prezzi
@@ -129,15 +131,23 @@ async function testRealSync() {
     const meta = (list.metadata as any) || {};
     console.log(`📄 ${list.name}`);
     console.log(`   carrier_code: ${meta.carrier_code || "N/A"}`);
-    console.log(`   courier_config_id: ${meta.courier_config_id?.substring(0, 8) || "N/A"}...`);
-    console.log(`   Ultimo aggiornamento: ${new Date(list.updated_at).toLocaleString("it-IT")}`);
-    
+    console.log(
+      `   courier_config_id: ${
+        meta.courier_config_id?.substring(0, 8) || "N/A"
+      }...`
+    );
+    console.log(
+      `   Ultimo aggiornamento: ${new Date(list.updated_at).toLocaleString(
+        "it-IT"
+      )}`
+    );
+
     // Conta entries
     const { count } = await supabase
       .from("price_list_entries")
       .select("*", { count: "exact", head: true })
       .eq("price_list_id", list.id);
-    
+
     console.log(`   Entries: ${count || 0}`);
     console.log();
   }
@@ -148,7 +158,7 @@ async function testRealSync() {
   console.log("═".repeat(70));
   console.log(`   Config attive: ${configs.length}`);
   console.log(`   Listini nel DB: ${priceLists?.length || 0}`);
-  
+
   // Verifica che ogni config abbia almeno un listino
   for (const cfg of configs) {
     const listsForConfig = priceLists?.filter(

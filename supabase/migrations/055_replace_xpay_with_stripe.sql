@@ -39,3 +39,4 @@ COMMENT ON TABLE payment_transactions IS 'Transazioni pagamento: Stripe (default
 -- per audit e storico, ma nuovi pagamenti usano Stripe.
 
 
+
