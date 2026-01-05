@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardNav from '@/components/dashboard-nav';
 import { SupplierPriceListForm } from '@/components/listini/supplier-price-list-form';
 import { SupplierPriceListTable } from '@/components/listini/supplier-price-list-table';
+import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog';
 import {
   listSupplierPriceListsAction,
   createSupplierPriceListAction,
@@ -42,6 +43,8 @@ export default function ResellerListiniFornitorePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [isResellerAdmin, setIsResellerAdmin] = useState(false); // Solo admin reseller può eliminare
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [configPriceList, setConfigPriceList] = useState<PriceList | null>(null);
 
   // Verifica permessi e carica dati
   useEffect(() => {
@@ -147,6 +150,11 @@ export default function ResellerListiniFornitorePage() {
     router.push(`/dashboard/reseller/listini-fornitore/${priceListId}`);
   };
 
+  const handleConfigure = (priceList: PriceList) => {
+    setConfigPriceList(priceList);
+    setShowConfigDialog(true);
+  };
+
   const handleFormSuccess = () => {
     setShowCreateDialog(false);
     setEditingPriceList(null);
@@ -230,6 +238,7 @@ export default function ResellerListiniFornitorePage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewDetails={handleViewDetails}
+            onConfigure={handleConfigure}
             isLoading={isLoading}
             canDelete={isResellerAdmin}
           />
@@ -288,6 +297,23 @@ export default function ResellerListiniFornitorePage() {
           cancelText="Annulla"
           variant="destructive"
         />
+
+        {/* Dialog Configurazione Manuale */}
+        {configPriceList && (
+          <SupplierPriceListConfigDialog
+            open={showConfigDialog}
+            onOpenChange={(open) => {
+              setShowConfigDialog(open);
+              if (!open) {
+                setConfigPriceList(null);
+              }
+            }}
+            priceList={configPriceList}
+            onSaveComplete={() => {
+              loadPriceLists();
+            }}
+          />
+        )}
       </div>
     </div>
   );
