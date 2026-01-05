@@ -94,9 +94,10 @@ async function testRealSync() {
         // Mostra prezzi
         console.log("\n   💰 Prezzi ricevuti:");
         for (const rate of result.rates.slice(0, 5)) {
-          const carrier = rate.carrier_code || rate.carrierCode;
-          const contract = rate.contract_code || rate.contractCode;
-          const price = rate.total_price;
+          const r = rate as any;
+          const carrier = r.carrier_code || r.carrierCode;
+          const contract = r.contract_code || r.contractCode;
+          const price = r.total_price;
           console.log(`      - ${carrier} (${contract}): €${price}`);
         }
         if (result.rates.length > 5) {
