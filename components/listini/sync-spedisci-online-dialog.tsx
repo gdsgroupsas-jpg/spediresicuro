@@ -49,6 +49,13 @@ export function SyncSpedisciOnlineDialog({
 }: SyncSpedisciOnlineDialogProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [syncAllProgress, setSyncAllProgress] = useState<{
+    current: number;
+    total: number;
+    currentConfig: string;
+    results: Array<{ configName: string; success: boolean; error?: string; created?: number; updated?: number }>;
+  } | null>(null);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     rates?: any[];
@@ -280,6 +287,143 @@ export function SyncSpedisciOnlineDialog({
     }
   }
 
+  /**
+   * Sincronizza TUTTI gli account Spedisci.Online attivi in sequenza
+   * Ogni config viene sincronizzata separatamente per evitare conflitti
+   */
+  async function handleSyncAll() {
+    if (configurations.length === 0) {
+      toast.error("Nessuna configurazione disponibile");
+      return;
+    }
+
+    console.log("🔄 [UI] handleSyncAll - Inizio sync di tutti gli account", {
+      totalConfigs: configurations.length,
+    });
+
+    setIsSyncingAll(true);
+    setSyncAllProgress({
+      current: 0,
+      total: configurations.length,
+      currentConfig: "",
+      results: [],
+    });
+
+    const results: Array<{ configName: string; success: boolean; error?: string; created?: number; updated?: number }> = [];
+
+    for (let i = 0; i < configurations.length; i++) {
+      const config = configurations[i];
+      
+      setSyncAllProgress({
+        current: i + 1,
+        total: configurations.length,
+        currentConfig: config.name || `Config ${config.id.substring(0, 6)}`,
+        results: [...results],
+      });
+
+      console.log(`📡 [UI] Sync config ${i + 1}/${configurations.length}: ${config.name}`);
+
+      try {
+        const result = await syncPriceListsFromSpedisciOnline({
+          testParams: {
+            packages: [
+              {
+                length: testParams.length,
+                width: testParams.width,
+                height: testParams.height,
+                weight: testParams.weight,
+              },
+            ],
+            shipFrom: {
+              name: "Mittente Test",
+              company: "Azienda Test",
+              street1: "Via Roma 1",
+              street2: "",
+              city: testParams.fromCity,
+              state: testParams.fromProvince,
+              postalCode: testParams.fromZip,
+              country: "IT",
+              email: "mittente@example.com",
+            },
+            shipTo: {
+              name: "Destinatario Test",
+              company: "",
+              street1: "Via Milano 2",
+              street2: "",
+              city: testParams.toCity,
+              state: testParams.toProvince,
+              postalCode: testParams.toZip,
+              country: "IT",
+              email: "destinatario@example.com",
+            },
+            notes: "Sincronizzazione listini - Sync All",
+            insuranceValue: testParams.insuranceValue,
+            codValue: testParams.codValue,
+            accessoriServices: [],
+          },
+          overwriteExisting: syncOptions.overwriteExisting,
+          configId: config.id,
+          mode: "fast", // Usa fast per sync multipli per evitare timeout
+        });
+
+        results.push({
+          configName: config.name || `Config ${config.id.substring(0, 6)}`,
+          success: result.success,
+          error: result.error,
+          created: result.priceListsCreated,
+          updated: result.priceListsUpdated,
+        });
+
+        if (result.success) {
+          console.log(`✅ [UI] Sync ${config.name} completata`);
+        } else {
+          console.warn(`⚠️ [UI] Sync ${config.name} fallita:`, result.error);
+        }
+      } catch (error: any) {
+        console.error(`💥 [UI] Errore sync ${config.name}:`, error);
+        results.push({
+          configName: config.name || `Config ${config.id.substring(0, 6)}`,
+          success: false,
+          error: error.message || "Errore sconosciuto",
+        });
+      }
+
+      // Piccola pausa tra le sync per evitare rate limiting
+      if (i < configurations.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    // Aggiorna stato finale
+    setSyncAllProgress({
+      current: configurations.length,
+      total: configurations.length,
+      currentConfig: "Completato",
+      results,
+    });
+
+    // Riepilogo
+    const successCount = results.filter((r) => r.success).length;
+    const failCount = results.filter((r) => !r.success).length;
+    const totalCreated = results.reduce((sum, r) => sum + (r.created || 0), 0);
+    const totalUpdated = results.reduce((sum, r) => sum + (r.updated || 0), 0);
+
+    if (failCount === 0) {
+      toast.success(
+        `✅ Sync completata per tutti i ${successCount} account! Creati ${totalCreated}, aggiornati ${totalUpdated} listini`
+      );
+    } else if (successCount > 0) {
+      toast.warning(
+        `⚠️ Sync parziale: ${successCount} OK, ${failCount} falliti. Creati ${totalCreated}, aggiornati ${totalUpdated} listini`
+      );
+    } else {
+      toast.error(`❌ Sync fallita per tutti i ${failCount} account`);
+    }
+
+    setIsSyncingAll(false);
+    onSyncComplete?.();
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -348,6 +492,57 @@ export function SyncSpedisciOnlineDialog({
                   Nessuna configurazione trovata. Vai in Integrazioni per
                   aggiungerne una.
                 </p>
+              )}
+
+              {/* Bottone Sync All - visibile solo se ci sono più config */}
+              {configurations.length > 1 && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <Button
+                    onClick={handleSyncAll}
+                    disabled={isSyncingAll || isSyncing || configurations.length === 0}
+                    variant="outline"
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 hover:from-blue-600 hover:to-indigo-600"
+                  >
+                    {isSyncingAll ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sync {syncAllProgress?.current}/{syncAllProgress?.total}: {syncAllProgress?.currentConfig}
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        🚀 Sincronizza TUTTI ({configurations.length} account)
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-blue-600 mt-1 text-center">
+                    Sincronizza i listini da tutti gli account in sequenza
+                  </p>
+
+                  {/* Progress dei risultati sync all */}
+                  {syncAllProgress && syncAllProgress.results.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {syncAllProgress.results.map((r, idx) => (
+                        <div
+                          key={idx}
+                          className={`text-xs p-1 rounded flex items-center gap-1 ${
+                            r.success ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {r.success ? (
+                            <CheckCircle2 className="w-3 h-3" />
+                          ) : (
+                            <XCircle className="w-3 h-3" />
+                          )}
+                          <span className="font-medium">{r.configName}:</span>
+                          {r.success
+                            ? `${r.created || 0} creati, ${r.updated || 0} aggiornati`
+                            : r.error}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

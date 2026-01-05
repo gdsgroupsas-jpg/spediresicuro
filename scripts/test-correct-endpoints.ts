@@ -2,7 +2,7 @@
  * Test DIRETTO delle API - USANDO L'ENDPOINT CORRETTO PER OGNI CONFIG
  */
 
-import { decrypt } from "@/lib/security/encryption";
+import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 config({ path: ".env.local" });
@@ -31,8 +31,8 @@ async function testWithCorrectEndpoints() {
 
     // Decripta la key
     let apiKey = cfg.api_key;
-    if (apiKey?.startsWith("enc:")) {
-      apiKey = decrypt(apiKey);
+    if (apiKey && isEncrypted(apiKey)) {
+      apiKey = decryptCredential(apiKey);
     }
     console.log(`   API Key: ${apiKey?.substring(0, 20)}...`);
 
