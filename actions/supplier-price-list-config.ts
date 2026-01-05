@@ -313,11 +313,6 @@ export async function upsertSupplierPriceListConfig(
       };
     }
 
-    if (error) {
-      console.error("Errore upsert configurazione:", error);
-      return { success: false, error: error.message };
-    }
-
     // Recupera configurazione aggiornata
     const { data: updatedConfig, error: fetchError } = await supabaseAdmin
       .from("supplier_price_list_config")
