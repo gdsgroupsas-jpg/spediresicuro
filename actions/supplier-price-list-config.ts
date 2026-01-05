@@ -181,7 +181,7 @@ export async function upsertSupplierPriceListConfig(
     }
 
     // Estrai carrier_code e contract_code se non forniti
-    const metadata = priceList.metadata || priceList.source_metadata || {};
+    const metadata = priceList.source_metadata || {};
     const carrierCode =
       input.carrier_code || metadata.carrier_code || "";
     const contractCode =
