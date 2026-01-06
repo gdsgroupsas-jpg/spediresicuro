@@ -374,3 +374,4 @@ npx playwright show-trace trace.zip
 
 **Regola d'oro:** Più test unit, alcuni integration, pochi E2E! 🎯
 
+

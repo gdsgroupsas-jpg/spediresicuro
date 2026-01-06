@@ -1,6 +1,6 @@
 /**
  * Dialog: Configurazione Manuale Listino Fornitore
- * 
+ *
  * Permette al reseller di configurare manualmente le sezioni non disponibili via API:
  * - Assicurazione
  * - Contrassegni
@@ -12,7 +12,10 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  getSupplierPriceListConfig,
+  upsertSupplierPriceListConfig,
+} from "@/actions/supplier-price-list-config";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,37 +27,32 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  getSupplierPriceListConfig,
-  upsertSupplierPriceListConfig,
-} from "@/actions/supplier-price-list-config";
-import {
-  Shield,
-  CreditCard,
-  Package,
-  Warehouse,
-  Truck,
-  Settings,
-  Loader2,
-  Save,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { toast } from "sonner";
+import type { PriceList } from "@/types/listini";
 import type {
-  SupplierPriceListConfig,
-  InsuranceConfig,
-  CODConfigRow,
   AccessoryServiceConfig,
-  StorageServiceConfig,
-  StorageConfig,
+  CODConfigRow,
+  InsuranceConfig,
   PickupServiceConfig,
+  StorageConfig,
 } from "@/types/supplier-price-list-config";
 import {
   COMMON_ACCESSORY_SERVICES,
   COMMON_STORAGE_SERVICES,
 } from "@/types/supplier-price-list-config";
-import type { PriceList } from "@/types/listini";
+import {
+  CreditCard,
+  Loader2,
+  Package,
+  Plus,
+  Save,
+  Settings,
+  Shield,
+  Trash2,
+  Truck,
+  Warehouse,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface SupplierPriceListConfigDialogProps {
   open: boolean;
@@ -148,10 +146,12 @@ export function SupplierPriceListConfigDialog({
         setInsuranceConfig(config.insurance_config);
         setCodConfig(config.cod_config || []);
         setAccessoryServicesConfig(config.accessory_services_config || []);
-        setStorageConfig(config.storage_config || {
-          services: [],
-          dossier_opening_cost: 0,
-        });
+        setStorageConfig(
+          config.storage_config || {
+            services: [],
+            dossier_opening_cost: 0,
+          }
+        );
         setPickupConfig(config.pickup_config || []);
         setExtraConfig(config.extra_config || {});
       } else {
@@ -479,7 +479,8 @@ export function SupplierPriceListConfigDialog({
               ))}
               {codConfig.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessuna riga configurata. Clicca &quot;Aggiungi riga&quot; per iniziare.
+                  Nessuna riga configurata. Clicca &quot;Aggiungi riga&quot; per
+                  iniziare.
                 </p>
               )}
             </div>
@@ -559,8 +560,8 @@ export function SupplierPriceListConfigDialog({
               ))}
               {accessoryServicesConfig.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessun servizio configurato. Clicca &quot;Aggiungi servizio&quot; per
-                  iniziare.
+                  Nessun servizio configurato. Clicca &quot;Aggiungi
+                  servizio&quot; per iniziare.
                 </p>
               )}
             </div>
@@ -593,7 +594,10 @@ export function SupplierPriceListConfigDialog({
                       onChange={(e) => {
                         const newServices = [...storageConfig.services];
                         newServices[index].service = e.target.value;
-                        setStorageConfig({ ...storageConfig, services: newServices });
+                        setStorageConfig({
+                          ...storageConfig,
+                          services: newServices,
+                        });
                       }}
                       placeholder="es. Riconsegna, Reso al mittente..."
                     />
@@ -608,7 +612,10 @@ export function SupplierPriceListConfigDialog({
                         const newServices = [...storageConfig.services];
                         newServices[index].price =
                           parseFloat(e.target.value) || 0;
-                        setStorageConfig({ ...storageConfig, services: newServices });
+                        setStorageConfig({
+                          ...storageConfig,
+                          services: newServices,
+                        });
                       }}
                     />
                   </div>
@@ -622,7 +629,10 @@ export function SupplierPriceListConfigDialog({
                         const newServices = [...storageConfig.services];
                         newServices[index].percent =
                           parseFloat(e.target.value) || 0;
-                        setStorageConfig({ ...storageConfig, services: newServices });
+                        setStorageConfig({
+                          ...storageConfig,
+                          services: newServices,
+                        });
                       }}
                     />
                   </div>
@@ -640,8 +650,8 @@ export function SupplierPriceListConfigDialog({
               ))}
               {storageConfig.services.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessun servizio configurato. Clicca &quot;Aggiungi servizio&quot; per
-                  iniziare.
+                  Nessun servizio configurato. Clicca &quot;Aggiungi
+                  servizio&quot; per iniziare.
                 </p>
               )}
             </div>
@@ -759,4 +769,3 @@ export function SupplierPriceListConfigDialog({
     </Dialog>
   );
 }
-
