@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Edit2, Loader2 } from 'lucide-react';
+import { Edit2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface UpdateFeeDialogProps {
   userId: string;
@@ -27,7 +27,7 @@ interface UpdateFeeDialogProps {
 const FEE_PRESETS = [
   { label: 'Enterprise', value: 0.30, description: 'Volume alto' },
   { label: 'Standard', value: 0.50, description: 'Default' },
-  { label: 'VIP', value: 0.00, description: 'Gratis' },
+  { label: 'Gratis (€0)', value: 0.00, description: 'Nessuna fee' },
   { label: 'Reset', value: null, description: 'Torna a default' },
 ] as const;
 
@@ -45,6 +45,8 @@ export function UpdateFeeDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [fee, setFee] = useState<string>(currentFee?.toFixed(2) ?? '');
   const [notes, setNotes] = useState<string>(currentNotes ?? '');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Applica preset
   const applyPreset = (presetValue: number | null) => {
@@ -78,7 +80,9 @@ export function UpdateFeeDialog({
     const validation = validateFee();
     
     if (!validation.valid) {
-      toast.error('Fee non valida. Inserisci un valore >= 0 o lascia vuoto per reset.');
+      toast.error('Fee non valida. Inserisci un valore >= 0 o lascia vuoto per reset.', {
+        duration: 5000,
+      });
       return;
     }
     
@@ -101,14 +105,51 @@ export function UpdateFeeDialog({
         throw new Error(data.error || 'Errore aggiornamento fee');
       }
       
-      toast.success('Fee aggiornata con successo');
-      setOpen(false);
-      router.refresh();
+      // Messaggio di successo dettagliato
+      const feeDisplay = validation.value === null 
+        ? 'default (€0.50)' 
+        : `€${validation.value.toFixed(2)}`;
+      
+      const previousFeeDisplay = data.previousFee === null 
+        ? 'default (€0.50)' 
+        : `€${data.previousFee.toFixed(2)}`;
+      
+      const successMsg = data.previousFee === null
+        ? `Fee impostata a ${feeDisplay}`
+        : `Fee aggiornata da ${previousFeeDisplay} a ${feeDisplay}`;
+      
+      // Mostra messaggio di successo nel dialog
+      setSuccessMessage(successMsg);
+      setErrorMessage(null);
+      
+      // Toast di successo con dettagli (doppio feedback)
+      toast.success(`✅ ${successMsg}`, {
+        duration: 6000,
+        description: data.message || 'La modifica è stata salvata correttamente nel database.',
+        icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
+      });
+      
+      // Reset form dopo 2 secondi e chiudi
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setFee(validation.value?.toFixed(2) ?? '');
+        setOpen(false);
+        // Refresh per aggiornare i dati nella pagina
+        router.refresh();
+      }, 2000);
       
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore sconosciuto';
-      toast.error(message);
-    } finally {
+      setErrorMessage(message);
+      setSuccessMessage(null);
+      
+      // Toast di errore
+      toast.error(`❌ Errore: ${message}`, {
+        duration: 7000,
+        description: 'Riprova o contatta il supporto se il problema persiste.',
+        icon: <AlertCircle className="w-5 h-5 text-red-600" />,
+      });
+      
       setIsLoading(false);
     }
   };
@@ -131,6 +172,36 @@ export function UpdateFeeDialog({
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
+            {/* Messaggio di successo */}
+            {successMessage && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-900">
+                    ✅ {successMessage}
+                  </p>
+                  <p className="text-xs text-green-700 mt-1">
+                    Salvataggio completato con successo!
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Messaggio di errore */}
+            {errorMessage && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-900">
+                    ❌ Errore: {errorMessage}
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Riprova o contatta il supporto se il problema persiste.
+                  </p>
+                </div>
+              </div>
+            )}
+            
             {/* Quick Presets */}
             <div className="space-y-2">
               <Label>Presets rapidi</Label>
