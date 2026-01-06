@@ -2,15 +2,16 @@ name: E2E Tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
+  workflow_dispatch: # Permette avvio manuale da qualsiasi branch
 
 jobs:
   test:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,8 +19,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -41,7 +42,7 @@ jobs:
         env:
           NODE_ENV: production
           PORT: 3000
-          CI: 'true'
+          CI: "true"
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
@@ -52,9 +53,9 @@ jobs:
       - name: Run E2E tests
         run: npm run test:e2e
         env:
-          CI: 'true'
+          CI: "true"
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
-          PLAYWRIGHT_TEST_MODE: 'true'
+          PLAYWRIGHT_TEST_MODE: "true"
           NODE_ENV: test
 
       - name: Stop server
