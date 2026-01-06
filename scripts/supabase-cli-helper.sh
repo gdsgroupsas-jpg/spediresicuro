@@ -16,12 +16,13 @@ if [ ! -f "$ENV_PATH" ]; then
     exit 1
 fi
 
-# Estrai token (fallback se non presente)
-TOKEN=$(grep -E '^SUPABASE_ACCESS_TOKEN=' "$ENV_PATH" | cut -d '=' -f2 | tr -d '"' | tr -d "'" || echo "***REMOVED_SUPABASE_TOKEN***")
+# Estrai token
+TOKEN=$(grep -E '^SUPABASE_ACCESS_TOKEN=' "$ENV_PATH" | cut -d '=' -f2 | tr -d '"' | tr -d "'")
 
-if [ -z "$TOKEN" ] || [ "$TOKEN" = "***REMOVED_SUPABASE_TOKEN***" ]; then
-    echo "⚠️  Token non trovato in .env.local, uso token di fallback"
-    echo "💡 Aggiungi SUPABASE_ACCESS_TOKEN al .env.local per persistenza"
+if [ -z "$TOKEN" ]; then
+    echo "❌ Errore: SUPABASE_ACCESS_TOKEN non trovato in .env.local"
+    echo "💡 Aggiungi il token al file .env.local per continuare."
+    exit 1
 fi
 
 # Imposta token come env var
