@@ -55,9 +55,9 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // script-src: unsafe-eval necessario per jsPDF, Tesseract.js, xlsx che usano eval() internamente
+              // script-src: unsafe-eval necessario per jsPDF, Tesseract.js che usano eval() internamente
               // ⚠️ NOTA: unsafe-eval è un rischio di sicurezza, ma necessario per queste librerie
-              // In futuro, considerare alternative che non richiedono eval
+              // ⚠️ xlsx è stato migrato a exceljs (server-side), non richiede più unsafe-eval
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://widget.spediresicuro.it https://cdn.jsdelivr.net",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com https://r2cdn.perplexity.ai data:",
@@ -69,7 +69,9 @@ const nextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'self'",
-              "upgrade-insecure-requests"
+              "upgrade-insecure-requests",
+              // CSP Reporting: invia violazioni a /api/csp-report
+              "report-uri /api/csp-report"
             ].join('; ')
           }
         ],

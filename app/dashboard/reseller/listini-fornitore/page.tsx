@@ -1,89 +1,102 @@
 /**
  * Dashboard Reseller: Gestione Listini Fornitore
- * 
+ *
  * Interfaccia per Reseller per gestire i propri listini fornitore
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { Package, Plus, Search, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import DashboardNav from '@/components/dashboard-nav';
-import { SupplierPriceListForm } from '@/components/listini/supplier-price-list-form';
-import { SupplierPriceListTable } from '@/components/listini/supplier-price-list-table';
-import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog';
 import {
-  listSupplierPriceListsAction,
-  createSupplierPriceListAction,
-  updatePriceListAction,
   deletePriceListAction,
-} from '@/actions/price-lists';
-import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
-import { toast } from 'sonner';
-import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
-import { SyncSpedisciOnlineDialog } from '@/components/listini/sync-spedisci-online-dialog';
-import type { PriceList } from '@/types/listini';
+  listSupplierPriceListsAction,
+} from "@/actions/price-lists";
+import DashboardNav from "@/components/dashboard-nav";
+import { SupplierPriceListForm } from "@/components/listini/supplier-price-list-form";
+import { SupplierPriceListTable } from "@/components/listini/supplier-price-list-table";
+import { SyncSpedisciOnlineDialog } from "@/components/listini/sync-spedisci-online-dialog";
+import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { getAvailableCouriersForUser } from "@/lib/db/price-lists";
+import type { PriceList } from "@/types/listini";
+import { Package, Plus, RefreshCw, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function ResellerListiniFornitorePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [availableCouriers, setAvailableCouriers] = useState<Array<{ courierId: string; courierName: string }>>([]);
+  const [availableCouriers, setAvailableCouriers] = useState<
+    Array<{ courierId: string; courierName: string }>
+  >([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
+  const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "draft" | "active" | "archived"
+  >("all");
   const [userId, setUserId] = useState<string | null>(null);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [isResellerAdmin, setIsResellerAdmin] = useState(false); // Solo admin reseller può eliminare
-  const [showConfigDialog, setShowConfigDialog] = useState(false);
-  const [configPriceList, setConfigPriceList] = useState<PriceList | null>(null);
 
   // Verifica permessi e carica dati
   useEffect(() => {
     async function checkPermissionsAndLoad() {
       if (!session?.user?.email) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
       try {
         // Verifica se è Reseller
-        const response = await fetch('/api/user/info');
+        const response = await fetch("/api/user/info");
         if (response.ok) {
           const data = await response.json();
           const userData = data.user || data;
-          
-          if (!userData.is_reseller && userData.account_type !== 'byoc') {
-            router.push('/dashboard?error=unauthorized');
+
+          if (!userData.is_reseller && userData.account_type !== "byoc") {
+            router.push("/dashboard?error=unauthorized");
             return;
           }
 
           setUserId(userData.id);
-          
+
           // Controlla se è admin reseller (può eliminare listini)
-          setIsResellerAdmin(userData.reseller_role === 'admin' || userData.account_type === 'superadmin' || userData.account_type === 'admin');
-          
+          setIsResellerAdmin(
+            userData.reseller_role === "admin" ||
+              userData.account_type === "superadmin" ||
+              userData.account_type === "admin"
+          );
+
           // Carica corrieri disponibili
           const couriers = await getAvailableCouriersForUser(userData.id);
-          setAvailableCouriers(couriers.map(c => ({
-            courierId: c.courierId,
-            courierName: c.courierName,
-          })));
+          setAvailableCouriers(
+            couriers.map((c) => ({
+              courierId: c.courierId,
+              courierName: c.courierName,
+            }))
+          );
 
           // Carica listini
           await loadPriceLists();
         }
       } catch (error) {
-        console.error('Errore verifica permessi:', error);
-        router.push('/dashboard?error=unauthorized');
+        console.error("Errore verifica permessi:", error);
+        router.push("/dashboard?error=unauthorized");
       }
     }
 
@@ -94,15 +107,15 @@ export default function ResellerListiniFornitorePage() {
     try {
       setIsLoading(true);
       const result = await listSupplierPriceListsAction();
-      
+
       if (result.success && result.priceLists) {
         setPriceLists(result.priceLists);
       } else {
-        toast.error(result.error || 'Errore caricamento listini');
+        toast.error(result.error || "Errore caricamento listini");
       }
     } catch (error) {
-      console.error('Errore caricamento listini:', error);
-      toast.error('Errore caricamento listini');
+      console.error("Errore caricamento listini:", error);
+      toast.error("Errore caricamento listini");
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +132,9 @@ export default function ResellerListiniFornitorePage() {
   };
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [priceListToDelete, setPriceListToDelete] = useState<string | null>(null);
+  const [priceListToDelete, setPriceListToDelete] = useState<string | null>(
+    null
+  );
 
   const handleDelete = (priceListId: string) => {
     setPriceListToDelete(priceListId);
@@ -131,28 +146,23 @@ export default function ResellerListiniFornitorePage() {
 
     try {
       const result = await deletePriceListAction(priceListToDelete);
-      
+
       if (result.success) {
-        toast.success('Listino eliminato con successo');
+        toast.success("Listino eliminato con successo");
         setShowDeleteDialog(false);
         setPriceListToDelete(null);
         await loadPriceLists();
       } else {
-        toast.error(result.error || 'Errore eliminazione listino');
+        toast.error(result.error || "Errore eliminazione listino");
       }
     } catch (error) {
-      console.error('Errore eliminazione listino:', error);
-      toast.error('Errore eliminazione listino');
+      console.error("Errore eliminazione listino:", error);
+      toast.error("Errore eliminazione listino");
     }
   };
 
   const handleViewDetails = (priceListId: string) => {
     router.push(`/dashboard/reseller/listini-fornitore/${priceListId}`);
-  };
-
-  const handleConfigure = (priceList: PriceList) => {
-    setConfigPriceList(priceList);
-    setShowConfigDialog(true);
   };
 
   const handleFormSuccess = () => {
@@ -163,8 +173,10 @@ export default function ResellerListiniFornitorePage() {
 
   // Filtra listini
   const filteredPriceLists = priceLists.filter((pl) => {
-    const matchesSearch = pl.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || pl.status === statusFilter;
+    const matchesSearch = pl.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || pl.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -238,28 +250,32 @@ export default function ResellerListiniFornitorePage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewDetails={handleViewDetails}
-            onConfigure={handleConfigure}
             isLoading={isLoading}
             canDelete={isResellerAdmin}
           />
         </div>
 
         {/* Dialog Creazione/Modifica */}
-        <Dialog open={showCreateDialog} onOpenChange={(open) => {
-          if (!open) {
-            setShowCreateDialog(false);
-            setEditingPriceList(null);
-          }
-        }}>
+        <Dialog
+          open={showCreateDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowCreateDialog(false);
+              setEditingPriceList(null);
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingPriceList ? 'Modifica Listino Fornitore' : 'Crea Nuovo Listino Fornitore'}
+                {editingPriceList
+                  ? "Modifica Listino Fornitore"
+                  : "Crea Nuovo Listino Fornitore"}
               </DialogTitle>
               <DialogDescription>
                 {editingPriceList
-                  ? 'Modifica i dettagli del listino fornitore'
-                  : 'Crea un nuovo listino fornitore per un corriere specifico'}
+                  ? "Modifica i dettagli del listino fornitore"
+                  : "Crea un nuovo listino fornitore per un corriere specifico"}
               </DialogDescription>
             </DialogHeader>
             <SupplierPriceListForm
@@ -297,25 +313,7 @@ export default function ResellerListiniFornitorePage() {
           cancelText="Annulla"
           variant="destructive"
         />
-
-        {/* Dialog Configurazione Manuale */}
-        {configPriceList && (
-          <SupplierPriceListConfigDialog
-            open={showConfigDialog}
-            onOpenChange={(open) => {
-              setShowConfigDialog(open);
-              if (!open) {
-                setConfigPriceList(null);
-              }
-            }}
-            priceList={configPriceList}
-            onSaveComplete={() => {
-              loadPriceLists();
-            }}
-          />
-        )}
       </div>
     </div>
   );
 }
-

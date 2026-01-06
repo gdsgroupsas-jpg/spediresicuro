@@ -41,3 +41,4 @@ COMMENT ON TABLE payment_transactions IS 'Transazioni pagamento: Stripe (default
 
 
 
+
