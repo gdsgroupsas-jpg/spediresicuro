@@ -30,6 +30,9 @@ if (!API_KEY) {
   process.exit(1);
 }
 
+// TypeScript: dopo il check, API_KEY è garantito essere string
+const apiKey: string = API_KEY;
+
 async function testDomain(baseUrl: string) {
   console.log(`\n${"=".repeat(60)}`);
   console.log(`🧪 Test: ${baseUrl}`);
@@ -74,7 +77,7 @@ async function testDomain(baseUrl: string) {
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(testPayload),
@@ -119,7 +122,7 @@ async function testDomain(baseUrl: string) {
 async function main() {
   console.log("🔍 Test Domini Alternativi");
   console.log("=".repeat(60));
-  console.log(`🔑 API Key: ${API_KEY.substring(0, 20)}...${API_KEY.substring(API_KEY.length - 10)}`);
+  console.log(`🔑 API Key: ${apiKey.substring(0, 20)}...${apiKey.substring(apiKey.length - 10)}`);
   console.log(`\n📋 Domini da testare:`);
   DOMAINS_TO_TEST.forEach((url, idx) => {
     console.log(`   ${idx + 1}. ${url}`);
