@@ -16,6 +16,7 @@ import { Select } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import DashboardNav from '@/components/dashboard-nav';
 import { CustomPriceListForm } from '@/components/listini/custom-price-list-form';
+import { CreateCustomerPriceListDialog } from '@/components/listini/create-customer-price-list-dialog';
 import { SupplierPriceListTable } from '@/components/listini/supplier-price-list-table';
 import {
   listPriceListsAction,
@@ -347,35 +348,46 @@ export default function ResellerListiniPersonalizzatiPage() {
           )}
         </div>
 
-        {/* Dialog Creazione/Modifica */}
-        <Dialog open={showCreateDialog} onOpenChange={(open) => {
-          if (!open) {
-            setShowCreateDialog(false);
-            setEditingPriceList(null);
-          }
-        }}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingPriceList ? 'Modifica Listino Personalizzato' : 'Crea Nuovo Listino Personalizzato'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingPriceList
-                  ? 'Modifica i dettagli del listino personalizzato'
-                  : 'Crea un nuovo listino personalizzato per un cliente specifico'}
-              </DialogDescription>
-            </DialogHeader>
-            <CustomPriceListForm
-              priceList={editingPriceList || undefined}
-              onSuccess={handleFormSuccess}
-              onCancel={() => {
+        {/* Dialog Creazione Listino Cliente (nuovo) */}
+        {!editingPriceList && (
+          <CreateCustomerPriceListDialog
+            open={showCreateDialog}
+            onOpenChange={(open) => {
+              if (!open) {
                 setShowCreateDialog(false);
-                setEditingPriceList(null);
-              }}
-              subUsers={subUsers}
-            />
-          </DialogContent>
-        </Dialog>
+              }
+            }}
+            onSuccess={handleFormSuccess}
+          />
+        )}
+
+        {/* Dialog Modifica Listino (esistente) */}
+        {editingPriceList && (
+          <Dialog open={showCreateDialog} onOpenChange={(open) => {
+            if (!open) {
+              setShowCreateDialog(false);
+              setEditingPriceList(null);
+            }
+          }}>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Modifica Listino Personalizzato</DialogTitle>
+                <DialogDescription>
+                  Modifica i dettagli del listino personalizzato
+                </DialogDescription>
+              </DialogHeader>
+              <CustomPriceListForm
+                priceList={editingPriceList}
+                onSuccess={handleFormSuccess}
+                onCancel={() => {
+                  setShowCreateDialog(false);
+                  setEditingPriceList(null);
+                }}
+                subUsers={subUsers}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Dialog Eliminazione */}
         <ConfirmActionDialog

@@ -90,6 +90,9 @@ export interface SupplierPriceListConfig {
   pickup_config: PickupServiceConfig[];
   extra_config: ExtraConfig;
   
+  // Fattore peso/volume (densità)
+  volumetric_density_factor?: number; // kg/m³ (default: 200 = divisore 5000)
+  
   // Metadata
   notes?: string;
   
@@ -114,6 +117,7 @@ export interface UpsertSupplierPriceListConfigInput {
   storage_config?: Partial<StorageConfig>;
   pickup_config?: PickupServiceConfig[];
   extra_config?: ExtraConfig;
+  volumetric_density_factor?: number; // kg/m³ (default: 200 = divisore 5000)
   notes?: string;
 }
 

@@ -105,9 +105,9 @@ export function SyncSpedisciOnlineDialog({
   });
 
   // Modalità di sincronizzazione
-  const [syncMode, setSyncMode] = useState<"fast" | "balanced" | "matrix">(
-    "balanced"
-  );
+  const [syncMode, setSyncMode] = useState<
+    "fast" | "balanced" | "matrix" | "semi-auto"
+  >("balanced");
 
   // Configurazioni per ogni modalità di sync (allineate con PRICING_MATRIX)
   const SYNC_MODES = {
@@ -132,6 +132,18 @@ export function SyncSpedisciOnlineDialog({
       color: "bg-blue-50 border-blue-200 text-blue-800",
       badgeColor: "bg-blue-100 text-blue-700",
       icon: "⚖️",
+    },
+    "semi-auto": {
+      label: "🔧 Semi-Automatico",
+      description:
+        "Crea struttura matrice: tutte le zone × 1 peso (9 zone × 1 kg). Completa manualmente i dati.",
+      zones: 9,
+      weights: 1,
+      calls: 9,
+      timeEstimate: "~30 sec",
+      color: "bg-orange-50 border-orange-200 text-orange-800",
+      badgeColor: "bg-orange-100 text-orange-700",
+      icon: "🔧",
     },
     matrix: {
       label: "📊 Matrice Completa",
@@ -1086,6 +1098,26 @@ export function SyncSpedisciOnlineDialog({
                       </button>
                     ))}
                   </div>
+
+                  {/* Avviso per semi-auto mode */}
+                  {syncMode === "semi-auto" && (
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-orange-800 font-medium">
+                            Modalità Semi-Automatica
+                          </p>
+                          <p className="text-xs text-orange-700 mt-1">
+                            Questa modalità crea solo la struttura della matrice
+                            (tutte le zone × 1 kg). Dopo la sincronizzazione,
+                            potrai completare manualmente tutti i dati per ogni
+                            zona e peso nella matrice del listino.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Avviso per matrix mode */}
                   {syncMode === "matrix" && (
