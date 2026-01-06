@@ -156,7 +156,7 @@ export function CreateCustomerPriceListDialog({
               <Select
                 id="client-select"
                 value={selectedClientId}
-                onValueChange={setSelectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
                 disabled={isSaving || subUsers.length === 0}
               >
                 <option value="">Seleziona un cliente</option>
