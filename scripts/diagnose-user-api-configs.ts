@@ -134,16 +134,16 @@ async function main() {
       }
 
       apiKey = config.api_key;
-      if (isEncrypted(apiKey)) {
+      if (apiKey && isEncrypted(apiKey)) {
         apiKey = decryptCredential(apiKey);
         console.log("✅ API Key decriptata");
-      } else {
+      } else if (apiKey) {
         console.log("ℹ️ API Key in chiaro (non criptata)");
       }
 
       if (config.api_secret) {
         apiSecret = config.api_secret;
-        if (isEncrypted(apiSecret)) {
+        if (apiSecret && isEncrypted(apiSecret)) {
           apiSecret = decryptCredential(apiSecret);
           console.log("✅ API Secret decriptato");
         }
