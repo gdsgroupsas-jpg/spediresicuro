@@ -107,9 +107,16 @@ export default function SpedisciOnlineWizard({
       const testResult = await response.json();
 
       if (!testResult.success) {
-        throw new Error(
-          testResult.error || "Errore durante il test di connessione"
-        );
+        // Mostra errore dettagliato con suggerimenti
+        const errorMessage = testResult.error || "Errore durante il test di connessione";
+        
+        // Se è un errore di rete, formatta meglio il messaggio
+        if (testResult.errorType === 'network' && errorMessage.includes('\n')) {
+          // Il messaggio contiene già suggerimenti formattati
+          throw new Error(errorMessage);
+        } else {
+          throw new Error(errorMessage);
+        }
       }
 
       // Se la risposta è OK, la connessione funziona
@@ -205,9 +212,24 @@ export default function SpedisciOnlineWizard({
       }
     } catch (err: any) {
       console.error("Errore test connessione:", err);
-      setError(
-        err.message || "Errore di connessione. Verifica API Key e Base URL."
-      );
+      
+      // Formatta l'errore per mostrarlo meglio all'utente
+      let errorMessage = err.message || "Errore di connessione. Verifica API Key e Base URL.";
+      
+      // Se il messaggio contiene suggerimenti (con \n), mantienili
+      if (errorMessage.includes('\n')) {
+        // Il messaggio è già formattato con suggerimenti
+        setError(errorMessage);
+      } else {
+        // Aggiungi suggerimenti generici
+        setError(
+          `${errorMessage}\n\n💡 Suggerimenti:\n` +
+          `   • Verifica che il Base URL sia corretto (es: https://tuodominio.spedisci.online/api/v2)\n` +
+          `   • Controlla eventuali errori di battitura nel dominio\n` +
+          `   • Verifica che l'API Key sia valida e non scaduta`
+        );
+      }
+      
       setStep("credentials");
     } finally {
       setIsTesting(false);
@@ -315,10 +337,40 @@ export default function SpedisciOnlineWizard({
               </div>
 
               {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-800 animate-in slide-in-from-top-2">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{error}</p>
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 animate-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold mb-2">Errore di connessione</p>
+                      {/* Se l'errore contiene \n, mostra i suggerimenti formattati */}
+                      {error.includes('\n') ? (
+                        <div className="text-sm space-y-1 whitespace-pre-line">
+                          {error.split('\n').map((line, idx) => {
+                            if (line.trim().startsWith('💡') || line.trim().startsWith('•')) {
+                              return (
+                                <p key={idx} className="text-red-700 font-medium">
+                                  {line}
+                                </p>
+                              );
+                            } else if (line.trim().startsWith('   ')) {
+                              return (
+                                <p key={idx} className="text-red-600 ml-4 text-xs">
+                                  {line.trim()}
+                                </p>
+                              );
+                            } else {
+                              return (
+                                <p key={idx} className="text-red-800">
+                                  {line}
+                                </p>
+                              );
+                            }
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm">{error}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
