@@ -13,7 +13,6 @@ import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPlatformFee, getPlatformFeeHistory } from '@/lib/services/pricing/platform-fee';
 import { CurrentFeeDisplay, FeeHistoryTable } from '@/components/admin/platform-fee';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, User, Mail, Shield, Calendar, CreditCard } from 'lucide-react';
@@ -51,7 +50,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   // Recupera dati utente
   const { data: user, error: userError } = await supabaseAdmin
     .from('users')
-    .select('id, email, name, role, account_type, wallet_balance, created_at, provider')
+    .select('id, email, name, role, account_type, is_reseller, wallet_balance, created_at, provider')
     .eq('id', userId)
     .single();
   
@@ -89,7 +88,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -108,84 +107,89 @@ export default async function UserDetailPage({ params }: PageProps) {
               <h1 className="text-2xl font-bold text-gray-900">
                 {user.name || 'Utente'}
               </h1>
-              <p className="text-gray-500">{user.email}</p>
+              <p className="text-gray-600">{user.email}</p>
             </div>
           </div>
         </div>
         
         {/* Informazioni Base */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-6 p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <User className="h-5 w-5 text-gray-600" />
               Informazioni Utente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Email */}
-              <div className="flex items-start gap-3">
-                <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium text-gray-900">{user.email}</p>
-                </div>
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Email */}
+            <div className="flex items-start gap-3">
+              <Mail className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Email</p>
+                <p className="font-medium text-gray-900">{user.email}</p>
               </div>
-              
-              {/* Ruolo */}
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Ruolo</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.account_type || user.role || 'user'}
-                    </Badge>
-                    {user.provider && user.provider !== 'credentials' && (
-                      <Badge variant="outline">{user.provider}</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Wallet */}
-              <div className="flex items-start gap-3">
-                <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Saldo Wallet</p>
-                  <p className="font-medium text-gray-900">
-                    {formatCurrency(user.wallet_balance || 0)}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Data registrazione */}
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Registrato il</p>
-                  <p className="font-medium text-gray-900">
-                    {formatDate(user.created_at)}
-                  </p>
+            </div>
+            
+            {/* Ruolo */}
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Ruolo</p>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const { RoleBadge } = require('@/lib/utils/role-badges');
+                    return (
+                      <RoleBadge
+                        accountType={user.account_type}
+                        isReseller={user.is_reseller}
+                        role={user.role}
+                      />
+                    );
+                  })()}
+                  {user.provider && user.provider !== 'credentials' && (
+                    <Badge variant="outline">{user.provider}</Badge>
+                  )}
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            
+            {/* Wallet */}
+            <div className="flex items-start gap-3">
+              <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Saldo Wallet</p>
+                <p className="font-medium text-gray-900">
+                  {formatCurrency(user.wallet_balance || 0)}
+                </p>
+              </div>
+            </div>
+            
+            {/* Data registrazione */}
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Registrato il</p>
+                <p className="font-medium text-gray-900">
+                  {formatDate(user.created_at)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* Platform Fee */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-gray-600" />
               Platform Fee (BYOC)
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
               Fee addebitata per ogni spedizione con modello BYOC (Bring Your Own Courier)
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
           
-          <CardContent className="space-y-6">
+          <div className="space-y-6">
             {/* Current Fee Display */}
             <CurrentFeeDisplay
               userId={userId}
@@ -196,11 +200,11 @@ export default async function UserDetailPage({ params }: PageProps) {
             
             {/* Fee History */}
             <div>
-              <h3 className="text-lg font-medium mb-4">Storico Modifiche</h3>
+              <h3 className="text-lg font-medium mb-4 text-gray-900">Storico Modifiche</h3>
               <FeeHistoryTable history={feeHistory} />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
