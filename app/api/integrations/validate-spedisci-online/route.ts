@@ -139,12 +139,41 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     // Gestisci errori di rete (no PII nei log)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorCause = error instanceof Error && 'cause' in error ? (error.cause as any)?.message || String(error.cause) : null;
     
-    if (errorMessage.includes('fetch')) {
+    // Analisi dettagliata degli errori di rete
+    if (errorMessage.includes('fetch failed') || errorMessage.includes('fetch')) {
+      let detailedError = 'Errore di connessione. Verifica che il Base URL sia raggiungibile e che non ci siano problemi di rete.';
+      
+      // Distingui tra diversi tipi di errori di rete
+      if (errorCause?.includes('ENOTFOUND') || errorMessage.includes('ENOTFOUND')) {
+        // Dominio non trovato (DNS)
+        const domainMatch = baseUrl.match(/https?:\/\/([^\/]+)/);
+        const domain = domainMatch ? domainMatch[1] : 'il dominio';
+        
+        detailedError = `Dominio non trovato: "${domain}" non esiste o non è raggiungibile.\n\n` +
+          `💡 Verifica:\n` +
+          `   • Il dominio è scritto correttamente (controlla eventuali errori di battitura)\n` +
+          `   • Il formato è: https://tuodominio.spedisci.online/api/v2\n` +
+          `   • Esempi comuni: ecommerceitalia, infinity, ecc. (senza "s" in più)\n` +
+          `   • Se hai copiato da documentazione, verifica che sia identico`;
+      } else if (errorCause?.includes('ECONNREFUSED') || errorMessage.includes('ECONNREFUSED')) {
+        detailedError = 'Connessione rifiutata dal server. Il Base URL potrebbe essere errato o il server non è raggiungibile.';
+      } else if (errorCause?.includes('CERT') || errorMessage.includes('certificate') || errorMessage.includes('SSL')) {
+        detailedError = 'Problema certificato SSL. Verifica che il Base URL usi HTTPS e che il certificato sia valido.';
+      } else if (errorCause?.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
+        detailedError = 'Timeout di connessione. Il server potrebbe essere lento o non raggiungibile.';
+      }
+      
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Errore di connessione. Verifica che il Base URL sia raggiungibile e che non ci siano problemi di rete.' 
+          error: detailedError,
+          errorType: 'network',
+          errorDetails: {
+            message: errorMessage,
+            cause: errorCause,
+          }
         },
         { status: 200 }
       );
@@ -153,7 +182,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: errorMessage || 'Errore durante il test di connessione' 
+        error: errorMessage || 'Errore durante il test di connessione',
+        errorType: 'unknown'
       },
       { status: 200 }
     );

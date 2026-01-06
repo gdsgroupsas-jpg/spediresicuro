@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculateBestPriceForReseller } from '@/lib/db/price-lists-advanced';
 import type { CourierServiceType } from '@/types/shipments';
