@@ -12,9 +12,9 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
     const variants = {
       default: 'bg-[#FFD700]/10 text-[#CC9900] border-[#FFD700]/20',
       secondary: 'bg-gray-100 text-gray-700 border-gray-200',
-      success: 'bg-green-100 text-green-700 border-green-200',
-      warning: 'bg-amber-100 text-amber-700 border-amber-200',
-      error: 'bg-red-100 text-red-700 border-red-200',
+      success: 'bg-teal-100 text-teal-800 border-teal-200', // Verde/Teal per Reseller
+      warning: 'bg-amber-100 text-amber-800 border-amber-200', // Viola/Amber per Admin
+      error: 'bg-red-100 text-red-800 border-red-200', // Rosso per Super Admin
       outline: 'bg-transparent text-gray-700 border-gray-300',
     }
 
