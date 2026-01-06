@@ -24,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { getZonesForMode } from "@/lib/constants/pricing-matrix";
 import {
   AlertCircle,
   CheckCircle2,
@@ -63,15 +62,6 @@ export function SyncSpedisciOnlineDialog({
       updated?: number;
     }>;
   } | null>(null);
-
-  // Progress per il single sync chunked
-  const [chunkProgress, setChunkProgress] = useState<{
-    currentZoneIndex: number;
-    totalZones: number;
-    currentZoneName: string;
-    completed: boolean;
-  } | null>(null);
-
   const [testResult, setTestResult] = useState<{
     success: boolean;
     rates?: any[];
@@ -271,137 +261,77 @@ export function SyncSpedisciOnlineDialog({
     console.log("✅ [UI] Test passato, avvio sync...");
     setIsSyncing(true);
 
-    // Calcola le zone da processare in base alla modalità
-    const zones = getZonesForMode(syncMode);
-
-    // Per "fast" o "balanced" su Vercel Free, possiamo ancora provare una sync unica
-    // ma per "matrix" o sicurezza, usiamo sempre il chunking
-    const useChunking = true; // Forziamo chunking per robustezza
-
-    console.log(
-      `🚀 [UI] Starting Sync (${syncMode}) - Chunking: ${useChunking}`,
-      {
-        totalZones: zones.length,
-      }
-    );
-
-    setChunkProgress({
-      currentZoneIndex: 0,
-      totalZones: zones.length,
-      currentZoneName: "Inizializzazione...",
-      completed: false,
-    });
-
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalEntries = 0;
-    let errors: string[] = [];
-
     try {
-      if (useChunking) {
-        // CHUNKED EXECUTION: Una chiamata per zona
-        for (let i = 0; i < zones.length; i++) {
-          const zone = zones[i];
-          setChunkProgress({
-            currentZoneIndex: i + 1,
-            totalZones: zones.length,
-            currentZoneName: zone.name,
-            completed: false,
-          });
-
-          console.log(
-            `📡 [UI] Sync Chunk ${i + 1}/${zones.length}: ${zone.name} (${
-              zone.code
-            })`
-          );
-
-          // Chiama server action solo per questa zona
-          const result = await syncPriceListsFromSpedisciOnline({
-            testParams: {
-              // ... params ...
-              packages: [
-                {
-                  length: testParams.length,
-                  width: testParams.width,
-                  height: testParams.height,
-                  weight: testParams.weight,
-                },
-              ],
-              shipFrom: {
-                name: "Mittente Test",
-                city: testParams.fromCity,
-                state: testParams.fromProvince,
-                postalCode: testParams.fromZip,
-                country: "IT",
-                street1: "Via Roma 1",
-                company: "Azienda Test",
-                email: "mittente@example.com",
-              },
-              shipTo: {
-                name: "Destinatario Test",
-                street1: "Via Milano 2",
-                city: testParams.toCity,
-                state: testParams.toProvince,
-                postalCode: testParams.toZip,
-                country: "IT",
-                company: "",
-                email: "destinatario@example.com",
-              },
-              notes: `Sync Chunk ${zone.code}`,
-              insuranceValue: testParams.insuranceValue,
-              codValue: testParams.codValue,
-              accessoriServices: [],
+      console.log("📡 [UI] Chiamata syncPriceListsFromSpedisciOnline con:", {
+        configId: selectedConfigId,
+        mode: syncMode,
+        overwriteExisting: syncOptions.overwriteExisting,
+      });
+      const result = await syncPriceListsFromSpedisciOnline({
+        testParams: {
+          packages: [
+            {
+              length: testParams.length,
+              width: testParams.width,
+              height: testParams.height,
+              weight: testParams.weight,
             },
-            priceListName: syncOptions.priceListName || undefined,
-            overwriteExisting: syncOptions.overwriteExisting, // Attenzione: true solo al primo giro? No, per zone diverse va bene true
-            configId: selectedConfigId || undefined,
-            mode: syncMode,
-            targetZones: [zone.code], // <--- KEY: Processa solo questa zona
-          });
+          ],
+          shipFrom: {
+            name: "Mittente Test",
+            company: "Azienda Test",
+            street1: "Via Roma 1",
+            street2: "",
+            city: testParams.fromCity,
+            state: testParams.fromProvince,
+            postalCode: testParams.fromZip,
+            country: "IT",
+            email: "mittente@example.com",
+          },
+          shipTo: {
+            name: "Destinatario Test",
+            company: "",
+            street1: "Via Milano 2",
+            street2: "",
+            city: testParams.toCity,
+            state: testParams.toProvince,
+            postalCode: testParams.toZip,
+            country: "IT",
+            email: "destinatario@example.com",
+          },
+          notes: "Sincronizzazione listini",
+          insuranceValue: testParams.insuranceValue,
+          codValue: testParams.codValue,
+          accessoriServices: [],
+        },
+        priceListName: syncOptions.priceListName || undefined,
+        overwriteExisting: syncOptions.overwriteExisting,
+        configId: selectedConfigId || undefined,
+        // Usa la modalità selezionata dall'utente
+        mode: syncMode,
+      });
 
-          if (result.success) {
-            totalCreated += result.priceListsCreated || 0;
-            totalUpdated += result.priceListsUpdated || 0;
-            totalEntries += result.entriesAdded || 0;
-            console.log(
-              `✅ [UI] Chunk ${zone.code} OK: +${result.entriesAdded} entries`
-            );
-          } else {
-            console.error(`❌ [UI] Chunk ${zone.code} FAIL:`, result.error);
-            errors.push(`${zone.name}: ${result.error}`);
-          }
-
-          // Piccolo delay per non floodare
-          await new Promise((r) => setTimeout(r, 200));
-        }
-      } else {
-        // Legacy: Chiamata unica (rischio timeout)
-        const result = await syncPriceListsFromSpedisciOnline({
-          // original logic...
-          // omitting for brevity since we force chunking
-          mode: syncMode,
-        } as any);
-      }
-
-      if (errors.length === 0) {
-        console.log("✅ [UI] All chunks completed successfully!");
+      console.log("📥 [UI] Risultato sync ricevuto:", result);
+      if (result.success) {
+        console.log("✅ [UI] Sync completata con successo!");
         toast.success(
-          `Sincronizzazione completata! Creati ${totalCreated} listini, aggiornati ${totalUpdated}, aggiunte ${totalEntries} entries`
+          `Sincronizzazione completata! Creati ${
+            result.priceListsCreated || 0
+          } listini, aggiornati ${result.priceListsUpdated || 0}, aggiunte ${
+            result.entriesAdded || 0
+          } entries`
         );
         onSyncComplete?.();
         onOpenChange(false);
       } else {
-        console.error("❌ [UI] Some chunks failed:", errors);
-        toast.warning(
-          `Sincronizzazione parziale. ${errors.length} zone fallite. Successo: ${totalEntries} entries.`
-        );
+        console.error("❌ [UI] Sync fallita:", result.error);
+        toast.error(result.error || "Errore durante la sincronizzazione");
       }
     } catch (error: any) {
       console.error("💥 [UI] Errore durante sync:", error);
       toast.error(error.message || "Errore durante la sincronizzazione");
     } finally {
       setIsSyncing(false);
-      setChunkProgress(null);
     }
   }
 
@@ -647,47 +577,6 @@ export function SyncSpedisciOnlineDialog({
                   <p className="text-xs text-blue-600 mt-1 text-center">
                     Sincronizza i listini da tutti gli account in sequenza
                   </p>
-
-                  {/* Progress Chunking (Single Sync) */}
-                  {isSyncing && chunkProgress && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-100">
-                      <div className="flex justify-between items-center text-sm mb-1">
-                        <span className="font-semibold text-blue-800">
-                          Sincronizzazione Zone:{" "}
-                          {chunkProgress.currentZoneIndex}/
-                          {chunkProgress.totalZones}
-                        </span>
-                        <span className="text-blue-600 text-xs">
-                          {Math.round(
-                            (chunkProgress.currentZoneIndex /
-                              chunkProgress.totalZones) *
-                              100
-                          )}
-                          %
-                        </span>
-                      </div>
-                      <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{
-                            width: `${
-                              (chunkProgress.currentZoneIndex /
-                                chunkProgress.totalZones) *
-                              100
-                            }%`,
-                          }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-blue-700 truncate">
-                        Elaborazione:{" "}
-                        <strong>{chunkProgress.currentZoneName}</strong>
-                      </p>
-                      <p className="text-[10px] text-blue-500 mt-1">
-                        ⚠️ Non chiudere questa pagina durante la
-                        sincronizzazione.
-                      </p>
-                    </div>
-                  )}
 
                   {/* Progress dei risultati sync all */}
                   {syncAllProgress && syncAllProgress.results.length > 0 && (

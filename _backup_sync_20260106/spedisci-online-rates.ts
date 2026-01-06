@@ -198,9 +198,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   testParams?: Parameters<typeof testSpedisciOnlineRates>[0];
   priceListName?: string;
   overwriteExisting?: boolean;
-  configId?: string;
-  mode?: "fast" | "balanced" | "matrix";
-  targetZones?: string[]; // Nuova opzione per chunking client-side
+  configId?: string; // ID configurazione opzionale
+  mode?: "fast" | "balanced" | "matrix"; // fast = 2 zone x 3 pesi (6 entries), balanced = 5 zone x 11 pesi (55 entries), matrix = tutte le zone x tutti i pesi (può essere lenta)
 }): Promise<{
   success: boolean;
   priceListsCreated?: number;
@@ -213,13 +212,15 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   };
 }> {
   // ⚠️ RIMOZIONE LOCK: Le sync dei listini non sono critiche come le spedizioni.
+  // Non c'è rischio finanziario, quindi il lock causa più problemi che benefici.
+  // Se necessario, possiamo aggiungere un semplice flag in-memory per prevenire sync simultanee.
   try {
     const session = await auth();
     if (!session?.user?.email) {
       return { success: false, error: "Non autenticato" };
     }
 
-    // Verifica permessi
+    // Verifica permessi: solo admin, reseller e BYOC possono sincronizzare
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, account_type, is_reseller")
@@ -242,40 +243,26 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       };
     }
 
-    // 1. Matrix Sync Logic
+    // 1. Matrix Sync Logic - Usa nuovi helper per zone/pesi
     const { getZonesForMode, getWeightsForMode, estimateSyncCalls } =
       await import("@/lib/constants/pricing-matrix");
 
+    // Preparazione array risultati
     const allRates: any[] = [];
     const processedCombinations = new Set<string>();
 
+    // ⚠️ Importante: su Vercel (piano free) le azioni server-side possono essere limitate come tempo.
+    // Per UX/affidabilità, default = "balanced": buon compromesso tra completezza e velocità.
     const mode: "fast" | "balanced" | "matrix" = options?.mode ?? "balanced";
 
     // Usa i nuovi helper per ottenere zone e pesi in base alla modalità
-    let zones = getZonesForMode(mode);
+    const zones = getZonesForMode(mode);
     const weightsToProbe = getWeightsForMode(mode);
-
-    // OTTIMIZZAZIONE CHUNKING: Filtra zone se richieste specificamente
-    if (options?.targetZones && options.targetZones.length > 0) {
-      console.log(
-        `🎯 [SYNC] Filtering zones based on targetZones: ${options.targetZones.join(
-          ", "
-        )}`
-      );
-      zones = zones.filter((z) => options.targetZones!.includes(z.code));
-
-      if (zones.length === 0) {
-        return {
-          success: true,
-          error: "Nessuna zona trovata per i codici richiesti",
-        };
-      }
-    }
 
     // Log stima sync
     const estimate = estimateSyncCalls(mode);
     console.log(
-      `🚀 Starting Price List Sync (${mode}): ${zones.length} Zones (filtered) x ${weightsToProbe.length} Weights`
+      `🚀 Starting Price List Sync (${mode}): ${estimate.zones} Zones x ${estimate.weights} Weights = ${estimate.totalCalls} calls (~${estimate.estimatedMinutes} min)`
     );
 
     // ============================================
@@ -301,14 +288,11 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
         if (matchingList) {
           const lastSync = new Date(matchingList.updated_at);
-          const daysSinceSync =
-            (Date.now() - lastSync.getTime()) / (1000 * 60 * 60 * 24);
-
+          const daysSinceSync = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60 * 24);
+          
           if (daysSinceSync < 7) {
             console.log(
-              `⏭️ [CACHE] Skip sync: listino sincronizzato ${Math.round(
-                daysSinceSync
-              )} giorni fa (< 7 giorni)`
+              `⏭️ [CACHE] Skip sync: listino sincronizzato ${Math.round(daysSinceSync)} giorni fa (< 7 giorni)`
             );
             shouldSkipSync = true;
           }
@@ -385,7 +369,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     // OTTIMIZZAZIONE 3: Parallelizzazione
     // ============================================
     // Prepara tutte le combinazioni da processare
-    const combinations: Array<{ zone: (typeof zones)[0]; weight: number }> = [];
+    const combinations: Array<{ zone: typeof zones[0]; weight: number }> = [];
     for (const zone of zones) {
       for (const weight of weightsToProbe) {
         // Skip se combinazione già presente (sync incrementale)
@@ -398,7 +382,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             const [from, to] = weightRange.split("-").map(Number);
             return weight >= from && weight <= to;
           });
-
+          
           if (exists) {
             console.log(
               `⏭️ [INCREMENTALE] Skip ${zone.code}/${weight}kg: già presente`
@@ -406,15 +390,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             continue;
           }
         }
-
+        
         combinations.push({ zone, weight });
       }
     }
 
     console.log(
-      `🔄 [PARALLEL] Processando ${combinations.length} combinazioni (${
-        combinations.length
-      } nuove, ${estimate.totalCalls - combinations.length} già presenti)`
+      `🔄 [PARALLEL] Processando ${combinations.length} combinazioni (${combinations.length} nuove, ${estimate.totalCalls - combinations.length} già presenti)`
     );
 
     // Se non ci sono combinazioni da processare, ritorna early
@@ -436,13 +418,12 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
     // Batch size per parallelizzazione (3-5 chiamate simultanee)
     const BATCH_SIZE = mode === "matrix" ? 3 : mode === "balanced" ? 4 : 5;
-    const delayBetweenBatches =
-      mode === "matrix" ? 200 : mode === "balanced" ? 100 : 50;
+    const delayBetweenBatches = mode === "matrix" ? 200 : mode === "balanced" ? 100 : 50;
 
     // Processa in batch paralleli
     for (let i = 0; i < combinations.length; i += BATCH_SIZE) {
       const batch = combinations.slice(i, i + BATCH_SIZE);
-
+      
       // Esegui batch in parallelo
       const batchPromises = batch.map(async ({ zone, weight }) => {
         const currentParams = {
@@ -468,7 +449,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
         try {
           const result = await testSpedisciOnlineRates(currentParams);
-
+          
           if (result.success && result.rates) {
             for (const rate of result.rates) {
               (rate as any)._probe_weight = weight;
@@ -477,23 +458,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             }
             return { success: true, zone: zone.code, weight };
           }
-          return {
-            success: false,
-            zone: zone.code,
-            weight,
-            error: result.error,
-          };
+          return { success: false, zone: zone.code, weight, error: result.error };
         } catch (error: any) {
           console.error(
             `❌ [BATCH] Errore ${zone.code}/${weight}kg:`,
             error.message
           );
-          return {
-            success: false,
-            zone: zone.code,
-            weight,
-            error: error.message,
-          };
+          return { success: false, zone: zone.code, weight, error: error.message };
         }
       });
 
@@ -501,9 +472,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       const batchResults = await Promise.all(batchPromises);
       const successCount = batchResults.filter((r) => r.success).length;
       console.log(
-        `✅ [BATCH ${
-          Math.floor(i / BATCH_SIZE) + 1
-        }] Completato: ${successCount}/${batch.length} successi`
+        `✅ [BATCH ${Math.floor(i / BATCH_SIZE) + 1}] Completato: ${successCount}/${batch.length} successi`
       );
 
       // Delay tra batch (non tra singole chiamate)
