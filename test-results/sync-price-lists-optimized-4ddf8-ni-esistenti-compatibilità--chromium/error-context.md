@@ -1,0 +1,80 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e4]:
+    - link "SpedireSicuro - Powered by AI" [ref=e6] [cursor=pointer]:
+      - /url: /
+      - img "SpedireSicuro - Powered by AI" [ref=e7]:
+        - generic [ref=e12]: SPEDIRESICURO
+        - generic [ref=e13]: Powered by AI
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - button "Accedi" [ref=e17] [cursor=pointer]:
+            - generic [ref=e18]:
+              - img [ref=e19]
+              - text: Accedi
+          - button "Registrati" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]:
+              - img [ref=e24]
+              - text: Registrati
+        - heading "Accedi al Dashboard" [level=1] [ref=e27]
+        - paragraph [ref=e28]: Inserisci le tue credenziali per accedere
+      - generic [ref=e29]:
+        - generic [ref=e34]: Oppure accedi con
+        - generic [ref=e35]:
+          - button "Continua con Google" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e42]: Continua con Google
+          - button "Continua con GitHub" [ref=e43] [cursor=pointer]:
+            - img [ref=e44]
+            - generic [ref=e46]: Continua con GitHub
+          - button "Continua con Facebook" [ref=e47] [cursor=pointer]:
+            - img [ref=e48]
+            - generic [ref=e50]: Continua con Facebook
+        - generic [ref=e55]: Oppure
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: Email
+          - generic [ref=e59]:
+            - img [ref=e61]
+            - textbox "email@esempio.it" [ref=e64]
+        - generic [ref=e65]:
+          - generic [ref=e66]: Password
+          - generic [ref=e67]:
+            - img [ref=e69]
+            - textbox "••••••••" [ref=e72]
+            - button [ref=e73] [cursor=pointer]:
+              - img [ref=e74]
+        - button "Accedi" [ref=e77] [cursor=pointer]:
+          - img [ref=e78]
+          - text: Accedi
+      - link "← Torna alla home" [ref=e82] [cursor=pointer]:
+        - /url: /
+  - generic [ref=e85]:
+    - generic [ref=e87]:
+      - img [ref=e88]
+      - generic [ref=e90]:
+        - heading "Utilizziamo i cookie per migliorare la tua esperienza" [level=3] [ref=e91]
+        - paragraph [ref=e92]:
+          - text: Utilizziamo cookie necessari per il funzionamento del sito e cookie opzionali per analisi e marketing. Puoi gestire le tue preferenze in qualsiasi momento.
+          - link "Scopri di più" [ref=e93] [cursor=pointer]:
+            - /url: /cookie-policy
+    - generic [ref=e94]:
+      - button "Rifiuta" [ref=e95] [cursor=pointer]
+      - button "Personalizza" [ref=e96] [cursor=pointer]:
+        - img [ref=e97]
+        - text: Personalizza
+      - button "Accetta Tutti" [ref=e100] [cursor=pointer]
+  - generic [ref=e102]:
+    - img [ref=e104]
+    - generic [ref=e107]:
+      - heading "Abilita Notifiche" [level=3] [ref=e108]
+      - paragraph [ref=e109]: Ricevi aggiornamenti sulle tue spedizioni, messaggi di Anne e avvisi importanti in tempo reale.
+      - generic [ref=e110]:
+        - button "Abilita" [ref=e111] [cursor=pointer]
+        - button "Dopo" [ref=e112] [cursor=pointer]
+    - button "Chiudi" [ref=e113] [cursor=pointer]: ✕
+```
