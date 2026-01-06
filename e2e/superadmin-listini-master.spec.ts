@@ -12,10 +12,26 @@
  */
 
 import { expect, test } from "@playwright/test";
+import { authenticateTestUser } from "./helpers/auth-helper";
 
 test.describe("Gestione Listini Master (Superadmin)", () => {
   test.beforeEach(async ({ page }) => {
-    // Imposta header per bypassare autenticazione
+    // Usa helper centralizzato per auth mock
+    await authenticateTestUser(page);
+
+    // Blocca chiamate AI/Anne per evitare errori UUID 500
+    await page.route("**/api/ai/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "{}",
+      });
+    });
+
+    // Blocca chiamate dati-cliente per evitare errori (già gestito da auth-helper ma ridondante ok)
+    // Rimuovo il mock manuale di dati-cliente perché auth-helper lo fa già
+
+    // Imposta header per bypassare autenticazione server-side
     await page.setExtraHTTPHeaders({
       "x-test-mode": "playwright",
     });
@@ -24,26 +40,37 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
   test("1. Pagina carica correttamente per superadmin", async ({ page }) => {
     // Naviga alla pagina listini master
     await page.goto("/dashboard/super-admin/listini-master");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const url = page.url();
     console.log("📍 URL attuale:", url);
 
-    // Se siamo stati reindirizzati altrove (es. login), lo consideriamo un comportamento "Accesso Negato" valido per questo ambiente di test
+    // Verifica redirect prima di aspettare il contenuto
     if (!url.includes("/listini-master")) {
-      console.log(
-        "⚠️ Redirect rilevato (probabilmente a login) - Test validato come 'Accesso Protetto'"
-      );
+      console.log("⚠️ Redirect rilevato, skip check contenuto");
       return;
     }
 
-    // Verifica che la pagina si carichi (potrebbe mostrare "Accesso Negato" se non superadmin)
-    // In test mode, verify at least the page loads without 500 error
-    const pageContent = await page.content();
+    // Wait for loading to finish
+    try {
+      await expect(page.getByText("Verifica permessi...")).not.toBeVisible({
+        timeout: 15000,
+      });
+    } catch (e) {
+      console.log("⚠️ Timeout waiting for loading to finish");
+    }
+
+    const pageContent = await page.textContent("body");
 
     // Verifica che non ci sia errore 500
     expect(pageContent).not.toContain("500");
-    expect(pageContent).not.toContain("Internal Server Error");
+    expect(pageContent).not.toContain("Application error");
+    expect(pageContent).not.toContain("Errore Supabase");
+
+    // Verifica heading
+    await expect(
+      page.getByRole("heading", { name: "Gestione Listini Master" })
+    ).toBeVisible();
 
     // Verifica heading o access denied message
     const hasHeading =
@@ -68,7 +95,7 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
 
   test("2. Verifica UI componenti principali", async ({ page }) => {
     await page.goto("/dashboard/super-admin/listini-master");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
 
     const url = page.url();
@@ -108,7 +135,7 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
 
   test("3. Test ricerca listini", async ({ page }) => {
     await page.goto("/dashboard/super-admin/listini-master");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3000);
 
     const url = page.url();
@@ -140,7 +167,7 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
 
   test("4. Verifica pulsanti azione nella tabella", async ({ page }) => {
     await page.goto("/dashboard/super-admin/listini-master");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(5000);
 
     const url = page.url();
@@ -181,7 +208,7 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
 
   test("5. Test apertura dialog clone", async ({ page }) => {
     await page.goto("/dashboard/super-admin/listini-master");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(5000);
 
     const url = page.url();
@@ -239,7 +266,7 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
 
   test("6. Test apertura dialog assegnazione", async ({ page }) => {
     await page.goto("/dashboard/super-admin/listini-master");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(5000);
 
     const url = page.url();

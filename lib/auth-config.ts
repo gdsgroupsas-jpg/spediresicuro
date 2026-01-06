@@ -796,7 +796,7 @@ export const auth = async (...args: any[]) => {
         // console.log('🧪 [AUTH CONFIG] Test mode bypass active via wrapper');
         return {
           user: {
-            id: "test-user-id",
+            id: "00000000-0000-0000-0000-000000000000", // Valid Nil UUID
             email: process.env.TEST_USER_EMAIL || "test@example.com",
             name: "Test User E2E",
             role: "admin", // Force admin role
@@ -804,6 +804,7 @@ export const auth = async (...args: any[]) => {
             // Mock extended fields potentially used
             is_reseller: true,
             reseller_role: "admin",
+            account_type: "superadmin", // Force superadmin for permissions
           },
           expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         };
