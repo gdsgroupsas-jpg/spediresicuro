@@ -12,7 +12,7 @@
  * Fix: commit 8fd4c71 - enforce fail-closed encryption in production
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock delle variabili d'ambiente per test isolati
 const originalEnv = { ...process.env };
@@ -112,7 +112,7 @@ describe("Encryption Fail-Closed Security", () => {
 
       function encryptCredential(plaintext: string): string {
         if (!encryptionKey) {
-          if (nodeEnv === "production") {
+          if ((nodeEnv as string) === "production") {
             throw new Error("ENCRYPTION_KEY must be configured in production");
           }
           console.warn("⚠️ ENCRYPTION_KEY non configurata (solo sviluppo)");
@@ -150,9 +150,9 @@ describe("Encryption Fail-Closed Security", () => {
 
       // Dati criptati (pattern tipico)
       expect(isEncrypted("enc:abcdefghijklmnop")).toBe(true);
-      expect(
-        isEncrypted("SGVsbG8gV29ybGQgdGhpcyBpcyBhIHRlc3Qgc3RyaW5n")
-      ).toBe(true);
+      expect(isEncrypted("SGVsbG8gV29ybGQgdGhpcyBpcyBhIHRlc3Qgc3RyaW5n")).toBe(
+        true
+      );
 
       // Dati plaintext
       expect(isEncrypted("api-key-12345")).toBe(false);
@@ -219,9 +219,11 @@ describe("Encryption Fail-Closed Security", () => {
 
   describe("Gestione Errori Decryption", () => {
     it("dovrebbe gestire gracefully dati corrotti", () => {
-      function safeDecrypt(
-        encrypted: string
-      ): { success: boolean; value?: string; error?: string } {
+      function safeDecrypt(encrypted: string): {
+        success: boolean;
+        value?: string;
+        error?: string;
+      } {
         try {
           if (!encrypted) {
             return { success: false, error: "Empty input" };
@@ -321,21 +323,17 @@ describe("Variabili d'Ambiente Encryption", () => {
     }
 
     // Chiave valida
-    expect(
-      validateEncryptionKey("a".repeat(64)).valid
-    ).toBe(true);
+    expect(validateEncryptionKey("a".repeat(64)).valid).toBe(true);
 
     // Chiave troppo corta
     expect(validateEncryptionKey("short").valid).toBe(false);
 
     // Chiave non hex
-    expect(validateEncryptionKey("not-a-hex-key!@#$%^&*()".repeat(3)).valid).toBe(
-      false
-    );
+    expect(
+      validateEncryptionKey("not-a-hex-key!@#$%^&*()".repeat(3)).valid
+    ).toBe(false);
 
     // Chiave mancante
     expect(validateEncryptionKey(undefined).valid).toBe(false);
   });
 });
-
-

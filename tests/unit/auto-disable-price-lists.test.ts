@@ -11,7 +11,7 @@
  * Riferimento: actions/configurations.ts:1042-1091
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // Tipi per i test
 interface PriceList {
@@ -260,21 +260,25 @@ describe("Auto-Disable Price Lists", () => {
       const priceLists: PriceList[] = [
         {
           id: "pl-match-1",
+          name: "Listino Match 1",
           status: "active",
           metadata: { courier_config_id: "config-specific" },
         },
         {
           id: "pl-match-2",
+          name: "Listino Match 2",
           status: "draft",
           metadata: { courier_config_id: "config-specific" },
         },
         {
           id: "pl-no-match",
+          name: "Listino No Match",
           status: "active",
           metadata: { courier_config_id: "config-other" },
         },
         {
           id: "pl-no-metadata",
+          name: "Listino No Metadata",
           status: "active",
           // Nessun metadata
         },
@@ -374,5 +378,3 @@ describe("Auto-Disable Price Lists", () => {
     });
   });
 });
-
-
