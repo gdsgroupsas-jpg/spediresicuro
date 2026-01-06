@@ -31,17 +31,23 @@ if (!API_KEY) {
 async function testAPIKey() {
   console.log("🧪 Test Diretto API Key Spedisci.Online");
   console.log("=".repeat(60));
-  console.log(`🔑 API Key: ${API_KEY.substring(0, 20)}...${API_KEY.substring(API_KEY.length - 10)}`);
+  console.log(
+    `🔑 API Key: ${API_KEY.substring(0, 20)}...${API_KEY.substring(
+      API_KEY.length - 10
+    )}`
+  );
   console.log(`🌐 Base URL: ${BASE_URL}\n`);
 
   // Payload di test
   const testPayload = {
-    packages: [{
-      length: 30,
-      width: 20,
-      height: 15,
-      weight: 2
-    }],
+    packages: [
+      {
+        length: 30,
+        width: 20,
+        height: 15,
+        weight: 2,
+      },
+    ],
     shipFrom: {
       name: "Mittente Test",
       company: "Azienda Test",
@@ -51,7 +57,7 @@ async function testAPIKey() {
       state: "RM",
       postalCode: "00100",
       country: "IT",
-      email: "mittente@example.com"
+      email: "mittente@example.com",
     },
     shipTo: {
       name: "Destinatario Test",
@@ -62,26 +68,29 @@ async function testAPIKey() {
       state: "MI",
       postalCode: "20100",
       country: "IT",
-      email: "destinatario@example.com"
+      email: "destinatario@example.com",
     },
     notes: "Test connessione API",
     insuranceValue: 0,
     codValue: 0,
-    accessoriServices: []
+    accessoriServices: [],
   };
 
   const apiUrl = `${BASE_URL}/shipping/rates`;
 
   console.log(`📤 Invio richiesta a: ${apiUrl}`);
-  console.log(`📦 Payload:`, JSON.stringify(testPayload, null, 2).substring(0, 200) + "...\n");
+  console.log(
+    `📦 Payload:`,
+    JSON.stringify(testPayload, null, 2).substring(0, 200) + "...\n"
+  );
 
   try {
     const startTime = Date.now();
-    
+
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(testPayload),
@@ -95,7 +104,7 @@ async function testAPIKey() {
     if (!response.ok) {
       const errorText = await response.text();
       console.log(`\n❌ ERRORE HTTP ${response.status}:`);
-      
+
       try {
         const errorJson = JSON.parse(errorText);
         console.log(JSON.stringify(errorJson, null, 2));
@@ -118,42 +127,62 @@ async function testAPIKey() {
     }
 
     const data = await response.json();
-    
+
     console.log(`\n✅ SUCCESSO!`);
-    console.log(`📦 Rates ottenuti: ${Array.isArray(data) ? data.length : 'N/A'}`);
-    
+    console.log(
+      `📦 Rates ottenuti: ${Array.isArray(data) ? data.length : "N/A"}`
+    );
+
     if (Array.isArray(data) && data.length > 0) {
-      const carriers = [...new Set(data.map((r: any) => r.carrierCode || r.carrier))];
-      const contracts = [...new Set(data.map((r: any) => r.contractCode || r.contract).filter(Boolean))];
-      
+      const carriers = [
+        ...new Set(data.map((r: any) => r.carrierCode || r.carrier)),
+      ];
+      const contracts = [
+        ...new Set(
+          data.map((r: any) => r.contractCode || r.contract).filter(Boolean)
+        ),
+      ];
+
       console.log(`🚚 Corrieri trovati: ${carriers.join(", ") || "Nessuno"}`);
       if (contracts.length > 0) {
         console.log(`📄 Contratti: ${contracts.join(", ")}`);
       }
-      
+
       console.log(`\n📋 Dettagli rates (primi 3):`);
       data.slice(0, 3).forEach((rate: any, idx: number) => {
-        console.log(`\n   ${idx + 1}. ${rate.carrierCode || rate.carrier || 'N/A'}`);
-        console.log(`      Prezzo: €${rate.total_price || rate.price || 'N/A'}`);
-        console.log(`      Contratto: ${rate.contractCode || rate.contract || 'N/A'}`);
+        console.log(
+          `\n   ${idx + 1}. ${rate.carrierCode || rate.carrier || "N/A"}`
+        );
+        console.log(
+          `      Prezzo: €${rate.total_price || rate.price || "N/A"}`
+        );
+        console.log(
+          `      Contratto: ${rate.contractCode || rate.contract || "N/A"}`
+        );
       });
     } else {
       console.log(`\n⚠️ Risposta ricevuta ma nessun rate trovato`);
-      console.log(`📄 Dati ricevuti:`, JSON.stringify(data, null, 2).substring(0, 300));
+      console.log(
+        `📄 Dati ricevuti:`,
+        JSON.stringify(data, null, 2).substring(0, 300)
+      );
     }
 
     process.exit(0);
   } catch (error: any) {
     console.log(`\n❌ ERRORE durante la richiesta:`);
-    console.log(`   Tipo: ${error.name || 'Unknown'}`);
+    console.log(`   Tipo: ${error.name || "Unknown"}`);
     console.log(`   Messaggio: ${error.message}`);
-    
+
     if (error.cause) {
       console.log(`   Causa: ${error.cause}`);
     }
 
     // Analisi errori di rete
-    if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
+    if (
+      error.message.includes("fetch failed") ||
+      error.message.includes("ECONNREFUSED")
+    ) {
       console.log(`\n💡 Analisi: Errore di connessione di rete`);
       console.log(`   → Verifica che il Base URL sia raggiungibile`);
       console.log(`   → Controlla firewall/proxy`);
@@ -163,7 +192,9 @@ async function testAPIKey() {
       console.log(`   → Il Base URL potrebbe essere errato`);
     } else if (error.message.includes("CERT")) {
       console.log(`\n💡 Analisi: Problema certificato SSL`);
-      console.log(`   → Il certificato del server potrebbe essere scaduto o non valido`);
+      console.log(
+        `   → Il certificato del server potrebbe essere scaduto o non valido`
+      );
     }
 
     process.exit(1);
