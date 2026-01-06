@@ -19,6 +19,8 @@ import { auth } from '@/lib/auth-config';
  */
 
 export async function POST(request: NextRequest) {
+  let cleanBaseUrl: string | undefined;
+  
   try {
     // 1. Verifica autenticazione (obbligatoria)
     const session = await auth();
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Prepara endpoint
-    const cleanBaseUrl = baseUrl.trim().replace(/\/$/, '');
+    cleanBaseUrl = baseUrl.trim().replace(/\/$/, '');
     const apiUrl = cleanBaseUrl.includes('/api/v2')
       ? `${cleanBaseUrl}/shipping/rates`
       : `${cleanBaseUrl}/api/v2/shipping/rates`;
@@ -148,7 +150,7 @@ export async function POST(request: NextRequest) {
       // Distingui tra diversi tipi di errori di rete
       if (errorCause?.includes('ENOTFOUND') || errorMessage.includes('ENOTFOUND')) {
         // Dominio non trovato (DNS)
-        const domainMatch = baseUrl.match(/https?:\/\/([^\/]+)/);
+        const domainMatch = cleanBaseUrl?.match(/https?:\/\/([^\/]+)/);
         const domain = domainMatch ? domainMatch[1] : 'il dominio';
         
         detailedError = `Dominio non trovato: "${domain}" non esiste o non è raggiungibile.\n\n` +
