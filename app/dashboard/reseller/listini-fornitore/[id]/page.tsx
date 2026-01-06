@@ -7,33 +7,28 @@
 
 "use client";
 
-import { getPriceListByIdAction } from "@/actions/price-lists";
-import {
-  createPriceListEntryAction,
-  deletePriceListEntryAction,
-  updatePriceListEntryAction,
-  upsertPriceListEntriesAction,
-} from "@/actions/price-list-entries";
 import { updateCustomerPriceListMarginAction } from "@/actions/customer-price-lists";
-import { SupplierPriceListConfigDialog } from "@/components/listini/supplier-price-list-config-dialog";
+import { upsertPriceListEntriesAction } from "@/actions/price-list-entries";
+import { getPriceListByIdAction } from "@/actions/price-lists";
 import DashboardNav from "@/components/dashboard-nav";
+import { SupplierPriceListConfigDialog } from "@/components/listini/supplier-price-list-config-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
 import type { PriceList, PriceListEntry } from "@/types/listini";
-import { PRICING_MATRIX, getZoneByCode } from "@/lib/constants/pricing-matrix";
 import {
   ArrowLeft,
   Calendar,
   Edit,
   Info,
   Package,
+  Plus,
   Save,
   Settings,
   Trash2,
-  X,
-  Plus,
   Truck,
+  X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
@@ -168,7 +163,9 @@ export default function PriceListDetailPage() {
         return (zoneA?.priority || 999) - (zoneB?.priority || 999);
       });
 
-    const normalizeZoneCode = (code: string | undefined | null): string | null => {
+    const normalizeZoneCode = (
+      code: string | undefined | null
+    ): string | null => {
       if (!code) return null;
       const legacyMap: Record<string, string> = {
         "IT-STD": "IT-ITALIA",
@@ -234,11 +231,7 @@ export default function PriceListDetailPage() {
   }
 
   // Aggiorna valore prezzo in matrice locale
-  function updateMatrixPrice(
-    rowId: string,
-    zoneCode: string,
-    value: number
-  ) {
+  function updateMatrixPrice(rowId: string, zoneCode: string, value: number) {
     setEditingMatrix((prev) =>
       prev.map((row) => {
         if (row.id === rowId) {
@@ -401,9 +394,7 @@ export default function PriceListDetailPage() {
   function cancelEditing() {
     if (hasUnsavedChanges) {
       if (
-        !confirm(
-          "Hai modifiche non salvate. Sei sicuro di voler annullare?"
-        )
+        !confirm("Hai modifiche non salvate. Sei sicuro di voler annullare?")
       ) {
         return;
       }
@@ -423,7 +414,9 @@ export default function PriceListDetailPage() {
         return (zoneA?.priority || 999) - (zoneB?.priority || 999);
       });
 
-    const normalizeZoneCode = (code: string | undefined | null): string | null => {
+    const normalizeZoneCode = (
+      code: string | undefined | null
+    ): string | null => {
       if (!code) return null;
       const legacyMap: Record<string, string> = {
         "IT-STD": "IT-ITALIA",
@@ -592,11 +585,10 @@ export default function PriceListDetailPage() {
                     value={priceList.default_margin_percent || 0}
                     onChange={async (e) => {
                       const newMargin = parseFloat(e.target.value) || 0;
-                      const result =
-                        await updateCustomerPriceListMarginAction(
-                          priceList.id,
-                          newMargin
-                        );
+                      const result = await updateCustomerPriceListMarginAction(
+                        priceList.id,
+                        newMargin
+                      );
                       if (result.success && result.priceList) {
                         setPriceList(result.priceList);
                         toast.success("Margine aggiornato");
@@ -702,7 +694,10 @@ export default function PriceListDetailPage() {
                     Nuova Fascia
                   </Button>
                   {hasUnsavedChanges && (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700">
+                    <Badge
+                      variant="outline"
+                      className="bg-orange-50 text-orange-700"
+                    >
                       Modifiche non salvate
                     </Badge>
                   )}
@@ -727,8 +722,12 @@ export default function PriceListDetailPage() {
                 const sortedZones = [...PRICING_MATRIX.ZONES]
                   .map((z) => z.code)
                   .sort((a, b) => {
-                    const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
-                    const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
+                    const zoneA = PRICING_MATRIX.ZONES.find(
+                      (z) => z.code === a
+                    );
+                    const zoneB = PRICING_MATRIX.ZONES.find(
+                      (z) => z.code === b
+                    );
                     return (zoneA?.priority || 999) - (zoneB?.priority || 999);
                   });
 
@@ -771,7 +770,9 @@ export default function PriceListDetailPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {displayRows.map((row, idx) => {
-                        const rowId = isEditing ? (row as MatrixRow).id : `row-${idx}`;
+                        const rowId = isEditing
+                          ? (row as MatrixRow).id
+                          : `row-${idx}`;
                         const rowData = isEditing
                           ? (row as MatrixRow)
                           : {
@@ -794,13 +795,16 @@ export default function PriceListDetailPage() {
                                     step="0.1"
                                     value={rowData.weightTo}
                                     onChange={(e) => {
-                                      const newWeight = parseFloat(e.target.value) || 0;
+                                      const newWeight =
+                                        parseFloat(e.target.value) || 0;
                                       updateMatrixWeight(rowId, newWeight);
                                     }}
                                     className="w-20 text-center"
                                     disabled={isSaving}
                                   />
-                                  <span className="text-xs text-gray-500">kg</span>
+                                  <span className="text-xs text-gray-500">
+                                    kg
+                                  </span>
                                 </div>
                               ) : (
                                 <>
@@ -829,7 +833,11 @@ export default function PriceListDetailPage() {
                                           e.target.value === ""
                                             ? -1
                                             : parseFloat(e.target.value) || 0;
-                                        updateMatrixPrice(rowId, zoneCode, value);
+                                        updateMatrixPrice(
+                                          rowId,
+                                          zoneCode,
+                                          value
+                                        );
                                       }}
                                       placeholder="-"
                                       className="w-24 text-center"
@@ -872,7 +880,8 @@ export default function PriceListDetailPage() {
                                   step="0.01"
                                   value={rowData.fuelSurcharge}
                                   onChange={(e) => {
-                                    const value = parseFloat(e.target.value) || 0;
+                                    const value =
+                                      parseFloat(e.target.value) || 0;
                                     updateMatrixFuelSurcharge(rowId, value);
                                   }}
                                   className="w-20 text-center"

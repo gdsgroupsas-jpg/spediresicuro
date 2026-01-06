@@ -47,6 +47,7 @@ export default function PriceListDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [rules, setRules] = useState<PriceRule[]>([])
   const [isEditing, setIsEditing] = useState(false)
+  const [showConfigDialog, setShowConfigDialog] = useState(false)
 
   useEffect(() => {
     if (params.id) {
