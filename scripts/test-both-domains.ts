@@ -1,13 +1,34 @@
 /**
  * Test entrambi i domini per verificare quale è corretto
+ * 
+ * Uso: npx tsx scripts/test-both-domains.ts <api_key> [domain1] [domain2]
+ * Oppure: TEST_API_KEY=xxx npx tsx scripts/test-both-domains.ts
  */
 
-const API_KEY = "c6HEnYYgJhxENVa0fd5CbG5evFZJXaS75GqnjGiEID7mgWIyJybX6wTwXFMc";
+import { config } from "dotenv";
+import { resolve } from "path";
 
+// Carica variabili d'ambiente
+config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: resolve(process.cwd(), ".env") });
+
+// API Key da parametri command line o variabile d'ambiente
+const API_KEY = process.argv[2] || process.env.TEST_API_KEY || process.env.SPEDISCI_ONLINE_API_KEY;
+
+// Domini da testare (da parametri o default)
 const DOMAINS_TO_TEST = [
-  "https://ecommercetalia.spedisci.online/api/v2",  // Con "s" (quello salvato)
-  "https://ecommerceitalia.spedisci.online/api/v2", // Senza "s" (quello nel placeholder)
+  process.argv[3] || "https://ecommercetalia.spedisci.online/api/v2",  // Con "s" (quello salvato)
+  process.argv[4] || "https://ecommerceitalia.spedisci.online/api/v2", // Senza "s" (quello nel placeholder)
 ];
+
+if (!API_KEY) {
+  console.error("❌ API Key mancante!");
+  console.error("\n💡 Uso:");
+  console.error("   npx tsx scripts/test-both-domains.ts <api_key> [domain1] [domain2]");
+  console.error("\n   Oppure imposta variabili d'ambiente:");
+  console.error("   TEST_API_KEY=xxx npx tsx scripts/test-both-domains.ts");
+  process.exit(1);
+}
 
 async function testDomain(baseUrl: string) {
   console.log(`\n${"=".repeat(60)}`);

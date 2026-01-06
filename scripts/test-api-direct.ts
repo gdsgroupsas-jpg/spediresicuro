@@ -1,17 +1,32 @@
 /**
  * Test DIRETTO delle API key con fetch raw
+ * 
+ * ⚠️ SECURITY: Non committare mai API key nel codice!
+ * 
+ * Uso: npx tsx scripts/test-api-direct.ts
+ * 
+ * Richiede variabili d'ambiente:
+ *   TEST_API_KEY_SPEED=xxx
+ *   TEST_API_KEY_PRIME=xxx
+ *   TEST_BASE_URL=xxx (opzionale)
  */
 
 import { config } from "dotenv";
 config({ path: ".env.local" });
+config({ path: ".env" });
 
-const API_KEYS = {
-  "speed go": "QIhMonA1fTY7J8nUsKHCrnClbrmXtvZ976gfoWhPZYHyMgIvESxwfYYCE0gj",
-  "spedizioni prime":
-    "c6HEnYYgJhxENVa0fd5CbG5evFZJXaS75GqnjGiEID7mgWIyJybX6wTwXFMc",
-};
+// ⚠️ SECURITY: Leggi API keys da variabili d'ambiente, mai hardcoded!
+const API_KEYS: Record<string, string> = {};
 
-const BASE_URL = "https://infinity.spedisci.online/api/v2";
+if (process.env.TEST_API_KEY_SPEED) {
+  API_KEYS["speed go"] = process.env.TEST_API_KEY_SPEED;
+}
+
+if (process.env.TEST_API_KEY_PRIME) {
+  API_KEYS["spedizioni prime"] = process.env.TEST_API_KEY_PRIME;
+}
+
+const BASE_URL = process.env.TEST_BASE_URL || "https://infinity.spedisci.online/api/v2";
 
 async function testDirectCall(name: string, apiKey: string) {
   console.log(`\n${"═".repeat(60)}`);
@@ -92,6 +107,15 @@ async function testDirectCall(name: string, apiKey: string) {
 async function main() {
   console.log("🔍 TEST DIRETTO API SPEDISCI.ONLINE");
   console.log("Bypassing all our code, calling API directly with fetch");
+
+  if (Object.keys(API_KEYS).length === 0) {
+    console.error("\n❌ Nessuna API key configurata!");
+    console.error("\n💡 Imposta le variabili d'ambiente:");
+    console.error("   TEST_API_KEY_SPEED=xxx");
+    console.error("   TEST_API_KEY_PRIME=xxx");
+    console.error("   TEST_BASE_URL=xxx (opzionale)");
+    process.exit(1);
+  }
 
   for (const [name, key] of Object.entries(API_KEYS)) {
     await testDirectCall(name, key);
