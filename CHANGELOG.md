@@ -9,6 +9,21 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- **Reseller System Enhancement** - Miglioramenti sistema reseller
+  - Reseller creati con `account_type='reseller'` invece di `'user'`
+  - Migration per aggiungere `'reseller'` all'enum `account_type`
+  - Script `create-reseller.ts` per creazione programmatica reseller
+- **Role Badge System** - Sistema badge ruoli con colori distintivi
+  - `lib/utils/role-badges.tsx` - Utility per badge ruoli
+  - Super Admin: rosso, Admin: amber, Reseller: teal, BYOC: blu, User: grigio
+  - Visualizzazione ruoli corretta in admin dashboard
+- **Platform Fee Improvements** - Miglioramenti gestione fee
+  - Feedback visibile dopo salvataggio (toast + messaggi nel dialog)
+  - Supporto per fee = 0 (gratis) con preset dedicato
+  - Fix foreign key constraint in audit history
+- **Documentation** - Nuova documentazione
+  - `docs/FLUSSO_CREAZIONE_RESELLER.md` - Flusso creazione reseller
+  - `docs/SPIEGAZIONE_FEE_VS_ABBONAMENTO.md` - Differenza fee vs abbonamento
 - **Stripe Integration** - Completa integrazione pagamenti Stripe (sostituisce Intesa XPay)
   - `lib/payments/stripe.ts` - Client Stripe con checkout session
   - `app/api/stripe/webhook/route.ts` - Webhook con signature verification
@@ -29,6 +44,11 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   - `e2e/stripe-payment.spec.ts`
 
 ### Changed
+- **UI Admin Dashboard** - Miglioramenti visualizzazione
+  - Pagina dettaglio utente: sfondo grigio chiaro (`bg-slate-50`) invece di gradient
+  - Card bianche invece di scure per migliore leggibilità
+  - Testo scuro su sfondo chiaro (fix: email invisibili nero su nero)
+  - Stile allineato alla pagina "Nuova Spedizione"
 - **Security Hardening**
   - `app/dashboard/layout.tsx` - Bloccato `PLAYWRIGHT_TEST_MODE` in produzione
   - `lib/hooks/use-service-worker.ts` - Sostituito `innerHTML` con DOM API sicure
@@ -49,6 +69,18 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - 🔒 `npm audit fix` - 5 vulnerabilità corrette
 
 ### Fixed
+- **Autocomplete Città** - Fix riapre dopo selezione
+  - Autocomplete non si riapre più dopo prima selezione
+  - Aggiunto flag `isSelectionInProgress` per prevenire loop
+  - Non fa ricerca se città è già validata
+- **Platform Fee Audit** - Fix foreign key constraint
+  - Risolto errore `platform_fee_history_changed_by_fkey`
+  - Audit gestito manualmente con adminUserId corretto
+  - Trigger automatico disabilitato (non funzionava con service role)
+- **Reseller Display** - Fix visualizzazione ruolo
+  - Reseller ora mostrati come "Reseller" invece di "Utente"
+  - Usa `account_type` e `is_reseller` per determinare ruolo
+  - Tabella admin dashboard aggiornata con query corretta
 - Wallet dialog ora usa Stripe invece di XPay
 - Service worker notification usa DOM API sicure
 
