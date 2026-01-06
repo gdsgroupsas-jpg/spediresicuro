@@ -90,6 +90,9 @@ export interface PriceList {
   assigned_to_user_id?: string; // Se specificato, listino personalizzato per utente
   list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
 
+  // Tracciabilità derivazione (master/clone)
+  master_list_id?: string; // ID listino master da cui questo deriva (null = listino originale)
+
   // Versionamento
   valid_from?: string;
   valid_until?: string;
@@ -238,4 +241,59 @@ export interface ParsedPriceListRow {
   base_price: number;
   fuel_surcharge_percent?: number;
   [key: string]: any;
+}
+
+/**
+ * Assegnazione listino a utente (tabella N:N)
+ */
+export interface PriceListAssignment {
+  id: string;
+  price_list_id: string;
+  user_id: string;
+  assigned_by: string;
+  assigned_at: string;
+  revoked_at?: string;
+  revoked_by?: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  // Campi join opzionali
+  price_list?: PriceList;
+  user?: {
+    id: string;
+    email: string;
+    name?: string;
+    account_type?: string;
+  };
+  assigner?: {
+    id: string;
+    email: string;
+  };
+}
+
+/**
+ * Input per clonazione listino
+ */
+export interface ClonePriceListInput {
+  source_price_list_id: string;
+  name: string;
+  target_user_id?: string;
+  overrides?: {
+    valid_from?: string;
+    valid_until?: string;
+    default_margin_percent?: number;
+    default_margin_fixed?: number;
+    description?: string;
+    notes?: string;
+  };
+}
+
+/**
+ * Input per assegnazione listino
+ */
+export interface AssignPriceListInput {
+  price_list_id: string;
+  user_id: string;
+  notes?: string;
 }
