@@ -28,8 +28,16 @@ CREATE POLICY price_lists_select ON price_lists
       AND users.account_type = 'superadmin'
     )
     OR
-    -- Listini globali visibili a tutti (ma Reseller/BYOC li filtrano nella Server Action)
-    (is_global = true AND list_type = 'global')
+    -- Listini globali visibili a tutti ORA FILTRATI PER RESELLER/BYOC (Audit Fix P0)
+    (
+      is_global = true 
+      AND list_type = 'global'
+      AND NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.id = auth.uid()::text::uuid 
+        AND (users.is_reseller = true OR users.account_type = 'byoc')
+      )
+    )
     OR
     -- Listini fornitore creati dall'utente
     (list_type = 'supplier' AND created_by = auth.uid()::text::uuid)

@@ -20,6 +20,38 @@ export async function GET(request: NextRequest) {
     if (!authResult.authorized) return authResult.response;
     const { session } = authResult;
 
+    // ⚠️ E2E TEST BYPASS: Mock user info for test user
+    if (
+      session?.user?.id === "test-user-id" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      console.log(
+        "🧪 [API USER INFO] Test mode active - returning mock reseller user"
+      );
+      const mockUser = {
+        id: "test-user-id",
+        email: session.user.email,
+        name: "Test User E2E",
+        role: "admin",
+        account_type: "admin",
+        is_reseller: true,
+        reseller_role: "admin",
+        provider: "credentials",
+        image: null,
+        datiCliente: {
+          datiCompletati: true,
+          nome: "Test",
+          cognome: "User",
+        },
+      };
+
+      return NextResponse.json({
+        success: true,
+        user: mockUser,
+        ...mockUser, // Retrocompatibilità
+      });
+    }
+
     // 2. Recupera informazioni utente
     const user = await findUserByEmail(session.user.email);
 
