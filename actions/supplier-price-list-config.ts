@@ -1,6 +1,6 @@
 /**
  * Server Actions: Supplier Price List Config
- * 
+ *
  * Gestione configurazioni manuali per sezioni listini fornitore:
  * - Assicurazione
  * - Contrassegni
@@ -23,9 +23,7 @@ import type {
 /**
  * Recupera configurazione per un listino fornitore
  */
-export async function getSupplierPriceListConfig(
-  priceListId: string
-): Promise<{
+export async function getSupplierPriceListConfig(priceListId: string): Promise<{
   success: boolean;
   config?: SupplierPriceListConfig;
   error?: string;
@@ -153,7 +151,8 @@ export async function upsertSupplierPriceListConfig(
     if (!isAdmin && !isReseller && !isBYOC) {
       return {
         success: false,
-        error: "Solo admin, reseller e BYOC possono configurare listini fornitore",
+        error:
+          "Solo admin, reseller e BYOC possono configurare listini fornitore",
       };
     }
 
@@ -176,23 +175,59 @@ export async function upsertSupplierPriceListConfig(
     if (priceList.list_type !== "supplier") {
       return {
         success: false,
-        error: "Le configurazioni manuali sono disponibili solo per listini fornitore",
+        error:
+          "Le configurazioni manuali sono disponibili solo per listini fornitore",
       };
     }
 
-    // Estrai carrier_code e contract_code se non forniti
+    // Estrai carrier_code da più fonti (in ordine di priorità):
+    // 1. Input esplicito
+    // 2. Metadata del listino
+    // 3. Courier associato (se presente courier_id)
+    // 4. Estrazione dal nome del listino (pattern: "carriercode_..." o "carriercode - ...")
     const metadata = priceList.source_metadata || {};
-    const carrierCode =
-      input.carrier_code || metadata.carrier_code || "";
+    let carrierCode =
+      input.carrier_code ||
+      metadata.carrier_code ||
+      (priceList.courier as any)?.code ||
+      "";
+
+    // Se ancora vuoto, prova a estrarlo dal nome del listino
+    if (!carrierCode && priceList.name) {
+      const nameLower = priceList.name.toLowerCase();
+      // Pattern comuni: "gls_...", "postedeliverybusiness_...", "brt_...", ecc.
+      const nameMatch = nameLower.match(
+        /^(gls|postedeliverybusiness|brt|dhl|ups|fedex|sda|bartolini|tnt|dhl-express|dhl-ecommerce)/
+      );
+      if (nameMatch) {
+        carrierCode = nameMatch[1];
+      }
+    }
+
+    // Se ancora vuoto, prova a recuperarlo dal courier_id se presente
+    if (!carrierCode && priceList.courier_id) {
+      const { data: courier } = await supabaseAdmin
+        .from("couriers")
+        .select("code")
+        .eq("id", priceList.courier_id)
+        .single();
+
+      if (courier?.code) {
+        carrierCode = courier.code.toLowerCase();
+      }
+    }
+
     const contractCode =
       input.contract_code || metadata.contract_code || undefined;
+
     const courierConfigId =
       input.courier_config_id || metadata.courier_config_id || undefined;
 
     if (!carrierCode) {
       return {
         success: false,
-        error: "carrier_code è obbligatorio",
+        error:
+          "carrier_code è obbligatorio. Impossibile determinarlo automaticamente dal listino. Inseriscilo manualmente nei metadata del listino o associa un corriere.",
       };
     }
 
@@ -226,8 +261,7 @@ export async function upsertSupplierPriceListConfig(
     if (input.storage_config) {
       configData.storage_config = {
         services: input.storage_config.services || [],
-        dossier_opening_cost:
-          input.storage_config.dossier_opening_cost ?? 0,
+        dossier_opening_cost: input.storage_config.dossier_opening_cost ?? 0,
       };
     }
 
@@ -237,6 +271,10 @@ export async function upsertSupplierPriceListConfig(
 
     if (input.extra_config !== undefined) {
       configData.extra_config = input.extra_config;
+    }
+
+    if (input.volumetric_density_factor !== undefined) {
+      configData.volumetric_density_factor = input.volumetric_density_factor;
     }
 
     // Upsert diretto (RLS gestisce i permessi)
@@ -321,7 +359,10 @@ export async function upsertSupplierPriceListConfig(
       .single();
 
     if (fetchError) {
-      return { success: false, error: fetchError?.message || "Errore recupero configurazione" };
+      return {
+        success: false,
+        error: fetchError?.message || "Errore recupero configurazione",
+      };
     }
 
     return {
@@ -459,4 +500,3 @@ export async function listSupplierPriceListConfigs(): Promise<{
     return { success: false, error: error.message || "Errore sconosciuto" };
   }
 }
-

@@ -203,7 +203,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   priceListName?: string;
   overwriteExisting?: boolean;
   configId?: string;
-  mode?: "fast" | "balanced" | "matrix";
+  mode?: "fast" | "balanced" | "matrix" | "semi-auto";
   targetZones?: string[]; // Nuova opzione per chunking client-side
 }): Promise<{
   success: boolean;
@@ -283,8 +283,11 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
     const allRates: any[] = [];
     const processedCombinations = new Set<string>();
+    // Traccia zone processate per creare entry anche se zero rates (semi-auto)
+    const processedZonesByCarrier: Record<string, Set<string>> = {};
 
-    const mode: "fast" | "balanced" | "matrix" = options?.mode ?? "balanced";
+    const mode: "fast" | "balanced" | "matrix" | "semi-auto" =
+      options?.mode ?? "balanced";
 
     // Usa i nuovi helper per ottenere zone e pesi in base alla modalità
     let zones = getZonesForMode(mode);
@@ -509,9 +512,27 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               (rate as any)._probe_weight = weight;
               (rate as any)._probe_zone = zone.code;
               allRates.push(rate);
+              
+              // Traccia zone processate per questo corriere
+              const carrierCode = rate.carrierCode;
+              if (carrierCode) {
+                if (!processedZonesByCarrier[carrierCode]) {
+                  processedZonesByCarrier[carrierCode] = new Set();
+                }
+                processedZonesByCarrier[carrierCode].add(zone.code);
+              }
             }
             return { success: true, zone: zone.code, weight };
           }
+          
+          // Anche se non ci sono rates, traccia la zona per semi-auto mode
+          // (verrà creata entry vuota dopo)
+          if (mode === "semi-auto" && result.success) {
+            // Se la chiamata è riuscita ma non ci sono rates, traccia comunque la zona
+            // per creare entry vuota (ma non possiamo sapere il corriere senza rates)
+            // Quindi tracciamo tutte le zone processate e le creeremo dopo
+          }
+          
           return {
             success: false,
             zone: zone.code,
@@ -1061,11 +1082,54 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         // Nota: I rates di spedisci.online sono per una spedizione specifica,
         // quindi creiamo entries basate su questi dati
 
+        // IMPORTANTE: Per listini fornitore (supplier), crea sempre entry per tutte le zone
+        // anche se zero rates, per garantire struttura matrice completa
+        // Questo vale per tutti i tipi di account: superadmin, admin, reseller, byoc, sub-user
         if (!carrierRates || carrierRates.length === 0) {
-          console.warn(
-            `⚠️ [SYNC] [${carrierIndex}/${totalCarriers}] Nessun rate per ${carrierCode}, salto`
+          console.log(
+            `📝 [SYNC] [${carrierIndex}/${totalCarriers}] Zero rates per ${carrierCode}: creo entry vuote per tutte le zone (listino fornitore)`
           );
-          continue;
+          
+          // Crea entry vuote per tutte le zone processate
+          const emptyEntries = zones.map((zone) => {
+            const weightFrom = 0;
+            // Per semi-auto usa 1 kg, altrimenti usa il primo peso della modalità
+            const weightTo = mode === "semi-auto" ? 1 : weightsToProbe[0] || 1;
+            
+            return {
+              weight_from: weightFrom,
+              weight_to: weightTo,
+              zone_code: zone.code,
+              base_price: 0, // Valore di default, utente completerà
+              service_type: "standard" as const,
+              fuel_surcharge_percent: 0,
+              cash_on_delivery_surcharge: 0,
+              insurance_rate_percent: 0,
+            };
+          });
+
+          try {
+            if (!options?.overwriteExisting) {
+              const upsertResult = await upsertPriceListEntries(priceListId, emptyEntries);
+              entriesAdded += upsertResult.inserted + upsertResult.updated;
+              console.log(
+                `✅ [SYNC] ${upsertResult.inserted} entry vuote inserite, ${upsertResult.updated} aggiornate per ${carrierCode}`
+              );
+            } else {
+              await addPriceListEntries(priceListId, emptyEntries);
+              entriesAdded += emptyEntries.length;
+              console.log(
+                `✅ [SYNC] ${emptyEntries.length} entry vuote aggiunte per ${carrierCode} (overwrite mode)`
+              );
+            }
+          } catch (err: any) {
+            console.error(
+              `❌ [SYNC] Errore aggiunta entry vuote per ${carrierCode}:`,
+              err.message || err
+            );
+          }
+          
+          continue; // Passa al prossimo corriere
         }
 
         // Rimuovi duplicati basati su (weight_to, zone_code, service_type)
@@ -1247,6 +1311,42 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             entries.length
           } entries al listino ${priceListId.substring(0, 8)}...`
         );
+        
+        // IMPORTANTE: Per listini fornitore, assicurati che tutte le zone abbiano un'entry
+        // Crea entry vuote per zone mancanti (vale per tutti i tipi di account)
+        // Questo garantisce struttura matrice completa anche se alcune zone non hanno rates
+        const zonesWithEntries = new Set(
+          entries.map((e) => e.zone_code).filter((z) => z)
+        );
+        const missingZones = zones.filter(
+          (z) => !zonesWithEntries.has(z.code)
+        );
+        
+        if (missingZones.length > 0) {
+          console.log(
+            `📝 [SYNC] Listino fornitore: creo ${missingZones.length} entry vuote per zone mancanti: ${missingZones.map((z) => z.code).join(", ")}`
+          );
+          
+          const emptyEntriesForMissingZones = missingZones.map((zone) => {
+            const weightFrom = 0;
+            // Per semi-auto usa 1 kg, altrimenti usa il primo peso della modalità
+            const weightTo = mode === "semi-auto" ? 1 : weightsToProbe[0] || 1;
+            
+            return {
+              weight_from: weightFrom,
+              weight_to: weightTo,
+              zone_code: zone.code,
+              base_price: 0, // Valore di default, utente completerà
+              service_type: "standard" as const,
+              fuel_surcharge_percent: 0,
+              cash_on_delivery_surcharge: 0,
+              insurance_rate_percent: 0,
+            };
+          });
+          
+          entries.push(...emptyEntriesForMissingZones);
+        }
+        
         try {
           // ✨ FIX: Se overwriteExisting=false, usa UPSERT per evitare duplicati
           // Se overwriteExisting=true, usa INSERT normale (dopo DELETE)

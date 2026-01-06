@@ -69,7 +69,7 @@ export function SupplierPriceListConfigDialog({
 }: SupplierPriceListConfigDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("insurance");
+  const [activeTab, setActiveTab] = useState("general");
 
   // Configurazioni
   const [insuranceConfig, setInsuranceConfig] = useState<InsuranceConfig>({
@@ -89,6 +89,8 @@ export function SupplierPriceListConfigDialog({
   });
   const [pickupConfig, setPickupConfig] = useState<PickupServiceConfig[]>([]);
   const [extraConfig, setExtraConfig] = useState<Record<string, any>>({});
+  const [volumetricDensityFactor, setVolumetricDensityFactor] =
+    useState<number>(200); // Default: 200 kg/m³
 
   const initializeDefaults = useCallback(() => {
     // Estrai carrier_code dai metadata
@@ -154,6 +156,7 @@ export function SupplierPriceListConfigDialog({
         );
         setPickupConfig(config.pickup_config || []);
         setExtraConfig(config.extra_config || {});
+        setVolumetricDensityFactor(config.volumetric_density_factor || 200);
       } else {
         // Inizializza con valori di default basati sul corriere
         initializeDefaults();
@@ -178,9 +181,29 @@ export function SupplierPriceListConfigDialog({
     setIsSaving(true);
     try {
       const metadata = priceList.source_metadata || {};
+
+      // Prova a recuperare carrier_code da più fonti
+      let carrierCode = metadata.carrier_code || "";
+
+      // Se non presente nei metadata, prova dal courier associato
+      if (!carrierCode && priceList.courier?.code) {
+        carrierCode = priceList.courier.code.toLowerCase();
+      }
+
+      // Se ancora vuoto, prova a estrarlo dal nome del listino
+      if (!carrierCode && priceList.name) {
+        const nameLower = priceList.name.toLowerCase();
+        const nameMatch = nameLower.match(
+          /^(gls|postedeliverybusiness|brt|dhl|ups|fedex|sda|bartolini|tnt|dhl-express|dhl-ecommerce)/
+        );
+        if (nameMatch) {
+          carrierCode = nameMatch[1];
+        }
+      }
+
       const result = await upsertSupplierPriceListConfig({
         price_list_id: priceList.id,
-        carrier_code: metadata.carrier_code || "",
+        carrier_code: carrierCode, // Può essere vuoto, la validazione lato server proverà a recuperarlo
         contract_code: metadata.contract_code,
         courier_config_id: metadata.courier_config_id,
         insurance_config: insuranceConfig,
@@ -189,6 +212,7 @@ export function SupplierPriceListConfigDialog({
         storage_config: storageConfig,
         pickup_config: pickupConfig,
         extra_config: extraConfig,
+        volumetric_density_factor: volumetricDensityFactor,
       });
 
       if (result.success) {
@@ -289,12 +313,20 @@ export function SupplierPriceListConfigDialog({
           </DialogTitle>
           <DialogDescription>
             Configura le sezioni non disponibili via API per questo listino
-            fornitore
+            {priceList.list_type === "custom" ? " cliente" : " fornitore"}
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="general">
+              <Settings className="h-4 w-4 mr-1" />
+              Generale
+            </TabsTrigger>
+            <TabsTrigger value="weights-zones">
+              <Package className="h-4 w-4 mr-1" />
+              Pesi / Zone
+            </TabsTrigger>
             <TabsTrigger value="insurance">
               <Shield className="h-4 w-4 mr-1" />
               Assicurazione
@@ -322,6 +354,141 @@ export function SupplierPriceListConfigDialog({
           </TabsList>
 
           {/* Tab Assicurazione */}
+          {/* Tab Generale */}
+          <TabsContent value="general" className="space-y-4 mt-4">
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Fattore Peso/Volume (Densità)
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="volumetric-density-factor">
+                    Densità (kg/m³)
+                  </Label>
+                  <Input
+                    id="volumetric-density-factor"
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    value={volumetricDensityFactor}
+                    onChange={(e) =>
+                      setVolumetricDensityFactor(
+                        parseFloat(e.target.value) || 200
+                      )
+                    }
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
+                    Fattore densità per calcolo peso volumetrico. Default: 200
+                    kg/m³ (corrisponde a divisore 5000).
+                    <br />
+                    Formula: Peso volumetrico (kg) = (L × W × H in cm) /
+                    (1,000,000 / densità)
+                    <br />
+                    Esempio: 200 kg/m³ → divisore 5000
+                  </p>
+                  {volumetricDensityFactor > 0 && (
+                    <p className="text-xs text-blue-700 mt-1 font-medium">
+                      Divisore equivalente:{" "}
+                      {Math.round(1000000 / volumetricDensityFactor)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Tab Generale */}
+          <TabsContent value="general" className="space-y-4 mt-4">
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Fattore Peso/Volume (Densità)
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="volumetric-density-factor">
+                    Densità (kg/m³)
+                  </Label>
+                  <Input
+                    id="volumetric-density-factor"
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    value={volumetricDensityFactor}
+                    onChange={(e) =>
+                      setVolumetricDensityFactor(
+                        parseFloat(e.target.value) || 200
+                      )
+                    }
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
+                    Fattore densità per calcolo peso volumetrico. Default: 200
+                    kg/m³ (corrisponde a divisore 5000).
+                    <br />
+                    Formula: Peso volumetrico (kg) = (L × W × H in cm) /
+                    (1,000,000 / densità)
+                    <br />
+                    Esempio: 200 kg/m³ → divisore 5000
+                  </p>
+                  {volumetricDensityFactor > 0 && (
+                    <p className="text-xs text-blue-700 mt-1 font-medium">
+                      Divisore equivalente:{" "}
+                      {Math.round(1000000 / volumetricDensityFactor)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Tab Pesi / Zone */}
+          <TabsContent value="weights-zones" className="space-y-4 mt-4">
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Matrice Pesi / Zone
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                La matrice pesi/zone viene gestita nella pagina dettaglio del
+                listino. Puoi modificare manualmente tutti i valori per ogni
+                combinazione di peso e zona geografica.
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Apri pagina dettaglio listino in nuova tab
+                    // Usa route corretta in base al tipo di listino
+                    const detailUrl =
+                      priceList.list_type === "custom"
+                        ? `/dashboard/listini/${priceList.id}`
+                        : `/dashboard/reseller/listini-fornitore/${priceList.id}`;
+                    window.open(detailUrl, "_blank");
+                  }}
+                  className="gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  Apri Matrice Completa
+                </Button>
+              </div>
+              <div className="mt-4 p-3 bg-white rounded border border-gray-200">
+                <p className="text-xs text-gray-600">
+                  <strong>Nota:</strong> La configurazione della matrice
+                  pesi/zone è gestita direttamente nella pagina dettaglio del
+                  listino, dove puoi:
+                </p>
+                <ul className="text-xs text-gray-600 mt-2 list-disc list-inside space-y-1">
+                  <li>Visualizzare tutte le zone geografiche</li>
+                  <li>Modificare manualmente i prezzi per ogni combinazione</li>
+                  <li>Aggiungere nuove fasce di peso</li>
+                  <li>Eliminare righe non necessarie</li>
+                  <li>Modificare il fuel surcharge per riga</li>
+                </ul>
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="insurance" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
