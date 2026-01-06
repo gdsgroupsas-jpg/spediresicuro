@@ -1,5 +1,8 @@
 # Script per rimuovere API key dalla storia Git
 # ⚠️ ATTENZIONE: Riscrive la storia Git!
+#
+# ⚠️ SECURITY: Le API key devono essere fornite via variabili d'ambiente!
+# Uso: $env:GIT_CLEANUP_API_KEY_1 = 'key1'; $env:GIT_CLEANUP_API_KEY_2 = 'key2'; .\scripts\clean-git-history.ps1
 
 param(
     [switch]$Force
@@ -29,28 +32,54 @@ Write-Host ""
 Write-Host "🧹 Rimozione API key dalla storia Git..." -ForegroundColor Cyan
 Write-Host "Questo richiedera tempo (molti commit da processare)..." -ForegroundColor Yellow
 
-# Crea script di filtro
-$filterCode = @'
-$files = Get-ChildItem -Recurse -Include *.ts,*.js,*.tsx,*.jsx -File -ErrorAction SilentlyContinue
-foreach ($file in $files) {
-    if (Test-Path $file.FullName) {
+# ⚠️ SECURITY: Leggi API key da variabili d'ambiente, mai hardcoded!
+$apiKey1 = $env:GIT_CLEANUP_API_KEY_1
+$apiKey2 = $env:GIT_CLEANUP_API_KEY_2
+
+if (-not $apiKey1 -or -not $apiKey2) {
+    Write-Host "❌ API key mancanti!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "💡 Imposta le variabili d'ambiente:" -ForegroundColor Yellow
+    Write-Host "   `$env:GIT_CLEANUP_API_KEY_1 = 'prima-api-key'" -ForegroundColor Cyan
+    Write-Host "   `$env:GIT_CLEANUP_API_KEY_2 = 'seconda-api-key'" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "⚠️ NON committare mai le API key nel codice!" -ForegroundColor Red
+    exit 1
+}
+
+# Crea script di filtro con API key passate come variabili d'ambiente
+# Usa @"..."@ per permettere interpolazione delle variabili
+$filterCode = @"
+`$apiKey1 = `$env:GIT_CLEANUP_API_KEY_1
+`$apiKey2 = `$env:GIT_CLEANUP_API_KEY_2
+
+if (-not `$apiKey1 -or -not `$apiKey2) {
+    Write-Error "API key non configurate nello script di filtro"
+    exit 1
+}
+
+`$files = Get-ChildItem -Recurse -Include *.ts,*.js,*.tsx,*.jsx -File -ErrorAction SilentlyContinue
+foreach (`$file in `$files) {
+    if (Test-Path `$file.FullName) {
         try {
-            $content = Get-Content $file.FullName -Raw -ErrorAction SilentlyContinue
-            if ($content) {
-                $new = $content -replace 'c6HEnYYgJhxENVa0fd5CbG5evFZJXaS75GqnjGiEID7mgWIyJybX6wTwXFMc', '[API_KEY_REMOVED]' -replace 'QIhMonA1fTY7J8nUsKHCrnClbrmXtvZ976gfoWhPZYHyMgIvESxwfYYCE0gj', '[API_KEY_REMOVED]'
-                if ($content -ne $new) {
-                    Set-Content $file.FullName -Value $new -NoNewline -ErrorAction SilentlyContinue
+            `$content = Get-Content `$file.FullName -Raw -ErrorAction SilentlyContinue
+            if (`$content) {
+                `$new = `$content -replace [regex]::Escape(`$apiKey1), '[API_KEY_REMOVED]' -replace [regex]::Escape(`$apiKey2), '[API_KEY_REMOVED]'
+                if (`$content -ne `$new) {
+                    Set-Content `$file.FullName -Value `$new -NoNewline -ErrorAction SilentlyContinue
                 }
             }
         } catch {}
     }
 }
-'@
+"@
 
 $tempFile = Join-Path $env:TEMP "git-filter-$(Get-Random).ps1"
 $filterCode | Out-File -FilePath $tempFile -Encoding UTF8
 
 $env:FILTER_BRANCH_SQUELCH_WARNING = "1"
+$env:GIT_CLEANUP_API_KEY_1 = $apiKey1
+$env:GIT_CLEANUP_API_KEY_2 = $apiKey2
 $absPath = (Resolve-Path $tempFile).Path
 
 Write-Host "  Esecuzione git filter-branch..." -ForegroundColor Cyan
@@ -84,3 +113,7 @@ if ($LASTEXITCODE -eq 0) {
 if (Test-Path $tempFile) {
     Remove-Item $tempFile -ErrorAction SilentlyContinue
 }
+
+# Pulisci variabili d'ambiente dalla sessione corrente
+Remove-Item Env:\GIT_CLEANUP_API_KEY_1 -ErrorAction SilentlyContinue
+Remove-Item Env:\GIT_CLEANUP_API_KEY_2 -ErrorAction SilentlyContinue
