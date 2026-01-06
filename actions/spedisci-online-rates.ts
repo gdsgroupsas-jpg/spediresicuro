@@ -13,7 +13,11 @@ import { getSpedisciOnlineCredentials } from "@/lib/actions/spedisci-online";
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
 import { auth } from "@/lib/auth-config";
 import { supabaseAdmin } from "@/lib/db/client";
-import { addPriceListEntries, createPriceList } from "@/lib/db/price-lists";
+import {
+  addPriceListEntries,
+  upsertPriceListEntries,
+  createPriceList,
+} from "@/lib/db/price-lists";
 import type { CreatePriceListInput } from "@/types/listini";
 
 /**
@@ -1244,11 +1248,22 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           } entries al listino ${priceListId.substring(0, 8)}...`
         );
         try {
-          await addPriceListEntries(priceListId, entries);
-          entriesAdded += entries.length;
-          console.log(
-            `✅ [SYNC] ${entries.length} entries aggiunte con successo per ${carrierCode}`
-          );
+          // ✨ FIX: Se overwriteExisting=false, usa UPSERT per evitare duplicati
+          // Se overwriteExisting=true, usa INSERT normale (dopo DELETE)
+          if (!options?.overwriteExisting) {
+            const upsertResult = await upsertPriceListEntries(priceListId, entries);
+            entriesAdded += upsertResult.inserted + upsertResult.updated;
+            console.log(
+              `✅ [SYNC] ${upsertResult.inserted} inserite, ${upsertResult.updated} aggiornate, ${upsertResult.skipped} saltate per ${carrierCode}`
+            );
+          } else {
+            // overwriteExisting=true: usa INSERT normale (dopo DELETE, quindi sicuro)
+            await addPriceListEntries(priceListId, entries);
+            entriesAdded += entries.length;
+            console.log(
+              `✅ [SYNC] ${entries.length} entries aggiunte con successo per ${carrierCode} (overwrite mode)`
+            );
+          }
         } catch (err: any) {
           console.error(
             `❌ [SYNC] Errore aggiunta entries per ${carrierCode}:`,
