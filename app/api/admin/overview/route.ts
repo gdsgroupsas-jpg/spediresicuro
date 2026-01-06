@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       try {
         const { data: users, error: usersError } = await supabaseAdmin
           .from('users')
-          .select('id, email, name, role, provider, created_at, updated_at, assigned_config_id')
+          .select('id, email, name, role, account_type, is_reseller, provider, created_at, updated_at, assigned_config_id')
           .order('created_at', { ascending: false });
 
         if (!usersError && users) {

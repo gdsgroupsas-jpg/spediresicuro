@@ -697,13 +697,17 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.role === 'admin' ? 'Admin' : 'Utente'}
-                        </span>
+                        {(() => {
+                          // Import dinamico per evitare problemi SSR
+                          const roleUtils = require('@/lib/utils/role-badges');
+                          return (
+                            <roleUtils.RoleBadgeSpan
+                              accountType={(user as any).account_type}
+                              isReseller={(user as any).is_reseller}
+                              role={user.role}
+                            />
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {user.provider || 'credentials'}
