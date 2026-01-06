@@ -204,15 +204,15 @@ export function UsersTable() {
     )
   }
 
-  const getAccountTypeBadge = (type: string) => {
-    switch (type) {
-      case 'superadmin':
-        return <Badge variant="error">Super Admin</Badge>
-      case 'admin':
-        return <Badge variant="warning">Admin</Badge>
-      default:
-        return <Badge variant="secondary">User</Badge>
-    }
+  const getAccountTypeBadge = (type: string, isReseller?: boolean) => {
+    // Import dinamico per evitare problemi SSR
+    const { RoleBadge } = require('@/lib/utils/role-badges');
+    return (
+      <RoleBadge
+        accountType={type}
+        isReseller={isReseller}
+      />
+    );
   }
 
   if (error) {
