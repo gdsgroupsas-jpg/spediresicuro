@@ -5,7 +5,6 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  workflow_dispatch: # Permette avvio manuale da qualsiasi branch
 
 jobs:
   test:
@@ -46,10 +45,6 @@ jobs:
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          PLAYWRIGHT_TEST_MODE: "true"
 
       - name: Wait for server
         run: npx wait-on http://localhost:3000 --timeout 60000
@@ -61,9 +56,6 @@ jobs:
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
           PLAYWRIGHT_TEST_MODE: "true"
           NODE_ENV: test
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Stop server
         if: always()

@@ -1316,6 +1316,7 @@ export async function assignConfigurationToUser(
 export async function listConfigurations(): Promise<{
   success: boolean;
   configs?: CourierConfig[];
+  currentUserEmail?: string;
   error?: string;
 }> {
   try {
@@ -1389,6 +1390,7 @@ export async function listConfigurations(): Promise<{
     return {
       success: true,
       configs: maskedConfigs,
+      currentUserEmail: session.user.email || undefined,
     };
   } catch (error: any) {
     console.error("Errore listConfigurations:", error);
