@@ -321,7 +321,11 @@ export async function upsertSupplierPriceListConfig(
       .single();
 
     if (fetchError) {
-      return { success: false, error: fetchError.message };
+      const fetchErrorMessage = fetchError?.message ?? "Errore sconosciuto";
+      return {
+        success: false,
+        error: fetchErrorMessage,
+      };
     }
 
     return {
@@ -459,4 +463,3 @@ export async function listSupplierPriceListConfigs(): Promise<{
     return { success: false, error: error.message || "Errore sconosciuto" };
   }
 }
-
