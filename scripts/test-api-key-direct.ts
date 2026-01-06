@@ -1,9 +1,9 @@
 /**
  * Test diretto API Key Spedisci.Online
  * Testa una chiave API specifica per verificare se funziona
- * 
+ *
  * ⚠️ SECURITY: Non committare mai API key nel codice!
- * 
+ *
  * Uso: npx tsx scripts/test-api-key-direct.ts <api_key> [base_url]
  * Oppure: TEST_API_KEY=xxx BASE_URL=xxx npx tsx scripts/test-api-key-direct.ts
  */
@@ -16,15 +16,26 @@ config({ path: resolve(process.cwd(), ".env.local") });
 config({ path: resolve(process.cwd(), ".env") });
 
 // API Key da parametri command line o variabile d'ambiente
-const API_KEY = process.argv[2] || process.env.TEST_API_KEY || process.env.SPEDISCI_ONLINE_API_KEY;
-const BASE_URL = process.argv[3] || process.env.TEST_BASE_URL || process.env.SPEDISCI_ONLINE_BASE_URL || "https://api.spedisci.online/api/v2";
+const API_KEY =
+  process.argv[2] ||
+  process.env.TEST_API_KEY ||
+  process.env.SPEDISCI_ONLINE_API_KEY;
+const BASE_URL =
+  process.argv[3] ||
+  process.env.TEST_BASE_URL ||
+  process.env.SPEDISCI_ONLINE_BASE_URL ||
+  "https://api.spedisci.online/api/v2";
 
 if (!API_KEY) {
   console.error("❌ API Key mancante!");
   console.error("\n💡 Uso:");
-  console.error("   npx tsx scripts/test-api-key-direct.ts <api_key> [base_url]");
+  console.error(
+    "   npx tsx scripts/test-api-key-direct.ts <api_key> [base_url]"
+  );
   console.error("\n   Oppure imposta variabili d'ambiente:");
-  console.error("   TEST_API_KEY=xxx TEST_BASE_URL=xxx npx tsx scripts/test-api-key-direct.ts");
+  console.error(
+    "   TEST_API_KEY=xxx TEST_BASE_URL=xxx npx tsx scripts/test-api-key-direct.ts"
+  );
   process.exit(1);
 }
 
