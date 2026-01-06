@@ -618,7 +618,7 @@ export default function PriceListDetailPage() {
               )}
               {priceList.list_type === "custom" && !isEditing && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Clicca "Modifica Manuale" per modificare
+                  Clicca &quot;Modifica Manuale&quot; per modificare
                 </p>
               )}
             </div>
