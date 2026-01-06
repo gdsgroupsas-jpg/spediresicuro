@@ -783,12 +783,14 @@ export const { handlers, signIn, signOut } = nextAuthResult;
 // Wrap auth to support E2E test bypass
 export const auth = async (...args: any[]) => {
   // ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
-  if (process.env.NODE_ENV !== "production") {
+  const isCI = process.env.CI === "true";
+  const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === "true";
+
+  if (process.env.NODE_ENV !== "production" || isCI || isPlaywrightMode) {
     try {
       const { headers } = await import("next/headers");
       const headersList = headers();
       const testHeader = headersList.get("x-test-mode");
-      const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === "true";
 
       if (testHeader === "playwright" || isPlaywrightMode) {
         // console.log('🧪 [AUTH CONFIG] Test mode bypass active via wrapper');
