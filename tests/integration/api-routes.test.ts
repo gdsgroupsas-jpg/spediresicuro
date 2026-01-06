@@ -340,3 +340,4 @@ describe("API Routes - Autenticazione", () => {
     expect(canAccessConfig(configOwnerId, configOwnerId, false)).toBe(true);
   });
 });
+

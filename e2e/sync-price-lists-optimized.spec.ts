@@ -33,7 +33,7 @@ test.describe("Sync Listini Ottimizzati", () => {
     await page.waitForTimeout(2000);
     console.log("📍 Navigazione a /dashboard/reseller/listini-fornitore...");
     await page.goto("/dashboard/reseller/listini-fornitore");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(5000);
 
     const url = page.url();

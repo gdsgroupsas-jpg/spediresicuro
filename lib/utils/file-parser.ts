@@ -1,9 +1,11 @@
 /**
  * Parser per file CSV/XLS/XLSX
  * Supporta import da Spedisci.Online, Amazon, Shopify, PrestaShop, etc.
+ * 
+ * ⚠️ MIGRATO: Usa ExcelJS invece di xlsx per sicurezza
  */
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // Interfaccia per ordine importato
 export interface ImportedOrder {
@@ -128,15 +130,32 @@ export function normalizeImportedOrder(order: ImportedOrder): any {
 
 /**
  * Parsa file CSV (accetta File o stringa)
+ * 
+ * ⚠️ NOTA: ExcelJS non supporta nativamente CSV, usiamo parsing manuale
  */
 export async function parseCSV(input: File | string): Promise<ImportedOrder[]> {
   return new Promise((resolve, reject) => {
     try {
-      if (typeof input === 'string') {
-        // Input è già una stringa CSV
-        const workbook = XLSX.read(input, { type: 'string', raw: true });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json<any>(firstSheet);
+      const parseCSVText = (text: string) => {
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length === 0) {
+          resolve([]);
+          return;
+        }
+
+        // Prima riga = header
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        
+        // Parse righe successive
+        const data: any[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const row: any = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index] || '';
+          });
+          data.push(row);
+        }
 
         // Normalizza i nomi delle colonne (lowercase, rimuovi spazi)
         const normalized = data.map((row: any) => {
@@ -149,6 +168,11 @@ export async function parseCSV(input: File | string): Promise<ImportedOrder[]> {
         });
 
         resolve(normalized);
+      };
+
+      if (typeof input === 'string') {
+        // Input è già una stringa CSV
+        parseCSVText(input);
       } else {
         // Input è un File
         const reader = new FileReader();
@@ -156,23 +180,7 @@ export async function parseCSV(input: File | string): Promise<ImportedOrder[]> {
         reader.onload = (e) => {
           try {
             const text = e.target?.result as string;
-
-            // Usa XLSX per parsare CSV (gestisce meglio separatori e encoding)
-            const workbook = XLSX.read(text, { type: 'string', raw: true });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json<any>(firstSheet);
-
-            // Normalizza i nomi delle colonne (lowercase, rimuovi spazi)
-            const normalized = data.map((row: any) => {
-              const normalizedRow: any = {};
-              Object.keys(row).forEach((key) => {
-                const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, '_');
-                normalizedRow[normalizedKey] = row[key];
-              });
-              return normalizedRow;
-            });
-
-            resolve(normalized);
+            parseCSVText(text);
           } catch (error) {
             reject(new Error('Errore nel parsing del CSV: ' + (error as Error).message));
           }
@@ -192,20 +200,59 @@ export async function parseCSV(input: File | string): Promise<ImportedOrder[]> {
 
 /**
  * Parsa file Excel (XLS/XLSX)
+ * 
+ * ⚠️ MIGRATO: Usa ExcelJS invece di xlsx
  */
 export async function parseExcel(file: File): Promise<ImportedOrder[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json<any>(firstSheet);
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        if (!arrayBuffer) {
+          reject(new Error('Errore: dati file non disponibili'));
+          return;
+        }
+
+        // Crea workbook da ArrayBuffer
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        // Leggi il primo worksheet
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          reject(new Error('Nessun worksheet trovato nel file Excel'));
+          return;
+        }
+
+        // Estrai header dalla prima riga
+        const headerRow = worksheet.getRow(1);
+        const headers: string[] = [];
+        headerRow.eachCell((cell, colNumber) => {
+          headers[colNumber - 1] = cell.value?.toString() || `Column${colNumber}`;
+        });
+
+        // Estrai dati dalle righe successive
+        const data: any[] = [];
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // Salta header
+
+          const rowData: any = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (header) {
+              rowData[header] = cell.value;
+            }
+          });
+
+          if (Object.keys(rowData).length > 0) {
+            data.push(rowData);
+          }
+        });
 
         // Normalizza i nomi delle colonne
-        const normalized = jsonData.map((row: any) => {
+        const normalized = data.map((row: any) => {
           const normalizedRow: any = {};
           Object.keys(row).forEach((key) => {
             const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, '_');
@@ -224,7 +271,7 @@ export async function parseExcel(file: File): Promise<ImportedOrder[]> {
       reject(new Error('Errore nella lettura del file'));
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   });
 }
 

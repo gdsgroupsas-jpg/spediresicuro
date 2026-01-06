@@ -60,12 +60,9 @@ test.describe("Gestione Listini Master (Superadmin)", () => {
       console.log("⚠️ Timeout waiting for loading to finish");
     }
 
-    const pageContent = await page.textContent("body");
-
-    // Verifica che non ci sia errore 500
-    expect(pageContent).not.toContain("500");
-    expect(pageContent).not.toContain("Application error");
-    expect(pageContent).not.toContain("Errore Supabase");
+    // ✅ FIX: Verifica errori reali invece di cercare "500" (false positive con chunk IDs tipo "9504-...")
+    const hasRealError = await page.locator('text=/500.*error|error.*500|Application error|Internal Server Error|Errore Supabase|Errore 500/i').count();
+    expect(hasRealError).toBe(0);
 
     // Verifica heading
     await expect(

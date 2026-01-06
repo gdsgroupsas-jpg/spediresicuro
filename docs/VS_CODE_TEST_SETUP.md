@@ -13,16 +13,19 @@
 Installa queste estensioni in VS Code:
 
 1. **Vitest** (by Vitest)
+
    - ID: `vitest.explorer`
    - Per eseguire test unit/integration con Vitest
    - **Code Lens:** Mostra "Run | Debug" sopra ogni test
 
 2. **Playwright Test for VSCode** (by Microsoft)
+
    - ID: `ms-playwright.playwright`
    - Per eseguire test E2E con Playwright
    - **UI Mode:** Browser integrato per debug visivo
 
 3. **TypeScript and JavaScript Language Features** (built-in)
+
    - Già incluso in VS Code
 
 4. **ESLint** (consigliato)
@@ -51,17 +54,17 @@ Il file `.vscode/settings.json` è già configurato con:
 {
   // Code Lens - Mostra "Run | Debug" sopra ogni test
   "editor.codeLens": true,
-  
+
   // Vitest: Esegui test automaticamente
   "vitest.enable": true,
   "vitest.commandLine": "npx vitest",
   "vitest.watch": true,
-  
+
   // Playwright: Browser visibile durante debug
   "playwright.reuseBrowser": true,
   "playwright.showTrace": true,
   "playwright.showBrowser": true,
-  
+
   // Testing: Icone nel gutter
   "testing.gutterEnabled": true,
   "testing.alwaysRevealTestOnStateChange": true
@@ -72,14 +75,14 @@ Il file `.vscode/settings.json` è già configurato con:
 
 Task disponibili in `.vscode/tasks.json`:
 
-| Task | Shortcut | Descrizione |
-|------|----------|-------------|
-| Test: Unit | Default | Esegue tutti i test unit |
-| Test: Integration | - | Esegue test di integrazione |
-| Test: E2E | - | Esegue test Playwright |
-| Test: Watch | Background | Auto-run su modifica file |
-| Type Check | - | Verifica tipi TypeScript |
-| Lint | - | ESLint check |
+| Task              | Shortcut   | Descrizione                 |
+| ----------------- | ---------- | --------------------------- |
+| Test: Unit        | Default    | Esegue tutti i test unit    |
+| Test: Integration | -          | Esegue test di integrazione |
+| Test: E2E         | -          | Esegue test Playwright      |
+| Test: Watch       | Background | Auto-run su modifica file   |
+| Type Check        | -          | Verifica tipi TypeScript    |
+| Lint              | -          | ESLint check                |
 
 **Esegui task:** `Ctrl+Shift+P` → `Tasks: Run Task` → Seleziona
 
@@ -87,15 +90,15 @@ Task disponibili in `.vscode/tasks.json`:
 
 Configurazioni debug in `.vscode/launch.json`:
 
-| Configurazione | Uso |
-|----------------|-----|
-| Debug: Vitest Current File | Debug del file test aperto |
-| Debug: Vitest Watch | Debug con watch mode |
-| Debug: Vitest All Tests | Debug tutti i test |
-| Debug: Playwright Current File | Debug E2E con browser |
-| Debug: Playwright All Tests | Debug tutti E2E |
-| Debug: Next.js Server | Debug server Next.js |
-| Full Debug: Next.js + Playwright | Combo debug completo |
+| Configurazione                   | Uso                        |
+| -------------------------------- | -------------------------- |
+| Debug: Vitest Current File       | Debug del file test aperto |
+| Debug: Vitest Watch              | Debug con watch mode       |
+| Debug: Vitest All Tests          | Debug tutti i test         |
+| Debug: Playwright Current File   | Debug E2E con browser      |
+| Debug: Playwright All Tests      | Debug tutti E2E            |
+| Debug: Next.js Server            | Debug server Next.js       |
+| Full Debug: Next.js + Playwright | Combo debug completo       |
 
 ---
 
@@ -112,7 +115,7 @@ Il modo più veloce per eseguire test:
 
 ```typescript
 // ↓ Run | Debug ← Clicca qui!
-test('calcola prezzo correttamente', () => {
+test("calcola prezzo correttamente", () => {
   expect(calculatePrice(100)).toBe(120);
 });
 ```
@@ -129,13 +132,13 @@ test('calcola prezzo correttamente', () => {
 1. Premi `Ctrl+Shift+P`
 2. Digita uno di questi comandi:
 
-| Comando | Descrizione |
-|---------|-------------|
-| `Vitest: Run All Tests` | Esegue tutti i test Vitest |
-| `Vitest: Run Current File` | Esegue test del file aperto |
+| Comando                      | Descrizione                   |
+| ---------------------------- | ----------------------------- |
+| `Vitest: Run All Tests`      | Esegue tutti i test Vitest    |
+| `Vitest: Run Current File`   | Esegue test del file aperto   |
 | `Vitest: Run Test at Cursor` | Esegue test dove è il cursore |
-| `Playwright: Run Tests` | Esegue test E2E |
-| `Playwright: Show Trace` | Apre trace viewer |
+| `Playwright: Run Tests`      | Esegue test E2E               |
+| `Playwright: Show Trace`     | Apre trace viewer             |
 
 ### 🔧 Metodo 4: Task Runner
 
@@ -152,7 +155,7 @@ test('calcola prezzo correttamente', () => {
 ### Debug con Breakpoint
 
 1. **Metti breakpoint:** Clicca sul numero di riga (pallino rosso)
-2. **Avvia debug:** 
+2. **Avvia debug:**
    - Clicca "Debug" sopra il test (Code Lens)
    - Oppure `F5` con configurazione selezionata
 3. **Controlla variabili:** Pannello Variables mostra valori
@@ -169,14 +172,14 @@ test('calcola prezzo correttamente', () => {
 
 ## ⚡ KEYBOARD SHORTCUTS
 
-| Shortcut | Azione |
-|----------|--------|
-| `Ctrl+Shift+P` | Command Palette |
-| `Ctrl+Shift+T` | Run test task |
-| `F5` | Start debugging |
-| `Shift+F5` | Stop debugging |
-| `F10` | Step over |
-| `F11` | Step into |
+| Shortcut       | Azione               |
+| -------------- | -------------------- |
+| `Ctrl+Shift+P` | Command Palette      |
+| `Ctrl+Shift+T` | Run test task        |
+| `F5`           | Start debugging      |
+| `Shift+F5`     | Stop debugging       |
+| `F10`          | Step over            |
+| `F11`          | Step into            |
 | `Ctrl+Shift+Y` | Toggle Debug Console |
 
 ### Aggiungi Shortcut Personalizzati
@@ -262,12 +265,10 @@ Dopo questa configurazione:
 ✅ **Zero Terminal:** Non serve più usare il terminale manualmente!
 
 **Workflow consigliato:**
+
 1. Scrivi test → 2. Clicca "Run" → 3. Vedi risultato → 4. Fix → 5. Repeat
 
 ---
 
 **Versione:** 2.0  
 **Data:** 1 Gennaio 2026
-
-
-

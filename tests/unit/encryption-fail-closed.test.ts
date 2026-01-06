@@ -337,3 +337,4 @@ describe("Variabili d'Ambiente Encryption", () => {
     expect(validateEncryptionKey(undefined).valid).toBe(false);
   });
 });
+

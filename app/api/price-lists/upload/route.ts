@@ -12,7 +12,8 @@ import { auth } from "@/lib/auth-config";
 import { existsSync, mkdirSync } from "fs";
 import { unlink, writeFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
-import { join } from "path";
+import path from "path"; // ✅ FIX P0-3: Import path module
+import crypto from "crypto"; // ✅ FIX P0-3: For secure random filenames
 
 // Limite upload: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -72,25 +73,75 @@ export async function POST(request: NextRequest) {
     }
 
     // Salva file temporaneo
-    const uploadsDir = join(process.cwd(), "uploads", "price-lists");
+    const uploadsDir = path.join(process.cwd(), "uploads", "price-lists");
     if (!existsSync(uploadsDir)) {
       mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Sanitize filename (Fix Audit P0)
-    // Rimuove caratteri non sicuri e previene path traversal
-    const sanitizedFileName = fileName
+    // ✅ FIX P0-3: Enhanced filename sanitization
+    // Step 1: Rimuovi caratteri pericolosi
+    let sanitizedFileName = fileName
       .replace(/[^a-zA-Z0-9.-]/g, "_")
-      .replace(/^_+/, "");
-    const safeFileName = sanitizedFileName || `upload-${Date.now()}.dat`; // Fallback se nome diventa vuoto
+      .replace(/^\.+/, "") // Rimuovi leading dots
+      .replace(/\.+/g, "."); // Replace multiple dots con single dot
 
-    const timestamp = Date.now();
-    const tempFileName = `${timestamp}-${safeFileName}`;
-    const tempFilePath = join(uploadsDir, tempFileName);
+    // Step 2: Usa solo basename (elimina directory components)
+    sanitizedFileName = path.basename(sanitizedFileName);
+
+    // Step 3: Limita lunghezza filename
+    if (sanitizedFileName.length > 100) {
+      const ext = path.extname(sanitizedFileName);
+      const base = path.basename(sanitizedFileName, ext).substring(0, 95);
+      sanitizedFileName = base + ext;
+    }
+
+    // Step 4: Fallback se nome diventa vuoto
+    const safeFileName = sanitizedFileName || `upload-${Date.now()}.dat`;
+
+    // ✅ FIX P0-3: Usa random ID invece di timestamp (previene race condition)
+    const randomId = crypto.randomBytes(16).toString("hex");
+    const tempFileName = `${randomId}-${safeFileName}`;
+    const tempFilePath = path.join(uploadsDir, tempFileName);
+
+    // ✅ FIX P0-3: Verifica che il path finale sia dentro uploadsDir
+    const resolvedUploadPath = path.resolve(tempFilePath);
+    const resolvedUploadDir = path.resolve(uploadsDir);
+
+    if (!resolvedUploadPath.startsWith(resolvedUploadDir)) {
+      console.error(
+        `[SECURITY] Path traversal attempt detected: ${fileName} → ${resolvedUploadPath}`
+      );
+      return NextResponse.json(
+        { error: "Invalid filename: path traversal attempt detected" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ FIX P0-3: Verifica che il file non esista già
+    if (existsSync(tempFilePath)) {
+      console.error(`[SECURITY] File collision detected: ${tempFilePath}`);
+      return NextResponse.json(
+        { error: "File collision detected, please retry" },
+        { status: 500 }
+      );
+    }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(tempFilePath, buffer);
+
+    // ✅ FIX P0-3: Write atomico con flag 'wx' (fails se file esiste)
+    try {
+      await writeFile(tempFilePath, buffer, { flag: "wx" });
+    } catch (writeError: any) {
+      if (writeError.code === "EEXIST") {
+        console.error(`[SECURITY] Race condition in file write: ${tempFilePath}`);
+        return NextResponse.json(
+          { error: "File write collision, please retry" },
+          { status: 500 }
+        );
+      }
+      throw writeError;
+    }
 
     // Processa file in base al tipo
     let parsedData: any[] = [];
@@ -143,17 +194,48 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Parse CSV file
+ * ✅ FIX P0-4: Sanitize CSV cell per prevenire formula injection
+ *
+ * Formula injection characters: = + - @ | % (Excel, Google Sheets, LibreOffice)
+ */
+function sanitizeCSVCell(value: string): string {
+  if (!value || typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+
+  // Lista di caratteri pericolosi all'inizio della cella
+  const dangerousChars = ["=", "+", "-", "@", "|", "%", "\t", "\r"];
+
+  // Se la cella inizia con carattere pericoloso, prefix con apostrofo
+  // L'apostrofo disabilita l'esecuzione di formule in Excel/Sheets
+  if (dangerousChars.some((char) => trimmed.startsWith(char))) {
+    return `'${trimmed}`;
+  }
+
+  // Rimuovi carriage return e tab interni (possono causare cell splitting)
+  return trimmed.replace(/[\r\t]/g, " ");
+}
+
+/**
+ * Parse CSV file (CON PROTEZIONE CSV INJECTION)
+ * ✅ FIX P0-4: Aggiunta sanitizzazione celle per prevenire formula injection
  */
 async function parseCSV(filePath: string): Promise<any[]> {
   const fs = await import("fs/promises");
   const content = await fs.readFile(filePath, "utf-8");
-  const lines = content.split("\n").filter((line) => line.trim());
+
+  // ✅ FIX P0-4: Normalize line endings (handle \r\n, \n, \r)
+  const normalizedContent = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalizedContent.split("\n").filter((line) => line.trim());
 
   if (lines.length === 0) return [];
 
-  // Estrai header
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+  // Estrai header (sanitizza anche gli headers)
+  const headers = lines[0]
+    .split(",")
+    .map((h) => sanitizeCSVCell(h).trim().toLowerCase());
 
   // Parse righe
   const rows: any[] = [];
@@ -161,7 +243,9 @@ async function parseCSV(filePath: string): Promise<any[]> {
     const values = lines[i].split(",").map((v) => v.trim());
     const row: any = {};
     headers.forEach((header, index) => {
-      row[header] = values[index] || "";
+      // ✅ FIX P0-4: Sanitize OGNI cella prima di salvarla
+      const rawValue = values[index] || "";
+      row[header] = sanitizeCSVCell(rawValue);
     });
     if (Object.keys(row).length > 0) {
       rows.push(row);
@@ -176,22 +260,42 @@ async function parseCSV(filePath: string): Promise<any[]> {
  */
 async function parseExcel(filePath: string): Promise<any[]> {
   try {
-    // Prova a importare xlsx, se non disponibile usa fallback
-    let XLSX: any;
-    try {
-      XLSX = await import("xlsx");
-    } catch {
-      throw new Error("Libreria xlsx non installata. Esegui: npm install xlsx");
+    // Usa ExcelJS (alternativa sicura a xlsx)
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    
+    await workbook.xlsx.readFile(filePath);
+    
+    // Leggi il primo worksheet
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new Error("Nessun worksheet trovato nel file Excel");
     }
 
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
-    return data as any[];
+    // Converti in array di oggetti
+    const data: any[] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) {
+        // Prima riga = header, salta
+        return;
+      }
+      
+      const rowData: any = {};
+      row.eachCell((cell, colNumber) => {
+        const headerCell = worksheet.getRow(1).getCell(colNumber);
+        const header = headerCell.value?.toString() || `Column${colNumber}`;
+        rowData[header] = cell.value;
+      });
+      
+      if (Object.keys(rowData).length > 0) {
+        data.push(rowData);
+      }
+    });
+
+    return data;
   } catch (error: any) {
-    if (error.message.includes("non installata")) {
-      throw error;
+    if (error.message.includes("non installata") || error.message.includes("Cannot find module")) {
+      throw new Error("Libreria exceljs non installata. Esegui: npm install exceljs");
     }
     throw new Error(`Errore lettura file Excel: ${error.message}`);
   }
