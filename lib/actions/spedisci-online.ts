@@ -312,10 +312,9 @@ export async function createShipmentWithOrchestrator(
         if (session.user.id) {
           userId = session.user.id;
           console.log(
-            `ℹ️ [ORCHESTRATOR] Usando NextAuth user.id come fallback: ${userId.substring(
-              0,
-              8
-            )}...`
+            `ℹ️ [ORCHESTRATOR] Usando NextAuth user.id come fallback: ${(
+              userId || ""
+            ).substring(0, 8)}...`
           );
         }
       }
