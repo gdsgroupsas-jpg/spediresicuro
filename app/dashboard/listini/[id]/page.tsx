@@ -36,6 +36,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Select } from '@/components/ui/select'
 import { getPriceListByIdAction } from '@/actions/price-lists'
+import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog'
 import type { PriceList, PriceRule } from '@/types/listini'
 
 export default function PriceListDetailPage() {
@@ -109,6 +110,10 @@ export default function PriceListDetailPage() {
           subtitle="Gestione dettaglio listino prezzi"
           actions={
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowConfigDialog(true)}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configurazione
+              </Button>
               {!isEditing && (
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   <Edit className="mr-2 h-4 w-4" />
@@ -170,6 +175,22 @@ export default function PriceListDetailPage() {
             <AuditTrail priceListId={priceList.id} />
           </TabsContent>
         </Tabs>
+
+        {/* Dialog Configurazione Manuale */}
+        {priceList && (
+          <SupplierPriceListConfigDialog
+            open={showConfigDialog}
+            onOpenChange={(open) => {
+              setShowConfigDialog(open);
+            }}
+            priceList={priceList}
+            onSaveComplete={() => {
+              if (priceList.id) {
+                loadPriceList(priceList.id);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   )

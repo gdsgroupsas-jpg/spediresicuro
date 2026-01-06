@@ -190,7 +190,7 @@ export function getZoneByCode(code: string) {
  * Helper: Get zones for sync mode
  */
 export function getZonesForMode(
-  mode: "fast" | "balanced" | "matrix" | "italy-only"
+  mode: "fast" | "balanced" | "matrix" | "italy-only" | "semi-auto"
 ): typeof PRICING_MATRIX.ZONES {
   switch (mode) {
     case "fast":
@@ -208,6 +208,9 @@ export function getZonesForMode(
       return PRICING_MATRIX.ZONES.filter((z) =>
         PRICING_MATRIX.ZONES_ITALY_ONLY.includes(z.code)
       );
+    case "semi-auto":
+      // Tutte le zone disponibili (per creare struttura matrice completa)
+      return PRICING_MATRIX.ZONES;
     case "matrix":
       // Tutte le zone inclusa Europa (9 zone)
       return PRICING_MATRIX.ZONES;
@@ -220,7 +223,7 @@ export function getZonesForMode(
  * Helper: Get weights for sync mode
  */
 export function getWeightsForMode(
-  mode: "fast" | "balanced" | "matrix"
+  mode: "fast" | "balanced" | "matrix" | "semi-auto"
 ): number[] {
   switch (mode) {
     case "fast":
@@ -232,6 +235,9 @@ export function getWeightsForMode(
     case "matrix":
       // Tutti i pesi 1-100 + 105 (101 pesi)
       return PRICING_MATRIX.WEIGHT_BRACKETS_GRANULAR;
+    case "semi-auto":
+      // Solo 1 kg per creare struttura matrice (utente completa manualmente)
+      return [1];
     default:
       return PRICING_MATRIX.WEIGHT_BRACKETS_STANDARD;
   }
@@ -240,7 +246,9 @@ export function getWeightsForMode(
 /**
  * Stima numero chiamate API per sync mode
  */
-export function estimateSyncCalls(mode: "fast" | "balanced" | "matrix"): {
+export function estimateSyncCalls(
+  mode: "fast" | "balanced" | "matrix" | "semi-auto"
+): {
   zones: number;
   weights: number;
   totalCalls: number;
