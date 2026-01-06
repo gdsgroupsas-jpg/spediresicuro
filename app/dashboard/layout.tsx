@@ -9,13 +9,12 @@
  * - AI Assistant modal globale
  */
 
-import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import { auth } from '@/lib/auth-config';
-import { findUserByEmail } from '@/lib/database';
-import DashboardSidebar from '@/components/dashboard-sidebar';
-import DashboardMobileNav from '@/components/dashboard-mobile-nav';
-import DashboardLayoutClient from '@/components/dashboard-layout-client';
+import DashboardLayoutClient from "@/components/dashboard-layout-client";
+import DashboardMobileNav from "@/components/dashboard-mobile-nav";
+import DashboardSidebar from "@/components/dashboard-sidebar";
+import { auth } from "@/lib/auth-config";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
   children,
@@ -24,26 +23,34 @@ export default async function DashboardLayout({
 }) {
   // Verifica autenticazione
   // ⚠️ SECURITY: Test mode bypass SOLO in sviluppo, MAI in produzione
-  const isProductionEnv = process.env.NODE_ENV === 'production';
+  const isProductionEnv = process.env.NODE_ENV === "production";
   let isTestMode = false;
   let testHeaderValue = null;
-  
+
   // SECURITY: In produzione, NESSUN bypass è permesso
   if (!isProductionEnv) {
     try {
       const headersList = headers();
-      testHeaderValue = headersList.get('x-test-mode');
-      isTestMode = testHeaderValue === 'playwright' || process.env.PLAYWRIGHT_TEST_MODE === 'true';
+      testHeaderValue = headersList.get("x-test-mode");
+      isTestMode =
+        testHeaderValue === "playwright" ||
+        process.env.PLAYWRIGHT_TEST_MODE === "true";
       if (testHeaderValue) {
-        console.log('🧪 [DASHBOARD LAYOUT] Header x-test-mode trovato:', testHeaderValue);
+        console.log(
+          "🧪 [DASHBOARD LAYOUT] Header x-test-mode trovato:",
+          testHeaderValue
+        );
       }
     } catch (e) {
       // Se headers() non è disponibile, usa solo env var
-      isTestMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
-      console.log('🧪 [DASHBOARD LAYOUT] headers() non disponibile, uso solo env var:', isTestMode);
+      isTestMode = process.env.PLAYWRIGHT_TEST_MODE === "true";
+      console.log(
+        "🧪 [DASHBOARD LAYOUT] headers() non disponibile, uso solo env var:",
+        isTestMode
+      );
     }
   }
-  
+
   let session = null;
   if (!isTestMode) {
     session = await auth();
@@ -51,16 +58,21 @@ export default async function DashboardLayout({
     // In test mode, crea una sessione mock
     session = {
       user: {
-        id: 'test-user-id',
-        email: process.env.TEST_USER_EMAIL || 'test@example.com',
-        name: 'Test User E2E',
-        role: 'user',
+        id: "00000000-0000-0000-0000-000000000000",
+        email: process.env.TEST_USER_EMAIL || "test@example.com",
+        name: "Test User E2E",
+        role: "user",
+        // Mock extended props
+        account_type: "superadmin",
+        is_reseller: true,
       },
     };
-    console.log('🧪 [DASHBOARD LAYOUT] Test mode attivo - bypass autenticazione');
+    console.log(
+      "🧪 [DASHBOARD LAYOUT] Test mode attivo - bypass autenticazione"
+    );
   }
 
-  console.log('🔍 [DASHBOARD LAYOUT] Verifica sessione:', {
+  console.log("🔍 [DASHBOARD LAYOUT] Verifica sessione:", {
     hasSession: !!session,
     hasUser: !!session?.user,
     email: session?.user?.email,
@@ -69,8 +81,10 @@ export default async function DashboardLayout({
   });
 
   if (!session && !isTestMode) {
-    console.log('❌ [DASHBOARD LAYOUT] Nessuna sessione trovata, redirect a /login');
-    redirect('/login');
+    console.log(
+      "❌ [DASHBOARD LAYOUT] Nessuna sessione trovata, redirect a /login"
+    );
+    redirect("/login");
   }
 
   // ⚠️ P0 FIX: Onboarding check RIMOSSO dal Layout
@@ -78,7 +92,9 @@ export default async function DashboardLayout({
   // Se la request arriva qui, significa che il middleware ha già verificato e permesso l'accesso
   // Duplicare la logica nel layout causava 307 self-redirect loop quando x-pathname header
   // non era disponibile o null (es. document request vs RSC request)
-  console.log('✅ [DASHBOARD LAYOUT] Rendering layout - middleware has authorized access');
+  console.log(
+    "✅ [DASHBOARD LAYOUT] Rendering layout - middleware has authorized access"
+  );
 
   return (
     <DashboardLayoutClient>
@@ -88,9 +104,7 @@ export default async function DashboardLayout({
       {/* Main Content Area */}
       <div className="lg:pl-64 flex flex-col min-h-screen">
         {/* Content */}
-        <main className="flex-1 pb-20 lg:pb-0">
-          {children}
-        </main>
+        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
       </div>
 
       {/* Mobile Navigation - Mobile Only */}
@@ -98,4 +112,3 @@ export default async function DashboardLayout({
     </DashboardLayoutClient>
   );
 }
-

@@ -47,10 +47,12 @@ export async function requireAuth(): Promise<AuthResult> {
         authorized: true,
         session: {
           user: {
-            id: "test-user-id",
+            id: "00000000-0000-0000-0000-000000000000",
             email: process.env.TEST_USER_EMAIL || "test@example.com",
             name: "Test User E2E",
             role: "admin", // Force admin role for tests
+            account_type: "superadmin",
+            is_reseller: true,
           },
         },
       };
