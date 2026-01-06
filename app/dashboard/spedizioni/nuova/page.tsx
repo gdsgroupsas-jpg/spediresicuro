@@ -30,6 +30,7 @@ import AddressFields from '@/components/ui/address-fields';
 import DashboardNav from '@/components/dashboard-nav';
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
+import ContractComparison from '@/components/shipments/contract-comparison';
 import { generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
 import type { Corriere } from '@/types/corrieri';
 
@@ -261,6 +262,10 @@ export default function NuovaSpedizionePage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
+
+  // ✨ NUOVO: Contratto selezionato (per reseller)
+  const [selectedContractId, setSelectedContractId] = useState<string | undefined>(undefined);
+  const [selectedContractType, setSelectedContractType] = useState<'reseller' | 'master' | 'default' | undefined>(undefined);
 
   // Corrieri disponibili caricati dinamicamente dal DB
   const [availableCouriers, setAvailableCouriers] = useState<Array<{ displayName: string; courierName: string }>>([]);
@@ -617,6 +622,11 @@ export default function NuovaSpedizionePage() {
         destinatarioCitta: formData.destinatarioCitta || null,
         destinatarioProvincia: destinatarioProvincia || null,
         destinatarioCap: destinatarioCap || null,
+        // ✨ NUOVO: Contratto selezionato (per reseller)
+        ...(selectedContractId && selectedContractType && {
+          selectedContractId,
+          selectedContractType,
+        }),
       };
 
       // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
@@ -1334,6 +1344,29 @@ export default function NuovaSpedizionePage() {
                       </div>
                     )}
                   </div>
+
+                  {/* ✨ NUOVO: Confronto Contratti (per reseller) */}
+                  {formData.peso && parseFloat(formData.peso) > 0 && formData.destinatarioCap && (
+                    <ContractComparison
+                      weight={parseFloat(formData.peso)}
+                      destination={{
+                        zip: formData.destinatarioCap,
+                        province: formData.destinatarioProvincia,
+                        region: undefined,
+                        country: 'IT',
+                      }}
+                      serviceType={formData.tipoSpedizione}
+                      options={{
+                        cashOnDelivery: formData.contrassegno,
+                        declaredValue: formData.contrassegnoAmount ? parseFloat(formData.contrassegnoAmount) : undefined,
+                      }}
+                      onSelectContract={(contractId, contractType) => {
+                        setSelectedContractId(contractId);
+                        setSelectedContractType(contractType);
+                      }}
+                      selectedContractId={selectedContractId}
+                    />
+                  )}
 
                   {/* Cost Calculator */}
                   <div className="pt-6 border-t border-gray-200">

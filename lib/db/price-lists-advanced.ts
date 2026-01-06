@@ -61,6 +61,8 @@ export async function getApplicablePriceList(
 
 /**
  * Fallback: query manuale per listino applicabile
+ * 
+ * ⚠️ AGGIORNATO: Include anche listini assegnati tramite price_list_assignments
  */
 async function getApplicablePriceListManual(
   userId: string,
@@ -69,7 +71,7 @@ async function getApplicablePriceListManual(
 ): Promise<PriceList | null> {
   const dateStr = date.toISOString().split('T')[0]
 
-  // 1. Prova listino assegnato direttamente
+  // 1. Prova listino assegnato direttamente (assigned_to_user_id)
   const { data: assignedList } = await supabaseAdmin
     .from('price_lists')
     .select('*')
@@ -85,7 +87,39 @@ async function getApplicablePriceListManual(
     return assignedList as PriceList
   }
 
-  // 2. Prova listino globale
+  // 2. ✨ NUOVO: Prova listino assegnato tramite price_list_assignments
+  const { data: assignments } = await supabaseAdmin
+    .from('price_list_assignments')
+    .select('price_list_id')
+    .eq('user_id', userId)
+    .is('revoked_at', null)
+
+  if (assignments && assignments.length > 0) {
+    const assignedPriceListIds = assignments.map(a => a.price_list_id)
+    
+    // Recupera i listini assegnati
+    const { data: assignedLists } = await supabaseAdmin
+      .from('price_lists')
+      .select('*')
+      .in('id', assignedPriceListIds)
+      .eq('status', 'active')
+      .lte('valid_from', dateStr)
+      .or(`valid_until.is.null,valid_until.gte.${dateStr}`)
+      .order('created_at', { ascending: false })
+
+    if (assignedLists && assignedLists.length > 0) {
+      // Filtra per corriere se specificato
+      const filtered = courierId
+        ? assignedLists.filter(pl => !pl.courier_id || pl.courier_id === courierId)
+        : assignedLists
+
+      if (filtered.length > 0) {
+        return filtered[0] as PriceList
+      }
+    }
+  }
+
+  // 3. Prova listino globale
   const { data: globalList } = await supabaseAdmin
     .from('price_lists')
     .select('*')
@@ -101,7 +135,7 @@ async function getApplicablePriceListManual(
     return globalList as PriceList
   }
 
-  // 3. Prova listino di default
+  // 4. Prova listino di default
   const { data: defaultList } = await supabaseAdmin
     .from('price_lists')
     .select('*')
@@ -446,4 +480,137 @@ async function getPriceListById(id: string): Promise<PriceList | null> {
   }
 
   return data as PriceList
+}
+
+/**
+ * ✨ NUOVO: Calcola e confronta prezzi per reseller (API Reseller vs API Master)
+ * 
+ * Per reseller che ha accesso sia alle proprie API che a quelle Master:
+ * 1. Calcola prezzo con listino fornitore reseller (API Reseller)
+ * 2. Calcola prezzo con listino personalizzato assegnato (API Master)
+ * 3. Confronta e seleziona il migliore
+ * 
+ * @param userId - ID utente reseller
+ * @param params - Parametri calcolo prezzo
+ * @returns Risultato con prezzo migliore e informazioni su quale API usare
+ */
+export async function calculateBestPriceForReseller(
+  userId: string,
+  params: {
+    weight: number
+    volume?: number
+    destination: {
+      zip?: string
+      province?: string
+      region?: string
+      country?: string
+    }
+    courierId?: string
+    serviceType?: CourierServiceType
+    options?: {
+      declaredValue?: number
+      cashOnDelivery?: boolean
+      insurance?: boolean
+    }
+  }
+): Promise<{
+  bestPrice: PriceCalculationResult
+  apiSource: 'reseller' | 'master' | 'default'
+  resellerPrice?: PriceCalculationResult
+  masterPrice?: PriceCalculationResult
+  priceDifference?: number
+} | null> {
+  try {
+    // Verifica che l'utente sia reseller
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('id, is_reseller, account_type')
+      .eq('id', userId)
+      .single()
+
+    if (!user || !user.is_reseller) {
+      // Non è reseller, usa calcolo normale
+      const normalPrice = await calculatePriceWithRules(userId, params)
+      if (!normalPrice) return null
+      return {
+        bestPrice: normalPrice,
+        apiSource: 'default',
+      }
+    }
+
+    // 1. Calcola prezzo con listino fornitore reseller (API Reseller)
+    const resellerPriceList = await getApplicablePriceList(
+      userId,
+      params.courierId
+    )
+    
+    let resellerPrice: PriceCalculationResult | null = null
+    if (resellerPriceList && resellerPriceList.list_type === 'supplier') {
+      resellerPrice = await calculatePriceWithRules(userId, params, resellerPriceList.id)
+    }
+
+    // 2. Calcola prezzo con listino personalizzato assegnato (API Master)
+    // Cerca listini assegnati tramite price_list_assignments
+    const { data: assignments } = await supabaseAdmin
+      .from('price_list_assignments')
+      .select('price_list_id, price_lists(*)')
+      .eq('user_id', userId)
+      .is('revoked_at', null)
+
+    let masterPrice: PriceCalculationResult | null = null
+    if (assignments && assignments.length > 0) {
+      // Prendi il primo listino assegnato valido
+      for (const assignment of assignments) {
+        const assignedList = assignment.price_lists as any
+        if (assignedList && assignedList.status === 'active') {
+          // Verifica che sia per lo stesso corriere (se specificato)
+          if (!params.courierId || !assignedList.courier_id || assignedList.courier_id === params.courierId) {
+            masterPrice = await calculatePriceWithRules(userId, params, assignedList.id)
+            if (masterPrice) break
+          }
+        }
+      }
+    }
+
+    // 3. Confronta prezzi e seleziona il migliore
+    const prices: Array<{ price: PriceCalculationResult; source: 'reseller' | 'master' }> = []
+    
+    if (resellerPrice) {
+      prices.push({ price: resellerPrice, source: 'reseller' })
+    }
+    
+    if (masterPrice) {
+      prices.push({ price: masterPrice, source: 'master' })
+    }
+
+    if (prices.length === 0) {
+      // Nessun prezzo disponibile, usa calcolo normale
+      const normalPrice = await calculatePriceWithRules(userId, params)
+      if (!normalPrice) return null
+      return {
+        bestPrice: normalPrice,
+        apiSource: 'default',
+      }
+    }
+
+    // Seleziona prezzo migliore (minore finalPrice)
+    const best = prices.reduce((best, current) => 
+      current.price.finalPrice < best.price.finalPrice ? current : best
+    )
+
+    const priceDifference = prices.length > 1
+      ? Math.abs((prices.find(p => p.source !== best.source)?.price.finalPrice || 0) - best.price.finalPrice)
+      : undefined
+
+    return {
+      bestPrice: best.price,
+      apiSource: best.source,
+      resellerPrice: resellerPrice || undefined,
+      masterPrice: masterPrice || undefined,
+      priceDifference,
+    }
+  } catch (error: any) {
+    console.error('Errore calculateBestPriceForReseller:', error)
+    return null
+  }
 }

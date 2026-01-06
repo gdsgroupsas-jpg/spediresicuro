@@ -21,7 +21,6 @@ import {
   Crown,
   UserCircle,
   Bot,
-  Mic,
   Wallet,
   Zap,
   Building2,
@@ -171,30 +170,10 @@ const returnsSection: NavSection = {
 };
 
 /**
- * STRUMENTI - AI e automazioni
+ * STRUMENTI - RIMOSSO
+ * OCR Scanner e Controllo Vocale sono disponibili come features
+ * quando si crea una spedizione (AI Import)
  */
-const toolsSection: NavSection = {
-  id: 'tools',
-  label: 'Strumenti',
-  collapsible: true,
-  defaultExpanded: true,
-  items: [
-    {
-      id: 'ocr-scanner',
-      label: 'OCR Scanner',
-      href: '/dashboard/ocr-scanner',
-      icon: ScanLine,
-      description: 'Estrazione dati da immagini',
-    },
-    {
-      id: 'voice-control',
-      label: 'Controllo Vocale',
-      href: '/dashboard/voice',
-      icon: Mic,
-      description: 'Comandi vocali',
-    },
-  ],
-};
 
 /**
  * COMUNICAZIONI
@@ -239,7 +218,7 @@ const financeSection: NavSection = {
   id: 'finance',
   label: 'Finanze',
   collapsible: true,
-  defaultExpanded: false,
+  defaultExpanded: true, // Sempre espansa per migliore UX
   items: [
     {
       id: 'wallet',
@@ -485,11 +464,11 @@ export function getNavigationForUser(
   const { isReseller = false, hasTeam = false, accountType } = features;
 
   // Filtra le sezioni in base ai permessi
-  // ⚠️ Ordine logico: Spedizioni → Resi → Strumenti → Finanze → Admin → Account → Comunicazioni → Supporto
+  // ⚠️ Ordine logico: Spedizioni → Resi → Finanze → Admin → Account → Comunicazioni → Supporto
+  // ⚠️ Strumenti rimosso: OCR e Voice sono features disponibili durante la creazione spedizione
   let sections: NavSection[] = [
     logisticsSection,
     returnsSection,
-    toolsSection,
   ];
 
   // Aggiungi sezione BYOC se account_type è 'byoc'

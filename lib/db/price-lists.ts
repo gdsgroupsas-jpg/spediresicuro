@@ -177,6 +177,7 @@ export async function getActivePriceList(
 
 /**
  * Aggiungi righe al listino
+ * ⚠️ NOTA: Usa INSERT semplice, può creare duplicati se chiamato più volte
  */
 export async function addPriceListEntries(
   priceListId: string,
@@ -195,6 +196,152 @@ export async function addPriceListEntries(
     console.error("Error adding price list entries:", error);
     throw new Error(`Errore aggiunta righe listino: ${error.message}`);
   }
+}
+
+/**
+ * ✨ NUOVO: Upsert righe al listino (INSERT o UPDATE se esiste già)
+ * 
+ * Previene duplicati verificando combinazione univoca:
+ * price_list_id + zone_code + weight_from + weight_to + service_type
+ * 
+ * Se esiste già una entry con stessa combinazione:
+ * - Aggiorna il prezzo e i supplementi con i nuovi valori
+ * - Mantiene l'ID esistente (non crea duplicati)
+ * 
+ * @param priceListId - ID del listino
+ * @param entries - Array di entries da aggiungere/aggiornare
+ * @returns Statistiche: { inserted: number, updated: number, skipped: number }
+ */
+export async function upsertPriceListEntries(
+  priceListId: string,
+  entries: Omit<PriceListEntry, "id" | "price_list_id" | "created_at">[]
+): Promise<{
+  inserted: number;
+  updated: number;
+  skipped: number;
+}> {
+  const entriesWithListId = entries.map((entry) => ({
+    ...entry,
+    price_list_id: priceListId,
+  }));
+
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  // Processa entries in batch per evitare query eccessive
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < entriesWithListId.length; i += BATCH_SIZE) {
+    const batch = entriesWithListId.slice(i, i + BATCH_SIZE);
+
+    // Per ogni entry, verifica se esiste già
+    for (const entry of batch) {
+      try {
+        // Cerca entry esistente con stessa combinazione
+        const { data: existing } = await supabaseAdmin
+          .from("price_list_entries")
+          .select("id, base_price")
+          .eq("price_list_id", priceListId)
+          .eq("zone_code", entry.zone_code || null)
+          .eq("weight_from", entry.weight_from)
+          .eq("weight_to", entry.weight_to)
+          .eq("service_type", entry.service_type)
+          .maybeSingle();
+
+        if (existing) {
+          // Entry esiste: verifica se il prezzo è cambiato
+          const priceChanged = Math.abs(existing.base_price - entry.base_price) > 0.01;
+
+          if (priceChanged) {
+            // Prezzo diverso: aggiorna
+            const { error: updateError } = await supabaseAdmin
+              .from("price_list_entries")
+              .update({
+                base_price: entry.base_price,
+                fuel_surcharge_percent: entry.fuel_surcharge_percent || 0,
+                cash_on_delivery_surcharge: entry.cash_on_delivery_surcharge || 0,
+                insurance_rate_percent: entry.insurance_rate_percent || 0,
+                island_surcharge: entry.island_surcharge || 0,
+                ztl_surcharge: entry.ztl_surcharge || 0,
+                estimated_delivery_days_min: entry.estimated_delivery_days_min,
+                estimated_delivery_days_max: entry.estimated_delivery_days_max,
+              })
+              .eq("id", existing.id);
+
+            if (updateError) {
+              console.warn(
+                `⚠️ [UPSERT] Errore aggiornamento entry ${existing.id}:`,
+                updateError.message
+              );
+              skipped++;
+            } else {
+              updated++;
+            }
+          } else {
+            // Prezzo identico: skip (evita update inutile)
+            skipped++;
+          }
+        } else {
+          // Entry non esiste: inserisci nuova
+          const { error: insertError } = await supabaseAdmin
+            .from("price_list_entries")
+            .insert(entry);
+
+          if (insertError) {
+            // Se errore per duplicato (race condition), prova update
+            if (
+              insertError.code === "23505" ||
+              insertError.message?.includes("duplicate") ||
+              insertError.message?.includes("unique")
+            ) {
+              // Race condition: entry creata da altro processo, prova update
+              const { data: raceExisting } = await supabaseAdmin
+                .from("price_list_entries")
+                .select("id")
+                .eq("price_list_id", priceListId)
+                .eq("zone_code", entry.zone_code || null)
+                .eq("weight_from", entry.weight_from)
+                .eq("weight_to", entry.weight_to)
+                .eq("service_type", entry.service_type)
+                .maybeSingle();
+
+              if (raceExisting) {
+                await supabaseAdmin
+                  .from("price_list_entries")
+                  .update({
+                    base_price: entry.base_price,
+                    fuel_surcharge_percent: entry.fuel_surcharge_percent || 0,
+                    cash_on_delivery_surcharge: entry.cash_on_delivery_surcharge || 0,
+                    insurance_rate_percent: entry.insurance_rate_percent || 0,
+                  })
+                  .eq("id", raceExisting.id);
+                updated++;
+              } else {
+                console.warn(
+                  `⚠️ [UPSERT] Errore insert e update fallito per entry:`,
+                  insertError.message
+                );
+                skipped++;
+              }
+            } else {
+              console.warn(
+                `⚠️ [UPSERT] Errore insert entry:`,
+                insertError.message
+              );
+              skipped++;
+            }
+          } else {
+            inserted++;
+          }
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ [UPSERT] Errore processamento entry:`, err.message);
+        skipped++;
+      }
+    }
+  }
+
+  return { inserted, updated, skipped };
 }
 
 /**

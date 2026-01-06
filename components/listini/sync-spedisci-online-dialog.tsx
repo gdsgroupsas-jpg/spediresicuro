@@ -160,9 +160,37 @@ export function SyncSpedisciOnlineDialog({
       const result = await listConfigurations();
       if (result.success && result.configs) {
         // Filtra solo Spedisci.Online
-        const spedisciConfigs = result.configs.filter(
+        let spedisciConfigs = result.configs.filter(
           (c: any) => c.provider_id === "spedisci_online" && c.is_active
         );
+
+        // ✨ FIX: Se superadmin, mostra SOLO config master (is_default) o proprie
+        // Non mostra config dei reseller per privacy e professionalità
+        try {
+          const userInfoResponse = await fetch('/api/user/info');
+          if (userInfoResponse.ok) {
+            const userInfo = await userInfoResponse.json();
+            const userData = userInfo.user || userInfo;
+            
+            if (userData.account_type === 'superadmin') {
+              // Superadmin vede solo:
+              // 1. Config globali (is_default = true)
+              // 2. Config proprie (owner_user_id = superadmin.id o created_by = superadmin.email)
+              spedisciConfigs = spedisciConfigs.filter((c: any) => {
+                const isDefault = c.is_default === true;
+                const isOwned = c.owner_user_id === userData.id;
+                const isCreatedBy = c.created_by === userData.email;
+                return isDefault || isOwned || isCreatedBy;
+              });
+              
+              console.log('🔒 [SUPERADMIN] Filtro config: mostro solo config master/proprie, nascoste config reseller');
+            }
+          }
+        } catch (userInfoError) {
+          console.warn('⚠️ Errore verifica utente per filtro config:', userInfoError);
+          // Continua senza filtro se errore
+        }
+
         setConfigurations(spedisciConfigs);
 
         // Seleziona default o il primo
