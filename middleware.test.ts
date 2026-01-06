@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 // Import middleware function (Next.js middleware export)
 // Usa dynamic import per compatibilità ES modules
