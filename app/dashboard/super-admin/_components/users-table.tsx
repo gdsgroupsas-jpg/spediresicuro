@@ -378,7 +378,7 @@ export function UsersTable() {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      {getAccountTypeBadge(user.account_type)}
+                      {getAccountTypeBadge(user.account_type, user.is_reseller)}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <Switch
