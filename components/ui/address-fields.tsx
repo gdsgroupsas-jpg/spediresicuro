@@ -56,16 +56,27 @@ export default function AddressFields({
   const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [isSelectionInProgress, setIsSelectionInProgress] = useState(false);
 
   // Aggiorna cityInput quando cityValue cambia (es. da OCR)
+  // ⚠️ NON aggiornare se è in corso una selezione (evita loop)
   useEffect(() => {
-    if (cityValue && cityValue !== cityInput) {
+    if (cityValue && cityValue !== cityInput && !isSelectionInProgress) {
       setCityInput(cityValue);
     }
-  }, [cityValue]);
+  }, [cityValue, cityInput, isSelectionInProgress]);
 
   // Debounce search
+  // ⚠️ NON fare ricerca se:
+  // - È in corso una selezione
+  // - La città è già validata (selezionata dall'autocomplete)
   useEffect(() => {
+    // Se è in corso una selezione o la città è già validata, non fare ricerca
+    if (isSelectionInProgress || cityValid) {
+      setShowResults(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       if (cityInput.length >= 2) {
         searchCity(cityInput);
@@ -76,7 +87,7 @@ export default function AddressFields({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [cityInput]);
+  }, [cityInput, isSelectionInProgress, cityValid, searchCity]);
 
   const searchCity = useCallback(async (query: string) => {
     if (query.length < 2) return;
@@ -119,6 +130,15 @@ export default function AddressFields({
 
   const handleSelectResult = (result: LocationResult) => {
     console.log('🔍 [AddressFields] handleSelectResult chiamato:', result);
+    
+    // ⚠️ Flag per prevenire ricerca automatica dopo selezione
+    setIsSelectionInProgress(true);
+    
+    // Chiudi dropdown immediatamente
+    setShowResults(false);
+    setSearchResults([]);
+    
+    // Aggiorna input
     setCityInput(result.city);
     
     // ⚠️ Chiama i callback nell'ordine corretto
@@ -131,14 +151,24 @@ export default function AddressFields({
     console.log('🔍 [AddressFields] Chiamando onPostalCodeChange:', result.postal_code);
     onPostalCodeChange(result.postal_code);
     
-    setShowResults(false);
+    // Reset flag dopo un breve delay per permettere ai callback di completare
+    setTimeout(() => {
+      setIsSelectionInProgress(false);
+    }, 100);
   };
 
   const handleCityInputChange = (value: string) => {
+    // Se l'utente sta modificando manualmente, reset flag selezione
+    setIsSelectionInProgress(false);
+    
     setCityInput(value);
     onCityChange(value);
-    if (value.length >= 2) {
+    
+    // Mostra risultati solo se non è validata (non selezionata)
+    if (value.length >= 2 && !cityValid) {
       setShowResults(true);
+    } else {
+      setShowResults(false);
     }
   };
 
@@ -161,7 +191,12 @@ export default function AddressFields({
               <Command.Input
                 value={cityInput}
                 onValueChange={handleCityInputChange}
-                onFocus={() => cityInput.length >= 2 && setShowResults(true)}
+                onFocus={() => {
+                  // Mostra risultati solo se non è validata e ha almeno 2 caratteri
+                  if (cityInput.length >= 2 && !cityValid && !isSelectionInProgress) {
+                    setShowResults(true);
+                  }
+                }}
                 placeholder="Cerca città..."
                 className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
                   cityValid
