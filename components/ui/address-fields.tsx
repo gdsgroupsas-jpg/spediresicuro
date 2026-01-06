@@ -58,37 +58,7 @@ export default function AddressFields({
   const [showResults, setShowResults] = useState(false);
   const [isSelectionInProgress, setIsSelectionInProgress] = useState(false);
 
-  // Aggiorna cityInput quando cityValue cambia (es. da OCR)
-  // ⚠️ NON aggiornare se è in corso una selezione (evita loop)
-  useEffect(() => {
-    if (cityValue && cityValue !== cityInput && !isSelectionInProgress) {
-      setCityInput(cityValue);
-    }
-  }, [cityValue, cityInput, isSelectionInProgress]);
-
-  // Debounce search
-  // ⚠️ NON fare ricerca se:
-  // - È in corso una selezione
-  // - La città è già validata (selezionata dall'autocomplete)
-  useEffect(() => {
-    // Se è in corso una selezione o la città è già validata, non fare ricerca
-    if (isSelectionInProgress || cityValid) {
-      setShowResults(false);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (cityInput.length >= 2) {
-        searchCity(cityInput);
-      } else {
-        setSearchResults([]);
-        setShowResults(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [cityInput, isSelectionInProgress, cityValid, searchCity]);
-
+  // Funzione di ricerca città (dichiarata prima per essere usata in useEffect)
   const searchCity = useCallback(async (query: string) => {
     if (query.length < 2) return;
 
@@ -127,6 +97,37 @@ export default function AddressFields({
       setIsSearching(false);
     }
   }, []);
+
+  // Aggiorna cityInput quando cityValue cambia (es. da OCR)
+  // ⚠️ NON aggiornare se è in corso una selezione (evita loop)
+  useEffect(() => {
+    if (cityValue && cityValue !== cityInput && !isSelectionInProgress) {
+      setCityInput(cityValue);
+    }
+  }, [cityValue, cityInput, isSelectionInProgress]);
+
+  // Debounce search
+  // ⚠️ NON fare ricerca se:
+  // - È in corso una selezione
+  // - La città è già validata (selezionata dall'autocomplete)
+  useEffect(() => {
+    // Se è in corso una selezione o la città è già validata, non fare ricerca
+    if (isSelectionInProgress || cityValid) {
+      setShowResults(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (cityInput.length >= 2) {
+        searchCity(cityInput);
+      } else {
+        setSearchResults([]);
+        setShowResults(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [cityInput, isSelectionInProgress, cityValid, searchCity]);
 
   const handleSelectResult = (result: LocationResult) => {
     console.log('🔍 [AddressFields] handleSelectResult chiamato:', result);
