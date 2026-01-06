@@ -199,7 +199,7 @@ export async function updatePlatformFee(
     // Utente non trovato - verrà gestito dall'update
   }
 
-  // Esegui update (il trigger DB registrerà l'audit)
+  // Esegui update
   const { error: updateError } = await supabaseAdmin
     .from('users')
     .update({
@@ -211,6 +211,24 @@ export async function updatePlatformFee(
   if (updateError) {
     console.error('[PlatformFee] Update error:', updateError);
     throw new Error(`Error updating platform fee: ${updateError.message}`);
+  }
+
+  // Inserisci record audit manualmente (controllo su changed_by)
+  const newFeeValue = newFee ?? 0.50; // Valore effettivo da loggare
+  const { error: auditError } = await supabaseAdmin
+    .from('platform_fee_history')
+    .insert({
+      user_id: targetUserId,
+      old_fee: previousFee,
+      new_fee: newFeeValue,
+      notes: notes || null,
+      changed_by: adminUserId, // ✅ ID admin che ha fatto la modifica
+    });
+
+  if (auditError) {
+    // Log errore audit ma non bloccare l'operazione
+    console.error('[PlatformFee] Audit error (non bloccante):', auditError);
+    // Non lanciare errore - l'update è andato a buon fine
   }
 
   // Log operazione (NO PII - solo IDs)
