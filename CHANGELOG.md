@@ -9,6 +9,16 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- **Fase 3: Reseller Tier System** - Sistema categorizzazione automatica reseller
+  - Enum `reseller_tier`: small (<10 sub-users), medium (10-100), enterprise (>100)
+  - Campo `reseller_tier` in tabella `users` (nullable, solo per reseller)
+  - Funzione DB `get_reseller_tier(user_id)` per calcolo automatico tier
+  - Helper TypeScript `lib/db/tier-helpers.ts` con funzioni: `getResellerTier()`, `calculateTierFromSubUsers()`, `getTierLimits()`, `isTierAtLimit()`
+  - Componente UI `TierBadge` per visualizzazione tier (small/medium/enterprise)
+  - Integrazione tier badge in `ClientsHierarchyView` per superadmin
+  - Migrations: 088 (enum e campo), 089 (funzione), 090 (popolamento iniziale)
+  - Test: 17/17 unit test per tier-helpers, 782/786 suite completa, 0 regressioni
+  - Documentazione: `docs/DEVELOPMENT_PLAN_FASE3.md`, script verifica `scripts/test-migrations-088-090.sql`
 - **Fase 4: Gestione Clienti UI Gerarchica** - Vista unificata clienti per Superadmin/Admin
   - `getAllClientsForUser()` - Backend: struttura gerarchica Reseller → Sub-Users + BYOC
   - `ClientsHierarchyView` - Frontend: componente gerarchico con ResellerCard expandable

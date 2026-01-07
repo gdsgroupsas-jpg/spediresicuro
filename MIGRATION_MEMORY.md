@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
