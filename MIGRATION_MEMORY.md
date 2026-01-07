@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -793,3 +793,52 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 - Il wallet_balance viene recuperato dal database ad ogni chiamata (non cached)
 - Gestione errori: se il recupero fallisce, continua con valore 0 (non critico)
 - Il wallet balance è disponibile sia nel contesto fiscale che nel context-builder standard
+
+### ✅ FASE 4: GESTIONE CLIENTI UI GERARCHICA (7 Gennaio 2026 - Commit 14e57b3, 70930cc, 65b4bde)
+
+**Problema:** Superadmin vedeva tutti gli utenti in modo "piatta", senza gerarchia Reseller → Sub-Users. Manca vista unificata per gestione clienti completa.
+
+**Soluzione:**
+- **Backend:** `getAllClientsForUser()` - Restituisce struttura gerarchica (Reseller con Sub-Users nested + BYOC standalone)
+- **Backend:** `canViewAllClients()` - Verifica capability `can_view_all_clients` o `account_type === 'superadmin'`
+- **Backend:** `getSubUsers()` aggiornato - Supporta superadmin (vede tutti i sub-users) mantenendo comportamento originale per reseller
+- **Frontend:** `ClientsHierarchyView` - Componente gerarchico con ResellerCard expandable e BYOCSection
+- **Frontend:** `useAllClients()` - Hook React Query per fetch dati gerarchici
+- **Frontend:** Page `reseller-team` - Rileva superadmin e mostra vista appropriata (gerarchica vs originale)
+
+**File creati/modificati:**
+- `actions/admin-reseller.ts` - Aggiunte funzioni `getAllClientsForUser()`, `canViewAllClients()`, aggiornato `getSubUsers()`
+- `tests/admin-reseller.test.ts` - Test completi (5/5 passati)
+- `lib/queries/use-sub-users.ts` - Aggiunto hook `useAllClients()`
+- `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx` - Nuovo componente gerarchico
+- `app/dashboard/reseller-team/page.tsx` - Aggiornato per supportare superadmin
+- `docs/DEVELOPMENT_PLAN_FASE4.md` - Piano sviluppo
+- `docs/FASE4_COMPLETE_REPORT.md` - Report completo
+
+**Funzionalità:**
+- Superadmin vede tutti i clienti in modo gerarchico (Reseller → Sub-Users nested + BYOC standalone)
+- Reseller mantiene vista originale (solo propri Sub-Users) - **non breaking**
+- Stats aggregate: Reseller, Sub-Users, BYOC, Wallet Totale
+- ResellerCard expandable per ogni reseller con lista sub-users nested
+- BYOCSection dedicata per clienti BYOC standalone
+- Access control: capability `can_view_all_clients` o `account_type === 'superadmin'`
+
+**Test:**
+- ✅ Backend: 5/5 test passati
+- ✅ Regressione: 3/3 test passati
+- ✅ Suite completa: 765/765 test passati
+- ✅ Type-check: nessun errore
+
+**Note:**
+- Non breaking: Reseller mantiene comportamento originale
+- Retrocompatibile: Fallback a `parent_id` se `tenant_id` non disponibile
+- Capability System: Usa nuovo sistema con fallback a `role`/`account_type`
+- Performance: Query ottimizzate con `Promise.all` per reseller paralleli
+
+**Come verificare:**
+```bash
+# Test locale: vai su /dashboard/reseller-team come superadmin
+# Expected: Vista gerarchica con Reseller → Sub-Users + BYOC
+# Test come reseller: stessa pagina
+# Expected: Vista originale (solo propri Sub-Users)
+```
