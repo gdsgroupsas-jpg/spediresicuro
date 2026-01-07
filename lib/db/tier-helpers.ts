@@ -1,30 +1,38 @@
 /**
  * Tier Helpers
- * 
+ *
  * Funzioni helper per gestire reseller_tier (small, medium, enterprise)
  * Calcolo automatico basato su numero sub-users
  */
 
-import { supabaseAdmin } from '@/lib/db/client'
+import { supabaseAdmin } from "@/lib/db/client";
 
-export type ResellerTier = 'small' | 'medium' | 'enterprise'
+export type ResellerTier = "small" | "medium" | "enterprise";
 
 export interface TierLimits {
-  maxSubUsers: number | null // null = unlimited
-  features: string[]
-  description: string
+  maxSubUsers: number | null; // null = unlimited
+  features: string[];
+  description: string;
 }
 
 /**
  * Calcola tier da numero sub-users (pure function)
  */
+/**
+ * Calcola tier da numero sub-users (pure function)
+ * 
+ * Logica:
+ * - Small: < 10 sub-users
+ * - Medium: 10-100 sub-users (incluso 100)
+ * - Enterprise: > 100 sub-users
+ */
 export function calculateTierFromSubUsers(subUsersCount: number): ResellerTier {
   if (subUsersCount < 10) {
-    return 'small'
+    return "small";
   } else if (subUsersCount <= 100) {
-    return 'medium'
+    return "medium";
   } else {
-    return 'enterprise'
+    return "enterprise";
   }
 }
 
@@ -33,46 +41,50 @@ export function calculateTierFromSubUsers(subUsersCount: number): ResellerTier {
  */
 export function getTierLimits(tier: ResellerTier): TierLimits {
   switch (tier) {
-    case 'small':
+    case "small":
       return {
         maxSubUsers: 10,
-        features: ['base'],
-        description: 'Reseller piccolo: max 10 sub-users, base features',
-      }
-    case 'medium':
+        features: ["base"],
+        description: "Reseller piccolo: max 10 sub-users, base features",
+      };
+    case "medium":
       return {
         maxSubUsers: 100,
-        features: ['base', 'advanced'],
-        description: 'Reseller medio: max 100 sub-users, advanced features',
-      }
-    case 'enterprise':
+        features: ["base", "advanced"],
+        description: "Reseller medio: max 100 sub-users, advanced features",
+      };
+    case "enterprise":
       return {
         maxSubUsers: null, // Unlimited
-        features: ['base', 'advanced', 'unlimited', 'sla'],
-        description: 'Reseller enterprise: unlimited sub-users, all features, SLA dedicato',
-      }
+        features: ["base", "advanced", "unlimited", "sla"],
+        description:
+          "Reseller enterprise: unlimited sub-users, all features, SLA dedicato",
+      };
     default:
-      throw new Error(`Tier non valido: ${tier}`)
+      throw new Error(`Tier non valido: ${tier}`);
   }
 }
 
 /**
  * Verifica se un tier ha raggiunto il limite di sub-users
  */
-export function isTierAtLimit(tier: ResellerTier, currentSubUsersCount: number): boolean {
-  const limits = getTierLimits(tier)
-  
+export function isTierAtLimit(
+  tier: ResellerTier,
+  currentSubUsersCount: number
+): boolean {
+  const limits = getTierLimits(tier);
+
   // Enterprise è sempre unlimited
   if (limits.maxSubUsers === null) {
-    return false
+    return false;
   }
-  
-  return currentSubUsersCount >= limits.maxSubUsers
+
+  return currentSubUsersCount >= limits.maxSubUsers;
 }
 
 /**
  * Recupera tier di un reseller dal database
- * 
+ *
  * Se tier è NULL nel database, la funzione DB calcola automaticamente
  * Se fallbackUser è fornito e ha sub-users count, usa quello per performance
  */
@@ -84,66 +96,68 @@ export async function getResellerTier(
     // Se fallbackUser ha subUsersCount, calcola direttamente (performance)
     // Questo evita chiamata DB se abbiamo già il count
     if (fallbackUser?.subUsersCount !== undefined && fallbackUser.is_reseller) {
-      return calculateTierFromSubUsers(fallbackUser.subUsersCount)
+      return calculateTierFromSubUsers(fallbackUser.subUsersCount);
     }
 
     // Se fallbackUser indica che non è reseller, restituisci null senza chiamare DB
     if (fallbackUser && fallbackUser.is_reseller === false) {
-      return null
+      return null;
     }
 
     // Chiama funzione database
-    const { data: tier, error } = await supabaseAdmin.rpc('get_reseller_tier', {
+    const { data: tier, error } = await supabaseAdmin.rpc("get_reseller_tier", {
       p_user_id: userId,
-    })
+    });
 
     if (error) {
-      console.error('Errore get_reseller_tier:', error)
-      return null
+      console.error("Errore get_reseller_tier:", error);
+      return null;
     }
 
-    return tier as ResellerTier | null
+    return tier as ResellerTier | null;
   } catch (error: any) {
-    console.error('Errore in getResellerTier:', error)
-    return null
+    console.error("Errore in getResellerTier:", error);
+    return null;
   }
 }
 
 /**
  * Recupera tier con query sub-users (se non fornito)
  */
-export async function getResellerTierWithQuery(userId: string): Promise<ResellerTier | null> {
+export async function getResellerTierWithQuery(
+  userId: string
+): Promise<ResellerTier | null> {
   try {
     // 1. Verifica se è reseller
     const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('id', userId)
-      .single()
+      .from("users")
+      .select("id, is_reseller")
+      .eq("id", userId)
+      .single();
 
     if (userError || !user || !user.is_reseller) {
-      return null
+      return null;
     }
 
     // 2. Conta sub-users
     const { data: subUsers, error: subUsersError } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('parent_id', userId)
-      .eq('is_reseller', false)
+      .from("users")
+      .select("id")
+      .eq("parent_id", userId)
+      .eq("is_reseller", false);
 
     if (subUsersError) {
-      console.error('Errore conteggio sub-users:', subUsersError)
-      return null
+      console.error("Errore conteggio sub-users:", subUsersError);
+      return null;
     }
 
-    const subUsersCount = subUsers?.length || 0
+    const subUsersCount = subUsers?.length || 0;
 
     // 3. Calcola tier
-    return calculateTierFromSubUsers(subUsersCount)
+    return calculateTierFromSubUsers(subUsersCount);
   } catch (error: any) {
-    console.error('Errore in getResellerTierWithQuery:', error)
-    return null
+    console.error("Errore in getResellerTierWithQuery:", error);
+    return null;
   }
 }
 
@@ -158,37 +172,37 @@ export async function updateResellerTier(
   try {
     // Verifica che sia reseller
     const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('id', userId)
-      .single()
+      .from("users")
+      .select("id, is_reseller")
+      .eq("id", userId)
+      .single();
 
     if (userError || !user || !user.is_reseller) {
       return {
         success: false,
-        error: 'Utente non è un reseller',
-      }
+        error: "Utente non è un reseller",
+      };
     }
 
     // Aggiorna tier
     const { error: updateError } = await supabaseAdmin
-      .from('users')
+      .from("users")
       .update({ reseller_tier: tier })
-      .eq('id', userId)
+      .eq("id", userId);
 
     if (updateError) {
-      console.error('Errore aggiornamento tier:', updateError)
+      console.error("Errore aggiornamento tier:", updateError);
       return {
         success: false,
-        error: updateError.message || 'Errore durante aggiornamento tier',
-      }
+        error: updateError.message || "Errore durante aggiornamento tier",
+      };
     }
 
     // Audit log (opzionale)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
-        action: 'reseller_tier_updated',
-        resource_type: 'user',
+      await supabaseAdmin.from("audit_logs").insert({
+        action: "reseller_tier_updated",
+        resource_type: "user",
         resource_id: userId,
         user_email: updatedBy,
         user_id: updatedBy,
@@ -196,18 +210,18 @@ export async function updateResellerTier(
           new_tier: tier,
           updated_by: updatedBy,
         },
-      })
+      });
     } catch (auditError) {
-      console.warn('Errore audit log:', auditError)
+      console.warn("Errore audit log:", auditError);
       // Non bloccante
     }
 
-    return { success: true }
+    return { success: true };
   } catch (error: any) {
-    console.error('Errore in updateResellerTier:', error)
+    console.error("Errore in updateResellerTier:", error);
     return {
       success: false,
-      error: error.message || 'Errore sconosciuto',
-    }
+      error: error.message || "Errore sconosciuto",
+    };
   }
 }
