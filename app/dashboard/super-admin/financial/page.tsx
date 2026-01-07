@@ -1,5 +1,12 @@
 'use client'
 
+/**
+ * Financial Dashboard - SuperAdmin
+ * 
+ * Dashboard completa per P&L, margini e riconciliazione.
+ * Sprint 2: Aggiunto Period Selector, Export CSV, Charts
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -8,14 +15,19 @@ import {
   RefreshCw, 
   DollarSign,
   ArrowLeft,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react'
+import { toast, Toaster } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { StatsCards } from './_components/stats-cards'
 import { AlertsTable } from './_components/alerts-table'
 import { ReconciliationTable } from './_components/reconciliation-table'
 import { MonthlyPnL } from './_components/monthly-pnl'
+import { PeriodSelector, type PeriodType, getStartDateForPeriod } from './_components/period-selector'
+import { MarginByCourierChart } from './_components/margin-by-courier-chart'
+import { TopResellersTable } from './_components/top-resellers-table'
 
 import {
   getPlatformStatsAction,
@@ -23,9 +35,14 @@ import {
   getMarginAlertsAction,
   getReconciliationPendingAction,
   updateReconciliationStatusAction,
+  getMarginByCourierAction,
+  getTopResellersAction,
+  exportFinancialCSVAction,
   type PlatformMonthlyPnL,
   type MarginAlert,
   type ReconciliationPending,
+  type CourierMarginData,
+  type TopResellerData,
 } from '@/actions/platform-costs'
 
 export default function FinancialDashboard() {
@@ -35,6 +52,10 @@ export default function FinancialDashboard() {
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  
+  // Period filter
+  const [period, setPeriod] = useState<PeriodType>('30d')
   
   // Data states
   const [stats, setStats] = useState<{
@@ -50,8 +71,10 @@ export default function FinancialDashboard() {
   const [monthlyPnL, setMonthlyPnL] = useState<PlatformMonthlyPnL[]>([])
   const [alerts, setAlerts] = useState<MarginAlert[]>([])
   const [reconciliation, setReconciliation] = useState<ReconciliationPending[]>([])
+  const [courierMargins, setCourierMargins] = useState<CourierMarginData[]>([])
+  const [topResellers, setTopResellers] = useState<TopResellerData[]>([])
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'reconciliation'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'reconciliation' | 'analytics'>('overview')
 
   // Verifica permessi superadmin
   useEffect(() => {
@@ -95,24 +118,40 @@ export default function FinancialDashboard() {
   // Carica dati
   const loadData = useCallback(async () => {
     setIsRefreshing(true)
+    
+    const startDate = getStartDateForPeriod(period)
+    const startDateStr = startDate?.toISOString()
+    
     try {
-      const [statsRes, monthlyRes, alertsRes, reconciliationRes] = await Promise.all([
+      const [
+        statsRes, 
+        monthlyRes, 
+        alertsRes, 
+        reconciliationRes,
+        courierRes,
+        resellersRes
+      ] = await Promise.all([
         getPlatformStatsAction(),
         getMonthlyPnLAction(12),
         getMarginAlertsAction(),
         getReconciliationPendingAction(),
+        getMarginByCourierAction(startDateStr),
+        getTopResellersAction(20, startDateStr),
       ])
 
       if (statsRes.success) setStats(statsRes.data!)
       if (monthlyRes.success) setMonthlyPnL(monthlyRes.data!)
       if (alertsRes.success) setAlerts(alertsRes.data!)
       if (reconciliationRes.success) setReconciliation(reconciliationRes.data!)
+      if (courierRes.success) setCourierMargins(courierRes.data!)
+      if (resellersRes.success) setTopResellers(resellersRes.data!)
     } catch (error) {
       console.error('Errore caricamento dati:', error)
+      toast.error('Errore nel caricamento dei dati')
     } finally {
       setIsRefreshing(false)
     }
-  }, [])
+  }, [period])
 
   useEffect(() => {
     if (isAuthorized) {
@@ -128,16 +167,49 @@ export default function FinancialDashboard() {
   ) => {
     const result = await updateReconciliationStatusAction(id, newStatus, notes)
     if (result.success) {
-      // Ricarica i dati
+      toast.success('Stato aggiornato')
       await loadData()
+    } else {
+      toast.error(result.error || 'Errore aggiornamento stato')
+    }
+  }
+
+  // Export CSV handler
+  const handleExportCSV = async () => {
+    setIsExporting(true)
+    try {
+      const startDate = getStartDateForPeriod(period)
+      const result = await exportFinancialCSVAction(startDate?.toISOString())
+      
+      if (result.success && result.csv) {
+        // Download CSV
+        const blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `financial-export-${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        
+        toast.success('Export completato')
+      } else {
+        toast.error(result.error || 'Errore export')
+      }
+    } catch (error) {
+      console.error('Errore export:', error)
+      toast.error('Errore durante l\'export')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Verifica permessi...</p>
         </div>
       </div>
@@ -146,7 +218,7 @@ export default function FinancialDashboard() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20">
         <div className="text-center">
           <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h1>
@@ -161,7 +233,7 @@ export default function FinancialDashboard() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
@@ -186,15 +258,25 @@ export default function FinancialDashboard() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Period Selector */}
+              <PeriodSelector value={period} onChange={setPeriod} />
+              
+              {/* Export CSV */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {/* TODO: Export CSV */}}
-                disabled
+                onClick={handleExportCSV}
+                disabled={isExporting}
               >
-                <Download className="w-4 h-4 mr-2" />
-                Export
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Export CSV
               </Button>
+              
+              {/* Refresh */}
               <Button
                 variant="outline"
                 size="sm"
@@ -208,16 +290,17 @@ export default function FinancialDashboard() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mt-6 bg-gray-100 p-1 rounded-lg w-fit">
+          <div className="flex gap-1 mt-6 bg-gray-100 p-1 rounded-lg w-fit overflow-x-auto">
             {[
               { id: 'overview', label: 'Overview' },
+              { id: 'analytics', label: 'Analytics' },
               { id: 'alerts', label: `Alert (${alerts.length})` },
               { id: 'reconciliation', label: `Riconciliazione (${reconciliation.length})` },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -233,7 +316,7 @@ export default function FinancialDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards - Always visible */}
         <div className="mb-8">
-          <StatsCards stats={stats || null} isLoading={isRefreshing && !stats} />
+          <StatsCards stats={stats} isLoading={isRefreshing && !stats} />
         </div>
 
         {/* Tab Content */}
@@ -262,6 +345,19 @@ export default function FinancialDashboard() {
           </div>
         )}
 
+        {activeTab === 'analytics' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <MarginByCourierChart 
+              data={courierMargins} 
+              isLoading={isRefreshing && courierMargins.length === 0} 
+            />
+            <TopResellersTable 
+              data={topResellers} 
+              isLoading={isRefreshing && topResellers.length === 0} 
+            />
+          </div>
+        )}
+
         {activeTab === 'alerts' && (
           <AlertsTable 
             alerts={alerts} 
@@ -278,6 +374,8 @@ export default function FinancialDashboard() {
           />
         )}
       </main>
+
+      <Toaster position="top-right" richColors />
     </div>
   )
 }

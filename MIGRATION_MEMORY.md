@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE | ✅ SPRINT 2 UX UNIFICATION DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -979,4 +979,46 @@ npx vitest run tests/unit/platform-cost-recorder.test.ts tests/unit/platform-cos
 # Verificare integrazione in create-shipment-core.ts
 grep -A20 "SPRINT 1: FINANCIAL TRACKING" lib/shipments/create-shipment-core.ts
 # Expected: sezione con determineApiSource, updateShipmentApiSource, recordPlatformCost
+```
+
+### ✅ SPRINT 2: UX UNIFICATION (7 Gennaio 2026)
+
+**Obiettivo:** Unificare UX per gestione clienti e dashboard finanziaria con nuove funzionalità.
+
+**TASK 2.1: Dashboard Unificata Clienti per Reseller**
+- `app/dashboard/reseller/clienti/page.tsx` - Pagina principale unificata
+- `app/dashboard/reseller/clienti/_components/client-stats-cards.tsx` - KPI cards clienti
+- `app/dashboard/reseller/clienti/_components/client-card-with-listino.tsx` - Card cliente con listino inline
+- `app/dashboard/reseller/clienti/_components/assign-listino-dialog.tsx` - Dialog assegnazione listini
+- `actions/reseller-clients.ts` - Actions per clienti con listini
+
+**Funzionalità Dashboard Clienti:**
+- Lista clienti con badge listino assegnato inline
+- Statistiche aggregate (totale clienti, wallet, spedizioni, con/senza listino)
+- Assegnazione rapida listino da dropdown menu
+- Filtri per nome/email, con/senza listino
+- Ordinamento per data, nome, saldo, spedizioni
+- Link rapido a wallet, spedizioni, creazione listino
+
+**TASK 2.2: Financial Dashboard Enhanced**
+- `app/dashboard/super-admin/financial/_components/period-selector.tsx` - Filtro periodo
+- `app/dashboard/super-admin/financial/_components/margin-by-courier-chart.tsx` - Grafico margini per corriere
+- `app/dashboard/super-admin/financial/_components/top-resellers-table.tsx` - Classifica top resellers
+- `actions/platform-costs.ts` - Actions: getMarginByCourierAction, getTopResellersAction, exportFinancialCSVAction
+
+**Nuove Features Financial Dashboard:**
+- Period Selector (7d, 30d, 90d, YTD, all)
+- Export CSV funzionante
+- Tab Analytics con charts
+
+**TASK 2.3: Navigation Update**
+- `lib/config/navigationConfig.ts` - Aggiornata navigazione
+- Nuova voce I Miei Clienti per Reseller
+- Nuova sezione Finanza Piattaforma per SuperAdmin
+
+**Come verificare:**
+```bash
+# Dashboard Clienti: /dashboard/reseller/clienti (come reseller)
+# Financial Dashboard: /dashboard/super-admin/financial (come superadmin)
+# Expected: Period selector, Export CSV, tab Analytics
 ```

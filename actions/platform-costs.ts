@@ -409,3 +409,259 @@ export async function getPlatformStatsAction(): Promise<{
     return { success: false, error: error.message };
   }
 }
+
+// ============================================
+// SPRINT 2: Additional Dashboard Features
+// ============================================
+
+export interface CourierMarginData {
+  courier_code: string;
+  total_shipments: number;
+  total_revenue: number;
+  total_cost: number;
+  gross_margin: number;
+  avg_margin_percent: number;
+}
+
+export interface TopResellerData {
+  user_id: string;
+  user_email: string;
+  user_name: string | null;
+  total_shipments: number;
+  total_billed: number;
+  margin_generated: number;
+}
+
+/**
+ * Ottiene margini aggregati per corriere
+ */
+export async function getMarginByCourierAction(startDate?: string): Promise<{
+  success: boolean;
+  data?: CourierMarginData[];
+  error?: string;
+}> {
+  const authCheck = await verifySuperAdmin();
+  if (!authCheck.success) {
+    return { success: false, error: authCheck.error };
+  }
+
+  try {
+    let query = supabaseAdmin
+      .from('platform_provider_costs')
+      .select('courier_code, billed_amount, provider_cost, platform_margin')
+      .eq('api_source', 'platform');
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Aggrega per corriere
+    const courierMap = new Map<string, {
+      total_shipments: number;
+      total_revenue: number;
+      total_cost: number;
+      gross_margin: number;
+    }>();
+
+    (data || []).forEach(row => {
+      const existing = courierMap.get(row.courier_code) || {
+        total_shipments: 0,
+        total_revenue: 0,
+        total_cost: 0,
+        gross_margin: 0,
+      };
+      
+      courierMap.set(row.courier_code, {
+        total_shipments: existing.total_shipments + 1,
+        total_revenue: existing.total_revenue + (row.billed_amount || 0),
+        total_cost: existing.total_cost + (row.provider_cost || 0),
+        gross_margin: existing.gross_margin + (row.platform_margin || 0),
+      });
+    });
+
+    const result: CourierMarginData[] = Array.from(courierMap.entries()).map(([courier_code, stats]) => ({
+      courier_code,
+      total_shipments: stats.total_shipments,
+      total_revenue: Math.round(stats.total_revenue * 100) / 100,
+      total_cost: Math.round(stats.total_cost * 100) / 100,
+      gross_margin: Math.round(stats.gross_margin * 100) / 100,
+      avg_margin_percent: stats.total_cost > 0 
+        ? Math.round((stats.gross_margin / stats.total_cost) * 100 * 100) / 100
+        : 0,
+    }));
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('[PLATFORM_COSTS] getMarginByCourierAction error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Ottiene top resellers per platform usage
+ */
+export async function getTopResellersAction(limit: number = 20, startDate?: string): Promise<{
+  success: boolean;
+  data?: TopResellerData[];
+  error?: string;
+}> {
+  const authCheck = await verifySuperAdmin();
+  if (!authCheck.success) {
+    return { success: false, error: authCheck.error };
+  }
+
+  try {
+    let query = supabaseAdmin
+      .from('platform_provider_costs')
+      .select(`
+        billed_user_id,
+        billed_amount,
+        platform_margin,
+        users!platform_provider_costs_billed_user_id_fkey(
+          id,
+          email,
+          name
+        )
+      `)
+      .eq('api_source', 'platform');
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Aggrega per utente
+    const userMap = new Map<string, {
+      user_email: string;
+      user_name: string | null;
+      total_shipments: number;
+      total_billed: number;
+      margin_generated: number;
+    }>();
+
+    (data || []).forEach(row => {
+      const userId = row.billed_user_id;
+      const userInfo = row.users as { id: string; email: string; name: string | null } | null;
+      
+      const existing = userMap.get(userId) || {
+        user_email: userInfo?.email || 'unknown',
+        user_name: userInfo?.name || null,
+        total_shipments: 0,
+        total_billed: 0,
+        margin_generated: 0,
+      };
+      
+      userMap.set(userId, {
+        user_email: existing.user_email,
+        user_name: existing.user_name,
+        total_shipments: existing.total_shipments + 1,
+        total_billed: existing.total_billed + (row.billed_amount || 0),
+        margin_generated: existing.margin_generated + (row.platform_margin || 0),
+      });
+    });
+
+    const result: TopResellerData[] = Array.from(userMap.entries())
+      .map(([user_id, stats]) => ({
+        user_id,
+        user_email: stats.user_email,
+        user_name: stats.user_name,
+        total_shipments: stats.total_shipments,
+        total_billed: Math.round(stats.total_billed * 100) / 100,
+        margin_generated: Math.round(stats.margin_generated * 100) / 100,
+      }))
+      .sort((a, b) => b.total_billed - a.total_billed)
+      .slice(0, limit);
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('[PLATFORM_COSTS] getTopResellersAction error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Genera CSV export dei dati finanziari
+ */
+export async function exportFinancialCSVAction(startDate?: string): Promise<{
+  success: boolean;
+  csv?: string;
+  error?: string;
+}> {
+  const authCheck = await verifySuperAdmin();
+  if (!authCheck.success) {
+    return { success: false, error: authCheck.error };
+  }
+
+  try {
+    let query = supabaseAdmin
+      .from('platform_provider_costs')
+      .select(`
+        id,
+        created_at,
+        shipment_tracking_number,
+        courier_code,
+        billed_amount,
+        provider_cost,
+        platform_margin,
+        platform_margin_percent,
+        reconciliation_status,
+        api_source,
+        cost_source,
+        users!platform_provider_costs_billed_user_id_fkey(email)
+      `)
+      .eq('api_source', 'platform')
+      .order('created_at', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Genera CSV
+    const headers = [
+      'Data',
+      'Tracking',
+      'Corriere',
+      'Email Cliente',
+      'Importo Addebitato',
+      'Costo Provider',
+      'Margine',
+      'Margine %',
+      'Stato Riconciliazione',
+      'Fonte Costo'
+    ];
+
+    const rows = (data || []).map(row => {
+      const userInfo = row.users as { email: string } | null;
+      return [
+        new Date(row.created_at).toLocaleString('it-IT'),
+        row.shipment_tracking_number || '',
+        row.courier_code || '',
+        userInfo?.email || '',
+        row.billed_amount?.toFixed(2) || '0.00',
+        row.provider_cost?.toFixed(2) || '0.00',
+        row.platform_margin?.toFixed(2) || '0.00',
+        row.platform_margin_percent?.toFixed(2) || '0.00',
+        row.reconciliation_status || 'pending',
+        row.cost_source || 'unknown'
+      ].join(';');
+    });
+
+    const csv = [headers.join(';'), ...rows].join('\n');
+
+    return { success: true, csv };
+  } catch (error: any) {
+    console.error('[PLATFORM_COSTS] exportFinancialCSVAction error:', error);
+    return { success: false, error: error.message };
+  }
+}

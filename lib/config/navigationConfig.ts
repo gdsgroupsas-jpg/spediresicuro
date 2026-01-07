@@ -232,6 +232,7 @@ const financeSection: NavSection = {
 
 /**
  * RESELLER - Solo per reseller
+ * SPRINT 2: UX Unification - Dashboard Unificata Clienti
  */
 const resellerSection: NavSection = {
   id: 'reseller',
@@ -241,11 +242,11 @@ const resellerSection: NavSection = {
   requiredFeature: 'reseller',
   items: [
     {
-      id: 'reseller-team',
+      id: 'reseller-clienti',
       label: 'I Miei Clienti',
-      href: '/dashboard/reseller-team',
+      href: '/dashboard/reseller/clienti',
       icon: Users,
-      description: 'Gestisci il tuo portfolio clienti',
+      description: 'Gestisci clienti, listini e wallet',
     },
     {
       id: 'reseller-listini-fornitore',
@@ -254,12 +255,42 @@ const resellerSection: NavSection = {
       icon: Package,
       description: 'Gestisci i tuoi listini fornitore',
     },
+    // Listini Personalizzati ora accessibile da "I Miei Clienti" inline
+    // Mantenuto per backward compatibility e accesso diretto
     {
       id: 'reseller-listini-personalizzati',
       label: 'Listini Personalizzati',
       href: '/dashboard/reseller/listini-personalizzati',
       icon: FileText,
       description: 'Listini personalizzati per i tuoi clienti',
+    },
+  ],
+};
+
+/**
+ * FINANZA SUPERADMIN - Solo per superadmin
+ * SPRINT 2: Financial Dashboard & Reconciliation
+ */
+const superAdminFinanceSection: NavSection = {
+  id: 'superadmin-finance',
+  label: 'Finanza Piattaforma',
+  collapsible: true,
+  defaultExpanded: true,
+  requiredRole: ['superadmin'],
+  items: [
+    {
+      id: 'financial-dashboard',
+      label: 'Financial Dashboard',
+      href: '/dashboard/super-admin/financial',
+      icon: Calculator,
+      description: 'P&L, Margini e Riconciliazione',
+    },
+    {
+      id: 'listini-master',
+      label: 'Listini Master',
+      href: '/dashboard/super-admin/listini-master',
+      icon: FileText,
+      description: 'Listini globali piattaforma',
     },
   ],
 };
@@ -480,6 +511,12 @@ export function getNavigationForUser(
   if (isReseller) {
     sections.push(financeSection);
     sections.push(resellerSection);
+  }
+
+  // Aggiungi sezione Finanza Piattaforma solo per superadmin
+  // SPRINT 2: Financial Dashboard
+  if (role === 'superadmin') {
+    sections.push(superAdminFinanceSection);
   }
 
   // Aggiungi admin solo se admin/superadmin
