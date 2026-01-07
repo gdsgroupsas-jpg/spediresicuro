@@ -672,6 +672,7 @@ export async function getAllClientsForUser(): Promise<{
         phone: string | null
         wallet_balance: number
         created_at: string
+        reseller_tier: string | null
       }
       subUsers: Array<{
         id: string
@@ -725,10 +726,10 @@ export async function getAllClientsForUser(): Promise<{
       }
     }
 
-    // 3. Recupera tutti i Reseller con statistiche
+    // 3. Recupera tutti i Reseller con statistiche (incluso reseller_tier)
     const { data: resellers, error: resellersError } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, company_name, phone, wallet_balance, created_at')
+      .select('id, email, name, company_name, phone, wallet_balance, created_at, reseller_tier')
       .eq('is_reseller', true)
       .order('created_at', { ascending: false })
 
