@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Shield, Store } from 'lucide-react'
+import { Shield, Store, DollarSign, FileText, TrendingUp } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { QueryProvider } from '@/components/providers/query-provider'
@@ -106,6 +106,51 @@ export default function SuperAdminDashboard() {
           {/* AI Provider Selector */}
           <div className="mb-8">
             <AIProviderSelector />
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <button
+              onClick={() => router.push('/dashboard/super-admin/financial')}
+              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md hover:border-emerald-300 transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Financial Dashboard</h3>
+                  <p className="text-sm text-gray-500">P&L, Margini, Riconciliazione</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/dashboard/super-admin/listini-master')}
+              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Listini Master</h3>
+                  <p className="text-sm text-gray-500">Gestione listini globali</p>
+                </div>
+              </div>
+            </button>
+
+            <div className="bg-white rounded-xl border border-gray-200 p-6 opacity-60 cursor-not-allowed">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Analytics</h3>
+                  <p className="text-sm text-gray-500">Coming soon...</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Users Table - Self-contained component with filters, sorting, bulk actions */}

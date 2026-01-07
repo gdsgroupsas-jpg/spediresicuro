@@ -6,5 +6,15 @@
     "app/api/cron/**/*.ts": {
       "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/financial-alerts",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/auto-reconciliation",
+      "schedule": "0 2 * * *"
+    }
+  ]
 }
