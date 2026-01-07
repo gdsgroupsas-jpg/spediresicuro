@@ -191,6 +191,7 @@ WHERE tablename = 'users' AND indexname = 'idx_users_reseller_tier';
 -- Test 4: Threshold boundaries
 -- Setup: Reseller con 9, 10, 99, 100, 101 sub-users
 -- Expected: small, medium, medium, medium, enterprise
+-- Nota: 100 è incluso in medium (boundary corretto)
 ```
 
 #### Test 3: Popolamento Iniziale

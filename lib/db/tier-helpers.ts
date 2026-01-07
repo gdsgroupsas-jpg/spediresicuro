@@ -21,7 +21,7 @@ export interface TierLimits {
 export function calculateTierFromSubUsers(subUsersCount: number): ResellerTier {
   if (subUsersCount < 10) {
     return 'small'
-  } else if (subUsersCount < 100) {
+  } else if (subUsersCount <= 100) {
     return 'medium'
   } else {
     return 'enterprise'

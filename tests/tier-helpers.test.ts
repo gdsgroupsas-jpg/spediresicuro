@@ -35,14 +35,15 @@ describe('Tier Helpers', () => {
       expect(calculateTierFromSubUsers(9)).toBe('small')
     })
 
-    it('should return medium for 10-99 sub-users', () => {
+    it('should return medium for 10-100 sub-users (incluso)', () => {
       expect(calculateTierFromSubUsers(10)).toBe('medium')
       expect(calculateTierFromSubUsers(50)).toBe('medium')
       expect(calculateTierFromSubUsers(99)).toBe('medium')
+      expect(calculateTierFromSubUsers(100)).toBe('medium') // Boundary: 100 è medium
     })
 
-    it('should return enterprise for >= 100 sub-users', () => {
-      expect(calculateTierFromSubUsers(100)).toBe('enterprise')
+    it('should return enterprise for > 100 sub-users', () => {
+      expect(calculateTierFromSubUsers(101)).toBe('enterprise')
       expect(calculateTierFromSubUsers(150)).toBe('enterprise')
       expect(calculateTierFromSubUsers(1000)).toBe('enterprise')
     })
