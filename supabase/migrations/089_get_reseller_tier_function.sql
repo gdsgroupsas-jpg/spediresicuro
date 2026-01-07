@@ -40,9 +40,10 @@ BEGIN
       AND is_reseller = false;
     
     -- Determina tier in base a numero sub-users
+    -- Medium: 10-100 (incluso), Enterprise: > 100
     IF v_sub_users_count < 10 THEN
       RETURN 'small'::reseller_tier;
-    ELSIF v_sub_users_count < 100 THEN
+    ELSIF v_sub_users_count <= 100 THEN
       RETURN 'medium'::reseller_tier;
     ELSE
       RETURN 'enterprise'::reseller_tier;
