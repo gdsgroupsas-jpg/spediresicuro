@@ -194,15 +194,18 @@ export class ReconciliationService {
         ? "reconciliation_completed"
         : "reconciliation_discrepancy";
 
-    await this.supabase
-      .rpc("log_financial_event", {
+    // Best effort - ignora errori
+    try {
+      await this.supabase.rpc("log_financial_event", {
         p_event_type: eventType,
         p_platform_cost_id: id,
         p_message: notes || `Status changed to ${status}`,
         p_severity: status === "discrepancy" ? "warning" : "info",
         p_actor_id: userId,
-      })
-      .catch(() => {}); // Best effort
+      });
+    } catch {
+      // Ignore errors - best effort logging
+    }
   }
 
   /**

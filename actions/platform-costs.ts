@@ -548,7 +548,11 @@ export async function getTopResellersAction(limit: number = 20, startDate?: stri
 
     (data || []).forEach(row => {
       const userId = row.billed_user_id;
-      const userInfo = row.users as { id: string; email: string; name: string | null } | null;
+      // Gestisce sia array che oggetto singolo (Supabase può restituire entrambi)
+      const usersData = row.users;
+      const userInfo = Array.isArray(usersData) 
+        ? (usersData[0] as { id: string; email: string; name: string | null } | undefined) || null
+        : (usersData as { id: string; email: string; name: string | null } | null);
       
       const existing = userMap.get(userId) || {
         user_email: userInfo?.email || 'unknown',
@@ -642,7 +646,11 @@ export async function exportFinancialCSVAction(startDate?: string): Promise<{
     ];
 
     const rows = (data || []).map(row => {
-      const userInfo = row.users as { email: string } | null;
+      // Gestisce sia array che oggetto singolo (Supabase può restituire entrambi)
+      const usersData = row.users;
+      const userInfo = Array.isArray(usersData)
+        ? (usersData[0] as { email: string } | undefined) || null
+        : (usersData as { email: string } | null);
       return [
         new Date(row.created_at).toLocaleString('it-IT'),
         row.shipment_tracking_number || '',
