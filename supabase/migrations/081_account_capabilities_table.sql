@@ -35,12 +35,7 @@ CREATE TABLE IF NOT EXISTS account_capabilities (
   
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- Vincolo: un utente può avere una sola capability attiva per nome
-  CONSTRAINT unique_active_capability 
-    UNIQUE (user_id, capability_name) 
-    WHERE revoked_at IS NULL
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================
@@ -60,6 +55,12 @@ CREATE INDEX IF NOT EXISTS idx_account_capabilities_active
 CREATE INDEX IF NOT EXISTS idx_account_capabilities_revoked 
   ON account_capabilities(revoked_at) 
   WHERE revoked_at IS NOT NULL;
+
+-- Vincolo: un utente può avere una sola capability attiva per nome
+-- Usa indice unico parziale (non può essere nella CREATE TABLE)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_capabilities_unique_active 
+  ON account_capabilities(user_id, capability_name) 
+  WHERE revoked_at IS NULL;
 
 -- ============================================
 -- STEP 3: Commenti
