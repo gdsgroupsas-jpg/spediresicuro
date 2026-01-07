@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
 /**
  * Dashboard Unificata Clienti per Reseller
- * 
+ *
  * Combina gestione clienti e listini in un'unica interfaccia.
  * Sprint 2 - UX Unification
- * 
+ *
  * Features:
  * - Lista clienti con badge listino inline
  * - Statistiche aggregate
@@ -14,68 +14,70 @@
  * - Creazione clienti
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { 
-  Users, 
-  Plus, 
-  FileText, 
-  Search, 
-  ShieldAlert,
+import {
+  FileText,
+  Filter,
   RefreshCw,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Filter
-} from 'lucide-react'
-import { Toaster, toast } from 'sonner'
+  Search,
+  ShieldAlert,
+  Users,
+} from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Toaster, toast } from "sonner";
 
-import DashboardNav from '@/components/dashboard-nav'
-import { QueryProvider } from '@/components/providers/query-provider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { EmptyState } from '@/components/shared/empty-state'
-import { DataTableSkeleton } from '@/components/shared/data-table-skeleton'
+import DashboardNav from "@/components/dashboard-nav";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { DataTableSkeleton } from "@/components/shared/data-table-skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
-import { ClientStatsCards } from './_components/client-stats-cards'
-import { ClientCardWithListino, type ClientWithListino } from './_components/client-card-with-listino'
-import { AssignListinoDialog } from './_components/assign-listino-dialog'
+import { AssignListinoDialog } from "./_components/assign-listino-dialog";
+import {
+  ClientCardWithListino,
+  type ClientWithListino,
+} from "./_components/client-card-with-listino";
+import { ClientStatsCards } from "./_components/client-stats-cards";
 
-import { CreateUserDialog } from '@/app/dashboard/reseller-team/_components/create-user-dialog'
-import { WalletRechargeDialog } from '@/app/dashboard/reseller-team/_components/wallet-recharge-dialog'
+import { CreateUserDialog } from "@/app/dashboard/reseller-team/_components/create-user-dialog";
+import { WalletRechargeDialog } from "@/app/dashboard/reseller-team/_components/wallet-recharge-dialog";
 
-import { 
-  getResellerClientsWithListino, 
+import {
   getResellerClientsStats,
-  type ClientsStatsResult 
-} from '@/actions/reseller-clients'
+  getResellerClientsWithListino,
+  type ClientsStatsResult,
+} from "@/actions/reseller-clients";
 
-type SortField = 'name' | 'wallet_balance' | 'shipments_count' | 'created_at'
-type SortOrder = 'asc' | 'desc'
-type ListinoFilter = 'all' | 'with' | 'without'
+type SortField = "name" | "wallet_balance" | "shipments_count" | "created_at";
+type SortOrder = "asc" | "desc";
+type ListinoFilter = "all" | "with" | "without";
 
 function ResellerClientiContent() {
-  const router = useRouter()
-  
+  const router = useRouter();
+
   // Data state
-  const [clients, setClients] = useState<ClientWithListino[]>([])
-  const [stats, setStats] = useState<ClientsStatsResult | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [clients, setClients] = useState<ClientWithListino[]>([]);
+  const [stats, setStats] = useState<ClientsStatsResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filter state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [listinoFilter, setListinoFilter] = useState<ListinoFilter>('all')
-  const [sortField, setSortField] = useState<SortField>('created_at')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [searchQuery, setSearchQuery] = useState("");
+  const [listinoFilter, setListinoFilter] = useState<ListinoFilter>("all");
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Dialog state
-  const [selectedClientForListino, setSelectedClientForListino] = useState<ClientWithListino | null>(null)
-  const [selectedClientForWallet, setSelectedClientForWallet] = useState<ClientWithListino | null>(null)
-  const [showAssignDialog, setShowAssignDialog] = useState(false)
-  const [showWalletDialog, setShowWalletDialog] = useState(false)
+  const [selectedClientForListino, setSelectedClientForListino] =
+    useState<ClientWithListino | null>(null);
+  const [selectedClientForWallet, setSelectedClientForWallet] =
+    useState<ClientWithListino | null>(null);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showWalletDialog, setShowWalletDialog] = useState(false);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -83,124 +85,128 @@ function ResellerClientiContent() {
       const [clientsResult, statsResult] = await Promise.all([
         getResellerClientsWithListino(),
         getResellerClientsStats(),
-      ])
+      ]);
 
       if (clientsResult.success && clientsResult.clients) {
-        setClients(clientsResult.clients)
+        setClients(clientsResult.clients);
       }
       if (statsResult.success && statsResult.stats) {
-        setStats(statsResult.stats)
+        setStats(statsResult.stats);
       }
     } catch (error) {
-      console.error('Errore caricamento dati:', error)
-      toast.error('Errore nel caricamento dei dati')
+      console.error("Errore caricamento dati:", error);
+      toast.error("Errore nel caricamento dei dati");
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadData();
+  }, [loadData]);
 
   const handleRefresh = () => {
-    setIsRefreshing(true)
-    loadData()
-  }
+    setIsRefreshing(true);
+    loadData();
+  };
 
   // Filtered and sorted clients
   const filteredClients = useMemo(() => {
-    let result = [...clients]
+    let result = [...clients];
 
     // Search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase();
       result = result.filter(
-        c => c.name.toLowerCase().includes(query) ||
-             c.email.toLowerCase().includes(query) ||
-             c.company_name?.toLowerCase().includes(query)
-      )
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.email.toLowerCase().includes(query) ||
+          c.company_name?.toLowerCase().includes(query)
+      );
     }
 
     // Listino filter
-    if (listinoFilter === 'with') {
-      result = result.filter(c => c.assigned_listino !== null)
-    } else if (listinoFilter === 'without') {
-      result = result.filter(c => c.assigned_listino === null)
+    if (listinoFilter === "with") {
+      result = result.filter((c) => c.assigned_listino !== null);
+    } else if (listinoFilter === "without") {
+      result = result.filter((c) => c.assigned_listino === null);
     }
 
     // Sort
     result.sort((a, b) => {
-      let comparison = 0
+      let comparison = 0;
       switch (sortField) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name)
-          break
-        case 'wallet_balance':
-          comparison = a.wallet_balance - b.wallet_balance
-          break
-        case 'shipments_count':
-          comparison = a.shipments_count - b.shipments_count
-          break
-        case 'created_at':
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          break
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "wallet_balance":
+          comparison = a.wallet_balance - b.wallet_balance;
+          break;
+        case "shipments_count":
+          comparison = a.shipments_count - b.shipments_count;
+          break;
+        case "created_at":
+          comparison =
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
       }
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
-    return result
-  }, [clients, searchQuery, listinoFilter, sortField, sortOrder])
+    return result;
+  }, [clients, searchQuery, listinoFilter, sortField, sortOrder]);
 
   // Handlers
   const handleAssignListino = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId)
+    const client = clients.find((c) => c.id === clientId);
     if (client) {
-      setSelectedClientForListino(client)
-      setShowAssignDialog(true)
+      setSelectedClientForListino(client);
+      setShowAssignDialog(true);
     }
-  }
+  };
 
   const handleCreateListino = (clientId: string) => {
     // Naviga alla pagina di creazione listino personalizzato con client preselezionato
-    router.push(`/dashboard/reseller/listini-personalizzati?clientId=${clientId}`)
-  }
+    router.push(
+      `/dashboard/reseller/listini-personalizzati?clientId=${clientId}`
+    );
+  };
 
   const handleManageWallet = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId)
+    const client = clients.find((c) => c.id === clientId);
     if (client) {
-      setSelectedClientForWallet(client as any)
-      setShowWalletDialog(true)
+      setSelectedClientForWallet(client as any);
+      setShowWalletDialog(true);
     }
-  }
+  };
 
   const handleViewShipments = (clientId: string) => {
-    router.push(`/dashboard/spedizioni?userId=${clientId}`)
-  }
+    router.push(`/dashboard/spedizioni?userId=${clientId}`);
+  };
 
   const handleEditClient = (clientId: string) => {
     // Per ora naviga al team page, in futuro dialog inline
-    router.push(`/dashboard/reseller-team?edit=${clientId}`)
-  }
+    router.push(`/dashboard/reseller-team?edit=${clientId}`);
+  };
 
   const handleUserCreated = () => {
-    loadData()
-    toast.success('Cliente creato con successo')
-  }
+    loadData();
+    toast.success("Cliente creato con successo");
+  };
 
   const handleListinoAssigned = () => {
-    setShowAssignDialog(false)
-    setSelectedClientForListino(null)
-    loadData()
-  }
+    setShowAssignDialog(false);
+    setSelectedClientForListino(null);
+    loadData();
+  };
 
   const handleWalletSuccess = () => {
-    setShowWalletDialog(false)
-    setSelectedClientForWallet(null)
-    loadData()
-    toast.success('Wallet aggiornato con successo')
-  }
+    setShowWalletDialog(false);
+    setSelectedClientForWallet(null);
+    loadData();
+    toast.success("Wallet aggiornato con successo");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10">
@@ -209,8 +215,8 @@ function ResellerClientiContent() {
           title="I Miei Clienti"
           subtitle="Gestisci clienti, listini e wallet in un'unica dashboard"
           breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Clienti' },
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Clienti" },
           ]}
           actions={
             <div className="flex items-center gap-2">
@@ -220,7 +226,11 @@ function ResellerClientiContent() {
                 onClick={handleRefresh}
                 disabled={isRefreshing}
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${
+                    isRefreshing ? "animate-spin" : ""
+                  }`}
+                />
                 Aggiorna
               </Button>
               <CreateUserDialog onSuccess={handleUserCreated} />
@@ -248,7 +258,9 @@ function ResellerClientiContent() {
             {/* Listino Filter */}
             <Select
               value={listinoFilter}
-              onChange={(e) => setListinoFilter(e.target.value as ListinoFilter)}
+              onChange={(e) =>
+                setListinoFilter(e.target.value as ListinoFilter)
+              }
               className="w-full md:w-48"
             >
               <option value="all">Tutti i clienti</option>
@@ -260,9 +272,9 @@ function ResellerClientiContent() {
             <Select
               value={`${sortField}-${sortOrder}`}
               onChange={(e) => {
-                const [field, order] = e.target.value.split('-')
-                setSortField(field as SortField)
-                setSortOrder(order as SortOrder)
+                const [field, order] = e.target.value.split("-");
+                setSortField(field as SortField);
+                setSortOrder(order as SortOrder);
               }}
               className="w-full md:w-48"
             >
@@ -277,26 +289,26 @@ function ResellerClientiContent() {
           </div>
 
           {/* Active filters summary */}
-          {(searchQuery || listinoFilter !== 'all') && (
+          {(searchQuery || listinoFilter !== "all") && (
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
               <Filter className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-500">Filtri attivi:</span>
               {searchQuery && (
                 <Badge variant="secondary" className="text-xs">
-                  Ricerca: "{searchQuery}"
+                  Ricerca: &quot;{searchQuery}&quot;
                 </Badge>
               )}
-              {listinoFilter !== 'all' && (
+              {listinoFilter !== "all" && (
                 <Badge variant="secondary" className="text-xs">
-                  {listinoFilter === 'with' ? 'Con listino' : 'Senza listino'}
+                  {listinoFilter === "with" ? "Con listino" : "Senza listino"}
                 </Badge>
               )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setSearchQuery('')
-                  setListinoFilter('all')
+                  setSearchQuery("");
+                  setListinoFilter("all");
                 }}
                 className="text-xs text-gray-500 hover:text-gray-700 h-6"
               >
@@ -329,8 +341,8 @@ function ResellerClientiContent() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setSearchQuery('')
-                      setListinoFilter('all')
+                      setSearchQuery("");
+                      setListinoFilter("all");
                     }}
                   >
                     Resetta filtri
@@ -343,20 +355,24 @@ function ResellerClientiContent() {
               {/* Results count */}
               <div className="flex items-center justify-between px-1">
                 <p className="text-sm text-gray-500">
-                  {filteredClients.length} {filteredClients.length === 1 ? 'cliente' : 'clienti'}
-                  {filteredClients.length !== clients.length && ` su ${clients.length} totali`}
+                  {filteredClients.length}{" "}
+                  {filteredClients.length === 1 ? "cliente" : "clienti"}
+                  {filteredClients.length !== clients.length &&
+                    ` su ${clients.length} totali`}
                 </p>
-                {stats && stats.clientsWithoutListino > 0 && listinoFilter === 'all' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setListinoFilter('without')}
-                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                  >
-                    <FileText className="w-4 h-4 mr-1" />
-                    {stats.clientsWithoutListino} senza listino
-                  </Button>
-                )}
+                {stats &&
+                  stats.clientsWithoutListino > 0 &&
+                  listinoFilter === "all" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setListinoFilter("without")}
+                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    >
+                      <FileText className="w-4 h-4 mr-1" />
+                      {stats.clientsWithoutListino} senza listino
+                    </Button>
+                  )}
               </div>
 
               {/* Cards */}
@@ -386,8 +402,8 @@ function ResellerClientiContent() {
           currentListinoId={selectedClientForListino.assigned_listino?.id}
           onSuccess={handleListinoAssigned}
           onCreateNew={() => {
-            setShowAssignDialog(false)
-            handleCreateListino(selectedClientForListino.id)
+            setShowAssignDialog(false);
+            handleCreateListino(selectedClientForListino.id);
           }}
         />
       )}
@@ -397,8 +413,8 @@ function ResellerClientiContent() {
           user={selectedClientForWallet as any}
           isOpen={showWalletDialog}
           onClose={() => {
-            setShowWalletDialog(false)
-            setSelectedClientForWallet(null)
+            setShowWalletDialog(false);
+            setSelectedClientForWallet(null);
           }}
           onSuccess={handleWalletSuccess}
         />
@@ -406,11 +422,11 @@ function ResellerClientiContent() {
 
       <Toaster position="top-right" richColors />
     </div>
-  )
+  );
 }
 
 function AccessDenied() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10 flex items-center justify-center">
@@ -418,62 +434,64 @@ function AccessDenied() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="h-8 w-8 text-red-600" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Accesso Negato
+        </h1>
         <p className="text-gray-600 mb-6">
           Questa sezione è riservata ai Reseller.
         </p>
-        <Button onClick={() => router.push('/dashboard')} variant="outline">
+        <Button onClick={() => router.push("/dashboard")} variant="outline">
           Torna alla Dashboard
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 export default function ResellerClientiPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isReseller, setIsReseller] = useState<boolean | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isReseller, setIsReseller] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function checkResellerStatus() {
-      if (status === 'loading') return
+      if (status === "loading") return;
 
       if (!session?.user?.email) {
-        router.push('/auth/signin')
-        return
+        router.push("/auth/signin");
+        return;
       }
 
       try {
-        const response = await fetch('/api/user/info')
+        const response = await fetch("/api/user/info");
         if (response.ok) {
-          const data = await response.json()
-          const userData = data.user || data
-          const accountType = userData.account_type || userData.accountType
-          
+          const data = await response.json();
+          const userData = data.user || data;
+          const accountType = userData.account_type || userData.accountType;
+
           // Reseller, admin o superadmin possono accedere
-          const hasAccess = 
-            accountType === 'superadmin' || 
-            accountType === 'admin' || 
-            userData.is_reseller === true
-          
-          setIsReseller(hasAccess)
+          const hasAccess =
+            accountType === "superadmin" ||
+            accountType === "admin" ||
+            userData.is_reseller === true;
+
+          setIsReseller(hasAccess);
         } else {
-          setIsReseller(false)
+          setIsReseller(false);
         }
       } catch (error) {
-        console.error('Errore verifica ruolo:', error)
-        setIsReseller(false)
+        console.error("Errore verifica ruolo:", error);
+        setIsReseller(false);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    checkResellerStatus()
-  }, [session, status, router])
+    checkResellerStatus();
+  }, [session, status, router]);
 
-  if (status === 'loading' || isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10 flex items-center justify-center">
         <div className="text-center">
@@ -481,20 +499,20 @@ export default function ResellerClientiPage() {
           <p className="text-gray-600">Caricamento...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!session) {
-    return null
+    return null;
   }
 
   if (!isReseller) {
-    return <AccessDenied />
+    return <AccessDenied />;
   }
 
   return (
     <QueryProvider>
       <ResellerClientiContent />
     </QueryProvider>
-  )
+  );
 }
