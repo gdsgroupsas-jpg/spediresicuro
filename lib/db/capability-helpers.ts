@@ -74,7 +74,7 @@ export async function hasCapability(
  * @param user - Dati utente per fallback
  * @returns true se capability concessa via fallback
  */
-function hasCapabilityFallback(
+export function hasCapabilityFallback(
   capabilityName: string,
   user?: {
     role?: string;
