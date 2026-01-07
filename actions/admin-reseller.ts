@@ -58,8 +58,11 @@ async function canViewAllClients(): Promise<{ canView: boolean; userId?: string;
     const session = await auth()
     
     if (!session?.user?.email) {
+      console.error('❌ [canViewAllClients] Non autenticato')
       return { canView: false, error: 'Non autenticato' }
     }
+
+    console.log('🔍 [canViewAllClients] Verifica per:', session.user.email)
 
     const { data: user, error } = await supabaseAdmin
       .from('users')
@@ -68,11 +71,15 @@ async function canViewAllClients(): Promise<{ canView: boolean; userId?: string;
       .single()
 
     if (error || !user) {
+      console.error('❌ [canViewAllClients] Utente non trovato:', { error: error?.message, email: session.user.email })
       return { canView: false, error: 'Utente non trovato' }
     }
 
+    console.log('✅ [canViewAllClients] Utente trovato:', { id: user.id, account_type: user.account_type, role: user.role })
+
     // Superadmin può sempre vedere tutto
     if (user.account_type === 'superadmin') {
+      console.log('✅ [canViewAllClients] Superadmin - accesso concesso')
       return { canView: true, userId: user.id }
     }
 
@@ -82,12 +89,18 @@ async function canViewAllClients(): Promise<{ canView: boolean; userId?: string;
       role: user.role,
     })
 
+    console.log('🔍 [canViewAllClients] Capability check:', { hasCap, account_type: user.account_type })
+
     return { 
       canView: hasCap, 
       userId: user.id 
     }
   } catch (error: any) {
-    console.error('Errore verifica canViewAllClients:', error)
+    console.error('❌ [canViewAllClients] Errore critico:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack?.split('\n').slice(0, 3).join('\n')
+    })
     return { canView: false, error: error.message }
   }
 }
@@ -711,66 +724,162 @@ export async function getAllClientsForUser(): Promise<{
     const session = await auth()
     
     if (!session?.user?.email) {
+      console.error('❌ [getAllClientsForUser] Non autenticato')
       return {
         success: false,
         error: 'Non autenticato.',
       }
     }
 
+    console.log('✅ [getAllClientsForUser] Utente autenticato:', session.user.email)
+
     // 2. Verifica che l'utente possa vedere tutti i clienti
     const canViewAll = await canViewAllClients()
+    console.log('🔍 [getAllClientsForUser] canViewAllClients result:', { 
+      canView: canViewAll.canView, 
+      userId: canViewAll.userId,
+      error: canViewAll.error 
+    })
+    
     if (!canViewAll.canView || !canViewAll.userId) {
+      console.error('❌ [getAllClientsForUser] Accesso negato:', canViewAll.error)
       return {
         success: false,
-        error: 'Solo Superadmin/Admin possono visualizzare tutti i clienti.',
+        error: canViewAll.error || 'Solo Superadmin/Admin possono visualizzare tutti i clienti.',
       }
     }
 
     // 3. Recupera tutti i Reseller con statistiche (incluso reseller_tier)
-    const { data: resellers, error: resellersError } = await supabaseAdmin
+    // FIX: Resiliente a colonne opzionali mancanti (company_name, phone, reseller_tier)
+    let resellers: any[] | null = null
+    let resellersError: any = null
+    
+    // Strategia fallback progressivo:
+    // 1. Prova con tutte le colonne (incluse opzionali)
+    // 2. Se fallisce per colonna mancante, prova solo colonne essenziali
+    // 3. Aggiungi campi opzionali come null se mancanti
+    
+    const { data: resellersFull, error: errorFull } = await supabaseAdmin
       .from('users')
       .select('id, email, name, company_name, phone, wallet_balance, created_at, reseller_tier')
       .eq('is_reseller', true)
       .order('created_at', { ascending: false })
 
+    if (errorFull) {
+      // Se errore per colonna mancante, prova solo colonne essenziali
+      const isColumnMissing = errorFull.message?.includes('column') && 
+                               errorFull.message?.includes('does not exist')
+      
+      if (isColumnMissing) {
+        const missingColumn = errorFull.message.match(/column "?(\w+)"? does not exist/i)?.[1]
+        console.warn(`⚠️ [RESILIENCE] Colonna ${missingColumn} non trovata, uso query con solo colonne essenziali`)
+        
+        const { data: resellersEssential, error: errorEssential } = await supabaseAdmin
+          .from('users')
+          .select('id, email, name, wallet_balance, created_at')
+          .eq('is_reseller', true)
+          .order('created_at', { ascending: false })
+        
+        if (errorEssential) {
+          resellersError = errorEssential
+        } else {
+          // Aggiungi campi opzionali come null per compatibilità
+          resellers = (resellersEssential || []).map(r => ({ 
+            ...r, 
+            company_name: null,
+            phone: null,
+            reseller_tier: null
+          }))
+        }
+      } else {
+        // Errore diverso, fallisce
+        resellersError = errorFull
+      }
+    } else {
+      resellers = resellersFull
+    }
+
     if (resellersError) {
-      console.error('Errore recupero Reseller:', resellersError)
+      console.error('❌ [getAllClientsForUser] Errore recupero Reseller:', {
+        message: resellersError.message,
+        code: resellersError.code,
+        details: resellersError.details,
+        hint: resellersError.hint
+      })
       return {
         success: false,
         error: resellersError.message || 'Errore durante il recupero dei Reseller.',
       }
     }
 
+    console.log('✅ [getAllClientsForUser] Reseller recuperati:', resellers?.length || 0)
+
     // 4. Per ogni Reseller, recupera i Sub-Users
+    // FIX: Resiliente a colonne opzionali mancanti
     const resellersWithSubUsers = await Promise.all(
       (resellers || []).map(async (reseller) => {
-        const { data: subUsers, error: subUsersError } = await supabaseAdmin
+        // Prova prima con tutte le colonne
+        let subUsers: any[] = []
+        const { data: subUsersFull, error: subUsersErrorFull } = await supabaseAdmin
           .from('users')
           .select('id, email, name, company_name, phone, wallet_balance, created_at')
           .eq('parent_id', reseller.id)
           .eq('is_reseller', false)
           .order('created_at', { ascending: false })
 
-        if (subUsersError) {
-          console.error(`Errore recupero Sub-Users per reseller ${reseller.id}:`, subUsersError)
-          return {
-            reseller,
-            subUsers: [],
-            stats: {
-              totalSubUsers: 0,
-              totalWalletBalance: 0,
-            },
+        if (subUsersErrorFull) {
+          // Se errore per colonna mancante, prova solo colonne essenziali
+          const isColumnMissing = subUsersErrorFull.message?.includes('column') && 
+                                   subUsersErrorFull.message?.includes('does not exist')
+          
+          if (isColumnMissing) {
+            const { data: subUsersEssential, error: subUsersErrorEssential } = await supabaseAdmin
+              .from('users')
+              .select('id, email, name, wallet_balance, created_at')
+              .eq('parent_id', reseller.id)
+              .eq('is_reseller', false)
+              .order('created_at', { ascending: false })
+            
+            if (subUsersErrorEssential) {
+              console.error(`❌ [getAllClientsForUser] Errore recupero Sub-Users per reseller ${reseller.id}:`, subUsersErrorEssential)
+              return {
+                reseller,
+                subUsers: [],
+                stats: {
+                  totalSubUsers: 0,
+                  totalWalletBalance: 0,
+                },
+              }
+            } else {
+              // Aggiungi campi opzionali come null
+              subUsers = (subUsersEssential || []).map(su => ({
+                ...su,
+                company_name: null,
+                phone: null
+              }))
+            }
+          } else {
+            console.error(`❌ [getAllClientsForUser] Errore recupero Sub-Users per reseller ${reseller.id}:`, subUsersErrorFull)
+            return {
+              reseller,
+              subUsers: [],
+              stats: {
+                totalSubUsers: 0,
+                totalWalletBalance: 0,
+              },
+            }
           }
+        } else {
+          subUsers = subUsersFull || []
         }
 
-        const subUsersList = subUsers || []
-        const totalWalletBalance = subUsersList.reduce((sum, su) => sum + (su.wallet_balance || 0), 0)
+        const totalWalletBalance = subUsers.reduce((sum, su) => sum + (su.wallet_balance || 0), 0)
 
         return {
           reseller,
-          subUsers: subUsersList,
+          subUsers,
           stats: {
-            totalSubUsers: subUsersList.length,
+            totalSubUsers: subUsers.length,
             totalWalletBalance,
           },
         }
@@ -778,15 +887,44 @@ export async function getAllClientsForUser(): Promise<{
     )
 
     // 5. Recupera tutti i BYOC clients
-    const { data: byocClients, error: byocError } = await supabaseAdmin
+    // FIX: Resiliente a colonne opzionali mancanti
+    let byocClients: any[] = []
+    const { data: byocClientsFull, error: byocErrorFull } = await supabaseAdmin
       .from('users')
       .select('id, email, name, company_name, phone, wallet_balance, created_at')
       .eq('account_type', 'byoc')
       .order('created_at', { ascending: false })
 
-    if (byocError) {
-      console.error('Errore recupero BYOC clients:', byocError)
-      // Non bloccante, continua con reseller
+    if (byocErrorFull) {
+      // Se errore per colonna mancante, prova solo colonne essenziali
+      const isColumnMissing = byocErrorFull.message?.includes('column') && 
+                               byocErrorFull.message?.includes('does not exist')
+      
+      if (isColumnMissing) {
+        console.warn('⚠️ [RESILIENCE] Colonna opzionale mancante per BYOC, uso query essenziali')
+        const { data: byocClientsEssential, error: byocErrorEssential } = await supabaseAdmin
+          .from('users')
+          .select('id, email, name, wallet_balance, created_at')
+          .eq('account_type', 'byoc')
+          .order('created_at', { ascending: false })
+        
+        if (byocErrorEssential) {
+          console.error('❌ [getAllClientsForUser] Errore recupero BYOC clients:', byocErrorEssential)
+          // Non bloccante, continua con reseller
+        } else {
+          // Aggiungi campi opzionali come null
+          byocClients = (byocClientsEssential || []).map(b => ({
+            ...b,
+            company_name: null,
+            phone: null
+          }))
+        }
+      } else {
+        console.error('❌ [getAllClientsForUser] Errore recupero BYOC clients:', byocErrorFull)
+        // Non bloccante, continua con reseller
+      }
+    } else {
+      byocClients = byocClientsFull || []
     }
 
     // 6. Calcola statistiche aggregate
@@ -796,6 +934,15 @@ export async function getAllClientsForUser(): Promise<{
     const totalWalletBalance = 
       resellersWithSubUsers.reduce((sum, r) => sum + (r.reseller.wallet_balance || 0) + r.stats.totalWalletBalance, 0) +
       (byocClients || []).reduce((sum, b) => sum + (b.wallet_balance || 0), 0)
+
+    console.log('✅ [getAllClientsForUser] Dati completati:', {
+      resellers: resellersWithSubUsers.length,
+      byocClients: (byocClients || []).length,
+      totalResellers,
+      totalSubUsers,
+      totalBYOC,
+      totalWalletBalance
+    })
 
     return {
       success: true,
@@ -811,7 +958,11 @@ export async function getAllClientsForUser(): Promise<{
       },
     }
   } catch (error: any) {
-    console.error('Errore in getAllClientsForUser:', error)
+    console.error('❌ [getAllClientsForUser] Errore critico:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack?.split('\n').slice(0, 5).join('\n'),
+    })
     return {
       success: false,
       error: error.message || 'Errore sconosciuto.',

@@ -54,20 +54,20 @@ export function UserActionsMenu({
 
         <DropdownMenuItem onClick={() => onRechargeWallet(user)}>
           <Wallet className="mr-2 h-4 w-4 text-green-600" />
-          Gestisci Wallet
+          <span className="text-gray-900">Gestisci Wallet</span>
         </DropdownMenuItem>
 
         {onViewShipments && (
           <DropdownMenuItem onClick={() => onViewShipments(user)}>
             <Package className="mr-2 h-4 w-4 text-blue-600" />
-            Vedi Spedizioni
+            <span className="text-gray-900">Vedi Spedizioni</span>
           </DropdownMenuItem>
         )}
 
         {onViewDetails && (
           <DropdownMenuItem onClick={() => onViewDetails(user)}>
             <User className="mr-2 h-4 w-4 text-gray-600" />
-            Dettagli Cliente
+            <span className="text-gray-900">Dettagli Cliente</span>
           </DropdownMenuItem>
         )}
 
@@ -77,7 +77,6 @@ export function UserActionsMenu({
             <DropdownMenuItem
               onClick={() => onDelete(user)}
               destructive
-              className="text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Elimina Cliente
