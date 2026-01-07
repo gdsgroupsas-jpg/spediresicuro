@@ -98,18 +98,18 @@ Eseguire: `scripts/test-migrations-081-087.sql`
 - [x] **Idempotenza testata** (IF NOT EXISTS / IF EXISTS)
 - [x] **Script verifica disponibile** (`scripts/test-migrations-081-087.sql`)
 - [x] **Regression test passati** (codice TypeScript funziona)
-- [ ] **Test su staging** (se disponibile)
+- [x] **Test su staging** ✅ **PASSATI** (script `test-staging-verification.sql` eseguito con successo)
 - [ ] **Backup database** (se produzione)
-- [ ] **Review code** (PR #37)
+- [x] **Review code** (PR #37) ✅ APPROVATO
 
 ---
 
 ## 🚀 Prossimi Passi
 
 1. ✅ **Migrazioni eseguite** - COMPLETATO
-2. ⏳ **Test su staging** - Da fare (se disponibile)
-3. ⏳ **Merge PR #37** - Da fare dopo review
-4. ⏳ **Deploy produzione** - Da fare dopo merge
+2. ✅ **Test su staging** - COMPLETATO (script verificato con successo)
+3. ✅ **Merge PR #37** - COMPLETATO
+4. ✅ **Deploy produzione** - IN CORSO (automatico via Vercel)
 
 ---
 
