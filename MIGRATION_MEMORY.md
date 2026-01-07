@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -934,4 +934,47 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 # Expected: Testi neri leggibili, contrasto ottimizzato
 # Test come reseller: stessa pagina
 # Expected: Vista originale (solo propri Sub-Users)
+```
+
+### ✅ SPRINT 1: FINANCIAL TRACKING INFRASTRUCTURE (7 Gennaio 2026)
+
+**Obiettivo:** Tracciare i costi reali che SpedireSicuro paga ai corrieri quando i Reseller/BYOC usano contratti piattaforma, per calcolo P&L e riconciliazione.
+
+**Database Migrations (4 file SQL):**
+- `090_platform_provider_costs.sql` - Tabella principale costi piattaforma con margini calcolati via trigger
+- `091_shipments_api_source.sql` - Campo `api_source` su shipments per tracking fonte contratto
+- `092_platform_pnl_views.sql` - 5 viste per P&L giornaliero/mensile, alert margini, riconciliazione
+- `093_financial_audit_log.sql` - Audit log finanziario immutabile per compliance
+
+**Business Logic TypeScript:**
+- `lib/shipments/platform-cost-recorder.ts` - Recording costi con graceful degradation
+- `lib/pricing/platform-cost-calculator.ts` - Determinazione api_source + calcolo provider_cost
+- `lib/shipments/create-shipment-core.ts` - Integrazione (linee 363-410): detection + recording
+
+**Funzionalità:**
+- **API Source Detection:** platform | reseller_own | byoc_own | unknown
+- **Cost Source Fallback Chain:** api_realtime → master_list → historical_avg → estimate
+- **Margini automatici:** Calcolati via trigger PostgreSQL (no IMMUTABLE issues)
+- **RLS:** Solo SuperAdmin vede dati finanziari
+- **Graceful Degradation:** Errori non bloccano creazione spedizione
+
+**Test:**
+- ✅ `tests/unit/platform-cost-recorder.test.ts` - 13 test
+- ✅ `tests/unit/platform-cost-calculator.test.ts` - 16 test
+- ✅ Suite completa: 590/590 test passati, 0 regressioni
+
+**Deploy Status:**
+- [x] Migrations 090-093 applicate con successo ✅
+- [x] Database pronto per financial tracking
+- [ ] Backfill api_source per shipments esistenti (opzionale, post-launch)
+
+**Come verificare:**
+```bash
+# Test unitari
+npx vitest run tests/unit/platform-cost-recorder.test.ts tests/unit/platform-cost-calculator.test.ts
+# Expected: 29 test passed
+
+# Verificare integrazione in create-shipment-core.ts
+grep -A20 "SPRINT 1: FINANCIAL TRACKING" lib/shipments/create-shipment-core.ts
+# Expected: sezione con determineApiSource, updateShipmentApiSource, recordPlatformCost
 ```
