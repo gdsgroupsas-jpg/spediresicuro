@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE | ✅ SPRINT 2 UX UNIFICATION DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE | ✅ SPRINT 2 UX UNIFICATION DONE | ✅ SPRINT 3 OPTIMIZATION DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -1021,4 +1021,55 @@ grep -A20 "SPRINT 1: FINANCIAL TRACKING" lib/shipments/create-shipment-core.ts
 # Dashboard Clienti: /dashboard/reseller/clienti (come reseller)
 # Financial Dashboard: /dashboard/super-admin/financial (come superadmin)
 # Expected: Period selector, Export CSV, tab Analytics
+```
+
+### ✅ SPRINT 3: OPTIMIZATION & HARDENING (7 Gennaio 2026)
+
+**Obiettivo:** Performance, monitoring e refactoring per produzione.
+
+**TASK 3.1: Performance Optimization**
+- `lib/services/pricing/pricing-service.ts` - PricingService con caching configurabile
+- Singleton pattern per riuso servizi
+- Cache TTL configurabile (default 5 min)
+
+**TASK 3.2: Monitoring & Alerting**
+- `lib/services/financial/financial-alerts-service.ts` - Alert automatici per:
+  - Margini negativi (threshold -10€, severity warning/critical)
+  - Riconciliazione scaduta (> 7 giorni pending)
+- `app/api/cron/financial-alerts/route.ts` - Endpoint cron per alert
+- `app/api/cron/auto-reconciliation/route.ts` - Auto-riconciliazione
+- Integrazione Slack webhook per notifiche
+- Vercel cron jobs configurati:
+  - `/api/cron/financial-alerts` → 8:00 AM daily
+  - `/api/cron/auto-reconciliation` → 2:00 AM daily
+
+**TASK 3.3: Refactoring Tech Debt**
+- `lib/services/financial/reconciliation-service.ts` - Servizio riconciliazione estratto
+- Auto-match margini positivi > 7 giorni
+- Auto-flag margini negativi come discrepancy
+- `lib/services/financial/index.ts` - Export centralizzato
+
+**Variabili ambiente richieste (opzionali):**
+```env
+SLACK_FINANCIAL_ALERTS_WEBHOOK=https://hooks.slack.com/...
+CRON_SECRET=your-secret-token
+SYSTEM_USER_ID=uuid-for-auto-operations
+ALERT_NEGATIVE_MARGIN_THRESHOLD=-10
+ALERT_RECONCILIATION_DAYS=7
+```
+
+**Test Results:**
+- ✅ 811/811 test passati
+- ✅ 54/55 file test passati (1 skipped)
+- ✅ 0 regressioni
+
+**Come verificare:**
+```bash
+# Test completo
+npx vitest run
+# Expected: 811 tests passed
+
+# Test cron endpoints (locale)
+curl http://localhost:3000/api/cron/financial-alerts
+curl http://localhost:3000/api/cron/auto-reconciliation
 ```
