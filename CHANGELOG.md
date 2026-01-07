@@ -9,6 +9,16 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- **Fase 4: Gestione Clienti UI Gerarchica** - Vista unificata clienti per Superadmin/Admin
+  - `getAllClientsForUser()` - Backend: struttura gerarchica Reseller → Sub-Users + BYOC
+  - `ClientsHierarchyView` - Frontend: componente gerarchico con ResellerCard expandable
+  - `BYOCSection` - Frontend: sezione dedicata clienti BYOC standalone
+  - `useAllClients()` - Hook React Query per fetch dati gerarchici
+  - Superadmin vede tutti i clienti in modo gerarchico (Reseller → Sub-Users nested + BYOC)
+  - Reseller mantiene vista originale (solo propri Sub-Users) - non breaking
+  - Stats aggregate: Reseller, Sub-Users, BYOC, Wallet Totale
+  - Access control: capability `can_view_all_clients` o `account_type === 'superadmin'`
+  - Test: 5/5 backend, 765/765 suite completa, 0 regressioni
 - **Reseller System Enhancement** - Miglioramenti sistema reseller
   - Reseller creati con `account_type='reseller'` invece di `'user'`
   - Migration per aggiungere `'reseller'` all'enum `account_type`
