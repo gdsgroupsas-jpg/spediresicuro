@@ -1,6 +1,6 @@
 # MIGRATION_MEMORY.md
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE | ✅ SPRINT 2 UX UNIFICATION DONE | ✅ SPRINT 3 OPTIMIZATION DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 1. **Strangler Fig:** Il codice Legacy è il paracadute. Non cancellarlo mai.
@@ -934,4 +934,145 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 # Expected: Testi neri leggibili, contrasto ottimizzato
 # Test come reseller: stessa pagina
 # Expected: Vista originale (solo propri Sub-Users)
+```
+
+### ✅ SPRINT 1: FINANCIAL TRACKING INFRASTRUCTURE (7 Gennaio 2026)
+
+**Obiettivo:** Tracciare i costi reali che SpedireSicuro paga ai corrieri quando i Reseller/BYOC usano contratti piattaforma, per calcolo P&L e riconciliazione.
+
+**Database Migrations (6 file SQL):**
+- `090_platform_provider_costs.sql` - Tabella principale costi piattaforma con margini calcolati via trigger
+- `091_shipments_api_source.sql` - Campo `api_source` su shipments per tracking fonte contratto
+- `092_platform_pnl_views.sql` - 5 viste per P&L giornaliero/mensile, alert margini, riconciliazione
+- `093_financial_audit_log.sql` - Audit log finanziario immutabile per compliance
+- `094_fix_record_platform_provider_cost_alert.sql` - Fix bug alert margini negativi (WHERE EXISTS LIMIT 0)
+- `095_secure_rpc_functions.sql` - 🔒 SECURITY HOTFIX: Revoca permessi pubblici su RPC critiche (solo service_role)
+
+**Business Logic TypeScript:**
+- `lib/shipments/platform-cost-recorder.ts` - Recording costi con graceful degradation
+- `lib/pricing/platform-cost-calculator.ts` - Determinazione api_source + calcolo provider_cost
+- `lib/shipments/create-shipment-core.ts` - Integrazione (linee 363-410): detection + recording
+
+**Funzionalità:**
+- **API Source Detection:** platform | reseller_own | byoc_own | unknown
+- **Cost Source Fallback Chain:** api_realtime → master_list → historical_avg → estimate
+- **Margini automatici:** Calcolati via trigger PostgreSQL (no IMMUTABLE issues)
+- **RLS:** Solo SuperAdmin vede dati finanziari
+- **Graceful Degradation:** Errori non bloccano creazione spedizione
+
+**Test:**
+- ✅ `tests/unit/platform-cost-recorder.test.ts` - 13 test
+- ✅ `tests/unit/platform-cost-calculator.test.ts` - 16 test
+- ✅ Suite completa: 590/590 test passati, 0 regressioni
+
+**Deploy Status:**
+- [x] Migrations 090-094 applicate con successo ✅
+- [x] Migration 095 (Security Hotfix) applicata ✅
+- [x] Database pronto per financial tracking
+- [x] Fix bug alert margini negativi applicato ✅
+- [x] 🔒 Vulnerabilità sicurezza RPC risolta (solo service_role può eseguire) ✅
+- [ ] Backfill api_source per shipments esistenti (opzionale, post-launch)
+
+**Come verificare:**
+```bash
+# Test unitari
+npx vitest run tests/unit/platform-cost-recorder.test.ts tests/unit/platform-cost-calculator.test.ts
+# Expected: 29 test passed
+
+# Verificare integrazione in create-shipment-core.ts
+grep -A20 "SPRINT 1: FINANCIAL TRACKING" lib/shipments/create-shipment-core.ts
+# Expected: sezione con determineApiSource, updateShipmentApiSource, recordPlatformCost
+```
+
+### ✅ SPRINT 2: UX UNIFICATION (7 Gennaio 2026)
+
+**Obiettivo:** Unificare UX per gestione clienti e dashboard finanziaria con nuove funzionalità.
+
+**TASK 2.1: Dashboard Unificata Clienti per Reseller**
+- `app/dashboard/reseller/clienti/page.tsx` - Pagina principale unificata
+- `app/dashboard/reseller/clienti/_components/client-stats-cards.tsx` - KPI cards clienti
+- `app/dashboard/reseller/clienti/_components/client-card-with-listino.tsx` - Card cliente con listino inline
+- `app/dashboard/reseller/clienti/_components/assign-listino-dialog.tsx` - Dialog assegnazione listini
+- `actions/reseller-clients.ts` - Actions per clienti con listini
+
+**Funzionalità Dashboard Clienti:**
+- Lista clienti con badge listino assegnato inline
+- Statistiche aggregate (totale clienti, wallet, spedizioni, con/senza listino)
+- Assegnazione rapida listino da dropdown menu
+- Filtri per nome/email, con/senza listino
+- Ordinamento per data, nome, saldo, spedizioni
+- Link rapido a wallet, spedizioni, creazione listino
+
+**TASK 2.2: Financial Dashboard Enhanced**
+- `app/dashboard/super-admin/financial/_components/period-selector.tsx` - Filtro periodo
+- `app/dashboard/super-admin/financial/_components/margin-by-courier-chart.tsx` - Grafico margini per corriere
+- `app/dashboard/super-admin/financial/_components/top-resellers-table.tsx` - Classifica top resellers
+- `actions/platform-costs.ts` - Actions: getMarginByCourierAction, getTopResellersAction, exportFinancialCSVAction
+
+**Nuove Features Financial Dashboard:**
+- Period Selector (7d, 30d, 90d, YTD, all)
+- Export CSV funzionante
+- Tab Analytics con charts
+
+**TASK 2.3: Navigation Update**
+- `lib/config/navigationConfig.ts` - Aggiornata navigazione
+- Nuova voce I Miei Clienti per Reseller
+- Nuova sezione Finanza Piattaforma per SuperAdmin
+
+**Come verificare:**
+```bash
+# Dashboard Clienti: /dashboard/reseller/clienti (come reseller)
+# Financial Dashboard: /dashboard/super-admin/financial (come superadmin)
+# Expected: Period selector, Export CSV, tab Analytics
+```
+
+### ✅ SPRINT 3: OPTIMIZATION & HARDENING (7 Gennaio 2026)
+
+**Obiettivo:** Performance, monitoring e refactoring per produzione.
+
+**TASK 3.1: Performance Optimization**
+- `lib/services/pricing/pricing-service.ts` - PricingService con caching configurabile
+- Singleton pattern per riuso servizi
+- Cache TTL configurabile (default 5 min)
+
+**TASK 3.2: Monitoring & Alerting**
+- `lib/services/financial/financial-alerts-service.ts` - Alert automatici per:
+  - Margini negativi (threshold -10€, severity warning/critical)
+  - Riconciliazione scaduta (> 7 giorni pending)
+- `app/api/cron/financial-alerts/route.ts` - Endpoint cron per alert
+- `app/api/cron/auto-reconciliation/route.ts` - Auto-riconciliazione
+- Integrazione Slack webhook per notifiche
+- Vercel cron jobs configurati:
+  - `/api/cron/financial-alerts` → 8:00 AM daily
+  - `/api/cron/auto-reconciliation` → 2:00 AM daily
+
+**TASK 3.3: Refactoring Tech Debt**
+- `lib/services/financial/reconciliation-service.ts` - Servizio riconciliazione estratto
+- Auto-match margini positivi > 7 giorni
+- Auto-flag margini negativi come discrepancy
+- `lib/services/financial/index.ts` - Export centralizzato
+
+**Variabili ambiente richieste (opzionali):**
+```env
+SLACK_FINANCIAL_ALERTS_WEBHOOK=https://hooks.slack.com/...
+CRON_SECRET=your-secret-token
+SYSTEM_USER_ID=uuid-for-auto-operations
+ALERT_NEGATIVE_MARGIN_THRESHOLD=-10
+ALERT_RECONCILIATION_DAYS=7
+```
+
+**Test Results:**
+- ✅ 811/811 test passati
+- ✅ 54/55 file test passati (1 skipped)
+- ✅ 0 regressioni
+
+**Come verificare:**
+```bash
+# Test completo
+npx vitest run
+# Expected: 811 tests passed
+
+# Test cron endpoints (locale)
+curl http://localhost:3000/api/cron/financial-alerts
+curl http://localhost:3000/api/cron/auto-reconciliation
 ```
