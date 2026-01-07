@@ -11,7 +11,7 @@
 UPDATE users u
 SET reseller_tier = CASE
   WHEN sub_count < 10 THEN 'small'::reseller_tier
-  WHEN sub_count < 100 THEN 'medium'::reseller_tier
+  WHEN sub_count <= 100 THEN 'medium'::reseller_tier
   ELSE 'enterprise'::reseller_tier
 END
 FROM (
