@@ -335,29 +335,39 @@ BEGIN
   RETURNING id INTO v_id;
 
   -- Log se margine negativo (alert automatico)
+  -- NOTA: financial_audit_log viene creata in migration 093, quindi verifichiamo
+  -- l'esistenza della tabella prima di inserire per evitare errori se la migration
+  -- 093 non è ancora stata eseguita
   IF p_billed_amount < p_provider_cost THEN
-    INSERT INTO financial_audit_log (
-      event_type,
-      shipment_id,
-      user_id,
-      amount,
-      metadata
-    )
-    SELECT
-      'margin_alert',
-      p_shipment_id,
-      p_billed_user_id,
-      p_billed_amount - p_provider_cost,
-      jsonb_build_object(
-        'billed_amount', p_billed_amount,
-        'provider_cost', p_provider_cost,
-        'margin_percent', CASE WHEN p_provider_cost > 0 
-          THEN ROUND(((p_billed_amount - p_provider_cost) / p_provider_cost * 100)::numeric, 2)
-          ELSE 0 END,
-        'courier', p_courier_code,
-        'alert', 'NEGATIVE_MARGIN'
+    -- Verifica se la tabella financial_audit_log esiste
+    IF EXISTS (
+      SELECT 1 FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'financial_audit_log'
+    ) THEN
+      INSERT INTO financial_audit_log (
+        event_type,
+        shipment_id,
+        user_id,
+        amount,
+        metadata
       )
-    WHERE EXISTS (SELECT 1 FROM financial_audit_log LIMIT 0); -- Solo se tabella esiste
+      VALUES (
+        'margin_alert',
+        p_shipment_id,
+        p_billed_user_id,
+        p_billed_amount - p_provider_cost,
+        jsonb_build_object(
+          'billed_amount', p_billed_amount,
+          'provider_cost', p_provider_cost,
+          'margin_percent', CASE WHEN p_provider_cost > 0 
+            THEN ROUND(((p_billed_amount - p_provider_cost) / p_provider_cost * 100)::numeric, 2)
+            ELSE 0 END,
+          'courier', p_courier_code,
+          'alert', 'NEGATIVE_MARGIN'
+        )
+      );
+    END IF;
   END IF;
 
   RETURN v_id;
