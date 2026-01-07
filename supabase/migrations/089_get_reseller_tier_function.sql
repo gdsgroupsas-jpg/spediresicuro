@@ -18,12 +18,15 @@ DECLARE
   v_is_reseller BOOLEAN;
   v_sub_users_count INTEGER;
 BEGIN
-  -- 1. Verifica se è reseller
+  -- 1. Verifica se è reseller (gestisce anche utente non esistente)
   SELECT is_reseller INTO v_is_reseller
   FROM users
   WHERE id = p_user_id;
   
-  IF NOT v_is_reseller THEN
+  -- Se utente non esiste o non è reseller, restituisce NULL
+  -- BUG FIX: Usa IS NULL OR IS NOT TRUE invece di NOT v_is_reseller
+  -- perché NOT NULL = NULL (non TRUE), quindi il check falliva
+  IF v_is_reseller IS NULL OR v_is_reseller IS NOT TRUE THEN
     RETURN NULL;
   END IF;
   
@@ -40,7 +43,8 @@ BEGIN
       AND is_reseller = false;
     
     -- Determina tier in base a numero sub-users
-    -- Medium: 10-100 (incluso), Enterprise: > 100
+    -- BUG FIX: Medium: 10-100 (incluso), Enterprise: > 100
+    -- Cambiato < 100 in <= 100 per includere esattamente 100 sub-users in medium
     IF v_sub_users_count < 10 THEN
       RETURN 'small'::reseller_tier;
     ELSIF v_sub_users_count <= 100 THEN
