@@ -13,17 +13,63 @@ import { Button } from '@/components/ui/button'
 import { TeamStatsCards } from './_components/team-stats-cards'
 import { SubUsersTable } from './_components/sub-users-table'
 import { CreateUserDialog } from './_components/create-user-dialog'
+import { ClientsHierarchyView } from './_components/clients-hierarchy-view'
 
-import { useSubUsersStats, useInvalidateSubUsers } from '@/lib/queries/use-sub-users'
+import { useSubUsersStats, useInvalidateSubUsers, useAllClients } from '@/lib/queries/use-sub-users'
 
 function ResellerDashboardContent() {
   const { data: stats, isLoading: statsLoading } = useSubUsersStats()
+  const { data: allClients, isLoading: allClientsLoading } = useAllClients()
   const invalidate = useInvalidateSubUsers()
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null)
+
+  // Verifica se è superadmin
+  useEffect(() => {
+    async function checkSuperAdmin() {
+      try {
+        const response = await fetch('/api/user/info')
+        if (response.ok) {
+          const data = await response.json()
+          const userData = data.user || data
+          const accountType = userData.account_type || userData.accountType
+          setIsSuperAdmin(accountType === 'superadmin')
+        } else {
+          setIsSuperAdmin(false)
+        }
+      } catch (error) {
+        console.error('Errore verifica superadmin:', error)
+        setIsSuperAdmin(false)
+      }
+    }
+    checkSuperAdmin()
+  }, [])
 
   const handleUserCreated = () => {
     invalidate()
   }
 
+  // Se superadmin e dati disponibili, mostra vista gerarchica
+  if (isSuperAdmin === true && allClients) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <DashboardNav
+            title="Gestione Clienti"
+            subtitle="Visualizza tutti i clienti della piattaforma (Reseller, Sub-Users, BYOC)"
+            breadcrumbs={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Clienti' },
+            ]}
+          />
+
+          <ClientsHierarchyView />
+        </div>
+        <Toaster position="top-right" richColors />
+      </div>
+    )
+  }
+
+  // Vista normale per reseller
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -118,10 +164,18 @@ export default function ResellerTeamPage() {
       }
 
       try {
-        const response = await fetch('/api/user/settings')
+        // Usa /api/user/info per avere account_type
+        const response = await fetch('/api/user/info')
         if (response.ok) {
           const data = await response.json()
-          const hasAccess = data.role === 'admin' || data.is_reseller === true
+          const userData = data.user || data
+          const accountType = userData.account_type || userData.accountType
+          // Superadmin, admin o reseller possono accedere
+          const hasAccess = 
+            accountType === 'superadmin' || 
+            accountType === 'admin' || 
+            userData.is_reseller === true ||
+            data.role === 'admin'
           setIsReseller(hasAccess)
         } else {
           setIsReseller(false)
