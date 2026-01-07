@@ -794,6 +794,53 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 - Gestione errori: se il recupero fallisce, continua con valore 0 (non critico)
 - Il wallet balance è disponibile sia nel contesto fiscale che nel context-builder standard
 
+### ✅ FASE 3: RESELLER TIER SYSTEM (7 Gennaio 2026 - Commit a6a7bac, 172dc2f, 7644b0c, da5fb07)
+
+**Obiettivo:** Implementare sistema categorizzazione automatica reseller in 3 tier (small, medium, enterprise) basato su numero sub-users.
+
+**Soluzione:**
+- **Database:** Enum `reseller_tier`, campo in `users`, funzione `get_reseller_tier()` per calcolo automatico
+- **Backend:** Helper TypeScript `lib/db/tier-helpers.ts` con funzioni per gestire tier
+- **Frontend:** Componente `TierBadge` per visualizzazione tier in UI
+- **UI:** Integrazione tier badge in `ClientsHierarchyView` per superadmin
+
+**File creati/modificati:**
+- `supabase/migrations/088_reseller_tier_enum_and_column.sql` - Enum e campo
+- `supabase/migrations/089_get_reseller_tier_function.sql` - Funzione calcolo automatico
+- `supabase/migrations/090_populate_reseller_tier.sql` - Popolamento iniziale
+- `lib/db/tier-helpers.ts` - Helper TypeScript (nuovo)
+- `tests/tier-helpers.test.ts` - Test unit completi (17/17 passati)
+- `lib/utils/tier-badge.tsx` - Componente badge (nuovo)
+- `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx` - Integrazione tier badge
+- `actions/admin-reseller.ts` - Query aggiornata per includere `reseller_tier`
+- `docs/DEVELOPMENT_PLAN_FASE3.md` - Piano sviluppo completo
+- `scripts/test-migrations-088-090.sql` - Script verifica database
+
+**Funzionalità:**
+- Tier automatico: small (<10 sub-users), medium (10-100), enterprise (>100)
+- Calcolo automatico se `reseller_tier` è NULL nel database
+- Visualizzazione tier badge in UI (colori distintivi)
+- Limiti configurabili per tier (max sub-users, features)
+
+**Test:**
+- ✅ Backend: 17/17 test passati (`tests/tier-helpers.test.ts`)
+- ✅ Regressione: 782/786 suite completa, 0 regressioni
+- ✅ Type-check: nessun errore
+
+**Note:**
+- Non breaking: Campo nullable, funziona anche se NULL
+- Idempotente: Tutte le migration idempotenti
+- Performance: Indice su `reseller_tier` per query veloci
+- Fallback: Se tier è NULL, calcola automatico da numero sub-users
+
+**Come verificare:**
+```bash
+# Eseguire migrations su Supabase Dashboard (088, 089, 090)
+# Verificare con script: scripts/test-migrations-088-090.sql
+# Test locale: vai su /dashboard/reseller-team come superadmin
+# Expected: Tier badge visibile su ogni reseller card
+```
+
 ### ✅ FASE 4: GESTIONE CLIENTI UI GERARCHICA (7 Gennaio 2026 - Commit 14e57b3, 70930cc, 65b4bde)
 
 **Problema:** Superadmin vedeva tutti gli utenti in modo "piatta", senza gerarchia Reseller → Sub-Users. Manca vista unificata per gestione clienti completa.
