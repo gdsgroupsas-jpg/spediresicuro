@@ -17,6 +17,7 @@ import { createUser } from '@/lib/database'
 import bcrypt from 'bcryptjs'
 import { validateEmail } from '@/lib/validators'
 import { userExists } from '@/lib/db/user-helpers'
+import { hasCapability } from '@/lib/db/capability-helpers'
 
 /**
  * Verifica se l'utente corrente è un Reseller
@@ -46,6 +47,48 @@ async function isCurrentUserReseller(): Promise<{ isReseller: boolean; userId?: 
   } catch (error: any) {
     console.error('Errore verifica Reseller:', error)
     return { isReseller: false, error: error.message }
+  }
+}
+
+/**
+ * Verifica se l'utente corrente è Superadmin o ha capability can_view_all_clients
+ */
+async function canViewAllClients(): Promise<{ canView: boolean; userId?: string; error?: string }> {
+  try {
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return { canView: false, error: 'Non autenticato' }
+    }
+
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type, role')
+      .eq('email', session.user.email)
+      .single()
+
+    if (error || !user) {
+      return { canView: false, error: 'Utente non trovato' }
+    }
+
+    // Superadmin può sempre vedere tutto
+    if (user.account_type === 'superadmin') {
+      return { canView: true, userId: user.id }
+    }
+
+    // Verifica capability can_view_all_clients
+    const hasCap = await hasCapability(user.id, 'can_view_all_clients', {
+      account_type: user.account_type,
+      role: user.role,
+    })
+
+    return { 
+      canView: hasCap, 
+      userId: user.id 
+    }
+  } catch (error: any) {
+    console.error('Errore verifica canViewAllClients:', error)
+    return { canView: false, error: error.message }
   }
 }
 
@@ -201,6 +244,8 @@ export async function createSubUser(data: {
 /**
  * Server Action: Ottiene la lista dei Sub-Users del Reseller corrente
  * 
+ * Supporta anche Superadmin (vede tutti i sub-users, ma restituisce formato compatibile)
+ * 
  * @returns Lista dei Sub-Users
  */
 export async function getSubUsers(): Promise<{
@@ -227,8 +272,35 @@ export async function getSubUsers(): Promise<{
       }
     }
 
-    // 2. Verifica che l'utente sia un Reseller
+    // 2. Verifica se può vedere tutti i clienti (superadmin) o è reseller
+    const canViewAll = await canViewAllClients()
     const resellerCheck = await isCurrentUserReseller()
+
+    // Se superadmin, restituisci tutti i sub-users (per compatibilità)
+    if (canViewAll.canView && canViewAll.userId) {
+      // Per superadmin, restituisci tutti i sub-users di tutti i reseller
+      const { data: allSubUsers, error } = await supabaseAdmin
+        .from('users')
+        .select('id, email, name, company_name, phone, wallet_balance, created_at')
+        .not('parent_id', 'is', null)
+        .eq('is_reseller', false)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Errore recupero Sub-Users (superadmin):', error)
+        return {
+          success: false,
+          error: error.message || 'Errore durante il recupero dei Sub-Users.',
+        }
+      }
+
+      return {
+        success: true,
+        subUsers: allSubUsers || [],
+      }
+    }
+
+    // Comportamento originale per reseller
     if (!resellerCheck.isReseller || !resellerCheck.userId) {
       return {
         success: false,
@@ -236,7 +308,7 @@ export async function getSubUsers(): Promise<{
       }
     }
 
-    // 3. Ottieni Sub-Users
+    // 3. Ottieni Sub-Users del reseller
     const { data: subUsers, error } = await supabaseAdmin
       .from('users')
       .select('id, email, name, company_name, phone, wallet_balance, created_at')
@@ -572,6 +644,173 @@ export async function getSubUsersShipments(limit: number = 50): Promise<{
     }
   } catch (error: any) {
     console.error('Errore in getSubUsersShipments:', error)
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto.',
+    }
+  }
+}
+
+/**
+ * Server Action: Ottiene tutti i clienti in modo gerarchico (Superadmin/Admin)
+ * 
+ * Restituisce:
+ * - Reseller con i loro Sub-Users nested
+ * - BYOC clients standalone
+ * 
+ * @returns Struttura gerarchica di tutti i clienti
+ */
+export async function getAllClientsForUser(): Promise<{
+  success: boolean
+  clients?: {
+    resellers: Array<{
+      reseller: {
+        id: string
+        email: string
+        name: string
+        company_name: string | null
+        phone: string | null
+        wallet_balance: number
+        created_at: string
+      }
+      subUsers: Array<{
+        id: string
+        email: string
+        name: string
+        company_name: string | null
+        phone: string | null
+        wallet_balance: number
+        created_at: string
+      }>
+      stats: {
+        totalSubUsers: number
+        totalWalletBalance: number
+      }
+    }>
+    byocClients: Array<{
+      id: string
+      email: string
+      name: string
+      company_name: string | null
+      phone: string | null
+      wallet_balance: number
+      created_at: string
+    }>
+    stats: {
+      totalResellers: number
+      totalSubUsers: number
+      totalBYOC: number
+      totalWalletBalance: number
+    }
+  }
+  error?: string
+}> {
+  try {
+    // 1. Verifica autenticazione
+    const session = await auth()
+    
+    if (!session?.user?.email) {
+      return {
+        success: false,
+        error: 'Non autenticato.',
+      }
+    }
+
+    // 2. Verifica che l'utente possa vedere tutti i clienti
+    const canViewAll = await canViewAllClients()
+    if (!canViewAll.canView || !canViewAll.userId) {
+      return {
+        success: false,
+        error: 'Solo Superadmin/Admin possono visualizzare tutti i clienti.',
+      }
+    }
+
+    // 3. Recupera tutti i Reseller con statistiche
+    const { data: resellers, error: resellersError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, company_name, phone, wallet_balance, created_at')
+      .eq('is_reseller', true)
+      .order('created_at', { ascending: false })
+
+    if (resellersError) {
+      console.error('Errore recupero Reseller:', resellersError)
+      return {
+        success: false,
+        error: resellersError.message || 'Errore durante il recupero dei Reseller.',
+      }
+    }
+
+    // 4. Per ogni Reseller, recupera i Sub-Users
+    const resellersWithSubUsers = await Promise.all(
+      (resellers || []).map(async (reseller) => {
+        const { data: subUsers, error: subUsersError } = await supabaseAdmin
+          .from('users')
+          .select('id, email, name, company_name, phone, wallet_balance, created_at')
+          .eq('parent_id', reseller.id)
+          .eq('is_reseller', false)
+          .order('created_at', { ascending: false })
+
+        if (subUsersError) {
+          console.error(`Errore recupero Sub-Users per reseller ${reseller.id}:`, subUsersError)
+          return {
+            reseller,
+            subUsers: [],
+            stats: {
+              totalSubUsers: 0,
+              totalWalletBalance: 0,
+            },
+          }
+        }
+
+        const subUsersList = subUsers || []
+        const totalWalletBalance = subUsersList.reduce((sum, su) => sum + (su.wallet_balance || 0), 0)
+
+        return {
+          reseller,
+          subUsers: subUsersList,
+          stats: {
+            totalSubUsers: subUsersList.length,
+            totalWalletBalance,
+          },
+        }
+      })
+    )
+
+    // 5. Recupera tutti i BYOC clients
+    const { data: byocClients, error: byocError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, company_name, phone, wallet_balance, created_at')
+      .eq('account_type', 'byoc')
+      .order('created_at', { ascending: false })
+
+    if (byocError) {
+      console.error('Errore recupero BYOC clients:', byocError)
+      // Non bloccante, continua con reseller
+    }
+
+    // 6. Calcola statistiche aggregate
+    const totalResellers = resellersWithSubUsers.length
+    const totalSubUsers = resellersWithSubUsers.reduce((sum, r) => sum + r.stats.totalSubUsers, 0)
+    const totalBYOC = (byocClients || []).length
+    const totalWalletBalance = 
+      resellersWithSubUsers.reduce((sum, r) => sum + (r.reseller.wallet_balance || 0) + r.stats.totalWalletBalance, 0) +
+      (byocClients || []).reduce((sum, b) => sum + (b.wallet_balance || 0), 0)
+
+    return {
+      success: true,
+      clients: {
+        resellers: resellersWithSubUsers,
+        byocClients: byocClients || [],
+        stats: {
+          totalResellers,
+          totalSubUsers,
+          totalBYOC,
+          totalWalletBalance,
+        },
+      },
+    }
+  } catch (error: any) {
+    console.error('Errore in getAllClientsForUser:', error)
     return {
       success: false,
       error: error.message || 'Errore sconosciuto.',
