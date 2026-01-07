@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSubUsers, createSubUser, getSubUsersStats } from '@/actions/admin-reseller'
+import { getSubUsers, createSubUser, getSubUsersStats, getAllClientsForUser } from '@/actions/admin-reseller'
 import type { CreateUserInput } from '@/lib/validations/user-schema'
 
 /**
@@ -104,5 +104,33 @@ export function useInvalidateSubUsers() {
   return () => {
     queryClient.invalidateQueries({ queryKey: ['sub-users'] })
     queryClient.invalidateQueries({ queryKey: ['sub-users-stats'] })
+    queryClient.invalidateQueries({ queryKey: ['all-clients'] })
   }
+}
+
+/**
+ * Hook per ottenere tutti i clienti in modo gerarchico (Superadmin/Admin)
+ */
+export function useAllClients() {
+  return useQuery({
+    queryKey: ['all-clients'],
+    queryFn: async () => {
+      const result = await getAllClientsForUser()
+      if (!result.success) {
+        throw new Error(result.error || 'Errore nel caricamento dei clienti')
+      }
+      return result.clients || {
+        resellers: [],
+        byocClients: [],
+        stats: {
+          totalResellers: 0,
+          totalSubUsers: 0,
+          totalBYOC: 0,
+          totalWalletBalance: 0,
+        },
+      }
+    },
+    staleTime: 30_000, // 30 secondi
+    refetchOnWindowFocus: true,
+  })
 }
