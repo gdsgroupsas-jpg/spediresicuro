@@ -12,6 +12,8 @@ import { DataTableSkeleton } from '@/components/shared/data-table-skeleton'
 
 import { useAllClients } from '@/lib/queries/use-sub-users'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { TierBadge } from '@/lib/utils/tier-badge'
+import { calculateTierFromSubUsers } from '@/lib/db/tier-helpers'
 
 interface ResellerCardProps {
   reseller: {
@@ -22,6 +24,7 @@ interface ResellerCardProps {
     phone: string | null
     wallet_balance: number
     created_at: string
+    reseller_tier: string | null
   }
   subUsers: Array<{
     id: string
@@ -84,9 +87,14 @@ function ResellerCard({ reseller, subUsers, stats }: ResellerCardProps) {
               <p className="text-xs text-gray-500">Wallet Totale</p>
               <p className="text-sm font-semibold">{formatCurrency(stats.totalWalletBalance)}</p>
             </div>
-            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-              Reseller
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                Reseller
+              </Badge>
+              <TierBadge 
+                tier={(reseller.reseller_tier as 'small' | 'medium' | 'enterprise' | null) || calculateTierFromSubUsers(stats.totalSubUsers)} 
+              />
+            </div>
           </div>
         </div>
       </div>
