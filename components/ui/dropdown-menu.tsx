@@ -136,11 +136,11 @@ const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenuItemPro
       <button
         ref={ref}
         className={cn(
-          'relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors',
-          'hover:bg-gray-100 focus:bg-gray-100',
-          destructive && 'text-red-600 hover:bg-red-50 focus:bg-red-50',
+          'relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm font-medium outline-none transition-colors',
+          'text-gray-900 hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900',
+          destructive && 'text-red-700 hover:bg-red-50 hover:text-red-800 focus:bg-red-50 focus:text-red-800',
           inset && 'pl-8',
-          'disabled:pointer-events-none disabled:opacity-50',
+          'disabled:pointer-events-none disabled:opacity-50 disabled:text-gray-400',
           className
         )}
         role="menuitem"
@@ -163,7 +163,7 @@ DropdownMenuSeparator.displayName = 'DropdownMenuSeparator'
 
 const DropdownMenuLabel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('px-2 py-1.5 text-xs font-semibold text-gray-500', className)} {...props} />
+    <div ref={ref} className={cn('px-2 py-1.5 text-xs font-semibold text-gray-700 uppercase tracking-wider', className)} {...props} />
   )
 )
 DropdownMenuLabel.displayName = 'DropdownMenuLabel'

@@ -48,8 +48,9 @@ function ResellerDashboardContent() {
     invalidate()
   }
 
-  // Se superadmin e dati disponibili, mostra vista gerarchica
-  if (isSuperAdmin === true && allClients) {
+  // Se superadmin, mostra sempre vista gerarchica (gestisce loading/error internamente)
+  // IMPORTANTE: Aspetta che isSuperAdmin sia determinato (non null) prima di decidere
+  if (isSuperAdmin === true) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -65,6 +66,18 @@ function ResellerDashboardContent() {
           <ClientsHierarchyView />
         </div>
         <Toaster position="top-right" richColors />
+      </div>
+    )
+  }
+
+  // Se ancora in loading (isSuperAdmin === null), mostra loading state
+  if (isSuperAdmin === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF9500] mb-4" />
+          <p className="text-gray-600">Verifica permessi...</p>
+        </div>
       </div>
     )
   }

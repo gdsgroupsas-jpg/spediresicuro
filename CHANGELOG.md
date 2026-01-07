@@ -28,6 +28,22 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   - Reseller mantiene vista originale (solo propri Sub-Users) - non breaking
   - Stats aggregate: Reseller, Sub-Users, BYOC, Wallet Totale
   - Access control: capability `can_view_all_clients` o `account_type === 'superadmin'`
+  - **Operatività Completa:**
+    - Menu azioni Reseller: Ricarica Wallet, Crea Sub-User, Elimina Reseller
+    - Menu azioni Sub-Users: Gestisci Wallet, Elimina Cliente
+    - Menu azioni BYOC: Gestisci Wallet, Elimina Cliente
+    - Pulsante "Crea Reseller" con dialog dedicato
+    - Integrazione `CreateResellerDialog`, `CreateUserDialog`, `WalletRechargeDialog`
+    - Conferma eliminazioni con `ConfirmActionDialog`
+    - Refresh automatico dopo operazioni
+  - **Query Resilienti:**
+    - Fallback automatico se colonne opzionali mancanti (`company_name`, `phone`, `reseller_tier`)
+    - Compatibilità con database locali senza tutte le migrations
+  - **UI/UX Miglioramenti:**
+    - Fix contrasti: testi grigi → neri (`text-gray-900`) per massima leggibilità
+    - Dropdown menu: label e items con contrasto ottimizzato
+    - Card hover effects e transizioni smooth
+    - Badge e icone con colori distintivi e leggibili
   - Test: 5/5 backend, 765/765 suite completa, 0 regressioni
 - **Reseller System Enhancement** - Miglioramenti sistema reseller
   - Reseller creati con `account_type='reseller'` invece di `'user'`

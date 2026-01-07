@@ -17,10 +17,14 @@ import { formatCurrency } from '@/lib/utils'
 
 interface CreateUserDialogProps {
   onSuccess?: () => void
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function CreateUserDialog({ onSuccess, isOpen: externalIsOpen, onClose: externalOnClose }: CreateUserDialogProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen
+  const setIsOpen = externalOnClose ? () => externalOnClose() : setInternalIsOpen
   const [isPending, startTransition] = useTransition()
   const [showPassword, setShowPassword] = useState(false)
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
@@ -98,10 +102,12 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
 
   return (
     <>
-      <Button onClick={() => setIsOpen(true)}>
-        <Plus className="mr-2 h-4 w-4" />
-        Nuovo Cliente
-      </Button>
+      {externalIsOpen === undefined && (
+        <Button onClick={() => setIsOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nuovo Cliente
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent onClose={handleClose} className="sm:max-w-md">
