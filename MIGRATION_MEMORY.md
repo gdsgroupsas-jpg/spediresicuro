@@ -940,11 +940,12 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 
 **Obiettivo:** Tracciare i costi reali che SpedireSicuro paga ai corrieri quando i Reseller/BYOC usano contratti piattaforma, per calcolo P&L e riconciliazione.
 
-**Database Migrations (4 file SQL):**
+**Database Migrations (5 file SQL):**
 - `090_platform_provider_costs.sql` - Tabella principale costi piattaforma con margini calcolati via trigger
 - `091_shipments_api_source.sql` - Campo `api_source` su shipments per tracking fonte contratto
 - `092_platform_pnl_views.sql` - 5 viste per P&L giornaliero/mensile, alert margini, riconciliazione
 - `093_financial_audit_log.sql` - Audit log finanziario immutabile per compliance
+- `094_fix_record_platform_provider_cost_alert.sql` - Fix bug alert margini negativi (WHERE EXISTS LIMIT 0)
 
 **Business Logic TypeScript:**
 - `lib/shipments/platform-cost-recorder.ts` - Recording costi con graceful degradation
@@ -964,8 +965,9 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 - ✅ Suite completa: 590/590 test passati, 0 regressioni
 
 **Deploy Status:**
-- [x] Migrations 090-093 applicate con successo ✅
+- [x] Migrations 090-094 applicate con successo ✅
 - [x] Database pronto per financial tracking
+- [x] Fix bug alert margini negativi applicato ✅
 - [ ] Backfill api_source per shipments esistenti (opzionale, post-launch)
 
 **Come verificare:**
