@@ -882,10 +882,41 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 - Capability System: Usa nuovo sistema con fallback a `role`/`account_type`
 - Performance: Query ottimizzate con `Promise.all` per reseller paralleli
 
+**Operatività Completa (8 Gennaio 2026):**
+- ✅ Menu azioni Reseller: Ricarica Wallet, Crea Sub-User, Elimina Reseller
+- ✅ Menu azioni Sub-Users: Gestisci Wallet, Elimina Cliente
+- ✅ Menu azioni BYOC: Gestisci Wallet, Elimina Cliente
+- ✅ Pulsante "Crea Reseller" con `CreateResellerDialog` integrato
+- ✅ Dialog `CreateUserDialog` per creazione sub-user da reseller specifico
+- ✅ Integrazione completa `WalletRechargeDialog` per gestione wallet
+- ✅ `ConfirmActionDialog` per conferma eliminazioni
+- ✅ Refresh automatico dati dopo operazioni con `useInvalidateSubUsers()`
+
+**Query Resilienti (8 Gennaio 2026):**
+- ✅ Fallback automatico se colonne opzionali mancanti (`company_name`, `phone`, `reseller_tier`)
+- ✅ Compatibilità con database locali senza tutte le migrations applicate
+- ✅ Logging dettagliato per debug (autenticazione, permessi, query steps)
+
+**UI/UX Miglioramenti (8 Gennaio 2026):**
+- ✅ Fix contrasti: testi grigi → neri (`text-gray-900`) per massima leggibilità
+- ✅ Dropdown menu: `DropdownMenuItem` con `text-gray-900 font-medium` di default
+- ✅ Dropdown label: `text-gray-700` invece di `text-gray-500`
+- ✅ Card hover effects e transizioni smooth
+- ✅ Badge e icone con colori distintivi e leggibili
+
+**File modificati (8 Gennaio 2026):**
+- `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx` - Operatività completa, menu azioni
+- `components/ui/dropdown-menu.tsx` - Fix contrasti menu items
+- `app/dashboard/reseller-team/_components/user-actions-menu.tsx` - Fix contrasti
+- `app/dashboard/reseller-team/_components/create-user-dialog.tsx` - Supporto controllo esterno
+- `actions/admin-reseller.ts` - Query resilienti con fallback colonne opzionali
+
 **Come verificare:**
 ```bash
 # Test locale: vai su /dashboard/reseller-team come superadmin
 # Expected: Vista gerarchica con Reseller → Sub-Users + BYOC
+# Expected: Menu azioni funzionanti (ricarica wallet, crea, elimina)
+# Expected: Testi neri leggibili, contrasto ottimizzato
 # Test come reseller: stessa pagina
 # Expected: Vista originale (solo propri Sub-Users)
 ```
