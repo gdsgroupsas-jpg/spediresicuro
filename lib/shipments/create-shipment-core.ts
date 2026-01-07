@@ -4,6 +4,9 @@ import type { ActingContext } from '@/lib/safe-auth'
 import type { CreateShipmentInput } from '@/lib/validations/shipment'
 import { withConcurrencyRetry } from '@/lib/wallet/retry'
 import { getPlatformFeeSafe, DEFAULT_PLATFORM_FEE } from '@/lib/services/pricing/platform-fee'
+// Sprint 1: Financial Tracking
+import { recordPlatformCost, updateShipmentApiSource } from '@/lib/shipments/platform-cost-recorder'
+import { determineApiSource, calculateProviderCost } from '@/lib/pricing/platform-cost-calculator'
 
 export interface CourierCreateShippingInput {
   sender: CreateShipmentInput['sender']
@@ -495,6 +498,73 @@ export async function createShipmentCore(params: {
       p_shipment_id: shipment.id,
       p_status: 'completed',
     })
+
+    // ============================================
+    // SPRINT 1: FINANCIAL TRACKING (non-blocking)
+    // ============================================
+    // Determina api_source e registra costo piattaforma
+    // IMPORTANTE: Questo NON deve bloccare la risposta al cliente
+    try {
+      const apiSourceResult = await determineApiSource(supabaseAdmin, {
+        userId: targetId,
+        priceListId: (validated as any).priceListId, // Opzionale, potrebbe non esistere
+        courierCode: validated.carrier,
+      })
+
+      // Aggiorna shipment con api_source
+      await updateShipmentApiSource(
+        supabaseAdmin,
+        shipment.id,
+        apiSourceResult.apiSource,
+        apiSourceResult.priceListId
+      )
+
+      // Se usa contratti piattaforma, registra il costo
+      if (apiSourceResult.apiSource === 'platform') {
+        // Calcola il costo reale che paghiamo al corriere
+        const serviceType = (validated as any).serviceType || 'standard'
+        const providerCostResult = await calculateProviderCost(supabaseAdmin, {
+          courierCode: validated.carrier,
+          weight: validated.packages[0]?.weight || 1,
+          destination: {
+            zip: validated.recipient.postalCode,
+            province: validated.recipient.province,
+            country: validated.recipient.country || 'IT',
+          },
+          serviceType,
+          masterPriceListId: apiSourceResult.masterPriceListId,
+        })
+
+        // Registra il costo piattaforma
+        await recordPlatformCost(supabaseAdmin, {
+          shipmentId: shipment.id,
+          trackingNumber: courierResponse.trackingNumber,
+          billedUserId: targetId,
+          billedAmount: finalCost, // Quanto abbiamo addebitato al cliente
+          providerCost: providerCostResult.cost, // Quanto paghiamo noi
+          apiSource: apiSourceResult.apiSource,
+          courierCode: validated.carrier,
+          serviceType,
+          priceListId: apiSourceResult.priceListId,
+          masterPriceListId: apiSourceResult.masterPriceListId,
+          costSource: providerCostResult.source,
+        })
+
+        console.log('💰 [PLATFORM_COST] Recorded:', {
+          shipmentId: shipment.id,
+          billed: finalCost,
+          providerCost: providerCostResult.cost,
+          margin: finalCost - providerCostResult.cost,
+          source: providerCostResult.source,
+        })
+      }
+    } catch (trackingError) {
+      // NON bloccare - graceful degradation
+      console.error('[PLATFORM_COST] Failed to track (non-blocking):', trackingError)
+    }
+    // ============================================
+    // END FINANCIAL TRACKING
+    // ============================================
   } catch (dbError: any) {
     // FAIL LOCK (best-effort)
     try {
