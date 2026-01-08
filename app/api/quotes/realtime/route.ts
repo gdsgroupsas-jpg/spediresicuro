@@ -68,6 +68,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ [QUOTES API] Trovate ${configsResult.configs.length} configurazioni API`);
+    console.log(`📊 [QUOTES API] Dettaglio configurazioni trovate:`);
+    configsResult.configs.forEach((config, idx) => {
+      console.log(`   Config ${idx + 1}: "${config.configName}" (${config.configId.substring(0, 8)}...)`);
+      console.log(`      - Contratti: ${Object.keys(config.contract_mapping).join(', ')}`);
+      console.log(`      - Base URL: ${config.base_url}`);
+      console.log(`      - API Key (hash): ${config.api_key ? config.api_key.substring(0, 10) + '...' : 'MANCANTE'}`);
+    });
     console.log(`📊 [QUOTES API] Servizi accessori richiesti:`, services);
 
     // Prepara parametri base per le chiamate
@@ -108,8 +115,15 @@ export async function POST(request: NextRequest) {
     let anyCached = false;
     let maxCacheAge = 0;
 
+    // ⚠️ FIX: Usa TUTTE le configurazioni senza deduplica errata
+    // Ogni configId è già univoco - se l'utente ha N configurazioni, le chiamiamo tutte
+    // La deduplica per API key (substring) causava bug: configurazioni diverse venivano saltate
+    const uniqueConfigs = configsResult.configs;
+    
+    console.log(`📊 [QUOTES API] Configurazioni da chiamare: ${uniqueConfigs.length}`);
+
     // Esegui chiamate in parallelo per performance
-    const promises = configsResult.configs.map(async (config) => {
+    const promises = uniqueConfigs.map(async (config) => {
       try {
         console.log(`🔄 [QUOTES API] Chiamata API per config "${config.configName}" (${config.configId.substring(0, 8)}...)`);
         console.log(`   - Contratti in questa config: ${Object.keys(config.contract_mapping).join(', ')}`);
@@ -121,6 +135,12 @@ export async function POST(request: NextRequest) {
 
         if (result.success && result.rates && result.rates.length > 0) {
           console.log(`✅ [QUOTES API] Config "${config.configName}": ${result.rates.length} rates ricevuti`);
+          
+          // ✨ DEBUG: Log dettaglio rates per debugging matching
+          console.log(`📊 [QUOTES API] Dettaglio rates config "${config.configName}":`);
+          result.rates.forEach((rate: any, idx: number) => {
+            console.log(`   Rate ${idx + 1}: carrierCode="${rate.carrierCode}", contractCode="${rate.contractCode}", total_price="${rate.total_price}"`);
+          });
           
           // Aggiungi metadata per tracciare la provenienza
           const ratesWithMeta = result.rates.map((rate: any) => ({
@@ -153,7 +173,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`✅ [QUOTES API] Totale rates unificati: ${allRates.length} da ${configsResult.configs.length} configurazioni`);
+    console.log(`✅ [QUOTES API] Totale rates unificati: ${allRates.length} da ${uniqueConfigs.length} configurazioni uniche`);
 
     // Se nessun rate da nessuna config, prova fallback listini
     if (allRates.length === 0) {
@@ -186,7 +206,7 @@ export async function POST(request: NextRequest) {
         cached: anyCached,
         cacheAge: maxCacheAge > 0 ? maxCacheAge : undefined,
         totalRates: rates.length,
-        configsUsed: configsResult.configs.length,
+        configsUsed: uniqueConfigs.length,
         carriersFound: [...new Set(rates.map((r: any) => r.carrierCode))],
         contractsFound: [...new Set(rates.map((r: any) => r.contractCode))],
         errors: errors.length > 0 ? errors : undefined,

@@ -277,9 +277,17 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         carrierCode: openApiPayload.carrierCode,
         contractCode: openApiPayload.contractCode,
         base_url: this.BASE_URL,
+        // ✨ DEBUG: Verifica servizi accessori
+        accessoriServices: openApiPayload.accessoriServices,
+        accessoriServices_count: Array.isArray(openApiPayload.accessoriServices)
+          ? openApiPayload.accessoriServices.length
+          : 0,
       });
 
       // 2. PRIORITÀ 1: Chiamata API OpenAPI (POST /shipping/create)
+      let jsonError: any = null;
+      let csvError: any = null;
+
       try {
         const result = await this.createShipmentJSON(openApiPayload);
         console.log("✅ [SPEDISCI.ONLINE] Chiamata API JSON riuscita!", {
@@ -323,13 +331,59 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
 
           return shippingLabel;
         }
-      } catch (jsonError: any) {
-        const is401 = jsonError.message?.includes("401");
+      } catch (err: any) {
+        jsonError = err;
+        const is401 = jsonError?.message?.includes("401");
+        const isImplodeError = jsonError?.message?.includes("implode");
         console.error("❌ [SPEDISCI.ONLINE] Creazione JSON fallita:", {
-          message: jsonError.message,
+          message: jsonError?.message,
           is401Unauthorized: is401,
+          isImplodeError,
           base_url: this.BASE_URL,
         });
+
+        // ✨ FIX: Se errore "implode", riprova SENZA servizi accessori
+        // L'API non supporta il formato che stiamo usando per accessoriServices
+        if (isImplodeError && openApiPayload.accessoriServices.length > 0) {
+          console.warn(
+            "⚠️ [SPEDISCI.ONLINE] Errore implode - riprovo SENZA servizi accessori (formato non supportato dall'API)..."
+          );
+          const payloadSenzaServizi = {
+            ...openApiPayload,
+            accessoriServices: [], // Array vuoto
+          };
+          try {
+            const result = await this.createShipmentJSON(payloadSenzaServizi);
+            if (result.success) {
+              console.log(
+                "✅ [SPEDISCI.ONLINE] Successo SENZA servizi accessori!"
+              );
+              console.warn(
+                "⚠️ [SPEDISCI.ONLINE] NOTA: I servizi accessori non sono stati applicati perché l'API non supporta il formato richiesto."
+              );
+              return {
+                tracking_number: result.tracking_number,
+                label_url: result.label_url,
+                label_pdf: result.label_pdf
+                  ? Buffer.from(result.label_pdf, "base64")
+                  : undefined,
+                shipmentId: result.shipmentId
+                  ? String(result.shipmentId)
+                  : undefined,
+                metadata: {
+                  ...(result.metadata || {}),
+                  accessoriServices_warning:
+                    "Servizi accessori non applicati - formato API non supportato",
+                },
+              };
+            }
+          } catch (noServicesError: any) {
+            console.warn(
+              "⚠️ [SPEDISCI.ONLINE] Anche senza servizi accessori fallito:",
+              noServicesError.message
+            );
+          }
+        }
 
         // Se 401, prova endpoint /v1 invece di /v2 (alcuni account usano API v1)
         if (is401 && this.BASE_URL.includes("/api/v2")) {
@@ -385,30 +439,34 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
               : undefined,
           };
         }
-      } catch (csvError: any) {
-        console.warn("Upload CSV fallito:", csvError.message);
+      } catch (err: any) {
+        csvError = err;
+        console.warn("Upload CSV fallito:", csvError?.message);
         // Continua con fallback
       }
 
       // 4. FALLBACK: Genera CSV locale (solo se tutto fallisce) - usa formato legacy
-      console.warn(
-        "⚠️ [SPEDISCI.ONLINE] TUTTE LE CHIAMATE API FALLITE - Genero CSV locale come fallback"
+      // ⚠️ CRITICO: Se tutte le chiamate API falliscono, NON restituire un ShippingLabel valido
+      // Lancia un errore invece, così l'orchestrator può gestirlo correttamente come fallback
+      console.error(
+        "❌ [SPEDISCI.ONLINE] TUTTE LE CHIAMATE API FALLITE - Impossibile creare LDV realmente"
       );
-      const legacyPayload = this.mapToSpedisciOnlineFormat(data, contractCode);
-      const csvContent = this.generateCSV(legacyPayload);
-      const trackingNumber =
-        this.extractTrackingNumber(data) || this.generateTrackingNumber();
+      console.error("❌ [SPEDISCI.ONLINE] Dettagli errori:", {
+        jsonError:
+          jsonError?.message || "Chiamata POST /shipping/create fallita",
+        csvError:
+          csvError?.message || "Upload CSV fallito (tutti gli endpoint 404)",
+      });
 
-      console.warn(
-        "⚠️ [SPEDISCI.ONLINE] CSV locale generato. Tracking:",
-        trackingNumber
+      // ⚠️ CRITICO: Lancia errore invece di restituire CSV fallback
+      // L'orchestrator gestirà questo come fallback CSV se necessario
+      const lastError = jsonError || csvError;
+      throw new Error(
+        `Impossibile creare LDV su Spedisci.Online: tutte le chiamate API sono fallite. ` +
+          `Verifica la configurazione API e i dati della spedizione. ` +
+          `Errore JSON: ${jsonError?.message || "N/A"}. ` +
+          `Errore CSV: ${csvError?.message || "N/A"}`
       );
-
-      return {
-        tracking_number: trackingNumber,
-        label_url: undefined, // Non disponibile senza upload riuscito
-        label_pdf: Buffer.from(csvContent, "utf-8"), // CSV come fallback
-      };
     } catch (error) {
       console.error("Errore creazione spedizione spedisci.online:", error);
 
@@ -531,6 +589,34 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       apiKeyFingerprint: keyFingerprint,
       apiKeyLength: this.API_KEY.length,
       authHeader: "Bearer [REDACTED]", // Non loggare API key
+      // ✨ DEBUG: Verifica servizi accessori nel payload
+      accessoriServices: payload.accessoriServices,
+      accessoriServices_count: Array.isArray(payload.accessoriServices)
+        ? payload.accessoriServices.length
+        : 0,
+      accessoriServices_type:
+        Array.isArray(payload.accessoriServices) &&
+        payload.accessoriServices.length > 0
+          ? typeof payload.accessoriServices[0]
+          : "empty",
+      accessoriServices_sample:
+        Array.isArray(payload.accessoriServices) &&
+        payload.accessoriServices.length > 0
+          ? payload.accessoriServices[0]
+          : null,
+    });
+
+    // ✨ DEBUG: Log completo payload (senza dati sensibili)
+    console.log("📡 [SPEDISCI.ONLINE] Payload completo (debug):", {
+      carrierCode: payload.carrierCode,
+      contractCode: payload.contractCode,
+      packages_count: payload.packages?.length || 0,
+      shipFrom_city: payload.shipFrom?.city,
+      shipTo_city: payload.shipTo?.city,
+      notes: payload.notes?.substring(0, 50),
+      insuranceValue: payload.insuranceValue,
+      codValue: payload.codValue,
+      accessoriServices: JSON.stringify(payload.accessoriServices), // Serializza per vedere formato esatto
     });
 
     try {
@@ -1269,7 +1355,48 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       notes: notes,
       insuranceValue: insuranceValue,
       codValue: codAmount,
-      accessoriServices: [],
+      // ✨ FIX: Servizi accessori per /shipping/create
+      // ⚠️ IMPORTANTE: OpenAPI spec dice che /shipping/create vuole array di OGGETTI, non stringhe!
+      // Ma gli esempi mostrano sempre [] vuoto, quindi non sappiamo il formato esatto degli oggetti.
+      // Per ora passiamo i servizi come [{service: "nome"}] - formato comune per API REST.
+      // Se fallisce, fallback a [] vuoto e la spedizione viene creata senza servizi accessori.
+      accessoriServices: (() => {
+        const services = Array.isArray(data.serviziAccessori)
+          ? data.serviziAccessori
+          : Array.isArray(data.accessoriServices)
+          ? data.accessoriServices
+          : [];
+
+        if (services.length === 0) {
+          return []; // Nessun servizio richiesto
+        }
+
+        // ⚠️ L'API /shipping/create vuole array di OGGETTI, non stringhe
+        // Proviamo diversi formati comuni per trovare quello corretto:
+        // Formato 1: [{service: "Exchange"}] - più comune
+        // Formato 2: [{name: "Exchange"}] - alternativo
+        // Formato 3: [{code: "Exchange"}] - alternativo
+        // Formato 4: [{value: "Exchange"}] - alternativo
+
+        // Usiamo format {service: "nome"} come primo tentativo
+        const formattedServices = services.map((s: any) => {
+          if (typeof s === "string") {
+            return { service: s };
+          }
+          // Se già oggetto, lo passiamo così com'è
+          return s;
+        });
+
+        console.log(
+          "📋 [SPEDISCI.ONLINE] Servizi accessori formattati per /create:",
+          {
+            original: services,
+            formatted: formattedServices,
+          }
+        );
+
+        return formattedServices;
+      })(),
       label_format: "PDF",
     };
   }
@@ -1396,7 +1523,12 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       colli: "1", // Default 1 collo
       codValue: codValue, // REQUIRED: number, sempre presente (0 se non attivo)
       insuranceValue: insuranceValue, // REQUIRED: number, sempre presente (0 se non presente)
-      accessoriServices: [], // REQUIRED: array, sempre presente (vuoto se non ci sono servizi aggiuntivi)
+      // ✨ FIX: Leggi servizi accessori da data (serviziAccessori o accessoriServices)
+      accessoriServices: Array.isArray(data.serviziAccessori)
+        ? data.serviziAccessori
+        : Array.isArray(data.accessoriServices)
+        ? data.accessoriServices
+        : [], // REQUIRED: array, sempre presente (vuoto se non ci sono servizi aggiuntivi)
       rif_mittente: senderName,
       rif_destinatario: recipientName,
       note: notes,
