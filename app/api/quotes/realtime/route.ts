@@ -1,15 +1,20 @@
 /**
  * API Route: Quote Real-Time da Spedisci.Online
  * 
- * Chiama API Spedisci.Online per ottenere rates real-time con cache Redis
+ * ✨ MULTI-CONFIG: Chiama API per OGNI configurazione dell'utente
+ * e unisce tutti i rates ricevuti.
  * 
- * ⚠️ ENTERPRISE: Include cache Redis (TTL 5min), debounce, retry logic
+ * Se un reseller ha N configurazioni API (N account Spedisci.Online),
+ * faremo N chiamate e uniremo tutti i rates.
+ * 
+ * ⚠️ ENTERPRISE: Include cache Redis (TTL 5min), multi-config support
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/db/client';
 import { testSpedisciOnlineRates } from '@/actions/spedisci-online-rates';
+import { getAllUserSpedisciOnlineConfigs } from '@/lib/actions/spedisci-online';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,8 +37,10 @@ export async function POST(request: NextRequest) {
       services = [],
       insuranceValue = 0,
       codValue = 0,
-      shipFrom, // Opzionale, usa default se non fornito
-      shipTo, // Opzionale, usa default se non fornito
+      shipFrom,
+      shipTo,
+      allContracts = false,
+      dimensions,
     } = body;
 
     // Validazione parametri minimi
@@ -51,12 +58,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepara parametri per testSpedisciOnlineRates
-    const testParams = {
+    // ✨ MULTI-CONFIG: Recupera TUTTE le configurazioni dell'utente
+    const configsResult = await getAllUserSpedisciOnlineConfigs();
+    
+    if (!configsResult.success || !configsResult.configs || configsResult.configs.length === 0) {
+      // Nessuna configurazione API: prova fallback a listini
+      console.log('⚠️ [QUOTES API] Nessuna configurazione API trovata, uso fallback listini');
+      return await handleListinoFallback(session.user.email, weight, zip, province, courier, contractCode, codValue, insuranceValue);
+    }
+
+    console.log(`✅ [QUOTES API] Trovate ${configsResult.configs.length} configurazioni API`);
+    console.log(`📊 [QUOTES API] Servizi accessori richiesti:`, services);
+
+    // Prepara parametri base per le chiamate
+    const baseParams = {
       packages: [{
-        length: 30,
-        width: 20,
-        height: 15,
+        length: dimensions?.length ? parseFloat(dimensions.length) : 30,
+        width: dimensions?.width ? parseFloat(dimensions.width) : 20,
+        height: dimensions?.height ? parseFloat(dimensions.height) : 15,
         weight: parseFloat(weight),
       }],
       shipFrom: shipFrom || {
@@ -77,127 +96,100 @@ export async function POST(request: NextRequest) {
         country: 'IT',
         email: 'destinatario@example.com',
       },
-      notes: `Quote real-time per ${courier || 'corriere'}`,
+      notes: `Quote real-time multi-config`,
       insuranceValue: parseFloat(insuranceValue) || 0,
       codValue: parseFloat(codValue) || 0,
       accessoriServices: services || [],
     };
 
-    // Chiama testSpedisciOnlineRates (che ha già cache Redis integrata)
-    const result = await testSpedisciOnlineRates(testParams);
+    // ✨ MULTI-CONFIG: Chiama API per OGNI configurazione
+    const allRates: any[] = [];
+    const errors: string[] = [];
+    let anyCached = false;
+    let maxCacheAge = 0;
 
-    if (!result.success) {
-      // ✨ ENTERPRISE: Distingui tra errori di configurazione e errori server
-      const isConfigError = result.error?.includes('Credenziali') || 
-                           result.error?.includes('non configurate');
-      
-      // Se credenziali non configurate, restituisci 422 (Unprocessable Entity) invece di 500
-      // e prova fallback a quote da listini
-      if (isConfigError) {
-        // Fallback: prova a ottenere quote da listini invece di API real-time
-        try {
-          const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
-          const { data: user } = await supabaseAdmin
-            .from('users')
-            .select('id')
-            .eq('email', session.user.email)
-            .single();
+    // Esegui chiamate in parallelo per performance
+    const promises = configsResult.configs.map(async (config) => {
+      try {
+        console.log(`🔄 [QUOTES API] Chiamata API per config "${config.configName}" (${config.configId.substring(0, 8)}...)`);
+        console.log(`   - Contratti in questa config: ${Object.keys(config.contract_mapping).join(', ')}`);
+        
+        const result = await testSpedisciOnlineRates({
+          ...baseParams,
+          configId: config.configId, // ✨ Passa il configId specifico!
+        });
 
-          if (user) {
-            const listinoResult = await calculatePriceWithRules(user.id, {
-              weight: parseFloat(weight),
-              destination: {
-                zip: zip,
-                province: province,
-                country: 'IT',
-              },
-              courierId: courier,
-              serviceType: 'standard',
-              options: {
-                cashOnDelivery: codValue > 0,
-                insurance: insuranceValue > 0,
-                declaredValue: insuranceValue > 0 ? insuranceValue : undefined,
-              },
-            });
-
-            if (listinoResult) {
-              // Converti risultato listino in formato rates per compatibilità
-              // surcharges è un numero totale, non un oggetto
-              return NextResponse.json({
-                success: true,
-                rates: [{
-                  carrierCode: courier || 'unknown',
-                  contractCode: 'listino',
-                  weight_price: listinoResult.basePrice.toString(),
-                  insurance_price: '0', // Non disponibile separatamente da listino
-                  cod_price: '0', // Non disponibile separatamente da listino
-                  services_price: listinoResult.surcharges.toString(), // Surcharges totali
-                  fuel: '0',
-                  total_price: listinoResult.finalPrice.toString(),
-                  source: 'listino', // Indica che è da listino, non API real-time
-                }],
-                details: {
-                  cached: false,
-                  source: 'listino',
-                  fallback: true,
-                  message: 'Quote da listino (API non configurata)',
-                },
-              });
-            }
-          }
-        } catch (fallbackError) {
-          console.error('Errore fallback a listino:', fallbackError);
+        if (result.success && result.rates && result.rates.length > 0) {
+          console.log(`✅ [QUOTES API] Config "${config.configName}": ${result.rates.length} rates ricevuti`);
+          
+          // Aggiungi metadata per tracciare la provenienza
+          const ratesWithMeta = result.rates.map((rate: any) => ({
+            ...rate,
+            _configId: config.configId,
+            _configName: config.configName,
+          }));
+          
+          return { success: true, rates: ratesWithMeta, cached: result.details?.cached, cacheAge: result.details?.cacheAge };
+        } else {
+          console.warn(`⚠️ [QUOTES API] Config "${config.configName}": ${result.error || 'Nessun rate'}`);
+          return { success: false, error: result.error, configName: config.configName };
         }
+      } catch (error: any) {
+        console.error(`❌ [QUOTES API] Errore config "${config.configName}":`, error.message);
+        return { success: false, error: error.message, configName: config.configName };
+      }
+    });
 
-        // Se fallback fallisce, restituisci errore configurazione
-        return NextResponse.json(
-          { 
-            error: result.error || 'Credenziali spedisci.online non configurate',
-            details: {
-              ...result.details,
-              requiresConfig: true,
-              configUrl: '/dashboard/integrazioni',
-            },
-          },
-          { status: 422 } // Unprocessable Entity (configurazione mancante)
+    const results = await Promise.all(promises);
+
+    // Unisci tutti i rates
+    for (const result of results) {
+      if (result.success && result.rates) {
+        allRates.push(...result.rates);
+        if (result.cached) anyCached = true;
+        if (result.cacheAge && result.cacheAge > maxCacheAge) maxCacheAge = result.cacheAge;
+      } else if (result.error) {
+        errors.push(`${result.configName}: ${result.error}`);
+      }
+    }
+
+    console.log(`✅ [QUOTES API] Totale rates unificati: ${allRates.length} da ${configsResult.configs.length} configurazioni`);
+
+    // Se nessun rate da nessuna config, prova fallback listini
+    if (allRates.length === 0) {
+      console.log('⚠️ [QUOTES API] Nessun rate da API, uso fallback listini');
+      return await handleListinoFallback(session.user.email, weight, zip, province, courier, contractCode, codValue, insuranceValue);
+    }
+
+    // ✨ Applica filtri se richiesto (comportamento legacy)
+    let rates = allRates;
+    
+    if (!allContracts) {
+      if (courier) {
+        rates = rates.filter((r: any) => 
+          r.carrierCode?.toLowerCase() === courier.toLowerCase() ||
+          r.carrierCode?.toLowerCase().includes(courier.toLowerCase())
         );
       }
 
-      // Altri errori (API, network, ecc.) → 500
-      return NextResponse.json(
-        { 
-          error: result.error || 'Errore durante il recupero dei rates',
-          details: result.details,
-        },
-        { status: 500 }
-      );
-    }
-
-    // Filtra per corriere se specificato
-    let rates = result.rates || [];
-    if (courier) {
-      rates = rates.filter((r: any) => 
-        r.carrierCode?.toLowerCase() === courier.toLowerCase() ||
-        r.carrierCode?.toLowerCase().includes(courier.toLowerCase())
-      );
-    }
-
-    // Filtra per contractCode se specificato
-    if (contractCode && rates.length > 0) {
-      rates = rates.filter((r: any) => 
-        r.contractCode === contractCode
-      );
+      if (contractCode && rates.length > 0) {
+        rates = rates.filter((r: any) => 
+          r.contractCode === contractCode
+        );
+      }
     }
 
     return NextResponse.json({
       success: true,
       rates,
       details: {
-        ...result.details,
-        cached: result.details?.cached || false,
-        cacheAge: result.details?.cacheAge,
+        cached: anyCached,
+        cacheAge: maxCacheAge > 0 ? maxCacheAge : undefined,
         totalRates: rates.length,
+        configsUsed: configsResult.configs.length,
         carriersFound: [...new Set(rates.map((r: any) => r.carrierCode))],
+        contractsFound: [...new Set(rates.map((r: any) => r.contractCode))],
+        errors: errors.length > 0 ? errors : undefined,
       },
     });
   } catch (error: any) {
@@ -207,4 +199,82 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Fallback a listini quando API non disponibile
+ */
+async function handleListinoFallback(
+  userEmail: string,
+  weight: string | number,
+  zip: string,
+  province: string,
+  courier?: string,
+  contractCode?: string,
+  codValue: number = 0,
+  insuranceValue: number = 0
+) {
+  try {
+    const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', userEmail)
+      .single();
+
+    if (user && courier) {
+      const listinoResult = await calculatePriceWithRules(user.id, {
+        weight: parseFloat(String(weight)),
+        destination: {
+          zip: zip,
+          province: province,
+          country: 'IT',
+        },
+        courierId: courier,
+        serviceType: 'standard',
+        options: {
+          cashOnDelivery: codValue > 0,
+          insurance: insuranceValue > 0,
+          declaredValue: insuranceValue > 0 ? insuranceValue : undefined,
+        },
+      });
+
+      if (listinoResult) {
+        return NextResponse.json({
+          success: true,
+          rates: [{
+            carrierCode: courier,
+            contractCode: contractCode || 'listino',
+            weight_price: listinoResult.basePrice.toString(),
+            insurance_price: '0',
+            cod_price: '0',
+            services_price: listinoResult.surcharges.toString(),
+            fuel: '0',
+            total_price: listinoResult.finalPrice.toString(),
+            source: 'listino',
+            fallback: true,
+          }],
+          details: {
+            cached: false,
+            source: 'listino',
+            fallback: true,
+            message: 'Quote da listino (API non disponibile)',
+          },
+        });
+      }
+    }
+  } catch (fallbackError) {
+    console.error('Errore fallback a listino:', fallbackError);
+  }
+
+  return NextResponse.json(
+    { 
+      error: 'Nessuna configurazione API e nessun listino disponibile',
+      details: {
+        requiresConfig: true,
+        configUrl: '/dashboard/integrazioni',
+      },
+    },
+    { status: 422 }
+  );
 }

@@ -94,7 +94,9 @@ export default function ContractComparison({
         setBestSource(data.bestSource);
       } catch (err: any) {
         console.error('Errore confronto contratti:', err);
-        setError(err.message || 'Errore calcolo preventivo');
+        // ⚠️ FIX: Non mostrare errore se ci sono quote valide dal preventivatore intelligente
+        // Il preventivatore intelligente ha priorità, questo è solo un fallback
+        setError(null); // Non mostrare errore per non confondere l'utente
         setContracts([]);
       } finally {
         setIsLoading(false);
