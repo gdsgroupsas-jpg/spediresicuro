@@ -471,6 +471,9 @@ export async function POST(request: NextRequest) {
       status: 'in_preparazione',
       tracking: trackingNumber,
       corriere: body.corriere || 'GLS',
+      // ✨ NUOVO: Servizi accessori selezionati
+      serviziAccessori: body.serviziAccessori || [],
+      accessoriServices: body.serviziAccessori || [], // Alias per compatibilità adapter
       // Audit Trail - Tracciamento creazione
       created_by_user_email: session.user.email,
       created_by_user_name: session.user.name || session.user.email,
@@ -862,10 +865,45 @@ export async function POST(request: NextRequest) {
           console.warn('⚠️ [API] Impossibile aggiornare spedizione: ID non disponibile');
         }
       } else {
-        console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
+        // ⚠️ CRITICO: Se la LDV non è stata creata realmente (fallback CSV), NON è un successo
+        if (ldvResult?.method === 'fallback') {
+          console.error('❌ [API] LDV NON creata realmente - fallback CSV generato:', {
+            method: ldvResult.method,
+            error: ldvResult.error,
+            message: ldvResult.message,
+          });
+          
+          // ⚠️ CRITICO: Se la spedizione è già stata salvata, aggiorna lo stato per indicare che la LDV non è stata creata
+          if (createdShipment?.id) {
+            try {
+              await supabaseAdmin
+                .from('shipments')
+                .update({
+                  status: 'ldv_failed',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', createdShipment.id);
+              console.log('⚠️ [API] Spedizione aggiornata con status "ldv_failed"');
+            } catch (updateError: any) {
+              console.error('❌ [API] Errore aggiornamento status spedizione:', updateError.message);
+            }
+          }
+          
+          // ⚠️ CRITICO: Rilancia errore per bloccare la risposta di successo
+          throw new Error(
+            `LDV non creata realmente: ${ldvResult.error || ldvResult.message || 'Fallback CSV generato'}\n` +
+            `Verifica la configurazione API in /dashboard/integrazioni`
+          );
+        } else {
+          console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
+        }
       }
     } catch (error) {
-      // Non bloccare la risposta se la creazione LDV fallisce
+      // ⚠️ CRITICO: Se è un errore di fallback, rilancia per bloccare la risposta
+      if (error instanceof Error && error.message.includes('LDV non creata realmente')) {
+        throw error;
+      }
+      // Per altri errori, logga ma non blocca (compatibilità retroattiva)
       console.warn('⚠️ Errore creazione LDV (non critico):', error);
     }
 
