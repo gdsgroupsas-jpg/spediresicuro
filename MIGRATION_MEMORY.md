@@ -1081,3 +1081,155 @@ npx vitest run
 curl http://localhost:3000/api/cron/financial-alerts
 curl http://localhost:3000/api/cron/auto-reconciliation
 ```
+
+---
+
+### ✅ PREVENTIVATORE INTELLIGENTE - WORKFLOW SERVIZI ACCESSORI (8 Gennaio 2026)
+
+**Obiettivo:** Implementare workflow enterprise-grade per la selezione di servizi accessori nel preventivatore, simile a Spedisci.Online ma con UX migliorata.
+
+**Problema Precedente:**
+- I servizi accessori venivano selezionati PRIMA del preventivo
+- L'API Spedisci.Online filtrava erroneamente i corrieri quando passati servizi accessori (es. Exchange → spariva GLS)
+- UX confusa: utente non sapeva quali servizi erano disponibili per quale corriere
+
+**Nuova Soluzione (Enterprise-Grade):**
+1. **Preventivo Base:** L'utente inserisce dati spedizione → sistema chiama API → mostra TUTTI i rates disponibili
+2. **Selezione Corriere:** L'utente clicca su un corriere nella tabella
+3. **Panel Servizi Accessori:** Appare dropdown con servizi specifici del corriere selezionato
+4. **Calcolo Finale:** Prezzo base + costo accessorio = Prezzo finale
+5. **Conferma:** Pulsante "Conferma Selezione" → aggiorna form principale
+
+**File Modificati:**
+- `components/shipments/intelligent-quote-comparator.tsx`:
+  - Nuovi state: `selectedCourierKey`, `selectedAccessoryService`, `showAccessoryDropdown`
+  - Panel accessori con dropdown filtrato per corriere
+  - Calcolo prezzo finale in tempo reale
+  - Callback `onContractSelected(courierName, contractCode, accessoryService)`
+
+- `app/dashboard/spedizioni/nuova/page.tsx`:
+  - Rimossa sezione "Servizi Accessori" dal form principale
+  - Aggiornato `onContractSelected` per gestire `accessoryService`
+  - Semplificata prop `services` passata al comparatore
+
+- `lib/adapters/couriers/spedisci-online.ts`:
+  - Rimosso `accessoriServices` dal payload `/shipping/rates`
+  - Servizi accessori applicati solo in fase `/shipping/create`
+
+- `app/api/quotes/realtime/route.ts`:
+  - Multi-Config API Calls: chiama TUTTE le configurazioni API dell'utente
+  - Unificazione rates da multiple configurazioni
+  - Deduplicazione rates per evitare duplicati
+
+**Costanti Servizi Accessori:**
+```typescript
+// types/supplier-price-list-config.ts
+COMMON_ACCESSORY_SERVICES = {
+  gls: ["Exchange", "Document Return", "Saturday Service", "Express12", "Preavviso Telefonico"],
+  poste: ["Assicurazione", "Contrassegno", "Consegna Sabato"],
+  // ...
+}
+ACCESSORY_SERVICE_COSTS = {
+  "Exchange": 3.50,
+  "Document Return": 2.50,
+  // ...
+}
+```
+
+**Flow UX:**
+```
+1. Utente compila form spedizione
+         │
+         ▼
+2. IntelligentQuoteComparator chiama /api/quotes/realtime
+         │
+         ▼
+3. API chiama TUTTE le config Spedisci.Online dell'utente
+         │
+         ▼
+4. Tabella mostra rates (Corriere | Costo Fornitore | Prezzo Vendita)
+         │
+         ▼
+5. Utente clicca su riga corriere → Panel accessori appare
+         │
+         ▼
+6. Dropdown mostra servizi specifici del corriere
+         │
+         ▼
+7. Utente seleziona servizio (opzionale) → Prezzo finale aggiornato
+         │
+         ▼
+8. "Conferma Selezione" → formData.corriere e formData.serviziAccessori aggiornati
+```
+
+**Guardrail Implementati:**
+- ✅ Servizi accessori mostrati solo DOPO selezione corriere
+- ✅ Dropdown filtrato per corriere (solo servizi disponibili)
+- ✅ Prezzo finale calcolato client-side (trasparenza)
+- ✅ `accessoriServices` rimosso da `/shipping/rates` (evita filtering errato API)
+- ✅ Panel chiudibile con "X" o click su altro corriere
+
+**Note Tecniche:**
+- Il costo accessorio mostrato è una STIMA (da `ACCESSORY_SERVICE_COSTS`)
+- Il prezzo definitivo sarà confermato alla creazione spedizione (`/shipping/create`)
+- Workflow sicuro: non rischia cause legali (non copia logica proprietaria)
+
+**Test Manuale:**
+1. Vai su `/dashboard/spedizioni/nuova`
+2. Compila form spedizione (mittente, destinatario, pacco)
+3. Aspetta tabella preventivi
+4. Clicca su riga corriere (es. GLS)
+5. Verifica panel accessori con dropdown
+6. Seleziona "Exchange" → prezzo aggiornato
+7. Clicca "Conferma Selezione"
+8. Verifica `formData.corriere` e `formData.serviziAccessori` aggiornati
+
+**Come verificare:**
+```bash
+# Type-check
+npx tsc --noEmit
+
+# Verifica implementazione
+grep -r "selectedAccessoryService" components/shipments/intelligent-quote-comparator.tsx
+# Expected: state e panel accessori
+
+grep -r "onContractSelected" app/dashboard/spedizioni/nuova/page.tsx
+# Expected: callback con accessoryService
+```
+
+---
+
+## 📋 TODO FUTURI (NON PRIORITARI)
+
+### 🔄 API Dirette per Preventivi Real-Time
+
+**Stato:** Non implementato - TODO futuro  
+**Data nota:** Gennaio 2026
+
+**Contesto:**
+- Attualmente il preventivatore intelligente (`IntelligentQuoteComparator`) funziona solo con **Spedisci.Online**
+- Le API dirette (Poste, GLS) hanno adapter implementati solo per `createShipment()` e `getTracking()`
+- **NON** hanno implementato `getRates()` o `calculateQuote()` per preventivi real-time
+
+**Cosa serve:**
+1. **PosteAdapter**: Implementare metodo `getRates()` o `calculateQuote()`
+   - Verificare manuale API Poste per endpoint preventivi
+   - Capire se accetta `contractCode` nella richiesta o restituisce tutti i rates
+   - Integrare in `/api/quotes/realtime` con routing provider-aware
+
+2. **GLSAdapter**: Implementare adapter completo (attualmente TODO)
+   - Creare `lib/adapters/couriers/gls.ts`
+   - Implementare `getRates()` o `calculateQuote()`
+   - Verificare documentazione API GLS per formato richiesta/risposta
+
+3. **Modifiche `/api/quotes/realtime`**:
+   - Rilevare provider dalla configurazione (`courier_configs.provider_id`)
+   - Routing: `spedisci_online` → `testSpedisciOnlineRates`, `poste` → `PosteAdapter.getRates()`, ecc.
+   - Gestire differenze formato risposta tra provider
+
+**Note:**
+- Manuale Poste disponibile ma non ancora analizzato
+- Pattern Spedisci.Online: non accetta `contractCode` in richiesta, filtriamo lato server
+- API dirette potrebbero avere comportamento diverso (accettare `contractCode` o richiedere credenziali per contratto)
+
+**Priorità:** Bassa (Spedisci.Online copre la maggior parte dei casi d'uso)
