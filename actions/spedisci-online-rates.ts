@@ -19,6 +19,7 @@ import {
   createPriceList,
 } from "@/lib/db/price-lists";
 import type { CreatePriceListInput } from "@/types/listini";
+import { getQuoteWithCache, type QuoteCacheParams } from "@/lib/cache/quote-cache";
 
 /**
  * Test endpoint /shipping/rates con parametri di esempio
@@ -72,6 +73,8 @@ export async function testSpedisciOnlineRates(testParams?: {
     responseTime?: number;
     carriersFound?: string[];
     contractsFound?: string[];
+    cached?: boolean;
+    cacheAge?: number;
   };
 }> {
   try {
@@ -152,10 +155,39 @@ export async function testSpedisciOnlineRates(testParams?: {
         testParams?.accessoriServices || defaultParams.accessoriServices,
     };
 
-    // Misura tempo di risposta
+    // ✨ ENTERPRISE: Cache Redis per quote API
+    // Prepara parametri per cache key
+    const cacheParams: QuoteCacheParams = {
+      userId: session.user.id,
+      weight: params.packages[0]?.weight || 0,
+      zip: params.shipTo.postalCode,
+      province: params.shipTo.state,
+      insuranceValue: params.insuranceValue,
+      codValue: params.codValue,
+      services: params.accessoriServices,
+    };
+
+    // Wrapper con cache (TTL: 5 minuti per quote real-time)
     const startTime = Date.now();
-    const result = await adapter.getRates(params);
+    const cachedResult = await getQuoteWithCache(
+      cacheParams,
+      async () => {
+        // Chiamata API reale (solo se cache miss)
+        return await adapter.getRates(params);
+      },
+      {
+        ttlSeconds: 300, // 5 minuti
+        maxAgeSeconds: 300,
+      }
+    );
     const responseTime = Date.now() - startTime;
+
+    // Adatta risultato per compatibilità
+    const result = {
+      success: cachedResult.success,
+      rates: cachedResult.rates,
+      error: cachedResult.error,
+    };
 
     if (!result.success || !result.rates) {
       return {
@@ -163,6 +195,7 @@ export async function testSpedisciOnlineRates(testParams?: {
         error: result.error || "Errore sconosciuto durante il test",
         details: {
           responseTime,
+          cached: cachedResult.cached || false,
         },
       };
     }
@@ -178,6 +211,8 @@ export async function testSpedisciOnlineRates(testParams?: {
         responseTime,
         carriersFound,
         contractsFound,
+        cached: cachedResult.cached || false,
+        cacheAge: cachedResult.cacheAge,
       },
     };
   } catch (error: any) {
