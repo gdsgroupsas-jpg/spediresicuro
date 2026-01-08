@@ -24,6 +24,7 @@
     "verify:users": "ts-node --project tsconfig.scripts.json scripts/verifica-crea-utenti-supabase.ts",
     "verify:reseller-wallet": "ts-node --project tsconfig.scripts.json scripts/verify-supabase-reseller-wallet.ts",
     "test:poste": "ts-node --project tsconfig.scripts.json scripts/test-poste-api.ts",
+    "test:redis": "ts-node --project tsconfig.scripts.json scripts/test-redis-connection.ts",
     "create:smoke-test-user": "ts-node --project tsconfig.scripts.json scripts/create-smoke-test-user.ts",
     "test:supabase:smoke": "ts-node --project tsconfig.scripts.json scripts/smoke-test-supabase.ts",
     "test:supabase:smoke:dry": "ts-node --project tsconfig.scripts.json scripts/smoke-test-supabase.ts --dry-run",

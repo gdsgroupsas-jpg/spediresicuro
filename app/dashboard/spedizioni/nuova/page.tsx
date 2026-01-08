@@ -290,6 +290,9 @@ export default function NuovaSpedizionePage() {
     new Map()
   );
 
+  // ✨ FIX: Counter per forzare re-mount del preventivatore dopo reset form
+  const [formResetCounter, setFormResetCounter] = useState(0);
+
   // ✨ Layout sempre ottimizzato per tabella (40/60)
 
   // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
@@ -332,11 +335,28 @@ export default function NuovaSpedizionePage() {
     async function loadAvailableCouriers() {
       try {
         setCouriersLoading(true);
+        console.log("🔄 [FORM] Caricamento corrieri disponibili...");
         const response = await fetch("/api/couriers/available");
+        console.log("📥 [FORM] Risposta API corrieri:", {
+          status: response.status,
+          ok: response.ok,
+        });
         if (response.ok) {
           const data = await response.json();
+          console.log("📋 [FORM] Corrieri ricevuti:", {
+            total: data.total,
+            couriers: data.couriers?.length || 0,
+            details: data.couriers?.map((c: any) => ({
+              displayName: c.displayName,
+              courierName: c.courierName,
+              contractCode: c.contractCode,
+            })),
+          });
           if (data.couriers && data.couriers.length > 0) {
             setAvailableCouriers(data.couriers);
+            console.log(
+              `✅ [FORM] ${data.couriers.length} corrieri caricati e impostati`
+            );
             // Se il corriere selezionato non è tra quelli disponibili, seleziona il primo
             const displayNames = data.couriers.map(
               (c: { displayName: string }) => c.displayName
@@ -350,17 +370,25 @@ export default function NuovaSpedizionePage() {
           } else {
             // Fallback: nessun corriere configurato, mostra default
             console.warn(
-              "Nessun corriere configurato per l'utente, usando default"
+              "⚠️ [FORM] Nessun corriere configurato per l'utente, usando default"
             );
             setAvailableCouriers([{ displayName: "GLS", courierName: "Gls" }]);
           }
         } else {
-          console.error("Errore caricamento corrieri:", response.status);
+          const errorText = await response.text();
+          console.error("❌ [FORM] Errore caricamento corrieri:", {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          });
           // Fallback in caso di errore
           setAvailableCouriers([{ displayName: "GLS", courierName: "Gls" }]);
         }
       } catch (error) {
-        console.error("Errore caricamento corrieri disponibili:", error);
+        console.error(
+          "❌ [FORM] Errore caricamento corrieri disponibili:",
+          error
+        );
         // Fallback in caso di errore
         setAvailableCouriers([{ displayName: "GLS", courierName: "Gls" }]);
       } finally {
@@ -747,15 +775,46 @@ export default function NuovaSpedizionePage() {
         },
       });
 
+      // ✨ DEBUG: Log payload prima dell'invio
+      console.log("📤 [FORM] Invio richiesta creazione spedizione:", {
+        payload_keys: Object.keys(payload),
+        corriere: (payload as any).corriere || formData.corriere,
+        peso: (payload as any).peso || formData.peso,
+        mittente: {
+          nome: (payload as any).mittenteNome || formData.mittenteNome,
+          provincia: (payload as any).mittenteProvincia || mittenteProvincia,
+          cap: (payload as any).mittenteCap || mittenteCap,
+        },
+        destinatario: {
+          nome: (payload as any).destinatarioNome || formData.destinatarioNome,
+          provincia:
+            (payload as any).destinatarioProvincia || destinatarioProvincia,
+          cap: (payload as any).destinatarioCap || destinatarioCap,
+        },
+      });
+
       const response = await fetch("/api/spedizioni", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
+      console.log("📥 [FORM] Risposta API:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Errore durante il salvataggio");
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Errore sconosciuto" }));
+        console.error("❌ [FORM] Errore API:", errorData);
+        throw new Error(
+          errorData.message ||
+            errorData.error ||
+            "Errore durante il salvataggio"
+        );
       }
 
       const result = await response.json();
@@ -1004,6 +1063,10 @@ export default function NuovaSpedizionePage() {
         setSubmitSuccess(false);
         setCreatedTracking(null);
         setSubmitError(null);
+
+        // ✨ FIX: Forza re-mount del preventivatore per pulire stato interno
+        setFormResetCounter((prev) => prev + 1);
+        setCourierQuotes(new Map()); // Reset anche le quote salvate
 
         // Scrolla in alto per mostrare il form vuoto
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1554,6 +1617,7 @@ export default function NuovaSpedizionePage() {
                       </div>
                     ) : availableCouriers.length > 0 ? (
                       <IntelligentQuoteComparator
+                        key={`quote-comparator-${formResetCounter}`}
                         couriers={availableCouriers}
                         weight={formData.peso ? parseFloat(formData.peso) : 0}
                         zip={formData.destinatarioCap}

@@ -145,7 +145,9 @@ export function IntelligentQuoteComparator({
     // ⚠️ FIX: Prevenire loop infinito - crea chiave univoca per questi parametri
     // ✨ BUG FIX: Include dimensions nel requestKey per evitare rates obsoleti quando cambiano le dimensioni
     const dimensionsKey = dimensions
-      ? `${dimensions.length || 0}-${dimensions.width || 0}-${dimensions.height || 0}`
+      ? `${dimensions.length || 0}-${dimensions.width || 0}-${
+          dimensions.height || 0
+        }`
       : "no-dimensions";
     const requestKey = `${weight}-${zip}-${province}-${services.join(
       ","
@@ -371,6 +373,19 @@ export function IntelligentQuoteComparator({
           "🔍 [QUOTE COMPARATOR] Carrier codes UNICI nei rates:",
           uniqueCarriers
         );
+
+        // ✨ DEBUG: Mostra TUTTI i contractCode ricevuti dall'API per debugging
+        console.log(
+          "📋 [QUOTE COMPARATOR] Contract codes EFFETTIVI ricevuti dall'API:"
+        );
+        result.rates.forEach((rate: any, idx: number) => {
+          console.log(
+            `   Rate ${idx + 1}: carrierCode="${
+              rate.carrierCode
+            }", contractCode="${rate.contractCode}", price=${rate.total_price}`
+          );
+        });
+
         console.log(
           "🔍 [QUOTE COMPARATOR] Contratti configurati:",
           couriers.map((c) => ({
@@ -869,28 +884,29 @@ export function IntelligentQuoteComparator({
               });
             }
           } else {
-            // ⚠️ DEBUG: Contratto configurato ma senza rates dall'API
-            // L'API DOVREBBE restituire rates per tutti i contratti configurati
-            // Se non li trova, il problema è nel matching, non nell'API
-            console.error(
-              `❌ [QUOTE COMPARATOR] ERRORE MATCHING: Contratto ${courier.displayName} (${contractCode}) configurato nel DB ma NON trovato nei rates API!`
-            );
-            console.error(
-              `   - CourierName configurato: ${courier.courierName}`
-            );
-            console.error(`   - ContractCode configurato: ${contractCode}`);
-            console.error(
-              `   - Rates disponibili per questo corriere:`,
-              ratesForCourier.map(
-                (r: any) => `${r.carrierCode}::${r.contractCode}`
-              )
-            );
-            console.error(
-              `   - TUTTI i rates ricevuti dall'API:`,
-              result.rates.map(
-                (r: any) => `${r.carrierCode}::${r.contractCode}`
-              )
-            );
+            // ⚠️ Contratto configurato ma senza rates dall'API
+            // Potrebbe essere un corriere "interno" che non passa per Spedisci.Online
+            // Oppure un corriere temporaneamente non disponibile
+            const isInternalCourier =
+              courier.courierName.toLowerCase().includes("interno") ||
+              contractCode.toLowerCase().includes("interno");
+
+            if (isInternalCourier) {
+              console.log(
+                `ℹ️ [QUOTE COMPARATOR] Corriere interno ${courier.displayName} (${contractCode}) - non disponibile via API Spedisci.Online`
+              );
+              // Non mostrare errore per corrieri interni - sono gestiti separatamente
+              // TODO: Implementare calcolo prezzo da listino interno
+            } else {
+              console.warn(
+                `⚠️ [QUOTE COMPARATOR] Contratto ${courier.displayName} (${contractCode}) non ha rates dall'API`
+              );
+              console.warn(`   - CourierName: ${courier.courierName}`);
+              console.warn(
+                `   - Rates disponibili per questo corriere:`,
+                ratesForCourier.length
+              );
+            }
           }
         });
 
@@ -899,8 +915,8 @@ export function IntelligentQuoteComparator({
           mappedQuotes.size
         );
 
-        // ⚠️ RIMOSSO FALLBACK: L'API Spedisci.Online restituisce rates per tutti i contratti configurati
-        // Se un contratto non viene trovato, il problema è nel matching, non nell'API
+        // ℹ️ NOTA: Corrieri "interni" non passano per Spedisci.Online
+        // Per ora non mostrati nel preventivatore API. In futuro: calcolo da listino interno.
 
         setQuotes(mappedQuotes);
         setCompletedCount(couriers.length); // Tutti completati in una volta
@@ -1046,7 +1062,12 @@ export function IntelligentQuoteComparator({
       {validQuotes.length > 0 && (
         <div className="space-y-4">
           {/* Tabella preventivi base */}
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div
+            className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-[#FF9500] focus-within:ring-offset-2"
+            tabIndex={0}
+            role="region"
+            aria-label="Preventivi corrieri disponibili"
+          >
             <table className="w-full divide-y divide-gray-200 table-auto">
               <thead className="bg-gray-50">
                 <tr>
@@ -1272,7 +1293,8 @@ function QuoteTableRow({
 
   return (
     <tr
-      className={`transition-colors cursor-pointer ${
+      tabIndex={0}
+      className={`transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 ${
         isSelected
           ? "bg-[#FF9500]/10 border-l-4 border-l-[#FF9500]"
           : isBest
@@ -1288,6 +1310,19 @@ function QuoteTableRow({
           quote.contractCode
         );
         onSelect();
+      }}
+      onKeyDown={(e) => {
+        // ✨ ACCESSIBILITÀ: Permetti selezione con Enter o Space
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log(
+            "⌨️ [QUOTE TABLE] Selezione da tastiera:",
+            quote.courier,
+            quote.contractCode
+          );
+          onSelect();
+        }
       }}
     >
       {/* Colonna Corriere - con contratto su due righe */}

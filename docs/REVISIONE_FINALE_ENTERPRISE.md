@@ -24,7 +24,7 @@
 4. **📦 Request Queue**
    - ✅ Hook `useQuoteRequest` con queue
    - ✅ Limite chiamate simultanee (max 3)
-   - ✅ Retry logic (2 tentativi)
+   - ✅ Retry logic (2 tentativi)PEN
    - ✅ Gestione errori robusta
 
 5. **🎨 UX Enterprise**
