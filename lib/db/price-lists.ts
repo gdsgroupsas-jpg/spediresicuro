@@ -427,9 +427,17 @@ export async function deletePriceList(id: string): Promise<void> {
 /**
  * Recupera corrieri disponibili per un utente
  *
- * Basato su:
- * 1. Configurazioni API (courier_configs) con owner_user_id = userId
- * 2. contract_mapping JSONB per estrarre corrieri (GLS, BRT, SDA, ecc.)
+ * Basato su logica a 3 priorità (allineata con get_courier_config_for_user RPC):
+ * 1. Configurazioni API personali (owner_user_id = userId)
+ * 2. Configurazioni assegnate (assigned_config_id)
+ * 3. Configurazioni default globali (is_default = true)
+ *
+ * ⚠️ IMPORTANTE: Include TUTTE le configurazioni valide (personali + assegnate + default)
+ * per mostrare TUTTI i contratti disponibili. Le config personali/assegnate hanno priorità
+ * nella deduplicazione (se stesso corriere da più config, mantiene il primo trovato).
+ *
+ * FIX: Risolve bug dove configurazioni default non venivano incluse se utente aveva
+ * configurazioni personali, causando perdita di contratti disponibili.
  *
  * @param userId - ID utente
  * @returns Array di oggetti { courierId: string, courierName: string, providerId: string, contractCode: string }
@@ -443,31 +451,75 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
   }>
 > {
   try {
-    // 1. Recupera configurazioni API dell'utente
-    const { data: configs, error } = await supabaseAdmin
+    // 1. Recupera informazioni utente per verificare assigned_config_id
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("assigned_config_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const assignedConfigId = user?.assigned_config_id;
+
+    // 2. Recupera configurazioni con logica a 3 priorità
+    // Priorità 1: Configurazioni personali (owner_user_id = userId)
+    const { data: personalConfigs, error: personalError } = await supabaseAdmin
       .from("courier_configs")
       .select("id, provider_id, contract_mapping")
       .eq("owner_user_id", userId)
       .eq("is_active", true);
 
-    if (error) {
-      console.error("Errore recupero configurazioni:", error);
+    if (personalError) {
+      console.error("Errore recupero configurazioni personali:", personalError);
+    }
+
+    // Priorità 2: Configurazione assegnata (se presente)
+    let assignedConfigs: any[] = [];
+    if (assignedConfigId) {
+      const { data: assignedConfig, error: assignedError } = await supabaseAdmin
+        .from("courier_configs")
+        .select("id, provider_id, contract_mapping")
+        .eq("id", assignedConfigId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!assignedError && assignedConfig) {
+        assignedConfigs = [assignedConfig];
+      }
+    }
+
+    // Priorità 3: Configurazioni default globali
+    // ⚠️ IMPORTANTE: Includiamo anche le default per mostrare TUTTI i contratti disponibili
+    // Le config personali/assegnate hanno priorità nella Map (mantengono il primo trovato)
+    const { data: defaultConfigsData, error: defaultError } = await supabaseAdmin
+      .from("courier_configs")
+      .select("id, provider_id, contract_mapping")
+      .eq("is_default", true)
+      .eq("is_active", true)
+      .is("owner_user_id", null); // Default globali hanno owner_user_id NULL
+
+    const defaultConfigs = !defaultError && defaultConfigsData ? defaultConfigsData : [];
+
+    // 3. Unisci tutte le configurazioni (priorità: personali > assegnate > default)
+    const allConfigs = [
+      ...(personalConfigs || []),
+      ...assignedConfigs,
+      ...defaultConfigs,
+    ];
+
+    if (allConfigs.length === 0) {
       return [];
     }
 
-    if (!configs || configs.length === 0) {
-      return [];
-    }
-
-    // 2. Estrai corrieri da contract_mapping
+    // 4. Estrai corrieri da contract_mapping di TUTTE le configurazioni
     // NOTA: Le CHIAVI sono i codici contratto (es. "gls-*", "postedeliverybusiness-SDA---Express---H24+")
     //       I VALORI sono i nomi corriere (es. "Gls", "PosteDeliveryBusiness")
+    // Usa Map con chiave composita (courierName + providerId) per gestire corrieri con stesso nome da provider diversi
     const couriersMap = new Map<
       string,
       { courierName: string; providerId: string; contractCode: string }
     >();
 
-    for (const config of configs) {
+    for (const config of allConfigs) {
       const contractMapping =
         (config.contract_mapping as Record<string, string>) || {};
       const providerId = config.provider_id;
@@ -476,8 +528,12 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
       for (const [contractCode, courierName] of Object.entries(
         contractMapping
       )) {
-        if (!couriersMap.has(courierName)) {
-          couriersMap.set(courierName, {
+        // Chiave composita per evitare conflitti tra corrieri con stesso nome da provider diversi
+        const mapKey = `${courierName}::${providerId}`;
+        
+        // Se non esiste già, aggiungi. Se esiste, mantieni il primo (priorità personali > assegnate > default)
+        if (!couriersMap.has(mapKey)) {
+          couriersMap.set(mapKey, {
             courierName,
             providerId,
             contractCode,
@@ -486,20 +542,20 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
       }
     }
 
-    // 3. Converti in array e prova a recuperare courier_id da tabella couriers
+    // 5. Converti in array e prova a recuperare courier_id da tabella couriers
     const result = [];
-    for (const [courierName, data] of Array.from(couriersMap.entries())) {
-      // Prova a trovare courier_id nella tabella couriers
+    for (const [, data] of Array.from(couriersMap.entries())) {
+      // Prova a trovare courier_id nella tabella couriers usando courierName dai dati
       const { data: courier } = await supabaseAdmin
         .from("couriers")
         .select("id, name")
-        .ilike("name", `%${courierName}%`)
+        .ilike("name", `%${data.courierName}%`)
         .limit(1)
         .maybeSingle();
 
       result.push({
-        courierId: courier?.id || courierName, // Fallback a nome se non trovato
-        courierName,
+        courierId: courier?.id || data.courierName, // Fallback a nome se non trovato
+        courierName: data.courierName,
         providerId: data.providerId,
         contractCode: data.contractCode,
       });
