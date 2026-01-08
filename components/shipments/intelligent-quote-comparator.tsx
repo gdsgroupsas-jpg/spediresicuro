@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Loader2, RefreshCw, Grid3x3, List, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
 // Rimuoviamo useQuoteRequest per gestire chiamate parallele manualmente
 
@@ -70,6 +70,10 @@ export function IntelligentQuoteComparator({
   const [isCalculating, setIsCalculating] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  
+  // ⚠️ FIX: Prevenire loop infinito - traccia se abbiamo già fatto le chiamate per questi parametri
+  const lastRequestParamsRef = useRef<string>('');
+  const isRequestingRef = useRef(false);
 
   // Verifica se dati sono completi per attivare preventivatore
   const isDataComplete = useMemo(() => {
@@ -88,6 +92,18 @@ export function IntelligentQuoteComparator({
     if (!isDataComplete || couriers.length === 0) {
       return;
     }
+
+    // ⚠️ FIX: Prevenire loop infinito - crea chiave univoca per questi parametri
+    const requestKey = `${weight}-${zip}-${province}-${services.join(',')}-${insuranceValue}-${codValue}-${couriers.length}`;
+    
+    // Se stiamo già facendo una richiesta o abbiamo già fatto questa richiesta, esci
+    if (isRequestingRef.current || lastRequestParamsRef.current === requestKey) {
+      return;
+    }
+
+    // Marca che stiamo facendo una richiesta
+    isRequestingRef.current = true;
+    lastRequestParamsRef.current = requestKey;
 
     // Reset stato
     setQuotes(new Map());
@@ -190,6 +206,7 @@ export function IntelligentQuoteComparator({
 
       await Promise.allSettled(promises);
       setIsCalculating(false);
+      isRequestingRef.current = false; // ⚠️ FIX: Libera il flag quando finito
     };
 
     fetchAllQuotes();
