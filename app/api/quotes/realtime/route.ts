@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-config';
+import { supabaseAdmin } from '@/lib/db/client';
 import { testSpedisciOnlineRates } from '@/actions/spedisci-online-rates';
 
 export async function POST(request: NextRequest) {
@@ -86,6 +87,83 @@ export async function POST(request: NextRequest) {
     const result = await testSpedisciOnlineRates(testParams);
 
     if (!result.success) {
+      // ✨ ENTERPRISE: Distingui tra errori di configurazione e errori server
+      const isConfigError = result.error?.includes('Credenziali') || 
+                           result.error?.includes('non configurate');
+      
+      // Se credenziali non configurate, restituisci 422 (Unprocessable Entity) invece di 500
+      // e prova fallback a quote da listini
+      if (isConfigError) {
+        // Fallback: prova a ottenere quote da listini invece di API real-time
+        try {
+          const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
+          const { data: user } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('email', session.user.email)
+            .single();
+
+          if (user) {
+            const listinoResult = await calculatePriceWithRules(user.id, {
+              weight: parseFloat(weight),
+              destination: {
+                zip: zip,
+                province: province,
+                country: 'IT',
+              },
+              courierId: courier,
+              serviceType: 'standard',
+              options: {
+                cashOnDelivery: codValue > 0,
+                insurance: insuranceValue > 0,
+                declaredValue: insuranceValue > 0 ? insuranceValue : undefined,
+              },
+            });
+
+            if (listinoResult) {
+              // Converti risultato listino in formato rates per compatibilità
+              // surcharges è un numero totale, non un oggetto
+              return NextResponse.json({
+                success: true,
+                rates: [{
+                  carrierCode: courier || 'unknown',
+                  contractCode: 'listino',
+                  weight_price: listinoResult.basePrice.toString(),
+                  insurance_price: '0', // Non disponibile separatamente da listino
+                  cod_price: '0', // Non disponibile separatamente da listino
+                  services_price: listinoResult.surcharges.toString(), // Surcharges totali
+                  fuel: '0',
+                  total_price: listinoResult.finalPrice.toString(),
+                  source: 'listino', // Indica che è da listino, non API real-time
+                }],
+                details: {
+                  cached: false,
+                  source: 'listino',
+                  fallback: true,
+                  message: 'Quote da listino (API non configurata)',
+                },
+              });
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Errore fallback a listino:', fallbackError);
+        }
+
+        // Se fallback fallisce, restituisci errore configurazione
+        return NextResponse.json(
+          { 
+            error: result.error || 'Credenziali spedisci.online non configurate',
+            details: {
+              ...result.details,
+              requiresConfig: true,
+              configUrl: '/dashboard/integrazioni',
+            },
+          },
+          { status: 422 } // Unprocessable Entity (configurazione mancante)
+        );
+      }
+
+      // Altri errori (API, network, ecc.) → 500
       return NextResponse.json(
         { 
           error: result.error || 'Errore durante il recupero dei rates',
