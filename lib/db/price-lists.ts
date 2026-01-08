@@ -12,6 +12,7 @@ import type {
   UpdatePriceListInput,
 } from "@/types/listini";
 import { supabase, supabaseAdmin } from "./client";
+import { assertValidUserId } from "@/lib/validators";
 
 // Re-export funzioni avanzate
 export {
@@ -451,6 +452,9 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
   }>
 > {
   try {
+    // ⚠️ SICUREZZA: Valida userId prima di usarlo nelle query
+    assertValidUserId(userId);
+
     // 1. Recupera informazioni utente per verificare assigned_config_id
     const { data: user } = await supabaseAdmin
       .from("users")
