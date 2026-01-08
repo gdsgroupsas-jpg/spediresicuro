@@ -40,10 +40,11 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     const userEmail = session.user.email;
     const { data: currentUser } = await supabaseAdmin
       .from("users")
-      .select("id, account_type")
+      .select("id, account_type, assigned_config_id")
       .eq("email", userEmail)
       .maybeSingle();
     const currentUserId = currentUser?.id ?? null;
+    const assignedConfigId = currentUser?.assigned_config_id ?? null;
     const isAdmin =
       currentUser?.account_type === "admin" ||
       currentUser?.account_type === "superadmin";
@@ -113,7 +114,83 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
       }
     }
 
-    // 1.1. Cerca configurazione personale dell'utente
+    // 1.1. PRIORITÀ: Configurazione assegnata (assigned_config_id)
+    if (assignedConfigId && currentUserId) {
+      const { data: assignedConfig } = await supabaseAdmin
+        .from("courier_configs")
+        .select("*")
+        .eq("id", assignedConfigId)
+        .eq("provider_id", "spedisci_online")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (assignedConfig) {
+        console.log(
+          "✅ [SPEDISCI.ONLINE] Configurazione assegnata trovata (assigned_config_id)"
+        );
+
+        let apiKey = assignedConfig.api_key;
+        let apiSecret = assignedConfig.api_secret;
+
+        if (apiKey && isEncrypted(apiKey)) {
+          apiKey = decryptCredential(apiKey);
+        }
+        if (apiSecret && isEncrypted(apiSecret)) {
+          apiSecret = decryptCredential(apiSecret);
+        }
+
+        return {
+          success: true,
+          credentials: {
+            api_key: apiKey,
+            api_secret: apiSecret,
+            base_url:
+              assignedConfig.base_url || "https://api.spedisci.online/api/v2",
+            contract_mapping: assignedConfig.contract_mapping || {},
+          },
+        };
+      }
+    }
+
+    // 1.2. Cerca configurazione con owner_user_id = currentUserId
+    if (currentUserId) {
+      const { data: ownedConfig } = await supabaseAdmin
+        .from("courier_configs")
+        .select("*")
+        .eq("provider_id", "spedisci_online")
+        .eq("owner_user_id", currentUserId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (ownedConfig) {
+        console.log(
+          "✅ [SPEDISCI.ONLINE] Configurazione personale trovata (owner_user_id)"
+        );
+
+        let apiKey = ownedConfig.api_key;
+        let apiSecret = ownedConfig.api_secret;
+
+        if (apiKey && isEncrypted(apiKey)) {
+          apiKey = decryptCredential(apiKey);
+        }
+        if (apiSecret && isEncrypted(apiSecret)) {
+          apiSecret = decryptCredential(apiSecret);
+        }
+
+        return {
+          success: true,
+          credentials: {
+            api_key: apiKey,
+            api_secret: apiSecret,
+            base_url:
+              ownedConfig.base_url || "https://api.spedisci.online/api/v2",
+            contract_mapping: ownedConfig.contract_mapping || {},
+          },
+        };
+      }
+    }
+
+    // 1.3. Cerca configurazione personale dell'utente (created_by)
     const { data: personalConfig } = await supabaseAdmin
       .from("courier_configs")
       .select("*")
@@ -124,7 +201,7 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
 
     if (personalConfig) {
       console.log(
-        "✅ [SPEDISCI.ONLINE] Configurazione personale trovata in courier_configs"
+        "✅ [SPEDISCI.ONLINE] Configurazione personale trovata (created_by)"
       );
 
       // Decripta credenziali se necessario
