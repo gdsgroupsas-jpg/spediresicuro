@@ -69,24 +69,21 @@ export function useQuoteRequest(options: UseQuoteRequestOptions = {}) {
         setLoading(true);
         setError(null);
 
-        // Chiama API (usa testSpedisciOnlineRates o endpoint appropriato)
-        const response = await fetch('/api/quotes/compare', {
+        // ✨ ENTERPRISE: Chiama endpoint real-time con cache Redis
+        const response = await fetch('/api/quotes/realtime', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             weight: params.weight,
-            destination: {
-              zip: params.zip,
-              province: params.province,
-            },
-            courierId: params.courier,
-            options: {
-              cashOnDelivery: params.codValue ? true : false,
-              insurance: params.insuranceValue ? true : false,
-              declaredValue: params.insuranceValue,
-            },
+            zip: params.zip,
+            province: params.province,
+            courier: params.courier,
+            contractCode: params.contractCode,
+            services: params.services || [],
+            insuranceValue: params.insuranceValue || 0,
+            codValue: params.codValue || 0,
           }),
         });
 
@@ -99,7 +96,7 @@ export function useQuoteRequest(options: UseQuoteRequestOptions = {}) {
         
         const result: QuoteResult = {
           success: true,
-          rates: data.contracts || [],
+          rates: data.rates || [], // Endpoint real-time restituisce 'rates', non 'contracts'
           cached: data.details?.cached || false,
           cacheAge: data.details?.cacheAge,
         };
