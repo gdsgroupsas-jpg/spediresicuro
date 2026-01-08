@@ -77,8 +77,10 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         const isOwner =
           !!currentUserId && specificConfig.owner_user_id === currentUserId;
         const isCreator = specificConfig.created_by === userEmail;
+        // ✨ FIX: Aggiungi controllo per configurazioni ASSEGNATE
+        const isAssigned = assignedConfigId === configId;
 
-        if (!isAdmin && !isDefaultVisible && !isOwner && !isCreator) {
+        if (!isAdmin && !isDefaultVisible && !isOwner && !isCreator && !isAssigned) {
           return {
             success: false,
             error: "Configurazione non trovata o non autorizzata",
@@ -321,6 +323,185 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     };
   } catch (error) {
     console.error("Errore recupero credenziali spedisci.online:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Errore sconosciuto",
+    };
+  }
+}
+
+/**
+ * ✨ NUOVA FUNZIONE: Recupera TUTTE le configurazioni Spedisci.Online dell'utente
+ * 
+ * Ogni reseller può avere N configurazioni API con credenziali diverse.
+ * Questa funzione le recupera TUTTE per permettere chiamate API multiple.
+ * 
+ * @returns Array di configurazioni con credenziali decriptate
+ */
+export async function getAllUserSpedisciOnlineConfigs(): Promise<{
+  success: boolean;
+  configs?: Array<{
+    configId: string;
+    configName: string;
+    api_key: string;
+    api_secret?: string;
+    base_url: string;
+    contract_mapping: Record<string, string>;
+  }>;
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return { success: false, error: "Non autenticato" };
+    }
+
+    const userEmail = session.user.email;
+    const { data: currentUser } = await supabaseAdmin
+      .from("users")
+      .select("id, account_type, assigned_config_id")
+      .eq("email", userEmail)
+      .maybeSingle();
+    
+    const currentUserId = currentUser?.id ?? null;
+    const assignedConfigId = currentUser?.assigned_config_id ?? null;
+
+    const { decryptCredential, isEncrypted } = await import(
+      "@/lib/security/encryption"
+    );
+
+    const configs: Array<{
+      configId: string;
+      configName: string;
+      api_key: string;
+      api_secret?: string;
+      base_url: string;
+      contract_mapping: Record<string, string>;
+    }> = [];
+
+    // 1. Recupera TUTTE le configurazioni personali (owner_user_id = currentUserId)
+    if (currentUserId) {
+      const { data: personalConfigs, error: personalError } = await supabaseAdmin
+        .from("courier_configs")
+        .select("*")
+        .eq("provider_id", "spedisci_online")
+        .eq("owner_user_id", currentUserId)
+        .eq("is_active", true);
+
+      if (!personalError && personalConfigs && personalConfigs.length > 0) {
+        console.log(`✅ [SPEDISCI.ONLINE] Trovate ${personalConfigs.length} configurazioni personali`);
+        
+        for (const config of personalConfigs) {
+          let apiKey = config.api_key;
+          let apiSecret = config.api_secret;
+
+          if (apiKey && isEncrypted(apiKey)) {
+            apiKey = decryptCredential(apiKey);
+          }
+          if (apiSecret && isEncrypted(apiSecret)) {
+            apiSecret = decryptCredential(apiSecret);
+          }
+
+          configs.push({
+            configId: config.id,
+            configName: config.name || config.config_label || `Config ${config.id.substring(0, 8)}`,
+            api_key: apiKey,
+            api_secret: apiSecret,
+            base_url: config.base_url || "https://api.spedisci.online/api/v2",
+            contract_mapping: config.contract_mapping || {},
+          });
+        }
+      }
+    }
+
+    // 2. Aggiungi configurazione assegnata (se non già presente)
+    if (assignedConfigId) {
+      const alreadyIncluded = configs.some(c => c.configId === assignedConfigId);
+      
+      if (!alreadyIncluded) {
+        const { data: assignedConfig } = await supabaseAdmin
+          .from("courier_configs")
+          .select("*")
+          .eq("id", assignedConfigId)
+          .eq("provider_id", "spedisci_online")
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (assignedConfig) {
+          console.log(`✅ [SPEDISCI.ONLINE] Aggiunta configurazione assegnata`);
+          
+          let apiKey = assignedConfig.api_key;
+          let apiSecret = assignedConfig.api_secret;
+
+          if (apiKey && isEncrypted(apiKey)) {
+            apiKey = decryptCredential(apiKey);
+          }
+          if (apiSecret && isEncrypted(apiSecret)) {
+            apiSecret = decryptCredential(apiSecret);
+          }
+
+          configs.push({
+            configId: assignedConfig.id,
+            configName: assignedConfig.name || assignedConfig.config_label || `Config Assegnata`,
+            api_key: apiKey,
+            api_secret: apiSecret,
+            base_url: assignedConfig.base_url || "https://api.spedisci.online/api/v2",
+            contract_mapping: assignedConfig.contract_mapping || {},
+          });
+        }
+      }
+    }
+
+    // 3. Aggiungi configurazioni default globali (se non già presenti)
+    const { data: defaultConfigs } = await supabaseAdmin
+      .from("courier_configs")
+      .select("*")
+      .eq("provider_id", "spedisci_online")
+      .eq("is_default", true)
+      .eq("is_active", true)
+      .is("owner_user_id", null);
+
+    if (defaultConfigs && defaultConfigs.length > 0) {
+      for (const config of defaultConfigs) {
+        const alreadyIncluded = configs.some(c => c.configId === config.id);
+        
+        if (!alreadyIncluded) {
+          console.log(`✅ [SPEDISCI.ONLINE] Aggiunta configurazione default globale`);
+          
+          let apiKey = config.api_key;
+          let apiSecret = config.api_secret;
+
+          if (apiKey && isEncrypted(apiKey)) {
+            apiKey = decryptCredential(apiKey);
+          }
+          if (apiSecret && isEncrypted(apiSecret)) {
+            apiSecret = decryptCredential(apiSecret);
+          }
+
+          configs.push({
+            configId: config.id,
+            configName: config.name || config.config_label || `Config Default`,
+            api_key: apiKey,
+            api_secret: apiSecret,
+            base_url: config.base_url || "https://api.spedisci.online/api/v2",
+            contract_mapping: config.contract_mapping || {},
+          });
+        }
+      }
+    }
+
+    if (configs.length === 0) {
+      return {
+        success: false,
+        error: "Nessuna configurazione Spedisci.Online attiva trovata",
+      };
+    }
+
+    console.log(`✅ [SPEDISCI.ONLINE] Totale configurazioni trovate: ${configs.length}`);
+    return { success: true, configs };
+  } catch (error) {
+    console.error("Errore recupero configurazioni spedisci.online:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Errore sconosciuto",

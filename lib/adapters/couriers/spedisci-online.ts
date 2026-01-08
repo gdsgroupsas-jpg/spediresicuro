@@ -1960,7 +1960,11 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         notes: params.notes || "N/A",
         insuranceValue: params.insuranceValue || 0,
         codValue: params.codValue || 0,
-        accessoriServices: params.accessoriServices || [],
+        // ⚠️ FIX: Non passare accessoriServices a /shipping/rates
+        // L'API sembra usarli come FILTRI (esclude corrieri che non li supportano)
+        // invece di aggiungerli al prezzo. I servizi vanno passati solo a /shipping/create
+        // TODO: Verificare con Spedisci.Online il comportamento corretto
+        accessoriServices: [], // Sempre vuoto per rates, servizi applicati in creazione
       };
 
       console.log("📊 [SPEDISCI.ONLINE] Chiamata GET RATES:", {
@@ -1968,6 +1972,10 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         packages_count: payload.packages.length,
         shipFrom: payload.shipFrom.city,
         shipTo: payload.shipTo.city,
+        insuranceValue: payload.insuranceValue,
+        codValue: payload.codValue,
+        // ⚠️ Servizi richiesti dall'utente (non passati all'API, saranno applicati in creazione)
+        requestedServices: params.accessoriServices || [],
       });
 
       const response = await fetch(url, {
@@ -1996,6 +2004,29 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
                 .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i)
             : [],
         });
+
+        // ✨ DEBUG: Mostra services_price per verificare se i servizi accessori funzionano
+        if (
+          Array.isArray(rates) &&
+          rates.length > 0 &&
+          payload.accessoriServices &&
+          payload.accessoriServices.length > 0
+        ) {
+          console.log(
+            "🔍 [SPEDISCI.ONLINE] SERVIZI ACCESSORI RICHIESTI:",
+            payload.accessoriServices
+          );
+          console.log(
+            "🔍 [SPEDISCI.ONLINE] DETTAGLIO RATES CON SERVICES_PRICE:"
+          );
+          rates.forEach((r: any, i: number) => {
+            console.log(
+              `   Rate ${i + 1}: ${r.carrierCode}/${
+                r.contractCode
+              } - services_price: ${r.services_price}, total: ${r.total_price}`
+            );
+          });
+        }
 
         return {
           success: true,
