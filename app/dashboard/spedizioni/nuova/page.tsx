@@ -32,6 +32,7 @@ import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import OCRUpload from '@/components/ocr/ocr-upload';
 import ContractComparison from '@/components/shipments/contract-comparison';
 import { CourierQuoteCard } from '@/components/shipments/courier-quote-card';
+import { IntelligentQuoteComparator } from '@/components/shipments/intelligent-quote-comparator';
 import { generateShipmentPDF, downloadPDF } from '@/lib/generate-shipment-document';
 import type { Corriere } from '@/types/corrieri';
 
@@ -1320,64 +1321,42 @@ export default function NuovaSpedizionePage() {
                     </div>
                   )}
 
-                  {/* ✨ ENTERPRISE: Corriere Selection con Quote Real-Time */}
+                  {/* ✨ ENTERPRISE: Preventivatore Intelligente */}
                   <div className="pt-6 border-t border-gray-200">
-                    <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-3">
-                      Corriere {formData.peso && parseFloat(formData.peso) > 0 && formData.destinatarioCap && (
-                        <span className="text-[#FF9500] ml-2">• Clicca per preventivo real-time</span>
-                      )}
-                    </label>
                     {couriersLoading ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                         <span className="ml-2 text-sm text-gray-500">Caricamento corrieri...</span>
                       </div>
+                    ) : availableCouriers.length > 0 ? (
+                      <IntelligentQuoteComparator
+                        couriers={availableCouriers}
+                        weight={formData.peso ? parseFloat(formData.peso) : 0}
+                        zip={formData.destinatarioCap}
+                        province={formData.destinatarioProvincia}
+                        city={formData.destinatarioCitta}
+                        services={formData.tipoSpedizione === 'express' ? ['express'] : []}
+                        insuranceValue={formData.contrassegnoAmount ? parseFloat(formData.contrassegnoAmount) : 0}
+                        codValue={formData.contrassegno ? parseFloat(formData.contrassegnoAmount || '0') : 0}
+                        dimensions={{
+                          length: formData.lunghezza ? parseFloat(formData.lunghezza) : undefined,
+                          width: formData.larghezza ? parseFloat(formData.larghezza) : undefined,
+                          height: formData.altezza ? parseFloat(formData.altezza) : undefined,
+                        }}
+                        onQuoteReceived={(courierName, contractCode, quote) => {
+                          setCourierQuotes((prev) => {
+                            const next = new Map(prev);
+                            next.set(`${courierName}::${contractCode}`, quote);
+                            return next;
+                          });
+                        }}
+                        onContractSelected={(courierName, contractCode) => {
+                          setFormData((prev) => ({ ...prev, corriere: courierName }));
+                        }}
+                      />
                     ) : (
-                      <div className="space-y-3">
-                        {availableCouriers.map((courier) => {
-                          // Se peso e CAP disponibili, mostra componente enterprise con quote
-                          if (formData.peso && parseFloat(formData.peso) > 0 && formData.destinatarioCap) {
-                            return (
-                              <CourierQuoteCard
-                                key={`${courier.displayName}::${courier.contractCode || 'default'}`}
-                                courier={courier}
-                                weight={parseFloat(formData.peso)}
-                                zip={formData.destinatarioCap}
-                                province={formData.destinatarioProvincia}
-                                services={formData.tipoSpedizione === 'express' ? ['express'] : []}
-                                insuranceValue={formData.contrassegnoAmount ? parseFloat(formData.contrassegnoAmount) : 0}
-                                codValue={formData.contrassegno ? parseFloat(formData.contrassegnoAmount || '0') : 0}
-                                estimatedPrice={estimatedCost}
-                                onQuoteReceived={(courierName, quote) => {
-                                  setCourierQuotes((prev) => {
-                                    const next = new Map(prev);
-                                    next.set(courierName, quote);
-                                    return next;
-                                  });
-                                  // Auto-seleziona corriere quando riceve quote
-                                  if (quote.success && quote.rates && quote.rates.length > 0) {
-                                    setFormData((prev) => ({ ...prev, corriere: courier.displayName }));
-                                  }
-                                }}
-                              />
-                            );
-                          }
-                          
-                          // Fallback: bottone semplice se peso/CAP non disponibili
-                          return (
-                            <button
-                              key={courier.displayName}
-                              type="button"
-                              onClick={() => setFormData((prev) => ({ ...prev, corriere: courier.displayName }))}
-                              className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all ${formData.corriere === courier.displayName
-                                ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white shadow-sm'
-                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                                }`}
-                            >
-                              {courier.displayName}
-                            </button>
-                          );
-                        })}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                        <p className="text-sm text-gray-600">Nessun corriere disponibile</p>
                       </div>
                     )}
                   </div>
