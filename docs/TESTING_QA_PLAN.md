@@ -8,9 +8,13 @@ Verificare che tutte le funzionalità implementate funzionino correttamente in p
 
 ## ✅ PRE-REQUISITI
 
-- [ ] Migrations 090-094 applicate con successo
+- [ ] Migrations 090-095 applicate con successo (095 per RPC security)
 - [ ] Environment variables configurate in Vercel
 - [ ] Deploy completato su produzione/staging
+- [ ] Browser console aperta (F12) per monitorare errori JavaScript
+- [ ] Network tab aperto per monitorare chiamate API
+
+> **📖 Per test dettagliati SuperAdmin con prompt operativo:** Vedi `docs/AGENT_TESTING_PROMPT_SUPERADMIN.md`
 
 ---
 
@@ -79,6 +83,8 @@ ORDER BY created_at DESC LIMIT 5;
 
 **Scenario:** Visualizzare P&L e statistiche finanziarie
 
+> **📖 Per test dettagliati passo-passo, vedi:** `docs/AGENT_TESTING_PROMPT_SUPERADMIN.md`
+
 **Steps:**
 
 1. Login come SuperAdmin
@@ -87,15 +93,35 @@ ORDER BY created_at DESC LIMIT 5;
 
 **Verifica:**
 
-- [ ] Stats Cards caricate correttamente (8 cards)
-- [ ] Monthly P&L chart visualizzato
-- [ ] Alerts Table mostra margini negativi
-- [ ] Reconciliation Table mostra spedizioni pending
-- [ ] Period Selector funziona (7d, 30d, 90d, YTD, all)
-- [ ] Export CSV funziona
+- [ ] Dashboard carica senza errori (verifica console browser)
+- [ ] Stats Cards caricate correttamente (8 cards):
+  - [ ] Spedizioni Totali
+  - [ ] Ricavi Totali
+  - [ ] Costi Provider
+  - [ ] Margine Lordo
+  - [ ] Margine Medio
+  - [ ] Da Riconciliare
+  - [ ] Margini Negativi
+  - [ ] Ultimi 30 Giorni
+- [ ] Monthly P&L chart visualizzato (tab Overview)
+- [ ] Period Selector funziona con 5 opzioni:
+  - [ ] Ultimi 7 giorni
+  - [ ] Ultimi 30 giorni
+  - [ ] Ultimi 90 giorni
+  - [ ] Da inizio anno
+  - [ ] Tutto il periodo
+- [ ] Export CSV funziona (verifica download file con colonne corrette)
 - [ ] Tab Analytics mostra:
-  - [ ] Margin By Courier Chart
-  - [ ] Top Resellers Table
+  - [ ] Margin By Courier Chart (grafico con barre colorate)
+  - [ ] Top Resellers Table (classifica con top 3 evidenziati)
+- [ ] Tab Riconciliazione:
+  - [ ] Tabella carica senza errori
+  - [ ] Se vuota, mostra messaggio "Tutto riconciliato!" (non errore)
+  - [ ] Se ci sono dati, mostra colonne: Tracking, Cliente, Billed, Costo, Margine, Stato, Azioni
+- [ ] Tab Alert:
+  - [ ] Tabella carica senza errori
+  - [ ] Se vuota, mostra messaggio "Nessun alert attivo" (non errore)
+  - [ ] Se ci sono alert, mostra severità colorate (Critical=rosso, Warning=giallo, Info=blu)
 
 ---
 
@@ -134,23 +160,34 @@ WHERE u.parent_user_id = '<reseller_id>';
 
 ### 4. Navigation Update
 
-**Scenario:** Verificare nuove voci di navigazione
+**Scenario:** Verificare nuove voci di navigazione e quick actions
 
 **Steps:**
 
 1. Login come Reseller → verifica sidebar
-2. Login come SuperAdmin → verifica sidebar
+2. Login come SuperAdmin → verifica sidebar e dashboard
 
 **Verifica Reseller:**
 
 - [ ] Voce "I Miei Clienti" punta a `/dashboard/reseller/clienti`
 - [ ] Descrizione aggiornata: "Gestisci clienti, listini e wallet"
 
-**Verifica SuperAdmin:**
+**Verifica SuperAdmin - Sidebar:**
 
-- [ ] Nuova sezione "Finanza Piattaforma" visibile
+- [ ] Nuova sezione "Finanza Piattaforma" visibile nel menu laterale
 - [ ] Voce "Financial Dashboard" punta a `/dashboard/super-admin/financial`
-- [ ] Voce "Listini Master" presente
+- [ ] Voce "Listini Master" presente e punta a `/dashboard/super-admin/listini-master`
+- [ ] Tutti i link navigano correttamente (nessun errore 404)
+
+**Verifica SuperAdmin - Quick Actions (Dashboard):**
+
+- [ ] Vai su `/dashboard/super-admin`
+- [ ] Verifica presenza di 3 card "Quick Actions":
+  - [ ] Financial Dashboard (card verde) → link funzionante
+  - [ ] Listini Master (card blu) → link funzionante
+  - [ ] Analytics (card grigia, disabled se non implementato)
+- [ ] Clic su "Financial Dashboard" → porta a `/dashboard/super-admin/financial`
+- [ ] Clic su "Listini Master" → porta a `/dashboard/super-admin/listini-master`
 
 ---
 
