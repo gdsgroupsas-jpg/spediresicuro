@@ -1339,7 +1339,7 @@ export default function NuovaSpedizionePage() {
                           if (formData.peso && parseFloat(formData.peso) > 0 && formData.destinatarioCap) {
                             return (
                               <CourierQuoteCard
-                                key={courier.displayName}
+                                key={`${courier.displayName}::${courier.contractCode || 'default'}`}
                                 courier={courier}
                                 weight={parseFloat(formData.peso)}
                                 zip={formData.destinatarioCap}

@@ -532,8 +532,10 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
       for (const [contractCode, courierName] of Object.entries(
         contractMapping
       )) {
-        // Chiave composita per evitare conflitti tra corrieri con stesso nome da provider diversi
-        const mapKey = `${courierName}::${providerId}`;
+        // ⚠️ FIX: Chiave composita include contractCode per distinguere contratti diversi
+        // con stesso courierName (es. due contratti "PosteDeliveryBusiness" diversi)
+        // Formato: courierName::contractCode::providerId
+        const mapKey = `${courierName}::${contractCode}::${providerId}`;
         
         // Se non esiste già, aggiungi. Se esiste, mantieni il primo (priorità personali > assegnate > default)
         if (!couriersMap.has(mapKey)) {
