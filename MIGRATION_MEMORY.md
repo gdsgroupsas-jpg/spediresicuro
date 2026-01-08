@@ -963,6 +963,7 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 **Test:**
 - ✅ `tests/unit/platform-cost-recorder.test.ts` - 13 test
 - ✅ `tests/unit/platform-cost-calculator.test.ts` - 16 test
+- ✅ `tests/integration/platform-costs.integration.test.ts` - 8 test cases (integration)
 - ✅ Suite completa: 590/590 test passati, 0 regressioni
 
 **Deploy Status:**

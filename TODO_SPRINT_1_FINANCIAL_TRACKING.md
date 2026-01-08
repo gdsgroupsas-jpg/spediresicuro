@@ -194,10 +194,11 @@ export async function logFinancialEvent(params: {
 
 **File:** `tests/integration/platform-costs.integration.test.ts`
 
-- [ ] Test full flow: create shipment → record cost
-- [ ] Test with real DB (staging)
-- [ ] Test RLS enforcement
-- [ ] Test concurrent shipments
+- [x] Test full flow: create shipment → record cost
+- [x] Test with real DB (staging)
+- [x] Test RLS enforcement
+- [x] Test concurrent shipments
+- **TOTALE: 8 test cases implementati**
 
 ### Task 4.3: Performance Tests
 
