@@ -193,7 +193,7 @@ export function IntelligentQuoteComparator({
     };
 
     fetchAllQuotes();
-  }, [isDataComplete, couriers, weight, zip, province, services, insuranceValue, codValue, requestQuote, onQuoteReceived]);
+  }, [isDataComplete, couriers, weight, zip, province, services, insuranceValue, codValue, onQuoteReceived]);
 
   // Filtra solo contratti con risultati validi
   const validQuotes = useMemo(() => {
