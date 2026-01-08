@@ -143,9 +143,13 @@ export function IntelligentQuoteComparator({
     }
 
     // ⚠️ FIX: Prevenire loop infinito - crea chiave univoca per questi parametri
+    // ✨ BUG FIX: Include dimensions nel requestKey per evitare rates obsoleti quando cambiano le dimensioni
+    const dimensionsKey = dimensions
+      ? `${dimensions.length || 0}-${dimensions.width || 0}-${dimensions.height || 0}`
+      : "no-dimensions";
     const requestKey = `${weight}-${zip}-${province}-${services.join(
       ","
-    )}-${insuranceValue}-${codValue}-${couriers.length}`;
+    )}-${insuranceValue}-${codValue}-${dimensionsKey}-${couriers.length}`;
 
     // ✨ DEBUG: Log per vedere se i parametri cambiano
     console.log("🔄 [QUOTE COMPARATOR] useEffect triggered:", {
