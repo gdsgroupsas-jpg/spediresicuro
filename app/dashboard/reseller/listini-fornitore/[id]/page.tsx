@@ -1159,8 +1159,8 @@ export default function PriceListDetailPage() {
               )}
             </div>
           </TabsContent>
+          </div>
         </Tabs>
-        </div>
 
         {/* Note e Info Aggiuntive */}
         {priceList.notes && (

@@ -814,7 +814,7 @@ export async function POST(request: Request) {
       return Response.json(
         { error: 'Errore salvataggio. Riprova.' },
         { status: 500 }
-      )
+      );
     }
 
     // ============================================
@@ -874,10 +874,10 @@ export async function POST(request: Request) {
       return Response.json(
         { error: 'Dati non validi', details: error.errors },
         { status: 400 }
-      )
+      );
     }
 
-    return Response.json({ error: 'Errore interno' }, { status: 500 })
+    return Response.json({ error: 'Errore interno' }, { status: 500 });
   }
 }
 
