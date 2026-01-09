@@ -864,10 +864,8 @@ export async function POST(request: Request) {
         }
       }
     });
-
   } catch (error: any) {
-    console.error('Error:', error)
-    
+    console.error('Error:', error);
     // Se è errore di validazione Zod
     if (error.name === 'ZodError') {
       return Response.json(
@@ -875,8 +873,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
     return Response.json({ error: 'Errore interno' }, { status: 500 });
-  }
 }
+
 
