@@ -79,19 +79,16 @@ export async function GET(request: NextRequest) {
     // Recupera corrieri disponibili dal DB
     const couriers = await getAvailableCouriersForUser(userId);
 
-    // ⚠️ IMPORTANTE: Include contractCode per distinguere contratti diversi con stesso displayName
-    // Es: "PosteDeliveryBusiness" e "Poste Italiane" possono avere contractCode diversi
-    // e devono essere mostrati come opzioni separate
+    // ⚠️ SICUREZZA: Esponi SOLO displayName e courierName (necessari per UI)
+    // NON esporre: contractCode, providerId, courierId interno
     const safeCouriers = couriers.map((courier) => ({
       displayName: getDisplayName(courier.courierName),
       courierName: courier.courierName,
-      contractCode: courier.contractCode, // ⚠️ Necessario per distinguere contratti
     }));
 
-    // ⚠️ FIX: Deduplica per displayName + contractCode invece di solo displayName
-    // Questo permette di mostrare più contratti con stesso nome (es. due contratti Poste Italiane)
+    // Rimuovi duplicati per displayName (es. se ci sono più contratti GLS)
     const uniqueCouriers = Array.from(
-      new Map(safeCouriers.map((c) => [`${c.displayName}::${c.contractCode}`, c])).values()
+      new Map(safeCouriers.map((c) => [c.displayName, c])).values()
     );
 
     return NextResponse.json({
