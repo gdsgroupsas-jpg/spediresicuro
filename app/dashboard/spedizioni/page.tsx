@@ -328,16 +328,20 @@ export default function ListaSpedizioniPage() {
       // Marca come in esecuzione
       sessionStorage.setItem(refreshKey, '1');
 
-      // Forza refresh immediato delle spedizioni
+      // ✨ ENTERPRISE: Refresh ottimizzato delle spedizioni
+      // Usa timestamp invece di no-store per performance migliori
       async function refreshSpedizioni() {
         try {
           setIsLoading(true);
-          // ⚠️ Cache bypass: forza fetch fresco (no cache browser/CDN)
-          const response = await fetch('/api/spedizioni', {
-            cache: 'no-store',
+          // ✨ Ottimizzazione: usa timestamp per bypass cache invece di no-store
+          // Questo è più veloce perché il browser può ancora usare la cache per altre parti
+          const timestamp = Date.now();
+          const response = await fetch(`/api/spedizioni?t=${timestamp}`, {
+            // Usa 'default' invece di 'no-store' per permettere cache browser per altre richieste
+            cache: 'default',
             headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
+              // Rimuoviamo header aggressivi per performance
+              'Cache-Control': 'max-age=0', // Chiedi validazione ma permetti cache condizionale
             },
           });
           if (response.ok) {

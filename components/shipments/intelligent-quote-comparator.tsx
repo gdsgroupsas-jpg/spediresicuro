@@ -21,8 +21,10 @@ import {
   Clock,
   Loader2,
   XCircle,
+  Shield,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 // Rimuoviamo useQuoteRequest per gestire chiamate parallele manualmente
 
 // Costi stimati per servizi accessori (da confermare in fase di creazione spedizione)
@@ -60,8 +62,15 @@ interface IntelligentQuoteComparatorProps {
   onContractSelected?: (
     courier: string,
     contractCode: string,
-    accessoryService?: string
+    accessoryService?: string,
+    configId?: string // ✨ ENTERPRISE: ConfigId della configurazione API che ha fornito questo rate
   ) => void;
+  // ✨ ENTERPRISE: resetKey per forzare reset cache quando si resetta il form
+  resetKey?: string | number;
+  // ✨ ENTERPRISE: useDbFirst - Se true, usa DB per preventivi (default: true per utenti normali)
+  useDbFirst?: boolean;
+  // ✨ ENTERPRISE: verifyCosts - Se true (solo superadmin), mostra anche prezzi API per confronto
+  verifyCosts?: boolean;
 }
 
 interface QuoteResult {
@@ -74,6 +83,14 @@ interface QuoteResult {
   cached?: boolean;
   cacheAge?: number;
   loading: boolean;
+  // ✨ ENTERPRISE: Confronto DB vs API (solo se verifyCosts attivo)
+  apiRate?: any;
+  priceComparison?: {
+    dbPrice: number;
+    apiPrice: number;
+    difference: number;
+    differencePercent: number;
+  };
 }
 
 export function IntelligentQuoteComparator({
@@ -88,6 +105,9 @@ export function IntelligentQuoteComparator({
   dimensions,
   onQuoteReceived,
   onContractSelected,
+  resetKey,
+  useDbFirst = true, // ✨ ENTERPRISE: Default DB-first per sicurezza e performance
+  verifyCosts = false, // ✨ ENTERPRISE: Solo superadmin può attivare
 }: IntelligentQuoteComparatorProps) {
   const [quotes, setQuotes] = useState<Map<string, QuoteResult>>(new Map());
   const [isCalculating, setIsCalculating] = useState(false);
@@ -102,13 +122,56 @@ export function IntelligentQuoteComparator({
     string | null
   >(null);
   const [showAccessoryDropdown, setShowAccessoryDropdown] = useState(false);
+  
+  // ✨ ENTERPRISE: Stato per switch "Verifica Costi" (solo superadmin)
+  const [isVerifyCostsEnabled, setIsVerifyCostsEnabled] = useState(verifyCosts || false);
+  const [isSuperadmin, setIsSuperadmin] = useState<boolean | null>(null);
 
   // ⚠️ FIX: Prevenire loop infinito - traccia se abbiamo già fatto le chiamate per questi parametri
   const lastRequestParamsRef = useRef<string>("");
   const isRequestingRef = useRef(false);
+  
+  // ✨ ENTERPRISE: Verifica se utente è superadmin (per mostrare switch)
+  useEffect(() => {
+    async function checkSuperadmin() {
+      try {
+        const response = await fetch('/api/user/info');
+        if (response.ok) {
+          const data = await response.json();
+          const userData = data.user || data;
+          const accountType = userData.account_type || userData.accountType;
+          setIsSuperadmin(accountType === 'superadmin');
+        } else {
+          setIsSuperadmin(false);
+        }
+      } catch (error) {
+        console.error('Errore verifica superadmin:', error);
+        setIsSuperadmin(false);
+      }
+    }
+    checkSuperadmin();
+  }, []);
 
   // ✨ FIX: Memorizza i servizi precedenti per rilevare cambiamenti
   const prevServicesRef = useRef<string>("");
+  
+  // ✨ ENTERPRISE: Reset cache quando cambia resetKey (es. dopo reset form)
+  const prevResetKeyRef = useRef<string | number | undefined>(undefined);
+  if (resetKey !== undefined && prevResetKeyRef.current !== resetKey) {
+    console.log(
+      "🔄 [QUOTE COMPARATOR] Reset key cambiato:",
+      prevResetKeyRef.current,
+      "→",
+      resetKey,
+      "- Reset cache interna"
+    );
+    prevResetKeyRef.current = resetKey;
+    lastRequestParamsRef.current = ""; // Forza nuova chiamata
+    isRequestingRef.current = false;
+    setQuotes(new Map()); // Reset quotes
+    setSelectedCourierKey(null); // Reset selezione
+    setSelectedAccessoryService(null); // Reset servizio accessorio
+  }
 
   // ✨ IMPORTANTE: Reset refs quando cambiano servizi o COD - PRIMA dell'useEffect principale
   const currentServicesKey = services.sort().join(",");
@@ -144,14 +207,16 @@ export function IntelligentQuoteComparator({
 
     // ⚠️ FIX: Prevenire loop infinito - crea chiave univoca per questi parametri
     // ✨ BUG FIX: Include dimensions nel requestKey per evitare rates obsoleti quando cambiano le dimensioni
+    // ✨ ENTERPRISE: Include resetKey nel requestKey per forzare nuova chiamata dopo reset form
     const dimensionsKey = dimensions
       ? `${dimensions.length || 0}-${dimensions.width || 0}-${
           dimensions.height || 0
         }`
       : "no-dimensions";
-    const requestKey = `${weight}-${zip}-${province}-${services.join(
+    const resetKeyStr = resetKey !== undefined ? String(resetKey) : "0";
+    const requestKey = `${resetKeyStr}-${weight}-${zip}-${province}-${services.join(
       ","
-    )}-${insuranceValue}-${codValue}-${dimensionsKey}-${couriers.length}`;
+    )}-${insuranceValue}-${codValue}-${dimensionsKey}-${couriers.length}-${useDbFirst ? "db" : "api"}-${verifyCosts ? "verify" : "normal"}`;
 
     // ✨ DEBUG: Log per vedere se i parametri cambiano
     console.log("🔄 [QUOTE COMPARATOR] useEffect triggered:", {
@@ -204,28 +269,96 @@ export function IntelligentQuoteComparator({
         });
         setQuotes(initialQuotes);
 
-        // ✨ UNA SOLA chiamata generica senza filtri courier/contractCode
+        // ✨ ENTERPRISE: DB-first con fallback a API
+        // Se useDbFirst=true, usa endpoint DB (veloce, isolato, sicuro)
+        // Se fallisce o useDbFirst=false, fallback a API realtime
         console.log(
-          "📊 [QUOTE COMPARATOR] Chiamata API con servizi:",
-          services
+          "📊 [QUOTE COMPARATOR] Modalità:",
+          useDbFirst ? "DB-first" : "API-realtime",
+          verifyCosts ? "(con verifica costi)" : ""
         );
-        const response = await fetch("/api/quotes/realtime", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            allContracts: true, // ✨ Flag per chiamata generica
-            weight,
-            zip,
-            province,
-            city,
-            services,
-            insuranceValue,
-            codValue,
-            dimensions, // Passa dimensioni se disponibili
-          }),
-        });
 
-        const result = await response.json();
+        let result: any = null;
+        let apiRates: any[] = []; // ✨ Per superadmin: prezzi API per confronto
+
+        if (useDbFirst) {
+          try {
+            // ✨ ENTERPRISE: Chiamata DB-first
+            const dbResponse = await fetch("/api/quotes/db", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                weight,
+                zip,
+                province,
+                city,
+                services,
+                insuranceValue,
+                codValue,
+                dimensions,
+                verifyCosts: isVerifyCostsEnabled, // ✨ Usa stato locale per superadmin
+              }),
+            });
+
+            const dbResult = await dbResponse.json();
+
+            if (dbResult.success && dbResult.rates && dbResult.rates.length > 0) {
+              result = dbResult;
+              apiRates = dbResult.apiRates || []; // ✨ Prezzi API per confronto (solo se verifyCosts=true)
+              console.log(
+                "✅ [QUOTE COMPARATOR] Preventivi da DB:",
+                dbResult.rates.length,
+                "rates"
+              );
+            } else {
+              // Fallback a API se DB non ha risultati
+              console.warn(
+                "⚠️ [QUOTE COMPARATOR] DB non ha risultati, fallback a API"
+              );
+              throw new Error("DB non disponibile, fallback a API");
+            }
+          } catch (dbError: any) {
+            // Fallback a API realtime se DB fallisce
+            console.warn(
+              "⚠️ [QUOTE COMPARATOR] Errore DB, fallback a API:",
+              dbError.message
+            );
+            const apiResponse = await fetch("/api/quotes/realtime", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                allContracts: true,
+                weight,
+                zip,
+                province,
+                city,
+                services,
+                insuranceValue,
+                codValue,
+                dimensions,
+              }),
+            });
+            result = await apiResponse.json();
+          }
+        } else {
+          // Modalità API realtime (legacy, per backward compatibility)
+          const apiResponse = await fetch("/api/quotes/realtime", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              allContracts: true,
+              weight,
+              zip,
+              province,
+              city,
+              services,
+              insuranceValue,
+              codValue,
+              dimensions,
+            }),
+          });
+          result = await apiResponse.json();
+        }
 
         if (!result.success || !result.rates || result.rates.length === 0) {
           // Nessun rate disponibile: aggiorna tutti i contratti come non disponibili
@@ -251,12 +384,46 @@ export function IntelligentQuoteComparator({
           return;
         }
 
+        // ✨ ENTERPRISE: Salva apiRates per confronto (solo se verifyCosts attivo)
+        const apiRatesForComparison = apiRates.length > 0 ? apiRates : [];
+        
         // ✨ MAPPING: Mappa i rates ricevuti ai contratti configurati
         // Usa la stessa logica della sincronizzazione listini: matching flessibile per variazioni formato
         const ratesByContractCode = new Map<string, any[]>();
         const ratesByNormalizedCode = new Map<string, any[]>();
         const ratesByExactMatch = new Map<string, any[]>(); // Match esatto case-sensitive
         const ratesByKeyParts = new Map<string, any[]>(); // ✨ NUOVO: Match per parti chiave (come sync listini)
+        
+        // ✨ ENTERPRISE: Mappa anche apiRates per confronto (solo se verifyCosts attivo)
+        // Usa stessa logica di matching per trovare rate API corrispondente
+        const apiRatesByContractCode = new Map<string, any[]>();
+        const apiRatesByNormalizedCode = new Map<string, any[]>();
+        if (isVerifyCostsEnabled && apiRatesForComparison.length > 0) {
+          apiRatesForComparison.forEach((rate: any) => {
+            const contractCode = rate.contractCode;
+            if (contractCode) {
+              // Match esatto
+              if (!apiRatesByContractCode.has(contractCode)) {
+                apiRatesByContractCode.set(contractCode, []);
+              }
+              apiRatesByContractCode.get(contractCode)!.push(rate);
+              
+              // Match normalizzato
+              const normalized = contractCode
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, "")
+                .replace(/-/g, "")
+                .replace(/_/g, "")
+                .replace(/---/g, "")
+                .replace(/--/g, "");
+              if (!apiRatesByNormalizedCode.has(normalized)) {
+                apiRatesByNormalizedCode.set(normalized, []);
+              }
+              apiRatesByNormalizedCode.get(normalized)!.push(rate);
+            }
+          });
+        }
 
         result.rates.forEach((rate: any) => {
           const contractCode = rate.contractCode;
@@ -619,7 +786,9 @@ export function IntelligentQuoteComparator({
 
               // Estrai parti specifiche del contractCode configurato (escludi prefissi generici)
               // ✨ FIX: Accetta anche parti di 2 caratteri (es. "PD", "BA", "4") e gestisci variazioni formato
-              const configParts = configCode
+              // ✨ ENTERPRISE: Normalizza trattini multipli prima dello split (--- -> -)
+              const normalizedConfigCode = configCode.replace(/---+/g, '-').replace(/--+/g, '-');
+              const configParts = normalizedConfigCode
                 .split(/[-_\s]+/)
                 .filter(
                   (p: string) =>
@@ -636,8 +805,10 @@ export function IntelligentQuoteComparator({
               // Deve matchare rateCode che contiene "pdb" O "4" (più permissivo)
               // Oppure: "postedeliverybusiness-Solution-and-Shipment" -> parti: ["solution", "and", "shipment"]
               // Deve matchare rateCode che contiene almeno una di queste parti
+              // ✨ ENTERPRISE: Normalizza anche rateCode per gestire variazioni formato (trattini multipli)
+              const normalizedRateCode = rateCode.replace(/---+/g, '-').replace(/--+/g, '-');
               const matchingParts = configParts.filter((part) =>
-                rateCode.includes(part.toLowerCase())
+                normalizedRateCode.includes(part.toLowerCase())
               );
 
               // Match se ALMENO UNA parte specifica è presente (più permissivo per gestire variazioni formato)
@@ -862,6 +1033,46 @@ export function IntelligentQuoteComparator({
           }
 
           if (ratesForContract.length > 0) {
+            // ✨ ENTERPRISE: Trova prezzo API corrispondente per confronto (solo se verifyCosts attivo)
+            let apiRateForComparison: any = null;
+            if (isVerifyCostsEnabled && apiRatesForComparison.length > 0) {
+              // Prova match esatto
+              if (apiRatesByContractCode.has(contractCode)) {
+                const apiRatesForContract = apiRatesByContractCode.get(contractCode) || [];
+                apiRateForComparison = apiRatesForContract[0] || null;
+              }
+              
+              // Se non trovato, prova match normalizzato
+              if (!apiRateForComparison) {
+                const normalized = contractCode
+                  .toLowerCase()
+                  .trim()
+                  .replace(/\s+/g, "")
+                  .replace(/-/g, "")
+                  .replace(/_/g, "")
+                  .replace(/---/g, "")
+                  .replace(/--/g, "");
+                if (apiRatesByNormalizedCode.has(normalized)) {
+                  const apiRatesForContract = apiRatesByNormalizedCode.get(normalized) || [];
+                  apiRateForComparison = apiRatesForContract[0] || null;
+                }
+              }
+              
+              // Se ancora non trovato, prova match per corriere (più permissivo)
+              if (!apiRateForComparison) {
+                const matchingApiRate = apiRatesForComparison.find((r: any) => {
+                  const rateCarrier = (r.carrierCode || "").toLowerCase().trim();
+                  const configCourier = courier.courierName.toLowerCase().trim();
+                  return (
+                    rateCarrier === configCourier ||
+                    rateCarrier.includes(configCourier) ||
+                    configCourier.includes(rateCarrier)
+                  );
+                });
+                apiRateForComparison = matchingApiRate || null;
+              }
+            }
+            
             // ✨ Contratto ha rates: mostra
             mappedQuotes.set(key, {
               courier: courier.displayName,
@@ -872,6 +1083,16 @@ export function IntelligentQuoteComparator({
               cached: result?.details?.cached || false,
               cacheAge: result?.details?.cacheAge,
               loading: false,
+              // ✨ ENTERPRISE: Aggiungi prezzo API per confronto (solo se verifyCosts attivo)
+              ...(isVerifyCostsEnabled && apiRateForComparison && {
+                apiRate: apiRateForComparison,
+                priceComparison: {
+                  dbPrice: parseFloat(ratesForContract[0]?.total_price || "0"),
+                  apiPrice: parseFloat(apiRateForComparison.total_price || "0"),
+                  difference: parseFloat(apiRateForComparison.total_price || "0") - parseFloat(ratesForContract[0]?.total_price || "0"),
+                  differencePercent: ((parseFloat(apiRateForComparison.total_price || "0") - parseFloat(ratesForContract[0]?.total_price || "0")) / parseFloat(ratesForContract[0]?.total_price || "1")) * 100,
+                },
+              }),
             });
 
             // Notifica callback
@@ -958,6 +1179,9 @@ export function IntelligentQuoteComparator({
     codValue,
     dimensions,
     onQuoteReceived,
+    useDbFirst,
+    isVerifyCostsEnabled, // ✨ ENTERPRISE: Forza nuova chiamata quando cambia verifyCosts
+    resetKey, // ✨ ENTERPRISE: Forza nuova chiamata quando cambia resetKey
   ]);
 
   // Filtra solo contratti con risultati validi e ordina per prezzo (crescente)
@@ -1022,6 +1246,24 @@ export function IntelligentQuoteComparator({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* ✨ ENTERPRISE: Switch "Verifica Costi" (solo superadmin) */}
+            {isSuperadmin === true && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                <Shield className="w-4 h-4 text-blue-600" />
+                <label className="text-xs font-medium text-blue-900 cursor-pointer flex items-center gap-2">
+                  <span>Verifica Costi</span>
+                  <Switch
+                    checked={isVerifyCostsEnabled}
+                    onCheckedChange={(checked) => {
+                      setIsVerifyCostsEnabled(checked);
+                      // Reset cache per forzare nuova chiamata con verifyCosts
+                      lastRequestParamsRef.current = "";
+                      isRequestingRef.current = false;
+                    }}
+                  />
+                </label>
+              </div>
+            )}
             {/* Progresso globale */}
             {isCalculating && (
               <div className="flex items-center gap-2">
@@ -1076,6 +1318,11 @@ export function IntelligentQuoteComparator({
                   </th>
                   <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Costo Fornitore
+                    {isVerifyCostsEnabled && (
+                      <span className="block text-[10px] text-blue-600 mt-1">
+                        (DB | API)
+                      </span>
+                    )}
                   </th>
                   <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Prezzo Base
@@ -1094,6 +1341,7 @@ export function IntelligentQuoteComparator({
                       key={quoteKey}
                       quote={quote}
                       isSelected={isSelected}
+                      isVerifyCostsEnabled={isVerifyCostsEnabled}
                       onSelect={() => {
                         console.log(
                           "🖱️ [QUOTE COMPARATOR] Selezione corriere:",
@@ -1235,17 +1483,22 @@ export function IntelligentQuoteComparator({
                   {/* Pulsante conferma */}
                   <button
                     onClick={() => {
+                      // ✨ ENTERPRISE: Estrai configId dal rate selezionato
+                      // Il rate contiene metadata _configId e _configName dalla chiamata multi-config
+                      const selectedConfigId = bestRate?._configId;
                       console.log("✅ [QUOTE COMPARATOR] Conferma selezione:", {
                         courier:
                           selectedQuote.courierName || selectedQuote.courier,
                         contractCode: selectedQuote.contractCode,
                         accessoryService: selectedAccessoryService,
                         finalPrice,
+                        configId: selectedConfigId, // ✨ ConfigId della configurazione API
                       });
                       onContractSelected?.(
                         selectedQuote.courierName || selectedQuote.courier,
                         selectedQuote.contractCode,
-                        selectedAccessoryService || undefined
+                        selectedAccessoryService || undefined,
+                        selectedConfigId // ✨ Passa configId al callback
                       );
                       // Chiudi pannello dopo conferma
                       setShowAccessoryDropdown(false);
@@ -1270,11 +1523,13 @@ function QuoteTableRow({
   onSelect,
   isBest = false,
   isSelected = false,
+  isVerifyCostsEnabled = false,
 }: {
   quote: QuoteResult;
   onSelect: () => void;
   isBest?: boolean;
   isSelected?: boolean;
+  isVerifyCostsEnabled?: boolean;
 }) {
   const bestRate = quote.rates?.[0];
   const totalPrice = bestRate ? parseFloat(bestRate.total_price || "0") : 0;
@@ -1349,13 +1604,38 @@ function QuoteTableRow({
 
       {/* Colonna Costo Fornitore */}
       <td className="px-3 py-2.5 text-right">
-        <div className="text-sm font-medium text-gray-700">
-          €{supplierPrice.toFixed(2)}
-        </div>
-        {margin > 0 && (
-          <div className="text-xs text-green-600 mt-0.5">
-            +€{margin.toFixed(2)}
+        {isVerifyCostsEnabled && quote.priceComparison ? (
+          // ✨ ENTERPRISE: Mostra confronto DB vs API per superadmin
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-gray-700">
+              <span className="text-blue-600">DB:</span> €{quote.priceComparison.dbPrice.toFixed(2)}
+            </div>
+            <div className="text-sm font-medium text-gray-700">
+              <span className="text-orange-600">API:</span> €{quote.priceComparison.apiPrice.toFixed(2)}
+            </div>
+            {Math.abs(quote.priceComparison.differencePercent) > 5 && (
+              <div className={`text-xs font-semibold mt-1 ${
+                quote.priceComparison.differencePercent > 0 
+                  ? 'text-red-600' 
+                  : 'text-green-600'
+              }`}>
+                {quote.priceComparison.differencePercent > 0 ? '+' : ''}
+                {quote.priceComparison.differencePercent.toFixed(1)}%
+              </div>
+            )}
           </div>
+        ) : (
+          // Modalità normale: mostra solo costo fornitore
+          <>
+            <div className="text-sm font-medium text-gray-700">
+              €{supplierPrice.toFixed(2)}
+            </div>
+            {margin > 0 && (
+              <div className="text-xs text-green-600 mt-0.5">
+                +€{margin.toFixed(2)}
+              </div>
+            )}
+          </>
         )}
       </td>
 

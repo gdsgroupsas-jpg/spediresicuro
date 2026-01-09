@@ -183,24 +183,70 @@ export async function POST(request: Request) {
       .eq('id', targetId)
       .single()
     
+    // ✨ ENTERPRISE: Se configId è fornito nel payload, usa quello specifico (priorità massima)
+    // Questo permette di usare la configurazione API corretta quando l'utente ha multiple config
+    const specificConfigId = validated.configId || (body as any).configId;
+    
     // Query multi-tenant: cerca config per utente o default
     let courierConfig = null
     let configError = null
     
-    // Priorità 1: Config personale (owner_user_id = targetId)
-    const { data: personalConfig, error: personalError } = await supabaseAdmin
-      .from('courier_configs')
-      .select('*')
-      .eq('provider_id', providerId)
-      .eq('owner_user_id', targetId)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle()
+    // ✨ PRIORITÀ 0: ConfigId specifico fornito (per multi-config)
+    if (specificConfigId) {
+      const { data: specificConfig, error: specificError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .eq('id', specificConfigId)
+        .eq('provider_id', providerId)
+        .eq('is_active', true)
+        .maybeSingle()
+      
+      if (specificConfig) {
+        // 🔒 SECURITY: Verifica che l'utente abbia accesso a questa configurazione
+        const isOwner = specificConfig.owner_user_id === targetId;
+        const isAssigned = userData?.assigned_config_id === specificConfigId;
+        const isDefault = specificConfig.is_default === true;
+        
+        if (isOwner || isAssigned || isDefault) {
+          courierConfig = specificConfig;
+          console.log('✅ [CONFIG] Trovata config specifica (configId fornito):', { 
+            configId: specificConfig.id, 
+            providerId, 
+            userId: targetId,
+            reason: isOwner ? 'owner' : isAssigned ? 'assigned' : 'default'
+          });
+        } else {
+          console.warn('⚠️ [CONFIG] ConfigId fornito ma utente non ha accesso:', { 
+            configId: specificConfigId, 
+            userId: targetId 
+          });
+          // Fallback al comportamento standard
+        }
+        configError = specificError;
+      } else {
+        console.warn('⚠️ [CONFIG] ConfigId fornito non trovato:', { 
+          configId: specificConfigId, 
+          providerId 
+        });
+        // Fallback al comportamento standard
+      }
+    }
     
-    if (personalConfig) {
-      courierConfig = personalConfig
-      console.log('✅ [CONFIG] Trovata config personale:', { configId: personalConfig.id, providerId, userId: targetId })
-    } else if (userData?.assigned_config_id) {
+    // Priorità 1: Config personale (owner_user_id = targetId) - SOLO se non abbiamo già una config
+    if (!courierConfig) {
+      const { data: personalConfig, error: personalError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', providerId)
+        .eq('owner_user_id', targetId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle()
+      
+      if (personalConfig) {
+        courierConfig = personalConfig
+        console.log('✅ [CONFIG] Trovata config personale:', { configId: personalConfig.id, providerId, userId: targetId })
+      } else if (userData?.assigned_config_id) {
       // Priorità 2: Config assegnata all'utente
       const { data: assignedConfig, error: assignedError } = await supabaseAdmin
         .from('courier_configs')
@@ -634,6 +680,21 @@ export async function POST(request: Request) {
         p_status: 'completed'
       })
 
+      // ============================================
+      // ✨ ENTERPRISE: Validazione silenziosa costi (solo superadmin)
+      // ============================================
+      // TODO: Implementare dopo test iniziali
+      // Confronta prezzo DB (listino master) vs prezzo API reale
+      // Salva differenze in cost_validations per dashboard verifica costi
+      // if (isSuperadmin) {
+      //   try {
+      //     // Calcola prezzo DB dal listino master (se disponibile)
+      //     // ... implementazione da completare
+      //   } catch (validationError: any) {
+      //     console.error('⚠️ [COST VALIDATION] Errore validazione costi:', validationError);
+      //   }
+      // }
+
     } catch (dbError: any) {
       // ============================================
       // FAIL IDEMPOTENCY LOCK
@@ -803,7 +864,7 @@ export async function POST(request: Request) {
           country: shipment.recipient_country
         }
       }
-    })
+    });
 
   } catch (error: any) {
     console.error('Error:', error)

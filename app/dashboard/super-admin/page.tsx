@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Shield, Store, DollarSign, FileText, TrendingUp } from 'lucide-react'
+import { Shield, Store, DollarSign, FileText, TrendingUp, AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { QueryProvider } from '@/components/providers/query-provider'
@@ -140,17 +140,20 @@ export default function SuperAdminDashboard() {
               </div>
             </button>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-6 opacity-60 cursor-not-allowed">
+            <button
+              onClick={() => router.push('/dashboard/super-admin/verifica-costi')}
+              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md hover:border-orange-300 transition-all text-left group"
+            >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <TrendingUp className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                  <AlertTriangle className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Analytics</h3>
-                  <p className="text-sm text-gray-500">Coming soon...</p>
+                  <h3 className="font-semibold text-gray-900">Verifica Costi</h3>
+                  <p className="text-sm text-gray-500">Confronto DB vs API</p>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Users Table - Self-contained component with filters, sorting, bulk actions */}
