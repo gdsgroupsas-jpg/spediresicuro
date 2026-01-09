@@ -12,14 +12,17 @@
 import { getSpedisciOnlineCredentials } from "@/lib/actions/spedisci-online";
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
 import { auth } from "@/lib/auth-config";
+import {
+  getQuoteWithCache,
+  type QuoteCacheParams,
+} from "@/lib/cache/quote-cache";
 import { supabaseAdmin } from "@/lib/db/client";
 import {
   addPriceListEntries,
-  upsertPriceListEntries,
   createPriceList,
+  upsertPriceListEntries,
 } from "@/lib/db/price-lists";
 import type { CreatePriceListInput } from "@/types/listini";
-import { getQuoteWithCache, type QuoteCacheParams } from "@/lib/cache/quote-cache";
 
 /**
  * Test endpoint /shipping/rates con parametri di esempio
@@ -547,7 +550,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               (rate as any)._probe_weight = weight;
               (rate as any)._probe_zone = zone.code;
               allRates.push(rate);
-              
+
               // Traccia zone processate per questo corriere
               const carrierCode = rate.carrierCode;
               if (carrierCode) {
@@ -559,7 +562,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             }
             return { success: true, zone: zone.code, weight };
           }
-          
+
           // Anche se non ci sono rates, traccia la zona per semi-auto mode
           // (verrà creata entry vuota dopo)
           if (mode === "semi-auto" && result.success) {
@@ -567,7 +570,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             // per creare entry vuota (ma non possiamo sapere il corriere senza rates)
             // Quindi tracciamo tutte le zone processate e le creeremo dopo
           }
-          
+
           return {
             success: false,
             zone: zone.code,
@@ -638,7 +641,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     for (const rate of rates) {
       const carrierCode = rate.carrierCode;
       const contractCode = rate.contractCode || "default";
-      
+
       if (!carrierCode) {
         console.warn(
           `⚠️ [SYNC] Rate senza carrierCode, salto:`,
@@ -665,35 +668,39 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
       // ✨ ENTERPRISE: Chiave composita per raggruppare per (carrierCode, contractCode)
       const groupKey = `${carrierCode}::${contractCode}`;
-      
+
       if (!ratesByCarrierAndContract[groupKey]) {
         ratesByCarrierAndContract[groupKey] = [];
       }
       ratesByCarrierAndContract[groupKey].push(rate);
     }
 
-    const groupingSummary = Object.keys(ratesByCarrierAndContract).map((key) => {
-      const [carrierCode, contractCode] = key.split("::");
-      return {
-        groupKey: key,
-        carrierCode,
-        contractCode,
-        ratesCount: ratesByCarrierAndContract[key].length,
-        sampleRate: ratesByCarrierAndContract[key][0]
-          ? {
-              carrierCode: ratesByCarrierAndContract[key][0].carrierCode,
-              contractCode: ratesByCarrierAndContract[key][0].contractCode,
-            }
-          : null,
-      };
-    });
+    const groupingSummary = Object.keys(ratesByCarrierAndContract).map(
+      (key) => {
+        const [carrierCode, contractCode] = key.split("::");
+        return {
+          groupKey: key,
+          carrierCode,
+          contractCode,
+          ratesCount: ratesByCarrierAndContract[key].length,
+          sampleRate: ratesByCarrierAndContract[key][0]
+            ? {
+                carrierCode: ratesByCarrierAndContract[key][0].carrierCode,
+                contractCode: ratesByCarrierAndContract[key][0].contractCode,
+              }
+            : null,
+        };
+      }
+    );
 
     console.log(
       `📊 [SYNC] Raggruppamento rates per (carrierCode, contractCode) completato:`,
       JSON.stringify(groupingSummary, null, 2)
     );
     console.log(
-      `📊 [SYNC] Totale gruppi (listini da creare): ${Object.keys(ratesByCarrierAndContract).length}`
+      `📊 [SYNC] Totale gruppi (listini da creare): ${
+        Object.keys(ratesByCarrierAndContract).length
+      }`
     );
 
     // 3. Per ogni corriere, crea/aggiorna listino
@@ -778,7 +785,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     };
 
     console.log(
-      `📊 [SYNC] Gruppi (carrierCode + contractCode) da processare: ${Object.keys(ratesByCarrierAndContract).length}`
+      `📊 [SYNC] Gruppi (carrierCode + contractCode) da processare: ${
+        Object.keys(ratesByCarrierAndContract).length
+      }`
     );
     console.log(
       `📊 [SYNC] Dettagli ratesByCarrierAndContract:`,
@@ -796,7 +805,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     let groupIndex = 0;
     const totalGroups = Object.keys(ratesByCarrierAndContract).length;
 
-    for (const [groupKey, groupRates] of Object.entries(ratesByCarrierAndContract)) {
+    for (const [groupKey, groupRates] of Object.entries(
+      ratesByCarrierAndContract
+    )) {
       groupIndex++;
       const [carrierCode, contractCode] = groupKey.split("::");
       console.log(
@@ -871,10 +882,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               .replace(/---/g, "-")
               .replace(/--/g, "-")
               .trim();
-            
+
             // Normalizza anche il nome del listino atteso per matching
-            const expectedNamePattern = `${carrierCode.toUpperCase()}_${contractCodeForName}_${configName || options.configId.substring(0, 8)}`.toLowerCase();
-            
+            const expectedNamePattern =
+              `${carrierCode.toUpperCase()}_${contractCodeForName}_${
+                configName || options.configId.substring(0, 8)
+              }`.toLowerCase();
+
             // Filtra in memoria con logica STRICT per (configId, carrierCode, contractCode)
             const matchingList = dataByMetadata.find((pl: any) => {
               const metadata = pl.metadata || pl.source_metadata || {};
@@ -894,7 +908,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
               // 3. ✨ NUOVO: ContractCode DEVE matchare (per distinguere contratti diversi)
               // Prova prima nei metadata, poi nel nome
-              const metadataContractCode = metadata.contract_code?.toLowerCase();
+              const metadataContractCode =
+                metadata.contract_code?.toLowerCase();
               if (metadataContractCode) {
                 // Match esatto nei metadata
                 const normalizedMetadataContract = metadataContractCode
@@ -905,32 +920,48 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
                   return true;
                 }
               }
-              
+
               // Fallback: cerca contractCode nel nome (più permissivo per gestire variazioni)
               // Estrai parti significative del contractCode per matching flessibile
               const contractCodeParts = normalizedContractCode
                 .split(/[-_]/)
-                .filter(p => p.length > 2)
+                .filter((p) => p.length > 2)
                 .slice(0, 3); // Prendi prime 3 parti significative
-              
+
               // Verifica che il nome contenga almeno 2 parti del contractCode
-              const contractCodeInName = contractCodeParts.length >= 2
-                ? contractCodeParts.filter(part => plNameLower.includes(part)).length >= 2
-                : plNameLower.includes(normalizedContractCode.substring(0, 20)) ||
-                  plNameLower.includes(contractCode.toLowerCase().substring(0, 20));
-              
+              const contractCodeInName =
+                contractCodeParts.length >= 2
+                  ? contractCodeParts.filter((part) =>
+                      plNameLower.includes(part)
+                    ).length >= 2
+                  : plNameLower.includes(
+                      normalizedContractCode.substring(0, 20)
+                    ) ||
+                    plNameLower.includes(
+                      contractCode.toLowerCase().substring(0, 20)
+                    );
+
               // Verifica anche che il nome corrisponda al pattern atteso (stesso config)
               // Cerca il nome config nel nome del listino (può essere all'inizio, in mezzo o alla fine)
-              const configNameLower = (configName || options.configId?.substring(0, 8) || '').toLowerCase();
+              const configNameLower = (
+                configName ||
+                options.configId?.substring(0, 8) ||
+                ""
+              ).toLowerCase();
               const nameMatchesPattern = plNameLower.includes(configNameLower);
-              
+
               // Log per debug se troviamo un match parziale
               if (contractCodeInName && nameMatchesPattern) {
                 console.log(
-                  `🔍 [SYNC] Match trovato per nome: "${pl.name}" (contractCode: ${contractCode.substring(0, 30)}, config: ${configNameLower})`
+                  `🔍 [SYNC] Match trovato per nome: "${
+                    pl.name
+                  }" (contractCode: ${contractCode.substring(
+                    0,
+                    30
+                  )}, config: ${configNameLower})`
                 );
               }
-              
+
               return contractCodeInName && nameMatchesPattern;
             });
 
@@ -943,14 +974,20 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
                 )}... configId=${options.configId.substring(
                   0,
                   8
-                )}... carrier=${carrierCode} contractCode=${contractCode.substring(0, 30)}`
+                )}... carrier=${carrierCode} contractCode=${contractCode.substring(
+                  0,
+                  30
+                )}`
               );
             } else {
               console.log(
                 `ℹ️ [SYNC] Nessun listino esistente per configId=${options.configId.substring(
                   0,
                   8
-                )}... carrier=${carrierCode} contractCode=${contractCode.substring(0, 30)} → creo nuovo`
+                )}... carrier=${carrierCode} contractCode=${contractCode.substring(
+                  0,
+                  30
+                )} → creo nuovo`
               );
               // ✨ DEBUG: Mostra i listini trovati per capire perché non matcha
               if (dataByMetadata.length > 0) {
@@ -1107,21 +1144,27 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
         } else {
           // ✨ ENTERPRISE: Lock specifico per (configId, carrierCode, contractCode) per evitare duplicati durante chunking
           // Quando la sync viene chiamata per ogni zona, più chiamate potrebbero cercare di creare lo stesso listino
-          const listLockKey = options?.configId 
-            ? `sync_list_lock:${user.id}:${options.configId}:${carrierCode}:${contractCode.substring(0, 30)}`
+          const listLockKey = options?.configId
+            ? `sync_list_lock:${user.id}:${
+                options.configId
+              }:${carrierCode}:${contractCode.substring(0, 30)}`
             : null;
-          
+
           let listLockAcquired = false;
           if (redis && listLockKey) {
             // Lock per 30 secondi (abbastanza per creare il listino)
-            listLockAcquired = await redis.set(listLockKey, "1", { nx: true, ex: 30 });
-            
+            const lockResult = await redis.set(listLockKey, "1", {
+              nx: true,
+              ex: 30,
+            });
+            listLockAcquired = lockResult !== null;
+
             if (!listLockAcquired) {
               // Lock già acquisito: riprova la ricerca (potrebbe essere stato creato nel frattempo)
               console.log(
                 `🔒 [SYNC] Lock attivo per ${listLockKey}, riprovo ricerca listino esistente...`
               );
-              
+
               // Ri-cerca il listino (potrebbe essere stato creato da un'altra chiamata)
               const { data: retryData } = await supabaseAdmin
                 .from("price_lists")
@@ -1130,41 +1173,54 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
                 .eq("list_type", "supplier")
                 .order("created_at", { ascending: false })
                 .limit(10); // Solo gli ultimi 10 per performance
-              
+
               if (retryData) {
                 const retryMatchingList = retryData.find((pl: any) => {
                   const metadata = pl.metadata || pl.source_metadata || {};
                   const plNameLower = (pl.name || "").toLowerCase();
-                  
-                  const matchesConfigId = metadata.courier_config_id === options.configId;
-                  const metadataCarrierCode = metadata.carrier_code?.toLowerCase();
+
+                  const matchesConfigId =
+                    metadata.courier_config_id === options.configId;
+                  const metadataCarrierCode =
+                    metadata.carrier_code?.toLowerCase();
                   const matchesCarrierCode = metadataCarrierCode
                     ? metadataCarrierCode === carrierCode.toLowerCase()
                     : plNameLower.startsWith(carrierCode.toLowerCase() + "_");
-                  
+
                   const normalizedContractCode = contractCode
                     .toLowerCase()
                     .replace(/---/g, "-")
                     .replace(/--/g, "-")
                     .trim();
-                  const metadataContractCode = metadata.contract_code?.toLowerCase();
+                  const metadataContractCode =
+                    metadata.contract_code?.toLowerCase();
                   const matchesContractCode = metadataContractCode
-                    ? metadataContractCode.replace(/---/g, "-").replace(/--/g, "-").trim() === normalizedContractCode
-                    : plNameLower.includes(normalizedContractCode.substring(0, 30));
-                  
-                  return matchesConfigId && matchesCarrierCode && matchesContractCode;
+                    ? metadataContractCode
+                        .replace(/---/g, "-")
+                        .replace(/--/g, "-")
+                        .trim() === normalizedContractCode
+                    : plNameLower.includes(
+                        normalizedContractCode.substring(0, 30)
+                      );
+
+                  return (
+                    matchesConfigId && matchesCarrierCode && matchesContractCode
+                  );
                 });
-                
+
                 if (retryMatchingList) {
                   existingPriceList = { id: retryMatchingList.id };
                   console.log(
-                    `✅ [SYNC] Listino trovato dopo retry: id=${retryMatchingList.id.substring(0, 8)}...`
+                    `✅ [SYNC] Listino trovato dopo retry: id=${retryMatchingList.id.substring(
+                      0,
+                      8
+                    )}...`
                   );
                 }
               }
             }
           }
-          
+
           // Se ancora non trovato, crea nuovo listino
           if (!existingPriceList) {
             // courier_id può essere undefined, quindi usiamo null esplicitamente
@@ -1237,15 +1293,23 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             priceListId = existingPriceList.id;
             priceListsUpdated++;
             console.log(
-              `✅ [SYNC] Listino trovato dopo retry, uso esistente: id=${priceListId.substring(0, 8)}...`
+              `✅ [SYNC] Listino trovato dopo retry, uso esistente: id=${priceListId.substring(
+                0,
+                8
+              )}...`
             );
           }
-          
+
           // Rilascia lock se acquisito
           if (redis && listLockKey && listLockAcquired) {
-            await redis.del(listLockKey).catch((e) => 
-              console.warn(`⚠️ [SYNC] Errore rilascio lock ${listLockKey}:`, e)
-            );
+            await redis
+              .del(listLockKey)
+              .catch((e) =>
+                console.warn(
+                  `⚠️ [SYNC] Errore rilascio lock ${listLockKey}:`,
+                  e
+                )
+              );
           }
         }
 
@@ -1261,13 +1325,13 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           console.log(
             `📝 [SYNC] [${groupIndex}/${totalGroups}] Zero rates per ${carrierCode}/${contractCode}: creo entry vuote per tutte le zone (listino fornitore)`
           );
-          
+
           // Crea entry vuote per tutte le zone processate
           const emptyEntries = zones.map((zone) => {
             const weightFrom = 0;
             // Per semi-auto usa 1 kg, altrimenti usa il primo peso della modalità
             const weightTo = mode === "semi-auto" ? 1 : weightsToProbe[0] || 1;
-            
+
             return {
               weight_from: weightFrom,
               weight_to: weightTo,
@@ -1282,7 +1346,10 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
           try {
             if (!options?.overwriteExisting) {
-              const upsertResult = await upsertPriceListEntries(priceListId, emptyEntries);
+              const upsertResult = await upsertPriceListEntries(
+                priceListId,
+                emptyEntries
+              );
               entriesAdded += upsertResult.inserted + upsertResult.updated;
               console.log(
                 `✅ [SYNC] ${upsertResult.inserted} entry vuote inserite, ${upsertResult.updated} aggiornate per ${carrierCode}`
@@ -1300,7 +1367,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               err.message || err
             );
           }
-          
+
           continue; // Passa al prossimo gruppo (carrierCode + contractCode)
         }
 
@@ -1483,27 +1550,29 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             entries.length
           } entries al listino ${priceListId.substring(0, 8)}...`
         );
-        
+
         // IMPORTANTE: Per listini fornitore, assicurati che tutte le zone abbiano un'entry
         // Crea entry vuote per zone mancanti (vale per tutti i tipi di account)
         // Questo garantisce struttura matrice completa anche se alcune zone non hanno rates
         const zonesWithEntries = new Set(
           entries.map((e) => e.zone_code).filter((z) => z)
         );
-        const missingZones = zones.filter(
-          (z) => !zonesWithEntries.has(z.code)
-        );
-        
+        const missingZones = zones.filter((z) => !zonesWithEntries.has(z.code));
+
         if (missingZones.length > 0) {
           console.log(
-            `📝 [SYNC] Listino fornitore: creo ${missingZones.length} entry vuote per zone mancanti: ${missingZones.map((z) => z.code).join(", ")}`
+            `📝 [SYNC] Listino fornitore: creo ${
+              missingZones.length
+            } entry vuote per zone mancanti: ${missingZones
+              .map((z) => z.code)
+              .join(", ")}`
           );
-          
+
           const emptyEntriesForMissingZones = missingZones.map((zone) => {
             const weightFrom = 0;
             // Per semi-auto usa 1 kg, altrimenti usa il primo peso della modalità
             const weightTo = mode === "semi-auto" ? 1 : weightsToProbe[0] || 1;
-            
+
             return {
               weight_from: weightFrom,
               weight_to: weightTo,
@@ -1515,15 +1584,18 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               insurance_rate_percent: 0,
             };
           });
-          
+
           entries.push(...emptyEntriesForMissingZones);
         }
-        
+
         try {
           // ✨ FIX: Se overwriteExisting=false, usa UPSERT per evitare duplicati
           // Se overwriteExisting=true, usa INSERT normale (dopo DELETE)
           if (!options?.overwriteExisting) {
-            const upsertResult = await upsertPriceListEntries(priceListId, entries);
+            const upsertResult = await upsertPriceListEntries(
+              priceListId,
+              entries
+            );
             entriesAdded += upsertResult.inserted + upsertResult.updated;
             console.log(
               `✅ [SYNC] ${upsertResult.inserted} inserite, ${upsertResult.updated} aggiornate, ${upsertResult.skipped} saltate per ${carrierCode}`
