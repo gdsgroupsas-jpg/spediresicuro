@@ -1,22 +1,33 @@
 /**
  * Dialog per test validazione API vs Listino DB
- * 
+ *
  * ✨ FASE 3: Testa 10 combinazioni random (zone/weight) confrontando
  * prezzi del listino DB vs prezzi API reali Spedisci.Online
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, Loader2, Play } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { testSpedisciOnlineRates } from '@/actions/spedisci-online-rates';
-import { calculatePriceFromList } from '@/lib/pricing/calculator';
-import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix';
-import { toast } from 'sonner';
-import type { PriceList, PriceListEntry } from '@/types/listini';
+import { testSpedisciOnlineRates } from "@/actions/spedisci-online-rates";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
+import type { PriceList, PriceListEntry } from "@/types/listini";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Play,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface TestApiValidationDialogProps {
   open: boolean;
@@ -32,7 +43,7 @@ interface TestResult {
   apiPrice: number | null;
   difference: number | null;
   differencePercent: number | null;
-  status: 'match' | 'warning' | 'error' | 'missing';
+  status: "match" | "warning" | "error" | "missing";
   error?: string;
 }
 
@@ -53,13 +64,17 @@ export function TestApiValidationDialog({
   } | null>(null);
 
   // Estrai metadata per configurazione API
-  const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+  const metadata = (priceList.metadata ||
+    priceList.source_metadata ||
+    {}) as any;
   const configId = metadata.courier_config_id;
   const carrierCode = metadata.carrier_code;
   const contractCode = metadata.contract_code;
 
   // Genera combinazioni random per test
-  const generateTestCombinations = (entries: PriceListEntry[]): Array<{ zone: string; weight: number }> => {
+  const generateTestCombinations = (
+    entries: PriceListEntry[]
+  ): Array<{ zone: string; weight: number }> => {
     if (!entries || entries.length === 0) {
       return [];
     }
@@ -78,16 +93,17 @@ export function TestApiValidationDialog({
     // Prendi 10 combinazioni random
     const combinations: Array<{ zone: string; weight: number }> = [];
     const zones = Array.from(entriesByZone.keys());
-    
+
     // Se abbiamo meno di 10 zone, usa tutte le zone disponibili
     const zonesToTest = zones.slice(0, 10);
-    
+
     zonesToTest.forEach((zone) => {
       const zoneEntries = entriesByZone.get(zone)!;
       if (zoneEntries.length > 0) {
         // Prendi un peso random nel range della prima entry
         const entry = zoneEntries[0];
-        const weight = entry.weight_from + (entry.weight_to - entry.weight_from) / 2;
+        const weight =
+          entry.weight_from + (entry.weight_to - entry.weight_from) / 2;
         combinations.push({ zone, weight: Math.round(weight * 100) / 100 });
       }
     });
@@ -142,22 +158,24 @@ export function TestApiValidationDialog({
 
     // Fallback: usa indirizzo standard
     return {
-      city: 'Milano',
-      state: 'MI',
-      postalCode: '20100',
-      country: 'IT',
+      city: "Milano",
+      state: "MI",
+      postalCode: "20100",
+      country: "IT",
     };
   };
 
   // Esegui test
   const runTests = async () => {
     if (!priceList.entries || priceList.entries.length === 0) {
-      toast.error('Listino non ha entries da testare');
+      toast.error("Listino non ha entries da testare");
       return;
     }
 
     if (!configId || !carrierCode || !contractCode) {
-      toast.error('Listino non ha metadata completi (configId, carrierCode, contractCode)');
+      toast.error(
+        "Listino non ha metadata completi (configId, carrierCode, contractCode)"
+      );
       return;
     }
 
@@ -170,7 +188,7 @@ export function TestApiValidationDialog({
       const combinations = generateTestCombinations(entries);
 
       if (combinations.length === 0) {
-        toast.error('Nessuna combinazione valida trovata per il test');
+        toast.error("Nessuna combinazione valida trovata per il test");
         setIsTesting(false);
         return;
       }
@@ -197,23 +215,23 @@ export function TestApiValidationDialog({
             },
           ],
           shipFrom: {
-            name: 'Mittente Test',
-            company: 'Azienda Test',
-            street1: 'Via Roma 1',
-            city: 'Roma',
-            state: 'RM',
-            postalCode: '00100',
-            country: 'IT',
-            email: 'test@example.com',
+            name: "Mittente Test",
+            company: "Azienda Test",
+            street1: "Via Roma 1",
+            city: "Roma",
+            state: "RM",
+            postalCode: "00100",
+            country: "IT",
+            email: "test@example.com",
           },
           shipTo: {
-            name: 'Destinatario Test',
-            street1: 'Via Test 1',
+            name: "Destinatario Test",
+            street1: "Via Test 1",
             city: testAddress.city,
             state: testAddress.state,
             postalCode: testAddress.postalCode,
             country: testAddress.country,
-            email: 'test@example.com',
+            email: "test@example.com",
           },
           configId,
         });
@@ -238,30 +256,30 @@ export function TestApiValidationDialog({
             error = `Rate non trovato per ${carrierCode}/${contractCode}`;
           }
         } else {
-          error = apiResult.error || 'Errore chiamata API';
+          error = apiResult.error || "Errore chiamata API";
         }
 
         // Calcola differenza
         let difference: number | null = null;
         let differencePercent: number | null = null;
-        let status: TestResult['status'] = 'error';
+        let status: TestResult["status"] = "error";
 
         if (dbPrice !== null && apiPrice !== null) {
           difference = apiPrice - dbPrice;
           differencePercent = dbPrice > 0 ? (difference / dbPrice) * 100 : 0;
-          
+
           if (Math.abs(differencePercent) <= 1) {
-            status = 'match';
+            status = "match";
           } else if (Math.abs(differencePercent) <= 5) {
-            status = 'warning';
+            status = "warning";
           } else {
-            status = 'error';
+            status = "error";
           }
         } else if (dbPrice === null) {
-          status = 'missing';
-          error = 'Entry non trovata nel listino DB';
+          status = "missing";
+          error = "Entry non trovata nel listino DB";
         } else if (apiPrice === null) {
-          status = 'error';
+          status = "error";
         }
 
         testResults.push({
@@ -280,17 +298,19 @@ export function TestApiValidationDialog({
       setResults(testResults);
 
       // Calcola summary
-      const matched = testResults.filter((r) => r.status === 'match').length;
-      const warnings = testResults.filter((r) => r.status === 'warning').length;
-      const errors = testResults.filter((r) => r.status === 'error').length;
-      const missing = testResults.filter((r) => r.status === 'missing').length;
-      
+      const matched = testResults.filter((r) => r.status === "match").length;
+      const warnings = testResults.filter((r) => r.status === "warning").length;
+      const errors = testResults.filter((r) => r.status === "error").length;
+      const missing = testResults.filter((r) => r.status === "missing").length;
+
       const validDifferences = testResults
         .filter((r) => r.differencePercent !== null)
         .map((r) => Math.abs(r.differencePercent!));
-      const avgDifference = validDifferences.length > 0
-        ? validDifferences.reduce((a, b) => a + b, 0) / validDifferences.length
-        : 0;
+      const avgDifference =
+        validDifferences.length > 0
+          ? validDifferences.reduce((a, b) => a + b, 0) /
+            validDifferences.length
+          : 0;
 
       setSummary({
         total: testResults.length,
@@ -307,12 +327,14 @@ export function TestApiValidationDialog({
           `Test completato: ${matched} match, ${warnings} warning, ${errors} errori, ${missing} mancanti`
         );
       } else if (warnings > 0) {
-        toast.warning(`Test completato: ${matched} match, ${warnings} warning (differenza > 1%)`);
+        toast.warning(
+          `Test completato: ${matched} match, ${warnings} warning (differenza > 1%)`
+        );
       } else {
         toast.success(`Test completato: ${matched} match perfetti`);
       }
     } catch (error: any) {
-      console.error('Errore test API validation:', error);
+      console.error("Errore test API validation:", error);
       toast.error(`Errore durante il test: ${error.message}`);
     } finally {
       setIsTesting(false);
@@ -325,29 +347,36 @@ export function TestApiValidationDialog({
         <DialogHeader>
           <DialogTitle>Test Validazione API vs Listino DB</DialogTitle>
           <DialogDescription>
-            Confronta i prezzi del listino DB con i prezzi reali dell&apos;API Spedisci.Online.
-            Verranno testate 10 combinazioni random (zone/weight).
+            Confronta i prezzi del listino DB con i prezzi reali dell&apos;API
+            Spedisci.Online. Verranno testate 10 combinazioni random
+            (zone/weight).
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Info metadata */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Configurazione API</h4>
+            <h4 className="font-medium text-blue-900 mb-2">
+              Configurazione API
+            </h4>
             <div className="text-sm text-blue-700 space-y-1">
               <p>
-                <span className="font-medium">Config ID:</span> {configId || 'N/A'}
+                <span className="font-medium">Config ID:</span>{" "}
+                {configId || "N/A"}
               </p>
               <p>
-                <span className="font-medium">Carrier Code:</span> {carrierCode || 'N/A'}
+                <span className="font-medium">Carrier Code:</span>{" "}
+                {carrierCode || "N/A"}
               </p>
               <p>
-                <span className="font-medium">Contract Code:</span> {contractCode || 'N/A'}
+                <span className="font-medium">Contract Code:</span>{" "}
+                {contractCode || "N/A"}
               </p>
             </div>
             {(!configId || !carrierCode || !contractCode) && (
               <p className="text-sm text-red-600 mt-2">
-                ⚠️ Metadata incompleti. Il test potrebbe non funzionare correttamente.
+                ⚠️ Metadata incompleti. Il test potrebbe non funzionare
+                correttamente.
               </p>
             )}
           </div>
@@ -380,19 +409,27 @@ export function TestApiValidationDialog({
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Totali</p>
-                  <p className="text-2xl font-bold text-gray-900">{summary.total}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summary.total}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-green-600">Match</p>
-                  <p className="text-2xl font-bold text-green-700">{summary.matched}</p>
+                  <p className="text-2xl font-bold text-green-700">
+                    {summary.matched}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-yellow-600">Warning</p>
-                  <p className="text-2xl font-bold text-yellow-700">{summary.warnings}</p>
+                  <p className="text-2xl font-bold text-yellow-700">
+                    {summary.warnings}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-red-600">Errori</p>
-                  <p className="text-2xl font-bold text-red-700">{summary.errors}</p>
+                  <p className="text-2xl font-bold text-red-700">
+                    {summary.errors}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Diff. Media</p>
@@ -407,7 +444,9 @@ export function TestApiValidationDialog({
           {/* Risultati */}
           {results.length > 0 && (
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">Risultati Dettagliati</h4>
+              <h4 className="font-medium text-gray-900 mb-3">
+                Risultati Dettagliati
+              </h4>
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
@@ -426,62 +465,65 @@ export function TestApiValidationDialog({
                         <td className="px-4 py-2">
                           <div>
                             <div className="font-medium">{result.zoneName}</div>
-                            <div className="text-xs text-gray-500">{result.zone}</div>
+                            <div className="text-xs text-gray-500">
+                              {result.zone}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-2">{result.weight} kg</td>
                         <td className="px-4 py-2 text-right">
                           {result.dbPrice !== null
                             ? `€${result.dbPrice.toFixed(2)}`
-                            : '-'}
+                            : "-"}
                         </td>
                         <td className="px-4 py-2 text-right">
                           {result.apiPrice !== null
                             ? `€${result.apiPrice.toFixed(2)}`
-                            : '-'}
+                            : "-"}
                         </td>
                         <td className="px-4 py-2 text-right">
-                          {result.difference !== null && result.differencePercent !== null ? (
+                          {result.difference !== null &&
+                          result.differencePercent !== null ? (
                             <div>
                               <div
                                 className={
                                   Math.abs(result.differencePercent) > 5
-                                    ? 'text-red-600 font-medium'
+                                    ? "text-red-600 font-medium"
                                     : Math.abs(result.differencePercent) > 1
-                                    ? 'text-yellow-600'
-                                    : 'text-green-600'
+                                    ? "text-yellow-600"
+                                    : "text-green-600"
                                 }
                               >
-                                {result.difference > 0 ? '+' : ''}
+                                {result.difference > 0 ? "+" : ""}
                                 {result.difference.toFixed(2)}€ (
-                                {result.differencePercent > 0 ? '+' : ''}
+                                {result.differencePercent > 0 ? "+" : ""}
                                 {result.differencePercent.toFixed(1)}%)
                               </div>
                             </div>
                           ) : (
-                            '-'
+                            "-"
                           )}
                         </td>
                         <td className="px-4 py-2 text-center">
-                          {result.status === 'match' && (
+                          {result.status === "match" && (
                             <Badge className="bg-green-100 text-green-700">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               OK
                             </Badge>
                           )}
-                          {result.status === 'warning' && (
+                          {result.status === "warning" && (
                             <Badge className="bg-yellow-100 text-yellow-700">
                               <AlertTriangle className="w-3 h-3 mr-1" />
                               Warning
                             </Badge>
                           )}
-                          {result.status === 'error' && (
+                          {result.status === "error" && (
                             <Badge className="bg-red-100 text-red-700">
                               <XCircle className="w-3 h-3 mr-1" />
                               Errore
                             </Badge>
                           )}
-                          {result.status === 'missing' && (
+                          {result.status === "missing" && (
                             <Badge className="bg-gray-100 text-gray-700">
                               <XCircle className="w-3 h-3 mr-1" />
                               Mancante
