@@ -323,10 +323,10 @@ export function ImportCsvDialog({
                   <div key={header} className="flex items-center gap-4 py-2">
                     <span className="w-48 text-sm font-medium">{header}</span>
                     <span className="text-gray-400">→</span>
-                    <Select
+                    <select
                       value={columnMapping[header] || ''}
                       onChange={(e) => updateColumnMapping(header, e.target.value)}
-                      className="flex-1"
+                      className="flex-1 rounded-md border border-gray-300 p-2 text-sm"
                     >
                       <option value="">-- Non mappare --</option>
                       {availableFields.map((field) => (
@@ -334,7 +334,7 @@ export function ImportCsvDialog({
                           {field.label} {field.required && '*'}
                         </option>
                       ))}
-                    </Select>
+                    </select>
                   </div>
                 ))}
               </div>
