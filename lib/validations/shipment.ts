@@ -40,7 +40,8 @@ export const createShipmentSchema = z.object({
   notes: z.string().optional(),
   provider: z.enum(['spediscionline', 'poste_native', 'gls_native', 'brt_native']).default('spediscionline'),
   carrier: z.enum(['GLS', 'POSTE', 'BRT', 'UPS', 'DHL', 'SDA', 'TNT', 'FEDEX']),
-  contract_id: z.string().optional()  // Se user ha più contratti stesso corriere
+  contract_id: z.string().optional(),  // Se user ha più contratti stesso corriere
+  configId: z.string().optional()  // ID configurazione API specifica (per multi-config)
 })
 
 export type CreateShipmentInput = z.infer<typeof createShipmentSchema>

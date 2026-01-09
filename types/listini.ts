@@ -108,6 +108,7 @@ export interface PriceList {
   source_file_url?: string;
   source_file_name?: string;
   source_metadata?: Record<string, any>; // Metadati file sorgente
+  metadata?: Record<string, any>; // Metadati aggiuntivi (alias per source_metadata in alcuni contesti)
 
   // Note e descrizione
   description?: string;
