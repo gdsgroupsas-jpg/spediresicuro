@@ -335,18 +335,101 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
         jsonError = err;
         const is401 = jsonError?.message?.includes("401");
         const isImplodeError = jsonError?.message?.includes("implode");
+        // ✨ FIX: Cattura anche errori "Property [value] does not exist" relativi a accessoriServices
+        const isPropertyError =
+          jsonError?.message?.includes("Property") &&
+          jsonError?.message?.includes("does not exist");
+        const isAccessoryServiceError = isImplodeError || isPropertyError;
+
         console.error("❌ [SPEDISCI.ONLINE] Creazione JSON fallita:", {
           message: jsonError?.message,
           is401Unauthorized: is401,
           isImplodeError,
+          isPropertyError,
+          isAccessoryServiceError,
           base_url: this.BASE_URL,
         });
 
-        // ✨ FIX: Se errore "implode", riprova SENZA servizi accessori
-        // L'API non supporta il formato che stiamo usando per accessoriServices
-        if (isImplodeError && openApiPayload.accessoriServices.length > 0) {
+        // ✨ FIX: Se errore relativo a servizi accessori, prova diversi formati
+        // L'API potrebbe accettare formati diversi (stringhe, oggetti con name/code/service/id)
+        if (
+          isAccessoryServiceError &&
+          openApiPayload.accessoriServices.length > 0
+        ) {
+          const originalServices = openApiPayload.accessoriServices;
+
+          // ✨ Se gli ID sono già numeri, prova anche come stringhe numeriche
+          // (alcune API preferiscono stringhe anche per numeri)
+          const serviceIds = originalServices
+            .map((s: any) => {
+              if (typeof s === "number") return s;
+              if (typeof s === "string" && /^\d+$/.test(s))
+                return parseInt(s, 10);
+              return null;
+            })
+            .filter((id: any): id is number => id !== null);
+
           console.warn(
-            "⚠️ [SPEDISCI.ONLINE] Errore implode - riprovo SENZA servizi accessori (formato non supportato dall'API)..."
+            `⚠️ [SPEDISCI.ONLINE] Errore servizi accessori (formato number[]) - provo formato string[]...`
+          );
+
+          // ✨ FORMATI DA PROVARE (solo fallback per ID numerici):
+          const formatsToTry = [
+            // Prova array di stringhe numeriche (fallback)
+            {
+              name: "string_numbers",
+              format: serviceIds.map((id) => String(id)),
+            },
+            // Prova array di oggetti con id (ultimo tentativo)
+            {
+              name: "object_with_id",
+              format: serviceIds.map((id) => ({ id: id })),
+            },
+          ];
+
+          // Prova ogni formato
+          for (const format of formatsToTry) {
+            try {
+              console.log(
+                `🔄 [SPEDISCI.ONLINE] Provo formato "${format.name}":`,
+                format.format
+              );
+              const payloadWithFormat = {
+                ...openApiPayload,
+                accessoriServices: format.format,
+              };
+              const result = await this.createShipmentJSON(payloadWithFormat);
+              if (result.success) {
+                console.log(
+                  `✅ [SPEDISCI.ONLINE] Successo con formato "${format.name}"!`
+                );
+                return {
+                  tracking_number: result.tracking_number,
+                  label_url: result.label_url,
+                  label_pdf: result.label_pdf
+                    ? Buffer.from(result.label_pdf, "base64")
+                    : undefined,
+                  shipmentId: result.shipmentId
+                    ? String(result.shipmentId)
+                    : undefined,
+                  metadata: {
+                    ...(result.metadata || {}),
+                    accessoriServices_format: format.name,
+                  },
+                };
+              }
+            } catch (formatError: any) {
+              console.warn(
+                `⚠️ [SPEDISCI.ONLINE] Formato "${format.name}" fallito:`,
+                formatError.message?.substring(0, 100)
+              );
+              continue; // Prova formato successivo
+            }
+          }
+
+          // ✨ FALLBACK FINALE: Se tutti i formati falliscono, prova SENZA servizi accessori
+          console.warn(
+            "⚠️ [SPEDISCI.ONLINE] Tutti i formati falliti - riprovo SENZA servizi accessori..."
           );
           const payloadSenzaServizi = {
             ...openApiPayload,
@@ -359,7 +442,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
                 "✅ [SPEDISCI.ONLINE] Successo SENZA servizi accessori!"
               );
               console.warn(
-                "⚠️ [SPEDISCI.ONLINE] NOTA: I servizi accessori non sono stati applicati perché l'API non supporta il formato richiesto."
+                "⚠️ [SPEDISCI.ONLINE] NOTA: I servizi accessori non sono stati applicati perché l'API non supporta nessun formato testato."
               );
               return {
                 tracking_number: result.tracking_number,
@@ -373,7 +456,7 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
                 metadata: {
                   ...(result.metadata || {}),
                   accessoriServices_warning:
-                    "Servizi accessori non applicati - formato API non supportato",
+                    "Servizi accessori non applicati - nessun formato API supportato (testati: string[], {name}, {code}, {service}, {id}, {value})",
                 },
               };
             }
@@ -1356,11 +1439,28 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       insuranceValue: insuranceValue,
       codValue: codAmount,
       // ✨ FIX: Servizi accessori per /shipping/create
-      // ⚠️ IMPORTANTE: OpenAPI spec dice che /shipping/create vuole array di OGGETTI, non stringhe!
-      // Ma gli esempi mostrano sempre [] vuoto, quindi non sappiamo il formato esatto degli oggetti.
-      // Per ora passiamo i servizi come [{service: "nome"}] - formato comune per API REST.
-      // Se fallisce, fallback a [] vuoto e la spedizione viene creata senza servizi accessori.
+      // 🎯 SCOPERTA: I servizi accessori usano ID NUMERICI, non nomi stringa!
+      // Dal pannello Spedisci.Online: Exchange=200001, Document Return=200002, etc.
       accessoriServices: (() => {
+        // Mappatura nome servizio → ID numerico (dal pannello Spedisci.Online)
+        const SERVICE_NAME_TO_ID: Record<string, number> = {
+          Exchange: 200001,
+          exchange: 200001,
+          EXCHANGE: 200001,
+          "Document Return": 200002,
+          "document return": 200002,
+          "DOCUMENT RETURN": 200002,
+          "Saturday Service": 200003,
+          "saturday service": 200003,
+          "SATURDAY SERVICE": 200003,
+          Express12: 200004,
+          express12: 200004,
+          EXPRESS12: 200004,
+          "Preavviso Telefonico": 200005,
+          "preavviso telefonico": 200005,
+          "PREAVVISO TELEFONICO": 200005,
+        };
+
         const services = Array.isArray(data.serviziAccessori)
           ? data.serviziAccessori
           : Array.isArray(data.accessoriServices)
@@ -1371,31 +1471,60 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           return []; // Nessun servizio richiesto
         }
 
-        // ⚠️ L'API /shipping/create vuole array di OGGETTI, non stringhe
-        // Proviamo diversi formati comuni per trovare quello corretto:
-        // Formato 1: [{service: "Exchange"}] - più comune
-        // Formato 2: [{name: "Exchange"}] - alternativo
-        // Formato 3: [{code: "Exchange"}] - alternativo
-        // Formato 4: [{value: "Exchange"}] - alternativo
+        // ✨ CONVERSIONE: Nome servizio → ID numerico
+        const serviceIds = services
+          .map((s: any) => {
+            // Se già un numero, usalo direttamente
+            if (typeof s === "number") {
+              return s;
+            }
+            // Se stringa numerica, converti
+            if (typeof s === "string" && /^\d+$/.test(s)) {
+              return parseInt(s, 10);
+            }
+            // Se oggetto con id numerico, estrai
+            if (s && typeof s === "object") {
+              if (typeof s.id === "number") return s.id;
+              if (typeof s.value === "number") return s.value;
+              if (typeof s.service_id === "number") return s.service_id;
+              if (typeof s.vector_service_id === "number")
+                return s.vector_service_id;
+              // Se ha un nome, convertilo
+              const name =
+                s.name || s.service || s.value || s.code || String(s);
+              if (typeof name === "string" && SERVICE_NAME_TO_ID[name]) {
+                return SERVICE_NAME_TO_ID[name];
+              }
+            }
+            // Se è una stringa con nome, convertila
+            if (typeof s === "string") {
+              return SERVICE_NAME_TO_ID[s] || null;
+            }
+            return null;
+          })
+          .filter(
+            (id: any): id is number => id !== null && typeof id === "number"
+          );
 
-        // Usiamo format {service: "nome"} come primo tentativo
-        const formattedServices = services.map((s: any) => {
-          if (typeof s === "string") {
-            return { service: s };
-          }
-          // Se già oggetto, lo passiamo così com'è
-          return s;
-        });
+        if (serviceIds.length === 0) {
+          console.warn(
+            "⚠️ [SPEDISCI.ONLINE] Nessun servizio accessorio valido trovato dopo conversione:",
+            { original: services }
+          );
+          return [];
+        }
 
         console.log(
-          "📋 [SPEDISCI.ONLINE] Servizi accessori formattati per /create:",
+          "📋 [SPEDISCI.ONLINE] Servizi accessori convertiti (nome → ID numerico):",
           {
             original: services,
-            formatted: formattedServices,
+            converted: serviceIds,
+            format_type: "number[]",
           }
         );
 
-        return formattedServices;
+        // ✨ FORMATO CORRETTO: Array di numeri [200001, 200002, ...]
+        return serviceIds;
       })(),
       label_format: "PDF",
     };

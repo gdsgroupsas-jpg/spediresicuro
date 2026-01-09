@@ -672,6 +672,10 @@ npm run test:e2e            # Esegui test Playwright E2E
 
 ### Documenti Core (Leggere PRIMA di sviluppare)
 
+**⭐ Documentazione Enterprise-Grade Completa:**
+
+- **[docs/REVISIONE_FINALE_ENTERPRISE.md](docs/REVISIONE_FINALE_ENTERPRISE.md)** - ⭐ **DOCUMENTAZIONE ENTERPRISE COMPLETA** - Vision, Business Architecture, Financial Core, Technical Stack, AI Orchestrator, Security, Developer Guide, Roadmap, Quick Reference
+
 **Per Visione Business:**
 
 - **[docs/VISION_BUSINESS.md](docs/VISION_BUSINESS.md)** - Visione business completa, modelli di ricavo, target, strategia
@@ -966,6 +970,34 @@ _Next Major: 1.0.0 (Go To Market Release)_
 ---
 
 ## 📝 Changelog Recente
+
+### 🔧 Fix Critici Produzione (9 Gennaio 2026 - PR #41)
+
+1. **Servizi Accessori - ID Numerici**:
+   - ✅ Scoperto formato corretto: array numeri `[200001]` invece di stringhe
+   - ✅ Mappatura automatica nome servizio → ID numerico (Exchange=200001, Document Return=200002, etc.)
+   - ✅ Retry intelligente con fallback a stringhe numeriche se necessario
+   - **File**: `lib/adapters/couriers/spedisci-online.ts`
+
+2. **Validazione Corriere Obbligatorio**:
+   - ✅ Pulsante "Genera Spedizione" disabilitato senza selezione corriere
+   - ✅ Validazione esplicita in `handleSubmit` con avviso visivo
+   - ✅ Prevenzione creazione spedizioni per errore
+   - **File**: `app/dashboard/spedizioni/nuova/page.tsx`
+
+3. **Multi-Configurazione Spedisci.Online**:
+   - ✅ Rimosso deduplicazione errata che filtrava config valide
+   - ✅ Ora carica tutte le configurazioni attive correttamente
+   - ✅ Logging dettagliato per debug multi-account
+   - **File**: `app/api/quotes/realtime/route.ts`, `lib/actions/spedisci-online.ts`
+
+4. **Cleanup Automatico Test Script**:
+   - ✅ Script test cancella automaticamente tutte le spedizioni create
+   - ✅ Cleanup anche in caso di CTRL+C o errore fatale
+   - ✅ Flag `--dry-run` per testare senza creare spedizioni
+   - **File**: `scripts/test-accessori-services-completo.ts`
+
+**Vedi [docs/REVISIONE_FINALE_ENTERPRISE.md](docs/REVISIONE_FINALE_ENTERPRISE.md) per dettagli completi PR #40 e #41.**
 
 ### 🐛 Fix Critici (2 Gennaio 2026)
 
