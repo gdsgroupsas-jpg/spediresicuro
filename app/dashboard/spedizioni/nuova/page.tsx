@@ -259,7 +259,7 @@ export default function NuovaSpedizionePage() {
     larghezza: "",
     altezza: "",
     tipoSpedizione: "standard",
-    corriere: "GLS",
+    corriere: "", // ⚠️ VUOTO - L'utente DEVE selezionare dal preventivatore
     note: "",
     contrassegnoAmount: "",
     serviziAccessori: [],
@@ -357,7 +357,8 @@ export default function NuovaSpedizionePage() {
             console.log(
               `✅ [FORM] ${data.couriers.length} corrieri caricati e impostati`
             );
-            // Se il corriere selezionato non è tra quelli disponibili, seleziona il primo
+            // ⚠️ NON auto-selezionare! L'utente DEVE cliccare sul preventivatore
+            // Se il corriere già selezionato non è più disponibile, resetta a vuoto
             const displayNames = data.couriers.map(
               (c: { displayName: string }) => c.displayName
             );
@@ -365,7 +366,7 @@ export default function NuovaSpedizionePage() {
               ...prev,
               corriere: displayNames.includes(prev.corriere)
                 ? prev.corriere
-                : displayNames[0] || "GLS",
+                : "", // ⚠️ VUOTO invece di auto-select primo
             }));
           } else {
             // Fallback: nessun corriere configurato, mostra default
@@ -478,8 +479,9 @@ export default function NuovaSpedizionePage() {
       formData.destinatarioCap, // ⚠️ CAP DESTINATARIO OBBLIGATORIO
       formData.destinatarioTelefono,
       formData.peso,
+      formData.corriere, // ⚠️ CORRIERE OBBLIGATORIO - Deve essere selezionato dal preventivatore
     ];
-    const filled = requiredFields.filter((f) => f.length > 0).length;
+    const filled = requiredFields.filter((f) => f && f.length > 0).length;
     return Math.round((filled / requiredFields.length) * 100);
   }, [formData]);
 
@@ -600,8 +602,15 @@ export default function NuovaSpedizionePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ⚠️ VALIDAZIONE PRE-SUBMIT: Blocca se provincia manca
+    // ⚠️ VALIDAZIONE PRE-SUBMIT: Blocca se dati obbligatori mancano
     const validationErrors: string[] = [];
+
+    // ⚠️ CRITICO: Verifica che sia stato selezionato un corriere dal preventivatore
+    if (!formData.corriere || formData.corriere.length === 0) {
+      validationErrors.push(
+        "Corriere non selezionato. Clicca su un corriere nella tabella preventivi."
+      );
+    }
 
     if (!formData.mittenteProvincia || formData.mittenteProvincia.length < 2) {
       validationErrors.push(
@@ -1053,7 +1062,7 @@ export default function NuovaSpedizionePage() {
           larghezza: "",
           altezza: "",
           tipoSpedizione: "standard",
-          corriere: "GLS",
+          corriere: "", // ⚠️ VUOTO - L'utente DEVE selezionare dal preventivatore
           note: "",
           contrassegnoAmount: "",
           serviziAccessori: [],
@@ -1758,6 +1767,16 @@ export default function NuovaSpedizionePage() {
 
                   {/* Action Area */}
                   <div className="pt-6 border-t border-gray-200 space-y-3">
+                    {/* ⚠️ Avviso se manca il corriere */}
+                    {!formData.corriere && (
+                      <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                        <span>
+                          <strong>Seleziona un corriere</strong> dalla tabella preventivi per continuare
+                        </span>
+                      </div>
+                    )}
+                    
                     <form onSubmit={handleSubmit}>
                       <button
                         type="submit"
