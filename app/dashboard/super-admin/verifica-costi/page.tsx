@@ -281,7 +281,7 @@ export default function VerificaCostiPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         {validation.requires_attention ? (
-                          <Badge variant="destructive">Richiede Attenzione</Badge>
+                          <Badge variant="error">Richiede Attenzione</Badge>
                         ) : (
                           <Badge variant="secondary">OK</Badge>
                         )}
