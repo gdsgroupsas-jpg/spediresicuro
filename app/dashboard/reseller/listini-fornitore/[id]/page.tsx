@@ -12,14 +12,22 @@ import { upsertPriceListEntriesAction } from "@/actions/price-list-entries";
 import { getPriceListByIdAction } from "@/actions/price-lists";
 import DashboardNav from "@/components/dashboard-nav";
 import { SupplierPriceListConfigDialog } from "@/components/listini/supplier-price-list-config-dialog";
+import { ManualPriceListEntriesForm } from "@/components/listini/manual-price-list-entries-form";
+import { ImportCsvDialog } from "@/components/listini/import-csv-dialog";
+import { TestApiValidationDialog } from "@/components/listini/test-api-validation-dialog";
+import { SyncIncrementalDialog } from "@/components/listini/sync-incremental-dialog";
+import { approvePriceListAction } from "@/actions/approve-price-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
 import type { PriceList, PriceListEntry } from "@/types/listini";
 import {
   ArrowLeft,
   Calendar,
+  CheckCircle2,
   Edit,
   Info,
   Package,
@@ -28,6 +36,9 @@ import {
   Settings,
   Trash2,
   Truck,
+  Upload,
+  FileText,
+  RefreshCw,
   X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -107,6 +118,13 @@ export default function PriceListDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [showManualFormDialog, setShowManualFormDialog] = useState(false);
+  const [showImportCsvDialog, setShowImportCsvDialog] = useState(false);
+  const [showTestApiDialog, setShowTestApiDialog] = useState(false);
+  const [showSyncIncrementalDialog, setShowSyncIncrementalDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<"matrix" | "entries">("matrix");
+  const [zoneFilter, setZoneFilter] = useState<string>("all");
+  const [weightFilter, setWeightFilter] = useState<string>("all");
 
   // Stato locale per editing batch della matrice
   type MatrixRow = {
@@ -552,6 +570,29 @@ export default function PriceListDetailPage() {
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge(priceList.status)}
+              {/* ✨ FASE 5: Pulsante Approvazione (solo se draft) */}
+              {priceList.status === "draft" && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={async () => {
+                    const result = await approvePriceListAction(priceList.id, "balanced");
+                    if (result.success) {
+                      toast.success("Listino approvato e attivato con successo");
+                      loadPriceList(priceList.id);
+                    } else {
+                      toast.error(result.error || "Errore approvazione listino");
+                      if (result.validation) {
+                        console.log("Dettagli validazione:", result.validation);
+                      }
+                    }
+                  }}
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Approva Listino
+                </Button>
+              )}
             </div>
           </div>
 
@@ -629,19 +670,78 @@ export default function PriceListDetailPage() {
           </div>
         </div>
 
-        {/* Matrix View (Pivot Table) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Tariffe per Peso e Zona (Matrice Completa)
-              </h2>
-              <p className="text-sm text-gray-500">
-                Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne =
-                Zone Geografiche
-              </p>
-            </div>
+        {/* ✨ FASE 6: Tabs per Matrice e Entries */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "matrix" | "entries")} className="w-full">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <TabsList>
+                  <TabsTrigger value="matrix">
+                    <Package className="h-4 w-4 mr-2" />
+                    Matrice
+                  </TabsTrigger>
+                  <TabsTrigger value="entries">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Entries ({entries.length})
+                  </TabsTrigger>
+                </TabsList>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {activeTab === "matrix" 
+                      ? "Tariffe per Peso e Zona (Matrice Completa)"
+                      : "Lista Entries"}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {activeTab === "matrix"
+                      ? "Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne = Zone Geografiche"
+                      : "Visualizzazione tabellare di tutte le entries con filtri"}
+                  </p>
+                </div>
+              </div>
             <div className="flex items-center gap-2">
+              {/* ✨ FASE 2: Pulsanti per inserimento entries */}
+              {!isEditing && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowManualFormDialog(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Aggiungi Entry
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowImportCsvDialog(true)}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Importa CSV
+                  </Button>
+                  {/* ✨ FASE 3: Pulsante Test API */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTestApiDialog(true)}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Test API
+                  </Button>
+                  {/* ✨ FASE 4: Pulsante Sync Incrementale */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSyncIncrementalDialog(true)}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Sync Incrementale
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -706,7 +806,9 @@ export default function PriceListDetailPage() {
             </div>
           </div>
 
-          {editingMatrix.length === 0 && !isEditing ? (
+          {/* Tab Content: Matrice */}
+          <TabsContent value="matrix" className="m-0">
+            {editingMatrix.length === 0 && !isEditing ? (
             <div className="p-12 text-center">
               <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-600 mb-2">Nessuna tariffa nel listino</p>
@@ -918,6 +1020,146 @@ export default function PriceListDetailPage() {
               })()}
             </div>
           )}
+          </TabsContent>
+
+          {/* ✨ FASE 6: Tab Content: Entries */}
+          <TabsContent value="entries" className="m-0">
+            <div className="p-6">
+              {/* Filtri */}
+              <div className="mb-4 flex items-center gap-4">
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                    Filtra per Zona
+                  </label>
+                  <Select
+                    value={zoneFilter}
+                    onChange={(e) => setZoneFilter(e.target.value)}
+                    className="w-full"
+                  >
+                    <option value="all">Tutte le zone</option>
+                    {PRICING_MATRIX.ZONES.map((zone) => (
+                      <option key={zone.code} value={zone.code}>
+                        {zone.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                    Filtra per Peso (kg)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={weightFilter === "all" ? "" : weightFilter}
+                    onChange={(e) =>
+                      setWeightFilter(e.target.value || "all")
+                    }
+                    placeholder="Tutti i pesi"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Tabella Entries */}
+              {entries.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">Nessuna entry nel listino</p>
+                  <p className="text-sm text-gray-500">
+                    Aggiungi entries manualmente o importa da CSV
+                  </p>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
+                          Zona
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
+                          Peso da (kg)
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
+                          Peso a (kg)
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
+                          Prezzo Base
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
+                          Fuel %
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
+                          COD (€)
+                        </th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase">
+                          Tipo Servizio
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {entries
+                        .filter((entry) => {
+                          if (zoneFilter !== "all" && entry.zone_code !== zoneFilter) {
+                            return false;
+                          }
+                          if (weightFilter !== "all") {
+                            const weight = parseFloat(weightFilter);
+                            if (
+                              !isNaN(weight) &&
+                              (weight < entry.weight_from || weight > entry.weight_to)
+                            ) {
+                              return false;
+                            }
+                          }
+                          return true;
+                        })
+                        .map((entry) => {
+                          const zone = PRICING_MATRIX.ZONES.find(
+                            (z) => z.code === entry.zone_code
+                          );
+                          return (
+                            <tr key={entry.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3">
+                                <div>
+                                  <div className="font-medium">
+                                    {zone?.name || entry.zone_code || "-"}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {entry.zone_code}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">{entry.weight_from} kg</td>
+                              <td className="px-4 py-3">{entry.weight_to} kg</td>
+                              <td className="px-4 py-3 text-right font-semibold">
+                                {formatCurrency(entry.base_price)}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                {entry.fuel_surcharge_percent
+                                  ? `${entry.fuel_surcharge_percent}%`
+                                  : "-"}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                {entry.cash_on_delivery_surcharge
+                                  ? formatCurrency(entry.cash_on_delivery_surcharge)
+                                  : "-"}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {getServiceTypeBadge(entry.service_type)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
         </div>
 
         {/* Note e Info Aggiuntive */}
@@ -939,6 +1181,61 @@ export default function PriceListDetailPage() {
             }}
             priceList={priceList}
             onSaveComplete={() => {
+              loadPriceList(priceList.id);
+            }}
+          />
+        )}
+
+        {/* ✨ FASE 2: Dialog Form Manuale Entries */}
+        {priceList && (
+          <Dialog open={showManualFormDialog} onOpenChange={setShowManualFormDialog}>
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Aggiungi Entries Manualmente</DialogTitle>
+                <DialogDescription>
+                  Inserisci una o più entries manualmente per questo listino
+                </DialogDescription>
+              </DialogHeader>
+              <ManualPriceListEntriesForm
+                priceListId={priceList.id}
+                onSuccess={() => {
+                  setShowManualFormDialog(false);
+                  loadPriceList(priceList.id);
+                }}
+                onCancel={() => setShowManualFormDialog(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* ✨ FASE 2: Dialog Import CSV */}
+        {priceList && (
+          <ImportCsvDialog
+            open={showImportCsvDialog}
+            onOpenChange={setShowImportCsvDialog}
+            priceListId={priceList.id}
+            onSuccess={() => {
+              loadPriceList(priceList.id);
+            }}
+          />
+        )}
+
+        {/* ✨ FASE 3: Dialog Test API Validation */}
+        {priceList && (
+          <TestApiValidationDialog
+            open={showTestApiDialog}
+            onOpenChange={setShowTestApiDialog}
+            priceList={priceList}
+          />
+        )}
+
+        {/* ✨ FASE 4: Dialog Sync Incrementale */}
+        {priceList && (
+          <SyncIncrementalDialog
+            open={showSyncIncrementalDialog}
+            onOpenChange={setShowSyncIncrementalDialog}
+            priceList={priceList}
+            onSuccess={() => {
               loadPriceList(priceList.id);
             }}
           />
