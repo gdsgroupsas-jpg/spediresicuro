@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
             destination: {
               zip,
               province,
-              city,
               country: 'IT',
             },
             courierId: courier.courierId || undefined, // courierId opzionale
