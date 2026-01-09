@@ -1180,7 +1180,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
                   const plNameLower = (pl.name || "").toLowerCase();
 
                   const matchesConfigId =
-                    metadata.courier_config_id === options.configId;
+                    metadata.courier_config_id === options?.configId;
                   const metadataCarrierCode =
                     metadata.carrier_code?.toLowerCase();
                   const matchesCarrierCode = metadataCarrierCode
