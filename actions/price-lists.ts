@@ -638,20 +638,20 @@ export async function createSupplierPriceListAction(
         .eq("list_type", "supplier")
         .limit(100);
 
-      if (existingLists) {
+      if (existingLists && data.metadata) {
         const duplicate = existingLists.find((pl: any) => {
           const metadata = pl.metadata || pl.source_metadata || {};
           return (
-            metadata.courier_config_id === data.metadata.courier_config_id &&
-            metadata.carrier_code?.toLowerCase() === data.metadata.carrier_code?.toLowerCase() &&
-            metadata.contract_code?.toLowerCase() === data.metadata.contract_code?.toLowerCase()
+            metadata.courier_config_id === data.metadata?.courier_config_id &&
+            metadata.carrier_code?.toLowerCase() === data.metadata?.carrier_code?.toLowerCase() &&
+            metadata.contract_code?.toLowerCase() === data.metadata?.contract_code?.toLowerCase()
           );
         });
 
         if (duplicate) {
           return {
             success: false,
-            error: `Esiste già un listino per questa configurazione (${data.metadata.carrier_code}/${data.metadata.contract_code}). Usa un nome diverso o modifica il listino esistente.`,
+            error: `Esiste già un listino per questa configurazione (${data.metadata?.carrier_code}/${data.metadata?.contract_code}). Usa un nome diverso o modifica il listino esistente.`,
           };
         }
       }

@@ -1,20 +1,25 @@
 /**
  * Dialog per import CSV/Excel entries listino
- * 
+ *
  * ✨ FASE 2: Permette import di entries da file CSV/Excel
  * Supporta preview e mapping colonne → campi DB
  */
 
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
-import { Upload, FileText, X, Check, Loader2, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { createPriceListEntryAction } from '@/actions/price-list-entries';
-import { toast } from 'sonner';
-import type { PriceListEntry } from '@/types/listini';
+import { createPriceListEntryAction } from "@/actions/price-list-entries";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { AlertCircle, Check, FileText, Loader2, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 interface ImportCsvDialogProps {
   open: boolean;
@@ -50,24 +55,50 @@ export function ImportCsvDialog({
   const [parsedEntries, setParsedEntries] = useState<ParsedEntry[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>(
+    {}
+  );
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Campi disponibili per mapping
   const availableFields = [
-    { key: 'zone_code', label: 'Zona (zone_code)', required: true },
-    { key: 'weight_from', label: 'Peso da (weight_from)', required: true },
-    { key: 'weight_to', label: 'Peso a (weight_to)', required: true },
-    { key: 'base_price', label: 'Prezzo base (base_price)', required: true },
-    { key: 'service_type', label: 'Tipo servizio (service_type)', required: false },
-    { key: 'fuel_surcharge_percent', label: 'Supplemento carburante %', required: false },
-    { key: 'cash_on_delivery_surcharge', label: 'Supplemento contrassegno €', required: false },
-    { key: 'insurance_rate_percent', label: 'Tasso assicurazione %', required: false },
-    { key: 'island_surcharge', label: 'Supplemento isole €', required: false },
-    { key: 'ztl_surcharge', label: 'Supplemento ZTL €', required: false },
-    { key: 'estimated_delivery_days_min', label: 'Giorni consegna (min)', required: false },
-    { key: 'estimated_delivery_days_max', label: 'Giorni consegna (max)', required: false },
+    { key: "zone_code", label: "Zona (zone_code)", required: true },
+    { key: "weight_from", label: "Peso da (weight_from)", required: true },
+    { key: "weight_to", label: "Peso a (weight_to)", required: true },
+    { key: "base_price", label: "Prezzo base (base_price)", required: true },
+    {
+      key: "service_type",
+      label: "Tipo servizio (service_type)",
+      required: false,
+    },
+    {
+      key: "fuel_surcharge_percent",
+      label: "Supplemento carburante %",
+      required: false,
+    },
+    {
+      key: "cash_on_delivery_surcharge",
+      label: "Supplemento contrassegno €",
+      required: false,
+    },
+    {
+      key: "insurance_rate_percent",
+      label: "Tasso assicurazione %",
+      required: false,
+    },
+    { key: "island_surcharge", label: "Supplemento isole €", required: false },
+    { key: "ztl_surcharge", label: "Supplemento ZTL €", required: false },
+    {
+      key: "estimated_delivery_days_min",
+      label: "Giorni consegna (min)",
+      required: false,
+    },
+    {
+      key: "estimated_delivery_days_max",
+      label: "Giorni consegna (max)",
+      required: false,
+    },
   ];
 
   // Reset form
@@ -77,7 +108,7 @@ export function ImportCsvDialog({
     setColumnMapping({});
     setCsvHeaders([]);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -86,18 +117,18 @@ export function ImportCsvDialog({
     setIsParsing(true);
     try {
       const text = await file.text();
-      const lines = text.split('\n').filter((line) => line.trim());
-      
+      const lines = text.split("\n").filter((line) => line.trim());
+
       if (lines.length < 2) {
-        toast.error('File CSV deve avere almeno header + 1 riga dati');
+        toast.error("File CSV deve avere almeno header + 1 riga dati");
         setIsParsing(false);
         return;
       }
 
       // Parse header
       const headers = lines[0]
-        .split(',')
-        .map((h) => h.trim().replace(/^"|"$/g, ''));
+        .split(",")
+        .map((h) => h.trim().replace(/^"|"$/g, ""));
       setCsvHeaders(headers);
 
       // Auto-detect column mapping (case-insensitive)
@@ -121,9 +152,9 @@ export function ImportCsvDialog({
       const entries: ParsedEntry[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i]
-          .split(',')
-          .map((v) => v.trim().replace(/^"|"$/g, ''));
-        
+          .split(",")
+          .map((v) => v.trim().replace(/^"|"$/g, ""));
+
         const entry: ParsedEntry = { _rowIndex: i + 1 };
         const errors: string[] = [];
 
@@ -132,9 +163,15 @@ export function ImportCsvDialog({
           const fieldKey = autoMapping[header];
           if (fieldKey && values[index]) {
             const value = values[index].trim();
-            
+
             // Parse based on field type
-            if (fieldKey.includes('weight') || fieldKey.includes('price') || fieldKey.includes('surcharge') || fieldKey.includes('rate') || fieldKey.includes('days')) {
+            if (
+              fieldKey.includes("weight") ||
+              fieldKey.includes("price") ||
+              fieldKey.includes("surcharge") ||
+              fieldKey.includes("rate") ||
+              fieldKey.includes("days")
+            ) {
               const numValue = parseFloat(value);
               if (isNaN(numValue)) {
                 errors.push(`${fieldKey}: valore non numerico "${value}"`);
@@ -163,7 +200,9 @@ export function ImportCsvDialog({
 
       setParsedEntries(entries);
 
-      const validCount = entries.filter((e) => !e._errors || e._errors.length === 0).length;
+      const validCount = entries.filter(
+        (e) => !e._errors || e._errors.length === 0
+      ).length;
       const errorCount = entries.length - validCount;
 
       if (errorCount > 0) {
@@ -174,7 +213,7 @@ export function ImportCsvDialog({
         toast.success(`${entries.length} righe parsate correttamente`);
       }
     } catch (error: any) {
-      console.error('Errore parsing CSV:', error);
+      console.error("Errore parsing CSV:", error);
       toast.error(`Errore parsing file: ${error.message}`);
     } finally {
       setIsParsing(false);
@@ -186,8 +225,8 @@ export function ImportCsvDialog({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    if (!selectedFile.name.endsWith('.csv')) {
-      toast.error('Solo file CSV sono supportati');
+    if (!selectedFile.name.endsWith(".csv")) {
+      toast.error("Solo file CSV sono supportati");
       return;
     }
 
@@ -215,7 +254,7 @@ export function ImportCsvDialog({
     );
 
     if (validEntries.length === 0) {
-      toast.error('Nessuna entry valida da importare');
+      toast.error("Nessuna entry valida da importare");
       return;
     }
 
@@ -224,11 +263,11 @@ export function ImportCsvDialog({
       const results = await Promise.all(
         validEntries.map((entry) =>
           createPriceListEntryAction(priceListId, {
-            zone_code: entry.zone_code || '',
+            zone_code: entry.zone_code || "",
             weight_from: entry.weight_from || 0,
             weight_to: entry.weight_to || 0,
             base_price: entry.base_price || 0,
-            service_type: (entry.service_type as any) || 'standard',
+            service_type: (entry.service_type as any) || "standard",
             fuel_surcharge_percent: entry.fuel_surcharge_percent || 0,
             cash_on_delivery_surcharge: entry.cash_on_delivery_surcharge || 0,
             insurance_rate_percent: entry.insurance_rate_percent || 0,
@@ -243,7 +282,9 @@ export function ImportCsvDialog({
       const failed = results.filter((r) => !r.success);
       if (failed.length > 0) {
         toast.error(
-          `${failed.length} entry non importate: ${failed[0].error || 'Errore sconosciuto'}`
+          `${failed.length} entry non importate: ${
+            failed[0].error || "Errore sconosciuto"
+          }`
         );
         setIsImporting(false);
         return;
@@ -254,8 +295,8 @@ export function ImportCsvDialog({
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      console.error('Errore import entries:', error);
-      toast.error('Errore imprevisto durante import. Riprova più tardi.');
+      console.error("Errore import entries:", error);
+      toast.error("Errore imprevisto durante import. Riprova più tardi.");
     } finally {
       setIsImporting(false);
     }
@@ -267,7 +308,8 @@ export function ImportCsvDialog({
         <DialogHeader>
           <DialogTitle>Importa Entries da CSV</DialogTitle>
           <DialogDescription>
-            Carica un file CSV con le entries del listino. Il file deve avere header nella prima riga.
+            Carica un file CSV con le entries del listino. Il file deve avere
+            header nella prima riga.
           </DialogDescription>
         </DialogHeader>
 
@@ -292,7 +334,7 @@ export function ImportCsvDialog({
                 className="flex items-center gap-2"
               >
                 <Upload className="w-4 h-4" />
-                {file ? file.name : 'Seleziona file CSV'}
+                {file ? file.name : "Seleziona file CSV"}
               </Button>
               {file && (
                 <Button
@@ -324,14 +366,16 @@ export function ImportCsvDialog({
                     <span className="w-48 text-sm font-medium">{header}</span>
                     <span className="text-gray-400">→</span>
                     <select
-                      value={columnMapping[header] || ''}
-                      onChange={(e) => updateColumnMapping(header, e.target.value)}
+                      value={columnMapping[header] || ""}
+                      onChange={(e) =>
+                        updateColumnMapping(header, e.target.value)
+                      }
                       className="flex-1 rounded-md border border-gray-300 p-2 text-sm"
                     >
                       <option value="">-- Non mappare --</option>
                       {availableFields.map((field) => (
                         <option key={field.key} value={field.key}>
-                          {field.label} {field.required && '*'}
+                          {field.label} {field.required && "*"}
                         </option>
                       ))}
                     </select>
@@ -347,8 +391,18 @@ export function ImportCsvDialog({
               <div className="flex justify-between items-center mb-2">
                 <Label>Preview Entries ({parsedEntries.length} righe)</Label>
                 <span className="text-sm text-gray-500">
-                  {parsedEntries.filter((e) => !e._errors || e._errors.length === 0).length} valide,{' '}
-                  {parsedEntries.filter((e) => e._errors && e._errors.length > 0).length} con errori
+                  {
+                    parsedEntries.filter(
+                      (e) => !e._errors || e._errors.length === 0
+                    ).length
+                  }{" "}
+                  valide,{" "}
+                  {
+                    parsedEntries.filter(
+                      (e) => e._errors && e._errors.length > 0
+                    ).length
+                  }{" "}
+                  con errori
                 </span>
               </div>
               <div className="max-h-64 overflow-y-auto border rounded-lg">
@@ -369,15 +423,17 @@ export function ImportCsvDialog({
                         key={idx}
                         className={`border-t ${
                           entry._errors && entry._errors.length > 0
-                            ? 'bg-red-50'
-                            : 'bg-white'
+                            ? "bg-red-50"
+                            : "bg-white"
                         }`}
                       >
                         <td className="px-3 py-2">{entry._rowIndex}</td>
-                        <td className="px-3 py-2">{entry.zone_code || '-'}</td>
-                        <td className="px-3 py-2">{entry.weight_from || '-'}</td>
-                        <td className="px-3 py-2">{entry.weight_to || '-'}</td>
-                        <td className="px-3 py-2">{entry.base_price || '-'}</td>
+                        <td className="px-3 py-2">{entry.zone_code || "-"}</td>
+                        <td className="px-3 py-2">
+                          {entry.weight_from || "-"}
+                        </td>
+                        <td className="px-3 py-2">{entry.weight_to || "-"}</td>
+                        <td className="px-3 py-2">{entry.base_price || "-"}</td>
                         <td className="px-3 py-2">
                           {entry._errors && entry._errors.length > 0 ? (
                             <div className="flex items-center gap-1 text-red-600">
@@ -425,7 +481,9 @@ export function ImportCsvDialog({
               disabled={
                 isImporting ||
                 parsedEntries.length === 0 ||
-                parsedEntries.filter((e) => !e._errors || e._errors.length === 0).length === 0
+                parsedEntries.filter(
+                  (e) => !e._errors || e._errors.length === 0
+                ).length === 0
               }
             >
               {isImporting ? (
@@ -436,11 +494,12 @@ export function ImportCsvDialog({
               ) : (
                 <>
                   <FileText className="w-4 h-4 mr-2" />
-                  Importa{' '}
+                  Importa{" "}
                   {
-                    parsedEntries.filter((e) => !e._errors || e._errors.length === 0)
-                      .length
-                  }{' '}
+                    parsedEntries.filter(
+                      (e) => !e._errors || e._errors.length === 0
+                    ).length
+                  }{" "}
                   Entries
                 </>
               )}
