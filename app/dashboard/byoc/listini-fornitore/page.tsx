@@ -216,7 +216,6 @@ export default function ByocListiniFornitorePage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewDetails={handleViewDetails}
-            onConfigure={handleConfigure}
             isLoading={isLoading}
           />
         </div>
