@@ -7,21 +7,27 @@
 
 "use client";
 
+import { approvePriceListAction } from "@/actions/approve-price-list";
 import { updateCustomerPriceListMarginAction } from "@/actions/customer-price-lists";
 import { upsertPriceListEntriesAction } from "@/actions/price-list-entries";
 import { getPriceListByIdAction } from "@/actions/price-lists";
 import DashboardNav from "@/components/dashboard-nav";
-import { SupplierPriceListConfigDialog } from "@/components/listini/supplier-price-list-config-dialog";
-import { ManualPriceListEntriesForm } from "@/components/listini/manual-price-list-entries-form";
 import { ImportCsvDialog } from "@/components/listini/import-csv-dialog";
-import { TestApiValidationDialog } from "@/components/listini/test-api-validation-dialog";
+import { ManualPriceListEntriesForm } from "@/components/listini/manual-price-list-entries-form";
+import { SupplierPriceListConfigDialog } from "@/components/listini/supplier-price-list-config-dialog";
 import { SyncIncrementalDialog } from "@/components/listini/sync-incremental-dialog";
-import { approvePriceListAction } from "@/actions/approve-price-list";
+import { TestApiValidationDialog } from "@/components/listini/test-api-validation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
 import type { PriceList, PriceListEntry } from "@/types/listini";
 import {
@@ -29,16 +35,16 @@ import {
   Calendar,
   CheckCircle2,
   Edit,
+  FileText,
   Info,
   Package,
   Plus,
+  RefreshCw,
   Save,
   Settings,
   Trash2,
   Truck,
   Upload,
-  FileText,
-  RefreshCw,
   X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -121,7 +127,8 @@ export default function PriceListDetailPage() {
   const [showManualFormDialog, setShowManualFormDialog] = useState(false);
   const [showImportCsvDialog, setShowImportCsvDialog] = useState(false);
   const [showTestApiDialog, setShowTestApiDialog] = useState(false);
-  const [showSyncIncrementalDialog, setShowSyncIncrementalDialog] = useState(false);
+  const [showSyncIncrementalDialog, setShowSyncIncrementalDialog] =
+    useState(false);
   const [activeTab, setActiveTab] = useState<"matrix" | "entries">("matrix");
   const [zoneFilter, setZoneFilter] = useState<string>("all");
   const [weightFilter, setWeightFilter] = useState<string>("all");
@@ -576,12 +583,19 @@ export default function PriceListDetailPage() {
                   variant="default"
                   size="sm"
                   onClick={async () => {
-                    const result = await approvePriceListAction(priceList.id, "balanced");
+                    const result = await approvePriceListAction(
+                      priceList.id,
+                      "balanced"
+                    );
                     if (result.success) {
-                      toast.success("Listino approvato e attivato con successo");
+                      toast.success(
+                        "Listino approvato e attivato con successo"
+                      );
                       loadPriceList(priceList.id);
                     } else {
-                      toast.error(result.error || "Errore approvazione listino");
+                      toast.error(
+                        result.error || "Errore approvazione listino"
+                      );
                       if (result.validation) {
                         console.log("Dettagli validazione:", result.validation);
                       }
@@ -671,7 +685,11 @@ export default function PriceListDetailPage() {
         </div>
 
         {/* ✨ FASE 6: Tabs per Matrice e Entries */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "matrix" | "entries")} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "matrix" | "entries")}
+          className="w-full"
+        >
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -687,7 +705,7 @@ export default function PriceListDetailPage() {
                 </TabsList>
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">
-                    {activeTab === "matrix" 
+                    {activeTab === "matrix"
                       ? "Tariffe per Peso e Zona (Matrice Completa)"
                       : "Lista Entries"}
                   </h2>
@@ -698,467 +716,484 @@ export default function PriceListDetailPage() {
                   </p>
                 </div>
               </div>
-            <div className="flex items-center gap-2">
-              {/* ✨ FASE 2: Pulsanti per inserimento entries */}
-              {!isEditing && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowManualFormDialog(true)}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Aggiungi Entry
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowImportCsvDialog(true)}
-                    className="gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Importa CSV
-                  </Button>
-                  {/* ✨ FASE 3: Pulsante Test API */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowTestApiDialog(true)}
-                    className="gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Test API
-                  </Button>
-                  {/* ✨ FASE 4: Pulsante Sync Incrementale */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSyncIncrementalDialog(true)}
-                    className="gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Sync Incrementale
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowConfigDialog(true)}
-                className="gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Configurazione
-              </Button>
-              {!isEditing ? (
+              <div className="flex items-center gap-2">
+                {/* ✨ FASE 2: Pulsanti per inserimento entries */}
+                {!isEditing && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowManualFormDialog(true)}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Aggiungi Entry
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImportCsvDialog(true)}
+                      className="gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Importa CSV
+                    </Button>
+                    {/* ✨ FASE 3: Pulsante Test API */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowTestApiDialog(true)}
+                      className="gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Test API
+                    </Button>
+                    {/* ✨ FASE 4: Pulsante Sync Incrementale */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSyncIncrementalDialog(true)}
+                      className="gap-2"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Sync Incrementale
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => setShowConfigDialog(true)}
                   className="gap-2"
                 >
-                  <Edit className="h-4 w-4" />
-                  Modifica Manuale
+                  <Settings className="h-4 w-4" />
+                  Configurazione
                 </Button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={saveAllChanges}
-                    disabled={isSaving || !hasUnsavedChanges}
-                    className="gap-2 bg-green-600 hover:bg-green-700"
-                  >
-                    <Save className="h-4 w-4" />
-                    {isSaving ? "Salvataggio..." : "Salva Tutto"}
-                  </Button>
+                {!isEditing ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={cancelEditing}
-                    disabled={isSaving}
+                    onClick={() => setIsEditing(true)}
                     className="gap-2"
                   >
-                    <X className="h-4 w-4" />
-                    Annulla
+                    <Edit className="h-4 w-4" />
+                    Modifica Manuale
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={addNewRow}
-                    disabled={isSaving}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Nuova Fascia
-                  </Button>
-                  {hasUnsavedChanges && (
-                    <Badge
-                      variant="outline"
-                      className="bg-orange-50 text-orange-700"
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={saveAllChanges}
+                      disabled={isSaving || !hasUnsavedChanges}
+                      className="gap-2 bg-green-600 hover:bg-green-700"
                     >
-                      Modifiche non salvate
-                    </Badge>
-                  )}
+                      <Save className="h-4 w-4" />
+                      {isSaving ? "Salvataggio..." : "Salva Tutto"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelEditing}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Annulla
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addNewRow}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Nuova Fascia
+                    </Button>
+                    {hasUnsavedChanges && (
+                      <Badge
+                        variant="outline"
+                        className="bg-orange-50 text-orange-700"
+                      >
+                        Modifiche non salvate
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tab Content: Matrice */}
+            <TabsContent value="matrix" className="m-0">
+              {editingMatrix.length === 0 && !isEditing ? (
+                <div className="p-12 text-center">
+                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">
+                    Nessuna tariffa nel listino
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Le tariffe vengono aggiunte durante la sincronizzazione da
+                    Spedisci.Online
+                  </p>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tab Content: Matrice */}
-          <TabsContent value="matrix" className="m-0">
-            {editingMatrix.length === 0 && !isEditing ? (
-            <div className="p-12 text-center">
-              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 mb-2">Nessuna tariffa nel listino</p>
-              <p className="text-sm text-gray-500">
-                Le tariffe vengono aggiunte durante la sincronizzazione da
-                Spedisci.Online
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {(() => {
-                // Ordina zone secondo priority
-                const sortedZones = [...PRICING_MATRIX.ZONES]
-                  .map((z) => z.code)
-                  .sort((a, b) => {
-                    const zoneA = PRICING_MATRIX.ZONES.find(
-                      (z) => z.code === a
-                    );
-                    const zoneB = PRICING_MATRIX.ZONES.find(
-                      (z) => z.code === b
-                    );
-                    return (zoneA?.priority || 999) - (zoneB?.priority || 999);
-                  });
-
-                // Usa editingMatrix se in editing, altrimenti buildMergedRows per visualizzazione
-                const displayRows = isEditing
-                  ? editingMatrix
-                  : buildMergedRows();
-
-                return (
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
-                          Peso (KG)
-                        </th>
-                        {sortedZones.map((zoneCode) => {
-                          const zone = PRICING_MATRIX.ZONES.find(
-                            (z) => z.code === zoneCode
-                          );
-                          const zoneName = zone?.name || zoneCode;
-                          return (
-                            <th
-                              key={zoneCode}
-                              className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b"
-                              title={zoneName}
-                            >
-                              {zoneName}
-                            </th>
-                          );
-                        })}
-                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b bg-yellow-50">
-                          Fuel %
-                        </th>
-                        {isEditing && (
-                          <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b w-20">
-                            Azioni
-                          </th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {displayRows.map((row, idx) => {
-                        const rowId = isEditing
-                          ? (row as MatrixRow).id
-                          : `row-${idx}`;
-                        const rowData = isEditing
-                          ? (row as MatrixRow)
-                          : {
-                              id: rowId,
-                              weightFrom: row.weightFrom,
-                              weightTo: row.weightTo,
-                              prices: row.prices,
-                              fuelSurcharge: 0,
-                              entryIds: {},
-                            };
-
+              ) : (
+                <div className="overflow-x-auto">
+                  {(() => {
+                    // Ordina zone secondo priority
+                    const sortedZones = [...PRICING_MATRIX.ZONES]
+                      .map((z) => z.code)
+                      .sort((a, b) => {
+                        const zoneA = PRICING_MATRIX.ZONES.find(
+                          (z) => z.code === a
+                        );
+                        const zoneB = PRICING_MATRIX.ZONES.find(
+                          (z) => z.code === b
+                        );
                         return (
-                          <tr key={rowId} className="hover:bg-gray-50">
-                            {/* Colonna Peso - Editabile in modalità editing */}
-                            <td className="px-4 py-3 font-semibold text-gray-900 border-r bg-gray-50 sticky left-0 z-10 whitespace-nowrap">
-                              {isEditing ? (
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    value={rowData.weightTo}
-                                    onChange={(e) => {
-                                      const newWeight =
-                                        parseFloat(e.target.value) || 0;
-                                      updateMatrixWeight(rowId, newWeight);
-                                    }}
-                                    className="w-20 text-center"
-                                    disabled={isSaving}
-                                  />
-                                  <span className="text-xs text-gray-500">
-                                    kg
-                                  </span>
-                                </div>
-                              ) : (
-                                <>
-                                  {rowData.weightFrom === 0
-                                    ? `Fino a ${rowData.weightTo}`
-                                    : `${rowData.weightFrom} - ${rowData.weightTo}`}{" "}
-                                  kg
-                                </>
-                              )}
-                            </td>
-                            {/* Colonne Zone - Editabili in modalità editing */}
+                          (zoneA?.priority || 999) - (zoneB?.priority || 999)
+                        );
+                      });
+
+                    // Usa editingMatrix se in editing, altrimenti buildMergedRows per visualizzazione
+                    const displayRows = isEditing
+                      ? editingMatrix
+                      : buildMergedRows();
+
+                    return (
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
+                              Peso (KG)
+                            </th>
                             {sortedZones.map((zoneCode) => {
-                              const price = rowData.prices[zoneCode] ?? -1;
+                              const zone = PRICING_MATRIX.ZONES.find(
+                                (z) => z.code === zoneCode
+                              );
+                              const zoneName = zone?.name || zoneCode;
                               return (
-                                <td
-                                  key={`${rowId}-${zoneCode}`}
-                                  className="px-4 py-3 text-center"
+                                <th
+                                  key={zoneCode}
+                                  className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b"
+                                  title={zoneName}
                                 >
+                                  {zoneName}
+                                </th>
+                              );
+                            })}
+                            <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b bg-yellow-50">
+                              Fuel %
+                            </th>
+                            {isEditing && (
+                              <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b w-20">
+                                Azioni
+                              </th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {displayRows.map((row, idx) => {
+                            const rowId = isEditing
+                              ? (row as MatrixRow).id
+                              : `row-${idx}`;
+                            const rowData = isEditing
+                              ? (row as MatrixRow)
+                              : {
+                                  id: rowId,
+                                  weightFrom: row.weightFrom,
+                                  weightTo: row.weightTo,
+                                  prices: row.prices,
+                                  fuelSurcharge: 0,
+                                  entryIds: {},
+                                };
+
+                            return (
+                              <tr key={rowId} className="hover:bg-gray-50">
+                                {/* Colonna Peso - Editabile in modalità editing */}
+                                <td className="px-4 py-3 font-semibold text-gray-900 border-r bg-gray-50 sticky left-0 z-10 whitespace-nowrap">
+                                  {isEditing ? (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        step="0.1"
+                                        value={rowData.weightTo}
+                                        onChange={(e) => {
+                                          const newWeight =
+                                            parseFloat(e.target.value) || 0;
+                                          updateMatrixWeight(rowId, newWeight);
+                                        }}
+                                        className="w-20 text-center"
+                                        disabled={isSaving}
+                                      />
+                                      <span className="text-xs text-gray-500">
+                                        kg
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      {rowData.weightFrom === 0
+                                        ? `Fino a ${rowData.weightTo}`
+                                        : `${rowData.weightFrom} - ${rowData.weightTo}`}{" "}
+                                      kg
+                                    </>
+                                  )}
+                                </td>
+                                {/* Colonne Zone - Editabili in modalità editing */}
+                                {sortedZones.map((zoneCode) => {
+                                  const price = rowData.prices[zoneCode] ?? -1;
+                                  return (
+                                    <td
+                                      key={`${rowId}-${zoneCode}`}
+                                      className="px-4 py-3 text-center"
+                                    >
+                                      {isEditing ? (
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={price >= 0 ? price : ""}
+                                          onChange={(e) => {
+                                            const value =
+                                              e.target.value === ""
+                                                ? -1
+                                                : parseFloat(e.target.value) ||
+                                                  0;
+                                            updateMatrixPrice(
+                                              rowId,
+                                              zoneCode,
+                                              value
+                                            );
+                                          }}
+                                          placeholder="-"
+                                          className="w-24 text-center"
+                                          disabled={isSaving}
+                                        />
+                                      ) : (
+                                        <div className="flex flex-col items-center">
+                                          {price >= 0 ? (
+                                            <>
+                                              <span
+                                                className={`font-bold ${
+                                                  price === 0
+                                                    ? "text-gray-400"
+                                                    : "text-gray-900"
+                                                }`}
+                                              >
+                                                {price === 0
+                                                  ? "0,00 €"
+                                                  : formatCurrency(price)}
+                                              </span>
+                                              {price === 0 && (
+                                                <span className="text-[10px] text-orange-500 font-medium">
+                                                  (da compilare)
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <span className="text-gray-300">
+                                              -
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                                {/* Colonna Fuel Surcharge */}
+                                <td className="px-4 py-3 text-center bg-yellow-50">
                                   {isEditing ? (
                                     <Input
                                       type="number"
                                       step="0.01"
-                                      value={price >= 0 ? price : ""}
+                                      value={rowData.fuelSurcharge}
                                       onChange={(e) => {
                                         const value =
-                                          e.target.value === ""
-                                            ? -1
-                                            : parseFloat(e.target.value) || 0;
-                                        updateMatrixPrice(
-                                          rowId,
-                                          zoneCode,
-                                          value
-                                        );
+                                          parseFloat(e.target.value) || 0;
+                                        updateMatrixFuelSurcharge(rowId, value);
                                       }}
-                                      placeholder="-"
-                                      className="w-24 text-center"
+                                      className="w-20 text-center"
                                       disabled={isSaving}
                                     />
                                   ) : (
-                                    <div className="flex flex-col items-center">
-                                      {price >= 0 ? (
-                                        <>
-                                          <span
-                                            className={`font-bold ${
-                                              price === 0
-                                                ? "text-gray-400"
-                                                : "text-gray-900"
-                                            }`}
-                                          >
-                                            {price === 0
-                                              ? "0,00 €"
-                                              : formatCurrency(price)}
-                                          </span>
-                                          {price === 0 && (
-                                            <span className="text-[10px] text-orange-500 font-medium">
-                                              (da compilare)
-                                            </span>
-                                          )}
-                                        </>
-                                      ) : (
-                                        <span className="text-gray-300">-</span>
-                                      )}
-                                    </div>
+                                    <span className="font-semibold text-gray-900">
+                                      {rowData.fuelSurcharge > 0
+                                        ? `${rowData.fuelSurcharge}%`
+                                        : "-"}
+                                    </span>
                                   )}
                                 </td>
-                              );
-                            })}
-                            {/* Colonna Fuel Surcharge */}
-                            <td className="px-4 py-3 text-center bg-yellow-50">
-                              {isEditing ? (
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={rowData.fuelSurcharge}
-                                  onChange={(e) => {
-                                    const value =
-                                      parseFloat(e.target.value) || 0;
-                                    updateMatrixFuelSurcharge(rowId, value);
-                                  }}
-                                  className="w-20 text-center"
-                                  disabled={isSaving}
-                                />
-                              ) : (
-                                <span className="font-semibold text-gray-900">
-                                  {rowData.fuelSurcharge > 0
-                                    ? `${rowData.fuelSurcharge}%`
-                                    : "-"}
-                                </span>
-                              )}
-                            </td>
-                            {/* Colonna Azioni (solo in editing) */}
-                            {isEditing && (
-                              <td className="px-4 py-3 text-center">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => removeRow(rowId)}
-                                  disabled={isSaving}
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                );
-              })()}
-            </div>
-          )}
-          </TabsContent>
+                                {/* Colonna Azioni (solo in editing) */}
+                                {isEditing && (
+                                  <td className="px-4 py-3 text-center">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => removeRow(rowId)}
+                                      disabled={isSaving}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
+                </div>
+              )}
+            </TabsContent>
 
-          {/* ✨ FASE 6: Tab Content: Entries */}
-          <TabsContent value="entries" className="m-0">
-            <div className="p-6">
-              {/* Filtri */}
-              <div className="mb-4 flex items-center gap-4">
-                <div className="flex-1">
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">
-                    Filtra per Zona
-                  </label>
-                  <select
-                    value={zoneFilter}
-                    onChange={(e) => setZoneFilter(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 p-2 text-sm"
-                  >
-                    <option value="all">Tutte le zone</option>
-                    {PRICING_MATRIX.ZONES.map((zone) => (
-                      <option key={zone.code} value={zone.code}>
-                        {zone.name}
-                      </option>
-                    ))}
-                  </select>
+            {/* ✨ FASE 6: Tab Content: Entries */}
+            <TabsContent value="entries" className="m-0">
+              <div className="p-6">
+                {/* Filtri */}
+                <div className="mb-4 flex items-center gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Filtra per Zona
+                    </label>
+                    <select
+                      value={zoneFilter}
+                      onChange={(e) => setZoneFilter(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                    >
+                      <option value="all">Tutte le zone</option>
+                      {PRICING_MATRIX.ZONES.map((zone) => (
+                        <option key={zone.code} value={zone.code}>
+                          {zone.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Filtra per Peso (kg)
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={weightFilter === "all" ? "" : weightFilter}
+                      onChange={(e) => setWeightFilter(e.target.value || "all")}
+                      placeholder="Tutti i pesi"
+                      className="w-full"
+                    />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">
-                    Filtra per Peso (kg)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={weightFilter === "all" ? "" : weightFilter}
-                    onChange={(e) =>
-                      setWeightFilter(e.target.value || "all")
-                    }
-                    placeholder="Tutti i pesi"
-                    className="w-full"
-                  />
-                </div>
-              </div>
 
-              {/* Tabella Entries */}
-              {entries.length === 0 ? (
-                <div className="text-center py-12">
-                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">Nessuna entry nel listino</p>
-                  <p className="text-sm text-gray-500">
-                    Aggiungi entries manualmente o importa da CSV
-                  </p>
-                </div>
-              ) : (
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
-                          Zona
-                        </th>
-                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
-                          Peso da (kg)
-                        </th>
-                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
-                          Peso a (kg)
-                        </th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
-                          Prezzo Base
-                        </th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
-                          Fuel %
-                        </th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
-                          COD (€)
-                        </th>
-                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase">
-                          Tipo Servizio
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {entries
-                        .filter((entry) => {
-                          if (zoneFilter !== "all" && entry.zone_code !== zoneFilter) {
-                            return false;
-                          }
-                          if (weightFilter !== "all") {
-                            const weight = parseFloat(weightFilter);
+                {/* Tabella Entries */}
+                {entries.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">
+                      Nessuna entry nel listino
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Aggiungi entries manualmente o importa da CSV
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
+                            Zona
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
+                            Peso da (kg)
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase">
+                            Peso a (kg)
+                          </th>
+                          <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
+                            Prezzo Base
+                          </th>
+                          <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
+                            Fuel %
+                          </th>
+                          <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase">
+                            COD (€)
+                          </th>
+                          <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase">
+                            Tipo Servizio
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {entries
+                          .filter((entry) => {
                             if (
-                              !isNaN(weight) &&
-                              (weight < entry.weight_from || weight > entry.weight_to)
+                              zoneFilter !== "all" &&
+                              entry.zone_code !== zoneFilter
                             ) {
                               return false;
                             }
-                          }
-                          return true;
-                        })
-                        .map((entry) => {
-                          const zone = PRICING_MATRIX.ZONES.find(
-                            (z) => z.code === entry.zone_code
-                          );
-                          return (
-                            <tr key={entry.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3">
-                                <div>
-                                  <div className="font-medium">
-                                    {zone?.name || entry.zone_code || "-"}
+                            if (weightFilter !== "all") {
+                              const weight = parseFloat(weightFilter);
+                              if (
+                                !isNaN(weight) &&
+                                (weight < entry.weight_from ||
+                                  weight > entry.weight_to)
+                              ) {
+                                return false;
+                              }
+                            }
+                            return true;
+                          })
+                          .map((entry) => {
+                            const zone = PRICING_MATRIX.ZONES.find(
+                              (z) => z.code === entry.zone_code
+                            );
+                            return (
+                              <tr key={entry.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <div>
+                                    <div className="font-medium">
+                                      {zone?.name || entry.zone_code || "-"}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {entry.zone_code}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    {entry.zone_code}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">{entry.weight_from} kg</td>
-                              <td className="px-4 py-3">{entry.weight_to} kg</td>
-                              <td className="px-4 py-3 text-right font-semibold">
-                                {formatCurrency(entry.base_price)}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {entry.fuel_surcharge_percent
-                                  ? `${entry.fuel_surcharge_percent}%`
-                                  : "-"}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {entry.cash_on_delivery_surcharge
-                                  ? formatCurrency(entry.cash_on_delivery_surcharge)
-                                  : "-"}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                {getServiceTypeBadge(entry.service_type)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </TabsContent>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {entry.weight_from} kg
+                                </td>
+                                <td className="px-4 py-3">
+                                  {entry.weight_to} kg
+                                </td>
+                                <td className="px-4 py-3 text-right font-semibold">
+                                  {formatCurrency(entry.base_price)}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {entry.fuel_surcharge_percent
+                                    ? `${entry.fuel_surcharge_percent}%`
+                                    : "-"}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {entry.cash_on_delivery_surcharge
+                                    ? formatCurrency(
+                                        entry.cash_on_delivery_surcharge
+                                      )
+                                    : "-"}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {getServiceTypeBadge(entry.service_type)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
           </div>
         </Tabs>
 
@@ -1188,7 +1223,10 @@ export default function PriceListDetailPage() {
 
         {/* ✨ FASE 2: Dialog Form Manuale Entries */}
         {priceList && (
-          <Dialog open={showManualFormDialog} onOpenChange={setShowManualFormDialog}>
+          <Dialog
+            open={showManualFormDialog}
+            onOpenChange={setShowManualFormDialog}
+          >
             <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Aggiungi Entries Manualmente</DialogTitle>
