@@ -15,7 +15,6 @@ interface SupplierPriceListTableProps {
   onEdit: (priceList: PriceList) => void;
   onDelete: (priceListId: string) => void;
   onViewDetails: (priceListId: string) => void;
-  onConfigure?: (priceList: PriceList) => void; // ✅ FIX: Restore missing prop for configure button
   isLoading?: boolean;
   canDelete?: boolean; // Se true, mostra il bottone elimina (default: true)
 }
@@ -25,7 +24,6 @@ export function SupplierPriceListTable({
   onEdit,
   onDelete,
   onViewDetails,
-  onConfigure,
   isLoading = false,
   canDelete = true,
 }: SupplierPriceListTableProps) {
