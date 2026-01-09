@@ -1,10 +1,22 @@
 /**
  * 🔬 SCRIPT DI TEST METICOLOSO - Servizi Accessori Spedisci.Online
  * 
+ * ⚠️⚠️⚠️ ATTENZIONE CRITICA ⚠️⚠️⚠️
+ * 
+ * QUESTO SCRIPT CREA SPEDIZIONI REALI!
+ * Ogni test chiama POST /api/v2/shipping/create e crea una spedizione vera.
+ * 
+ * ⚠️ NON USARE IN PRODUZIONE SENZA SUPERVISIONE!
+ * ⚠️ Le spedizioni create vanno poi cancellate manualmente!
+ * 
  * Questo script prova TUTTI i formati possibili per accessoriServices
  * nell'endpoint POST /api/v2/shipping/create
  * 
- * Esegui con: npx ts-node --project tsconfig.scripts.json scripts/test-accessori-services-completo.ts
+ * Esegui con: 
+ *   npx ts-node --project tsconfig.scripts.json scripts/test-accessori-services-completo.ts
+ * 
+ * Modalità DRY-RUN (non crea spedizioni reali):
+ *   npx ts-node --project tsconfig.scripts.json scripts/test-accessori-services-completo.ts --dry-run
  */
 
 import * as dotenv from 'dotenv';
@@ -12,6 +24,9 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 
 import { createClient } from '@supabase/supabase-js';
+
+// ⚠️ FLAG DRY-RUN: Se true, NON crea spedizioni reali (solo testa formati)
+const DRY_RUN = process.argv.includes('--dry-run') || process.argv.includes('-d');
 
 // ⚠️ CONFIGURAZIONE: Modifica questi valori per il tuo test
 const TEST_CONFIG = {
@@ -169,7 +184,18 @@ interface TestResult {
   hasTracking?: boolean;
   hasLabel?: boolean;
   shipmentId?: number;
+  trackingNumber?: string;
 }
+
+// ⚠️ TRACCIAMENTO SPEDIZIONI CREATE: Per cleanup automatico
+interface CreatedShipment {
+  shipmentId: number;
+  trackingNumber?: string;
+  formatName: string;
+  createdAt: Date;
+}
+
+const createdShipments: CreatedShipment[] = [];
 
 /**
  * Recupera credenziali Spedisci.Online dal database
@@ -259,6 +285,23 @@ async function testFormat(
 
   const startTime = Date.now();
 
+  // ⚠️ DRY-RUN: Se attivo, simula risposta senza chiamare API
+  if (DRY_RUN) {
+    console.log(`   [DRY-RUN] Simulazione chiamata API con formato: ${formatName}`);
+    // Simula risposta di successo per testare la logica
+    return {
+      formatName,
+      format,
+      success: true,
+      status: 200,
+      response: { trackingNumber: 'DRY-RUN-TEST', shipmentId: 999999 },
+      hasTracking: true,
+      hasLabel: true,
+      shipmentId: 999999,
+      trackingNumber: 'DRY-RUN-TEST',
+    };
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -284,6 +327,18 @@ async function testFormat(
       const hasTracking = !!responseData.trackingNumber || !!responseData.tracking_number;
       const hasLabel = !!responseData.labelData || !!responseData.label_data || !!responseData.label_pdf;
       const shipmentId = responseData.shipmentId || responseData.shipment_id;
+      const trackingNumber = responseData.trackingNumber || responseData.tracking_number;
+
+      // ⚠️ SALVA SPEDIZIONE CREATA per cleanup automatico
+      if (shipmentId && !DRY_RUN) {
+        createdShipments.push({
+          shipmentId: typeof shipmentId === 'number' ? shipmentId : parseInt(String(shipmentId), 10),
+          trackingNumber,
+          formatName,
+          createdAt: new Date(),
+        });
+        console.log(`   💾 [CLEANUP] Spedizione tracciata per cleanup: ID=${shipmentId}, Tracking=${trackingNumber || 'N/A'}`);
+      }
 
       return {
         formatName,
@@ -294,6 +349,7 @@ async function testFormat(
         hasTracking,
         hasLabel,
         shipmentId,
+        trackingNumber,
       };
     } else {
       const errorMessage = responseData.error || responseData.message || responseText.substring(0, 200);
@@ -318,11 +374,105 @@ async function testFormat(
 }
 
 /**
+ * 🗑️ CLEANUP AUTOMATICO: Cancella tutte le spedizioni create durante i test
+ */
+async function cleanupCreatedShipments(
+  apiKey: string,
+  baseUrl: string
+): Promise<void> {
+  if (DRY_RUN || createdShipments.length === 0) {
+    return; // Nessuna spedizione da cancellare
+  }
+
+  console.log('');
+  console.log('═'.repeat(80));
+  console.log('🗑️  CLEANUP AUTOMATICO - Cancellazione spedizioni create');
+  console.log('═'.repeat(80));
+  console.log(`   Totale spedizioni da cancellare: ${createdShipments.length}`);
+  console.log('');
+
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const shipment of createdShipments) {
+    try {
+      // Usa POST /shipping/delete con increment_id
+      const deleteUrl = `${baseUrl}/shipping/delete`;
+      
+      console.log(`   🗑️  Cancellazione: ID=${shipment.shipmentId}, Tracking=${shipment.trackingNumber || 'N/A'}, Format=${shipment.formatName}`);
+
+      const response = await fetch(deleteUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          increment_id: shipment.shipmentId,
+        }),
+      });
+
+      if (response.ok) {
+        successCount++;
+        console.log(`      ✅ Cancellata con successo`);
+      } else {
+        failureCount++;
+        const errorText = await response.text();
+        console.log(`      ❌ Fallita: HTTP ${response.status} - ${errorText.substring(0, 100)}`);
+      }
+
+      // Pausa breve per non sovraccaricare API
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error: any) {
+      failureCount++;
+      console.log(`      ❌ Errore: ${error.message}`);
+    }
+  }
+
+  console.log('');
+  console.log('═'.repeat(80));
+  console.log(`📊 CLEANUP COMPLETATO: ${successCount} successi, ${failureCount} falliti`);
+  console.log('═'.repeat(80));
+  
+  if (failureCount > 0) {
+    console.log('');
+    console.log('⚠️  ATTENZIONE: Alcune spedizioni potrebbero non essere state cancellate.');
+    console.log('   Verifica manualmente nel dashboard e cancella se necessario.');
+    console.log('');
+    console.log('   Spedizioni da verificare:');
+    createdShipments.forEach(s => {
+      console.log(`   - ID: ${s.shipmentId}, Tracking: ${s.trackingNumber || 'N/A'}, Format: ${s.formatName}`);
+    });
+  }
+}
+
+/**
  * Funzione principale
  */
 async function main() {
   console.log('═'.repeat(80));
   console.log('🔬 TEST METICOLOSO - Servizi Accessori Spedisci.Online');
+  console.log('═'.repeat(80));
+  console.log('');
+  if (DRY_RUN) {
+    console.log('🔒 MODALITÀ DRY-RUN ATTIVA - Nessuna spedizione reale verrà creata');
+    console.log('');
+  } else {
+    console.log('⚠️⚠️⚠️  ATTENZIONE: QUESTO SCRIPT CREA SPEDIZIONI REALI!  ⚠️⚠️⚠️');
+    console.log('');
+    console.log('Ogni test chiama POST /shipping/create e crea una spedizione vera.');
+    console.log('Le spedizioni create vanno poi cancellate manualmente dal dashboard.');
+    console.log('');
+    console.log('💡 Usa --dry-run per testare senza creare spedizioni reali');
+    console.log('');
+    console.log('Premi CTRL+C per annullare, oppure attendi 5 secondi per continuare...');
+    console.log('');
+    
+    // Pausa di sicurezza
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+  
   console.log('═'.repeat(80));
   console.log('');
 
@@ -518,6 +668,11 @@ async function main() {
   console.log(JSON.stringify(reportJson, null, 2));
   console.log('');
 
+  // 🗑️ CLEANUP AUTOMATICO: Cancella tutte le spedizioni create
+  if (credentials && !DRY_RUN) {
+    await cleanupCreatedShipments(credentials.apiKey, credentials.baseUrl);
+  }
+
   console.log('═'.repeat(80));
   console.log('✅ Test completato!');
   console.log('═'.repeat(80));
@@ -529,7 +684,42 @@ async function main() {
   console.log('');
 }
 
-main().catch((error) => {
+// ⚠️ GESTIONE INTERRUZIONE: Cleanup anche in caso di CTRL+C
+process.on('SIGINT', async () => {
+  console.log('');
+  console.log('');
+  console.log('⚠️  Interruzione rilevata (CTRL+C)');
+  console.log('🗑️  Eseguo cleanup delle spedizioni create...');
+  console.log('');
+  
+  try {
+    const credentials = await getCredentials();
+    if (credentials && !DRY_RUN && createdShipments.length > 0) {
+      await cleanupCreatedShipments(credentials.apiKey, credentials.baseUrl);
+    }
+  } catch (error) {
+    console.error('❌ Errore durante cleanup:', error);
+  }
+  
+  console.log('');
+  console.log('👋 Script terminato');
+  process.exit(0);
+});
+
+main().catch(async (error) => {
   console.error('❌ Errore fatale:', error);
+  
+  // Cleanup anche in caso di errore
+  try {
+    const credentials = await getCredentials();
+    if (credentials && !DRY_RUN && createdShipments.length > 0) {
+      console.log('');
+      console.log('🗑️  Eseguo cleanup delle spedizioni create prima di terminare...');
+      await cleanupCreatedShipments(credentials.apiKey, credentials.baseUrl);
+    }
+  } catch (cleanupError) {
+    console.error('❌ Errore durante cleanup:', cleanupError);
+  }
+  
   process.exit(1);
 });
