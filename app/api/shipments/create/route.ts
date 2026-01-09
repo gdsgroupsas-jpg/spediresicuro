@@ -694,7 +694,6 @@ export async function POST(request: Request) {
       //     console.error('⚠️ [COST VALIDATION] Errore validazione costi:', validationError);
       //   }
       // }
-
     } catch (dbError: any) {
       // ============================================
       // FAIL IDEMPOTENCY LOCK
@@ -818,7 +817,7 @@ export async function POST(request: Request) {
     }
 
     // ============================================
-    // AUDIT LOG
+    // AUDIT LOG (solo se try interno OK)
     // ============================================
     try {
       await writeShipmentAuditLog(
