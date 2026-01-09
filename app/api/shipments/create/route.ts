@@ -262,6 +262,7 @@ export async function POST(request: Request) {
       }
       configError = assignedError
     }
+    }
     
     // Priorità 3: Config default per provider
     if (!courierConfig) {
@@ -278,7 +279,7 @@ export async function POST(request: Request) {
         courierConfig = defaultConfig
         console.log('✅ [CONFIG] Trovata config default:', { configId: defaultConfig.id, providerId })
       }
-      configError = defaultError || personalError
+      configError = defaultError
     }
 
     if (configError || !courierConfig) {
