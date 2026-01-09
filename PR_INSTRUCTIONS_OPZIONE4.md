@@ -3,11 +3,13 @@
 ## 📋 QUICK START
 
 ### 1️⃣ Crea Branch
+
 ```bash
 git checkout -b feature/manual-price-list-entries
 ```
 
 ### 2️⃣ Apri questo URL nel browser:
+
 ```
 https://github.com/gdsgroupsas-jpg/spediresicuro/compare/master...feature/manual-price-list-entries
 ```
@@ -51,13 +53,15 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 - ✅ **Zero additional costs** (uses existing infrastructure)
 - ✅ **Fast implementation** (6 days vs 2-3 weeks)
 
-**Root Problem Solved**: 
+**Root Problem Solved**:
+
 - Client-side chunking was fragile (browser close = incomplete sync)
 - Race conditions causing duplicates
 - No atomicity (partial syncs left inconsistent state)
 - Complex code hard to maintain
 
-**Solution**: 
+**Solution**:
+
 - Manual list creation with metadata (configId, carrierCode, contractCode)
 - Manual entry insertion (form + CSV import)
 - API validation before commit
@@ -71,12 +75,14 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ### ✅ **MANTENUTO (Riutilizzato al 100%)**
 
 1. **Database Functions** (`lib/db/price-lists.ts`)
+
    - `createPriceList()` - ✅ No changes
    - `addPriceListEntries()` - ✅ No changes
    - `upsertPriceListEntries()` - ✅ No changes
    - `getPriceListById()` - ✅ No changes
 
 2. **Test API Function** (`actions/spedisci-online-rates.ts`)
+
    - `testSpedisciOnlineRates()` - ✅ No changes (reused for validation)
 
 3. **Constants** (`lib/constants/pricing-matrix.ts`)
@@ -88,6 +94,7 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ### 🔧 **MODIFICATO (Estensioni)**
 
 1. **Form Creazione Listino** (`components/listini/supplier-price-list-form.tsx`)
+
    - ➕ Added: `contract_code` field (required)
    - ➕ Added: `carrier_code` field (auto-fill from courier)
    - ➕ Added: `courier_config_id` field (auto-fill from config)
@@ -96,6 +103,7 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
    - ➕ Added: Approval button (draft → active)
 
 2. **Sync Function** (`actions/spedisci-online-rates.ts`)
+
    - 🔧 Simplified: Removed complex chunking logic
    - ➕ Added: `syncIncrementalPriceListEntries()` - Atomic sync per zone
    - 🔧 Changed: Accept `targetZones: string[]` (only missing zones)
@@ -103,6 +111,7 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
    - ➕ Added: Automatic rollback on error
 
 3. **Sync Dialog** (`components/listini/sync-spedisci-online-dialog.tsx`)
+
    - ❌ Removed: Client-side chunking loop (lines 341-416)
    - 🔧 Simplified: Show only "Incremental Sync" button
    - ➕ Added: Zone selection (checkboxes for missing zones)
@@ -121,11 +130,13 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ### ❌ **RIMOSSO (Obsoleto)**
 
 1. **Client-Side Chunking** (`components/listini/sync-spedisci-online-dialog.tsx`)
+
    - ❌ Removed: Sequential loop for zones (lines 341-416)
    - ❌ Removed: Complex `chunkProgress` state management
    - ❌ Removed: "Sync all zones" automatic flow
 
 2. **Complex Grouping Logic** (`actions/spedisci-online-rates.ts`)
+
    - ❌ Removed: Complex `(carrierCode, contractCode)` grouping (lines 620-697)
    - ❌ Removed: Complex duplicate detection (lines 850-950)
    - 🔧 Simplified: Incremental sync processes only specific zones
@@ -139,18 +150,21 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ### ➕ **AGGIUNTO (Nuovo)**
 
 1. **Manual Entry Form** (`components/listini/manual-price-list-entries-form.tsx`)
+
    - Form for manual entry insertion
    - Fields: zone_code, weight_from, weight_to, base_price, fuel_surcharge_percent, etc.
    - Real-time format validation
    - Batch save (multiple entries)
 
 2. **CSV Import Dialog** (`components/listini/import-csv-dialog.tsx`)
+
    - Upload CSV/Excel file
    - Parse and validate format
    - Preview entries before save
    - CSV column mapping → DB fields
 
 3. **Test API Validation Dialog** (`components/listini/test-api-validation-dialog.tsx`)
+
    - "Verify with API" button
    - Test 10 random combinations (zone/weight)
    - Compare manual prices vs API
@@ -168,13 +182,16 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ## 📋 IMPLEMENTATION PHASES
 
 ### **Phase 1: Manual List Creation** (1 day)
+
 - ✅ Modified `supplier-price-list-form.tsx`:
   - Added metadata fields (configId, carrierCode, contractCode)
   - Status default: `"draft"`
   - Unique name validation
 
 ### **Phase 2: Entry Insertion** (2 days)
+
 - ✅ Created `manual-price-list-entries-form.tsx`:
+
   - Manual entry form
   - Format validation
   - Batch save
@@ -185,13 +202,16 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
   - Preview before save
 
 ### **Phase 3: API Test** (1 day)
+
 - ✅ Created `test-api-validation-dialog.tsx`:
   - Reuses `testSpedisciOnlineRates()`
   - Test 10 random combinations
   - Report differences %
 
 ### **Phase 4: Incremental Sync** (1 day)
+
 - ✅ Created `actions/sync-incremental-entries.ts`:
+
   - Sync only missing zones
   - Atomic commit per zone
   - Automatic rollback
@@ -202,12 +222,14 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
   - Progress per zone
 
 ### **Phase 5: Approval** (1 day)
+
 - ✅ Modified `supplier-price-list-form.tsx`:
   - "Approve Listino" button
   - Completeness validation
   - Status draft → active
 
 ### **Phase 6: UI Detail** (1 day)
+
 - ✅ Modified `app/dashboard/reseller/listini-fornitore/[id]/page.tsx`:
   - "Entries" tab with table
   - Zone/weight filters
@@ -245,22 +267,26 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ## 📊 FILE SUMMARY
 
 ### **Kept (0 changes)**
+
 - ✅ `lib/db/price-lists.ts` - DB functions
 - ✅ `actions/spedisci-online-rates.ts` - `testSpedisciOnlineRates()` (lines 30-225)
 - ✅ `lib/constants/pricing-matrix.ts` - Zone/weight constants
 
 ### **Modified (extensions)**
+
 - 🔧 `components/listini/supplier-price-list-form.tsx` - Added metadata, approval
 - 🔧 `actions/spedisci-online-rates.ts` - Simplified sync, added incremental
 - 🔧 `components/listini/sync-spedisci-online-dialog.tsx` - Simplified, removed chunking
 - 🔧 `app/dashboard/reseller/listini-fornitore/[id]/page.tsx` - Added entries tab, buttons
 
 ### **Removed (obsolete code)**
+
 - ❌ Client-side chunking complex (lines 341-416 in `sync-spedisci-online-dialog.tsx`)
 - ❌ Complex grouping (lines 620-697 in `spedisci-online-rates.ts`)
 - ❌ Complex Redis lock (simplified)
 
 ### **Added (new files)**
+
 - ➕ `components/listini/manual-price-list-entries-form.tsx` - Manual entry form
 - ➕ `components/listini/import-csv-dialog.tsx` - CSV import
 - ➕ `components/listini/test-api-validation-dialog.tsx` - API validation
@@ -271,6 +297,7 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 ## ✅ TESTING
 
 ### **Manual Testing**
+
 - [ ] Create listino manually (with metadata)
 - [ ] Insert entries manually (form)
 - [ ] Import entries from CSV
@@ -280,6 +307,7 @@ This PR implements **Opzione 4: Full Manual + Sync Incrementale**, a pragmatic e
 - [ ] Verify entries in detail page
 
 ### **Edge Cases**
+
 - [ ] Duplicate entry (should upsert)
 - [ ] Invalid CSV format (should show error)
 - [ ] API validation failure (should show warning)
