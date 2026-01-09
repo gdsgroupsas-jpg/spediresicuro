@@ -921,7 +921,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
               
               // Verifica anche che il nome corrisponda al pattern atteso (stesso config)
               // Cerca il nome config nel nome del listino (può essere all'inizio, in mezzo o alla fine)
-              const configNameLower = (configName || options.configId.substring(0, 8)).toLowerCase();
+              const configNameLower = (configName || options.configId?.substring(0, 8) || '').toLowerCase();
               const nameMatchesPattern = plNameLower.includes(configNameLower);
               
               // Log per debug se troviamo un match parziale
