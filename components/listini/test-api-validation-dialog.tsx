@@ -325,7 +325,7 @@ export function TestApiValidationDialog({
         <DialogHeader>
           <DialogTitle>Test Validazione API vs Listino DB</DialogTitle>
           <DialogDescription>
-            Confronta i prezzi del listino DB con i prezzi reali dell'API Spedisci.Online.
+            Confronta i prezzi del listino DB con i prezzi reali dell&apos;API Spedisci.Online.
             Verranno testate 10 combinazioni random (zone/weight).
           </DialogDescription>
         </DialogHeader>

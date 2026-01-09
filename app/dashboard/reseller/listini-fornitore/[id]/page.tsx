@@ -1031,10 +1031,10 @@ export default function PriceListDetailPage() {
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Filtra per Zona
                   </label>
-                  <Select
+                  <select
                     value={zoneFilter}
                     onChange={(e) => setZoneFilter(e.target.value)}
-                    className="w-full"
+                    className="w-full rounded-md border border-gray-300 p-2 text-sm"
                   >
                     <option value="all">Tutte le zone</option>
                     {PRICING_MATRIX.ZONES.map((zone) => (
@@ -1042,7 +1042,7 @@ export default function PriceListDetailPage() {
                         {zone.name}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
                 <div className="flex-1">
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
