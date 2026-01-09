@@ -9,7 +9,6 @@
 import { auth } from "@/lib/auth-config";
 import { supabaseAdmin } from "@/lib/db/client";
 import {
-  calculatePriceWithRules,
   createPriceList,
   deletePriceList,
   getApplicablePriceList,
@@ -218,7 +217,7 @@ export async function getApplicablePriceListAction(
 
 /**
  * Calcola preventivo usando sistema PriceRule
- * 
+ *
  * ✨ AGGIORNATO: Per reseller, confronta automaticamente API Reseller vs API Master
  * e seleziona il prezzo migliore
  */
@@ -247,7 +246,7 @@ export async function calculateQuoteAction(
   error?: string;
   // ✨ NUOVO: Informazioni aggiuntive per reseller
   resellerComparison?: {
-    apiSource: 'reseller' | 'master' | 'default';
+    apiSource: "reseller" | "master" | "default";
     resellerPrice?: PriceCalculationResult;
     masterPrice?: PriceCalculationResult;
     priceDifference?: number;
@@ -271,13 +270,19 @@ export async function calculateQuoteAction(
 
     // ✨ Se è reseller e non è specificato un listino, usa confronto automatico
     if (user.is_reseller && !priceListId) {
-      const { calculateBestPriceForReseller } = await import('@/lib/db/price-lists-advanced');
-      const bestPriceResult = await calculateBestPriceForReseller(user.id, params);
+      const { calculateBestPriceForReseller } = await import(
+        "@/lib/db/price-lists-advanced"
+      );
+      const bestPriceResult = await calculateBestPriceForReseller(
+        user.id,
+        params
+      );
 
       if (!bestPriceResult) {
         return {
           success: false,
-          error: "Impossibile calcolare preventivo. Verifica listino configurato.",
+          error:
+            "Impossibile calcolare preventivo. Verifica listino configurato.",
         };
       }
 
@@ -294,13 +299,16 @@ export async function calculateQuoteAction(
     }
 
     // Calcolo normale (utente standard o listino specificato)
-    const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
+    const { calculatePriceWithRules } = await import(
+      "@/lib/db/price-lists-advanced"
+    );
     const result = await calculatePriceWithRules(user.id, params, priceListId);
 
     if (!result) {
       return {
         success: false,
-        error: "Impossibile calcolare preventivo. Verifica listino configurato.",
+        error:
+          "Impossibile calcolare preventivo. Verifica listino configurato.",
       };
     }
 
@@ -630,7 +638,11 @@ export async function createSupplierPriceListAction(
     }
 
     // ✨ FASE 1: Validazione nome univoco per (configId, carrierCode, contractCode)
-    if (data.metadata?.courier_config_id && data.metadata?.carrier_code && data.metadata?.contract_code) {
+    if (
+      data.metadata?.courier_config_id &&
+      data.metadata?.carrier_code &&
+      data.metadata?.contract_code
+    ) {
       const { data: existingLists } = await supabaseAdmin
         .from("price_lists")
         .select("id, name, metadata, source_metadata")
@@ -643,8 +655,10 @@ export async function createSupplierPriceListAction(
           const metadata = pl.metadata || pl.source_metadata || {};
           return (
             metadata.courier_config_id === data.metadata?.courier_config_id &&
-            metadata.carrier_code?.toLowerCase() === data.metadata?.carrier_code?.toLowerCase() &&
-            metadata.contract_code?.toLowerCase() === data.metadata?.contract_code?.toLowerCase()
+            metadata.carrier_code?.toLowerCase() ===
+              data.metadata?.carrier_code?.toLowerCase() &&
+            metadata.contract_code?.toLowerCase() ===
+              data.metadata?.contract_code?.toLowerCase()
           );
         });
 
