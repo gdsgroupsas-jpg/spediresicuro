@@ -382,12 +382,24 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
 
     // 1. Recupera TUTTE le configurazioni personali (owner_user_id = currentUserId)
     if (currentUserId) {
+      console.log(`🔍 [SPEDISCI.ONLINE] Cerco configurazioni per owner_user_id: ${currentUserId}`);
+      
       const { data: personalConfigs, error: personalError } = await supabaseAdmin
         .from("courier_configs")
         .select("*")
         .eq("provider_id", "spedisci_online")
         .eq("owner_user_id", currentUserId)
         .eq("is_active", true);
+
+      if (personalError) {
+        console.error(`❌ [SPEDISCI.ONLINE] Errore query configurazioni personali:`, personalError);
+      }
+
+      console.log(`📊 [SPEDISCI.ONLINE] Query risultato:`, {
+        query: `provider_id=spedisci_online, owner_user_id=${currentUserId}, is_active=true`,
+        found: personalConfigs?.length || 0,
+        configs: personalConfigs?.map(c => ({ id: c.id.substring(0, 8), name: c.name })) || [],
+      });
 
       if (!personalError && personalConfigs && personalConfigs.length > 0) {
         console.log(`✅ [SPEDISCI.ONLINE] Trovate ${personalConfigs.length} configurazioni personali`);
