@@ -278,6 +278,10 @@ export default function NuovaSpedizionePage() {
   const [selectedContractType, setSelectedContractType] = useState<
     "reseller" | "master" | "default" | undefined
   >(undefined);
+  // ✨ ENTERPRISE: ConfigId della configurazione API selezionata (per multi-config)
+  const [selectedConfigId, setSelectedConfigId] = useState<
+    string | undefined
+  >(undefined);
 
   // Corrieri disponibili caricati dinamicamente dal DB
   const [availableCouriers, setAvailableCouriers] = useState<
@@ -753,6 +757,10 @@ export default function NuovaSpedizionePage() {
             selectedContractId,
             selectedContractType,
           }),
+        // ✨ ENTERPRISE: ConfigId della configurazione API selezionata (per multi-config)
+        ...(selectedConfigId && {
+          configId: selectedConfigId,
+        }),
       };
 
       // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
@@ -1076,6 +1084,29 @@ export default function NuovaSpedizionePage() {
         // ✨ FIX: Forza re-mount del preventivatore per pulire stato interno
         setFormResetCounter((prev) => prev + 1);
         setCourierQuotes(new Map()); // Reset anche le quote salvate
+        setSelectedConfigId(undefined); // ✨ ENTERPRISE: Reset configId per nuova spedizione
+
+        // ✨ ENTERPRISE: Ricarica corrieri disponibili dopo reset form
+        // Questo assicura che se i corrieri sono cambiati (es. dopo configurazione),
+        // vengono mostrati correttamente nella nuova spedizione
+        try {
+          console.log("🔄 [FORM] Ricaricamento corrieri dopo reset form...");
+          const couriersResponse = await fetch("/api/couriers/available", {
+            cache: "no-store", // Forza fetch fresco
+          });
+          if (couriersResponse.ok) {
+            const couriersData = await couriersResponse.json();
+            if (couriersData.couriers && couriersData.couriers.length > 0) {
+              setAvailableCouriers(couriersData.couriers);
+              console.log(
+                `✅ [FORM] ${couriersData.couriers.length} corrieri ricaricati dopo reset`
+              );
+            }
+          }
+        } catch (error) {
+          console.error("❌ [FORM] Errore ricaricamento corrieri:", error);
+          // Non bloccare, continua con corrieri esistenti
+        }
 
         // Scrolla in alto per mostrare il form vuoto
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1627,6 +1658,8 @@ export default function NuovaSpedizionePage() {
                     ) : availableCouriers.length > 0 ? (
                       <IntelligentQuoteComparator
                         key={`quote-comparator-${formResetCounter}`}
+                        resetKey={formResetCounter}
+                        useDbFirst={true} // ✨ ENTERPRISE: DB-first per sicurezza e performance
                         couriers={availableCouriers}
                         weight={formData.peso ? parseFloat(formData.peso) : 0}
                         zip={formData.destinatarioCap}
@@ -1665,7 +1698,8 @@ export default function NuovaSpedizionePage() {
                         onContractSelected={(
                           courierName,
                           contractCode,
-                          accessoryService
+                          accessoryService,
+                          configId // ✨ ENTERPRISE: ConfigId della configurazione API
                         ) => {
                           console.log(
                             "✅ [FORM] Corriere confermato dal preventivatore:",
@@ -1673,6 +1707,7 @@ export default function NuovaSpedizionePage() {
                               courierName,
                               contractCode,
                               accessoryService,
+                              configId, // ✨ Salva configId per usarlo nella creazione
                             }
                           );
                           setFormData((prev) => ({
@@ -1682,6 +1717,8 @@ export default function NuovaSpedizionePage() {
                               ? [accessoryService]
                               : [],
                           }));
+                          // ✨ ENTERPRISE: Salva configId per usarlo nella creazione spedizione
+                          setSelectedConfigId(configId);
                         }}
                       />
                     ) : (

@@ -591,6 +591,12 @@ export async function listPriceListsAction(filters?: {
 export async function createSupplierPriceListAction(
   data: Omit<CreatePriceListInput, "list_type" | "is_global"> & {
     courier_id: string;
+    metadata?: {
+      courier_config_id?: string;
+      carrier_code?: string;
+      contract_code?: string;
+      synced_at?: string;
+    };
   }
 ): Promise<{
   success: boolean;
@@ -621,6 +627,34 @@ export async function createSupplierPriceListAction(
         success: false,
         error: "Solo Reseller e BYOC possono creare listini fornitore",
       };
+    }
+
+    // ✨ FASE 1: Validazione nome univoco per (configId, carrierCode, contractCode)
+    if (data.metadata?.courier_config_id && data.metadata?.carrier_code && data.metadata?.contract_code) {
+      const { data: existingLists } = await supabaseAdmin
+        .from("price_lists")
+        .select("id, name, metadata, source_metadata")
+        .eq("created_by", user.id)
+        .eq("list_type", "supplier")
+        .limit(100);
+
+      if (existingLists) {
+        const duplicate = existingLists.find((pl: any) => {
+          const metadata = pl.metadata || pl.source_metadata || {};
+          return (
+            metadata.courier_config_id === data.metadata.courier_config_id &&
+            metadata.carrier_code?.toLowerCase() === data.metadata.carrier_code?.toLowerCase() &&
+            metadata.contract_code?.toLowerCase() === data.metadata.contract_code?.toLowerCase()
+          );
+        });
+
+        if (duplicate) {
+          return {
+            success: false,
+            error: `Esiste già un listino per questa configurazione (${data.metadata.carrier_code}/${data.metadata.contract_code}). Usa un nome diverso o modifica il listino esistente.`,
+          };
+        }
+      }
     }
 
     // Imposta automaticamente list_type = 'supplier'

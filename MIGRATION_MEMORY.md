@@ -1367,3 +1367,71 @@ grep -r "onContractSelected" app/dashboard/spedizioni/nuova/page.tsx
 - API dirette potrebbero avere comportamento diverso (accettare `contractCode` o richiedere credenziali per contratto)
 
 **Priorità:** Bassa (Spedisci.Online copre la maggior parte dei casi d'uso)
+
+---
+
+## ✅ FIX: CREAZIONE SPEDIZIONE - REFRESH E CORRIERI (COMPLETATO - 2026)
+
+### Problema Identificato
+
+**Bug P0:** Dopo la creazione di una spedizione in modalità reseller:
+1. **Refresh lento**: Il refresh della lista spedizioni era molto lento perché usava `cache: 'no-store'` che bypassava completamente la cache
+2. **Corrieri mancanti**: Quando si creava una seconda spedizione, il sistema non mostrava tutti i corrieri disponibili perché:
+   - I corrieri disponibili venivano caricati solo all'avvio della pagina
+   - Il `IntelligentQuoteComparator` aveva una cache interna che non veniva resettata dopo il reset del form
+   - Se i parametri (peso, CAP, provincia) erano identici alla prima spedizione, il quote comparator saltava la richiesta
+
+### Soluzione Implementata
+
+#### 1. Reset Cache Quote Comparator
+- **File**: `components/shipments/intelligent-quote-comparator.tsx`
+- **Aggiunta prop `resetKey`**: Permette di forzare il reset della cache interna quando si resetta il form
+- **Reset automatico**: Quando `resetKey` cambia, vengono resettati:
+  - `lastRequestParamsRef` (forza nuova chiamata API)
+  - `isRequestingRef` (permette nuove richieste)
+  - `quotes` Map (reset quote salvate)
+  - Selezione corriere e servizio accessorio
+
+#### 2. Ricaricamento Corrieri Dopo Reset
+- **File**: `app/dashboard/spedizioni/nuova/page.tsx`
+- **Ricaricamento automatico**: Dopo il reset del form (2 secondi dopo creazione), viene ricaricata la lista dei corrieri disponibili
+- **Fetch fresco**: Usa `cache: 'no-store'` solo per questo fetch specifico per assicurare dati aggiornati
+- **Passaggio resetKey**: Il `formResetCounter` viene passato come `resetKey` al `IntelligentQuoteComparator`
+
+#### 3. Ottimizzazione Refresh Lista Spedizioni
+- **File**: `app/dashboard/spedizioni/page.tsx`
+- **Timestamp invece di no-store**: Usa un timestamp nel query string (`?t=${timestamp}`) invece di `cache: 'no-store'`
+- **Performance migliori**: Permette al browser di usare la cache per altre parti mentre forza un fetch fresco per questa richiesta specifica
+- **Cache-Control ottimizzato**: Usa `max-age=0` invece di `no-cache, no-store` per permettere cache condizionale
+
+### Test
+
+**Verificare:**
+1. Creare una spedizione in modalità reseller
+2. Verificare che il refresh della lista sia più veloce
+3. Creare una seconda spedizione con gli stessi parametri (peso, CAP, provincia)
+4. Verificare che tutti i corrieri disponibili vengano mostrati nel preventivatore
+
+### File Modificati
+
+- `components/shipments/intelligent-quote-comparator.tsx`: 
+  - Aggiunta prop `resetKey` e logica di reset cache
+  - Aggiunto `configId` al callback `onContractSelected` per supportare multi-config
+  - Migliorato matching contractCode per gestire trattini multipli (--- -> -)
+- `app/dashboard/spedizioni/nuova/page.tsx`: 
+  - Ricaricamento corrieri dopo reset e passaggio `resetKey`
+  - Salvataggio `configId` quando si seleziona un contratto
+  - Passaggio `configId` al payload di creazione spedizione
+- `app/dashboard/spedizioni/page.tsx`: Ottimizzazione refresh con timestamp
+- `app/api/shipments/create/route.ts`: 
+  - Supporto `configId` specifico nel payload (priorità massima)
+  - Verifica sicurezza accesso alla configurazione richiesta
+
+### Note Tecniche
+
+- Il `resetKey` può essere un `string` o `number` (es. `formResetCounter`)
+- Il reset della cache avviene in modo sincrono quando `resetKey` cambia (prima dell'useEffect principale)
+- Il ricaricamento corrieri avviene in modo asincrono dopo il reset del form (non blocca l'UI)
+- Il timestamp nel refresh permette di bypassare la cache senza dover fare una chiamata completamente nuova ogni volta
+- **Multi-Config Support**: Quando l'utente seleziona un contratto nel preventivatore, viene salvato il `_configId` del rate selezionato. Questo `configId` viene passato alla creazione spedizione per usare la configurazione API corretta invece della prima disponibile
+- **Matching ContractCode**: Il matching è stato migliorato per gestire variazioni di formato con trattini multipli (es. "SDA---Express---H24+" viene normalizzato a "SDA-Express-H24+")
