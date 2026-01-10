@@ -9,28 +9,35 @@
 
 "use client";
 
-import { calculateQuoteAction, getAvailableCouriersForUserAction } from "@/actions/price-lists";
+import {
+  calculateQuoteAction,
+  getAvailableCouriersForUserAction,
+} from "@/actions/price-lists";
 import DashboardNav from "@/components/dashboard-nav";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
 import type { CourierServiceType } from "@/types/shipments";
 import {
-  Calculator,
-  Loader2,
-  Package,
-  MapPin,
-  Euro,
-  Info,
-  CheckCircle2,
   AlertCircle,
-  Truck,
+  Calculator,
+  CheckCircle2,
+  Info,
+  Loader2,
+  MapPin,
+  Package,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // Formatta valuta
@@ -90,7 +97,9 @@ export default function PreventivoPage() {
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
 
   // Form state
-  const [destinationType, setDestinationType] = useState<"italia" | "europa">("italia");
+  const [destinationType, setDestinationType] = useState<"italia" | "europa">(
+    "italia"
+  );
   const [mittenteCitta, setMittenteCitta] = useState("");
   const [mittenteCap, setMittenteCap] = useState("");
   const [mittenteProvincia, setMittenteProvincia] = useState("");
@@ -102,7 +111,8 @@ export default function PreventivoPage() {
   const [larghezza, setLarghezza] = useState("");
   const [altezza, setAltezza] = useState("");
   const [courierId, setCourierId] = useState("");
-  const [serviceType, setServiceType] = useState<CourierServiceType>("standard");
+  const [serviceType, setServiceType] =
+    useState<CourierServiceType>("standard");
   const [assicurazione, setAssicurazione] = useState("");
   const [contrassegno, setContrassegno] = useState("");
 
@@ -171,7 +181,9 @@ export default function PreventivoPage() {
           courierId,
           serviceType,
           options: {
-            declaredValue: assicurazione ? parseFloat(assicurazione) : undefined,
+            declaredValue: assicurazione
+              ? parseFloat(assicurazione)
+              : undefined,
             cashOnDelivery: contrassegno ? parseFloat(contrassegno) > 0 : false,
             insurance: assicurazione ? parseFloat(assicurazione) > 0 : false,
           },
@@ -208,10 +220,10 @@ export default function PreventivoPage() {
     // In produzione, usare geocoding o lookup table
     const zone = PRICING_MATRIX.ZONES.find((z) => {
       // Cerca per pattern CAP (es. Sardegna: 07xxx, 08xxx, 09xxx)
-      if (z.code.includes("sardegna") && (capNum >= 7000 && capNum < 10000)) {
+      if (z.code.includes("sardegna") && capNum >= 7000 && capNum < 10000) {
         return true;
       }
-      if (z.code.includes("sicilia") && (capNum >= 9000 && capNum < 10000)) {
+      if (z.code.includes("sicilia") && capNum >= 9000 && capNum < 10000) {
         return true;
       }
       // Default: Italia
@@ -252,7 +264,9 @@ export default function PreventivoPage() {
                   <div className="flex gap-2 mt-2">
                     <Button
                       type="button"
-                      variant={destinationType === "italia" ? "default" : "outline"}
+                      variant={
+                        destinationType === "italia" ? "default" : "outline"
+                      }
                       onClick={() => setDestinationType("italia")}
                       className="flex-1"
                     >
@@ -260,7 +274,9 @@ export default function PreventivoPage() {
                     </Button>
                     <Button
                       type="button"
-                      variant={destinationType === "europa" ? "default" : "outline"}
+                      variant={
+                        destinationType === "europa" ? "default" : "outline"
+                      }
                       onClick={() => setDestinationType("europa")}
                       className="flex-1"
                     >
@@ -271,7 +287,9 @@ export default function PreventivoPage() {
 
                 {/* Mittente */}
                 <div className="space-y-3 pt-2 border-t">
-                  <h3 className="text-sm font-semibold text-gray-700">Mittente</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Mittente
+                  </h3>
                   <div>
                     <Label htmlFor="mittente-citta">Città</Label>
                     <Input
@@ -298,7 +316,9 @@ export default function PreventivoPage() {
                       <Input
                         id="mittente-provincia"
                         value={mittenteProvincia}
-                        onChange={(e) => setMittenteProvincia(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setMittenteProvincia(e.target.value.toUpperCase())
+                        }
                         placeholder="RM"
                         maxLength={2}
                         className="mt-1"
@@ -309,7 +329,9 @@ export default function PreventivoPage() {
 
                 {/* Destinatario */}
                 <div className="space-y-3 pt-2 border-t">
-                  <h3 className="text-sm font-semibold text-gray-700">Destinatario</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Destinatario
+                  </h3>
                   <div>
                     <Label htmlFor="destinatario-citta">Città *</Label>
                     <Input
@@ -337,7 +359,9 @@ export default function PreventivoPage() {
                       <Input
                         id="destinatario-provincia"
                         value={destinatarioProvincia}
-                        onChange={(e) => setDestinatarioProvincia(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setDestinatarioProvincia(e.target.value.toUpperCase())
+                        }
                         placeholder="MI"
                         maxLength={2}
                         className="mt-1"
@@ -364,7 +388,9 @@ export default function PreventivoPage() {
                     />
                   </div>
                   <div>
-                    <Label className="text-sm text-gray-600">Misure (opzionale, in cm)</Label>
+                    <Label className="text-sm text-gray-600">
+                      Misure (opzionale, in cm)
+                    </Label>
                     <div className="grid grid-cols-3 gap-2 mt-1">
                       <Input
                         type="number"
@@ -396,7 +422,9 @@ export default function PreventivoPage() {
 
                 {/* Corriere e Servizio */}
                 <div className="space-y-3 pt-2 border-t">
-                  <h3 className="text-sm font-semibold text-gray-700">Corriere</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Corriere
+                  </h3>
                   <div>
                     <Label htmlFor="corriere">Corriere *</Label>
                     <Select
@@ -408,7 +436,10 @@ export default function PreventivoPage() {
                     >
                       <option value="">Seleziona corriere</option>
                       {availableCouriers.map((courier) => (
-                        <option key={courier.courierId} value={courier.courierId}>
+                        <option
+                          key={courier.courierId}
+                          value={courier.courierId}
+                        >
                           {courier.courierName}
                         </option>
                       ))}
@@ -419,7 +450,9 @@ export default function PreventivoPage() {
                     <Select
                       id="service-type"
                       value={serviceType}
-                      onChange={(e) => setServiceType(e.target.value as CourierServiceType)}
+                      onChange={(e) =>
+                        setServiceType(e.target.value as CourierServiceType)
+                      }
                       className="mt-1"
                     >
                       <option value="standard">Standard</option>
@@ -433,7 +466,9 @@ export default function PreventivoPage() {
 
                 {/* Accessori */}
                 <div className="space-y-3 pt-2 border-t">
-                  <h3 className="text-sm font-semibold text-gray-700">Accessori</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Accessori
+                  </h3>
                   <div>
                     <Label htmlFor="assicurazione">Assicurazione (€)</Label>
                     <Input
@@ -471,7 +506,9 @@ export default function PreventivoPage() {
                 {/* Pulsante Calcola */}
                 <Button
                   onClick={handleCalculate}
-                  disabled={isLoading || !peso || !destinatarioCap || !courierId}
+                  disabled={
+                    isLoading || !peso || !destinatarioCap || !courierId
+                  }
                   className="w-full mt-4"
                   size="lg"
                 >
@@ -501,7 +538,8 @@ export default function PreventivoPage() {
                     Inserisci i dati della spedizione
                   </p>
                   <p className="text-sm text-gray-500">
-                    Compila il form e clicca "Calcola Preventivo" per vedere i risultati
+                    Compila il form e clicca &quot;Calcola Preventivo&quot; per
+                    vedere i risultati
                   </p>
                 </CardContent>
               </Card>
@@ -542,7 +580,9 @@ export default function PreventivoPage() {
                         </span>
                       </div>
                       <div className="border-t pt-3 flex justify-between items-center">
-                        <span className="text-lg font-semibold text-gray-900">Totale</span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          Totale
+                        </span>
                         <span className="text-2xl font-bold text-green-700">
                           {formatCurrency(quoteResult.result.finalPrice)}
                         </span>
@@ -554,7 +594,9 @@ export default function PreventivoPage() {
                       <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                         <div className="flex items-center gap-2 mb-1">
                           <MapPin className="h-4 w-4 text-blue-600" />
-                          <span className="text-xs font-medium text-blue-900">Zona Rilevata</span>
+                          <span className="text-xs font-medium text-blue-900">
+                            Zona Rilevata
+                          </span>
                         </div>
                         <p className="text-sm font-semibold text-blue-700">
                           {getZoneFromCap(destinatarioCap)}
@@ -563,7 +605,9 @@ export default function PreventivoPage() {
                       <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
                         <div className="flex items-center gap-2 mb-1">
                           <Package className="h-4 w-4 text-purple-600" />
-                          <span className="text-xs font-medium text-purple-900">Peso</span>
+                          <span className="text-xs font-medium text-purple-900">
+                            Peso
+                          </span>
                         </div>
                         <p className="text-sm font-semibold text-purple-700">
                           {peso} kg
@@ -573,7 +617,8 @@ export default function PreventivoPage() {
 
                     {/* Confronto Reseller vs Master (solo se reseller) */}
                     {quoteResult.resellerComparison &&
-                      quoteResult.resellerComparison.apiSource !== "default" && (
+                      quoteResult.resellerComparison.apiSource !==
+                        "default" && (
                         <div className="mt-4 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                           <div className="flex items-start gap-2 mb-2">
                             <Info className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -584,7 +629,8 @@ export default function PreventivoPage() {
                               <p className="text-sm text-yellow-700 mb-3">
                                 Prezzo selezionato da:{" "}
                                 <strong>
-                                  {quoteResult.resellerComparison.apiSource === "reseller"
+                                  {quoteResult.resellerComparison.apiSource ===
+                                  "reseller"
                                     ? "API Reseller (tuo contratto)"
                                     : "API Master (listino assegnato)"}
                                 </strong>
@@ -593,27 +639,37 @@ export default function PreventivoPage() {
                                 quoteResult.resellerComparison.masterPrice && (
                                   <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                      <span className="text-yellow-700">API Reseller:</span>
+                                      <span className="text-yellow-700">
+                                        API Reseller:
+                                      </span>
                                       <span className="font-semibold text-yellow-900">
                                         {formatCurrency(
-                                          quoteResult.resellerComparison.resellerPrice.finalPrice
+                                          quoteResult.resellerComparison
+                                            .resellerPrice.finalPrice
                                         )}
                                       </span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-yellow-700">API Master:</span>
+                                      <span className="text-yellow-700">
+                                        API Master:
+                                      </span>
                                       <span className="font-semibold text-yellow-900">
                                         {formatCurrency(
-                                          quoteResult.resellerComparison.masterPrice.finalPrice
+                                          quoteResult.resellerComparison
+                                            .masterPrice.finalPrice
                                         )}
                                       </span>
                                     </div>
-                                    {quoteResult.resellerComparison.priceDifference && (
+                                    {quoteResult.resellerComparison
+                                      .priceDifference && (
                                       <div className="flex justify-between pt-2 border-t border-yellow-300">
-                                        <span className="text-yellow-700">Differenza:</span>
+                                        <span className="text-yellow-700">
+                                          Differenza:
+                                        </span>
                                         <span className="font-semibold text-yellow-900">
                                           {formatCurrency(
-                                            quoteResult.resellerComparison.priceDifference
+                                            quoteResult.resellerComparison
+                                              .priceDifference
                                           )}
                                         </span>
                                       </div>
@@ -640,25 +696,31 @@ export default function PreventivoPage() {
                         <div className="flex justify-between">
                           <span>Corriere:</span>
                           <span className="font-medium">
-                            {availableCouriers.find((c) => c.courierId === courierId)
-                              ?.courierName || "N/A"}
+                            {availableCouriers.find(
+                              (c) => c.courierId === courierId
+                            )?.courierName || "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Servizio:</span>
-                          <span className="font-medium capitalize">{serviceType}</span>
+                          <span className="font-medium capitalize">
+                            {serviceType}
+                          </span>
                         </div>
-                        {quoteResult.result.calculationDetails.options?.declaredValue && (
+                        {quoteResult.result.calculationDetails.options
+                          ?.declaredValue && (
                           <div className="flex justify-between">
                             <span>Assicurazione:</span>
                             <span className="font-medium">
                               {formatCurrency(
-                                quoteResult.result.calculationDetails.options.declaredValue
+                                quoteResult.result.calculationDetails.options
+                                  .declaredValue
                               )}
                             </span>
                           </div>
                         )}
-                        {quoteResult.result.calculationDetails.options?.cashOnDelivery && (
+                        {quoteResult.result.calculationDetails.options
+                          ?.cashOnDelivery && (
                           <div className="flex justify-between">
                             <span>Contrassegno:</span>
                             <span className="font-medium">Attivo</span>

@@ -1,24 +1,26 @@
 /**
  * Form per creazione/modifica listino fornitore
- * 
+ *
  * Componente riutilizzabile per gestire listini fornitore (Reseller/BYOC)
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Package, X, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { createSupplierPriceListAction, updatePriceListAction } from '@/actions/price-lists';
-import { listConfigurations } from '@/actions/configurations';
-import { toast } from 'sonner';
-import type { PriceList, PriceListStatus } from '@/types/listini';
-import type { CourierConfig } from '@/actions/configurations';
+import type { CourierConfig } from "@/actions/configurations";
+import { listConfigurations } from "@/actions/configurations";
+import {
+  createSupplierPriceListAction,
+  updatePriceListAction,
+} from "@/actions/price-lists";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { PriceList, PriceListStatus } from "@/types/listini";
+import { Loader2, Package } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface SupplierPriceListFormProps {
   priceList?: PriceList; // Se presente, modalità modifica
@@ -36,30 +38,63 @@ export function SupplierPriceListForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [configurations, setConfigurations] = useState<CourierConfig[]>([]);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
-  const [availableContractCodes, setAvailableContractCodes] = useState<string[]>([]);
-  const [selectedCourierCode, setSelectedCourierCode] = useState<string>('');
-  
+  const [availableContractCodes, setAvailableContractCodes] = useState<
+    string[]
+  >([]);
+  const [selectedCourierCode, setSelectedCourierCode] = useState<string>("");
+
   // Estrai metadata dal listino esistente (se in modifica)
-  const existingMetadata = priceList?.metadata || priceList?.source_metadata || {};
-  const existingConfigId = (existingMetadata as any)?.courier_config_id || '';
-  const existingCarrierCode = (existingMetadata as any)?.carrier_code || '';
-  const existingContractCode = (existingMetadata as any)?.contract_code || '';
+  const existingMetadata =
+    priceList?.metadata || priceList?.source_metadata || {};
+  const existingConfigId = (existingMetadata as any)?.courier_config_id || "";
+  const existingCarrierCode = (existingMetadata as any)?.carrier_code || "";
+  const existingContractCode = (existingMetadata as any)?.contract_code || "";
 
   const [formData, setFormData] = useState({
-    name: priceList?.name || '',
-    version: priceList?.version || '1.0.0',
-    status: (priceList?.status || 'draft') as PriceListStatus,
-    courier_id: priceList?.courier_id || '',
+    name: priceList?.name || "",
+    version: priceList?.version || "1.0.0",
+    status: (priceList?.status || "draft") as PriceListStatus,
+    courier_id: priceList?.courier_id || "",
     courier_config_id: existingConfigId,
     carrier_code: existingCarrierCode,
     contract_code: existingContractCode,
-    description: priceList?.description || '',
-    notes: priceList?.notes || '',
+    description: priceList?.description || "",
+    notes: priceList?.notes || "",
   });
+
+  const loadConfigurations = useCallback(async () => {
+    setIsLoadingConfigs(true);
+    try {
+      const result = await listConfigurations();
+      if (result.success && result.configs) {
+        // Filtra solo Spedisci.Online attive
+        const spedisciConfigs = result.configs.filter(
+          (c) => c.provider_id === "spedisci_online" && c.is_active
+        );
+        setConfigurations(spedisciConfigs);
+
+        // Auto-select prima configurazione se disponibile
+        if (spedisciConfigs.length > 0 && !formData.courier_config_id) {
+          const defaultConfig =
+            spedisciConfigs.find((c) => c.is_default) || spedisciConfigs[0];
+          setFormData((prev) => ({
+            ...prev,
+            courier_config_id: defaultConfig.id,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Errore caricamento configurazioni:", error);
+      toast.error("Errore caricamento configurazioni");
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  }, [formData.courier_config_id]);
 
   // Carica configurazioni disponibili
   useEffect(() => {
-    if (!priceList) { // Solo in creazione
+    if (!priceList) {
+      // Solo in creazione
       loadConfigurations();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,14 +103,16 @@ export function SupplierPriceListForm({
   // Carica contract codes quando cambia configurazione
   useEffect(() => {
     if (formData.courier_config_id) {
-      const config = configurations.find(c => c.id === formData.courier_config_id);
+      const config = configurations.find(
+        (c) => c.id === formData.courier_config_id
+      );
       if (config && config.contract_mapping) {
         const contractCodes = Object.keys(config.contract_mapping);
         setAvailableContractCodes(contractCodes);
-        
+
         // Auto-select primo contract code se non selezionato
         // Usa funzione updater per evitare dependency su formData.contract_code
-        setFormData(prev => {
+        setFormData((prev) => {
           if (!prev.contract_code && contractCodes.length > 0) {
             return { ...prev, contract_code: contractCodes[0] };
           }
@@ -92,10 +129,10 @@ export function SupplierPriceListForm({
   useEffect(() => {
     if (formData.contract_code) {
       // Estrai carrier_code dal contract_code (prima parte prima del primo trattino)
-      const carrierCode = formData.contract_code.split('-')[0].toLowerCase();
+      const carrierCode = formData.contract_code.split("-")[0].toLowerCase();
       // Aggiorna solo se diverso dal valore corrente (previene loop infiniti)
       if (carrierCode && carrierCode !== formData.carrier_code) {
-        setFormData(prev => ({ ...prev, carrier_code: carrierCode }));
+        setFormData((prev) => ({ ...prev, carrier_code: carrierCode }));
         setSelectedCourierCode(carrierCode);
       }
     }
@@ -103,44 +140,26 @@ export function SupplierPriceListForm({
 
   // Fallback: Auto-fill carrier_code quando cambia corriere (se contract_code non disponibile)
   useEffect(() => {
-    if (formData.courier_id && availableCouriers.length > 0 && !formData.carrier_code) {
-      const courier = availableCouriers.find(c => c.courierId === formData.courier_id);
+    if (
+      formData.courier_id &&
+      availableCouriers.length > 0 &&
+      !formData.carrier_code
+    ) {
+      const courier = availableCouriers.find(
+        (c) => c.courierId === formData.courier_id
+      );
       if (courier) {
         // Estrai carrier_code dal nome corriere (es. "GLS" -> "gls", "Poste Italiane" -> "postedeliverybusiness")
-        const carrierCode = courier.courierName.toLowerCase()
-          .replace(/\s+/g, '')
-          .replace('posteitaliane', 'postedeliverybusiness')
-          .replace('poste', 'postedeliverybusiness');
+        const carrierCode = courier.courierName
+          .toLowerCase()
+          .replace(/\s+/g, "")
+          .replace("posteitaliane", "postedeliverybusiness")
+          .replace("poste", "postedeliverybusiness");
         setSelectedCourierCode(carrierCode);
-        setFormData(prev => ({ ...prev, carrier_code: carrierCode }));
+        setFormData((prev) => ({ ...prev, carrier_code: carrierCode }));
       }
     }
-  }, [formData.courier_id, availableCouriers]);
-
-  const loadConfigurations = async () => {
-    setIsLoadingConfigs(true);
-    try {
-      const result = await listConfigurations();
-      if (result.success && result.configs) {
-        // Filtra solo Spedisci.Online attive
-        const spedisciConfigs = result.configs.filter(
-          (c) => c.provider_id === 'spedisci_online' && c.is_active
-        );
-        setConfigurations(spedisciConfigs);
-        
-        // Auto-select prima configurazione se disponibile
-        if (spedisciConfigs.length > 0 && !formData.courier_config_id) {
-          const defaultConfig = spedisciConfigs.find(c => c.is_default) || spedisciConfigs[0];
-          setFormData(prev => ({ ...prev, courier_config_id: defaultConfig.id }));
-        }
-      }
-    } catch (error) {
-      console.error('Errore caricamento configurazioni:', error);
-      toast.error('Errore caricamento configurazioni');
-    } finally {
-      setIsLoadingConfigs(false);
-    }
-  };
+  }, [formData.courier_id, availableCouriers, formData.carrier_code]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,33 +177,33 @@ export function SupplierPriceListForm({
         });
 
         if (result.success) {
-          toast.success('Listino aggiornato con successo');
+          toast.success("Listino aggiornato con successo");
           onSuccess();
         } else {
-          toast.error(result.error || 'Errore aggiornamento listino');
+          toast.error(result.error || "Errore aggiornamento listino");
         }
       } else {
         // Creazione
         if (!formData.courier_id) {
-          toast.error('Seleziona un corriere');
+          toast.error("Seleziona un corriere");
           setIsSubmitting(false);
           return;
         }
 
         if (!formData.courier_config_id) {
-          toast.error('Seleziona una configurazione API');
+          toast.error("Seleziona una configurazione API");
           setIsSubmitting(false);
           return;
         }
 
         if (!formData.contract_code) {
-          toast.error('Seleziona un contract code');
+          toast.error("Seleziona un contract code");
           setIsSubmitting(false);
           return;
         }
 
         if (!formData.carrier_code) {
-          toast.error('Carrier code mancante');
+          toast.error("Carrier code mancante");
           setIsSubmitting(false);
           return;
         }
@@ -206,15 +225,15 @@ export function SupplierPriceListForm({
         });
 
         if (result.success) {
-          toast.success('Listino creato con successo');
+          toast.success("Listino creato con successo");
           onSuccess();
         } else {
-          toast.error(result.error || 'Errore creazione listino');
+          toast.error(result.error || "Errore creazione listino");
         }
       }
     } catch (error: any) {
-      console.error('Errore submit form:', error);
-      toast.error('Errore imprevisto. Riprova più tardi.');
+      console.error("Errore submit form:", error);
+      toast.error("Errore imprevisto. Riprova più tardi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -242,15 +261,23 @@ export function SupplierPriceListForm({
           <Select
             id="courier_config_id"
             value={formData.courier_config_id}
-            onChange={(e) => setFormData({ ...formData, courier_config_id: e.target.value, contract_code: '' })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                courier_config_id: e.target.value,
+                contract_code: "",
+              })
+            }
             required
             disabled={isLoadingConfigs}
             className="mt-1"
           >
-            <option value="">{isLoadingConfigs ? 'Caricamento...' : 'Seleziona configurazione'}</option>
+            <option value="">
+              {isLoadingConfigs ? "Caricamento..." : "Seleziona configurazione"}
+            </option>
             {configurations.map((config) => (
               <option key={config.id} value={config.id}>
-                {config.name} {config.is_default ? '(Default)' : ''}
+                {config.name} {config.is_default ? "(Default)" : ""}
               </option>
             ))}
           </Select>
@@ -267,14 +294,19 @@ export function SupplierPriceListForm({
           <Select
             id="contract_code"
             value={formData.contract_code}
-            onChange={(e) => setFormData({ ...formData, contract_code: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, contract_code: e.target.value })
+            }
             required
             className="mt-1"
           >
             <option value="">Seleziona contract code</option>
             {availableContractCodes.map((contractCode) => {
-              const config = configurations.find(c => c.id === formData.courier_config_id);
-              const courierName = config?.contract_mapping?.[contractCode] || contractCode;
+              const config = configurations.find(
+                (c) => c.id === formData.courier_config_id
+              );
+              const courierName =
+                config?.contract_mapping?.[contractCode] || contractCode;
               return (
                 <option key={contractCode} value={contractCode}>
                   {contractCode} ({courierName})
@@ -295,7 +327,9 @@ export function SupplierPriceListForm({
           <Input
             id="carrier_code"
             value={formData.carrier_code}
-            onChange={(e) => setFormData({ ...formData, carrier_code: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, carrier_code: e.target.value })
+            }
             placeholder="Es: gls, postedeliverybusiness"
             required
             className="mt-1"
@@ -313,7 +347,9 @@ export function SupplierPriceListForm({
           <Select
             id="courier_id"
             value={formData.courier_id}
-            onChange={(e) => setFormData({ ...formData, courier_id: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, courier_id: e.target.value })
+            }
             required
             className="mt-1"
           >
@@ -333,7 +369,9 @@ export function SupplierPriceListForm({
         <Input
           id="version"
           value={formData.version}
-          onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, version: e.target.value })
+          }
           placeholder="Es: 1.0.0"
           required
           className="mt-1"
@@ -343,13 +381,18 @@ export function SupplierPriceListForm({
       {/* Status */}
       <div>
         <Label htmlFor="status">Status *</Label>
-          <Select
-            id="status"
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as PriceListStatus })}
-            required
-            className="mt-1"
-          >
+        <Select
+          id="status"
+          value={formData.status}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              status: e.target.value as PriceListStatus,
+            })
+          }
+          required
+          className="mt-1"
+        >
           <option value="draft">Bozza</option>
           <option value="active">Attivo</option>
           <option value="archived">Archiviato</option>
@@ -362,7 +405,9 @@ export function SupplierPriceListForm({
         <Textarea
           id="description"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
           placeholder="Descrizione opzionale del listino"
           rows={3}
           className="mt-1"
@@ -384,19 +429,24 @@ export function SupplierPriceListForm({
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Annulla
         </Button>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {priceList ? 'Aggiornamento...' : 'Creazione...'}
+              {priceList ? "Aggiornamento..." : "Creazione..."}
             </>
           ) : (
             <>
               <Package className="w-4 h-4 mr-2" />
-              {priceList ? 'Aggiorna Listino' : 'Crea Listino'}
+              {priceList ? "Aggiorna Listino" : "Crea Listino"}
             </>
           )}
         </Button>
@@ -404,4 +454,3 @@ export function SupplierPriceListForm({
     </form>
   );
 }
-

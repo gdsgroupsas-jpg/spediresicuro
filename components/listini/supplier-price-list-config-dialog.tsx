@@ -12,13 +12,13 @@
 
 "use client";
 
+import type { CourierConfig } from "@/actions/configurations";
+import { listConfigurations } from "@/actions/configurations";
+import { updatePriceListAction } from "@/actions/price-lists";
 import {
   getSupplierPriceListConfig,
   upsertSupplierPriceListConfig,
 } from "@/actions/supplier-price-list-config";
-import { updatePriceListAction } from "@/actions/price-lists";
-import { listConfigurations } from "@/actions/configurations";
-import type { CourierConfig } from "@/actions/configurations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -73,17 +73,21 @@ export function SupplierPriceListConfigDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
-  
+
   // Metadata editabili - inizializzati dai metadata del priceList
-  const initialMetadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+  const initialMetadata = (priceList.metadata ||
+    priceList.source_metadata ||
+    {}) as any;
   const [metadataFields, setMetadataFields] = useState({
-    courier_config_id: initialMetadata.courier_config_id || '',
-    carrier_code: initialMetadata.carrier_code || '',
-    contract_code: initialMetadata.contract_code || '',
+    courier_config_id: initialMetadata.courier_config_id || "",
+    carrier_code: initialMetadata.carrier_code || "",
+    contract_code: initialMetadata.contract_code || "",
   });
   const [configurations, setConfigurations] = useState<CourierConfig[]>([]);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
-  const [availableContractCodes, setAvailableContractCodes] = useState<string[]>([]);
+  const [availableContractCodes, setAvailableContractCodes] = useState<
+    string[]
+  >([]);
 
   // Configurazioni
   const [insuranceConfig, setInsuranceConfig] = useState<InsuranceConfig>({
@@ -184,17 +188,36 @@ export function SupplierPriceListConfigDialog({
     }
   }, [priceList.id, initializeDefaults]);
 
+  const loadConfigurations = useCallback(async () => {
+    setIsLoadingConfigs(true);
+    try {
+      const result = await listConfigurations();
+      if (result.success && result.configs) {
+        const spedisciConfigs = result.configs.filter(
+          (c) => c.provider_id === "spedisci_online" && c.is_active
+        );
+        setConfigurations(spedisciConfigs);
+      }
+    } catch (error) {
+      console.error("Errore caricamento configurazioni:", error);
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  }, []);
+
   // Carica configurazioni disponibili
   useEffect(() => {
     if (open) {
       loadConfigurations();
     }
-  }, [open]);
+  }, [open, loadConfigurations]);
 
   // Carica contract codes quando cambia configurazione
   useEffect(() => {
     if (metadataFields.courier_config_id) {
-      const config = configurations.find(c => c.id === metadataFields.courier_config_id);
+      const config = configurations.find(
+        (c) => c.id === metadataFields.courier_config_id
+      );
       if (config && config.contract_mapping) {
         const contractCodes = Object.keys(config.contract_mapping);
         setAvailableContractCodes(contractCodes);
@@ -207,20 +230,24 @@ export function SupplierPriceListConfigDialog({
   // Auto-fill carrier_code quando cambia contract_code
   useEffect(() => {
     if (metadataFields.contract_code) {
-      const carrierCode = metadataFields.contract_code.split('-')[0].toLowerCase();
+      const carrierCode = metadataFields.contract_code
+        .split("-")[0]
+        .toLowerCase();
       if (carrierCode && carrierCode !== metadataFields.carrier_code) {
-        setMetadataFields(prev => ({ ...prev, carrier_code: carrierCode }));
+        setMetadataFields((prev) => ({ ...prev, carrier_code: carrierCode }));
       }
     }
-  }, [metadataFields.contract_code]);
+  }, [metadataFields.contract_code, metadataFields.carrier_code]);
 
   // Aggiorna metadata fields quando cambia priceList
   useEffect(() => {
-    const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+    const metadata = (priceList.metadata ||
+      priceList.source_metadata ||
+      {}) as any;
     setMetadataFields({
-      courier_config_id: metadata.courier_config_id || '',
-      carrier_code: metadata.carrier_code || '',
-      contract_code: metadata.contract_code || '',
+      courier_config_id: metadata.courier_config_id || "",
+      carrier_code: metadata.carrier_code || "",
+      contract_code: metadata.contract_code || "",
     });
   }, [priceList.metadata, priceList.source_metadata]);
 
@@ -231,50 +258,38 @@ export function SupplierPriceListConfigDialog({
     }
   }, [open, priceList.id, loadConfig]);
 
-  const loadConfigurations = async () => {
-    setIsLoadingConfigs(true);
-    try {
-      const result = await listConfigurations();
-      if (result.success && result.configs) {
-        const spedisciConfigs = result.configs.filter(
-          (c) => c.provider_id === 'spedisci_online' && c.is_active
-        );
-        setConfigurations(spedisciConfigs);
-      }
-    } catch (error) {
-      console.error('Errore caricamento configurazioni:', error);
-    } finally {
-      setIsLoadingConfigs(false);
-    }
-  };
-
   async function handleSave() {
     setIsSaving(true);
     try {
       // Usa i valori dai campi editabili invece di metadata esistenti
-      const carrierCode = metadataFields.carrier_code || 
-        (priceList.courier?.code?.toLowerCase()) || 
+      const carrierCode =
+        metadataFields.carrier_code ||
+        priceList.courier?.code?.toLowerCase() ||
         "";
 
       // Valida metadata obbligatori
-      if (!metadataFields.courier_config_id || !carrierCode || !metadataFields.contract_code) {
+      if (
+        !metadataFields.courier_config_id ||
+        !carrierCode ||
+        !metadataFields.contract_code
+      ) {
         toast.error(
-          `Metadata incompleti: mancano ${
-            [
-              !metadataFields.courier_config_id && 'Config ID',
-              !carrierCode && 'Carrier Code',
-              !metadataFields.contract_code && 'Contract Code',
-            ]
-              .filter(Boolean)
-              .join(', ')
-          }. Completa tutti i campi nel tab "Generale".`
+          `Metadata incompleti: mancano ${[
+            !metadataFields.courier_config_id && "Config ID",
+            !carrierCode && "Carrier Code",
+            !metadataFields.contract_code && "Contract Code",
+          ]
+            .filter(Boolean)
+            .join(", ")}. Completa tutti i campi nel tab "Generale".`
         );
         setIsSaving(false);
         return;
       }
 
       // 1. Aggiorna metadata nel price_list stesso
-      const existingMetadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+      const existingMetadata = (priceList.metadata ||
+        priceList.source_metadata ||
+        {}) as any;
       const updatedMetadata = {
         ...existingMetadata,
         courier_config_id: metadataFields.courier_config_id,
@@ -456,10 +471,11 @@ export function SupplierPriceListConfigDialog({
                 Metadata API (Obbligatori per Sincronizzazione)
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Questi campi sono necessari per sincronizzare il listino con l&apos;API Spedisci.Online.
-                Se mancanti, la sincronizzazione incrementale non funzionerà.
+                Questi campi sono necessari per sincronizzare il listino con
+                l&apos;API Spedisci.Online. Se mancanti, la sincronizzazione
+                incrementale non funzionerà.
               </p>
-              
+
               <div className="space-y-4">
                 {/* Configurazione API */}
                 <div>
@@ -470,26 +486,29 @@ export function SupplierPriceListConfigDialog({
                     id="metadata-courier-config-id"
                     value={metadataFields.courier_config_id}
                     onChange={(e) => {
-                      setMetadataFields(prev => ({ 
-                        ...prev, 
+                      setMetadataFields((prev) => ({
+                        ...prev,
                         courier_config_id: e.target.value,
-                        contract_code: '' // Reset contract code quando cambia config
+                        contract_code: "", // Reset contract code quando cambia config
                       }));
                     }}
                     disabled={isLoadingConfigs}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1"
                   >
                     <option value="">
-                      {isLoadingConfigs ? 'Caricamento...' : 'Seleziona configurazione'}
+                      {isLoadingConfigs
+                        ? "Caricamento..."
+                        : "Seleziona configurazione"}
                     </option>
                     {configurations.map((config) => (
                       <option key={config.id} value={config.id}>
-                        {config.name} {config.is_default ? '(Default)' : ''}
+                        {config.name} {config.is_default ? "(Default)" : ""}
                       </option>
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Configurazione Spedisci.Online da utilizzare per questo listino
+                    Configurazione Spedisci.Online da utilizzare per questo
+                    listino
                   </p>
                 </div>
 
@@ -503,17 +522,21 @@ export function SupplierPriceListConfigDialog({
                       id="metadata-contract-code"
                       value={metadataFields.contract_code}
                       onChange={(e) => {
-                        setMetadataFields(prev => ({ 
-                          ...prev, 
-                          contract_code: e.target.value 
+                        setMetadataFields((prev) => ({
+                          ...prev,
+                          contract_code: e.target.value,
                         }));
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1"
                     >
                       <option value="">Seleziona contract code</option>
                       {availableContractCodes.map((contractCode) => {
-                        const config = configurations.find(c => c.id === metadataFields.courier_config_id);
-                        const courierName = config?.contract_mapping?.[contractCode] || contractCode;
+                        const config = configurations.find(
+                          (c) => c.id === metadataFields.courier_config_id
+                        );
+                        const courierName =
+                          config?.contract_mapping?.[contractCode] ||
+                          contractCode;
                         return (
                           <option key={contractCode} value={contractCode}>
                             {contractCode} ({courierName})
@@ -522,28 +545,30 @@ export function SupplierPriceListConfigDialog({
                       })}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Contract code specifico per questo listino (auto-compila carrier_code)
+                      Contract code specifico per questo listino (auto-compila
+                      carrier_code)
                     </p>
                   </div>
                 )}
 
                 {/* Carrier Code */}
                 <div>
-                  <Label htmlFor="metadata-carrier-code">
-                    Carrier Code *
-                  </Label>
+                  <Label htmlFor="metadata-carrier-code">Carrier Code *</Label>
                   <Input
                     id="metadata-carrier-code"
                     value={metadataFields.carrier_code}
-                    onChange={(e) => setMetadataFields(prev => ({ 
-                      ...prev, 
-                      carrier_code: e.target.value.toLowerCase() 
-                    }))}
+                    onChange={(e) =>
+                      setMetadataFields((prev) => ({
+                        ...prev,
+                        carrier_code: e.target.value.toLowerCase(),
+                      }))
+                    }
                     placeholder="Es: gls, postedeliverybusiness"
                     className="mt-1"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Codice corriere (auto-compilato dal contract code se selezionato)
+                    Codice corriere (auto-compilato dal contract code se
+                    selezionato)
                   </p>
                 </div>
               </div>
