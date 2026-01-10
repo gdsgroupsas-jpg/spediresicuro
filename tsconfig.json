@@ -25,7 +25,12 @@
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": [
     "node_modules",
-    "automation-service/**/*"  // Esclude servizio automation (ha dipendenze separate)
+    "automation-service/**/*",  // Esclude servizio automation (ha dipendenze separate)
+    "scripts/**/*",             // ⚡ BUILD OPTIMIZATION: Scripts usano tsconfig.scripts.json separato
+    "tests/**/*",               // ⚡ BUILD OPTIMIZATION: Test usano vitest.config.mts
+    "e2e/**/*",                 // ⚡ BUILD OPTIMIZATION: E2E test usano Playwright
+    "supabase/migrations/**/*", // ⚡ BUILD OPTIMIZATION: SQL migrations non servono per build
+    "docs/**/*"                 // ⚡ BUILD OPTIMIZATION: Documentazione non serve per build
   ]
 }
 
