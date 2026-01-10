@@ -229,7 +229,7 @@ export function setMockRedis(mockRedis: Redis | null): void {
 }
 
 // ====== EXPORT ======
-export default {
+const rateLimitService = {
   rateLimit,
   generateKey,
   hashUserId,
@@ -237,3 +237,5 @@ export default {
   resetForTesting,
   setMockRedis,
 };
+
+export default rateLimitService;

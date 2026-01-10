@@ -2,7 +2,7 @@
  * Hook React per verificare platform features lato client
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
 
 interface PlatformFeatureStatus {
   feature_code: string;
@@ -23,16 +23,18 @@ export function usePlatformFeature(featureCode: string) {
     async function checkFeature() {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/platform-features/check?feature=${featureCode}`);
-        
+        const response = await fetch(
+          `/api/platform-features/check?feature=${featureCode}`
+        );
+
         if (!response.ok) {
-          throw new Error('Errore durante la verifica della feature');
+          throw new Error("Errore durante la verifica della feature");
         }
 
         const data = await response.json();
         setStatus(data);
       } catch (err: any) {
-        console.error('Errore verifica platform feature:', err);
+        console.error("Errore verifica platform feature:", err);
         setError(err.message);
         // In caso di errore, assumiamo che la feature sia attiva (compatibilità)
         setStatus({
@@ -62,7 +64,9 @@ export function usePlatformFeature(featureCode: string) {
  * Hook per verificare più platform features contemporaneamente
  */
 export function usePlatformFeatures(featureCodes: string[]) {
-  const [features, setFeatures] = useState<Record<string, PlatformFeatureStatus>>({});
+  const [features, setFeatures] = useState<
+    Record<string, PlatformFeatureStatus>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,7 +75,9 @@ export function usePlatformFeatures(featureCodes: string[]) {
       try {
         setIsLoading(true);
         const promises = featureCodes.map(async (code) => {
-          const response = await fetch(`/api/platform-features/check?feature=${code}`);
+          const response = await fetch(
+            `/api/platform-features/check?feature=${code}`
+          );
           if (!response.ok) {
             throw new Error(`Errore verifica feature ${code}`);
           }
@@ -81,14 +87,14 @@ export function usePlatformFeatures(featureCodes: string[]) {
 
         const results = await Promise.all(promises);
         const featuresMap: Record<string, PlatformFeatureStatus> = {};
-        
+
         results.forEach(({ code, status }) => {
           featuresMap[code] = status;
         });
 
         setFeatures(featuresMap);
       } catch (err: any) {
-        console.error('Errore verifica platform features:', err);
+        console.error("Errore verifica platform features:", err);
         setError(err.message);
         // In caso di errore, assumiamo che tutte le features siano attive
         const featuresMap: Record<string, PlatformFeatureStatus> = {};
@@ -111,7 +117,8 @@ export function usePlatformFeatures(featureCodes: string[]) {
     } else {
       setIsLoading(false);
     }
-  }, [featureCodes.join(',')]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featureCodes.join(",")]);
 
   return {
     features,
@@ -122,9 +129,3 @@ export function usePlatformFeatures(featureCodes: string[]) {
     isFeatureActive: (code: string) => features[code]?.is_active ?? true,
   };
 }
-
-
-
-
-
-

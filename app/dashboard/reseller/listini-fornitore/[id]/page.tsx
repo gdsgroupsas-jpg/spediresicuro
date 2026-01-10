@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // Formatta valuta
@@ -142,158 +142,164 @@ export default function PriceListDetailPage() {
   const [editingMatrix, setEditingMatrix] = useState<MatrixRow[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Inizializza matrice editing dai dati esistenti
+  const initializeEditingMatrix = useCallback(
+    (entriesData: PriceListEntry[]) => {
+      const sortedZones = [...PRICING_MATRIX.ZONES]
+        .map((z) => z.code)
+        .sort((a, b) => {
+          const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
+          const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
+          return (zoneA?.priority || 999) - (zoneB?.priority || 999);
+        });
+
+      const normalizeZoneCode = (
+        code: string | undefined | null
+      ): string | null => {
+        if (!code) return null;
+
+        // Normalizza il codice (lowercase, rimuovi underscore e trattini)
+        const normalized = code.toLowerCase().replace(/[_\-\s]+/g, "_");
+
+        // Mappatura codici legacy
+        const legacyMap: Record<string, string> = {
+          it_std: "IT-ITALIA",
+          it_cal: "IT-CALABRIA",
+          it_sic: "IT-SICILIA",
+          it_sar: "IT-SARDEGNA",
+          it_ven: "IT-DISAGIATE",
+          it_liv: "IT-LIVIGNO",
+          it_iso: "IT-ISOLE-MINORI",
+          eu_z1: "EU-ZONA1",
+          eu_z2: "EU-ZONA2",
+        };
+
+        // Mappatura nomi semplici (da CSV import)
+        const nameMap: Record<string, string> = {
+          italia: "IT-ITALIA",
+          sardegna: "IT-SARDEGNA",
+          calabria: "IT-CALABRIA",
+          sicilia: "IT-SICILIA",
+          livigno: "IT-LIVIGNO",
+          campione: "IT-LIVIGNO",
+          livigno_campione: "IT-LIVIGNO",
+          isole_minori: "IT-ISOLE-MINORI",
+          isole: "IT-ISOLE-MINORI",
+          localita_disagiate: "IT-DISAGIATE",
+          disagiate: "IT-DISAGIATE",
+          europa1: "EU-ZONA1",
+          europa_1: "EU-ZONA1",
+          europa_zona_1: "EU-ZONA1",
+          europa2: "EU-ZONA2",
+          europa_2: "EU-ZONA2",
+          europa_zona_2: "EU-ZONA2",
+        };
+
+        // Prova prima con mappatura legacy
+        if (legacyMap[normalized]) {
+          return legacyMap[normalized];
+        }
+
+        // Prova con mappatura nomi semplici
+        if (nameMap[normalized]) {
+          return nameMap[normalized];
+        }
+
+        // Se il codice è già nel formato corretto (IT-*, EU-*), ritorna così com'è
+        if (code.match(/^(IT|EU)-/i)) {
+          return code.toUpperCase();
+        }
+
+        // Altrimenti ritorna il codice originale (potrebbe essere già corretto)
+        return code;
+      };
+
+      const uniqueWeights = Array.from(
+        new Set(entriesData.map((e) => e.weight_to))
+      ).sort((a, b) => a - b);
+
+      const matrixRows: MatrixRow[] = [];
+
+      for (let i = 0; i < uniqueWeights.length; i++) {
+        const weightTo = uniqueWeights[i];
+        const weightFrom = i > 0 ? uniqueWeights[i - 1] : 0;
+
+        const prices: Record<string, number> = {};
+        const entryIds: Record<string, string | undefined> = {};
+        let fuelSurcharge = 0;
+
+        sortedZones.forEach((zoneCode) => {
+          const entry = entriesData.find((e) => {
+            const normalizedEntryZone = normalizeZoneCode(e.zone_code);
+            return (
+              (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) &&
+              e.weight_to === weightTo
+            );
+          });
+
+          if (entry) {
+            prices[zoneCode] = entry.base_price;
+            entryIds[zoneCode] = entry.id;
+            // Prendi fuel_surcharge dalla prima entry trovata (assumiamo sia uguale per tutte le zone della riga)
+            if (fuelSurcharge === 0 && entry.fuel_surcharge_percent) {
+              fuelSurcharge = entry.fuel_surcharge_percent;
+            }
+          } else {
+            prices[zoneCode] = -1; // -1 = mancante
+            entryIds[zoneCode] = undefined;
+          }
+        });
+
+        matrixRows.push({
+          id: `row-${weightTo}`,
+          weightFrom,
+          weightTo,
+          prices,
+          fuelSurcharge,
+          entryIds,
+        });
+      }
+
+      setEditingMatrix(matrixRows);
+      setHasUnsavedChanges(false);
+    },
+    []
+  );
+
+  const loadPriceList = useCallback(
+    async (id: string) => {
+      try {
+        setIsLoading(true);
+        const result = await getPriceListByIdAction(id);
+
+        if (result.success && result.priceList) {
+          const list = result.priceList as PriceList & {
+            entries?: PriceListEntry[];
+          };
+          setPriceList(list);
+          setEntries(list.entries || []);
+          // Inizializza matrice editing dai dati esistenti
+          initializeEditingMatrix(list.entries || []);
+        } else {
+          toast.error(result.error || "Listino non trovato");
+          router.push("/dashboard/reseller/listini-fornitore");
+        }
+      } catch (error: any) {
+        toast.error("Errore caricamento listino");
+        console.error(error);
+        router.push("/dashboard/reseller/listini-fornitore");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [router, initializeEditingMatrix]
+  );
+
   useEffect(() => {
     if (params.id) {
       loadPriceList(params.id as string);
     }
-  }, [params.id]);
-
-  async function loadPriceList(id: string) {
-    try {
-      setIsLoading(true);
-      const result = await getPriceListByIdAction(id);
-
-      if (result.success && result.priceList) {
-        const list = result.priceList as PriceList & {
-          entries?: PriceListEntry[];
-        };
-        setPriceList(list);
-        setEntries(list.entries || []);
-        // Inizializza matrice editing dai dati esistenti
-        initializeEditingMatrix(list.entries || []);
-      } else {
-        toast.error(result.error || "Listino non trovato");
-        router.push("/dashboard/reseller/listini-fornitore");
-      }
-    } catch (error: any) {
-      toast.error("Errore caricamento listino");
-      console.error(error);
-      router.push("/dashboard/reseller/listini-fornitore");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // Inizializza matrice editing dai dati esistenti
-  function initializeEditingMatrix(entriesData: PriceListEntry[]) {
-    const sortedZones = [...PRICING_MATRIX.ZONES]
-      .map((z) => z.code)
-      .sort((a, b) => {
-        const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
-        const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
-        return (zoneA?.priority || 999) - (zoneB?.priority || 999);
-      });
-
-    const normalizeZoneCode = (
-      code: string | undefined | null
-    ): string | null => {
-      if (!code) return null;
-      
-      // Normalizza il codice (lowercase, rimuovi underscore e trattini)
-      const normalized = code.toLowerCase().replace(/[_\-\s]+/g, '_');
-      
-      // Mappatura codici legacy
-      const legacyMap: Record<string, string> = {
-        "it_std": "IT-ITALIA",
-        "it_cal": "IT-CALABRIA",
-        "it_sic": "IT-SICILIA",
-        "it_sar": "IT-SARDEGNA",
-        "it_ven": "IT-DISAGIATE",
-        "it_liv": "IT-LIVIGNO",
-        "it_iso": "IT-ISOLE-MINORI",
-        "eu_z1": "EU-ZONA1",
-        "eu_z2": "EU-ZONA2",
-      };
-      
-      // Mappatura nomi semplici (da CSV import)
-      const nameMap: Record<string, string> = {
-        "italia": "IT-ITALIA",
-        "sardegna": "IT-SARDEGNA",
-        "calabria": "IT-CALABRIA",
-        "sicilia": "IT-SICILIA",
-        "livigno": "IT-LIVIGNO",
-        "campione": "IT-LIVIGNO",
-        "livigno_campione": "IT-LIVIGNO",
-        "isole_minori": "IT-ISOLE-MINORI",
-        "isole": "IT-ISOLE-MINORI",
-        "localita_disagiate": "IT-DISAGIATE",
-        "disagiate": "IT-DISAGIATE",
-        "europa1": "EU-ZONA1",
-        "europa_1": "EU-ZONA1",
-        "europa_zona_1": "EU-ZONA1",
-        "europa2": "EU-ZONA2",
-        "europa_2": "EU-ZONA2",
-        "europa_zona_2": "EU-ZONA2",
-      };
-      
-      // Prova prima con mappatura legacy
-      if (legacyMap[normalized]) {
-        return legacyMap[normalized];
-      }
-      
-      // Prova con mappatura nomi semplici
-      if (nameMap[normalized]) {
-        return nameMap[normalized];
-      }
-      
-      // Se il codice è già nel formato corretto (IT-*, EU-*), ritorna così com'è
-      if (code.match(/^(IT|EU)-/i)) {
-        return code.toUpperCase();
-      }
-      
-      // Altrimenti ritorna il codice originale (potrebbe essere già corretto)
-      return code;
-    };
-
-    const uniqueWeights = Array.from(
-      new Set(entriesData.map((e) => e.weight_to))
-    ).sort((a, b) => a - b);
-
-    const matrixRows: MatrixRow[] = [];
-
-    for (let i = 0; i < uniqueWeights.length; i++) {
-      const weightTo = uniqueWeights[i];
-      const weightFrom = i > 0 ? uniqueWeights[i - 1] : 0;
-
-      const prices: Record<string, number> = {};
-      const entryIds: Record<string, string | undefined> = {};
-      let fuelSurcharge = 0;
-
-      sortedZones.forEach((zoneCode) => {
-        const entry = entriesData.find((e) => {
-          const normalizedEntryZone = normalizeZoneCode(e.zone_code);
-          return (
-            (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) &&
-            e.weight_to === weightTo
-          );
-        });
-
-        if (entry) {
-          prices[zoneCode] = entry.base_price;
-          entryIds[zoneCode] = entry.id;
-          // Prendi fuel_surcharge dalla prima entry trovata (assumiamo sia uguale per tutte le zone della riga)
-          if (fuelSurcharge === 0 && entry.fuel_surcharge_percent) {
-            fuelSurcharge = entry.fuel_surcharge_percent;
-          }
-        } else {
-          prices[zoneCode] = -1; // -1 = mancante
-          entryIds[zoneCode] = undefined;
-        }
-      });
-
-      matrixRows.push({
-        id: `row-${weightTo}`,
-        weightFrom,
-        weightTo,
-        prices,
-        fuelSurcharge,
-        entryIds,
-      });
-    }
-
-    setEditingMatrix(matrixRows);
-    setHasUnsavedChanges(false);
-  }
+  }, [params.id, loadPriceList]);
 
   // Aggiorna valore prezzo in matrice locale
   function updateMatrixPrice(rowId: string, zoneCode: string, value: number) {
@@ -483,59 +489,59 @@ export default function PriceListDetailPage() {
       code: string | undefined | null
     ): string | null => {
       if (!code) return null;
-      
+
       // Normalizza il codice (lowercase, rimuovi underscore e trattini)
-      const normalized = code.toLowerCase().replace(/[_\-\s]+/g, '_');
-      
+      const normalized = code.toLowerCase().replace(/[_\-\s]+/g, "_");
+
       // Mappatura codici legacy
       const legacyMap: Record<string, string> = {
-        "it_std": "IT-ITALIA",
-        "it_cal": "IT-CALABRIA",
-        "it_sic": "IT-SICILIA",
-        "it_sar": "IT-SARDEGNA",
-        "it_ven": "IT-DISAGIATE",
-        "it_liv": "IT-LIVIGNO",
-        "it_iso": "IT-ISOLE-MINORI",
-        "eu_z1": "EU-ZONA1",
-        "eu_z2": "EU-ZONA2",
+        it_std: "IT-ITALIA",
+        it_cal: "IT-CALABRIA",
+        it_sic: "IT-SICILIA",
+        it_sar: "IT-SARDEGNA",
+        it_ven: "IT-DISAGIATE",
+        it_liv: "IT-LIVIGNO",
+        it_iso: "IT-ISOLE-MINORI",
+        eu_z1: "EU-ZONA1",
+        eu_z2: "EU-ZONA2",
       };
-      
+
       // Mappatura nomi semplici (da CSV import)
       const nameMap: Record<string, string> = {
-        "italia": "IT-ITALIA",
-        "sardegna": "IT-SARDEGNA",
-        "calabria": "IT-CALABRIA",
-        "sicilia": "IT-SICILIA",
-        "livigno": "IT-LIVIGNO",
-        "campione": "IT-LIVIGNO",
-        "livigno_campione": "IT-LIVIGNO",
-        "isole_minori": "IT-ISOLE-MINORI",
-        "isole": "IT-ISOLE-MINORI",
-        "localita_disagiate": "IT-DISAGIATE",
-        "disagiate": "IT-DISAGIATE",
-        "europa1": "EU-ZONA1",
-        "europa_1": "EU-ZONA1",
-        "europa_zona_1": "EU-ZONA1",
-        "europa2": "EU-ZONA2",
-        "europa_2": "EU-ZONA2",
-        "europa_zona_2": "EU-ZONA2",
+        italia: "IT-ITALIA",
+        sardegna: "IT-SARDEGNA",
+        calabria: "IT-CALABRIA",
+        sicilia: "IT-SICILIA",
+        livigno: "IT-LIVIGNO",
+        campione: "IT-LIVIGNO",
+        livigno_campione: "IT-LIVIGNO",
+        isole_minori: "IT-ISOLE-MINORI",
+        isole: "IT-ISOLE-MINORI",
+        localita_disagiate: "IT-DISAGIATE",
+        disagiate: "IT-DISAGIATE",
+        europa1: "EU-ZONA1",
+        europa_1: "EU-ZONA1",
+        europa_zona_1: "EU-ZONA1",
+        europa2: "EU-ZONA2",
+        europa_2: "EU-ZONA2",
+        europa_zona_2: "EU-ZONA2",
       };
-      
+
       // Prova prima con mappatura legacy
       if (legacyMap[normalized]) {
         return legacyMap[normalized];
       }
-      
+
       // Prova con mappatura nomi semplici
       if (nameMap[normalized]) {
         return nameMap[normalized];
       }
-      
+
       // Se il codice è già nel formato corretto (IT-*, EU-*), ritorna così com'è
       if (code.match(/^(IT|EU)-/i)) {
         return code.toUpperCase();
       }
-      
+
       // Altrimenti ritorna il codice originale (potrebbe essere già corretto)
       return code;
     };
@@ -776,341 +782,330 @@ export default function PriceListDetailPage() {
                 Tariffe per Peso e Zona (Matrice Completa)
               </h2>
               <p className="text-sm text-gray-500">
-                Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne = Zone Geografiche
+                Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne =
+                Zone Geografiche
               </p>
             </div>
-              <div className="flex items-center gap-2">
-                {/* ✨ FASE 2: Pulsanti per inserimento entries */}
-                {!isEditing && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowManualFormDialog(true)}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Aggiungi Entry
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowImportCsvDialog(true)}
-                      className="gap-2"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Importa CSV
-                    </Button>
-                    {/* ✨ FASE 3: Pulsante Test API */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowTestApiDialog(true)}
-                      className="gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Test API
-                    </Button>
-                    {/* ✨ FASE 4: Pulsante Sync Incrementale */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowSyncIncrementalDialog(true)}
-                      className="gap-2"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Sync Incrementale
-                    </Button>
-                  </>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowConfigDialog(true)}
-                  className="gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  Configurazione
-                </Button>
-                {!isEditing ? (
+            <div className="flex items-center gap-2">
+              {/* ✨ FASE 2: Pulsanti per inserimento entries */}
+              {!isEditing && (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => setShowManualFormDialog(true)}
                     className="gap-2"
                   >
-                    <Edit className="h-4 w-4" />
-                    Modifica Manuale
+                    <Plus className="h-4 w-4" />
+                    Aggiungi Entry
                   </Button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={saveAllChanges}
-                      disabled={isSaving || !hasUnsavedChanges}
-                      className="gap-2 bg-green-600 hover:bg-green-700"
-                    >
-                      <Save className="h-4 w-4" />
-                      {isSaving ? "Salvataggio..." : "Salva Tutto"}
-                    </Button>
-                    <Button
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowImportCsvDialog(true)}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Importa CSV
+                  </Button>
+                  {/* ✨ FASE 3: Pulsante Test API */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTestApiDialog(true)}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Test API
+                  </Button>
+                  {/* ✨ FASE 4: Pulsante Sync Incrementale */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSyncIncrementalDialog(true)}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Sync Incrementale
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowConfigDialog(true)}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Configurazione
+              </Button>
+              {!isEditing ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Modifica Manuale
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={saveAllChanges}
+                    disabled={isSaving || !hasUnsavedChanges}
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Salvataggio..." : "Salva Tutto"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelEditing}
+                    disabled={isSaving}
+                    className="gap-2"
+                  >
+                    <X className="h-4 w-4" />
+                    Annulla
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addNewRow}
+                    disabled={isSaving}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nuova Fascia
+                  </Button>
+                  {hasUnsavedChanges && (
+                    <Badge
                       variant="outline"
-                      size="sm"
-                      onClick={cancelEditing}
-                      disabled={isSaving}
-                      className="gap-2"
+                      className="bg-orange-50 text-orange-700"
                     >
-                      <X className="h-4 w-4" />
-                      Annulla
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={addNewRow}
-                      disabled={isSaving}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Nuova Fascia
-                    </Button>
-                    {hasUnsavedChanges && (
-                      <Badge
-                        variant="outline"
-                        className="bg-orange-50 text-orange-700"
-                      >
-                        Modifiche non salvate
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </div>
+                      Modifiche non salvate
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Matrice Prezzi */}
-            {(() => {
-              // Usa editingMatrix se in editing, altrimenti buildMergedRows per visualizzazione
-              const displayRows = isEditing
-                ? editingMatrix
-                : buildMergedRows();
-              
-              // Mostra messaggio vuoto solo se non ci sono entries E non siamo in editing
-              if (displayRows.length === 0 && entries.length === 0 && !isEditing) {
-                return (
-                  <div className="p-12 text-center">
-                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">
-                      Nessuna tariffa nel listino
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Le tariffe vengono aggiunte durante la sincronizzazione da
-                      Spedisci.Online o importando da CSV
-                    </p>
-                  </div>
-                );
-              }
-              
-              // Ordina zone secondo priority
-              const sortedZones = [...PRICING_MATRIX.ZONES]
-                .map((z) => z.code)
-                .sort((a, b) => {
-                  const zoneA = PRICING_MATRIX.ZONES.find(
-                    (z) => z.code === a
-                  );
-                  const zoneB = PRICING_MATRIX.ZONES.find(
-                    (z) => z.code === b
-                  );
-                  return (
-                    (zoneA?.priority || 999) - (zoneB?.priority || 999)
-                  );
-                });
+          {/* Matrice Prezzi */}
+          {(() => {
+            // Usa editingMatrix se in editing, altrimenti buildMergedRows per visualizzazione
+            const displayRows = isEditing ? editingMatrix : buildMergedRows();
 
+            // Mostra messaggio vuoto solo se non ci sono entries E non siamo in editing
+            if (
+              displayRows.length === 0 &&
+              entries.length === 0 &&
+              !isEditing
+            ) {
               return (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
-                            Peso (KG)
-                          </th>
-                          {sortedZones.map((zoneCode) => {
-                            const zone = PRICING_MATRIX.ZONES.find(
-                              (z) => z.code === zoneCode
-                            );
-                            const zoneName = zone?.name || zoneCode;
-                            return (
-                              <th
-                                key={zoneCode}
-                                className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b"
-                                title={zoneName}
-                              >
-                                {zoneName}
-                              </th>
-                            );
-                          })}
-                          <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b bg-yellow-50">
-                            Fuel %
-                          </th>
-                          {isEditing && (
-                            <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b w-20">
-                              Azioni
-                            </th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {displayRows.map((row, idx) => {
-                          const rowId = isEditing
-                            ? (row as MatrixRow).id
-                            : `row-${idx}`;
-                          const rowData = isEditing
-                            ? (row as MatrixRow)
-                            : {
-                                id: rowId,
-                                weightFrom: row.weightFrom,
-                                weightTo: row.weightTo,
-                                prices: row.prices,
-                                fuelSurcharge: 0,
-                                entryIds: {},
-                              };
+                <div className="p-12 text-center">
+                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">
+                    Nessuna tariffa nel listino
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Le tariffe vengono aggiunte durante la sincronizzazione da
+                    Spedisci.Online o importando da CSV
+                  </p>
+                </div>
+              );
+            }
 
-                          return (
-                            <tr key={rowId} className="hover:bg-gray-50">
-                              {/* Colonna Peso - Editabile in modalità editing */}
-                              <td className="px-4 py-3 font-semibold text-gray-900 border-r bg-gray-50 sticky left-0 z-10 whitespace-nowrap">
-                                {isEditing ? (
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      step="0.1"
-                                      value={rowData.weightTo}
-                                      onChange={(e) => {
-                                        const newWeight =
-                                          parseFloat(e.target.value) || 0;
-                                        updateMatrixWeight(rowId, newWeight);
-                                      }}
-                                      className="w-20 text-center"
-                                      disabled={isSaving}
-                                    />
-                                    <span className="text-xs text-gray-500">
-                                      kg
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    {rowData.weightFrom === 0
-                                      ? `Fino a ${rowData.weightTo}`
-                                      : `${rowData.weightFrom} - ${rowData.weightTo}`}{" "}
-                                    kg
-                                  </>
-                                )}
-                              </td>
-                              {/* Colonne Zone - Editabili in modalità editing */}
-                              {sortedZones.map((zoneCode) => {
-                                const price = rowData.prices[zoneCode] ?? -1;
-                                return (
-                                  <td
-                                    key={`${rowId}-${zoneCode}`}
-                                    className="px-4 py-3 text-center"
-                                  >
-                                    {isEditing ? (
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={price >= 0 ? price : ""}
-                                        onChange={(e) => {
-                                          const value =
-                                            e.target.value === ""
-                                              ? -1
-                                              : parseFloat(e.target.value) ||
-                                                0;
-                                          updateMatrixPrice(
-                                            rowId,
-                                            zoneCode,
-                                            value
-                                          );
-                                        }}
-                                        placeholder="-"
-                                        className="w-24 text-center"
-                                        disabled={isSaving}
-                                      />
-                                    ) : (
-                                      <div className="flex flex-col items-center">
-                                        {price >= 0 ? (
-                                          <>
-                                            <span
-                                              className={`font-bold ${
-                                                price === 0
-                                                  ? "text-gray-400"
-                                                  : "text-gray-900"
-                                              }`}
-                                            >
-                                              {price === 0
-                                                ? "0,00 €"
-                                                : formatCurrency(price)}
-                                            </span>
-                                            {price === 0 && (
-                                              <span className="text-[10px] text-orange-500 font-medium">
-                                                (da compilare)
-                                              </span>
-                                            )}
-                                          </>
-                                        ) : (
-                                          <span className="text-gray-300">
-                                            -
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                              {/* Colonna Fuel Surcharge */}
-                              <td className="px-4 py-3 text-center bg-yellow-50">
+            // Ordina zone secondo priority
+            const sortedZones = [...PRICING_MATRIX.ZONES]
+              .map((z) => z.code)
+              .sort((a, b) => {
+                const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
+                const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
+                return (zoneA?.priority || 999) - (zoneB?.priority || 999);
+              });
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
+                        Peso (KG)
+                      </th>
+                      {sortedZones.map((zoneCode) => {
+                        const zone = PRICING_MATRIX.ZONES.find(
+                          (z) => z.code === zoneCode
+                        );
+                        const zoneName = zone?.name || zoneCode;
+                        return (
+                          <th
+                            key={zoneCode}
+                            className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b"
+                            title={zoneName}
+                          >
+                            {zoneName}
+                          </th>
+                        );
+                      })}
+                      <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b bg-yellow-50">
+                        Fuel %
+                      </th>
+                      {isEditing && (
+                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b w-20">
+                          Azioni
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {displayRows.map((row, idx) => {
+                      const rowId = isEditing
+                        ? (row as MatrixRow).id
+                        : `row-${idx}`;
+                      const rowData = isEditing
+                        ? (row as MatrixRow)
+                        : {
+                            id: rowId,
+                            weightFrom: row.weightFrom,
+                            weightTo: row.weightTo,
+                            prices: row.prices,
+                            fuelSurcharge: 0,
+                            entryIds: {},
+                          };
+
+                      return (
+                        <tr key={rowId} className="hover:bg-gray-50">
+                          {/* Colonna Peso - Editabile in modalità editing */}
+                          <td className="px-4 py-3 font-semibold text-gray-900 border-r bg-gray-50 sticky left-0 z-10 whitespace-nowrap">
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={rowData.weightTo}
+                                  onChange={(e) => {
+                                    const newWeight =
+                                      parseFloat(e.target.value) || 0;
+                                    updateMatrixWeight(rowId, newWeight);
+                                  }}
+                                  className="w-20 text-center"
+                                  disabled={isSaving}
+                                />
+                                <span className="text-xs text-gray-500">
+                                  kg
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                {rowData.weightFrom === 0
+                                  ? `Fino a ${rowData.weightTo}`
+                                  : `${rowData.weightFrom} - ${rowData.weightTo}`}{" "}
+                                kg
+                              </>
+                            )}
+                          </td>
+                          {/* Colonne Zone - Editabili in modalità editing */}
+                          {sortedZones.map((zoneCode) => {
+                            const price = rowData.prices[zoneCode] ?? -1;
+                            return (
+                              <td
+                                key={`${rowId}-${zoneCode}`}
+                                className="px-4 py-3 text-center"
+                              >
                                 {isEditing ? (
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={rowData.fuelSurcharge}
+                                    value={price >= 0 ? price : ""}
                                     onChange={(e) => {
                                       const value =
-                                        parseFloat(e.target.value) || 0;
-                                      updateMatrixFuelSurcharge(rowId, value);
+                                        e.target.value === ""
+                                          ? -1
+                                          : parseFloat(e.target.value) || 0;
+                                      updateMatrixPrice(rowId, zoneCode, value);
                                     }}
-                                    className="w-20 text-center"
+                                    placeholder="-"
+                                    className="w-24 text-center"
                                     disabled={isSaving}
                                   />
                                 ) : (
-                                  <span className="font-semibold text-gray-900">
-                                    {rowData.fuelSurcharge > 0
-                                      ? `${rowData.fuelSurcharge}%`
-                                      : "-"}
-                                  </span>
+                                  <div className="flex flex-col items-center">
+                                    {price >= 0 ? (
+                                      <>
+                                        <span
+                                          className={`font-bold ${
+                                            price === 0
+                                              ? "text-gray-400"
+                                              : "text-gray-900"
+                                          }`}
+                                        >
+                                          {price === 0
+                                            ? "0,00 €"
+                                            : formatCurrency(price)}
+                                        </span>
+                                        {price === 0 && (
+                                          <span className="text-[10px] text-orange-500 font-medium">
+                                            (da compilare)
+                                          </span>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className="text-gray-300">-</span>
+                                    )}
+                                  </div>
                                 )}
                               </td>
-                              {/* Colonna Azioni (solo in editing) */}
-                              {isEditing && (
-                                <td className="px-4 py-3 text-center">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => removeRow(rowId)}
-                                    disabled={isSaving}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </td>
-                              )}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                </div>
-              );
-            })()}
-          </div>
+                            );
+                          })}
+                          {/* Colonna Fuel Surcharge */}
+                          <td className="px-4 py-3 text-center bg-yellow-50">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={rowData.fuelSurcharge}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || 0;
+                                  updateMatrixFuelSurcharge(rowId, value);
+                                }}
+                                className="w-20 text-center"
+                                disabled={isSaving}
+                              />
+                            ) : (
+                              <span className="font-semibold text-gray-900">
+                                {rowData.fuelSurcharge > 0
+                                  ? `${rowData.fuelSurcharge}%`
+                                  : "-"}
+                              </span>
+                            )}
+                          </td>
+                          {/* Colonna Azioni (solo in editing) */}
+                          {isEditing && (
+                            <td className="px-4 py-3 text-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeRow(rowId)}
+                                disabled={isSaving}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Note e Info Aggiuntive */}
         {priceList.notes && (
