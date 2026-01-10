@@ -12,6 +12,23 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
   },
   
+  // ⚡ BUILD OPTIMIZATION: Esclude dipendenze pesanti dal bundle client via webpack
+  // Queste librerie sono usate solo server-side e non devono essere incluse nel bundle client
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Escludi pacchetti pesanti dal bundle client (solo server-side)
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'puppeteer': false,              // Browser automation (solo server-side)
+        'tesseract.js': false,           // OCR (solo server-side, client usa dynamic import)
+        '@google-cloud/vision': false,   // Google Vision API (solo server-side)
+        'imap': false,                   // Email client (solo server-side)
+        'cheerio': false                 // HTML parsing (solo server-side)
+      };
+    }
+    return config;
+  },
+  
   // Configurazione immagini (se necessario in futuro)
   images: {
     formats: ['image/avif', 'image/webp'],
