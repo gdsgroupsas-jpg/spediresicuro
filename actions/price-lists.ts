@@ -1034,13 +1034,16 @@ export async function assignPriceListToUserViaTableAction(
       };
     }
 
-    // Usa la funzione DB assign_price_list
+    // ✨ FIX: Passa p_caller_id per supportare service_role
+    // La funzione PostgreSQL usa auth.uid() che è NULL con service_role,
+    // quindi passiamo esplicitamente l'ID del chiamante
     const { data: assignmentId, error } = await supabaseAdmin.rpc(
       "assign_price_list",
       {
         p_price_list_id: input.price_list_id,
         p_user_id: input.user_id,
         p_notes: input.notes || null,
+        p_caller_id: user.id,  // ✨ Passa ID utente corrente per service_role
       }
     );
 
