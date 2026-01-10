@@ -12,9 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 // Usa input checkbox nativo invece di componente UI
-import { syncIncrementalPriceListEntries } from '@/actions/sync-incremental-entries';
+import { syncIncrementalPriceListEntries, getExistingZonesForPriceListAction } from '@/actions/sync-incremental-entries';
 import { PRICING_MATRIX, getZonesForMode } from '@/lib/constants/pricing-matrix';
-import { supabase } from '@/lib/db/client';
 import { toast } from 'sonner';
 import type { PriceList } from '@/types/listini';
 
@@ -59,15 +58,16 @@ export function SyncIncrementalDialog({
   const loadMissingZones = async () => {
     setIsLoadingZones(true);
     try {
-      // Recupera zone esistenti nel listino
-      const { data: existingEntries } = await supabase
-        .from('price_list_entries')
-        .select('zone_code')
-        .eq('price_list_id', priceList.id);
+      // Recupera zone esistenti nel listino (tramite server action per evitare errori 401)
+      const result = await getExistingZonesForPriceListAction(priceList.id);
+      
+      if (!result.success) {
+        toast.error(result.error || 'Errore recupero zone esistenti');
+        setIsLoadingZones(false);
+        return;
+      }
 
-      const existingZones = new Set(
-        (existingEntries || []).map((e) => e.zone_code).filter((z) => z)
-      );
+      const existingZones = new Set(result.zones || []);
 
       // Ottieni tutte le zone per la modalità selezionata
       const allZones = getZonesForMode(mode);
@@ -116,8 +116,25 @@ export function SyncIncrementalDialog({
     setSyncResults([]);
 
     try {
+      // Validazione metadata (già validata in UI, ma doppio check per sicurezza)
       const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
       const configId = metadata.courier_config_id;
+      const carrierCode = metadata.carrier_code;
+      const contractCode = metadata.contract_code;
+
+      if (!configId || !carrierCode || !contractCode) {
+        toast.error(
+          `Metadata incompleti: mancano ${[
+            !configId && 'configId',
+            !carrierCode && 'carrierCode',
+            !contractCode && 'contractCode',
+          ]
+            .filter(Boolean)
+            .join(', ')}. Configura il listino prima di sincronizzare.`
+        );
+        setIsSyncing(false);
+        return;
+      }
 
       const result = await syncIncrementalPriceListEntries({
         priceListId: priceList.id,
@@ -162,6 +179,18 @@ export function SyncIncrementalDialog({
   const missingZonesCount = zones.filter((z) => z.isMissing).length;
   const selectedZonesCount = zones.filter((z) => z.selected).length;
 
+  // Valida metadata prima di permettere la sync
+  const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+  const configId = metadata.courier_config_id;
+  const carrierCode = metadata.carrier_code;
+  const contractCode = metadata.contract_code;
+  
+  const hasCompleteMetadata = !!(configId && carrierCode && contractCode);
+  const missingMetadataFields = [];
+  if (!configId) missingMetadataFields.push('configId (courier_config_id)');
+  if (!carrierCode) missingMetadataFields.push('carrierCode');
+  if (!contractCode) missingMetadataFields.push('contractCode');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -173,6 +202,30 @@ export function SyncIncrementalDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* ⚠️ Avviso metadata incompleti */}
+          {!hasCompleteMetadata && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-red-900 mb-1">
+                    Metadata Incompleti
+                  </h4>
+                  <p className="text-sm text-red-700 mb-2">
+                    Il listino non ha metadata completi. Per sincronizzare è necessario configurare:
+                  </p>
+                  <ul className="text-sm text-red-700 list-disc list-inside mb-3">
+                    {missingMetadataFields.map((field) => (
+                      <li key={field}>{field}</li>
+                    ))}
+                  </ul>
+                  <p className="text-sm text-red-600">
+                    Vai su <strong>&quot;Configurazione&quot;</strong> per completare i metadata del listino.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Modalità */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -339,9 +392,15 @@ export function SyncIncrementalDialog({
                 isSyncing ||
                 isLoadingZones ||
                 selectedZonesCount === 0 ||
-                missingZonesCount === 0
+                missingZonesCount === 0 ||
+                !hasCompleteMetadata
               }
               className="gap-2"
+              title={
+                !hasCompleteMetadata
+                  ? `Metadata incompleti: ${missingMetadataFields.join(', ')}`
+                  : undefined
+              }
             >
               {isSyncing ? (
                 <>

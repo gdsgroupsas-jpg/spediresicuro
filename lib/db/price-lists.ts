@@ -58,7 +58,7 @@ export async function updatePriceList(
     .update({
       ...data,
       updated_at: new Date().toISOString(),
-      updated_by: userId,
+      // Nota: updated_by non esiste nella tabella, solo created_by
     })
     .eq("id", id)
     .select()

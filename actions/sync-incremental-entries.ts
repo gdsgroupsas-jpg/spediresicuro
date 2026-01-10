@@ -355,3 +355,46 @@ export async function syncIncrementalPriceListEntries(
     };
   }
 }
+
+/**
+ * Recupera le zone esistenti per un listino
+ * 
+ * ⚠️ SERVER ACTION: Sostituisce query diretta a Supabase dal client
+ * per evitare errori 401 (supabase client non autenticato)
+ * 
+ * @param priceListId - ID del listino
+ * @returns Set di zone_code esistenti
+ */
+export async function getExistingZonesForPriceListAction(
+  priceListId: string
+): Promise<{
+  success: boolean;
+  zones?: string[];
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return { success: false, error: "Non autenticato" };
+    }
+
+    const { data: existingEntries, error } = await supabaseAdmin
+      .from("price_list_entries")
+      .select("zone_code")
+      .eq("price_list_id", priceListId);
+
+    if (error) {
+      console.error("Errore recupero zone esistenti:", error);
+      return { success: false, error: error.message };
+    }
+
+    const zones = (existingEntries || [])
+      .map((e) => e.zone_code)
+      .filter((z): z is string => z !== null && z !== undefined);
+
+    return { success: true, zones };
+  } catch (error: any) {
+    console.error("Errore getExistingZonesForPriceListAction:", error);
+    return { success: false, error: error.message || "Errore sconosciuto" };
+  }
+}

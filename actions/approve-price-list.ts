@@ -1,9 +1,9 @@
 /**
  * Server Action: Approvazione Listino Fornitore
  * 
- * ✨ FASE 5: Valida completezza listino e cambia status da draft → active
- * - Verifica che tutte le zone abbiano entries
- * - Verifica che tutte le entries abbiano prezzi > 0
+ * ✨ FASE 5: Cambia status da draft → active
+ * - Non richiede completezza: l'utente può approvare anche con zone mancanti o prezzi zero
+ * - L'utente può sempre modificare il listino dopo l'approvazione
  * - Cambia status da "draft" a "active"
  */
 
@@ -86,59 +86,42 @@ export async function approvePriceListAction(
       };
     }
 
-    // ✨ VALIDAZIONE COMPLETEZZA: Verifica che tutte le zone abbiano entries
+    // ✨ VALIDAZIONE COMPLETEZZA: RIMOSSA
+    // L'utente può approvare anche con zone mancanti o prezzi zero
+    // e può sempre modificare dopo l'approvazione
+    // Recupera entries solo per statistiche (opzionale)
     const { data: entries, error: entriesError } = await supabaseAdmin
       .from("price_list_entries")
       .select("zone_code, base_price")
       .eq("price_list_id", priceListId);
 
-    if (entriesError) {
-      return {
-        success: false,
-        error: `Errore recupero entries: ${entriesError.message}`,
-      };
-    }
+    // Calcola statistiche per info (non bloccanti)
+    let validation = {
+      totalZones: 0,
+      zonesWithEntries: 0,
+      missingZones: [] as string[],
+      entriesWithZeroPrice: 0,
+    };
 
-    // Ottieni zone attese per la modalità
-    const expectedZones = getZonesForMode(mode);
-    const zonesWithEntries = new Set(
-      (entries || []).map((e) => e.zone_code).filter((z) => z)
-    );
+    if (!entriesError && entries) {
+      const expectedZones = getZonesForMode(mode);
+      const zonesWithEntries = new Set(
+        entries.map((e) => e.zone_code).filter((z) => z)
+      );
 
-    // Trova zone mancanti
-    const missingZones = expectedZones
-      .filter((z) => !zonesWithEntries.has(z.code))
-      .map((z) => z.name);
+      const missingZones = expectedZones
+        .filter((z) => !zonesWithEntries.has(z.code))
+        .map((z) => z.name);
 
-    // Verifica entries con prezzo zero
-    const entriesWithZeroPrice = (entries || []).filter(
-      (e) => !e.base_price || e.base_price <= 0
-    ).length;
+      const entriesWithZeroPrice = entries.filter(
+        (e) => !e.base_price || e.base_price <= 0
+      ).length;
 
-    // Validazione
-    if (missingZones.length > 0) {
-      return {
-        success: false,
-        error: `Zone mancanti: ${missingZones.join(", ")}. Completa tutte le zone prima di approvare.`,
-        validation: {
-          totalZones: expectedZones.length,
-          zonesWithEntries: zonesWithEntries.size,
-          missingZones,
-          entriesWithZeroPrice,
-        },
-      };
-    }
-
-    if (entriesWithZeroPrice > 0) {
-      return {
-        success: false,
-        error: `${entriesWithZeroPrice} entries hanno prezzo zero. Completa tutti i prezzi prima di approvare.`,
-        validation: {
-          totalZones: expectedZones.length,
-          zonesWithEntries: zonesWithEntries.size,
-          missingZones: [],
-          entriesWithZeroPrice,
-        },
+      validation = {
+        totalZones: expectedZones.length,
+        zonesWithEntries: zonesWithEntries.size,
+        missingZones,
+        entriesWithZeroPrice,
       };
     }
 
@@ -151,12 +134,7 @@ export async function approvePriceListAction(
 
     return {
       success: true,
-      validation: {
-        totalZones: expectedZones.length,
-        zonesWithEntries: zonesWithEntries.size,
-        missingZones: [],
-        entriesWithZeroPrice: 0,
-      },
+      validation,
     };
   } catch (error: any) {
     console.error("Errore approvePriceListAction:", error);
