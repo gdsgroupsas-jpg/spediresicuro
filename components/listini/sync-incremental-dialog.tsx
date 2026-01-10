@@ -1,21 +1,36 @@
 /**
  * Dialog per sincronizzazione incrementale zone mancanti
- * 
+ *
  * ✨ FASE 4: Permette sincronizzare solo zone mancanti con atomic commit
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { RefreshCw, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 // Usa input checkbox nativo invece di componente UI
-import { syncIncrementalPriceListEntries, getExistingZonesForPriceListAction } from '@/actions/sync-incremental-entries';
-import { PRICING_MATRIX, getZonesForMode } from '@/lib/constants/pricing-matrix';
-import { toast } from 'sonner';
-import type { PriceList } from '@/types/listini';
+import {
+  getExistingZonesForPriceListAction,
+  syncIncrementalPriceListEntries,
+} from "@/actions/sync-incremental-entries";
+import { getZonesForMode } from "@/lib/constants/pricing-matrix";
+import type { PriceList } from "@/types/listini";
+import { toast } from "sonner";
 
 interface SyncIncrementalDialogProps {
   open: boolean;
@@ -46,23 +61,16 @@ export function SyncIncrementalDialog({
     currentZone: string;
   } | null>(null);
   const [syncResults, setSyncResults] = useState<any[]>([]);
-  const [mode, setMode] = useState<'fast' | 'balanced' | 'matrix'>('balanced');
+  const [mode, setMode] = useState<"fast" | "balanced" | "matrix">("balanced");
 
-  // Carica zone mancanti
-  useEffect(() => {
-    if (open && priceList.id) {
-      loadMissingZones();
-    }
-  }, [open, priceList.id]);
-
-  const loadMissingZones = async () => {
+  const loadMissingZones = useCallback(async () => {
     setIsLoadingZones(true);
     try {
       // Recupera zone esistenti nel listino (tramite server action per evitare errori 401)
       const result = await getExistingZonesForPriceListAction(priceList.id);
-      
+
       if (!result.success) {
-        toast.error(result.error || 'Errore recupero zone esistenti');
+        toast.error(result.error || "Errore recupero zone esistenti");
         setIsLoadingZones(false);
         return;
       }
@@ -82,12 +90,19 @@ export function SyncIncrementalDialog({
 
       setZones(zonesList);
     } catch (error: any) {
-      console.error('Errore caricamento zone:', error);
-      toast.error('Errore caricamento zone mancanti');
+      console.error("Errore caricamento zone:", error);
+      toast.error("Errore caricamento zone mancanti");
     } finally {
       setIsLoadingZones(false);
     }
-  };
+  }, [priceList.id, mode]);
+
+  // Carica zone mancanti
+  useEffect(() => {
+    if (open && priceList.id) {
+      loadMissingZones();
+    }
+  }, [open, priceList.id, loadMissingZones]);
 
   // Toggle selezione zona
   const toggleZone = (zoneCode: string) => {
@@ -103,7 +118,7 @@ export function SyncIncrementalDialog({
     const selectedZones = zones.filter((z) => z.selected).map((z) => z.code);
 
     if (selectedZones.length === 0) {
-      toast.error('Seleziona almeno una zona da sincronizzare');
+      toast.error("Seleziona almeno una zona da sincronizzare");
       return;
     }
 
@@ -111,13 +126,15 @@ export function SyncIncrementalDialog({
     setSyncProgress({
       current: 0,
       total: selectedZones.length,
-      currentZone: '',
+      currentZone: "",
     });
     setSyncResults([]);
 
     try {
       // Validazione metadata (già validata in UI, ma doppio check per sicurezza)
-      const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+      const metadata = (priceList.metadata ||
+        priceList.source_metadata ||
+        {}) as any;
       const configId = metadata.courier_config_id;
       const carrierCode = metadata.carrier_code;
       const contractCode = metadata.contract_code;
@@ -125,12 +142,12 @@ export function SyncIncrementalDialog({
       if (!configId || !carrierCode || !contractCode) {
         toast.error(
           `Metadata incompleti: mancano ${[
-            !configId && 'configId',
-            !carrierCode && 'carrierCode',
-            !contractCode && 'contractCode',
+            !configId && "configId",
+            !carrierCode && "carrierCode",
+            !contractCode && "contractCode",
           ]
             .filter(Boolean)
-            .join(', ')}. Configura il listino prima di sincronizzare.`
+            .join(", ")}. Configura il listino prima di sincronizzare.`
         );
         setIsSyncing(false);
         return;
@@ -168,7 +185,7 @@ export function SyncIncrementalDialog({
         onOpenChange(false);
       }, 2000);
     } catch (error: any) {
-      console.error('Errore sincronizzazione incrementale:', error);
+      console.error("Errore sincronizzazione incrementale:", error);
       toast.error(`Errore durante la sincronizzazione: ${error.message}`);
     } finally {
       setIsSyncing(false);
@@ -180,16 +197,18 @@ export function SyncIncrementalDialog({
   const selectedZonesCount = zones.filter((z) => z.selected).length;
 
   // Valida metadata prima di permettere la sync
-  const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
+  const metadata = (priceList.metadata ||
+    priceList.source_metadata ||
+    {}) as any;
   const configId = metadata.courier_config_id;
   const carrierCode = metadata.carrier_code;
   const contractCode = metadata.contract_code;
-  
+
   const hasCompleteMetadata = !!(configId && carrierCode && contractCode);
   const missingMetadataFields = [];
-  if (!configId) missingMetadataFields.push('configId (courier_config_id)');
-  if (!carrierCode) missingMetadataFields.push('carrierCode');
-  if (!contractCode) missingMetadataFields.push('contractCode');
+  if (!configId) missingMetadataFields.push("configId (courier_config_id)");
+  if (!carrierCode) missingMetadataFields.push("carrierCode");
+  if (!contractCode) missingMetadataFields.push("contractCode");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -197,7 +216,8 @@ export function SyncIncrementalDialog({
         <DialogHeader>
           <DialogTitle>Sincronizzazione Incrementale Zone</DialogTitle>
           <DialogDescription>
-            Sincronizza solo le zone mancanti nel listino. Ogni zona viene sincronizzata atomicamente (all or nothing).
+            Sincronizza solo le zone mancanti nel listino. Ogni zona viene
+            sincronizzata atomicamente (all or nothing).
           </DialogDescription>
         </DialogHeader>
 
@@ -212,7 +232,8 @@ export function SyncIncrementalDialog({
                     Metadata Incompleti
                   </h4>
                   <p className="text-sm text-red-700 mb-2">
-                    Il listino non ha metadata completi. Per sincronizzare è necessario configurare:
+                    Il listino non ha metadata completi. Per sincronizzare è
+                    necessario configurare:
                   </p>
                   <ul className="text-sm text-red-700 list-disc list-inside mb-3">
                     {missingMetadataFields.map((field) => (
@@ -220,7 +241,8 @@ export function SyncIncrementalDialog({
                     ))}
                   </ul>
                   <p className="text-sm text-red-600">
-                    Vai su <strong>&quot;Configurazione&quot;</strong> per completare i metadata del listino.
+                    Vai su <strong>&quot;Configurazione&quot;</strong> per
+                    completare i metadata del listino.
                   </p>
                 </div>
               </div>
@@ -319,14 +341,16 @@ export function SyncIncrementalDialog({
                 </span>
               </div>
               <div className="text-sm text-blue-700">
-                Zona {syncProgress.current} di {syncProgress.total}:{' '}
+                Zona {syncProgress.current} di {syncProgress.total}:{" "}
                 {syncProgress.currentZone}
               </div>
               <div className="mt-2 w-full bg-blue-200 rounded-full h-2">
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all"
                   style={{
-                    width: `${(syncProgress.current / syncProgress.total) * 100}%`,
+                    width: `${
+                      (syncProgress.current / syncProgress.total) * 100
+                    }%`,
                   }}
                 />
               </div>
@@ -336,15 +360,17 @@ export function SyncIncrementalDialog({
           {/* Risultati */}
           {syncResults.length > 0 && (
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">Risultati Sincronizzazione</h4>
+              <h4 className="font-medium text-gray-900 mb-3">
+                Risultati Sincronizzazione
+              </h4>
               <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-4">
                 {syncResults.map((result, idx) => (
                   <div
                     key={idx}
                     className={`flex items-center justify-between p-2 rounded ${
                       result.success
-                        ? 'bg-green-50 border border-green-200'
-                        : 'bg-red-50 border border-red-200'
+                        ? "bg-green-50 border border-green-200"
+                        : "bg-red-50 border border-red-200"
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -354,8 +380,12 @@ export function SyncIncrementalDialog({
                         <XCircle className="w-4 h-4 text-red-600" />
                       )}
                       <div>
-                        <div className="text-sm font-medium">{result.zoneName}</div>
-                        <div className="text-xs text-gray-500">{result.zone}</div>
+                        <div className="text-sm font-medium">
+                          {result.zoneName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {result.zone}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -365,7 +395,7 @@ export function SyncIncrementalDialog({
                         </div>
                       ) : (
                         <div className="text-sm text-red-700">
-                          {result.error || 'Errore'}
+                          {result.error || "Errore"}
                         </div>
                       )}
                     </div>
@@ -398,7 +428,7 @@ export function SyncIncrementalDialog({
               className="gap-2"
               title={
                 !hasCompleteMetadata
-                  ? `Metadata incompleti: ${missingMetadataFields.join(', ')}`
+                  ? `Metadata incompleti: ${missingMetadataFields.join(", ")}`
                   : undefined
               }
             >
