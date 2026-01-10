@@ -1517,3 +1517,49 @@ export async function listUsersForAssignmentAction(): Promise<{
     return { success: false, error: error.message || "Errore sconosciuto" };
   }
 }
+
+/**
+ * Recupera corrieri disponibili per l'utente corrente
+ * 
+ * ⚠️ SERVER ACTION: Sostituisce chiamata diretta a getAvailableCouriersForUser
+ * che causava errori 401 quando eseguita lato client (supabaseAdmin non disponibile)
+ * 
+ * @returns Lista corrieri disponibili con info contratto
+ */
+export async function getAvailableCouriersForUserAction(): Promise<{
+  success: boolean;
+  couriers?: Array<{
+    courierId: string;
+    courierName: string;
+    providerId: string;
+    contractCode: string;
+  }>;
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return { success: false, error: "Non autenticato" };
+    }
+
+    // Recupera user ID
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("email", session.user.email)
+      .single();
+
+    if (!user) {
+      return { success: false, error: "Utente non trovato" };
+    }
+
+    // Import dinamico per evitare problemi di bundling
+    const { getAvailableCouriersForUser } = await import("@/lib/db/price-lists");
+    const couriers = await getAvailableCouriersForUser(user.id);
+
+    return { success: true, couriers };
+  } catch (error: any) {
+    console.error("Errore getAvailableCouriersForUserAction:", error);
+    return { success: false, error: error.message || "Errore sconosciuto" };
+  }
+}
