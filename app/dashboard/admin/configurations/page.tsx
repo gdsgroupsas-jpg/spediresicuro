@@ -37,6 +37,7 @@ import {
   type CourierConfig,
   type CourierConfigInput,
 } from '@/actions/configurations';
+import { toggleAutomation } from '@/actions/automation';
 
 // Provider disponibili
 const AVAILABLE_PROVIDERS = [
@@ -199,6 +200,22 @@ export default function ConfigurationsPage() {
     } catch (error: any) {
       console.error('Errore test credenziali:', error);
       alert('Errore durante test credenziali');
+    }
+  }
+
+  // ✨ NUOVO: Toggle Auto-Sync (automation_enabled)
+  async function handleToggleAutoSync(configId: string, currentStatus: boolean) {
+    try {
+      const result = await toggleAutomation(configId, !currentStatus);
+      
+      if (result.success) {
+        await loadConfigurations(); // Refresh per aggiornare stato
+      } else {
+        alert(`❌ Errore: ${result.error || 'Impossibile aggiornare auto-sync'}`);
+      }
+    } catch (error: any) {
+      console.error('Errore toggle auto-sync:', error);
+      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
     }
   }
 
@@ -484,6 +501,16 @@ export default function ConfigurationsPage() {
                             Inattiva
                           </span>
                         )}
+                        {/* ✨ NUOVO: Badge Auto-Sync */}
+                        {(config as any).automation_enabled !== undefined && (
+                          <span className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 ${
+                            (config as any).automation_enabled
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {(config as any).automation_enabled ? '🔄 Auto-Sync ON' : '⏸️ Auto-Sync OFF'}
+                          </span>
+                        )}
                         {/* Integration Hub: Status Badge */}
                         {(config as any).status && (config as any).status !== 'active' && (
                           <span className={`px-2 py-1 text-xs font-medium rounded ${
@@ -542,6 +569,20 @@ export default function ConfigurationsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
+                      {/* ✨ NUOVO: Toggle Auto-Sync */}
+                      {(config as any).automation_enabled !== undefined && (
+                        <button
+                          onClick={() => handleToggleAutoSync(config.id, (config as any).automation_enabled)}
+                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1 ${
+                            (config as any).automation_enabled
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title={(config as any).automation_enabled ? 'Disattiva Auto-Sync' : 'Attiva Auto-Sync'}
+                        >
+                          {(config as any).automation_enabled ? '🔄 ON' : '⏸️ OFF'}
+                        </button>
+                      )}
                       {/* Integration Hub: Test Credentials Button */}
                       <button
                         onClick={() => handleTestCredentials(config.id)}
