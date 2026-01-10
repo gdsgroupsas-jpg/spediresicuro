@@ -64,6 +64,27 @@ export async function autoSyncPriceListsAfterConfig(
       return { success: false, error: "Non autorizzato" };
     }
 
+    // ✨ FIX: Verifica se automation_enabled è attivo per questa configurazione
+    if (configId) {
+      const { data: config } = await supabaseAdmin
+        .from("courier_configs")
+        .select("automation_enabled")
+        .eq("id", configId)
+        .single();
+
+      if (config && config.automation_enabled === false) {
+        console.log(
+          `⏭️ [AUTO-SYNC] Sincronizzazione automatica DISABILITATA per config ${configId.substring(0, 8)}...`
+        );
+        return {
+          success: true,
+          priceListsCreated: 0,
+          priceListsUpdated: 0,
+          error: undefined,
+        };
+      }
+    }
+
     // Sincronizza in base al provider
     switch (providerId) {
       case "spedisci_online":

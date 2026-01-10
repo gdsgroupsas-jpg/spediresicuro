@@ -860,9 +860,42 @@ export function IntelligentQuoteComparator({
             }
           }
 
-          // 5. ❌ FALLBACK COMPLETAMENTE DISABILITATO
-          // Ogni contractCode deve avere il suo rate specifico, altrimenti non mostrarlo
-          // NO fallback per evitare bug multi-contratto
+          // 5. ✨ FALLBACK INTELLIGENTE: Solo per contractCode "default" o placeholder
+          // Se contractCode è "default" o un placeholder generico, usa il primo rate disponibile per quel corriere
+          // Questo risolve il problema quando il DB ha "default" ma l'API restituisce codici specifici
+          if (ratesForContract.length === 0 && ratesForCourier.length > 0) {
+            const isDefaultOrPlaceholder = 
+              contractCode.toLowerCase() === "default" ||
+              contractCode.toLowerCase().includes("replace_with") ||
+              contractCode.toLowerCase().includes("placeholder") ||
+              contractCode.trim() === "" ||
+              contractCode === "REPLACE_WITH_CONTRACT_CODE";
+            
+            if (isDefaultOrPlaceholder) {
+              // Usa il primo rate disponibile per questo corriere (escludi internazionali se destinazione italiana)
+              const availableRates = isItalianDestination
+                ? ratesForCourier.filter((r: any) => {
+                    const rateCode = (r.contractCode || "").toLowerCase();
+                    return !internationalKeywords.some((keyword) =>
+                      rateCode.includes(keyword)
+                    );
+                  })
+                : ratesForCourier;
+              
+              if (availableRates.length > 0) {
+                // Prendi il rate più economico come fallback intelligente
+                ratesForContract = [availableRates.sort((a: any, b: any) => 
+                  parseFloat(a.total_price || "0") - parseFloat(b.total_price || "0")
+                )[0]];
+                
+                console.log(
+                  `🔄 [QUOTE COMPARATOR] Fallback intelligente per ${courier.displayName}:`,
+                  `contractCode "${contractCode}" non trovato, uso primo rate disponibile:`,
+                  `${ratesForContract[0].carrierCode}::${ratesForContract[0].contractCode} (€${ratesForContract[0].total_price})`
+                );
+              }
+            }
+          }
 
           // ✨ DEBUG: Log matching per questo contratto
           if (ratesForContract.length > 0) {
