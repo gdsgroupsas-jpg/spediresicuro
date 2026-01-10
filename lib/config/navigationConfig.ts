@@ -249,6 +249,13 @@ const resellerSection: NavSection = {
       description: 'Gestisci clienti, listini e wallet',
     },
     {
+      id: 'reseller-preventivo',
+      label: 'Preventivatore',
+      href: '/dashboard/reseller/preventivo',
+      icon: Calculator,
+      description: 'Calcola preventivi basati sulla matrice del listino',
+    },
+    {
       id: 'reseller-listini-fornitore',
       label: 'Listini Fornitore',
       href: '/dashboard/reseller/listini-fornitore',
@@ -477,6 +484,13 @@ const byocSection: NavSection = {
       href: '/dashboard/byoc/listini-fornitore',
       icon: Package,
       description: 'Gestisci i tuoi listini fornitore',
+    },
+    {
+      id: 'byoc-preventivo',
+      label: 'Preventivatore',
+      href: '/dashboard/reseller/preventivo',
+      icon: Calculator,
+      description: 'Calcola preventivi basati sulla matrice del listino',
     },
   ],
 };

@@ -8,6 +8,7 @@
 
 import {
   deletePriceListAction,
+  getAvailableCouriersForUserAction,
   listSupplierPriceListsAction,
 } from "@/actions/price-lists";
 import DashboardNav from "@/components/dashboard-nav";
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { getAvailableCouriersForUser } from "@/lib/db/price-lists";
 import type { PriceList } from "@/types/listini";
 import { Package, Plus, RefreshCw, Search } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -82,14 +82,16 @@ export default function ResellerListiniFornitorePage() {
               userData.account_type === "admin"
           );
 
-          // Carica corrieri disponibili
-          const couriers = await getAvailableCouriersForUser(userData.id);
-          setAvailableCouriers(
-            couriers.map((c) => ({
-              courierId: c.courierId,
-              courierName: c.courierName,
-            }))
-          );
+          // Carica corrieri disponibili (tramite server action per evitare errori 401)
+          const couriersResult = await getAvailableCouriersForUserAction();
+          if (couriersResult.success && couriersResult.couriers) {
+            setAvailableCouriers(
+              couriersResult.couriers.map((c) => ({
+                courierId: c.courierId,
+                courierName: c.courierName,
+              }))
+            );
+          }
 
           // Carica listini
           await loadPriceLists();

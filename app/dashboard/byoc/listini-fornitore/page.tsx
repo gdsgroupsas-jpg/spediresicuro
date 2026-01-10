@@ -21,8 +21,8 @@ import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-pri
 import {
   listSupplierPriceListsAction,
   deletePriceListAction,
+  getAvailableCouriersForUserAction,
 } from '@/actions/price-lists';
-import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
 import { toast } from 'sonner';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 import type { PriceList } from '@/types/listini';
@@ -62,12 +62,14 @@ export default function ByocListiniFornitorePage() {
             return;
           }
 
-          // Carica corrieri disponibili
-          const couriers = await getAvailableCouriersForUser(userData.id);
-          setAvailableCouriers(couriers.map(c => ({
-            courierId: c.courierId,
-            courierName: c.courierName,
-          })));
+          // Carica corrieri disponibili (tramite server action per evitare errori 401)
+          const couriersResult = await getAvailableCouriersForUserAction();
+          if (couriersResult.success && couriersResult.couriers) {
+            setAvailableCouriers(couriersResult.couriers.map(c => ({
+              courierId: c.courierId,
+              courierName: c.courierName,
+            })));
+          }
 
           // Carica listini
           await loadPriceLists();
