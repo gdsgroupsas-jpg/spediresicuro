@@ -7,6 +7,17 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
+
+# File di output e report generati
+discovery_output.txt
+discovery_report.txt
+lint_report.txt
+lint_full_report.txt
+logs_result*.json
+price_dump.txt
+REPORT_STORICO_COMMIT.md
 
 # next.js
 /.next/
