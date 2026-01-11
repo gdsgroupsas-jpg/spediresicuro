@@ -279,9 +279,16 @@ export default function NuovaSpedizionePage() {
     "reseller" | "master" | "default" | undefined
   >(undefined);
   // ✨ ENTERPRISE: ConfigId della configurazione API selezionata (per multi-config)
-  const [selectedConfigId, setSelectedConfigId] = useState<
-    string | undefined
-  >(undefined);
+  const [selectedConfigId, setSelectedConfigId] = useState<string | undefined>(
+    undefined
+  );
+
+  // ✨ ENTERPRISE: Quote selezionato con prezzo esatto (per routing)
+  const [selectedQuoteExactPrice, setSelectedQuoteExactPrice] = useState<{
+    courierName: string;
+    price: number;
+    contractCode?: string;
+  } | null>(null);
 
   // Corrieri disponibili caricati dinamicamente dal DB
   const [availableCouriers, setAvailableCouriers] = useState<
@@ -293,6 +300,8 @@ export default function NuovaSpedizionePage() {
   const [courierQuotes, setCourierQuotes] = useState<Map<string, any>>(
     new Map()
   );
+
+  // ✨ RIMOSSA: validQuotesFromComparator non più usato (sezione routing rimossa)
 
   // ✨ FIX: Counter per forzare re-mount del preventivatore dopo reset form
   const [formResetCounter, setFormResetCounter] = useState(0);
@@ -402,6 +411,18 @@ export default function NuovaSpedizionePage() {
     }
     loadAvailableCouriers();
   }, []);
+
+  // ✨ ENTERPRISE: Reset prezzo esatto quando cambiano i dati critici (peso, destinazione)
+  useEffect(() => {
+    // Reset quando peso o destinazione cambiano o vengono rimossi
+    if (
+      !formData.peso ||
+      parseFloat(formData.peso) <= 0 ||
+      !formData.destinatarioCap
+    ) {
+      setSelectedQuoteExactPrice(null);
+    }
+  }, [formData.peso, formData.destinatarioCap]);
 
   // Carica mittente predefinito all'avvio
   useEffect(() => {
@@ -1085,6 +1106,7 @@ export default function NuovaSpedizionePage() {
         setFormResetCounter((prev) => prev + 1);
         setCourierQuotes(new Map()); // Reset anche le quote salvate
         setSelectedConfigId(undefined); // ✨ ENTERPRISE: Reset configId per nuova spedizione
+        setSelectedQuoteExactPrice(null); // ✨ ENTERPRISE: Reset prezzo esatto
 
         // ✨ ENTERPRISE: Ricarica corrieri disponibili dopo reset form
         // Questo assicura che se i corrieri sono cambiati (es. dopo configurazione),
@@ -1694,6 +1716,30 @@ export default function NuovaSpedizionePage() {
                             next.set(`${courierName}::${contractCode}`, quote);
                             return next;
                           });
+
+                          // ✨ ENTERPRISE: Se questo è il corriere selezionato, aggiorna il prezzo esatto
+                          if (
+                            formData.corriere === courierName &&
+                            quote &&
+                            quote.rates &&
+                            quote.rates.length > 0
+                          ) {
+                            const bestRate = quote.rates[0];
+                            const exactPrice = parseFloat(
+                              bestRate.total_price || "0"
+                            );
+                            setSelectedQuoteExactPrice((prev) => {
+                              if (prev && prev.courierName === courierName) {
+                                return { ...prev, price: exactPrice };
+                              }
+                              // Se non c'è ancora un quote selezionato, crealo
+                              return {
+                                courierName,
+                                price: exactPrice,
+                                contractCode,
+                              };
+                            });
+                          }
                         }}
                         onContractSelected={(
                           courierName,
@@ -1719,6 +1765,34 @@ export default function NuovaSpedizionePage() {
                           }));
                           // ✨ ENTERPRISE: Salva configId per usarlo nella creazione spedizione
                           setSelectedConfigId(configId);
+
+                          // ✨ ENTERPRISE: Salva quote selezionato per mostrare costo esatto
+                          const selectedQuote = courierQuotes.get(
+                            `${courierName}::${contractCode}`
+                          );
+                          if (
+                            selectedQuote &&
+                            selectedQuote.rates &&
+                            selectedQuote.rates.length > 0
+                          ) {
+                            const bestRate = selectedQuote.rates[0];
+                            const exactPrice = parseFloat(
+                              bestRate.total_price || "0"
+                            );
+                            setSelectedQuoteExactPrice({
+                              courierName,
+                              price: exactPrice,
+                              contractCode,
+                            });
+                          } else {
+                            // Se non abbiamo ancora il quote, cerca nel preventivatore
+                            // Il prezzo verrà aggiornato quando il quote arriva
+                            setSelectedQuoteExactPrice({
+                              courierName,
+                              price: 0, // Placeholder, verrà aggiornato
+                              contractCode,
+                            });
+                          }
                         }}
                       />
                     ) : (
@@ -1763,44 +1837,26 @@ export default function NuovaSpedizionePage() {
                       />
                     )}
 
-                  {/* Cost Calculator */}
-                  <div className="pt-6 border-t border-gray-200">
-                    <div className="mb-4">
-                      <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
-                        Costo Stimato
-                      </p>
-                      <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-700">
-                        {formatPrice(estimatedCost)}
-                      </div>
-                      {formData.tipoSpedizione === "express" && (
-                        <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                          <Sparkles className="w-3 h-3" />
-                          Express Rate
-                        </div>
-                      )}
-                    </div>
+                  {/* ✨ RIMOSSA: Sezione Routing Corrieri - funzionalità già coperta dal preventivatore */}
 
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>Base</span>
-                        <span>{formatPrice(10)}</span>
+                  {/* ✨ COSTO ESATTO: Mostra solo quando viene selezionato un corriere (sostituisce placeholder) */}
+                  {formData.corriere &&
+                    selectedQuoteExactPrice &&
+                    selectedQuoteExactPrice.price > 0 && (
+                      <div className="pt-6 border-t border-gray-200">
+                        <div className="mb-4">
+                          <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
+                            Costo Esatto
+                          </p>
+                          <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF9500] to-[#E88500]">
+                            {formatPrice(selectedQuoteExactPrice.price)}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-2">
+                            Corriere: {selectedQuoteExactPrice.courierName}
+                          </div>
+                        </div>
                       </div>
-                      {formData.peso && (
-                        <div className="flex justify-between">
-                          <span>Peso ({formData.peso} kg)</span>
-                          <span>
-                            {formatPrice(parseFloat(formData.peso) * 2 || 0)}
-                          </span>
-                        </div>
-                      )}
-                      {formData.tipoSpedizione === "express" && (
-                        <div className="flex justify-between">
-                          <span>Express</span>
-                          <span>+50%</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    )}
 
                   {/* Action Area */}
                   <div className="pt-6 border-t border-gray-200 space-y-3">
@@ -1809,11 +1865,12 @@ export default function NuovaSpedizionePage() {
                       <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
                         <AlertCircle className="w-5 h-5 flex-shrink-0" />
                         <span>
-                          <strong>Seleziona un corriere</strong> dalla tabella preventivi per continuare
+                          <strong>Seleziona un corriere</strong> dalla tabella
+                          preventivi per continuare
                         </span>
                       </div>
                     )}
-                    
+
                     <form onSubmit={handleSubmit}>
                       <button
                         type="submit"
