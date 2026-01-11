@@ -6,6 +6,7 @@
  */
 
 import { supabaseAdmin } from './client'
+import { calculatePriceFromList } from '@/lib/pricing/calculator'
 import type { 
   PriceList, 
   PriceRule, 
@@ -202,7 +203,7 @@ export async function calculatePriceWithRules(
 
     if (matchingRules.length === 0) {
       // Nessuna regola matcha, usa margine di default
-      return calculateWithDefaultMargin(priceList, params)
+      return await calculateWithDefaultMargin(priceList, params)
     }
 
     // 4. Seleziona regola con priorità più alta
@@ -214,6 +215,63 @@ export async function calculatePriceWithRules(
     console.error('Errore calculatePriceWithRules:', error)
     return null
   }
+}
+
+/**
+ * Helper: Mappa provincia/regione a zona geografica
+ * Retrocompatibile: se non può determinare, ritorna null (regola viene comunque valutata)
+ */
+function getZoneFromDestination(
+  province?: string,
+  region?: string
+): string | null {
+  if (!province && !region) return null
+
+  // Mappatura province/regioni a zone (basata su PRICING_MATRIX)
+  const provinceToZone: Record<string, string> = {
+    // Sardegna
+    'CA': 'IT-SARDEGNA',
+    'NU': 'IT-SARDEGNA',
+    'OR': 'IT-SARDEGNA',
+    'SS': 'IT-SARDEGNA',
+    // Calabria
+    'RC': 'IT-CALABRIA',
+    'CZ': 'IT-CALABRIA',
+    'CS': 'IT-CALABRIA',
+    'KR': 'IT-CALABRIA',
+    'VV': 'IT-CALABRIA',
+    // Sicilia
+    'PA': 'IT-SICILIA',
+    'CT': 'IT-SICILIA',
+    'ME': 'IT-SICILIA',
+    'AG': 'IT-SICILIA',
+    'CL': 'IT-SICILIA',
+    'EN': 'IT-SICILIA',
+    'RG': 'IT-SICILIA',
+    'SR': 'IT-SICILIA',
+    'TP': 'IT-SICILIA',
+    // Livigno/Campione
+    'SO': 'IT-LIVIGNO', // Solo per Livigno specifico
+  }
+
+  const regionToZone: Record<string, string> = {
+    'Sardegna': 'IT-SARDEGNA',
+    'Calabria': 'IT-CALABRIA',
+    'Sicilia': 'IT-SICILIA',
+  }
+
+  // Prova prima con provincia
+  if (province && provinceToZone[province]) {
+    return provinceToZone[province]
+  }
+
+  // Poi con regione
+  if (region && regionToZone[region]) {
+    return regionToZone[region]
+  }
+
+  // Default: Italia standard (non escludere la regola)
+  return 'IT-ITALIA'
 }
 
 /**
@@ -266,7 +324,17 @@ function findMatchingRules(
 
     // Verifica zona geografica
     if (rule.zone_codes && rule.zone_codes.length > 0) {
-      // TODO: Implementare logica zone (richiede mapping ZIP -> zone)
+      const destinationZone = getZoneFromDestination(
+        params.destination.province,
+        params.destination.region
+      )
+      
+      // Se non può determinare la zona, la regola viene comunque valutata (retrocompatibilità)
+      // Solo se la zona è determinabile E non matcha, escludi la regola
+      if (destinationZone && !rule.zone_codes.includes(destinationZone)) {
+        return false
+      }
+      // Se destinationZone è null, la regola viene valutata (non esclusa)
     }
 
     // Verifica CAP
@@ -335,10 +403,27 @@ function calculatePriceWithRule(
   // Prezzo base
   let basePrice = rule.base_price_override || 0
 
-  // Se non c'è override, calcola da peso/volume (logica semplificata)
-  if (!rule.base_price_override) {
-    // TODO: Integrare con calcolo da price_list_entries legacy se necessario
-    basePrice = 10.0 // Default temporaneo
+  // Se non c'è override, calcola da price_list_entries (matrice) se disponibile
+  if (!rule.base_price_override && priceList.entries && priceList.entries.length > 0) {
+    const matrixResult = calculatePriceFromList(
+      priceList,
+      params.weight,
+      params.destination.zip || '',
+      params.serviceType || 'standard',
+      params.options,
+      params.destination.province,
+      params.destination.region
+    )
+    
+    if (matrixResult) {
+      basePrice = matrixResult.basePrice
+    } else {
+      // Se non trova entry nella matrice, usa default (retrocompatibilità)
+      basePrice = 10.0
+    }
+  } else if (!rule.base_price_override) {
+    // Nessuna matrice disponibile, usa default
+    basePrice = 10.0
   }
 
   // Calcola sovrapprezzi
@@ -409,7 +494,7 @@ function calculatePriceWithRule(
 /**
  * Calcola prezzo usando margine di default (nessuna regola matcha)
  */
-function calculateWithDefaultMargin(
+async function calculateWithDefaultMargin(
   priceList: PriceList,
   params: {
     weight: number
@@ -428,10 +513,107 @@ function calculateWithDefaultMargin(
       insurance?: boolean
     }
   }
-): PriceCalculationResult {
-  // Prezzo base (da calcolare o default)
-  const basePrice = 10.0 // TODO: Integrare con sistema legacy
-  const surcharges = 0
+): Promise<PriceCalculationResult> {
+  // ✨ FIX: Calcola prezzo base dalla matrice se disponibile
+  let basePrice = 10.0 // Default fallback
+  let surcharges = 0
+  let supplierBasePrice = 0 // ✨ NUOVO: Prezzo originale fornitore (se listino personalizzato modificato manualmente)
+  let supplierSurcharges = 0
+
+  // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
+  if (priceList.master_list_id && priceList.list_type === 'custom') {
+    try {
+      const { data: masterList } = await supabaseAdmin
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)')
+        .eq('id', priceList.master_list_id)
+        .single()
+
+      if (masterList && masterList.entries) {
+        const masterMatrixResult = calculatePriceFromList(
+          masterList as PriceList,
+          params.weight,
+          params.destination.zip || '',
+          params.serviceType || 'standard',
+          params.options,
+          params.destination.province,
+          params.destination.region
+        )
+
+        if (masterMatrixResult) {
+          supplierBasePrice = masterMatrixResult.basePrice
+          supplierSurcharges = masterMatrixResult.surcharges || 0
+          console.log(`✅ [PRICE CALC] Listino personalizzato: recuperato prezzo fornitore originale €${(supplierBasePrice + supplierSurcharges).toFixed(2)}`)
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️ [PRICE CALC] Errore recupero prezzo fornitore originale:`, error)
+    }
+  }
+
+  if (priceList.entries && priceList.entries.length > 0) {
+    const matrixResult = calculatePriceFromList(
+      priceList,
+      params.weight,
+      params.destination.zip || '',
+      params.serviceType || 'standard',
+      params.options,
+      params.destination.province,
+      params.destination.region
+    )
+    
+    if (matrixResult) {
+      basePrice = matrixResult.basePrice
+      surcharges = matrixResult.surcharges || 0
+      // totalCost dalla matrice include già basePrice + surcharges
+      const totalCost = basePrice + surcharges
+      
+      // ✨ ENTERPRISE: Se abbiamo il prezzo fornitore originale, significa che i prezzi sono stati modificati manualmente
+      // In questo caso, il prezzo nel listino personalizzato è già il prezzo finale (con margine incluso)
+      // Quindi NON applichiamo margini aggiuntivi
+      const supplierTotalCost = supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0
+      const isManuallyModified = supplierTotalCost > 0 && Math.abs(totalCost - supplierTotalCost) > 0.01
+      
+      let margin = 0
+      let finalPrice = totalCost
+      
+      if (isManuallyModified) {
+        // Prezzi modificati manualmente: il prezzo nel listino personalizzato è già il prezzo finale
+        // Il margine è la differenza tra prezzo personalizzato e prezzo fornitore originale
+        margin = totalCost - supplierTotalCost
+        finalPrice = totalCost // Non aggiungiamo margine, è già incluso
+        console.log(`✅ [PRICE CALC] Prezzi modificati manualmente: fornitore €${supplierTotalCost.toFixed(2)} → personalizzato €${totalCost.toFixed(2)} (margine €${margin.toFixed(2)})`)
+      } else {
+        // Prezzi non modificati: applica margine di default
+        if (priceList.default_margin_percent) {
+          margin = totalCost * (priceList.default_margin_percent / 100)
+        } else if (priceList.default_margin_fixed) {
+          margin = priceList.default_margin_fixed
+        }
+        finalPrice = totalCost + margin
+      }
+
+      return {
+        basePrice,
+        surcharges,
+        margin,
+        totalCost: isManuallyModified ? supplierTotalCost : totalCost, // ✨ Costo fornitore originale se modificato manualmente
+        finalPrice,
+        appliedPriceList: priceList,
+        priceListId: priceList.id,
+        calculationDetails: {
+          weight: params.weight,
+          volume: params.volume,
+          destination: params.destination,
+          courierId: params.courierId,
+          serviceType: params.serviceType,
+          options: params.options,
+        },
+      }
+    }
+  }
+
+  // Fallback: se non trova entry nella matrice, usa default
   const totalCost = basePrice + surcharges
 
   // Margine di default
@@ -465,11 +647,12 @@ function calculateWithDefaultMargin(
 
 /**
  * Importa getPriceListById dalla versione base
+ * ✨ FIX: Carica anche entries (matrice) per calcolo prezzi
  */
 async function getPriceListById(id: string): Promise<PriceList | null> {
   const { data, error } = await supabaseAdmin
     .from('price_lists')
-    .select('*')
+    .select('*, entries:price_list_entries(*)')
     .eq('id', id)
     .single()
 
@@ -538,7 +721,84 @@ export async function calculateBestPriceForReseller(
       }
     }
 
-    // 1. Calcola prezzo con listino fornitore reseller (API Reseller)
+    // ✨ PRIORITÀ 1: Listini personalizzati ATTIVI del reseller (list_type='custom', status='active')
+    // Questi hanno la massima priorità perché sono creati e configurati dal reseller stesso
+    let customPrice: PriceCalculationResult | null = null
+    const { data: customPriceLists } = await supabaseAdmin
+      .from('price_lists')
+      .select('*')
+      .eq('created_by', userId)
+      .eq('list_type', 'custom')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    if (customPriceLists && customPriceLists.length > 0) {
+      // Filtra per corriere se specificato
+      const filtered = params.courierId
+        ? customPriceLists.filter(pl => !pl.courier_id || pl.courier_id === params.courierId)
+        : customPriceLists
+
+      // ✨ ENTERPRISE: Se ci sono PIÙ listini attivi, calcola il prezzo per tutti e scegli il PIÙ ECONOMICO
+      const priceResults: Array<{
+        price: PriceCalculationResult
+        list: typeof customPriceLists[0]
+        metadata: any
+      }> = []
+
+      // Calcola prezzo per ogni listino personalizzato attivo
+      for (const customList of filtered) {
+        const calculatedPrice = await calculatePriceWithRules(userId, params, customList.id)
+        if (calculatedPrice) {
+          const metadata = customList.metadata || customList.source_metadata || {}
+          priceResults.push({
+            price: calculatedPrice,
+            list: customList,
+            metadata,
+          })
+        }
+      }
+
+      // Se ci sono risultati, scegli il PIÙ ECONOMICO (prezzo finale più basso)
+      if (priceResults.length > 0) {
+        // Ordina per prezzo finale (finalPrice) crescente
+        priceResults.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
+        
+        // Prendi il primo (più economico)
+        const bestResult = priceResults[0]
+        customPrice = bestResult.price
+        
+        // ✨ ENTERPRISE: Estrai courier_config_id dal metadata del listino personalizzato
+        // Questo è fondamentale per usare la configurazione API corretta nella creazione spedizione
+        const courierConfigId = bestResult.metadata.courier_config_id
+        
+        // Aggiungi courier_config_id al risultato per tracciare quale config API usare
+        if (courierConfigId) {
+          customPrice._courierConfigId = courierConfigId
+          console.log(`✅ [RESELLER] Usato listino personalizzato PIÙ ECONOMICO: ${bestResult.list.name} (${bestResult.list.id}) con prezzo €${bestResult.price.finalPrice.toFixed(2)} e config API: ${courierConfigId}`)
+        } else {
+          console.log(`✅ [RESELLER] Usato listino personalizzato PIÙ ECONOMICO: ${bestResult.list.name} (${bestResult.list.id}) con prezzo €${bestResult.price.finalPrice.toFixed(2)} - ATTENZIONE: courier_config_id non presente nei metadata`)
+        }
+        
+        // Log dei listini confrontati (solo se ce ne sono più di uno)
+        if (priceResults.length > 1) {
+          console.log(`📊 [RESELLER] Confrontati ${priceResults.length} listini attivi per corriere ${params.courierId || 'tutti'}:`)
+          priceResults.forEach((result, index) => {
+            console.log(`  ${index + 1}. ${result.list.name}: €${result.price.finalPrice.toFixed(2)} ${index === 0 ? '✅ SCELTO' : ''}`)
+          })
+        }
+      }
+    }
+
+    // Se abbiamo trovato un listino personalizzato attivo, usalo (priorità massima)
+    if (customPrice) {
+      return {
+        bestPrice: customPrice,
+        apiSource: 'reseller', // Listino personalizzato = reseller
+        resellerPrice: customPrice,
+      }
+    }
+
+    // ✨ PRIORITÀ 2: Listino fornitore reseller (API Reseller)
     const resellerPriceList = await getApplicablePriceList(
       userId,
       params.courierId
@@ -549,7 +809,7 @@ export async function calculateBestPriceForReseller(
       resellerPrice = await calculatePriceWithRules(userId, params, resellerPriceList.id)
     }
 
-    // 2. Calcola prezzo con listino personalizzato assegnato (API Master)
+    // ✨ PRIORITÀ 3: Listino personalizzato assegnato (API Master)
     // Cerca listini assegnati tramite price_list_assignments
     const { data: assignments } = await supabaseAdmin
       .from('price_list_assignments')

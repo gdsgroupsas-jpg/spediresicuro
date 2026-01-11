@@ -27,6 +27,37 @@ export interface PriceCalculationResult {
 }
 
 /**
+ * Helper: Mappa provincia/regione a zona geografica (stesso mapping di price-lists-advanced.ts)
+ */
+function getZoneFromDestination(province?: string, region?: string): string | null {
+  if (!province && !region) return null
+
+  const provinceToZone: Record<string, string> = {
+    'CA': 'IT-SARDEGNA', 'NU': 'IT-SARDEGNA', 'OR': 'IT-SARDEGNA', 'SS': 'IT-SARDEGNA',
+    'RC': 'IT-CALABRIA', 'CZ': 'IT-CALABRIA', 'CS': 'IT-CALABRIA', 'KR': 'IT-CALABRIA', 'VV': 'IT-CALABRIA',
+    'PA': 'IT-SICILIA', 'CT': 'IT-SICILIA', 'ME': 'IT-SICILIA', 'AG': 'IT-SICILIA', 'CL': 'IT-SICILIA',
+    'EN': 'IT-SICILIA', 'RG': 'IT-SICILIA', 'SR': 'IT-SICILIA', 'TP': 'IT-SICILIA',
+    'SO': 'IT-LIVIGNO',
+  }
+
+  const regionToZone: Record<string, string> = {
+    'Sardegna': 'IT-SARDEGNA',
+    'Calabria': 'IT-CALABRIA',
+    'Sicilia': 'IT-SICILIA',
+  }
+
+  if (province && provinceToZone[province]) {
+    return provinceToZone[province]
+  }
+
+  if (region && regionToZone[region]) {
+    return regionToZone[region]
+  }
+
+  return 'IT-ITALIA' // Default
+}
+
+/**
  * Calcola il prezzo da una price list (funzione pura).
  * 
  * @param priceList - Listino prezzi completo con entries
@@ -34,6 +65,8 @@ export interface PriceCalculationResult {
  * @param destinationZip - CAP destinazione (5 cifre)
  * @param serviceType - Tipo servizio ('standard', 'express', 'economy')
  * @param options - Opzioni aggiuntive (contrassegno, assicurazione)
+ * @param destinationProvince - Provincia destinazione (opzionale, per matching zone_code)
+ * @param destinationRegion - Regione destinazione (opzionale, per matching zone_code)
  * @returns Risultato calcolo prezzo o null se nessuna entry matcha
  */
 export function calculatePriceFromList(
@@ -41,24 +74,53 @@ export function calculatePriceFromList(
   weight: number,
   destinationZip: string,
   serviceType: string = 'standard',
-  options?: PriceCalculationOptions
+  options?: PriceCalculationOptions,
+  destinationProvince?: string,
+  destinationRegion?: string
 ): PriceCalculationResult | null {
   if (!priceList || !priceList.entries) {
     return null;
   }
 
-  // Trova la riga corrispondente
-  const entry = (priceList.entries as PriceListEntry[]).find(e => {
-    const weightMatch = weight >= e.weight_from && weight <= e.weight_to;
-    const serviceMatch = e.service_type === serviceType;
+  // Calcola zona geografica dalla destinazione
+  const destinationZone = getZoneFromDestination(destinationProvince, destinationRegion);
 
-    // Match ZIP se specificato
-    let zipMatch = true;
+  // Trova la riga corrispondente con matching migliorato
+  const entry = (priceList.entries as PriceListEntry[]).find(e => {
+    // Match peso
+    const weightMatch = weight >= e.weight_from && weight <= e.weight_to;
+    if (!weightMatch) return false;
+
+    // Match service type
+    const serviceMatch = e.service_type === serviceType;
+    if (!serviceMatch) return false;
+
+    // Match ZIP se specificato nell'entry
     if (e.zip_code_from && e.zip_code_to) {
-      zipMatch = destinationZip >= e.zip_code_from && destinationZip <= e.zip_code_to;
+      if (destinationZip < e.zip_code_from || destinationZip > e.zip_code_to) {
+        return false;
+      }
     }
 
-    return weightMatch && serviceMatch && zipMatch;
+    // ✨ ENTERPRISE: Match zone_code se specificato nell'entry
+    if (e.zone_code) {
+      if (destinationZone && e.zone_code !== destinationZone) {
+        return false;
+      }
+      // Se destinationZone è null ma entry ha zone_code, non matcha (a meno che non sia IT-ITALIA default)
+      if (!destinationZone && e.zone_code !== 'IT-ITALIA') {
+        return false;
+      }
+    }
+
+    // ✨ ENTERPRISE: Match province_code se specificato nell'entry
+    if (e.province_code && destinationProvince) {
+      if (e.province_code !== destinationProvince) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   if (!entry) {

@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { FileText, Plus, Search, Users, Eye, Edit, Trash2, Calendar } from 'lucide-react';
+import { FileText, Plus, Search, Users, Eye, Edit, Trash2, Calendar, Copy, FileSpreadsheet, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -17,13 +17,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardNav from '@/components/dashboard-nav';
 import { CustomPriceListForm } from '@/components/listini/custom-price-list-form';
 import { CreateCustomerPriceListDialog } from '@/components/listini/create-customer-price-list-dialog';
-import { SupplierPriceListTable } from '@/components/listini/supplier-price-list-table';
+import { CloneSupplierPriceListDialog } from '@/components/listini/clone-supplier-price-list-dialog';
+import { ImportPriceListEntriesDialog } from '@/components/listini/import-price-list-entries-dialog';
 import {
   listPriceListsAction,
   updatePriceListAction,
   deletePriceListAction,
 } from '@/actions/price-lists';
 import { getSubUsers } from '@/actions/admin-reseller';
+import { activateResellerPriceListAction } from '@/actions/reseller-price-lists';
 import { toast } from 'sonner';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 import type { PriceList } from '@/types/listini';
@@ -35,12 +37,17 @@ export default function ResellerListiniPersonalizzatiPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [subUsers, setSubUsers] = useState<Array<{ id: string; email: string; name?: string }>>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showCloneDialog, setShowCloneDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importPriceListId, setImportPriceListId] = useState<string>('');
+  const [importPriceListName, setImportPriceListName] = useState<string>('');
   const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [priceListToDelete, setPriceListToDelete] = useState<string | null>(null);
+  const [activatingPriceList, setActivatingPriceList] = useState<string | null>(null);
 
   // Verifica permessi e carica dati
   useEffect(() => {
@@ -150,8 +157,37 @@ export default function ResellerListiniPersonalizzatiPage() {
 
   const handleFormSuccess = () => {
     setShowCreateDialog(false);
+    setShowCloneDialog(false);
     setEditingPriceList(null);
     loadPriceLists();
+  };
+
+  const handleClone = () => {
+    setShowCloneDialog(true);
+  };
+
+  const handleImport = (priceListId: string, priceListName: string) => {
+    setImportPriceListId(priceListId);
+    setImportPriceListName(priceListName);
+    setShowImportDialog(true);
+  };
+
+  const handleActivate = async (priceListId: string) => {
+    setActivatingPriceList(priceListId);
+    try {
+      const result = await activateResellerPriceListAction(priceListId);
+      if (result.success) {
+        toast.success('Listino attivato con successo');
+        await loadPriceLists();
+      } else {
+        toast.error(result.error || 'Errore attivazione listino');
+      }
+    } catch (error) {
+      console.error('Errore attivazione:', error);
+      toast.error('Errore attivazione listino');
+    } finally {
+      setActivatingPriceList(null);
+    }
   };
 
   // Filtra listini
@@ -188,10 +224,16 @@ export default function ResellerListiniPersonalizzatiPage() {
               Crea e gestisci listini personalizzati per i tuoi clienti
             </p>
           </div>
-          <Button onClick={handleCreate} className="flex items-center gap-2" disabled={subUsers.length === 0}>
-            <Plus className="w-4 h-4" />
-            Crea Listino Personalizzato
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleClone} variant="outline" className="flex items-center gap-2">
+              <Copy className="w-4 h-4" />
+              Clona da Fornitore
+            </Button>
+            <Button onClick={handleCreate} className="flex items-center gap-2" disabled={subUsers.length === 0}>
+              <Plus className="w-4 h-4" />
+              Crea Vuoto
+            </Button>
+          </div>
         </div>
 
         {subUsers.length === 0 && (
@@ -311,30 +353,66 @@ export default function ResellerListiniPersonalizzatiPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Import CSV - solo per draft */}
+                          {priceList.status === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleImport(priceList.id, priceList.name)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                              title="Importa tariffe da file CSV - Permette di importare o aggiornare le tariffe del listino da un file CSV"
+                            >
+                              <FileSpreadsheet className="w-4 h-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Attiva - solo per draft */}
+                          {priceList.status === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleActivate(priceList.id)}
+                              disabled={activatingPriceList === priceList.id}
+                              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50"
+                              title="Attiva listino - Cambia lo status da 'Bozza' a 'Attivo' per renderlo utilizzabile nei preventivi"
+                            >
+                              {activatingPriceList === priceList.id ? (
+                                <Play className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Play className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                          
+                          {/* Dettagli */}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewDetails(priceList.id)}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                            title="Dettagli"
+                            title="Visualizza dettagli - Apre la pagina completa con tutte le tariffe, statistiche e informazioni del listino"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
+                          
+                          {/* Modifica */}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(priceList)}
                             className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50"
-                            title="Modifica"
+                            title="Modifica listino - Modifica nome, descrizione, margini e altre impostazioni del listino"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          
+                          {/* Elimina */}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(priceList.id)}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                            title="Elimina"
+                            title="Elimina listino - Rimuove definitivamente il listino dal sistema (richiede conferma)"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -402,6 +480,32 @@ export default function ResellerListiniPersonalizzatiPage() {
           confirmText="Elimina"
           cancelText="Annulla"
           variant="destructive"
+        />
+
+        {/* Dialog Clonazione Listino Fornitore */}
+        <CloneSupplierPriceListDialog
+          open={showCloneDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowCloneDialog(false);
+            }
+          }}
+          onSuccess={handleFormSuccess}
+        />
+
+        {/* Dialog Import CSV */}
+        <ImportPriceListEntriesDialog
+          open={showImportDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowImportDialog(false);
+              setImportPriceListId('');
+              setImportPriceListName('');
+            }
+          }}
+          priceListId={importPriceListId}
+          priceListName={importPriceListName}
+          onSuccess={handleFormSuccess}
         />
       </div>
     </div>

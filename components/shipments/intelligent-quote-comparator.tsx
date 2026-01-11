@@ -1364,9 +1364,10 @@ export function IntelligentQuoteComparator({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {validQuotes.map((quote, index) => {
-                  const quoteKey = `${quote.courierName || quote.courier}::${
-                    quote.contractCode
-                  }`;
+                  // ✨ SEMPLIFICAZIONE: Chiave solo per carrier code (senza contract code)
+                  // Questo elimina duplicati visivi: mostra solo "Poste Italiane" una volta
+                  // Il contract code viene comunque passato internamente alla creazione spedizione
+                  const quoteKey = quote.courierName || quote.courier;
                   const isSelected = selectedCourierKey === quoteKey;
 
                   return (
@@ -1408,10 +1409,11 @@ export function IntelligentQuoteComparator({
           {selectedCourierKey &&
             showAccessoryDropdown &&
             (() => {
+              // ✨ SEMPLIFICAZIONE: Trova quote per carrier code (senza contract code)
+              // Se ci sono più quote per lo stesso carrier code, usa il primo (già deduplicato dal backend)
               const selectedQuote = validQuotes.find(
                 (q) =>
-                  `${q.courierName || q.courier}::${q.contractCode}` ===
-                  selectedCourierKey
+                  (q.courierName || q.courier) === selectedCourierKey
               );
               if (!selectedQuote) return null;
 
@@ -1522,10 +1524,12 @@ export function IntelligentQuoteComparator({
                       console.log("✅ [QUOTE COMPARATOR] Conferma selezione:", {
                         courier:
                           selectedQuote.courierName || selectedQuote.courier,
-                        contractCode: selectedQuote.contractCode,
+                        contractCode: selectedQuote.contractCode, // ✨ Passato internamente (non mostrato in UI)
                         accessoryService: selectedAccessoryService,
                         finalPrice,
                         configId: selectedConfigId, // ✨ ConfigId della configurazione API
+                        // ✨ DEBUG: Contract code e configId vengono passati internamente alla creazione spedizione
+                        // anche se non mostrati nel preventivatore per semplificare l'UI
                       });
                       onContractSelected?.(
                         selectedQuote.courierName || selectedQuote.courier,
@@ -1625,12 +1629,10 @@ function QuoteTableRow({
             <div className="font-semibold text-gray-900 text-sm leading-tight">
               {quote.courier}
             </div>
-            <div
-              className="text-xs text-gray-500 mt-0.5 leading-tight truncate"
-              title={quote.contractCode}
-            >
-              {formatContractCode(quote.contractCode)}
-            </div>
+            {/* ✨ SEMPLIFICAZIONE: Nascondi contract code nel preventivatore
+                Il contract code viene comunque passato internamente alla creazione spedizione
+                Se il reseller vuole vedere altre opzioni, può attivare altri listini personalizzati */}
+            {/* Contract code rimosso per semplificare UI e eliminare duplicati */}
           </div>
         </div>
       </td>
