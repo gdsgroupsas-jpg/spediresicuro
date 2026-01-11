@@ -26,6 +26,35 @@ import type {
 import type { CourierServiceType } from "@/types/shipments";
 
 /**
+ * Helper: Logga evento listino nel financial_audit_log
+ */
+async function logPriceListEvent(
+  eventType: string,
+  priceListId: string,
+  actorId: string,
+  message?: string,
+  oldValue?: any,
+  newValue?: any,
+  metadata?: Record<string, any>
+): Promise<void> {
+  try {
+    await supabaseAdmin.rpc("log_price_list_event", {
+      p_event_type: eventType,
+      p_price_list_id: priceListId,
+      p_actor_id: actorId,
+      p_message: message,
+      p_old_value: oldValue ? JSON.stringify(oldValue) : null,
+      p_new_value: newValue ? JSON.stringify(newValue) : null,
+      p_metadata: metadata || {},
+      p_severity: "info",
+    });
+  } catch (error) {
+    // Non bloccare l'operazione se il logging fallisce
+    console.error("Errore logging evento listino:", error);
+  }
+}
+
+/**
  * Crea nuovo listino prezzi
  */
 export async function createPriceListAction(
@@ -172,6 +201,94 @@ export async function updatePriceListAction(
     }
 
     const updated = await updatePriceList(id, data, user.id);
+
+    // Logga evento audit
+    const changes: Record<string, any> = {};
+    if (data.name && data.name !== existingPriceList.name) {
+      changes.name = { from: existingPriceList.name, to: data.name };
+    }
+    if (data.status && data.status !== existingPriceList.status) {
+      changes.status = { from: existingPriceList.status, to: data.status };
+      // Logga attivazione/disattivazione separatamente
+      if (data.status === "active" && existingPriceList.status !== "active") {
+        await logPriceListEvent(
+          "price_list_activated",
+          id,
+          user.id,
+          `Listino attivato: ${updated.name || existingPriceList.name}`
+        );
+      } else if (data.status === "archived" && existingPriceList.status !== "archived") {
+        await logPriceListEvent(
+          "price_list_archived",
+          id,
+          user.id,
+          `Listino archiviato: ${updated.name || existingPriceList.name}`
+        );
+      }
+    }
+    if (data.default_margin_percent !== undefined && data.default_margin_percent !== existingPriceList.default_margin_percent) {
+      changes.default_margin_percent = {
+        from: existingPriceList.default_margin_percent,
+        to: data.default_margin_percent,
+      };
+      await logPriceListEvent(
+        "price_list_margin_updated",
+        id,
+        user.id,
+        `Margine aggiornato: ${existingPriceList.default_margin_percent}% → ${data.default_margin_percent}%`,
+        { default_margin_percent: existingPriceList.default_margin_percent },
+        { default_margin_percent: data.default_margin_percent }
+      );
+    }
+    if (data.rules !== undefined) {
+      changes.rules = {
+        from: (existingPriceList.rules as any[])?.length || 0,
+        to: (data.rules as any[])?.length || 0,
+      };
+      // Logga modifiche regole
+      const oldRulesCount = (existingPriceList.rules as any[])?.length || 0;
+      const newRulesCount = (data.rules as any[])?.length || 0;
+      if (newRulesCount > oldRulesCount) {
+        await logPriceListEvent(
+          "price_list_rule_created",
+          id,
+          user.id,
+          `Regola creata: ${newRulesCount - oldRulesCount} nuova/e`,
+          { rules_count: oldRulesCount },
+          { rules_count: newRulesCount }
+        );
+      } else if (newRulesCount < oldRulesCount) {
+        await logPriceListEvent(
+          "price_list_rule_deleted",
+          id,
+          user.id,
+          `Regola eliminata: ${oldRulesCount - newRulesCount} rimossa/e`,
+          { rules_count: oldRulesCount },
+          { rules_count: newRulesCount }
+        );
+      } else {
+        await logPriceListEvent(
+          "price_list_rule_updated",
+          id,
+          user.id,
+          `Regole modificate: ${newRulesCount} regole`,
+          { rules_count: oldRulesCount },
+          { rules_count: newRulesCount }
+        );
+      }
+    }
+
+    // Logga aggiornamento generale se ci sono modifiche
+    if (Object.keys(changes).length > 0) {
+      await logPriceListEvent(
+        "price_list_updated",
+        id,
+        user.id,
+        `Listino aggiornato: ${Object.keys(changes).join(", ")}`,
+        existingPriceList,
+        updated
+      );
+    }
 
     return { success: true, priceList: updated };
   } catch (error: any) {
@@ -1563,6 +1680,109 @@ export async function getAvailableCouriersForUserAction(): Promise<{
     return { success: true, couriers };
   } catch (error: any) {
     console.error("Errore getAvailableCouriersForUserAction:", error);
+    return { success: false, error: error.message || "Errore sconosciuto" };
+  }
+}
+
+/**
+ * Recupera eventi audit per un listino
+ */
+export async function getPriceListAuditEventsAction(
+  priceListId: string,
+  options?: {
+    eventTypes?: string[];
+    limit?: number;
+    offset?: number;
+    actorId?: string;
+  }
+): Promise<{
+  success: boolean;
+  events?: Array<{
+    id: string;
+    event_type: string;
+    severity: string;
+    actor_id?: string;
+    actor_email?: string;
+    actor_type?: string;
+    message?: string;
+    old_value?: any;
+    new_value?: any;
+    metadata?: any;
+    created_at: string;
+  }>;
+  total_count?: number;
+  error?: string;
+}> {
+  try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return { success: false, error: "Non autenticato" };
+    }
+
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("id, account_type, is_reseller")
+      .eq("email", session.user.email)
+      .single();
+
+    if (!user) {
+      return { success: false, error: "Utente non trovato" };
+    }
+
+    // Verifica permessi sul listino
+    const priceList = await getPriceListById(priceListId);
+    if (!priceList) {
+      return { success: false, error: "Listino non trovato" };
+    }
+
+    const isAdmin =
+      user.account_type === "admin" || user.account_type === "superadmin";
+    const isOwner = priceList.created_by === user.id;
+    const isAssignedOwner = priceList.assigned_to_user_id === user.id;
+
+    if (!isAdmin && !isOwner && !isAssignedOwner) {
+      return {
+        success: false,
+        error: "Non hai i permessi per vedere l'audit di questo listino",
+      };
+    }
+
+    // Recupera eventi
+    const { data, error } = await supabaseAdmin.rpc("get_price_list_audit_events", {
+      p_price_list_id: priceListId,
+      p_event_types: options?.eventTypes || null,
+      p_limit: options?.limit || 100,
+      p_offset: options?.offset || 0,
+      p_actor_id: options?.actorId || null,
+    });
+
+    if (error) {
+      console.error("Errore get_price_list_audit_events:", error);
+      return { success: false, error: error.message };
+    }
+
+    const events = data || [];
+    const total_count = events.length > 0 ? events[0].total_count : 0;
+
+    return {
+      success: true,
+      events: events.map((e: any) => ({
+        id: e.id,
+        event_type: e.event_type,
+        severity: e.severity,
+        actor_id: e.actor_id,
+        actor_email: e.actor_email,
+        actor_type: e.actor_type,
+        message: e.message,
+        old_value: e.old_value,
+        new_value: e.new_value,
+        metadata: e.metadata,
+        created_at: e.created_at,
+      })),
+      total_count: Number(total_count),
+    };
+  } catch (error: any) {
+    console.error("Errore getPriceListAuditEventsAction:", error);
     return { success: false, error: error.message || "Errore sconosciuto" };
   }
 }
