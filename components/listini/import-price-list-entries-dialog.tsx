@@ -239,7 +239,7 @@ export function ImportPriceListEntriesDialog({
               Istruzioni per il file CSV:
             </p>
             <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li>Il file deve avere un'intestazione nella prima riga</li>
+              <li>Il file deve avere un&apos;intestazione nella prima riga</li>
               <li>Colonne supportate (case-insensitive):</li>
               <li className="ml-4">
                 <strong>Obbligatorie:</strong> weight/peso, price/prezzo/base
@@ -391,7 +391,7 @@ export function ImportPriceListEntriesDialog({
                 </table>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Nota: L'importazione utilizzerà tutte le righe trovate nel file,
+                Nota: L&apos;importazione utilizzerà tutte le righe trovate nel file,
                 non solo queste 5.
               </p>
             </div>
