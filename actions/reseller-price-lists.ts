@@ -437,7 +437,12 @@ export async function updateResellerPriceListMarginAction(
       return { success: false, error: error.message };
     }
 
-    return { success: true, priceList: priceList as PriceList };
+    // ✨ FIX: Restituisci data (risultato della query) invece di priceList (non definito)
+    if (!data) {
+      return { success: false, error: "Listino non trovato dopo l'aggiornamento" };
+    }
+
+    return { success: true, priceList: data as PriceList };
   } catch (error: any) {
     console.error("Errore updateResellerPriceListMarginAction:", error);
     return { success: false, error: error.message || "Errore sconosciuto" };
