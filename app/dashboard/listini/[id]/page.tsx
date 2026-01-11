@@ -1037,7 +1037,7 @@ function PriceCalculatorPreview({
           <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-600 mb-2">Nessuna tariffa nel listino</p>
           <p className="text-sm text-gray-500">
-            Usa la tab "Carica Tariffe" per importare tariffe da CSV o aggiungerle manualmente
+            Usa la tab &quot;Carica Tariffe&quot; per importare tariffe da CSV o aggiungerle manualmente
           </p>
         </div>
       ) : (
