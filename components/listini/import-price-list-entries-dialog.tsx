@@ -40,12 +40,14 @@ export function ImportPriceListEntriesDialog({
   const [isParsing, setIsParsing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Array<any>>([]);
+  const [data, setData] = useState<Array<any>>([]); // ✨ FIX: Salva tutti i dati, non solo preview
   const [error, setError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setFile(null);
     setPreview([]);
+    setData([]); // ✨ FIX: Reset anche data
     setError("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -151,7 +153,8 @@ export function ImportPriceListEntriesDialog({
       }
 
       setFile(selectedFile);
-      setPreview(data.slice(0, 5)); // Mostra prime 5 righe
+      setData(data); // ✨ FIX: Salva TUTTI i dati nello state
+      setPreview(data.slice(0, 5)); // Mostra prime 5 righe per preview
       setIsParsing(false);
       toast.success(`Trovate ${data.length} righe nel file`);
     } catch (err) {
@@ -162,7 +165,7 @@ export function ImportPriceListEntriesDialog({
   };
 
   const handleImport = async () => {
-    if (!file || preview.length === 0) {
+    if (!file || data.length === 0) {
       toast.error("Seleziona un file valido");
       return;
     }
@@ -174,7 +177,8 @@ export function ImportPriceListEntriesDialog({
         "@/actions/reseller-price-lists"
       );
 
-      const result = await importPriceListEntriesAction(priceListId, preview);
+      // ✨ FIX: Usa TUTTI i dati, non solo preview (prime 5 righe)
+      const result = await importPriceListEntriesAction(priceListId, data);
 
       if (!result.success) {
         toast.error(result.error || "Errore durante l'importazione");
@@ -291,7 +295,7 @@ export function ImportPriceListEntriesDialog({
                       <div>
                         <p className="font-medium text-green-900">{file.name}</p>
                         <p className="text-sm text-green-700">
-                          {preview.length} righe trovate
+                          {data.length} righe trovate (mostrate prime {preview.length} in anteprima)
                         </p>
                       </div>
                     </div>
@@ -396,7 +400,7 @@ export function ImportPriceListEntriesDialog({
           </Button>
           <Button
             onClick={handleImport}
-            disabled={isLoading || !file || preview.length === 0}
+            disabled={isLoading || !file || data.length === 0}
           >
             {isLoading ? (
               <>
