@@ -2,13 +2,63 @@
  * API Route: OCR Extract
  *
  * Endpoint per estrazione dati da immagini tramite OCR
+ *
+ * GDPR COMPLIANCE (P0 AUDIT FIX):
+ * - User consent obbligatorio per Vision APIs (Google/Claude)
+ * - Logging completo processing per audit trail
+ * - Kill-switch env var ENABLE_OCR_VISION
+ * - Retention policy 7 giorni (auto-cleanup)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createOCRAdapter } from '@/lib/adapters/ocr';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
+    // ============================================
+    // AUTHENTICATION (required)
+    // ============================================
+    const { context, error: authError } = await requireSafeAuth();
+    if (authError || !context) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userId = context.target.id;
+
+    // ============================================
+    // GDPR: Check kill-switch
+    // ============================================
+    const visionEnabled = process.env.ENABLE_OCR_VISION !== 'false'; // Default: enabled
+
+    // ============================================
+    // GDPR: Check user consent (se Vision enabled)
+    // ============================================
+    let consentGiven = false;
+    if (visionEnabled) {
+      const { data: user } = await supabaseAdmin
+        .from('users')
+        .select('ocr_vision_consent_given_at')
+        .eq('id', userId)
+        .single();
+
+      consentGiven = !!user?.ocr_vision_consent_given_at;
+
+      if (!consentGiven) {
+        console.warn('⚠️ [OCR] User consent not given, using Tesseract only', {
+          userId: userId.substring(0, 8) + '...',
+        });
+      }
+    }
+
+    // ============================================
+    // REQUEST PARSING
+    // ============================================
     const body = await request.json();
     const { image, options } = body;
 
@@ -19,19 +69,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crea adapter OCR
-    // Usa 'auto' per selezionare automaticamente il migliore disponibile:
-    // 1. Google Vision (se GOOGLE_CLOUD_CREDENTIALS configurata) ✅ ATTIVO
-    // 2. Claude Vision (se ANTHROPIC_API_KEY configurata)
-    // 3. Tesseract (se disponibile)
-    // 4. Mock (fallback)
-    const ocr = createOCRAdapter('auto');
-    
-    console.log(`🔍 OCR Adapter utilizzato: ${(ocr as any).name || 'unknown'}`);
+    // ============================================
+    // OCR ADAPTER SELECTION (GDPR-aware)
+    // ============================================
+    // 1. Se consent + vision enabled → Auto (Google/Claude Vision)
+    // 2. Se NO consent OR vision disabled → Tesseract only
+    const adapterType = (visionEnabled && consentGiven) ? 'auto' : 'tesseract';
+    const ocr = createOCRAdapter(adapterType);
+
+    console.log(`🔍 OCR Adapter: ${adapterType} | Consent: ${consentGiven} | Vision enabled: ${visionEnabled}`);
 
     // Check disponibilità
     const available = await ocr.isAvailable();
-    console.log(`📊 OCR disponibile: ${available}`);
     if (!available) {
       return NextResponse.json(
         {
@@ -42,22 +91,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Converti base64 a Buffer
+    // ============================================
+    // IMAGE PROCESSING
+    // ============================================
     const imageBuffer = Buffer.from(image, 'base64');
 
-    // Estrai dati con fallback: Google Vision → Claude Vision
+    // Calculate image hash (per deduplication + privacy)
+    const imageHash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
+    const imageSize = imageBuffer.length;
+    const imageFormat = detectImageFormat(imageBuffer);
+
+    // ============================================
+    // OCR EXTRACTION
+    // ============================================
     let result = await ocr.extract(imageBuffer, options);
-    let usedAdapter = (ocr as any).name;
+    let usedProvider = getProviderName(ocr);
 
     // Fallback: se Google Vision fallisce, prova Claude
-    if (!result.success && usedAdapter === 'google-vision') {
+    if (!result.success && usedProvider === 'google_vision' && visionEnabled && consentGiven) {
       console.warn('⚠️ Google Vision fallito, provo Claude Vision:', result.error);
-      
+
       if (process.env.ANTHROPIC_API_KEY) {
         try {
           const claudeOcr = createOCRAdapter('claude');
           result = await claudeOcr.extract(imageBuffer, options);
-          usedAdapter = 'claude-vision';
+          usedProvider = 'claude_vision';
           console.log('✅ Usando Claude Vision come fallback');
         } catch (error) {
           console.warn('❌ Anche Claude Vision fallito:', error);
@@ -65,6 +123,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ============================================
+    // GDPR: Log processing event
+    // ============================================
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    const processingStatus = result.success ? 'success' : 'failed';
+    const extractedFields = result.success ? normalizeExtractedData(result.extractedData) : null;
+
+    await supabaseAdmin.rpc('log_ocr_processing', {
+      p_user_id: userId,
+      p_provider: usedProvider,
+      p_status: processingStatus,
+      p_image_hash: imageHash,
+      p_image_size: imageSize,
+      p_image_format: imageFormat,
+      p_extracted_fields: extractedFields ? JSON.parse(JSON.stringify(extractedFields)) : null,
+      p_consent_given: consentGiven,
+      p_ip_address: ipAddress,
+      p_user_agent: userAgent,
+      p_error_message: result.success ? null : result.error,
+      p_error_code: result.success ? null : 'OCR_FAILED',
+    });
+
+    // ============================================
+    // RESPONSE
+    // ============================================
     if (!result.success) {
       return NextResponse.json(
         {
@@ -75,14 +160,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalizza e valida dati estratti
-    const normalizedData = normalizeExtractedData(result.extractedData);
-
     return NextResponse.json({
       success: true,
       confidence: result.confidence,
-      extractedData: normalizedData,
-      rawText: result.rawText,
+      extractedData: extractedFields,
+      provider: usedProvider,
+      consentGiven,
     });
   } catch (error: any) {
     console.error('OCR Extract Error:', error);
@@ -95,6 +178,37 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Get provider name from adapter
+ */
+function getProviderName(ocr: any): string {
+  const name = ocr.name || 'unknown';
+
+  // Map adapter names to DB enum values
+  const mapping: Record<string, string> = {
+    'google-vision': 'google_vision',
+    'claude-vision': 'claude_vision',
+    'tesseract': 'tesseract',
+    'mock': 'mock',
+  };
+
+  return mapping[name] || name;
+}
+
+/**
+ * Detect image format from buffer
+ */
+function detectImageFormat(buffer: Buffer): string {
+  const header = buffer.toString('hex', 0, 4);
+
+  if (header.startsWith('ffd8ff')) return 'jpeg';
+  if (header.startsWith('89504e47')) return 'png';
+  if (header.startsWith('47494638')) return 'gif';
+  if (header.startsWith('424d')) return 'bmp';
+
+  return 'unknown';
 }
 
 /**
