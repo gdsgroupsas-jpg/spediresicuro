@@ -1,6 +1,6 @@
 /**
  * Server Actions: Reseller Price Lists Management
- * 
+ *
  * Gestione listini personalizzati per reseller con funzionalità enterprise:
  * - Clonazione listini supplier con margini personalizzati
  * - Assegnazione listini a sub-users
@@ -17,7 +17,7 @@ import type { PriceList } from "@/types/listini";
 
 /**
  * Clona un listino supplier applicando margini personalizzati
- * 
+ *
  * @param sourcePriceListId - ID listino supplier da clonare
  * @param newName - Nome del nuovo listino personalizzato
  * @param marginType - Tipo margine: 'percent' | 'fixed' | 'none'
@@ -81,14 +81,17 @@ export async function resellerCloneSupplierPriceListAction(
     }
 
     // Chiama la funzione DB per clonazione
-    const { data, error } = await supabaseAdmin.rpc("reseller_clone_supplier_price_list", {
-      p_source_id: sourcePriceListId,
-      p_new_name: newName,
-      p_margin_type: marginType,
-      p_margin_value: marginValue,
-      p_description: description || null,
-      p_caller_id: user.id, // ✨ FIX: Passa caller_id per supportare service_role
-    });
+    const { data, error } = await supabaseAdmin.rpc(
+      "reseller_clone_supplier_price_list",
+      {
+        p_source_id: sourcePriceListId,
+        p_new_name: newName,
+        p_margin_type: marginType,
+        p_margin_value: marginValue,
+        p_description: description || null,
+        p_caller_id: user.id, // ✨ FIX: Passa caller_id per supportare service_role
+      }
+    );
 
     if (error) {
       console.error("Errore clonazione listino:", error);
@@ -138,7 +141,7 @@ export async function resellerCloneSupplierPriceListAction(
 
 /**
  * Assegna un listino personalizzato a un sub-user
- * 
+ *
  * @param priceListId - ID listino personalizzato
  * @param userId - ID sub-user a cui assegnare
  * @param notes - Note opzionali
@@ -178,12 +181,15 @@ export async function resellerAssignPriceListAction(
     assertValidUserId(priceListId);
 
     // Chiama la funzione DB per assegnazione
-    const { data, error } = await supabaseAdmin.rpc("reseller_assign_price_list", {
-      p_price_list_id: priceListId,
-      p_user_id: userId,
-      p_notes: notes || null,
-      p_caller_id: user.id, // ✨ FIX: Passa caller_id per supportare service_role
-    });
+    const { data, error } = await supabaseAdmin.rpc(
+      "reseller_assign_price_list",
+      {
+        p_price_list_id: priceListId,
+        p_user_id: userId,
+        p_notes: notes || null,
+        p_caller_id: user.id, // ✨ FIX: Passa caller_id per supportare service_role
+      }
+    );
 
     if (error) {
       console.error("Errore assegnazione listino:", error);
@@ -208,7 +214,7 @@ export async function resellerAssignPriceListAction(
 
 /**
  * Ottieni la lista dei sub-users del reseller
- * 
+ *
  * @returns Array di sub-users
  */
 export async function getResellerSubUsersAction(): Promise<{
@@ -263,7 +269,7 @@ export async function getResellerSubUsersAction(): Promise<{
 
 /**
  * Ottieni lista listini supplier del reseller
- * 
+ *
  * @returns Array di listini supplier clonabili
  */
 export async function getResellerSupplierPriceListsAction(): Promise<{
@@ -330,7 +336,7 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
 
 /**
  * Aggiorna margine di un listino personalizzato
- * 
+ *
  * @param priceListId - ID listino
  * @param marginType - Tipo margine
  * @param marginValue - Valore margine
@@ -379,54 +385,52 @@ export async function updateResellerPriceListMarginAction(
       };
     }
 
-    // Aggiorna margine sul listino
-    const { data: priceList, error } = await supabaseAdmin
-      .from("price_lists")
-      // ✨ SECURITY FIX: Valida marginType a runtime per prevenire SQL injection
-      const validMarginTypes = ["percent", "fixed", "none"];
-      if (!validMarginTypes.includes(marginType)) {
-        return {
-          success: false,
-          error: `Tipo margine non valido: ${marginType}. Valori accettati: ${validMarginTypes.join(", ")}`,
-        };
-      }
-
-      // ✨ SECURITY FIX: Usa parametri sicuri invece di string interpolation
-      // Recupera metadata esistente e aggiorna in modo sicuro
-      const { data: existingList } = await supabaseAdmin
-        .from("price_lists")
-        .select("metadata")
-        .eq("id", priceListId)
-        .eq("created_by", user.id)
-        .eq("list_type", "custom")
-        .single();
-
-      if (!existingList) {
-        return {
-          success: false,
-          error: "Listino non trovato o non autorizzato",
-        };
-      }
-
-      const updatedMetadata = {
-        ...(existingList.metadata || {}),
-        margin_type: marginType,
+    // ✨ SECURITY FIX: Valida marginType a runtime per prevenire SQL injection
+    const validMarginTypes = ["percent", "fixed", "none"];
+    if (!validMarginTypes.includes(marginType)) {
+      return {
+        success: false,
+        error: `Tipo margine non valido: ${marginType}. Valori accettati: ${validMarginTypes.join(
+          ", "
+        )}`,
       };
+    }
 
-      const { data, error } = await supabaseAdmin
-        .from("price_lists")
-        .update({
-          default_margin_percent:
-            marginType === "percent" ? marginValue : null,
-          default_margin_fixed: marginType === "fixed" ? marginValue : null,
-          updated_at: new Date().toISOString(),
-          metadata: updatedMetadata, // ✨ FIX: Usa oggetto JavaScript invece di raw SQL
-        })
-        .eq("id", priceListId)
-        .eq("created_by", user.id) // Solo propri listini
-        .eq("list_type", "custom")
-        .select()
-        .single();
+    // ✨ SECURITY FIX: Usa parametri sicuri invece di string interpolation
+    // Recupera metadata esistente e aggiorna in modo sicuro
+    const { data: existingList } = await supabaseAdmin
+      .from("price_lists")
+      .select("metadata")
+      .eq("id", priceListId)
+      .eq("created_by", user.id)
+      .eq("list_type", "custom")
+      .single();
+
+    if (!existingList) {
+      return {
+        success: false,
+        error: "Listino non trovato o non autorizzato",
+      };
+    }
+
+    const updatedMetadata = {
+      ...(existingList.metadata || {}),
+      margin_type: marginType,
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("price_lists")
+      .update({
+        default_margin_percent: marginType === "percent" ? marginValue : null,
+        default_margin_fixed: marginType === "fixed" ? marginValue : null,
+        updated_at: new Date().toISOString(),
+        metadata: updatedMetadata, // ✨ FIX: Usa oggetto JavaScript invece di raw SQL
+      })
+      .eq("id", priceListId)
+      .eq("created_by", user.id) // Solo propri listini
+      .eq("list_type", "custom")
+      .select()
+      .single();
 
     if (error) {
       console.error("Errore aggiornamento margine:", error);
@@ -442,7 +446,7 @@ export async function updateResellerPriceListMarginAction(
 
 /**
  * Attiva un listino personalizzato
- * 
+ *
  * @param priceListId - ID listino
  * @returns Listino attivato
  */
@@ -507,7 +511,7 @@ export async function activateResellerPriceListAction(
 
 /**
  * Importa entries da CSV per un listino personalizzato
- * 
+ *
  * @param priceListId - ID listino
  * @param entries - Array di entries da importare
  * @returns Statistiche importazione
@@ -584,7 +588,9 @@ export async function importPriceListEntriesAction(
         p_event_type: "price_list_entry_imported",
         p_price_list_id: priceListId,
         p_actor_id: user.id,
-        p_message: `Importate ${result.inserted || 0} entries, aggiornate ${result.updated || 0}`,
+        p_message: `Importate ${result.inserted || 0} entries, aggiornate ${
+          result.updated || 0
+        }`,
         p_metadata: {
           inserted: result.inserted || 0,
           updated: result.updated || 0,

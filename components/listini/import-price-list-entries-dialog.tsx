@@ -1,24 +1,30 @@
 /**
  * Dialog: Import CSV Entries per Listini Personalizzati
- * 
+ *
  * Permette al reseller di importare entries da file CSV
  * per completare manualmente un listino personalizzato.
  */
 
 "use client";
 
-import { useState, useRef } from "react";
-import { FileSpreadsheet, Upload, CheckCircle, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  AlertCircle,
+  CheckCircle,
+  FileSpreadsheet,
+  Upload,
+  X,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface ImportPriceListEntriesDialogProps {
@@ -71,7 +77,9 @@ export function ImportPriceListEntriesDialog({
       const lines = text.split("\n").filter((line) => line.trim());
 
       if (lines.length < 2) {
-        setError("Il file deve avere almeno una riga di dati oltre all'intestazione");
+        setError(
+          "Il file deve avere almeno una riga di dati oltre all'intestazione"
+        );
         setIsParsing(false);
         return;
       }
@@ -101,7 +109,10 @@ export function ImportPriceListEntriesDialog({
               header.includes("provincia")
             ) {
               row.province_code = value;
-            } else if (header.includes("region") || header.includes("regione")) {
+            } else if (
+              header.includes("region") ||
+              header.includes("regione")
+            ) {
               row.region = value;
             } else if (
               header.includes("price") ||
@@ -114,10 +125,7 @@ export function ImportPriceListEntriesDialog({
               header.includes("carburante")
             ) {
               row.fuel_surcharge_percent = parseFloat(value) || 0;
-            } else if (
-              header.includes("island") ||
-              header.includes("isole")
-            ) {
+            } else if (header.includes("island") || header.includes("isole")) {
               row.island_surcharge = parseFloat(value) || 0;
             } else if (header.includes("ztl")) {
               row.ztl_surcharge = parseFloat(value) || 0;
@@ -188,7 +196,9 @@ export function ImportPriceListEntriesDialog({
 
       if ((result.inserted || 0) > 0 || (result.updated || 0) > 0) {
         toast.success(
-          `Importazione completata: ${result.inserted || 0} nuove, ${result.updated || 0} aggiornate`
+          `Importazione completata: ${result.inserted || 0} nuove, ${
+            result.updated || 0
+          } aggiornate`
         );
         reset();
         onOpenChange(false);
@@ -239,9 +249,7 @@ export function ImportPriceListEntriesDialog({
                 region, service, fuel/carburante, island/isole, ztl, cod,
                 insurance/assicurazione
               </li>
-              <li>
-                Esempio: weight,zone,price,fuel,island,ztl,cod,insurance
-              </li>
+              <li>Esempio: weight,zone,price,fuel,island,ztl,cod,insurance</li>
             </ul>
           </div>
 
@@ -293,9 +301,12 @@ export function ImportPriceListEntriesDialog({
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-6 h-6 text-green-600" />
                       <div>
-                        <p className="font-medium text-green-900">{file.name}</p>
+                        <p className="font-medium text-green-900">
+                          {file.name}
+                        </p>
                         <p className="text-sm text-green-700">
-                          {data.length} righe trovate (mostrate prime {preview.length} in anteprima)
+                          {data.length} righe trovate (mostrate prime{" "}
+                          {preview.length} in anteprima)
                         </p>
                       </div>
                     </div>

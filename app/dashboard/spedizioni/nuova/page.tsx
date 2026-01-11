@@ -279,10 +279,10 @@ export default function NuovaSpedizionePage() {
     "reseller" | "master" | "default" | undefined
   >(undefined);
   // ✨ ENTERPRISE: ConfigId della configurazione API selezionata (per multi-config)
-  const [selectedConfigId, setSelectedConfigId] = useState<
-    string | undefined
-  >(undefined);
-  
+  const [selectedConfigId, setSelectedConfigId] = useState<string | undefined>(
+    undefined
+  );
+
   // ✨ ENTERPRISE: Quote selezionato con prezzo esatto (per routing)
   const [selectedQuoteExactPrice, setSelectedQuoteExactPrice] = useState<{
     courierName: string;
@@ -300,7 +300,7 @@ export default function NuovaSpedizionePage() {
   const [courierQuotes, setCourierQuotes] = useState<Map<string, any>>(
     new Map()
   );
-  
+
   // ✨ ENTERPRISE: Quote validi dal preventivatore (per routing)
   const [validQuotesFromComparator, setValidQuotesFromComparator] = useState<
     Array<{ courier: string; courierName: string; price: number }>
@@ -414,11 +414,15 @@ export default function NuovaSpedizionePage() {
     }
     loadAvailableCouriers();
   }, []);
-  
+
   // ✨ ENTERPRISE: Reset quote validi quando cambiano i dati critici (peso, destinazione)
   useEffect(() => {
     // Reset quando peso o destinazione cambiano o vengono rimossi
-    if (!formData.peso || parseFloat(formData.peso) <= 0 || !formData.destinatarioCap) {
+    if (
+      !formData.peso ||
+      parseFloat(formData.peso) <= 0 ||
+      !formData.destinatarioCap
+    ) {
       setValidQuotesFromComparator([]);
       setSelectedQuoteExactPrice(null);
     }
@@ -1717,16 +1721,20 @@ export default function NuovaSpedizionePage() {
                             next.set(`${courierName}::${contractCode}`, quote);
                             return next;
                           });
-                          
+
                           // ✨ ENTERPRISE: Aggiorna lista quote validi per routing
                           if (quote && quote.rates && quote.rates.length > 0) {
                             const bestRate = quote.rates[0];
-                            const price = parseFloat(bestRate.total_price || '0');
-                            
+                            const price = parseFloat(
+                              bestRate.total_price || "0"
+                            );
+
                             setValidQuotesFromComparator((prev) => {
                               // Rimuovi quote esistenti per questo corriere (deduplica per displayName)
                               const filtered = prev.filter(
-                                (q) => q.courierName !== courierName && q.courier !== courierName
+                                (q) =>
+                                  q.courierName !== courierName &&
+                                  q.courier !== courierName
                               );
                               // Aggiungi nuovo quote
                               return [
@@ -1739,17 +1747,28 @@ export default function NuovaSpedizionePage() {
                               ];
                             });
                           }
-                          
+
                           // ✨ ENTERPRISE: Se questo è il corriere selezionato, aggiorna il prezzo esatto
-                          if (formData.corriere === courierName && quote && quote.rates && quote.rates.length > 0) {
+                          if (
+                            formData.corriere === courierName &&
+                            quote &&
+                            quote.rates &&
+                            quote.rates.length > 0
+                          ) {
                             const bestRate = quote.rates[0];
-                            const exactPrice = parseFloat(bestRate.total_price || '0');
+                            const exactPrice = parseFloat(
+                              bestRate.total_price || "0"
+                            );
                             setSelectedQuoteExactPrice((prev) => {
                               if (prev && prev.courierName === courierName) {
                                 return { ...prev, price: exactPrice };
                               }
                               // Se non c'è ancora un quote selezionato, crealo
-                              return { courierName, price: exactPrice, contractCode };
+                              return {
+                                courierName,
+                                price: exactPrice,
+                                contractCode,
+                              };
                             });
                           }
                         }}
@@ -1777,12 +1796,20 @@ export default function NuovaSpedizionePage() {
                           }));
                           // ✨ ENTERPRISE: Salva configId per usarlo nella creazione spedizione
                           setSelectedConfigId(configId);
-                          
+
                           // ✨ ENTERPRISE: Salva quote selezionato per mostrare costo esatto
-                          const selectedQuote = courierQuotes.get(`${courierName}::${contractCode}`);
-                          if (selectedQuote && selectedQuote.rates && selectedQuote.rates.length > 0) {
+                          const selectedQuote = courierQuotes.get(
+                            `${courierName}::${contractCode}`
+                          );
+                          if (
+                            selectedQuote &&
+                            selectedQuote.rates &&
+                            selectedQuote.rates.length > 0
+                          ) {
                             const bestRate = selectedQuote.rates[0];
-                            const exactPrice = parseFloat(bestRate.total_price || '0');
+                            const exactPrice = parseFloat(
+                              bestRate.total_price || "0"
+                            );
                             setSelectedQuoteExactPrice({
                               courierName,
                               price: exactPrice,
@@ -1846,33 +1873,42 @@ export default function NuovaSpedizionePage() {
                     // ✨ ENTERPRISE: Routing si attiva solo se:
                     // 1. Ci sono dati inseriti (peso e destinazione)
                     // 2. Ci sono più quote validi dal preventivatore (non da availableCouriers)
-                    const hasData = formData.peso && parseFloat(formData.peso) > 0 && formData.destinatarioCap;
-                    
+                    const hasData =
+                      formData.peso &&
+                      parseFloat(formData.peso) > 0 &&
+                      formData.destinatarioCap;
+
                     if (!hasData) {
                       return null; // Non mostrare routing se non ci sono dati
                     }
-                    
+
                     // Deduplica carrier code dai quote validi (non da availableCouriers)
-                    const uniqueCarriersFromQuotes = new Map<string, { courier: string; courierName: string; price: number }>();
+                    const uniqueCarriersFromQuotes = new Map<
+                      string,
+                      { courier: string; courierName: string; price: number }
+                    >();
                     for (const quote of validQuotesFromComparator) {
                       const displayName = quote.courier || quote.courierName;
                       if (!uniqueCarriersFromQuotes.has(displayName)) {
                         uniqueCarriersFromQuotes.set(displayName, quote);
                       } else {
                         // Se esiste già, tieni quello con prezzo più basso
-                        const existing = uniqueCarriersFromQuotes.get(displayName)!;
+                        const existing =
+                          uniqueCarriersFromQuotes.get(displayName)!;
                         if (quote.price < existing.price) {
                           uniqueCarriersFromQuotes.set(displayName, quote);
                         }
                       }
                     }
-                    const uniqueCarriersList = Array.from(uniqueCarriersFromQuotes.values());
-                    
+                    const uniqueCarriersList = Array.from(
+                      uniqueCarriersFromQuotes.values()
+                    );
+
                     // Mostra routing solo se ci sono più carrier code unici nei quote validi
                     if (uniqueCarriersList.length <= 1) {
                       return null;
                     }
-                    
+
                     return (
                       <div className="pt-6 border-t border-gray-200">
                         <div className="mb-4">
@@ -1880,30 +1916,37 @@ export default function NuovaSpedizionePage() {
                             Routing Corrieri
                           </p>
                           <p className="text-sm text-gray-600 mb-4">
-                            Seleziona il corriere dal preventivatore per vedere il costo esatto
+                            Seleziona il corriere dal preventivatore per vedere
+                            il costo esatto
                           </p>
-                          
+
                           {/* Lista carrier code disponibili (deduplicati dai quote validi) */}
                           <div className="grid grid-cols-2 gap-2">
                             {uniqueCarriersList.map((quote) => {
-                              const isSelected = formData.corriere === quote.courierName || formData.corriere === quote.courier;
-                              
+                              const isSelected =
+                                formData.corriere === quote.courierName ||
+                                formData.corriere === quote.courier;
+
                               return (
                                 <div
                                   key={quote.courierName}
                                   className={`p-3 rounded-lg border-2 transition-colors ${
                                     isSelected
-                                      ? 'border-[#FF9500] bg-[#FF9500]/5'
-                                      : 'border-gray-200 bg-white hover:border-gray-300'
+                                      ? "border-[#FF9500] bg-[#FF9500]/5"
+                                      : "border-gray-200 bg-white hover:border-gray-300"
                                   }`}
                                 >
                                   <div className="font-semibold text-sm text-gray-900">
                                     {quote.courier || quote.courierName}
                                   </div>
-                                  {isSelected && selectedQuoteExactPrice && selectedQuoteExactPrice.price > 0 ? (
+                                  {isSelected &&
+                                  selectedQuoteExactPrice &&
+                                  selectedQuoteExactPrice.price > 0 ? (
                                     <div className="mt-2">
                                       <div className="text-2xl font-bold text-[#FF9500]">
-                                        {formatPrice(selectedQuoteExactPrice.price)}
+                                        {formatPrice(
+                                          selectedQuoteExactPrice.price
+                                        )}
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1">
                                         Costo esatto
@@ -1929,21 +1972,23 @@ export default function NuovaSpedizionePage() {
                   })()}
 
                   {/* ✨ COSTO ESATTO: Mostra solo quando viene selezionato un corriere (sostituisce placeholder) */}
-                  {formData.corriere && selectedQuoteExactPrice && selectedQuoteExactPrice.price > 0 && (
-                    <div className="pt-6 border-t border-gray-200">
-                      <div className="mb-4">
-                        <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
-                          Costo Esatto
-                        </p>
-                        <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF9500] to-[#E88500]">
-                          {formatPrice(selectedQuoteExactPrice.price)}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-2">
-                          Corriere: {selectedQuoteExactPrice.courierName}
+                  {formData.corriere &&
+                    selectedQuoteExactPrice &&
+                    selectedQuoteExactPrice.price > 0 && (
+                      <div className="pt-6 border-t border-gray-200">
+                        <div className="mb-4">
+                          <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
+                            Costo Esatto
+                          </p>
+                          <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF9500] to-[#E88500]">
+                            {formatPrice(selectedQuoteExactPrice.price)}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-2">
+                            Corriere: {selectedQuoteExactPrice.courierName}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Action Area */}
                   <div className="pt-6 border-t border-gray-200 space-y-3">
@@ -1952,11 +1997,12 @@ export default function NuovaSpedizionePage() {
                       <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
                         <AlertCircle className="w-5 h-5 flex-shrink-0" />
                         <span>
-                          <strong>Seleziona un corriere</strong> dalla tabella preventivi per continuare
+                          <strong>Seleziona un corriere</strong> dalla tabella
+                          preventivi per continuare
                         </span>
                       </div>
                     )}
-                    
+
                     <form onSubmit={handleSubmit}>
                       <button
                         type="submit"
