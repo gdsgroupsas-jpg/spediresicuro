@@ -340,6 +340,30 @@ export async function upsertPriceListEntriesAction(
       }))
     );
 
+    // Logga evento audit
+    try {
+      const { supabaseAdmin } = await import("@/lib/db/client");
+      const eventType = result.inserted && result.inserted > 0 
+        ? "price_list_entry_imported" 
+        : "price_list_entry_modified";
+      
+      await supabaseAdmin.rpc("log_price_list_event", {
+        p_event_type: eventType,
+        p_price_list_id: priceListId,
+        p_actor_id: user.id,
+        p_message: `${result.inserted || 0} inserite, ${result.updated || 0} aggiornate`,
+        p_metadata: {
+          inserted: result.inserted || 0,
+          updated: result.updated || 0,
+          total_entries: entries.length,
+        },
+        p_severity: "info",
+      });
+    } catch (logError) {
+      // Non bloccare l'operazione se il logging fallisce
+      console.error("Errore logging upsert entries:", logError);
+    }
+
     return {
       success: true,
       inserted: result.inserted,
