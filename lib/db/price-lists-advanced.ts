@@ -210,7 +210,7 @@ export async function calculatePriceWithRules(
     const selectedRule = selectBestRule(matchingRules)
 
     // 5. Calcola prezzo con regola selezionata
-    return calculatePriceWithRule(priceList, selectedRule, params)
+    return await calculatePriceWithRule(priceList, selectedRule, params)
   } catch (error: any) {
     console.error('Errore calculatePriceWithRules:', error)
     return null
@@ -379,7 +379,7 @@ function selectBestRule(rules: PriceRule[]): PriceRule {
 /**
  * Calcola prezzo usando una regola specifica
  */
-function calculatePriceWithRule(
+async function calculatePriceWithRule(
   priceList: PriceList,
   rule: PriceRule,
   params: {
@@ -399,12 +399,52 @@ function calculatePriceWithRule(
       insurance?: boolean
     }
   }
-): PriceCalculationResult {
+): Promise<PriceCalculationResult> {
   // Prezzo base
   let basePrice = rule.base_price_override || 0
+  let supplierBasePrice = 0 // ✨ Costo fornitore originale
+  let supplierSurcharges = 0
+
+  // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
+  if (priceList.master_list_id && priceList.list_type === 'custom') {
+    try {
+      const { data: masterList } = await supabaseAdmin
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)')
+        .eq('id', priceList.master_list_id)
+        .single()
+
+      if (masterList && masterList.entries) {
+        const masterMatrixResult = calculatePriceFromList(
+          masterList as PriceList,
+          params.weight,
+          params.destination.zip || '',
+          params.serviceType || 'standard',
+          params.options,
+          params.destination.province,
+          params.destination.region
+        )
+
+        if (masterMatrixResult) {
+          supplierBasePrice = masterMatrixResult.basePrice
+          supplierSurcharges = masterMatrixResult.surcharges || 0
+          console.log(`✅ [PRICE CALC] Listino personalizzato: recuperato costo fornitore originale €${(supplierBasePrice + supplierSurcharges).toFixed(2)}`)
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️ [PRICE CALC] Errore recupero costo fornitore originale:`, error)
+    }
+  }
 
   // Se non c'è override, calcola da price_list_entries (matrice) se disponibile
   if (!rule.base_price_override && priceList.entries && priceList.entries.length > 0) {
+    console.log(`🔍 [PRICE CALC] Calcolo prezzo da matrice listino "${priceList.name}" (${priceList.list_type}):`)
+    console.log(`   - Peso: ${params.weight}kg`)
+    console.log(`   - CAP: ${params.destination.zip}`)
+    console.log(`   - Provincia: ${params.destination.province || 'N/A'}`)
+    console.log(`   - Service Type: ${params.serviceType || 'standard'}`)
+    console.log(`   - Entries disponibili: ${priceList.entries.length}`)
+    
     const matrixResult = calculatePriceFromList(
       priceList,
       params.weight,
@@ -417,12 +457,15 @@ function calculatePriceWithRule(
     
     if (matrixResult) {
       basePrice = matrixResult.basePrice
+      console.log(`✅ [PRICE CALC] Entry trovata nella matrice: basePrice = €${basePrice.toFixed(2)}`)
     } else {
       // Se non trova entry nella matrice, usa default (retrocompatibilità)
+      console.warn(`⚠️ [PRICE CALC] Nessuna entry matcha nella matrice, uso default €10.00`)
       basePrice = 10.0
     }
   } else if (!rule.base_price_override) {
     // Nessuna matrice disponibile, usa default
+    console.warn(`⚠️ [PRICE CALC] Nessuna matrice disponibile, uso default €10.00`)
     basePrice = 10.0
   }
 
@@ -460,6 +503,7 @@ function calculatePriceWithRule(
   }
 
   const totalCost = basePrice + surcharges
+  const supplierTotalCost = supplierBasePrice + supplierSurcharges
 
   // Calcola margine
   let margin = 0
@@ -475,11 +519,13 @@ function calculatePriceWithRule(
     basePrice,
     surcharges,
     margin,
-    totalCost,
+    totalCost: supplierTotalCost > 0 ? supplierTotalCost : totalCost, // ✨ Se c'è costo fornitore, usa quello
     finalPrice,
     appliedRule: rule,
     appliedPriceList: priceList,
     priceListId: priceList.id,
+    // ✨ NUOVO: Aggiungi costo fornitore originale
+    supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
     calculationDetails: {
       weight: params.weight,
       volume: params.volume,
@@ -689,6 +735,7 @@ export async function calculateBestPriceForReseller(
       country?: string
     }
     courierId?: string
+    contractCode?: string // ✨ NUOVO: per matching contract_code nei metadata
     serviceType?: CourierServiceType
     options?: {
       declaredValue?: number
@@ -704,15 +751,18 @@ export async function calculateBestPriceForReseller(
   priceDifference?: number
 } | null> {
   try {
-    // Verifica che l'utente sia reseller
+    // Verifica ruolo utente
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, is_reseller, account_type')
       .eq('id', userId)
       .single()
 
-    if (!user || !user.is_reseller) {
-      // Non è reseller, usa calcolo normale
+    const isReseller = user?.is_reseller === true
+    const isSuperadmin = user?.account_type === 'superadmin'
+
+    // Per utenti normali (non reseller e non superadmin), usa calcolo base
+    if (!user || (!isReseller && !isSuperadmin)) {
       const normalPrice = await calculatePriceWithRules(userId, params)
       if (!normalPrice) return null
       return {
@@ -721,40 +771,124 @@ export async function calculateBestPriceForReseller(
       }
     }
 
-    // ✨ PRIORITÀ 1: Listini personalizzati ATTIVI del reseller (list_type='custom', status='active')
-    // Questi hanno la massima priorità perché sono creati e configurati dal reseller stesso
+    // ✨ PRIORITÀ 1: Schema Reseller/Sub-Users
+    // 
+    // REGOLE VISIBILITÀ:
+    // - RESELLER: vede TUTTI i suoi listini personalizzati attivi (custom + supplier)
+    // - UTENTI NORMALI: vedono SOLO i listini assegnati tramite price_list_assignments
+    // - SUPERADMIN: vede tutti i listini attivi
+    
     let customPrice: PriceCalculationResult | null = null
-    const { data: customPriceLists } = await supabaseAdmin
-      .from('price_lists')
-      .select('*')
-      .eq('created_by', userId)
-      .eq('list_type', 'custom')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
+    
+    let activePriceLists: any[] = [];
 
-    if (customPriceLists && customPriceLists.length > 0) {
-      // Filtra per corriere se specificato
-      const filtered = params.courierId
-        ? customPriceLists.filter(pl => !pl.courier_id || pl.courier_id === params.courierId)
-        : customPriceLists
+    if (isSuperadmin) {
+      // Superadmin: vede tutti i listini attivi
+      const { data } = await supabaseAdmin
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      activePriceLists = data || [];
+    } else if (isReseller) {
+      // RESELLER: vede TUTTI i suoi listini personalizzati attivi
+      const { data } = await supabaseAdmin
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false });
+      activePriceLists = data || [];
+    } else {
+      // UTENTI NORMALI: vedono SOLO i listini assegnati
+      const { data: assignments } = await supabaseAdmin
+        .from('price_list_assignments')
+        .select('price_list_id, price_lists(*)')
+        .eq('user_id', userId)
+        .is('revoked_at', null);
+
+      if (assignments && assignments.length > 0) {
+        const assignedListIds = assignments.map((a: any) => a.price_list_id);
+        const { data } = await supabaseAdmin
+          .from('price_lists')
+          .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
+          .in('id', assignedListIds)
+          .in('list_type', ['custom', 'supplier'])
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+        activePriceLists = data || [];
+      }
+    }
+
+    if (activePriceLists && activePriceLists.length > 0) {
+      // ✨ Filtra per corriere: usa contractCode (priorità) o courierId (fallback)
+      const filtered = activePriceLists.filter(pl => {
+        // Se contractCode è specificato, matcha per contract_code nei metadata
+        if (params.contractCode) {
+          const metadata = pl.metadata || pl.source_metadata || {};
+          const listContractCode = (metadata as any).contract_code;
+          const listCarrierCode = (metadata as any).carrier_code;
+          
+          // Match esatto o parziale con contractCode
+          const contractCodeLower = params.contractCode.toLowerCase();
+          const listContractCodeLower = listContractCode?.toLowerCase() || '';
+          const listCarrierCodeLower = listCarrierCode?.toLowerCase() || '';
+          
+          // Match esatto
+          if (listContractCodeLower === contractCodeLower || listCarrierCodeLower === contractCodeLower) {
+            return true;
+          }
+          
+          // Match parziale: contractCode contiene il prefisso (es. "gls-GLS-5000" contiene "gls")
+          if (contractCodeLower.startsWith(listCarrierCodeLower + '-') || contractCodeLower === listCarrierCodeLower) {
+            return true;
+          }
+          if (listContractCodeLower.startsWith(contractCodeLower + '-') || listContractCodeLower === contractCodeLower) {
+            return true;
+          }
+        }
+        
+        // Fallback: filtra per courierId se specificato
+        if (params.courierId) {
+          return !pl.courier_id || pl.courier_id === params.courierId;
+        }
+        
+        // Se nessun filtro, include tutti
+        return true;
+      })
 
       // ✨ ENTERPRISE: Se ci sono PIÙ listini attivi, calcola il prezzo per tutti e scegli il PIÙ ECONOMICO
       const priceResults: Array<{
         price: PriceCalculationResult
-        list: typeof customPriceLists[0]
+        list: typeof activePriceLists[0]
         metadata: any
       }> = []
 
-      // Calcola prezzo per ogni listino personalizzato attivo
-      for (const customList of filtered) {
-        const calculatedPrice = await calculatePriceWithRules(userId, params, customList.id)
+      // Calcola prezzo per ogni listino attivo (custom o supplier)
+      console.log(`🔍 [RESELLER] Listini filtrati per calcolo: ${filtered.length} (su ${activePriceLists.length} totali)`);
+      for (const priceList of filtered) {
+        const metadata = priceList.metadata || priceList.source_metadata || {};
+        const contractCode = (metadata as any).contract_code;
+        const carrierCode = (metadata as any).carrier_code;
+        
+        console.log(`🔍 [RESELLER] Calcolo prezzo per listino: "${priceList.name}" (${priceList.list_type})`);
+        console.log(`   - contract_code: ${contractCode || 'N/A'}`);
+        console.log(`   - carrier_code: ${carrierCode || 'N/A'}`);
+        console.log(`   - master_list_id: ${priceList.master_list_id || 'N/A'}`);
+        console.log(`   - entries: ${priceList.entries?.length || 0}`);
+        
+        const calculatedPrice = await calculatePriceWithRules(userId, params, priceList.id)
         if (calculatedPrice) {
-          const metadata = customList.metadata || customList.source_metadata || {}
+          console.log(`✅ [RESELLER] Prezzo calcolato: €${calculatedPrice.finalPrice.toFixed(2)} (fornitore: €${calculatedPrice.supplierPrice?.toFixed(2) || calculatedPrice.totalCost.toFixed(2)})`);
           priceResults.push({
             price: calculatedPrice,
-            list: customList,
+            list: priceList,
             metadata,
           })
+        } else {
+          console.warn(`⚠️ [RESELLER] Impossibile calcolare prezzo per listino "${priceList.name}"`);
         }
       }
 
