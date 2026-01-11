@@ -151,6 +151,8 @@ export const assignPriceListTool: AgentTool = {
       return `Error assigning list: ${result.error}`;
     }
 
-    return `Successfully assigned price list ${args.price_list_id} to user ${args.user_id}. Assignment ID: ${result.assignment.id}`;
+    return `Successfully assigned price list ${args.price_list_id} to user ${
+      args.user_id
+    }. Assignment ID: ${result.assignment?.id || "unknown"}`;
   },
 };
