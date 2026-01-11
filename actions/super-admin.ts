@@ -842,6 +842,8 @@ export async function updateUserAiFeatures(
   error?: string;
 }> {
   try {
+    console.log("[updateUserAiFeatures] START", { userId, features });
+
     // 1. Verifica che l'utente corrente sia Super Admin
     const superAdminCheck = await isCurrentUserSuperAdmin();
     if (!superAdminCheck.isSuperAdmin) {
@@ -857,6 +859,12 @@ export async function updateUserAiFeatures(
       .select("id, email, metadata")
       .eq("id", userId)
       .single();
+
+    console.log("[updateUserAiFeatures] Query Result:", {
+      userId,
+      targetUser,
+      userError,
+    });
 
     if (userError || !targetUser) {
       return {
