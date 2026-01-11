@@ -1,44 +1,48 @@
 /**
  * Admin Dashboard - God View
- * 
+ *
  * Dashboard amministrativa completa con:
  * - Vista di tutti gli utenti
  * - Vista di tutte le spedizioni
  * - Statistiche globali
  * - Grafici e visualizzazioni
- * 
+ *
  * ⚠️ SOLO PER ADMIN: Verifica permessi prima di mostrare
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import Link from 'next/link';
-import DashboardNav from '@/components/dashboard-nav';
-import { 
-  Users, 
-  Package, 
-  TrendingUp, 
-  DollarSign, 
+import {
+  assignConfigurationToUser,
+  listConfigurations,
+} from "@/actions/configurations";
+import { AiFeaturesCard } from "@/components/admin/ai-features/AiFeaturesCard";
+import DashboardNav from "@/components/dashboard-nav";
+import {
   Activity,
-  Shield,
-  UserCheck,
   AlertCircle,
   CheckCircle2,
   Clock,
-  XCircle,
-  Sparkles,
-  Settings,
-  Trash2,
+  Cog,
+  DollarSign,
+  ExternalLink,
+  Package,
   Power,
   PowerOff,
+  Settings,
+  Shield,
+  Sparkles,
+  Trash2,
+  TrendingUp,
+  UserCheck,
+  Users,
+  XCircle,
   Zap,
-  Cog,
-  ExternalLink
-} from 'lucide-react';
-import { listConfigurations, assignConfigurationToUser } from '@/actions/configurations';
+} from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface AdminStats {
   // Utenti
@@ -76,6 +80,7 @@ interface User {
   provider: string;
   created_at: string;
   assigned_config_id?: string | null;
+  metadata?: any;
 }
 
 interface Shipment {
@@ -98,10 +103,12 @@ export default function AdminDashboardPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [killerFeatures, setKillerFeatures] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Stati per modali e azioni
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(
+    null
+  );
   const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [showDeleteShipmentModal, setShowDeleteShipmentModal] = useState(false);
   const [showFeaturesModal, setShowFeaturesModal] = useState(false);
@@ -123,7 +130,7 @@ export default function AdminDashboardPage() {
         setCourierConfigs(result.configs);
       }
     } catch (error) {
-      console.error('Errore caricamento configurazioni:', error);
+      console.error("Errore caricamento configurazioni:", error);
     }
   }
 
@@ -134,20 +141,20 @@ export default function AdminDashboardPage() {
       const result = await assignConfigurationToUser(userId, configId);
       if (result.success) {
         // Ricarica dati
-        const overviewResponse = await fetch('/api/admin/overview');
+        const overviewResponse = await fetch("/api/admin/overview");
         if (overviewResponse.ok) {
           const data = await overviewResponse.json();
           if (data.success) {
             setUsers(data.users || []);
           }
         }
-        alert(result.message || 'Configurazione assegnata con successo');
+        alert(result.message || "Configurazione assegnata con successo");
       } else {
         alert(`Errore: ${result.error}`);
       }
     } catch (error: any) {
-      console.error('Errore assegnazione configurazione:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      console.error("Errore assegnazione configurazione:", error);
+      alert(`Errore: ${error.message || "Errore sconosciuto"}`);
     } finally {
       setAssigningConfig(null);
     }
@@ -156,52 +163,54 @@ export default function AdminDashboardPage() {
   // Verifica autorizzazione e carica dati
   useEffect(() => {
     async function loadAdminData() {
-      if (status === 'loading') return;
+      if (status === "loading") return;
 
       if (!session) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
       try {
         setIsLoading(true);
-        const response = await fetch('/api/admin/overview');
+        const response = await fetch("/api/admin/overview");
 
         if (response.status === 403) {
-          setError('Accesso negato. Solo gli admin possono accedere a questa pagina.');
+          setError(
+            "Accesso negato. Solo gli admin possono accedere a questa pagina."
+          );
           setIsAuthorized(false);
           setIsLoading(false);
           return;
         }
 
         if (!response.ok) {
-          throw new Error('Errore nel caricamento dei dati admin');
+          throw new Error("Errore nel caricamento dei dati admin");
         }
 
         const data = await response.json();
-        
+
         if (data.success) {
           setStats(data.stats);
           setUsers(data.users || []);
           setShipments(data.shipments || []);
           setIsAuthorized(true);
         } else {
-          throw new Error(data.error || 'Errore sconosciuto');
+          throw new Error(data.error || "Errore sconosciuto");
         }
 
         // Carica anche le killer features
         try {
-          const featuresResponse = await fetch('/api/admin/features');
+          const featuresResponse = await fetch("/api/admin/features");
           if (featuresResponse.ok) {
             const featuresData = await featuresResponse.json();
             setKillerFeatures(featuresData.features || []);
           }
         } catch (err) {
-          console.warn('Errore caricamento features:', err);
+          console.warn("Errore caricamento features:", err);
         }
       } catch (err: any) {
-        console.error('Errore caricamento dati admin:', err);
-        setError(err.message || 'Errore nel caricamento dei dati');
+        console.error("Errore caricamento dati admin:", err);
+        setError(err.message || "Errore nel caricamento dei dati");
       } finally {
         setIsLoading(false);
       }
@@ -234,9 +243,7 @@ export default function AdminDashboardPage() {
         </div>
         <div className="p-6">
           <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-          {change && (
-            <div className="text-sm text-gray-500">{change}</div>
-          )}
+          {change && <div className="text-sm text-gray-500">{change}</div>}
         </div>
       </div>
     );
@@ -244,20 +251,20 @@ export default function AdminDashboardPage() {
 
   // Formatta numero come valuta
   function formatCurrency(value: number): string {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
+    return new Intl.NumberFormat("it-IT", {
+      style: "currency",
+      currency: "EUR",
     }).format(value);
   }
 
   // Formatta data
   function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   }
 
@@ -271,7 +278,7 @@ export default function AdminDashboardPage() {
         setUserFeatures(data.features || []);
       }
     } catch (error) {
-      console.error('Errore caricamento features utente:', error);
+      console.error("Errore caricamento features utente:", error);
     } finally {
       setIsLoadingFeatures(false);
     }
@@ -289,14 +296,14 @@ export default function AdminDashboardPage() {
     if (!selectedUser) return;
 
     try {
-      const response = await fetch('/api/admin/features', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/admin/features", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetUserEmail: selectedUser.email,
           featureCode,
           activate,
-          activationType: 'admin_grant',
+          activationType: "admin_grant",
         }),
       });
 
@@ -304,7 +311,7 @@ export default function AdminDashboardPage() {
         // Ricarica features
         await loadUserFeatures(selectedUser.id);
         // Ricarica dati dashboard
-        const overviewResponse = await fetch('/api/admin/overview');
+        const overviewResponse = await fetch("/api/admin/overview");
         if (overviewResponse.ok) {
           const data = await overviewResponse.json();
           if (data.success) {
@@ -313,11 +320,11 @@ export default function AdminDashboardPage() {
         }
       } else {
         const errorData = await response.json();
-        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+        alert(`Errore: ${errorData.error || "Errore sconosciuto"}`);
       }
     } catch (error: any) {
-      console.error('Errore toggle feature:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      console.error("Errore toggle feature:", error);
+      alert(`Errore: ${error.message || "Errore sconosciuto"}`);
     }
   }
 
@@ -328,12 +335,12 @@ export default function AdminDashboardPage() {
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
         // Ricarica dati
-        const overviewResponse = await fetch('/api/admin/overview');
+        const overviewResponse = await fetch("/api/admin/overview");
         if (overviewResponse.ok) {
           const data = await overviewResponse.json();
           if (data.success) {
@@ -343,14 +350,14 @@ export default function AdminDashboardPage() {
         }
         setShowDeleteUserModal(false);
         setSelectedUser(null);
-        alert('Utente cancellato con successo');
+        alert("Utente cancellato con successo");
       } else {
         const errorData = await response.json();
-        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+        alert(`Errore: ${errorData.error || "Errore sconosciuto"}`);
       }
     } catch (error: any) {
-      console.error('Errore cancellazione utente:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      console.error("Errore cancellazione utente:", error);
+      alert(`Errore: ${error.message || "Errore sconosciuto"}`);
     } finally {
       setIsDeleting(false);
     }
@@ -362,13 +369,16 @@ export default function AdminDashboardPage() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/admin/shipments/${selectedShipment.id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/admin/shipments/${selectedShipment.id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         // Ricarica dati
-        const overviewResponse = await fetch('/api/admin/overview');
+        const overviewResponse = await fetch("/api/admin/overview");
         if (overviewResponse.ok) {
           const data = await overviewResponse.json();
           if (data.success) {
@@ -378,14 +388,14 @@ export default function AdminDashboardPage() {
         }
         setShowDeleteShipmentModal(false);
         setSelectedShipment(null);
-        alert('Spedizione cancellata con successo');
+        alert("Spedizione cancellata con successo");
       } else {
         const errorData = await response.json();
-        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+        alert(`Errore: ${errorData.error || "Errore sconosciuto"}`);
       }
     } catch (error: any) {
-      console.error('Errore cancellazione spedizione:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      console.error("Errore cancellazione spedizione:", error);
+      alert(`Errore: ${error.message || "Errore sconosciuto"}`);
     } finally {
       setIsDeleting(false);
     }
@@ -393,27 +403,64 @@ export default function AdminDashboardPage() {
 
   // Badge status spedizione
   function StatusBadge({ status }: { status: string }) {
-    const config: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-      pending: { label: 'In attesa', className: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-3 h-3" /> },
-      draft: { label: 'Bozza', className: 'bg-gray-100 text-gray-800', icon: <Clock className="w-3 h-3" /> },
-      in_transit: { label: 'In transito', className: 'bg-blue-100 text-blue-800', icon: <Activity className="w-3 h-3" /> },
-      shipped: { label: 'Spedita', className: 'bg-blue-100 text-blue-800', icon: <Activity className="w-3 h-3" /> },
-      delivered: { label: 'Consegnata', className: 'bg-green-100 text-green-800', icon: <CheckCircle2 className="w-3 h-3" /> },
-      failed: { label: 'Fallita', className: 'bg-red-100 text-red-800', icon: <XCircle className="w-3 h-3" /> },
-      cancelled: { label: 'Cancellata', className: 'bg-red-100 text-red-800', icon: <XCircle className="w-3 h-3" /> },
+    const config: Record<
+      string,
+      { label: string; className: string; icon: React.ReactNode }
+    > = {
+      pending: {
+        label: "In attesa",
+        className: "bg-yellow-100 text-yellow-800",
+        icon: <Clock className="w-3 h-3" />,
+      },
+      draft: {
+        label: "Bozza",
+        className: "bg-gray-100 text-gray-800",
+        icon: <Clock className="w-3 h-3" />,
+      },
+      in_transit: {
+        label: "In transito",
+        className: "bg-blue-100 text-blue-800",
+        icon: <Activity className="w-3 h-3" />,
+      },
+      shipped: {
+        label: "Spedita",
+        className: "bg-blue-100 text-blue-800",
+        icon: <Activity className="w-3 h-3" />,
+      },
+      delivered: {
+        label: "Consegnata",
+        className: "bg-green-100 text-green-800",
+        icon: <CheckCircle2 className="w-3 h-3" />,
+      },
+      failed: {
+        label: "Fallita",
+        className: "bg-red-100 text-red-800",
+        icon: <XCircle className="w-3 h-3" />,
+      },
+      cancelled: {
+        label: "Cancellata",
+        className: "bg-red-100 text-red-800",
+        icon: <XCircle className="w-3 h-3" />,
+      },
     };
 
-    const statusConfig = config[status] || { label: status, className: 'bg-gray-100 text-gray-800', icon: <AlertCircle className="w-3 h-3" /> };
+    const statusConfig = config[status] || {
+      label: status,
+      className: "bg-gray-100 text-gray-800",
+      icon: <AlertCircle className="w-3 h-3" />,
+    };
 
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}
+      >
         {statusConfig.icon}
         {statusConfig.label}
       </span>
     );
   }
 
-  if (status === 'loading' || isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
         <div className="text-center">
@@ -435,8 +482,12 @@ export default function AdminDashboardPage() {
           />
           <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h2>
-            <p className="text-gray-600 mb-6">{error || 'Solo gli admin possono accedere a questa pagina.'}</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Accesso Negato
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {error || "Solo gli admin possono accedere a questa pagina."}
+            </p>
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -490,8 +541,12 @@ export default function AdminDashboardPage() {
                     <Cog className="w-5 h-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Configurazioni</h3>
-                    <p className="text-sm text-gray-500">Gestisci API corrieri</p>
+                    <h3 className="font-semibold text-gray-900">
+                      Configurazioni
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Gestisci API corrieri
+                    </p>
                   </div>
                 </Link>
                 <Link
@@ -502,8 +557,12 @@ export default function AdminDashboardPage() {
                     <Sparkles className="w-5 h-5 text-purple-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Features Piattaforma</h3>
-                    <p className="text-sm text-gray-500">Attiva/disattiva features</p>
+                    <h3 className="font-semibold text-gray-900">
+                      Features Piattaforma
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Attiva/disattiva features
+                    </p>
                   </div>
                 </Link>
                 <Link
@@ -515,7 +574,9 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">Automation</h3>
-                    <p className="text-sm text-gray-500">Gestisci automazione</p>
+                    <p className="text-sm text-gray-500">
+                      Gestisci automazione
+                    </p>
                   </div>
                 </Link>
                 <Link
@@ -526,8 +587,12 @@ export default function AdminDashboardPage() {
                     <Users className="w-5 h-5 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Gestione Team</h3>
-                    <p className="text-sm text-gray-500">Gestisci utenti e admin</p>
+                    <h3 className="font-semibold text-gray-900">
+                      Gestione Team
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Gestisci utenti e admin
+                    </p>
                   </div>
                 </Link>
                 <Link
@@ -538,7 +603,9 @@ export default function AdminDashboardPage() {
                     <Activity className="w-5 h-5 text-orange-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Log Diagnostici</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      Log Diagnostici
+                    </h3>
                     <p className="text-sm text-gray-500">Eventi e monitoring</p>
                   </div>
                 </Link>
@@ -659,7 +726,9 @@ export default function AdminDashboardPage() {
 
         {/* Tabella Utenti Recenti */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Utenti Recenti</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Utenti Recenti
+          </h2>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -691,15 +760,19 @@ export default function AdminDashboardPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{user.name || user.email}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.name || user.email}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {user.email}
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {
                           // Import dinamico per evitare problemi SSR
-                          const roleUtils = require('@/lib/utils/role-badges');
+                          const roleUtils = require("@/lib/utils/role-badges");
                           return (
                             <roleUtils.RoleBadgeSpan
                               accountType={(user as any).account_type}
@@ -710,12 +783,14 @@ export default function AdminDashboardPage() {
                         })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.provider || 'credentials'}
+                        {user.provider || "credentials"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <select
-                          value={user.assigned_config_id || ''}
-                          onChange={(e) => handleAssignConfig(user.id, e.target.value || null)}
+                          value={user.assigned_config_id || ""}
+                          onChange={(e) =>
+                            handleAssignConfig(user.id, e.target.value || null)
+                          }
                           disabled={assigningConfig === user.id}
                           className="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                         >
@@ -770,7 +845,9 @@ export default function AdminDashboardPage() {
 
         {/* Tabella Spedizioni Recenti */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Spedizioni Recenti</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Spedizioni Recenti
+          </h2>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -800,19 +877,23 @@ export default function AdminDashboardPage() {
                   {shipments.slice(0, 20).map((shipment) => (
                     <tr key={shipment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {shipment.tracking_number || 'N/A'}
+                        {shipment.tracking_number || "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {shipment.recipient_name || 'N/A'}
+                        {shipment.recipient_name || "N/A"}
                         {shipment.recipient_city && (
-                          <div className="text-xs text-gray-400">{shipment.recipient_city}</div>
+                          <div className="text-xs text-gray-400">
+                            {shipment.recipient_city}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <StatusBadge status={shipment.status} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {shipment.final_price ? formatCurrency(shipment.final_price) : 'N/A'}
+                        {shipment.final_price
+                          ? formatCurrency(shipment.final_price)
+                          : "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(shipment.created_at)}
@@ -846,7 +927,9 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-6">
               {killerFeatures.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Nessuna feature disponibile</p>
+                <p className="text-gray-500 text-center py-8">
+                  Nessuna feature disponibile
+                </p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {killerFeatures.map((feature) => (
@@ -856,8 +939,12 @@ export default function AdminDashboardPage() {
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold text-gray-900">{feature.name}</h3>
-                          <p className="text-sm text-gray-500 mt-1">{feature.description}</p>
+                          <h3 className="font-semibold text-gray-900">
+                            {feature.name}
+                          </h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {feature.description}
+                          </p>
                         </div>
                         {feature.is_free ? (
                           <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
@@ -874,9 +961,13 @@ export default function AdminDashboardPage() {
                           {feature.category}
                         </span>
                         {feature.is_available ? (
-                          <span className="text-xs text-green-600">✓ Disponibile</span>
+                          <span className="text-xs text-green-600">
+                            ✓ Disponibile
+                          </span>
                         ) : (
-                          <span className="text-xs text-gray-400">Non disponibile</span>
+                          <span className="text-xs text-gray-400">
+                            Non disponibile
+                          </span>
                         )}
                       </div>
                     </div>
@@ -888,27 +979,40 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Modali */}
-        
+
         {/* Modale Cancellazione Utente */}
         {showDeleteUserModal && selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteUserModal(false)}>
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowDeleteUserModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-red-100 rounded-lg">
                     <AlertCircle className="w-6 h-6 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">Cancella Account</h3>
-                    <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Cancella Account
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Questa azione non può essere annullata
+                    </p>
                   </div>
                 </div>
               </div>
               <div className="p-6">
                 <p className="text-gray-700 mb-4">
-                  Sei sicuro di voler cancellare l&apos;account di <strong>{selectedUser.email}</strong>?
+                  Sei sicuro di voler cancellare l&apos;account di{" "}
+                  <strong>{selectedUser.email}</strong>?
                   <br />
-                  <span className="text-sm text-red-600">Tutte le spedizioni verranno eliminate.</span>
+                  <span className="text-sm text-red-600">
+                    Tutte le spedizioni verranno eliminate.
+                  </span>
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -916,7 +1020,7 @@ export default function AdminDashboardPage() {
                     disabled={isDeleting}
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
                   >
-                    {isDeleting ? 'Cancellazione...' : 'Cancella Account'}
+                    {isDeleting ? "Cancellazione..." : "Cancella Account"}
                   </button>
                   <button
                     onClick={() => {
@@ -936,22 +1040,36 @@ export default function AdminDashboardPage() {
 
         {/* Modale Cancellazione Spedizione */}
         {showDeleteShipmentModal && selectedShipment && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteShipmentModal(false)}>
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowDeleteShipmentModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-red-100 rounded-lg">
                     <AlertCircle className="w-6 h-6 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">Cancella Spedizione</h3>
-                    <p className="text-sm text-gray-600">Questa azione non può essere annullata</p>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Cancella Spedizione
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Questa azione non può essere annullata
+                    </p>
                   </div>
                 </div>
               </div>
               <div className="p-6">
                 <p className="text-gray-700 mb-4">
-                  Sei sicuro di voler cancellare la spedizione <strong>{selectedShipment.tracking_number || selectedShipment.id}</strong>?
+                  Sei sicuro di voler cancellare la spedizione{" "}
+                  <strong>
+                    {selectedShipment.tracking_number || selectedShipment.id}
+                  </strong>
+                  ?
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -959,7 +1077,7 @@ export default function AdminDashboardPage() {
                     disabled={isDeleting}
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
                   >
-                    {isDeleting ? 'Cancellazione...' : 'Cancella Spedizione'}
+                    {isDeleting ? "Cancellazione..." : "Cancella Spedizione"}
                   </button>
                   <button
                     onClick={() => {
@@ -979,8 +1097,14 @@ export default function AdminDashboardPage() {
 
         {/* Modale Gestione Features */}
         {showFeaturesModal && selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowFeaturesModal(false)}>
-            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowFeaturesModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -988,8 +1112,12 @@ export default function AdminDashboardPage() {
                       <Sparkles className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Gestisci Features</h3>
-                      <p className="text-sm text-gray-600">{selectedUser.email}</p>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Gestisci Features
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {selectedUser.email}
+                      </p>
                     </div>
                   </div>
                   <button
@@ -1005,10 +1133,27 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               <div className="p-6">
+                {/* AI Features Toggle for Resellers */}
+                {selectedUser.role !== "admin" &&
+                  (selectedUser as any).is_reseller && (
+                    <div className="mb-6">
+                      <AiFeaturesCard
+                        userId={selectedUser.id}
+                        initialCanManagePriceLists={
+                          selectedUser.metadata?.ai_can_manage_pricelists ===
+                          true
+                        }
+                        userName={selectedUser.name || selectedUser.email}
+                      />
+                    </div>
+                  )}
+
                 {isLoadingFeatures ? (
                   <div className="text-center py-8">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <p className="text-gray-500 mt-2">Caricamento features...</p>
+                    <p className="text-gray-500 mt-2">
+                      Caricamento features...
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1019,7 +1164,9 @@ export default function AdminDashboardPage() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-gray-900">{feature.name}</h4>
+                            <h4 className="font-semibold text-gray-900">
+                              {feature.name}
+                            </h4>
                             {feature.is_free ? (
                               <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                                 Gratuita
@@ -1030,19 +1177,29 @@ export default function AdminDashboardPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">{feature.description}</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {feature.description}
+                          </p>
                           {feature.is_active_for_user && feature.expires_at && (
                             <p className="text-xs text-gray-400 mt-1">
-                              Scade il: {new Date(feature.expires_at).toLocaleDateString('it-IT')}
+                              Scade il:{" "}
+                              {new Date(feature.expires_at).toLocaleDateString(
+                                "it-IT"
+                              )}
                             </p>
                           )}
                         </div>
                         <button
-                          onClick={() => toggleUserFeature(feature.code, !feature.is_active_for_user)}
+                          onClick={() =>
+                            toggleUserFeature(
+                              feature.code,
+                              !feature.is_active_for_user
+                            )
+                          }
                           className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
                             feature.is_active_for_user
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              ? "bg-green-100 text-green-700 hover:bg-green-200"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           }`}
                         >
                           {feature.is_active_for_user ? (
@@ -1060,7 +1217,9 @@ export default function AdminDashboardPage() {
                       </div>
                     ))}
                     {userFeatures.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">Nessuna feature disponibile</p>
+                      <p className="text-center text-gray-500 py-8">
+                        Nessuna feature disponibile
+                      </p>
                     )}
                   </div>
                 )}
@@ -1068,9 +1227,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
-
