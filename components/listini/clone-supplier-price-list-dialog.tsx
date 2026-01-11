@@ -147,7 +147,7 @@ export function CloneSupplierPriceListDialog({
         if (assignResult.success) {
           toast.success("Listino assegnato al cliente selezionato");
         } else {
-          toast.warn(
+          toast.warning(
             `Listino clonato ma assegnazione fallita: ${assignResult.error}`
           );
         }
