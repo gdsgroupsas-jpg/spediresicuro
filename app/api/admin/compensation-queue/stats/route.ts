@@ -20,13 +20,7 @@ export async function GET(request: NextRequest) {
     // ============================================
     // AUTHORIZATION: Admin/SuperAdmin only
     // ============================================
-    const { context, error: authError } = await requireSafeAuth();
-    if (authError || !context) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const context = await requireSafeAuth();
 
     // Check if user is admin/superadmin
     const { data: user } = await supabaseAdmin
