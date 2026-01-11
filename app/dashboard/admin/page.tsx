@@ -1145,22 +1145,33 @@ export default function AdminDashboardPage() {
                         }
                         userName={selectedUser.name || selectedUser.email}
                         onToggleComplete={async () => {
-                          // Ricarica dati dashboard per aggiornare stato utente
-                          const overviewResponse = await fetch(
-                            "/api/admin/overview"
-                          );
-                          if (overviewResponse.ok) {
-                            const data = await overviewResponse.json();
-                            if (data.success) {
-                              setUsers(data.users || []);
-                              // Aggiorna anche selectedUser per riflettere i cambiamenti nel modal
-                              const updatedUser = data.users.find(
-                                (u: any) => u.id === selectedUser.id
-                              );
-                              if (updatedUser) {
+                          try {
+                            // Fetch fresh data for this specific user (including auth metadata)
+                            const response = await fetch(
+                              `/api/admin/users/${selectedUser.id}/features`
+                            );
+                            if (response.ok) {
+                              const data = await response.json();
+                              if (data.success && data.metadata) {
+                                // Update selected user state with new metadata
+                                const updatedUser = {
+                                  ...selectedUser,
+                                  metadata: data.metadata,
+                                };
                                 setSelectedUser(updatedUser);
+
+                                // Also update the user in the main list to keep it in sync
+                                setUsers((currentUsers) =>
+                                  currentUsers.map((u) =>
+                                    u.id === selectedUser.id
+                                      ? { ...u, metadata: data.metadata }
+                                      : u
+                                  )
+                                );
                               }
                             }
+                          } catch (error) {
+                            console.error("Error refreshing user data:", error);
                           }
                         }}
                       />
