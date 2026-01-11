@@ -20,14 +20,7 @@ export async function POST(request: NextRequest) {
     // ============================================
     // AUTHENTICATION
     // ============================================
-    const { context, error: authError } = await requireSafeAuth();
-    if (authError || !context) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
+    const context = await requireSafeAuth();
     const userId = context.target.id;
 
     // ============================================
@@ -88,14 +81,7 @@ export async function DELETE(request: NextRequest) {
     // ============================================
     // AUTHENTICATION
     // ============================================
-    const { context, error: authError } = await requireSafeAuth();
-    if (authError || !context) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
+    const context = await requireSafeAuth();
     const userId = context.target.id;
 
     // ============================================
@@ -147,14 +133,7 @@ export async function GET(request: NextRequest) {
     // ============================================
     // AUTHENTICATION
     // ============================================
-    const { context, error: authError } = await requireSafeAuth();
-    if (authError || !context) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
+    const context = await requireSafeAuth();
     const userId = context.target.id;
 
     // ============================================
