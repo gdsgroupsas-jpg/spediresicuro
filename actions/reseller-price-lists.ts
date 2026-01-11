@@ -13,7 +13,8 @@
 import { auth } from "@/lib/auth-config";
 import { supabaseAdmin } from "@/lib/db/client";
 import { assertValidUserId } from "@/lib/validators";
-import type { PriceList } from "@/types/listini";
+import type { PriceList, PriceListEntry } from "@/types/listini";
+import type { CourierServiceType } from "@/types/shipments";
 
 /**
  * Clona un listino supplier applicando margini personalizzati
@@ -588,7 +589,22 @@ export async function importPriceListEntriesAction(
 
     // Importa entries usando la funzione esistente
     const { upsertPriceListEntries } = await import("@/lib/db/price-lists");
-    const result = await upsertPriceListEntries(priceListId, entries);
+    
+    // ✨ FIX: Normalizza entries per garantire service_type valido
+    const validServiceTypes: CourierServiceType[] = ['standard', 'express', 'economy', 'same_day', 'next_day'];
+    const normalizedEntries: Omit<PriceListEntry, "id" | "price_list_id" | "created_at">[] = entries.map((entry) => {
+      // Assicura che service_type sia sempre definito e valido
+      const serviceType: CourierServiceType = (entry.service_type && validServiceTypes.includes(entry.service_type as CourierServiceType))
+        ? (entry.service_type as CourierServiceType)
+        : 'standard'; // Default a 'standard' se non valido o mancante
+      
+      return {
+        ...entry,
+        service_type: serviceType,
+      };
+    });
+    
+    const result = await upsertPriceListEntries(priceListId, normalizedEntries);
 
     // Logga evento audit
     try {
