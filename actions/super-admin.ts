@@ -35,7 +35,7 @@ async function isCurrentUserSuperAdmin(): Promise<{
       .single();
 
     if (error || !user) {
-      return { isSuperAdmin: false, error: "Utente non trovato" };
+      return { isSuperAdmin: false, error: "Admin user record not found" };
     }
 
     return {

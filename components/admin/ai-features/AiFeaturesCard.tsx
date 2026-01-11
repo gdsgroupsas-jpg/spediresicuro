@@ -4,7 +4,7 @@ import { updateUserAiFeatures } from "@/actions/super-admin";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Bot } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface AiFeaturesCardProps {
@@ -24,6 +24,10 @@ export function AiFeaturesCard({
     initialCanManagePriceLists
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    console.log("AiFeaturesCard v2 loaded - Check for this log");
+  }, []);
 
   const handleToggle = async (checked: boolean) => {
     setIsLoading(true);
