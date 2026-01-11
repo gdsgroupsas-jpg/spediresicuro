@@ -11,12 +11,14 @@ interface AiFeaturesCardProps {
   userId: string;
   initialCanManagePriceLists: boolean;
   userName: string;
+  onToggleComplete?: () => void;
 }
 
 export function AiFeaturesCard({
   userId,
   initialCanManagePriceLists,
   userName,
+  onToggleComplete,
 }: AiFeaturesCardProps) {
   const [canManagePriceLists, setCanManagePriceLists] = useState(
     initialCanManagePriceLists
@@ -42,6 +44,10 @@ export function AiFeaturesCard({
           ? `Feature attivata per ${userName}`
           : `Feature disattivata per ${userName}`
       );
+
+      if (onToggleComplete) {
+        onToggleComplete();
+      }
     } catch (error: any) {
       console.error("Error toggling AI feature:", error);
       toast.error(error.message || "Errore sconosciuto");
