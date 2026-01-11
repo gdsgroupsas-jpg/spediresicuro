@@ -1144,6 +1144,25 @@ export default function AdminDashboardPage() {
                           true
                         }
                         userName={selectedUser.name || selectedUser.email}
+                        onToggleComplete={async () => {
+                          // Ricarica dati dashboard per aggiornare stato utente
+                          const overviewResponse = await fetch(
+                            "/api/admin/overview"
+                          );
+                          if (overviewResponse.ok) {
+                            const data = await overviewResponse.json();
+                            if (data.success) {
+                              setUsers(data.users || []);
+                              // Aggiorna anche selectedUser per riflettere i cambiamenti nel modal
+                              const updatedUser = data.users.find(
+                                (u: any) => u.id === selectedUser.id
+                              );
+                              if (updatedUser) {
+                                setSelectedUser(updatedUser);
+                              }
+                            }
+                          }
+                        }}
                       />
                     </div>
                   )}
