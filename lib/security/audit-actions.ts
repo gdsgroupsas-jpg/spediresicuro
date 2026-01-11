@@ -37,6 +37,7 @@ export const AUDIT_ACTIONS = {
   WALLET_REFUND: 'wallet_refund',
   VIEW_WALLET_BALANCE: 'view_wallet_balance',
   VIEW_WALLET_TRANSACTIONS: 'view_wallet_transactions',
+  SUPERADMIN_WALLET_BYPASS: 'superadmin_wallet_bypass', // P0: Audit fix - bypass tracking
   
   // ============================================
   // IMPERSONATION (ACTING CONTEXT)

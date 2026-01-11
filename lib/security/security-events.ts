@@ -20,6 +20,8 @@ export type SecurityEventType =
   | 'impersonation_expired'
   | 'impersonation_target_not_found'
   | 'impersonation_authz_failed'
+  // Wallet bypass events (P0 audit fix)
+  | 'superadmin_wallet_bypass'
   // Existing credential events (compatibility)
   | 'credential_viewed'
   | 'credential_copied'
@@ -259,6 +261,43 @@ export async function logImpersonationAuthzFailed(
     impersonation_active: false,
     audit_metadata: {
       authz_failure_reason: reason,
+      ...metadata,
+    },
+  });
+}
+
+/**
+ * Log SuperAdmin wallet bypass (P0 AUDIT FIX)
+ *
+ * Traccia ogni utilizzo del bypass wallet SuperAdmin.
+ * CRITICAL: Questo evento deve triggerare alerting real-time in produzione.
+ *
+ * @param actorId - SuperAdmin che esegue bypass
+ * @param targetId - User target (può essere stesso SuperAdmin o impersonation)
+ * @param amount - Importo operazione che bypasserebbe wallet check
+ * @param currentBalance - Balance corrente user
+ * @param metadata - Metadata aggiuntivi (impersonation, reason, etc.)
+ */
+export async function logSuperAdminWalletBypass(
+  actorId: string,
+  targetId: string,
+  amount: number,
+  currentBalance: number,
+  metadata?: Record<string, any>
+): Promise<void> {
+  await logSecurityEvent({
+    action: 'superadmin_wallet_bypass',
+    resource_type: 'wallet',
+    resource_id: targetId,
+    actor_id: actorId,
+    target_id: targetId,
+    impersonation_active: metadata?.impersonating || false,
+    audit_metadata: {
+      amount,
+      currentBalance,
+      deficit: currentBalance < amount ? amount - currentBalance : 0,
+      severity: 'CRITICAL', // P0: Alerting trigger
+      requires_review: true,
       ...metadata,
     },
   });
