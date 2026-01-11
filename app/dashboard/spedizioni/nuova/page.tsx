@@ -282,6 +282,13 @@ export default function NuovaSpedizionePage() {
   const [selectedConfigId, setSelectedConfigId] = useState<
     string | undefined
   >(undefined);
+  
+  // ✨ ENTERPRISE: Quote selezionato con prezzo esatto (per routing)
+  const [selectedQuoteExactPrice, setSelectedQuoteExactPrice] = useState<{
+    courierName: string;
+    price: number;
+    contractCode?: string;
+  } | null>(null);
 
   // Corrieri disponibili caricati dinamicamente dal DB
   const [availableCouriers, setAvailableCouriers] = useState<
@@ -293,6 +300,11 @@ export default function NuovaSpedizionePage() {
   const [courierQuotes, setCourierQuotes] = useState<Map<string, any>>(
     new Map()
   );
+  
+  // ✨ ENTERPRISE: Quote validi dal preventivatore (per routing)
+  const [validQuotesFromComparator, setValidQuotesFromComparator] = useState<
+    Array<{ courier: string; courierName: string; price: number }>
+  >([]);
 
   // ✨ FIX: Counter per forzare re-mount del preventivatore dopo reset form
   const [formResetCounter, setFormResetCounter] = useState(0);
@@ -402,6 +414,15 @@ export default function NuovaSpedizionePage() {
     }
     loadAvailableCouriers();
   }, []);
+  
+  // ✨ ENTERPRISE: Reset quote validi quando cambiano i dati critici (peso, destinazione)
+  useEffect(() => {
+    // Reset quando peso o destinazione cambiano o vengono rimossi
+    if (!formData.peso || parseFloat(formData.peso) <= 0 || !formData.destinatarioCap) {
+      setValidQuotesFromComparator([]);
+      setSelectedQuoteExactPrice(null);
+    }
+  }, [formData.peso, formData.destinatarioCap]);
 
   // Carica mittente predefinito all'avvio
   useEffect(() => {
@@ -1084,7 +1105,11 @@ export default function NuovaSpedizionePage() {
         // ✨ FIX: Forza re-mount del preventivatore per pulire stato interno
         setFormResetCounter((prev) => prev + 1);
         setCourierQuotes(new Map()); // Reset anche le quote salvate
+        setValidQuotesFromComparator([]); // ✨ ENTERPRISE: Reset quote validi per routing
+        setSelectedQuoteExactPrice(null); // ✨ ENTERPRISE: Reset prezzo esatto
         setSelectedConfigId(undefined); // ✨ ENTERPRISE: Reset configId per nuova spedizione
+        setValidQuotesFromComparator([]); // ✨ ENTERPRISE: Reset quote validi per routing
+        setSelectedQuoteExactPrice(null); // ✨ ENTERPRISE: Reset prezzo esatto
 
         // ✨ ENTERPRISE: Ricarica corrieri disponibili dopo reset form
         // Questo assicura che se i corrieri sono cambiati (es. dopo configurazione),
@@ -1694,6 +1719,41 @@ export default function NuovaSpedizionePage() {
                             next.set(`${courierName}::${contractCode}`, quote);
                             return next;
                           });
+                          
+                          // ✨ ENTERPRISE: Aggiorna lista quote validi per routing
+                          if (quote && quote.rates && quote.rates.length > 0) {
+                            const bestRate = quote.rates[0];
+                            const price = parseFloat(bestRate.total_price || '0');
+                            
+                            setValidQuotesFromComparator((prev) => {
+                              // Rimuovi quote esistenti per questo corriere (deduplica per displayName)
+                              const filtered = prev.filter(
+                                (q) => q.courierName !== courierName && q.courier !== courierName
+                              );
+                              // Aggiungi nuovo quote
+                              return [
+                                ...filtered,
+                                {
+                                  courier: quote.courier || courierName,
+                                  courierName: courierName,
+                                  price,
+                                },
+                              ];
+                            });
+                          }
+                          
+                          // ✨ ENTERPRISE: Se questo è il corriere selezionato, aggiorna il prezzo esatto
+                          if (formData.corriere === courierName && quote && quote.rates && quote.rates.length > 0) {
+                            const bestRate = quote.rates[0];
+                            const exactPrice = parseFloat(bestRate.total_price || '0');
+                            setSelectedQuoteExactPrice((prev) => {
+                              if (prev && prev.courierName === courierName) {
+                                return { ...prev, price: exactPrice };
+                              }
+                              // Se non c'è ancora un quote selezionato, crealo
+                              return { courierName, price: exactPrice, contractCode };
+                            });
+                          }
                         }}
                         onContractSelected={(
                           courierName,
@@ -1719,6 +1779,26 @@ export default function NuovaSpedizionePage() {
                           }));
                           // ✨ ENTERPRISE: Salva configId per usarlo nella creazione spedizione
                           setSelectedConfigId(configId);
+                          
+                          // ✨ ENTERPRISE: Salva quote selezionato per mostrare costo esatto
+                          const selectedQuote = courierQuotes.get(`${courierName}::${contractCode}`);
+                          if (selectedQuote && selectedQuote.rates && selectedQuote.rates.length > 0) {
+                            const bestRate = selectedQuote.rates[0];
+                            const exactPrice = parseFloat(bestRate.total_price || '0');
+                            setSelectedQuoteExactPrice({
+                              courierName,
+                              price: exactPrice,
+                              contractCode,
+                            });
+                          } else {
+                            // Se non abbiamo ancora il quote, cerca nel preventivatore
+                            // Il prezzo verrà aggiornato quando il quote arriva
+                            setSelectedQuoteExactPrice({
+                              courierName,
+                              price: 0, // Placeholder, verrà aggiornato
+                              contractCode,
+                            });
+                          }
                         }}
                       />
                     ) : (
@@ -1763,44 +1843,109 @@ export default function NuovaSpedizionePage() {
                       />
                     )}
 
-                  {/* Cost Calculator */}
-                  <div className="pt-6 border-t border-gray-200">
-                    <div className="mb-4">
-                      <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
-                        Costo Stimato
-                      </p>
-                      <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-700">
-                        {formatPrice(estimatedCost)}
-                      </div>
-                      {formData.tipoSpedizione === "express" && (
-                        <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                          <Sparkles className="w-3 h-3" />
-                          Express Rate
+                  {/* ✨ ROUTING: Mostra carrier code disponibili (solo se ce ne sono più di uno E ci sono dati inseriti) */}
+                  {(() => {
+                    // ✨ ENTERPRISE: Routing si attiva solo se:
+                    // 1. Ci sono dati inseriti (peso e destinazione)
+                    // 2. Ci sono più quote validi dal preventivatore (non da availableCouriers)
+                    const hasData = formData.peso && parseFloat(formData.peso) > 0 && formData.destinatarioCap;
+                    
+                    if (!hasData) {
+                      return null; // Non mostrare routing se non ci sono dati
+                    }
+                    
+                    // Deduplica carrier code dai quote validi (non da availableCouriers)
+                    const uniqueCarriersFromQuotes = new Map<string, { courier: string; courierName: string; price: number }>();
+                    for (const quote of validQuotesFromComparator) {
+                      const displayName = quote.courier || quote.courierName;
+                      if (!uniqueCarriersFromQuotes.has(displayName)) {
+                        uniqueCarriersFromQuotes.set(displayName, quote);
+                      } else {
+                        // Se esiste già, tieni quello con prezzo più basso
+                        const existing = uniqueCarriersFromQuotes.get(displayName)!;
+                        if (quote.price < existing.price) {
+                          uniqueCarriersFromQuotes.set(displayName, quote);
+                        }
+                      }
+                    }
+                    const uniqueCarriersList = Array.from(uniqueCarriersFromQuotes.values());
+                    
+                    // Mostra routing solo se ci sono più carrier code unici nei quote validi
+                    if (uniqueCarriersList.length <= 1) {
+                      return null;
+                    }
+                    
+                    return (
+                      <div className="pt-6 border-t border-gray-200">
+                        <div className="mb-4">
+                          <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
+                            Routing Corrieri
+                          </p>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Seleziona il corriere dal preventivatore per vedere il costo esatto
+                          </p>
+                          
+                          {/* Lista carrier code disponibili (deduplicati dai quote validi) */}
+                          <div className="grid grid-cols-2 gap-2">
+                            {uniqueCarriersList.map((quote) => {
+                              const isSelected = formData.corriere === quote.courierName || formData.corriere === quote.courier;
+                              
+                              return (
+                                <div
+                                  key={quote.courierName}
+                                  className={`p-3 rounded-lg border-2 transition-colors ${
+                                    isSelected
+                                      ? 'border-[#FF9500] bg-[#FF9500]/5'
+                                      : 'border-gray-200 bg-white hover:border-gray-300'
+                                  }`}
+                                >
+                                  <div className="font-semibold text-sm text-gray-900">
+                                    {quote.courier || quote.courierName}
+                                  </div>
+                                  {isSelected && selectedQuoteExactPrice && selectedQuoteExactPrice.price > 0 ? (
+                                    <div className="mt-2">
+                                      <div className="text-2xl font-bold text-[#FF9500]">
+                                        {formatPrice(selectedQuoteExactPrice.price)}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        Costo esatto
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="mt-2">
+                                      <div className="text-lg font-semibold text-gray-700">
+                                        {formatPrice(quote.price)}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        Preventivo
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    );
+                  })()}
 
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>Base</span>
-                        <span>{formatPrice(10)}</span>
+                  {/* ✨ COSTO ESATTO: Mostra solo quando viene selezionato un corriere (sostituisce placeholder) */}
+                  {formData.corriere && selectedQuoteExactPrice && selectedQuoteExactPrice.price > 0 && (
+                    <div className="pt-6 border-t border-gray-200">
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
+                          Costo Esatto
+                        </p>
+                        <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF9500] to-[#E88500]">
+                          {formatPrice(selectedQuoteExactPrice.price)}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-2">
+                          Corriere: {selectedQuoteExactPrice.courierName}
+                        </div>
                       </div>
-                      {formData.peso && (
-                        <div className="flex justify-between">
-                          <span>Peso ({formData.peso} kg)</span>
-                          <span>
-                            {formatPrice(parseFloat(formData.peso) * 2 || 0)}
-                          </span>
-                        </div>
-                      )}
-                      {formData.tipoSpedizione === "express" && (
-                        <div className="flex justify-between">
-                          <span>Express</span>
-                          <span>+50%</span>
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Action Area */}
                   <div className="pt-6 border-t border-gray-200 space-y-3">
