@@ -301,10 +301,7 @@ export default function NuovaSpedizionePage() {
     new Map()
   );
 
-  // ✨ ENTERPRISE: Quote validi dal preventivatore (per routing)
-  const [validQuotesFromComparator, setValidQuotesFromComparator] = useState<
-    Array<{ courier: string; courierName: string; price: number }>
-  >([]);
+  // ✨ RIMOSSA: validQuotesFromComparator non più usato (sezione routing rimossa)
 
   // ✨ FIX: Counter per forzare re-mount del preventivatore dopo reset form
   const [formResetCounter, setFormResetCounter] = useState(0);
@@ -415,7 +412,7 @@ export default function NuovaSpedizionePage() {
     loadAvailableCouriers();
   }, []);
 
-  // ✨ ENTERPRISE: Reset quote validi quando cambiano i dati critici (peso, destinazione)
+  // ✨ ENTERPRISE: Reset prezzo esatto quando cambiano i dati critici (peso, destinazione)
   useEffect(() => {
     // Reset quando peso o destinazione cambiano o vengono rimossi
     if (
@@ -423,7 +420,6 @@ export default function NuovaSpedizionePage() {
       parseFloat(formData.peso) <= 0 ||
       !formData.destinatarioCap
     ) {
-      setValidQuotesFromComparator([]);
       setSelectedQuoteExactPrice(null);
     }
   }, [formData.peso, formData.destinatarioCap]);
@@ -1110,7 +1106,6 @@ export default function NuovaSpedizionePage() {
         setFormResetCounter((prev) => prev + 1);
         setCourierQuotes(new Map()); // Reset anche le quote salvate
         setSelectedConfigId(undefined); // ✨ ENTERPRISE: Reset configId per nuova spedizione
-        setValidQuotesFromComparator([]); // ✨ ENTERPRISE: Reset quote validi per routing
         setSelectedQuoteExactPrice(null); // ✨ ENTERPRISE: Reset prezzo esatto
 
         // ✨ ENTERPRISE: Ricarica corrieri disponibili dopo reset form
@@ -1722,32 +1717,6 @@ export default function NuovaSpedizionePage() {
                             return next;
                           });
 
-                          // ✨ ENTERPRISE: Aggiorna lista quote validi per routing
-                          if (quote && quote.rates && quote.rates.length > 0) {
-                            const bestRate = quote.rates[0];
-                            const price = parseFloat(
-                              bestRate.total_price || "0"
-                            );
-
-                            setValidQuotesFromComparator((prev) => {
-                              // Rimuovi quote esistenti per questo corriere (deduplica per displayName)
-                              const filtered = prev.filter(
-                                (q) =>
-                                  q.courierName !== courierName &&
-                                  q.courier !== courierName
-                              );
-                              // Aggiungi nuovo quote
-                              return [
-                                ...filtered,
-                                {
-                                  courier: quote.courier || courierName,
-                                  courierName: courierName,
-                                  price,
-                                },
-                              ];
-                            });
-                          }
-
                           // ✨ ENTERPRISE: Se questo è il corriere selezionato, aggiorna il prezzo esatto
                           if (
                             formData.corriere === courierName &&
@@ -1868,108 +1837,7 @@ export default function NuovaSpedizionePage() {
                       />
                     )}
 
-                  {/* ✨ ROUTING: Mostra carrier code disponibili (solo se ce ne sono più di uno E ci sono dati inseriti) */}
-                  {(() => {
-                    // ✨ ENTERPRISE: Routing si attiva solo se:
-                    // 1. Ci sono dati inseriti (peso e destinazione)
-                    // 2. Ci sono più quote validi dal preventivatore (non da availableCouriers)
-                    const hasData =
-                      formData.peso &&
-                      parseFloat(formData.peso) > 0 &&
-                      formData.destinatarioCap;
-
-                    if (!hasData) {
-                      return null; // Non mostrare routing se non ci sono dati
-                    }
-
-                    // Deduplica carrier code dai quote validi (non da availableCouriers)
-                    const uniqueCarriersFromQuotes = new Map<
-                      string,
-                      { courier: string; courierName: string; price: number }
-                    >();
-                    for (const quote of validQuotesFromComparator) {
-                      const displayName = quote.courier || quote.courierName;
-                      if (!uniqueCarriersFromQuotes.has(displayName)) {
-                        uniqueCarriersFromQuotes.set(displayName, quote);
-                      } else {
-                        // Se esiste già, tieni quello con prezzo più basso
-                        const existing =
-                          uniqueCarriersFromQuotes.get(displayName)!;
-                        if (quote.price < existing.price) {
-                          uniqueCarriersFromQuotes.set(displayName, quote);
-                        }
-                      }
-                    }
-                    const uniqueCarriersList = Array.from(
-                      uniqueCarriersFromQuotes.values()
-                    );
-
-                    // Mostra routing solo se ci sono più carrier code unici nei quote validi
-                    if (uniqueCarriersList.length <= 1) {
-                      return null;
-                    }
-
-                    return (
-                      <div className="pt-6 border-t border-gray-200">
-                        <div className="mb-4">
-                          <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-2">
-                            Routing Corrieri
-                          </p>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Seleziona il corriere dal preventivatore per vedere
-                            il costo esatto
-                          </p>
-
-                          {/* Lista carrier code disponibili (deduplicati dai quote validi) */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {uniqueCarriersList.map((quote) => {
-                              const isSelected =
-                                formData.corriere === quote.courierName ||
-                                formData.corriere === quote.courier;
-
-                              return (
-                                <div
-                                  key={quote.courierName}
-                                  className={`p-3 rounded-lg border-2 transition-colors ${
-                                    isSelected
-                                      ? "border-[#FF9500] bg-[#FF9500]/5"
-                                      : "border-gray-200 bg-white hover:border-gray-300"
-                                  }`}
-                                >
-                                  <div className="font-semibold text-sm text-gray-900">
-                                    {quote.courier || quote.courierName}
-                                  </div>
-                                  {isSelected &&
-                                  selectedQuoteExactPrice &&
-                                  selectedQuoteExactPrice.price > 0 ? (
-                                    <div className="mt-2">
-                                      <div className="text-2xl font-bold text-[#FF9500]">
-                                        {formatPrice(
-                                          selectedQuoteExactPrice.price
-                                        )}
-                                      </div>
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        Costo esatto
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="mt-2">
-                                      <div className="text-lg font-semibold text-gray-700">
-                                        {formatPrice(quote.price)}
-                                      </div>
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        Preventivo
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  {/* ✨ RIMOSSA: Sezione Routing Corrieri - funzionalità già coperta dal preventivatore */}
 
                   {/* ✨ COSTO ESATTO: Mostra solo quando viene selezionato un corriere (sostituisce placeholder) */}
                   {formData.corriere &&
