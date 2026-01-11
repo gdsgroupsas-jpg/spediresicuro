@@ -382,20 +382,51 @@ export async function updateResellerPriceListMarginAction(
     // Aggiorna margine sul listino
     const { data: priceList, error } = await supabaseAdmin
       .from("price_lists")
-      .update({
-        default_margin_percent:
-          marginType === "percent" ? marginValue : null,
-        default_margin_fixed: marginType === "fixed" ? marginValue : null,
-        updated_at: new Date().toISOString(),
-        metadata: supabaseAdmin.raw(
-          `jsonb_set(metadata, '{margin_type}', '${marginType}')`
-        ),
-      })
-      .eq("id", priceListId)
-      .eq("created_by", user.id) // Solo propri listini
-      .eq("list_type", "custom")
-      .select()
-      .single();
+      // ✨ SECURITY FIX: Valida marginType a runtime per prevenire SQL injection
+      const validMarginTypes = ["percent", "fixed", "none"];
+      if (!validMarginTypes.includes(marginType)) {
+        return {
+          success: false,
+          error: `Tipo margine non valido: ${marginType}. Valori accettati: ${validMarginTypes.join(", ")}`,
+        };
+      }
+
+      // ✨ SECURITY FIX: Usa parametri sicuri invece di string interpolation
+      // Recupera metadata esistente e aggiorna in modo sicuro
+      const { data: existingList } = await supabaseAdmin
+        .from("price_lists")
+        .select("metadata")
+        .eq("id", priceListId)
+        .eq("created_by", user.id)
+        .eq("list_type", "custom")
+        .single();
+
+      if (!existingList) {
+        return {
+          success: false,
+          error: "Listino non trovato o non autorizzato",
+        };
+      }
+
+      const updatedMetadata = {
+        ...(existingList.metadata || {}),
+        margin_type: marginType,
+      };
+
+      const { data, error } = await supabaseAdmin
+        .from("price_lists")
+        .update({
+          default_margin_percent:
+            marginType === "percent" ? marginValue : null,
+          default_margin_fixed: marginType === "fixed" ? marginValue : null,
+          updated_at: new Date().toISOString(),
+          metadata: updatedMetadata, // ✨ FIX: Usa oggetto JavaScript invece di raw SQL
+        })
+        .eq("id", priceListId)
+        .eq("created_by", user.id) // Solo propri listini
+        .eq("list_type", "custom")
+        .select()
+        .single();
 
     if (error) {
       console.error("Errore aggiornamento margine:", error);

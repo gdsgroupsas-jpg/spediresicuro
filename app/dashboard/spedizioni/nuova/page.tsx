@@ -1105,8 +1105,6 @@ export default function NuovaSpedizionePage() {
         // ✨ FIX: Forza re-mount del preventivatore per pulire stato interno
         setFormResetCounter((prev) => prev + 1);
         setCourierQuotes(new Map()); // Reset anche le quote salvate
-        setValidQuotesFromComparator([]); // ✨ ENTERPRISE: Reset quote validi per routing
-        setSelectedQuoteExactPrice(null); // ✨ ENTERPRISE: Reset prezzo esatto
         setSelectedConfigId(undefined); // ✨ ENTERPRISE: Reset configId per nuova spedizione
         setValidQuotesFromComparator([]); // ✨ ENTERPRISE: Reset quote validi per routing
         setSelectedQuoteExactPrice(null); // ✨ ENTERPRISE: Reset prezzo esatto
