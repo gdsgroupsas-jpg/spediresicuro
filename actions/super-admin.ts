@@ -438,7 +438,6 @@ export async function getAllUsers(limit: number = 100): Promise<{
     reseller_role: string | null;
     wallet_balance: number;
     created_at: string;
-    metadata: any;
   }>;
   error?: string;
 }> {
@@ -456,7 +455,7 @@ export async function getAllUsers(limit: number = 100): Promise<{
     const { data: users, error } = await supabaseAdmin
       .from("users")
       .select(
-        "id, email, name, account_type, is_reseller, reseller_role, wallet_balance, created_at, metadata"
+        "id, email, name, account_type, is_reseller, reseller_role, wallet_balance, created_at"
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -853,48 +852,45 @@ export async function updateUserAiFeatures(
       };
     }
 
-    // 2. Verifica che l'utente target esista
-    const { data: targetUser, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("id, email, metadata")
-      .eq("id", userId)
-      .single();
+    // 2. Verifica che l'utente esista in Auth (per i metadata)
+    const { data: authUser, error: authError } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
 
-    console.log("[updateUserAiFeatures] Query Result:", {
+    console.log("[updateUserAiFeatures] Auth Query Result:", {
       userId,
-      targetUser,
-      userError,
+      authUserFound: !!authUser?.user,
+      authError,
     });
 
-    if (userError || !targetUser) {
+    if (authError || !authUser?.user) {
       return {
         success: false,
-        error: `Utente non trovato (ID: ${userId}). Err: ${
-          userError?.message || "N/A"
+        error: `Utente Auth non trovato (ID: ${userId}). Err: ${
+          authError?.message || "N/A"
         }`,
       };
     }
 
     // 3. Prepara nuovi metadata (merge con esistenti)
-    const currentMeta = targetUser.metadata || {};
+    const currentMeta = authUser.user.user_metadata || {};
     const newMeta = {
       ...currentMeta,
       ai_can_manage_pricelists: features.canManagePriceLists,
     };
 
-    // 4. Aggiorna utente
-    const { error: updateError } = await supabaseAdmin
-      .from("users")
-      .update({ metadata: newMeta })
-      .eq("id", userId);
+    // 4. Aggiorna utente in Supabase Auth
+    const { error: updateError } =
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: newMeta,
+      });
 
     if (updateError) {
-      console.error("Errore aggiornamento feature AI:", updateError);
+      console.error("Errore aggiornamento feature AI (Auth):", updateError);
       return {
         success: false,
         error:
           updateError.message ||
-          "Errore durante l'aggiornamento delle feature AI.",
+          "Errore durante l'aggiornamento delle feature AI su Auth.",
       };
     }
 
