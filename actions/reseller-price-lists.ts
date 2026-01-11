@@ -439,7 +439,10 @@ export async function updateResellerPriceListMarginAction(
 
     // ✨ FIX: Restituisci data (risultato della query) invece di priceList (non definito)
     if (!data) {
-      return { success: false, error: "Listino non trovato dopo l'aggiornamento" };
+      return {
+        success: false,
+        error: "Listino non trovato dopo l'aggiornamento",
+      };
     }
 
     return { success: true, priceList: data as PriceList };
