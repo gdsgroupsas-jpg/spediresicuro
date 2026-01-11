@@ -11,7 +11,7 @@
  */
 
 import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
+import { supabaseAdmin } from "@/lib/supabase";
 
 /**
  * Verifica se l'utente corrente è Super Admin
@@ -869,7 +869,9 @@ export async function updateUserAiFeatures(
     if (userError || !targetUser) {
       return {
         success: false,
-        error: "Utente non trovato.",
+        error: `Utente non trovato (ID: ${userId}). Err: ${
+          userError?.message || "N/A"
+        }`,
       };
     }
 
