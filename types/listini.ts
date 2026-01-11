@@ -210,6 +210,7 @@ export interface PriceCalculationResult {
   appliedRule?: PriceRule; // Regola applicata
   appliedPriceList?: PriceList; // Listino utilizzato
   priceListId: string; // ID listino per audit
+  _courierConfigId?: string; // ID configurazione API corriere (per tracciamento)
   calculationDetails: {
     weight: number;
     volume?: number;
