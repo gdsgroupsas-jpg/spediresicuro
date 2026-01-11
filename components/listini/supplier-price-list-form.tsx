@@ -124,16 +124,24 @@ export function SupplierPriceListForm({
     }
   }, [formData.courier_config_id, configurations]);
 
-  // ✨ FASE 1: Auto-fill carrier_code quando cambia contract_code (più affidabile)
-  // Il contract_code contiene già il carrier_code (es. "postedeliverybusiness-SDA---Express---H24+")
+  // ✨ SCHEMA CORRETTO:
+  // - carrier_code = solo prefisso (es. "gls") → nome base del corriere
+  // - contract_code = codice completo (es. "gls-GLS-5000") → identificatore contratto univoco
+  // 
+  // Nel contract_mapping:
+  // - CHIAVI = contract_code completo (es. "gls-GLS-5000") → identificatore UNIVOCO
+  // - VALORI = courierName (es. "Gls") → nome corriere interno
   useEffect(() => {
     if (formData.contract_code) {
-      // Estrai carrier_code dal contract_code (prima parte prima del primo trattino)
-      const carrierCode = formData.contract_code.split("-")[0].toLowerCase();
+      // ✅ Il "contract_code" selezionato nel dropdown è il codice completo (es. "gls-GLS-5000")
+      // Lo salviamo come contract_code
+      // Estrai solo il prefisso per carrier_code (es. "gls")
+      const carrierCodePrefisso = formData.contract_code.split("-")[0].toLowerCase();
+      
       // Aggiorna solo se diverso dal valore corrente (previene loop infiniti)
-      if (carrierCode && carrierCode !== formData.carrier_code) {
-        setFormData((prev) => ({ ...prev, carrier_code: carrierCode }));
-        setSelectedCourierCode(carrierCode);
+      if (carrierCodePrefisso && carrierCodePrefisso !== formData.carrier_code) {
+        setFormData((prev) => ({ ...prev, carrier_code: carrierCodePrefisso }));
+        setSelectedCourierCode(carrierCodePrefisso);
       }
     }
   }, [formData.contract_code, formData.carrier_code]);
@@ -208,6 +216,18 @@ export function SupplierPriceListForm({
           return;
         }
 
+        // ✅ SCHEMA CORRETTO:
+        // - carrier_code = solo prefisso (es. "gls") → nome base del corriere
+        // - contract_code = codice completo (es. "gls-GLS-5000") → identificatore contratto univoco
+        // 
+        // formData.contract_code contiene il codice completo selezionato (es. "gls-GLS-5000")
+        // formData.carrier_code contiene il prefisso (es. "gls")
+        
+        console.log('📦 [FORM] Salvataggio listino fornitore:');
+        console.log('   - carrier_code (prefisso):', formData.carrier_code);
+        console.log('   - contract_code (completo):', formData.contract_code);
+        console.log('   - dropdown selection:', formData.contract_code);
+
         const result = await createSupplierPriceListAction({
           name: formData.name,
           version: formData.version,
@@ -215,11 +235,13 @@ export function SupplierPriceListForm({
           courier_id: formData.courier_id,
           description: formData.description,
           notes: formData.notes,
-          // ✨ FASE 1: Aggiungi metadata per identificazione univoca
+          // ✅ SCHEMA CORRETTO: Metadata con valori corretti
+          // - carrier_code = solo prefisso (es. "gls")
+          // - contract_code = codice completo (es. "gls-GLS-5000")
           metadata: {
             courier_config_id: formData.courier_config_id,
-            carrier_code: formData.carrier_code,
-            contract_code: formData.contract_code,
+            carrier_code: formData.carrier_code, // ✅ Prefisso (es. "gls")
+            contract_code: formData.contract_code, // ✅ Completo (es. "gls-GLS-5000")
             synced_at: new Date().toISOString(),
           },
         });

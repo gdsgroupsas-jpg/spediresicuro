@@ -447,8 +447,11 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
   Array<{
     courierId: string;
     courierName: string;
+    displayName: string; // ✨ Nome formattato per UI (es. "GLS 5000")
     providerId: string;
     contractCode: string;
+    carrierCode: string; // ✨ Carrier code unico (chiave)
+    configId: string; // ✨ ID configurazione API
   }>
 > {
   try {
@@ -515,43 +518,123 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
     }
 
     // 4. Estrai corrieri da contract_mapping di TUTTE le configurazioni
-    // NOTA: Le CHIAVI sono i codici contratto (es. "gls-*", "postedeliverybusiness-SDA---Express---H24+")
-    //       I VALORI sono i nomi corriere (es. "Gls", "PosteDeliveryBusiness")
-    // Usa Map con chiave composita (courierName + providerId) per gestire corrieri con stesso nome da provider diversi
+    // ✨ SCHEMA CORRETTO:
+    // - Le CHIAVI di contract_mapping sono i contract_code COMPLETI e UNIVOCI (es. "gls-GLS-5000")
+    // - I VALORI sono i nomi corriere per l'API (es. "Gls")
+    // - Ogni contract_code è UNICO e deve essere mostrato separatamente
+    // - Il matching con price_lists.metadata.contract_code deve essere ESATTO (stesso contract_code)
+    
+    // Mapping per normalizzare il nome base del corriere
+    const COURIER_BASE_NAMES: Record<string, string> = {
+      'gls': 'GLS',
+      'postedeliverybusiness': 'Poste Italiane',
+      'poste': 'Poste Italiane',
+      'bartolini': 'Bartolini',
+      'brt': 'Bartolini',
+      'sda': 'SDA',
+      'dhl': 'DHL',
+      'tnt': 'TNT',
+      'ups': 'UPS',
+      'fedex': 'FedEx',
+      'interno': 'Interno',
+    };
+    
+    // Ottiene il nome base del corriere (es. "Gls" → "GLS")
+    const getBaseCourierName = (courierName: string): string => {
+      const normalized = courierName.toLowerCase().trim().replace(/\s+/g, '');
+      if (COURIER_BASE_NAMES[normalized]) {
+        return COURIER_BASE_NAMES[normalized];
+      }
+      // Match parziale
+      for (const [key, baseName] of Object.entries(COURIER_BASE_NAMES)) {
+        if (normalized.includes(key) || key.includes(normalized)) {
+          return baseName;
+        }
+      }
+      return courierName; // Fallback al nome originale
+    };
+    
+    // Formatta il carrier_code per display (es. "gls-GLS-5000" → "5000")
+    const formatCarrierCodeForDisplay = (carrierCode: string, baseCourierName: string): string => {
+      // Rimuovi il prefisso del corriere (es. "gls-", "postedeliverybusiness-")
+      let formatted = carrierCode
+        .replace(/^gls-/i, '')
+        .replace(/^postedeliverybusiness-/i, '')
+        .replace(/^brt-/i, '')
+        .replace(/^sda-/i, '')
+        .replace(/^dhl-/i, '')
+        .replace(/^ups-/i, '')
+        .replace(/^tnt-/i, '')
+        .replace(/^fedex-/i, '')
+        .replace(/^interno-/i, '');
+      
+      // Rimuovi prefissi ripetuti del nome corriere (es. "GLS-5000" → "5000")
+      formatted = formatted
+        .replace(/^GLS-/i, '')
+        .replace(/^Poste-/i, '')
+        .replace(/^SDA-/i, '')
+        .replace(/^UPS-/i, '');
+      
+      // Sostituisci --- con spazi e formatta
+      formatted = formatted
+        .replace(/---/g, ' ')
+        .replace(/--/g, ' ')
+        .replace(/-/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // Se rimane vuoto o è solo il nome del corriere, usa "Standard"
+      if (!formatted || formatted.toLowerCase() === baseCourierName.toLowerCase()) {
+        return '';
+      }
+      
+      return formatted;
+    };
+    
+    // ✨ CHIAVE UNICA: carrier_code (ogni tariffa è separata)
     const couriersMap = new Map<
       string,
-      { courierName: string; providerId: string; contractCode: string }
+      { courierName: string; providerId: string; carrierCode: string; configId: string }
     >();
 
     for (const config of allConfigs) {
       const contractMapping =
         (config.contract_mapping as Record<string, string>) || {};
       const providerId = config.provider_id;
+      const configId = config.id;
 
-      // contractCode = chiave (codice contratto), courierName = valore (nome corriere)
-      for (const [contractCode, courierName] of Object.entries(
+      // ✨ CORRETTO: La CHIAVE è il contract_code completo e univoco (es. "gls-GLS-5000")
+      // Il VALORE è il nome corriere per l'API (es. "Gls")
+      for (const [contractCodeKey, courierName] of Object.entries(
         contractMapping
       )) {
-        // ⚠️ FIX: Chiave composita include contractCode per distinguere contratti diversi
-        // con stesso courierName (es. due contratti "PosteDeliveryBusiness" diversi)
-        // Formato: courierName::contractCode::providerId
-        const mapKey = `${courierName}::${contractCode}::${providerId}`;
+        // ✨ CHIAVE UNICA: contract_code completo (NON displayName!)
+        // Ogni contract_code rappresenta una tariffa diversa e deve essere mostrato separatamente
+        // Questo contract_code deve matchare ESATTAMENTE con price_lists.metadata.contract_code
+        const mapKey = contractCodeKey;
         
         // Se non esiste già, aggiungi. Se esiste, mantieni il primo (priorità personali > assegnate > default)
         if (!couriersMap.has(mapKey)) {
           couriersMap.set(mapKey, {
             courierName,
             providerId,
-            contractCode,
+            carrierCode: contractCodeKey, // ✨ La chiave è il contract_code completo
+            configId,
           });
         }
       }
     }
 
-    // 5. Converti in array e prova a recuperare courier_id da tabella couriers
+    // 5. Converti in array con displayName formattato
     const result = [];
     for (const [, data] of Array.from(couriersMap.entries())) {
-      // Prova a trovare courier_id nella tabella couriers usando courierName dai dati
+      const baseName = getBaseCourierName(data.courierName);
+      const carrierSuffix = formatCarrierCodeForDisplay(data.carrierCode, baseName);
+      
+      // DisplayName = "Corriere" o "Corriere - Suffisso" (es. "GLS 5000", "Poste Italiane SDA Express H24+")
+      const displayName = carrierSuffix ? `${baseName} ${carrierSuffix}` : baseName;
+      
+      // Prova a trovare courier_id nella tabella couriers
       const { data: courier } = await supabaseAdmin
         .from("couriers")
         .select("id, name")
@@ -560,13 +643,18 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
         .maybeSingle();
 
       result.push({
-        courierId: courier?.id || data.courierName, // Fallback a nome se non trovato
-        courierName: data.courierName,
+        courierId: courier?.id || data.courierName,
+        courierName: data.courierName, // Nome interno per matching API
+        displayName, // ✨ Nome formattato per UI (es. "GLS 5000")
         providerId: data.providerId,
-        contractCode: data.contractCode,
+        contractCode: data.carrierCode, // ✨ CORRETTO: contract_code completo e univoco (chiave di contract_mapping)
+        carrierCode: data.carrierCode, // ✨ Alias per retrocompatibilità (stesso valore di contractCode)
+        configId: data.configId, // ✨ ID configurazione API
       });
     }
 
+    console.log(`✅ [getAvailableCouriersForUser] Contract codes disponibili: ${result.length} (TUTTI, senza deduplicazione)`);
+    console.log(`   Contract codes: ${result.map(r => r.contractCode).join(', ')}`);
     return result;
   } catch (error: any) {
     console.error("Errore getAvailableCouriersForUser:", error);
