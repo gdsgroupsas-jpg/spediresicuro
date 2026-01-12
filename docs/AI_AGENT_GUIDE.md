@@ -1,9 +1,11 @@
 # 🤖 Guida per AI Agents - Come Leggere la Documentazione
 
 ## Overview
+
 Guida completa per AI agents su come navigare e utilizzare la documentazione strutturata di SpedireSicuro.
 
 ## Target Audience
+
 - [x] AI Agents
 - [x] Developers (per capire come gli agenti usano la doc)
 - [ ] Business/PM
@@ -15,17 +17,20 @@ Guida completa per AI agents su come navigare e utilizzare la documentazione str
 ### 1. Punto di Partenza: `docs/README.md`
 
 **SEMPRE iniziare da qui:**
+
 ```markdown
 docs/README.md
 ```
 
 **Contiene:**
+
 - Indice completo di tutta la documentazione
 - Quick reference per trovare rapidamente cosa serve
 - Link organizzati per categoria
 - Stato di completamento di ogni sezione
 
 **Come usarlo:**
+
 1. Leggi `docs/README.md` per capire la struttura
 2. Identifica la sezione rilevante per il tuo task
 3. Segui i link ai documenti specifici
@@ -45,6 +50,7 @@ docs/README.md
 5. **`docs/3-API/REST_API.md`** o **`docs/3-API/SERVER_ACTIONS.md`** - API rilevanti
 
 **Esempio - Task: Modificare Wallet:**
+
 ```
 1. docs/README.md → Quick reference
 2. docs/11-FEATURES/WALLET.md → Feature completa
@@ -66,6 +72,7 @@ docs/README.md
 3. **`docs/12-TROUBLESHOOTING/DEBUG_GUIDE.md`** - Tecniche debugging
 
 **Esempio - Task: Fix errore 500 API:**
+
 ```
 1. docs/12-TROUBLESHOOTING/API_ISSUES.md → Sezione "500 Internal Server Error"
 2. docs/12-TROUBLESHOOTING/DEBUG_GUIDE.md → Debugging techniques
@@ -117,6 +124,7 @@ docs/README.md
 Tabella che mappa "cosa stai cercando" → "dove trovarlo"
 
 **Esempio:**
+
 ```
 | Così stai cercando? | Vai qui |
 |---------------------|----------|
@@ -131,6 +139,7 @@ Tabella che mappa "cosa stai cercando" → "dove trovarlo"
 **`docs/README.md` → Sezione "Indice Completo"**
 
 Organizzato per categoria:
+
 - 1-GETTING-STARTED
 - 2-ARCHITECTURE
 - 3-API
@@ -154,7 +163,7 @@ Organizzato per categoria:
 // Esempio: Cercare documentazione su wallet
 codebase_search({
   query: "How does the wallet system work?",
-  target_directories: ["docs"]
+  target_directories: ["docs"],
 });
 ```
 
@@ -177,6 +186,7 @@ codebase_search({
 9. **Changelog** - Storico modifiche
 
 **Come usarlo:**
+
 - Leggi **Overview** per capire se è il documento giusto
 - Leggi **Quick Reference** per link rapidi
 - Leggi **Content** per dettagli
@@ -189,12 +199,14 @@ codebase_search({
 ### 1. Leggi Prima di Implementare
 
 **❌ Sbagliato:**
+
 ```
 Task: Modificare wallet
 → Inizia subito a modificare codice
 ```
 
 **✅ Corretto:**
+
 ```
 Task: Modificare wallet
 → Leggi docs/11-FEATURES/WALLET.md
@@ -207,11 +219,13 @@ Task: Modificare wallet
 ### 2. Usa Link, Non Duplicare
 
 **❌ Sbagliato:**
+
 ```
 // Copia tutto il contenuto di un documento in un altro
 ```
 
 **✅ Corretto:**
+
 ```
 // Link al documento originale
 Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
@@ -222,6 +236,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ### 3. Verifica Single Source of Truth
 
 **Ogni concetto è documentato in UN SOLO posto:**
+
 - Wallet → `docs/11-FEATURES/WALLET.md`
 - Security → `docs/8-SECURITY/`
 - API → `docs/3-API/`
@@ -257,6 +272,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ```
 
 **Come seguirli:**
+
 - `../` = sali di una directory
 - `./` = stessa directory
 - Nome file = stessa directory
@@ -292,11 +308,13 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ### ❌ Non Leggere Documenti Archiviati
 
 **`docs/archive/` contiene documenti storici:**
+
 - Non usare per sviluppo attivo
 - Solo per riferimento storico
 - Usa la nuova documentazione strutturata
 
 **Vecchi documenti archiviati:**
+
 - `docs/archive/root/ARCHITECTURE.md` → Usa `docs/2-ARCHITECTURE/`
 - `docs/archive/root/SECURITY.md` → Usa `docs/8-SECURITY/`
 - `docs/archive/root/VISION_BUSINESS.md` → Usa `docs/9-BUSINESS/`
@@ -306,6 +324,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ### ❌ Non Duplicare Contenuto
 
 **Ogni concetto in UN SOLO posto:**
+
 - Link invece di copiare
 - Riferisci invece di ripetere
 
@@ -314,6 +333,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ### ❌ Non Saltare Overview
 
 **Sempre leggere Overview prima:**
+
 - Capisci se è il documento giusto
 - Vedi struttura e link rapidi
 - Eviti di leggere documenti sbagliati
@@ -336,6 +356,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ## 🔄 Workflow Consigliato
 
 ### Step 1: Capire il Task
+
 ```
 1. Leggi task description
 2. Identifica area (Feature, API, Database, Security, ecc.)
@@ -343,6 +364,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ```
 
 ### Step 2: Leggere Documentazione Rilevante
+
 ```
 1. Leggi documento principale (feature/architecture)
 2. Leggi documenti correlati (link in "Related Documentation")
@@ -350,6 +372,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ```
 
 ### Step 3: Implementare
+
 ```
 1. Usa documentazione come riferimento
 2. Segui patterns documentati
@@ -357,6 +380,7 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ```
 
 ### Step 4: Verificare
+
 ```
 1. Verifica che implementazione segua documentazione
 2. Aggiorna documentazione se necessario
@@ -370,12 +394,14 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ### Esempio 1: Task "Aggiungere campo a wallet"
 
 **Lettura:**
+
 1. `docs/README.md` → Quick Reference → Wallet
 2. `docs/11-FEATURES/WALLET.md` → Sistema wallet completo
 3. `docs/2-ARCHITECTURE/DATABASE.md` → Wallet system tecnico
 4. `docs/8-SECURITY/OVERVIEW.md` → Security considerations
 
 **Implementazione:**
+
 - Segui pattern documentati in WALLET.md
 - Usa funzioni atomiche (increment_wallet_balance, ecc.)
 - Rispetta RLS policies
@@ -385,12 +411,14 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 ### Esempio 2: Task "Fix errore 500 in API shipments"
 
 **Lettura:**
+
 1. `docs/12-TROUBLESHOOTING/API_ISSUES.md` → Sezione "500 Internal Server Error"
 2. `docs/12-TROUBLESHOOTING/DEBUG_GUIDE.md` → Debugging techniques
 3. `docs/11-FEATURES/SHIPMENTS.md` → Shipment creation flow
 4. `docs/3-API/REST_API.md` → Endpoint shipments/create
 
 **Debug:**
+
 - Segui checklist in DEBUG_GUIDE.md
 - Verifica errori comuni in API_ISSUES.md
 - Controlla logs come documentato
@@ -409,12 +437,12 @@ Vedi: [Wallet Feature](../11-FEATURES/WALLET.md)
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: AI Agents + Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: AI Agents + Dev Team_
