@@ -249,18 +249,25 @@ export async function createShipmentCore(params: {
    * - Debit wallet PRIMA della chiamata corriere (nessuna label senza credito)
    * - Se corriere/DB falliscono, eseguire refund o enqueue in compensation_queue
    *
+   * P0 AUDIT FIX: Idempotency standalone a livello wallet
+   * - decrement_wallet_balance() ora riceve idempotency_key
+   * - UNIQUE constraint previene doppio addebito anche fuori shipment flow
+   *
    * Qualsiasi modifica a questo flusso DEVE mantenere VERDI gli smoke test wallet:
    *   - `npm run smoke:wallet`
    */
   let walletDebited = false
   let walletDebitAmount = 0
+  let walletTransactionId: string | undefined
 
   if (!isSuperadmin) {
-    const { error: walletError } = await withConcurrencyRetry(
+    // P0: Passa idempotency_key a wallet function (standalone idempotent)
+    const { data: walletResult, error: walletError } = await withConcurrencyRetry(
       async () =>
         await supabaseAdmin.rpc('decrement_wallet_balance', {
           p_user_id: targetId,
           p_amount: estimatedCost,
+          p_idempotency_key: idempotencyKey,  // P0: Wallet-level idempotency
         }),
       { operationName: 'shipment_debit_estimate' }
     )
@@ -277,8 +284,18 @@ export async function createShipmentCore(params: {
       }
     }
 
+    // P0: Handle new JSONB return type
+    const result = (walletResult as any)?.[0] || walletResult
+    if (result?.idempotent_replay) {
+      console.log('💰 [WALLET] Idempotent replay: wallet already debited for this operation', {
+        transaction_id: result.transaction_id,
+        idempotency_key: idempotencyKey,
+      })
+    }
+
     walletDebited = true
     walletDebitAmount = estimatedCost
+    walletTransactionId = result?.transaction_id
   }
 
   // ============================================
@@ -314,9 +331,11 @@ export async function createShipmentCore(params: {
         const refundFn =
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
-            const { error } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            // P0: Refund con idempotency (derivata da shipment idempotency_key)
+            const { data, error } = await supabaseAdmin.rpc('increment_wallet_balance', {
               p_user_id: userId,
               p_amount: amount,
+              p_idempotency_key: `${idempotencyKey}-refund`,  // P0: Idempotent refund
             })
             return { error: error ? { message: error.message, code: error.code } : null }
           })
@@ -385,20 +404,24 @@ export async function createShipmentCore(params: {
 
       if (Math.abs(costDifference) > 0.01) {
         if (costDifference > 0) {
+          // P0: Adjustment debit con idempotency
           const { error: adjustError } = await withConcurrencyRetry(
             async () =>
               await supabaseAdmin.rpc('decrement_wallet_balance', {
                 p_user_id: targetId,
                 p_amount: costDifference,
+                p_idempotency_key: `${idempotencyKey}-adjust-debit`,  // P0: Idempotent adjustment
               }),
             { operationName: 'shipment_debit_adjustment' }
           )
           if (adjustError) throw new Error(`Wallet adjustment failed: ${adjustError.message}`)
           walletDebitAmount = finalCost
         } else {
+          // P0: Adjustment credit con idempotency
           const { error: adjustError } = await supabaseAdmin.rpc('increment_wallet_balance', {
             p_user_id: targetId,
             p_amount: Math.abs(costDifference),
+            p_idempotency_key: `${idempotencyKey}-adjust-credit`,  // P0: Idempotent adjustment
           })
           if (adjustError) {
             await supabaseAdmin.from('compensation_queue').insert({
@@ -582,9 +605,11 @@ export async function createShipmentCore(params: {
         const refundFn =
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
-            const { error } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            // P0: Refund con idempotency (derivata da shipment idempotency_key)
+            const { data, error } = await supabaseAdmin.rpc('increment_wallet_balance', {
               p_user_id: userId,
               p_amount: amount,
+              p_idempotency_key: `${idempotencyKey}-refund`,  // P0: Idempotent refund
             })
             return { error: error ? { message: error.message, code: error.code } : null }
           })

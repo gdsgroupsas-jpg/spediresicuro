@@ -1,10 +1,15 @@
 /**
  * Wallet Credit Check - Pre-Booking Verification
- * 
+ *
  * Verifica credito disponibile PRIMA di procedere con booking.
  * Prevenzione tentativi booking inutili (risparmio API calls).
- * 
+ *
  * P3 Task 2: Wallet Integration - Verifica Credito Pre-Booking
+ *
+ * SECURITY (P0 AUDIT FIX):
+ * - SuperAdmin bypass controllato da env var ALLOW_SUPERADMIN_WALLET_BYPASS
+ * - Ogni bypass loggato come security event (alerting ready)
+ * - Fail-closed: se env var non configurato → bypass DISABILITATO
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
@@ -15,6 +20,8 @@ export interface CreditCheckResult {
   currentBalance: number;
   required: number;
   deficit?: number; // Quanto manca (se insufficiente)
+  bypassUsed?: boolean; // Flag se bypass SuperAdmin è stato usato
+  bypassReason?: string; // Motivo bypass (se applicato)
 }
 
 /**
@@ -47,15 +54,76 @@ export async function checkCreditBeforeBooking(
   const currentBalance = parseFloat(data.wallet_balance) || 0;
   const isSuperadmin = data.role === 'SUPERADMIN' || data.role === 'superadmin';
 
-  // Superadmin bypassa controllo credito
+  // ============================================
+  // SUPERADMIN WALLET BYPASS (P0 SECURITY)
+  // ============================================
   if (isSuperadmin) {
+    // Check kill-switch env var (fail-closed: default DISABILITATO)
+    const bypassAllowed = process.env.ALLOW_SUPERADMIN_WALLET_BYPASS === 'true';
+
+    if (!bypassAllowed) {
+      // Bypass DISABILITATO: SuperAdmin deve pagare come tutti
+      console.warn('⚠️ [WALLET] SuperAdmin bypass DISABILITATO (kill-switch active)', {
+        userId: targetUserId.substring(0, 8) + '...',
+        currentBalance,
+        required: estimatedCost,
+      });
+
+      // Procedi con check normale (NO bypass)
+      const sufficient = currentBalance >= estimatedCost;
+      const deficit = sufficient ? 0 : estimatedCost - currentBalance;
+
+      return {
+        sufficient,
+        currentBalance,
+        required: estimatedCost,
+        deficit,
+        bypassUsed: false,
+      };
+    }
+
+    // Bypass CONSENTITO: log security event
+    console.warn('🚨 [WALLET BYPASS] SuperAdmin bypass wallet check', {
+      userId: targetUserId.substring(0, 8) + '...',
+      actorId: actingContext?.actor.id?.substring(0, 8) + '...',
+      impersonating: actingContext?.isImpersonating || false,
+      currentBalance,
+      required: estimatedCost,
+      deficit: currentBalance < estimatedCost ? estimatedCost - currentBalance : 0,
+    });
+
+    // Log security event (async, non-blocking)
+    try {
+      const { logSuperAdminWalletBypass } = await import('@/lib/security/security-events');
+      await logSuperAdminWalletBypass(
+        actingContext?.actor.id || targetUserId,
+        targetUserId,
+        estimatedCost,
+        currentBalance,
+        {
+          impersonating: actingContext?.isImpersonating || false,
+          reason: actingContext?.metadata?.reason || 'SuperAdmin operation',
+          currentBalance,
+          estimatedCost,
+        }
+      );
+    } catch (error: any) {
+      // Fail-open sul logging (non bloccare operazione)
+      console.error('❌ [WALLET BYPASS] Failed to log security event:', error.message);
+    }
+
     return {
       sufficient: true,
       currentBalance,
       required: estimatedCost,
+      bypassUsed: true,
+      bypassReason: 'SuperAdmin wallet bypass enabled',
     };
   }
 
+  // ============================================
+  // STANDARD CREDIT CHECK (NON-SUPERADMIN)
+  // ============================================
   const sufficient = currentBalance >= estimatedCost;
   const deficit = sufficient ? 0 : estimatedCost - currentBalance;
 
@@ -64,6 +132,7 @@ export async function checkCreditBeforeBooking(
     currentBalance,
     required: estimatedCost,
     deficit,
+    bypassUsed: false,
   };
 }
 
