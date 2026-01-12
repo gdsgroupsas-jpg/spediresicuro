@@ -1560,3 +1560,57 @@ grep -r "onContractSelected" app/dashboard/spedizioni/nuova/page.tsx
 # Test locale: vai su /dashboard/admin come superadmin
 
 # Expected: Componente AI Features Selector visibile e funzionante
+
+---
+
+## 🔒 AUDIT P0 SECURITY MIGRATIONS (2026-01-12)
+
+### Migration applicate:
+
+| Migration | Descrizione | Stato |
+|-----------|-------------|-------|
+| 098_wallet_idempotency_standalone | Idempotency key in wallet_transactions | ✅ |
+| 099_ocr_gdpr_compliance | GDPR consent flow per OCR Vision | ✅ |
+| 100_compensation_queue_observability | Dead-letter e metriche compensation | ✅ |
+| 103_fix_compensation_constraints_and_security_events | Fix constraint + security_events table | ✅ |
+
+### Funzionalità aggiunte:
+
+**P0.2 Wallet Idempotency:**
+- `wallet_transactions.idempotency_key` (colonna + UNIQUE index)
+- `decrement_wallet_balance(uuid, decimal, text)` con idempotency
+- `increment_wallet_balance(uuid, decimal, text)` con idempotency
+- Doppio addebito IMPOSSIBILE con stesso idempotency_key
+
+**P0.3 OCR GDPR Compliance:**
+- `users.ocr_vision_consent_given_at/ip/user_agent`
+- `ocr_processing_log` tabella con RLS
+- `grant_ocr_vision_consent()`, `revoke_ocr_vision_consent()`
+- `log_ocr_processing()`, `cleanup_expired_ocr_logs()` (TTL 7 giorni)
+
+**P0.4 Compensation Queue Observability:**
+- `compensation_queue` colonne: retry_count, resolved_at, dead_letter_reason
+- `retry_compensation()` → dead_letter dopo 3 retry
+- `mark_compensation_resolved()`
+- `get_compensation_alerts()` per pending > 7 giorni
+- `compensation_queue_stats` materialized view
+
+**Security Events:**
+- `security_events` tabella per audit trail
+- `log_security_event()` helper function
+- RLS abilitato (solo service_role può accedere)
+
+### Kill-switches da verificare su Vercel:
+
+```
+ALLOW_SUPERADMIN_WALLET_BYPASS=false  # CRITICO: deve essere false!
+ENABLE_OCR_IMAGES=true                # Abilita OCR immagini
+```
+
+### Test eseguiti:
+
+- ✅ Doppio addebito wallet bloccato
+- ✅ Consent GDPR salva IP+UserAgent+Timestamp
+- ✅ RLS attivo su ocr_processing_log
+- ✅ Compensation functions funzionanti
+- ✅ security_events table creata
