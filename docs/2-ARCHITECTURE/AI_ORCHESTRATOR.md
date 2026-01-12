@@ -1,0 +1,343 @@
+# AI Orchestrator Architecture - SpedireSicuro
+
+## Overview
+
+Questo documento descrive l'architettura dell'AI Orchestrator (Anne) basata su LangGraph, che gestisce richieste complesse multi-step per preventivi, normalizzazione indirizzi, booking e altre operazioni AI.
+
+## Target Audience
+
+- [x] Developers
+- [ ] DevOps
+- [ ] Business/PM
+- [x] AI Agents
+- [x] Nuovi team member
+
+## Prerequisites
+
+- LangGraph basics
+- AI/LLM concepts
+- TypeScript familiarity
+- Understanding of state machines
+
+## Quick Reference
+
+| Sezione | Pagina | Link |
+|---------|--------|------|
+| Architecture Overview | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Architecture](#architecture-overview) |
+| Supervisor Pattern | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Supervisor](#supervisor-pattern) |
+| Workers | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Workers](#workers) |
+| State Management | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [State](#state-management) |
+| Safety Invariants | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Safety](#safety-invariants) |
+
+## Content
+
+### Architecture Overview
+
+**Problema:** Gestire richieste complesse multi-step (preventivi, normalizzazione indirizzi, booking) con decisioni dinamiche basate su stato.
+
+**Soluzione:** Architettura LangGraph Supervisor con worker specializzati e Single Decision Point.
+
+#### Architettura Logica
+
+```
+User Input (messaggio)
+    │
+    ▼
+supervisorRouter()  ← Entry point UNICO (/api/ai/agent-chat)
+    │
+    ├─── Intent Detection (pricing vs non-pricing)
+    ├─── OCR Pattern Detection
+    ├─── Booking Confirmation Detection
+    │
+    ▼
+supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
+    │
+    ├─── next_step: 'ocr_worker' → OCR Worker → arricchisce shipmentDraft
+    ├─── next_step: 'address_worker' → Address Worker → normalizza indirizzi
+    ├─── next_step: 'pricing_worker' → Pricing Worker → calcola preventivi
+    ├─── next_step: 'booking_worker' → Booking Worker → prenota spedizione
+    ├─── next_step: 'legacy' → Claude Legacy Handler
+    └─── next_step: 'END' → Risposta finale al client
+    │
+    ▼ (dopo ogni worker, torna a supervisor)
+supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
+    │
+    └─── ... (loop fino a END o MAX_ITERATIONS raggiunto)
+```
+
+#### Data Flow Pattern
+
+1. **Input Utente** → `supervisorRouter()` rileva intent/pattern
+2. **Supervisor Decision** → `decideNextStep()` (funzione pura) decide routing basato su stato
+3. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
+4. **Loop Back** → Torna a supervisor, valuta nuovo stato
+5. **Termination** → `next_step: 'END'` → Risposta al client o azione DB (booking)
+
+---
+
+### Componenti
+
+#### 1. Supervisor Router
+
+**File:** `lib/agent/orchestrator/supervisor-router.ts`
+
+- Entry point unico per `/api/ai/agent-chat`
+- Rileva intent, pattern OCR, conferma booking
+- Invoca pricing graph o legacy handler
+- Emette telemetria finale (`supervisorRouterComplete`)
+
+#### 2. Supervisor
+
+**File:** `lib/agent/orchestrator/supervisor.ts`
+
+- `decideNextStep()` - Funzione pura, SINGLE DECISION POINT
+- `supervisor()` - Node LangGraph che estrae dati e decide routing
+- Estrae dati spedizione dal messaggio (LLM opzionale, fallback regex)
+- Determina routing basato su stato e intent
+- **Nessun altro componente decide routing** (verificabile con grep)
+
+#### 3. Pricing Graph
+
+**File:** `lib/agent/orchestrator/pricing-graph.ts`
+
+- LangGraph StateGraph con nodi: supervisor, ocr_worker, address_worker, pricing_worker, booking_worker
+- Conditional edges basati su `next_step` dallo stato
+- MAX_ITERATIONS guard (2) per prevenire loop infiniti
+- Configurazione: `lib/config.ts` (`graphConfig.MAX_ITERATIONS`)
+
+#### 4. Workers Specializzati
+
+**Address Worker** (`lib/agent/workers/address.ts`)
+- Normalizza indirizzi italiani (CAP, provincia, città)
+- Usa regex e validazione CAP
+
+**Pricing Worker** (`lib/agent/workers/pricing.ts`)
+- Calcola preventivi multi-corriere
+- Integra con sistema listini
+
+**OCR Worker** (`lib/agent/workers/ocr.ts`)
+- Estrae dati da testo OCR
+- Immagini: placeholder (TODO Sprint 2.5)
+
+**Booking Worker** (`lib/agent/workers/booking.ts`)
+- Prenota spedizioni (preflight + adapter)
+- Verifica credito wallet prima di booking
+
+---
+
+### State Management
+
+**File:** `lib/agent/orchestrator/state.ts`
+
+`AgentState` - Stato centralizzato con:
+
+```typescript
+interface AgentState {
+  shipmentDraft?: {
+    sender?: Address;
+    recipient?: Address;
+    packages?: Package[];
+    // ... altri campi
+  };
+  pricing_options?: PricingOption[];
+  booking_result?: BookingResult;
+  next_step: 'ocr_worker' | 'address_worker' | 'pricing_worker' | 'booking_worker' | 'legacy' | 'END';
+  clarification_request?: string;
+  messages: Message[];
+  // ... altri campi
+}
+```
+
+**Key Insight:** `shipmentDraft` usa merge non distruttivo - ogni worker arricchisce senza sovrascrivere.
+
+---
+
+### Safety Invariants (CRITICO)
+
+#### 1. No Silent Booking
+
+**Regola:** Booking richiede conferma esplicita utente (`containsBookingConfirmation()`)
+
+**Pattern:** "procedi", "conferma", "ok prenota", "sì procedi"
+
+**Verifica:**
+```bash
+grep -r "containsBookingConfirmation\|booking_worker" lib/agent/orchestrator/supervisor.ts
+```
+
+#### 2. Pre-flight Check Obbligatorio
+
+**Regola:** Booking worker esegue `preflightCheck()` prima di chiamare adapter
+
+**Verifica:**
+- recipient completo
+- parcel completo
+- pricing_option
+- idempotency_key
+
+**Se fallisce:** ritorna `PREFLIGHT_FAILED`, no adapter call
+
+**Verifica:**
+```bash
+grep -A5 "preflightCheck" lib/agent/workers/booking.ts
+```
+
+#### 3. Single Decision Point
+
+**Regola:** Solo `supervisor.ts` imposta `next_step`
+
+**Altri componenti non decidono routing autonomamente**
+
+**Verifica:**
+```bash
+grep -r "next_step.*=" lib/agent/orchestrator/ lib/agent/workers/ | grep -v "supervisor.ts"
+```
+
+#### 4. No PII nei Log
+
+**Regola:** Mai loggare dati sensibili
+
+**Non loggare:**
+- `addressLine1`
+- `postalCode`
+- `fullName`
+- `phone`
+- Testo OCR raw
+
+**Loggare solo:**
+- `trace_id`
+- `user_id_hash`
+- Conteggi
+
+**Verifica:**
+```bash
+grep -r "logger\.\(log\|info\|warn\|error\)" lib/agent/ | grep -i "addressLine\|postalCode\|fullName\|phone"
+```
+
+---
+
+### Known Limits
+
+- **LangGraph typing constraints:** Alcuni cast `as any` necessari per nomi nodi (documentati in codice)
+- **OCR immagini:** Placeholder, ritorna clarification request (TODO Sprint 2.5)
+- **MAX_ITERATIONS:** Limite hardcoded a 2 (configurabile in `lib/config.ts`)
+
+---
+
+### State Persistence (P3 Architecture Improvements)
+
+**File:** `lib/agent/orchestrator/checkpointer.ts`
+
+- LangGraph checkpointer per persistenza stato
+- `lib/services/agent-session.ts` - Service layer con cache in-memory (TTL 5 min)
+- Persistenza conversazioni multi-turn in `agent_sessions` table
+- Ripristino stato da checkpoint quando utente riapre chat
+
+---
+
+### Wallet Integration
+
+**File:** `lib/wallet/credit-check.ts`
+
+- Verifica credito pre-booking
+- Check in `supervisor.ts` prima di routing a `booking_worker`
+- Prevenzione tentativi booking con credito insufficiente
+
+---
+
+### Tool Registry
+
+**File:** `lib/agent/tools/registry.ts`
+
+- Registry centralizzato per tools
+- Auto-discovery e validazione input/output con Zod
+- Compatibilità con tools esistenti
+
+---
+
+### Performance Optimizations
+
+**File:** `lib/services/cache.ts`
+
+- Cache in-memory per RAG (TTL 1 ora) e pricing (TTL 5 min)
+- Integrato in `mentor_worker.ts`, `explain_worker.ts`, `pricing_worker.ts`
+- Query Supabase ottimizzate (select solo campi necessari)
+
+---
+
+## Examples
+
+### Invocare Agent
+
+```typescript
+// API Route: /api/ai/agent-chat
+import { supervisorRouter } from '@/lib/agent/orchestrator/supervisor-router';
+
+export async function POST(request: Request) {
+  const { message, sessionId } = await request.json();
+  
+  const result = await supervisorRouter({
+    message,
+    sessionId,
+    userId: context.target.id
+  });
+  
+  return Response.json(result);
+}
+```
+
+### Aggiungere Nuovo Worker
+
+```typescript
+// lib/agent/workers/custom-worker.ts
+export async function customWorker(state: AgentState): Promise<Partial<AgentState>> {
+  // Arricchisci shipmentDraft (merge non distruttivo)
+  return {
+    shipmentDraft: {
+      ...state.shipmentDraft,
+      customField: 'value'
+    }
+  };
+}
+
+// Aggiungi a pricing-graph.ts
+graph.addNode('custom_worker', customWorker);
+graph.addConditionalEdges('supervisor', (state) => {
+  if (state.next_step === 'custom_worker') return 'custom_worker';
+  // ... altri edge
+});
+```
+
+---
+
+## Common Issues
+
+| Issue | Soluzione |
+|-------|-----------|
+| Loop infinito | Verifica MAX_ITERATIONS e che `next_step` sia sempre impostato |
+| Booking senza conferma | Verifica `containsBookingConfirmation()` prima di routing |
+| Stato perso | Verifica che checkpointer sia configurato correttamente |
+| PII nei log | Verifica pattern di logging, usa solo hash/conteggi |
+
+---
+
+## Related Documentation
+
+- [10-AI-AGENT/OVERVIEW.md](../10-AI-AGENT/OVERVIEW.md) - Anne AI overview completo
+- [10-AI-AGENT/ARCHITECTURE.md](../10-AI-AGENT/ARCHITECTURE.md) - LangGraph architecture dettagliata
+- [10-AI-AGENT/WORKERS.md](../10-AI-AGENT/WORKERS.md) - Worker specifici
+- [MIGRATION_MEMORY.md](../../MIGRATION_MEMORY.md) - Single Source of Truth per migrazione Anne
+- [Backend Architecture](BACKEND.md) - API routes e Server Actions
+
+---
+
+## Changelog
+
+| Date | Version | Changes | Author |
+|------|---------|---------|--------|
+| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+
+---
+*Last Updated: 2026-01-12*  
+*Status: 🟢 Active*  
+*Maintainer: Team*

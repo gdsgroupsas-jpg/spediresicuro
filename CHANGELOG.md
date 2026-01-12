@@ -4,122 +4,148 @@ Tutte le modifiche significative al progetto SpedireSicuro sono documentate in q
 
 Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Versioning Strategy
+
+Questo progetto segue [Semantic Versioning 2.0.0](https://semver.org/):
+
+- **Major (X)**: Breaking changes, major architectural shifts
+- **Minor (Y)**: New features, backward compatible
+- **Patch (Z)**: Bug fixes, security patches
+
+## Release Process
+
+1. Tutte le modifiche significative vanno in `[Unreleased]`
+2. Al deploy in produzione, spostare il contenuto in nuova sezione `[X.Y.Z]`
+3. Aggiungere data alla release
+4. Creare nuova sezione vuota `[Unreleased]`
+
 ---
 
 ## [Unreleased]
 
+Ultimo aggiornamento: 2026-01-11
+
 ### Added
-- **Fase 3: Reseller Tier System** - Sistema categorizzazione automatica reseller
-  - Enum `reseller_tier`: small (<10 sub-users), medium (10-100), enterprise (>100)
-  - Campo `reseller_tier` in tabella `users` (nullable, solo per reseller)
-  - Funzione DB `get_reseller_tier(user_id)` per calcolo automatico tier
-  - Helper TypeScript `lib/db/tier-helpers.ts` con funzioni: `getResellerTier()`, `calculateTierFromSubUsers()`, `getTierLimits()`, `isTierAtLimit()`
-  - Componente UI `TierBadge` per visualizzazione tier (small/medium/enterprise)
-  - Integrazione tier badge in `ClientsHierarchyView` per superadmin
-  - Migrations: 088 (enum e campo), 089 (funzione), 090 (popolamento iniziale)
-  - Test: 17/17 unit test per tier-helpers, 782/786 suite completa, 0 regressioni
-  - Documentazione: `docs/DEVELOPMENT_PLAN_FASE3.md`, script verifica `scripts/test-migrations-088-090.sql`
-- **Fase 4: Gestione Clienti UI Gerarchica** - Vista unificata clienti per Superadmin/Admin
-  - `getAllClientsForUser()` - Backend: struttura gerarchica Reseller → Sub-Users + BYOC
-  - `ClientsHierarchyView` - Frontend: componente gerarchico con ResellerCard expandable
-  - `BYOCSection` - Frontend: sezione dedicata clienti BYOC standalone
-  - `useAllClients()` - Hook React Query per fetch dati gerarchici
-  - Superadmin vede tutti i clienti in modo gerarchico (Reseller → Sub-Users nested + BYOC)
-  - Reseller mantiene vista originale (solo propri Sub-Users) - non breaking
-  - Stats aggregate: Reseller, Sub-Users, BYOC, Wallet Totale
-  - Access control: capability `can_view_all_clients` o `account_type === 'superadmin'`
-  - **Operatività Completa:**
-    - Menu azioni Reseller: Ricarica Wallet, Crea Sub-User, Elimina Reseller
-    - Menu azioni Sub-Users: Gestisci Wallet, Elimina Cliente
-    - Menu azioni BYOC: Gestisci Wallet, Elimina Cliente
-    - Pulsante "Crea Reseller" con dialog dedicato
-    - Integrazione `CreateResellerDialog`, `CreateUserDialog`, `WalletRechargeDialog`
-    - Conferma eliminazioni con `ConfirmActionDialog`
-    - Refresh automatico dopo operazioni
-  - **Query Resilienti:**
-    - Fallback automatico se colonne opzionali mancanti (`company_name`, `phone`, `reseller_tier`)
-    - Compatibilità con database locali senza tutte le migrations
-  - **UI/UX Miglioramenti:**
-    - Fix contrasti: testi grigi → neri (`text-gray-900`) per massima leggibilità
-    - Dropdown menu: label e items con contrasto ottimizzato
-    - Card hover effects e transizioni smooth
-    - Badge e icone con colori distintivi e leggibili
-  - Test: 5/5 backend, 765/765 suite completa, 0 regressioni
-  - **Test Produzione (8 Gennaio 2026):** ✅ Test completo 6 fasi - Tutti GO, nessun errore, UI leggibile, operatività completa funzionante, pronta per produzione
-- **Reseller System Enhancement** - Miglioramenti sistema reseller
-  - Reseller creati con `account_type='reseller'` invece di `'user'`
-  - Migration per aggiungere `'reseller'` all'enum `account_type`
-  - Script `create-reseller.ts` per creazione programmatica reseller
-- **Role Badge System** - Sistema badge ruoli con colori distintivi
-  - `lib/utils/role-badges.tsx` - Utility per badge ruoli
-  - Super Admin: rosso, Admin: amber, Reseller: teal, BYOC: blu, User: grigio
-  - Visualizzazione ruoli corretta in admin dashboard
-- **Platform Fee Improvements** - Miglioramenti gestione fee
-  - Feedback visibile dopo salvataggio (toast + messaggi nel dialog)
-  - Supporto per fee = 0 (gratis) con preset dedicato
-  - Fix foreign key constraint in audit history
-- **Documentation** - Nuova documentazione
-  - `docs/FLUSSO_CREAZIONE_RESELLER.md` - Flusso creazione reseller
-  - `docs/SPIEGAZIONE_FEE_VS_ABBONAMENTO.md` - Differenza fee vs abbonamento
-- **Stripe Integration** - Completa integrazione pagamenti Stripe (sostituisce Intesa XPay)
-  - `lib/payments/stripe.ts` - Client Stripe con checkout session
-  - `app/api/stripe/webhook/route.ts` - Webhook con signature verification
-  - `app/api/stripe/create-checkout/route.ts` - Creazione sessioni checkout
-- **Invoice System** - Sistema fatturazione completo
-  - `lib/invoices/pdf-generator.ts` - Generazione PDF con jsPDF
-  - `app/api/invoices/generate/route.ts` - API generazione fatture
-  - `app/api/invoices/download/route.ts` - API download PDF
-  - `app/dashboard/fatture/page.tsx` - UI fatture
-- **Doctor Dashboard** - Dashboard diagnostica per admin
-  - `app/api/admin/doctor/route.ts` - API health check sistema
-  - `app/dashboard/admin/doctor/page.tsx` - UI diagnostica
-- **Nuovo endpoint sicuro** - `/api/integrations/validate-spedisci-online`
-  - Migrato da `/api/test-spedisci-online` con path più appropriato
-- **Test E2E** - Nuovi test Playwright
-  - `e2e/doctor-dashboard.spec.ts`
-  - `e2e/invoice-generation.spec.ts`
-  - `e2e/stripe-payment.spec.ts`
+- **AI Capabilities Toggle** - Toggle per abilitare/disabilitare capabilities AI di Anne nella dashboard admin
+  - Componente `AiFeaturesCard` nella pagina admin
+  - Toggle specifico per "Gestione Listini" (price list management)
+  - Actions `updateUserAiFeatures` per aggiornare metadata utente
+  - Refresh automatico stato locale dopo toggle
+  - Commits: 9df1a86, 11c331c, a4a31e1, 5dc5791, fd7de78, 88ac7fe
 
-### Changed
-- **UI Admin Dashboard** - Miglioramenti visualizzazione
-  - Pagina dettaglio utente: sfondo grigio chiaro (`bg-slate-50`) invece di gradient
-  - Card bianche invece di scure per migliore leggibilità
-  - Testo scuro su sfondo chiaro (fix: email invisibili nero su nero)
-  - Stile allineato alla pagina "Nuova Spedizione"
-- **Security Hardening**
-  - `app/dashboard/layout.tsx` - Bloccato `PLAYWRIGHT_TEST_MODE` in produzione
-  - `lib/hooks/use-service-worker.ts` - Sostituito `innerHTML` con DOM API sicure
-  - `app/api/stripe/webhook/route.ts` - Structured logging senza PII
-- **SpedisciOnlineWizard** - Aggiornato per usare nuovo endpoint `/api/integrations/validate-spedisci-online`
+- **Anne Price List Management** - Abilitazione dell'agente Anne alla gestione dei listini prezzi
+  - Strumenti AI: `search_master_price_lists`, `clone_price_list`, `assign_price_list`
+  - Worker: `price-list-manager` per gestione intenti complessi
+  - Sicurezza RBAC: Superadmin accesso completo, Reseller accesso negato di default
+  - Graph integration: nodo `price_list_worker` in pricing-graph.ts
+  - Documentazione: `docs/ANNE_PRICE_LIST_CAPABILITIES.md`
 
-### Removed
-- ❌ `app/api/test-redis/route.ts` - Endpoint diagnostico rimosso per sicurezza
-- ❌ `app/api/test-supabase/route.ts` - Endpoint diagnostico rimosso per sicurezza  
-- ❌ `app/api/test-spedisci-online/route.ts` - Migrato a nuovo path
-- ❌ `lib/payments/intesa-xpay.ts` - Sostituito da Stripe
-
-### Security
-- 🔒 Rimossi 3 endpoint di test esposti in produzione
-- 🔒 Bloccato bypass autenticazione test mode in produzione
-- 🔒 Eliminato logging PII (userId, amount) in webhook
-- 🔒 Fixato potenziale XSS via innerHTML
-- 🔒 `npm audit fix` - 5 vulnerabilità corrette
+- **Reseller Personalized Price Lists** - Sistema enterprise-grade per reseller con listini personalizzati
+  - Clone supplier price lists con custom margins (percent o fixed)
+  - Creazione listini vuoti con import CSV
+  - Operazioni CRUD complete per price list entries
+  - UI matrix-style per preview e editing manuale
+  - Enterprise audit trail con logging completo
+  - Integrazione con preventivatore intelligente
+  - Miglioramenti matching geografico zone/provincia/regione
 
 ### Fixed
-- **Autocomplete Città** - Fix riapre dopo selezione
-  - Autocomplete non si riapre più dopo prima selezione
-  - Aggiunto flag `isSelectionInProgress` per prevenire loop
-  - Non fa ricerca se città è già validata
-- **Platform Fee Audit** - Fix foreign key constraint
-  - Risolto errore `platform_fee_history_changed_by_fkey`
-  - Audit gestito manualmente con adminUserId corretto
-  - Trigger automatico disabilitato (non funzionava con service role)
-- **Reseller Display** - Fix visualizzazione ruolo
-  - Reseller ora mostrati come "Reseller" invece di "Utente"
-  - Usa `account_type` e `is_reseller` per determinare ruolo
-  - Tabella admin dashboard aggiornata con query corretta
-- Wallet dialog ora usa Stripe invece di XPay
-- Service worker notification usa DOM API sicure
+- **Metadata Column Missing** - Risolto problema colonna metadata mancante usando `auth.users` invece di `users` (5dc5791)
+- **Supabase Client** - Usa client Supabase corretto e migliora log errori (fd7de78)
+- **Local State Update** - Aggiorna stato locale con metadata freschi dopo toggle (11c331c)
+- **Dashboard Refresh** - Refresh automatico dashboard dopo toggle AI features (a4a31e1)
+- **TypeScript Build Error** - Risolto errore TS su assegnazione potenzialmente undefined (9c85761)
+- **Service Accessori Format** - Formato corretto: array numeri `[200001]` invece di stringhe
+- **Validazione Corriere Obbligatorio** - Pulsante "Genera Spedizione" disabilitato senza selezione corriere
+- **Multi-Configurazione Spedisci.Online** - Rimosso deduplicazione errata che filtrava config valide
+- **Creazione Spedizione Refresh** - Reset cache quote comparator + ricaricamento corrieri dopo reset
+- **Refresh Lista Spedizioni** - Ottimizzato con timestamp invece di `cache: 'no-store'`
+
+### Security
+- 🔒 Metadata access limitato a service role solo
+- 🔒 Audit logging per tutte le operazioni toggle AI
+- 🔒 Rimozione endpoint di test esposti in produzione (redis, supabase, spedisci-online)
+- 🔒 Bloccato PLAYWRIGHT_TEST_MODE bypass in produzione
+
+### Documentation
+- Aggiornato `MIGRATION_MEMORY.md` con Anne price list capabilities
+- Documentazione completa per reseller personalized price lists (PR#43)
+- Documentazione AI features toggle workflow
+
+---
+
+## [0.3.1] - 2026-01-02
+
+### Added
+- **Anne Price List Management** - Abilitazione dell'agente Anne alla gestione dei listini prezzi
+  - Strumenti AI: `search_master_price_lists`, `clone_price_list`, `assign_price_list`
+  - Worker: `price-list-manager` per gestione intenti complessi
+  - Sicurezza RBAC: Superadmin accesso completo, Reseller accesso negato di default
+  - Graph integration: nodo `price_list_worker` in pricing-graph.ts
+  - Documentazione: `docs/ANNE_PRICE_LIST_CAPABILITIES.md`
+
+### Changed
+- **MIGRATION_MEMORY.md** - Aggiornato con Anne price list capabilities
+
+---
+
+## [0.3.0] - 2025-12-27
+
+### Added
+- **Dynamic Platform Fees** - Fee configurabili per utente
+  - DB migration 050: colonna `platform_fee_override`, tabella `platform_fee_history`
+  - Service layer `lib/services/pricing/platform-fee.ts`
+  - Worker integration: BookingWorker applica fee dinamica
+  - SuperAdmin UI: `CurrentFeeDisplay`, `UpdateFeeDialog`, `FeeHistoryTable`
+
+- **Fase 2.8: SuperAdmin UI** - Gestione platform fee via UI
+
+### Fixed
+- **Platform Fee Audit** - Fix foreign key constraint in audit history
+
+---
+
+## [0.2.0] - 2025-12-20
+
+### Added
+- **OCR Immagini** - Integrazione Gemini Vision per OCR da immagini
+  - Vision support con max 1 retry per errori transient
+  - Fallback: clarification request immediata
+  - 10 immagini test processate, 90% confidence
+  - Test integration: 13 test passati
+
+- **Booking Worker** - Prenotazione spedizioni con preflight checks
+  - Pre-flight check: verifica recipient/parcel/pricing_option
+  - Conferma esplicita utente via pattern matching
+  - Test integration: 30 test passati
+
+---
+
+## [0.1.0] - 2025-12-01
+
+### Added
+- **LangGraph Supervisor Architecture** - Orchestrazione AI Anne con LangGraph
+  - Supervisor Router come entry point unico
+  - Workers: OCR, Address, Pricing, Booking
+  - Telemetria strutturata
+  - Rate limiting distribuito (Upstash Redis)
+
+- **Address Worker** - Normalizzazione indirizzi italiani
+  - Estrazione CAP, provincia, città
+  - Schema Zod per validazione
+  - Test: 107 test passati
+
+- **OCR Worker** - Estrazione dati da testo
+  - Parsing deterministico con regex
+  - Output `ShipmentDraft` con missing fields
+  - Test: 25 test passati
+
+- **Pricing Worker** - Calcolo preventivi multi-corriere
+  - Single source of truth: `lib/pricing/calculator.ts`
+  - Contract tests: 18 test passati
+
+### Changed
+- **MIGRATION_MEMORY.md** - Creato come Single Source of Truth per migrazione Anne
 
 ---
 
@@ -138,4 +164,6 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
-**Vedi anche:** [docs/SESSION_STATUS_2026_01_01.md](docs/SESSION_STATUS_2026_01_01.md) per dettagli sessione
+**Vedi anche:**
+- [MIGRATION_MEMORY.md](MIGRATION_MEMORY.md) - Architettura AI Anne dettagliata
+- [docs/README.md](docs/README.md) - Indice documentazione completo

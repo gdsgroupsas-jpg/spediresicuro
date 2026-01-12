@@ -1464,3 +1464,99 @@ grep -r "onContractSelected" app/dashboard/spedizioni/nuova/page.tsx
 
 - Script `scripts/test_anne_tools.ts` verify permission gates.
 - Docs: `docs/ANNE_PRICE_LIST_CAPABILITIES.md`
+
+### ✅ AI FEATURES TOGGLE - ADMIN DASHBOARD (11 Gennaio 2026)
+
+**Obiettivo:** Implementare toggle UI per abilitare/disabilitare le capabilities AI di Anne per singolo utente.
+
+**Implementazione:**
+
+### Componente UI
+
+- **File:** `components/admin/ai-features/AiFeaturesCard.tsx`
+- **Feature:** Toggle per "Gestione Listini" (price list management)
+- **Stato locale:** Aggiornamento ottimistico con rollback su errore
+- **Feedback:** Toast notification (success/error)
+
+### Backend Actions
+
+- **File:** `actions/super-admin.ts`
+- **Action:** `updateUserAiFeatures(userId, { canManagePriceLists })`
+- **Storage:** Aggiorna metadata `ai_can_manage_pricelists` in `auth.users`
+
+### Integration Dashboard
+
+- **File:** `app/dashboard/admin/page.tsx`
+- **Sezione:** "Capacità AI (Anne)" nella card utente
+- **Refresh:** Aggiornamento automatico stato locale dopo toggle
+- **Metadata fetch:** Usa `auth.users` invece di `users` per metadata
+
+**Fix Applicati:**
+
+1. **Fix Metadata Column (5dc5791):**
+
+   - Problema: Query cercavano `metadata` in `users` invece di `auth.users`
+   - Soluzione: Usa `auth.users` per fetch metadata
+
+2. **Fix Supabase Client (fd7de78):**
+
+   - Problema: Client Supabase errato per azioni admin
+   - Soluzione: Usa `createClient()` con service role
+
+3. **Fix Local State Update (11c331c):**
+
+   - Problema: UI non si aggiornava dopo toggle
+   - Soluzione: Refresh stato locale con metadata freschi da auth
+
+4. **Fix Dashboard Refresh (a4a31e1):**
+
+   - Problema: Dashboard non mostrava stato aggiornato
+   - Soluzione: Aggiunge refresh automatico dopo toggle completo
+
+5. **Fix TypeScript Build (9c85761):**
+
+   - Problema: Errore TS su assegnazione potenzialmente undefined
+   - Soluzione: Risolto casting e type guards
+
+6. **Debug Logs (5ee75f3 + 88ac7fe):**
+
+   - Problema: Debug cache issue
+   - Soluzione: Aggiunti log versione, rimossi nel commit finale
+
+7. **Cleanup Debug (126449c):**
+   - Problema: Log temporanei rimasti in codice
+   - Soluzione: Rimossi tutti i log debug temporanei
+
+**Security:**
+
+- 🔒 Metadata access limitato a service role solo
+- 🔒 Audit logging per tutte le operazioni toggle AI
+- 🔒 RBAC enforcement (solo superadmin può modificare)
+
+**File Modificati:**
+
+- `components/admin/ai-features/AiFeaturesCard.tsx` - Toggle UI
+- `actions/super-admin.ts` - Backend actions
+- `app/dashboard/admin/page.tsx` - Dashboard integration
+- `app/api/admin/overview/route.ts` - Overview API
+- `app/api/admin/users/[id]/features/route.ts` - User features API
+
+**Test:**
+
+- Test manuale: Toggle funziona correttamente
+- Toast notification appare su success/error
+- Stato locale aggiornato correttamente
+- Refresh dashboard funziona dopo toggle
+
+**Note:**
+
+- Il toggle influenza solo le capabilities AI per gestione listini
+- Altre capabilities AI non sono ancora implementate
+- Il metadata è salvato in `auth.users.metadata.ai_can_manage_pricelists`
+- Il toggle è persistente (non resetta al logout)
+
+**Come verificare:**
+
+# Test locale: vai su /dashboard/admin come superadmin
+
+# Expected: Componente AI Features Selector visibile e funzionante
