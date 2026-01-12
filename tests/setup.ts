@@ -74,8 +74,9 @@ import { vi } from 'vitest';
  * - NextResponse.json(body, init) deve ritornare una Response reale (supporta await response.json()).
  * - NextResponse.next() deve ritornare Response status 200.
  * - Non deve crashare in import-time.
+ * - Deve gestire anche l'import da next-auth che cerca next/server
  */
-vi.mock('next/server', () => {
+vi.mock('next/server', async () => {
   class NextRequest extends Request {}
 
   const NextResponse = {
@@ -91,8 +92,59 @@ vi.mock('next/server', () => {
       });
     },
     next: () => new Response(null, { status: 200 }),
+    redirect: (url: string | URL) => {
+      return new Response(null, { 
+        status: 307,
+        headers: { Location: String(url) }
+      });
+    },
   };
 
   return { NextRequest, NextResponse };
 });
 
+/**
+ * Mock anche per next/server.js (variante che next-auth potrebbe cercare)
+ */
+vi.mock('next/server.js', async () => {
+  class NextRequest extends Request {}
+
+  const NextResponse = {
+    json: (body: unknown, init?: ResponseInit) => {
+      const headers = new Headers(init?.headers);
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json; charset=utf-8');
+      }
+      return new Response(JSON.stringify(body), {
+        ...init,
+        status: init?.status ?? 200,
+        headers,
+      });
+    },
+    next: () => new Response(null, { status: 200 }),
+    redirect: (url: string | URL) => {
+      return new Response(null, { 
+        status: 307,
+        headers: { Location: String(url) }
+      });
+    },
+  };
+
+  return { NextRequest, NextResponse };
+});
+
+/**
+ * Mock di next-auth per evitare problemi con next/server durante i test
+ * Questo previene l'import di next/server da parte di next-auth/lib/env.js
+ */
+vi.mock('next-auth', () => {
+  return {
+    default: vi.fn(() => ({
+      auth: vi.fn(),
+      handlers: {
+        GET: vi.fn(),
+        POST: vi.fn(),
+      },
+    })),
+  };
+});
