@@ -71,6 +71,7 @@ export default function DashboardSidebar() {
   const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
 
   // Auto-espandi sezioni se siamo in una pagina relativa
+  // 🆕 Supporta anche nested sections (subsections)
   useEffect(() => {
     setExpandedSections((prevExpanded) => {
       const newExpandedSections = new Set<string>();
@@ -84,12 +85,31 @@ export default function DashboardSidebar() {
           newExpandedSections.add(section.id);
         }
 
+        // Verifica items diretti
         const hasActiveItem = section.items.some((item) =>
           isNavItemActive(item.href, pathname || '')
         );
 
         if (hasActiveItem) {
           newExpandedSections.add(section.id);
+        }
+
+        // 🆕 Verifica items nelle subsections
+        if (section.subsections) {
+          section.subsections.forEach((subsection) => {
+            if (subsection.defaultExpanded) {
+              newExpandedSections.add(subsection.id);
+            }
+
+            const hasActiveNestedItem = subsection.items.some((item) =>
+              isNavItemActive(item.href, pathname || '')
+            );
+
+            if (hasActiveNestedItem) {
+              newExpandedSections.add(section.id); // Espandi sezione parent
+              newExpandedSections.add(subsection.id); // Espandi subsection
+            }
+          });
         }
       });
 
@@ -179,10 +199,16 @@ export default function DashboardSidebar() {
         {/* Sezioni principali */}
         {navigationConfig.sections.map((section) => {
           const isExpanded = expandedSections.has(section.id);
-          const hasActiveItem = section.items.some(item => 
+
+          // Verifica active state sia per items diretti che nested
+          const hasActiveItem = section.items.some(item =>
             isNavItemActive(item.href, pathname || '')
           );
-          
+          const hasActiveNestedItem = section.subsections?.some(subsection =>
+            subsection.items.some(item => isNavItemActive(item.href, pathname || ''))
+          );
+          const hasActive = hasActiveItem || hasActiveNestedItem;
+
           return (
             <div key={section.id} className="space-y-0.5">
               {/* Section Header */}
@@ -191,7 +217,7 @@ export default function DashboardSidebar() {
                   onClick={() => toggleSection(section.id)}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 uppercase tracking-wider transition-colors",
-                    hasActiveItem && "text-gray-900",
+                    hasActive && "text-gray-900",
                     "hover:text-gray-900"
                   )}
                 >
@@ -208,13 +234,14 @@ export default function DashboardSidebar() {
                 </div>
               )}
 
-              {/* Section Items */}
+              {/* Section Content */}
               {(!section.collapsible || isExpanded) && (
                 <div className="space-y-0.5 pl-5">
+                  {/* Section Items (diretti) */}
                   {section.items.map((item) => {
                     const isItemActive = isNavItemActive(item.href, pathname || '');
                     const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
-                    
+
                     return (
                       <Link
                         key={item.id}
@@ -247,6 +274,86 @@ export default function DashboardSidebar() {
                           </span>
                         )}
                       </Link>
+                    );
+                  })}
+
+                  {/* 🆕 Subsections (nested) */}
+                  {section.subsections?.map((subsection) => {
+                    const isSubExpanded = expandedSections.has(subsection.id);
+                    const hasActiveSubItem = subsection.items.some(item =>
+                      isNavItemActive(item.href, pathname || '')
+                    );
+
+                    return (
+                      <div key={subsection.id} className="space-y-0.5 mt-2">
+                        {/* Subsection Header */}
+                        {subsection.collapsible ? (
+                          <button
+                            onClick={() => toggleSection(subsection.id)}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wide transition-colors",
+                              hasActiveSubItem ? "text-orange-600" : "text-gray-500 hover:text-gray-700"
+                            )}
+                          >
+                            {isSubExpanded ? (
+                              <ChevronDown className="w-3 h-3" />
+                            ) : (
+                              <ChevronRight className="w-3 h-3" />
+                            )}
+                            {subsection.icon && <subsection.icon className="w-3 h-3" />}
+                            <span className="flex-1 text-left">{subsection.label}</span>
+                          </button>
+                        ) : (
+                          <div className="px-2 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                            {subsection.icon && <subsection.icon className="w-3 h-3" />}
+                            <span>{subsection.label}</span>
+                          </div>
+                        )}
+
+                        {/* Subsection Items */}
+                        {(!subsection.collapsible || isSubExpanded) && (
+                          <div className="space-y-0.5 pl-3">
+                            {subsection.items.map((item) => {
+                              const isItemActive = isNavItemActive(item.href, pathname || '');
+                              const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
+
+                              return (
+                                <Link
+                                  key={item.id}
+                                  href={item.href}
+                                  className={cn(
+                                    "flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors group",
+                                    isItemActive
+                                      ? isPrimary
+                                        ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm"
+                                        : "bg-gray-100 text-gray-900 font-medium"
+                                      : isPrimary
+                                      ? "text-gray-700 hover:bg-gray-50"
+                                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                  )}
+                                  title={item.description}
+                                >
+                                  <item.icon className={cn(
+                                    "w-3.5 h-3.5 flex-shrink-0",
+                                    isItemActive && isPrimary ? "text-white" : ""
+                                  )} />
+                                  <span className="flex-1 truncate text-sm">{item.label}</span>
+                                  {item.badge && (
+                                    <span className={cn(
+                                      "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                      isItemActive && isPrimary
+                                        ? "bg-white/20 text-white"
+                                        : "bg-gray-200 text-gray-700"
+                                    )}>
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
