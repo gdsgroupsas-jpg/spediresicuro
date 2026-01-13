@@ -25,17 +25,45 @@ import {
   isNavItemActive,
   type UserRole,
   type NavSection,
+  type NavItem,
+  FEATURES,
 } from '@/lib/config/navigationConfig';
 import { cn } from '@/lib/utils';
+import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [accountType, setAccountType] = useState<string | null>(null);
   const [isReseller, setIsReseller] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+
+  // 🆕 LocalStorage keys
+  const STORAGE_KEYS = {
+    expandedSections: 'sidebar-expanded-sections',
+    manuallyCollapsed: 'sidebar-manually-collapsed',
+  };
+
+  // 🆕 Inizializza state da localStorage (con fallback)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.expandedSections);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.manuallyCollapsed);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   // Carica il tipo di account e reseller status
   useEffect(() => {
@@ -70,7 +98,62 @@ export default function DashboardSidebar() {
   
   const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
 
+  // 🆕 Flatten all navigable items for keyboard navigation
+  const allNavigableItems = useMemo(() => {
+    const items: NavItem[] = [];
+
+    // Add dashboard item
+    if (navigationConfig.dashboardItem) {
+      items.push(navigationConfig.dashboardItem);
+    }
+
+    // Add all section items (including nested)
+    navigationConfig.sections.forEach((section) => {
+      items.push(...section.items);
+
+      // Add subsection items
+      if (section.subsections) {
+        section.subsections.forEach((subsection) => {
+          items.push(...subsection.items);
+        });
+      }
+    });
+
+    return items;
+  }, [navigationConfig]);
+
+  // 🆕 Keyboard navigation support
+  const { focusedIndex, isKeyboardMode } = useKeyboardNav(allNavigableItems, {
+    enabled: FEATURES.KEYBOARD_NAV,
+  });
+
+  // 🆕 Salva stato in localStorage quando cambia
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.expandedSections,
+        JSON.stringify(Array.from(expandedSections))
+      );
+    } catch (error) {
+      console.error('Failed to save expanded sections:', error);
+    }
+  }, [expandedSections, STORAGE_KEYS.expandedSections]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.manuallyCollapsed,
+        JSON.stringify(Array.from(manuallyCollapsed))
+      );
+    } catch (error) {
+      console.error('Failed to save manually collapsed:', error);
+    }
+  }, [manuallyCollapsed, STORAGE_KEYS.manuallyCollapsed]);
+
   // Auto-espandi sezioni se siamo in una pagina relativa
+  // 🆕 Supporta anche nested sections (subsections)
   useEffect(() => {
     setExpandedSections((prevExpanded) => {
       const newExpandedSections = new Set<string>();
@@ -84,12 +167,31 @@ export default function DashboardSidebar() {
           newExpandedSections.add(section.id);
         }
 
+        // Verifica items diretti
         const hasActiveItem = section.items.some((item) =>
           isNavItemActive(item.href, pathname || '')
         );
 
         if (hasActiveItem) {
           newExpandedSections.add(section.id);
+        }
+
+        // 🆕 Verifica items nelle subsections
+        if (section.subsections) {
+          section.subsections.forEach((subsection) => {
+            if (subsection.defaultExpanded) {
+              newExpandedSections.add(subsection.id);
+            }
+
+            const hasActiveNestedItem = subsection.items.some((item) =>
+              isNavItemActive(item.href, pathname || '')
+            );
+
+            if (hasActiveNestedItem) {
+              newExpandedSections.add(section.id); // Espandi sezione parent
+              newExpandedSections.add(subsection.id); // Espandi subsection
+            }
+          });
         }
       });
 
@@ -123,8 +225,18 @@ export default function DashboardSidebar() {
   const isAdmin = accountType === 'admin' || accountType === 'superadmin';
   const isSuperAdmin = accountType === 'superadmin';
 
+  // 🆕 Helper to get global nav index for an item (for keyboard nav)
+  const getNavIndex = (item: NavItem): number => {
+    return allNavigableItems.findIndex((i) => i.id === item.id);
+  };
+
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-50">
+    <div
+      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-50"
+      data-keyboard-nav
+      role="navigation"
+      aria-label="Main navigation"
+    >
       {/* Header - Logo e Brand */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
@@ -144,11 +256,16 @@ export default function DashboardSidebar() {
         {navigationConfig.dashboardItem && (
           <Link
             href={navigationConfig.dashboardItem.href}
+            data-nav-index={getNavIndex(navigationConfig.dashboardItem)}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
               isNavItemActive(navigationConfig.dashboardItem.href, pathname || '')
                 ? "bg-gray-100 text-gray-900"
-                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+              // 🆕 Keyboard focus ring
+              isKeyboardMode &&
+                focusedIndex === getNavIndex(navigationConfig.dashboardItem) &&
+                "ring-2 ring-orange-500 ring-offset-1"
             )}
           >
             <navigationConfig.dashboardItem.icon className="w-4 h-4 flex-shrink-0" />
@@ -179,10 +296,16 @@ export default function DashboardSidebar() {
         {/* Sezioni principali */}
         {navigationConfig.sections.map((section) => {
           const isExpanded = expandedSections.has(section.id);
-          const hasActiveItem = section.items.some(item => 
+
+          // Verifica active state sia per items diretti che nested
+          const hasActiveItem = section.items.some(item =>
             isNavItemActive(item.href, pathname || '')
           );
-          
+          const hasActiveNestedItem = section.subsections?.some(subsection =>
+            subsection.items.some(item => isNavItemActive(item.href, pathname || ''))
+          );
+          const hasActive = hasActiveItem || hasActiveNestedItem;
+
           return (
             <div key={section.id} className="space-y-0.5">
               {/* Section Header */}
@@ -191,7 +314,7 @@ export default function DashboardSidebar() {
                   onClick={() => toggleSection(section.id)}
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 uppercase tracking-wider transition-colors",
-                    hasActiveItem && "text-gray-900",
+                    hasActive && "text-gray-900",
                     "hover:text-gray-900"
                   )}
                 >
@@ -208,17 +331,21 @@ export default function DashboardSidebar() {
                 </div>
               )}
 
-              {/* Section Items */}
+              {/* Section Content */}
               {(!section.collapsible || isExpanded) && (
                 <div className="space-y-0.5 pl-5">
+                  {/* Section Items (diretti) */}
                   {section.items.map((item) => {
                     const isItemActive = isNavItemActive(item.href, pathname || '');
                     const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
-                    
+                    const navIndex = getNavIndex(item);
+                    const isFocused = isKeyboardMode && focusedIndex === navIndex;
+
                     return (
                       <Link
                         key={item.id}
                         href={item.href}
+                        data-nav-index={navIndex}
                         className={cn(
                           "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group",
                           isItemActive
@@ -227,7 +354,9 @@ export default function DashboardSidebar() {
                               : "bg-gray-100 text-gray-900 font-medium"
                             : isPrimary
                             ? "text-gray-700 hover:bg-gray-50"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                          // 🆕 Keyboard focus ring
+                          isFocused && "ring-2 ring-orange-500 ring-offset-1"
                         )}
                         title={item.description}
                       >
@@ -247,6 +376,91 @@ export default function DashboardSidebar() {
                           </span>
                         )}
                       </Link>
+                    );
+                  })}
+
+                  {/* 🆕 Subsections (nested) */}
+                  {section.subsections?.map((subsection) => {
+                    const isSubExpanded = expandedSections.has(subsection.id);
+                    const hasActiveSubItem = subsection.items.some(item =>
+                      isNavItemActive(item.href, pathname || '')
+                    );
+
+                    return (
+                      <div key={subsection.id} className="space-y-0.5 mt-2">
+                        {/* Subsection Header */}
+                        {subsection.collapsible ? (
+                          <button
+                            onClick={() => toggleSection(subsection.id)}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wide transition-colors",
+                              hasActiveSubItem ? "text-orange-600" : "text-gray-500 hover:text-gray-700"
+                            )}
+                          >
+                            {isSubExpanded ? (
+                              <ChevronDown className="w-3 h-3" />
+                            ) : (
+                              <ChevronRight className="w-3 h-3" />
+                            )}
+                            {subsection.icon && <subsection.icon className="w-3 h-3" />}
+                            <span className="flex-1 text-left">{subsection.label}</span>
+                          </button>
+                        ) : (
+                          <div className="px-2 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                            {subsection.icon && <subsection.icon className="w-3 h-3" />}
+                            <span>{subsection.label}</span>
+                          </div>
+                        )}
+
+                        {/* Subsection Items */}
+                        {(!subsection.collapsible || isSubExpanded) && (
+                          <div className="space-y-0.5 pl-3">
+                            {subsection.items.map((item) => {
+                              const isItemActive = isNavItemActive(item.href, pathname || '');
+                              const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
+                              const navIndex = getNavIndex(item);
+                              const isFocused = isKeyboardMode && focusedIndex === navIndex;
+
+                              return (
+                                <Link
+                                  key={item.id}
+                                  href={item.href}
+                                  data-nav-index={navIndex}
+                                  className={cn(
+                                    "flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors group",
+                                    isItemActive
+                                      ? isPrimary
+                                        ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm"
+                                        : "bg-gray-100 text-gray-900 font-medium"
+                                      : isPrimary
+                                      ? "text-gray-700 hover:bg-gray-50"
+                                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                                    // 🆕 Keyboard focus ring
+                                    isFocused && "ring-2 ring-orange-500 ring-offset-1"
+                                  )}
+                                  title={item.description}
+                                >
+                                  <item.icon className={cn(
+                                    "w-3.5 h-3.5 flex-shrink-0",
+                                    isItemActive && isPrimary ? "text-white" : ""
+                                  )} />
+                                  <span className="flex-1 truncate text-sm">{item.label}</span>
+                                  {item.badge && (
+                                    <span className={cn(
+                                      "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                      isItemActive && isPrimary
+                                        ? "bg-white/20 text-white"
+                                        : "bg-gray-200 text-gray-700"
+                                    )}>
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
