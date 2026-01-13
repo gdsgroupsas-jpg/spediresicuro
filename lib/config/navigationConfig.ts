@@ -75,6 +75,16 @@ export interface NavSection {
 export type UserRole = 'user' | 'admin' | 'superadmin';
 
 /**
+ * Feature flags per funzionalità opzionali
+ * Permette rollout graduale e rollback istantaneo
+ */
+export const FEATURES = {
+  KEYBOARD_NAV: true, // Keyboard navigation (Arrow keys, Enter, Escape)
+  SIDEBAR_SEARCH: false, // Search/filter sidebar items
+  TELEMETRY: false, // Analytics tracking
+} as const;
+
+/**
  * Configurazione completa navigazione
  */
 export interface NavigationConfig {

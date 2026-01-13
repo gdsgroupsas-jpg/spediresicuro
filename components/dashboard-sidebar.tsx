@@ -25,8 +25,11 @@ import {
   isNavItemActive,
   type UserRole,
   type NavSection,
+  type NavItem,
+  FEATURES,
 } from '@/lib/config/navigationConfig';
 import { cn } from '@/lib/utils';
+import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -94,6 +97,35 @@ export default function DashboardSidebar() {
   }, [userRole, isReseller, accountType]);
   
   const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
+
+  // 🆕 Flatten all navigable items for keyboard navigation
+  const allNavigableItems = useMemo(() => {
+    const items: NavItem[] = [];
+
+    // Add dashboard item
+    if (navigationConfig.dashboardItem) {
+      items.push(navigationConfig.dashboardItem);
+    }
+
+    // Add all section items (including nested)
+    navigationConfig.sections.forEach((section) => {
+      items.push(...section.items);
+
+      // Add subsection items
+      if (section.subsections) {
+        section.subsections.forEach((subsection) => {
+          items.push(...subsection.items);
+        });
+      }
+    });
+
+    return items;
+  }, [navigationConfig]);
+
+  // 🆕 Keyboard navigation support
+  const { focusedIndex, isKeyboardMode } = useKeyboardNav(allNavigableItems, {
+    enabled: FEATURES.KEYBOARD_NAV,
+  });
 
   // 🆕 Salva stato in localStorage quando cambia
   useEffect(() => {
@@ -193,8 +225,18 @@ export default function DashboardSidebar() {
   const isAdmin = accountType === 'admin' || accountType === 'superadmin';
   const isSuperAdmin = accountType === 'superadmin';
 
+  // 🆕 Helper to get global nav index for an item (for keyboard nav)
+  const getNavIndex = (item: NavItem): number => {
+    return allNavigableItems.findIndex((i) => i.id === item.id);
+  };
+
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-50">
+    <div
+      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-50"
+      data-keyboard-nav
+      role="navigation"
+      aria-label="Main navigation"
+    >
       {/* Header - Logo e Brand */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
@@ -214,11 +256,16 @@ export default function DashboardSidebar() {
         {navigationConfig.dashboardItem && (
           <Link
             href={navigationConfig.dashboardItem.href}
+            data-nav-index={getNavIndex(navigationConfig.dashboardItem)}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
               isNavItemActive(navigationConfig.dashboardItem.href, pathname || '')
                 ? "bg-gray-100 text-gray-900"
-                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+              // 🆕 Keyboard focus ring
+              isKeyboardMode &&
+                focusedIndex === getNavIndex(navigationConfig.dashboardItem) &&
+                "ring-2 ring-orange-500 ring-offset-1"
             )}
           >
             <navigationConfig.dashboardItem.icon className="w-4 h-4 flex-shrink-0" />
@@ -291,11 +338,14 @@ export default function DashboardSidebar() {
                   {section.items.map((item) => {
                     const isItemActive = isNavItemActive(item.href, pathname || '');
                     const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
+                    const navIndex = getNavIndex(item);
+                    const isFocused = isKeyboardMode && focusedIndex === navIndex;
 
                     return (
                       <Link
                         key={item.id}
                         href={item.href}
+                        data-nav-index={navIndex}
                         className={cn(
                           "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group",
                           isItemActive
@@ -304,7 +354,9 @@ export default function DashboardSidebar() {
                               : "bg-gray-100 text-gray-900 font-medium"
                             : isPrimary
                             ? "text-gray-700 hover:bg-gray-50"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                          // 🆕 Keyboard focus ring
+                          isFocused && "ring-2 ring-orange-500 ring-offset-1"
                         )}
                         title={item.description}
                       >
@@ -366,11 +418,14 @@ export default function DashboardSidebar() {
                             {subsection.items.map((item) => {
                               const isItemActive = isNavItemActive(item.href, pathname || '');
                               const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
+                              const navIndex = getNavIndex(item);
+                              const isFocused = isKeyboardMode && focusedIndex === navIndex;
 
                               return (
                                 <Link
                                   key={item.id}
                                   href={item.href}
+                                  data-nav-index={navIndex}
                                   className={cn(
                                     "flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors group",
                                     isItemActive
@@ -379,7 +434,9 @@ export default function DashboardSidebar() {
                                         : "bg-gray-100 text-gray-900 font-medium"
                                       : isPrimary
                                       ? "text-gray-700 hover:bg-gray-50"
-                                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                                    // 🆕 Keyboard focus ring
+                                    isFocused && "ring-2 ring-orange-500 ring-offset-1"
                                   )}
                                   title={item.description}
                                 >
