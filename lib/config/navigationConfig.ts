@@ -55,12 +55,14 @@ export interface NavItem {
 
 /**
  * Tipo per le sezioni di navigazione (con sottomenu)
+ * Supporta nested sections per organizzazione gerarchica
  */
 export interface NavSection {
   id: string;
   label: string;
   icon?: LucideIcon;
   items: NavItem[];
+  subsections?: NavSection[]; // 🆕 Supporto per sottosezioni nested
   collapsible?: boolean;
   defaultExpanded?: boolean;
   requiredRole?: UserRole[];
@@ -134,7 +136,7 @@ const logisticsSection: NavSection = {
     },
     {
       id: 'contrassegni',
-      label: 'Contrassegni',
+      label: 'Spedizioni Contrassegno',
       href: '/dashboard/contrassegni',
       icon: DollarSign,
       description: 'Gestione spedizioni con contrassegno',
@@ -212,31 +214,19 @@ const supportSection: NavSection = {
 };
 
 /**
- * FINANZE - Solo per Reseller o utenti con wallet
+ * FINANZE - RIMOSSA
+ * Wallet spostato in "Il Mio Account" per eliminare duplicazione
+ * La sezione "Finanze" conteneva solo Wallet, creando confusione per i reseller
  */
-const financeSection: NavSection = {
-  id: 'finance',
-  label: 'Finanze',
-  collapsible: true,
-  defaultExpanded: true, // Sempre espansa per migliore UX
-  items: [
-    {
-      id: 'wallet',
-      label: 'Wallet',
-      href: '/dashboard/wallet',
-      icon: Wallet,
-      description: 'Ricariche e transazioni',
-    },
-  ],
-};
 
 /**
  * RESELLER - Solo per reseller
  * SPRINT 2: UX Unification - Dashboard Unificata Clienti
+ * Include gestione clienti, preventivi e listini
  */
 const resellerSection: NavSection = {
   id: 'reseller',
-  label: 'Reseller',
+  label: 'Gestione Business',
   collapsible: true,
   defaultExpanded: true,
   requiredFeature: 'reseller',
@@ -287,10 +277,10 @@ const superAdminFinanceSection: NavSection = {
   items: [
     {
       id: 'financial-dashboard',
-      label: 'Financial Dashboard',
+      label: 'Dashboard Finanziaria',
       href: '/dashboard/super-admin/financial',
       icon: Calculator,
-      description: 'P&L, Margini e Riconciliazione',
+      description: 'P&L, Margini e Riconciliazione Piattaforma',
     },
     {
       id: 'listini-master',
@@ -304,7 +294,7 @@ const superAdminFinanceSection: NavSection = {
 
 /**
  * AMMINISTRAZIONE - Solo per admin/superadmin
- * Include gestione utenti, features, prezzi e distinte contrassegni
+ * Organizzata in 3 sottogruppi logici per migliore UX enterprise-grade
  */
 const adminSection: NavSection = {
   id: 'admin',
@@ -328,96 +318,125 @@ const adminSection: NavSection = {
       icon: Shield,
       description: 'Dashboard amministratore principale',
     },
+  ],
+  subsections: [
     {
-      id: 'team',
-      label: 'Team Aziendale',
-      href: '/dashboard/team',
-      icon: Building2,
-      description: 'Gestione team e sub-admin',
-    },
-    {
-      id: 'leads',
-      label: 'Leads (CRM)',
-      href: '/dashboard/admin/leads',
+      id: 'admin-users',
+      label: 'Utenti & Team',
       icon: Users,
-      description: 'Gestione potenziali clienti e opportunità',
+      collapsible: true,
+      defaultExpanded: true,
+      items: [
+        {
+          id: 'team',
+          label: 'Team Aziendale',
+          href: '/dashboard/team',
+          icon: Building2,
+          description: 'Gestione team e sub-admin',
+        },
+        {
+          id: 'leads',
+          label: 'Leads (CRM)',
+          href: '/dashboard/admin/leads',
+          icon: Users,
+          description: 'Gestione potenziali clienti e opportunità',
+        },
+      ],
     },
     {
-      id: 'finance',
-      label: 'Financial Control',
-      href: '/dashboard/finanza',
+      id: 'admin-finance',
+      label: 'Finanza & Fatturazione',
       icon: Wallet,
-      description: 'CFO Dashboard & Fiscal Brain',
+      collapsible: true,
+      defaultExpanded: true,
+      items: [
+        {
+          id: 'finance',
+          label: 'Dashboard Finanziaria',
+          href: '/dashboard/finanza',
+          icon: Wallet,
+          description: 'CFO Dashboard & Fiscal Brain',
+        },
+        {
+          id: 'admin-invoices',
+          label: 'Gestione Fatture',
+          href: '/dashboard/admin/invoices',
+          icon: FileText,
+          description: 'Emissione e gestione fatture',
+        },
+        {
+          id: 'admin-bonifici',
+          label: 'Gestione Bonifici',
+          href: '/dashboard/admin/bonifici',
+          icon: Wallet,
+          description: 'Approvazione e rifiuto richieste ricarica wallet',
+        },
+        {
+          id: 'cost-adjustment',
+          label: 'Rettifica Costi',
+          href: '/dashboard/rettifica-costi',
+          icon: Calculator,
+          description: 'Correzione costi spedizioni',
+        },
+        {
+          id: 'price-lists',
+          label: 'Listini Prezzi',
+          href: '/dashboard/listini',
+          icon: FileText,
+          description: 'Gestione listini per utenti',
+        },
+        {
+          id: 'cash-on-delivery',
+          label: 'Admin Contrassegni',
+          href: '/dashboard/contrassegni',
+          icon: DollarSign,
+          description: 'Gestione amministrativa contrassegni',
+        },
+        {
+          id: 'cash-statements',
+          label: 'Distinte Contrassegni',
+          href: '/dashboard/distinte-contrassegni',
+          icon: FileSpreadsheet,
+          description: 'Distinte riepilogative contrassegni',
+        },
+      ],
     },
     {
-      id: 'price-lists',
-      label: 'Listini Prezzi',
-      href: '/dashboard/listini',
-      icon: FileText,
-      description: 'Gestione listini per utenti',
-    },
-    {
-      id: 'cash-on-delivery',
-      label: 'Lista Contrassegni',
-      href: '/dashboard/contrassegni',
-      icon: DollarSign,
-      description: 'Gestione contrassegni',
-    },
-    {
-      id: 'cash-statements',
-      label: 'Distinte Contrassegni',
-      href: '/dashboard/distinte-contrassegni',
-      icon: FileSpreadsheet,
-      description: 'Distinte riepilogative contrassegni',
-    },
-    {
-      id: 'admin-invoices',
-      label: 'Gestione Fatture',
-      href: '/dashboard/admin/invoices',
-      icon: FileText,
-      description: 'Emissione e gestione fatture',
-    },
-    {
-      id: 'cost-adjustment',
-      label: 'Rettifica Costi',
-      href: '/dashboard/rettifica-costi',
-      icon: Calculator,
-      description: 'Correzione costi spedizioni',
-    },
-    {
-      id: 'admin-features',
-      label: 'Features Platform',
-      href: '/dashboard/admin/features',
-      icon: Zap,
-      description: 'Gestione features utenti',
-    },
-    {
-      id: 'admin-automation',
-      label: 'Automazioni',
-      href: '/dashboard/admin/automation',
-      icon: Bot,
-      description: 'Sync automatici e integrazioni',
-    },
-    {
-      id: 'admin-config',
-      label: 'Configurazioni',
-      href: '/dashboard/admin/configurations',
+      id: 'admin-system',
+      label: 'Sistema & Configurazione',
       icon: Settings,
-      description: 'Impostazioni globali piattaforma',
-    },
-    {
-      id: 'admin-logs',
-      label: 'Log Diagnostici',
-      href: '/dashboard/admin/logs',
-      icon: Activity,
-      description: 'Visualizzazione eventi diagnostici e monitoring',
-    },
-    {
-      id: 'admin-bonifici',
-      label: 'Gestione Bonifici',
-      href: '/dashboard/admin/bonifici',
-      icon: Wallet,
-      description: 'Approvazione e rifiuto richieste ricarica wallet',
+      collapsible: true,
+      defaultExpanded: true,
+      items: [
+        {
+          id: 'admin-features',
+          label: 'Features Platform',
+          href: '/dashboard/admin/features',
+          icon: Zap,
+          description: 'Gestione features utenti',
+        },
+        {
+          id: 'admin-automation',
+          label: 'Automazioni',
+          href: '/dashboard/admin/automation',
+          icon: Bot,
+          description: 'Sync automatici e integrazioni',
+        },
+        {
+          id: 'admin-config',
+          label: 'Configurazioni',
+          href: '/dashboard/admin/configurations',
+          icon: Settings,
+          description: 'Impostazioni globali piattaforma',
+        },
+        {
+          id: 'admin-logs',
+          label: 'Log Diagnostici',
+          href: '/dashboard/admin/logs',
+          icon: Activity,
+          description: 'Visualizzazione eventi diagnostici e monitoring',
+        },
+      ],
     },
   ],
 };
@@ -508,32 +527,19 @@ export function getNavigationForUser(
 ): NavigationConfig {
   const { isReseller = false, hasTeam = false, accountType } = features;
 
-  // Filtra le sezioni in base ai permessi
-  // ⚠️ Ordine logico: Spedizioni → Resi → Finanze → Admin → Account → Comunicazioni → Supporto
+  // Filtra le sezioni in base ai permessi e ruolo
+  // 🎯 ORDINE ENTERPRISE-GRADE (priority-first):
+  //    Per SUPERADMIN: Finanza Piattaforma → Amministrazione → Operativo → Account
+  //    Per USER: Operativo → Account → Supporto
   // ⚠️ Strumenti rimosso: OCR e Voice sono features disponibili durante la creazione spedizione
-  let sections: NavSection[] = [
-    logisticsSection,
-    returnsSection,
-  ];
+  let sections: NavSection[] = [];
 
-  // Aggiungi sezione BYOC se account_type è 'byoc'
-  if (accountType === 'byoc') {
-    sections.push(byocSection);
-  }
-
-  // Aggiungi sezione finanze se reseller o se ha wallet
-  if (isReseller) {
-    sections.push(financeSection);
-    sections.push(resellerSection);
-  }
-
-  // Aggiungi sezione Finanza Piattaforma solo per superadmin
-  // SPRINT 2: Financial Dashboard
+  // 1. SEZIONI STRATEGICHE (solo superadmin)
   if (role === 'superadmin') {
     sections.push(superAdminFinanceSection);
   }
 
-  // Aggiungi admin solo se admin/superadmin
+  // 2. SEZIONI AMMINISTRATIVE (admin/superadmin)
   if (role === 'admin' || role === 'superadmin') {
     // Filtra i items di admin in base al ruolo
     const filteredAdminItems = adminSection.items.filter((item) => {
@@ -549,10 +555,25 @@ export function getNavigationForUser(
     });
   }
 
-  // Aggiungi sempre la sezione account
+  // 3. SEZIONI OPERATIVE (tutti gli utenti)
+  sections.push(logisticsSection);
+  sections.push(returnsSection);
+
+  // 4. SEZIONI BUSINESS SPECIFICHE
+  // BYOC section
+  if (accountType === 'byoc') {
+    sections.push(byocSection);
+  }
+
+  // Reseller section (rinominata "Gestione Business")
+  if (isReseller) {
+    sections.push(resellerSection);
+  }
+
+  // 5. SEZIONI PERSONALI (tutti gli utenti)
   sections.push(accountSection);
 
-  // ⚠️ Aggiungi Comunicazioni e Supporto alla fine come richiesto dall'utente
+  // 6. SEZIONI SUPPORTO (sempre alla fine)
   sections.push(communicationsSection);
   sections.push(supportSection);
 
