@@ -33,9 +33,34 @@ export default function DashboardSidebar() {
   const { data: session } = useSession();
   const [accountType, setAccountType] = useState<string | null>(null);
   const [isReseller, setIsReseller] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+
+  // 🆕 LocalStorage keys
+  const STORAGE_KEYS = {
+    expandedSections: 'sidebar-expanded-sections',
+    manuallyCollapsed: 'sidebar-manually-collapsed',
+  };
+
+  // 🆕 Inizializza state da localStorage (con fallback)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.expandedSections);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.manuallyCollapsed);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   // Carica il tipo di account e reseller status
   useEffect(() => {
@@ -69,6 +94,31 @@ export default function DashboardSidebar() {
   }, [userRole, isReseller, accountType]);
   
   const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
+
+  // 🆕 Salva stato in localStorage quando cambia
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.expandedSections,
+        JSON.stringify(Array.from(expandedSections))
+      );
+    } catch (error) {
+      console.error('Failed to save expanded sections:', error);
+    }
+  }, [expandedSections, STORAGE_KEYS.expandedSections]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.manuallyCollapsed,
+        JSON.stringify(Array.from(manuallyCollapsed))
+      );
+    } catch (error) {
+      console.error('Failed to save manually collapsed:', error);
+    }
+  }, [manuallyCollapsed, STORAGE_KEYS.manuallyCollapsed]);
 
   // Auto-espandi sezioni se siamo in una pagina relativa
   // 🆕 Supporta anche nested sections (subsections)
