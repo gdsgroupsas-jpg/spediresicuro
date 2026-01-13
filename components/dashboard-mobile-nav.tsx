@@ -6,13 +6,15 @@
  * - Menu drawer per funzioni secondarie
  * - Design iOS/Android style
  * - Icone chiare e touch-friendly
+ *
+ * 🆕 Ora usa navigationConfig come single source of truth
  */
 
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
   Home,
@@ -21,25 +23,22 @@ import {
   Mail,
   Menu,
   X,
-  Bot,
-  Zap,
-  Settings,
-  FileText,
-  Shield,
-  Users,
-  Crown,
-  User,
   LogOut,
   ChevronRight,
-  BookOpen,
-  Ghost,
+  User,
 } from 'lucide-react';
+import {
+  getNavigationForUser,
+  isNavItemActive,
+  type UserRole,
+  type NavItem,
+} from '@/lib/config/navigationConfig';
 
 export default function DashboardMobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [accountType, setAccountType] = useState<string | null>(null);
-  const [isResellerFlag, setIsResellerFlag] = useState(false);
+  const [isReseller, setIsReseller] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Carica il tipo di account
@@ -52,7 +51,7 @@ export default function DashboardMobileNav() {
             const data = await response.json();
             const userData = data.user || data;
             setAccountType(userData.account_type || null);
-            setIsResellerFlag(userData.is_reseller === true);
+            setIsReseller(userData.is_reseller === true);
           }
         } catch (error) {
           console.error('Errore caricamento account type:', error);
@@ -79,17 +78,42 @@ export default function DashboardMobileNav() {
     };
   }, [isMenuOpen]);
 
+  // 🆕 Ottieni navigazione dinamica da navigationConfig
+  const userRole: UserRole = (accountType as UserRole) || 'user';
+  const navigationConfig = useMemo(() => {
+    return getNavigationForUser(userRole, {
+      isReseller,
+      accountType: accountType || undefined,
+    });
+  }, [userRole, isReseller, accountType]);
+
   const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return pathname === '/dashboard';
-    }
-    return pathname?.startsWith(path);
+    return isNavItemActive(path, pathname || '');
   };
 
-  const isAdmin = accountType === 'admin' || accountType === 'superadmin';
-  const isReseller = isResellerFlag || accountType === 'reseller' || accountType === 'byoc';
-  const isByoc = accountType === 'byoc';
   const isSuperAdmin = accountType === 'superadmin';
+
+  // 🆕 Flatten nested sections per mobile (UX semplificata)
+  // Le subsections diventano items normali con un separatore visivo
+  const flattenedSections = useMemo(() => {
+    return navigationConfig.sections.map((section) => {
+      if (!section.subsections || section.subsections.length === 0) {
+        return section;
+      }
+
+      // Merge items + tutti gli items delle subsections
+      const allItems: NavItem[] = [
+        ...section.items,
+        ...section.subsections.flatMap((sub) => sub.items),
+      ];
+
+      return {
+        ...section,
+        items: allItems,
+        subsections: undefined, // Rimuovi subsections per mobile
+      };
+    });
+  }, [navigationConfig.sections]);
 
   return (
     <>
@@ -157,7 +181,7 @@ export default function DashboardMobileNav() {
           >
             <div className="relative">
               <Menu className="w-6 h-6 text-gray-600" />
-              {(isAdmin || isSuperAdmin) && (
+              {isSuperAdmin && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
               )}
             </div>
@@ -212,241 +236,77 @@ export default function DashboardMobileNav() {
                   </p>
                   <div className="flex items-center gap-1.5">
                     <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
-                    {accountType && (
-                      <span className="text-xs">
-                        {accountType === 'superadmin' ? '👑' : accountType === 'admin' ? '⭐' : ''}
-                      </span>
-                    )}
+                    {isSuperAdmin && <span className="text-xs">👑</span>}
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </Link>
             )}
 
-            {/* Menu Items */}
+            {/* 🆕 Menu Items dinamici da navigationConfig */}
             <div className="p-4 space-y-6">
-              {/* Azioni Rapide */}
-              <div>
-                <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Azioni Rapide
-                </h3>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      const event = new CustomEvent('openAiAssistant');
-                      window.dispatchEvent(event);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white font-semibold hover:shadow-lg transition-all duration-200"
-                  >
-                    <Ghost className="w-5 h-5" />
-                    <span>Anne</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Gestione */}
-              <div>
-                <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Gestione
-                </h3>
-                <nav className="space-y-1">
-                  <Link
-                    href="/dashboard/integrazioni"
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive('/dashboard/integrazioni')
-                        ? 'bg-orange-50 text-orange-600 font-semibold'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Zap className="w-5 h-5" />
-                    <span>Integrazioni</span>
-                  </Link>
-
-                  <Link
-                    href="/dashboard/impostazioni"
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive('/dashboard/impostazioni')
-                        ? 'bg-orange-50 text-orange-600 font-semibold'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Settings className="w-5 h-5" />
-                    <span>Impostazioni</span>
-                  </Link>
-                </nav>
-              </div>
-
-              {/* Supporto */}
-              <div>
-                <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Supporto
-                </h3>
-                <nav className="space-y-1">
-                  <Link
-                    href="/manuale"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-50 transition-all duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <BookOpen className="w-5 h-5" />
-                    <span>Manuale Utente</span>
-                  </Link>
-                </nav>
-              </div>
-
-              {/* Reseller - Solo per Reseller */}
-              {isReseller && !isByoc && (
+              {/* Azioni Rapide (AI Assistant) */}
+              {navigationConfig.mainActions.length > 0 && (
                 <div>
                   <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                    Reseller
+                    Azioni Rapide
                   </h3>
-                  <nav className="space-y-1">
-                    <Link
-                      href="/dashboard/reseller/listini-fornitore"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/reseller/listini-fornitore')
-                          ? 'bg-orange-50 text-orange-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Package className="w-5 h-5" />
-                      <span>Listini Fornitore</span>
-                    </Link>
-
-                    <Link
-                      href="/dashboard/reseller/listini-personalizzati"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/reseller/listini-personalizzati')
-                          ? 'bg-orange-50 text-orange-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FileText className="w-5 h-5" />
-                      <span>Listini Personalizzati</span>
-                    </Link>
-
-                    <Link
-                      href="/dashboard/reseller-team"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/reseller-team')
-                          ? 'bg-orange-50 text-orange-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Users className="w-5 h-5" />
-                      <span>I Miei Clienti</span>
-                    </Link>
-                  </nav>
+                  <div className="space-y-1">
+                    {navigationConfig.mainActions.map((action) => (
+                      <button
+                        key={action.id}
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          if (action.href === '#ai-assistant') {
+                            const event = new CustomEvent('openAiAssistant');
+                            window.dispatchEvent(event);
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white font-semibold hover:shadow-lg transition-all duration-200"
+                      >
+                        <action.icon className="w-5 h-5" />
+                        <span>{action.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* BYOC - Solo per BYOC */}
-              {isByoc && (
-                <div>
+              {/* 🆕 Sezioni dinamiche da navigationConfig */}
+              {flattenedSections.map((section) => (
+                <div key={section.id}>
                   <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                    BYOC
+                    {section.label}
                   </h3>
                   <nav className="space-y-1">
-                    <Link
-                      href="/dashboard/byoc/listini-fornitore"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/byoc/listini-fornitore')
-                          ? 'bg-orange-50 text-orange-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Package className="w-5 h-5" />
-                      <span>Listini Fornitore</span>
-                    </Link>
-                  </nav>
-                </div>
-              )}
-
-              {/* Amministrazione - Solo Admin */}
-              {isAdmin && (
-                <div>
-                  <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                    Amministrazione
-                  </h3>
-                  <nav className="space-y-1">
-                    {isSuperAdmin && (
+                    {section.items.map((item) => (
                       <Link
-                        href="/dashboard/super-admin"
+                        key={item.id}
+                        href={item.href}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                          isActive('/dashboard/super-admin')
-                            ? 'bg-red-50 text-red-600 font-semibold'
+                          isActive(item.href)
+                            ? 'bg-orange-50 text-orange-600 font-semibold'
                             : 'text-gray-700 hover:bg-gray-50'
                         }`}
                         onClick={() => setIsMenuOpen(false)}
+                        title={item.description}
                       >
-                        <Crown className="w-5 h-5" />
-                        <span>Super Admin</span>
+                        <item.icon className="w-5 h-5" />
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 font-medium">
+                            {item.badge}
+                          </span>
+                        )}
                       </Link>
-                    )}
-
-                    <Link
-                      href="/dashboard/admin"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/admin')
-                          ? 'bg-blue-50 text-blue-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Shield className="w-5 h-5" />
-                      <span>Admin Panel</span>
-                    </Link>
-
-                    <Link
-                      href="/dashboard/team"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/team')
-                          ? 'bg-purple-50 text-purple-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Users className="w-5 h-5" />
-                      <span>Team</span>
-                    </Link>
-
-                    <Link
-                      href="/dashboard/listini"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        isActive('/dashboard/listini')
-                          ? 'bg-green-50 text-green-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FileText className="w-5 h-5" />
-                      <span>Listini</span>
-                    </Link>
+                    ))}
                   </nav>
                 </div>
-              )}
+              ))}
 
-              {/* Profilo */}
+              {/* Logout */}
               <div>
-                <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                  Profilo
-                </h3>
                 <nav className="space-y-1">
-                  <Link
-                    href="/dashboard/dati-cliente"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-50 transition-all duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Dati Cliente</span>
-                  </Link>
-
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
