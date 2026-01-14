@@ -23,16 +23,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-middleware';
 import { handleApiError } from '@/lib/api-responses';
 import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/db/client';
 
 // ⚠️ IMPORTANTE: Questa route usa headers() per l'autenticazione, quindi deve essere dinamica
 export const dynamic = 'force-dynamic';
-
-// Supabase Admin per accesso DB
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // ✨ RIMOSSO: Il mapping displayName ora è gestito in getAvailableCouriersForUser
 // Ogni carrier_code ha il suo displayName formattato (es. "GLS 5000")
