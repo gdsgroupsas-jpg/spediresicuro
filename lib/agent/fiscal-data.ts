@@ -1,15 +1,21 @@
 import { createServerActionClient } from "@/lib/supabase-server";
-// import { UserRole } from '@/types/user'; // Removed as it seems missing, using string for now
+import type {
+  UserRole,
+  Shipment,
+  CODShipment,
+  FiscalDeadline,
+  FiscalContext,
+  FiscalDataError,
+} from "./fiscal-data.types";
 
-export interface FiscalContext {
-  userId: string;
-  role: string;
-  shipments?: any[];
-  wallet?: any;
-  cod?: any[];
-  globalStats?: any;
-  networkStats?: any;
-}
+export type {
+  UserRole,
+  Shipment,
+  CODShipment,
+  FiscalDeadline,
+  FiscalContext,
+  FiscalDataError,
+} from "./fiscal-data.types";
 
 /**
  * Recupera l'elenco degli ID dei sub-utenti per un reseller
@@ -26,13 +32,14 @@ async function getSubUserIds(resellerId: string): Promise<string[]> {
 
 /**
  * Esegue query spedizioni filtrata rigorosamente per utente/ruolo
+ * @throws {FiscalDataError} Se la query fallisce
  */
 export async function getShipmentsByPeriod(
   userId: string,
-  role: string,
+  role: UserRole,
   startDate: string, // ISO Date string
   endDate: string // ISO Date string
-) {
+): Promise<Shipment[]> {
   const supabase = createServerActionClient();
   let query = supabase
     .from("shipments")
@@ -75,14 +82,21 @@ export async function getShipmentsByPeriod(
   }
 
   const { data, error } = await query;
-  if (error) throw new Error(`Errore recupero spedizioni: ${error.message}`);
-  return data;
+  if (error) {
+    const fiscalError = new Error(
+      `Errore recupero spedizioni: ${error.message}`
+    ) as FiscalDataError;
+    fiscalError.code = "DATABASE_ERROR";
+    fiscalError.context = { userId, role, startDate, endDate };
+    throw fiscalError;
+  }
+  return (data as Shipment[]) || [];
 }
 
 /**
  * Recupera scadenze fiscali statiche (calendario) + eventuali dinamiche
  */
-export function getFiscalDeadlines() {
+export function getFiscalDeadlines(): FiscalDeadline[] {
   const currentYear = new Date().getFullYear();
   // Calendario statico come da specifica
   return [
@@ -143,8 +157,12 @@ export function getFiscalDeadlines() {
 
 /**
  * Recupera stato COD (Contrassegni) per l'utente, isolato.
+ * @throws {FiscalDataError} Se la query fallisce
  */
-export async function getPendingCOD(userId: string, role: string) {
+export async function getPendingCOD(
+  userId: string,
+  role: UserRole
+): Promise<CODShipment[]> {
   const supabase = createServerActionClient();
   let query = supabase
     .from("shipments")
@@ -162,14 +180,25 @@ export async function getPendingCOD(userId: string, role: string) {
   }
 
   const { data, error } = await query;
-  if (error) throw new Error(`Errore recupero COD: ${error.message}`);
-  return data;
+  if (error) {
+    const fiscalError = new Error(
+      `Errore recupero COD: ${error.message}`
+    ) as FiscalDataError;
+    fiscalError.code = "DATABASE_ERROR";
+    fiscalError.context = { userId, role };
+    throw fiscalError;
+  }
+  return (data as CODShipment[]) || [];
 }
 
 /**
  * Costruisce il contesto completo per l'AI
+ * @throws {FiscalDataError} Se il recupero dati fallisce
  */
-export async function getFiscalContext(userId: string, role: string) {
+export async function getFiscalContext(
+  userId: string,
+  role: UserRole
+): Promise<FiscalContext> {
   const today = new Date();
   // Default last 30 days context
   const startDate = new Date(
@@ -225,20 +254,14 @@ export async function getFiscalContext(userId: string, role: string) {
     shipmentsSummary: {
       count: shipments?.length || 0,
       total_margin:
-        shipments?.reduce((acc: number, s: any) => acc + (s.margin || 0), 0) ||
-        0,
+        shipments?.reduce((acc, s) => acc + (s.margin || 0), 0) || 0,
       total_revenue:
-        shipments?.reduce(
-          (acc: number, s: any) => acc + (s.total_price || 0),
-          0
-        ) || 0,
+        shipments?.reduce((acc, s) => acc + (s.total_price || 0), 0) || 0,
     },
     pending_cod_count: cods?.length || 0,
     pending_cod_value:
-      cods?.reduce(
-        (acc: number, s: any) => acc + (s.cash_on_delivery || 0),
-        0
-      ) || 0,
+      cods?.reduce((acc, s) => acc + (Number(s.cash_on_delivery) || 0), 0) ||
+      0,
     deadlines: deadlines
       .filter((d) => d.date >= new Date().toISOString().split("T")[0])
       .slice(0, 3), // Prossime 3 scadenze
