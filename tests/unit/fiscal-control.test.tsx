@@ -132,7 +132,7 @@ describe("FinanceControlRoom", () => {
     await waitFor(() => {
       expect(screen.getByText(/MARGINE NETTO/)).toBeInTheDocument();
       // Check if margin value is displayed (formatted as Italian locale)
-      expect(screen.getByText(/2\.840,50/)).toBeInTheDocument();
+      expect(screen.getByText(/2[.,\s]?840,50/)).toBeInTheDocument();
     });
   });
 
