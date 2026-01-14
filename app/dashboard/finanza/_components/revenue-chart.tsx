@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -26,6 +26,12 @@ interface ChartDataPoint {
 }
 
 export function RevenueChart({ fiscalContext, isLoading }: RevenueChartProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const chartData = useMemo<ChartDataPoint[]>(() => {
     if (!fiscalContext?.shipmentsSummary) {
       // Mock data for loading state
@@ -52,8 +58,17 @@ export function RevenueChart({ fiscalContext, isLoading }: RevenueChartProps) {
     );
   }
 
+  // ⚠️ FIX: Assicura che il componente sia montato prima di renderizzare il grafico
+  if (!isMounted) {
+    return (
+      <div className="w-full h-[300px] flex items-center justify-center">
+        <div className="animate-pulse text-slate-400">Caricamento grafico...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-64">
+    <div className="w-full h-[300px]" style={{ minWidth: 0, minHeight: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
@@ -101,11 +116,15 @@ export function RevenueChart({ fiscalContext, isLoading }: RevenueChartProps) {
   );
 }
 
+// ⚠️ FIX HYDRATION: Usa valori deterministici invece di Math.random()
+// per evitare mismatch tra server e client
 function generateMockData(): ChartDataPoint[] {
   const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
-  return days.map((day) => {
-    const revenue = Math.random() * 2000 + 500;
-    const costs = revenue * (0.6 + Math.random() * 0.2); // 60-80% of revenue
+  // Usa valori fissi per evitare hydration mismatch
+  const baseValues = [1200, 1500, 1800, 1600, 2000, 800, 600];
+  return days.map((day, index) => {
+    const revenue = baseValues[index] || 1000;
+    const costs = revenue * 0.7; // 70% of revenue (fisso)
     return {
       day,
       revenue: Math.round(revenue * 100) / 100,
@@ -126,10 +145,15 @@ function generateDataFromContext(context: FiscalContext): ChartDataPoint[] {
   const avgCosts = totalCosts / 7;
   const avgMargin = totalMargin / 7;
 
+  // ⚠️ FIX HYDRATION: Usa variance deterministico basato sull'indice invece di Math.random()
+  // per evitare mismatch tra server e client
   return days.map((day, index) => {
     // Add variance based on day (weekends lower, weekdays higher)
+    // Usa un pattern deterministico basato sull'indice invece di Math.random()
     const isWeekend = index >= 5;
-    const variance = isWeekend ? 0.7 : 1.0 + (Math.random() * 0.4 - 0.2);
+    // Pattern deterministico: 0.9, 1.1, 0.95, 1.05, 1.0, 0.7, 0.75
+    const variancePattern = [0.9, 1.1, 0.95, 1.05, 1.0, 0.7, 0.75];
+    const variance = isWeekend ? 0.7 : (variancePattern[index] || 1.0);
 
     const revenue = avgRevenue * variance;
     const costs = avgCosts * variance;
