@@ -7,6 +7,7 @@
 
 import { supabaseAdmin } from './client'
 import { calculatePriceFromList } from '@/lib/pricing/calculator'
+import { pricingConfig } from '@/lib/config'
 import type { 
   PriceList, 
   PriceRule, 
@@ -620,6 +621,10 @@ async function calculateWithDefaultMargin(
       const supplierTotalCost = supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0
       const isManuallyModified = supplierTotalCost > 0 && Math.abs(totalCost - supplierTotalCost) > 0.01
       
+      // ✨ FIX: Quando i prezzi sono identici (isManuallyModified = false) e c'è un master,
+      // usa supplierTotalCost come base per il calcolo del margine e come totalCost nel risultato
+      const costBaseForMargin = (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost : totalCost
+      
       let margin = 0
       let finalPrice = totalCost
       
@@ -631,22 +636,39 @@ async function calculateWithDefaultMargin(
         console.log(`✅ [PRICE CALC] Prezzi modificati manualmente: fornitore €${supplierTotalCost.toFixed(2)} → personalizzato €${totalCost.toFixed(2)} (margine €${margin.toFixed(2)})`)
       } else {
         // Prezzi non modificati: applica margine di default
+        // ✨ FIX: Usa costBaseForMargin (supplierTotalCost se disponibile) invece di totalCost
         if (priceList.default_margin_percent) {
-          margin = totalCost * (priceList.default_margin_percent / 100)
+          margin = costBaseForMargin * (priceList.default_margin_percent / 100)
         } else if (priceList.default_margin_fixed) {
           margin = priceList.default_margin_fixed
+        } else {
+          // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
+          // applica margine di default globale per garantire consistenza nel comparatore
+          // Questo garantisce che OGNI corriere nel comparatore abbia sempre un margine
+          if (priceList.list_type === 'custom' && priceList.master_list_id) {
+            margin = costBaseForMargin * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100)
+            console.log(`⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato, applicato margine default globale ${pricingConfig.DEFAULT_MARGIN_PERCENT}%: €${margin.toFixed(2)}`)
+          }
+          // Se non è CUSTOM con master, margin rimane 0 (comportamento originale)
         }
-        finalPrice = totalCost + margin
+        // ✨ FIX: Quando i prezzi sono identici, finalPrice = supplierTotalCost + margin
+        // Altrimenti finalPrice = totalCost + margin
+        finalPrice = (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost + margin : totalCost + margin
       }
 
       return {
         basePrice,
         surcharges,
         margin,
-        totalCost: isManuallyModified ? supplierTotalCost : totalCost, // ✨ Costo fornitore originale se modificato manualmente
+        // ✨ FIX: Quando i prezzi sono identici e c'è un master, usa supplierTotalCost come totalCost
+        // Quando sono modificati, usa supplierTotalCost (già corretto)
+        totalCost: (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost : (isManuallyModified ? supplierTotalCost : totalCost),
         finalPrice,
         appliedPriceList: priceList,
         priceListId: priceList.id,
+        // ✨ FIX: Aggiungi supplierPrice anche quando isManuallyModified = false
+        // (per listini CUSTOM con master ma prezzi identici)
+        supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
         calculationDetails: {
           weight: params.weight,
           volume: params.volume,
@@ -668,9 +690,19 @@ async function calculateWithDefaultMargin(
     margin = totalCost * (priceList.default_margin_percent / 100)
   } else if (priceList.default_margin_fixed) {
     margin = priceList.default_margin_fixed
+  } else {
+    // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
+    // applica margine di default globale per garantire consistenza nel comparatore
+    if (priceList.list_type === 'custom' && priceList.master_list_id) {
+      margin = totalCost * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100)
+      console.log(`⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato (fallback), applicato margine default globale ${pricingConfig.DEFAULT_MARGIN_PERCENT}%: €${margin.toFixed(2)}`)
+    }
   }
 
   const finalPrice = totalCost + margin
+
+  // ✨ FIX: Se listino CUSTOM con master, aggiungi supplierPrice anche nel fallback
+  const supplierTotalCost = supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0
 
   return {
     basePrice,
@@ -680,6 +712,8 @@ async function calculateWithDefaultMargin(
     finalPrice,
     appliedPriceList: priceList,
     priceListId: priceList.id,
+    // ✨ FIX: Aggiungi supplierPrice se disponibile (listino CUSTOM con master)
+    supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
     calculationDetails: {
       weight: params.weight,
       volume: params.volume,
