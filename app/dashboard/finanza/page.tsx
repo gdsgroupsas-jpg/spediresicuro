@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   TrendingUp, AlertTriangle, ShieldCheck, PieChart, Activity,
   Zap, MessageSquare, AlertCircle, Download, RefreshCw
@@ -24,22 +24,38 @@ function FinanceControlRoomContent() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
-  // Calculate stats from fiscal context
-  const stats = fiscalContext ? {
-    revenue: fiscalContext.shipmentsSummary.total_revenue,
-    margin: fiscalContext.shipmentsSummary.total_margin,
-    projection: fiscalContext.shipmentsSummary.total_revenue * 1.1,
-    roi: fiscalContext.shipmentsSummary.total_revenue > 0
-      ? (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100
-      : 0,
-    marginPercent: fiscalContext.shipmentsSummary.total_revenue > 0
-      ? (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100
-      : 0,
-    tax_risk: "LOW" as const,
-    next_deadline: fiscalContext.deadlines?.[0]
-      ? `${new Date(fiscalContext.deadlines[0].date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} - ${fiscalContext.deadlines[0].type}`
-      : "Nessuna scadenza"
-  } : null;
+  // ⚠️ FIX HYDRATION: Formatta date solo lato client per evitare mismatch
+  const stats = useMemo(() => {
+    if (!fiscalContext) return null;
+    
+    // Formatta deadline solo se siamo lato client (dopo mount)
+    let next_deadline = "Nessuna scadenza";
+    if (fiscalContext.deadlines?.[0] && typeof window !== 'undefined') {
+      const deadline = fiscalContext.deadlines[0];
+      const date = new Date(deadline.date);
+      const day = date.getDate().toString().padStart(2, '0');
+      const monthNames = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+      const month = monthNames[date.getMonth()];
+      next_deadline = `${day} ${month} - ${deadline.type}`;
+    } else if (fiscalContext.deadlines?.[0]) {
+      // Fallback per SSR: usa formato ISO
+      next_deadline = `${fiscalContext.deadlines[0].date} - ${fiscalContext.deadlines[0].type}`;
+    }
+    
+    return {
+      revenue: fiscalContext.shipmentsSummary.total_revenue,
+      margin: fiscalContext.shipmentsSummary.total_margin,
+      projection: fiscalContext.shipmentsSummary.total_revenue * 1.1,
+      roi: fiscalContext.shipmentsSummary.total_revenue > 0
+        ? (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100
+        : 0,
+      marginPercent: fiscalContext.shipmentsSummary.total_revenue > 0
+        ? (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100
+        : 0,
+      tax_risk: "LOW" as const,
+      next_deadline,
+    };
+  }, [fiscalContext]);
 
   // Generate AI insight
   const aiMessage = fiscalContext ? generateAIInsight(fiscalContext) : "Sto analizzando i flussi di cassa in tempo reale...";
