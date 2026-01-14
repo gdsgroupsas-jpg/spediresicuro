@@ -1,52 +1,93 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  TrendingUp, TrendingDown, AlertTriangle, ShieldCheck, 
-  Wallet, PieChart, Activity, Zap, MessageSquare 
+import {
+  TrendingUp, AlertTriangle, ShieldCheck,
+  PieChart, Activity, Zap, MessageSquare, AlertCircle
 } from 'lucide-react';
 import { getMyFiscalData } from '@/app/actions/fiscal';
-import { getUserInvoices } from '@/app/actions/invoices';
+import type { FiscalContext } from '@/lib/agent/fiscal-data.types';
+import { FiscalErrorBoundary } from './_components/fiscal-error-boundary';
+import { AIChatDialog } from './_components/ai-chat-dialog';
+import { toast } from 'sonner';
 
-export default function FinanceControlRoom() {
-  const [activeTab, setActiveTab] = useState('overview');
+function FinanceControlRoomContent() {
   const [aiMessage, setAiMessage] = useState("Sto analizzando i flussi di cassa in tempo reale...");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [fiscalContext, setFiscalContext] = useState<FiscalContext | null>(null);
 
-  // Mock Data per 'Tonight' demo, da collegare a getFiscalContext reale via server action
+  // Real data from server
   const [stats, setStats] = useState({
-      revenue: 12450.00,
-      margin: 2840.50,
-      projection: 3100.00,
+      revenue: 0,
+      margin: 0,
+      projection: 0,
       roi: 22.8,
-      tax_risk: "LOW",
-      next_deadline: "16 Feb - F24"
+      tax_risk: "LOW" as const,
+      next_deadline: "Caricamento..."
   });
 
   useEffect(() => {
     // Caricamento dati reali via Server Action
     const fetchData = async () => {
         try {
+            setError(null);
             const data = await getMyFiscalData();
-            // Map data to state stats (simplified mapping)
+            setFiscalContext(data);
+
+            // Map data to state stats
             if (data && data.shipmentsSummary) {
-                setStats(prev => ({
-                    ...prev,
+                const nextDeadline = data.deadlines?.[0];
+                const deadlineText = nextDeadline
+                  ? `${new Date(nextDeadline.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} - ${nextDeadline.type}`
+                  : "Nessuna scadenza";
+
+                setStats({
                     revenue: data.shipmentsSummary.total_revenue,
-                    margin: data.shipmentsSummary.total_margin, 
-                    // Projection logic simple placeholder
-                    projection: data.shipmentsSummary.total_revenue * 1.1 
-                }));
+                    margin: data.shipmentsSummary.total_margin,
+                    projection: data.shipmentsSummary.total_revenue * 1.1,
+                    roi: data.shipmentsSummary.total_revenue > 0
+                      ? (data.shipmentsSummary.total_margin / data.shipmentsSummary.total_revenue) * 100
+                      : 0,
+                    tax_risk: "LOW",
+                    next_deadline: deadlineText
+                });
+
+                // Generate AI insight based on real data
+                const marginPercent = data.shipmentsSummary.total_revenue > 0
+                  ? (data.shipmentsSummary.total_margin / data.shipmentsSummary.total_revenue) * 100
+                  : 0;
+
+                let insight = `Analisi completata. `;
+                if (marginPercent > 20) {
+                    insight += `Margine eccellente (${marginPercent.toFixed(1)}%). `;
+                } else if (marginPercent > 15) {
+                    insight += `Margine buono (${marginPercent.toFixed(1)}%). `;
+                } else if (marginPercent > 10) {
+                    insight += `Margine nella media (${marginPercent.toFixed(1)}%). `;
+                } else {
+                    insight += `Attenzione: margine basso (${marginPercent.toFixed(1)}%). `;
+                }
+
+                if (data.pending_cod_count > 0) {
+                    insight += `Hai ${data.pending_cod_count} contrassegni pendenti (€${data.pending_cod_value.toFixed(2)}).`;
+                } else {
+                    insight += `Nessuna criticità rilevata.`;
+                }
+
+                setAiMessage(insight);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to fetch fiscal data", e);
-        }
-        
-        // Simulate AI Analysis completion visual
-        setTimeout(() => {
-            setAiMessage("Analisi completata. Il trend è positivo (+12% vs mese scorso). Nessuna criticità doganale rilevata.");
+            const errorMessage = e?.message || "Errore nel caricamento dei dati";
+            setError(errorMessage);
+            toast.error('Errore', {
+              description: errorMessage
+            });
+        } finally {
             setIsLoading(false);
-        }, 2000);
+        }
     };
 
     fetchData();
@@ -89,7 +130,11 @@ export default function FinanceControlRoom() {
                     </p>
                 )}
             </div>
-            <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-900/50 flex items-center gap-2">
+            <button
+                onClick={() => setIsChatOpen(true)}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-900/50 flex items-center gap-2"
+                aria-label="Apri chat con ANNE"
+            >
                 <MessageSquare className="w-4 h-4" /> Chiedi Dettagli
             </button>
         </div>
@@ -201,6 +246,33 @@ export default function FinanceControlRoom() {
          </div>
       </div>
 
+      {/* Error State */}
+      {error && (
+        <div className="fixed bottom-6 right-6 bg-red-500/10 border border-red-500/30 backdrop-blur-md rounded-xl p-4 max-w-md">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-400">Errore di caricamento</p>
+              <p className="text-xs text-red-300 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Chat Dialog */}
+      <AIChatDialog
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        fiscalContext={fiscalContext || undefined}
+      />
     </div>
+  );
+}
+
+export default function FinanceControlRoom() {
+  return (
+    <FiscalErrorBoundary>
+      <FinanceControlRoomContent />
+    </FiscalErrorBoundary>
   );
 }
