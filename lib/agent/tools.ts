@@ -1,13 +1,13 @@
 
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
-import { getShipmentsByPeriod, getPendingCOD } from "./fiscal-data";
+import { getShipmentsByPeriod, getPendingCOD, type UserRole } from "./fiscal-data";
 
 // Tool per analizzare margini in un periodo specifico
 // Nota: In questa architettura RAG "Context-First", l'AI riceve già i dati recenti.
 // Questo tool serve se l'utente chiede date DIVERSE dai default (es. "Dammi il fatturato dell'anno scorso").
 
-export const createFiscalTools = (userId: string, role: string) => {
+export const createFiscalTools = (userId: string, role: UserRole) => {
   return [
     new DynamicStructuredTool({
       name: "analyze_custom_period",
