@@ -77,7 +77,7 @@ export function RevenueChart({ fiscalContext, isLoading }: RevenueChartProps) {
               borderRadius: '8px',
               color: '#f1f5f9',
             }}
-            formatter={(value: number) => [`€${value.toFixed(2)}`, '']}
+            formatter={(value) => [`€${Number(value || 0).toFixed(2)}`, '']}
             labelStyle={{ color: '#cbd5e1' }}
           />
           <Legend
