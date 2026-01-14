@@ -108,6 +108,9 @@ $RECYCLE.BIN/
 .next/
 node_modules/
 
+# Supabase temporary files
+supabase/.temp/
+
 # Script PowerShell locali (utilità personali)
 fix-git-output.ps1
 fix-git-output-auto.ps1

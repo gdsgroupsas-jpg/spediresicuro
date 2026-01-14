@@ -102,19 +102,34 @@ describe("Fiscal Data Module", () => {
     ];
 
     it("fetches shipments for standard user", async () => {
-      mockSupabaseClient.from = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        lte: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-      });
+      // Mock che supporta chaining multiplo: .eq("deleted", false).eq("user_id", userId)
+      const createQueryBuilder = () => {
+        const builder: any = {
+          select: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+        };
+        // L'ultimo .eq() deve restituire una Promise quando viene await
+        // Usiamo un contatore per distinguere le chiamate
+        let eqCallCount = 0;
+        builder.eq = vi.fn(function (column: string, value: any) {
+          eqCallCount++;
+          // Se è la seconda chiamata a .eq() (user_id), restituisci Promise
+          if (eqCallCount === 2) {
+            return Promise.resolve({
+              data: mockShipments,
+              error: null,
+            });
+          }
+          // Altrimenti restituisci this per il chaining
+          return this;
+        });
+        return builder;
+      };
 
-      const chainEnd = mockSupabaseClient.from();
-      chainEnd.eq = vi.fn().mockResolvedValue({
-        data: mockShipments,
-        error: null,
-      });
+      mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
       const result = await getShipmentsByPeriod(
         "user-123",
@@ -128,18 +143,32 @@ describe("Fiscal Data Module", () => {
     });
 
     it("filters by user_id for standard user", async () => {
-      const eqMock = vi.fn().mockResolvedValue({
-        data: mockShipments,
-        error: null,
-      });
+      let eqCalls: Array<[string, any]> = [];
+      
+      const createQueryBuilder = () => {
+        const builder: any = {
+          select: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+        };
+        let eqCallCount = 0;
+        builder.eq = vi.fn(function (column: string, value: any) {
+          eqCalls.push([column, value]);
+          eqCallCount++;
+          // Seconda chiamata (user_id) restituisce Promise
+          if (eqCallCount === 2) {
+            return Promise.resolve({
+              data: mockShipments,
+              error: null,
+            });
+          }
+          return this;
+        });
+        return builder;
+      };
 
-      mockSupabaseClient.from = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        lte: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        eq: eqMock,
-      });
+      mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
       await getShipmentsByPeriod(
         "user-123",
@@ -148,20 +177,20 @@ describe("Fiscal Data Module", () => {
         "2026-01-31"
       );
 
-      expect(eqMock).toHaveBeenCalledWith("user_id", "user-123");
+      // Verifica che .eq() sia stato chiamato con user_id
+      const userEqCall = eqCalls.find(([col]) => col === "user_id");
+      expect(userEqCall).toBeDefined();
+      expect(userEqCall?.[1]).toBe("user-123");
     });
 
     it("includes sub-users for reseller role", async () => {
-      const inMock = vi.fn().mockResolvedValue({
-        data: mockShipments,
-        error: null,
-      });
-
       // Mock sub-users query
       const subUsersQuery = {
         data: [{ id: "sub-user-1" }, { id: "sub-user-2" }],
         error: null,
       };
+
+      let inCallArgs: any = null;
 
       mockSupabaseClient.from = vi.fn((tableName: string) => {
         if (tableName === "users") {
@@ -170,13 +199,22 @@ describe("Fiscal Data Module", () => {
             eq: vi.fn().mockResolvedValue(subUsersQuery),
           };
         }
-        return {
+        // Per shipments: supporta chaining .eq("deleted", false).in("user_id", ...)
+        const builder: any = {
           select: vi.fn().mockReturnThis(),
           gte: vi.fn().mockReturnThis(),
           lte: vi.fn().mockReturnThis(),
           is: vi.fn().mockReturnThis(),
-          in: inMock,
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn(function (column: string, values: any[]) {
+            inCallArgs = [column, values];
+            return Promise.resolve({
+              data: mockShipments,
+              error: null,
+            });
+          }),
         };
+        return builder;
       });
 
       await getShipmentsByPeriod(
@@ -186,7 +224,9 @@ describe("Fiscal Data Module", () => {
         "2026-01-31"
       );
 
-      expect(inMock).toHaveBeenCalledWith("user_id", [
+      expect(inCallArgs).toBeDefined();
+      expect(inCallArgs[0]).toBe("user_id");
+      expect(inCallArgs[1]).toEqual([
         "reseller-123",
         "sub-user-1",
         "sub-user-2",
@@ -194,16 +234,29 @@ describe("Fiscal Data Module", () => {
     });
 
     it("throws error on database failure", async () => {
-      mockSupabaseClient.from = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        lte: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: "Database error" },
-        }),
-      });
+      const createQueryBuilder = () => {
+        const builder: any = {
+          select: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+        };
+        let eqCallCount = 0;
+        builder.eq = vi.fn(function (column: string, value: any) {
+          eqCallCount++;
+          // Seconda chiamata (user_id) restituisce errore
+          if (eqCallCount === 2) {
+            return Promise.resolve({
+              data: null,
+              error: { message: "Database error" },
+            });
+          }
+          return this;
+        });
+        return builder;
+      };
+
+      mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
       await expect(
         getShipmentsByPeriod("user-123", "user", "2026-01-01", "2026-01-31")
@@ -212,7 +265,26 @@ describe("Fiscal Data Module", () => {
   });
 
   describe("getPendingCOD", () => {
+    // ⚠️ Il codice usa cash_on_delivery_amount, non cash_on_delivery
     const mockCODShipments = [
+      {
+        id: "1",
+        created_at: "2026-01-10",
+        cash_on_delivery_amount: 50.0,
+        cod_status: "pending",
+        user_id: "user-123",
+      },
+      {
+        id: "2",
+        created_at: "2026-01-12",
+        cash_on_delivery_amount: 75.5,
+        cod_status: "collected",
+        user_id: "user-123",
+      },
+    ];
+    
+    // Risultato mappato atteso (dopo il mapping nel codice)
+    const expectedMappedCODShipments = [
       {
         id: "1",
         created_at: "2026-01-10",
@@ -230,19 +302,33 @@ describe("Fiscal Data Module", () => {
     ];
 
     it("fetches pending COD shipments", async () => {
-      const mockBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        neq: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        then: (resolve: any) =>
-          resolve({ data: mockCODShipments, error: null }),
+      // getPendingCOD fa: .select().eq("cash_on_delivery", true).neq().eq("deleted", false).eq("user_id", userId)
+      // Quindi TRE chiamate a .eq(): cash_on_delivery, deleted, user_id
+      const createQueryBuilder = () => {
+        const builder: any = {
+          select: vi.fn().mockReturnThis(),
+          neq: vi.fn().mockReturnThis(),
+        };
+        let eqCallCount = 0;
+        builder.eq = vi.fn(function (column: string, value: any) {
+          eqCallCount++;
+          // Terza chiamata a .eq() (user_id) restituisce Promise
+          if (eqCallCount === 3) {
+            return Promise.resolve({
+              data: mockCODShipments,
+              error: null,
+            });
+          }
+          // Prime due chiamate restituiscono this per il chaining
+          return this;
+        });
+        return builder;
       };
-      mockSupabaseClient.from = vi.fn().mockReturnValue(mockBuilder);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
       const result = await getPendingCOD("user-123", "user");
 
-      expect(result).toEqual(mockCODShipments);
+      expect(result).toEqual(expectedMappedCODShipments);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith("shipments");
     });
 
