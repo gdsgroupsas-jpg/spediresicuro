@@ -41,6 +41,8 @@ export async function getShipmentsByPeriod(
   endDate: string // ISO Date string
 ): Promise<Shipment[]> {
   const supabase = createServerActionClient();
+  // ⚠️ FIX: Usa colonne fiscali (dopo migrazione 105_add_fiscal_columns_to_shipments.sql)
+  // total_price, courier_cost, margin, cod_status ora esistono nel database
   let query = supabase
     .from("shipments")
     .select(
@@ -48,7 +50,7 @@ export async function getShipmentsByPeriod(
     )
     .gte("created_at", startDate)
     .lte("created_at", endDate)
-    .is("deleted_at", null);
+    .eq("deleted", false);
 
   switch (role) {
     case "superadmin":
@@ -90,7 +92,19 @@ export async function getShipmentsByPeriod(
     fiscalError.context = { userId, role, startDate, endDate };
     throw fiscalError;
   }
-  return (data as Shipment[]) || [];
+  
+  // ⚠️ FIX: Le colonne total_price, courier_cost, margin, cod_status ora esistono nel database
+  // (dopo migrazione 105_add_fiscal_columns_to_shipments.sql)
+  // Assicuriamoci che i valori numerici siano parsati correttamente
+  const mappedData = (data || []).map((s: any) => ({
+    ...s,
+    total_price: parseFloat(s.total_price || "0") || 0,
+    courier_cost: parseFloat(s.courier_cost || "0") || 0,
+    margin: parseFloat(s.margin || "0") || 0,
+    cod_status: s.cod_status || null,
+  }));
+  
+  return mappedData as Shipment[];
 }
 
 /**
@@ -164,12 +178,13 @@ export async function getPendingCOD(
   role: UserRole
 ): Promise<CODShipment[]> {
   const supabase = createServerActionClient();
+  // ⚠️ FIX: cod_status ora esiste nel database (dopo migrazione 105_add_fiscal_columns_to_shipments.sql)
   let query = supabase
     .from("shipments")
-    .select("id, created_at, cash_on_delivery, cod_status, user_id")
+    .select("id, created_at, cash_on_delivery, cash_on_delivery_amount, cod_status, user_id")
     .eq("cash_on_delivery", true) // Solo contrassegni
     .neq("cod_status", "paid") // Non ancora pagati al merchant
-    .is("deleted_at", null);
+    .eq("deleted", false);
 
   // Applicazione filtri di ruolo (simile a getShipmentsByPeriod)
   if (role === "reseller") {
@@ -188,7 +203,18 @@ export async function getPendingCOD(
     fiscalError.context = { userId, role };
     throw fiscalError;
   }
-  return (data as CODShipment[]) || [];
+  
+  // ⚠️ FIX: cod_status ora esiste nel database (dopo migrazione 105_add_fiscal_columns_to_shipments.sql)
+  // cash_on_delivery nel tipo è number (importo), nel DB è boolean, usiamo cash_on_delivery_amount
+  const mappedData = (data || []).map((s: any) => ({
+    id: s.id,
+    created_at: s.created_at,
+    user_id: s.user_id,
+    cod_status: (s.cod_status || "pending") as "pending" | "collected" | "paid",
+    cash_on_delivery: parseFloat(s.cash_on_delivery_amount || "0") || 0, // Importo COD
+  }));
+  
+  return mappedData as CODShipment[];
 }
 
 /**
