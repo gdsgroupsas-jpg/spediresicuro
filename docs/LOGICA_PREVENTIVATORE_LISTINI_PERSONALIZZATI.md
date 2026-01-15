@@ -91,29 +91,43 @@
 
 ## 🔧 Modifiche Implementate
 
-### **1. Selezione Listino Più Economico** ✨ **AGGIORNATO**
+### **1. Selezione Listino con Priorità CUSTOM** ✨ **AGGIORNATO 2026-01-15**
 
-**File**: `lib/db/price-lists-advanced.ts`
+**File**: `lib/db/price-lists-advanced.ts` - `calculateBestPriceForReseller`
 
 **Comportamento**:
-- Calcola il prezzo per **TUTTI** i listini personalizzati attivi
-- Ordina per prezzo finale (`finalPrice`) crescente
-- Sceglie il **PIÙ ECONOMICO** (primo nella lista ordinata)
-- Log dei listini confrontati per debug
+- Calcola il prezzo per **TUTTI** i listini attivi (CUSTOM e SUPPLIER)
+- **PRIORITÀ 1**: Se ci sono listini CUSTOM, sceglie il più economico tra quelli CUSTOM
+- **PRIORITÀ 2**: Se non ci sono listini CUSTOM, usa il più economico tra i SUPPLIER
+- I listini CUSTOM hanno sempre priorità rispetto ai SUPPLIER, anche se il SUPPLIER è più economico
+- Log dei listini confrontati per debug con indicazione del tipo (CUSTOM/SUPPLIER)
+
+**Motivazione**: I listini CUSTOM sono quelli configurati per la rivendita e devono riflettere il prezzo di vendita corretto. I listini SUPPLIER sono i prezzi base del fornitore e non dovrebbero essere usati direttamente nel preventivatore quando esiste un listino CUSTOM.
 
 ```typescript
-// Calcola prezzo per ogni listino personalizzato attivo
+// Calcola prezzo per ogni listino attivo (CUSTOM e SUPPLIER)
 const priceResults = []
-for (const customList of filtered) {
-  const calculatedPrice = await calculatePriceWithRules(userId, params, customList.id)
+for (const priceList of filtered) {
+  const calculatedPrice = await calculatePriceWithRules(userId, params, priceList.id)
   if (calculatedPrice) {
-    priceResults.push({ price: calculatedPrice, list: customList, metadata })
+    priceResults.push({ price: calculatedPrice, list: priceList, metadata })
   }
 }
 
-// Ordina per prezzo finale crescente e scegli il più economico
-priceResults.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
-const bestResult = priceResults[0]
+// ✨ FIX: Priorità ai listini CUSTOM rispetto ai SUPPLIER
+const customLists = priceResults.filter(r => r.list.list_type === 'custom')
+const supplierLists = priceResults.filter(r => r.list.list_type === 'supplier')
+
+let bestResult
+if (customLists.length > 0) {
+  // Se ci sono listini CUSTOM, scegli il più economico tra quelli CUSTOM
+  customLists.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
+  bestResult = customLists[0]
+} else {
+  // Se non ci sono listini CUSTOM, usa il più economico tra i SUPPLIER
+  supplierLists.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
+  bestResult = supplierLists[0]
+}
 ```
 
 ### **2. Matching Geografico Migliorato** ✨ **NUOVO**
@@ -225,13 +239,14 @@ onContractSelected={(courierName, contractCode, accessoryService, configId) => {
 
 ## ✅ Stato Implementazione
 
-1. ✅ **Selezione listino più economico** quando ci sono più listini attivi
-2. ✅ **Passaggio configId** dal preventivatore al form verificato
-3. ✅ **Creazione spedizione** con `configId` dal listino personalizzato
-4. ✅ **Matching geografico migliorato** (zone, province)
-5. ✅ **Distinzione costo fornitore vs prezzo finale** per listini modificati manualmente
-6. ✅ **UI Routing Corrieri** dinamica (solo se più carrier code disponibili)
-7. ⚠️ **Deduplicazione corrieri** (problema noto: duplicati ancora visibili)
+1. ✅ **Priorità listini CUSTOM su SUPPLIER** (Fix 2026-01-15) - I listini personalizzati hanno sempre priorità
+2. ✅ **Selezione listino più economico** quando ci sono più listini attivi dello stesso tipo
+3. ✅ **Passaggio configId** dal preventivatore al form verificato
+4. ✅ **Creazione spedizione** con `configId` dal listino personalizzato
+5. ✅ **Matching geografico migliorato** (zone, province)
+6. ✅ **Distinzione costo fornitore vs prezzo finale** per listini modificati manualmente
+7. ✅ **UI Routing Corrieri** dinamica (solo se più carrier code disponibili)
+8. ⚠️ **Deduplicazione corrieri** (problema noto: duplicati ancora visibili)
 
 **Prossimi test**:
 - Testare con reseller che ha più listini attivi per stesso corriere
