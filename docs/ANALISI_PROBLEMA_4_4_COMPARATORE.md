@@ -204,18 +204,26 @@ const supplierPrice = quoteResult.supplierPrice ??
 - ⚠️ `basePrice` potrebbe non essere il costo fornitore reale
 - ⚠️ Non risolve il problema se non c'è margine configurato
 
-## ✅ Raccomandazione
+## ✅ Soluzione Implementata (2026-01-15)
 
-**Usa Soluzione 1**: Creare listino CUSTOM per Poste Italiane che clona il SUPPLIER con margine.
+**Fix**: Priorità listini CUSTOM su SUPPLIER in `calculateBestPriceForReseller`
 
-Questo garantisce:
-- ✅ Calcolo corretto di `supplierPrice` dal master
-- ✅ Separazione tra listino fornitore e listino vendita
-- ✅ Tracciabilità completa
-- ✅ Consistenza con la logica di GLS
+**Comportamento**:
+- Se ci sono listini CUSTOM disponibili, vengono sempre preferiti rispetto ai SUPPLIER
+- Anche se un listino SUPPLIER è più economico, viene scelto il listino CUSTOM
+- I listini CUSTOM sono quelli configurati per la rivendita e riflettono il prezzo di vendita corretto
+
+**Risultato**:
+- ✅ GLS 5000: Usa listino CUSTOM "gls 5000 rivendita" (€8.00) invece di SUPPLIER (€4.27)
+- ✅ Poste Italiane: Usa listino CUSTOM "Pdb 5000 rivendita" (€10.00) invece di SUPPLIER (€4.40)
+- ✅ Prezzo vendita ora riflette correttamente il listino personalizzato configurato
+
+**File Modificato**: `lib/db/price-lists-advanced.ts` - `calculateBestPriceForReseller`
+
+**Documentazione**: Vedi `docs/FIX_PRIORITA_LISTINI_CUSTOM.md` per dettagli completi
 
 ## 📝 Note
 
 - Il listino SUPPLIER dovrebbe essere usato **solo come master** per listini CUSTOM
 - I listini SUPPLIER senza margine non dovrebbero essere usati direttamente nel comparatore
-- Il fallback nel route è errato: non dovrebbe usare `totalCost` quando `supplierPrice` è `undefined`
+- **Fix implementato**: I listini CUSTOM hanno sempre priorità sui SUPPLIER nel preventivatore
