@@ -342,23 +342,44 @@ export async function POST(request: NextRequest) {
           // 
           // Se è un listino personalizzato con master_list_id, usa supplierPrice (costo fornitore originale)
           // Altrimenti usa totalCost (per listini fornitore o senza master_list_id)
+          
+          // 🔍 LOGGING DETTAGLIATO: Traccia valori ricevuti da calculatePriceWithRules
+          console.log(`🔍 [QUOTES DB] Valori ricevuti da calculatePriceWithRules per ${courier.displayName || courier.courierName}:`)
+          console.log(`   - quoteResult.basePrice: €${quoteResult.basePrice?.toFixed(2) || 'undefined'}`)
+          console.log(`   - quoteResult.surcharges: €${quoteResult.surcharges?.toFixed(2) || 'undefined'}`)
+          console.log(`   - quoteResult.margin: €${quoteResult.margin?.toFixed(2) || 'undefined'}`)
+          console.log(`   - quoteResult.totalCost: €${quoteResult.totalCost?.toFixed(2) || 'undefined'}`)
+          console.log(`   - quoteResult.finalPrice: €${quoteResult.finalPrice?.toFixed(2) || 'undefined'}`)
+          console.log(`   - quoteResult.supplierPrice: €${quoteResult.supplierPrice?.toFixed(2) || 'undefined'}`)
+          console.log(`   - quoteResult.priceListId: ${quoteResult.priceListId}`)
+          console.log(`   - quoteResult.appliedPriceList.name: ${(quoteResult.appliedPriceList as any)?.name || 'N/A'}`)
+          console.log(`   - quoteResult.appliedPriceList.list_type: ${(quoteResult.appliedPriceList as any)?.list_type || 'N/A'}`)
+          console.log(`   - quoteResult.appliedPriceList.master_list_id: ${(quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'}`)
+          console.log(`   - quoteResult.appliedPriceList.default_margin_percent: ${(quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'}`)
+          console.log(`   - quoteResult.appliedPriceList.default_margin_fixed: ${(quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'}`)
+          
           const supplierPrice = quoteResult.supplierPrice ?? quoteResult.totalCost ?? quoteResult.basePrice ?? 0;
           
-          console.log(`💰 [QUOTES DB] Prezzo calcolato per ${courier.displayName || courier.courierName}:`)
-          console.log(`   - Listino: ${(quoteResult.appliedPriceList as any)?.name || quoteResult.priceListId}`)
-          console.log(`   - Tipo: ${(quoteResult.appliedPriceList as any)?.list_type || 'N/A'}`)
-          console.log(`   - Costo Fornitore: €${supplierPrice.toFixed(2)}`)
-          console.log(`   - Prezzo Vendita: €${quoteResult.finalPrice.toFixed(2)}`)
-          console.log(`   - Margine: €${quoteResult.margin?.toFixed(2) || '0.00'}`)
+          console.log(`💰 [QUOTES DB] Mapping valori per ${courier.displayName || courier.courierName}:`)
+          console.log(`   - supplierPrice calcolato: €${supplierPrice.toFixed(2)} (${quoteResult.supplierPrice !== undefined ? 'supplierPrice' : quoteResult.totalCost !== undefined ? 'totalCost' : 'basePrice'})`)
+          console.log(`   - total_price (finalPrice): €${quoteResult.finalPrice.toFixed(2)}`)
+          console.log(`   - weight_price (supplierPrice): €${supplierPrice.toFixed(2)}`)
+          console.log(`   - Differenza (margine): €${(quoteResult.finalPrice - supplierPrice).toFixed(2)}`)
           
           // Verifica che il margine sia stato calcolato correttamente
           if (supplierPrice === quoteResult.finalPrice && quoteResult.margin === 0) {
-            console.warn(`⚠️ [QUOTES DB] Margine 0% per ${courier.courierName}: costo fornitore = prezzo finale (€${supplierPrice.toFixed(2)})`)
+            console.warn(`⚠️ [QUOTES DB] ⚠️ PROBLEMA RILEVATO: Margine 0% per ${courier.courierName}`)
+            console.warn(`   - Costo fornitore = prezzo finale (€${supplierPrice.toFixed(2)})`)
             console.warn(`   - Listino ID: ${quoteResult.priceListId}`)
+            console.warn(`   - Listino tipo: ${(quoteResult.appliedPriceList as any)?.list_type || 'N/A'}`)
+            console.warn(`   - Master List ID: ${(quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'}`)
             console.warn(`   - default_margin_percent: ${(quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'}`)
             console.warn(`   - default_margin_fixed: ${(quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'}`)
+            console.warn(`   - ⚠️ Il prezzo di vendita non riflette il listino personalizzato!`)
           } else if (quoteResult.margin > 0) {
-            console.log(`✅ [QUOTES DB] Margine calcolato per ${courier.courierName}: €${supplierPrice.toFixed(2)} + €${quoteResult.margin.toFixed(2)} = €${quoteResult.finalPrice.toFixed(2)}`)
+            console.log(`✅ [QUOTES DB] Margine calcolato correttamente per ${courier.courierName}: €${supplierPrice.toFixed(2)} + €${quoteResult.margin.toFixed(2)} = €${quoteResult.finalPrice.toFixed(2)}`)
+          } else {
+            console.warn(`⚠️ [QUOTES DB] Margine = 0 ma finalPrice ≠ supplierPrice: €${supplierPrice.toFixed(2)} vs €${quoteResult.finalPrice.toFixed(2)}`)
           }
           
           // ✨ ENTERPRISE: Normalizza contractCode per evitare problemi di matching
@@ -369,7 +390,7 @@ export async function POST(request: NextRequest) {
             normalizedContractCode = 'default'
           }
           
-          rates.push({
+          const rate = {
             carrierCode: courier.courierName.toLowerCase(),
             contractCode: normalizedContractCode,
             total_price: quoteResult.finalPrice.toString(), // ✨ Prezzo finale CON margine
@@ -383,7 +404,14 @@ export async function POST(request: NextRequest) {
             _priceListId: quoteResult.priceListId,
             _apiSource: quoteResult._apiSource || "db",
             _configId: quoteResult._configId || quoteResult._courierConfigId, // ✨ Usa courier_config_id se presente
-          });
+          };
+          
+          console.log(`📤 [QUOTES DB] Rate mappato per ${courier.displayName || courier.courierName}:`)
+          console.log(`   - total_price: ${rate.total_price} (da finalPrice: €${quoteResult.finalPrice.toFixed(2)})`)
+          console.log(`   - weight_price: ${rate.weight_price} (da supplierPrice: €${supplierPrice.toFixed(2)})`)
+          console.log(`   - margin: ${rate.margin} (da margin: €${quoteResult.margin?.toFixed(2) || '0.00'})`)
+          
+          rates.push(rate);
           console.log(`✅ [QUOTES DB] Rate aggiunto per ${courier.displayName || courier.courierName}: €${quoteResult.finalPrice.toFixed(2)}`);
         } else {
           console.warn(`⚠️ [QUOTES DB] quoteResult non valido per ${courier.displayName || courier.courierName}:`, {

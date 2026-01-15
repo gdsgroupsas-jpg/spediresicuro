@@ -599,8 +599,16 @@ async function calculateWithDefaultMargin(
   }
 
   if (priceList.entries && priceList.entries.length > 0) {
+    // 🔍 VERIFICA: Usa la matrice del listino personalizzato (priceList), non del master
+    console.log(`🔍 [PRICE CALC] Calcolo prezzo da matrice listino personalizzato:`)
+    console.log(`   - Listino ID: ${priceList.id}`)
+    console.log(`   - Listino nome: ${priceList.name}`)
+    console.log(`   - Listino tipo: ${priceList.list_type}`)
+    console.log(`   - Numero entries: ${priceList.entries.length}`)
+    console.log(`   - ✅ Usando matrice del listino PERSONALIZZATO (non master)`)
+    
     const matrixResult = calculatePriceFromList(
-      priceList,
+      priceList, // ✅ CORRETTO: Usa priceList (listino personalizzato), non masterList
       params.weight,
       params.destination.zip || '',
       params.serviceType || 'standard',
@@ -615,15 +623,34 @@ async function calculateWithDefaultMargin(
       // totalCost dalla matrice include già basePrice + surcharges
       const totalCost = basePrice + surcharges
       
+      console.log(`✅ [PRICE CALC] Risultato da matrice listino personalizzato:`)
+      console.log(`   - basePrice: €${basePrice.toFixed(2)}`)
+      console.log(`   - surcharges: €${surcharges.toFixed(2)}`)
+      console.log(`   - totalCost: €${totalCost.toFixed(2)}`)
+      
       // ✨ ENTERPRISE: Se abbiamo il prezzo fornitore originale, significa che i prezzi sono stati modificati manualmente
       // In questo caso, il prezzo nel listino personalizzato è già il prezzo finale (con margine incluso)
       // Quindi NON applichiamo margini aggiuntivi
       const supplierTotalCost = supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0
       const isManuallyModified = supplierTotalCost > 0 && Math.abs(totalCost - supplierTotalCost) > 0.01
       
+      // 🔍 LOGGING DETTAGLIATO: Traccia valori per debug
+      console.log(`🔍 [PRICE CALC] Calcolo prezzo per listino "${priceList.name}" (${priceList.list_type}):`)
+      console.log(`   - Listino ID: ${priceList.id}`)
+      console.log(`   - Master List ID: ${priceList.master_list_id || 'N/A'}`)
+      console.log(`   - Base Price (da matrice listino personalizzato): €${basePrice.toFixed(2)}`)
+      console.log(`   - Surcharges (da matrice listino personalizzato): €${surcharges.toFixed(2)}`)
+      console.log(`   - Total Cost (listino personalizzato): €${totalCost.toFixed(2)}`)
+      console.log(`   - Supplier Base Price (da master): €${supplierBasePrice.toFixed(2)}`)
+      console.log(`   - Supplier Surcharges (da master): €${supplierSurcharges.toFixed(2)}`)
+      console.log(`   - Supplier Total Cost (master): €${supplierTotalCost.toFixed(2)}`)
+      console.log(`   - Differenza: €${Math.abs(totalCost - supplierTotalCost).toFixed(2)}`)
+      console.log(`   - Is Manually Modified: ${isManuallyModified}`)
+      
       // ✨ FIX: Quando i prezzi sono identici (isManuallyModified = false) e c'è un master,
       // usa supplierTotalCost come base per il calcolo del margine e come totalCost nel risultato
       const costBaseForMargin = (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost : totalCost
+      console.log(`   - Cost Base For Margin: €${costBaseForMargin.toFixed(2)}`)
       
       let margin = 0
       let finalPrice = totalCost
@@ -633,42 +660,78 @@ async function calculateWithDefaultMargin(
         // Il margine è la differenza tra prezzo personalizzato e prezzo fornitore originale
         margin = totalCost - supplierTotalCost
         finalPrice = totalCost // Non aggiungiamo margine, è già incluso
-        console.log(`✅ [PRICE CALC] Prezzi modificati manualmente: fornitore €${supplierTotalCost.toFixed(2)} → personalizzato €${totalCost.toFixed(2)} (margine €${margin.toFixed(2)})`)
+        console.log(`✅ [PRICE CALC] Prezzi modificati manualmente:`)
+        console.log(`   - Margine calcolato (differenza): €${margin.toFixed(2)}`)
+        console.log(`   - Final Price (usando totalCost listino personalizzato): €${finalPrice.toFixed(2)}`)
+        console.log(`   - ✅ RISULTATO: Fornitore €${supplierTotalCost.toFixed(2)} → Vendita €${finalPrice.toFixed(2)} (margine €${margin.toFixed(2)})`)
       } else {
         // Prezzi non modificati: applica margine di default
         // ✨ FIX: Usa costBaseForMargin (supplierTotalCost se disponibile) invece di totalCost
+        console.log(`🔍 [PRICE CALC] Prezzi identici al master, applicazione margine:`)
+        console.log(`   - default_margin_percent: ${priceList.default_margin_percent || 'NULL'}`)
+        console.log(`   - default_margin_fixed: ${priceList.default_margin_fixed || 'NULL'}`)
+        console.log(`   - list_type: ${priceList.list_type}`)
+        console.log(`   - master_list_id: ${priceList.master_list_id || 'NULL'}`)
+        
         if (priceList.default_margin_percent) {
           margin = costBaseForMargin * (priceList.default_margin_percent / 100)
+          console.log(`   - Margine percentuale: ${priceList.default_margin_percent}% su €${costBaseForMargin.toFixed(2)} = €${margin.toFixed(2)}`)
         } else if (priceList.default_margin_fixed) {
           margin = priceList.default_margin_fixed
+          console.log(`   - Margine fisso: €${margin.toFixed(2)}`)
         } else {
           // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
           // applica margine di default globale per garantire consistenza nel comparatore
           // Questo garantisce che OGNI corriere nel comparatore abbia sempre un margine
           if (priceList.list_type === 'custom' && priceList.master_list_id) {
             margin = costBaseForMargin * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100)
-            console.log(`⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato, applicato margine default globale ${pricingConfig.DEFAULT_MARGIN_PERCENT}%: €${margin.toFixed(2)}`)
+            console.log(`   - ⚠️ Margine default globale: ${pricingConfig.DEFAULT_MARGIN_PERCENT}% su €${costBaseForMargin.toFixed(2)} = €${margin.toFixed(2)}`)
+          } else {
+            console.log(`   - ⚠️ Nessun margine configurato, margin = 0`)
           }
           // Se non è CUSTOM con master, margin rimane 0 (comportamento originale)
         }
         // ✨ FIX: Quando i prezzi sono identici, finalPrice = supplierTotalCost + margin
         // Altrimenti finalPrice = totalCost + margin
-        finalPrice = (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost + margin : totalCost + margin
+        const baseForFinalPrice = (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost : totalCost
+        finalPrice = baseForFinalPrice + margin
+        console.log(`   - Base per finalPrice: €${baseForFinalPrice.toFixed(2)} (${supplierTotalCost > 0 && !isManuallyModified ? 'supplierTotalCost' : 'totalCost'})`)
+        console.log(`   - Final Price: €${baseForFinalPrice.toFixed(2)} + €${margin.toFixed(2)} = €${finalPrice.toFixed(2)}`)
+        console.log(`   - ✅ RISULTATO: Fornitore €${supplierTotalCost.toFixed(2)} → Vendita €${finalPrice.toFixed(2)} (margine €${margin.toFixed(2)})`)
       }
 
+      // ✨ FIX: Calcolo corretto di totalCost nel risultato
+      // - Se isManuallyModified = true: totalCost = totalCost (prezzo listino personalizzato)
+      // - Se isManuallyModified = false e c'è master: totalCost = supplierTotalCost (per consistenza)
+      // - Altrimenti: totalCost = totalCost (prezzo listino)
+      const resultTotalCost = isManuallyModified 
+        ? totalCost  // ✅ Prezzi modificati: usa prezzo listino personalizzato
+        : (supplierTotalCost > 0 ? supplierTotalCost : totalCost)  // Prezzi identici: usa supplierTotalCost se disponibile
+      
+      const resultSupplierPrice = supplierTotalCost > 0 ? supplierTotalCost : undefined
+      
+      console.log(`📤 [PRICE CALC] Valori restituiti:`)
+      console.log(`   - basePrice: €${basePrice.toFixed(2)}`)
+      console.log(`   - surcharges: €${surcharges.toFixed(2)}`)
+      console.log(`   - margin: €${margin.toFixed(2)}`)
+      console.log(`   - totalCost: €${resultTotalCost.toFixed(2)} (${isManuallyModified ? 'totalCost listino personalizzato' : supplierTotalCost > 0 ? 'supplierTotalCost' : 'totalCost'})`)
+      console.log(`   - finalPrice: €${finalPrice.toFixed(2)}`)
+      console.log(`   - supplierPrice: €${resultSupplierPrice?.toFixed(2) || 'undefined'}`)
+      console.log(`   - ✅ VERIFICA: finalPrice ${finalPrice === resultTotalCost ? '=' : '≠'} totalCost (${finalPrice === resultTotalCost ? 'OK se isManuallyModified' : 'OK se margine applicato'})`)
+      
       return {
         basePrice,
         surcharges,
         margin,
-        // ✨ FIX: Quando i prezzi sono identici e c'è un master, usa supplierTotalCost come totalCost
-        // Quando sono modificati, usa supplierTotalCost (già corretto)
-        totalCost: (supplierTotalCost > 0 && !isManuallyModified) ? supplierTotalCost : (isManuallyModified ? supplierTotalCost : totalCost),
+        // ✨ FIX: Quando i prezzi sono modificati manualmente, totalCost = prezzo listino personalizzato
+        // Quando i prezzi sono identici al master, totalCost = supplierTotalCost (per consistenza)
+        totalCost: resultTotalCost,
         finalPrice,
         appliedPriceList: priceList,
         priceListId: priceList.id,
         // ✨ FIX: Aggiungi supplierPrice anche quando isManuallyModified = false
         // (per listini CUSTOM con master ma prezzi identici)
-        supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
+        supplierPrice: resultSupplierPrice,
         calculationDetails: {
           weight: params.weight,
           volume: params.volume,
@@ -926,13 +989,27 @@ export async function calculateBestPriceForReseller(
         }
       }
 
-      // Se ci sono risultati, scegli il PIÙ ECONOMICO (prezzo finale più basso)
+      // Se ci sono risultati, scegli il listino CUSTOM se presente, altrimenti il più economico
       if (priceResults.length > 0) {
-        // Ordina per prezzo finale (finalPrice) crescente
-        priceResults.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
+        // ✨ FIX: Priorità ai listini CUSTOM rispetto ai SUPPLIER
+        // I listini CUSTOM sono quelli configurati per la rivendita e devono essere sempre preferiti
+        const customLists = priceResults.filter(r => r.list.list_type === 'custom')
+        const supplierLists = priceResults.filter(r => r.list.list_type === 'supplier')
         
-        // Prendi il primo (più economico)
-        const bestResult = priceResults[0]
+        let bestResult: typeof priceResults[0]
+        
+        if (customLists.length > 0) {
+          // Se ci sono listini CUSTOM, scegli il più economico tra quelli CUSTOM
+          customLists.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
+          bestResult = customLists[0]
+          console.log(`✅ [RESELLER] Priorità a listini CUSTOM: scelto "${bestResult.list.name}" (€${bestResult.price.finalPrice.toFixed(2)}) tra ${customLists.length} listini CUSTOM`)
+        } else {
+          // Se non ci sono listini CUSTOM, usa il più economico tra i SUPPLIER
+          supplierLists.sort((a, b) => a.price.finalPrice - b.price.finalPrice)
+          bestResult = supplierLists[0]
+          console.log(`⚠️ [RESELLER] Nessun listino CUSTOM disponibile, usato SUPPLIER "${bestResult.list.name}" (€${bestResult.price.finalPrice.toFixed(2)})`)
+        }
+        
         customPrice = bestResult.price
         
         // ✨ ENTERPRISE: Estrai courier_config_id dal metadata del listino personalizzato
@@ -950,8 +1027,10 @@ export async function calculateBestPriceForReseller(
         // Log dei listini confrontati (solo se ce ne sono più di uno)
         if (priceResults.length > 1) {
           console.log(`📊 [RESELLER] Confrontati ${priceResults.length} listini attivi per corriere ${params.courierId || 'tutti'}:`)
-          priceResults.forEach((result, index) => {
-            console.log(`  ${index + 1}. ${result.list.name}: €${result.price.finalPrice.toFixed(2)} ${index === 0 ? '✅ SCELTO' : ''}`)
+          priceResults.forEach((result) => {
+            const isSelected = result.list.id === bestResult.list.id
+            const typeLabel = result.list.list_type === 'custom' ? 'CUSTOM' : 'SUPPLIER'
+            console.log(`  - ${result.list.name} (${typeLabel}): €${result.price.finalPrice.toFixed(2)} ${isSelected ? '✅ SCELTO' : ''}`)
           })
         }
       }

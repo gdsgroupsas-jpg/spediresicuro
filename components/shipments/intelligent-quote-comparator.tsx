@@ -412,6 +412,8 @@ export function IntelligentQuoteComparator({
             carrierCode: r.carrierCode,
             contractCode: r.contractCode,
             total_price: r.total_price,
+            weight_price: r.weight_price || 'MISSING',
+            margin: r.margin || 'MISSING',
           }))
         );
         console.log(
@@ -444,6 +446,8 @@ export function IntelligentQuoteComparator({
             carrierCode: r.carrierCode,
             contractCode: r.contractCode,
             total_price: r.total_price,
+            weight_price: r.weight_price || 'MISSING',
+            margin: r.margin || 'MISSING',
           }))
         );
         // Log separato per carrierCode unici
@@ -463,7 +467,7 @@ export function IntelligentQuoteComparator({
           console.log(
             `   Rate ${idx + 1}: carrierCode="${
               rate.carrierCode
-            }", contractCode="${rate.contractCode}", price=${rate.total_price}`
+            }", contractCode="${rate.contractCode}", total_price=${rate.total_price}, weight_price=${rate.weight_price || 'MISSING'}, margin=${rate.margin || 'MISSING'}`
           );
         });
 
