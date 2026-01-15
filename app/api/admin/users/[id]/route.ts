@@ -56,7 +56,7 @@ export async function DELETE(
 
     const { data: targetUser, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, email, role')
+      .select('id, email, name, role')
       .eq('id', userId)
       .single();
 
@@ -84,48 +84,62 @@ export async function DELETE(
     }
 
     // 7. Cancella utente (hard delete - elimina completamente)
-    // Prima cancella tutte le dipendenze (user_features, shipments, ecc.)
+    // ⚠️ IMPORTANTE: Cancellare PRIMA da auth.users (Supabase Auth) per evitare problemi
+    // Se l'email rimane in auth.users, non potrà essere riutilizzata!
     
-    // Cancella user_features
-    await supabaseAdmin
-      .from('user_features')
-      .delete()
-      .eq('user_email', targetUser.email);
-
-    // Soft delete spedizioni (non hard delete per mantenere storico)
-    await supabaseAdmin
-      .from('shipments')
-      .update({
-        deleted: true,
-        deleted_at: new Date().toISOString(),
-        deleted_by_user_id: adminUser.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId);
-
-    // Cancella user_profiles se esiste
-    await supabaseAdmin
-      .from('user_profiles')
-      .delete()
-      .eq('email', targetUser.email);
-
-    // Infine cancella l'utente
-    const { error: deleteError } = await supabaseAdmin
-      .from('users')
-      .delete()
-      .eq('id', userId);
+    // 7a. Cancella da Supabase Auth PRIMA (non può essere fatto in SQL)
+    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (deleteAuthError) {
+      console.error('❌ [DELETE USER] Errore cancellazione auth.users:', deleteAuthError);
+      return NextResponse.json(
+        { error: `Errore durante la cancellazione dell'utente da Supabase Auth: ${deleteAuthError.message || 'Errore sconosciuto'}` },
+        { status: 500 }
+      );
+    }
+    
+    console.log(`✅ [DELETE USER] Utente cancellato da auth.users: ${targetUser.email}`);
+    
+    // 7b. Cancellazione atomica da database pubblico (ENTERPRISE-GRADE)
+    // Usa funzione SQL atomica per garantire consistenza completa
+    const { data: deleteResult, error: deleteError } = await supabaseAdmin.rpc(
+      'delete_user_complete',
+      {
+        p_user_id: userId,
+        p_admin_id: adminUser.id,
+        p_admin_email: session.user.email,
+        p_target_user_email: targetUser.email,
+        p_target_user_name: targetUser.name || targetUser.email,
+      }
+    );
 
     if (deleteError) {
-      console.error('Errore cancellazione utente:', deleteError);
+      console.error('❌ [DELETE USER] Errore cancellazione database pubblico:', deleteError);
       return NextResponse.json(
-        { error: 'Errore durante la cancellazione dell\'utente' },
+        { error: `Errore durante la cancellazione dell'utente dal database: ${deleteError.message || 'Errore sconosciuto'}` },
         { status: 500 }
       );
     }
 
+    console.log(`✅ [DELETE USER] Utente cancellato completamente:`, deleteResult);
+
+    // Costruisci messaggio dettagliato con statistiche
+    const stats = deleteResult as {
+      deleted_shipments_count?: number;
+      deleted_features_count?: number;
+      deleted_profiles_count?: number;
+      wallet_balance_final?: number;
+    };
+
+    const message = `Utente ${targetUser.email} cancellato con successo. ` +
+      `Spedizioni cancellate: ${stats.deleted_shipments_count || 0}, ` +
+      `Features rimosse: ${stats.deleted_features_count || 0}, ` +
+      `Profili rimossi: ${stats.deleted_profiles_count || 0}`;
+
     return NextResponse.json({
       success: true,
-      message: `Utente ${targetUser.email} cancellato con successo`,
+      message,
+      statistics: stats,
     });
 
   } catch (error: any) {
