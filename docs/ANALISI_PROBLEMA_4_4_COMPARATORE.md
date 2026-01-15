@@ -3,6 +3,7 @@
 ## 📋 Problema
 
 Nel comparatore preventivi:
+
 - **GLS 5000**: Mostra costo fornitore €4.27 + margine €3.73 = prezzo vendita €8.00 ✅
 - **Poste Italiane Express H24+**: Mostra costo fornitore €4.40 = prezzo vendita €4.40 (senza margine) ❌
 
@@ -16,15 +17,16 @@ Nel comparatore preventivi:
 
 ```typescript
 // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
-if (priceList.master_list_id && priceList.list_type === 'custom') {
+if (priceList.master_list_id && priceList.list_type === "custom") {
   // Recupera prezzo dal listino master
-  supplierBasePrice = masterMatrixResult.basePrice
-  supplierSurcharges = masterMatrixResult.surcharges || 0
+  supplierBasePrice = masterMatrixResult.basePrice;
+  supplierSurcharges = masterMatrixResult.surcharges || 0;
   // ...
 }
 ```
 
 **Punti critici:**
+
 - `supplierPrice` viene calcolato **SOLO** se:
   - `list_type === 'custom'` **E**
   - `master_list_id IS NOT NULL`
@@ -33,26 +35,32 @@ if (priceList.master_list_id && priceList.list_type === 'custom') {
 #### Calcolo Margine (linea 666-673)
 
 ```typescript
-let margin = 0
+let margin = 0;
 if (priceList.default_margin_percent) {
-  margin = totalCost * (priceList.default_margin_percent / 100)
+  margin = totalCost * (priceList.default_margin_percent / 100);
 } else if (priceList.default_margin_fixed) {
-  margin = priceList.default_margin_fixed
+  margin = priceList.default_margin_fixed;
 }
-const finalPrice = totalCost + margin
+const finalPrice = totalCost + margin;
 ```
 
 **Se non c'è margine configurato:**
+
 - `margin = 0`
 - `finalPrice = totalCost`
 
 ### 2. Mapping nel Route (`app/api/quotes/db/route.ts`, linea 345)
 
 ```typescript
-const supplierPrice = quoteResult.supplierPrice ?? quoteResult.totalCost ?? quoteResult.basePrice ?? 0;
+const supplierPrice =
+  quoteResult.supplierPrice ??
+  quoteResult.totalCost ??
+  quoteResult.basePrice ??
+  0;
 ```
 
 **Problema del fallback:**
+
 - Se `supplierPrice` è `undefined` → usa `totalCost`
 - Se `totalCost = finalPrice` (senza margine) → `supplierPrice = finalPrice`
 - **Risultato**: costo fornitore = prezzo vendita
@@ -66,6 +74,7 @@ const margin = totalPrice - supplierPrice;
 ```
 
 **Se `weight_price = total_price`:**
+
 - `margin = 0`
 - Non viene mostrato il margine nella UI
 
@@ -107,21 +116,21 @@ Esegui le query SQL in `scripts/verify-price-lists-config.sql` nel Supabase SQL 
 
 ```sql
 -- Listini GLS attivi
-SELECT 
+SELECT
   pl.id,
   pl.name,
   pl.list_type,
   pl.master_list_id,
   pl.default_margin_percent,
   pl.default_margin_fixed,
-  CASE 
-    WHEN pl.list_type = 'custom' AND pl.master_list_id IS NOT NULL THEN 
+  CASE
+    WHEN pl.list_type = 'custom' AND pl.master_list_id IS NOT NULL THEN
       '✅ CUSTOM con master → supplierPrice calcolato'
-    WHEN pl.list_type = 'supplier' AND pl.master_list_id IS NULL THEN 
-      CASE 
-        WHEN pl.default_margin_percent IS NULL AND pl.default_margin_fixed IS NULL THEN 
+    WHEN pl.list_type = 'supplier' AND pl.master_list_id IS NULL THEN
+      CASE
+        WHEN pl.default_margin_percent IS NULL AND pl.default_margin_fixed IS NULL THEN
           '❌ SUPPLIER senza master e senza margine → PROBLEMA'
-        ELSE 
+        ELSE
           '⚠️ SUPPLIER senza master ma con margine'
       END
   END as analisi_logica
@@ -131,21 +140,21 @@ WHERE pl.status = 'active'
 ORDER BY pl.created_at DESC;
 
 -- Listini Poste Italiane attivi
-SELECT 
+SELECT
   pl.id,
   pl.name,
   pl.list_type,
   pl.master_list_id,
   pl.default_margin_percent,
   pl.default_margin_fixed,
-  CASE 
-    WHEN pl.list_type = 'custom' AND pl.master_list_id IS NOT NULL THEN 
+  CASE
+    WHEN pl.list_type = 'custom' AND pl.master_list_id IS NOT NULL THEN
       '✅ CUSTOM con master → supplierPrice calcolato'
-    WHEN pl.list_type = 'supplier' AND pl.master_list_id IS NULL THEN 
-      CASE 
-        WHEN pl.default_margin_percent IS NULL AND pl.default_margin_fixed IS NULL THEN 
+    WHEN pl.list_type = 'supplier' AND pl.master_list_id IS NULL THEN
+      CASE
+        WHEN pl.default_margin_percent IS NULL AND pl.default_margin_fixed IS NULL THEN
           '❌ SUPPLIER senza master e senza margine → PROBLEMA'
-        ELSE 
+        ELSE
           '⚠️ SUPPLIER senza master ma con margine'
       END
   END as analisi_logica
@@ -167,6 +176,7 @@ ORDER BY pl.created_at DESC;
 3. Attivare il listino CUSTOM
 
 **Vantaggi:**
+
 - ✅ `supplierPrice` viene calcolato correttamente dal master
 - ✅ Separazione tra listino fornitore e listino vendita
 - ✅ Tracciabilità completa
@@ -177,12 +187,13 @@ ORDER BY pl.created_at DESC;
    ```sql
    UPDATE price_lists
    SET default_margin_percent = 10  -- o valore desiderato
-   WHERE name ILIKE '%pdb 5000%' 
+   WHERE name ILIKE '%pdb 5000%'
      AND list_type = 'supplier'
      AND status = 'active';
    ```
 
 **Svantaggi:**
+
 - ⚠️ `supplierPrice` rimane `undefined` (non viene calcolato)
 - ⚠️ Nel route, fallback usa ancora `totalCost`
 - ⚠️ Non mostra correttamente il costo fornitore
@@ -193,14 +204,18 @@ Modificare `app/api/quotes/db/route.ts` (linea 345):
 
 ```typescript
 // ✨ FIX: Se listino è SUPPLIER senza master, usa basePrice invece di totalCost
-const supplierPrice = quoteResult.supplierPrice ?? 
-  (quoteResult.appliedPriceList?.list_type === 'supplier' && !quoteResult.appliedPriceList?.master_list_id
-    ? quoteResult.basePrice  // Per listini supplier, usa basePrice come costo fornitore
-    : quoteResult.totalCost) ?? 
-  quoteResult.basePrice ?? 0;
+const supplierPrice =
+  quoteResult.supplierPrice ??
+  (quoteResult.appliedPriceList?.list_type === "supplier" &&
+  !quoteResult.appliedPriceList?.master_list_id
+    ? quoteResult.basePrice // Per listini supplier, usa basePrice come costo fornitore
+    : quoteResult.totalCost) ??
+  quoteResult.basePrice ??
+  0;
 ```
 
 **Svantaggi:**
+
 - ⚠️ `basePrice` potrebbe non essere il costo fornitore reale
 - ⚠️ Non risolve il problema se non c'è margine configurato
 
@@ -209,11 +224,13 @@ const supplierPrice = quoteResult.supplierPrice ??
 **Fix**: Priorità listini CUSTOM su SUPPLIER in `calculateBestPriceForReseller`
 
 **Comportamento**:
+
 - Se ci sono listini CUSTOM disponibili, vengono sempre preferiti rispetto ai SUPPLIER
 - Anche se un listino SUPPLIER è più economico, viene scelto il listino CUSTOM
 - I listini CUSTOM sono quelli configurati per la rivendita e riflettono il prezzo di vendita corretto
 
 **Risultato**:
+
 - ✅ GLS 5000: Usa listino CUSTOM "gls 5000 rivendita" (€8.00) invece di SUPPLIER (€4.27)
 - ✅ Poste Italiane: Usa listino CUSTOM "Pdb 5000 rivendita" (€10.00) invece di SUPPLIER (€4.40)
 - ✅ Prezzo vendita ora riflette correttamente il listino personalizzato configurato
