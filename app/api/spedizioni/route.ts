@@ -429,6 +429,38 @@ export async function POST(request: NextRequest) {
       console.log('💰 [API] Calcolato prezzo finale con margine default:', prezzoFinale);
     }
 
+    // ✨ FIX: Aggiungi platform fee al prezzo finale (se non superadmin)
+    // La platform fee viene addebitata al wallet, quindi deve essere inclusa nel prezzo salvato
+    let platformFee = 0;
+    try {
+      const { getPlatformFeeSafe } = await import('@/lib/services/pricing/platform-fee');
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('role, account_type')
+        .eq('email', session.user.email)
+        .single();
+      
+      const isSuperadmin = userData?.role === 'SUPERADMIN' || userData?.role === 'superadmin' || userData?.account_type === 'superadmin';
+      
+      if (!isSuperadmin) {
+        // Recupera user_id per calcolare platform fee
+        const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
+        const userId = await getSupabaseUserIdFromEmail(session.user.email);
+        if (userId) {
+          platformFee = await getPlatformFeeSafe(userId);
+          prezzoFinale = prezzoFinale + platformFee;
+          console.log('💰 [API] Aggiunta platform fee al prezzo finale:', {
+            prezzoSenzaFee: prezzoFinale - platformFee,
+            platformFee,
+            prezzoFinale,
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ [API] Errore recupero platform fee, prezzo senza fee:', error);
+      // Non bloccare - continua senza platform fee
+    }
+
     // Genera tracking number
     const trackingPrefix = (body.corriere || 'GLS').substring(0, 3).toUpperCase();
     const trackingNumber = `${trackingPrefix}${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
