@@ -769,31 +769,44 @@ async function calculateWithDefaultMargin(
       // In questo caso, il prezzo nel listino personalizzato è già il prezzo finale (con margine incluso)
       // Quindi NON applichiamo margini aggiuntivi
       // ✨ FIX: Calcola supplierTotalCost e normalizza a IVA esclusa per confronto corretto
-      const supplierTotalCostRaw =
-        supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0;
+      // IMPORTANTE: Surcharges sono sempre IVA esclusa, quindi normalizziamo solo basePrice
       const customVATMode: "included" | "excluded" = getVATModeWithFallback(
         priceList.vat_mode ?? null
       );
       const customVATRate = priceList.vat_rate || 22.0;
 
-      // Normalizza totalCost a IVA esclusa per confronto
+      // ✨ BUG FIX: Normalizza solo basePrice (non totalCost) perché surcharges sono sempre IVA esclusa
+      // Questo è consistente con la logica di calcolo margine (linee 1018-1030)
+      let basePriceExclVATForComparison = basePrice;
+      if (customVATMode === "included") {
+        basePriceExclVATForComparison = normalizePrice(
+          basePrice,
+          "included",
+          "excluded",
+          customVATRate
+        );
+      }
+      // Surcharges sono sempre IVA esclusa, quindi li aggiungiamo direttamente
       const totalCostExclVATForComparison =
-        customVATMode === "included"
-          ? normalizePrice(totalCost, "included", "excluded", customVATRate)
-          : totalCost;
+        basePriceExclVATForComparison + surcharges;
 
-      // Normalizza supplierTotalCost a IVA esclusa usando vat_mode del master
+      // ✨ BUG FIX: Normalizza solo supplierBasePrice (non supplierTotalCostRaw) perché supplierSurcharges sono sempre IVA esclusa
+      let supplierBasePriceExclVATForComparison = 0;
+      if (supplierBasePrice > 0) {
+        if (masterVATMode === "included") {
+          supplierBasePriceExclVATForComparison = normalizePrice(
+            supplierBasePrice,
+            "included",
+            "excluded",
+            masterVATRate
+          );
+        } else {
+          supplierBasePriceExclVATForComparison = supplierBasePrice;
+        }
+      }
+      // SupplierSurcharges sono sempre IVA esclusa, quindi li aggiungiamo direttamente
       const supplierTotalCostExclVATForComparison =
-        supplierTotalCostRaw > 0
-          ? masterVATMode === "included"
-            ? normalizePrice(
-                supplierTotalCostRaw,
-                "included",
-                "excluded",
-                masterVATRate
-              )
-            : supplierTotalCostRaw
-          : 0;
+        supplierBasePriceExclVATForComparison + supplierSurcharges;
 
       // Confronta su base IVA esclusa per determinare se modificato manualmente
       const isManuallyModified =
@@ -824,9 +837,14 @@ async function calculateWithDefaultMargin(
         )} (vat_mode: ${customVATMode})`
       );
       console.log(
+        `   - Base Price Excl VAT (per confronto): €${basePriceExclVATForComparison.toFixed(
+          2
+        )} (vat_mode custom: ${customVATMode})`
+      );
+      console.log(
         `   - Total Cost Excl VAT (per confronto): €${totalCostExclVATForComparison.toFixed(
           2
-        )}`
+        )} (basePriceExclVAT + surcharges)`
       );
       console.log(
         `   - Supplier Base Price (da master): €${supplierBasePrice.toFixed(2)}`
@@ -837,14 +855,14 @@ async function calculateWithDefaultMargin(
         )}`
       );
       console.log(
-        `   - Supplier Total Cost (master, raw): €${supplierTotalCostRaw.toFixed(
+        `   - Supplier Base Price Excl VAT (per confronto): €${supplierBasePriceExclVATForComparison.toFixed(
           2
-        )} (vat_mode: ${masterVATMode})`
+        )} (vat_mode master: ${masterVATMode || "N/A"})`
       );
       console.log(
         `   - Supplier Total Cost Excl VAT (per confronto): €${supplierTotalCostExclVATForComparison.toFixed(
           2
-        )}`
+        )} (basePriceExclVAT + surcharges)`
       );
       console.log(
         `   - Differenza (su base IVA esclusa): €${Math.abs(
