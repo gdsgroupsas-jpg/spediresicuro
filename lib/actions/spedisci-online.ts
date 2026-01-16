@@ -21,6 +21,32 @@ import type { CreateShipmentInput, Shipment } from "@/types/shipments";
 import crypto from "crypto";
 
 /**
+ * AUDIT FIX P1-3: Sanitizza UUID per log production-safe
+ * Genera hash parziale (primi 8 caratteri) invece di UUID completo
+ */
+function sanitizeIdForLog(id: string | null | undefined): string {
+  if (!id) return "N/A";
+  return crypto
+    .createHash("sha256")
+    .update(String(id))
+    .digest("hex")
+    .substring(0, 8);
+}
+
+/**
+ * AUDIT FIX P1-3: Sanitizza nome per log production-safe
+ * Rimuove caratteri sensibili e limita lunghezza
+ */
+function sanitizeNameForLog(name: string | null | undefined): string {
+  if (!name) return "N/A";
+  // Rimuove caratteri speciali e limita a 20 caratteri
+  return name
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .substring(0, 20)
+    .trim() || "N/A";
+}
+
+/**
  * Recupera credenziali spedisci.online dell'utente
  *
  * ⚠️ PRIORITÀ:
@@ -382,7 +408,7 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
 
     // 1. Recupera TUTTE le configurazioni personali (owner_user_id = currentUserId)
     if (currentUserId) {
-      console.log(`🔍 [SPEDISCI.ONLINE] Cerco configurazioni per owner_user_id: ${currentUserId}`);
+      console.log(`🔍 [SPEDISCI.ONLINE] Cerco configurazioni per owner_user_id: ${sanitizeIdForLog(currentUserId)}`);
       
       const { data: personalConfigs, error: personalError } = await supabaseAdmin
         .from("courier_configs")
@@ -395,10 +421,11 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
         console.error(`❌ [SPEDISCI.ONLINE] Errore query configurazioni personali:`, personalError);
       }
 
+      // AUDIT FIX P1-3: Sanitizza configId e configName nei log
       console.log(`📊 [SPEDISCI.ONLINE] Query risultato:`, {
-        query: `provider_id=spedisci_online, owner_user_id=${currentUserId}, is_active=true`,
+        query: `provider_id=spedisci_online, owner_user_id=${sanitizeIdForLog(currentUserId)}, is_active=true`,
         found: personalConfigs?.length || 0,
-        configs: personalConfigs?.map(c => ({ id: c.id.substring(0, 8), name: c.name })) || [],
+        configs: personalConfigs?.map(c => ({ id: sanitizeIdForLog(c.id), name: sanitizeNameForLog(c.name) })) || [],
       });
 
       if (!personalError && personalConfigs && personalConfigs.length > 0) {
@@ -796,9 +823,10 @@ export async function createShipmentWithOrchestrator(
             : "N/A";
 
           // Log production-safe: sempre (dev + production)
+          // AUDIT FIX P1-3: Sanitizza configId e configName
           console.log("🔧 [BROKER] Spedisci.Online adapter istanziato:", {
-            configId: defaultConfig.id,
-            configName: defaultConfig.name,
+            configId: sanitizeIdForLog(defaultConfig.id),
+            configName: sanitizeNameForLog(defaultConfig.name),
             providerId: defaultConfig.provider_id,
             baseUrl: defaultConfig.base_url,
             apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
@@ -816,8 +844,9 @@ export async function createShipmentWithOrchestrator(
           console.log(
             '✅ [BROKER] Questo adapter verrà usato quando l\'utente seleziona corrieri come "Poste Italiane" (fallback broker)'
           );
+          // AUDIT FIX P1-3: Sanitizza configId
           console.log("✅ [BROKER] Config usata:", {
-            configId: defaultConfig.id,
+            configId: sanitizeIdForLog(defaultConfig.id),
             providerId: defaultConfig.provider_id,
             baseUrl: defaultConfig.base_url,
             apiKeyFingerprint: keyFingerprint,
