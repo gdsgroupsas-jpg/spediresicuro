@@ -499,6 +499,26 @@ const accountSection: NavSection = {
 };
 
 /**
+ * FINANZA - Dashboard fiscale personale (TUTTI gli utenti)
+ * Accessibile a: user, reseller, admin, superadmin, BYOC
+ */
+const financeSection: NavSection = {
+  id: 'finance',
+  label: 'Finanza',
+  collapsible: true,
+  defaultExpanded: true,
+  items: [
+    {
+      id: 'finance-dashboard',
+      label: 'Dashboard Finanziaria',
+      href: '/dashboard/finanza',
+      icon: Wallet,
+      description: 'CFO Dashboard & Fiscal Brain - Dati fiscali personali',
+    },
+  ],
+};
+
+/**
  * BYOC - Solo per BYOC (Bring Your Own Carrier)
  */
 const byocSection: NavSection = {
@@ -569,7 +589,10 @@ export function getNavigationForUser(
   sections.push(logisticsSection);
   sections.push(returnsSection);
 
-  // 4. SEZIONI BUSINESS SPECIFICHE
+  // 4. SEZIONE FINANZA (TUTTI gli utenti - dashboard fiscale personale)
+  sections.push(financeSection);
+
+  // 5. SEZIONI BUSINESS SPECIFICHE
   // BYOC section
   if (accountType === 'byoc') {
     sections.push(byocSection);
@@ -580,10 +603,10 @@ export function getNavigationForUser(
     sections.push(resellerSection);
   }
 
-  // 5. SEZIONI PERSONALI (tutti gli utenti)
+  // 6. SEZIONI PERSONALI (tutti gli utenti)
   sections.push(accountSection);
 
-  // 6. SEZIONI SUPPORTO (sempre alla fine)
+  // 7. SEZIONI SUPPORTO (sempre alla fine)
   sections.push(communicationsSection);
   sections.push(supportSection);
 

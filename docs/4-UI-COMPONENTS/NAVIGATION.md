@@ -87,9 +87,10 @@ const navigationConfig = getNavigationForUser(
 
 | Role | Sezioni Visibili |
 |------|------------------|
-| `user` | Logistica, Resi, Account, Comunicazioni, Supporto |
+| `user` | Logistica, Resi, **Finanza** (personale), Account, Comunicazioni, Supporto |
 | `admin` | + Amministrazione (filtrata) |
-| `superadmin` | + Finanza Piattaforma, Amministrazione (completa) |
+| `reseller` | + Finanza (personale + sub-user), Gestione Business |
+| `superadmin` | + Finanza Piattaforma (operativa), Amministrazione (completa) |
 
 **Feature Flags:**
 - `isReseller: true` → Mostra sezione "Gestione Business"
@@ -146,16 +147,18 @@ const adminSection: NavSection = {
 Le sezioni sono ordinate per priorità strategica:
 
 **Superadmin:**
-1. 🎯 **Strategic**: Finanza Piattaforma
+1. 🎯 **Strategic**: Finanza Piattaforma (operativa)
 2. 🛠️ **Administrative**: Amministrazione
 3. 📦 **Operational**: Logistica, Resi
-4. 👤 **Personal**: Account
-5. 💬 **Support**: Comunicazioni, Supporto
+4. 💰 **Finance**: Finanza (personale - stessa di tutti)
+5. 👤 **Personal**: Account
+6. 💬 **Support**: Comunicazioni, Supporto
 
-**User:**
+**User/Reseller:**
 1. 📦 **Operational**: Logistica, Resi
-2. 👤 **Personal**: Account
-3. 💬 **Support**: Comunicazioni, Supporto
+2. 💰 **Finance**: Finanza (Dashboard fiscale personale)
+3. 👤 **Personal**: Account
+4. 💬 **Support**: Comunicazioni, Supporto
 
 ## Components
 
@@ -435,7 +438,7 @@ const myNewSection: NavSection = {
   label: 'My Section',
   collapsible: true,
   defaultExpanded: true,
-  requiredRole: ['admin', 'superadmin'],  // Optional
+  requiredRole: ['admin', 'superadmin'],  // Optional - ometti per accesso universale
   items: [
     {
       id: 'my-item',
@@ -451,10 +454,16 @@ const myNewSection: NavSection = {
 2. **Add to Section Order:**
 ```typescript
 // In getNavigationForUser()
+// Per sezione universale (tutti gli utenti):
+sections.push(myNewSection);  // Nessun controllo ruolo
+
+// Per sezione con restrizioni:
 if (role === 'admin' || role === 'superadmin') {
   sections.push(myNewSection);
 }
 ```
+
+**Note:** La sezione **Finanza** (`financeSection`) è un esempio di sezione universale accessibile a tutti gli utenti (user, reseller, admin, superadmin, BYOC). Ogni utente vede solo i propri dati fiscali (atomizzazione per `user_id`).
 
 3. **Test Coverage:**
 ```typescript
