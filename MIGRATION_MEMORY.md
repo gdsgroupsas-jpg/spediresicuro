@@ -2,7 +2,7 @@
 
 # OBIETTIVO: Migrazione Anne -> LangGraph Supervisor
 
-# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE | ✅ SPRINT 2 UX UNIFICATION DONE | ✅ SPRINT 3 OPTIMIZATION DONE
+# STATO: 🟢 FASE 1-2 DONE | Sprint 2.5-2.8 DONE | P0-P1 Refactoring DONE | ✅ OCR Immagini COMPLETATO | ✅ P3 Architecture DONE | ✅ P4 Business Value DONE | ✅ FASE 4 Gestione Clienti UI DONE | ✅ FASE 3 Reseller Tier System DONE | ✅ SPRINT 1 FINANCIAL TRACKING DONE | ✅ SPRINT 2 UX UNIFICATION DONE | ✅ SPRINT 3 OPTIMIZATION DONE | ✅ VAT SEMANTICS FASE 0-3 DONE
 
 ## 🛑 REGOLE D'INGAGGIO
 
@@ -1618,3 +1618,88 @@ ENABLE_OCR_IMAGES=true                # Abilita OCR immagini
 - ✅ RLS attivo su ocr_processing_log
 - ✅ Compensation functions funzionanti
 - ✅ security_events table creata
+
+---
+
+## ✅ VAT SEMANTICS IN PRICE LISTS (ADR-001) - FASE 0-3 COMPLETATA
+
+**Data:** 2026-01-XX  
+**ADR:** `ADR_001_VAT_SEMANTICS_IN_PRICE_LISTS.md`  
+**Piano Implementazione:** `IMPLEMENTATION_PLAN_VAT_SEMANTICS.md`
+
+### Obiettivo
+
+Implementare semantica IVA esplicita nei listini prezzi per supportare:
+- Prezzi con IVA inclusa o esclusa
+- Calcolo margine sempre su base IVA esclusa (Invariant #1)
+- Normalizzazione corretta tra listini master e custom con vat_mode diversi
+- Backward compatibility completa (NULL = 'excluded')
+
+### Fasi Completate
+
+#### ✅ FASE 0: Preparazione
+- **0.1:** Script SQL audit baseline (`scripts/audit-vat-baseline.sql`)
+- **0.2:** Test suite VAT utils (`tests/pricing/vat-utils.test.ts` - 25 test)
+
+#### ✅ FASE 1: Schema & Types
+- **1.1:** Migration database (`supabase/migrations/110_add_vat_semantics_to_price_lists.sql`)
+  - Colonne `vat_mode` (TEXT, CHECK 'included'/'excluded', NULL) e `vat_rate` (DECIMAL, DEFAULT 22.00)
+  - Aggiunte a `price_lists` e `shipments`
+  - Indici parziali per performance
+  - **Idempotente e zero-downtime**
+- **1.2:** TypeScript types aggiornati
+  - `PriceList`: `vat_mode?`, `vat_rate?`
+  - `Shipment`: `vat_mode?`, `vat_rate?`
+  - `PriceCalculationResult`: `vatMode?`, `vatRate?`, `vatAmount?`, `totalPriceWithVAT?`
+
+#### ✅ FASE 2: Utility Functions
+- **File:** `lib/pricing/vat-utils.ts`
+- Funzioni pure:
+  - `normalizePrice()`: conversione excluded ↔ included
+  - `calculateVATAmount()`: calcolo importo IVA
+  - `calculatePriceWithVAT()`: prezzo con IVA
+  - `extractPriceExclVAT()`: estrazione prezzo escluso IVA
+  - `getVATModeWithFallback()`: fallback NULL → 'excluded'
+- **Test:** 25 test unitari, tutti passati
+
+#### ✅ FASE 3: Pricing Engine Update
+- **File:** `lib/db/price-lists-advanced.ts`
+- **Modifiche critiche:**
+  1. Recupero `vat_mode` e `vat_rate` del master list quando presente
+  2. Normalizzazione `basePrice` a IVA esclusa per calcoli interni
+  3. Normalizzazione `supplierTotalCost` e `totalCost` a IVA esclusa **prima** del confronto per `isManuallyModified`
+  4. Margine sempre calcolato su base IVA esclusa (Invariant #1)
+  5. `finalPrice` riflette `vat_mode` del listino personalizzato
+  6. Propagazione VAT semantics nel `PriceCalculationResult`
+- **Fix critico:** Gestione corretta margine 0 quando master e custom hanno `vat_mode` diversi
+- **Test:** `tests/pricing/vat-margin-zero-fix.test.ts` - 4 scenari testati, tutti passati
+
+### Invariants Implementati
+
+1. **Invariant #1:** Margine sempre calcolato su base IVA esclusa
+2. **Invariant #2:** Confronto prezzi sempre su base normalizzata (IVA esclusa)
+3. **Invariant #3:** Backward compatibility: `vat_mode = NULL` → assume 'excluded'
+
+### Test Coverage
+
+- ✅ Unit tests: VAT utils (25 test)
+- ✅ Integration tests: VAT margin zero fix (4 scenari)
+- ✅ Regression tests: Backward compatibility verificata
+
+### Prossimi Passi (FASE 4-8)
+
+- **FASE 4:** Update Quote API response (campi VAT opzionali)
+- **FASE 5:** UI updates con feature flag (comparator + dashboard)
+- **FASE 6:** Shipment creation - persistenza VAT context
+- **FASE 7:** Data migration legacy → explicit (conservativa)
+- **FASE 8:** Testing completo (unit, integration, regression)
+
+### File Chiave
+
+- `ADR_001_VAT_SEMANTICS_IN_PRICE_LISTS.md` - Decisione formale
+- `IMPLEMENTATION_PLAN_VAT_SEMANTICS.md` - Piano implementazione completo
+- `supabase/migrations/110_add_vat_semantics_to_price_lists.sql` - Migration DB
+- `lib/pricing/vat-utils.ts` - Utility functions
+- `lib/db/price-lists-advanced.ts` - Pricing engine con VAT logic
+- `tests/pricing/vat-utils.test.ts` - Test suite utils
+- `tests/pricing/vat-margin-zero-fix.test.ts` - Test suite margin zero fix
