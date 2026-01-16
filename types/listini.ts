@@ -126,6 +126,10 @@ export interface PriceList {
   // Statistiche
   usage_count?: number; // Numero di volte utilizzato
   last_used_at?: string; // Ultima volta utilizzato
+
+  // ✨ NUOVO: VAT Semantics (ADR-001)
+  vat_mode?: "included" | "excluded" | null; // NULL = legacy (assume 'excluded')
+  vat_rate?: number; // Default 22.00
 }
 
 export interface PriceListEntry {
@@ -234,6 +238,11 @@ export interface PriceCalculationResult {
     selectedRule: PriceRule; // Regola selezionata (priorità più alta)
     selectionReason: string; // Motivo selezione
   };
+  // ✨ NUOVO: VAT Semantics (ADR-001)
+  vatMode?: "included" | "excluded" | null;
+  vatRate?: number;
+  vatAmount?: number; // Calcolato se vatMode = 'excluded'
+  totalPriceWithVAT?: number; // Calcolato se vatMode = 'excluded'
 }
 
 export interface ParsedPriceListRow {
