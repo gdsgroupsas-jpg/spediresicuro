@@ -1710,3 +1710,17 @@ Implementare semantica IVA esplicita nei listini prezzi per supportare:
 - `tests/integration/vat-semantics-flow.test.ts` - Test integrazione
 - `tests/regression/vat-backward-compatibility.test.ts` - Test regressione
 - `tests/pricing/vat-semantics-manual-checklist.md` - Checklist testing manuale
+
+### Fix Post-Implementazione (16/01/2025)
+
+- **Fix display costo fornitore con IVA inclusa:**
+  - Aggiunto campo `supplierPriceOriginal` in `PriceCalculationResult` per prezzo fornitore nella modalità VAT del master
+  - API `/api/quotes/db` ora usa `supplierPriceOriginal` quando disponibile per `weight_price` (COSTO FORNITORE)
+  - Colonna "COSTO FORNITORE" ora mostra correttamente prezzo originale master (con IVA inclusa se master ha IVA inclusa)
+  - Fix applicato in `calculatePriceWithRule` e `calculateWithDefaultMargin`
+
+- **Fix matching entry matrice per fasce di peso:**
+  - Migliorato `calculatePriceFromList` per selezionare entry più specifica quando multiple match
+  - Ordina entry per: 1) Larghezza fascia peso (più stretta = migliore), 2) Criteri specifici (ZIP, zona, provincia)
+  - Aggiunto logging dettagliato per entry selezionate e match multipli
+  - Risolve problema selezione entry sbagliata quando ci sono fasce sovrapposte (es. 0-2 kg e 2-5 kg)
