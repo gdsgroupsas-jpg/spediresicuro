@@ -39,6 +39,13 @@ export interface Invoice {
   recipient_country?: string;
   
   pdf_url?: string | null;
+  xml_url?: string | null; // ✨ NUOVO: URL XML FatturaPA
+  
+  // ✨ NUOVO: Tipo fattura e periodo
+  invoice_type?: 'shipment' | 'recharge' | 'periodic' | 'manual';
+  period_start?: string | null; // ISO Date (per fatture periodiche)
+  period_end?: string | null; // ISO Date (per fatture periodiche)
+  
   notes?: string;
   internal_notes?: string;
   

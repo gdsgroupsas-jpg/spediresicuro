@@ -197,7 +197,32 @@ async function handleCheckoutSessionCompleted(session: any) {
     },
   });
 
-  // 6. Audit log (non bloccante)
+  // 6. Genera fattura automatica (se regola attiva) - NON BLOCCANTE
+  try {
+    const { generateAutomaticInvoiceForStripeRecharge } = await import(
+      "@/actions/invoice-recharges"
+    );
+    const invoiceResult = await generateAutomaticInvoiceForStripeRecharge(txId);
+    
+    if (invoiceResult.success && invoiceResult.invoiceId) {
+      console.log(
+        `✅ [STRIPE WEBHOOK] Fattura automatica generata: ${invoiceResult.invoiceId}`
+      );
+    } else {
+      // Non è un errore: potrebbe non esserci regola automatica attiva
+      console.log(
+        `ℹ️ [STRIPE WEBHOOK] Fattura automatica non generata: ${invoiceResult.error || 'Nessuna regola attiva'}`
+      );
+    }
+  } catch (invoiceError: any) {
+    // NON bloccare: la ricarica è già completata
+    console.warn(
+      "⚠️ [STRIPE WEBHOOK] Generazione fattura automatica fallita (non-blocking):",
+      invoiceError?.message || invoiceError
+    );
+  }
+
+  // 7. Audit log (non bloccante)
   try {
     await supabaseAdmin.from("audit_logs").insert({
       action: "stripe_payment_completed",
