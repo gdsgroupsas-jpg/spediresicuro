@@ -1706,3 +1706,7 @@ Implementare semantica IVA esplicita nei listini prezzi per supportare:
 - `lib/db/price-lists-advanced.ts` - Pricing engine con VAT logic
 - `tests/pricing/vat-utils.test.ts` - Test suite utils
 - `tests/pricing/vat-margin-zero-fix.test.ts` - Test suite margin zero fix
+- `tests/pricing/vat-semantics-comprehensive.test.ts` - Test suite completa (62 test)
+- `tests/integration/vat-semantics-flow.test.ts` - Test integrazione
+- `tests/regression/vat-backward-compatibility.test.ts` - Test regressione
+- `tests/pricing/vat-semantics-manual-checklist.md` - Checklist testing manuale

@@ -60,6 +60,9 @@ export function SupplierPriceListForm({
     contract_code: existingContractCode,
     description: priceList?.description || "",
     notes: priceList?.notes || "",
+    // ✨ NUOVO: VAT Semantics (ADR-001) - Opzionali, default per retrocompatibilità
+    vat_mode: priceList?.vat_mode || null,
+    vat_rate: priceList?.vat_rate || 22.0,
   });
 
   const loadConfigurations = useCallback(async () => {
@@ -182,6 +185,9 @@ export function SupplierPriceListForm({
           status: formData.status,
           description: formData.description,
           notes: formData.notes,
+          // ✨ NUOVO: VAT Semantics (ADR-001)
+          vat_mode: formData.vat_mode || null,
+          vat_rate: formData.vat_rate || 22.0,
         });
 
         if (result.success) {
@@ -235,6 +241,9 @@ export function SupplierPriceListForm({
           courier_id: formData.courier_id,
           description: formData.description,
           notes: formData.notes,
+          // ✨ NUOVO: VAT Semantics (ADR-001)
+          vat_mode: formData.vat_mode || null,
+          vat_rate: formData.vat_rate || 22.0,
           // ✅ SCHEMA CORRETTO: Metadata con valori corretti
           // - carrier_code = solo prefisso (es. "gls")
           // - contract_code = codice completo (es. "gls-GLS-5000")
@@ -447,6 +456,54 @@ export function SupplierPriceListForm({
           rows={2}
           className="mt-1"
         />
+      </div>
+
+      {/* ✨ NUOVO: VAT Semantics (ADR-001) */}
+      <div className="pt-4 border-t space-y-4">
+        <div className="text-sm font-medium text-gray-700">Impostazioni IVA</div>
+        
+        {/* VAT Mode */}
+        <div>
+          <Label htmlFor="vat_mode">Modalità IVA</Label>
+          <Select
+            id="vat_mode"
+            value={formData.vat_mode || ''}
+            onChange={(e) => setFormData({ 
+              ...formData, 
+              vat_mode: e.target.value === '' ? null : (e.target.value as 'included' | 'excluded')
+            })}
+            className="mt-1"
+          >
+            <option value="">IVA Esclusa (default)</option>
+            <option value="excluded">IVA Esclusa</option>
+            <option value="included">IVA Inclusa</option>
+          </Select>
+          <p className="text-xs text-gray-500 mt-1">
+            Seleziona se i prezzi nel listino sono con IVA inclusa o esclusa. Default: IVA Esclusa.
+          </p>
+        </div>
+
+        {/* VAT Rate */}
+        <div>
+          <Label htmlFor="vat_rate">Aliquota IVA (%)</Label>
+          <Input
+            id="vat_rate"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={formData.vat_rate}
+            onChange={(e) => setFormData({ 
+              ...formData, 
+              vat_rate: parseFloat(e.target.value) || 22.0 
+            })}
+            placeholder="22.00"
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Aliquota IVA in percentuale (default: 22% per Italia).
+          </p>
+        </div>
       </div>
 
       {/* Actions */}
