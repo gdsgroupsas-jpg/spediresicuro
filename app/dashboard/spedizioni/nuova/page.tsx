@@ -792,6 +792,10 @@ export default function NuovaSpedizionePage() {
           vat_mode: selectedVATContext.vat_mode,
           vat_rate: selectedVATContext.vat_rate,
         }),
+        // ✨ FIX: Prezzo finale dal quote selezionato (prezzo listino personalizzato con margine)
+        ...(selectedQuoteExactPrice && selectedQuoteExactPrice.price > 0 && {
+          final_price: selectedQuoteExactPrice.price,
+        }),
       };
 
       // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
