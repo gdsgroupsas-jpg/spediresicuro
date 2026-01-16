@@ -289,6 +289,11 @@ export default function NuovaSpedizionePage() {
     price: number;
     contractCode?: string;
   } | null>(null);
+  // ✨ NUOVO: VAT context dal quote selezionato (ADR-001)
+  const [selectedVATContext, setSelectedVATContext] = useState<{
+    vat_mode?: "included" | "excluded" | null;
+    vat_rate?: number;
+  } | null>(null);
 
   // Corrieri disponibili caricati dinamicamente dal DB
   const [availableCouriers, setAvailableCouriers] = useState<
@@ -781,6 +786,11 @@ export default function NuovaSpedizionePage() {
         // ✨ ENTERPRISE: ConfigId della configurazione API selezionata (per multi-config)
         ...(selectedConfigId && {
           configId: selectedConfigId,
+        }),
+        // ✨ NUOVO: VAT Semantics (ADR-001) - Propaga VAT context dal quote selezionato
+        ...(selectedVATContext && {
+          vat_mode: selectedVATContext.vat_mode,
+          vat_rate: selectedVATContext.vat_rate,
         }),
       };
 
@@ -1728,6 +1738,13 @@ export default function NuovaSpedizionePage() {
                             const exactPrice = parseFloat(
                               bestRate.total_price || "0"
                             );
+                            // ✨ NUOVO: Aggiorna anche VAT context se quote selezionato (ADR-001)
+                            setSelectedVATContext({
+                              vat_mode: bestRate.vat_mode || null,
+                              vat_rate: bestRate.vat_rate
+                                ? parseFloat(bestRate.vat_rate)
+                                : undefined,
+                            });
                             setSelectedQuoteExactPrice((prev) => {
                               if (prev && prev.courierName === courierName) {
                                 return { ...prev, price: exactPrice };
@@ -1783,6 +1800,13 @@ export default function NuovaSpedizionePage() {
                               courierName,
                               price: exactPrice,
                               contractCode,
+                            });
+                            // ✨ NUOVO: Estrai VAT context dal quote selezionato (ADR-001)
+                            setSelectedVATContext({
+                              vat_mode: bestRate.vat_mode || null,
+                              vat_rate: bestRate.vat_rate
+                                ? parseFloat(bestRate.vat_rate)
+                                : undefined,
                             });
                           } else {
                             // Se non abbiamo ancora il quote, cerca nel preventivatore

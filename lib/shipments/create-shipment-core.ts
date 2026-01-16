@@ -495,6 +495,9 @@ export async function createShipmentCore(params: {
             declared_value: args.validated.insurance?.value || 0,
             cash_on_delivery_amount: args.validated.cod?.value || 0,
             notes: args.validated.notes || null,
+            // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
+            vat_mode: args.validated.vat_mode || null, // NULL = legacy (assume 'excluded')
+            vat_rate: args.validated.vat_rate || 22.0, // Default per retrocompatibilità
             // Best-effort: utile per vincoli anti-orphan e audit
             created_by_user_email: context.target.email,
           } as any)
