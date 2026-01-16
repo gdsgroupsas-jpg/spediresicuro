@@ -16,88 +16,86 @@
 -- - Zero downtime: UPDATE non bloccante
 -- - Superadmin può correggere manualmente se necessario
 -- ============================================
-
 -- ============================================
 -- STEP 1: Migrazione Listini Esistenti
 -- ============================================
 -- Strategia conservativa: assume tutti i listini esistenti sono IVA esclusa
 -- Superadmin può correggere manualmente se necessario
-
 DO $$
-DECLARE
-  updated_count INTEGER;
-BEGIN
-  -- Aggiorna solo listini con vat_mode = NULL
-  UPDATE public.price_lists
-  SET
-    vat_mode = 'excluded',
-    vat_rate = COALESCE(vat_rate, 22.00)  -- Mantieni vat_rate esistente o imposta default
-  WHERE vat_mode IS NULL;
-
-  GET DIAGNOSTICS updated_count = ROW_COUNT;
-  
-  RAISE NOTICE '✅ Migrati % listini legacy → vat_mode = excluded', updated_count;
+DECLARE updated_count INTEGER;
+BEGIN -- Aggiorna solo listini con vat_mode = NULL
+UPDATE public.price_lists
+SET vat_mode = 'excluded',
+    vat_rate = COALESCE(vat_rate, 22.00) -- Mantieni vat_rate esistente o imposta default
+WHERE vat_mode IS NULL;
+GET DIAGNOSTICS updated_count = ROW_COUNT;
+RAISE NOTICE '✅ Migrati % listini legacy → vat_mode = excluded',
+updated_count;
 END $$;
-
 -- ============================================
 -- STEP 2: Migrazione Spedizioni Esistenti
 -- ============================================
 -- Strategia conservativa: assume tutte le spedizioni esistenti sono IVA esclusa
-
 DO $$
-DECLARE
-  updated_count INTEGER;
-BEGIN
-  -- Aggiorna solo spedizioni con vat_mode = NULL
-  UPDATE public.shipments
-  SET
-    vat_mode = 'excluded',
-    vat_rate = COALESCE(vat_rate, 22.00)  -- Mantieni vat_rate esistente o imposta default
-  WHERE vat_mode IS NULL;
-
-  GET DIAGNOSTICS updated_count = ROW_COUNT;
-  
-  RAISE NOTICE '✅ Migrate % spedizioni legacy → vat_mode = excluded', updated_count;
+DECLARE updated_count INTEGER;
+BEGIN -- Aggiorna solo spedizioni con vat_mode = NULL
+UPDATE public.shipments
+SET vat_mode = 'excluded',
+    vat_rate = COALESCE(vat_rate, 22.00) -- Mantieni vat_rate esistente o imposta default
+WHERE vat_mode IS NULL;
+GET DIAGNOSTICS updated_count = ROW_COUNT;
+RAISE NOTICE '✅ Migrate % spedizioni legacy → vat_mode = excluded',
+updated_count;
 END $$;
-
 -- ============================================
 -- STEP 3: Verifica Risultati
 -- ============================================
-
 -- Verifica distribuzione vat_mode nei listini
 DO $$
-DECLARE
-  excluded_count INTEGER;
-  included_count INTEGER;
-  null_count INTEGER;
+DECLARE excluded_count INTEGER;
+included_count INTEGER;
+null_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO excluded_count FROM public.price_lists WHERE vat_mode = 'excluded';
-  SELECT COUNT(*) INTO included_count FROM public.price_lists WHERE vat_mode = 'included';
-  SELECT COUNT(*) INTO null_count FROM public.price_lists WHERE vat_mode IS NULL;
-  
-  RAISE NOTICE '📊 [PRICE_LISTS] Distribuzione vat_mode:';
-  RAISE NOTICE '   - excluded: %', excluded_count;
-  RAISE NOTICE '   - included: %', included_count;
-  RAISE NOTICE '   - NULL (legacy): %', null_count;
+SELECT COUNT(*) INTO excluded_count
+FROM public.price_lists
+WHERE vat_mode = 'excluded';
+SELECT COUNT(*) INTO included_count
+FROM public.price_lists
+WHERE vat_mode = 'included';
+SELECT COUNT(*) INTO null_count
+FROM public.price_lists
+WHERE vat_mode IS NULL;
+RAISE NOTICE '📊 [PRICE_LISTS] Distribuzione vat_mode:';
+RAISE NOTICE '   - excluded: %',
+excluded_count;
+RAISE NOTICE '   - included: %',
+included_count;
+RAISE NOTICE '   - NULL (legacy): %',
+null_count;
 END $$;
-
 -- Verifica distribuzione vat_mode nelle spedizioni
 DO $$
-DECLARE
-  excluded_count INTEGER;
-  included_count INTEGER;
-  null_count INTEGER;
+DECLARE excluded_count INTEGER;
+included_count INTEGER;
+null_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO excluded_count FROM public.shipments WHERE vat_mode = 'excluded';
-  SELECT COUNT(*) INTO included_count FROM public.shipments WHERE vat_mode = 'included';
-  SELECT COUNT(*) INTO null_count FROM public.shipments WHERE vat_mode IS NULL;
-  
-  RAISE NOTICE '📊 [SHIPMENTS] Distribuzione vat_mode:';
-  RAISE NOTICE '   - excluded: %', excluded_count;
-  RAISE NOTICE '   - included: %', included_count;
-  RAISE NOTICE '   - NULL (legacy): %', null_count;
+SELECT COUNT(*) INTO excluded_count
+FROM public.shipments
+WHERE vat_mode = 'excluded';
+SELECT COUNT(*) INTO included_count
+FROM public.shipments
+WHERE vat_mode = 'included';
+SELECT COUNT(*) INTO null_count
+FROM public.shipments
+WHERE vat_mode IS NULL;
+RAISE NOTICE '📊 [SHIPMENTS] Distribuzione vat_mode:';
+RAISE NOTICE '   - excluded: %',
+excluded_count;
+RAISE NOTICE '   - included: %',
+included_count;
+RAISE NOTICE '   - NULL (legacy): %',
+null_count;
 END $$;
-
 -- ============================================
 -- NOTA IMPORTANTE
 -- ============================================
@@ -109,4 +107,7 @@ END $$;
 -- UPDATE price_lists SET vat_mode = 'included' WHERE id = 'xxx' AND ...;
 -- ============================================
 
-RAISE NOTICE '✅ Migration completata: Dati legacy migrati a vat_mode esplicito';
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Migration completata: Dati legacy migrati a vat_mode esplicito';
+END $$;
