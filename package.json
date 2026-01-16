@@ -52,6 +52,10 @@
     "test:integration:verbose": "vitest run tests/integration",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
+    "test:vat": "vitest run tests/pricing/vat-utils.test.ts tests/pricing/vat-margin-zero-fix.test.ts tests/pricing/vat-semantics-comprehensive.test.ts",
+    "test:vat:integration": "vitest run tests/integration/vat-semantics-flow.test.ts",
+    "test:vat:regression": "vitest run tests/regression/vat-backward-compatibility.test.ts",
+    "test:vat:all": "vitest run --run tests/pricing/vat tests/integration/vat-semantics-flow tests/regression/vat-backward-compatibility",
     "vercel": "vercel",
     "vercel:login": "vercel login",
     "vercel:deploy": "vercel --prod"
