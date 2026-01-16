@@ -41,6 +41,10 @@ Ultimo aggiornamento: 2025-01-16
   - Test suite enterprise-grade: 62 unit test + integration + regression (FASE 8)
   - Manual testing checklist completa
   - Documentazione: ADR-001, Implementation Plan, Migration Memory aggiornato
+  - **Fix post-implementazione (16/01/2025):**
+    - Fix display costo fornitore: aggiunto `supplierPriceOriginal` per mostrare prezzo master nella modalità VAT corretta
+    - Fix matching entry matrice: migliorata selezione entry più specifica per fasce di peso sovrapposte
+    - Logging dettagliato per debug matching entry e prezzi fornitore
 
 ### Added
 - **AI Capabilities Toggle** - Toggle per abilitare/disabilitare capabilities AI di Anne nella dashboard admin
