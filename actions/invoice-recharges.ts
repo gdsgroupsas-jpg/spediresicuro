@@ -20,6 +20,9 @@ import type { Invoice } from '@/types/invoices';
 /**
  * Genera fattura da ricariche wallet
  * 
+ * ⚠️ RICHIEDE AUTENTICAZIONE: Solo admin può chiamare questa action.
+ * Per uso interno (webhook), usa internalGenerateInvoiceFromRecharges().
+ * 
  * @param params - Parametri generazione fattura
  * @returns Fattura creata con PDF e XML
  */
@@ -50,11 +53,85 @@ export async function generateInvoiceFromRechargesAction(params: {
       };
     }
 
+    // 🔒 Usa funzione interna (dopo verifica auth)
+    return await internalGenerateInvoiceFromRecharges(params);
+  } catch (error: any) {
+    console.error('Errore generateInvoiceFromRechargesAction:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto',
+    };
+  }
+}
+
+/**
+ * 🔒 INTERNAL: Genera fattura da ricariche SENZA autenticazione
+ * 
+ * Usata da webhook Stripe (system context, no user session).
+ * Valida parametri e verifica ownership delle transazioni.
+ * 
+ * ⚠️ NON esporre come Server Action pubblica - solo per uso interno.
+ * 
+ * @param userId - ID utente proprietario delle ricariche
+ * @param transactionIds - Array ID transazioni wallet
+ * @param invoiceType - Tipo fattura
+ * @param generateXML - Se true, genera anche XML FatturaPA
+ * @returns Fattura creata
+ */
+async function internalGenerateInvoiceFromRecharges(params: {
+  userId: string;
+  transactionIds: string[];
+  invoiceType?: 'recharge' | 'periodic' | 'manual';
+  periodStart?: string;
+  periodEnd?: string;
+  notes?: string;
+  generateXML?: boolean;
+}): Promise<{
+  success: boolean;
+  invoice?: Invoice;
+  error?: string;
+}> {
+  try {
     // Validazione input
     if (!params.userId || !params.transactionIds || params.transactionIds.length === 0) {
       return {
         success: false,
         error: 'Parametri mancanti: userId e transactionIds obbligatori',
+      };
+    }
+
+    // 🔒 SICUREZZA: Verifica che tutte le transazioni appartengano all'utente
+    const { data: transactions, error: txError } = await supabaseAdmin
+      .from('wallet_transactions')
+      .select('id, user_id, amount, type')
+      .in('id', params.transactionIds)
+      .eq('user_id', params.userId) // ⚠️ CRITICAL: Verifica ownership
+      .gt('amount', 0);
+
+    if (txError) {
+      return {
+        success: false,
+        error: 'Errore verifica transazioni',
+      };
+    }
+
+    if (!transactions || transactions.length !== params.transactionIds.length) {
+      return {
+        success: false,
+        error: 'Una o più transazioni non trovate o non appartengono all\'utente',
+      };
+    }
+
+    // Verifica che non siano già fatturate
+    const { data: existingLinks } = await supabaseAdmin
+      .from('invoice_recharge_links')
+      .select('wallet_transaction_id')
+      .in('wallet_transaction_id', params.transactionIds);
+
+    if (existingLinks && existingLinks.length > 0) {
+      return {
+        success: false,
+        error: 'Una o più transazioni sono già state fatturate',
       };
     }
 
@@ -228,7 +305,7 @@ export async function generateInvoiceFromRechargesAction(params: {
       invoice: invoice as Invoice,
     };
   } catch (error: any) {
-    console.error('Errore generateInvoiceFromRechargesAction:', error);
+    console.error('Errore internalGenerateInvoiceFromRecharges:', error);
     return {
       success: false,
       error: error.message || 'Errore sconosciuto',
@@ -239,6 +316,8 @@ export async function generateInvoiceFromRechargesAction(params: {
 /**
  * Genera fattura automatica per ricarica Stripe
  * Chiamata automaticamente dopo webhook Stripe successo
+ * 
+ * ⚠️ SYSTEM CONTEXT: Non richiede autenticazione (webhook Stripe non ha sessione)
  * 
  * @param transactionId - ID transazione wallet della ricarica
  * @returns Fattura creata
@@ -297,8 +376,8 @@ export async function generateAutomaticInvoiceForStripeRecharge(
       };
     }
 
-    // Genera fattura
-    const result = await generateInvoiceFromRechargesAction({
+    // 🔒 Usa funzione interna (senza autenticazione) per webhook
+    const result = await internalGenerateInvoiceFromRecharges({
       userId: transaction.user_id,
       transactionIds: [transactionId],
       invoiceType: 'recharge',
@@ -388,8 +467,8 @@ export async function generatePeriodicInvoiceAction(params: {
 
     const transactionIds = recharges.map(r => r.id);
 
-    // Genera fattura periodica
-    return await generateInvoiceFromRechargesAction({
+    // 🔒 Usa funzione interna (dopo verifica auth)
+    return await internalGenerateInvoiceFromRecharges({
       userId: params.userId,
       transactionIds,
       invoiceType: 'periodic',
