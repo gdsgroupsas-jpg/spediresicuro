@@ -585,22 +585,41 @@ async function calculatePriceWithRule(
     );
   }
 
-  // Surcharges sono sempre IVA esclusa (assunzione)
-  const totalCostExclVAT = basePriceExclVAT + surcharges;
+  // ✨ FIX: Surcharges seguono lo stesso vat_mode del listino (non sono sempre IVA esclusa)
+  // Se il listino è IVA inclusa, anche i surcharges sono IVA inclusa
+  let surchargesExclVAT = surcharges;
+  if (vatMode === "included") {
+    surchargesExclVAT = normalizePrice(
+      surcharges,
+      "included",
+      "excluded",
+      vatRate
+    );
+  }
+  const totalCostExclVAT = basePriceExclVAT + surchargesExclVAT;
 
   // ✨ FIX: Normalizza supplierTotalCost a IVA esclusa usando vat_mode del master list
-  const supplierTotalCostRaw = supplierBasePrice + supplierSurcharges;
+  // Surcharges seguono lo stesso vat_mode del master list
+  let supplierBasePriceExclVAT = supplierBasePrice;
+  if (supplierBasePrice > 0 && masterVATModeForRule === "included") {
+    supplierBasePriceExclVAT = normalizePrice(
+      supplierBasePrice,
+      "included",
+      "excluded",
+      masterVATRateForRule
+    );
+  }
+  let supplierSurchargesExclVAT = supplierSurcharges;
+  if (supplierSurcharges > 0 && masterVATModeForRule === "included") {
+    supplierSurchargesExclVAT = normalizePrice(
+      supplierSurcharges,
+      "included",
+      "excluded",
+      masterVATRateForRule
+    );
+  }
   const supplierTotalCostExclVAT =
-    supplierTotalCostRaw > 0
-      ? masterVATModeForRule === "included"
-        ? normalizePrice(
-            supplierTotalCostRaw,
-            "included",
-            "excluded",
-            masterVATRateForRule
-          )
-        : supplierTotalCostRaw // Già IVA esclusa se masterVATModeForRule === 'excluded'
-      : 0;
+    supplierBasePriceExclVAT + supplierSurchargesExclVAT;
 
   // Calcola margine su base IVA esclusa (Invariant #1)
   let margin = 0;
@@ -626,7 +645,7 @@ async function calculatePriceWithRule(
 
   return {
     basePrice: basePriceExclVAT, // Sempre IVA esclusa per consistenza
-    surcharges,
+    surcharges: surchargesExclVAT, // Sempre IVA esclusa per consistenza
     margin,
     totalCost:
       supplierTotalCostExclVAT > 0
@@ -769,14 +788,13 @@ async function calculateWithDefaultMargin(
       // In questo caso, il prezzo nel listino personalizzato è già il prezzo finale (con margine incluso)
       // Quindi NON applichiamo margini aggiuntivi
       // ✨ FIX: Calcola supplierTotalCost e normalizza a IVA esclusa per confronto corretto
-      // IMPORTANTE: Surcharges sono sempre IVA esclusa, quindi normalizziamo solo basePrice
+      // IMPORTANTE: Surcharges seguono lo stesso vat_mode del listino (non sono sempre IVA esclusa)
       const customVATMode: "included" | "excluded" = getVATModeWithFallback(
         priceList.vat_mode ?? null
       );
       const customVATRate = priceList.vat_rate || 22.0;
 
-      // ✨ BUG FIX: Normalizza solo basePrice (non totalCost) perché surcharges sono sempre IVA esclusa
-      // Questo è consistente con la logica di calcolo margine (linee 1018-1030)
+      // ✨ FIX: Normalizza basePrice e surcharges separatamente perché seguono lo stesso vat_mode del listino
       let basePriceExclVATForComparison = basePrice;
       if (customVATMode === "included") {
         basePriceExclVATForComparison = normalizePrice(
@@ -786,11 +804,19 @@ async function calculateWithDefaultMargin(
           customVATRate
         );
       }
-      // Surcharges sono sempre IVA esclusa, quindi li aggiungiamo direttamente
+      let surchargesExclVATForComparison = surcharges;
+      if (customVATMode === "included") {
+        surchargesExclVATForComparison = normalizePrice(
+          surcharges,
+          "included",
+          "excluded",
+          customVATRate
+        );
+      }
       const totalCostExclVATForComparison =
-        basePriceExclVATForComparison + surcharges;
+        basePriceExclVATForComparison + surchargesExclVATForComparison;
 
-      // ✨ BUG FIX: Normalizza solo supplierBasePrice (non supplierTotalCostRaw) perché supplierSurcharges sono sempre IVA esclusa
+      // ✨ FIX: Normalizza supplierBasePrice e supplierSurcharges separatamente perché seguono lo stesso vat_mode del master list
       let supplierBasePriceExclVATForComparison = 0;
       if (supplierBasePrice > 0) {
         if (masterVATMode === "included") {
@@ -804,9 +830,18 @@ async function calculateWithDefaultMargin(
           supplierBasePriceExclVATForComparison = supplierBasePrice;
         }
       }
-      // SupplierSurcharges sono sempre IVA esclusa, quindi li aggiungiamo direttamente
+      let supplierSurchargesExclVATForComparison = supplierSurcharges;
+      if (supplierSurcharges > 0 && masterVATMode === "included") {
+        supplierSurchargesExclVATForComparison = normalizePrice(
+          supplierSurcharges,
+          "included",
+          "excluded",
+          masterVATRate
+        );
+      }
       const supplierTotalCostExclVATForComparison =
-        supplierBasePriceExclVATForComparison + supplierSurcharges;
+        supplierBasePriceExclVATForComparison +
+        supplierSurchargesExclVATForComparison;
 
       // Confronta su base IVA esclusa per determinare se modificato manualmente
       const isManuallyModified =
@@ -1044,8 +1079,17 @@ async function calculateWithDefaultMargin(
         );
       }
 
-      // Surcharges sono sempre IVA esclusa
-      const totalCostExclVAT = basePriceExclVAT + surcharges;
+      // ✨ FIX: Surcharges seguono lo stesso vat_mode del listino (non sono sempre IVA esclusa)
+      let surchargesExclVAT = surcharges;
+      if (customVATMode === "included") {
+        surchargesExclVAT = normalizePrice(
+          surcharges,
+          "included",
+          "excluded",
+          customVATRate
+        );
+      }
+      const totalCostExclVAT = basePriceExclVAT + surchargesExclVAT;
 
       // ✨ FIX: Usa i valori già normalizzati calcolati sopra
       // supplierTotalCostExclVAT e totalCostExclVAT sono già stati calcolati nella sezione precedente
@@ -1120,7 +1164,7 @@ async function calculateWithDefaultMargin(
 
       return {
         basePrice: basePriceExclVAT, // Sempre IVA esclusa per consistenza
-        surcharges,
+        surcharges: surchargesExclVAT, // Sempre IVA esclusa per consistenza
         margin: marginExclVAT,
         // ✨ FIX: Quando i prezzi sono modificati manualmente, totalCost = prezzo listino personalizzato
         // Quando i prezzi sono identici al master, totalCost = supplierTotalCost (per consistenza)
