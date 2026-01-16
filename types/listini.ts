@@ -181,6 +181,9 @@ export interface CreatePriceListInput {
   description?: string;
   notes?: string;
   metadata?: Record<string, any>;
+  // ✨ NUOVO: VAT Semantics (ADR-001) - Opzionali per retrocompatibilità
+  vat_mode?: "included" | "excluded" | null;
+  vat_rate?: number;
 }
 
 /**
@@ -200,6 +203,9 @@ export interface UpdatePriceListInput {
   description?: string;
   notes?: string;
   metadata?: Record<string, any>;
+  // ✨ NUOVO: VAT Semantics (ADR-001) - Opzionali per retrocompatibilità
+  vat_mode?: "included" | "excluded" | null;
+  vat_rate?: number;
 }
 
 /**
