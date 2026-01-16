@@ -1,5 +1,9 @@
 # RISPOSTA ALL'AUDIT - SpedireSicuro Platform
 
+> **AGGIORNAMENTO 2026-01-16**: Eseguita verifica "Studio Assoluto". I fix per le vulnerabilità P1 (Ownership, Locking, Logging) sono stati confermati e testati con successo. Vedi [AUDIT_STUDY_2026_ABSOLUTE.md](./AUDIT_STUDY_2026_ABSOLUTE.md) per i dettagli.
+
+# RISPOSTA ALL'AUDIT - SpedireSicuro Platform
+
 **Data**: 2026-01-11
 **Auditor**: Hostile Security Review
 **Respondent**: Development Team
@@ -26,8 +30,9 @@ Ringraziamo per l'audit approfondito. Rispondiamo punto per punto con **evidenze
 **Evidenze dal codice**:
 
 📄 `lib/wallet/credit-check.ts:48-57`
+
 ```typescript
-const isSuperadmin = data.role === 'SUPERADMIN' || data.role === 'superadmin';
+const isSuperadmin = data.role === "SUPERADMIN" || data.role === "superadmin";
 
 // Superadmin bypassa controllo credito
 if (isSuperadmin) {
@@ -40,6 +45,7 @@ if (isSuperadmin) {
 ```
 
 📄 `lib/shipments/create-shipment-core.ts:229-241`
+
 ```typescript
 const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin'
 
@@ -57,11 +63,13 @@ if (!isSuperadmin) {
 ### CONTROLLI ESISTENTI
 
 **Audit Trail completo**:
+
 - Ogni operazione SuperAdmin tracciata con `ActingContext` (`lib/safe-auth.ts:41-70`)
 - Audit log registra: `actor_id`, `target_id`, `impersonation_active`, `reason`
 - Migration `20251221201850_audit_actor_schema.sql` crea schema audit con tracciamento completo
 
 **Impersonation sicuro**:
+
 - Cookie firmato AES-256-GCM + HMAC-SHA256 (`lib/security/impersonation-cookie.ts:115-169`)
 - TTL 30 minuti (`DEFAULT_TTL_MS = 30 * 60 * 1000`)
 - Reason obbligatorio per audit trail
@@ -70,6 +78,7 @@ if (!isSuperadmin) {
 ### GAP RISPETTO AUDIT
 
 **Mancanti** (ammessi):
+
 1. ❌ Flag `ALLOW_WALLET_BYPASS=false` env-level kill switch
 2. ❌ Double approval per operazioni critiche
 3. ❌ Alerting real-time su bypass usage
@@ -78,6 +87,7 @@ if (!isSuperadmin) {
 ### POSIZIONE
 
 **DIFESA PARZIALE**:
+
 - Il bypass è **governance requirement** per:
   - Testing in produzione (smoke tests)
   - Emergenze clienti (rimborsi immediati)
@@ -98,6 +108,7 @@ if (!isSuperadmin) {
 **Evidenze dal codice**:
 
 📄 `supabase/migrations/044_idempotency_locks.sql:27-47`
+
 ```sql
 CREATE TABLE IF NOT EXISTS idempotency_locks (
   idempotency_key TEXT PRIMARY KEY,  -- ✅ UNIQUE constraint DB-level
@@ -110,6 +121,7 @@ CREATE TABLE IF NOT EXISTS idempotency_locks (
 ```
 
 📄 `supabase/migrations/044_idempotency_locks.sql:100-116`
+
 ```sql
 CREATE OR REPLACE FUNCTION acquire_idempotency_lock(...)
 BEGIN
@@ -125,16 +137,21 @@ BEGIN
 ```
 
 📄 `lib/shipments/create-shipment-core.ts:108-114`
+
 ```typescript
 // CRASH-SAFE IDEMPOTENCY LOCK
-const { data: lockResult, error: lockError } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
-  p_idempotency_key: idempotencyKey,
-  p_user_id: targetId,
-  p_ttl_minutes: 30,
-})
+const { data: lockResult, error: lockError } = await supabaseAdmin.rpc(
+  "acquire_idempotency_lock",
+  {
+    p_idempotency_key: idempotencyKey,
+    p_user_id: targetId,
+    p_ttl_minutes: 30,
+  }
+);
 ```
 
 **Flusso implementato**:
+
 1. Lock acquisito **PRIMA** del wallet debit (riga 110)
 2. Lock completato **DOPO** shipment creation (riga 496)
 3. Se crash tra debit e shipment → lock status='failed' → **previene re-debit** (righe 181-191)
@@ -142,11 +159,13 @@ const { data: lockResult, error: lockError } = await supabaseAdmin.rpc('acquire_
 ### WALLET DEBIT IDEMPOTENCY
 
 **PARZIALMENTE CONFORME**:
+
 - ✅ `decrement_wallet_balance()` ha lock atomico `FOR UPDATE NOWAIT` (`040_wallet_atomic_operations.sql:36`)
 - ✅ Idempotency **logica** enforced tramite `idempotency_locks` table
 - ❌ `decrement_wallet_balance()` NON riceve `idempotency_key` come parametro
 
 **Architettura attuale**:
+
 ```
 shipment_creation (idempotency_key)
   ↓
@@ -162,9 +181,11 @@ complete_lock()               -- Status='completed'
 ### GAP RISPETTO AUDIT
 
 **Aspettativa auditor**:
+
 > "UNIQUE(idempotency_key) lato DB + Lock + TTL **sulla funzione wallet stessa**"
 
 **Realtà**:
+
 - Idempotency key è **a livello shipment creation** (transaction layer)
 - Wallet function è **atomic** ma NON idempotent standalone
 - Se chiamata direttamente `decrement_wallet_balance()` senza shipment flow → **no idempotency**
@@ -172,11 +193,13 @@ complete_lock()               -- Status='completed'
 ### POSIZIONE
 
 **DIFESA PARZIALE**:
+
 - Design attuale previene **double charge in shipment flow** (99% dei casi)
 - Lock pessimistico `FOR UPDATE NOWAIT` garantisce atomicità
 - Idempotency table con UNIQUE constraint DB-enforced
 
 **AMMISSIONE**:
+
 - Wallet function **non è standalone idempotent** ✅ **CONCORDIAMO**
 - Se usata fuori da shipment flow (es. direct credit/debit) → no protezione
 - Enterprise-grade richiederebbe `idempotency_key` IN wallet function signature
@@ -194,21 +217,23 @@ complete_lock()               -- Status='completed'
 **Evidenze dal codice**:
 
 📄 `app/api/ocr/extract/route.ts:28-49`
+
 ```typescript
 // Crea adapter OCR
 // Usa 'auto' per selezionare automaticamente:
 // 1. Google Vision (se GOOGLE_CLOUD_CREDENTIALS configurata) ✅ ATTIVO
 // 2. Claude Vision (se ANTHROPIC_API_KEY configurata)
-const ocr = createOCRAdapter('auto');
+const ocr = createOCRAdapter("auto");
 
 // Converti base64 a Buffer
-const imageBuffer = Buffer.from(image, 'base64');
+const imageBuffer = Buffer.from(image, "base64");
 
 // Estrai dati con fallback: Google Vision → Claude Vision
 let result = await ocr.extract(imageBuffer, options);
 ```
 
 **Provider esterni utilizzati**:
+
 1. Google Cloud Vision API (primary)
 2. Anthropic Claude Vision API (fallback)
 3. Tesseract OCR (local, se configurato)
@@ -216,10 +241,12 @@ let result = await ocr.extract(imageBuffer, options);
 ### PROTEZIONI ESISTENTI
 
 **NO PII in logs** (verificato):
+
 - Shipment creation NON logga dati sensibili: `console.log({ userId: targetId?.substring(0, 8) + '...' })` (`create-shipment-core.ts:226`)
 - Audit log structure non include PII raw data
 
 **Data retention**:
+
 - ❌ NO policy esplicita per immagini caricate
 - ❌ NO TTL automatico su upload storage
 - ❌ NO explicit user consent flow per OCR processing
@@ -227,6 +254,7 @@ let result = await ocr.extract(imageBuffer, options);
 ### GAP RISPETTO AUDIT
 
 **Mancanti** (ammessi):
+
 1. ❌ Data retention policy formale (es. "immagini eliminate dopo 7 giorni")
 2. ❌ Explicit user consent flow ("Accetto che immagini siano processate da servizi AI")
 3. ❌ Kill-switch Vision (`ENABLE_OCR_VISION=false`)
@@ -236,6 +264,7 @@ let result = await ocr.extract(imageBuffer, options);
 ### POSIZIONE
 
 **AMMISSIONE TOTALE**:
+
 - OCR è **business critical** ma GDPR compliance è **incompleta** ✅ **CONCORDIAMO**
 - GDPR Art. 9 (dati sensibili) richiede:
   - Explicit consent ❌
@@ -244,10 +273,12 @@ let result = await ocr.extract(imageBuffer, options);
   - Retention limits ❌
 
 **RISCHIO**:
+
 - Upload di documenti con dati sanitari/giudiziari → violazione GDPR
 - Provider AI (Google/Anthropic) vedono immagini raw → data breach indiretto possibile
 
 **AZIONE RICHIESTA**:
+
 1. Consent flow esplicito (P0)
 2. DPA con provider (P0)
 3. Retention policy + auto-cleanup (P1)
@@ -264,12 +295,14 @@ let result = await ocr.extract(imageBuffer, options);
 **Evidenze dal codice**:
 
 📄 `supabase/migrations/056.5_add_byoc_to_account_type_enum.sql`
+
 ```sql
 -- Adds 'byoc' to account_type enum
 ALTER TYPE account_type ADD VALUE IF NOT EXISTS 'byoc';
 ```
 
 📄 `lib/pricing/platform-cost-calculator.ts:138-151`
+
 ```typescript
 // Check 5: Verifica tipo utente
 const { data: user } = await supabaseAdmin
@@ -290,6 +323,7 @@ return { apiSource: 'reseller_own', ... };
 ```
 
 **Logica di separazione**:
+
 - Runtime check su `account_type` (enum string)
 - Function `determineApiSource()` decide quale contratto usare
 - Shipment creation flow **identico** per BYOC e Broker
@@ -297,10 +331,12 @@ return { apiSource: 'reseller_own', ... };
 ### PROTEZIONI ESISTENTI
 
 **RLS policies** (by account_type):
+
 - Migration `043_wallet_transactions_rls_hardening.sql` differenzia policies per account type
 - Test coverage: `tests/unit/byoc-permissions.test.ts`
 
 **NO compile-time enforcement**:
+
 - ❌ NO TypeScript branded types (`BrokerContext | ByocContext`)
 - ❌ NO separate code paths at type-level
 - ❌ NO DB CHECK constraints per business model
@@ -308,9 +344,11 @@ return { apiSource: 'reseller_own', ... };
 ### GAP RISPETTO AUDIT
 
 **Aspettativa auditor**:
+
 > "Compile-time enforcement + DB guardrail"
 
 **Realtà**:
+
 - Separazione è **convention over configuration**
 - Refactor futuro potrebbe toccare wallet per BYOC **per errore**
 - Bug silenzioso possibile (es. wallet debit per BYOC user)
@@ -318,20 +356,26 @@ return { apiSource: 'reseller_own', ... };
 ### POSIZIONE
 
 **DIFESA PARZIALE**:
+
 - Account type enum è **database-enforced** (PostgreSQL enum)
 - Test coverage verifica permissions: `tests/unit/byoc-permissions.test.ts`
 - RLS policies prevengono accesso cross-boundary
 
 **AMMISSIONE**:
+
 - **NO type-level safety** in TypeScript ✅ **CONCORDIAMO**
 - Possibile refactor che introduce bug BYOC/Broker mixing
 - Enterprise-grade richiederebbe:
   ```typescript
-  type BrokerContext = ActingContext & { businessModel: 'broker' }
-  type ByocContext = ActingContext & { businessModel: 'byoc', walletDisabled: true }
+  type BrokerContext = ActingContext & { businessModel: "broker" };
+  type ByocContext = ActingContext & {
+    businessModel: "byoc";
+    walletDisabled: true;
+  };
   ```
 
 **AZIONE RICHIESTA**:
+
 1. Branded types TypeScript (P1)
 2. DB CHECK constraint: `CHECK (account_type != 'byoc' OR wallet_balance IS NULL)` (P2)
 3. Integration tests per business model separation (P2)
@@ -349,6 +393,7 @@ return { apiSource: 'reseller_own', ... };
 **Evidenze dal codice**:
 
 📄 `lib/db/redis.ts:1-30`
+
 ```typescript
 // Upstash Redis for edge compatibility (HTTP-based)
 // Lazy initialization pattern
@@ -357,13 +402,16 @@ return { apiSource: 'reseller_own', ... };
 ```
 
 📄 `lib/cache/quote-cache.ts` (referenced, not read)
+
 - Quote caching logic presente
 - NO test files trovati per quote-cache
 
 **Test script esistente**:
+
 - `scripts/test-redis-connection.ts` (connectivity test, non functional)
 
 **Test automatici**:
+
 - ❌ NO test per cache hit/miss logic
 - ❌ NO test per race condition su quote-cache
 - ❌ NO test per cache invalidation
@@ -372,11 +420,13 @@ return { apiSource: 'reseller_own', ... };
 ### GAP RISPETTO AUDIT
 
 **Rischio identificato**:
+
 > "Cache finanziaria non testata → Race su prezzi = margini sbagliati"
 
 ### POSIZIONE
 
 **AMMISSIONE TOTALE**:
+
 - Redis è **operativo** ma **non test-covered** ✅ **CONCORDIAMO**
 - Quote cache è **business critical** (pricing)
 - Race condition su cache potrebbe causare:
@@ -384,6 +434,7 @@ return { apiSource: 'reseller_own', ... };
   - Overbooking (doppia vendita stesso slot)
 
 **AZIONE RICHIESTA**:
+
 1. Test suite Redis cache (Vitest + Redis mock) (P1)
 2. Chaos tests: cache miss, Redis down, stale data (P1)
 3. Load tests con concorrenza alta (P2)
@@ -399,17 +450,18 @@ return { apiSource: 'reseller_own', ... };
 **Evidenze dal codice**:
 
 📄 `lib/wallet/retry.ts:65-96`
+
 ```typescript
 export async function withConcurrencyRetry<T>(
   operation: () => Promise<{ data?: T; error?: any }>,
   options: { maxRetries?: number; operationName?: string } = {}
 ): Promise<{ data?: T; error?: any }> {
-  const { maxRetries = 3 } = options
-  const backoffDelays = [50, 150, 300]  // Exponential backoff
+  const { maxRetries = 3 } = options;
+  const backoffDelays = [50, 150, 300]; // Exponential backoff
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const isLockError = isLockContentionError(result.error)
-    if (!isLockError) return result  // Fail-fast su errori NON-lock
+    const isLockError = isLockContentionError(result.error);
+    if (!isLockError) return result; // Fail-fast su errori NON-lock
     // Retry con backoff
   }
 }
@@ -419,18 +471,20 @@ export async function withConcurrencyRetry<T>(
 **Retry carrier**: ❌ NON implementato a livello adapter
 
 📄 `lib/shipments/create-shipment-core.ts:296-307`
+
 ```typescript
 try {
   courierResponse = await courierClient.createShipping(
     { sender, recipient, packages, insurance, cod, notes },
-    { timeout: 30000 }  // Timeout, ma NO retry
-  )
+    { timeout: 30000 } // Timeout, ma NO retry
+  );
 } catch (courierError: any) {
   // Compensazione: refund wallet
 }
 ```
 
 **NO retry su carrier API**:
+
 - Timeout 30s configurato
 - Errore → immediate compensation (refund)
 - NO exponential backoff
@@ -439,6 +493,7 @@ try {
 ### IDEMPOTENCY CORRIERE
 
 **NON GARANTITA**:
+
 - Carriers API (SpedisciOnline, Sendcloud, etc.) potrebbero NON essere idempotenti
 - Se retry automatico → rischio doppia etichetta
 - Sistema attuale: **fail-fast + compensation**
@@ -446,6 +501,7 @@ try {
 ### POSIZIONE
 
 **DIFESA TOTALE**:
+
 - **NO retry su carrier API** → **design corretto** per sicurezza finanziaria
 - Retry automatico richiederebbe:
   - Idempotency key inviata al corriere
@@ -454,6 +510,7 @@ try {
 - Design attuale: **fail-fast + human review** (compensation queue)
 
 **DISACCORDO CON AUDITOR**:
+
 > "Retry lato adapter = rischio doppia spedizione"
 
 **Realtà**: NO retry lato adapter. Retry SOLO per wallet lock (safe). ✅ **AUDIT BASATO SU ASSUNZIONE ERRATA**
@@ -469,6 +526,7 @@ try {
 **Evidenze dal codice**:
 
 📄 `lib/services/compensation/processor.ts:20-125`
+
 ```typescript
 export async function processCompensationQueue(): Promise<{
   success: boolean;
@@ -479,20 +537,21 @@ export async function processCompensationQueue(): Promise<{
 }> {
   // Trova records con status='pending' e created_at > 7 giorni
   const { data: orphanRecords } = await supabaseAdmin
-    .from('compensation_queue')
-    .select('id, user_id, created_at, status, action')
-    .eq('status', 'pending')
-    .lt('created_at', sevenDaysAgo.toISOString());
+    .from("compensation_queue")
+    .select("id, user_id, created_at, status, action")
+    .eq("status", "pending")
+    .lt("created_at", sevenDaysAgo.toISOString());
 
   // Marca come 'expired' (mantiene audit trail)
-  await supabaseAdmin.from('compensation_queue').update({
-    status: 'expired',
-    resolution_notes: 'Auto-expired: record pending da più di 7 giorni',
-  })
+  await supabaseAdmin.from("compensation_queue").update({
+    status: "expired",
+    resolution_notes: "Auto-expired: record pending da più di 7 giorni",
+  });
 }
 ```
 
 📄 `app/api/cron/compensation-queue/route.ts:18-83`
+
 ```typescript
 export const maxDuration = 300; // 5 minuti max
 
@@ -513,6 +572,7 @@ export async function GET(request: NextRequest) {
 **Inserimento in compensation queue**:
 
 📄 `lib/shipments/create-shipment-core.ts:329-354` (corriere fallisce)
+
 ```typescript
 // Compensation: etichetta non creata → refund wallet
 const { error: compensateError } = await refundFn(...)
@@ -532,6 +592,7 @@ if (compensateError) {
 ### METRICHE PRODUZIONE
 
 **Assenti**:
+
 - ❌ NO dashboard compensation queue
 - ❌ NO alerting su pending > X giorni
 - ❌ NO metriche: success rate, average resolution time
@@ -541,16 +602,19 @@ if (compensateError) {
 ### POSIZIONE
 
 **AMMISSIONE TOTALE**:
+
 - Compensation queue è **implementata** ✅
 - CRON job configurato (cleanup automatico) ✅
 - **Observability ZERO** ❌ ✅ **CONCORDIAMO**
 
 **RISCHIO**:
+
 - Orphan financial records non visibili
 - Contabilità incoerente non rilevata
 - Refund mancati non allertati
 
 **AZIONE RICHIESTA**:
+
 1. Dashboard compensation queue (Grafana/custom) (P1)
 2. Alerting: `pending > 24h` → notification (P1)
 3. Dead-letter queue per retry failures (P1)
@@ -567,18 +631,20 @@ if (compensateError) {
 **Evidenze dal codice**:
 
 📄 `lib/safe-auth.ts:41-70`
+
 ```typescript
 export interface ActingContext {
-  actor: ActingUser;      // Chi ESEGUE (SuperAdmin se impersonating)
-  target: ActingUser;     // Per CHI viene eseguita (il cliente)
+  actor: ActingUser; // Chi ESEGUE (SuperAdmin se impersonating)
+  target: ActingUser; // Per CHI viene eseguita (il cliente)
   isImpersonating: boolean;
-  metadata?: { reason?, requestId?, ip? };
+  metadata?: { reason?; requestId?; ip? };
 }
 ```
 
 📄 `lib/safe-auth.ts:122-134`
+
 ```typescript
-const impersonateTargetId = headersList.get('x-sec-impersonate-target');
+const impersonateTargetId = headersList.get("x-sec-impersonate-target");
 
 if (!impersonateTargetId) {
   return { actor, target: actor, isImpersonating: false };
@@ -588,6 +654,7 @@ if (!impersonateTargetId) {
 ```
 
 **NO scope limits**:
+
 - SuperAdmin può fare **QUALSIASI operazione** come target user
 - NO distinzione read/write
 - NO time-boxed impersonation (solo TTL cookie 30min)
@@ -596,6 +663,7 @@ if (!impersonateTargetId) {
 ### AUDIT TRAIL
 
 **Completo** (verificato):
+
 - Migration `20251221201850_audit_actor_schema.sql`
 - Ogni operazione logga: `actor_id`, `target_id`, `impersonation_active`, `metadata`
 - Function `logActingContextAudit()` (`safe-auth.ts:323-362`)
@@ -603,6 +671,7 @@ if (!impersonateTargetId) {
 ### GAP RISPETTO AUDIT
 
 **Mancanti**:
+
 1. ❌ Scope limit (es. `impersonate:read` vs `impersonate:write`)
 2. ❌ Time-boxed impersonation (es. "valida solo per 10 minuti")
 3. ❌ Reason mandatory con validation (es. "deve matchare ticket ID")
@@ -611,16 +680,19 @@ if (!impersonateTargetId) {
 ### POSIZIONE
 
 **DIFESA PARZIALE**:
+
 - Impersonation è **governance requirement** per supporto clienti
 - Audit completo permette **post-mortem investigation**
 - Cookie TTL 30min limita window di rischio
 
 **AMMISSIONE**:
+
 - NO preventive controls, solo detective ✅ **CONCORDIAMO**
 - Scope granulare richiederebbe permission matrix complessa
 - Enterprise-grade richiederebbe approval workflow
 
 **AZIONE RICHIESTA**:
+
 1. Scope limits (read/write separation) (P1)
 2. Reason validation (ticket ID required) (P2)
 3. Approval workflow per operazioni critiche (P2)
@@ -638,11 +710,13 @@ if (!impersonateTargetId) {
 **Evidenze dal codice**:
 
 Ricerca frontend components:
+
 - `components/wallet/recharge-wallet-dialog.tsx` - UI wallet recharge
 - `components/shipments/intelligent-quote-comparator.tsx` - Quote comparison UI
 - `app/dashboard/spedizioni/nuova/page.tsx` - Booking page
 
 **Logica critica nel frontend**:
+
 - ❌ NO debounce finanziario nel client (solo UX debounce)
 - ❌ NO queue management client-side
 - ✅ Credit check è **server-side**: `lib/wallet/credit-check.ts`
@@ -650,6 +724,7 @@ Ricerca frontend components:
 - ✅ Wallet operations sono **RPC server-side**: `decrement_wallet_balance()`
 
 **Client può bypassare?**:
+
 - NO: tutte le operazioni critiche sono protect by:
   - NextAuth session validation
   - RLS policies database-level
@@ -658,14 +733,17 @@ Ricerca frontend components:
 ### POSIZIONE
 
 **DIFESA TOTALE**:
+
 - Frontend ha **SOLO UI logic** (form validation, UX debounce)
 - **ZERO business logic critica** nel client
 - Architettura: Server Actions + RPC functions (trusted backend)
 
 **DISACCORDO CON AUDITOR**:
+
 > "Client può bypassare con chiamate dirette"
 
 **Realtà**:
+
 - RLS policies impediscono bypass
 - Session validation obbligatoria
 - Client non può chiamare `decrement_wallet_balance()` direttamente (service_role only)
@@ -681,11 +759,13 @@ Ricerca frontend components:
 **CONFERMATO**: 300+ test, ma **chaos tests limitati**.
 
 **Test files trovati**:
+
 - 56+ unit/integration tests (`tests/`)
 - 13 E2E tests (`e2e/`)
 - 20+ smoke tests (`scripts/smoke-*.ts`)
 
 **Esempi**:
+
 - `tests/integration/shipment-lifecycle.test.ts` - Happy path
 - `tests/integration/platform-costs.integration.test.ts` - Financial tracking
 - `tests/security/rpc-permissions.test.ts` - Security
@@ -693,6 +773,7 @@ Ricerca frontend components:
 - `scripts/test-idempotency-crash-safety.ts` - Crash scenarios
 
 **Smoke tests wallet**:
+
 - `scripts/smoke-wallet.ts`
 - `scripts/smoke-test-zero-balance.ts`
 - `scripts/smoke-test-no-label-no-credit-courier-fail.ts`
@@ -701,6 +782,7 @@ Ricerca frontend components:
 ### CHAOS TESTS
 
 **Limitati**:
+
 - ✅ Test idempotency crash
 - ✅ Test wallet concurrency
 - ✅ Test negative paths
@@ -712,11 +794,13 @@ Ricerca frontend components:
 ### POSIZIONE
 
 **AMMISSIONE PARZIALE**:
+
 - Coverage è **alta** (300+ tests) ✅
 - **Risk-based testing parziale** ❌
 - Chaos engineering **assente** ❌
 
 **AZIONE RICHIESTA**:
+
 1. Chaos tests: DB timeout, network partition, Redis down (P2)
 2. Load tests: 100 concurrent shipments creation (P2)
 3. Fuzz testing: invalid inputs, edge cases (P3)
@@ -732,12 +816,15 @@ Ricerca frontend components:
 **Evidenze dal codice**:
 
 Test trovati:
+
 - `tests/integration/stripe-webhook.test.ts` - Webhook handler tests
 
 Actions:
+
 - `actions/wallet.ts` - `initiateCardRecharge()` Stripe Checkout
 
 **Stripe integration**:
+
 - ✅ Checkout session creation
 - ✅ Webhook signature validation
 - ❌ NO test end-to-end in ambiente reale (solo mock)
@@ -747,16 +834,19 @@ Actions:
 ### POSIZIONE
 
 **AMMISSIONE TOTALE**:
+
 - Stripe è **implementato** ma **non battle-tested** ✅ **CONCORDIAMO**
 - Webhook validation è **testata** (mock)
 - Live testing **assente**
 
 **RISCHIO**:
+
 - 3DS flow potrebbe fallire in produzione
 - Webhook retry logic non verificato
 - Edge cases carte internazionali non testati
 
 **AZIONE RICHIESTA**:
+
 1. Stripe test mode end-to-end (P1)
 2. 3DS flow testing (P1)
 3. Webhook replay testing (P2)
@@ -772,16 +862,19 @@ Actions:
 **CONFERMATO**: AI workers esistono, **no sanitization output**.
 
 **Evidenze**:
+
 - `lib/agent/workers/ocr.ts` - OCR extraction worker
 - `tests/integration/agent-chat.pricing.test.ts` - Chat pricing tests
 
 **Rischio**:
+
 - AI worker potrebbe esporre logica business in spiegazioni
 - No filter su output AI (es. "il sistema calcola margine come...")
 
 ### POSIZIONE
 
 **AMMISSIONE**:
+
 - Rischio **basso** ma **reale**
 - Output AI non sanitizzato
 
@@ -806,21 +899,15 @@ Actions:
 ## CONCORDANZE CON AUDIT
 
 **Bloccanti P0 confermati**:
+
 1. ✅ SuperAdmin wallet bypass richiede kill-switch + alerting
 2. ⚠️ Idempotency wallet non standalone (ma safe in shipment flow)
 3. ✅ GDPR OCR incomplete (consent + DPA + retention)
 4. ✅ BYOC/Broker no type-safety (solo runtime checks)
 
-**Alti P1 confermati**:
-5. ✅ Redis cache no test automatici
-6. ❌ Retry carrier API: **audit errato**, NO retry implementato
-7. ✅ Compensation queue no observability
-8. ✅ Acting Context no scope limits
+**Alti P1 confermati**: 5. ✅ Redis cache no test automatici 6. ❌ Retry carrier API: **audit errato**, NO retry implementato 7. ✅ Compensation queue no observability 8. ✅ Acting Context no scope limits
 
-**Medi P2 confermati**:
-9. ❌ Frontend logic: **audit errato**, business logic è server-side
-10. ⚠️ Test coverage alta, chaos tests limitati
-11. ✅ Stripe non live-tested
+**Medi P2 confermati**: 9. ❌ Frontend logic: **audit errato**, business logic è server-side 10. ⚠️ Test coverage alta, chaos tests limitati 11. ✅ Stripe non live-tested
 
 ## STATO REALE SISTEMA
 
