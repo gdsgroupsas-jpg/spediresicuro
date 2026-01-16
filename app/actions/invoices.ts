@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { CreateInvoiceDTO, Invoice, InvoiceStatus } from '@/types/invoices';
 import { revalidatePath } from 'next/cache';
 import { generateInvoicePDF, InvoiceData } from '@/lib/invoices/pdf-generator';
+import { generateInvoiceXML, validateFatturaPAData, FatturaPAData } from '@/lib/invoices/xml-generator';
 
 /**
  * Crea una nuova bozza di fattura
@@ -326,4 +327,168 @@ export async function generateInvoiceForShipment(shipmentId: string) {
   revalidatePath('/dashboard/admin/invoices');
 
   return invoice as Invoice;
+}
+
+/**
+ * Genera XML FatturaPA per una fattura esistente
+ * 
+ * @param invoiceId - ID fattura
+ * @returns URL XML generato
+ */
+export async function generateXMLForInvoice(invoiceId: string): Promise<{
+  success: boolean;
+  xmlUrl?: string;
+  error?: string;
+}> {
+  try {
+    const supabase = createServerActionClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    // Recupera fattura con dati completi
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
+      .from('invoices')
+      .select(`
+        *,
+        items:invoice_items(*),
+        user:users(
+          id,
+          name,
+          email,
+          company_name,
+          vat_number,
+          tax_code,
+          address,
+          city,
+          province,
+          zip,
+          country,
+          codiceSDI,
+          pec
+        )
+      `)
+      .eq('id', invoiceId)
+      .single();
+
+    if (invoiceError || !invoice) {
+      return { success: false, error: 'Fattura non trovata' };
+    }
+
+    // Verifica che la fattura sia emessa
+    if (invoice.status !== 'issued') {
+      return { success: false, error: 'Solo fatture emesse possono avere XML' };
+    }
+
+    // Prepara dati per XML
+    const invoiceData: InvoiceData = {
+      invoiceNumber: invoice.invoice_number || '',
+      issueDate: invoice.invoice_date ? new Date(invoice.invoice_date) : new Date(),
+      dueDate: invoice.due_date ? new Date(invoice.due_date) : undefined,
+      sender: {
+        companyName: process.env.COMPANY_NAME || 'GDS Group SAS',
+        vatNumber: process.env.COMPANY_VAT_NUMBER || '',
+        taxCode: process.env.COMPANY_TAX_CODE || '',
+        address: process.env.COMPANY_ADDRESS || '',
+        city: process.env.COMPANY_CITY || '',
+        province: process.env.COMPANY_PROVINCE || '',
+        zip: process.env.COMPANY_ZIP || '',
+        country: 'Italia',
+      },
+      recipient: {
+        name: (invoice.user as any)?.company_name || (invoice.user as any)?.name || '',
+        vatNumber: (invoice.user as any)?.vat_number,
+        taxCode: (invoice.user as any)?.tax_code,
+        address: (invoice.user as any)?.address || '',
+        city: (invoice.user as any)?.city || '',
+        province: (invoice.user as any)?.province || '',
+        zip: (invoice.user as any)?.zip || '',
+        country: (invoice.user as any)?.country || 'Italia',
+      },
+      items: (invoice.items || []).map((item: any) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        vatRate: item.tax_rate,
+        total: item.total,
+      })),
+      paymentMethod: 'Bonifico bancario',
+      iban: process.env.COMPANY_IBAN || '',
+      notes: invoice.notes || undefined,
+    };
+
+    const fatturaPAData: FatturaPAData = {
+      ...invoiceData,
+      sdiCode: (invoice.user as any)?.codiceSDI,
+      pec: (invoice.user as any)?.pec,
+      sender: {
+        ...invoiceData.sender,
+        sdiCode: process.env.COMPANY_SDI_CODE,
+        pec: process.env.COMPANY_PEC,
+      },
+    };
+
+    // Valida dati
+    const validationErrors = validateFatturaPAData(fatturaPAData);
+    if (validationErrors.length > 0) {
+      return {
+        success: false,
+        error: `Dati incompleti per fatturazione elettronica: ${validationErrors.join(', ')}`,
+      };
+    }
+
+    // Genera XML
+    const xmlBuffer = await generateInvoiceXML(fatturaPAData);
+    const currentYear = new Date().getFullYear();
+    const xmlPath = `invoices/${currentYear}/${invoice.invoice_number}.xml`;
+
+    // Upload XML
+    const { error: xmlUploadError } = await supabaseAdmin.storage
+      .from('documents')
+      .upload(xmlPath, xmlBuffer, {
+        contentType: 'application/xml',
+        upsert: true, // Permetti sovrascrittura se già esiste
+      });
+
+    if (xmlUploadError) {
+      return {
+        success: false,
+        error: `Errore upload XML: ${xmlUploadError.message}`,
+      };
+    }
+
+    // Ottieni URL pubblico
+    const { data: { publicUrl: xmlUrl } } = supabaseAdmin.storage
+      .from('documents')
+      .getPublicUrl(xmlPath);
+
+    // Aggiorna fattura con XML URL
+    const { error: updateError } = await supabaseAdmin
+      .from('invoices')
+      .update({ xml_url: xmlUrl })
+      .eq('id', invoiceId);
+
+    if (updateError) {
+      return {
+        success: false,
+        error: `Errore aggiornamento fattura: ${updateError.message}`,
+      };
+    }
+
+    revalidatePath('/dashboard/fatture');
+    revalidatePath('/dashboard/admin/invoices');
+
+    return {
+      success: true,
+      xmlUrl,
+    };
+  } catch (error: any) {
+    console.error('Errore generateXMLForInvoice:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto',
+    };
+  }
 }
