@@ -318,8 +318,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
     if (!lockResult || lockResult.length === 0 || !lockResult[0]?.acquired) {
       const status = lockResult?.[0]?.status || "unknown";
-      const errorMsg = lockResult?.[0]?.error_message || "Operazione già in corso";
-      
+      const errorMsg =
+        lockResult?.[0]?.error_message || "Operazione già in corso";
+
       console.warn(
         `🔒 [SYNC] Lock non acquisito (status: ${status}): ${errorMsg}`
       );
@@ -1157,84 +1158,11 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             .delete()
             .eq("price_list_id", priceListId);
         } else {
-          // ✨ ENTERPRISE: Lock specifico per (configId, carrierCode, contractCode) per evitare duplicati durante chunking
-          // Quando la sync viene chiamata per ogni zona, più chiamate potrebbero cercare di creare lo stesso listino
-          const listLockKey = options?.configId
-            ? `sync_list_lock:${user.id}:${
-                options.configId
-              }:${carrierCode}:${contractCode.substring(0, 30)}`
-            : null;
+          // ✨ ENTERPRISE: Lock Logic removed (replaced by global DB lock at start of function)
+          // The previous granular Redis lock caused compilation issues and is redundant
+          // given the new global idempotency lock on the whole sync process.
 
-          let listLockAcquired = false;
-          if (redis && listLockKey) {
-            // Lock per 30 secondi (abbastanza per creare il listino)
-            const lockResult = await redis.set(listLockKey, "1", {
-              nx: true,
-              ex: 30,
-            });
-            listLockAcquired = lockResult !== null;
-
-            if (!listLockAcquired) {
-              // Lock già acquisito: riprova la ricerca (potrebbe essere stato creato nel frattempo)
-              console.log(
-                `🔒 [SYNC] Lock attivo per ${listLockKey}, riprovo ricerca listino esistente...`
-              );
-
-              // Ri-cerca il listino (potrebbe essere stato creato da un'altra chiamata)
-              const { data: retryData } = await supabaseAdmin
-                .from("price_lists")
-                .select("id, name, metadata, source_metadata")
-                .eq("created_by", user.id)
-                .eq("list_type", "supplier")
-                .order("created_at", { ascending: false })
-                .limit(10); // Solo gli ultimi 10 per performance
-
-              if (retryData) {
-                const retryMatchingList = retryData.find((pl: any) => {
-                  const metadata = pl.metadata || pl.source_metadata || {};
-                  const plNameLower = (pl.name || "").toLowerCase();
-
-                  const matchesConfigId =
-                    metadata.courier_config_id === options?.configId;
-                  const metadataCarrierCode =
-                    metadata.carrier_code?.toLowerCase();
-                  const matchesCarrierCode = metadataCarrierCode
-                    ? metadataCarrierCode === carrierCode.toLowerCase()
-                    : plNameLower.startsWith(carrierCode.toLowerCase() + "_");
-
-                  const normalizedContractCode = contractCode
-                    .toLowerCase()
-                    .replace(/---/g, "-")
-                    .replace(/--/g, "-")
-                    .trim();
-                  const metadataContractCode =
-                    metadata.contract_code?.toLowerCase();
-                  const matchesContractCode = metadataContractCode
-                    ? metadataContractCode
-                        .replace(/---/g, "-")
-                        .replace(/--/g, "-")
-                        .trim() === normalizedContractCode
-                    : plNameLower.includes(
-                        normalizedContractCode.substring(0, 30)
-                      );
-
-                  return (
-                    matchesConfigId && matchesCarrierCode && matchesContractCode
-                  );
-                });
-
-                if (retryMatchingList) {
-                  existingPriceList = { id: retryMatchingList.id };
-                  console.log(
-                    `✅ [SYNC] Listino trovato dopo retry: id=${retryMatchingList.id.substring(
-                      0,
-                      8
-                    )}...`
-                  );
-                }
-              }
-            }
-          }
+          // Proceed directly to creation logic
 
           // Se ancora non trovato, crea nuovo listino
           if (!existingPriceList) {
@@ -1313,18 +1241,6 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
                 8
               )}...`
             );
-          }
-
-          // Rilascia lock se acquisito
-          if (redis && listLockKey && listLockAcquired) {
-            await redis
-              .del(listLockKey)
-              .catch((e) =>
-                console.warn(
-                  `⚠️ [SYNC] Errore rilascio lock ${listLockKey}:`,
-                  e
-                )
-              );
           }
         }
 
