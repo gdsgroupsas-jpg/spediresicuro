@@ -1149,12 +1149,28 @@ async function calculateWithDefaultMargin(
       }
 
       // Se listino ha IVA inclusa, converti prezzo finale
-      const finalPriceWithVAT =
-        customVATMode === "included"
-          ? isManuallyModified
-            ? totalCost // Usa prezzo originale listino personalizzato (già con IVA inclusa)
-            : calculatePriceWithVAT(finalPriceExclVAT, customVATRate) // Calcola IVA su prezzo + margine
-          : finalPriceExclVAT;
+      // ✨ FIX: Quando listino è supplier (non custom) senza master_list_id e senza margine,
+      // il prezzo dalla matrice è già IVA inclusa, quindi usa totalCost direttamente
+      let finalPriceWithVAT: number;
+      if (customVATMode === "included") {
+        if (isManuallyModified) {
+          // Prezzi modificati manualmente: usa prezzo originale listino personalizzato (già con IVA inclusa)
+          finalPriceWithVAT = totalCost;
+          console.log(`✅ [PRICE CALC] Final Price (manually modified, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCost originale)`);
+        } else if (supplierTotalCostExclVAT === 0 && marginExclVAT === 0) {
+          // ✨ FIX: Listino supplier senza margine: usa prezzo originale matrice (già IVA inclusa)
+          // Evita doppia conversione che può causare arrotondamenti
+          finalPriceWithVAT = totalCost;
+          console.log(`✅ [PRICE CALC] Final Price (supplier senza margine, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCost originale, evita doppia conversione)`);
+        } else {
+          // Calcola IVA su prezzo + margine (normalizzato a IVA esclusa)
+          finalPriceWithVAT = calculatePriceWithVAT(finalPriceExclVAT, customVATRate);
+          console.log(`✅ [PRICE CALC] Final Price (con margine, IVA inclusa): €${finalPriceExclVAT.toFixed(2)} (excl) → €${finalPriceWithVAT.toFixed(2)} (incl)`);
+        }
+      } else {
+        finalPriceWithVAT = finalPriceExclVAT;
+        console.log(`✅ [PRICE CALC] Final Price (IVA esclusa): €${finalPriceWithVAT.toFixed(2)}`);
+      }
 
       // Calcola importo IVA
       const vatAmount =
@@ -1196,43 +1212,83 @@ async function calculateWithDefaultMargin(
   }
 
   // Fallback: se non trova entry nella matrice, usa default
-  const totalCost = basePrice + surcharges;
+  // ✨ FIX: Gestione VAT anche nel fallback (ADR-001)
+  const vatModeFallback: "included" | "excluded" = getVATModeWithFallback(
+    priceList.vat_mode ?? null
+  );
+  const vatRateFallback = priceList.vat_rate || 22.0;
 
-  // Margine di default
-  let margin = 0;
+  // Normalizza basePrice e surcharges a IVA esclusa se necessario
+  let basePriceExclVATFallback = basePrice;
+  let surchargesExclVATFallback = surcharges;
+  if (vatModeFallback === "included") {
+    basePriceExclVATFallback = normalizePrice(
+      basePrice,
+      "included",
+      "excluded",
+      vatRateFallback
+    );
+    surchargesExclVATFallback = normalizePrice(
+      surcharges,
+      "included",
+      "excluded",
+      vatRateFallback
+    );
+  }
+  const totalCostExclVATFallback = basePriceExclVATFallback + surchargesExclVATFallback;
+
+  // Margine di default (sempre su base IVA esclusa)
+  let marginExclVATFallback = 0;
   if (priceList.default_margin_percent) {
-    margin = totalCost * (priceList.default_margin_percent / 100);
+    marginExclVATFallback = totalCostExclVATFallback * (priceList.default_margin_percent / 100);
   } else if (priceList.default_margin_fixed) {
-    margin = priceList.default_margin_fixed;
+    marginExclVATFallback = priceList.default_margin_fixed;
   } else {
     // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
     // applica margine di default globale per garantire consistenza nel comparatore
     if (priceList.list_type === "custom" && priceList.master_list_id) {
-      margin = totalCost * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+      marginExclVATFallback = totalCostExclVATFallback * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
       console.log(
         `⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato (fallback), applicato margine default globale ${
           pricingConfig.DEFAULT_MARGIN_PERCENT
-        }%: €${margin.toFixed(2)}`
+        }%: €${marginExclVATFallback.toFixed(2)}`
       );
     }
   }
 
-  const finalPrice = totalCost + margin;
+  const finalPriceExclVATFallback = totalCostExclVATFallback + marginExclVATFallback;
+
+  // Se listino ha IVA inclusa, converti prezzo finale
+  const finalPriceFallback = vatModeFallback === "included"
+    ? calculatePriceWithVAT(finalPriceExclVATFallback, vatRateFallback)
+    : finalPriceExclVATFallback;
+
+  // Calcola importo IVA
+  const vatAmountFallback = vatModeFallback === "excluded"
+    ? calculateVATAmount(finalPriceExclVATFallback, vatRateFallback)
+    : finalPriceFallback - finalPriceExclVATFallback;
 
   // ✨ FIX: Se listino CUSTOM con master, aggiungi supplierPrice anche nel fallback
   const supplierTotalCost =
     supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0;
 
   return {
-    basePrice,
-    surcharges,
-    margin,
-    totalCost,
-    finalPrice,
+    basePrice: basePriceExclVATFallback, // Sempre IVA esclusa per consistenza
+    surcharges: surchargesExclVATFallback, // Sempre IVA esclusa per consistenza
+    margin: marginExclVATFallback,
+    totalCost: totalCostExclVATFallback, // Sempre IVA esclusa per consistenza
+    finalPrice: finalPriceFallback, // Nella modalità IVA del listino
     appliedPriceList: priceList,
     priceListId: priceList.id,
     // ✨ FIX: Aggiungi supplierPrice se disponibile (listino CUSTOM con master)
     supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
+    // ✨ NUOVO: VAT Semantics (ADR-001) - anche nel fallback
+    vatMode: priceList.vat_mode || "excluded",
+    vatRate: vatRateFallback,
+    vatAmount: vatAmountFallback,
+    totalPriceWithVAT: vatModeFallback === "excluded"
+      ? finalPriceFallback + vatAmountFallback
+      : finalPriceFallback,
     calculationDetails: {
       weight: params.weight,
       volume: params.volume,
