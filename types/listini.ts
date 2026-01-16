@@ -217,7 +217,8 @@ export interface PriceCalculationResult {
   margin: number;
   totalCost: number;
   finalPrice: number; // Prezzo finale con margine applicato
-  supplierPrice?: number; // ✨ Costo fornitore originale (se listino personalizzato con master_list_id)
+  supplierPrice?: number; // ✨ Costo fornitore originale (se listino personalizzato con master_list_id) - sempre IVA esclusa per calcoli
+  supplierPriceOriginal?: number; // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master list (per visualizzazione)
   appliedRule?: PriceRule; // Regola applicata
   appliedPriceList?: PriceList; // Listino utilizzato
   priceListId: string; // ID listino per audit

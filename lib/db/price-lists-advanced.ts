@@ -436,6 +436,7 @@ async function calculatePriceWithRule(
   let basePrice = rule.base_price_override || 0;
   let supplierBasePrice = 0; // ✨ Costo fornitore originale
   let supplierSurcharges = 0;
+  let supplierTotalCostOriginal = 0; // ✨ FIX: Salva prezzo originale fornitore (per visualizzazione, nella modalità VAT del master)
 
   // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
   let masterVATModeForRule: "included" | "excluded" = "excluded"; // Default per retrocompatibilità
@@ -467,10 +468,10 @@ async function calculatePriceWithRule(
           if (masterMatrixResult) {
             supplierBasePrice = masterMatrixResult.basePrice;
             supplierSurcharges = masterMatrixResult.surcharges || 0;
+            // ✨ FIX: Salva prezzo originale fornitore (già IVA inclusa se masterVATModeForRule === 'included')
+            supplierTotalCostOriginal = supplierBasePrice + supplierSurcharges;
             console.log(
-              `✅ [PRICE CALC] Listino personalizzato: recuperato costo fornitore originale €${(
-                supplierBasePrice + supplierSurcharges
-              ).toFixed(2)} (vat_mode: ${masterVATModeForRule})`
+              `✅ [PRICE CALC] Listino personalizzato: recuperato costo fornitore originale €${supplierTotalCostOriginal.toFixed(2)} (vat_mode: ${masterVATModeForRule})`
             );
           }
         }
@@ -658,6 +659,9 @@ async function calculatePriceWithRule(
     // ✨ NUOVO: Aggiungi costo fornitore originale (sempre IVA esclusa per consistenza)
     supplierPrice:
       supplierTotalCostExclVAT > 0 ? supplierTotalCostExclVAT : undefined,
+    // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
+    supplierPriceOriginal:
+      supplierTotalCostOriginal > 0 ? supplierTotalCostOriginal : undefined,
     // ✨ NUOVO: VAT Semantics (ADR-001)
     vatMode: priceList.vat_mode || "excluded", // Propaga vat_mode
     vatRate,
@@ -703,6 +707,7 @@ async function calculateWithDefaultMargin(
   let surcharges = 0;
   let supplierBasePrice = 0; // ✨ NUOVO: Prezzo originale fornitore (se listino personalizzato modificato manualmente)
   let supplierSurcharges = 0;
+  let supplierTotalCostOriginal = 0; // ✨ FIX: Salva prezzo originale fornitore (per visualizzazione, nella modalità VAT del master)
   let totalCostOriginal = 0; // ✨ FIX: Salva prezzo originale matrice (per listini con IVA inclusa)
 
   // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
@@ -734,10 +739,10 @@ async function calculateWithDefaultMargin(
         if (masterMatrixResult) {
           supplierBasePrice = masterMatrixResult.basePrice;
           supplierSurcharges = masterMatrixResult.surcharges || 0;
+          // ✨ FIX: Salva prezzo originale fornitore (già IVA inclusa se masterVATMode === 'included')
+          supplierTotalCostOriginal = supplierBasePrice + supplierSurcharges;
           console.log(
-            `✅ [PRICE CALC] Listino personalizzato: recuperato prezzo fornitore originale €${(
-              supplierBasePrice + supplierSurcharges
-            ).toFixed(2)} (vat_mode: ${masterVATMode})`
+            `✅ [PRICE CALC] Listino personalizzato: recuperato prezzo fornitore originale €${supplierTotalCostOriginal.toFixed(2)} (vat_mode: ${masterVATMode})`
           );
         }
       }
@@ -1048,6 +1053,12 @@ async function calculateWithDefaultMargin(
         supplierTotalCostExclVATForComparison > 0
           ? supplierTotalCostExclVATForComparison
           : undefined;
+      
+      // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
+      const resultSupplierPriceOriginal =
+        supplierTotalCostOriginal > 0
+          ? supplierTotalCostOriginal
+          : undefined;
 
       console.log(`📤 [PRICE CALC] Valori restituiti:`);
       console.log(`   - basePrice: €${basePrice.toFixed(2)}`);
@@ -1223,7 +1234,9 @@ async function calculateWithDefaultMargin(
         priceListId: priceList.id,
         // ✨ FIX: Aggiungi supplierPrice anche quando isManuallyModified = false
         // (per listini CUSTOM con master ma prezzi identici)
-        supplierPrice: resultSupplierPrice,
+        supplierPrice: resultSupplierPrice, // Sempre IVA esclusa per calcoli
+        // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
+        supplierPriceOriginal: resultSupplierPriceOriginal, // Nella modalità VAT del master list
         // ✨ NUOVO: VAT Semantics (ADR-001)
         vatMode: priceList.vat_mode || "excluded",
         vatRate: customVATRate,
