@@ -17,6 +17,7 @@ import { ExportService } from '@/lib/adapters/export';
 import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
 import ImportOrders from '@/components/import/import-orders';
 import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
+import { featureFlags } from '@/lib/config/feature-flags';
 import dynamic from 'next/dynamic';
 
 // Carica lo scanner solo quando serve (dynamic import per performance)
@@ -1558,11 +1559,23 @@ export default function ListaSpedizioniPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900">
-                          {spedizione.prezzoFinale > 0
-                            ? formatPrice(spedizione.prezzoFinale)
-                            : '—'}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900">
+                            {spedizione.prezzoFinale > 0
+                              ? formatPrice(spedizione.prezzoFinale)
+                              : '—'}
+                          </span>
+                          {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
+                          {featureFlags.showVATSemantics && 
+                           spedizione.prezzoFinale > 0 && 
+                           (spedizione as any).vat_mode && (
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {(spedizione as any).vat_mode === "excluded"
+                                ? `+ IVA ${(spedizione as any).vat_rate || 22}%`
+                                : "IVA incl."}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
