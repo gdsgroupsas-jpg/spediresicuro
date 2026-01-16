@@ -411,10 +411,23 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Margine configurabile (default 15%)
-    const marginePercentuale = 15;
-    const margine = (prezzoBase * marginePercentuale) / 100;
-    const prezzoFinale = prezzoBase + margine + costoContrassegno + costoAssicurazione;
+    // ✨ FIX: Usa final_price dal frontend se disponibile (prezzo listino personalizzato con margine)
+    // Altrimenti calcola prezzo finale con margine default
+    let prezzoFinale: number;
+    let margine: number;
+    if (body.final_price && typeof body.final_price === 'number' && body.final_price > 0) {
+      // Usa prezzo dal quote selezionato (listino personalizzato)
+      prezzoFinale = body.final_price;
+      // Calcola margine approssimativo per logging (prezzo finale - costo base)
+      margine = prezzoFinale - prezzoBase - costoContrassegno - costoAssicurazione;
+      console.log('💰 [API] Usando final_price dal frontend (listino personalizzato):', prezzoFinale);
+    } else {
+      // Calcola prezzo finale con margine default (fallback)
+      const marginePercentuale = 15;
+      margine = (prezzoBase * marginePercentuale) / 100;
+      prezzoFinale = prezzoBase + margine + costoContrassegno + costoAssicurazione;
+      console.log('💰 [API] Calcolato prezzo finale con margine default:', prezzoFinale);
+    }
 
     // Genera tracking number
     const trackingPrefix = (body.corriere || 'GLS').substring(0, 3).toUpperCase();
