@@ -793,6 +793,15 @@ async function calculateWithDefaultMargin(
         priceList.vat_mode ?? null
       );
       const customVATRate = priceList.vat_rate || 22.0;
+      
+      // 🔍 LOGGING: Verifica vat_mode recuperato
+      console.log(`🔍 [PRICE CALC] VAT Mode recuperato per listino "${priceList.name}":`, {
+        vat_mode_raw: priceList.vat_mode,
+        vat_mode_processed: customVATMode,
+        vat_rate: customVATRate,
+        list_type: priceList.list_type,
+        has_master: !!priceList.master_list_id,
+      });
 
       // ✨ FIX: Normalizza basePrice e surcharges separatamente perché seguono lo stesso vat_mode del listino
       let basePriceExclVATForComparison = basePrice;
@@ -1177,6 +1186,21 @@ async function calculateWithDefaultMargin(
         customVATMode === "excluded"
           ? calculateVATAmount(finalPriceExclVAT, customVATRate)
           : finalPriceWithVAT - finalPriceExclVAT;
+
+      // 🔍 LOGGING FINALE: Verifica valori restituiti
+      console.log(`📤 [PRICE CALC] Valori finali restituiti per listino "${priceList.name}":`, {
+        basePriceExclVAT: basePriceExclVAT.toFixed(2),
+        surchargesExclVAT: surchargesExclVAT.toFixed(2),
+        marginExclVAT: marginExclVAT.toFixed(2),
+        totalCostExclVAT: resultTotalCostExclVAT.toFixed(2),
+        finalPriceExclVAT: finalPriceExclVAT.toFixed(2),
+        finalPriceWithVAT: finalPriceWithVAT.toFixed(2),
+        vatMode: customVATMode,
+        vatRate: customVATRate,
+        vatAmount: vatAmount.toFixed(2),
+        isManuallyModified,
+        supplierTotalCostExclVAT: supplierTotalCostExclVAT.toFixed(2),
+      });
 
       return {
         basePrice: basePriceExclVAT, // Sempre IVA esclusa per consistenza
