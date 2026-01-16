@@ -109,12 +109,14 @@ CREATE TABLE IF NOT EXISTS invoice_generation_rules (
   
   -- Metadati
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- Unicità: un utente può avere una sola regola attiva per tipo
-  CONSTRAINT unique_user_generation_type UNIQUE (user_id, generation_type) 
-    WHERE is_active = true
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Unicità: un utente può avere una sola regola attiva per tipo
+-- Usa UNIQUE INDEX parziale invece di constraint inline (PostgreSQL non supporta WHERE in constraint)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoice_generation_rules_unique_active 
+  ON invoice_generation_rules(user_id, generation_type) 
+  WHERE is_active = true;
 
 CREATE INDEX IF NOT EXISTS idx_invoice_generation_rules_user ON invoice_generation_rules(user_id);
 CREATE INDEX IF NOT EXISTS idx_invoice_generation_rules_active ON invoice_generation_rules(is_active) WHERE is_active = true;
