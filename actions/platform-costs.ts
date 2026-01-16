@@ -366,67 +366,148 @@ export async function getPlatformStatsAction(): Promise<{
   }
 
   try {
-    // Statistiche totali
-    const { data: totalStats, error: totalError } = await supabaseAdmin
-      .from("platform_provider_costs")
-      .select("billed_amount, provider_cost, platform_margin")
-      .eq("api_source", "platform");
-
-    if (totalError) throw totalError;
-
-    // Pending reconciliation
-    const { count: pendingCount, error: pendingError } = await supabaseAdmin
-      .from("platform_provider_costs")
-      .select("*", { count: "exact", head: true })
-      .in("reconciliation_status", ["pending", "discrepancy"]);
-
-    if (pendingError) throw pendingError;
-
-    // Negative margins
-    const { count: negativeCount, error: negativeError } = await supabaseAdmin
-      .from("platform_provider_costs")
-      .select("*", { count: "exact", head: true })
-      .lt("platform_margin", 0);
-
-    if (negativeError) throw negativeError;
-
-    // Last 30 days
-    const thirtyDaysAgo = new Date(
-      Date.now() - 30 * 24 * 60 * 60 * 1000
-    ).toISOString();
-    const { count: last30Days, error: last30Error } = await supabaseAdmin
-      .from("platform_provider_costs")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", thirtyDaysAgo);
-
-    if (last30Error) throw last30Error;
-
-    // Calculate totals
-    const stats = (totalStats || []).reduce(
-      (acc, row) => ({
-        totalRevenue: acc.totalRevenue + (row.billed_amount || 0),
-        totalCost: acc.totalCost + (row.provider_cost || 0),
-        totalMargin: acc.totalMargin + (row.platform_margin || 0),
-      }),
-      { totalRevenue: 0, totalCost: 0, totalMargin: 0 }
+    // Usa funzione RPC che esclude test e cancellate
+    console.log("[PLATFORM_COSTS] Chiamata RPC get_platform_stats()...");
+    const { data: statsData, error: rpcError } = await supabaseAdmin.rpc(
+      "get_platform_stats"
     );
 
-    const avgMarginPercent =
-      stats.totalCost > 0
-        ? Math.round((stats.totalMargin / stats.totalCost) * 100 * 100) / 100
-        : 0;
+    console.log("[PLATFORM_COSTS] Risposta RPC:", { 
+      hasData: !!statsData, 
+      dataLength: statsData?.length,
+      error: rpcError?.message 
+    });
+
+    if (rpcError) {
+      // Fallback: se la funzione non esiste, usa query dirette (legacy)
+      // ⚠️ ATTENZIONE: Il fallback NON può fare JOIN con Supabase client
+      // Quindi restituisce dati SENZA filtri (include test e cancellate)
+      // Questo è un problema! La RPC deve funzionare.
+      console.error(
+        "[PLATFORM_COSTS] ⚠️ CRITICO: get_platform_stats RPC ERRORE, uso fallback SENZA filtri:",
+        rpcError.message,
+        rpcError.details,
+        rpcError.hint
+      );
+      console.error(
+        "[PLATFORM_COSTS] ⚠️ I dati mostrati includono test e cancellate! Applica migration 104."
+      );
+
+      // ⚠️ FALLBACK: Query dirette SENZA filtri (include test e cancellate)
+      // Questo è temporaneo - la RPC deve funzionare!
+      const { data: totalStats, error: totalError } = await supabaseAdmin
+        .from("platform_provider_costs")
+        .select("billed_amount, provider_cost, platform_margin")
+        .eq("api_source", "platform");
+
+      if (totalError) throw totalError;
+
+      // Pending reconciliation
+      const { count: pendingCount, error: pendingError } = await supabaseAdmin
+        .from("platform_provider_costs")
+        .select("*", { count: "exact", head: true })
+        .eq("api_source", "platform")
+        .in("reconciliation_status", ["pending", "discrepancy"]);
+
+      if (pendingError) throw pendingError;
+
+      // Negative margins
+      const { count: negativeCount, error: negativeError } = await supabaseAdmin
+        .from("platform_provider_costs")
+        .select("*", { count: "exact", head: true })
+        .eq("api_source", "platform")
+        .lt("platform_margin", 0);
+
+      if (negativeError) throw negativeError;
+
+      // Last 30 days
+      const thirtyDaysAgo = new Date(
+        Date.now() - 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const { count: last30Days, error: last30Error } = await supabaseAdmin
+        .from("platform_provider_costs")
+        .select("*", { count: "exact", head: true })
+        .eq("api_source", "platform")
+        .gte("created_at", thirtyDaysAgo);
+
+      if (last30Error) throw last30Error;
+
+      // Calculate totals
+      const stats = (totalStats || []).reduce(
+        (acc, row) => ({
+          totalRevenue: acc.totalRevenue + (row.billed_amount || 0),
+          totalCost: acc.totalCost + (row.provider_cost || 0),
+          totalMargin: acc.totalMargin + (row.platform_margin || 0),
+        }),
+        { totalRevenue: 0, totalCost: 0, totalMargin: 0 }
+      );
+
+      const avgMarginPercent =
+        stats.totalCost > 0
+          ? Math.round((stats.totalMargin / stats.totalCost) * 100 * 100) / 100
+          : 0;
+
+      return {
+        success: true,
+        data: {
+          totalShipments: totalStats?.length || 0,
+          totalRevenue: Math.round(stats.totalRevenue * 100) / 100,
+          totalCost: Math.round(stats.totalCost * 100) / 100,
+          totalMargin: Math.round(stats.totalMargin * 100) / 100,
+          avgMarginPercent,
+          pendingReconciliation: pendingCount || 0,
+          negativeMarginCount: negativeCount || 0,
+          last30DaysShipments: last30Days || 0,
+        },
+      };
+    }
+
+    // Usa dati dalla funzione RPC (corretti, escludono test e cancellate)
+    console.log("[PLATFORM_COSTS] Processing statsData:", statsData);
+    const stats = statsData?.[0];
+    
+    if (!stats) {
+      console.error(
+        "[PLATFORM_COSTS] ❌ get_platform_stats() restituito vuoto. statsData:",
+        JSON.stringify(statsData, null, 2)
+      );
+      // Se la RPC restituisce array vuoto, significa 0 spedizioni (corretto!)
+      // Non è un errore, restituiamo 0
+      return {
+        success: true,
+        data: {
+          totalShipments: 0,
+          totalRevenue: 0,
+          totalCost: 0,
+          totalMargin: 0,
+          avgMarginPercent: 0,
+          pendingReconciliation: 0,
+          negativeMarginCount: 0,
+          last30DaysShipments: 0,
+        },
+      };
+    }
+
+    console.log(
+      "[PLATFORM_COSTS] get_platform_stats() successo:",
+      {
+        total_shipments: stats.total_shipments,
+        total_revenue: stats.total_revenue,
+        total_cost: stats.total_cost,
+      }
+    );
 
     return {
       success: true,
       data: {
-        totalShipments: totalStats?.length || 0,
-        totalRevenue: Math.round(stats.totalRevenue * 100) / 100,
-        totalCost: Math.round(stats.totalCost * 100) / 100,
-        totalMargin: Math.round(stats.totalMargin * 100) / 100,
-        avgMarginPercent,
-        pendingReconciliation: pendingCount || 0,
-        negativeMarginCount: negativeCount || 0,
-        last30DaysShipments: last30Days || 0,
+        totalShipments: Number(stats.total_shipments) || 0,
+        totalRevenue: Number(stats.total_revenue) || 0,
+        totalCost: Number(stats.total_cost) || 0,
+        totalMargin: Number(stats.total_margin) || 0,
+        avgMarginPercent: Number(stats.avg_margin_percent) || 0,
+        pendingReconciliation: Number(stats.pending_reconciliation) || 0,
+        negativeMarginCount: Number(stats.negative_margin_count) || 0,
+        last30DaysShipments: Number(stats.last_30_days_shipments) || 0,
       },
     };
   } catch (error: any) {
@@ -471,60 +552,85 @@ export async function getMarginByCourierAction(startDate?: string): Promise<{
   }
 
   try {
-    let query = supabaseAdmin
-      .from("platform_provider_costs")
-      .select("courier_code, billed_amount, provider_cost, platform_margin")
-      .eq("api_source", "platform");
-
-    if (startDate) {
-      query = query.gte("created_at", startDate);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Aggrega per corriere
-    const courierMap = new Map<
-      string,
-      {
-        total_shipments: number;
-        total_revenue: number;
-        total_cost: number;
-        gross_margin: number;
-      }
-    >();
-
-    (data || []).forEach((row) => {
-      const existing = courierMap.get(row.courier_code) || {
-        total_shipments: 0,
-        total_revenue: 0,
-        total_cost: 0,
-        gross_margin: 0,
-      };
-
-      courierMap.set(row.courier_code, {
-        total_shipments: existing.total_shipments + 1,
-        total_revenue: existing.total_revenue + (row.billed_amount || 0),
-        total_cost: existing.total_cost + (row.provider_cost || 0),
-        gross_margin: existing.gross_margin + (row.platform_margin || 0),
-      });
+    // Usa funzione RPC che esclude test e cancellate
+    const { data, error } = await supabaseAdmin.rpc("get_margin_by_courier", {
+      p_start_date: startDate || null,
     });
 
-    const result: CourierMarginData[] = Array.from(courierMap.entries()).map(
-      ([courier_code, stats]) => ({
-        courier_code,
-        total_shipments: stats.total_shipments,
-        total_revenue: Math.round(stats.total_revenue * 100) / 100,
-        total_cost: Math.round(stats.total_cost * 100) / 100,
-        gross_margin: Math.round(stats.gross_margin * 100) / 100,
-        avg_margin_percent:
-          stats.total_cost > 0
-            ? Math.round((stats.gross_margin / stats.total_cost) * 100 * 100) /
-              100
-            : 0,
-      })
-    );
+    if (error) {
+      // Fallback: se la funzione non esiste, usa query dirette (legacy)
+      console.warn(
+        "[PLATFORM_COSTS] get_margin_by_courier RPC non disponibile, uso fallback:",
+        error.message
+      );
+
+      let query = supabaseAdmin
+        .from("platform_provider_costs")
+        .select("courier_code, billed_amount, provider_cost, platform_margin")
+        .eq("api_source", "platform");
+
+      if (startDate) {
+        query = query.gte("created_at", startDate);
+      }
+
+      const { data: fallbackData, error: fallbackError } = await query;
+      if (fallbackError) throw fallbackError;
+
+      // Aggrega per corriere
+      const courierMap = new Map<
+        string,
+        {
+          total_shipments: number;
+          total_revenue: number;
+          total_cost: number;
+          gross_margin: number;
+        }
+      >();
+
+      (fallbackData || []).forEach((row) => {
+        const existing = courierMap.get(row.courier_code) || {
+          total_shipments: 0,
+          total_revenue: 0,
+          total_cost: 0,
+          gross_margin: 0,
+        };
+
+        courierMap.set(row.courier_code, {
+          total_shipments: existing.total_shipments + 1,
+          total_revenue: existing.total_revenue + (row.billed_amount || 0),
+          total_cost: existing.total_cost + (row.provider_cost || 0),
+          gross_margin: existing.gross_margin + (row.platform_margin || 0),
+        });
+      });
+
+      const result: CourierMarginData[] = Array.from(courierMap.entries()).map(
+        ([courier_code, stats]) => ({
+          courier_code,
+          total_shipments: stats.total_shipments,
+          total_revenue: Math.round(stats.total_revenue * 100) / 100,
+          total_cost: Math.round(stats.total_cost * 100) / 100,
+          gross_margin: Math.round(stats.gross_margin * 100) / 100,
+          avg_margin_percent:
+            stats.total_cost > 0
+              ? Math.round(
+                  (stats.gross_margin / stats.total_cost) * 100 * 100
+                ) / 100
+              : 0,
+        })
+      );
+
+      return { success: true, data: result };
+    }
+
+    // Usa dati dalla funzione RPC (corretti, escludono test e cancellate)
+    const result: CourierMarginData[] = (data || []).map((row: any) => ({
+      courier_code: row.courier_code,
+      total_shipments: Number(row.total_shipments) || 0,
+      total_revenue: Number(row.total_revenue) || 0,
+      total_cost: Number(row.total_cost) || 0,
+      gross_margin: Number(row.gross_margin) || 0,
+      avg_margin_percent: Number(row.avg_margin_percent) || 0,
+    }));
 
     return { success: true, data: result };
   } catch (error: any) {
@@ -550,10 +656,23 @@ export async function getTopResellersAction(
   }
 
   try {
-    let query = supabaseAdmin
-      .from("platform_provider_costs")
-      .select(
-        `
+    // Usa funzione RPC che esclude test e cancellate
+    const { data, error } = await supabaseAdmin.rpc("get_top_resellers", {
+      p_limit: limit,
+      p_start_date: startDate || null,
+    });
+
+    if (error) {
+      // Fallback: se la funzione non esiste, usa query dirette (legacy)
+      console.warn(
+        "[PLATFORM_COSTS] get_top_resellers RPC non disponibile, uso fallback:",
+        error.message
+      );
+
+      let query = supabaseAdmin
+        .from("platform_provider_costs")
+        .select(
+          `
         billed_user_id,
         billed_amount,
         platform_margin,
@@ -563,72 +682,84 @@ export async function getTopResellersAction(
           name
         )
       `
-      )
-      .eq("api_source", "platform");
+        )
+        .eq("api_source", "platform");
 
-    if (startDate) {
-      query = query.gte("created_at", startDate);
+      if (startDate) {
+        query = query.gte("created_at", startDate);
+      }
+
+      const { data: fallbackData, error: fallbackError } = await query;
+      if (fallbackError) throw fallbackError;
+
+      // Aggrega per utente
+      const userMap = new Map<
+        string,
+        {
+          user_email: string;
+          user_name: string | null;
+          total_shipments: number;
+          total_billed: number;
+          margin_generated: number;
+        }
+      >();
+
+      (fallbackData || []).forEach((row) => {
+        const userId = row.billed_user_id;
+        // Gestisce sia array che oggetto singolo (Supabase può restituire entrambi)
+        const usersData = row.users;
+        const userInfo = Array.isArray(usersData)
+          ? (usersData[0] as
+              | { id: string; email: string; name: string | null }
+              | undefined) || null
+          : (usersData as {
+              id: string;
+              email: string;
+              name: string | null;
+            } | null);
+
+        const existing = userMap.get(userId) || {
+          user_email: userInfo?.email || "unknown",
+          user_name: userInfo?.name || null,
+          total_shipments: 0,
+          total_billed: 0,
+          margin_generated: 0,
+        };
+
+        userMap.set(userId, {
+          user_email: existing.user_email,
+          user_name: existing.user_name,
+          total_shipments: existing.total_shipments + 1,
+          total_billed: existing.total_billed + (row.billed_amount || 0),
+          margin_generated:
+            existing.margin_generated + (row.platform_margin || 0),
+        });
+      });
+
+      const result: TopResellerData[] = Array.from(userMap.entries())
+        .map(([user_id, stats]) => ({
+          user_id,
+          user_email: stats.user_email,
+          user_name: stats.user_name,
+          total_shipments: stats.total_shipments,
+          total_billed: Math.round(stats.total_billed * 100) / 100,
+          margin_generated: Math.round(stats.margin_generated * 100) / 100,
+        }))
+        .sort((a, b) => b.total_billed - a.total_billed)
+        .slice(0, limit);
+
+      return { success: true, data: result };
     }
 
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Aggrega per utente
-    const userMap = new Map<
-      string,
-      {
-        user_email: string;
-        user_name: string | null;
-        total_shipments: number;
-        total_billed: number;
-        margin_generated: number;
-      }
-    >();
-
-    (data || []).forEach((row) => {
-      const userId = row.billed_user_id;
-      // Gestisce sia array che oggetto singolo (Supabase può restituire entrambi)
-      const usersData = row.users;
-      const userInfo = Array.isArray(usersData)
-        ? (usersData[0] as
-            | { id: string; email: string; name: string | null }
-            | undefined) || null
-        : (usersData as {
-            id: string;
-            email: string;
-            name: string | null;
-          } | null);
-
-      const existing = userMap.get(userId) || {
-        user_email: userInfo?.email || "unknown",
-        user_name: userInfo?.name || null,
-        total_shipments: 0,
-        total_billed: 0,
-        margin_generated: 0,
-      };
-
-      userMap.set(userId, {
-        user_email: existing.user_email,
-        user_name: existing.user_name,
-        total_shipments: existing.total_shipments + 1,
-        total_billed: existing.total_billed + (row.billed_amount || 0),
-        margin_generated:
-          existing.margin_generated + (row.platform_margin || 0),
-      });
-    });
-
-    const result: TopResellerData[] = Array.from(userMap.entries())
-      .map(([user_id, stats]) => ({
-        user_id,
-        user_email: stats.user_email,
-        user_name: stats.user_name,
-        total_shipments: stats.total_shipments,
-        total_billed: Math.round(stats.total_billed * 100) / 100,
-        margin_generated: Math.round(stats.margin_generated * 100) / 100,
-      }))
-      .sort((a, b) => b.total_billed - a.total_billed)
-      .slice(0, limit);
+    // Usa dati dalla funzione RPC (corretti, escludono test e cancellate)
+    const result: TopResellerData[] = (data || []).map((row: any) => ({
+      user_id: row.user_id,
+      user_email: row.user_email || "unknown",
+      user_name: row.user_name,
+      total_shipments: Number(row.total_shipments) || 0,
+      total_billed: Number(row.total_billed) || 0,
+      margin_generated: Number(row.margin_generated) || 0,
+    }));
 
     return { success: true, data: result };
   } catch (error: any) {
