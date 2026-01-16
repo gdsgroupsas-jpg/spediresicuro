@@ -44,26 +44,18 @@ export default function DashboardSidebar() {
     manuallyCollapsed: 'sidebar-manually-collapsed',
   };
 
-  // 🆕 Inizializza state da localStorage (con fallback)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.expandedSections);
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // 🔧 FIX HYDRATION: Inizializza sempre vuoto (server e client identici)
+  // Il caricamento da localStorage avviene dopo il mount per evitare mismatch
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
+  
+  // 🔧 FIX HYDRATION: Flag per indicare quando il componente è montato sul client
+  const [mounted, setMounted] = useState(false);
 
-  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.manuallyCollapsed);
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // 🔧 FIX HYDRATION: Imposta mounted dopo il primo render sul client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Carica il tipo di account e reseller status
   useEffect(() => {
@@ -95,8 +87,6 @@ export default function DashboardSidebar() {
       accountType: accountType || undefined,
     });
   }, [userRole, isReseller, accountType]);
-  
-  const manuallyCollapsedMemo = useMemo(() => manuallyCollapsed, [manuallyCollapsed]);
 
   // 🆕 Flatten all navigable items for keyboard navigation
   const allNavigableItems = useMemo(() => {
@@ -127,9 +117,79 @@ export default function DashboardSidebar() {
     enabled: FEATURES.KEYBOARD_NAV,
   });
 
-  // 🆕 Salva stato in localStorage quando cambia
+  // 🔧 FIX HYDRATION: Carica da localStorage e applica auto-espansione solo dopo il mount
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!mounted) return;
+
+    // Carica stato salvato da localStorage
+    try {
+           const storedExpanded = localStorage.getItem(STORAGE_KEYS.expandedSections);
+           const storedCollapsed = localStorage.getItem(STORAGE_KEYS.manuallyCollapsed);
+           
+           const loadedExpanded = storedExpanded ? new Set<string>(JSON.parse(storedExpanded) as string[]) : new Set<string>();
+           const loadedCollapsed = storedCollapsed ? new Set<string>(JSON.parse(storedCollapsed) as string[]) : new Set<string>();
+      
+      setManuallyCollapsed(loadedCollapsed);
+
+      // Applica auto-espansione basata su pathname e configurazione
+      setExpandedSections((prevExpanded) => {
+        const newExpandedSections = new Set<string>();
+
+        // Mantieni le sezioni già espanse da localStorage (se non manualmente collassate)
+        loadedExpanded.forEach((sectionId) => {
+          if (!loadedCollapsed.has(sectionId)) {
+            newExpandedSections.add(sectionId);
+          }
+        });
+
+        // Auto-espandi sezioni basate su configurazione e pathname attivo
+        navigationConfig.sections.forEach((section) => {
+          if (loadedCollapsed.has(section.id)) {
+            return; // Rispetta le sezioni manualmente collassate
+          }
+
+          if (section.defaultExpanded) {
+            newExpandedSections.add(section.id);
+          }
+
+          // Verifica items diretti
+          const hasActiveItem = section.items.some((item) =>
+            isNavItemActive(item.href, pathname || '')
+          );
+
+          if (hasActiveItem) {
+            newExpandedSections.add(section.id);
+          }
+
+          // Verifica items nelle subsections
+          if (section.subsections) {
+            section.subsections.forEach((subsection) => {
+              if (subsection.defaultExpanded) {
+                newExpandedSections.add(subsection.id);
+              }
+
+              const hasActiveNestedItem = subsection.items.some((item) =>
+                isNavItemActive(item.href, pathname || '')
+              );
+
+              if (hasActiveNestedItem) {
+                newExpandedSections.add(section.id); // Espandi sezione parent
+                newExpandedSections.add(subsection.id); // Espandi subsection
+              }
+            });
+          }
+        });
+
+        return newExpandedSections;
+      });
+    } catch (error) {
+      console.error('Errore caricamento stato sidebar:', error);
+    }
+  }, [mounted, pathname, navigationConfig, STORAGE_KEYS.expandedSections, STORAGE_KEYS.manuallyCollapsed]);
+
+  // 🆕 Salva stato in localStorage quando cambia (solo dopo mount)
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return;
     try {
       localStorage.setItem(
         STORAGE_KEYS.expandedSections,
@@ -138,10 +198,10 @@ export default function DashboardSidebar() {
     } catch (error) {
       console.error('Failed to save expanded sections:', error);
     }
-  }, [expandedSections, STORAGE_KEYS.expandedSections]);
+  }, [mounted, expandedSections, STORAGE_KEYS.expandedSections]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!mounted || typeof window === 'undefined') return;
     try {
       localStorage.setItem(
         STORAGE_KEYS.manuallyCollapsed,
@@ -150,54 +210,7 @@ export default function DashboardSidebar() {
     } catch (error) {
       console.error('Failed to save manually collapsed:', error);
     }
-  }, [manuallyCollapsed, STORAGE_KEYS.manuallyCollapsed]);
-
-  // Auto-espandi sezioni se siamo in una pagina relativa
-  // 🆕 Supporta anche nested sections (subsections)
-  useEffect(() => {
-    setExpandedSections((prevExpanded) => {
-      const newExpandedSections = new Set<string>();
-
-      navigationConfig.sections.forEach((section) => {
-        if (manuallyCollapsedMemo.has(section.id)) {
-          return;
-        }
-
-        if (section.defaultExpanded) {
-          newExpandedSections.add(section.id);
-        }
-
-        // Verifica items diretti
-        const hasActiveItem = section.items.some((item) =>
-          isNavItemActive(item.href, pathname || '')
-        );
-
-        if (hasActiveItem) {
-          newExpandedSections.add(section.id);
-        }
-
-        // 🆕 Verifica items nelle subsections
-        if (section.subsections) {
-          section.subsections.forEach((subsection) => {
-            if (subsection.defaultExpanded) {
-              newExpandedSections.add(subsection.id);
-            }
-
-            const hasActiveNestedItem = subsection.items.some((item) =>
-              isNavItemActive(item.href, pathname || '')
-            );
-
-            if (hasActiveNestedItem) {
-              newExpandedSections.add(section.id); // Espandi sezione parent
-              newExpandedSections.add(subsection.id); // Espandi subsection
-            }
-          });
-        }
-      });
-
-      return newExpandedSections;
-    });
-  }, [pathname, navigationConfig, manuallyCollapsedMemo]);
+  }, [mounted, manuallyCollapsed, STORAGE_KEYS.manuallyCollapsed]);
 
   // Toggle espansione sezione
   const toggleSection = (sectionId: string) => {
