@@ -85,8 +85,9 @@ export function calculatePriceFromList(
   // Calcola zona geografica dalla destinazione
   const destinationZone = getZoneFromDestination(destinationProvince, destinationRegion);
 
-  // Trova la riga corrispondente con matching migliorato
-  const entry = (priceList.entries as PriceListEntry[]).find(e => {
+  // ✨ FIX: Trova tutte le entry che matchano, poi seleziona la più specifica
+  // (preferisce fasce di peso più strette e entry con più criteri specifici)
+  const matchingEntries = (priceList.entries as PriceListEntry[]).filter(e => {
     // Match peso
     const weightMatch = weight >= e.weight_from && weight <= e.weight_to;
     if (!weightMatch) return false;
@@ -123,9 +124,49 @@ export function calculatePriceFromList(
     return true;
   });
 
+  // ✨ FIX: Seleziona l'entry più specifica (fasce di peso più strette hanno priorità)
+  // Ordina per: 1) Larghezza fascia peso (più stretta = migliore), 2) Priorità criteri specifici
+  const entry = matchingEntries.length > 0
+    ? matchingEntries.sort((a, b) => {
+        // 1. Preferisci fasce di peso più strette (weight_to - weight_from più piccolo)
+        const rangeA = a.weight_to - a.weight_from;
+        const rangeB = b.weight_to - b.weight_from;
+        if (rangeA !== rangeB) {
+          return rangeA - rangeB; // Fasce più strette prima
+        }
+        
+        // 2. Se fasce uguali, preferisci entry con più criteri specifici
+        const specificityA = [
+          a.zip_code_from && a.zip_code_to,
+          a.zone_code,
+          a.province_code,
+        ].filter(Boolean).length;
+        const specificityB = [
+          b.zip_code_from && b.zip_code_to,
+          b.zone_code,
+          b.province_code,
+        ].filter(Boolean).length;
+        
+        return specificityB - specificityA; // Più specifiche prima
+      })[0]
+    : null;
+
+  // 🔍 LOGGING: Verifica entry selezionata (solo se multiple match)
+  if (matchingEntries.length > 1) {
+    console.log(`🔍 [CALCULATOR] Trovate ${matchingEntries.length} entry che matchano per listino "${priceList.name}" (peso: ${weight}kg, zona: ${destinationZone || 'N/A'}, service: ${serviceType}):`);
+    matchingEntries.forEach((e, idx) => {
+      const isSelected = e === entry;
+      console.log(`   ${idx + 1}. Fascia ${e.weight_from}-${e.weight_to}kg, prezzo: €${e.base_price}, ${isSelected ? '✅ SELEZIONATA' : ''}`);
+    });
+  }
+
   if (!entry) {
+    console.log(`⚠️ [CALCULATOR] Nessuna entry trovata per listino "${priceList.name}" (peso: ${weight}kg, zona: ${destinationZone || 'N/A'}, service: ${serviceType})`);
     return null;
   }
+
+  // 🔍 LOGGING: Entry selezionata (sempre, per debug)
+  console.log(`✅ [CALCULATOR] Entry selezionata per listino "${priceList.name}": fascia ${entry.weight_from}-${entry.weight_to}kg, prezzo: €${entry.base_price}`);
 
   // Calcola prezzo
   let basePrice = parseFloat(entry.base_price as any);
