@@ -19,6 +19,33 @@ import {
 import { supabaseAdmin } from "@/lib/db/client";
 import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
 import type { CreateShipmentInput, Shipment } from "@/types/shipments";
+import crypto from "crypto";
+
+/**
+ * AUDIT FIX P1-3: Sanitizza UUID per log production-safe
+ * Genera hash parziale (primi 8 caratteri) invece di UUID completo
+ */
+function sanitizeIdForLog(id: string | null | undefined): string {
+  if (!id) return "N/A";
+  return crypto
+    .createHash("sha256")
+    .update(String(id))
+    .digest("hex")
+    .substring(0, 8);
+}
+
+/**
+ * AUDIT FIX P1-3: Sanitizza nome per log production-safe
+ * Rimuove caratteri sensibili e limita lunghezza
+ */
+function sanitizeNameForLog(name: string | null | undefined): string {
+  if (!name) return "N/A";
+  // Rimuove caratteri speciali e limita a 20 caratteri
+  return name
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .substring(0, 20)
+    .trim() || "N/A";
+}
 
 // Tipo per configurazione corriere dal DB
 export interface CourierConfig {
@@ -89,7 +116,7 @@ export async function getCourierConfigForUser(
 
         if (!isDefaultVisible && !isOwner && !isCreator) {
           console.warn(
-            `⚠️ [FACTORY] Accesso negato a configurazione specifica ${specificConfigId} per userId=${userId}`
+            `⚠️ [FACTORY] Accesso negato a configurazione specifica ${sanitizeIdForLog(specificConfigId)} per userId=${sanitizeIdForLog(userId)}`
           );
           return null;
         }
@@ -97,7 +124,7 @@ export async function getCourierConfigForUser(
         return specificConfig as CourierConfig;
       } else {
         console.warn(
-          `⚠️ [FACTORY] Configurazione specifica ${specificConfigId} non trovata o provider non corrispondente.`
+          `⚠️ [FACTORY] Configurazione specifica ${sanitizeIdForLog(specificConfigId)} non trovata o provider non corrispondente.`
         );
         // Fallback al comportamento standard se non trovata? O return null?
         // Meglio return null per essere espliciti sull'errore di richiesta
@@ -149,7 +176,7 @@ export async function getCourierConfigForUser(
       // 🔧 FIX: Cerca prima configurazione personale (owner_user_id = userId)
       // Questa è la priorità più alta, come nella RPC migration 053
       console.log(
-        `🔍 [FACTORY] Fallback query: cerco config per userId=${userId}, provider=${normalizedProviderId}`
+        `🔍 [FACTORY] Fallback query: cerco config per userId=${sanitizeIdForLog(userId)}, provider=${normalizedProviderId}`
       );
 
       // PRIORITÀ 1: Configurazione personale (owner_user_id = userId)
@@ -165,9 +192,9 @@ export async function getCourierConfigForUser(
         console.log(
           `✅ [FACTORY] Trovata config personale (owner_user_id match):`,
           {
-            id: personalConfig.id,
-            name: personalConfig.name,
-            owner_user_id: personalConfig.owner_user_id,
+            id: sanitizeIdForLog(personalConfig.id),
+            name: sanitizeNameForLog(personalConfig.name),
+            owner_user_id: sanitizeIdForLog(personalConfig.owner_user_id),
           }
         );
         return personalConfig as CourierConfig;
@@ -188,8 +215,8 @@ export async function getCourierConfigForUser(
           console.log(
             `✅ [FACTORY] Trovata config assegnata (assigned_config_id):`,
             {
-              id: assignedConfig.id,
-              name: assignedConfig.name,
+              id: sanitizeIdForLog(assignedConfig.id),
+              name: sanitizeNameForLog(assignedConfig.name),
             }
           );
           return assignedConfig as CourierConfig;
@@ -209,8 +236,8 @@ export async function getCourierConfigForUser(
         console.log(
           `ℹ️ [FACTORY] Nessuna config personale/assegnata, uso config default:`,
           {
-            id: defaultConfig.id,
-            name: defaultConfig.name,
+            id: sanitizeIdForLog(defaultConfig.id),
+            name: sanitizeNameForLog(defaultConfig.name),
           }
         );
         return defaultConfig as CourierConfig;
@@ -218,7 +245,7 @@ export async function getCourierConfigForUser(
 
       console.error("❌ Nessuna configurazione trovata nel DB");
       console.error(`   - Provider ID cercato: "${normalizedProviderId}"`);
-      console.error(`   - User ID: ${userId}`);
+      console.error(`   - User ID: ${sanitizeIdForLog(userId)}`);
       console.error(
         `   - Cercate: personale (owner_user_id), assegnata (assigned_config_id), default (is_default)`
       );
@@ -356,9 +383,10 @@ function instantiateProviderFromConfig(
           : "N/A";
 
         // Log sicuro: sempre (dev + production)
+        // AUDIT FIX P1-3: Sanitizza configId e configName
         console.log(`🔑 [FACTORY] Spedisci.Online config loaded:`, {
-          configId: config.id,
-          configName: config.name,
+          configId: sanitizeIdForLog(config.id),
+          configName: sanitizeNameForLog(config.name),
           providerId: config.provider_id,
           baseUrl: config.base_url,
           apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)

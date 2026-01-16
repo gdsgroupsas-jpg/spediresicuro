@@ -254,10 +254,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     carriersProcessed?: string[];
   };
 }> {
-  // ⚠️ RIMOZIONE LOCK: Le sync dei listini non sono critiche come le spedizioni.
-  // UPDATE (Audit Fix): Ripristino Lock distribuito per evitare duplicati
+  // AUDIT FIX P1-2: DB Lock invece di Redis per maggiore robustezza
+  // Usa idempotency_locks table per prevenire race conditions
   let lockKey: string | null = null;
-  const redis = await import("@/lib/db/redis").then((m) => m.getRedis());
 
   try {
     const session = await auth();
@@ -296,23 +295,39 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       };
     }
 
-    // AUDIT FIX: Distributed Lock
+    // AUDIT FIX P1-2: DB Lock usando idempotency_locks
     // Previene race conditions che causano entry duplicate
-    if (redis && options?.courierId) {
-      lockKey = `sync_lock:${user.id}:${options.courierId}`;
-      // Lock per 5 minuti (NX = solo se non esiste, EX = scadenza)
-      const acquired = await redis.set(lockKey, "1", { nx: true, ex: 300 });
-
-      if (!acquired) {
-        console.warn(
-          `🔒 [SYNC] Lock attivo per ${lockKey}, skip esecuzione parallela`
-        );
-        return {
-          success: false,
-          error:
-            "Sincronizzazione già in corso per questo corriere. Riprova tra poco.",
-        };
+    // Usa DB lock invece di Redis per maggiore robustezza (non soggetto a flush/restart)
+    lockKey = `sync_price_lists_${user.id}_${options?.courierId || "all"}`;
+    const { data: lockResult, error: lockError } = await supabaseAdmin.rpc(
+      "acquire_idempotency_lock",
+      {
+        p_idempotency_key: lockKey,
+        p_user_id: user.id,
+        p_ttl_minutes: 30, // Lock per 30 minuti (sufficiente per sync completa)
       }
+    );
+
+    if (lockError) {
+      console.error(`❌ [SYNC] Errore acquisizione lock:`, lockError);
+      return {
+        success: false,
+        error: "Errore durante l'acquisizione del lock. Riprova tra poco.",
+      };
+    }
+
+    if (!lockResult || lockResult.length === 0 || !lockResult[0]?.acquired) {
+      const status = lockResult?.[0]?.status || "unknown";
+      const errorMsg = lockResult?.[0]?.error_message || "Operazione già in corso";
+      
+      console.warn(
+        `🔒 [SYNC] Lock non acquisito (status: ${status}): ${errorMsg}`
+      );
+      return {
+        success: false,
+        error:
+          "Sincronizzazione già in corso. Attendi il completamento prima di riprovare.",
+      };
     }
 
     // 1. Matrix Sync Logic
@@ -1674,11 +1689,21 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
       error: error.message || "Errore durante la sincronizzazione",
     };
   } finally {
-    // Release Lock
-    if (redis && lockKey) {
-      await redis
-        .del(lockKey)
-        .catch((e) => console.error("Error releasing lock:", e));
+    // AUDIT FIX P1-2: Release DB Lock
+    if (lockKey) {
+      try {
+        // Per sync listini non abbiamo shipment_id, quindi usiamo UUID zero come placeholder
+        // La funzione complete_idempotency_lock richiede UUID non-null
+        const zeroUuid = "00000000-0000-0000-0000-000000000000";
+        await supabaseAdmin.rpc("complete_idempotency_lock", {
+          p_idempotency_key: lockKey,
+          p_shipment_id: zeroUuid, // UUID zero come placeholder per operazioni non-shipment
+          p_status: "completed",
+        });
+      } catch (e: any) {
+        console.error("❌ [SYNC] Errore rilascio lock:", e.message || e);
+        // Non bloccare se il release fallisce (lock scadrà comunque per TTL)
+      }
     }
   }
 }
