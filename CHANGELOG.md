@@ -23,7 +23,18 @@ Questo progetto segue [Semantic Versioning 2.0.0](https://semver.org/):
 
 ## [Unreleased]
 
-Ultimo aggiornamento: 2026-01-11
+Ultimo aggiornamento: 2026-01-XX
+
+### Added
+- **VAT Semantics in Price Lists (ADR-001)** - Implementazione semantica IVA esplicita nei listini prezzi
+  - Colonne `vat_mode` e `vat_rate` aggiunte a `price_lists` e `shipments` (migration 110)
+  - Supporto prezzi con IVA inclusa o esclusa
+  - Utility functions per normalizzazione e calcolo IVA (`lib/pricing/vat-utils.ts`)
+  - Calcolo margine sempre su base IVA esclusa (Invariant #1)
+  - Fix critico: gestione corretta margine 0 quando master e custom hanno `vat_mode` diversi
+  - Backward compatibility completa (NULL = 'excluded')
+  - Test suite completa: 25 unit test + 4 integration test
+  - Documentazione: ADR-001, Implementation Plan, Migration Memory aggiornato
 
 ### Added
 - **AI Capabilities Toggle** - Toggle per abilitare/disabilitare capabilities AI di Anne nella dashboard admin
