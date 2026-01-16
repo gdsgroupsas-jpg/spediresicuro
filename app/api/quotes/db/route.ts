@@ -485,8 +485,11 @@ export async function POST(request: NextRequest) {
             }`
           );
 
+          // ✨ FIX: Usa supplierPriceOriginal se disponibile (prezzo originale nella modalità VAT del master)
+          // Altrimenti usa supplierPrice (normalizzato IVA esclusa per calcoli)
           const supplierPrice =
-            quoteResult.supplierPrice ??
+            (quoteResult as any).supplierPriceOriginal ?? // Prezzo originale master (con IVA inclusa se master ha IVA inclusa)
+            quoteResult.supplierPrice ?? // Prezzo normalizzato IVA esclusa (per calcoli)
             quoteResult.totalCost ??
             quoteResult.basePrice ??
             0;
