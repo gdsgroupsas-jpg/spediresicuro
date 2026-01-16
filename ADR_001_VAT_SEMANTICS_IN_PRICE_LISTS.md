@@ -1,7 +1,7 @@
 # ADR-001: VAT Semantics in Price Lists
 
 **Status:** Accepted  
-**Date:** 2026-01-XX  
+**Date:** 2025-01-16  
 **Deciders:** Domain Architecture Team  
 **Tags:** pricing, vat, price-lists, fiscal-compliance
 
