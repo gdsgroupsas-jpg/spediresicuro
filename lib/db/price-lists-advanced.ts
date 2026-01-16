@@ -12,6 +12,7 @@ import {
   calculateVATAmount,
   getVATModeWithFallback,
   normalizePrice,
+  type VATMode,
 } from "@/lib/pricing/vat-utils";
 import type {
   PriceCalculationResult,
@@ -437,6 +438,8 @@ async function calculatePriceWithRule(
   let supplierSurcharges = 0;
 
   // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
+  let masterVATModeForRule: "included" | "excluded" = "excluded"; // Default per retrocompatibilità
+  let masterVATRateForRule = 22.0;
   if (priceList.master_list_id && priceList.list_type === "custom") {
     try {
       const { data: masterList } = await supabaseAdmin
@@ -445,25 +448,31 @@ async function calculatePriceWithRule(
         .eq("id", priceList.master_list_id)
         .single();
 
-      if (masterList && masterList.entries) {
-        const masterMatrixResult = calculatePriceFromList(
-          masterList as PriceList,
-          params.weight,
-          params.destination.zip || "",
-          params.serviceType || "standard",
-          params.options,
-          params.destination.province,
-          params.destination.region
-        );
+      if (masterList) {
+        // ✨ NUOVO: Recupera vat_mode del master list (ADR-001 fix)
+        masterVATModeForRule = getVATModeWithFallback(masterList.vat_mode);
+        masterVATRateForRule = masterList.vat_rate || 22.0;
 
-        if (masterMatrixResult) {
-          supplierBasePrice = masterMatrixResult.basePrice;
-          supplierSurcharges = masterMatrixResult.surcharges || 0;
-          console.log(
-            `✅ [PRICE CALC] Listino personalizzato: recuperato costo fornitore originale €${(
-              supplierBasePrice + supplierSurcharges
-            ).toFixed(2)}`
+        if (masterList.entries) {
+          const masterMatrixResult = calculatePriceFromList(
+            masterList as PriceList,
+            params.weight,
+            params.destination.zip || "",
+            params.serviceType || "standard",
+            params.options,
+            params.destination.province,
+            params.destination.region
           );
+
+          if (masterMatrixResult) {
+            supplierBasePrice = masterMatrixResult.basePrice;
+            supplierSurcharges = masterMatrixResult.surcharges || 0;
+            console.log(
+              `✅ [PRICE CALC] Listino personalizzato: recuperato costo fornitore originale €${(
+                supplierBasePrice + supplierSurcharges
+              ).toFixed(2)} (vat_mode: ${masterVATModeForRule})`
+            );
+          }
         }
       }
     } catch (error) {
@@ -560,7 +569,9 @@ async function calculatePriceWithRule(
   }
 
   // ✨ NUOVO: Gestione VAT (ADR-001)
-  const vatMode = getVATModeWithFallback(priceList.vat_mode); // null → 'excluded'
+  const vatMode: "included" | "excluded" = getVATModeWithFallback(
+    (priceList.vat_mode ?? null) as VATMode
+  ); // null → 'excluded'
   const vatRate = priceList.vat_rate || 22.0;
 
   // Normalizza basePrice a IVA esclusa per calcoli (Invariant #1: margine sempre su base IVA esclusa)
@@ -760,7 +771,9 @@ async function calculateWithDefaultMargin(
       // ✨ FIX: Calcola supplierTotalCost e normalizza a IVA esclusa per confronto corretto
       const supplierTotalCostRaw =
         supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0;
-      const customVATMode = getVATModeWithFallback(priceList.vat_mode);
+      const customVATMode: "included" | "excluded" = getVATModeWithFallback(
+        priceList.vat_mode ?? null
+      );
       const customVATRate = priceList.vat_rate || 22.0;
 
       // Normalizza totalCost a IVA esclusa per confronto
