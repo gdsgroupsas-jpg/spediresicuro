@@ -106,8 +106,5 @@ END $$;
 -- Esempio correzione manuale (se necessario):
 -- UPDATE price_lists SET vat_mode = 'included' WHERE id = 'xxx' AND ...;
 -- ============================================
-
-DO $$
-BEGIN
-  RAISE NOTICE '✅ Migration completata: Dati legacy migrati a vat_mode esplicito';
+DO $$ BEGIN RAISE NOTICE '✅ Migration completata: Dati legacy migrati a vat_mode esplicito';
 END $$;
