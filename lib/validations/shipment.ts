@@ -41,7 +41,10 @@ export const createShipmentSchema = z.object({
   provider: z.enum(['spediscionline', 'poste_native', 'gls_native', 'brt_native']).default('spediscionline'),
   carrier: z.enum(['GLS', 'POSTE', 'BRT', 'UPS', 'DHL', 'SDA', 'TNT', 'FEDEX']),
   contract_id: z.string().optional(),  // Se user ha più contratti stesso corriere
-  configId: z.string().optional()  // ID configurazione API specifica (per multi-config)
+  configId: z.string().optional(),  // ID configurazione API specifica (per multi-config)
+  // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
+  vat_mode: z.enum(['included', 'excluded']).optional().nullable(),  // NULL = legacy (assume 'excluded')
+  vat_rate: z.number().positive().optional()  // Default 22.0 se non specificato
 })
 
 export type CreateShipmentInput = z.infer<typeof createShipmentSchema>

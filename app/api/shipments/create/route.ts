@@ -735,6 +735,9 @@ export async function POST(request: Request) {
           declared_value: validated.insurance?.value || 0,
           cash_on_delivery_amount: validated.cod?.value || 0,
           notes: validated.notes || null,
+          // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
+          vat_mode: validated.vat_mode || null, // NULL = legacy (assume 'excluded')
+          vat_rate: validated.vat_rate || 22.0, // Default per retrocompatibilità
         })
         .select()
         .single();
