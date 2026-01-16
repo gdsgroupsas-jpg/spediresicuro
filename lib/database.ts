@@ -587,6 +587,9 @@ function mapSpedizioneFromSupabase(s: any): any {
       importSource: s.import_source || '',
       importPlatform: s.import_platform || '',
       verified: s.verified || false,
+      // ✨ NUOVO: VAT Semantics (ADR-001)
+      vat_mode: s.vat_mode || null,
+      vat_rate: s.vat_rate || 22.0,
     };
   } catch (error: any) {
     console.error('❌ [MAP] Errore mapping spedizione:', error.message, s);
@@ -618,6 +621,9 @@ function mapSpedizioneFromSupabase(s: any): any {
       peso: s.weight || 1,
       prezzoFinale: s.final_price || 0,
       deleted: s.deleted || false,
+      // ✨ NUOVO: VAT Semantics (ADR-001) - anche nel fallback
+      vat_mode: s.vat_mode || null,
+      vat_rate: s.vat_rate || 22.0,
     };
   }
 }

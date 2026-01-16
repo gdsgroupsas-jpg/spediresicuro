@@ -96,6 +96,9 @@ interface Spedizione {
   rif_mittente?: string;
   rif_destinatario?: string;
   colli?: number;
+  // ✨ NUOVO: VAT Semantics (ADR-001)
+  vat_mode?: 'included' | 'excluded' | null;
+  vat_rate?: number;
 }
 
 // Componente Badge Status
@@ -1568,10 +1571,10 @@ export default function ListaSpedizioniPage() {
                           {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
                           {featureFlags.showVATSemantics && 
                            spedizione.prezzoFinale > 0 && 
-                           (spedizione as any).vat_mode && (
+                           spedizione.vat_mode && (
                             <span className="text-xs text-gray-500 mt-0.5">
-                              {(spedizione as any).vat_mode === "excluded"
-                                ? `+ IVA ${(spedizione as any).vat_rate || 22}%`
+                              {spedizione.vat_mode === "excluded"
+                                ? `+ IVA ${spedizione.vat_rate || 22}%`
                                 : "IVA incl."}
                             </span>
                           )}
