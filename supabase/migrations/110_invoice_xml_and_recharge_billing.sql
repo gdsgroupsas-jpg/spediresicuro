@@ -147,7 +147,28 @@ DECLARE
   v_invoice_number TEXT;
   v_current_year TEXT;
   v_next_seq INTEGER;
+  v_caller_id UUID;
+  v_is_admin BOOLEAN;
 BEGIN
+  -- 🔒 SICUREZZA: Verifica autorizzazione chiamante
+  -- Se chiamato da utente autenticato (non system), verifica permessi
+  v_caller_id := auth.uid();
+  
+  IF v_caller_id IS NOT NULL THEN
+    -- Verifica se chiamante è admin o se sta fatturando per se stesso
+    SELECT EXISTS(
+      SELECT 1 FROM users 
+      WHERE id = v_caller_id 
+      AND account_type IN ('admin', 'superadmin')
+    ) INTO v_is_admin;
+    
+    -- Se non è admin E non sta fatturando per se stesso → ERRORE
+    IF NOT v_is_admin AND v_caller_id != p_user_id THEN
+      RAISE EXCEPTION 'Non autorizzato: puoi fatturare solo per te stesso o devi essere admin';
+    END IF;
+  END IF;
+  -- Se v_caller_id IS NULL, è chiamata da system (webhook) → OK (validazione ownership nelle transazioni)
+  
   -- Validazione
   IF array_length(p_transaction_ids, 1) IS NULL OR array_length(p_transaction_ids, 1) = 0 THEN
     RAISE EXCEPTION 'Nessuna transazione specificata';
