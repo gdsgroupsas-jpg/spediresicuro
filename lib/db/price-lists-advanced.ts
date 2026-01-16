@@ -703,6 +703,7 @@ async function calculateWithDefaultMargin(
   let surcharges = 0;
   let supplierBasePrice = 0; // ✨ NUOVO: Prezzo originale fornitore (se listino personalizzato modificato manualmente)
   let supplierSurcharges = 0;
+  let totalCostOriginal = 0; // ✨ FIX: Salva prezzo originale matrice (per listini con IVA inclusa)
 
   // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
   let masterVATMode: "included" | "excluded" = "excluded"; // Default per retrocompatibilità
@@ -776,6 +777,7 @@ async function calculateWithDefaultMargin(
       surcharges = matrixResult.surcharges || 0;
       // totalCost dalla matrice include già basePrice + surcharges
       const totalCost = basePrice + surcharges;
+      totalCostOriginal = totalCost; // ✨ FIX: Salva prezzo originale matrice (già IVA inclusa se listino ha IVA inclusa)
 
       console.log(
         `✅ [PRICE CALC] Risultato da matrice listino personalizzato:`
@@ -1164,13 +1166,20 @@ async function calculateWithDefaultMargin(
       if (customVATMode === "included") {
         if (isManuallyModified) {
           // Prezzi modificati manualmente: usa prezzo originale listino personalizzato (già con IVA inclusa)
-          finalPriceWithVAT = totalCost;
-          console.log(`✅ [PRICE CALC] Final Price (manually modified, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCost originale)`);
+          // ✨ IMPORTANTE: totalCostOriginal è il prezzo originale dalla matrice (già IVA inclusa se customVATMode === "included")
+          // Non usare totalCostExclVAT perché è già normalizzato
+          finalPriceWithVAT = totalCostOriginal; // Prezzo originale matrice (10€ se matrice ha 10€ IVA inclusa)
+          console.log(`✅ [PRICE CALC] Final Price (manually modified, IVA inclusa):`, {
+            totalCostOriginal: totalCostOriginal.toFixed(2),
+            totalCostExclVAT_normalizzato: totalCostExclVAT.toFixed(2),
+            finalPriceWithVAT: finalPriceWithVAT.toFixed(2),
+            note: "Usa totalCostOriginal (già IVA inclusa dalla matrice)"
+          });
         } else if (supplierTotalCostExclVAT === 0 && marginExclVAT === 0) {
           // ✨ FIX: Listino supplier senza margine: usa prezzo originale matrice (già IVA inclusa)
           // Evita doppia conversione che può causare arrotondamenti
-          finalPriceWithVAT = totalCost;
-          console.log(`✅ [PRICE CALC] Final Price (supplier senza margine, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCost originale, evita doppia conversione)`);
+          finalPriceWithVAT = totalCostOriginal > 0 ? totalCostOriginal : totalCostExclVAT;
+          console.log(`✅ [PRICE CALC] Final Price (supplier senza margine, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCostOriginal, evita doppia conversione)`);
         } else {
           // Calcola IVA su prezzo + margine (normalizzato a IVA esclusa)
           finalPriceWithVAT = calculatePriceWithVAT(finalPriceExclVAT, customVATRate);
