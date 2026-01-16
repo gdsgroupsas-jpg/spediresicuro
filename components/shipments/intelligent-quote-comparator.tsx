@@ -14,6 +14,7 @@
 "use client";
 
 import { COMMON_ACCESSORY_SERVICES } from "@/types/supplier-price-list-config";
+import { featureFlags } from "@/lib/config/feature-flags";
 import {
   AlertCircle,
   Check,
@@ -1491,15 +1492,29 @@ function QuoteTableRow({
 
       {/* Colonna Prezzo Vendita */}
       <td className="px-3 py-2.5 text-right">
-        <span className="text-base font-bold text-[#FF9500]">
-          €{totalPrice.toFixed(2)}
-        </span>
-        {quote.cached && (
-          <div className="text-xs text-blue-600 mt-0.5 flex items-center justify-end gap-1">
-            <Clock className="w-3 h-3" />
-            <span>Cache</span>
-          </div>
-        )}
+        <div className="flex flex-col items-end">
+          <span className="text-base font-bold text-[#FF9500]">
+            €{totalPrice.toFixed(2)}
+          </span>
+          
+          {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
+          {featureFlags.showVATSemantics && bestRate && (
+            <div className="text-xs text-gray-500 mt-0.5">
+              {bestRate.vat_mode === "excluded" ? (
+                <span>+ IVA {bestRate.vat_rate || "22"}%</span>
+              ) : bestRate.vat_mode === "included" ? (
+                <span className="text-green-600">IVA incl.</span>
+              ) : null}
+            </div>
+          )}
+          
+          {quote.cached && (
+            <div className="text-xs text-blue-600 mt-0.5 flex items-center justify-end gap-1">
+              <Clock className="w-3 h-3" />
+              <span>Cache</span>
+            </div>
+          )}
+        </div>
       </td>
     </tr>
   );

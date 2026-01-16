@@ -18,6 +18,7 @@ import {
 } from "@/actions/configurations";
 import { AiFeaturesCard } from "@/components/admin/ai-features/AiFeaturesCard";
 import DashboardNav from "@/components/dashboard-nav";
+import { featureFlags } from "@/lib/config/feature-flags";
 import {
   Activity,
   AlertCircle,
@@ -891,9 +892,23 @@ export default function AdminDashboardPage() {
                         <StatusBadge status={shipment.status} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {shipment.final_price
-                          ? formatCurrency(shipment.final_price)
-                          : "N/A"}
+                        <div className="flex flex-col">
+                          <span>
+                            {shipment.final_price
+                              ? formatCurrency(shipment.final_price)
+                              : "N/A"}
+                          </span>
+                          {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
+                          {featureFlags.showVATSemantics &&
+                           shipment.final_price &&
+                           (shipment as any).vat_mode && (
+                            <span className="text-xs text-gray-500 mt-0.5">
+                              {(shipment as any).vat_mode === "excluded"
+                                ? `+ IVA ${(shipment as any).vat_rate || 22}%`
+                                : "IVA incl."}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(shipment.created_at)}
