@@ -99,6 +99,8 @@ interface Spedizione {
   // ✨ NUOVO: VAT Semantics (ADR-001)
   vat_mode?: 'included' | 'excluded' | null;
   vat_rate?: number;
+  // ✨ NUOVO: Platform fee per breakdown (0 per superadmin)
+  platform_fee?: number;
 }
 
 // Componente Badge Status
@@ -217,6 +219,8 @@ export default function ListaSpedizioniPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [hasLDVScanner, setHasLDVScanner] = useState(false);
   const [showLDVScanner, setShowLDVScanner] = useState(false);
+  // ✨ NUOVO: Verifica ruolo admin/superadmin per tooltip breakdown prezzo
+  const [isAdminOrSuperadmin, setIsAdminOrSuperadmin] = useState(false);
   
   // Filtri e ricerca
   const [searchQuery, setSearchQuery] = useState('');
@@ -260,6 +264,14 @@ export default function ListaSpedizioniPage() {
             // API restituisce { success: true, user: { id, ... } }
             const userData = data.user || data;
             setUserId(userData.id || null);
+
+            // ✨ NUOVO: Verifica ruolo per tooltip breakdown (SUPERADMIN, ADMIN, RESELLER)
+            const role = (userData.role || '').toUpperCase();
+            const accountType = (userData.account_type || '').toLowerCase();
+            const canSeeBreakdown =
+              role === 'ADMIN' || role === 'SUPERADMIN' || role === 'RESELLER' ||
+              accountType === 'admin' || accountType === 'superadmin' || accountType === 'reseller';
+            setIsAdminOrSuperadmin(canSeeBreakdown);
           }
         } catch (err) {
           console.error('Errore recupero userId:', err);
@@ -1562,15 +1574,43 @@ export default function ListaSpedizioniPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
+                        <div className="group relative flex flex-col">
                           <span className="text-sm font-medium text-gray-900">
                             {spedizione.prezzoFinale > 0
                               ? formatPrice(spedizione.prezzoFinale)
                               : '—'}
                           </span>
+
+                          {/* ✨ NUOVO: Tooltip breakdown prezzo (solo admin/superadmin con fee > 0) */}
+                          {isAdminOrSuperadmin &&
+                           spedizione.prezzoFinale > 0 &&
+                           spedizione.platform_fee !== undefined &&
+                           spedizione.platform_fee > 0 && (
+                            <div className="hidden group-hover:block absolute z-20 bottom-full left-0 mb-2
+                                            bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg
+                                            whitespace-nowrap min-w-[140px]">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-gray-300">Base:</span>
+                                  <span>{formatPrice(spedizione.prezzoFinale - spedizione.platform_fee)}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-gray-300">Fee:</span>
+                                  <span>{formatPrice(spedizione.platform_fee)}</span>
+                                </div>
+                                <div className="border-t border-gray-700 pt-1 mt-1 flex justify-between gap-4">
+                                  <span className="font-semibold">Totale:</span>
+                                  <span className="font-semibold">{formatPrice(spedizione.prezzoFinale)}</span>
+                                </div>
+                              </div>
+                              <div className="absolute bottom-0 left-4 transform translate-y-1/2 rotate-45
+                                              w-2 h-2 bg-gray-900"></div>
+                            </div>
+                          )}
+
                           {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
-                          {featureFlags.showVATSemantics && 
-                           spedizione.prezzoFinale > 0 && 
+                          {featureFlags.showVATSemantics &&
+                           spedizione.prezzoFinale > 0 &&
                            spedizione.vat_mode && (
                             <span className="text-xs text-gray-500 mt-0.5">
                               {spedizione.vat_mode === "excluded"
