@@ -96,17 +96,16 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         // Consentito se:
         // - config default globale (is_default=true, owner_user_id NULL)
         // - config di proprietà dell'utente (owner_user_id = currentUserId)
-        // - config creata dall'utente (created_by = userEmail) [legacy/backward-compat]
+        // - config assegnata all'utente (assigned_config_id)
         // - admin/superadmin (operazioni amministrative)
+        // NOTE: Rimosso fallback created_by (email) - tutte le config hanno owner_user_id
         const isDefaultVisible =
           specificConfig.is_default === true && !specificConfig.owner_user_id;
         const isOwner =
           !!currentUserId && specificConfig.owner_user_id === currentUserId;
-        const isCreator = specificConfig.created_by === userEmail;
-        // ✨ FIX: Aggiungi controllo per configurazioni ASSEGNATE
         const isAssigned = assignedConfigId === configId;
 
-        if (!isAdmin && !isDefaultVisible && !isOwner && !isCreator && !isAssigned) {
+        if (!isAdmin && !isDefaultVisible && !isOwner && !isAssigned) {
           return {
             success: false,
             error: "Configurazione non trovata o non autorizzata",

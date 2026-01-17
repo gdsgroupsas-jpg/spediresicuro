@@ -84,13 +84,6 @@ export async function getCourierConfigForUser(
     // 0. Se specificConfigId è fornito, cerca direttamente quella configurazione
     // Questa ha la massima priorità (override manuale)
     if (specificConfigId) {
-      // Recupera email del target user (serve per compat legacy created_by=email)
-      const { data: targetUser } = await supabaseAdmin
-        .from("users")
-        .select("email")
-        .eq("id", userId)
-        .maybeSingle();
-
       const { data: specificConfig, error: specificError } = await supabaseAdmin
         .from("courier_configs")
         .select("*")
@@ -107,14 +100,12 @@ export async function getCourierConfigForUser(
         // Consentito se:
         // - config default globale (is_default=true, owner_user_id NULL)
         // - config di proprietà del target user (owner_user_id = userId)
-        // - config creata dal target user (created_by = targetUser.email) [legacy/backward-compat]
+        // NOTE: Rimosso fallback created_by (email) - tutte le config hanno owner_user_id
         const isDefaultVisible =
           specificConfig.is_default === true && !specificConfig.owner_user_id;
         const isOwner = specificConfig.owner_user_id === userId;
-        const isCreator =
-          !!targetUser?.email && specificConfig.created_by === targetUser.email;
 
-        if (!isDefaultVisible && !isOwner && !isCreator) {
+        if (!isDefaultVisible && !isOwner) {
           console.warn(
             `⚠️ [FACTORY] Accesso negato a configurazione specifica ${sanitizeIdForLog(specificConfigId)} per userId=${sanitizeIdForLog(userId)}`
           );
