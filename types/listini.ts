@@ -252,6 +252,35 @@ export interface PriceCalculationResult {
   totalPriceWithVAT?: number; // Calcolato se vatMode = 'excluded'
 }
 
+/**
+ * Reseller pricing governance policy (opt-in)
+ *
+ * Default: enforce_limits = false (libertà assoluta)
+ * SuperAdmin può attivare limiti per singoli reseller tramite questa policy.
+ *
+ * @property enforce_limits - Se true, applica validazione min_markup_percent
+ * @property min_markup_percent - Margine minimo richiesto (0-100%)
+ * @property revoked_at - Soft delete per audit trail
+ *
+ * @example
+ * // Policy disattivata (default) - reseller ha libertà assoluta
+ * { enforce_limits: false, min_markup_percent: 0 }
+ *
+ * // Policy attivata - reseller deve avere almeno 10% markup
+ * { enforce_limits: true, min_markup_percent: 10 }
+ */
+export interface ResellerPricingPolicy {
+  id: string;
+  reseller_id: string;
+  enforce_limits: boolean;
+  min_markup_percent: number;
+  created_at: string;
+  updated_at: string;
+  revoked_at: string | null;
+  created_by: string | null;
+  notes: string | null;
+}
+
 export interface ParsedPriceListRow {
   weight_from: number;
   weight_to: number;

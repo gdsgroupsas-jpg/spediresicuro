@@ -499,12 +499,27 @@ async function calculatePriceWithRule(
     console.log(`   - Service Type: ${params.serviceType || "standard"}`);
     console.log(`   - Entries disponibili: ${priceList.entries.length}`);
 
+    // ✨ NUOVO: Carica configurazioni manuali se presenti
+    const { data: manualConfig } = await supabaseAdmin
+      .from("supplier_price_list_config")
+      .select("insurance_config, cod_config, accessory_services_config")
+      .eq("price_list_id", priceList.id)
+      .maybeSingle();
+
+    // Estendi options con config manuali (se presenti)
+    const extendedOptions = {
+      ...params.options,
+      ...(manualConfig?.insurance_config && { insuranceConfig: manualConfig.insurance_config }),
+      ...(manualConfig?.cod_config && { codConfig: manualConfig.cod_config }),
+      ...(manualConfig?.accessory_services_config && { accessoryServices: manualConfig.accessory_services_config }),
+    };
+
     const matrixResult = calculatePriceFromList(
       priceList,
       params.weight,
       params.destination.zip || "",
       params.serviceType || "standard",
-      params.options,
+      extendedOptions, // ← Passa options esteso
       params.destination.province,
       params.destination.region
     );
