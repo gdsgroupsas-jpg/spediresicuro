@@ -36,9 +36,13 @@ export interface PlatformFeeResult {
   /** Note sulla fee personalizzata (se presenti) */
   notes: string | null;
   /** Sorgente della fee */
-  source: 'custom' | 'default';
+  source: 'custom' | 'parent_imposed' | 'parent_cascaded' | 'default';
   /** ID utente */
   userId: string;
+  /** ID utente sorgente (se fee viene da parent) */
+  sourceUserId?: string;
+  /** Email utente sorgente (se fee viene da parent) */
+  sourceUserEmail?: string;
 }
 
 /** Entry nella history delle modifiche fee */
@@ -87,30 +91,48 @@ export interface UpdatePlatformFeeResult {
 
 /**
  * Recupera la platform fee per un utente.
- * Usa la funzione SQL `get_platform_fee` per garantire consistenza.
- * 
+ * Usa il sistema a CASCATA:
+ * 1. platform_fee_override (massima priorità)
+ * 2. parent_imposed_fee (fee imposta dal parent)
+ * 3. Fee del parent (ricorsivo)
+ * 4. Default €0.50
+ *
  * @param userId - UUID dell'utente
  * @returns PlatformFeeResult con fee e metadati
  * @throws Error se utente non trovato o errore DB
  */
 export async function getPlatformFee(userId: string): Promise<PlatformFeeResult> {
-  // Chiamata RPC alla funzione SQL
-  const { data: feeFromRpc, error: rpcError } = await supabaseAdmin
-    .rpc('get_platform_fee', { p_user_id: userId });
+  // Prima prova la funzione cascading (se esiste)
+  // Fallback alla vecchia funzione per backward compatibility
+  let feeFromRpc: number | null = null;
+  let usedCascading = false;
 
-  if (rpcError) {
-    // Gestisci errore "user not found"
-    if (rpcError.message?.includes('not found')) {
-      throw new Error(`User ${userId} not found`);
+  // Prova prima la funzione cascading
+  const { data: cascadingFee, error: cascadingError } = await supabaseAdmin
+    .rpc('get_platform_fee_cascading', { p_user_id: userId });
+
+  if (!cascadingError && cascadingFee !== null) {
+    feeFromRpc = cascadingFee;
+    usedCascading = true;
+  } else {
+    // Fallback alla vecchia funzione
+    const { data: oldFee, error: oldError } = await supabaseAdmin
+      .rpc('get_platform_fee', { p_user_id: userId });
+
+    if (oldError) {
+      if (oldError.message?.includes('not found')) {
+        throw new Error(`User ${userId} not found`);
+      }
+      console.error('[PlatformFee] RPC error:', oldError);
+      throw new Error(`Error fetching platform fee: ${oldError.message}`);
     }
-    console.error('[PlatformFee] RPC error:', rpcError);
-    throw new Error(`Error fetching platform fee: ${rpcError.message}`);
+    feeFromRpc = oldFee;
   }
 
-  // Recupera anche i dettagli utente per sapere se è custom
+  // Recupera dettagli utente per determinare source
   const { data: userData, error: userError } = await supabaseAdmin
     .from('users')
-    .select('platform_fee_override, platform_fee_notes')
+    .select('platform_fee_override, platform_fee_notes, parent_imposed_fee, parent_id, fee_applied_by_parent_id')
     .eq('id', userId)
     .single();
 
@@ -119,14 +141,55 @@ export async function getPlatformFee(userId: string): Promise<PlatformFeeResult>
     throw new Error(`Error fetching user data: ${userError.message}`);
   }
 
-  const isCustom = userData.platform_fee_override !== null;
-  
+  // Determina source della fee
+  let source: 'custom' | 'parent_imposed' | 'parent_cascaded' | 'default' = 'default';
+  let sourceUserId: string | undefined;
+  let sourceUserEmail: string | undefined;
+
+  if (userData.platform_fee_override !== null) {
+    // Priorità 1: Override utente
+    source = 'custom';
+    sourceUserId = userId;
+  } else if (userData.parent_imposed_fee !== null) {
+    // Priorità 2: Fee imposta dal parent
+    source = 'parent_imposed';
+    sourceUserId = userData.fee_applied_by_parent_id || undefined;
+
+    // Recupera email del parent che ha imposto la fee
+    if (sourceUserId) {
+      const { data: parentData } = await supabaseAdmin
+        .from('users')
+        .select('email')
+        .eq('id', sourceUserId)
+        .single();
+      sourceUserEmail = parentData?.email || undefined;
+    }
+  } else if (userData.parent_id !== null && usedCascading) {
+    // Priorità 3: Fee cascaded dal parent
+    source = 'parent_cascaded';
+
+    // Prova a ottenere dettagli dalla funzione get_platform_fee_details
+    const { data: detailsData } = await supabaseAdmin
+      .rpc('get_platform_fee_details', { p_user_id: userId });
+
+    if (detailsData && detailsData.length > 0) {
+      const detail = detailsData[0];
+      source = detail.source as typeof source;
+      sourceUserId = detail.source_user_id || undefined;
+      sourceUserEmail = detail.source_user_email || undefined;
+    }
+  }
+
+  const isCustom = source === 'custom';
+
   return {
-    fee: feeFromRpc,
+    fee: feeFromRpc ?? DEFAULT_PLATFORM_FEE,
     isCustom,
     notes: userData.platform_fee_notes,
-    source: isCustom ? 'custom' : 'default',
+    source,
     userId,
+    sourceUserId,
+    sourceUserEmail,
   };
 }
 
@@ -340,5 +403,212 @@ export async function listUsersWithCustomFees(
     customFee: row.platform_fee_override,
     notes: row.platform_fee_notes,
   }));
+}
+
+// ============================================
+// FUNZIONI CASCADING FEE (RESELLER → SUB-USER)
+// ============================================
+
+/** Input per impostare fee a un sub-user */
+export interface SetParentImposedFeeInput {
+  /** ID del sub-user a cui applicare la fee */
+  childUserId: string;
+  /** Fee da imporre (null per rimuovere) */
+  fee: number | null;
+  /** Note opzionali */
+  notes?: string;
+}
+
+/** Risultato operazione set parent fee */
+export interface SetParentImposedFeeResult {
+  success: boolean;
+  message: string;
+  previousFee: number | null;
+  newFee: number | null;
+}
+
+/**
+ * Imposta una fee per un sub-user.
+ * Solo RESELLER/SUPERADMIN possono chiamare questa funzione
+ * e solo per i propri sub-user.
+ *
+ * @param input - Dati fee da impostare
+ * @param parentUserId - ID del RESELLER/SUPERADMIN che esegue l'operazione
+ * @returns Risultato operazione
+ * @throws Error se non autorizzato o sub-user non valido
+ */
+export async function setParentImposedFee(
+  input: SetParentImposedFeeInput,
+  parentUserId: string
+): Promise<SetParentImposedFeeResult> {
+  const { childUserId, fee, notes } = input;
+
+  // Validazione input
+  if (fee !== null && fee < 0) {
+    throw new Error('Fee cannot be negative');
+  }
+
+  // 1. Verifica che parentUserId sia RESELLER o SUPERADMIN
+  const { data: parentData, error: parentError } = await supabaseAdmin
+    .from('users')
+    .select('account_type, role, is_reseller')
+    .eq('id', parentUserId)
+    .single();
+
+  if (parentError) {
+    console.error('[PlatformFee] Parent check error:', parentError);
+    throw new Error('Error verifying parent privileges');
+  }
+
+  const canImposeFee =
+    parentData.account_type === 'superadmin' ||
+    parentData.account_type === 'reseller' ||
+    parentData.role === 'SUPERADMIN' ||
+    parentData.role === 'ADMIN' ||
+    parentData.is_reseller === true;
+
+  if (!canImposeFee) {
+    throw new Error('Only RESELLER or SUPERADMIN can impose fees on sub-users');
+  }
+
+  // 2. Verifica che childUserId sia un sub-user del parent
+  const { data: isSubUser, error: subUserError } = await supabaseAdmin
+    .rpc('is_sub_user_of', {
+      p_sub_user_id: childUserId,
+      p_admin_id: parentUserId,
+    });
+
+  if (subUserError) {
+    console.error('[PlatformFee] Sub-user check error:', subUserError);
+    throw new Error('Error verifying sub-user relationship');
+  }
+
+  // SUPERADMIN può impostare fee a chiunque
+  const isSuperAdmin =
+    parentData.account_type === 'superadmin' ||
+    parentData.role === 'SUPERADMIN';
+
+  if (!isSubUser && !isSuperAdmin) {
+    throw new Error('Target user is not a sub-user of your organization');
+  }
+
+  // 3. Recupera fee precedente per audit
+  const { data: childData, error: childError } = await supabaseAdmin
+    .from('users')
+    .select('parent_imposed_fee')
+    .eq('id', childUserId)
+    .single();
+
+  if (childError) {
+    console.error('[PlatformFee] Child data error:', childError);
+    throw new Error('Error fetching sub-user data');
+  }
+
+  const previousFee = childData.parent_imposed_fee;
+
+  // 4. Aggiorna parent_imposed_fee
+  const { error: updateError } = await supabaseAdmin
+    .from('users')
+    .update({
+      parent_imposed_fee: fee,
+      fee_applied_by_parent_id: fee !== null ? parentUserId : null,
+    })
+    .eq('id', childUserId);
+
+  if (updateError) {
+    console.error('[PlatformFee] Update error:', updateError);
+    throw new Error(`Error updating parent imposed fee: ${updateError.message}`);
+  }
+
+  // 5. Registra in audit log
+  const { error: auditError } = await supabaseAdmin
+    .from('parent_fee_history')
+    .insert({
+      parent_id: parentUserId,
+      child_id: childUserId,
+      old_parent_fee: previousFee,
+      new_parent_fee: fee,
+      notes: notes || null,
+      changed_by: parentUserId,
+    });
+
+  if (auditError) {
+    // Log errore audit ma non bloccare l'operazione
+    console.error('[PlatformFee] Audit error (non bloccante):', auditError);
+  }
+
+  // Log operazione
+  console.log('[PlatformFee] Parent imposed fee updated:', {
+    parentUserId,
+    childUserId,
+    previousFee,
+    newFee: fee,
+  });
+
+  return {
+    success: true,
+    message: fee === null
+      ? 'Parent imposed fee removed - sub-user will inherit parent fee'
+      : `Parent imposed fee set to €${fee.toFixed(2)}`,
+    previousFee,
+    newFee: fee,
+  };
+}
+
+/**
+ * Recupera la lista di sub-user con le loro fee configurate.
+ * Per dashboard RESELLER.
+ *
+ * @param parentUserId - ID del RESELLER/SUPERADMIN
+ * @returns Lista sub-user con dettagli fee
+ */
+export async function getSubUsersWithFees(parentUserId: string): Promise<
+  Array<{
+    userId: string;
+    name: string;
+    email: string;
+    parentImposedFee: number | null;
+    effectiveFee: number;
+    feeSource: string;
+  }>
+> {
+  // Recupera sub-user diretti
+  const { data: subUsers, error } = await supabaseAdmin
+    .from('users')
+    .select('id, name, email, parent_imposed_fee')
+    .eq('parent_id', parentUserId)
+    .order('name');
+
+  if (error) {
+    console.error('[PlatformFee] Get sub-users error:', error);
+    throw new Error(`Error fetching sub-users: ${error.message}`);
+  }
+
+  // Per ogni sub-user, calcola la fee effettiva
+  const result = await Promise.all(
+    (subUsers || []).map(async (user) => {
+      let effectiveFee = DEFAULT_PLATFORM_FEE;
+      let feeSource = 'default';
+
+      try {
+        const feeResult = await getPlatformFee(user.id);
+        effectiveFee = feeResult.fee;
+        feeSource = feeResult.source;
+      } catch (e) {
+        console.warn(`[PlatformFee] Error getting fee for user ${user.id}:`, e);
+      }
+
+      return {
+        userId: user.id,
+        name: user.name || '',
+        email: user.email,
+        parentImposedFee: user.parent_imposed_fee,
+        effectiveFee,
+        feeSource,
+      };
+    })
+  );
+
+  return result;
 }
 
