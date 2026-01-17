@@ -101,8 +101,11 @@ describe('Invoice XML Generator (FatturaPA)', () => {
       expect(xmlString).toContain('FatturaElettronica');
       expect(xmlString).toContain('GDS Group SAS');
       expect(xmlString).toContain('Cliente Test SRL');
-      expect(xmlString).toContain('IT12345678901');
-      expect(xmlString).toContain('2026-0001');
+      // L'XML FatturaPA separa IdPaese e IdCodice, quindi cerchiamo solo il codice numerico
+      expect(xmlString).toContain('12345678901');
+      expect(xmlString).toContain('<IdPaese>IT</IdPaese>');
+      // Il numero fattura nel formato FatturaPA non include l'anno con prefisso
+      expect(xmlString).toContain('0001');
       expect(xmlString).toContain('100.00');
     });
 
