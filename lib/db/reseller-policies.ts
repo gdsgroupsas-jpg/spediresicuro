@@ -8,6 +8,9 @@
 
 import { supabaseAdmin } from "@/lib/db/client";
 import type { ResellerPricingPolicy } from "@/types/listini";
+import { createLogger, hashValue } from "@/lib/logger";
+
+const logger = createLogger();
 
 /**
  * Recupera la policy di pricing attiva per un reseller
@@ -42,9 +45,10 @@ export async function getResellerPricingPolicy(
 
     return data as ResellerPricingPolicy;
   } catch (error) {
-    console.error(
-      `[RESELLER_POLICIES] Error fetching policy for ${resellerId}:`,
-      error
+    logger.error(
+      "Error fetching reseller pricing policy",
+      error,
+      { resellerId: hashValue(resellerId) }
     );
     // Fail-safe: se errore DB, nessuna restrizione (libertà assoluta)
     return null;
@@ -171,15 +175,21 @@ export async function upsertResellerPricingPolicy(params: {
 
     if (error) throw error;
 
-    console.log(
-      `[RESELLER_POLICIES] Policy ${enforceLimit ? "ACTIVATED" : "DISABLED"} for reseller ${resellerId} (min markup: ${minMarkupPercent}%)`
+    logger.info(
+      `Policy ${enforceLimit ? "ACTIVATED" : "DISABLED"} for reseller`,
+      {
+        resellerId: hashValue(resellerId),
+        enforceLimit,
+        minMarkupPercent,
+      }
     );
 
     return data as ResellerPricingPolicy;
   } catch (error) {
-    console.error(
-      `[RESELLER_POLICIES] Error upserting policy for ${resellerId}:`,
-      error
+    logger.error(
+      "Error upserting reseller pricing policy",
+      error,
+      { resellerId: hashValue(resellerId) }
     );
     throw error;
   }
@@ -218,16 +228,21 @@ export async function revokeResellerPricingPolicy(
     const revoked = data && data.length > 0;
 
     if (revoked) {
-      console.log(
-        `[RESELLER_POLICIES] Policy REVOKED for reseller ${resellerId} by ${revokedBy}`
+      logger.info(
+        "Policy REVOKED for reseller",
+        {
+          resellerId: hashValue(resellerId),
+          revokedBy: hashValue(revokedBy),
+        }
       );
     }
 
     return revoked;
   } catch (error) {
-    console.error(
-      `[RESELLER_POLICIES] Error revoking policy for ${resellerId}:`,
-      error
+    logger.error(
+      "Error revoking reseller pricing policy",
+      error,
+      { resellerId: hashValue(resellerId) }
     );
     throw error;
   }
