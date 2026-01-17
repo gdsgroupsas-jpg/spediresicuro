@@ -171,12 +171,13 @@ export async function upsertSupplierPriceListConfig(
       };
     }
 
-    // Verifica che sia un listino fornitore
-    if (priceList.list_type !== "supplier") {
+    // ✨ NUOVO: Supporto configurazioni manuali per listini custom
+    // Governance gestita tramite reseller_pricing_policies (opt-in)
+    const listType = priceList.list_type || "unknown";
+    if (!["supplier", "custom"].includes(listType)) {
       return {
         success: false,
-        error:
-          "Le configurazioni manuali sono disponibili solo per listini fornitore",
+        error: `Configurazioni manuali non supportate per list_type='${listType}'`,
       };
     }
 
