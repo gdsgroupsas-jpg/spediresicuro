@@ -265,12 +265,13 @@ export default function ListaSpedizioniPage() {
             const userData = data.user || data;
             setUserId(userData.id || null);
 
-            // ✨ NUOVO: Verifica ruolo admin/superadmin
+            // ✨ NUOVO: Verifica ruolo per tooltip breakdown (SUPERADMIN, ADMIN, RESELLER)
             const role = (userData.role || '').toUpperCase();
             const accountType = (userData.account_type || '').toLowerCase();
-            const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN' ||
-                           accountType === 'admin' || accountType === 'superadmin';
-            setIsAdminOrSuperadmin(isAdmin);
+            const canSeeBreakdown =
+              role === 'ADMIN' || role === 'SUPERADMIN' || role === 'RESELLER' ||
+              accountType === 'admin' || accountType === 'superadmin' || accountType === 'reseller';
+            setIsAdminOrSuperadmin(canSeeBreakdown);
           }
         } catch (err) {
           console.error('Errore recupero userId:', err);

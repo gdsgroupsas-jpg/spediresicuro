@@ -429,14 +429,14 @@ export async function POST(request: NextRequest) {
       console.log('💰 [API] Calcolato prezzo finale con margine default:', prezzoFinale);
     }
 
-    // ✨ FIX: Aggiungi platform fee al prezzo finale (se non superadmin)
-    // La platform fee viene addebitata al wallet, quindi deve essere inclusa nel prezzo salvato
+    // ✨ FIX: Platform fee per ruoli BUSINESS (SUPERADMIN, ADMIN, RESELLER, BYOC)
+    // USER finali NON pagano mai platform fee
+    // La fee è configurabile per utente (può essere 0 = gratis)
     let platformFee = 0;
     try {
       const { getPlatformFeeSafe } = await import('@/lib/services/pricing/platform-fee');
 
       // ✨ FIX P0: Verifica ruolo da MULTIPLE FONTI per evitare false negative
-      // Il ruolo può essere nella session token O nel database
       const sessionRole = (session.user as any)?.role?.toUpperCase?.() || '';
       const sessionAccountType = (session.user as any)?.account_type?.toLowerCase?.() || '';
 
@@ -450,12 +450,24 @@ export async function POST(request: NextRequest) {
       const dbRole = userData?.role?.toUpperCase?.() || '';
       const dbAccountType = userData?.account_type?.toLowerCase?.() || '';
 
-      // Check multiplo con fallback - SUPERADMIN non paga MAI platform fee
-      const isSuperadmin =
-        sessionRole === 'SUPERADMIN' ||
-        sessionAccountType === 'superadmin' ||
-        dbRole === 'SUPERADMIN' ||
-        dbAccountType === 'superadmin';
+      // Determina se è un USER finale (NON paga fee)
+      // USER = account_type 'user' OPPURE nessun ruolo business esplicito
+      const isRegularUser =
+        sessionAccountType === 'user' ||
+        dbAccountType === 'user' ||
+        (
+          // Se non ha account_type definito E non è un ruolo business
+          !sessionAccountType && !dbAccountType &&
+          !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(sessionRole) &&
+          !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(dbRole)
+        );
+
+      // Ruoli BUSINESS che pagano fee (configurabile, può essere 0)
+      const isBusinessRole =
+        ['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(sessionRole) ||
+        ['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(dbRole) ||
+        ['superadmin', 'admin', 'reseller', 'byoc'].includes(sessionAccountType) ||
+        ['superadmin', 'admin', 'reseller', 'byoc'].includes(dbAccountType);
 
       console.log('🔐 [API] Verifica ruolo per platform fee:', {
         email: session.user.email,
@@ -463,25 +475,29 @@ export async function POST(request: NextRequest) {
         sessionAccountType,
         dbRole,
         dbAccountType,
-        isSuperadmin,
-        platformFeeApplied: !isSuperadmin
+        isRegularUser,
+        isBusinessRole,
+        platformFeeApplied: isBusinessRole && !isRegularUser
       });
 
-      if (!isSuperadmin) {
-        // Recupera user_id per calcolare platform fee
+      // Solo ruoli BUSINESS pagano platform fee (può essere 0 se configurata così)
+      // USER finali NON pagano MAI
+      if (isBusinessRole && !isRegularUser) {
         const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
         const userId = await getSupabaseUserIdFromEmail(session.user.email);
         if (userId) {
           platformFee = await getPlatformFeeSafe(userId);
           prezzoFinale = prezzoFinale + platformFee;
-          console.log('💰 [API] Aggiunta platform fee al prezzo finale:', {
+          console.log('💼 [API] BUSINESS role - platform fee applicata:', {
+            role: dbRole || sessionRole,
+            accountType: dbAccountType || sessionAccountType,
             prezzoSenzaFee: prezzoFinale - platformFee,
             platformFee,
             prezzoFinale,
           });
         }
       } else {
-        console.log('👑 [API] SUPERADMIN - platform fee NON applicata');
+        console.log('👤 [API] USER finale - platform fee NON applicata (gratis)');
       }
     } catch (error) {
       console.warn('⚠️ [API] Errore recupero platform fee, prezzo senza fee:', error);
