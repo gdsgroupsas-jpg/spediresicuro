@@ -76,6 +76,25 @@ export async function updatePriceListEntryAction(
       };
     }
 
+    // ✨ NUOVO: Governance validation per custom lists (opt-in)
+    if (priceList.list_type === "custom" && priceList.created_by && data.base_price) {
+      const { validateResellerPricing } = await import("@/lib/db/reseller-policies");
+
+      const validationError = await validateResellerPricing({
+        resellerId: priceList.created_by,
+        basePrice: data.base_price,
+        finalPrice: data.base_price, // Simplified (real calc would include surcharges)
+        isSuperAdmin: isAdmin,
+      });
+
+      if (validationError) {
+        return {
+          success: false,
+          error: `Governance: ${validationError}`,
+        };
+      }
+    }
+
     // Aggiorna entry
     const { data: updatedEntry, error: updateError } = await supabaseAdmin
       .from("price_list_entries")
