@@ -17,6 +17,7 @@ import {
   listConfigurations,
 } from "@/actions/configurations";
 import { AiFeaturesCard } from "@/components/admin/ai-features/AiFeaturesCard";
+import { ManagePriceListAssignmentsDialog } from "@/components/admin/manage-price-list-assignments-dialog";
 import DashboardNav from "@/components/dashboard-nav";
 import { featureFlags } from "@/lib/config/feature-flags";
 import {
@@ -27,9 +28,12 @@ import {
   Cog,
   DollarSign,
   ExternalLink,
+  FileText,
+  Filter,
   Package,
   Power,
   PowerOff,
+  Search,
   Settings,
   Shield,
   Sparkles,
@@ -43,7 +47,15 @@ import {
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import {
+  isTestUser,
+  isTestShipment,
+  createUserMap,
+  filterProductionUsers,
+  filterProductionShipments,
+  countTestVsProduction,
+} from "@/lib/utils/test-data-detection";
 
 interface AdminStats {
   // Utenti
@@ -82,6 +94,11 @@ interface User {
   created_at: string;
   assigned_config_id?: string | null;
   metadata?: any;
+  price_lists_count?: number;
+  account_type?: string;
+  is_reseller?: boolean;
+  reseller_role?: string;
+  parent_user_id?: string | null;
 }
 
 interface Shipment {
@@ -118,6 +135,18 @@ export default function AdminDashboardPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [courierConfigs, setCourierConfigs] = useState<any[]>([]);
   const [assigningConfig, setAssigningConfig] = useState<string | null>(null);
+
+  // Stati per gestione listini personalizzati
+  const [selectedUserForPriceLists, setSelectedUserForPriceLists] = useState<User | null>(null);
+  const [showPriceListsDialog, setShowPriceListsDialog] = useState(false);
+
+  // Filtri per dati di test
+  const [showTestData, setShowTestData] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [shipmentSearch, setShipmentSearch] = useState("");
+  const [currentUserPage, setCurrentUserPage] = useState(1);
+  const [currentShipmentPage, setCurrentShipmentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   // Carica configurazioni corrieri
   useEffect(() => {
@@ -268,6 +297,93 @@ export default function AdminDashboardPage() {
       minute: "2-digit",
     });
   }
+
+  // Statistiche test vs produzione (definite prima degli early return - REGOLA HOOKS)
+  const userStats = useMemo(() => {
+    if (!users || users.length === 0) {
+      return { test: 0, production: 0, total: 0 };
+    }
+    return countTestVsProduction(users);
+  }, [users]);
+  
+  const shipmentStats = useMemo(() => {
+    if (!shipments || shipments.length === 0) {
+      return { test: 0, production: 0, total: 0 };
+    }
+    const userMap = createUserMap(users);
+    let test = 0;
+    let production = 0;
+
+    shipments.forEach((s) => {
+      if (isTestShipment(s, userMap)) {
+        test++;
+      } else {
+        production++;
+      }
+    });
+
+    return { test, production, total: shipments.length };
+  }, [shipments, users]);
+
+  // Filtra e processa utenti
+  const processedUsers = useMemo(() => {
+    let filtered = [...users];
+
+    // Filtro dati di test
+    if (!showTestData) {
+      filtered = filterProductionUsers(filtered);
+    }
+
+    // Filtro ricerca
+    if (userSearch) {
+      const searchLower = userSearch.toLowerCase();
+      filtered = filtered.filter(
+        (u) =>
+          u.email?.toLowerCase().includes(searchLower) ||
+          u.name?.toLowerCase().includes(searchLower) ||
+          u.id.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [users, showTestData, userSearch]);
+
+  // Filtra e processa spedizioni
+  const processedShipments = useMemo(() => {
+    let filtered = [...shipments];
+    const userMap = createUserMap(users);
+
+    // Filtro dati di test
+    if (!showTestData) {
+      filtered = filterProductionShipments(filtered, userMap);
+    }
+
+    // Filtro ricerca
+    if (shipmentSearch) {
+      const searchLower = shipmentSearch.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.tracking_number?.toLowerCase().includes(searchLower) ||
+          s.recipient_name?.toLowerCase().includes(searchLower) ||
+          s.recipient_city?.toLowerCase().includes(searchLower) ||
+          s.id.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [shipments, users, showTestData, shipmentSearch]);
+
+  // Paginazione utenti
+  const paginatedUsers = useMemo(() => {
+    const start = (currentUserPage - 1) * ITEMS_PER_PAGE;
+    return processedUsers.slice(start, start + ITEMS_PER_PAGE);
+  }, [processedUsers, currentUserPage]);
+
+  // Paginazione spedizioni
+  const paginatedShipments = useMemo(() => {
+    const start = (currentShipmentPage - 1) * ITEMS_PER_PAGE;
+    return processedShipments.slice(start, start + ITEMS_PER_PAGE);
+  }, [processedShipments, currentShipmentPage]);
 
   // Carica features di un utente
   async function loadUserFeatures(userId: string) {
@@ -525,6 +641,34 @@ export default function AdminDashboardPage() {
           showBackButton={true}
         />
 
+        {/* Banner Informazioni Filtri */}
+        {(userStats.test > 0 || shipmentStats.test > 0) && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Filter className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                  Filtri Dati di Test Attivi
+                </h3>
+                <p className="text-sm text-blue-800">
+                  Per default, i dati di test sono nascosti per una navigazione più pulita.{" "}
+                  {userStats.test > 0 && (
+                    <span>
+                      <strong>{userStats.test} utenti di test</strong> e{" "}
+                    </span>
+                  )}
+                  {shipmentStats.test > 0 && (
+                    <span>
+                      <strong>{shipmentStats.test} spedizioni di test</strong>{" "}
+                    </span>
+                  )}
+                  sono attualmente nascosti. Attiva &quot;Mostra dati di test&quot; nelle tabelle per visualizzarli.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions - Admin Tools */}
         {session?.user && (
           <div className="mb-8">
@@ -617,15 +761,27 @@ export default function AdminDashboardPage() {
 
         {/* Stat Cards - Utenti */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Utenti
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Utenti
+            </h2>
+            {userStats.test > 0 && (
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-green-600">{userStats.production} produzione</span>
+                {" / "}
+                <span className="font-medium text-yellow-600">{userStats.test} test</span>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Totale Utenti"
-              value={stats.totalUsers}
-              change={`${stats.adminUsers} admin, ${stats.regularUsers} utenti`}
+              value={showTestData ? stats.totalUsers : userStats.production}
+              change={showTestData 
+                ? `${stats.adminUsers} admin, ${stats.regularUsers} utenti`
+                : `${userStats.production} produzione${userStats.test > 0 ? ` (${userStats.test} test nascosti)` : ''}`
+              }
               gradient="bg-gradient-to-r from-blue-500 to-blue-600"
               icon={<Users className="w-5 h-5" />}
             />
@@ -655,15 +811,27 @@ export default function AdminDashboardPage() {
 
         {/* Stat Cards - Spedizioni */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Spedizioni
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Spedizioni
+            </h2>
+            {shipmentStats.test > 0 && (
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-green-600">{shipmentStats.production} produzione</span>
+                {" / "}
+                <span className="font-medium text-yellow-600">{shipmentStats.test} test</span>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Totale Spedizioni"
-              value={stats.totalShipments}
-              change={`${stats.shipmentsDelivered} consegnate`}
+              value={showTestData ? stats.totalShipments : shipmentStats.production}
+              change={showTestData
+                ? `${stats.shipmentsDelivered} consegnate`
+                : `${shipmentStats.production} produzione${shipmentStats.test > 0 ? ` (${shipmentStats.test} test nascoste)` : ''}`
+              }
               gradient="bg-gradient-to-r from-orange-500 to-orange-600"
               icon={<Package className="w-5 h-5" />}
             />
@@ -727,9 +895,47 @@ export default function AdminDashboardPage() {
 
         {/* Tabella Utenti Recenti */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Utenti Recenti
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              Utenti {!showTestData && `(Produzione: ${userStats.production})`}
+            </h2>
+            <div className="flex items-center gap-4">
+              {/* Filtro dati di test */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showTestData}
+                  onChange={(e) => {
+                    setShowTestData(e.target.checked);
+                    setCurrentUserPage(1);
+                  }}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-600">Mostra dati di test</span>
+              </label>
+              {/* Ricerca utenti */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cerca utenti..."
+                  value={userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setCurrentUserPage(1);
+                  }}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+          {userStats.test > 0 && !showTestData && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>{userStats.test} utenti di test</strong> nascosti. Attiva &quot;Mostra dati di test&quot; per visualizzarli.
+              </p>
+            </div>
+          )}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -748,6 +954,9 @@ export default function AdminDashboardPage() {
                       Configurazione Corriere
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Listini Personalizzati
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Registrato
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -756,20 +965,29 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {users.slice(0, 10).map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.name || user.email}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {user.email}
+                  {paginatedUsers.map((user) => {
+                    const isTest = isTestUser(user);
+                    return (
+                      <tr key={user.id} className={`hover:bg-gray-50 ${isTest ? 'bg-yellow-50/50' : ''}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {user.name || user.email}
+                                </div>
+                                {isTest && (
+                                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                                    TEST
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {
                           // Import dinamico per evitare problemi SSR
@@ -802,6 +1020,29 @@ export default function AdminDashboardPage() {
                             </option>
                           ))}
                         </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {!user.parent_user_id ? (
+                          <button
+                            onClick={() => {
+                              setSelectedUserForPriceLists(user);
+                              setShowPriceListsDialog(true);
+                            }}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm transition-all ${
+                              (user.price_lists_count || 0) > 0
+                                ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            <FileText className="w-4 h-4" />
+                            {(user.price_lists_count || 0) > 0
+                              ? `${user.price_lists_count} Listino${user.price_lists_count > 1 ? 'i' : ''}`
+                              : 'Nessuno'
+                            }
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400">N/A</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(user.created_at)}
@@ -837,7 +1078,8 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>
@@ -846,9 +1088,34 @@ export default function AdminDashboardPage() {
 
         {/* Tabella Spedizioni Recenti */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Spedizioni Recenti
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              Spedizioni {!showTestData && `(Produzione: ${shipmentStats.production})`}
+            </h2>
+            <div className="flex items-center gap-4">
+              {/* Ricerca spedizioni */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cerca spedizioni..."
+                  value={shipmentSearch}
+                  onChange={(e) => {
+                    setShipmentSearch(e.target.value);
+                    setCurrentShipmentPage(1);
+                  }}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+          {shipmentStats.test > 0 && !showTestData && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>{shipmentStats.test} spedizioni di test</strong> nascoste. Attiva &quot;Mostra dati di test&quot; per visualizzarle.
+              </p>
+            </div>
+          )}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -875,23 +1142,36 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {shipments.slice(0, 20).map((shipment) => (
-                    <tr key={shipment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {shipment.tracking_number || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {(() => {
+                    const userMap = createUserMap(users);
+                    return paginatedShipments.map((shipment) => {
+                      const isTest = isTestShipment(shipment, userMap);
+                      return (
+                        <tr key={shipment.id} className={`hover:bg-gray-50 ${isTest ? 'bg-yellow-50/50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              {shipment.tracking_number || "N/A"}
+                            </span>
+                            {isTest && (
+                              <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                                TEST
+                              </span>
+                            )}
+                          </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {shipment.recipient_name || "N/A"}
                         {shipment.recipient_city && (
                           <div className="text-xs text-gray-400">
                             {shipment.recipient_city}
                           </div>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={shipment.status} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <StatusBadge status={shipment.status} />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <div className="flex flex-col">
                           <span>
                             {shipment.final_price
@@ -908,12 +1188,12 @@ export default function AdminDashboardPage() {
                                 : "IVA incl."}
                             </span>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(shipment.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(shipment.created_at)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => {
                             setSelectedShipment(shipment);
@@ -922,11 +1202,13 @@ export default function AdminDashboardPage() {
                           className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
                           title="Cancella Spedizione"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1271,6 +1553,27 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Dialog Gestione Listini Personalizzati */}
+        {showPriceListsDialog && selectedUserForPriceLists && (
+          <ManagePriceListAssignmentsDialog
+            open={showPriceListsDialog}
+            onOpenChange={setShowPriceListsDialog}
+            userId={selectedUserForPriceLists.id}
+            userName={selectedUserForPriceLists.name}
+            userEmail={selectedUserForPriceLists.email}
+            onSuccess={() => {
+              // Ricarica overview per aggiornare count
+              fetch("/api/admin/overview")
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data.success) {
+                    setUsers(data.users || []);
+                  }
+                });
+            }}
+          />
         )}
       </div>
     </div>
