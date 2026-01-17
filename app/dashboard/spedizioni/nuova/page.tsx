@@ -34,7 +34,12 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+
+// Enterprise Feedback UX Components (Phase 3)
+import { SuccessModal, ErrorDialog } from "@/components/feedback";
+import { useEnterpriseFeedbackUX } from "@/hooks/useEnterpriseFeedbackUX";
+import { formatError } from "@/lib/errors";
 
 interface FormData {
   // Mittente
@@ -239,6 +244,20 @@ function RouteVisualizer({
 
 export default function NuovaSpedizionePage() {
   const router = useRouter();
+
+  // Enterprise Feedback UX feature flag
+  const { isEnabled: useEnterpriseFeedback } = useEnterpriseFeedbackUX();
+
+  // State per Enterprise Feedback modals
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [formattedError, setFormattedError] = useState<ReturnType<typeof formatError> | null>(null);
+  const [createdShipmentData, setCreatedShipmentData] = useState<{
+    tracking: string;
+    courier: string;
+    cost: string;
+  } | null>(null);
+
   const [formData, setFormData] = useState<FormData>({
     mittenteNome: "",
     mittenteIndirizzo: "",
@@ -632,6 +651,12 @@ export default function NuovaSpedizionePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // ⚠️ DOUBLE-SUBMIT PROTECTION: Blocca se già in corso
+    if (isSubmitting) {
+      console.warn("⚠️ [FORM] Submit già in corso, ignoro click duplicato");
+      return;
+    }
+
     // ⚠️ VALIDAZIONE PRE-SUBMIT: Blocca se dati obbligatori mancano
     const validationErrors: string[] = [];
 
@@ -880,8 +905,22 @@ export default function NuovaSpedizionePage() {
       console.log("📦 [CLIENT] Corriere:", result.data?.corriere);
       console.log("📦 [CLIENT] Success:", result.success);
       console.log("📦 [CLIENT] Message:", result.message);
+
+      // Legacy state (sempre settato per compatibilità)
       setSubmitSuccess(true);
       setCreatedTracking(result.data?.tracking || null);
+
+      // Enterprise Feedback: Mostra SuccessModal invece dell'inline message
+      if (useEnterpriseFeedback) {
+        setCreatedShipmentData({
+          tracking: result.data?.tracking || "",
+          courier: formData.corriere,
+          cost: selectedQuoteExactPrice?.price
+            ? `€${selectedQuoteExactPrice.price.toFixed(2)}`
+            : "",
+        });
+        setShowSuccessModal(true);
+      }
 
       // Genera e scarica documento (CSV o PDF)
       const spedizioneData = result.data;
@@ -1160,7 +1199,19 @@ export default function NuovaSpedizionePage() {
         error instanceof Error
           ? error.message
           : "Errore durante il salvataggio. Riprova.";
+
+      // Legacy state (sempre settato per compatibilità)
       setSubmitError(errorMessage);
+
+      // Enterprise Feedback: Mostra ErrorDialog invece dell'inline message
+      if (useEnterpriseFeedback) {
+        const formatted = formatError({
+          message: errorMessage,
+          originalError: error,
+        });
+        setFormattedError(formatted);
+        setShowErrorDialog(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1938,14 +1989,14 @@ export default function NuovaSpedizionePage() {
                     </div>
                   </div>
 
-                  {/* Error/Success Messages */}
-                  {submitError && (
+                  {/* Error/Success Messages - Legacy (solo se Enterprise Feedback disabilitato) */}
+                  {!useEnterpriseFeedback && submitError && (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                       {submitError}
                     </div>
                   )}
 
-                  {submitSuccess && (
+                  {!useEnterpriseFeedback && submitSuccess && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
                       <div className="flex items-center gap-2 text-green-700 mb-2">
                         <CheckCircle2 className="w-5 h-5" />
@@ -1975,6 +2026,104 @@ export default function NuovaSpedizionePage() {
           </div>
         </div>
       </div>
+
+      {/* Enterprise Feedback UX Modals */}
+      {useEnterpriseFeedback && (
+        <>
+          {/* Success Modal */}
+          <SuccessModal
+            open={showSuccessModal}
+            onOpenChange={setShowSuccessModal}
+            trackingNumber={createdShipmentData?.tracking || createdTracking || ""}
+            courier={createdShipmentData?.courier}
+            cost={createdShipmentData?.cost}
+            onPrintLabel={() => {
+              // Il download del PDF è già gestito nel handleSubmit
+              // Chiudi modal
+              setShowSuccessModal(false);
+            }}
+            onTrackShipment={() => {
+              // Naviga a tracking page
+              const tracking = createdShipmentData?.tracking || createdTracking;
+              if (tracking) {
+                window.open(`/track/${tracking}`, "_blank");
+              }
+              setShowSuccessModal(false);
+            }}
+            onCreateAnother={() => {
+              // Il reset form è già schedulato nel handleSubmit
+              // Chiudi modal per mostrare form pulito
+              setShowSuccessModal(false);
+              setSubmitSuccess(false);
+              setCreatedTracking(null);
+              setCreatedShipmentData(null);
+            }}
+          />
+
+          {/* Error Dialog */}
+          {formattedError && (
+            <ErrorDialog
+              open={showErrorDialog}
+              onOpenChange={(open) => {
+                setShowErrorDialog(open);
+                if (!open) {
+                  setSubmitError(null);
+                  setFormattedError(null);
+                }
+              }}
+              error={formattedError.error}
+              actions={formattedError.actions}
+              canRetry={formattedError.canRetry}
+              onRetry={() => {
+                // Reset errore e riprova submit
+                setShowErrorDialog(false);
+                setSubmitError(null);
+                setFormattedError(null);
+                // Trigger nuovo submit
+                const form = document.querySelector("form");
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+              onAction={(action) => {
+                // Gestisci azioni di recovery
+                if (action.destination) {
+                  router.push(action.destination);
+                } else {
+                  // Azioni locali (es. focus su campo)
+                  switch (action.id) {
+                    case "select_courier":
+                    case "change_courier":
+                      // Scroll al preventivatore
+                      document.querySelector('[class*="IntelligentQuote"]')?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                      });
+                      break;
+                    case "fix_address":
+                    case "fix_sender":
+                      // Scroll a mittente
+                      document.querySelector('[class*="Mittente"]')?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                      });
+                      break;
+                    case "fix_recipient":
+                      // Scroll a destinatario
+                      document.querySelector('[class*="Destinatario"]')?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                      });
+                      break;
+                  }
+                }
+                setShowErrorDialog(false);
+              }}
+              isRetrying={isSubmitting}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
