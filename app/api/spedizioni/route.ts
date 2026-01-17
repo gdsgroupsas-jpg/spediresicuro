@@ -434,14 +434,39 @@ export async function POST(request: NextRequest) {
     let platformFee = 0;
     try {
       const { getPlatformFeeSafe } = await import('@/lib/services/pricing/platform-fee');
+
+      // ✨ FIX P0: Verifica ruolo da MULTIPLE FONTI per evitare false negative
+      // Il ruolo può essere nella session token O nel database
+      const sessionRole = (session.user as any)?.role?.toUpperCase?.() || '';
+      const sessionAccountType = (session.user as any)?.account_type?.toLowerCase?.() || '';
+
+      // Query DB come backup (potrebbe fallire)
       const { data: userData } = await supabaseAdmin
         .from('users')
         .select('role, account_type')
         .eq('email', session.user.email)
         .single();
-      
-      const isSuperadmin = userData?.role === 'SUPERADMIN' || userData?.role === 'superadmin' || userData?.account_type === 'superadmin';
-      
+
+      const dbRole = userData?.role?.toUpperCase?.() || '';
+      const dbAccountType = userData?.account_type?.toLowerCase?.() || '';
+
+      // Check multiplo con fallback - SUPERADMIN non paga MAI platform fee
+      const isSuperadmin =
+        sessionRole === 'SUPERADMIN' ||
+        sessionAccountType === 'superadmin' ||
+        dbRole === 'SUPERADMIN' ||
+        dbAccountType === 'superadmin';
+
+      console.log('🔐 [API] Verifica ruolo per platform fee:', {
+        email: session.user.email,
+        sessionRole,
+        sessionAccountType,
+        dbRole,
+        dbAccountType,
+        isSuperadmin,
+        platformFeeApplied: !isSuperadmin
+      });
+
       if (!isSuperadmin) {
         // Recupera user_id per calcolare platform fee
         const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
@@ -455,6 +480,8 @@ export async function POST(request: NextRequest) {
             prezzoFinale,
           });
         }
+      } else {
+        console.log('👑 [API] SUPERADMIN - platform fee NON applicata');
       }
     } catch (error) {
       console.warn('⚠️ [API] Errore recupero platform fee, prezzo senza fee:', error);
@@ -512,6 +539,8 @@ export async function POST(request: NextRequest) {
       costoContrassegno: costoContrassegno,
       costoAssicurazione: costoAssicurazione,
       prezzoFinale: prezzoFinale,
+      // ✨ NUOVO: Platform fee separata per audit/breakdown (0 per superadmin)
+      platform_fee: platformFee,
       // Status e tracking
       status: 'in_preparazione',
       tracking: trackingNumber,
