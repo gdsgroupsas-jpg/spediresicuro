@@ -6,11 +6,20 @@
  */
 
 import type { PriceList, PriceListEntry } from '@/types/listini';
+import type {
+  InsuranceConfig,
+  CODConfigRow,
+  AccessoryServiceConfig,
+} from '@/types/supplier-price-list-config';
 
 export interface PriceCalculationOptions {
   declaredValue?: number;
   cashOnDelivery?: boolean;
   insurance?: boolean;
+  // ✨ NUOVO: Manual configurations (opzionali, da supplier_price_list_config)
+  insuranceConfig?: InsuranceConfig;
+  codConfig?: CODConfigRow[];
+  accessoryServices?: AccessoryServiceConfig[];
 }
 
 export interface PriceCalculationResult {
@@ -187,14 +196,72 @@ export function calculatePriceFromList(
     surcharges += parseFloat(entry.ztl_surcharge as any);
   }
 
-  // Supplemento contrassegno
+  // Supplemento contrassegno (standard da entry)
   if (options?.cashOnDelivery && entry.cash_on_delivery_surcharge) {
     surcharges += parseFloat(entry.cash_on_delivery_surcharge as any);
   }
 
-  // Assicurazione
+  // Assicurazione (standard da entry)
   if (options?.insurance && options?.declaredValue && entry.insurance_rate_percent) {
     surcharges += options.declaredValue * (parseFloat(entry.insurance_rate_percent as any) / 100);
+  }
+
+  // ✨ NUOVO: Assicurazione custom da config (sovrascrive standard se presente)
+  if (options?.insurance && options?.insuranceConfig && options?.declaredValue) {
+    const cfg = options.insuranceConfig;
+    let customInsuranceFee = 0;
+
+    if (cfg.fixed_price) {
+      customInsuranceFee = cfg.fixed_price;
+    } else if (cfg.percent) {
+      customInsuranceFee = options.declaredValue * (cfg.percent / 100);
+    }
+
+    // Sovrascrivi assicurazione standard con custom
+    if (customInsuranceFee > 0) {
+      // Rimuovi assicurazione standard già applicata
+      if (entry.insurance_rate_percent) {
+        surcharges -= options.declaredValue * (parseFloat(entry.insurance_rate_percent as any) / 100);
+      }
+      // Applica custom
+      surcharges += customInsuranceFee;
+    }
+  }
+
+  // ✨ NUOVO: Contrassegno custom da config (sovrascrive standard se presente)
+  if (options?.cashOnDelivery && options?.codConfig && options?.declaredValue) {
+    const applicableCOD = options.codConfig.find(
+      row => options.declaredValue! <= row.max_value
+    );
+
+    if (applicableCOD) {
+      let customCODFee = applicableCOD.fixed_price || 0;
+      if (applicableCOD.percent) {
+        customCODFee += options.declaredValue * (applicableCOD.percent / 100);
+      }
+
+      // Sovrascrivi COD standard con custom
+      if (customCODFee > 0) {
+        // Rimuovi COD standard già applicato
+        if (entry.cash_on_delivery_surcharge) {
+          surcharges -= parseFloat(entry.cash_on_delivery_surcharge as any);
+        }
+        // Applica custom
+        surcharges += customCODFee;
+      }
+    }
+  }
+
+  // ✨ NUOVO: Servizi accessori custom
+  if (options?.accessoryServices && options.accessoryServices.length > 0) {
+    options.accessoryServices.forEach(svc => {
+      if (svc.price) {
+        surcharges += svc.price;
+      }
+      if (svc.percent) {
+        surcharges += basePrice * (svc.percent / 100);
+      }
+    });
   }
 
   const totalCost = basePrice + surcharges;
