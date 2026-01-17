@@ -61,26 +61,32 @@ function getLegacyEncryptionKey(): Buffer | null {
 
 /**
  * Cripta un valore sensibile
- * 
- * ⚠️ Se ENCRYPTION_KEY non è configurata, restituisce il testo in chiaro (con warning)
- * 
+ *
+ * ⚠️ SECURITY (P0 Audit Fix):
+ * - In PRODUZIONE senza ENCRYPTION_KEY: BLOCCA scrittura (fail-closed)
+ * - In DEVELOPMENT senza ENCRYPTION_KEY: Permette plaintext (per testing locale)
+ *
  * @param plaintext - Testo da criptare
- * @returns Stringa criptata in formato: iv:salt:tag:encrypted (tutti in base64) o testo in chiaro se chiave non configurata
+ * @returns Stringa criptata in formato: iv:salt:tag:encrypted (tutti in base64)
+ * @throws Error in produzione se ENCRYPTION_KEY non configurata
  */
 export function encryptCredential(plaintext: string): string {
   if (!plaintext) {
     return ''
   }
 
-  // Se ENCRYPTION_KEY non è configurata, restituisci in chiaro (con warning)
+  // ⚠️ P0 AUDIT FIX: Fail-closed in produzione
+  // Non permettere MAI salvataggio credenziali in chiaro in produzione
   if (!process.env.ENCRYPTION_KEY) {
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ ENCRYPTION_KEY non configurata in produzione. Le credenziali verranno salvate in chiaro (NON SICURO). Configura ENCRYPTION_KEY su Vercel per abilitare la criptazione.')
+      // 🔒 FAIL-CLOSED: Blocca operazione invece di salvare in chiaro
+      console.error('❌ [SECURITY P0] ENCRYPTION_KEY non configurata in produzione. Operazione bloccata.')
+      throw new Error('ENCRYPTION_KEY_MISSING: Impossibile salvare credenziali in modo sicuro. Configura ENCRYPTION_KEY su Vercel.')
     } else {
-      console.warn('⚠️ ENCRYPTION_KEY non configurata. Le credenziali verranno salvate in chiaro.')
+      // Development: permetti plaintext per testing locale (con warning)
+      console.warn('⚠️ [DEV] ENCRYPTION_KEY non configurata. Credenziali salvate in chiaro (solo sviluppo).')
+      return plaintext
     }
-    // Restituisci in chiaro - il sistema continuerà a funzionare
-    return plaintext
   }
 
   try {
@@ -108,9 +114,14 @@ export function encryptCredential(plaintext: string): string {
     
     return result
   } catch (error) {
-    console.error('Errore criptazione credenziale:', error)
-    // In caso di errore, restituisci in chiaro invece di lanciare errore
-    console.warn('⚠️ Fallback: credenziale salvata in chiaro a causa di errore di criptazione')
+    console.error('❌ [SECURITY P0] Errore criptazione credenziale:', error)
+    // ⚠️ P0 AUDIT FIX: Fail-closed anche in caso di errore
+    // Non salvare MAI in chiaro, meglio fallire che esporre credenziali
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_FAILED: Errore durante la criptazione. Credenziali non salvate per sicurezza.')
+    }
+    // Development: permetti fallback per debug
+    console.warn('⚠️ [DEV] Fallback: credenziale salvata in chiaro (solo sviluppo)')
     return plaintext
   }
 }
