@@ -109,7 +109,7 @@ export function createLogger(requestId?: string, userId?: string): Logger {
 
 /**
  * Hash userId per pseudo-anonimizzazione GDPR
- * 
+ *
  * @param userId - ID utente in chiaro
  * @returns Hash corto (primi 8 caratteri) o 'anonymous' se undefined
  */
@@ -119,6 +119,38 @@ function hashUserId(userId?: string): string {
   }
   const hash = createHash('sha256').update(userId).digest('hex');
   return hash.substring(0, 8);
+}
+
+/**
+ * Hash generico per ID sensibili (ordini, spedizioni, etc.)
+ *
+ * @param value - Valore da hashare
+ * @returns Hash corto (primi 8 caratteri)
+ */
+export function hashValue(value: string): string {
+  const hash = createHash('sha256').update(value).digest('hex');
+  return hash.substring(0, 8);
+}
+
+/**
+ * Sanitizza metadati rimuovendo campi sensibili
+ *
+ * @param metadata - Metadati da sanitizzare
+ * @returns Metadati sanitizzati
+ */
+export function sanitizeMetadata(metadata?: Record<string, any>): Record<string, any> | undefined {
+  if (!metadata) return undefined;
+
+  const sensitiveKeys = ['password', 'token', 'api_key', 'apiKey', 'secret', 'authorization'];
+  const sanitized = { ...metadata };
+
+  for (const key of sensitiveKeys) {
+    if (key in sanitized) {
+      sanitized[key] = '[REDACTED]';
+    }
+  }
+
+  return sanitized;
 }
 
 /**
