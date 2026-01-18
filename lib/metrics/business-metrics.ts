@@ -7,22 +7,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Test user email patterns to exclude from metrics
-const TEST_USER_PATTERNS = [
-  'test@%',
-  'test-%@%',
-  '%@test.%',
-  'e2e-%@%',
-  'smoke-test-%@%',
-  'integration-test-%@%',
-];
-
-// Test tracking number patterns to exclude
-const TEST_TRACKING_PATTERNS = ['TEST%', 'FAKE%', 'DEMO%', 'MOCK%'];
-
-// Shipment statuses considered "successful"
-const SUCCESS_STATUSES = ['delivered'];
-
 // Shipment statuses to exclude from metrics
 const EXCLUDED_STATUSES = ['draft', 'cancelled'];
 
@@ -108,52 +92,84 @@ function getDateBoundaries() {
 }
 
 /**
- * Fetch shipment metrics
+ * Fetch shipment metrics using SQL aggregations
+ * Optimized: Uses COUNT/SUM instead of loading full tables
  */
 async function getShipmentMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const dates = getDateBoundaries();
 
-  // Get all shipments (excluding test users and cancelled)
-  // We'll do client-side filtering for test users since LIKE patterns are complex
-  const { data: shipments, error } = await supabase
-    .from('shipments')
-    .select('id, status, final_price, created_at, user_id, deleted')
-    .eq('deleted', false)
-    .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`);
+  // Use RPC for efficient aggregation, or multiple count queries
+  const [totalResult, todayResult, weekResult, monthResult, statusResult, deliveredResult, costResult] = await Promise.all([
+    // Total count
+    supabase
+      .from('shipments')
+      .select('id', { count: 'exact', head: true })
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`),
 
-  if (error) {
-    console.error('Error fetching shipments:', error);
-    throw new Error(`Failed to fetch shipment metrics: ${error.message}`);
-  }
+    // Today count
+    supabase
+      .from('shipments')
+      .select('id', { count: 'exact', head: true })
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .gte('created_at', dates.todayStart),
 
-  // Filter out test tracking numbers (would need to add tracking_number to select)
-  const validShipments = shipments || [];
+    // This week count
+    supabase
+      .from('shipments')
+      .select('id', { count: 'exact', head: true })
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .gte('created_at', dates.weekStart),
 
-  // Calculate metrics
-  const total = validShipments.length;
-  const today = validShipments.filter(
-    (s) => s.created_at >= dates.todayStart
-  ).length;
-  const thisWeek = validShipments.filter(
-    (s) => s.created_at >= dates.weekStart
-  ).length;
-  const thisMonth = validShipments.filter(
-    (s) => s.created_at >= dates.monthStart
-  ).length;
+    // This month count
+    supabase
+      .from('shipments')
+      .select('id', { count: 'exact', head: true })
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .gte('created_at', dates.monthStart),
 
-  // Count by status
+    // Status breakdown - need to fetch distinct statuses and count each
+    supabase
+      .from('shipments')
+      .select('status')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`),
+
+    // Delivered count for success rate
+    supabase
+      .from('shipments')
+      .select('id', { count: 'exact', head: true })
+      .eq('deleted', false)
+      .eq('status', 'delivered'),
+
+    // Sum of prices for average cost - still need to fetch but only prices
+    supabase
+      .from('shipments')
+      .select('final_price')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .not('final_price', 'is', null),
+  ]);
+
+  const total = totalResult.count || 0;
+  const today = todayResult.count || 0;
+  const thisWeek = weekResult.count || 0;
+  const thisMonth = monthResult.count || 0;
+  const deliveredCount = deliveredResult.count || 0;
+
+  // Count by status from minimal data
   const byStatus: Record<string, number> = {};
-  for (const shipment of validShipments) {
-    const status = shipment.status || 'unknown';
+  for (const row of statusResult.data || []) {
+    const status = row.status || 'unknown';
     byStatus[status] = (byStatus[status] || 0) + 1;
   }
 
-  // Success rate (delivered / total non-draft)
-  const deliveredCount = byStatus['delivered'] || 0;
+  // Calculate success rate and average cost
   const successRate = total > 0 ? deliveredCount / total : 0;
-
-  // Average cost
-  const totalCost = validShipments.reduce(
+  const totalCost = (costResult.data || []).reduce(
     (sum, s) => sum + (s.final_price || 0),
     0
   );
@@ -171,50 +187,68 @@ async function getShipmentMetrics(supabase: ReturnType<typeof getSupabaseAdmin>)
 }
 
 /**
- * Fetch revenue metrics
+ * Fetch revenue metrics using SQL aggregations
+ * Optimized: Fetches only price columns, grouped by period
  */
 async function getRevenueMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const dates = getDateBoundaries();
 
-  // Get shipments with revenue data
-  const { data: shipments, error } = await supabase
-    .from('shipments')
-    .select('final_price, margin_percent, created_at, deleted, status')
-    .eq('deleted', false)
-    .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`);
+  // Fetch prices and margins with period filtering in parallel
+  const [totalResult, todayResult, weekResult, monthResult, marginResult] = await Promise.all([
+    // Total revenue
+    supabase
+      .from('shipments')
+      .select('final_price')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .not('final_price', 'is', null),
 
-  if (error) {
-    console.error('Error fetching revenue:', error);
-    throw new Error(`Failed to fetch revenue metrics: ${error.message}`);
-  }
+    // Today revenue
+    supabase
+      .from('shipments')
+      .select('final_price')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .not('final_price', 'is', null)
+      .gte('created_at', dates.todayStart),
 
-  const validShipments = shipments || [];
+    // This week revenue
+    supabase
+      .from('shipments')
+      .select('final_price')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .not('final_price', 'is', null)
+      .gte('created_at', dates.weekStart),
 
-  // Calculate revenue by period
-  const total = validShipments.reduce(
-    (sum, s) => sum + (s.final_price || 0),
-    0
-  );
+    // This month revenue
+    supabase
+      .from('shipments')
+      .select('final_price')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .not('final_price', 'is', null)
+      .gte('created_at', dates.monthStart),
 
-  const today = validShipments
-    .filter((s) => s.created_at >= dates.todayStart)
-    .reduce((sum, s) => sum + (s.final_price || 0), 0);
+    // Margin data
+    supabase
+      .from('shipments')
+      .select('margin_percent')
+      .eq('deleted', false)
+      .not('status', 'in', `(${EXCLUDED_STATUSES.join(',')})`)
+      .not('margin_percent', 'is', null),
+  ]);
 
-  const thisWeek = validShipments
-    .filter((s) => s.created_at >= dates.weekStart)
-    .reduce((sum, s) => sum + (s.final_price || 0), 0);
-
-  const thisMonth = validShipments
-    .filter((s) => s.created_at >= dates.monthStart)
-    .reduce((sum, s) => sum + (s.final_price || 0), 0);
+  // Sum up values
+  const total = (totalResult.data || []).reduce((sum, s) => sum + (s.final_price || 0), 0);
+  const today = (todayResult.data || []).reduce((sum, s) => sum + (s.final_price || 0), 0);
+  const thisWeek = (weekResult.data || []).reduce((sum, s) => sum + (s.final_price || 0), 0);
+  const thisMonth = (monthResult.data || []).reduce((sum, s) => sum + (s.final_price || 0), 0);
 
   // Average margin
-  const marginSum = validShipments.reduce(
-    (sum, s) => sum + (s.margin_percent || 0),
-    0
-  );
-  const averageMargin =
-    validShipments.length > 0 ? marginSum / validShipments.length : 0;
+  const marginData = marginResult.data || [];
+  const marginSum = marginData.reduce((sum, s) => sum + (s.margin_percent || 0), 0);
+  const averageMargin = marginData.length > 0 ? marginSum / marginData.length : 0;
 
   return {
     total: Math.round(total * 100) / 100,
@@ -226,58 +260,82 @@ async function getRevenueMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) 
 }
 
 /**
- * Fetch user metrics
+ * Fetch user metrics using SQL aggregations
+ * Optimized: Uses COUNT with server-side test user filtering
+ *
+ * Test user exclusion patterns:
+ * - test@%, test-%, %@test.%, e2e-%, smoke-test-%, integration-test-%
  */
 async function getUserMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const dates = getDateBoundaries();
 
-  // Get all users
-  const { data: users, error } = await supabase
-    .from('users')
-    .select('id, created_at, last_login_at, email');
+  const [totalResult, active30dResult, newTodayResult, newWeekResult, newMonthResult] = await Promise.all([
+    // Total users (excluding test users)
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .not('email', 'like', 'test@%')
+      .not('email', 'like', 'test-%@%')
+      .not('email', 'ilike', '%@test.%')
+      .not('email', 'like', 'e2e-%@%')
+      .not('email', 'like', 'smoke-test-%@%')
+      .not('email', 'like', 'integration-test-%@%'),
 
-  if (error) {
-    console.error('Error fetching users:', error);
-    throw new Error(`Failed to fetch user metrics: ${error.message}`);
-  }
+    // Active users (logged in within 30 days)
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .gte('last_login_at', dates.active30dStart)
+      .not('email', 'like', 'test@%')
+      .not('email', 'like', 'test-%@%')
+      .not('email', 'ilike', '%@test.%')
+      .not('email', 'like', 'e2e-%@%')
+      .not('email', 'like', 'smoke-test-%@%')
+      .not('email', 'like', 'integration-test-%@%'),
 
-  // Filter out test users
-  const validUsers = (users || []).filter((u) => {
-    const email = (u.email || '').toLowerCase();
-    return !(
-      email.startsWith('test@') ||
-      email.startsWith('test-') ||
-      email.includes('@test.') ||
-      email.startsWith('e2e-') ||
-      email.startsWith('smoke-test-') ||
-      email.startsWith('integration-test-')
-    );
-  });
+    // New today
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', dates.todayStart)
+      .not('email', 'like', 'test@%')
+      .not('email', 'like', 'test-%@%')
+      .not('email', 'ilike', '%@test.%')
+      .not('email', 'like', 'e2e-%@%')
+      .not('email', 'like', 'smoke-test-%@%')
+      .not('email', 'like', 'integration-test-%@%'),
 
-  const total = validUsers.length;
+    // New this week
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', dates.weekStart)
+      .not('email', 'like', 'test@%')
+      .not('email', 'like', 'test-%@%')
+      .not('email', 'ilike', '%@test.%')
+      .not('email', 'like', 'e2e-%@%')
+      .not('email', 'like', 'smoke-test-%@%')
+      .not('email', 'like', 'integration-test-%@%'),
 
-  // Active users (logged in within 30 days)
-  const active30d = validUsers.filter(
-    (u) => u.last_login_at && u.last_login_at >= dates.active30dStart
-  ).length;
-
-  // New registrations
-  const newToday = validUsers.filter(
-    (u) => u.created_at >= dates.todayStart
-  ).length;
-  const newThisWeek = validUsers.filter(
-    (u) => u.created_at >= dates.weekStart
-  ).length;
-  const newThisMonth = validUsers.filter(
-    (u) => u.created_at >= dates.monthStart
-  ).length;
+    // New this month
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', dates.monthStart)
+      .not('email', 'like', 'test@%')
+      .not('email', 'like', 'test-%@%')
+      .not('email', 'ilike', '%@test.%')
+      .not('email', 'like', 'e2e-%@%')
+      .not('email', 'like', 'smoke-test-%@%')
+      .not('email', 'like', 'integration-test-%@%'),
+  ]);
 
   return {
-    total,
-    active30d,
-    newToday,
-    newThisWeek,
-    newThisMonth,
+    total: totalResult.count || 0,
+    active30d: active30dResult.count || 0,
+    newToday: newTodayResult.count || 0,
+    newThisWeek: newWeekResult.count || 0,
+    newThisMonth: newMonthResult.count || 0,
   };
 }
 
@@ -386,7 +444,7 @@ export async function getBusinessMetrics(): Promise<BusinessMetrics> {
  * Fetch metrics for a specific period
  */
 export async function getMetricsForPeriod(
-  period: 'today' | 'week' | 'month' | 'all'
+  _period: 'today' | 'week' | 'month' | 'all'
 ): Promise<BusinessMetrics> {
   // For now, return all metrics - period filtering can be added later
   return getBusinessMetrics();

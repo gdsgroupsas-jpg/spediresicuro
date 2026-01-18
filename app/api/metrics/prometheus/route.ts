@@ -61,11 +61,18 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Check authentication
+    // Check authentication - FAIL CLOSED in production
     const authHeader = request.headers.get('authorization');
     const expectedToken = process.env.METRICS_API_TOKEN;
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // Allow access if no token is configured (for initial setup) or if token matches
+    // In production, token MUST be configured - fail closed
+    if (isProduction && (!expectedToken || expectedToken.length === 0)) {
+      logger.error('Prometheus metrics: METRICS_API_TOKEN not configured in production');
+      return new NextResponse('Service Unavailable - Metrics not configured', { status: 503 });
+    }
+
+    // Require token authentication if configured (always in prod, optional in dev)
     if (expectedToken && expectedToken.length > 0) {
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         logger.warn('Prometheus metrics: missing auth header');

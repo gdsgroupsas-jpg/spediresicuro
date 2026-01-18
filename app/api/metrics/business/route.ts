@@ -4,7 +4,7 @@
  * Returns business metrics in JSON format for internal admin dashboards.
  *
  * Security:
- * - Requires authenticated session with Admin or SuperAdmin role
+ * - Requires authenticated session with Admin or SuperAdmin role (via NextAuth)
  *
  * Query Parameters:
  * - period: 'today' | 'week' | 'month' | 'all' (default: 'all')
@@ -12,8 +12,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { auth } from '@/lib/auth-config';
+import { findUserByEmail } from '@/lib/database';
 import {
   getBusinessMetrics,
   getQuickStats,
@@ -30,62 +30,29 @@ async function verifyAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    const cookieStore = await cookies();
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Use NextAuth for authentication (same as middleware)
+    const session = await auth();
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return { authorized: false, error: 'Missing Supabase configuration' };
-    }
-
-    // Get session from cookie
-    const accessToken = cookieStore.get('sb-access-token')?.value;
-    const refreshToken = cookieStore.get('sb-refresh-token')?.value;
-
-    if (!accessToken) {
+    if (!session?.user?.email) {
       return { authorized: false, error: 'No session found' };
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false },
-    });
+    // Get user from database to verify role
+    const user = await findUserByEmail(session.user.email);
 
-    // Set session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken || '',
-    });
-
-    if (authError || !user) {
-      return { authorized: false, error: 'Invalid session' };
-    }
-
-    // Get user role from users table
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-      { auth: { persistSession: false } }
-    );
-
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('role, account_type')
-      .eq('id', user.id)
-      .single();
-
-    if (userError || !userData) {
+    if (!user) {
       return { authorized: false, error: 'User not found' };
     }
 
-    const role = userData.role || userData.account_type;
-    if (!ALLOWED_ROLES.includes(role)) {
+    // User type has role, but extended properties may include account_type for superadmin
+    const extendedUser = user as typeof user & { account_type?: string };
+    const role = extendedUser.account_type || user.role;
+
+    if (!role || !ALLOWED_ROLES.includes(role)) {
       return {
         authorized: false,
         userId: user.id,
-        role,
+        role: role || 'unknown',
         error: 'Insufficient permissions',
       };
     }

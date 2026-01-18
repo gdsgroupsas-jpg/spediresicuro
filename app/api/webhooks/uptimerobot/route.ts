@@ -38,29 +38,37 @@ function normalizeAlertType(alertType: AlertType): "1" | "2" | "3" {
 /**
  * Verify webhook secret token
  * Checks query param 'token' or header 'x-uptimerobot-token'
+ *
+ * SECURITY: Fail-closed in production - returns false if secret not configured
  */
-function verifyWebhookSecret(request: NextRequest): boolean {
+function verifyWebhookSecret(request: NextRequest): { valid: boolean; error?: string } {
   const secret = process.env.UPTIMEROBOT_WEBHOOK_SECRET;
+  const isProduction = process.env.NODE_ENV === "production";
 
-  // If no secret configured, log warning but allow (for initial setup)
-  if (!secret) {
-    console.warn("[UPTIMEROBOT_WEBHOOK] UPTIMEROBOT_WEBHOOK_SECRET not configured - webhook is unprotected!");
-    return true; // Allow for backward compatibility during setup
+  // FAIL-CLOSED in production: secret MUST be configured
+  if (!secret || secret.length === 0) {
+    if (isProduction) {
+      console.error("[UPTIMEROBOT_WEBHOOK] CRITICAL: UPTIMEROBOT_WEBHOOK_SECRET not configured in production - rejecting request");
+      return { valid: false, error: "Webhook secret not configured" };
+    }
+    // Only allow in development for initial setup
+    console.warn("[UPTIMEROBOT_WEBHOOK] UPTIMEROBOT_WEBHOOK_SECRET not configured - allowing in development only");
+    return { valid: true };
   }
 
   // Check query parameter
   const tokenParam = request.nextUrl.searchParams.get("token");
   if (tokenParam === secret) {
-    return true;
+    return { valid: true };
   }
 
   // Check header
   const tokenHeader = request.headers.get("x-uptimerobot-token");
   if (tokenHeader === secret) {
-    return true;
+    return { valid: true };
   }
 
-  return false;
+  return { valid: false, error: "Invalid or missing token" };
 }
 
 async function sendSlackNotification(payload: UptimeRobotPayload): Promise<boolean> {
@@ -175,11 +183,12 @@ async function sendSlackNotification(payload: UptimeRobotPayload): Promise<boole
 }
 
 export async function POST(request: NextRequest) {
-  // SECURITY: Verify webhook secret
-  if (!verifyWebhookSecret(request)) {
-    console.warn("[UPTIMEROBOT_WEBHOOK] Unauthorized request - invalid or missing token");
+  // SECURITY: Verify webhook secret (fail-closed in production)
+  const authResult = verifyWebhookSecret(request);
+  if (!authResult.valid) {
+    console.warn("[UPTIMEROBOT_WEBHOOK] Unauthorized request:", authResult.error);
     return NextResponse.json(
-      { error: "Unauthorized", message: "Invalid or missing webhook token" },
+      { error: "Unauthorized", message: authResult.error || "Invalid or missing webhook token" },
       { status: 401 }
     );
   }
@@ -277,7 +286,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Health check for the webhook endpoint itself
-export async function GET(request: NextRequest) {
+export async function GET() {
   // Don't require auth for GET health check, but indicate if secret is configured
   const secretConfigured = !!process.env.UPTIMEROBOT_WEBHOOK_SECRET;
 

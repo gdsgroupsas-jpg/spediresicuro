@@ -27,30 +27,31 @@ import { trackMiddlewareError } from "@/lib/error-tracker";
 import * as Sentry from "@sentry/nextjs"; // M2: APM tracing
 
 /**
- * ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
- * 
- * Quando l'header 'x-test-mode: playwright' è presente E siamo in CI,
+ * ⚠️ E2E TEST BYPASS (Solo CI/Development Environment)
+ *
+ * Quando l'header 'x-test-mode: playwright' è presente E siamo in CI o dev,
  * bypassa l'autenticazione per permettere i test E2E.
- * 
+ *
  * SICUREZZA: Funziona SOLO se:
- * - CI=true (GitHub Actions)
- * - PLAYWRIGHT_TEST_BASE_URL è impostato
- * - O siamo in development
+ * - NODE_ENV !== 'production' (NEVER in production)
+ * - AND (CI=true OR NODE_ENV=development)
  */
 function isPlaywrightTestBypass(request: NextRequest): boolean {
   const testHeader = request.headers.get('x-test-mode');
   if (testHeader !== 'playwright') {
     return false;
   }
-  
-  // Verifica che siamo in ambiente test (CI o dev)
+
+  // NEVER allow bypass in production - fail closed
+  if (process.env.NODE_ENV === 'production') {
+    return false;
+  }
+
+  // Only allow in CI or development
   const isCI = process.env.CI === 'true';
-  const isTestEnv = !!process.env.PLAYWRIGHT_TEST_BASE_URL;
   const isDev = process.env.NODE_ENV === 'development';
-  const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
-  
-  // Permetti bypass se: CI, test env variable, dev mode, o explicit playwright mode
-  return isCI || isTestEnv || isDev || isPlaywrightMode;
+
+  return isCI || isDev;
 }
 
 /**
@@ -64,6 +65,7 @@ const PUBLIC_ROUTES = [
   "/api/health", // Health check endpoint
   "/api/cron", // Cron endpoints (have own token auth)
   "/api/webhooks", // External webhooks (UptimeRobot, etc. - have own secret auth)
+  "/api/metrics/prometheus", // Prometheus scraping (has own Bearer token auth)
   // Marketing routes
   "/come-funziona",
   "/contatti",
