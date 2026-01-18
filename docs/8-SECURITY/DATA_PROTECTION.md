@@ -71,16 +71,18 @@ const isValid = await verifyPassword(password, hashed);
 
 #### Problema
 
-Quando il backend usa `supabaseAdmin` (service role), **RLS è bypassata**.  
+Quando il backend usa `supabaseAdmin` (service role), **RLS è bypassata**.
 Questo è corretto per molte operazioni server-side, ma richiede **validazione esplicita** quando si accetta un input come `configId` / `specificConfigId`.
 
 #### Regola
 
 - **Se arriva `configId`/`specificConfigId` dal client/UI**: il server deve verificare che la configurazione sia:
   - di proprietà dell'utente (`owner_user_id = userId`) **oppure**
-  - legacy compat (`created_by = userEmail`) **oppure**
+  - assegnata all'utente (`assigned_config_id = configId`) **oppure**
   - una config default globale (`is_default = true AND owner_user_id IS NULL`) **oppure**
   - l'actor è `admin/superadmin`.
+
+> **NOTE (2026-01-17):** Rimosso fallback legacy `created_by = userEmail` - tutte le config hanno `owner_user_id` popolato. Questo elimina la vulnerabilità di account takeover via email change.
 
 #### Implementazione
 
@@ -156,30 +158,24 @@ const decrypted = decryptCredential(config.api_key);
 ### Validare Accesso Config
 
 ```typescript
-async function validateConfigAccess(configId: string, userId: string) {
+async function validateConfigAccess(configId: string, userId: string, assignedConfigId?: string) {
   const { data: config } = await supabaseAdmin
     .from('courier_configs')
-    .select('owner_user_id, is_default, created_by')
+    .select('owner_user_id, is_default')
     .eq('id', configId)
     .single();
-  
+
   if (!config) return false;
-  
+
   // Default globale
   if (config.is_default && !config.owner_user_id) return true;
-  
+
   // Proprietà utente
   if (config.owner_user_id === userId) return true;
-  
-  // Legacy compat
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('email')
-    .eq('id', userId)
-    .single();
-  
-  if (user?.email === config.created_by) return true;
-  
+
+  // Config assegnata
+  if (assignedConfigId === configId) return true;
+
   return false;
 }
 ```
@@ -208,9 +204,10 @@ async function validateConfigAccess(configId: string, userId: string) {
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
+| 2026-01-17 | 1.1.0 | Rimosso fallback legacy created_by (P1 fix), aggiunto assigned_config_id | AI Agent |
 | 2026-01-12 | 1.0.0 | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
+*Last Updated: 2026-01-17*  
 *Status: 🟢 Active*  
 *Maintainer: Engineering Team*

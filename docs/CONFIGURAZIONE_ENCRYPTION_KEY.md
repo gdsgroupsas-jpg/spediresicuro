@@ -4,7 +4,13 @@
 
 Il sistema di criptazione delle credenziali API richiede la variabile d'ambiente `ENCRYPTION_KEY` per funzionare in sicurezza.
 
-**ATTENZIONE**: In produzione (`NODE_ENV=production`), se `ENCRYPTION_KEY` non è configurata, il sistema **bloccherà il salvataggio con un ERRORE CRITICO** per prevenire il salvataggio di dati in chiaro. In ambiente di sviluppo, verrà mostrato un warning e salvato in chiaro.
+**ATTENZIONE (P0 Security Fix 2026-01-17)**: In produzione (`NODE_ENV=production`), se `ENCRYPTION_KEY` non è configurata:
+- ❌ Il salvataggio di nuove credenziali **FALLIRÀ** con errore `ENCRYPTION_KEY_MISSING`
+- ❌ Qualsiasi errore di criptazione **FALLIRÀ** con errore `ENCRYPTION_FAILED`
+- ✅ Le credenziali esistenti (già criptate) continueranno a funzionare
+- ✅ In sviluppo, viene mostrato un warning e salvato in chiaro (per testing locale)
+
+Questo comportamento **fail-closed** previene il salvataggio accidentale di credenziali in chiaro.
 
 ---
 
@@ -152,6 +158,18 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 2. Controlla i log per eventuali errori di criptazione
 3. Dopo aver configurato la chiave, le nuove credenziali verranno criptate automaticamente
 
+### Problema: Errore "ENCRYPTION_KEY_MISSING" in produzione
+
+**Causa**: Stai cercando di salvare nuove credenziali ma `ENCRYPTION_KEY` non è configurata.
+
+**Soluzione**:
+
+1. Vai su Vercel Dashboard → Settings → Environment Variables
+2. Aggiungi `ENCRYPTION_KEY` con una chiave generata (vedi Passo 1)
+3. Redeploy l'applicazione
+
+> **Nota (2026-01-17)**: Questo errore è intenzionale - il sistema ora rifiuta di salvare credenziali in chiaro in produzione per sicurezza.
+
 ---
 
 ## 📚 RIFERIMENTI
@@ -162,4 +180,4 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 
 ---
 
-**Ultimo aggiornamento**: 3 Dicembre 2025
+**Ultimo aggiornamento**: 17 Gennaio 2026
