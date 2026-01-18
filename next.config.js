@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Configurazione per performance ottimali
@@ -97,5 +99,27 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+// Sentry configuration
+module.exports = withSentryConfig(nextConfig, {
+  // Sentry organization and project
+  org: 'spediresicuro',
+  project: 'spediresicuro',
+
+  // Disable source maps upload in development
+  silent: !process.env.CI,
+
+  // Upload source maps for better error stack traces
+  widenClientFileUpload: true,
+
+  // Automatically annotate React components for better error context
+  reactComponentAnnotation: {
+    enabled: true,
+  },
+
+  // Hide Sentry from the client bundle
+  hideSourceMaps: true,
+
+  // Disable telemetry
+  disableLogger: true,
+})
 
