@@ -117,6 +117,9 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [productionStats, setProductionStats] = useState<AdminStats | null>(
+    null
+  );
   const [users, setUsers] = useState<User[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [killerFeatures, setKillerFeatures] = useState<any[]>([]);
@@ -221,6 +224,7 @@ export default function AdminDashboardPage() {
 
         if (data.success) {
           setStats(data.stats);
+          setProductionStats(data.productionStats || data.stats);
           setUsers(data.users || []);
           setShipments(data.shipments || []);
           setIsAuthorized(true);
@@ -463,6 +467,7 @@ export default function AdminDashboardPage() {
           if (data.success) {
             setUsers(data.users || []);
             setStats(data.stats);
+            setProductionStats(data.productionStats || data.stats);
           }
         }
         setShowDeleteUserModal(false);
@@ -501,6 +506,7 @@ export default function AdminDashboardPage() {
           if (data.success) {
             setShipments(data.shipments || []);
             setStats(data.stats);
+            setProductionStats(data.productionStats || data.stats);
           }
         }
         setShowDeleteShipmentModal(false);
@@ -630,6 +636,8 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
+
+  const effectiveStats = showTestData ? stats : productionStats || stats;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
@@ -827,32 +835,41 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Totale Spedizioni"
-              value={showTestData ? stats.totalShipments : shipmentStats.production}
-              change={showTestData
-                ? `${stats.shipmentsDelivered} consegnate`
-                : `${shipmentStats.production} produzione${shipmentStats.test > 0 ? ` (${shipmentStats.test} test nascoste)` : ''}`
-              }
+                value={
+                  showTestData
+                    ? stats.totalShipments
+                    : effectiveStats.totalShipments
+                }
+                change={
+                  showTestData
+                    ? `${stats.shipmentsDelivered} consegnate`
+                    : `${effectiveStats.totalShipments} produzione${
+                        shipmentStats.test > 0
+                          ? ` (${shipmentStats.test} test nascoste)`
+                          : ""
+                      }`
+                }
               gradient="bg-gradient-to-r from-orange-500 to-orange-600"
               icon={<Package className="w-5 h-5" />}
             />
             <StatCard
               title="Oggi"
-              value={stats.shipmentsToday}
-              change={formatCurrency(stats.revenueToday)}
+                value={effectiveStats.shipmentsToday}
+                change={formatCurrency(effectiveStats.revenueToday)}
               gradient="bg-gradient-to-r from-cyan-500 to-cyan-600"
               icon={<Activity className="w-5 h-5" />}
             />
             <StatCard
               title="Questa Settimana"
-              value={stats.shipmentsThisWeek}
-              change={formatCurrency(stats.revenueThisWeek)}
+                value={effectiveStats.shipmentsThisWeek}
+                change={formatCurrency(effectiveStats.revenueThisWeek)}
               gradient="bg-gradient-to-r from-pink-500 to-pink-600"
               icon={<TrendingUp className="w-5 h-5" />}
             />
             <StatCard
               title="Questo Mese"
-              value={stats.shipmentsThisMonth}
-              change={formatCurrency(stats.revenueThisMonth)}
+                value={effectiveStats.shipmentsThisMonth}
+                change={formatCurrency(effectiveStats.revenueThisMonth)}
               gradient="bg-gradient-to-r from-teal-500 to-teal-600"
               icon={<Package className="w-5 h-5" />}
             />
@@ -868,25 +885,25 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="In Attesa"
-              value={stats.shipmentsPending}
+                value={effectiveStats.shipmentsPending}
               gradient="bg-gradient-to-r from-yellow-500 to-yellow-600"
               icon={<Clock className="w-5 h-5" />}
             />
             <StatCard
               title="In Transito"
-              value={stats.shipmentsInTransit}
+                value={effectiveStats.shipmentsInTransit}
               gradient="bg-gradient-to-r from-blue-500 to-blue-600"
               icon={<Activity className="w-5 h-5" />}
             />
             <StatCard
               title="Consegnate"
-              value={stats.shipmentsDelivered}
+                value={effectiveStats.shipmentsDelivered}
               gradient="bg-gradient-to-r from-green-500 to-green-600"
               icon={<CheckCircle2 className="w-5 h-5" />}
             />
             <StatCard
               title="Fatturato Totale"
-              value={formatCurrency(stats.totalRevenue)}
+                value={formatCurrency(effectiveStats.totalRevenue)}
               gradient="bg-gradient-to-r from-emerald-500 to-emerald-600"
               icon={<DollarSign className="w-5 h-5" />}
             />
@@ -1036,7 +1053,7 @@ export default function AdminDashboardPage() {
                           >
                             <FileText className="w-4 h-4" />
                             {(user.price_lists_count || 0) > 0
-                              ? `${user.price_lists_count} Listino${user.price_lists_count > 1 ? 'i' : ''}`
+                              ? `${user.price_lists_count} Listino${(user.price_lists_count || 0) > 1 ? 'i' : ''}`
                               : 'Nessuno'
                             }
                           </button>
