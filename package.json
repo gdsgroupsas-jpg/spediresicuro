@@ -68,6 +68,7 @@
     "@langchain/core": "^1.1.4",
     "@langchain/google-genai": "^2.0.4",
     "@langchain/langgraph": "^1.0.4",
+    "@sentry/nextjs": "^10.34.0",
     "@supabase/supabase-js": "^2.39.0",
     "@tanstack/react-query": "^5.90.12",
     "@upstash/ratelimit": "^2.0.7",
