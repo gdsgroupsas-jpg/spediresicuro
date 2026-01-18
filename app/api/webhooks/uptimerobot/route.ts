@@ -6,22 +6,61 @@
  *
  * Endpoint: POST /api/webhooks/uptimerobot
  *
+ * SECURITY: Requires secret token via query param or header
+ * Configure in UptimeRobot: https://spediresicuro.it/api/webhooks/uptimerobot?token=YOUR_SECRET
+ *
  * Milestone: M3 - Uptime & Health Monitoring
  */
 import { NextRequest, NextResponse } from "next/server";
 
 // UptimeRobot alert types
 // 1 = Down, 2 = Up, 3 = SSL Certificate expires soon
-type AlertType = "1" | "2" | "3";
+type AlertType = "1" | "2" | "3" | 1 | 2 | 3;
 
 interface UptimeRobotPayload {
-  monitorID: string;
+  monitorID: string | number;
   monitorURL: string;
   monitorFriendlyName: string;
   alertType: AlertType;
   alertTypeFriendlyName: string;
   alertDetails: string;
-  alertDuration?: string; // Duration of downtime in seconds (only on recovery)
+  alertDuration?: string | number; // Duration of downtime in seconds (only on recovery)
+}
+
+/**
+ * Normalize alertType to string for consistent comparison
+ * UptimeRobot may send as number in JSON or string in form data
+ */
+function normalizeAlertType(alertType: AlertType): "1" | "2" | "3" {
+  return String(alertType) as "1" | "2" | "3";
+}
+
+/**
+ * Verify webhook secret token
+ * Checks query param 'token' or header 'x-uptimerobot-token'
+ */
+function verifyWebhookSecret(request: NextRequest): boolean {
+  const secret = process.env.UPTIMEROBOT_WEBHOOK_SECRET;
+
+  // If no secret configured, log warning but allow (for initial setup)
+  if (!secret) {
+    console.warn("[UPTIMEROBOT_WEBHOOK] UPTIMEROBOT_WEBHOOK_SECRET not configured - webhook is unprotected!");
+    return true; // Allow for backward compatibility during setup
+  }
+
+  // Check query parameter
+  const tokenParam = request.nextUrl.searchParams.get("token");
+  if (tokenParam === secret) {
+    return true;
+  }
+
+  // Check header
+  const tokenHeader = request.headers.get("x-uptimerobot-token");
+  if (tokenHeader === secret) {
+    return true;
+  }
+
+  return false;
 }
 
 async function sendSlackNotification(payload: UptimeRobotPayload): Promise<boolean> {
@@ -32,9 +71,10 @@ async function sendSlackNotification(payload: UptimeRobotPayload): Promise<boole
     return false;
   }
 
-  const isDown = payload.alertType === "1";
-  const isUp = payload.alertType === "2";
-  const isSSL = payload.alertType === "3";
+  const alertType = normalizeAlertType(payload.alertType);
+  const isDown = alertType === "1";
+  const isUp = alertType === "2";
+  const isSSL = alertType === "3";
 
   let emoji = "ℹ️";
   let color = "#36a64f"; // green
@@ -53,7 +93,9 @@ async function sendSlackNotification(payload: UptimeRobotPayload): Promise<boole
   // Format downtime duration
   let downtimeText = "";
   if (isUp && payload.alertDuration) {
-    const seconds = parseInt(payload.alertDuration, 10);
+    const seconds = typeof payload.alertDuration === 'string'
+      ? parseInt(payload.alertDuration, 10)
+      : payload.alertDuration;
     if (seconds >= 3600) {
       downtimeText = `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
     } else if (seconds >= 60) {
@@ -133,6 +175,15 @@ async function sendSlackNotification(payload: UptimeRobotPayload): Promise<boole
 }
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Verify webhook secret
+  if (!verifyWebhookSecret(request)) {
+    console.warn("[UPTIMEROBOT_WEBHOOK] Unauthorized request - invalid or missing token");
+    return NextResponse.json(
+      { error: "Unauthorized", message: "Invalid or missing webhook token" },
+      { status: 401 }
+    );
+  }
+
   try {
     // Parse body - UptimeRobot sends JSON or form data depending on config
     let payload: UptimeRobotPayload;
@@ -157,9 +208,13 @@ export async function POST(request: NextRequest) {
       payload = await request.json();
     }
 
+    // Normalize alertType for consistent comparison
+    const alertType = normalizeAlertType(payload.alertType);
+
     console.log("[UPTIMEROBOT_WEBHOOK] Received alert:", {
       monitor: payload.monitorFriendlyName,
       type: payload.alertTypeFriendlyName,
+      alertType,
       url: payload.monitorURL,
     });
 
@@ -167,10 +222,10 @@ export async function POST(request: NextRequest) {
     const logEntry = {
       event: "uptime_alert",
       source: "uptimerobot",
-      monitorId: payload.monitorID,
+      monitorId: String(payload.monitorID),
       monitorName: payload.monitorFriendlyName,
       monitorUrl: payload.monitorURL,
-      alertType: payload.alertType,
+      alertType,
       alertTypeFriendlyName: payload.alertTypeFriendlyName,
       alertDetails: payload.alertDetails,
       alertDuration: payload.alertDuration,
@@ -180,13 +235,15 @@ export async function POST(request: NextRequest) {
     console.log("[UPTIME_ALERT]", JSON.stringify(logEntry));
 
     // Forward to Slack for critical alerts (down events)
-    if (payload.alertType === "1") {
+    if (alertType === "1") {
       await sendSlackNotification(payload);
     }
 
     // Also notify on recovery if downtime was significant (> 5 minutes)
-    if (payload.alertType === "2" && payload.alertDuration) {
-      const seconds = parseInt(payload.alertDuration, 10);
+    if (alertType === "2" && payload.alertDuration) {
+      const seconds = typeof payload.alertDuration === 'string'
+        ? parseInt(payload.alertDuration, 10)
+        : payload.alertDuration;
       if (seconds > 300) {
         // > 5 minutes
         await sendSlackNotification(payload);
@@ -194,7 +251,7 @@ export async function POST(request: NextRequest) {
     }
 
     // SSL expiration warning
-    if (payload.alertType === "3") {
+    if (alertType === "3") {
       await sendSlackNotification(payload);
     }
 
@@ -202,7 +259,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Alert received and processed",
-        monitorId: payload.monitorID,
+        monitorId: String(payload.monitorID),
       },
       { status: 200 }
     );
@@ -220,12 +277,19 @@ export async function POST(request: NextRequest) {
 }
 
 // Health check for the webhook endpoint itself
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Don't require auth for GET health check, but indicate if secret is configured
+  const secretConfigured = !!process.env.UPTIMEROBOT_WEBHOOK_SECRET;
+
   return NextResponse.json(
     {
       status: "ok",
       endpoint: "UptimeRobot Webhook",
       description: "Receives UptimeRobot alerts and forwards to Slack",
+      security: {
+        secretConfigured,
+        authMethod: secretConfigured ? "query param 'token' or header 'x-uptimerobot-token'" : "WARNING: No secret configured",
+      },
     },
     { status: 200 }
   );
