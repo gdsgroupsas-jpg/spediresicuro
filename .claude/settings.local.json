@@ -21,7 +21,9 @@
       "Bash(gh pr merge:*)",
       "Bash(git fetch:*)",
       "Bash(git rev-parse:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(PGPASSWORD=\"QAtRyqc1TgYseCxj\" psql:*)"
     ],
     "deny": [],
     "ask": []
