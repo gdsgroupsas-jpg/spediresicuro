@@ -13,6 +13,19 @@
 
 ---
 
+## ⚠️ NOTA IMPORTANTE: Gestione Fiscale
+
+**Questo POS NON gestisce la fiscalità diretta.**
+
+È un **sistema gestionale interno** per tracking vendite e inventario.
+
+**Gestione Fiscale:**
+- Scontrini/Fatture: tramite registratore di cassa fiscale del reseller
+- Il POS genera solo **ricevute interne** (non fiscali)
+- Integrazione fiscale: **NON inclusa** (futura quando necessario)
+
+---
+
 ## 🚀 Step 1: Database Migrations
 
 ### Migration 1: Product Catalog
@@ -208,8 +221,7 @@ CREATE TABLE pos_orders (
   payment_method TEXT,
   payment_status TEXT DEFAULT 'pending',
   paid_at TIMESTAMPTZ,
-  receipt_number TEXT,
-  fiscal_data JSONB,
+  internal_receipt_number TEXT, -- Ricevuta interna (non fiscale)
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

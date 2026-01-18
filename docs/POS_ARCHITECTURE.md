@@ -22,6 +22,25 @@ Sistema **Point of Sale (POS)** multi-servizio per reseller SpediReSicuro che ge
 
 ---
 
+## ⚠️ IMPORTANTE: Gestione Fiscale
+
+**Il POS NON gestisce la fiscalità diretta.**
+
+Questo sistema è un **gestionale interno** per tracking vendite, inventario e commissioni.
+
+**Gestione Fiscale Esterna:**
+- Scontrini/Fatture emessi tramite registratore di cassa fiscale esistente del reseller
+- Il POS genera **ricevute interne** (non fiscali) per tracking
+- Integrazione fiscale (RT, DGFE, ecc.) **NON implementata** in questa versione
+- **Futura integrazione possibile** quando il volume lo richiederà (es. oltre una certa soglia)
+
+**Workflow Consigliato:**
+1. POS genera ordine interno + ricevuta
+2. Reseller emette scontrino/fattura con proprio sistema fiscale
+3. Riconciliazione a fine giornata tra POS e cassa fiscale
+
+---
+
 ## 🎯 Obiettivi
 
 ### Funzionali
@@ -30,7 +49,7 @@ Sistema **Point of Sale (POS)** multi-servizio per reseller SpediReSicuro che ge
 - ✅ **Gestione inventario** (stock per POS/location)
 - ✅ **Sistema commissioni** (tracking contratti procacciati)
 - ✅ **Pagamenti multipli** (Cash, Card, Wallet prepagato)
-- ✅ **Stampa ricevute** (scontrino fiscale + etichette spedizione)
+- ✅ **Stampa ricevute** (ricevuta interna + etichette spedizione)
 - ✅ **Multi-terminal** (più POS per reseller)
 
 ### Non-Funzionali
@@ -234,9 +253,8 @@ CREATE TABLE pos_orders (
   payment_status TEXT DEFAULT 'pending', -- 'pending', 'paid', 'refunded'
   paid_at TIMESTAMPTZ,
 
-  -- Fiscal Receipt
-  receipt_number TEXT, -- Numero scontrino fiscale (se integrato con misuratore)
-  fiscal_data JSONB, -- Dati fiscali (RT, DGFE, ecc.)
+  -- Internal Receipt (non-fiscal)
+  internal_receipt_number TEXT, -- Numero ricevuta interna (auto-increment)
 
   -- Notes
   notes TEXT,
@@ -558,9 +576,9 @@ const handleProcessPayment = async (paymentMethod: 'cash' | 'card' | 'wallet') =
     total_revenue: increment(grandTotal)
   });
 
-  // 6. Clear cart & show receipt
+  // 6. Clear cart & show internal receipt
   clearCart();
-  printReceipt(orderId);
+  printInternalReceipt(orderId); // Ricevuta interna (non fiscale)
 };
 ```
 
@@ -735,7 +753,7 @@ Quando utente clicca su prodotto spedizione (es. "GLS Standard"), mostra modal:
 // Body: { items: CartItem[], payment_method, customer_info? }
 {
   order: POSOrder;
-  receipt_url: string; // PDF receipt
+  internal_receipt_url: string; // PDF ricevuta interna (non fiscale)
   shipment_labels?: string[]; // Array PDF labels se ci sono spedizioni
 }
 
@@ -1018,8 +1036,9 @@ GROUP BY s.pos_terminal_id, s.location_id, DATE(s.session_start);
 
 ### Long-term (Quarter 1)
 1. Rollout graduale a tutti i reseller
-2. Integrazione stampante fiscale
+2. Dashboard analytics avanzata (vendite, margini, commissioni)
 3. Mobile app nativa (React Native)
+4. **[FUTURO]** Integrazione fiscale quando necessario (oltre soglia volume)
 
 ---
 
