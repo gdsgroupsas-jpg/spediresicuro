@@ -685,7 +685,23 @@ export default function AdminDashboardPage() {
                 <Settings className="w-5 h-5" />
                 Azioni Rapide
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <Link
+                  href="/dashboard/admin/metrics"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                    <TrendingUp className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">
+                      Business Metrics
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      KPI e dashboard
+                    </p>
+                  </div>
+                </Link>
                 <Link
                   href="/dashboard/admin/configurations"
                   className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all group"
