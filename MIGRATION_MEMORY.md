@@ -773,6 +773,33 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 
 ## 🔧 MODIFICHE RECENTI
 
+### ? Admin Overview KPI - RPC server-side (18 Gennaio 2026)
+
+**Problema:** La dashboard admin calcolava KPI da query limitate e includeva spedizioni cancellate/test.
+
+**Soluzione:**
+- Nuova RPC `get_admin_overview_stats(include_test)` per KPI no-limit.
+- Esclude `deleted`/`cancelled` sempre; filtra test per pattern e tracking, con eccezione `testspediresicuro+`.
+- API `/api/admin/overview` ora usa RPC con fallback in-memory.
+- Tabella admin: filtra spedizioni soft-deleted/cancelled e riconosce tracking con 'TEST'.
+- Query utenti resiliente: fallback se colonne opzionali mancanti.
+
+**Migrations:**
+- `supabase/migrations/110_admin_overview_stats_function.sql`
+- `supabase/migrations/111_admin_overview_stats_function_fix.sql`
+
+
+### ? Health Probes - Readiness/Liveness (18 Gennaio 2026)
+
+**Feature:** Endpoint dedicati per readiness/liveness monitoring.
+- `/api/health/ready` verifica DB Supabase.
+- `/api/health/live` conferma istanza viva.
+
+**File:**
+- `app/api/health/ready/route.ts`
+- `app/api/health/live/route.ts`
+
+
 ### ✅ AI Provider Selection - Supporto Multi-Provider (Gennaio 2026)
 
 **Feature:** Sistema per selezionare il provider AI (Anthropic Claude, DeepSeek o Google Gemini) per Anne tramite UI Superadmin.

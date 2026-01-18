@@ -14,6 +14,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { findUserByEmail } from "@/lib/database";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
+import { createUserMap, isTestShipment } from "@/lib/utils/test-data-detection";
+import type { AdminStats } from "@/types/admin";
 
 // Forza rendering dinamico (usa headers, session, ecc.)
 export const dynamic = "force-dynamic";
@@ -70,12 +72,40 @@ export async function GET(request: NextRequest) {
     let allUsers: any[] = [];
     if (isSupabaseConfigured()) {
       try {
-        const { data: users, error: usersError } = await supabaseAdmin
+        let usersError: any = null;
+        let users: any[] | null = null;
+
+        const usersResponse = await supabaseAdmin
           .from("users")
           .select(
             "id, email, name, role, account_type, is_reseller, reseller_role, parent_user_id, provider, created_at, updated_at, assigned_config_id"
           )
           .order("created_at", { ascending: false });
+
+        usersError = usersResponse.error;
+        users = usersResponse.data;
+
+        if (usersError) {
+          const fallbackResponse = await supabaseAdmin
+            .from("users")
+            .select(
+              "id, email, name, role, account_type, is_reseller, reseller_role, parent_user_id, provider, created_at, updated_at"
+            )
+            .order("created_at", { ascending: false });
+
+          usersError = fallbackResponse.error;
+          users = fallbackResponse.data;
+        }
+
+        if (usersError) {
+          const minimalResponse = await supabaseAdmin
+            .from("users")
+            .select("id, email, name, role, account_type, created_at, updated_at")
+            .order("created_at", { ascending: false });
+
+          usersError = minimalResponse.error;
+          users = minimalResponse.data;
+        }
 
         if (!usersError && users) {
           // Carica conteggio assegnazioni listini per tutti gli utenti
@@ -95,6 +125,8 @@ export async function GET(request: NextRequest) {
             ...user,
             price_lists_count: countsMap.get(user.id) || 0,
           }));
+        } else if (usersError) {
+          console.error("Errore caricamento utenti (users):", usersError);
         }
       } catch (error) {
         console.error("Errore caricamento utenti:", error);
@@ -108,6 +140,9 @@ export async function GET(request: NextRequest) {
         const { data: shipments, error: shipmentsError } = await supabaseAdmin
           .from("shipments")
           .select("*")
+          .or("deleted.is.null,deleted.eq.false")
+          .is("deleted_at", null)
+          .not("status", "in", "(cancelled,deleted)")
           .order("created_at", { ascending: false })
           .limit(1000); // Limita a 1000 per performance
 
@@ -121,12 +156,20 @@ export async function GET(request: NextRequest) {
 
     // 5. Calcola statistiche globali
     const now = new Date();
-    const today = new Date(now.setHours(0, 0, 0, 0));
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const stats = {
-      // Utenti
+    const userStats: Pick<
+      AdminStats,
+      | "totalUsers"
+      | "adminUsers"
+      | "regularUsers"
+      | "newUsersToday"
+      | "newUsersThisWeek"
+      | "newUsersThisMonth"
+    > = {
       totalUsers: allUsers.length,
       adminUsers: allUsers.filter((u) => u.role === "admin").length,
       regularUsers: allUsers.filter((u) => u.role === "user").length,
@@ -142,76 +185,224 @@ export async function GET(request: NextRequest) {
         const created = new Date(u.created_at);
         return created >= monthAgo;
       }).length,
+    };
 
-      // Spedizioni
-      totalShipments: allShipments.length,
-      shipmentsToday: allShipments.filter((s: any) => {
-        const date = new Date(s.created_at);
-        return date >= today;
-      }).length,
-      shipmentsThisWeek: allShipments.filter((s: any) => {
-        const date = new Date(s.created_at);
-        return date >= weekAgo;
-      }).length,
-      shipmentsThisMonth: allShipments.filter((s: any) => {
-        const date = new Date(s.created_at);
-        return date >= monthAgo;
-      }).length,
+    const mapShipmentStatsRow = (
+      row: any
+    ): Pick<
+      AdminStats,
+      | "totalShipments"
+      | "shipmentsToday"
+      | "shipmentsThisWeek"
+      | "shipmentsThisMonth"
+      | "shipmentsPending"
+      | "shipmentsInTransit"
+      | "shipmentsDelivered"
+      | "shipmentsFailed"
+      | "totalRevenue"
+      | "revenueToday"
+      | "revenueThisWeek"
+      | "revenueThisMonth"
+    > => ({
+      totalShipments: Number(row.total_shipments) || 0,
+      shipmentsToday: Number(row.shipments_today) || 0,
+      shipmentsThisWeek: Number(row.shipments_this_week) || 0,
+      shipmentsThisMonth: Number(row.shipments_this_month) || 0,
+      shipmentsPending: Number(row.shipments_pending) || 0,
+      shipmentsInTransit: Number(row.shipments_in_transit) || 0,
+      shipmentsDelivered: Number(row.shipments_delivered) || 0,
+      shipmentsFailed: Number(row.shipments_failed) || 0,
+      totalRevenue: Number(row.total_revenue) || 0,
+      revenueToday: Number(row.revenue_today) || 0,
+      revenueThisWeek: Number(row.revenue_this_week) || 0,
+      revenueThisMonth: Number(row.revenue_this_month) || 0,
+    });
 
-      // Status spedizioni
-      shipmentsPending: allShipments.filter(
-        (s: any) => s.status === "pending" || s.status === "draft"
-      ).length,
-      shipmentsInTransit: allShipments.filter(
-        (s: any) => s.status === "in_transit" || s.status === "shipped"
-      ).length,
-      shipmentsDelivered: allShipments.filter(
-        (s: any) => s.status === "delivered"
-      ).length,
-      shipmentsFailed: allShipments.filter(
-        (s: any) => s.status === "failed" || s.status === "cancelled"
-      ).length,
+    let stats: AdminStats;
+    let productionStats: AdminStats;
 
-      // Fatturato
-      totalRevenue: allShipments.reduce(
-        (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
-        0
-      ),
-      revenueToday: allShipments
-        .filter((s: any) => {
+    if (isSupabaseConfigured()) {
+      const { data: rawStats, error: statsError } = await supabaseAdmin.rpc(
+        "get_admin_overview_stats",
+        { include_test: true }
+      );
+      const { data: rawProductionStats, error: productionError } =
+        await supabaseAdmin.rpc("get_admin_overview_stats", {
+          include_test: false,
+        });
+
+      if (!statsError && !productionError && rawStats && rawProductionStats) {
+        stats = {
+          ...userStats,
+          ...mapShipmentStatsRow(rawStats[0]),
+        };
+        productionStats = {
+          ...userStats,
+          ...mapShipmentStatsRow(rawProductionStats[0]),
+        };
+      } else {
+        console.error(
+          "Errore RPC get_admin_overview_stats:",
+          statsError || productionError
+        );
+        const userMap = createUserMap(allUsers);
+        const baseShipments = allShipments.filter((s: any) => {
+          if (s.deleted === true || s.deleted_at) return false;
+          if (s.status === "cancelled" || s.status === "deleted") return false;
+          return true;
+        });
+        const productionShipments = baseShipments.filter(
+          (s: any) => !isTestShipment(s, userMap)
+        );
+        const computeShipmentStats = (shipments: any[]) => ({
+          totalShipments: shipments.length,
+          shipmentsToday: shipments.filter((s: any) => {
+            const date = new Date(s.created_at);
+            return date >= today;
+          }).length,
+          shipmentsThisWeek: shipments.filter((s: any) => {
+            const date = new Date(s.created_at);
+            return date >= weekAgo;
+          }).length,
+          shipmentsThisMonth: shipments.filter((s: any) => {
+            const date = new Date(s.created_at);
+            return date >= monthAgo;
+          }).length,
+          shipmentsPending: shipments.filter(
+            (s: any) => s.status === "pending" || s.status === "draft"
+          ).length,
+          shipmentsInTransit: shipments.filter(
+            (s: any) => s.status === "in_transit" || s.status === "shipped"
+          ).length,
+          shipmentsDelivered: shipments.filter(
+            (s: any) => s.status === "delivered"
+          ).length,
+          shipmentsFailed: shipments.filter((s: any) => s.status === "failed")
+            .length,
+          totalRevenue: shipments.reduce(
+            (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
+            0
+          ),
+          revenueToday: shipments
+            .filter((s: any) => {
+              const date = new Date(s.created_at);
+              return date >= today;
+            })
+            .reduce(
+              (sum: number, s: any) =>
+                sum + (parseFloat(s.final_price || 0) || 0),
+              0
+            ),
+          revenueThisWeek: shipments
+            .filter((s: any) => {
+              const date = new Date(s.created_at);
+              return date >= weekAgo;
+            })
+            .reduce(
+              (sum: number, s: any) =>
+                sum + (parseFloat(s.final_price || 0) || 0),
+              0
+            ),
+          revenueThisMonth: shipments
+            .filter((s: any) => {
+              const date = new Date(s.created_at);
+              return date >= monthAgo;
+            })
+            .reduce(
+              (sum: number, s: any) =>
+                sum + (parseFloat(s.final_price || 0) || 0),
+              0
+            ),
+        });
+
+        stats = { ...userStats, ...computeShipmentStats(baseShipments) };
+        productionStats = {
+          ...userStats,
+          ...computeShipmentStats(productionShipments),
+        };
+      }
+    } else {
+      const userMap = createUserMap(allUsers);
+      const baseShipments = allShipments.filter((s: any) => {
+        if (s.deleted === true || s.deleted_at) return false;
+        if (s.status === "cancelled" || s.status === "deleted") return false;
+        return true;
+      });
+      const productionShipments = baseShipments.filter(
+        (s: any) => !isTestShipment(s, userMap)
+      );
+      const computeShipmentStats = (shipments: any[]) => ({
+        totalShipments: shipments.length,
+        shipmentsToday: shipments.filter((s: any) => {
           const date = new Date(s.created_at);
           return date >= today;
-        })
-        .reduce(
-          (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
-          0
-        ),
-      revenueThisWeek: allShipments
-        .filter((s: any) => {
+        }).length,
+        shipmentsThisWeek: shipments.filter((s: any) => {
           const date = new Date(s.created_at);
           return date >= weekAgo;
-        })
-        .reduce(
-          (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
-          0
-        ),
-      revenueThisMonth: allShipments
-        .filter((s: any) => {
+        }).length,
+        shipmentsThisMonth: shipments.filter((s: any) => {
           const date = new Date(s.created_at);
           return date >= monthAgo;
-        })
-        .reduce(
+        }).length,
+        shipmentsPending: shipments.filter(
+          (s: any) => s.status === "pending" || s.status === "draft"
+        ).length,
+        shipmentsInTransit: shipments.filter(
+          (s: any) => s.status === "in_transit" || s.status === "shipped"
+        ).length,
+        shipmentsDelivered: shipments.filter(
+          (s: any) => s.status === "delivered"
+        ).length,
+        shipmentsFailed: shipments.filter((s: any) => s.status === "failed")
+          .length,
+        totalRevenue: shipments.reduce(
           (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
           0
         ),
-    };
+        revenueToday: shipments
+          .filter((s: any) => {
+            const date = new Date(s.created_at);
+            return date >= today;
+          })
+          .reduce(
+            (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
+            0
+          ),
+        revenueThisWeek: shipments
+          .filter((s: any) => {
+            const date = new Date(s.created_at);
+            return date >= weekAgo;
+          })
+          .reduce(
+            (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
+            0
+          ),
+        revenueThisMonth: shipments
+          .filter((s: any) => {
+            const date = new Date(s.created_at);
+            return date >= monthAgo;
+          })
+          .reduce(
+            (sum: number, s: any) => sum + (parseFloat(s.final_price || 0) || 0),
+            0
+          ),
+      });
+
+      stats = { ...userStats, ...computeShipmentStats(baseShipments) };
+      productionStats = {
+        ...userStats,
+        ...computeShipmentStats(productionShipments),
+      };
+    }
 
     return NextResponse.json({
       success: true,
       stats,
+      productionStats,
       users: allUsers,
       shipments: allShipments.slice(0, 100), // Limita a 100 per la risposta
-      totalShipments: allShipments.length,
+      totalShipments: stats.totalShipments,
     });
   } catch (error: any) {
     console.error("Errore API admin overview:", error);

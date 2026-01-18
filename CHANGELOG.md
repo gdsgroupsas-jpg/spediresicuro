@@ -23,9 +23,10 @@ Questo progetto segue [Semantic Versioning 2.0.0](https://semver.org/):
 
 ## [Unreleased]
 
-Ultimo aggiornamento: 2025-01-16
+Ultimo aggiornamento: 2026-01-18
 
 ### Added
+- **Health Readiness/Liveness** - Nuovi endpoint `/api/health/ready` e `/api/health/live` per probe uptime/dep readiness
 - **VAT Semantics in Price Lists (ADR-001)** - Implementazione semantica IVA esplicita nei listini prezzi (FASE 0-8 completata)
   - Colonne `vat_mode` e `vat_rate` aggiunte a `price_lists` e `shipments` (migration 110)
   - Supporto prezzi con IVA inclusa o esclusa
@@ -71,6 +72,8 @@ Ultimo aggiornamento: 2025-01-16
   - Miglioramenti matching geografico zone/provincia/regione
 
 ### Fixed
+- **Admin Overview KPI** - KPI admin server-side via RPC con filtri no-limit e esclusione cancellate/test (salva include testspediresicuro+)
+- **Admin Overview Data Quality** - Lista spedizioni ora esclude soft-delete/cancellate; detection test include tracking con `TEST`; query utenti con fallback colonne opzionali
 - **Metadata Column Missing** - Risolto problema colonna metadata mancante usando `auth.users` invece di `users` (5dc5791)
 - **Supabase Client** - Usa client Supabase corretto e migliora log errori (fd7de78)
 - **Local State Update** - Aggiorna stato locale con metadata freschi dopo toggle (11c331c)
