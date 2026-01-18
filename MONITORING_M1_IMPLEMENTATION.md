@@ -37,7 +37,7 @@ replaysOnErrorSampleRate: 0.0 // No session replay (€0)
 #### 2. **Slack Financial Alerts**
 - **Integration**: Financial alerts service
 - **Webhook**: Configured for `#tutta-spediresicuro` channel
-- **Frequency**: Every 6 hours (Vercel Cron)
+- **Frequency**: Daily at 8:00 AM (Vercel Cron - Hobby tier limit)
 - **Cost**: €0 (Slack free plan)
 
 **Alert Types**:
@@ -47,7 +47,7 @@ replaysOnErrorSampleRate: 0.0 // No session replay (€0)
 - Cost spike (+50% vs average)
 
 **Files**:
-- `vercel.json` - Cron schedule updated (every 6h)
+- `vercel.json` - Cron schedule updated (daily 8am)
 - Environment variable: `SLACK_FINANCIAL_ALERTS_WEBHOOK`
 
 ---
@@ -148,8 +148,8 @@ curl http://localhost:3000/api/health/live
 | Service | Free Tier Limit | Usage | Cost |
 |---------|----------------|-------|------|
 | Sentry Errors | 5K errors/month | ~100/month | €0 |
-| Slack Messages | Unlimited | ~120/month (6h cron) | €0 |
-| Vercel Cron | Included | 2 jobs | €0 |
+| Slack Messages | Unlimited | ~30/month (daily cron) | €0 |
+| Vercel Cron | 2 jobs (Hobby) | 2 jobs (1x/day each) | €0 |
 | **TOTAL** | | | **€0/month** |
 
 ---
