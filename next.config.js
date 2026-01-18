@@ -12,6 +12,8 @@ const nextConfig = {
   // ⚠️ OTTIMIZZAZIONE: Prefetch più aggressivo per navigazione veloce
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+    // M2: Enable instrumentation hook for Sentry
+    instrumentationHook: true,
   },
   
   // ⚡ BUILD OPTIMIZATION: Esclude dipendenze pesanti dal bundle client via webpack
