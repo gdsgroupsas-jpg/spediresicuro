@@ -73,12 +73,28 @@ export async function GET(request: NextRequest) {
         const { data: users, error: usersError } = await supabaseAdmin
           .from("users")
           .select(
-            "id, email, name, role, account_type, is_reseller, provider, created_at, updated_at, assigned_config_id"
+            "id, email, name, role, account_type, is_reseller, reseller_role, parent_user_id, provider, created_at, updated_at, assigned_config_id"
           )
           .order("created_at", { ascending: false });
 
         if (!usersError && users) {
-          allUsers = users;
+          // Carica conteggio assegnazioni listini per tutti gli utenti
+          const { data: assignmentCounts } = await supabaseAdmin
+            .from("price_list_assignments")
+            .select("user_id")
+            .is("revoked_at", null);
+
+          // Crea mappa user_id -> count
+          const countsMap = new Map<string, number>();
+          assignmentCounts?.forEach((a) => {
+            countsMap.set(a.user_id, (countsMap.get(a.user_id) || 0) + 1);
+          });
+
+          // Aggiungi count a ogni user
+          allUsers = users.map((user) => ({
+            ...user,
+            price_lists_count: countsMap.get(user.id) || 0,
+          }));
         }
       } catch (error) {
         console.error("Errore caricamento utenti:", error);
