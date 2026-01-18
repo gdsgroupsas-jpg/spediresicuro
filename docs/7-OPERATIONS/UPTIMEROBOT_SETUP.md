@@ -35,7 +35,7 @@ Create the following monitors for SpediReSicuro:
 ```
 Type: HTTP(s)
 Friendly Name: SpediReSicuro - Health Check
-URL: https://spediresicuro.com/api/health
+URL: https://spediresicuro.it/api/health
 Monitoring Interval: 5 minutes
 HTTP Method: GET
 Expected Status: 200
@@ -45,7 +45,7 @@ Expected Status: 200
 ```
 Type: HTTP(s)
 Friendly Name: SpediReSicuro - Database Ready
-URL: https://spediresicuro.com/api/health/ready
+URL: https://spediresicuro.it/api/health/ready
 Monitoring Interval: 5 minutes
 HTTP Method: GET
 Expected Status: 200
@@ -57,7 +57,7 @@ Keyword Value: "working":true
 ```
 Type: HTTP(s)
 Friendly Name: SpediReSicuro - Liveness
-URL: https://spediresicuro.com/api/health/live
+URL: https://spediresicuro.it/api/health/live
 Monitoring Interval: 5 minutes
 HTTP Method: GET
 Expected Status: 200
@@ -67,7 +67,7 @@ Expected Status: 200
 ```
 Type: HTTP(s)
 Friendly Name: SpediReSicuro - Dependencies
-URL: https://spediresicuro.com/api/health/dependencies
+URL: https://spediresicuro.it/api/health/dependencies
 Monitoring Interval: 5 minutes
 HTTP Method: GET
 Expected Status: 200
@@ -78,7 +78,7 @@ Alert on: "status":"ok" OR "status":"degraded" (both acceptable)
 ```
 Type: HTTP(s)
 Friendly Name: SpediReSicuro - Homepage
-URL: https://spediresicuro.com
+URL: https://spediresicuro.it
 Monitoring Interval: 5 minutes
 HTTP Method: GET
 Expected Status: 200
@@ -95,7 +95,7 @@ Expected Status: 200
 #### Webhook Integration (Optional)
 ```
 Type: Webhook
-URL: https://spediresicuro.com/api/webhooks/uptimerobot
+URL: https://spediresicuro.it/api/webhooks/uptimerobot
 HTTP Method: POST
 POST Value (JSON):
 {
@@ -114,7 +114,7 @@ POST Value (JSON):
 1. Go to Status Pages
 2. Create new status page
 3. Add all monitors
-4. Custom domain: `status.spediresicuro.com` (optional)
+4. Custom domain: `status.spediresicuro.it` (optional)
 
 ---
 
