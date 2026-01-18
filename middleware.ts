@@ -62,7 +62,8 @@ const PUBLIC_ROUTES = [
   "/login",
   "/api/auth", // NextAuth routes
   "/api/health", // Health check endpoint
-  "/api/cron", // Webhook endpoints (have own token auth)
+  "/api/cron", // Cron endpoints (have own token auth)
+  "/api/webhooks", // External webhooks (UptimeRobot, etc. - have own secret auth)
   // Marketing routes
   "/come-funziona",
   "/contatti",
