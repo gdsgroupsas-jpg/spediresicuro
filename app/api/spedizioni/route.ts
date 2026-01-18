@@ -429,11 +429,9 @@ export async function POST(request: NextRequest) {
       console.log('💰 [API] Calcolato prezzo finale con margine default:', prezzoFinale);
     }
 
-    // ✨ FIX: Platform fee con sistema CASCADING
-    // - SUPERADMIN, ADMIN, RESELLER, BYOC: pagano fee (configurabile, può essere 0)
-    // - USER senza parent: GRATIS
-    // - USER con parent_imposed_fee: paga fee imposta dal parent
-    // - USER con parent: eredita fee del parent
+    // ✨ FIX: Platform fee per ruoli BUSINESS (SUPERADMIN, ADMIN, RESELLER, BYOC)
+    // USER finali NON pagano mai platform fee
+    // La fee è configurabile per utente (può essere 0 = gratis)
     let platformFee = 0;
     try {
       const { getPlatformFeeSafe } = await import('@/lib/services/pricing/platform-fee');
@@ -442,41 +440,36 @@ export async function POST(request: NextRequest) {
       const sessionRole = (session.user as any)?.role?.toUpperCase?.() || '';
       const sessionAccountType = (session.user as any)?.account_type?.toLowerCase?.() || '';
 
-      // Query DB con campi per fee cascading
+      // Query DB come backup (potrebbe fallire)
       const { data: userData } = await supabaseAdmin
         .from('users')
-        .select('id, role, account_type, parent_id, parent_imposed_fee')
+        .select('role, account_type')
         .eq('email', session.user.email)
         .single();
 
       const dbRole = userData?.role?.toUpperCase?.() || '';
       const dbAccountType = userData?.account_type?.toLowerCase?.() || '';
-      const hasParent = !!userData?.parent_id;
-      const hasParentImposedFee = userData?.parent_imposed_fee !== null;
 
-      // Determina se è un USER finale SENZA fee da parent
-      // USER senza parent e senza fee imposta = GRATIS
-      // USER con parent_imposed_fee o con parent = usa fee cascading
+      // Determina se è un USER finale (NON paga fee)
+      // USER = account_type 'user' OPPURE nessun ruolo business esplicito
       const isRegularUser =
         sessionAccountType === 'user' ||
         dbAccountType === 'user' ||
         (
+          // Se non ha account_type definito E non è un ruolo business
           !sessionAccountType && !dbAccountType &&
           !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(sessionRole) &&
           !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(dbRole)
         );
 
-      // Ruoli BUSINESS che pagano fee sempre
+      // Ruoli BUSINESS che pagano fee (configurabile, può essere 0)
       const isBusinessRole =
         ['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(sessionRole) ||
         ['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(dbRole) ||
         ['superadmin', 'admin', 'reseller', 'byoc'].includes(sessionAccountType) ||
         ['superadmin', 'admin', 'reseller', 'byoc'].includes(dbAccountType);
 
-      // ✨ NEW: USER con parent può avere fee imposta
-      const userWithParentFee = isRegularUser && (hasParentImposedFee || hasParent);
-
-      console.log('🔐 [API] Verifica ruolo per platform fee (cascading):', {
+      console.log('🔐 [API] Verifica ruolo per platform fee:', {
         email: session.user.email,
         sessionRole,
         sessionAccountType,
@@ -484,35 +477,27 @@ export async function POST(request: NextRequest) {
         dbAccountType,
         isRegularUser,
         isBusinessRole,
-        hasParent,
-        hasParentImposedFee,
-        userWithParentFee,
-        platformFeeApplied: isBusinessRole || userWithParentFee
+        platformFeeApplied: isBusinessRole && !isRegularUser
       });
 
-      // Applica platform fee:
-      // 1. Ruoli BUSINESS: sempre (configurabile a 0)
-      // 2. USER con parent_imposed_fee: sempre
-      // 3. USER con parent: eredita fee dal parent
-      // 4. USER senza parent: GRATIS
-      if (isBusinessRole || userWithParentFee) {
+      // Solo ruoli BUSINESS pagano platform fee (può essere 0 se configurata così)
+      // USER finali NON pagano MAI
+      if (isBusinessRole && !isRegularUser) {
         const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
-        const userId = userData?.id || await getSupabaseUserIdFromEmail(session.user.email);
+        const userId = await getSupabaseUserIdFromEmail(session.user.email);
         if (userId) {
           platformFee = await getPlatformFeeSafe(userId);
           prezzoFinale = prezzoFinale + platformFee;
-          console.log('💼 [API] Platform fee applicata (cascading):', {
+          console.log('💼 [API] BUSINESS role - platform fee applicata:', {
             role: dbRole || sessionRole,
             accountType: dbAccountType || sessionAccountType,
-            isBusinessRole,
-            userWithParentFee,
             prezzoSenzaFee: prezzoFinale - platformFee,
             platformFee,
             prezzoFinale,
           });
         }
       } else {
-        console.log('👤 [API] USER finale senza parent - platform fee NON applicata (gratis)');
+        console.log('👤 [API] USER finale - platform fee NON applicata (gratis)');
       }
     } catch (error) {
       console.warn('⚠️ [API] Errore recupero platform fee, prezzo senza fee:', error);
