@@ -61,7 +61,7 @@ export function isTestUser(user: {
 
 /**
  * Verifica se una spedizione è una spedizione di test
- * (creata da un utente di test o con status cancelled)
+ * (creata da un utente di test, con status cancelled, o orfana senza user valido)
  */
 export function isTestShipment(
   shipment: {
@@ -82,14 +82,22 @@ export function isTestShipment(
     return true
   }
 
-  // Se abbiamo la mappa utenti, verifica se l'utente è di test
+  // Se abbiamo la mappa utenti, verifica se l'utente è di test o orfano
   if (userMap) {
     const userId = shipment.user_id || shipment.created_by
     if (userId) {
       const user = userMap.get(userId)
-      if (user && isTestUser(user)) {
+      // Se l'utente è orfano (non trovato nella mappa), è considerato test
+      if (!user) {
         return true
       }
+      // Se l'utente esiste e è di test, è considerato test
+      if (isTestUser(user)) {
+        return true
+      }
+    } else {
+      // Se non ha user_id, è orfano e quindi test
+      return true
     }
   }
 

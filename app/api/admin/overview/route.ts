@@ -187,6 +187,19 @@ export async function GET(request: NextRequest) {
       }).length,
     };
 
+    /**
+     * Helper: Filtra spedizioni orfane (senza user_id valido nella mappa)
+     * Le spedizioni orfane vengono sempre considerate TEST per evitare
+     * che vengano conteggiate nel fatturato di produzione
+     */
+    const filterOrphanedShipments = (shipments: any[], userMap: Map<string, any>) => {
+      return shipments.filter(s => {
+        if (!s.user_id) return false; // Scarta spedizioni senza user_id
+        if (!userMap.has(s.user_id)) return false; // Scarta spedizioni con user_id inesistente
+        return true;
+      });
+    };
+
     const mapShipmentStatsRow = (
       row: any
     ): Pick<
@@ -251,7 +264,9 @@ export async function GET(request: NextRequest) {
           if (s.status === "cancelled" || s.status === "deleted") return false;
           return true;
         });
-        const productionShipments = baseShipments.filter(
+        // Filtra spedizioni orfane (user_id non trovato nella mappa utenti)
+        const validShipments = filterOrphanedShipments(baseShipments, userMap);
+        const productionShipments = validShipments.filter(
           (s: any) => !isTestShipment(s, userMap)
         );
         const computeShipmentStats = (shipments: any[]) => ({
@@ -315,7 +330,7 @@ export async function GET(request: NextRequest) {
             ),
         });
 
-        stats = { ...userStats, ...computeShipmentStats(baseShipments) };
+        stats = { ...userStats, ...computeShipmentStats(validShipments) };
         productionStats = {
           ...userStats,
           ...computeShipmentStats(productionShipments),
@@ -328,7 +343,9 @@ export async function GET(request: NextRequest) {
         if (s.status === "cancelled" || s.status === "deleted") return false;
         return true;
       });
-      const productionShipments = baseShipments.filter(
+      // Filtra spedizioni orfane (user_id non trovato nella mappa utenti)
+      const validShipments = filterOrphanedShipments(baseShipments, userMap);
+      const productionShipments = validShipments.filter(
         (s: any) => !isTestShipment(s, userMap)
       );
       const computeShipmentStats = (shipments: any[]) => ({
@@ -389,7 +406,7 @@ export async function GET(request: NextRequest) {
           ),
       });
 
-      stats = { ...userStats, ...computeShipmentStats(baseShipments) };
+      stats = { ...userStats, ...computeShipmentStats(validShipments) };
       productionStats = {
         ...userStats,
         ...computeShipmentStats(productionShipments),
