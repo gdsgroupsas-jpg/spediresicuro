@@ -19,6 +19,11 @@ logs_result*.json
 price_dump.txt
 REPORT_STORICO_COMMIT.md
 
+# Deployment verification files (may contain secrets)
+*_DEPLOYMENT_VERIFICATION.md
+*_DEPLOYMENT_SUMMARY.md
+POST_DEPLOYMENT_VERIFICATION.md
+
 # next.js
 /.next/
 /out/
