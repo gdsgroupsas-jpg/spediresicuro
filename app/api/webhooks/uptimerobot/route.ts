@@ -2,7 +2,7 @@
  * UptimeRobot Webhook Endpoint
  *
  * Receives alerts from UptimeRobot when monitors go down/up.
- * Forwards critical alerts to Slack.
+ * Forwards critical alerts to Slack and Telegram.
  *
  * Endpoint: POST /api/webhooks/uptimerobot
  *
@@ -10,8 +10,10 @@
  * Configure in UptimeRobot: https://spediresicuro.it/api/webhooks/uptimerobot?token=YOUR_SECRET
  *
  * Milestone: M3 - Uptime & Health Monitoring
+ * Updated: M5 - Added Telegram notifications
  */
 import { NextRequest, NextResponse } from "next/server";
+import { sendDowntimeAlert } from "@/lib/services/telegram-bot";
 
 // UptimeRobot alert types
 // 1 = Down, 2 = Up, 3 = SSL Certificate expires soon
@@ -243,9 +245,12 @@ export async function POST(request: NextRequest) {
 
     console.log("[UPTIME_ALERT]", JSON.stringify(logEntry));
 
-    // Forward to Slack for critical alerts (down events)
+    // Forward to Slack and Telegram for critical alerts (down events)
     if (alertType === "1") {
-      await sendSlackNotification(payload);
+      await Promise.all([
+        sendSlackNotification(payload),
+        sendDowntimeAlert(payload.monitorFriendlyName, payload.monitorURL, true, payload.alertDetails),
+      ]);
     }
 
     // Also notify on recovery if downtime was significant (> 5 minutes)
@@ -255,13 +260,19 @@ export async function POST(request: NextRequest) {
         : payload.alertDuration;
       if (seconds > 300) {
         // > 5 minutes
-        await sendSlackNotification(payload);
+        await Promise.all([
+          sendSlackNotification(payload),
+          sendDowntimeAlert(payload.monitorFriendlyName, payload.monitorURL, false, `Downtime: ${Math.floor(seconds / 60)}m`),
+        ]);
       }
     }
 
-    // SSL expiration warning
+    // SSL expiration warning - Slack and Telegram
     if (alertType === "3") {
-      await sendSlackNotification(payload);
+      await Promise.all([
+        sendSlackNotification(payload),
+        sendDowntimeAlert(payload.monitorFriendlyName, payload.monitorURL, true, `SSL: ${payload.alertDetails}`),
+      ]);
     }
 
     return NextResponse.json(
