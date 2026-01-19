@@ -125,18 +125,31 @@ async function handleHealth(chatId: number): Promise<string> {
     const supabaseStart = Date.now();
     try {
       const { supabaseAdmin } = await import('@/lib/supabase');
+
+      // Use AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const { data, error } = await supabaseAdmin
         .from('shipments')
         .select('id')
-        .limit(1);
+        .limit(1)
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
 
       services.push({
         name: 'Database',
         status: error ? 'error' : 'ok',
         latency: Date.now() - supabaseStart,
       });
-    } catch {
-      services.push({ name: 'Database', status: 'error' });
+    } catch (err) {
+      const latency = Date.now() - supabaseStart;
+      services.push({
+        name: 'Database',
+        status: 'error',
+        latency: latency > 5000 ? undefined : latency // Don't show latency if timeout
+      });
     }
 
     // Telegram is obviously OK if we're here
