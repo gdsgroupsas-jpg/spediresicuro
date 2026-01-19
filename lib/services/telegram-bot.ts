@@ -75,7 +75,7 @@ export async function sendTelegramMessage(
     return { success: false, error: 'Telegram not configured' };
   }
 
-  const chatId = options.chatId || config.defaultChatId;
+  const chatId = String(options.chatId || config.defaultChatId);
   const url = `${TELEGRAM_API_BASE}${config.botToken}/sendMessage`;
 
   console.log('[TELEGRAM] Sending message:', {
