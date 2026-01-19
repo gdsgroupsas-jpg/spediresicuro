@@ -78,26 +78,49 @@ export async function sendTelegramMessage(
   const chatId = options.chatId || config.defaultChatId;
   const url = `${TELEGRAM_API_BASE}${config.botToken}/sendMessage`;
 
+  console.log('[TELEGRAM] Sending message:', {
+    chatId,
+    textLength: text.length,
+    url: url.substring(0, 50) + '...',
+  });
+
   try {
+    const payload = {
+      chat_id: chatId,
+      text,
+      parse_mode: options.parseMode || 'HTML',
+      disable_notification: options.disableNotification || false,
+      reply_to_message_id: options.replyToMessageId,
+    };
+
+    console.log('[TELEGRAM] Payload:', {
+      chat_id: payload.chat_id,
+      parse_mode: payload.parse_mode,
+      textPreview: text.substring(0, 50),
+    });
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: options.parseMode || 'HTML',
-        disable_notification: options.disableNotification || false,
-        reply_to_message_id: options.replyToMessageId,
-      }),
+      body: JSON.stringify(payload),
     });
 
+    console.log('[TELEGRAM] Response status:', response.status);
+
     const data = await response.json();
+
+    console.log('[TELEGRAM] Response data:', {
+      ok: data.ok,
+      description: data.description,
+      messageId: data.result?.message_id,
+    });
 
     if (!response.ok || !data.ok) {
       console.error('[TELEGRAM] API error:', data);
       return { success: false, error: data.description || 'API error' };
     }
 
+    console.log('[TELEGRAM] Message sent successfully');
     return { success: true, messageId: data.result?.message_id };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
