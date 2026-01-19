@@ -24,6 +24,7 @@ import {
   isTelegramConfigured,
 } from '@/lib/services/telegram-bot';
 import { getQuickStats } from '@/lib/metrics/business-metrics';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // Authorized chat IDs (from env)
 function getAuthorizedChatIds(): number[] {
@@ -124,8 +125,6 @@ async function handleHealth(chatId: number): Promise<string> {
     // Check Supabase by querying the database directly
     const supabaseStart = Date.now();
     try {
-      const { supabaseAdmin } = await import('@/lib/supabase');
-
       // Use AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
