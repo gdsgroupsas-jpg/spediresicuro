@@ -24,7 +24,6 @@ import {
   isTelegramConfigured,
 } from '@/lib/services/telegram-bot';
 import { getQuickStats } from '@/lib/metrics/business-metrics';
-import { supabaseAdmin } from '@/lib/supabase';
 
 // Authorized chat IDs (from env)
 function getAuthorizedChatIds(): number[] {
@@ -125,11 +124,19 @@ async function handleHealth(chatId: number): Promise<string> {
     // Check Supabase by querying the database directly
     const supabaseStart = Date.now();
     try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
       // Use AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabase
         .from('shipments')
         .select('id')
         .limit(1)
