@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     let webhookUrl = body.url;
 
     if (!webhookUrl) {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://spediresicuro.it';
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.spediresicuro.it';
       webhookUrl = `${baseUrl}/api/webhooks/telegram`;
     }
 
