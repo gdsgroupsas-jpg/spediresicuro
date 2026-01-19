@@ -33,7 +33,7 @@ describe("Invoice Webhook Authentication Fix", () => {
 
     // Dovrebbe fallire perché richiede autenticazione
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Solo admin può generare fatture");
+    expect(result.error).toContain("UNAUTHORIZED: No user session");
   });
 
   it("dovrebbe permettere generateAutomaticInvoiceForStripeRecharge senza auth", async () => {
