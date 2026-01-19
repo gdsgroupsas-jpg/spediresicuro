@@ -261,7 +261,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const update: TelegramUpdate = await request.json();
+    console.log('[TELEGRAM_WEBHOOK] Processing POST request');
+
+    const rawBody = await request.json();
+    console.log('[TELEGRAM_WEBHOOK] Raw body received:', {
+      keys: Object.keys(rawBody),
+      hasMessage: !!rawBody.message,
+      hasUpdateId: !!rawBody.update_id,
+    });
+
+    const update: TelegramUpdate = rawBody;
 
     console.log('[TELEGRAM_WEBHOOK] Received update:', {
       updateId: update.update_id,
@@ -270,13 +279,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Process asynchronously - return immediately to Telegram
+    console.log('[TELEGRAM_WEBHOOK] Starting async processing');
     processUpdate(update).catch((error) => {
       console.error('[TELEGRAM_WEBHOOK] Processing error:', error);
     });
 
+    console.log('[TELEGRAM_WEBHOOK] Returning ok: true to Telegram');
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('[TELEGRAM_WEBHOOK] Error:', error);
+    console.error('[TELEGRAM_WEBHOOK] Error parsing request:', error);
+    console.error('[TELEGRAM_WEBHOOK] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     // Return OK to prevent Telegram from retrying
     return NextResponse.json({ ok: true });
   }
