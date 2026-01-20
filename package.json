@@ -83,6 +83,7 @@
     "exceljs": "^4.4.0",
     "framer-motion": "^11.0.0",
     "imap": "^0.8.19",
+    "ioredis": "^5.9.2",
     "isomorphic-dompurify": "^2.33.0",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
