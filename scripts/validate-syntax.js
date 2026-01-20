@@ -24,6 +24,11 @@ for (const file of stagedFiles) {
     continue;
   }
 
+  // Skip k6 test files (they use ES modules)
+  if (file.includes('.k6.js')) {
+    continue;
+  }
+
   try {
     execSync(`node --check "${file}"`, { stdio: 'pipe' });
   } catch (error) {
