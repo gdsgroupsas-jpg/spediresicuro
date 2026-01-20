@@ -20,7 +20,7 @@
  * Cost: €0/month (Upstash Free Tier: 10K commands/day)
  */
 
-import Redis from 'ioredis';
+import { Redis } from '@upstash/redis';
 
 // ============================================================
 // Configuration & Constants
@@ -80,31 +80,13 @@ function getRedisClient(): Redis | null {
   }
 
   if (!redisClient) {
-    // Upstash Redis uses REST API, but ioredis works with standard Redis protocol
-    // Extract host and port from URL
-    const url = new URL(REDIS_URL.replace('https://', 'redis://'));
-
+    // Upstash Redis REST API client
     redisClient = new Redis({
-      host: url.hostname,
-      port: parseInt(url.port || '6379'),
-      password: REDIS_TOKEN,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      maxRetriesPerRequest: 3,
-      retryStrategy(times) {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
+      url: REDIS_URL,
+      token: REDIS_TOKEN,
     });
 
-    redisClient.on('error', (err) => {
-      console.error('[TELEGRAM_QUEUE] Redis error:', err);
-    });
-
-    redisClient.on('connect', () => {
-      console.log('[TELEGRAM_QUEUE] Redis connected');
-    });
+    console.log('[TELEGRAM_QUEUE] Redis client initialized');
   }
 
   return redisClient;
@@ -152,7 +134,7 @@ export function enqueueMessage(
   const score = Date.now() - ((message.priority || 0) * 1000000);
 
   redis
-    .zadd(QUEUE_KEY, score, JSON.stringify(message))
+    .zadd(QUEUE_KEY, { score, member: JSON.stringify(message) })
     .then(() => {
       console.log('[TELEGRAM_QUEUE] Message enqueued:', {
         id: message.id,
@@ -161,7 +143,7 @@ export function enqueueMessage(
         priority: message.priority,
       });
     })
-    .catch((err) => {
+    .catch((err: Error) => {
       console.error('[TELEGRAM_QUEUE] Failed to enqueue:', err);
     });
 
@@ -185,9 +167,9 @@ export async function dequeueMessage(): Promise<QueuedMessage | null> {
     }
 
     // Get message with highest priority (lowest score)
-    const messages = await redis.zrange(QUEUE_KEY, 0, 0);
+    const messages = await redis.zrange<string[]>(QUEUE_KEY, 0, 0);
 
-    if (messages.length === 0) {
+    if (!messages || messages.length === 0) {
       return null; // Queue empty
     }
 
@@ -220,7 +202,7 @@ async function checkRateLimit(): Promise<boolean> {
   const now = Date.now();
 
   // Check minimum delay between messages
-  const lastSent = await redis.get(LAST_SENT_KEY);
+  const lastSent = await redis.get<string>(LAST_SENT_KEY);
   if (lastSent) {
     const timeSinceLastSent = now - parseInt(lastSent);
     if (timeSinceLastSent < RATE_LIMIT.MIN_DELAY_MS) {
@@ -229,7 +211,7 @@ async function checkRateLimit(): Promise<boolean> {
   }
 
   // Check messages per minute limit
-  const messagesLastMinute = await redis.get(RATE_COUNTER_KEY);
+  const messagesLastMinute = await redis.get<string>(RATE_COUNTER_KEY);
   if (messagesLastMinute && parseInt(messagesLastMinute) >= RATE_LIMIT.MAX_MESSAGES_PER_MINUTE) {
     console.warn('[TELEGRAM_QUEUE] Rate limit reached: 120 msg/min');
     return false;
@@ -275,7 +257,7 @@ export async function requeueMessage(message: QueuedMessage): Promise<void> {
   // Add back to queue with lower priority (retry messages go to end)
   const score = Date.now() + RATE_LIMIT.RETRY_DELAY_MS;
 
-  await redis.zadd(QUEUE_KEY, score, JSON.stringify(message));
+  await redis.zadd(QUEUE_KEY, { score, member: JSON.stringify(message) });
 
   console.log('[TELEGRAM_QUEUE] Message requeued for retry:', {
     id: message.id,
@@ -298,8 +280,8 @@ export async function getQueueStats(): Promise<QueueStats> {
 
   const [queueLength, messagesLastMinute, lastSent] = await Promise.all([
     redis.zcard(QUEUE_KEY),
-    redis.get(RATE_COUNTER_KEY),
-    redis.get(LAST_SENT_KEY),
+    redis.get<string>(RATE_COUNTER_KEY),
+    redis.get<string>(LAST_SENT_KEY),
   ]);
 
   return {
@@ -329,7 +311,7 @@ export async function clearQueue(): Promise<void> {
  */
 export async function closeQueue(): Promise<void> {
   if (redisClient) {
-    await redisClient.quit();
+    // Upstash Redis REST client doesn't need explicit closing
     redisClient = null;
     console.log('[TELEGRAM_QUEUE] Redis connection closed');
   }
