@@ -9,12 +9,22 @@
 
 <div align="center">
 
-![Status](https://img.shields.io/badge/status-production%20ready-success)
-![Security](https://img.shields.io/badge/security-P0%20cleared-success)
+![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Security](https://img.shields.io/badge/security-hardened-success)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2014%20%2B%20Supabase-blue)
-![Quality](https://img.shields.io/badge/quality-10%2F10-brightgreen)
+![Issues](https://img.shields.io/badge/P0%20issues-4%20remaining-orange)
 
 </div>
+
+---
+
+## 🚀 New Here? Start Here!
+
+**For AI Chat Sessions:** Read [docs/START_HERE.md](./docs/START_HERE.md) to sync quickly on current system state.
+
+**For Contributors:** Read [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines.
+
+**For Documentation:** Browse [docs/INDEX.md](./docs/INDEX.md) to find what you need.
 
 ---
 
