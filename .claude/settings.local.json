@@ -33,7 +33,8 @@
       "Bash(npm run lint:*)",
       "Bash(npx lint-staged)",
       "Bash(git reset:*)",
-      "Bash(npm run type-check:*)"
+      "Bash(npm run type-check:*)",
+      "Bash(npx prettier:*)"
     ],
     "deny": [],
     "ask": []

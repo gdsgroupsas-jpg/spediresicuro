@@ -1,4 +1,5 @@
 # 🏗️ ANALISI ARCHITETTURALE: REFACTORING UI/UX SpedireSicuro
+
 ## Enterprise Grade No-Break Migration
 
 > **Data:** 2026-01-17
@@ -33,17 +34,18 @@ Refactoring UI/UX SpedireSicuro per ottenere **ENTERPRISE GRADE** (score: 4.25/5
 
 ### 📊 Stato Attuale (AS-IS)
 
-| Aspetto | Status | Problem |
-|---------|--------|---------|
-| **Financial Core** | ✅ Implemented | Feedback UI incoerente (silent booking risk) |
-| **Backend** | ✅ Production Ready | Wallet atomizzato, RLS ok, pricing ok |
-| **Frontend** | 🟡 Inconsistent | Loading/error/success states non uniformi |
-| **Target: Broker B2B** | 🟡 Functional | UX non ottimizzata per velocità operativa |
-| **Security** | ✅ Solid | RLS + ActingContext ok, double-submit risk UI-level |
+| Aspetto                | Status          | Problem                                             |
+| ---------------------- | --------------- | --------------------------------------------------- |
+| **Financial Core**     | ✅ Implemented  | Feedback UI incoerente (silent booking risk)        |
+| **Backend**            | ✅ Implementato | Wallet atomizzato, RLS ok, pricing ok               |
+| **Frontend**           | 🟡 Inconsistent | Loading/error/success states non uniformi           |
+| **Target: Broker B2B** | 🟡 Functional   | UX non ottimizzata per velocità operativa           |
+| **Security**           | ✅ Solid        | RLS + ActingContext ok, double-submit risk UI-level |
 
 ### 🎁 Deliverable
 
 **Progettazione completa** senza codice:
+
 - ✅ State machine unificato (IDLE → LOADING → SUCCESS/ERROR)
 - ✅ Modal/Dialog design patterns (user-selected)
 - ✅ Component architecture (no-break compatible)
@@ -62,6 +64,7 @@ Refactoring UI/UX SpedireSicuro per ottenere **ENTERPRISE GRADE** (score: 4.25/5
 #### Pain Point #1: Feedback e Stati Non Uniformi (Priority: 🔴 HIGH)
 
 **Symptom:**
+
 ```
 Utente crea spedizione:
   → Clicca "Crea Spedizione"
@@ -73,21 +76,23 @@ Utente crea spedizione:
 ```
 
 **Manifestazioni Attuali:**
+
 - ❌ Alcuni componenti mostrano skeleton loaders, altri no
 - ❌ Error messages variano:
-  * Alcuni sono toast (auto-dismiss, potresti non vederlo)
-  * Alcuni sono inline (buried in form)
-  * Alcuni sono console.error (user non vede niente)
+  - Alcuni sono toast (auto-dismiss, potresti non vederlo)
+  - Alcuni sono inline (buried in form)
+  - Alcuni sono console.error (user non vede niente)
 - ❌ Success feedback assente (no chiaro quando operazione completa)
 - ❌ Form submit feedback incoerente:
-  * Pagina reload su success (user disoriented)
-  * Toast su error (easy to miss on slow network)
+  - Pagina reload su success (user disoriented)
+  - Toast su error (easy to miss on slow network)
 - ❌ Retry UI non standardizzato:
-  * Quale button ritenta?
-  * Quale key usa per idempotency?
-  * No chiaro all'utente
+  - Quale button ritenta?
+  - Quale key usa per idempotency?
+  - No chiaro all'utente
 
 **Impact su UX:**
+
 - 🚨 Silent booking risk: User non sa se spedizione creata o no
 - 🚨 Cognitive load: User must infer state from indirect signals
 - 🚨 Double-submit risk: Form risubmittable durante request
@@ -95,6 +100,7 @@ Utente crea spedizione:
 - 🚨 Mobile UX disaster: No feedback su slow network
 
 **Business Impact:**
+
 - Customer support load ↑ (confusione su spedizioni create)
 - Operator efficiency ↓ (wasted time on retry/verification)
 - Compliance risk ↑ (silent booking = financial core violation)
@@ -102,6 +108,7 @@ Utente crea spedizione:
 #### Pain Point #2: Modello Operativo Non Evidente (Priority: 🟡 MEDIUM)
 
 **Symptom:**
+
 ```
 Reseller con 2 clienti in team:
   → Dashboard shows "€500 wallet"
@@ -116,16 +123,16 @@ Reseller con 2 clienti in team:
 
 ### 📊 AS-IS Scorecard
 
-| Criterio | Score | Note |
-|----------|-------|------|
-| **No Credit, No Label** | 4/5 | Backend ok, UI non chiara |
-| **No Silent Booking** | 3/5 | No confirma esplicita visibile |
-| **Sicurezza UI** | 3/5 | RLS ok, double-submit UI-risk |
-| **Permission Clarity** | 3/5 | Acting context no badge visibile |
-| **Performance Perceived** | 3/5 | No skeleton, slow feedback |
-| **Usability** | 2/5 | Feedback incoerente |
-| **Polish** | 2.5/5 | Inconsistent error handling |
-| **TOTAL (weighted)** | **2.95/5** | -44% vs enterprise target (4.25) |
+| Criterio                  | Score      | Note                             |
+| ------------------------- | ---------- | -------------------------------- |
+| **No Credit, No Label**   | 4/5        | Backend ok, UI non chiara        |
+| **No Silent Booking**     | 3/5        | No confirma esplicita visibile   |
+| **Sicurezza UI**          | 3/5        | RLS ok, double-submit UI-risk    |
+| **Permission Clarity**    | 3/5        | Acting context no badge visibile |
+| **Performance Perceived** | 3/5        | No skeleton, slow feedback       |
+| **Usability**             | 2/5        | Feedback incoerente              |
+| **Polish**                | 2.5/5      | Inconsistent error handling      |
+| **TOTAL (weighted)**      | **2.95/5** | -44% vs enterprise target (4.25) |
 
 ---
 
@@ -223,12 +230,14 @@ AI Sidebar (Anne + Mentor):
 ### 📱 State 1: IDLE - Pronto per Azione
 
 **Visual Appearance:**
+
 - Form: Normal rendering (no gray overlay)
 - Button: Enabled, clickable, normal color
 - Preview: Shows current data or placeholder
 - Feedback: None (state is implicit)
 
 **Component State:**
+
 ```
 {
   state: 'IDLE',
@@ -240,11 +249,13 @@ AI Sidebar (Anne + Mentor):
 ```
 
 **UX Rules:**
+
 - ✅ User può cambiare form fields
 - ✅ User può cliccare [Crea Spedizione]
 - ✅ No tooltip obbligatorio
 
 **Example:**
+
 ```
 ┌────────────────────────┐
 │ New Shipment Form      │
@@ -288,16 +299,18 @@ Preview Column (Right 40%, Sticky):
 ```
 
 **Skeleton Loader Specifications:**
+
 - **Type:** Animated shimmer (Framer Motion + Tailwind)
 - **Color:** bg-gray-200 animate-pulse
 - **Structure:** Matches expected content shape
 - **Locations:**
-  * Preview area (durante creazione spedizione)
-  * Table rows (durante listing load)
-  * Form fields (during form load)
-  * Anne message area (durante AI suggestions)
+  - Preview area (durante creazione spedizione)
+  - Table rows (durante listing load)
+  - Form fields (during form load)
+  - Anne message area (durante AI suggestions)
 
 **Component State:**
+
 ```
 {
   state: 'LOADING',
@@ -311,6 +324,7 @@ Preview Column (Right 40%, Sticky):
 ```
 
 **UX Rules:**
+
 - ✅ Form locked (click on field = no-op)
 - ✅ Button disabled (click = no-op)
 - ✅ No re-submit possible (form.onSubmit ignored)
@@ -320,6 +334,7 @@ Preview Column (Right 40%, Sticky):
 - ❌ No toast yet (modal will show on success)
 
 **Technical Implementation (no code, just spec):**
+
 - Component prop: `isLoading: boolean`
 - Form `disabled` attribute: true
 - Button `disabled` attribute: true
@@ -350,6 +365,7 @@ Modal Dialog (Centered, No background overlay dismiss):
 ```
 
 **Component State:**
+
 ```
 {
   state: 'SUCCESS',
@@ -369,24 +385,25 @@ Modal Dialog (Centered, No background overlay dismiss):
 
 **Modal Specifications:**
 
-| Element | Spec | Behavior |
-|---------|------|----------|
-| **Icon** | ✅ (animated checkmark) | Animate in on modal open (200ms) |
-| **Title** | "Spedizione Creata" (h2, brand-blue) | Static |
+| Element             | Spec                                     | Behavior                                |
+| ------------------- | ---------------------------------------- | --------------------------------------- |
+| **Icon**            | ✅ (animated checkmark)                  | Animate in on modal open (200ms)        |
+| **Title**           | "Spedizione Creata" (h2, brand-blue)     | Static                                  |
 | **Tracking Number** | Large (24px), monospace font, selectable | Triple-click selects all, copy-friendly |
-| **Divider** | Light gray line | Visual separator |
-| **Buttons** | 3 action buttons | See action mapping below |
-| **Close (X)** | Top-right corner | Modal dismisses, form clears |
+| **Divider**         | Light gray line                          | Visual separator                        |
+| **Buttons**         | 3 action buttons                         | See action mapping below                |
+| **Close (X)**       | Top-right corner                         | Modal dismisses, form clears            |
 
 **Button Actions:**
 
-| Button | Destination | Form State | Note |
-|--------|-------------|-----------|------|
-| **Print Label** | Direct print (no browser print dialog) | Reset to IDLE + clear form | Prints label from stored data |
-| **Track Shipment** | Navigate to `/track/${trackingNumber}` | Reset to IDLE, stay in modal briefly | New tab or router? (TBD) |
-| **Create Another** | Close modal, clear form fields | Reset to IDLE | User ready for next shipment |
+| Button             | Destination                            | Form State                           | Note                          |
+| ------------------ | -------------------------------------- | ------------------------------------ | ----------------------------- |
+| **Print Label**    | Direct print (no browser print dialog) | Reset to IDLE + clear form           | Prints label from stored data |
+| **Track Shipment** | Navigate to `/track/${trackingNumber}` | Reset to IDLE, stay in modal briefly | New tab or router? (TBD)      |
+| **Create Another** | Close modal, clear form fields         | Reset to IDLE                        | User ready for next shipment  |
 
 **UX Rules:**
+
 - ✅ Modal is PRIMARY feedback (not toast)
 - ✅ Tracking number is copyable (user can paste in email)
 - ✅ User controls next action (no auto-redirect)
@@ -396,6 +413,7 @@ Modal Dialog (Centered, No background overlay dismiss):
 - ❌ No page reload (modal stays in place)
 
 **Technical Implementation (spec, no code):**
+
 - React component: `<SuccessModal data={shipmentData} onAction={handleAction} />`
 - Render location: Portal to `body` (z-index 50)
 - Open trigger: When API response.status === 200 AND data.trackingNumber exists
@@ -437,6 +455,7 @@ Error Dialog (Centered):
 ```
 
 **Component State:**
+
 ```
 {
   state: 'ERROR',
@@ -480,16 +499,16 @@ Error Dialog (Centered):
 
 **Error Dialog Specifications:**
 
-| Element | Spec | Behavior |
-|---------|------|----------|
-| **Icon** | ❌ (red) | Static |
-| **Title** | Dynamic (WALLET_INSUFFICIENT → "Wallet Insufficient") | 20px, bold, red-600 |
-| **Message** | Friendly, non-technical | Explains problem in user terms |
-| **Details** | Contextual info (current balance, etc.) | Gray text, smaller font |
-| **Question** | "What would you like to do?" | Empathetic, action-oriented |
-| **Actions** | Up to 3 action options + Retry | See mapping below |
-| **Retry** | Always available (idempotent) | Protected by idempotency_key |
-| **Close (X)** | Top-right corner | Dialog dismisses, form unlocked |
+| Element       | Spec                                                  | Behavior                        |
+| ------------- | ----------------------------------------------------- | ------------------------------- |
+| **Icon**      | ❌ (red)                                              | Static                          |
+| **Title**     | Dynamic (WALLET_INSUFFICIENT → "Wallet Insufficient") | 20px, bold, red-600             |
+| **Message**   | Friendly, non-technical                               | Explains problem in user terms  |
+| **Details**   | Contextual info (current balance, etc.)               | Gray text, smaller font         |
+| **Question**  | "What would you like to do?"                          | Empathetic, action-oriented     |
+| **Actions**   | Up to 3 action options + Retry                        | See mapping below               |
+| **Retry**     | Always available (idempotent)                         | Protected by idempotency_key    |
+| **Close (X)** | Top-right corner                                      | Dialog dismisses, form unlocked |
 
 **Error-to-Action Mapping:**
 
@@ -525,6 +544,7 @@ GENERIC_ERROR
 ```
 
 **UX Rules:**
+
 - ✅ Error is persistent (not auto-dismiss)
 - ✅ Actions are prominent (primary CTA first)
 - ✅ Retry is protected (same idempotency_key)
@@ -535,6 +555,7 @@ GENERIC_ERROR
 - ❌ No blame (avoid: "User error", "Invalid input")
 
 **Technical Implementation (spec, no code):**
+
 - React component: `<ErrorDialog error={errorObject} onAction={handleAction} />`
 - Open trigger: When API response.status >= 400
 - Actions mapping: `lib/errors/error-action-map.ts` (configuration)
@@ -547,6 +568,7 @@ GENERIC_ERROR
 ### 🎨 Design System Tokens
 
 **State Colors:**
+
 ```
 IDLE (gray):
   ├─ Primary: text-gray-700
@@ -573,6 +595,7 @@ ERROR (red):
 ```
 
 **Animations (Framer Motion + Tailwind):**
+
 ```
 LOADING:
   ├─ Skeleton shimmer: linear gradient left-to-right (1.5s infinite)
@@ -607,6 +630,7 @@ TRANSITION:
 #### 3a. Feedback Components Library
 
 **New Component: `SuccessModal`**
+
 - Displays tracking number (copyable)
 - 3 action buttons: Print, Track, Create Another
 - Animated checkmark
@@ -614,6 +638,7 @@ TRANSITION:
 - Location: `components/feedback/SuccessModal.tsx`
 
 **New Component: `ErrorDialog`**
+
 - Problem description (dynamic per error code)
 - Up to 3 action buttons (dynamic per error)
 - Retry button (idempotent)
@@ -621,18 +646,21 @@ TRANSITION:
 - Location: `components/feedback/ErrorDialog.tsx`
 
 **New Component: `OperationSkeleton`**
+
 - Animated placeholder matching content structure
 - Shimmer effect (left-to-right)
 - Props: `shape` (ticket, table-row, form-fields, message)
 - Location: `components/feedback/OperationSkeleton.tsx`
 
 **New Component: `StateIndicator`**
+
 - Badge showing current state (IDLE, LOADING, SUCCESS, ERROR)
 - Color-coded per state
 - Optional: progress indicator during LOADING
 - Location: `components/feedback/StateIndicator.tsx`
 
 **New Hook: `useOperationState`**
+
 - Manages 4-state machine
 - Props: `initialState = 'IDLE'`
 - Returns: `{ state, error, data, formLocked, setLoading, setSuccess, setError }`
@@ -641,6 +669,7 @@ TRANSITION:
 #### 3b. Error Formatting Layer
 
 **New Module: `lib/errors/error-formatter.ts`**
+
 - Converts technical errors to user-friendly messages
 - Input: Error object with `code`, `message`, `details`
 - Output: { `title`, `message`, `details`, `actions` }
@@ -653,6 +682,7 @@ TRANSITION:
   ```
 
 **New Module: `lib/errors/error-action-map.ts`**
+
 - Maps error codes to recovery actions
 - Defines CTA buttons, destinations, types
 - Used by ErrorDialog to render actions
@@ -661,10 +691,12 @@ TRANSITION:
 #### 3c. Feature Flag Integration
 
 **New Table Column: `users.enable_enterprise_feedback_ux` (boolean, default: false)**
+
 - Per-user override for feature flag
 - Superadmin can toggle per user or cohort
 
 **New Config Route: `/dashboard/admin/configurations`**
+
 - Toggle: "Enable Enterprise Feedback UX"
 - Info: Current rollout percentage (10% → 25% → 50% → 100%)
 - Cohort controls: Manual vs gradual
@@ -673,6 +705,7 @@ TRANSITION:
 #### 3d. PRs Increment Plan
 
 **PR #1: Feedback Components + Hooks**
+
 - Add: SuccessModal, ErrorDialog, OperationSkeleton, StateIndicator
 - Add: useOperationState hook
 - Add: Error formatter + error-action-map
@@ -681,6 +714,7 @@ TRANSITION:
 - Regression risk: LOW (feature-flagged)
 
 **PR #2: Form Integration (Shipment Creation)**
+
 - Modify: `app/dashboard/spedizioni/nuova/page.tsx`
 - Add: useOperationState hook integration
 - Add: Feature flag check at component level
@@ -690,6 +724,7 @@ TRANSITION:
 - Regression risk: LOW (feature-flagged)
 
 **PR #3: Double-Submit Protection (Enhanced)**
+
 - Modify: Form submit handler
 - Add: `isSubmitting` flag (from useOperationState)
 - Modify: Button disabled when `isSubmitting === true`
@@ -699,6 +734,7 @@ TRANSITION:
 - Regression risk: LOW
 
 **PR #4: Progressive Rollout**
+
 - Add: Feature flag database check
 - Add: Cohort randomization (10% of users)
 - Add: Admin UI for controlling rollout
@@ -708,6 +744,7 @@ TRANSITION:
 - Regression risk: NEGLIGIBLE
 
 **Total Scope (Phase 3):**
+
 - ~4 PRs
 - ~800-1000 lines of code (UI + hooks + formatting)
 - Zero backend changes
@@ -721,6 +758,7 @@ TRANSITION:
 **Sprint Duration:** 3-4 weeks (estimate, future)
 
 **Scope:**
+
 - Broker B2B dashboard: Operative panel + team stats + quick actions
 - SaaS/BYOC dashboard: Integration status + automation rules
 - SuperAdmin dashboard: Financial reconciliation + user mgmt
@@ -734,6 +772,7 @@ TRANSITION:
 **Sprint Duration:** 2-3 weeks (estimate, future)
 
 **Scope:**
+
 - Skeleton loading for all async operations
 - Mobile-first responsive design
 - WCAG 2.1 AA accessibility compliance
@@ -752,6 +791,7 @@ TRANSITION:
 **Definition:** No shipment created without wallet credit check.
 
 **Current Implementation (Backend, Untouched):**
+
 ```
 Server Action Pseudocode:
 1. Validate user wallet balance ≥ cost
@@ -762,11 +802,13 @@ Server Action Pseudocode:
 ```
 
 **UI Enhancement (No-Break):**
+
 - BEFORE: On error, show toast with message
 - AFTER: On error, show dialog with actionable recovery steps
 - **Invariant Preserved:** Wallet check still happens BEFORE debit
 
 **Verification Checklist:**
+
 - ✅ Server Action contract unchanged (input/output same)
 - ✅ RPC function unchanged (decrement_wallet_balance still atomic)
 - ✅ Wallet RLS policies unchanged
@@ -781,12 +823,14 @@ Server Action Pseudocode:
 **Definition:** No auto-submit without explicit user confirmation.
 
 **Current Implementation (Frontend, Fragile):**
+
 ```
 Current: Form submittable at any time (no visual confirmation)
 Risk: User doesn't know if submitted successfully
 ```
 
 **UI Enhancement (Robust):**
+
 ```
 IDLE state:
   ✅ User sees form normally
@@ -805,6 +849,7 @@ SUCCESS state:
 **Invariant Preserved:** User always sees explicit confirmation before proceeding.
 
 **Verification Checklist:**
+
 - ✅ Form locked during LOADING (no field changes)
 - ✅ Button disabled during LOADING (no re-click)
 - ✅ SUCCESS modal shows tracking number (explicit confirmation)
@@ -819,6 +864,7 @@ SUCCESS state:
 **Definition:** Same request can be safely retried without double-charging.
 
 **Current Implementation (Backend, Untouched):**
+
 ```
 Server Action:
 1. Generate/receive idempotency_key
@@ -830,11 +876,13 @@ Server Action:
 ```
 
 **UI Enhancement (No-Break):**
+
 - BEFORE: On error, user must manually retry (unclear which key used)
 - AFTER: On error, "Retry" button re-uses same idempotency_key
 - **Invariant Preserved:** Retry is protected by existing idempotency system
 
 **Verification Checklist:**
+
 - ✅ Server Action sends same idempotency_key on first submit and retry
 - ✅ Test: Timeout error → [Retry] button reuses same key
 - ✅ Test: Network error → [Retry] doesn't double-charge
@@ -845,12 +893,14 @@ Server Action:
 #### Anti-Pattern Prevention
 
 **Pattern: ❌ "Optimistic booking without confirmation"**
+
 ```
 Wrong: Submit form → Optimistically show "Spedizione creata"
        → Server returns error → Rollback confuses user
 ```
 
 **Correct Implementation:**
+
 ```
 Right: Submit form → Show LOADING skeleton
        → Wait for server response
@@ -867,6 +917,7 @@ Right: Submit form → Show LOADING skeleton
 #### Smoke Tests (Rapid validation)
 
 **Test 1: State Machine Transitions**
+
 ```
 GIVEN: Form with all required fields filled
 WHEN: User clicks [Crea Spedizione]
@@ -878,6 +929,7 @@ THEN:
 ```
 
 **Test 2: SUCCESS State**
+
 ```
 GIVEN: LOADING state with successful response
 WHEN: API returns { trackingNumber, shipmentId, ... }
@@ -890,6 +942,7 @@ THEN:
 ```
 
 **Test 3: ERROR State (Wallet Insufficient)**
+
 ```
 GIVEN: LOADING state with error response code 402
 WHEN: API returns { error: 'WALLET_INSUFFICIENT', required, balance }
@@ -903,6 +956,7 @@ THEN:
 ```
 
 **Test 4: Double-Submit Prevention**
+
 ```
 GIVEN: Form in LOADING state
 WHEN: User clicks button twice rapidly (200ms apart)
@@ -913,6 +967,7 @@ THEN:
 ```
 
 **Test 5: Idempotent Retry**
+
 ```
 GIVEN: ERROR state with timeout error
 WHEN: User clicks [Retry] button
@@ -928,6 +983,7 @@ THEN:
 #### Integration Tests (Component interaction)
 
 **Test 6: Form + Modal + ActionButtons**
+
 ```
 GIVEN: Form with complete shipment data
 WHEN: User submits → SUCCESS modal
@@ -940,6 +996,7 @@ THEN:
 ```
 
 **Test 7: Feature Flag Behavior**
+
 ```
 GIVEN: User with feature_flag = false
 WHEN: User submits form
@@ -961,6 +1018,7 @@ THEN:
 #### E2E Tests (Playwright, User journey)
 
 **Test 8: Complete Broker B2B Flow**
+
 ```
 SCENARIO: Reseller creates shipment, prints label
 
@@ -982,6 +1040,7 @@ ASSERT:
 ```
 
 **Test 9: Error Recovery Flow (Wallet Insufficient)**
+
 ```
 SCENARIO: Reseller with low wallet tries to create shipment
 
@@ -1004,6 +1063,7 @@ ASSERT:
 ```
 
 **Test 10: Mobile UX**
+
 ```
 SCENARIO: Reseller creates shipment on mobile (iPhone 12)
 
@@ -1027,6 +1087,7 @@ ASSERT:
 #### Regression Tests (No-Break validation)
 
 **Test 11: Feature Flag Disabled = Legacy Behavior**
+
 ```
 GIVEN: Feature flag ENABLE_ENTERPRISE_FEEDBACK_UX = false
 WHEN: User submits shipment form
@@ -1039,6 +1100,7 @@ THEN:
 ```
 
 **Test 12: Server Action Contract Unchanged**
+
 ```
 GIVEN: Existing client code calling Server Action
 WHEN: New code is deployed
@@ -1050,6 +1112,7 @@ THEN:
 ```
 
 **Test 13: Wallet RPC Functions Unchanged**
+
 ```
 GIVEN: Existing RPC functions in migrations
 WHEN: New UI code is deployed
@@ -1061,6 +1124,7 @@ THEN:
 ```
 
 **Test 14: RLS Policies Unchanged**
+
 ```
 GIVEN: Existing RLS policies on tables
 WHEN: New UI code is deployed
@@ -1076,6 +1140,7 @@ THEN:
 ### ✅ Verification Checklist (Implementation Time)
 
 **Before Merging PR #1 (Feedback Components):**
+
 - [ ] SuccessModal component renders correctly (Storybook)
 - [ ] ErrorDialog component renders correctly (Storybook)
 - [ ] OperationSkeleton animates smoothly (visual test)
@@ -1087,6 +1152,7 @@ THEN:
 - [ ] Tests pass (npm run test:unit)
 
 **Before Merging PR #2 (Form Integration):**
+
 - [ ] Feature flag check works (functional test)
 - [ ] Flag disabled = legacy flow (E2E test with flag=false)
 - [ ] Flag enabled = state machine flow (E2E test with flag=true)
@@ -1096,12 +1162,14 @@ THEN:
 - [ ] Regression tests pass (npm run test:integration)
 
 **Before Merging PR #3 (Double-Submit Protection):**
+
 - [ ] Button disabled during submit (visual)
 - [ ] Rapid clicks send only 1 request (unit test with spies)
 - [ ] idempotency_key reused on retry (audit)
 - [ ] No wallet double-charge (integration test)
 
 **Before Merging PR #4 (Rollout):**
+
 - [ ] Feature flag database column created (migration check)
 - [ ] Cohort randomization working (10% rollout test)
 - [ ] Admin UI accessible and functional (E2E)
@@ -1115,6 +1183,7 @@ THEN:
 ### 📊 Scoring Model
 
 **Weights:**
+
 - Financial & Flow Safety: 30%
 - Security & Permissions: 20%
 - Performance: 20%
@@ -1122,6 +1191,7 @@ THEN:
 - Enterprise Polish & Scalability: 10%
 
 **Formula:**
+
 ```
 Total Score = (Financial×0.30) + (Security×0.20) + (Performance×0.20) + (Usability×0.20) + (Polish×0.10)
 ```
@@ -1130,69 +1200,69 @@ Total Score = (Financial×0.30) + (Security×0.20) + (Performance×0.20) + (Usab
 
 ### 📈 AS-IS Scorecard (Current State)
 
-| Criteria | Score | Details |
-|----------|-------|---------|
-| **Financial Core** | | |
-| No Credit, No Label | 4/5 | Backend ok, UI feedback incoherent |
-| No Silent Booking | 3/5 | Form works but no explicit confirmation |
-| Idempotency | 4/5 | Backend protected, UI retry UI missing |
-| **Financial Subtotal** | **3.7/5** | |
-| **Security & Perms** | | |
-| Sicurezza UI | 3/5 | RLS ok, double-submit risk (UI) |
-| Permission Clarity | 3/5 | Acting context not visually clear |
-| Anti-Injection | 4/5 | Input validation ok |
-| **Security Subtotal** | **3.3/5** | |
-| **Performance** | | |
-| Perceived (skeleton) | 2/5 | No skeleton loaders, spinner only |
-| Real (API) | 3.5/5 | Caching ok, but frontend waterfall |
-| Mobile | 2/5 | No mobile optimization |
-| **Performance Subtotal** | **2.5/5** | |
-| **Usability** | | |
-| Error Prevention | 2/5 | Double-submit possible, no feedback |
-| Operator Efficiency | 2.5/5 | Recovery paths not obvious |
-| Accessibility | 2/5 | No keyboard nav, no aria labels |
-| **Usability Subtotal** | **2.2/5** | |
-| **Polish** | | |
-| Design Consistency | 2.5/5 | Components somewhat cohesive |
-| Feedback UX | 1.5/5 | Toast/toast incoherent, confusing |
-| Animation | 2/5 | Some Framer Motion, mostly static |
-| **Polish Subtotal** | **2/5** | |
-| | | |
-| **WEIGHTED TOTAL** | **3.0/5** | |
+| Criteria                 | Score     | Details                                 |
+| ------------------------ | --------- | --------------------------------------- |
+| **Financial Core**       |           |                                         |
+| No Credit, No Label      | 4/5       | Backend ok, UI feedback incoherent      |
+| No Silent Booking        | 3/5       | Form works but no explicit confirmation |
+| Idempotency              | 4/5       | Backend protected, UI retry UI missing  |
+| **Financial Subtotal**   | **3.7/5** |                                         |
+| **Security & Perms**     |           |                                         |
+| Sicurezza UI             | 3/5       | RLS ok, double-submit risk (UI)         |
+| Permission Clarity       | 3/5       | Acting context not visually clear       |
+| Anti-Injection           | 4/5       | Input validation ok                     |
+| **Security Subtotal**    | **3.3/5** |                                         |
+| **Performance**          |           |                                         |
+| Perceived (skeleton)     | 2/5       | No skeleton loaders, spinner only       |
+| Real (API)               | 3.5/5     | Caching ok, but frontend waterfall      |
+| Mobile                   | 2/5       | No mobile optimization                  |
+| **Performance Subtotal** | **2.5/5** |                                         |
+| **Usability**            |           |                                         |
+| Error Prevention         | 2/5       | Double-submit possible, no feedback     |
+| Operator Efficiency      | 2.5/5     | Recovery paths not obvious              |
+| Accessibility            | 2/5       | No keyboard nav, no aria labels         |
+| **Usability Subtotal**   | **2.2/5** |                                         |
+| **Polish**               |           |                                         |
+| Design Consistency       | 2.5/5     | Components somewhat cohesive            |
+| Feedback UX              | 1.5/5     | Toast/toast incoherent, confusing       |
+| Animation                | 2/5       | Some Framer Motion, mostly static       |
+| **Polish Subtotal**      | **2/5**   |                                         |
+|                          |           |                                         |
+| **WEIGHTED TOTAL**       | **3.0/5** |                                         |
 
 ---
 
 ### 📈 TO-BE Scorecard (After Refactor)
 
-| Criteria | Score | Details |
-|----------|-------|---------|
-| **Financial Core** | | |
-| No Credit, No Label | 5/5 | Backend + UI both protect invariant |
-| No Silent Booking | 5/5 | Modal confirms, no auto-submit |
-| Idempotency | 5/5 | UI retry button uses same key |
-| **Financial Subtotal** | **5/5** | ✅ PERFECT |
-| **Security & Perms** | | |
-| Sicurezza UI | 4/5 | Double-submit prevented (form lock) |
-| Permission Clarity | 4/5 | ActingContext badge visible |
-| Anti-Injection | 4/5 | Input validation + error formatting |
-| **Security Subtotal** | **4/5** | ✅ STRONG |
-| **Performance** | | |
-| Perceived (skeleton) | 4.5/5 | Skeleton loaders for all async |
-| Real (API) | 4/5 | Optimistic updates, caching |
-| Mobile | 4/5 | Responsive modal/dialog, touch-friendly |
-| **Performance Subtotal** | **4.2/5** | ✅ STRONG |
-| **Usability** | | |
-| Error Prevention | 4.5/5 | Form lock, disabled button, no retry |
-| Operator Efficiency | 4.5/5 | Actionable recovery steps obvious |
-| Accessibility | 4/5 | Keyboard nav, aria labels, WCAG AA |
-| **Usability Subtotal** | **4.3/5** | ✅ STRONG |
-| **Polish** | | |
-| Design Consistency | 4/5 | Unified state machine + colors |
-| Feedback UX | 4.5/5 | Modal/dialog instead of toast |
-| Animation | 4/5 | Framer Motion transitions, skeleton |
-| **Polish Subtotal** | **4.2/5** | ✅ GOOD |
-| | | |
-| **WEIGHTED TOTAL** | **4.3/5** | ✅ ENTERPRISE GRADE (+44% improvement) |
+| Criteria                 | Score     | Details                                 |
+| ------------------------ | --------- | --------------------------------------- |
+| **Financial Core**       |           |                                         |
+| No Credit, No Label      | 5/5       | Backend + UI both protect invariant     |
+| No Silent Booking        | 5/5       | Modal confirms, no auto-submit          |
+| Idempotency              | 5/5       | UI retry button uses same key           |
+| **Financial Subtotal**   | **5/5**   | ✅ PERFECT                              |
+| **Security & Perms**     |           |                                         |
+| Sicurezza UI             | 4/5       | Double-submit prevented (form lock)     |
+| Permission Clarity       | 4/5       | ActingContext badge visible             |
+| Anti-Injection           | 4/5       | Input validation + error formatting     |
+| **Security Subtotal**    | **4/5**   | ✅ STRONG                               |
+| **Performance**          |           |                                         |
+| Perceived (skeleton)     | 4.5/5     | Skeleton loaders for all async          |
+| Real (API)               | 4/5       | Optimistic updates, caching             |
+| Mobile                   | 4/5       | Responsive modal/dialog, touch-friendly |
+| **Performance Subtotal** | **4.2/5** | ✅ STRONG                               |
+| **Usability**            |           |                                         |
+| Error Prevention         | 4.5/5     | Form lock, disabled button, no retry    |
+| Operator Efficiency      | 4.5/5     | Actionable recovery steps obvious       |
+| Accessibility            | 4/5       | Keyboard nav, aria labels, WCAG AA      |
+| **Usability Subtotal**   | **4.3/5** | ✅ STRONG                               |
+| **Polish**               |           |                                         |
+| Design Consistency       | 4/5       | Unified state machine + colors          |
+| Feedback UX              | 4.5/5     | Modal/dialog instead of toast           |
+| Animation                | 4/5       | Framer Motion transitions, skeleton     |
+| **Polish Subtotal**      | **4.2/5** | ✅ GOOD                                 |
+|                          |           |                                         |
+| **WEIGHTED TOTAL**       | **4.3/5** | ✅ ENTERPRISE GRADE (+44% improvement)  |
 
 ---
 
@@ -1221,6 +1291,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 ### 📋 Pre-Implementation
 
 **Codebase Audit:**
+
 - [ ] Verify Next.js 14 App Router fully functional
 - [ ] Check React Query integration (useQuery, useMutation)
 - [ ] Audit Server Actions contract (input/output shape)
@@ -1231,6 +1302,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Check feature flags mechanism exists (users table or config)
 
 **Stakeholder Alignment:**
+
 - [ ] Product: Approve modal/dialog UX (user feedback integrated)
 - [ ] Design: Approve animation timing + color tokens
 - [ ] Backend: Confirm Server Action contracts not changing
@@ -1244,6 +1316,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 #### PR #1 Checklist (Feedback Components + Hooks)
 
 **Development:**
+
 - [ ] Create `components/feedback/` folder
 - [ ] Implement SuccessModal component (spec provided above)
 - [ ] Implement ErrorDialog component (spec provided above)
@@ -1257,6 +1330,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Add Framer Motion animations spec
 
 **Testing:**
+
 - [ ] Unit tests: useOperationState transitions
 - [ ] Unit tests: Error formatter (tech → user-friendly)
 - [ ] Unit tests: Error action map coverage (all codes)
@@ -1265,18 +1339,21 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Component tests: Modal actions (Print, Track, New)
 
 **Code Quality:**
+
 - [ ] No TypeScript errors (type-check clean)
 - [ ] No linting errors (ESLint clean)
 - [ ] No console errors (clean build)
 - [ ] 100% imports resolve (no missing deps)
 
 **Documentation:**
+
 - [ ] Storybook stories with usage examples
 - [ ] Component README files (props, usage)
 - [ ] Error code taxonomy (all codes documented)
 - [ ] Animation timing specs in comments
 
 **Integration:**
+
 - [ ] Feature flag config: ENABLE_ENTERPRISE_FEEDBACK_UX (default: false)
 - [ ] No production impact (flag disabled = no-op)
 - [ ] Existing tests pass (regression: green)
@@ -1286,6 +1363,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 #### PR #2 Checklist (Form Integration)
 
 **Development:**
+
 - [ ] Modify `app/dashboard/spedizioni/nuova/page.tsx`
 - [ ] Add useOperationState hook integration
 - [ ] Conditionally render SUCCESS modal (if flag + success)
@@ -1295,6 +1373,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Update error response handling
 
 **Testing:**
+
 - [ ] E2E test with flag=false (legacy flow)
 - [ ] E2E test with flag=true (state machine flow)
 - [ ] E2E test: Successful submission → SUCCESS modal
@@ -1304,11 +1383,13 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Regression: All existing shipment tests pass
 
 **Code Quality:**
+
 - [ ] No TypeScript errors
 - [ ] No linting errors
 - [ ] No console errors
 
 **Integration:**
+
 - [ ] Server Action contract unchanged
 - [ ] No changes to wallet RPC functions
 - [ ] No changes to RLS policies
@@ -1319,6 +1400,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 #### PR #3 Checklist (Double-Submit Protection)
 
 **Development:**
+
 - [ ] Update form submit handler
 - [ ] Add isSubmitting flag tracking
 - [ ] Disable button when isSubmitting
@@ -1326,12 +1408,14 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Add early return if already submitting
 
 **Testing:**
+
 - [ ] Unit test: Multiple rapid submits → 1 request only
 - [ ] Unit test: Button disabled during submit
 - [ ] E2E test: Double-click button → only 1 shipment created
 - [ ] E2E test: Network delay → user can't retry until done
 
 **Code Quality:**
+
 - [ ] No TypeScript errors
 - [ ] No linting errors
 
@@ -1340,6 +1424,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 #### PR #4 Checklist (Progressive Rollout)
 
 **Development:**
+
 - [ ] Add feature flag database check (users.feature_flags or central config)
 - [ ] Implement cohort randomization (10% → 25% → 50% → 100%)
 - [ ] Create admin UI at /dashboard/admin/configurations
@@ -1348,11 +1433,13 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Add metrics dashboard (error rates per state)
 
 **Testing:**
+
 - [ ] E2E test: 10% of users have flag enabled, 90% disabled
 - [ ] E2E test: Admin can toggle rollout percentage
 - [ ] E2E test: Feature flag control works end-to-end
 
 **Monitoring:**
+
 - [ ] Set up error rate alerts (by state: IDLE, LOADING, SUCCESS, ERROR)
 - [ ] Set up performance metrics (time in LOADING state)
 - [ ] Set up user metrics (% users with flag enabled)
@@ -1363,6 +1450,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 ### 📋 Post-Implementation
 
 **Monitoring (Week 1):**
+
 - [ ] Error rates normal (< 0.5% variance)
 - [ ] Performance metrics healthy (LOADING < 10s)
 - [ ] No double-submit incidents
@@ -1370,6 +1458,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] User feedback positive (NPS/survey)
 
 **Metrics Dashboard:**
+
 - [ ] State machine state transitions (chart)
 - [ ] Error rates by code (pie chart)
 - [ ] Time in LOADING state (histogram)
@@ -1377,11 +1466,13 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 - [ ] Double-submit prevention (0% expected)
 
 **Kill Switch:**
+
 - [ ] Feature flag disabled (if metrics bad)
 - [ ] Users revert to legacy flow (no data loss)
 - [ ] Monitoring still active (track metrics change)
 
 **Gradual Rollout:**
+
 - [ ] Week 1-2: 10% rollout (monitor)
 - [ ] Week 3: 25% rollout (if metrics good)
 - [ ] Week 4: 50% rollout (if metrics good)
@@ -1401,6 +1492,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 6. **Monitor:** Same metrics dashboard
 
 **Zero-downtime rollback:**
+
 - Users on legacy flow stay on legacy
 - Users on new flow revert on page refresh
 - No data loss (modals are UI-only)
@@ -1452,6 +1544,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 ### 📊 Final Score: **4.3/5** (+44% vs current 2.95/5)
 
 **Comparison:**
+
 ```
 Current (AS-IS):    2.95/5  (Inconsistent, risky, confusing)
 Target (TO-BE):     4.3/5   (Clear, protected, professional)
@@ -1477,4 +1570,3 @@ Business Value:
 **Document Status:** ✅ Complete - Ready for implementation
 **Last Updated:** 2026-01-17
 **Version:** 1.0 Final
-

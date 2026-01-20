@@ -1,4 +1,4 @@
-# 🏢 WAREHOUSE SYSTEM - Enterprise Architecture (10/10)
+# 🏢 WAREHOUSE SYSTEM - Enterprise Architecture
 
 ## 📋 Executive Summary
 
@@ -23,11 +23,11 @@ Questo documento definisce l'architettura **enterprise-grade** del Warehouse Sys
 // Gerarchia permessi: RISORSA → AZIONE → SCOPE → FIELD-LEVEL
 
 interface Permission {
-  resource: WarehouseResource;  // 'warehouse', 'product', 'movement', 'category', etc.
-  action: Action;                // 'read', 'create', 'update', 'delete', 'approve', 'export'
-  scope: PermissionScope;        // 'own', 'team', 'warehouse', 'all'
-  conditions?: Condition[];      // Condizioni dinamiche (es: valore < €1000)
-  fieldRestrictions?: FieldPermission[];  // Permessi per campo singolo
+  resource: WarehouseResource; // 'warehouse', 'product', 'movement', 'category', etc.
+  action: Action; // 'read', 'create', 'update', 'delete', 'approve', 'export'
+  scope: PermissionScope; // 'own', 'team', 'warehouse', 'all'
+  conditions?: Condition[]; // Condizioni dinamiche (es: valore < €1000)
+  fieldRestrictions?: FieldPermission[]; // Permessi per campo singolo
 }
 
 type WarehouseResource =
@@ -53,15 +53,15 @@ type Action =
   | 'adjust';
 
 type PermissionScope =
-  | 'own'           // Solo propri record
-  | 'team'          // Team di appartenenza
-  | 'warehouse'     // Magazzino specifico
-  | 'all';          // Tutti i magazzini
+  | 'own' // Solo propri record
+  | 'team' // Team di appartenenza
+  | 'warehouse' // Magazzino specifico
+  | 'all'; // Tutti i magazzini
 
 interface FieldPermission {
-  field: string;        // 'cost_price', 'supplier_id', 'notes'
+  field: string; // 'cost_price', 'supplier_id', 'notes'
   access: 'read' | 'write' | 'none';
-  masked?: boolean;     // Maschera valore (es: costo → "***")
+  masked?: boolean; // Maschera valore (es: costo → "***")
 }
 
 interface Condition {
@@ -81,8 +81,8 @@ export const WAREHOUSE_ROLES = {
   SUPERADMIN: {
     name: 'Super Admin',
     permissions: [
-      { resource: '*', action: '*', scope: 'all' }  // Wildcard = tutto
-    ]
+      { resource: '*', action: '*', scope: 'all' }, // Wildcard = tutto
+    ],
   },
 
   // WAREHOUSE_MANAGER - Gestisce magazzino completo
@@ -96,8 +96,8 @@ export const WAREHOUSE_ROLES = {
       { resource: 'category', action: '*', scope: 'warehouse' },
       { resource: 'supplier', action: '*', scope: 'warehouse' },
       { resource: 'analytics', action: 'read', scope: 'warehouse' },
-      { resource: 'settings', action: ['read', 'update'], scope: 'warehouse' }
-    ]
+      { resource: 'settings', action: ['read', 'update'], scope: 'warehouse' },
+    ],
   },
 
   // INVENTORY_COORDINATOR - Gestisce stock e movimenti
@@ -115,12 +115,12 @@ export const WAREHOUSE_ROLES = {
         action: 'update',
         scope: 'warehouse',
         fieldRestrictions: [
-          { field: 'cost_price', access: 'none' },      // NON può vedere costo
+          { field: 'cost_price', access: 'none' }, // NON può vedere costo
           { field: 'sale_price', access: 'none' },
-          { field: 'supplier_id', access: 'read' }      // Solo lettura fornitore
-        ]
-      }
-    ]
+          { field: 'supplier_id', access: 'read' }, // Solo lettura fornitore
+        ],
+      },
+    ],
   },
 
   // WAREHOUSE_OPERATOR - Operatore magazzino (carico/scarico)
@@ -135,8 +135,8 @@ export const WAREHOUSE_ROLES = {
         action: ['create', 'read'],
         scope: 'warehouse',
         conditions: [
-          { field: 'type', operator: 'in', value: ['inbound', 'outbound'] }  // Solo carico/scarico
-        ]
+          { field: 'type', operator: 'in', value: ['inbound', 'outbound'] }, // Solo carico/scarico
+        ],
       },
       { resource: 'category', action: 'read', scope: 'warehouse' },
       {
@@ -144,12 +144,12 @@ export const WAREHOUSE_ROLES = {
         action: 'read',
         scope: 'warehouse',
         fieldRestrictions: [
-          { field: 'cost_price', access: 'none' },      // Nascosto
+          { field: 'cost_price', access: 'none' }, // Nascosto
           { field: 'sale_price', access: 'none' },
-          { field: 'warehouse_location', access: 'read' }
-        ]
-      }
-    ]
+          { field: 'warehouse_location', access: 'read' },
+        ],
+      },
+    ],
   },
 
   // AUDITOR - Solo lettura completa (compliance)
@@ -158,8 +158,8 @@ export const WAREHOUSE_ROLES = {
     permissions: [
       { resource: '*', action: 'read', scope: 'all' },
       { resource: 'analytics', action: 'read', scope: 'all' },
-      { resource: '*', action: 'export', scope: 'all' }
-    ]
+      { resource: '*', action: 'export', scope: 'all' },
+    ],
   },
 
   // PRODUCT_VIEWER - Solo visualizzazione prodotti (es: sales team)
@@ -174,12 +174,12 @@ export const WAREHOUSE_ROLES = {
         action: 'read',
         scope: 'all',
         fieldRestrictions: [
-          { field: 'cost_price', access: 'none' },      // Costo nascosto
-          { field: 'supplier_id', access: 'none' }      // Fornitore nascosto
-        ]
-      }
-    ]
-  }
+          { field: 'cost_price', access: 'none' }, // Costo nascosto
+          { field: 'supplier_id', access: 'none' }, // Fornitore nascosto
+        ],
+      },
+    ],
+  },
 };
 ```
 
@@ -271,7 +271,7 @@ export async function checkPermission(params: {
   warehouseId: string;
   resource: WarehouseResource;
   action: Action;
-  record?: any;  // Record da verificare (per field-level)
+  record?: any; // Record da verificare (per field-level)
 }): Promise<boolean> {
   const { userId, warehouseId, resource, action, record } = params;
 
@@ -296,9 +296,7 @@ export async function checkPermission(params: {
     if (perm.resource === resource && perm.action === action) {
       // 3. Check conditions (se presenti)
       if (perm.conditions && record) {
-        const conditionsMet = perm.conditions.every(cond =>
-          evaluateCondition(record, cond)
-        );
+        const conditionsMet = perm.conditions.every((cond) => evaluateCondition(record, cond));
         if (!conditionsMet) continue;
       }
 
@@ -335,7 +333,7 @@ export async function checkFieldPermission(params: {
 
     // Check field restrictions
     if (perm.fieldRestrictions) {
-      const fieldPerm = perm.fieldRestrictions.find(f => f.field === field);
+      const fieldPerm = perm.fieldRestrictions.find((f) => f.field === field);
       if (!fieldPerm) continue;
 
       if (fieldPerm.access === 'none') return false;
@@ -355,13 +353,20 @@ function evaluateCondition(record: any, condition: Condition): boolean {
   const value = record[condition.field];
 
   switch (condition.operator) {
-    case 'eq': return value === condition.value;
-    case 'gt': return value > condition.value;
-    case 'lt': return value < condition.value;
-    case 'gte': return value >= condition.value;
-    case 'lte': return value <= condition.value;
-    case 'in': return condition.value.includes(value);
-    default: return false;
+    case 'eq':
+      return value === condition.value;
+    case 'gt':
+      return value > condition.value;
+    case 'lt':
+      return value < condition.value;
+    case 'gte':
+      return value >= condition.value;
+    case 'lte':
+      return value <= condition.value;
+    case 'in':
+      return condition.value.includes(value);
+    default:
+      return false;
   }
 }
 ```
@@ -383,7 +388,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     userId: session.user.id,
     warehouseId,
     resource: 'product',
-    action: 'create'
+    action: 'create',
   });
 
   if (!canCreate) {
@@ -399,13 +404,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         warehouseId,
         resource: 'product',
         field,
-        accessType: 'write'
+        accessType: 'write',
       });
 
       if (!canWrite) {
-        return Response.json({
-          error: `Forbidden: Cannot write field '${field}'`
-        }, { status: 403 });
+        return Response.json(
+          {
+            error: `Forbidden: Cannot write field '${field}'`,
+          },
+          { status: 403 }
+        );
       }
     }
   }
@@ -532,31 +540,28 @@ export async function logAudit(params: AuditLogParams) {
     beforeSnapshot,
     afterSnapshot,
     reason,
-    metadata
+    metadata,
   } = params;
 
   // Calcola diff (solo campi modificati)
-  const changes = beforeSnapshot && afterSnapshot
-    ? computeDiff(beforeSnapshot, afterSnapshot)
-    : null;
+  const changes =
+    beforeSnapshot && afterSnapshot ? computeDiff(beforeSnapshot, afterSnapshot) : null;
 
-  const { error } = await supabase
-    .from('warehouse_audit_log')
-    .insert({
-      warehouse_id: warehouseId,
-      actor_user_id: actorUserId,
-      resource_type: resourceType,
-      resource_id: resourceId,
-      action,
-      before_snapshot: beforeSnapshot,
-      after_snapshot: afterSnapshot,
-      changes,
-      reason,
-      ip_address: metadata?.ipAddress,
-      user_agent: metadata?.userAgent,
-      session_id: metadata?.sessionId,
-      request_id: metadata?.requestId
-    });
+  const { error } = await supabase.from('warehouse_audit_log').insert({
+    warehouse_id: warehouseId,
+    actor_user_id: actorUserId,
+    resource_type: resourceType,
+    resource_id: resourceId,
+    action,
+    before_snapshot: beforeSnapshot,
+    after_snapshot: afterSnapshot,
+    changes,
+    reason,
+    ip_address: metadata?.ipAddress,
+    user_agent: metadata?.userAgent,
+    session_id: metadata?.sessionId,
+    request_id: metadata?.requestId,
+  });
 
   if (error) {
     console.error('[AUDIT] Failed to log:', error);
@@ -765,14 +770,14 @@ export async function exportUserData(userId: string): Promise<{
     supabase.from('users').select('*').eq('id', userId).single(),
     supabase.from('warehouse_audit_log').select('*').eq('actor_user_id', userId),
     supabase.from('inventory_movements').select('*').eq('created_by', userId),
-    supabase.from('products').select('*').eq('owner_user_id', userId)
+    supabase.from('products').select('*').eq('owner_user_id', userId),
   ]);
 
   return {
     personal_data: personalData.data,
     audit_logs: auditLogs.data || [],
     movements: movements.data || [],
-    products_created: products.data || []
+    products_created: products.data || [],
   };
 }
 
@@ -784,8 +789,8 @@ export async function deleteUserData(userId: string, reason: string) {
     .update({
       deleted_at: new Date().toISOString(),
       deletion_reason: reason,
-      email: `deleted_${userId}@deleted.local`,  // Anonimizza
-      name: 'Deleted User'
+      email: `deleted_${userId}@deleted.local`, // Anonimizza
+      name: 'Deleted User',
     })
     .eq('id', userId);
 
@@ -795,14 +800,14 @@ export async function deleteUserData(userId: string, reason: string) {
     .update({
       actor_user_id: null,
       ip_address: null,
-      user_agent: 'ANONYMIZED'
+      user_agent: 'ANONYMIZED',
     })
     .eq('actor_user_id', userId);
 
   // 3. Transfer ownership prodotti (se necessario)
   await supabase
     .from('products')
-    .update({ owner_user_id: null })  // O trasferisci ad admin
+    .update({ owner_user_id: null }) // O trasferisci ad admin
     .eq('owner_user_id', userId);
 
   // 4. Log deletion
@@ -812,7 +817,7 @@ export async function deleteUserData(userId: string, reason: string) {
     resourceType: 'user',
     resourceId: userId,
     action: 'gdpr_delete',
-    reason: `GDPR deletion request: ${reason}`
+    reason: `GDPR deletion request: ${reason}`,
   });
 }
 
@@ -822,7 +827,7 @@ export async function exportDataPortability(userId: string): Promise<Blob> {
 
   // Format standard machine-readable (JSON)
   return new Blob([JSON.stringify(data, null, 2)], {
-    type: 'application/json'
+    type: 'application/json',
   });
 }
 ```
@@ -906,7 +911,7 @@ export async function requestApproval(params: {
       requested_by: params.requestedBy,
       request_type: params.requestType,
       payload: params.payload,
-      expires_at: expiresAt.toISOString()
+      expires_at: expiresAt.toISOString(),
     })
     .select()
     .single();
@@ -917,7 +922,7 @@ export async function requestApproval(params: {
   await notifyApprovers({
     warehouseId: params.warehouseId,
     requestId: data.id,
-    requestType: params.requestType
+    requestType: params.requestType,
   });
 
   return data;
@@ -935,7 +940,7 @@ export async function approveRequest(params: {
       status: 'approved',
       approved_by: params.approvedBy,
       reviewed_at: new Date().toISOString(),
-      review_notes: params.notes
+      review_notes: params.notes,
     })
     .eq('id', params.requestId)
     .select()
@@ -951,7 +956,7 @@ export async function approveRequest(params: {
     resourceType: 'approval_request',
     resourceId: request.id,
     action: 'approve',
-    reason: params.notes
+    reason: params.notes,
   });
 }
 ```
@@ -1018,7 +1023,7 @@ export const WAREHOUSE_FEATURES = {
 
   // Beta features
   PREDICTIVE_ANALYTICS: 'predictive_analytics',
-  BLOCKCHAIN_TRACEABILITY: 'blockchain_traceability'
+  BLOCKCHAIN_TRACEABILITY: 'blockchain_traceability',
 } as const;
 
 export async function isFeatureEnabled(params: {
@@ -1040,7 +1045,7 @@ export async function isFeatureEnabled(params: {
       // Gradual rollout check
       if (data.rollout_percentage < 100) {
         const hash = hashString(params.warehouseId);
-        return (hash % 100) < data.rollout_percentage;
+        return hash % 100 < data.rollout_percentage;
       }
       return data.enabled;
     }
@@ -1074,7 +1079,7 @@ export async function isFeatureEnabled(params: {
 function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = (hash << 5) - hash + str.charCodeAt(i);
     hash |= 0;
   }
   return Math.abs(hash);
@@ -1116,7 +1121,7 @@ export class WarehouseMetrics {
   static trackPageLoad(page: string, duration: number) {
     // Sentry performance monitoring
     Sentry.metrics.distribution('warehouse.page_load', duration, {
-      tags: { page }
+      tags: { page },
     });
 
     // Log se > 3s (slow)
@@ -1127,7 +1132,7 @@ export class WarehouseMetrics {
 
   static trackApiCall(endpoint: string, duration: number, status: number) {
     Sentry.metrics.distribution('warehouse.api_call', duration, {
-      tags: { endpoint, status: status.toString() }
+      tags: { endpoint, status: status.toString() },
     });
 
     // Alert se > 1s
@@ -1139,13 +1144,13 @@ export class WarehouseMetrics {
   // Business metrics
   static trackInventoryOperation(operation: string, count: number) {
     Sentry.metrics.increment('warehouse.inventory_operation', count, {
-      tags: { operation }
+      tags: { operation },
     });
   }
 
   static trackSearchPerformance(query: string, resultCount: number, duration: number) {
     Sentry.metrics.distribution('warehouse.search_duration', duration, {
-      tags: { result_count: resultCount.toString() }
+      tags: { result_count: resultCount.toString() },
     });
 
     // Log se search lenta
@@ -1170,25 +1175,18 @@ import { createLogger, format, transports } from 'winston';
 
 const logger = createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: format.combine(
-    format.timestamp(),
-    format.errors({ stack: true }),
-    format.json()
-  ),
+  format: format.combine(format.timestamp(), format.errors({ stack: true }), format.json()),
   defaultMeta: { service: 'warehouse-system' },
   transports: [
     // Console (development)
     new transports.Console({
-      format: format.combine(
-        format.colorize(),
-        format.simple()
-      )
+      format: format.combine(format.colorize(), format.simple()),
     }),
 
     // File (production)
     new transports.File({ filename: 'logs/warehouse-error.log', level: 'error' }),
-    new transports.File({ filename: 'logs/warehouse-combined.log' })
-  ]
+    new transports.File({ filename: 'logs/warehouse-combined.log' }),
+  ],
 });
 
 export class WarehouseLogger {
@@ -1214,7 +1212,7 @@ export class WarehouseLogger {
   }) {
     logger.info('Inventory changed', {
       event: 'inventory_change',
-      ...params
+      ...params,
     });
   }
 
@@ -1226,7 +1224,7 @@ export class WarehouseLogger {
   }) {
     logger.warn('Low stock alert triggered', {
       event: 'low_stock_alert',
-      ...params
+      ...params,
     });
   }
 }
@@ -1252,7 +1250,7 @@ export async function sendAlert(params: {
       severity,
       title,
       message,
-      metadata
+      metadata,
     });
   }
 
@@ -1262,7 +1260,7 @@ export async function sendAlert(params: {
       severity,
       title,
       message,
-      metadata
+      metadata,
     });
   }
 
@@ -1272,7 +1270,7 @@ export async function sendAlert(params: {
       severity,
       title,
       message,
-      metadata
+      metadata,
     });
   }
 
@@ -1305,7 +1303,7 @@ export async function retryWithBackoff<T>(
     initialDelay = 1000,
     maxDelay = 10000,
     backoffMultiplier = 2,
-    onRetry
+    onRetry,
   } = options;
 
   let lastError: Error;
@@ -1320,14 +1318,11 @@ export async function retryWithBackoff<T>(
         throw lastError;
       }
 
-      const delay = Math.min(
-        initialDelay * Math.pow(backoffMultiplier, attempt),
-        maxDelay
-      );
+      const delay = Math.min(initialDelay * Math.pow(backoffMultiplier, attempt), maxDelay);
 
       onRetry?.(lastError, attempt + 1);
 
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
@@ -1342,7 +1337,7 @@ class CircuitBreaker {
 
   constructor(
     private threshold: number = 5,
-    private timeout: number = 60000  // 1 min
+    private timeout: number = 60000 // 1 min
   ) {}
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
@@ -1464,7 +1459,7 @@ export class OfflineSyncQueue {
       ...operation,
       id: crypto.randomUUID(),
       timestamp: Date.now(),
-      retries: 0
+      retries: 0,
     };
 
     this.queue.push(queuedOp);
@@ -1486,7 +1481,7 @@ export class OfflineSyncQueue {
 
       try {
         await this.executeOperation(operation);
-        this.queue.shift();  // Remove from queue
+        this.queue.shift(); // Remove from queue
         await this.saveQueue();
       } catch (error) {
         operation.retries++;
@@ -1511,7 +1506,7 @@ export class OfflineSyncQueue {
     const response = await fetch(endpoint, {
       method: op.type === 'create' ? 'POST' : op.type === 'update' ? 'PATCH' : 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(op.data)
+      body: JSON.stringify(op.data),
     });
 
     if (!response.ok) {
@@ -1563,13 +1558,11 @@ export async function enableMFA(userId: string) {
     .from('users')
     .update({
       mfa_enabled: true,
-      mfa_secret: encryptCredential(secret)
+      mfa_secret: encryptCredential(secret),
     })
     .eq('id', userId);
 
-  const qrCode = await QRCode.toDataURL(
-    authenticator.keyuri(userId, 'Spediresicuro', secret)
-  );
+  const qrCode = await QRCode.toDataURL(authenticator.keyuri(userId, 'Spediresicuro', secret));
 
   return { secret, qrCode };
 }
@@ -1663,8 +1656,8 @@ export const WAREHOUSE_TRANSLATIONS = {
       create: 'Create Warehouse',
       inventory: 'Inventory',
       low_stock: 'Low Stock',
-      out_of_stock: 'Out of Stock'
-    }
+      out_of_stock: 'Out of Stock',
+    },
   },
   it: {
     warehouse: {
@@ -1672,8 +1665,8 @@ export const WAREHOUSE_TRANSLATIONS = {
       create: 'Crea Magazzino',
       inventory: 'Inventario',
       low_stock: 'Stock Basso',
-      out_of_stock: 'Esaurito'
-    }
+      out_of_stock: 'Esaurito',
+    },
   },
   de: {
     warehouse: {
@@ -1681,9 +1674,9 @@ export const WAREHOUSE_TRANSLATIONS = {
       create: 'Lager Erstellen',
       inventory: 'Bestand',
       low_stock: 'Niedriger Bestand',
-      out_of_stock: 'Ausverkauft'
-    }
-  }
+      out_of_stock: 'Ausverkauft',
+    },
+  },
 };
 ```
 
@@ -1704,25 +1697,18 @@ export function formatDateLocale(
   const locales = { it, en: enUS, de };
 
   return formatInTimeZone(date, timezone, formatStr, {
-    locale: locales[locale as keyof typeof locales]
+    locale: locales[locale as keyof typeof locales],
   });
 }
 
-export function formatCurrency(
-  amount: number,
-  currency: string = 'EUR',
-  locale: string = 'it-IT'
-) {
+export function formatCurrency(amount: number, currency: string = 'EUR', locale: string = 'it-IT') {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency
+    currency,
   }).format(amount);
 }
 
-export function formatNumber(
-  value: number,
-  locale: string = 'it-IT'
-) {
+export function formatNumber(value: number, locale: string = 'it-IT') {
   return new Intl.NumberFormat(locale).format(value);
 }
 ```
@@ -1735,6 +1721,7 @@ export function formatNumber(
 # Warehouse System - Enterprise Readiness Checklist
 
 ## 🔐 RBAC & Permissions
+
 - [x] Ruoli granulari (resource → action → scope → field)
 - [x] Field-level permissions
 - [x] Conditional permissions
@@ -1742,6 +1729,7 @@ export function formatNumber(
 - [x] Audit su permission changes
 
 ## 📝 Audit Trail
+
 - [x] Log immutabile (append-only)
 - [x] Before/after snapshots
 - [x] IP + user agent tracking
@@ -1749,6 +1737,7 @@ export function formatNumber(
 - [x] Export audit log (CSV/JSON/PDF)
 
 ## 📜 Compliance
+
 - [x] GDPR: Right to Access
 - [x] GDPR: Right to Erasure
 - [x] GDPR: Data Portability
@@ -1757,6 +1746,7 @@ export function formatNumber(
 - [x] Approval workflows
 
 ## 🏗️ Scalability
+
 - [x] Multi-tenant isolation (RLS)
 - [x] Feature flags (global/warehouse/user)
 - [x] Gradual rollout
@@ -1764,6 +1754,7 @@ export function formatNumber(
 - [x] Caching strategy
 
 ## 📊 Observability
+
 - [x] Performance metrics (Sentry)
 - [x] Structured logging (Winston)
 - [x] Error tracking
@@ -1771,6 +1762,7 @@ export function formatNumber(
 - [x] Alerting (Telegram/Email/Slack)
 
 ## 🛡️ Resilienza
+
 - [x] Retry with backoff
 - [x] Circuit breaker
 - [x] Empty states
@@ -1779,6 +1771,7 @@ export function formatNumber(
 - [x] Sync queue
 
 ## 🔒 Security
+
 - [x] MFA support
 - [x] Session timeout
 - [x] IP allowlist
@@ -1787,6 +1780,7 @@ export function formatNumber(
 - [x] XSS prevention
 
 ## 🌍 Localization
+
 - [x] Multi-lingua (i18n)
 - [x] Timezone support
 - [x] Currency formatting
@@ -1828,4 +1822,4 @@ npm run migrate:staging
 
 ---
 
-**ORA è 10/10 enterprise-grade!** 🎯
+**Sistema warehouse con architettura enterprise** 🎯

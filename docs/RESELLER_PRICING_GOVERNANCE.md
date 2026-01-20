@@ -47,11 +47,11 @@ CREATE TABLE reseller_pricing_policies (
 interface ResellerPricingPolicy {
   id: string;
   reseller_id: string;
-  enforce_limits: boolean;        // false = nessun limite (default)
-  min_markup_percent: number;     // 0-100%
+  enforce_limits: boolean; // false = nessun limite (default)
+  min_markup_percent: number; // 0-100%
   created_at: string;
   updated_at: string;
-  revoked_at: string | null;      // Soft delete
+  revoked_at: string | null; // Soft delete
   created_by: string | null;
   notes: string | null;
 }
@@ -61,11 +61,11 @@ interface ResellerPricingPolicy {
 
 ## 🔐 Permessi (RLS)
 
-| Utente | SELECT | INSERT | UPDATE | DELETE |
-|--------|--------|--------|--------|--------|
-| **SuperAdmin** | ✅ Tutte | ✅ Tutte | ✅ Tutte | ✅ Tutte |
-| **Reseller** | ✅ Propria (attiva) | ❌ No | ❌ No | ❌ No |
-| **User** | ❌ No | ❌ No | ❌ No | ❌ No |
+| Utente         | SELECT              | INSERT   | UPDATE   | DELETE   |
+| -------------- | ------------------- | -------- | -------- | -------- |
+| **SuperAdmin** | ✅ Tutte            | ✅ Tutte | ✅ Tutte | ✅ Tutte |
+| **Reseller**   | ✅ Propria (attiva) | ❌ No    | ❌ No    | ❌ No    |
+| **User**       | ❌ No               | ❌ No    | ❌ No    | ❌ No    |
 
 ---
 
@@ -80,7 +80,7 @@ const policy = await getResellerPricingPolicy(resellerId);
 
 // Reseller può impostare QUALSIASI prezzo
 await createPriceListEntry({
-  base_price: 1.00,  // Anche sotto costo!
+  base_price: 1.0, // Anche sotto costo!
   markup_percent: -50, // Anche negativo!
 }); // ✅ ACCETTATO
 ```
@@ -96,7 +96,7 @@ const policy = {
 
 // Reseller ha libertà assoluta
 await createPriceListEntry({
-  base_price: 1.00,
+  base_price: 1.0,
   markup_percent: 5, // Sotto il 10%, ma OK
 }); // ✅ ACCETTATO
 ```
@@ -109,7 +109,7 @@ await upsertResellerPricingPolicy({
   resellerId: 'reseller-uuid',
   enforce_limits: true,
   min_markup_percent: 15,
-  notes: 'Reseller ha storico perdite'
+  notes: 'Reseller ha storico perdite',
 });
 
 // Reseller prova a creare entry con 10% markup
@@ -216,12 +216,14 @@ test('allows any price for superadmin', async () => {
 ## 📈 Use Cases
 
 ### Use Case 1: Reseller "Fidato"
+
 ```typescript
 // Nessuna policy → Libertà assoluta
 // Reseller gestisce prezzi autonomamente
 ```
 
 ### Use Case 2: Reseller "In Osservazione"
+
 ```typescript
 // Policy con min_markup_percent = 5%
 // Previene perdite accidentali
@@ -234,6 +236,7 @@ await upsertResellerPricingPolicy({
 ```
 
 ### Use Case 3: Reseller "Problematico"
+
 ```typescript
 // Policy con min_markup_percent = 20%
 // Forza marginalità minima
@@ -250,11 +253,13 @@ await upsertResellerPricingPolicy({
 ## 🔄 Migration Path
 
 ### Existing Data
+
 - ✅ Zero impatto su listini esistenti
 - ✅ Nessuna policy creata automaticamente
 - ✅ Default comportamento: libertà assoluta
 
 ### Rollback
+
 ```sql
 -- Drop policies
 DROP POLICY "SuperAdmin full access on reseller_pricing_policies"
@@ -295,6 +300,7 @@ WHERE pl.list_type = 'custom'
 ## 📝 Changelog
 
 ### v1.0.0 (2026-01-17)
+
 - ✅ Migration 112: Tabella `reseller_pricing_policies`
 - ✅ Type: `ResellerPricingPolicy` interface
 - ✅ RLS policies (SuperAdmin full, Reseller read own)
@@ -305,6 +311,7 @@ WHERE pl.list_type = 'custom'
 ## 🤝 Contributing
 
 Modifiche future:
+
 - [ ] UI SuperAdmin per gestire policies
 - [ ] Dashboard reseller per vedere propria policy
 - [ ] Alert automatici su markup sotto soglia
@@ -314,4 +321,4 @@ Modifiche future:
 
 **Autori**: SpedireSicuro Dev Team
 **Data**: 2026-01-17
-**Status**: ✅ Production Ready
+**Status**: Implemented
