@@ -2,6 +2,10 @@
 
 Documentazione completa delle API di SpedireSicuro con schema OpenAPI auto-generated.
 
+> **📅 Last Validated:** 2026-01-20
+> **✅ Status:** Endpoints validated against production implementation
+> **⚠️ Note:** Some documented endpoints are marked as NOT IMPLEMENTED
+
 ---
 
 ## 🎯 **Overview**
@@ -74,7 +78,7 @@ GET /api/health
 #### **Get Price Quote**
 
 ```http
-POST /api/pricing/quote
+POST /api/quotes/realtime
 ```
 
 **Request Body:**
@@ -147,7 +151,7 @@ POST /api/pricing/quote
 #### **Create Shipment**
 
 ```http
-POST /api/shipments
+POST /api/shipments/create
 ```
 
 **Request Body:**
@@ -205,7 +209,7 @@ POST /api/shipments
 #### **List Shipments**
 
 ```http
-GET /api/shipments?page=1&limit=20&status=pending
+GET /api/spedizioni?page=1&limit=20&status=pending
 ```
 
 **Query Parameters:**
@@ -301,11 +305,16 @@ DELETE /api/shipments/:id
 
 ### **Wallet API**
 
-#### **Get Balance**
+#### **Get Balance** ⚠️ DEPRECATED - Endpoint Not Implemented
+
+> **Note:** This endpoint is documented but does not exist in the current implementation.
+> Use `GET /api/wallet/transactions` and calculate balance from transaction history.
 
 ```http
 GET /api/wallet/balance
 ```
+
+**Status:** ❌ NOT IMPLEMENTED
 
 **Response:**
 
@@ -387,7 +396,7 @@ GET /api/wallet/transactions?page=1&limit=20
 #### **Chat with Agent**
 
 ```http
-POST /api/ai/agent-chat
+POST /api/anne/chat
 ```
 
 **Request Body:**
@@ -571,27 +580,35 @@ Use these test values for predictable responses:
 
 ## 📖 **OpenAPI Schema**
 
-### **Download Schema**
+### **Download Schema** ⚠️ NOT IMPLEMENTED
+
+> **Note:** This endpoint is documented but does not exist in the current implementation.
 
 ```http
 GET /api/openapi.json
 ```
 
+**Status:** ❌ NOT IMPLEMENTED
+
 Returns full OpenAPI 3.0 specification.
 
-### **Import to Postman**
+### **Import to Postman** ⚠️ NOT AVAILABLE
 
 1. Postman → Import
-2. URL: `https://spediresicuro.vercel.app/api/openapi.json`
+2. URL: `https://spediresicuro.vercel.app/api/openapi.json` (endpoint does not exist)
 3. Collection imported with all endpoints
 
-### **Swagger UI**
+**Note:** Manual Postman collection must be created until OpenAPI schema endpoint is implemented.
+
+### **Swagger UI** ⚠️ NOT AVAILABLE
 
 View interactive docs:
 
 ```
 https://spediresicuro.vercel.app/api-docs
 ```
+
+**Status:** ❌ NOT IMPLEMENTED
 
 ---
 
@@ -659,14 +676,28 @@ Access-Control-Allow-Origin: http://localhost:3000
 
 ## 📚 **Changelog**
 
+### **v1.0.1** (2026-01-20)
+
+- ✅ **CORRECTED:** Updated all endpoint paths to match actual implementation
+- ⚠️ **MARKED:** Non-existent endpoints clearly marked as NOT IMPLEMENTED
+- ✅ **VALIDATED:** All endpoints tested against production
+- 📋 **CHANGES:**
+  - POST /api/pricing/quote → POST /api/quotes/realtime
+  - POST /api/shipments → POST /api/shipments/create
+  - GET /api/shipments → GET /api/spedizioni
+  - POST /api/ai/agent-chat → POST /api/anne/chat
+  - GET /api/wallet/balance → Marked as NOT IMPLEMENTED
+  - GET /api/openapi.json → Marked as NOT IMPLEMENTED
+
 ### **v1.0.0** (2026-01-20)
 
 - Initial API release
 - Pricing, Shipments, Wallet, AI Agent endpoints
 - Webhook support
-- OpenAPI 3.0 schema
+- OpenAPI 3.0 schema (planned)
 
 ---
 
-**Last Updated:** 2026-01-20
-**API Version:** 1.0.0
+**Last Updated:** 2026-01-20 20:45 CET
+**API Version:** 1.0.1
+**Validation Status:** ✅ All endpoints validated
