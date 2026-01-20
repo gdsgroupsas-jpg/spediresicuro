@@ -45,6 +45,10 @@
     "test:smoke:negative": "ts-node --project tsconfig.scripts.json scripts/smoke-test-negative-path.ts",
     "test:smoke:negative:dry": "ts-node --project tsconfig.scripts.json scripts/smoke-test-negative-path.ts --dry-run",
     "smoke:wallet": "npx tsx scripts/smoke-wallet.ts",
+    "smoke:api": "node scripts/smoke-test-api.js",
+    "smoke:api:local": "node scripts/smoke-test-api.js http://localhost:3000",
+    "validate:api": "node scripts/validate-api-endpoints.js",
+    "validate:api:local": "node scripts/validate-api-endpoints.js http://localhost:3000",
     "test": "vitest",
     "test:unit": "vitest run tests/unit --silent",
     "test:unit:verbose": "vitest run tests/unit",
@@ -72,6 +76,9 @@
     "*.{ts,tsx,js,jsx}": [
       "prettier --write",
       "eslint --fix"
+    ],
+    "*.js": [
+      "node scripts/validate-syntax.js"
     ],
     "*.{json,md,css,scss}": [
       "prettier --write"

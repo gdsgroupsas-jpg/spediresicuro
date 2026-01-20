@@ -44,6 +44,13 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Validate JavaScript syntax
+        run: |
+          for file in $(find scripts -name "*.js" 2>/dev/null); do
+            echo "Checking $file..."
+            node --check "$file"
+          done
+
       - name: Build
         run: npm run build
         env:
