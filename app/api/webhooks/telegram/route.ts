@@ -202,7 +202,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   // /id is always allowed (for setup)
   if (command !== 'id' && !isAuthorizedChat(chatId)) {
     console.log('[TELEGRAM_WEBHOOK] Chat not authorized:', { chatId });
-    sendTelegramMessage('⛔ Non sei autorizzato ad usare questo bot.', {
+    await sendTelegramMessage('⛔ Non sei autorizzato ad usare questo bot.', {
       chatId: String(chatId),
     });
     return;
@@ -237,7 +237,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
     chatId,
     responseLength: response.length,
   });
-  const sendResult = sendTelegramMessage(response, { chatId: String(chatId) });
+  const sendResult = await sendTelegramMessage(response, { chatId: String(chatId) });
   console.log('[TELEGRAM_WEBHOOK] Enqueue result:', sendResult);
 }
 

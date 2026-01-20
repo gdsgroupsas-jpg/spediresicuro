@@ -62,22 +62,22 @@ export function isTelegramConfigured(): boolean {
 }
 
 /**
- * Send a message via Telegram Bot API (SYNCHRONIZED)
+ * Send a message via Telegram Bot API (ASYNC)
  *
- * IMPORTANTE: Questa funzione è ora SINCRONA e usa la message queue.
+ * IMPORTANTE: Questa funzione è ASINCRONA e usa la message queue.
  * NON invia messaggi direttamente - li mette in coda per essere processati.
  *
  * Architecture (secondo specifiche Dario):
- * - Funzione sincrona: enqueue e return immediatamente
- * - Queue gestisce asincronia e rate limiting
+ * - Funzione async: enqueue e attende conferma
+ * - Queue gestisce rate limiting
  * - Worker processa la queue in background
  *
  * @returns Success + queueId se enqueued, error se fallisce
  */
-export function sendTelegramMessage(
+export async function sendTelegramMessage(
   text: string,
   options: SendMessageOptions = {}
-): { success: boolean; queueId?: string; error?: string } {
+): Promise<{ success: boolean; queueId?: string; error?: string }> {
   // Lazy import to avoid circular dependencies
   const { enqueueMessage } = require('./telegram-queue');
 
@@ -97,8 +97,8 @@ export function sendTelegramMessage(
   });
 
   try {
-    // Enqueue message (SYNCHRONOUS operation)
-    const queueId = enqueueMessage(chatId, text, {
+    // Enqueue message (ASYNC operation - must await!)
+    const queueId = await enqueueMessage(chatId, text, {
       parseMode: options.parseMode || 'HTML',
       disableNotification: options.disableNotification || false,
       replyToMessageId: options.replyToMessageId,
@@ -122,10 +122,10 @@ export function sendTelegramMessage(
 /**
  * Send message to all admin chats
  */
-export function sendToAdmins(
+export async function sendToAdmins(
   text: string,
   options: Omit<SendMessageOptions, 'chatId'> = {}
-): { success: boolean; sent: number; failed: number } {
+): Promise<{ success: boolean; sent: number; failed: number }> {
   const config = getConfig();
 
   if (!config) {
@@ -140,7 +140,7 @@ export function sendToAdmins(
   let failed = 0;
 
   for (const chatId of chatIds) {
-    const result = sendTelegramMessage(text, { ...options, chatId });
+    const result = await sendTelegramMessage(text, { ...options, chatId });
     if (result.success) {
       sent++;
     } else {
@@ -165,12 +165,12 @@ const SEVERITY_EMOJI: Record<AlertSeverity, string> = {
 /**
  * Send a formatted alert message
  */
-export function sendAlert(
+export async function sendAlert(
   severity: AlertSeverity,
   title: string,
   details: Record<string, string | number | boolean>,
   options?: SendMessageOptions
-): { success: boolean; queueId?: string; error?: string } {
+): Promise<{ success: boolean; queueId?: string; error?: string }> {
   const emoji = SEVERITY_EMOJI[severity];
   const detailLines = Object.entries(details)
     .map(([key, value]) => `• <b>${escapeHtml(key)}:</b> ${escapeHtml(String(value))}`)
@@ -178,7 +178,7 @@ export function sendAlert(
 
   const message = `${emoji} <b>${escapeHtml(title)}</b>\n\n${detailLines}\n\n<i>${new Date().toISOString()}</i>`;
 
-  return sendTelegramMessage(message, options);
+  return await sendTelegramMessage(message, options);
 }
 
 /**
@@ -198,16 +198,16 @@ function escapeHtml(text: string): string {
 /**
  * Send downtime alert (from UptimeRobot)
  */
-export function sendDowntimeAlert(
+export async function sendDowntimeAlert(
   monitorName: string,
   url: string,
   isDown: boolean,
   details?: string
-): { success: boolean } {
+): Promise<{ success: boolean }> {
   const severity: AlertSeverity = isDown ? 'critical' : 'success';
   const title = isDown ? 'SERVIZIO DOWN' : 'SERVIZIO RIPRISTINATO';
 
-  return sendAlert(severity, title, {
+  return await sendAlert(severity, title, {
     Monitor: monitorName,
     URL: url,
     Stato: isDown ? 'Offline' : 'Online',
@@ -218,13 +218,13 @@ export function sendDowntimeAlert(
 /**
  * Send error alert (from Sentry)
  */
-export function sendErrorAlert(
+export async function sendErrorAlert(
   errorTitle: string,
   errorMessage: string,
   url?: string,
   count?: number
-): { success: boolean } {
-  return sendAlert('critical', 'ERRORE APPLICAZIONE', {
+): Promise<{ success: boolean }> {
+  return await sendAlert('critical', 'ERRORE APPLICAZIONE', {
     Errore: errorTitle,
     Messaggio: errorMessage,
     ...(url ? { Link: url } : {}),
@@ -235,12 +235,12 @@ export function sendErrorAlert(
 /**
  * Send wallet/financial alert
  */
-export function sendWalletAlert(
+export async function sendWalletAlert(
   type: 'topup_pending' | 'topup_approved' | 'low_balance',
   userEmail: string,
   amount: number,
   details?: Record<string, string | number>
-): { success: boolean } {
+): Promise<{ success: boolean }> {
   const titles: Record<typeof type, string> = {
     topup_pending: 'RICARICA IN ATTESA',
     topup_approved: 'RICARICA APPROVATA',
@@ -249,7 +249,7 @@ export function sendWalletAlert(
 
   const severity: AlertSeverity = type === 'low_balance' ? 'warning' : 'info';
 
-  return sendAlert(severity, titles[type], {
+  return await sendAlert(severity, titles[type], {
     Utente: userEmail,
     Importo: `€${amount.toFixed(2)}`,
     ...details,
@@ -259,13 +259,13 @@ export function sendWalletAlert(
 /**
  * Send daily stats summary
  */
-export function sendDailyStats(stats: {
+export async function sendDailyStats(stats: {
   shipmentsToday: number;
   revenueToday: number;
   newUsers: number;
   pendingTopups: number;
   activeUsers: number;
-}): { success: boolean } {
+}): Promise<{ success: boolean }> {
   const message = `📊 <b>RIEPILOGO GIORNALIERO</b>
 
 📦 Spedizioni oggi: <b>${stats.shipmentsToday}</b>
@@ -276,7 +276,7 @@ export function sendDailyStats(stats: {
 
 <i>${new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</i>`;
 
-  return sendTelegramMessage(message, { disableNotification: true });
+  return await sendTelegramMessage(message, { disableNotification: true });
 }
 
 // ============================================================
