@@ -39,6 +39,13 @@ export default defineConfig({
         'e2e/',
         'scripts/',
       ],
+      // Coverage thresholds (enforced in CI)
+      thresholds: {
+        lines: 70,
+        functions: 65,
+        branches: 60,
+        statements: 70,
+      },
     },
   },
   resolve: {
