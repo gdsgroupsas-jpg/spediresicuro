@@ -102,7 +102,7 @@ function getRedisClient(): Redis | null {
  *
  * @returns Message ID if queued, null if failed
  */
-export function enqueueMessage(
+export async function enqueueMessage(
   chatId: string,
   text: string,
   options: {
@@ -111,7 +111,7 @@ export function enqueueMessage(
     replyToMessageId?: number;
     priority?: number;
   } = {}
-): string | null {
+): Promise<string | null> {
   const redis = getRedisClient();
   if (!redis) {
     console.warn('[TELEGRAM_QUEUE] Queue not available - message not sent');
@@ -133,21 +133,19 @@ export function enqueueMessage(
   // Add to sorted set with priority (higher priority = lower score)
   const score = Date.now() - ((message.priority || 0) * 1000000);
 
-  redis
-    .zadd(QUEUE_KEY, { score, member: JSON.stringify(message) })
-    .then(() => {
-      console.log('[TELEGRAM_QUEUE] Message enqueued:', {
-        id: message.id,
-        chatId: message.chatId,
-        textPreview: text.substring(0, 50),
-        priority: message.priority,
-      });
-    })
-    .catch((err: Error) => {
-      console.error('[TELEGRAM_QUEUE] Failed to enqueue:', err);
+  try {
+    await redis.zadd(QUEUE_KEY, { score, member: JSON.stringify(message) });
+    console.log('[TELEGRAM_QUEUE] Message enqueued:', {
+      id: message.id,
+      chatId: message.chatId,
+      textPreview: text.substring(0, 50),
+      priority: message.priority,
     });
-
-  return message.id;
+    return message.id;
+  } catch (err) {
+    console.error('[TELEGRAM_QUEUE] Failed to enqueue:', err);
+    return null;
+  }
 }
 
 /**
