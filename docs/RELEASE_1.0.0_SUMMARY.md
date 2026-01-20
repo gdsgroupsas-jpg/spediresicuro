@@ -125,12 +125,12 @@ Questo release rappresenta il **traguardo finale** dell'engineering process di S
 
 ### **Tutte le Feature Implementate** ✅
 
-1. ✅ GitHub Projects Setup (1 ora) - DONE
-2. ✅ API Documentation (2 ore) - DONE
-3. ✅ Load Testing Baseline (2 ore) - DONE
-4. ✅ Advanced Contributing Guide (1 ora) - DONE
+1. ✅ GitHub Projects Setup (~15 min) - DONE
+2. ✅ API Documentation (~30 min) - DONE
+3. ✅ Load Testing Baseline (~30 min) - DONE
+4. ✅ Advanced Contributing Guide (~15 min) - DONE
 
-**Totale: 6 ore → 10/10 raggiunto** ✅
+**Totale: ~1.5 ore → 10/10 raggiunto** ✅
 
 ---
 
@@ -246,7 +246,7 @@ Tutti gli strumenti rimangono **gratuiti**:
 - ✅ Automation > Manual process (Prettier, Dependabot, standard-version)
 - ✅ Documentation as Code (Mermaid diagrams, OpenAPI auto-gen)
 - ✅ Zero-cost tools esistono e funzionano (nessun costo mensile)
-- ✅ Incremental improvements (v0.8.0 → v1.0.0 in 6 ore)
+- ✅ Incremental improvements (v0.8.0 → v1.0.0 in ~1.5 ore)
 - ✅ Standards enforcement via CI (pre-commit hooks + GitHub Actions)
 
 ### **Best Practices confermate:**
@@ -264,9 +264,9 @@ Implementazione completata in **collaborazione con AI Agent**.
 
 **Total engineering time:**
 
-- v0.8.0: 7 ore (8.2/10 → 9.2/10)
-- v1.0.0: 6 ore (9.2/10 → 10/10)
-- **Grand total: 13 ore per raggiungere 10/10** ✅
+- v0.8.0: ~7 ore (8.2/10 → 9.2/10)
+- v1.0.0: ~1.5 ore (9.2/10 → 10/10)
+- **Grand total: ~8.5 ore per raggiungere 10/10** ✅
 
 **Tools utilizzati:**
 
