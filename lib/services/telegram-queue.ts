@@ -165,17 +165,24 @@ export async function dequeueMessage(): Promise<QueuedMessage | null> {
     }
 
     // Get message with highest priority (lowest score)
-    const messages = await redis.zrange<string[]>(QUEUE_KEY, 0, 0);
+    const messages = await redis.zrange(QUEUE_KEY, 0, 0);
 
     if (!messages || messages.length === 0) {
       return null; // Queue empty
     }
 
     const messageData = messages[0];
-    const message: QueuedMessage = JSON.parse(messageData);
 
-    // Remove from queue
-    await redis.zrem(QUEUE_KEY, messageData);
+    // @upstash/redis auto-deserializes JSON, so messageData might be object or string
+    const message: QueuedMessage = typeof messageData === 'string'
+      ? JSON.parse(messageData)
+      : messageData;
+
+    // Remove from queue (must pass string for zrem)
+    const messageString = typeof messageData === 'string'
+      ? messageData
+      : JSON.stringify(messageData);
+    await redis.zrem(QUEUE_KEY, messageString);
 
     console.log('[TELEGRAM_QUEUE] Message dequeued:', {
       id: message.id,
