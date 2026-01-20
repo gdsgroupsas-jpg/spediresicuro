@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentazione
+    url: https://github.com/gdsgroupsas-jpg/spediresicuro/blob/master/README.md
+    about: Consulta la documentazione prima di aprire un issue
+  - name: Security Issue
+    url: https://github.com/gdsgroupsas-jpg/spediresicuro/security/advisories/new
+    about: Per segnalare vulnerabilità di sicurezza usa il sistema di advisory privato

@@ -1,0 +1,44 @@
+version: 2
+updates:
+  # NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    # Grouping strategy
+    groups:
+      # Group all patch updates
+      patch-updates:
+        update-types:
+          - "patch"
+      # Group all minor updates
+      minor-updates:
+        update-types:
+          - "minor"
+    # Auto-merge patch updates for non-critical dependencies
+    labels:
+      - "dependencies"
+      - "automated"
+    reviewers:
+      - "gdsgroupsas-jpg"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    # Security updates have priority
+    priority: 10
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
