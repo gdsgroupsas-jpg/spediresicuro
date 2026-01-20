@@ -202,7 +202,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   // /id is always allowed (for setup)
   if (command !== 'id' && !isAuthorizedChat(chatId)) {
     console.log('[TELEGRAM_WEBHOOK] Chat not authorized:', { chatId });
-    await sendTelegramMessage('⛔ Non sei autorizzato ad usare questo bot.', {
+    sendTelegramMessage('⛔ Non sei autorizzato ad usare questo bot.', {
       chatId: String(chatId),
     });
     return;
@@ -231,14 +231,14 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       response = await handleUnknown(chatId, command);
   }
 
-  // Send response
-  console.log('[TELEGRAM_WEBHOOK] Sending response:', {
+  // Send response (now synchronous - enqueued)
+  console.log('[TELEGRAM_WEBHOOK] Enqueuing response:', {
     command,
     chatId,
     responseLength: response.length,
   });
-  const sendResult = await sendTelegramMessage(response, { chatId: String(chatId) });
-  console.log('[TELEGRAM_WEBHOOK] Send result:', sendResult);
+  const sendResult = sendTelegramMessage(response, { chatId: String(chatId) });
+  console.log('[TELEGRAM_WEBHOOK] Enqueue result:', sendResult);
 }
 
 /**
@@ -269,9 +269,8 @@ export async function POST(request: NextRequest) {
       text: update.message?.text?.substring(0, 50),
     });
 
-    // Process update and wait for completion
-    // Note: We must await this in Vercel serverless environment
-    // otherwise the execution context is terminated before message is sent
+    // Process update (messages are now enqueued, not sent directly)
+    // The queue worker will process and send messages asynchronously
     console.log('[TELEGRAM_WEBHOOK] Processing update...');
     await processUpdate(update);
 

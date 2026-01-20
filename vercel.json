@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/auto-reconciliation",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/telegram-queue",
+      "schedule": "* * * * *"
     }
   ]
 }
