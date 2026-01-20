@@ -115,50 +115,13 @@ async function handleHealth(chatId: number): Promise<string> {
       latency?: number;
     }> = [];
 
-    // Check API health - we're running in the API, so it's OK
+    // API is OK if we're executing this code
     services.push({
       name: 'API',
       status: 'ok',
     });
 
-    // Check Supabase by querying the database directly
-    const supabaseStart = Date.now();
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-      const supabase = createClient(supabaseUrl, supabaseKey, {
-        auth: { autoRefreshToken: false, persistSession: false }
-      });
-
-      // Use AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-      const { data, error } = await supabase
-        .from('shipments')
-        .select('id')
-        .limit(1)
-        .abortSignal(controller.signal);
-
-      clearTimeout(timeoutId);
-
-      services.push({
-        name: 'Database',
-        status: error ? 'error' : 'ok',
-        latency: Date.now() - supabaseStart,
-      });
-    } catch (err) {
-      const latency = Date.now() - supabaseStart;
-      services.push({
-        name: 'Database',
-        status: 'error',
-        latency: latency > 5000 ? undefined : latency // Don't show latency if timeout
-      });
-    }
-
-    // Telegram is obviously OK if we're here
+    // Telegram is OK if we received this message
     services.push({ name: 'Telegram Bot', status: 'ok' });
 
     return formatHealthStatus(services);
