@@ -18,11 +18,13 @@ Implementare **Application Performance Monitoring (APM)** e **Log Aggregation** 
 ### 1. **Sentry Performance Monitoring** (FREE tier: 10K transactions/month)
 
 **Configurazione**:
+
 - `sentry.server.config.ts`: `tracesSampleRate: 0.1` (10% sampling)
 - `sentry.client.config.ts`: `tracesSampleRate: 0.1` (10% sampling)
 - `sentry.edge.config.ts`: `tracesSampleRate: 0.1` (10% sampling)
 
 **Environment Variables**:
+
 ```bash
 SENTRY_TRACES_SAMPLE_RATE=0.1
 NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
@@ -32,11 +34,13 @@ SENTRY_PROFILES_SAMPLE_RATE=0.0  # Keep profiling disabled (€0 cost)
 ### 2. **Enhanced Logger con Trace Context** ([lib/logger.ts](lib/logger.ts))
 
 **Nuove Features**:
+
 - `getTraceContext()`: Estrae `traceId` e `spanId` da Sentry automaticamente
 - `createLogger()`: Include trace context nei logs (backward compatible)
 - `createLoggerWithTrace()`: Per operazioni async con trace context esplicito
 
 **Esempio**:
+
 ```typescript
 import { createLogger } from '@/lib/logger';
 
@@ -48,11 +52,13 @@ logger.info('Operazione completata', { shipmentId: '123' });
 ### 3. **Database Instrumentation** ([lib/db/instrumented-client.ts](lib/db/instrumented-client.ts))
 
 **Wrapper automatico per Supabase client**:
+
 - Crea Sentry spans per TUTTE le query (select, insert, update, delete, upsert, rpc)
 - Traccia durata query e errori
 - Log automatico per query lente (>1s) o errori
 
 **Esempio**:
+
 ```typescript
 import { instrumentSupabaseClient } from '@/lib/db/instrumented-client';
 import { supabaseAdmin } from '@/lib/supabase';
@@ -65,12 +71,14 @@ const { data } = await db.from('shipments').select('*').limit(10);
 ### 4. **External API Instrumentation** ([lib/services/instrumented-fetch.ts](lib/services/instrumented-fetch.ts))
 
 **Wrapper fetch() con tracing automatico**:
+
 - Crea Sentry spans per chiamate API esterne
 - Auto-detection servizi (stripe, ups, dhl, anthropic, etc.)
 - Sanitizza URL e headers sensibili
 - Log automatico per errori o chiamate lente (>2s)
 
 **Esempio**:
+
 ```typescript
 import { instrumentedFetch, stripeFetch } from '@/lib/services/instrumented-fetch';
 
@@ -80,18 +88,20 @@ const response = await instrumentedFetch('https://api.stripe.com/v1/customers');
 // Metodo 2: Helper pre-configurato
 const customer = await stripeFetch('https://api.stripe.com/v1/customers/cus_123', {
   method: 'GET',
-  headers: { Authorization: `Bearer ${STRIPE_KEY}` }
+  headers: { Authorization: `Bearer ${STRIPE_KEY}` },
 });
 ```
 
 ### 5. **Middleware Root Span** ([middleware.ts](middleware.ts))
 
 **Root span per distributed tracing**:
+
 - Ogni richiesta HTTP crea span `http.server`
 - Attributi: method, url, route, request_id, user_id, status_code
 - Tutti gli span figli (DB, API) collegati automaticamente
 
 **Distributed Tracing Flow**:
+
 ```
 HTTP Request → Middleware (ROOT SPAN)
   ├─ Database Query (CHILD SPAN) - via instrumentedClient
@@ -102,11 +112,13 @@ HTTP Request → Middleware (ROOT SPAN)
 ### 6. **Better Stack (Logtail) Integration**
 
 **Setup**:
+
 - Integrazione Vercel → Better Stack (automatic log shipping)
 - FREE tier: 1GB/month, 1-day retention
 - Logs strutturati JSON con trace context
 
 **Environment Variable**:
+
 ```bash
 LOGTAIL_SOURCE_TOKEN=VCtQAkJJbmQfN1N9vgTt4bFT
 ```
@@ -120,6 +132,7 @@ LOGTAIL_SOURCE_TOKEN=VCtQAkJJbmQfN1N9vgTt4bFT
 #### 1. **M2 APM Test** ([app/api/test/m2-apm/route.ts](app/api/test/m2-apm/route.ts))
 
 **Test distributed tracing**:
+
 ```bash
 curl http://localhost:3000/api/test/m2-apm
 # or
@@ -127,6 +140,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-apm
 ```
 
 **Expected Result**:
+
 ```json
 {
   "success": true,
@@ -144,6 +158,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-apm
 ```
 
 **Verify in Sentry**:
+
 1. Go to Sentry → Performance → Transactions
 2. Search for `GET /api/test/m2-apm`
 3. You should see:
@@ -155,6 +170,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-apm
 #### 2. **M2 Logging Test** ([app/api/test/m2-logging/route.ts](app/api/test/m2-logging/route.ts))
 
 **Test log aggregation**:
+
 ```bash
 curl http://localhost:3000/api/test/m2-logging
 # or
@@ -162,6 +178,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
 ```
 
 **Expected Result**:
+
 ```json
 {
   "success": true,
@@ -180,6 +197,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
 ```
 
 **Verify in Better Stack**:
+
 1. Go to Better Stack → Live Tail
 2. Search for `requestId` from response
 3. You should see 6 log entries:
@@ -191,6 +209,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
    - INFO: Slow operation completed
 
 **Verify Trace Correlation**:
+
 1. Copy `traceId` from response
 2. Search in Sentry Performance → Should link to this request
 3. All logs and spans linked via same `traceId`
@@ -204,6 +223,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
 **URL**: https://sentry.io/organizations/spediresicuro/performance/
 
 **Key Metrics**:
+
 - Transaction throughput (requests/minute)
 - P50/P95/P99 latency
 - Error rate
@@ -212,6 +232,7 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
 - External API call performance
 
 **Useful Views**:
+
 1. **Transactions**: Overview of all HTTP requests
 2. **Database**: Supabase query performance
 3. **External Services**: Stripe, courier APIs, etc.
@@ -222,12 +243,14 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
 **URL**: https://logs.betterstack.com
 
 **Key Features**:
+
 - Live Tail: Real-time log streaming
 - Search by: requestId, traceId, userId, level
 - Filters: error logs, slow requests (>1s)
 - Alerts: Configure alerts for specific patterns
 
 **Common Queries**:
+
 ```
 # Find all logs for a specific request
 requestId:"lvwabc123-xyz456"
@@ -281,7 +304,7 @@ import { stripeFetch } from '@/lib/services/instrumented-fetch';
 
 const response = await stripeFetch('https://api.stripe.com/v1/customers', {
   method: 'GET',
-  headers: { Authorization: `Bearer ${STRIPE_KEY}` }
+  headers: { Authorization: `Bearer ${STRIPE_KEY}` },
 });
 // Automatically creates Sentry span + logs errors
 ```
@@ -300,7 +323,7 @@ await Sentry.startSpan(
     attributes: {
       shipmentId: '123',
       courier: 'UPS',
-    }
+    },
   },
   async () => {
     // Your business logic here
@@ -317,11 +340,13 @@ await Sentry.startSpan(
 ### Problem: Traces not appearing in Sentry
 
 **Possible causes**:
+
 1. Sampling rate too low (10% = only 1 in 10 requests traced)
 2. Environment variable not set
 3. Sentry DSN incorrect
 
 **Solution**:
+
 ```bash
 # Check environment variables
 echo $SENTRY_TRACES_SAMPLE_RATE  # Should be 0.1
@@ -334,11 +359,13 @@ SENTRY_TRACES_SAMPLE_RATE=1.0  # 100% sampling (dev only!)
 ### Problem: Logs not appearing in Better Stack
 
 **Possible causes**:
+
 1. Vercel integration not configured
 2. LOGTAIL_SOURCE_TOKEN not set
 3. Logs not in production (dev logs may not be shipped)
 
 **Solution**:
+
 ```bash
 # Check Vercel integration
 vercel integrations list
@@ -353,10 +380,12 @@ curl https://spediresicuro.vercel.app/api/test/m2-logging
 ### Problem: traceId not linking logs to Sentry
 
 **Possible causes**:
+
 1. Logger created outside Sentry span context
 2. Async operation lost context
 
 **Solution**:
+
 ```typescript
 // BAD: Logger created before span
 const logger = createLogger(requestId);
@@ -375,13 +404,14 @@ await Sentry.startSpan({ ... }, async () => {
 
 ## 📈 Cost Analysis
 
-| Service | Free Tier | Expected Usage | Monthly Cost |
-|---------|-----------|----------------|--------------|
-| Sentry Transactions | 10K/month | ~3K/month (10% sample) | €0 |
-| Better Stack Logs | 1GB/month | ~500MB/month | €0 |
-| **TOTAL** | | | **€0/month** |
+| Service             | Free Tier | Expected Usage         | Monthly Cost |
+| ------------------- | --------- | ---------------------- | ------------ |
+| Sentry Transactions | 10K/month | ~3K/month (10% sample) | €0           |
+| Better Stack Logs   | 1GB/month | ~500MB/month           | €0           |
+| **TOTAL**           |           |                        | **€0/month** |
 
 **Scaling Plan**:
+
 - If traffic grows >30K requests/month → Reduce sampling to 5% (0.05)
 - If logs exceed 1GB/month → Upgrade Better Stack (€10/month for 5GB)
 - Sentry remains FREE up to 10K sampled transactions
@@ -407,6 +437,7 @@ await Sentry.startSpan({ ... }, async () => {
 ## 📝 Files Modified/Created
 
 ### Modified Files
+
 - [sentry.server.config.ts](sentry.server.config.ts) - Enabled tracing
 - [sentry.client.config.ts](sentry.client.config.ts) - Enabled tracing
 - [sentry.edge.config.ts](sentry.edge.config.ts) - Enabled tracing
@@ -415,6 +446,7 @@ await Sentry.startSpan({ ... }, async () => {
 - [.env.local](.env.local) - Added LOGTAIL_SOURCE_TOKEN
 
 ### New Files
+
 - [lib/db/instrumented-client.ts](lib/db/instrumented-client.ts) - DB instrumentation
 - [lib/services/instrumented-fetch.ts](lib/services/instrumented-fetch.ts) - API instrumentation
 - [app/api/test/m2-apm/route.ts](app/api/test/m2-apm/route.ts) - APM test endpoint
@@ -450,4 +482,4 @@ await Sentry.startSpan({ ... }, async () => {
 
 **Implementation by**: Claude Sonnet 4.5
 **Date**: 2026-01-18
-**Status**: ✅ Production Ready
+**Status**: Implemented
