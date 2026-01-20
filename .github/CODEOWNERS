@@ -1,0 +1,40 @@
+# CODEOWNERS
+# Questo file definisce i proprietari del codice per review automatiche
+# Documentazione: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner per tutto il repository
+* @gdsgroupsas-jpg
+
+# AI Agent & Orchestration
+/lib/agent/** @gdsgroupsas-jpg
+/lib/services/ai/** @gdsgroupsas-jpg
+
+# Pricing Engine (critical business logic)
+/lib/pricing/** @gdsgroupsas-jpg
+/lib/services/pricing/** @gdsgroupsas-jpg
+
+# Financial Core (wallet, transactions)
+/lib/wallet/** @gdsgroupsas-jpg
+/lib/services/financial/** @gdsgroupsas-jpg
+/actions/wallet.ts @gdsgroupsas-jpg
+
+# Database & Migrations (require careful review)
+/supabase/migrations/** @gdsgroupsas-jpg
+/lib/db/** @gdsgroupsas-jpg
+
+# Security & Authentication
+/lib/auth*.ts @gdsgroupsas-jpg
+/lib/safe-auth.ts @gdsgroupsas-jpg
+/middleware.ts @gdsgroupsas-jpg
+
+# API Routes
+/app/api/** @gdsgroupsas-jpg
+
+# Configuration & Infrastructure
+/.github/** @gdsgroupsas-jpg
+/vercel.json @gdsgroupsas-jpg
+/*.config.* @gdsgroupsas-jpg
+
+# Documentation (lighter review)
+/docs/** @gdsgroupsas-jpg
+/*.md @gdsgroupsas-jpg

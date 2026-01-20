@@ -1,0 +1,91 @@
+name: Bug Report
+description: Segnala un bug o comportamento non atteso
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees:
+  - gdsgroupsas-jpg
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie per aver segnalato un bug! Compila il form seguente per aiutarci a risolvere il problema.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrizione del problema
+      description: Descrivi chiaramente cosa non funziona
+      placeholder: "Quando provo a..., mi aspetto..., invece succede..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Step per riprodurre
+      description: Elenca i passaggi per riprodurre il bug
+      placeholder: |
+        1. Vai a '...'
+        2. Clicca su '...'
+        3. Scrolla fino a '...'
+        4. Vedi l'errore
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento atteso
+      description: Cosa ti aspettavi che succedesse?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamento attuale
+      description: Cosa succede invece?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log o screenshot
+      description: Aggiungi eventuali log, errori console, o screenshot
+      placeholder: |
+        ```
+        Incolla qui eventuali log...
+        ```
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Quanto grave è il bug?
+      options:
+        - P0 - Critical (sistema down, data loss)
+        - P1 - High (feature principale broken)
+        - P2 - Medium (workaround disponibile)
+        - P3 - Low (cosmetic, minor issue)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Dove si verifica il bug?
+      options:
+        - Production
+        - Staging
+        - Development/Local
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contesto addizionale
+      description: Altre informazioni utili (browser, OS, user role, etc.)

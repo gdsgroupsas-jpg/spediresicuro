@@ -23,7 +23,17 @@
       "Bash(git rev-parse:*)",
       "Bash(curl:*)",
       "Bash(ls:*)",
-      "Bash(PGPASSWORD=\"QAtRyqc1TgYseCxj\" psql:*)"
+      "Bash(PGPASSWORD=\"QAtRyqc1TgYseCxj\" psql:*)",
+      "Bash(npx vitest:*)",
+      "Bash(nvm list:*)",
+      "Bash(nvm use:*)",
+      "Bash(node --input-type=module -e:*)",
+      "Bash(npm run test:unit:verbose:*)",
+      "Bash(npm run format:check:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx lint-staged)",
+      "Bash(git reset:*)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": [],
     "ask": []

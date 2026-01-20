@@ -106,6 +106,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation only
@@ -116,6 +117,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore`: Updating build tasks, package manager configs, etc.
 
 **Examples:**
+
 ```
 feat(wallet): add XPay credit card integration
 fix(shipments): prevent orphan shipments after DB failure
@@ -136,19 +138,20 @@ refactor(auth): migrate to requireSafeAuth() pattern
 ```typescript
 // ✅ Good
 export async function getUser(id: string): Promise<User | null> {
-  const { data } = await supabase.from('users').select('*').eq('id', id).single()
-  return data
+  const { data } = await supabase.from('users').select('*').eq('id', id).single();
+  return data;
 }
 
 // ❌ Bad
 export async function getUser(id) {
-  return await supabase.from('users').select('*').eq('id', id).single()
+  return await supabase.from('users').select('*').eq('id', id).single();
 }
 ```
 
 ### ESLint Rules
 
 **Critical Rules:**
+
 - **No direct `auth()` import** in `/app/api/**` and `/app/actions/**`
   - ✅ Use: `requireSafeAuth()` or `getSafeAuth()`
   - ❌ Banned: `import { auth } from '@/lib/auth-config'`
@@ -197,16 +200,19 @@ export function WalletTopUpButton({ onSuccess }: WalletTopUpButtonProps) {
 **All PRs must pass these checks:**
 
 #### Database Security
+
 - [ ] All new tenant tables have RLS enabled
 - [ ] All queries use `context.target.id` (not hardcoded user_id)
 - [ ] No direct `supabaseAdmin` usage in client components
 
 #### Authentication
+
 - [ ] No `auth()` direct usage in `/app/api/**` or `/app/actions/**`
 - [ ] Use `requireSafeAuth()` for all protected routes/actions
 - [ ] Proper error handling (don't leak sensitive data in errors)
 
 #### Audit Logging
+
 - [ ] Audit log written for sensitive operations:
   - Shipment create/update/delete
   - Wallet credit/debit
@@ -215,23 +221,26 @@ export function WalletTopUpButton({ onSuccess }: WalletTopUpButtonProps) {
   - Courier credential access
 
 #### Input Validation
+
 - [ ] All user inputs validated with Zod schemas
 - [ ] SQL injection prevention (use parameterized queries)
 - [ ] XSS prevention (sanitize HTML if rendering user content)
 
 #### Secrets
+
 - [ ] No hardcoded secrets or API keys
 - [ ] All secrets in environment variables
 - [ ] `.env.local` not committed (in `.gitignore`)
 
 **Example: Secure Server Action**
-```typescript
-'use server'
 
-import { z } from 'zod'
-import { requireSafeAuth } from '@/lib/safe-auth'
-import { writeAuditLog } from '@/lib/security/audit-log'
-import { AUDIT_ACTIONS } from '@/lib/security/audit-actions'
+```typescript
+'use server';
+
+import { z } from 'zod';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { writeAuditLog } from '@/lib/security/audit-log';
+import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 const CreateShipmentSchema = z.object({
   recipient: z.object({
@@ -240,27 +249,27 @@ const CreateShipmentSchema = z.object({
     // ... other fields
   }),
   // ... other fields
-})
+});
 
 export async function createShipment(input: unknown) {
   // 1. Authenticate
-  const context = await requireSafeAuth()
-  
+  const context = await requireSafeAuth();
+
   // 2. Validate input
-  const validated = CreateShipmentSchema.parse(input)
-  
+  const validated = CreateShipmentSchema.parse(input);
+
   // 3. Business logic
-  const shipment = await createShipmentInternal(context.target.id, validated)
-  
+  const shipment = await createShipmentInternal(context.target.id, validated);
+
   // 4. Audit log
   await writeAuditLog({
     context,
     action: AUDIT_ACTIONS.CREATE_SHIPMENT,
     resourceType: 'shipment',
     resourceId: shipment.id,
-  })
-  
-  return { success: true, data: shipment }
+  });
+
+  return { success: true, data: shipment };
 }
 ```
 
@@ -278,6 +287,7 @@ npx supabase migration new your_migration_name
 ### Migration Best Practices
 
 **1. Idempotent:**
+
 ```sql
 -- ✅ Good - Safe to run multiple times
 CREATE TABLE IF NOT EXISTS my_table (...);
@@ -289,6 +299,7 @@ ALTER TABLE users ADD COLUMN new_column TEXT;
 ```
 
 **2. Backward Compatible:**
+
 ```sql
 -- ✅ Good - Add column with default
 ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active';
@@ -298,6 +309,7 @@ ALTER TABLE users DROP COLUMN old_column;
 ```
 
 **3. Include Rollback:**
+
 ```sql
 -- Migration: Add status column
 ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
@@ -307,6 +319,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
 ```
 
 **4. Test Locally:**
+
 ```bash
 # Reset DB and apply all migrations
 npx supabase db reset
@@ -326,11 +339,11 @@ npx supabase migration list
 -- ROLLBACK: Instructions for rollback (if complex)
 -- ============================================
 
-DO $$ 
+DO $$
 BEGIN
   -- Check if change needed
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
+    SELECT 1 FROM information_schema.columns
     WHERE table_name = 'users' AND column_name = 'new_column'
   ) THEN
     -- Apply change
@@ -363,6 +376,7 @@ END $$;
 ### Opening PR
 
 **PR Title:** Use Conventional Commits format
+
 ```
 feat: add bulk shipment import
 fix: prevent duplicate wallet debits
@@ -370,42 +384,51 @@ docs: update security architecture
 ```
 
 **PR Description Template:**
+
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
 
 ## Changes Made
+
 - Added X
 - Fixed Y
 - Updated Z
 
 ## Security Checklist (if applicable)
+
 - [ ] RLS policies added/updated
 - [ ] Audit logging implemented
 - [ ] Input validation with Zod
 - [ ] No secrets in code
 
 ## Testing
+
 - [ ] Tested locally
 - [ ] Added tests (if applicable)
 - [ ] Verified with different user roles
 
 ## Screenshots (if UI changes)
+
 [Add screenshots here]
 
 ## Related Issues
+
 Closes #123
 ```
 
 ### PR Review
 
 **Reviewers will check:**
+
 - Code quality and style
 - Security compliance
 - Performance implications
@@ -413,6 +436,7 @@ Closes #123
 - Documentation accuracy
 
 **Feedback:**
+
 - Address all comments before merging
 - Re-request review after changes
 - Discuss disagreements constructively
@@ -439,38 +463,123 @@ npm run test:e2e
 When adding tests, follow these patterns:
 
 **Unit Tests (lib/ functions):**
+
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { calculateWalletBalance } from '@/lib/wallet'
+import { describe, it, expect } from 'vitest';
+import { calculateWalletBalance } from '@/lib/wallet';
 
 describe('calculateWalletBalance', () => {
   it('sums positive and negative transactions', () => {
-    const transactions = [
-      { amount: 100 },
-      { amount: -50 },
-      { amount: 25 },
-    ]
-    expect(calculateWalletBalance(transactions)).toBe(75)
-  })
-})
+    const transactions = [{ amount: 100 }, { amount: -50 }, { amount: 25 }];
+    expect(calculateWalletBalance(transactions)).toBe(75);
+  });
+});
 ```
 
 **Integration Tests (API routes):**
+
 ```typescript
-import { POST } from '@/app/api/wallet/topup/route'
+import { POST } from '@/app/api/wallet/topup/route';
 
 describe('POST /api/wallet/topup', () => {
   it('creates top-up request', async () => {
     const request = new Request('http://localhost:3000/api/wallet/topup', {
       method: 'POST',
       body: JSON.stringify({ amount: 100, fileUrl: 'https://...' }),
-    })
-    
-    const response = await POST(request)
-    expect(response.status).toBe(200)
-  })
-})
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+  });
+});
 ```
+
+---
+
+## 🐛 **Common Issues & Troubleshooting**
+
+### **Issue: Tests fail on Windows**
+
+**Cause:** Known Vitest bug on Windows with path resolution
+**Workaround:** Tests pass in CI (Linux). Rely on CI for validation.
+**Details:** [KNOWN_ISSUES.md](./docs/KNOWN_ISSUES.md)
+
+---
+
+### **Issue: "Module not found" errors**
+
+**Fix:**
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+---
+
+### **Issue: Pre-commit hooks fail**
+
+**Fix:**
+
+```bash
+# Re-install Husky
+npm run prepare
+
+# Format all files
+npm run format
+
+# Try commit again
+git commit -m "your message"
+```
+
+---
+
+### **Issue: Database connection errors**
+
+**Check:**
+
+1. `.env.local` has correct Supabase credentials
+2. Supabase project is not paused (free tier auto-pauses after 7 days inactivity)
+3. Network allows connections to `*.supabase.co`
+
+**Fix:**
+
+```bash
+# Verify environment
+npm run check:env
+
+# Test Supabase connection
+npm run verify:supabase
+```
+
+---
+
+## 🎓 **Learning Resources**
+
+### **For New Contributors**
+
+1. Read [README.md](./README.md) - Understand the business model
+2. Read [ARCHITECTURE_DIAGRAMS.md](./docs/ARCHITECTURE_DIAGRAMS.md) - Visual system overview
+3. Read [DEVELOPMENT_STANDARDS.md](./DEVELOPMENT_STANDARDS.md) - Code standards
+4. Run the app locally - See it in action
+5. Pick a "good first issue" - Start with beginner-friendly tasks
+
+### **External Documentation**
+
+- [Next.js 14 App Router](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [LangGraph Guide](https://langchain-ai.github.io/langgraph/)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+
+---
+
+## 🙏 **Recognition**
+
+Contributors will be:
+
+- Listed in release notes
+- Thanked in [CONTRIBUTORS.md](./CONTRIBUTORS.md) (if exists)
+- Eligible for "Top Contributor" recognition
 
 ---
 
@@ -483,3 +592,5 @@ describe('POST /api/wallet/topup', () => {
 ---
 
 **Thank you for contributing to SpedireSicuro!** 🚀
+
+Your contributions help make logistics simpler for thousands of businesses.
