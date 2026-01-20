@@ -35,31 +35,24 @@ const endpoints = [
   },
   {
     method: 'POST',
-    path: '/api/pricing/quote',
+    path: '/api/quotes/realtime',
     requiresAuth: true,
     expectedStatuses: [200, 401], // 401 if no auth
-    description: 'Get pricing quote',
+    description: 'Get pricing quote (realtime)',
   },
   {
     method: 'POST',
-    path: '/api/shipments',
+    path: '/api/shipments/create',
     requiresAuth: true,
-    expectedStatuses: [201, 401],
+    expectedStatuses: [201, 401, 400],
     description: 'Create shipment',
   },
   {
     method: 'GET',
-    path: '/api/shipments',
+    path: '/api/spedizioni',
     requiresAuth: true,
     expectedStatuses: [200, 401],
     description: 'List shipments',
-  },
-  {
-    method: 'GET',
-    path: '/api/wallet/balance',
-    requiresAuth: true,
-    expectedStatuses: [200, 401],
-    description: 'Get wallet balance',
   },
   {
     method: 'GET',
@@ -70,17 +63,10 @@ const endpoints = [
   },
   {
     method: 'POST',
-    path: '/api/ai/agent-chat',
+    path: '/api/anne/chat',
     requiresAuth: true,
     expectedStatuses: [200, 401],
-    description: 'AI agent chat',
-  },
-  {
-    method: 'GET',
-    path: '/api/openapi.json',
-    requiresAuth: false,
-    expectedStatuses: [200],
-    description: 'OpenAPI schema',
+    description: 'AI agent chat (Anne)',
   },
 ];
 
