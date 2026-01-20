@@ -24,6 +24,7 @@ import {
   isTelegramConfigured,
 } from '@/lib/services/telegram-bot';
 import { getQuickStats } from '@/lib/metrics/business-metrics';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // Authorized chat IDs (from env)
 function getAuthorizedChatIds(): number[] {
@@ -120,6 +121,27 @@ async function handleHealth(chatId: number): Promise<string> {
       name: 'API',
       status: 'ok',
     });
+
+    // Check Supabase by querying the database
+    const supabaseStart = Date.now();
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('shipments')
+        .select('id')
+        .limit(1);
+
+      services.push({
+        name: 'Database',
+        status: error ? 'error' : 'ok',
+        latency: Date.now() - supabaseStart,
+      });
+    } catch (err) {
+      services.push({
+        name: 'Database',
+        status: 'error',
+        latency: Date.now() - supabaseStart,
+      });
+    }
 
     // Telegram is OK if we received this message
     services.push({ name: 'Telegram Bot', status: 'ok' });
@@ -247,11 +269,11 @@ export async function POST(request: NextRequest) {
       text: update.message?.text?.substring(0, 50),
     });
 
-    // Process asynchronously - return immediately to Telegram
-    console.log('[TELEGRAM_WEBHOOK] Starting async processing');
-    processUpdate(update).catch((error) => {
-      console.error('[TELEGRAM_WEBHOOK] Processing error:', error);
-    });
+    // Process update and wait for completion
+    // Note: We must await this in Vercel serverless environment
+    // otherwise the execution context is terminated before message is sent
+    console.log('[TELEGRAM_WEBHOOK] Processing update...');
+    await processUpdate(update);
 
     console.log('[TELEGRAM_WEBHOOK] Returning ok: true to Telegram');
     return NextResponse.json({ ok: true });
