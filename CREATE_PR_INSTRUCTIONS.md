@@ -13,6 +13,7 @@ gh auth login
 ```
 
 Scegli:
+
 - **What account do you want to log into?** → `GitHub.com`
 - **What is your preferred protocol?** → `HTTPS`
 - **Authenticate Git with your GitHub credentials?** → `Yes`
@@ -41,6 +42,7 @@ Apri: `https://github.com/gdsgroupsas-jpg/spediresicuro/compare/master...claude/
 ### Step 3: Compila i Campi
 
 **Title:**
+
 ```
 🚀 Dashboard Navigation System Refactor (Enterprise-Grade)
 ```
@@ -48,12 +50,13 @@ Apri: `https://github.com/gdsgroupsas-jpg/spediresicuro/compare/master...claude/
 **Description:**
 Copia tutto il contenuto da `PR_NAVIGATION_REFACTOR.md` oppure usa questo:
 
-```markdown
+````markdown
 # 🚀 Dashboard Navigation System Refactor (Enterprise-Grade)
 
 ## 📊 Summary
 
-Complete refactor of dashboard navigation system to **10/10 enterprise-grade standard** with:
+Complete refactor of dashboard navigation system to **enterprise-grade standard** with:
+
 - ✅ Nested sections (reduce cognitive load)
 - ✅ RBAC filtering (role-based access)
 - ✅ Keyboard navigation (WCAG 2.1 AA)
@@ -66,6 +69,7 @@ Complete refactor of dashboard navigation system to **10/10 enterprise-grade sta
 ## 🎯 Problem Solved
 
 ### Before (7.5/10):
+
 - ❌ Admin section with 15 flat items (cognitive overload)
 - ❌ Wallet duplicated in 2 sections
 - ❌ Ambiguous labels ("Contrassegni" vs "Lista Contrassegni")
@@ -74,7 +78,8 @@ Complete refactor of dashboard navigation system to **10/10 enterprise-grade sta
 - ❌ No keyboard navigation (accessibility gap)
 - ❌ No test coverage (0%)
 
-### After (10/10):
+### After Refactor:
+
 - ✅ Admin section with 3 nested subsections (max 7±2 items per level)
 - ✅ Wallet only in "Il Mio Account" (no duplications)
 - ✅ Clear labels ("Spedizioni Contrassegno", "Admin Contrassegni")
@@ -102,22 +107,24 @@ Complete refactor of dashboard navigation system to **10/10 enterprise-grade sta
    - navigationConfig.test.ts: 33 tests
    - useKeyboardNav.test.ts: 23 tests
 ```
+````
 
 ## 📊 Metrics
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Code Quality Score** | 7.5/10 | 10/10 | +2.5 |
-| **Test Coverage** | 0% | 100% | +100% |
-| **Mobile Nav Lines** | 479 | 338 | -141 (-29%) |
-| **Cognitive Load (Admin)** | 15 items | 3+7 items | -53% |
-| **Duplications** | 2 (Wallet) | 0 | -100% |
-| **Accessibility** | ❌ | ✅ WCAG 2.1 AA | ✅ |
-| **Breaking Changes** | - | 0 | ✅ |
+| Metric                     | Before     | After          | Improvement |
+| -------------------------- | ---------- | -------------- | ----------- |
+| **Code Quality**           | Baseline   | Improved       | Refactored  |
+| **Test Coverage**          | 0%         | 100%           | +100%       |
+| **Mobile Nav Lines**       | 479        | 338            | -141 (-29%) |
+| **Cognitive Load (Admin)** | 15 items   | 3+7 items      | -53%        |
+| **Duplications**           | 2 (Wallet) | 0              | -100%       |
+| **Accessibility**          | ❌         | ✅ WCAG 2.1 AA | ✅          |
+| **Breaking Changes**       | -          | 0              | ✅          |
 
 ## 🔒 Safety
 
 ### Zero Breaking Changes
+
 - ✅ All hrefs preserved (exact same URLs)
 - ✅ All components backward compatible
 - ✅ Feature flags for gradual rollout
@@ -125,6 +132,7 @@ Complete refactor of dashboard navigation system to **10/10 enterprise-grade sta
 - ✅ SSR-safe (localStorage checks)
 
 ### Test Coverage
+
 - ✅ 56 tests covering all navigation logic
 - ✅ RBAC filtering for all roles
 - ✅ Nested sections structure
@@ -156,6 +164,7 @@ Complete refactor of dashboard navigation system to **10/10 enterprise-grade sta
 ### Safe to Merge ✅
 
 **Why:**
+
 1. ✅ Zero breaking changes (all hrefs preserved)
 2. ✅ 646/646 tests passing (including new 56)
 3. ✅ Feature flags for gradual rollout
@@ -181,8 +190,9 @@ Complete refactor of dashboard navigation system to **10/10 enterprise-grade sta
 **Target:** `master`
 **Status:** ✅ Ready to merge
 **Risk:** 🟢 Low (zero breaking changes, full test coverage)
-**Score:** 🏆 10/10 (enterprise-grade standard achieved)
-```
+**Score:** 🏆 Enterprise-Grade (enterprise-grade standard achieved)
+
+````
 
 ### Step 4: Aggiungi Labels
 
@@ -213,7 +223,7 @@ gh pr create \
   --body "$(cat PR_NAVIGATION_REFACTOR.md)" \
   --base master \
   --head claude/organize-dashboard-sidebar-0B0hm
-```
+````
 
 ### View PR dopo creazione:
 
@@ -244,6 +254,7 @@ Dopo la creazione:
 ## 📞 Supporto
 
 Se hai problemi:
+
 1. Verifica autenticazione: `gh auth status`
 2. Verifica remote: `git remote -v`
 3. Verifica branch: `git branch -a | grep claude/organize`
@@ -252,7 +263,7 @@ Se hai problemi:
 ---
 
 **Status:** ✅ Ready to create PR
-**Score:** 🏆 10/10 Enterprise-Grade
+**Score:** 🏆 Enterprise-Grade Enterprise-Grade
 **Risk:** 🟢 Low
 **Commits:** 6 (all clean)
 **Tests:** 646/646 passing
