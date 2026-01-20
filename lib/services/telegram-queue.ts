@@ -149,7 +149,7 @@ export function enqueueMessage(
   };
 
   // Add to sorted set with priority (higher priority = lower score)
-  const score = Date.now() - (message.priority * 1000000);
+  const score = Date.now() - ((message.priority || 0) * 1000000);
 
   redis
     .zadd(QUEUE_KEY, score, JSON.stringify(message))
