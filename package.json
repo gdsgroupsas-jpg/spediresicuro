@@ -1,6 +1,6 @@
 {
   "name": "spediresicuro",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -65,6 +65,7 @@
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "release:patch": "standard-version --release-as patch",
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
     "prepare": "husky"
   },
   "lint-staged": {
