@@ -24,6 +24,7 @@ import {
   isTelegramConfigured,
 } from '@/lib/services/telegram-bot';
 import { getQuickStats } from '@/lib/metrics/business-metrics';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // Authorized chat IDs (from env)
 function getAuthorizedChatIds(): number[] {
@@ -121,28 +122,13 @@ async function handleHealth(chatId: number): Promise<string> {
       status: 'ok',
     });
 
-    // Check Supabase by querying the database directly
+    // Check Supabase by querying the database
     const supabaseStart = Date.now();
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-      const supabase = createClient(supabaseUrl, supabaseKey, {
-        auth: { autoRefreshToken: false, persistSession: false }
-      });
-
-      // Use AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('shipments')
         .select('id')
-        .limit(1)
-        .abortSignal(controller.signal);
-
-      clearTimeout(timeoutId);
+        .limit(1);
 
       services.push({
         name: 'Database',
@@ -150,11 +136,10 @@ async function handleHealth(chatId: number): Promise<string> {
         latency: Date.now() - supabaseStart,
       });
     } catch (err) {
-      const latency = Date.now() - supabaseStart;
       services.push({
         name: 'Database',
         status: 'error',
-        latency: latency > 5000 ? undefined : latency // Don't show latency if timeout
+        latency: Date.now() - supabaseStart,
       });
     }
 
@@ -284,11 +269,11 @@ export async function POST(request: NextRequest) {
       text: update.message?.text?.substring(0, 50),
     });
 
-    // Process asynchronously - return immediately to Telegram
-    console.log('[TELEGRAM_WEBHOOK] Starting async processing');
-    processUpdate(update).catch((error) => {
-      console.error('[TELEGRAM_WEBHOOK] Processing error:', error);
-    });
+    // Process update and wait for completion
+    // Note: We must await this in Vercel serverless environment
+    // otherwise the execution context is terminated before message is sent
+    console.log('[TELEGRAM_WEBHOOK] Processing update...');
+    await processUpdate(update);
 
     console.log('[TELEGRAM_WEBHOOK] Returning ok: true to Telegram');
     return NextResponse.json({ ok: true });
