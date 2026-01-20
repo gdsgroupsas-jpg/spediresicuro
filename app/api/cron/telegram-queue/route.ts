@@ -11,7 +11,7 @@
  * 4. Retry se fallisce
  *
  * Endpoint: GET /api/cron/telegram-queue
- * Cron Schedule: */30 * * * * (ogni 30 secondi)
+ * Cron Schedule: Every minute (* * * * *)
  *
  * Milestone: M5 - Telegram Notifications
  */
