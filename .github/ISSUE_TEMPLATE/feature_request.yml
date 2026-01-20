@@ -1,0 +1,94 @@
+name: Feature Request
+description: Proponi una nuova feature o miglioramento
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+assignees:
+  - gdsgroupsas-jpg
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie per il tuo suggerimento! Compila il form per descrivere la feature richiesta.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema da risolvere
+      description: Qual è il problema che questa feature risolverebbe?
+      placeholder: "Attualmente è difficile/impossibile fare X perché..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Soluzione proposta
+      description: Descrivi come vorresti che funzionasse
+      placeholder: "Vorrei poter..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative considerate
+      description: Hai considerato altre soluzioni?
+      placeholder: "Ho provato a usare..., ma..."
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorità
+      description: Quanto è importante questa feature?
+      options:
+        - P0 - Critical (business blocker)
+        - P1 - High (significant value)
+        - P2 - Medium (nice to have)
+        - P3 - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Categoria
+      description: A quale area appartiene questa feature?
+      options:
+        - AI/Agent
+        - Pricing Engine
+        - Wallet/Financial
+        - Courier Integration
+        - Dashboard/UI
+        - API
+        - Security
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: business-value
+    attributes:
+      label: Business Value
+      description: Quale valore porta al business?
+      placeholder: "Questa feature permetterebbe di..., con impatto su..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Come sappiamo quando è completata?
+      placeholder: |
+        - [ ] Criterio 1
+        - [ ] Criterio 2
+        - [ ] Criterio 3
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contesto addizionale
+      description: Mockup, riferimenti, esempi, etc.

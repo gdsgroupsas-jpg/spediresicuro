@@ -1,8 +1,8 @@
 # 📦 SpedireSicuro.it - Logistics Operating System
 
-> **Version:** 0.3.1 (Logistics OS Architecture)  
-> **Last Updated:** January 2, 2026  
-> **Status:** 🟡 In Development / Testing | 🔒 Security P0 Cleared  
+> **Version:** 0.8.0 (Feature Complete - Pre-GTM)
+> **Last Updated:** January 20, 2026
+> **Status:** 🟢 Feature Complete | 🔒 Security Hardened | 📊 9.2/10 Quality Score
 > **Next Major:** 1.0.0 (Go To Market Release)
 
 ---
@@ -297,16 +297,13 @@ Nessuna etichetta viene generata senza credito disponibile nel wallet.
 
 ```typescript
 // ✅ CORRETTO
-await supabaseAdmin.rpc("decrement_wallet_balance", {
+await supabaseAdmin.rpc('decrement_wallet_balance', {
   p_user_id: userId,
   p_amount: cost,
 });
 
 // ❌ VIETATO ASSOLUTAMENTE
-await supabaseAdmin
-  .from("users")
-  .update({ wallet_balance: newBalance })
-  .eq("id", userId);
+await supabaseAdmin.from('users').update({ wallet_balance: newBalance }).eq('id', userId);
 ```
 
 **Funzioni Atomiche Disponibili:**
@@ -329,7 +326,7 @@ await supabaseAdmin
 ```typescript
 // Genera idempotency key
 const idempotencyKey = crypto
-  .createHash("sha256")
+  .createHash('sha256')
   .update(
     JSON.stringify({
       userId: targetId,
@@ -338,17 +335,14 @@ const idempotencyKey = crypto
       timestamp: Math.floor(Date.now() / 5000),
     })
   )
-  .digest("hex");
+  .digest('hex');
 
 // Acquire lock PRIMA di debit
-const { data: lockResult } = await supabaseAdmin.rpc(
-  "acquire_idempotency_lock",
-  {
-    p_idempotency_key: idempotencyKey,
-    p_user_id: targetId,
-    p_ttl_minutes: 30,
-  }
-);
+const { data: lockResult } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
+  p_idempotency_key: idempotencyKey,
+  p_user_id: targetId,
+  p_ttl_minutes: 30,
+});
 ```
 
 **Tabella:** `idempotency_locks` (migration `044_idempotency_locks.sql`)
@@ -526,8 +520,8 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 const price = 8.5; // Hardcoded nel frontend
 
 // ✅ CORRETTO
-const { data: price } = await fetch("/api/shipments/estimate", {
-  method: "POST",
+const { data: price } = await fetch('/api/shipments/estimate', {
+  method: 'POST',
   body: JSON.stringify(shipmentData),
 });
 ```
@@ -1002,7 +996,6 @@ _Next Major: 1.0.0 (Go To Market Release)_
 ### 🐛 Fix Critici (2 Gennaio 2026)
 
 1. **FIX CRITICO: Cancellazione Spedisci.Online per Poste Italiane**:
-
    - ✅ **BUG RISOLTO**: Il salvataggio di `shipment_id_external` era dentro un blocco `else` e NON veniva eseguito per "Poste Italiane"
    - ✅ Spostato salvataggio `shipment_id_external` FUORI dal blocco condizionale corriere
    - ✅ Ora `shipment_id_external` viene salvato per TUTTI i corrieri (Poste Italiane, GLS, BRT, UPS, ecc.)
@@ -1018,7 +1011,6 @@ _Next Major: 1.0.0 (Go To Market Release)_
 ### 🐛 Fix Critici (31 Dicembre 2025)
 
 1. **Fix Cancellazione Spedisci.Online**:
-
    - ✅ Salvataggio `shipmentId` (increment_id) durante creazione spedizione
    - ✅ Estrazione corretta `increment_id` dal tracking (numero finale invece di `parseInt()`)
    - ✅ Priorità: `shipment_id_external` > estrazione da tracking
