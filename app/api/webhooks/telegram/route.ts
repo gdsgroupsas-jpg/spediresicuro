@@ -116,7 +116,7 @@ async function handleHealth(chatId: number): Promise<string> {
       latency?: number;
     }> = [];
 
-    // Check API health - we're running in the API, so it's OK
+    // API is OK if we're executing this code
     services.push({
       name: 'API',
       status: 'ok',
@@ -143,7 +143,7 @@ async function handleHealth(chatId: number): Promise<string> {
       });
     }
 
-    // Telegram is obviously OK if we're here
+    // Telegram is OK if we received this message
     services.push({ name: 'Telegram Bot', status: 'ok' });
 
     return formatHealthStatus(services);
