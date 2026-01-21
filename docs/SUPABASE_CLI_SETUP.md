@@ -40,6 +40,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 ```
 
 **Dove trovare PROJECT_REF**:
+
 - Vai su Supabase Dashboard
 - Settings → General
 - Copia "Reference ID"

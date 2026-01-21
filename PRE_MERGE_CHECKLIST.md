@@ -9,21 +9,24 @@
 ## 🔍 Verifica Finale Codice
 
 ### File Modificati
+
 - [x] `middleware.ts` - Security hardening implementato
 - [x] Commento doppio matcher documentato
 - [x] Funzioni: `timingSafeEqual()`, `hasPathTraversal()`, `validateCronSecret()`
 
 ### Verifica Implementazione
+
 ```typescript
 // middleware.ts:77-97
 function validateCronSecret(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET_TOKEN || process.env.CRON_SECRET;
-  if (!cronSecret) return false;  // ✅ Fail-closed
+  if (!cronSecret) return false; // ✅ Fail-closed
   // ...
 }
 ```
 
 **Conferma:**
+
 - ✅ Fail-closed: deny se secret manca
 - ✅ Constant-time comparison implementato
 - ✅ Path traversal validation attiva
@@ -34,18 +37,21 @@ function validateCronSecret(request: NextRequest): boolean {
 ## 🌐 Verifica Environment Variables (Vercel)
 
 ### Preview Environment
+
 - [ ] Aprire Vercel Dashboard → Project → Settings → Environment Variables
 - [ ] Verificare presenza di `CRON_SECRET_TOKEN` (o `CRON_SECRET`)
 - [ ] Verificare che il valore sia corretto (non placeholder)
 - [ ] Verificare che sia diverso da `AUTOMATION_SERVICE_TOKEN`
 
 ### Production Environment
+
 - [ ] Aprire Vercel Dashboard → Project → Settings → Environment Variables
 - [ ] Verificare presenza di `CRON_SECRET_TOKEN` (o `CRON_SECRET`) in **Production**
 - [ ] Verificare che il valore sia corretto (non placeholder)
 - [ ] Verificare che sia diverso da `AUTOMATION_SERVICE_TOKEN`
 
 **Comando rapido verifica (se Vercel CLI disponibile):**
+
 ```bash
 # Lista env vars (non mostra valori per sicurezza)
 vercel env ls
@@ -64,6 +70,7 @@ curl -i https://spediresicuro.vercel.app/api/cron/automation-sync
 ```
 
 **Expected:**
+
 ```
 HTTP/1.1 401 Unauthorized
 Content-Type: application/json
@@ -82,6 +89,7 @@ curl -i -H "Authorization: Bearer wrong-token-12345" https://spediresicuro.verce
 ```
 
 **Expected:**
+
 ```
 HTTP/1.1 401 Unauthorized
 Content-Type: application/json
@@ -101,6 +109,7 @@ curl -i -H "Authorization: Bearer $CRON_SECRET_TOKEN" https://spediresicuro.verc
 ```
 
 **Expected:**
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -117,31 +126,37 @@ Content-Type: application/json
 ### Log da Monitorare
 
 #### 1. Tentativi Accesso Non Autorizzati (401)
+
 - [ ] Filtrare log per `401` su route `/api/cron/**`
 - [ ] Verificare pattern: `[Middleware] Unauthorized cron request`
 - [ ] Contare tentativi (se > 10/h, possibile attacco)
 
 **Query Vercel Logs:**
+
 ```
 status:401 AND path:/api/cron/*
 ```
 
 #### 2. Path Traversal Attempts (400)
+
 - [ ] Filtrare log per `400` con pattern sospetti
 - [ ] Verificare pattern: `[Middleware] Path traversal detected`
 - [ ] Contare tentativi (se > 5/h, possibile attacco)
 
 **Query Vercel Logs:**
+
 ```
 status:400 AND message:"Path traversal"
 ```
 
 #### 3. Errori Middleware
+
 - [ ] Filtrare log per errori middleware
 - [ ] Verificare che non ci siano errori runtime
 - [ ] Se errori presenti, investigare immediatamente
 
 **Query Vercel Logs:**
+
 ```
 level:error AND source:middleware
 ```
@@ -151,23 +166,27 @@ level:error AND source:middleware
 ## 📝 Checklist Pre-Merge
 
 ### Code Review
+
 - [x] Security Gate: GO ✅
 - [x] P0/P1: Chiusi ✅
 - [x] Commento doppio matcher aggiunto ✅
 - [x] Test documentati ✅
 
 ### Environment
+
 - [ ] `CRON_SECRET_TOKEN` presente in Vercel Preview
 - [ ] `CRON_SECRET_TOKEN` presente in Vercel Production
 - [ ] Valore corretto (non placeholder)
 - [ ] Diverso da `AUTOMATION_SERVICE_TOKEN`
 
 ### Pre-Deploy
+
 - [ ] Branch pulito (no file temporanei)
 - [ ] Commit message descrittivo
 - [ ] Documentazione aggiornata
 
 ### Post-Deploy (DOPO MERGE)
+
 - [ ] Test 1: CRON senza header → 401
 - [ ] Test 2: CRON con header sbagliato → 401
 - [ ] Test 3: CRON con header corretto → 200
@@ -178,6 +197,7 @@ level:error AND source:middleware
 ## 🎯 Task Backlog (Opzionale)
 
 ### Hardening Matcher (Non Bloccante)
+
 - [ ] Valutare regex case-insensitive nel matcher
 - [ ] Considerare normalizzazione pathname nel matcher
 - [ ] Rimuovere dipendenza implicita tra matcher (se possibile)
@@ -218,13 +238,3 @@ level:error AND source:middleware
 👉 **Annotare nel backlog l'hardening matcher (non bloccante).**
 
 **Status:** 🟢 **PRONTO PER MERGE**
-
-
-
-
-
-
-
-
-
-

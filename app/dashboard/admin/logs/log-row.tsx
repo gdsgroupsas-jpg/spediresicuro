@@ -1,29 +1,38 @@
-'use client'
+'use client';
 
 /**
  * Componente per una riga della tabella log
- * 
+ *
  * Mostra i dettagli di un singolo evento diagnostico con supporto
  * per espandere/collassare il JSON completo del context
  */
 
-import { useState } from 'react'
-import type { DiagnosticEvent } from '@/types/diagnostics'
-import { AlertCircle, AlertTriangle, Info, Activity, User, XCircle, Link as LinkIcon, ChevronDown } from 'lucide-react'
+import { useState } from 'react';
+import type { DiagnosticEvent } from '@/types/diagnostics';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  Activity,
+  User,
+  XCircle,
+  Link as LinkIcon,
+  ChevronDown,
+} from 'lucide-react';
 
 /**
  * Formatta una data ISO in formato 'dd/MM HH:mm'
  */
 function formatDate(dateString: string): string {
   try {
-    const date = new Date(dateString)
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${day}/${month} ${hours}:${minutes}`
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month} ${hours}:${minutes}`;
   } catch {
-    return dateString
+    return dateString;
   }
 }
 
@@ -32,19 +41,19 @@ function formatDate(dateString: string): string {
  * Se non trova context.message, ritorna 'Dettagli'
  */
 function extractMessage(context: any): string {
-  if (!context) return 'Dettagli'
-  
+  if (!context) return 'Dettagli';
+
   // Cerca prima context.message
-  if (context.message) return String(context.message)
-  
+  if (context.message) return String(context.message);
+
   // Fallback ad altri campi comuni
-  if (typeof context === 'string') return context
-  if (context.error) return String(context.error)
-  if (context.msg) return String(context.msg)
-  if (context.description) return String(context.description)
-  
+  if (typeof context === 'string') return context;
+  if (context.error) return String(context.error);
+  if (context.msg) return String(context.msg);
+  if (context.description) return String(context.description);
+
   // Se non c'è un messaggio esplicito, mostra 'Dettagli'
-  return 'Dettagli'
+  return 'Dettagli';
 }
 
 /**
@@ -54,14 +63,14 @@ function getSeverityBadgeColor(severity: DiagnosticEvent['severity']): string {
   switch (severity) {
     case 'critical':
     case 'high':
-      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800'
+      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
     case 'medium':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800'
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800';
     case 'low':
-      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
     case 'info':
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
   }
 }
 
@@ -71,17 +80,17 @@ function getSeverityBadgeColor(severity: DiagnosticEvent['severity']): string {
 function getTypeIcon(type: DiagnosticEvent['type']) {
   switch (type) {
     case 'error':
-      return <XCircle className="w-4 h-4" />
+      return <XCircle className="w-4 h-4" />;
     case 'warning':
-      return <AlertTriangle className="w-4 h-4" />
+      return <AlertTriangle className="w-4 h-4" />;
     case 'info':
-      return <Info className="w-4 h-4" />
+      return <Info className="w-4 h-4" />;
     case 'performance':
-      return <Activity className="w-4 h-4" />
+      return <Activity className="w-4 h-4" />;
     case 'user_action':
-      return <User className="w-4 h-4" />
+      return <User className="w-4 h-4" />;
     default:
-      return <Info className="w-4 h-4" />
+      return <Info className="w-4 h-4" />;
   }
 }
 
@@ -95,7 +104,7 @@ function SeverityBadge({ severity }: { severity: DiagnosticEvent['severity'] }) 
     >
       {severity.toUpperCase()}
     </span>
-  )
+  );
 }
 
 /**
@@ -108,22 +117,22 @@ function TypeBadge({ type }: { type: DiagnosticEvent['type'] }) {
     info: 'Info',
     performance: 'Performance',
     user_action: 'Azione Utente',
-  }
+  };
 
   return (
     <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
       {getTypeIcon(type)}
       {typeLabels[type]}
     </span>
-  )
+  );
 }
 
 interface LogRowProps {
-  log: DiagnosticEvent
+  log: DiagnosticEvent;
 }
 
 export function LogRow({ log }: LogRowProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <>
@@ -149,9 +158,7 @@ export function LogRow({ log }: LogRowProps) {
         {/* Messaggio */}
         <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 max-w-md">
           <div className="flex flex-col gap-1">
-            <span className="break-words">
-              {extractMessage(log.context)}
-            </span>
+            <span className="break-words">{extractMessage(log.context)}</span>
             {log.correlation_id && (
               <span className="inline-flex items-center gap-1 text-xs font-mono text-gray-500 dark:text-gray-400">
                 <LinkIcon className="w-3 h-3" />
@@ -166,7 +173,7 @@ export function LogRow({ log }: LogRowProps) {
           {log.ip_address || '-'}
         </td>
       </tr>
-      
+
       {/* Riga espansa con dettagli JSON */}
       {isExpanded && (
         <tr className="bg-gray-50 dark:bg-slate-900/50">
@@ -184,5 +191,5 @@ export function LogRow({ log }: LogRowProps) {
         </tr>
       )}
     </>
-  )
+  );
 }

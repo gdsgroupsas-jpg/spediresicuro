@@ -20,13 +20,13 @@ Questo documento descrive l'architettura di sicurezza di SpedireSicuro, inclusi 
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Multi-Tenant Enforcement | docs/8-SECURITY/OVERVIEW.md | [Multi-Tenant](#multi-tenant-enforcement) |
-| RLS Pattern | docs/8-SECURITY/OVERVIEW.md | [RLS](#rls-row-level-security-pattern) |
-| Acting Context | docs/8-SECURITY/AUTHORIZATION.md | [Acting Context](../8-SECURITY/AUTHORIZATION.md) |
-| Audit Logging | docs/8-SECURITY/AUDIT_LOGGING.md | [Audit](../8-SECURITY/AUDIT_LOGGING.md) |
-| Data Protection | docs/8-SECURITY/DATA_PROTECTION.md | [Data Protection](../8-SECURITY/DATA_PROTECTION.md) |
+| Sezione                  | Pagina                             | Link                                                |
+| ------------------------ | ---------------------------------- | --------------------------------------------------- |
+| Multi-Tenant Enforcement | docs/8-SECURITY/OVERVIEW.md        | [Multi-Tenant](#multi-tenant-enforcement)           |
+| RLS Pattern              | docs/8-SECURITY/OVERVIEW.md        | [RLS](#rls-row-level-security-pattern)              |
+| Acting Context           | docs/8-SECURITY/AUTHORIZATION.md   | [Acting Context](../8-SECURITY/AUTHORIZATION.md)    |
+| Audit Logging            | docs/8-SECURITY/AUDIT_LOGGING.md   | [Audit](../8-SECURITY/AUDIT_LOGGING.md)             |
+| Data Protection          | docs/8-SECURITY/DATA_PROTECTION.md | [Data Protection](../8-SECURITY/DATA_PROTECTION.md) |
 
 ## Content
 
@@ -69,13 +69,10 @@ FOR SELECT USING (
 
 ```typescript
 // ❌ DANGEROUS - No tenant filter
-const { data } = await supabase.from("shipments").select("*");
+const { data } = await supabase.from('shipments').select('*');
 
 // ✅ SAFE - Explicit tenant binding
-const { data } = await supabase
-  .from("shipments")
-  .select("*")
-  .eq("user_id", context.target.id); // Acting Context aware
+const { data } = await supabase.from('shipments').select('*').eq('user_id', context.target.id); // Acting Context aware
 ```
 
 #### Core Tables Status
@@ -97,16 +94,19 @@ Vedi [Database Architecture](../2-ARCHITECTURE/DATABASE.md) per dettagli tecnici
 ### Security Boundaries
 
 #### Client-Side (Browser)
+
 - **Can access:** Public Supabase anon key (RLS enforced)
 - **Cannot access:** Service role key, API secrets, encrypted passwords
 - **Pattern:** Use Server Actions for sensitive operations
 
 #### Server-Side (Node.js)
+
 - **Can access:** All secrets via environment variables
 - **Can bypass:** RLS via `supabaseAdmin`
 - **Pattern:** Validate input, enforce business rules
 
 #### Database (PostgreSQL)
+
 - **Enforces:** RLS policies, CHECK constraints, foreign keys
 - **Trusted:** Only server-side code (service role)
 - **Pattern:** Defense in depth, never trust client
@@ -120,16 +120,19 @@ Vedi [Database Architecture](../2-ARCHITECTURE/DATABASE.md) per dettagli tecnici
 **Root Cause:** Bypass RLS or missing `WHERE user_id` filter
 
 **Investigation:**
+
 1. Check recent code changes in affected API/action
 2. Verify RLS policy exists: `SELECT * FROM pg_policies WHERE tablename='<table>'`
 3. Check query pattern: Must use `context.target.id`
 
 **Fix:**
+
 1. Add explicit filter: `.eq('user_id', context.target.id)`
 2. Verify policy: Re-run migration if missing
 3. Test with different users (normal + admin + impersonation)
 
 **Prevention:**
+
 - Code review checklist: All tenant queries filtered
 - Add integration test: User A cannot see User B data
 
@@ -138,16 +141,19 @@ Vedi [Database Architecture](../2-ARCHITECTURE/DATABASE.md) per dettagli tecnici
 **Root Cause:** Missing SUPERADMIN check or cookie tampering
 
 **Investigation:**
+
 1. Check `middleware.ts`: Cookie signature validation
 2. Verify actor role: `SELECT role, account_type FROM users WHERE id=<actor_id>`
 3. Audit log: `SELECT * FROM audit_logs WHERE action LIKE 'impersonation_%' ORDER BY created_at DESC LIMIT 50`
 
 **Fix:**
+
 1. Validate cookie signature (HMAC with `NEXTAUTH_SECRET`)
 2. Enforce role check: `isSuperAdmin(context)` before allowing
 3. Rotate `NEXTAUTH_SECRET` if compromise suspected
 
 **Prevention:**
+
 - Cookie must be HTTP-only, Secure, SameSite=Lax
 - TTL enforcement (default 3600s)
 - Rate limit impersonation start endpoint
@@ -199,13 +205,10 @@ import { requireSafeAuth } from '@/lib/safe-auth';
 
 export async function getMyShipments() {
   const context = await requireSafeAuth();
-  
+
   // ✅ SAFE: Usa context.target.id
-  const { data } = await supabase
-    .from('shipments')
-    .select('*')
-    .eq('user_id', context.target.id);
-  
+  const { data } = await supabase.from('shipments').select('*').eq('user_id', context.target.id);
+
   return data;
 }
 ```
@@ -214,12 +217,12 @@ export async function getMyShipments() {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| User A vede dati di User B | Verifica RLS policy e filtri espliciti `user_id` |
-| Impersonation non funziona | Verifica cookie signature e ruolo SUPERADMIN |
+| Issue                      | Soluzione                                             |
+| -------------------------- | ----------------------------------------------------- |
+| User A vede dati di User B | Verifica RLS policy e filtri espliciti `user_id`      |
+| Impersonation non funziona | Verifica cookie signature e ruolo SUPERADMIN          |
 | RLS blocca query legittime | Verifica che `auth.uid()` sia impostato correttamente |
-| Audit log non scritto | Verifica che `writeAuditLog()` sia chiamato |
+| Audit log non scritto      | Verifica che `writeAuditLog()` sia chiamato           |
 
 ---
 
@@ -236,11 +239,12 @@ export async function getMyShipments() {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

@@ -1,9 +1,11 @@
 # UI Components Overview - SpedireSicuro
 
 ## Overview
+
 Questa documentazione descrive il sistema componenti UI di SpedireSicuro, basato su Shadcn/UI e componenti custom.
 
 ## Target Audience
+
 - [x] Developers
 - [ ] DevOps
 - [ ] Business/PM
@@ -11,23 +13,26 @@ Questa documentazione descrive il sistema componenti UI di SpedireSicuro, basato
 - [x] Nuovi team member
 
 ## Prerequisites
+
 - React hooks familiarity
 - Tailwind CSS basics
 - TypeScript basics
 
 ## Quick Reference
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Shadcn/UI | docs/4-UI-COMPONENTS/SHADCN_UI.md | [Shadcn/UI](#shadcnui-integration) |
-| Componenti Custom | docs/4-UI-COMPONENTS/CUSTOM_COMPONENTS.md | [Custom](#componenti-custom) |
-| Dashboard | docs/4-UI-COMPONENTS/DASHBOARDS.md | [Dashboard](#dashboard-patterns) |
-| Forms | docs/4-UI-COMPONENTS/FORMS.md | [Forms](#form-patterns) |
+
+| Sezione           | Pagina                                    | Link                               |
+| ----------------- | ----------------------------------------- | ---------------------------------- |
+| Shadcn/UI         | docs/4-UI-COMPONENTS/SHADCN_UI.md         | [Shadcn/UI](#shadcnui-integration) |
+| Componenti Custom | docs/4-UI-COMPONENTS/CUSTOM_COMPONENTS.md | [Custom](#componenti-custom)       |
+| Dashboard         | docs/4-UI-COMPONENTS/DASHBOARDS.md        | [Dashboard](#dashboard-patterns)   |
+| Forms             | docs/4-UI-COMPONENTS/FORMS.md             | [Forms](#form-patterns)            |
 
 ## Content
 
 ### Sistema Componenti
 
 **Struttura Cartelle:**
+
 ```
 components/
 ├── ui/                        # Shadcn/UI base components
@@ -80,6 +85,7 @@ components/
 ### Shadcn/UI Integration
 
 **Setup:**
+
 - Componenti base in `components/ui/`
 - Basati su Radix UI (accessibilità)
 - Styled con Tailwind CSS
@@ -88,6 +94,7 @@ components/
 **Componenti Disponibili:**
 
 #### Button (`components/ui/button.tsx`)
+
 ```typescript
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
@@ -102,6 +109,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 ```
 
 **Variants:**
+
 - `default`: Gradient giallo/arancione (brand colors)
 - `destructive`: Rosso per azioni distruttive
 - `outline`: Bordo grigio
@@ -110,6 +118,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 - `link`: Link stile (underline)
 
 #### Dialog (`components/ui/dialog.tsx`)
+
 ```typescript
 <Dialog open={isOpen} onOpenChange={setIsOpen}>
   <DialogContent className="sm:max-w-[425px]">
@@ -128,6 +137,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 ```
 
 #### Input (`components/ui/input.tsx`)
+
 ```typescript
 <Input
   type="text"
@@ -147,6 +157,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 ```
 
 #### Select (`components/ui/select.tsx`)
+
 ```typescript
 <Select onValueChange={handleSelect}>
   <SelectTrigger>
@@ -160,6 +171,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 ```
 
 #### Card (`components/ui/card.tsx`)
+
 ```typescript
 <Card>
   <CardHeader>
@@ -178,6 +190,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 ### Componenti Custom
 
 #### Dashboard Navigation (`components/dashboard-nav.tsx`)
+
 Navigazione premium per dashboard con breadcrumbs e quick actions.
 
 ```typescript
@@ -192,12 +205,14 @@ Navigazione premium per dashboard con breadcrumbs e quick actions.
 ```
 
 **Features:**
+
 - Breadcrumbs automatici da pathname
 - Sticky navbar con glassmorphism
 - Back button con animazioni
 - Actions slot per pulsanti custom
 
 #### Intelligent Quote Comparator (`components/shipments/intelligent-quote-comparator.tsx`)
+
 Componente preventivatore intelligente che compara più corrieri.
 
 ```typescript
@@ -226,6 +241,7 @@ Componente preventivatore intelligente che compara più corrieri.
 ```
 
 **Features:**
+
 - Attivazione automatica quando dati completi
 - DB-first con fallback API
 - Filtro destinazione (Italia vs internazionale)
@@ -234,6 +250,7 @@ Componente preventivatore intelligente che compara più corrieri.
 - Progresso globale + stato per singolo corriere
 
 #### OCR Upload (`components/ocr/ocr-upload.tsx`)
+
 Componente per upload immagini con estrazione dati OCR.
 
 ```typescript
@@ -256,6 +273,7 @@ Componente per upload immagini con estrazione dati OCR.
 ### Pattern Riutilizzabili
 
 #### Smart Input Pattern
+
 Input con validazione in tempo reale e feedback visivo.
 
 ```typescript
@@ -319,6 +337,7 @@ function SmartInput({
 ```
 
 #### Card Pattern
+
 Container con bordo arrotondato e shadow elegante.
 
 ```typescript
@@ -349,6 +368,7 @@ function SmartCard({
 ```
 
 #### Progress Bar Pattern
+
 Indicatore di progresso visuale.
 
 ```typescript
@@ -367,29 +387,35 @@ function ProgressBar({ percentage }: { percentage: number }) {
 ### Componenti Principali
 
 #### Dashboard Components
+
 - `DashboardNav` - Navigazione con breadcrumbs
 - `DashboardSidebar` - Sidebar con menu
 - `DashboardMobileNav` - Navigation mobile
 
 #### Shipment Components
+
 - `IntelligentQuoteComparator` - Preventivatore multi-corriere
 - `ContractComparison` - Confronto contratti
 - `CourierQuoteCard` - Card singolo corriere
 
 #### Admin Components
+
 - `AiFeaturesCard` - Gestione features AI per utenti
 - `PlatformFeeDisplay` - Visualizzazione fee piattaforma
 - `CurrentFeeDisplay` - Fee attuale
 
 #### Integration Components
+
 - `SpedisciOnlineWizard` - Wizard configurazione Spedisci.Online
 - `PosteWizard` - Wizard configurazione Poste Italiane
 - `UniversalWidgetCard` - Card widget generico
 
 #### Wallet Components
+
 - `RechargeWalletDialog` - Dialog ricarica wallet
 
 #### List Components
+
 - `SupplierPriceListTable` - Tabella listini fornitori
 - `CreateCustomerPriceListDialog` - Dialog creazione listino cliente
 - `SyncSpedisciOnlineDialog` - Dialog sincronizzazione
@@ -397,6 +423,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
 ### Styling
 
 **Tailwind CSS Colors (Brand):**
+
 ```javascript
 colors: {
   brand: {
@@ -416,36 +443,39 @@ colors: {
 ```
 
 **Utility Function (`cn`):**
+
 ```typescript
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 ```
 
 **Common Patterns:**
+
 ```typescript
 // Gradient backgrounds
-className="bg-gradient-to-r from-[#FFD700] to-[#FF9500]"
+className = 'bg-gradient-to-r from-[#FFD700] to-[#FF9500]';
 
 // Shadows
-className="shadow-sm hover:shadow-md"
+className = 'shadow-sm hover:shadow-md';
 
 // Transitions
-className="transition-all duration-200"
+className = 'transition-all duration-200';
 
 // Responsive
-className="px-4 sm:px-6 lg:px-8"
+className = 'px-4 sm:px-6 lg:px-8';
 
 // Focus states
-className="focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700]"
+className = 'focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700]';
 ```
 
 ## Examples
 
 ### Esempio Dashboard Completa
+
 ```typescript
 import DashboardNav from "@/components/dashboard-nav";
 import { Button } from "@/components/ui/button";
@@ -505,6 +535,7 @@ export default function DashboardPage() {
 ```
 
 ### Esempio Form con Smart Input
+
 ```typescript
 import { useState } from "react";
 import { SmartInput, SmartCard } from "@/components";
@@ -552,27 +583,28 @@ export function ShipmentForm() {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Icon non appare | Verifica import corretto da lucide-react |
-| Styling Tailwind non funziona | Verifica `tailwind.config.js` content paths |
-| Dialog non si apre | Verifica `open` prop state |
-| Form non invia dati | Verifica `onSubmit` handler e `type="submit"` sul bottone |
-| Componenti non renderizzano | Verifica `"use client"` directive per componenti interattivi |
+| Issue                         | Soluzione                                                    |
+| ----------------------------- | ------------------------------------------------------------ |
+| Icon non appare               | Verifica import corretto da lucide-react                     |
+| Styling Tailwind non funziona | Verifica `tailwind.config.js` content paths                  |
+| Dialog non si apre            | Verifica `open` prop state                                   |
+| Form non invia dati           | Verifica `onSubmit` handler e `type="submit"` sul bottone    |
+| Componenti non renderizzano   | Verifica `"use client"` directive per componenti interattivi |
 
 ## Related Documentation
+
 - [Frontend Architecture](../2-ARCHITECTURE/FRONTEND.md) - Next.js App Router patterns
 - [Backend Architecture](../2-ARCHITECTURE/BACKEND.md) - API routes e Server Actions
 - [Workflows](WORKFLOWS.md) - User flows completi
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
 
-*Last Updated: 2026-01-12*
-*Status: 🟢 Active*
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_
+_Status: 🟢 Active_
+_Maintainer: Dev Team_

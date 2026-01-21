@@ -40,7 +40,7 @@ if (!encryptionKey) missing.push('ENCRYPTION_KEY');
 
 if (missing.length > 0) {
   console.error('ERRORE: Variabili mancanti in .env.local:');
-  missing.forEach(v => console.error('  - ' + v));
+  missing.forEach((v) => console.error('  - ' + v));
   process.exit(1);
 }
 
@@ -92,7 +92,3 @@ console.log('  - AUTOMATION_SERVICE_TOKEN');
 console.log('  - ENCRYPTION_KEY');
 console.log('\nIMPORTANTE: ENCRYPTION_KEY e AUTOMATION_SERVICE_TOKEN');
 console.log('sono identici a quelli in .env.local (come richiesto)');
-
-
-
-

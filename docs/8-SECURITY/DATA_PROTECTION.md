@@ -20,11 +20,11 @@ Questo documento descrive le misure di protezione dati di SpedireSicuro, inclusi
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Encryption | docs/8-SECURITY/DATA_PROTECTION.md | [Encryption](#encryption) |
+| Sezione                 | Pagina                             | Link                                                      |
+| ----------------------- | ---------------------------------- | --------------------------------------------------------- |
+| Encryption              | docs/8-SECURITY/DATA_PROTECTION.md | [Encryption](#encryption)                                 |
 | Courier Config Security | docs/8-SECURITY/DATA_PROTECTION.md | [Courier Configs](#multi-account-courier-config-security) |
-| Environment Variables | docs/8-SECURITY/DATA_PROTECTION.md | [Env Vars](#environment-variables-security-critical) |
+| Environment Variables   | docs/8-SECURITY/DATA_PROTECTION.md | [Env Vars](#environment-variables-security-critical)      |
 
 ## Content
 
@@ -35,11 +35,13 @@ Questo documento descrive le misure di protezione dati di SpedireSicuro, inclusi
 Le credenziali corriere sono salvate criptate in `courier_configs.api_key` e `courier_configs.api_secret`.
 
 **Encryption Key:**
+
 - Variabile ambiente: `ENCRYPTION_KEY`
 - **Hardening:** Sistema lancia Error in production se `ENCRYPTION_KEY` è mancante (Fail-Closed)
 - Accessibile solo server-side via `supabaseAdmin`
 
 **Pattern:**
+
 ```typescript
 import { encryptCredential, decryptCredential } from '@/lib/security/encryption';
 
@@ -55,6 +57,7 @@ const decrypted = decryptCredential(encrypted);
 Le password utente sono hashate con bcrypt prima di essere salvate in `users.password`.
 
 **Pattern:**
+
 ```typescript
 import { hashPassword, verifyPassword } from '@/lib/auth/password';
 
@@ -140,10 +143,7 @@ import { encryptCredential, decryptCredential } from '@/lib/security/encryption'
 
 // Salva credenziale criptata
 const encrypted = encryptCredential(apiKey);
-await supabaseAdmin
-  .from('courier_configs')
-  .update({ api_key: encrypted })
-  .eq('id', configId);
+await supabaseAdmin.from('courier_configs').update({ api_key: encrypted }).eq('id', configId);
 
 // Leggi e decripta (solo server-side)
 const { data: config } = await supabaseAdmin
@@ -184,11 +184,11 @@ async function validateConfigAccess(configId: string, userId: string, assignedCo
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| ENCRYPTION_KEY mancante | Configura variabile ambiente in production |
-| Credenziali non decriptate | Verifica che `ENCRYPTION_KEY` sia corretta |
-| Accesso non autorizzato a config | Verifica validazione accesso in factory |
+| Issue                            | Soluzione                                  |
+| -------------------------------- | ------------------------------------------ |
+| ENCRYPTION_KEY mancante          | Configura variabile ambiente in production |
+| Credenziali non decriptate       | Verifica che `ENCRYPTION_KEY` sia corretta |
+| Accesso non autorizzato a config | Verifica validazione accesso in factory    |
 
 ---
 
@@ -202,12 +202,13 @@ async function validateConfigAccess(configId: string, userId: string, assignedCo
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-17 | 1.1.0 | Rimosso fallback legacy created_by (P1 fix), aggiunto assigned_config_id | AI Agent |
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes                                                                  | Author   |
+| ---------- | ------- | ------------------------------------------------------------------------ | -------- |
+| 2026-01-17 | 1.1.0   | Rimosso fallback legacy created_by (P1 fix), aggiunto assigned_config_id | AI Agent |
+| 2026-01-12 | 1.0.0   | Initial version                                                          | AI Agent |
 
 ---
-*Last Updated: 2026-01-17*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-17_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

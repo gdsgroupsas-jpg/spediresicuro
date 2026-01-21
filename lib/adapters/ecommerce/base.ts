@@ -175,16 +175,14 @@ export abstract class EcommerceAdapter {
    */
   protected handleError(error: any, context: string): never {
     console.error(`[${this.platform}] Error in ${context}:`, error);
-    throw new Error(
-      `Errore ${this.platform} - ${context}: ${error.message || 'Unknown error'}`
-    );
+    throw new Error(`Errore ${this.platform} - ${context}: ${error.message || 'Unknown error'}`);
   }
 
   /**
    * Helper: Rate limiting
    */
   protected async rateLimit(delayMs: number = 500): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, delayMs));
+    return new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
   /**
@@ -205,7 +203,7 @@ export abstract class EcommerceAdapter {
         if (attempt < maxRetries - 1) {
           const delay = baseDelay * Math.pow(2, attempt);
           console.log(`[${this.platform}] Retry ${attempt + 1}/${maxRetries} after ${delay}ms`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }

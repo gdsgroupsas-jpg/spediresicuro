@@ -1,6 +1,6 @@
 /**
  * Unit Tests: mentor-worker.ts
- * 
+ *
  * Test REALI della logica del worker in isolamento.
  * Coverage:
  * - detectMentorIntent: pattern matching per domande tecniche
@@ -67,18 +67,18 @@ Il wallet è un sistema di credito prepagato che permette agli utenti di addebit
 describe('mentor-worker', () => {
   let logger: ILogger;
   let agentCache: any;
-  
+
   beforeEach(async () => {
     logger = new NullLogger();
     vi.clearAllMocks();
-    
+
     // Reset cache mock per ogni test
     const cacheModule = await import('@/lib/services/cache');
     agentCache = cacheModule.agentCache;
     vi.mocked(agentCache.getRAG).mockReturnValue(null); // Default: no cache
     vi.mocked(agentCache.setRAG).mockClear();
   });
-  
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -105,7 +105,7 @@ describe('mentor-worker', () => {
     });
 
     it('dovrebbe rilevare intent per keyword "architettura"', () => {
-      expect(detectMentorIntent('Dimmi dell\'architettura del sistema')).toBe(true);
+      expect(detectMentorIntent("Dimmi dell'architettura del sistema")).toBe(true);
     });
 
     it('NON dovrebbe rilevare intent per domande normali', () => {
@@ -121,7 +121,7 @@ describe('mentor-worker', () => {
     it('dovrebbe restituire risposta con sources quando trova documenti rilevanti', async () => {
       // Mock readFile per restituire contenuto documento
       vi.mocked(readFile).mockResolvedValueOnce(MOCK_DOC_CONTENT);
-      
+
       const state = createMockAgentState({
         messages: [new HumanMessage('Come funziona il wallet?')],
       });
@@ -138,7 +138,7 @@ describe('mentor-worker', () => {
     it('dovrebbe restituire clarification quando non trova documenti rilevanti', async () => {
       // Mock readFile per restituire contenuto non rilevante
       vi.mocked(readFile).mockResolvedValueOnce('Contenuto non rilevante');
-      
+
       const state = createMockAgentState({
         messages: [new HumanMessage('Domanda completamente non correlata?')],
       });
@@ -157,7 +157,7 @@ describe('mentor-worker', () => {
       // readDocument gestisce l'errore silenziosamente e restituisce null
       // quindi searchDocuments restituirà array vuoto
       vi.mocked(readFile).mockRejectedValue(new Error('File not found'));
-      
+
       const state = createMockAgentState({
         messages: [new HumanMessage('Come funziona il wallet?')],
       });
@@ -189,7 +189,7 @@ describe('mentor-worker', () => {
       vi.mocked(readFile)
         .mockResolvedValueOnce(MOCK_DOC_CONTENT)
         .mockResolvedValueOnce('# Architecture\n\nIl sistema usa Next.js e Supabase.');
-      
+
       const state = createMockAgentState({
         messages: [new HumanMessage('Come funziona il sistema?')],
       });
@@ -202,4 +202,3 @@ describe('mentor-worker', () => {
     });
   });
 });
-

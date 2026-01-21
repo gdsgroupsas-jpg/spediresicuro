@@ -1,13 +1,17 @@
 /**
  * Unit Tests: Invoice XML Generator (FatturaPA)
- * 
+ *
  * Testa generazione XML conforme formato FatturaPA 1.2.1
- * 
+ *
  * @module tests/unit/invoice-xml-generator.test
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateInvoiceXML, validateFatturaPAData, FatturaPAData } from '@/lib/invoices/xml-generator';
+import {
+  generateInvoiceXML,
+  validateFatturaPAData,
+  FatturaPAData,
+} from '@/lib/invoices/xml-generator';
 
 describe('Invoice XML Generator (FatturaPA)', () => {
   const baseInvoiceData: FatturaPAData = {
@@ -40,9 +44,9 @@ describe('Invoice XML Generator (FatturaPA)', () => {
       {
         description: 'Ricarica wallet',
         quantity: 1,
-        unitPrice: 100.00,
+        unitPrice: 100.0,
         vatRate: 22,
-        total: 100.00,
+        total: 100.0,
       },
     ],
     paymentMethod: 'Bonifico bancario',
@@ -65,13 +69,17 @@ describe('Invoice XML Generator (FatturaPA)', () => {
     it('dovrebbe rilevare Codice Fiscale mittente mancante', () => {
       const invalid = { ...baseInvoiceData, sender: { ...baseInvoiceData.sender, taxCode: '' } };
       const errors = validateFatturaPAData(invalid);
-      expect(errors).toContain('Codice Fiscale mittente obbligatorio e deve essere di 16 caratteri');
+      expect(errors).toContain(
+        'Codice Fiscale mittente obbligatorio e deve essere di 16 caratteri'
+      );
     });
 
     it('dovrebbe rilevare Codice SDI mancante', () => {
       const invalid = { ...baseInvoiceData, sdiCode: undefined, pec: undefined };
       const errors = validateFatturaPAData(invalid);
-      expect(errors).toContain('Codice SDI o PEC destinatario obbligatorio per fatturazione elettronica');
+      expect(errors).toContain(
+        'Codice SDI o PEC destinatario obbligatorio per fatturazione elettronica'
+      );
     });
 
     it('dovrebbe accettare PEC invece di SDI', () => {
@@ -97,7 +105,7 @@ describe('Invoice XML Generator (FatturaPA)', () => {
     it('dovrebbe includere tutti i dati obbligatori', async () => {
       const xml = await generateInvoiceXML(baseInvoiceData);
       const xmlString = xml.toString('utf-8');
-      
+
       expect(xmlString).toContain('FatturaElettronica');
       expect(xmlString).toContain('GDS Group SAS');
       expect(xmlString).toContain('Cliente Test SRL');
@@ -116,16 +124,16 @@ describe('Invoice XML Generator (FatturaPA)', () => {
           {
             description: 'Test & < > " \' caratteri speciali',
             quantity: 1,
-            unitPrice: 50.00,
+            unitPrice: 50.0,
             vatRate: 22,
-            total: 50.00,
+            total: 50.0,
           },
         ],
       };
-      
+
       const xml = await generateInvoiceXML(withSpecialChars);
       const xmlString = xml.toString('utf-8');
-      
+
       expect(xmlString).toContain('&amp;');
       expect(xmlString).toContain('&lt;');
       expect(xmlString).toContain('&gt;');
@@ -135,11 +143,13 @@ describe('Invoice XML Generator (FatturaPA)', () => {
     it('dovrebbe generare XML conforme FatturaPA 1.2.1', async () => {
       const xml = await generateInvoiceXML(baseInvoiceData);
       const xmlString = xml.toString('utf-8');
-      
+
       // Verifica namespace e versione
-      expect(xmlString).toContain('xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"');
+      expect(xmlString).toContain(
+        'xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"'
+      );
       expect(xmlString).toContain('versione="FPA12"');
-      
+
       // Verifica struttura base
       expect(xmlString).toContain('<FatturaElettronicaHeader>');
       expect(xmlString).toContain('<FatturaElettronicaBody>');
@@ -150,7 +160,7 @@ describe('Invoice XML Generator (FatturaPA)', () => {
 
     it('dovrebbe fallire con dati incompleti', async () => {
       const invalid = { ...baseInvoiceData, sender: { ...baseInvoiceData.sender, vatNumber: '' } };
-      
+
       await expect(generateInvoiceXML(invalid)).rejects.toThrow();
     });
 
@@ -161,23 +171,23 @@ describe('Invoice XML Generator (FatturaPA)', () => {
           {
             description: 'Ricarica wallet - Gennaio',
             quantity: 1,
-            unitPrice: 100.00,
+            unitPrice: 100.0,
             vatRate: 22,
-            total: 100.00,
+            total: 100.0,
           },
           {
             description: 'Ricarica wallet - Febbraio',
             quantity: 1,
-            unitPrice: 150.00,
+            unitPrice: 150.0,
             vatRate: 22,
-            total: 150.00,
+            total: 150.0,
           },
         ],
       };
-      
+
       const xml = await generateInvoiceXML(multiItem);
       const xmlString = xml.toString('utf-8');
-      
+
       expect(xmlString).toContain('<NumeroLinea>1</NumeroLinea>');
       expect(xmlString).toContain('<NumeroLinea>2</NumeroLinea>');
       expect(xmlString).toContain('250.00'); // Totale imponibile
@@ -186,7 +196,7 @@ describe('Invoice XML Generator (FatturaPA)', () => {
     it('dovrebbe calcolare correttamente IVA e totali', async () => {
       const xml = await generateInvoiceXML(baseInvoiceData);
       const xmlString = xml.toString('utf-8');
-      
+
       // Imponibile: 100.00
       expect(xmlString).toContain('<ImponibileImporto>100.00</ImponibileImporto>');
       // IVA 22%: 22.00

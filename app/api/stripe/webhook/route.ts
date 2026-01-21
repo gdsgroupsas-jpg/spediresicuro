@@ -14,14 +14,10 @@
  * - payment_intent.payment_failed → Notifica errore
  */
 
-import { supabaseAdmin } from "@/lib/db/client";
-import {
-  getPaymentTransaction,
-  stripe,
-  updatePaymentTransaction,
-} from "@/lib/payments/stripe";
-import { withConcurrencyRetry } from "@/lib/wallet/retry";
-import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from '@/lib/db/client';
+import { getPaymentTransaction, stripe, updatePaymentTransaction } from '@/lib/payments/stripe';
+import { withConcurrencyRetry } from '@/lib/wallet/retry';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * POST /api/stripe/webhook
@@ -30,35 +26,25 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
-  const signature = request.headers.get("stripe-signature");
+  const signature = request.headers.get('stripe-signature');
 
   if (!signature) {
-    console.error("❌ [STRIPE WEBHOOK] Missing signature");
-    return NextResponse.json(
-      { error: "Missing stripe-signature header" },
-      { status: 400 }
-    );
+    console.error('❌ [STRIPE WEBHOOK] Missing signature');
+    return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
   }
 
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error("❌ [STRIPE WEBHOOK] Missing STRIPE_WEBHOOK_SECRET");
-    return NextResponse.json(
-      { error: "Webhook secret not configured" },
-      { status: 500 }
-    );
+    console.error('❌ [STRIPE WEBHOOK] Missing STRIPE_WEBHOOK_SECRET');
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
   }
 
   let event;
   try {
     // Verifica firma webhook (CRITICAL per sicurezza)
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err: any) {
-    console.error("❌ [STRIPE WEBHOOK] Invalid signature:", err.message);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    console.error('❌ [STRIPE WEBHOOK] Invalid signature:', err.message);
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
   console.log(`📥 [STRIPE WEBHOOK] Received event: ${event.type}`);
@@ -66,15 +52,15 @@ export async function POST(request: NextRequest) {
   try {
     // Gestisci eventi
     switch (event.type) {
-      case "checkout.session.completed": {
+      case 'checkout.session.completed': {
         await handleCheckoutSessionCompleted(event.data.object as any);
         break;
       }
-      case "payment_intent.succeeded": {
+      case 'payment_intent.succeeded': {
         await handlePaymentIntentSucceeded(event.data.object as any);
         break;
       }
-      case "payment_intent.payment_failed": {
+      case 'payment_intent.payment_failed': {
         await handlePaymentIntentFailed(event.data.object as any);
         break;
       }
@@ -84,11 +70,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error("❌ [STRIPE WEBHOOK] Error processing event:", error);
+    console.error('❌ [STRIPE WEBHOOK] Error processing event:', error);
     // Ritorna 200 per evitare retry infiniti di Stripe
     // Loggiamo l'errore per investigazione manuale
     return NextResponse.json(
-      { error: "Error processing webhook", details: error.message },
+      { error: 'Error processing webhook', details: error.message },
       { status: 200 }
     );
   }
@@ -103,14 +89,14 @@ async function handleCheckoutSessionCompleted(session: any) {
   const transactionId = session.client_reference_id;
 
   if (!transactionId) {
-    console.error("❌ [STRIPE WEBHOOK] Missing client_reference_id in session");
+    console.error('❌ [STRIPE WEBHOOK] Missing client_reference_id in session');
     return;
   }
 
   // Log strutturato senza PII
   console.log(
     JSON.stringify({
-      event: "stripe_checkout_completed",
+      event: 'stripe_checkout_completed',
       transaction_id: transactionId,
       timestamp: new Date().toISOString(),
     })
@@ -120,7 +106,7 @@ async function handleCheckoutSessionCompleted(session: any) {
   const tx = await getPaymentTransaction(transactionId);
 
   // 2. Idempotency: verifica se già processato
-  if (tx.status !== "pending") {
+  if (tx.status !== 'pending') {
     console.log(
       `ℹ️ [STRIPE WEBHOOK] Transaction ${transactionId} already processed (status: ${tx.status})`
     );
@@ -128,16 +114,16 @@ async function handleCheckoutSessionCompleted(session: any) {
   }
 
   // 3. Verifica che il pagamento sia stato completato
-  if (session.payment_status !== "paid") {
+  if (session.payment_status !== 'paid') {
     console.warn(
       `⚠️ [STRIPE WEBHOOK] Session ${session.id} not paid (status: ${session.payment_status})`
     );
     await updatePaymentTransaction(transactionId, {
-      status: "failed",
+      status: 'failed',
       provider_tx_id: session.payment_intent,
       metadata: {
         payment_status: session.payment_status,
-        reason: "Payment not completed",
+        reason: 'Payment not completed',
       },
     });
     return;
@@ -145,15 +131,13 @@ async function handleCheckoutSessionCompleted(session: any) {
 
   // 4. Accredita wallet usando RPC (con retry per lock contention)
   const userId = session.metadata?.user_id || tx.user_id;
-  const amountCredit = parseFloat(
-    session.metadata?.amount_credit || tx.amount_credit.toString()
-  );
+  const amountCredit = parseFloat(session.metadata?.amount_credit || tx.amount_credit.toString());
 
   // Log strutturato con userId hashato (GDPR compliance)
-  const userIdHash = userId ? userId.substring(0, 8) + "***" : "unknown";
+  const userIdHash = userId ? userId.substring(0, 8) + '***' : 'unknown';
   console.log(
     JSON.stringify({
-      event: "stripe_wallet_credit",
+      event: 'stripe_wallet_credit',
       user_id_hash: userIdHash,
       amount: amountCredit,
       transaction_id: transactionId,
@@ -163,20 +147,20 @@ async function handleCheckoutSessionCompleted(session: any) {
 
   const { data: txId, error: creditError } = await withConcurrencyRetry(
     async () =>
-      await supabaseAdmin.rpc("add_wallet_credit", {
+      await supabaseAdmin.rpc('add_wallet_credit', {
         p_user_id: userId,
         p_amount: amountCredit,
         p_description: `Ricarica Stripe #${transactionId}`,
         p_created_by: null, // System operation
       }),
-    { operationName: "stripe_webhook_credit" }
+    { operationName: 'stripe_webhook_credit' }
   );
 
   if (creditError) {
-    console.error("❌ [STRIPE WEBHOOK] Wallet credit failed:", creditError);
+    console.error('❌ [STRIPE WEBHOOK] Wallet credit failed:', creditError);
     // Aggiorna transazione come failed
     await updatePaymentTransaction(transactionId, {
-      status: "failed",
+      status: 'failed',
       provider_tx_id: session.payment_intent,
       metadata: {
         error: creditError.message,
@@ -188,7 +172,7 @@ async function handleCheckoutSessionCompleted(session: any) {
 
   // 5. Aggiorna transazione come success
   await updatePaymentTransaction(transactionId, {
-    status: "success",
+    status: 'success',
     provider_tx_id: session.payment_intent,
     metadata: {
       session_id: session.id,
@@ -199,15 +183,12 @@ async function handleCheckoutSessionCompleted(session: any) {
 
   // 6. Genera fattura automatica (se regola attiva) - NON BLOCCANTE
   try {
-    const { generateAutomaticInvoiceForStripeRecharge } = await import(
-      "@/actions/invoice-recharges"
-    );
+    const { generateAutomaticInvoiceForStripeRecharge } =
+      await import('@/actions/invoice-recharges');
     const invoiceResult = await generateAutomaticInvoiceForStripeRecharge(txId);
-    
+
     if (invoiceResult.success && invoiceResult.invoiceId) {
-      console.log(
-        `✅ [STRIPE WEBHOOK] Fattura automatica generata: ${invoiceResult.invoiceId}`
-      );
+      console.log(`✅ [STRIPE WEBHOOK] Fattura automatica generata: ${invoiceResult.invoiceId}`);
     } else {
       // Non è un errore: potrebbe non esserci regola automatica attiva
       console.log(
@@ -217,18 +198,18 @@ async function handleCheckoutSessionCompleted(session: any) {
   } catch (invoiceError: any) {
     // NON bloccare: la ricarica è già completata
     console.warn(
-      "⚠️ [STRIPE WEBHOOK] Generazione fattura automatica fallita (non-blocking):",
+      '⚠️ [STRIPE WEBHOOK] Generazione fattura automatica fallita (non-blocking):',
       invoiceError?.message || invoiceError
     );
   }
 
   // 7. Audit log (non bloccante)
   try {
-    await supabaseAdmin.from("audit_logs").insert({
-      action: "stripe_payment_completed",
-      resource_type: "payment_transaction",
+    await supabaseAdmin.from('audit_logs').insert({
+      action: 'stripe_payment_completed',
+      resource_type: 'payment_transaction',
       resource_id: transactionId,
-      user_email: session.customer_email || "unknown",
+      user_email: session.customer_email || 'unknown',
       user_id: userId,
       metadata: {
         amount_credit: amountCredit,
@@ -240,15 +221,12 @@ async function handleCheckoutSessionCompleted(session: any) {
       },
     });
   } catch (auditError) {
-    console.warn(
-      "⚠️ [STRIPE WEBHOOK] Audit log failed (non-blocking):",
-      auditError
-    );
+    console.warn('⚠️ [STRIPE WEBHOOK] Audit log failed (non-blocking):', auditError);
   }
 
   console.log(
     JSON.stringify({
-      event: "stripe_transaction_success",
+      event: 'stripe_transaction_success',
       transaction_id: transactionId,
       timestamp: new Date().toISOString(),
     })
@@ -264,36 +242,29 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
   const transactionId = paymentIntent.metadata?.transaction_id;
 
   if (!transactionId) {
-    console.warn(
-      "⚠️ [STRIPE WEBHOOK] PaymentIntent succeeded but no transaction_id in metadata"
-    );
+    console.warn('⚠️ [STRIPE WEBHOOK] PaymentIntent succeeded but no transaction_id in metadata');
     return;
   }
 
-  console.log(
-    `✅ [STRIPE WEBHOOK] PaymentIntent succeeded for transaction: ${transactionId}`
-  );
+  console.log(`✅ [STRIPE WEBHOOK] PaymentIntent succeeded for transaction: ${transactionId}`);
 
   // Verifica se già processato da checkout.session.completed
   const tx = await getPaymentTransaction(transactionId);
 
-  if (tx.status === "success") {
-    console.log(
-      `ℹ️ [STRIPE WEBHOOK] Transaction ${transactionId} already processed`
-    );
+  if (tx.status === 'success') {
+    console.log(`ℹ️ [STRIPE WEBHOOK] Transaction ${transactionId} already processed`);
     return;
   }
 
   // Se ancora pending, processa (backup)
-  if (tx.status === "pending") {
+  if (tx.status === 'pending') {
     await handleCheckoutSessionCompleted({
       client_reference_id: transactionId,
-      payment_status: "paid",
+      payment_status: 'paid',
       payment_intent: paymentIntent.id,
       metadata: {
         user_id: paymentIntent.metadata?.user_id || tx.user_id,
-        amount_credit:
-          paymentIntent.metadata?.amount_credit || tx.amount_credit.toString(),
+        amount_credit: paymentIntent.metadata?.amount_credit || tx.amount_credit.toString(),
       },
       customer_email: paymentIntent.receipt_email,
       id: paymentIntent.id,
@@ -310,30 +281,26 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
   const transactionId = paymentIntent.metadata?.transaction_id;
 
   if (!transactionId) {
-    console.warn(
-      "⚠️ [STRIPE WEBHOOK] PaymentIntent failed but no transaction_id in metadata"
-    );
+    console.warn('⚠️ [STRIPE WEBHOOK] PaymentIntent failed but no transaction_id in metadata');
     return;
   }
 
-  console.log(
-    `❌ [STRIPE WEBHOOK] PaymentIntent failed for transaction: ${transactionId}`
-  );
+  console.log(`❌ [STRIPE WEBHOOK] PaymentIntent failed for transaction: ${transactionId}`);
 
   await updatePaymentTransaction(transactionId, {
-    status: "failed",
+    status: 'failed',
     provider_tx_id: paymentIntent.id,
     metadata: {
-      error: paymentIntent.last_payment_error?.message || "Payment failed",
+      error: paymentIntent.last_payment_error?.message || 'Payment failed',
       failure_code: paymentIntent.last_payment_error?.code,
     },
   });
 
   // Audit log
   try {
-    await supabaseAdmin.from("audit_logs").insert({
-      action: "stripe_payment_failed",
-      resource_type: "payment_transaction",
+    await supabaseAdmin.from('audit_logs').insert({
+      action: 'stripe_payment_failed',
+      resource_type: 'payment_transaction',
       resource_id: transactionId,
       user_id: paymentIntent.metadata?.user_id,
       metadata: {
@@ -343,13 +310,10 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
       },
     });
   } catch (auditError) {
-    console.warn(
-      "⚠️ [STRIPE WEBHOOK] Audit log failed (non-blocking):",
-      auditError
-    );
+    console.warn('⚠️ [STRIPE WEBHOOK] Audit log failed (non-blocking):', auditError);
   }
 }
 
 // Disabilita body parsing per webhook (Stripe ha bisogno del raw body)
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

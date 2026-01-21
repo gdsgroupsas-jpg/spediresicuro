@@ -12,11 +12,13 @@
 **File:** `supabase/migrations/010_courier_configs_system.sql`
 
 **Cosa fa:**
+
 - Crea tabella `courier_configs` per gestire configurazioni dinamiche
 - Aggiunge campo `assigned_config_id` a `users`
 - Crea funzioni helper per recupero configurazioni
 
 **Come eseguire:**
+
 1. Vai su **Supabase Dashboard** → **SQL Editor**
 2. Apri file `supabase/migrations/010_courier_configs_system.sql`
 3. Copia tutto il contenuto
@@ -24,6 +26,7 @@
 5. Clicca **"Run"**
 
 **Verifica:**
+
 ```sql
 -- Dovrebbe restituire la tabella
 SELECT * FROM courier_configs LIMIT 1;
@@ -36,12 +39,14 @@ SELECT * FROM courier_configs LIMIT 1;
 **File:** `supabase/migrations/015_extend_courier_configs_session_data.sql`
 
 **Cosa fa:**
+
 - Aggiunge campo `session_data` (JSONB) per cookie e CSRF token
 - Aggiunge campo `automation_settings` (JSONB) per impostazioni agent
 - Aggiunge campo `last_automation_sync` (TIMESTAMPTZ) per tracking
 - Aggiunge campo `automation_enabled` (BOOLEAN) per abilitazione
 
 **Come eseguire:**
+
 1. Vai su **Supabase Dashboard** → **SQL Editor**
 2. Apri file `supabase/migrations/015_extend_courier_configs_session_data.sql`
 3. Copia tutto il contenuto
@@ -49,10 +54,11 @@ SELECT * FROM courier_configs LIMIT 1;
 5. Clicca **"Run"**
 
 **Verifica:**
+
 ```sql
 -- Dovrebbe mostrare le nuove colonne
-SELECT column_name, data_type 
-FROM information_schema.columns 
+SELECT column_name, data_type
+FROM information_schema.columns
 WHERE table_name = 'courier_configs'
 AND column_name IN ('session_data', 'automation_settings', 'last_automation_sync', 'automation_enabled');
 ```
@@ -64,11 +70,13 @@ AND column_name IN ('session_data', 'automation_settings', 'last_automation_sync
 **File:** `supabase/migrations/016_automation_locks.sql`
 
 **Cosa fa:**
+
 - Crea tabella `automation_locks` per prevenire conflitti
 - Crea funzioni: `acquire_automation_lock()`, `release_automation_lock()`, `check_automation_lock()`
 - Previene loop infiniti tra agent e uso manuale
 
 **Come eseguire:**
+
 1. Vai su **Supabase Dashboard** → **SQL Editor**
 2. Apri file `supabase/migrations/016_automation_locks.sql`
 3. Copia tutto il contenuto
@@ -76,13 +84,14 @@ AND column_name IN ('session_data', 'automation_settings', 'last_automation_sync
 5. Clicca **"Run"**
 
 **Verifica:**
+
 ```sql
 -- Dovrebbe restituire la tabella (vuota)
 SELECT * FROM automation_locks;
 
 -- Dovrebbe mostrare le funzioni
-SELECT routine_name 
-FROM information_schema.routines 
+SELECT routine_name
+FROM information_schema.routines
 WHERE routine_schema = 'public'
 AND routine_name LIKE '%automation%lock%';
 ```
@@ -94,11 +103,13 @@ AND routine_name LIKE '%automation%lock%';
 **File:** `supabase/migrations/017_encrypt_automation_passwords.sql`
 
 **Cosa fa:**
+
 - Aggiunge colonna `automation_encrypted` per tracciare criptazione
 - Le password in `automation_settings` verranno criptate lato applicazione
 - **PROTEZIONE CRITICA** per le tue password
 
 **Come eseguire:**
+
 1. Vai su **Supabase Dashboard** → **SQL Editor**
 2. Apri file `supabase/migrations/017_encrypt_automation_passwords.sql`
 3. Copia tutto il contenuto
@@ -106,15 +117,17 @@ AND routine_name LIKE '%automation%lock%';
 5. Clicca **"Run"**
 
 **⚠️ IMPORTANTE:**
+
 - Dopo questa migration, configura `ENCRYPTION_KEY` su Vercel
 - Le password verranno criptate automaticamente quando le salvi
 - **NON** perdere ENCRYPTION_KEY!
 
 **Verifica:**
+
 ```sql
 -- Dovrebbe mostrare la colonna
-SELECT column_name 
-FROM information_schema.columns 
+SELECT column_name
+FROM information_schema.columns
 WHERE table_name = 'courier_configs'
 AND column_name = 'automation_encrypted';
 ```
@@ -139,25 +152,27 @@ AND column_name = 'automation_encrypted';
 ### **Dopo Esecuzione:**
 
 - [ ] Verifica tabelle create:
+
   ```sql
-  SELECT table_name 
-  FROM information_schema.tables 
+  SELECT table_name
+  FROM information_schema.tables
   WHERE table_schema = 'public'
   AND table_name IN ('courier_configs', 'automation_locks');
   ```
 
 - [ ] Verifica colonne aggiunte:
+
   ```sql
-  SELECT column_name 
-  FROM information_schema.columns 
+  SELECT column_name
+  FROM information_schema.columns
   WHERE table_name = 'courier_configs'
   AND column_name IN ('session_data', 'automation_settings', 'automation_enabled', 'automation_encrypted');
   ```
 
 - [ ] Verifica funzioni create:
   ```sql
-  SELECT routine_name 
-  FROM information_schema.routines 
+  SELECT routine_name
+  FROM information_schema.routines
   WHERE routine_schema = 'public'
   AND routine_name LIKE '%automation%';
   ```
@@ -173,7 +188,7 @@ AND column_name = 'automation_encrypted';
 DROP TABLE IF EXISTS automation_locks CASCADE;
 
 -- Rimuovi colonne automation da courier_configs
-ALTER TABLE courier_configs 
+ALTER TABLE courier_configs
 DROP COLUMN IF EXISTS session_data,
 DROP COLUMN IF EXISTS automation_settings,
 DROP COLUMN IF EXISTS last_automation_sync,
@@ -230,7 +245,8 @@ ALTER TABLE users DROP COLUMN IF EXISTS assigned_config_id;
 
 **Causa:** Migration già eseguita
 
-**Soluzione:** 
+**Soluzione:**
+
 - ✅ OK, significa che è già fatto
 - ✅ Salta questa migration
 
@@ -239,6 +255,7 @@ ALTER TABLE users DROP COLUMN IF EXISTS assigned_config_id;
 **Causa:** Non hai permessi admin
 
 **Soluzione:**
+
 - Verifica di essere loggato come admin su Supabase
 - Contatta admin Supabase se necessario
 
@@ -247,6 +264,7 @@ ALTER TABLE users DROP COLUMN IF EXISTS assigned_config_id;
 **Causa:** SQL malformato
 
 **Soluzione:**
+
 - Verifica di aver copiato tutto il file
 - Controlla che non ci siano caratteri strani
 - Prova a eseguire sezione per sezione
@@ -255,4 +273,3 @@ ALTER TABLE users DROP COLUMN IF EXISTS assigned_config_id;
 
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0
-

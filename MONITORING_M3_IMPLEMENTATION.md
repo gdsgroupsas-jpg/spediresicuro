@@ -9,11 +9,13 @@
 ## 📋 **Implementation Summary**
 
 ### **Objective**
+
 Implement 24/7 uptime monitoring with UptimeRobot and enhanced health checks for external dependencies.
 
 ### **What Was Implemented**
 
 #### 1. **UptimeRobot Integration** (FREE TIER)
+
 - **Service**: UptimeRobot
 - **Free Tier Limit**: 50 monitors
 - **Check Interval**: Every 5 minutes
@@ -33,17 +35,19 @@ Implement 24/7 uptime monitoring with UptimeRobot and enhanced health checks for
 #### 2. **Enhanced Health Check Endpoints**
 
 ##### `/api/health/dependencies` (NEW)
+
 Comprehensive dependency monitoring endpoint that checks:
 
-| Dependency | Check Type | Timeout | Critical |
-|------------|-----------|---------|----------|
-| Supabase | Query test | 5s | ✅ Yes |
-| SpedisciOnline API | HTTP check | 5s | No |
-| Redis (Upstash) | Ping | 3s | No |
-| Slack Webhook | URL validation | N/A | No |
-| Sentry | DSN validation | N/A | No |
+| Dependency         | Check Type     | Timeout | Critical |
+| ------------------ | -------------- | ------- | -------- |
+| Supabase           | Query test     | 5s      | ✅ Yes   |
+| SpedisciOnline API | HTTP check     | 5s      | No       |
+| Redis (Upstash)    | Ping           | 3s      | No       |
+| Slack Webhook      | URL validation | N/A     | No       |
+| Sentry             | DSN validation | N/A     | No       |
 
 **Response Format**:
+
 ```json
 {
   "status": "ok|degraded|unhealthy",
@@ -72,13 +76,16 @@ Comprehensive dependency monitoring endpoint that checks:
 #### 3. **UptimeRobot Webhook Endpoint**
 
 ##### `POST /api/webhooks/uptimerobot`
+
 Receives alerts from UptimeRobot and:
+
 - Logs events for Better Stack ingestion
 - Forwards critical alerts to Slack
 - Notifies on recovery if downtime > 5 minutes
 - Handles SSL expiration warnings
 
 **Alert Flow**:
+
 ```
 UptimeRobot → Webhook → Slack (#tutta-spediresicuro)
                     ↓
@@ -92,6 +99,7 @@ UptimeRobot → Webhook → Slack (#tutta-spediresicuro)
 ### **Environment Variables**
 
 No new environment variables required. Uses existing:
+
 ```bash
 # Already configured in M1/M2
 SLACK_FINANCIAL_ALERTS_WEBHOOK  # Slack notifications
@@ -109,6 +117,7 @@ UPSTASH_REDIS_REST_TOKEN        # Redis auth (optional)
 ## 📁 **Files Created/Modified**
 
 ### **New Files**
+
 ```
 A  app/api/health/dependencies/route.ts    # Dependencies health check
 A  app/api/webhooks/uptimerobot/route.ts   # UptimeRobot webhook receiver
@@ -150,6 +159,7 @@ curl http://localhost:3000/api/webhooks/uptimerobot
 ## 🚀 **Production Deployment**
 
 ### **Step 1: Deploy Code**
+
 ```bash
 git add .
 git commit -m "feat(monitoring): M3 Uptime & Health Monitoring"
@@ -157,14 +167,17 @@ git push origin feature/m3-m4-monitoring-dashboards
 ```
 
 ### **Step 2: Create UptimeRobot Account**
+
 1. Go to [uptimerobot.com](https://uptimerobot.com)
 2. Create free account
 3. Follow [UPTIMEROBOT_SETUP.md](docs/7-OPERATIONS/UPTIMEROBOT_SETUP.md)
 
 ### **Step 3: Create Monitors**
+
 Create 5 monitors as documented in the setup guide.
 
 ### **Step 4: Configure Alerts**
+
 1. Add Slack integration
 2. Add webhook: `https://spediresicuro.com/api/webhooks/uptimerobot`
 
@@ -172,22 +185,22 @@ Create 5 monitors as documented in the setup guide.
 
 ## 📊 **Monitoring Targets**
 
-| Metric | Target | Alert Threshold |
-|--------|--------|-----------------|
-| **Uptime** | 99.9% | < 99.5% |
-| **Response Time** | < 500ms | > 2000ms |
-| **Monthly Downtime** | < 43 min | > 60 min |
+| Metric               | Target   | Alert Threshold |
+| -------------------- | -------- | --------------- |
+| **Uptime**           | 99.9%    | < 99.5%         |
+| **Response Time**    | < 500ms  | > 2000ms        |
+| **Monthly Downtime** | < 43 min | > 60 min        |
 
 ---
 
 ## 📈 **Roadmap Status**
 
-| Milestone | Status | Hours | Cost |
-|-----------|--------|-------|------|
-| **M1** | ✅ COMPLETED | ~2h | €0/mo |
-| **M2** | ✅ COMPLETED | ~4h | €0/mo |
-| **M3** | ✅ COMPLETED | ~2h | €0/mo |
-| **M4** | 🔲 PLANNED | ~9h | €0/mo |
+| Milestone | Status       | Hours | Cost  |
+| --------- | ------------ | ----- | ----- |
+| **M1**    | ✅ COMPLETED | ~2h   | €0/mo |
+| **M2**    | ✅ COMPLETED | ~4h   | €0/mo |
+| **M3**    | ✅ COMPLETED | ~2h   | €0/mo |
+| **M4**    | 🔲 PLANNED   | ~9h   | €0/mo |
 
 **Next**: M4 - Business Dashboards (Grafana Cloud + Audit Trail)
 

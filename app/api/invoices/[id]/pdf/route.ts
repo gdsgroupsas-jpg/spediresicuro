@@ -1,8 +1,8 @@
 /**
  * API Endpoint: Download PDF Fattura
- * 
+ *
  * GET /api/invoices/[id]/pdf
- * 
+ *
  * Scarica il PDF di una fattura esistente.
  * RLS: utente può scaricare solo le proprie fatture, admin può scaricare tutte.
  */
@@ -12,10 +12,7 @@ import { createServerActionClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { requireSafeAuth } from '@/lib/safe-auth';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const context = await requireSafeAuth();
     const invoiceId = params.id;
@@ -28,10 +25,7 @@ export async function GET(
       .single();
 
     if (invoiceError || !invoice) {
-      return NextResponse.json(
-        { error: 'Fattura non trovata' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Fattura non trovata' }, { status: 404 });
     }
 
     // 2. Verifica permessi (utente può vedere solo le proprie, admin tutte)
@@ -39,10 +33,7 @@ export async function GET(
     const isOwner = invoice.user_id === context.target.id;
 
     if (!isAdmin && !isOwner) {
-      return NextResponse.json(
-        { error: 'Non autorizzato' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
     }
 
     // 3. Se PDF esiste, scarica da storage
@@ -59,10 +50,7 @@ export async function GET(
 
       if (downloadError || !fileData) {
         console.error('Errore download PDF:', downloadError);
-        return NextResponse.json(
-          { error: 'Errore download PDF' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Errore download PDF' }, { status: 500 });
       }
 
       const arrayBuffer = await fileData.arrayBuffer();
@@ -78,7 +66,7 @@ export async function GET(
 
     // 4. Se PDF non esiste, genera al volo
     const { generateInvoiceForShipment } = await import('@/app/actions/invoices');
-    
+
     // Cerca spedizione associata
     const { data: items } = await supabaseAdmin
       .from('invoice_items')
@@ -96,22 +84,11 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(
-      { error: 'PDF non disponibile' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: 'PDF non disponibile' }, { status: 404 });
   } catch (error: any) {
     console.error('Errore download PDF fattura:', error);
-    return NextResponse.json(
-      { error: 'Errore interno del server' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Errore interno del server' }, { status: 500 });
   }
 }
 
 export const dynamic = 'force-dynamic';
-
-
-
-
-

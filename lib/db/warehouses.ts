@@ -29,11 +29,7 @@ export async function listWarehouses() {
  * Ottieni magazzino per ID
  */
 export async function getWarehouseById(id: string): Promise<Warehouse | null> {
-  const { data, error } = await supabase
-    .from('warehouses')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const { data, error } = await supabase.from('warehouses').select('*').eq('id', id).single();
 
   if (error) {
     if (error.code === 'PGRST116') return null;
@@ -231,9 +227,7 @@ export async function releaseStock(
  * Registra movimento magazzino
  */
 async function recordWarehouseMovement(movement: Partial<WarehouseMovement>): Promise<void> {
-  const { error } = await supabase
-    .from('warehouse_movements')
-    .insert(movement);
+  const { error } = await supabase.from('warehouse_movements').insert(movement);
 
   if (error) {
     console.error('Error recording warehouse movement:', error);
@@ -312,11 +306,11 @@ export async function getStockValue(warehouseId?: string) {
   }
 
   const cost_value = data.reduce((sum, inv: any) => {
-    return sum + (inv.quantity_available * (inv.product?.cost_price || 0));
+    return sum + inv.quantity_available * (inv.product?.cost_price || 0);
   }, 0);
 
   const retail_value = data.reduce((sum, inv: any) => {
-    return sum + (inv.quantity_available * (inv.product?.sale_price || 0));
+    return sum + inv.quantity_available * (inv.product?.sale_price || 0);
   }, 0);
 
   return { cost_value, retail_value };

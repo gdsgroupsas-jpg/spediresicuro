@@ -1,6 +1,6 @@
 /**
  * Componente: Lista Features Attive Utente
- * 
+ *
  * Mostra tutte le killer features attive per l'utente corrente
  */
 
@@ -46,9 +46,7 @@ export default function UserFeaturesList() {
           <Sparkles className="w-5 h-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900">Le Tue Features</h3>
         </div>
-        <p className="text-gray-500 text-center py-8">
-          Nessuna feature attiva al momento
-        </p>
+        <p className="text-gray-500 text-center py-8">Nessuna feature attiva al momento</p>
       </div>
     );
   }
@@ -62,11 +60,11 @@ export default function UserFeaturesList() {
           {features.length} attive
         </span>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {features.map((feature) => {
           const isExpired = feature.expires_at && new Date(feature.expires_at) < new Date();
-          
+
           return (
             <div
               key={feature.feature_code}
@@ -98,7 +96,7 @@ export default function UserFeaturesList() {
                   </span>
                 )}
               </div>
-              
+
               {feature.expires_at && (
                 <div className="mt-3 flex items-center gap-2 text-xs">
                   <Clock className="w-3 h-3 text-gray-400" />
@@ -108,7 +106,7 @@ export default function UserFeaturesList() {
                   </span>
                 </div>
               )}
-              
+
               {feature.activation_type && feature.activation_type !== 'free' && (
                 <div className="mt-2 text-xs text-gray-500">
                   Attivata via: {feature.activation_type}
@@ -121,4 +119,3 @@ export default function UserFeaturesList() {
     </div>
   );
 }
-

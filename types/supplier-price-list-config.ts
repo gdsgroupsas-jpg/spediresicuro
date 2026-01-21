@@ -1,6 +1,6 @@
 /**
  * Types: Supplier Price List Config
- * 
+ *
  * Configurazioni manuali per sezioni listini fornitore non disponibili via API:
  * - Assicurazione
  * - Contrassegni
@@ -17,7 +17,7 @@ export interface InsuranceConfig {
   max_value: number; // Valore massimo assicurabile
   fixed_price: number; // Prezzo fisso (€)
   percent: number; // Percentuale aggiuntiva (%)
-  percent_on: "totale" | "base"; // Calcolo % su: "totale" o "base"
+  percent_on: 'totale' | 'base'; // Calcolo % su: "totale" o "base"
 }
 
 /**
@@ -27,7 +27,7 @@ export interface CODConfigRow {
   max_value: number; // Valore massimo contrassegno
   fixed_price: number; // Prezzo fisso (€)
   percent: number; // Percentuale sul valore (%)
-  percent_on: "totale" | "base"; // Calcolo % su: "totale" o "base"
+  percent_on: 'totale' | 'base'; // Calcolo % su: "totale" o "base"
 }
 
 /**
@@ -76,12 +76,12 @@ export interface ExtraConfig {
 export interface SupplierPriceListConfig {
   id: string;
   price_list_id: string; // Collegamento al listino fornitore
-  
+
   // Identificazione
   carrier_code: string; // es. "gls", "postedeliverybusiness"
   contract_code?: string; // es. "gls-standard", "postedeliverybusiness-SDA---Express---H24+"
   courier_config_id?: string; // ID configurazione Spedisci.Online
-  
+
   // Configurazioni per sezione
   insurance_config: InsuranceConfig;
   cod_config: CODConfigRow[];
@@ -89,13 +89,13 @@ export interface SupplierPriceListConfig {
   storage_config: StorageConfig;
   pickup_config: PickupServiceConfig[];
   extra_config: ExtraConfig;
-  
+
   // Fattore peso/volume (densità)
   volumetric_density_factor?: number; // kg/m³ (default: 200 = divisore 5000)
-  
+
   // Metadata
   notes?: string;
-  
+
   // Timestamps
   created_at: string;
   updated_at: string;
@@ -123,74 +123,51 @@ export interface UpsertSupplierPriceListConfigInput {
 
 /**
  * Servizi accessori comuni per mapping default
- * 
+ *
  * Ogni corriere ha servizi specifici diversi.
  * Questi vengono inizializzati automaticamente quando si crea una configurazione.
  */
 export const COMMON_ACCESSORY_SERVICES: Record<string, string[]> = {
-  gls: [
-    "Exchange",
-    "Document Return",
-    "Saturday Service",
-    "Express12",
-    "Preavviso Telefonico"
-  ],
+  gls: ['Exchange', 'Document Return', 'Saturday Service', 'Express12', 'Preavviso Telefonico'],
   postedeliverybusiness: [
-    "Reverse A Domicilio",
-    "Andata & Ritorno",
-    "Reverse PuntoPoste",
-    "Reverse PuntoPoste Locker",
-    "Reverse Ufficio Postale",
-    "Consegna su appuntamento"
+    'Reverse A Domicilio',
+    'Andata & Ritorno',
+    'Reverse PuntoPoste',
+    'Reverse PuntoPoste Locker',
+    'Reverse Ufficio Postale',
+    'Consegna su appuntamento',
   ],
   poste: [
-    "Reverse A Domicilio",
-    "Andata & Ritorno",
-    "Reverse PuntoPoste",
-    "Reverse PuntoPoste Locker",
-    "Reverse Ufficio Postale",
-    "Consegna su appuntamento"
+    'Reverse A Domicilio',
+    'Andata & Ritorno',
+    'Reverse PuntoPoste',
+    'Reverse PuntoPoste Locker',
+    'Reverse Ufficio Postale',
+    'Consegna su appuntamento',
   ],
   posteitaliane: [
-    "Reverse A Domicilio",
-    "Andata & Ritorno",
-    "Reverse PuntoPoste",
-    "Reverse PuntoPoste Locker",
-    "Reverse Ufficio Postale",
-    "Consegna su appuntamento"
+    'Reverse A Domicilio',
+    'Andata & Ritorno',
+    'Reverse PuntoPoste',
+    'Reverse PuntoPoste Locker',
+    'Reverse Ufficio Postale',
+    'Consegna su appuntamento',
   ],
-  brt: [
-    "Exchange",
-    "Document Return",
-    "Preavviso Telefonico"
-  ],
-  sda: [
-    "Exchange",
-    "Document Return",
-    "Saturday Service",
-    "Preavviso Telefonico"
-  ],
-  ups: [
-    "Exchange",
-    "Document Return",
-    "Saturday Service"
-  ],
-  dhl: [
-    "Exchange",
-    "Document Return"
-  ]
+  brt: ['Exchange', 'Document Return', 'Preavviso Telefonico'],
+  sda: ['Exchange', 'Document Return', 'Saturday Service', 'Preavviso Telefonico'],
+  ups: ['Exchange', 'Document Return', 'Saturday Service'],
+  dhl: ['Exchange', 'Document Return'],
 };
 
 /**
  * Servizi giacenza comuni
  */
 export const COMMON_STORAGE_SERVICES = [
-  "Riconsegna",
-  "Riconsegna al nuovo destinatario",
-  "Reso al mittente",
-  "Distruggere",
-  "Il destinatario ritira la merce in sede",
-  "Consegna parziale e rendi",
-  "Consegna parziale e distruggi"
+  'Riconsegna',
+  'Riconsegna al nuovo destinatario',
+  'Reso al mittente',
+  'Distruggere',
+  'Il destinatario ritira la merce in sede',
+  'Consegna parziale e rendi',
+  'Consegna parziale e distruggi',
 ];
-

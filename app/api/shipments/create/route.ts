@@ -1,11 +1,11 @@
-import { supabaseAdmin } from "@/lib/db/client";
-import { requireSafeAuth } from "@/lib/safe-auth";
-import { AUDIT_ACTIONS } from "@/lib/security/audit-actions";
-import { writeShipmentAuditLog } from "@/lib/security/audit-log";
-import { CourierFactory } from "@/lib/services/couriers/courier-factory";
-import { createShipmentSchema } from "@/lib/validations/shipment";
-import { withConcurrencyRetry } from "@/lib/wallet/retry";
-import crypto from "crypto";
+import { supabaseAdmin } from '@/lib/db/client';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
+import { writeShipmentAuditLog } from '@/lib/security/audit-log';
+import { CourierFactory } from '@/lib/services/couriers/courier-factory';
+import { createShipmentSchema } from '@/lib/validations/shipment';
+import { withConcurrencyRetry } from '@/lib/wallet/retry';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   // CRITICAL: Use requireSafeAuth() to support impersonation (Acting Context)
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     // mappiamo automaticamente a provider='spediscionline' e carrier=corriere
     if (body.corriere && !body.carrier) {
       body.carrier = body.corriere.toUpperCase();
-      body.provider = body.provider || "spediscionline";
+      body.provider = body.provider || 'spediscionline';
     }
 
     const validated = createShipmentSchema.parse(body);
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     // IDEMPOTENCY KEY GENERATION
     // ============================================
     const idempotencyKey = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(
         JSON.stringify({
           userId: targetId, // Use targetId for idempotency (who pays, not who clicked)
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
           timestamp: Math.floor(Date.now() / 5000),
         })
       )
-      .digest("hex");
+      .digest('hex');
 
     // ============================================
     // CRASH-SAFE IDEMPOTENCY LOCK
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     // ⚠️ FIX P0: TTL aumentato da 10 a 30 minuti per prevenire TOCTOU (audit 2025-12-22)
     // Se lock scade prima del retry, potrebbe causare doppio debit
     const { data: lockResult, error: lockError } = await supabaseAdmin.rpc(
-      "acquire_idempotency_lock",
+      'acquire_idempotency_lock',
       {
         p_idempotency_key: idempotencyKey,
         p_user_id: targetId,
@@ -65,31 +65,25 @@ export async function POST(request: Request) {
     );
 
     if (lockError) {
-      console.error("❌ [IDEMPOTENCY] Lock acquisition failed:", lockError);
-      return Response.json(
-        { error: "Errore sistema idempotency. Riprova." },
-        { status: 500 }
-      );
+      console.error('❌ [IDEMPOTENCY] Lock acquisition failed:', lockError);
+      return Response.json({ error: 'Errore sistema idempotency. Riprova.' }, { status: 500 });
     }
 
     const lock = lockResult?.[0];
     if (!lock) {
-      return Response.json(
-        { error: "Errore acquisizione lock idempotency." },
-        { status: 500 }
-      );
+      return Response.json({ error: 'Errore acquisizione lock idempotency.' }, { status: 500 });
     }
 
     // Handle lock states
     if (!lock.acquired) {
-      if (lock.status === "completed" && lock.result_shipment_id) {
+      if (lock.status === 'completed' && lock.result_shipment_id) {
         // Idempotent replay: shipment già creato
         const { data: existingShipment } = await supabaseAdmin
-          .from("shipments")
+          .from('shipments')
           .select(
-            "id, tracking_number, carrier, total_cost, label_data, sender_name, sender_address, sender_city, sender_province, sender_zip, sender_country, recipient_name, recipient_address, recipient_city, recipient_province, recipient_zip, recipient_country"
+            'id, tracking_number, carrier, total_cost, label_data, sender_name, sender_address, sender_city, sender_province, sender_zip, sender_country, recipient_name, recipient_address, recipient_city, recipient_province, recipient_zip, recipient_country'
           )
-          .eq("id", lock.result_shipment_id)
+          .eq('id', lock.result_shipment_id)
           .single();
 
         if (existingShipment) {
@@ -121,37 +115,37 @@ export async function POST(request: Request) {
             idempotent_replay: true,
           });
         }
-      } else if (lock.status === "in_progress") {
+      } else if (lock.status === 'in_progress') {
         // Operation already in progress: don't debit again
         // Log strutturato per observability
         console.log(
           JSON.stringify({
-            event_type: "idempotency_lock_in_progress",
+            event_type: 'idempotency_lock_in_progress',
             idempotency_key: idempotencyKey,
             user_id: targetId,
-            message: "Lock already in progress, preventing duplicate request",
+            message: 'Lock already in progress, preventing duplicate request',
             timestamp: new Date().toISOString(),
           })
         );
 
         return Response.json(
           {
-            error: "DUPLICATE_REQUEST",
-            message: "Richiesta già in elaborazione. Attendere.",
+            error: 'DUPLICATE_REQUEST',
+            message: 'Richiesta già in elaborazione. Attendere.',
             retry_after: 5,
             idempotency_key: idempotencyKey,
           },
           { status: 409 }
         );
-      } else if (lock.status === "failed") {
+      } else if (lock.status === 'failed') {
         // Previous attempt failed after debit: don't re-debit
         // Log strutturato per observability
         console.log(
           JSON.stringify({
-            event_type: "idempotency_lock_failed",
+            event_type: 'idempotency_lock_failed',
             idempotency_key: idempotencyKey,
             user_id: targetId,
-            error_message: lock.error_message || "Previous attempt failed",
+            error_message: lock.error_message || 'Previous attempt failed',
             requires_manual_review: true,
             timestamp: new Date().toISOString(),
           })
@@ -159,10 +153,8 @@ export async function POST(request: Request) {
 
         return Response.json(
           {
-            error: "PREVIOUS_ATTEMPT_FAILED",
-            message:
-              lock.error_message ||
-              "Tentativo precedente fallito. Contattare supporto.",
+            error: 'PREVIOUS_ATTEMPT_FAILED',
+            message: lock.error_message || 'Tentativo precedente fallito. Contattare supporto.',
             requires_manual_review: true,
             idempotency_key: idempotencyKey,
           },
@@ -187,15 +179,13 @@ export async function POST(request: Request) {
     // NON una colonna in courier_configs. Il contract_mapping JSONB contiene
     // i codici contratto per ogni carrier.
     const providerId =
-      validated.provider === "spediscionline"
-        ? "spedisci_online"
-        : validated.provider;
+      validated.provider === 'spediscionline' ? 'spedisci_online' : validated.provider;
 
     // Prima recupera assigned_config_id dell'utente
     const { data: userData } = await supabaseAdmin
-      .from("users")
-      .select("assigned_config_id")
-      .eq("id", targetId)
+      .from('users')
+      .select('assigned_config_id')
+      .eq('id', targetId)
       .single();
 
     // ✨ ENTERPRISE: Se configId è fornito nel payload, usa quello specifico (priorità massima)
@@ -209,11 +199,11 @@ export async function POST(request: Request) {
     // ✨ PRIORITÀ 0: ConfigId specifico fornito (per multi-config)
     if (specificConfigId) {
       const { data: specificConfig, error: specificError } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("id", specificConfigId)
-        .eq("provider_id", providerId)
-        .eq("is_active", true)
+        .from('courier_configs')
+        .select('*')
+        .eq('id', specificConfigId)
+        .eq('provider_id', providerId)
+        .eq('is_active', true)
         .maybeSingle();
 
       if (specificConfig) {
@@ -224,28 +214,22 @@ export async function POST(request: Request) {
 
         if (isOwner || isAssigned || isDefault) {
           courierConfig = specificConfig;
-          console.log(
-            "✅ [CONFIG] Trovata config specifica (configId fornito):",
-            {
-              configId: specificConfig.id,
-              providerId,
-              userId: targetId,
-              reason: isOwner ? "owner" : isAssigned ? "assigned" : "default",
-            }
-          );
+          console.log('✅ [CONFIG] Trovata config specifica (configId fornito):', {
+            configId: specificConfig.id,
+            providerId,
+            userId: targetId,
+            reason: isOwner ? 'owner' : isAssigned ? 'assigned' : 'default',
+          });
         } else {
-          console.warn(
-            "⚠️ [CONFIG] ConfigId fornito ma utente non ha accesso:",
-            {
-              configId: specificConfigId,
-              userId: targetId,
-            }
-          );
+          console.warn('⚠️ [CONFIG] ConfigId fornito ma utente non ha accesso:', {
+            configId: specificConfigId,
+            userId: targetId,
+          });
           // Fallback al comportamento standard
         }
         configError = specificError;
       } else {
-        console.warn("⚠️ [CONFIG] ConfigId fornito non trovato:", {
+        console.warn('⚠️ [CONFIG] ConfigId fornito non trovato:', {
           configId: specificConfigId,
           providerId,
         });
@@ -256,35 +240,34 @@ export async function POST(request: Request) {
     // Priorità 1: Config personale (owner_user_id = targetId) - SOLO se non abbiamo già una config
     if (!courierConfig) {
       const { data: personalConfig, error: personalError } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("provider_id", providerId)
-        .eq("owner_user_id", targetId)
-        .eq("is_active", true)
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', providerId)
+        .eq('owner_user_id', targetId)
+        .eq('is_active', true)
         .limit(1)
         .maybeSingle();
 
       if (personalConfig) {
         courierConfig = personalConfig;
-        console.log("✅ [CONFIG] Trovata config personale:", {
+        console.log('✅ [CONFIG] Trovata config personale:', {
           configId: personalConfig.id,
           providerId,
           userId: targetId,
         });
       } else if (userData?.assigned_config_id) {
         // Priorità 2: Config assegnata all'utente
-        const { data: assignedConfig, error: assignedError } =
-          await supabaseAdmin
-            .from("courier_configs")
-            .select("*")
-            .eq("id", userData.assigned_config_id)
-            .eq("provider_id", providerId)
-            .eq("is_active", true)
-            .maybeSingle();
+        const { data: assignedConfig, error: assignedError } = await supabaseAdmin
+          .from('courier_configs')
+          .select('*')
+          .eq('id', userData.assigned_config_id)
+          .eq('provider_id', providerId)
+          .eq('is_active', true)
+          .maybeSingle();
 
         if (assignedConfig) {
           courierConfig = assignedConfig;
-          console.log("✅ [CONFIG] Trovata config assegnata:", {
+          console.log('✅ [CONFIG] Trovata config assegnata:', {
             configId: assignedConfig.id,
             providerId,
             userId: targetId,
@@ -297,17 +280,17 @@ export async function POST(request: Request) {
     // Priorità 3: Config default per provider
     if (!courierConfig) {
       const { data: defaultConfig, error: defaultError } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("provider_id", providerId)
-        .eq("is_default", true)
-        .eq("is_active", true)
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', providerId)
+        .eq('is_default', true)
+        .eq('is_active', true)
         .limit(1)
         .maybeSingle();
 
       if (defaultConfig) {
         courierConfig = defaultConfig;
-        console.log("✅ [CONFIG] Trovata config default:", {
+        console.log('✅ [CONFIG] Trovata config default:', {
           configId: defaultConfig.id,
           providerId,
         });
@@ -316,7 +299,7 @@ export async function POST(request: Request) {
     }
 
     if (configError || !courierConfig) {
-      console.error("❌ [CONFIG] Nessuna configurazione trovata:", {
+      console.error('❌ [CONFIG] Nessuna configurazione trovata:', {
         providerId,
         userId: targetId,
         assignedConfigId: userData?.assigned_config_id,
@@ -338,30 +321,26 @@ export async function POST(request: Request) {
       validated.contract_id ||
       contractMapping[carrierLower] ||
       contractMapping[validated.carrier] ||
-      contractMapping["default"] ||
+      contractMapping['default'] ||
       undefined;
 
-    const courierClient = CourierFactory.getClient(
-      validated.provider,
-      validated.carrier,
-      {
-        apiKey: courierConfig.api_key,
-        baseUrl: courierConfig.base_url,
-        contractId: contractId,
-      }
-    );
+    const courierClient = CourierFactory.getClient(validated.provider, validated.carrier, {
+      apiKey: courierConfig.api_key,
+      baseUrl: courierConfig.base_url,
+      contractId: contractId,
+    });
 
     // ============================================
     // PRE-CHECK CREDITO
     // ============================================
     const { data: user, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("wallet_balance, role")
-      .eq("id", targetId) // Target ID (who pays)
+      .from('users')
+      .select('wallet_balance, role')
+      .eq('id', targetId) // Target ID (who pays)
       .single();
 
     if (userError || !user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      return Response.json({ error: 'User not found' }, { status: 404 });
     }
 
     // ============================================
@@ -371,18 +350,15 @@ export async function POST(request: Request) {
     // Il costo reale viene solo dopo la chiamata API corriere
     const baseEstimatedCost = 8.5; // TODO: Calcolo reale basato su peso/destinazione
     const estimatedCost = baseEstimatedCost * 1.2; // Buffer 20% per sicurezza
-    const isSuperadmin =
-      user.role === "SUPERADMIN" || user.role === "superadmin";
+    const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin';
 
     if (!isSuperadmin && (user.wallet_balance || 0) < estimatedCost) {
       return Response.json(
         {
-          error: "INSUFFICIENT_CREDIT",
+          error: 'INSUFFICIENT_CREDIT',
           required: estimatedCost,
           available: user.wallet_balance || 0,
-          message: `Credito insufficiente. Disponibile: €${(
-            user.wallet_balance || 0
-          ).toFixed(2)}`,
+          message: `Credito insufficiente. Disponibile: €${(user.wallet_balance || 0).toFixed(2)}`,
         },
         { status: 402 }
       );
@@ -414,35 +390,32 @@ export async function POST(request: Request) {
       // Smart retry per lock contention (55P03)
       const { error: walletError } = await withConcurrencyRetry(
         async () =>
-          await supabaseAdmin.rpc("decrement_wallet_balance", {
+          await supabaseAdmin.rpc('decrement_wallet_balance', {
             p_user_id: targetId, // Target ID (who pays)
             p_amount: estimatedCost,
           }),
-        { operationName: "shipment_debit_estimate" }
+        { operationName: 'shipment_debit_estimate' }
       );
 
       // FAIL-FAST: No fallback, no manual UPDATE
       // If RPC fails, entire operation must fail (no label created)
       if (walletError) {
-        console.error(
-          "❌ [WALLET] Atomic debit failed (before courier call):",
-          {
-            userId: targetId,
-            amount: estimatedCost,
-            error: walletError.message,
-            code: walletError.code,
-          }
-        );
+        console.error('❌ [WALLET] Atomic debit failed (before courier call):', {
+          userId: targetId,
+          amount: estimatedCost,
+          error: walletError.message,
+          code: walletError.code,
+        });
 
         // ⚠️ CRITICAL: Se debit fallisce, NON creare etichetta
         return Response.json(
           {
-            error: "INSUFFICIENT_CREDIT",
+            error: 'INSUFFICIENT_CREDIT',
             required: estimatedCost,
             available: user.wallet_balance || 0,
-            message: `Credito insufficiente. Disponibile: €${(
-              user.wallet_balance || 0
-            ).toFixed(2)}`,
+            message: `Credito insufficiente. Disponibile: €${(user.wallet_balance || 0).toFixed(
+              2
+            )}`,
           },
           { status: 402 }
         );
@@ -452,14 +425,11 @@ export async function POST(request: Request) {
       walletDebitAmount = estimatedCost;
 
       // SUCCESS: Log wallet debit
-      console.log(
-        "✅ [WALLET] Atomic debit successful (before courier call):",
-        {
-          userId: targetId,
-          amount: estimatedCost,
-          note: "Debit with estimate, will adjust after courier response",
-        }
-      );
+      console.log('✅ [WALLET] Atomic debit successful (before courier call):', {
+        userId: targetId,
+        amount: estimatedCost,
+        note: 'Debit with estimate, will adjust after courier response',
+      });
     }
 
     // ============================================
@@ -499,61 +469,50 @@ export async function POST(request: Request) {
       // ⚠️ CRITICAL: "No Label, No Credit" - Se etichetta non creata, compensa debit
       if (walletDebited && !isSuperadmin) {
         try {
-          const { error: compensateError } = await supabaseAdmin.rpc(
-            "increment_wallet_balance",
-            {
-              p_user_id: targetId,
-              p_amount: walletDebitAmount,
-            }
-          );
+          const { error: compensateError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            p_user_id: targetId,
+            p_amount: walletDebitAmount,
+          });
 
           if (compensateError) {
-            console.error(
-              "❌ [WALLET] Compensation failed after courier error:",
-              {
-                userId: targetId,
-                amount: walletDebitAmount,
-                error: compensateError.message,
-                courier_error: courierError.message,
-              }
-            );
+            console.error('❌ [WALLET] Compensation failed after courier error:', {
+              userId: targetId,
+              amount: walletDebitAmount,
+              error: compensateError.message,
+              courier_error: courierError.message,
+            });
 
             // ⚠️ CRITICAL: Se compensazione fallisce, accoda per retry manuale
-            await supabaseAdmin.from("compensation_queue").insert({
+            await supabaseAdmin.from('compensation_queue').insert({
               user_id: targetId,
               provider_id:
-                validated.provider === "spediscionline"
-                  ? "spediscionline"
-                  : validated.provider,
+                validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
               carrier: validated.carrier,
-              action: "REFUND",
+              action: 'REFUND',
               original_cost: walletDebitAmount,
               error_context: {
                 courier_error: courierError.message,
                 compensation_error: compensateError.message,
-                retry_strategy: "MANUAL",
+                retry_strategy: 'MANUAL',
                 actor_id: actorId,
                 impersonation_active: impersonationActive,
               },
-              status: "PENDING",
+              status: 'PENDING',
             });
           } else {
-            console.log(
-              "✅ [WALLET] Compensation successful after courier error:",
-              {
-                userId: targetId,
-                amount: walletDebitAmount,
-              }
-            );
+            console.log('✅ [WALLET] Compensation successful after courier error:', {
+              userId: targetId,
+              amount: walletDebitAmount,
+            });
           }
         } catch (compError) {
-          console.error("❌ [WALLET] Compensation exception:", compError);
+          console.error('❌ [WALLET] Compensation exception:', compError);
         }
       }
 
-      await supabaseAdmin.from("diagnostics_events").insert({
-        type: "error",
-        severity: "high",
+      await supabaseAdmin.from('diagnostics_events').insert({
+        type: 'error',
+        severity: 'high',
         context: {
           user_id: targetId, // Target ID (who pays)
           actor_id: actorId, // Actor ID (who clicked)
@@ -566,26 +525,17 @@ export async function POST(request: Request) {
       });
 
       if (courierError.statusCode === 422) {
-        return Response.json(
-          { error: "Indirizzo destinatario non valido." },
-          { status: 422 }
-        );
+        return Response.json({ error: 'Indirizzo destinatario non valido.' }, { status: 422 });
       }
 
-      if (
-        courierError.statusCode >= 500 ||
-        courierError.message.includes("timeout")
-      ) {
+      if (courierError.statusCode >= 500 || courierError.message.includes('timeout')) {
         return Response.json(
-          { error: "Corriere temporaneamente non disponibile." },
+          { error: 'Corriere temporaneamente non disponibile.' },
           { status: 503 }
         );
       }
 
-      return Response.json(
-        { error: "Errore creazione spedizione." },
-        { status: 500 }
-      );
+      return Response.json({ error: 'Errore creazione spedizione.' }, { status: 500 });
     }
 
     // ============================================
@@ -609,73 +559,63 @@ export async function POST(request: Request) {
             // Costo reale > stimato: debit aggiuntivo
             const { error: adjustError } = await withConcurrencyRetry(
               async () =>
-                await supabaseAdmin.rpc("decrement_wallet_balance", {
+                await supabaseAdmin.rpc('decrement_wallet_balance', {
                   p_user_id: targetId,
                   p_amount: costDifference,
                 }),
-              { operationName: "shipment_debit_adjustment" }
+              { operationName: 'shipment_debit_adjustment' }
             );
 
             if (adjustError) {
-              console.error("❌ [WALLET] Adjustment debit failed:", {
+              console.error('❌ [WALLET] Adjustment debit failed:', {
                 userId: targetId,
                 amount: costDifference,
                 error: adjustError.message,
               });
               // ⚠️ CRITICAL: Se aggiustamento fallisce, dobbiamo compensare tutto
               // (etichetta creata ma debit incompleto)
-              throw new Error(
-                `Wallet adjustment failed: ${adjustError.message}`
-              );
+              throw new Error(`Wallet adjustment failed: ${adjustError.message}`);
             }
 
             walletDebitAmount = finalCost; // Aggiorna totale debitato
-            console.log("✅ [WALLET] Adjustment debit successful:", {
+            console.log('✅ [WALLET] Adjustment debit successful:', {
               userId: targetId,
               amount: costDifference,
               total: finalCost,
             });
           } else {
             // Costo reale < stimato: credit differenza
-            const { error: adjustError } = await supabaseAdmin.rpc(
-              "increment_wallet_balance",
-              {
-                p_user_id: targetId,
-                p_amount: Math.abs(costDifference),
-              }
-            );
+            const { error: adjustError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+              p_user_id: targetId,
+              p_amount: Math.abs(costDifference),
+            });
 
             if (adjustError) {
-              console.error(
-                "⚠️ [WALLET] Adjustment credit failed (non-blocking):",
-                {
-                  userId: targetId,
-                  amount: Math.abs(costDifference),
-                  error: adjustError.message,
-                }
-              );
+              console.error('⚠️ [WALLET] Adjustment credit failed (non-blocking):', {
+                userId: targetId,
+                amount: Math.abs(costDifference),
+                error: adjustError.message,
+              });
               // Non blocchiamo: utente ha pagato di più, ma etichetta è creata
               // Accodiamo per retry manuale
-              await supabaseAdmin.from("compensation_queue").insert({
+              await supabaseAdmin.from('compensation_queue').insert({
                 user_id: targetId,
                 provider_id:
-                  validated.provider === "spediscionline"
-                    ? "spediscionline"
-                    : validated.provider,
+                  validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
                 carrier: validated.carrier,
-                action: "REFUND",
+                action: 'REFUND',
                 original_cost: Math.abs(costDifference),
                 error_context: {
                   adjustment_error: adjustError.message,
                   estimated: walletDebitAmount,
                   actual: finalCost,
-                  retry_strategy: "MANUAL",
+                  retry_strategy: 'MANUAL',
                 },
-                status: "PENDING",
+                status: 'PENDING',
               });
             } else {
               walletDebitAmount = finalCost; // Aggiorna totale debitato
-              console.log("✅ [WALLET] Adjustment credit successful:", {
+              console.log('✅ [WALLET] Adjustment credit successful:', {
                 userId: targetId,
                 amount: Math.abs(costDifference),
                 total: finalCost,
@@ -689,22 +629,22 @@ export async function POST(request: Request) {
 
         // Create wallet transaction record for audit trail
         // ⚠️ FIX P0: Rimosso campo 'status' inesistente (audit 2025-12-22)
-        await supabaseAdmin.from("wallet_transactions").insert({
+        await supabaseAdmin.from('wallet_transactions').insert({
           user_id: targetId, // Target ID (who pays)
           amount: -finalCost,
-          type: "SHIPMENT_CHARGE",
+          type: 'SHIPMENT_CHARGE',
           description: `Spedizione ${courierResponse.trackingNumber}`,
         });
       }
 
       // 2. Crea spedizione
       const { data: newShipment, error: shipmentError } = await supabaseAdmin
-        .from("shipments")
+        .from('shipments')
         .insert({
           user_id: targetId, // Target ID (who pays, owner of shipment)
           // NOTE: il DB applica un CHECK constraint su shipments.status.
           // In produzione il valore valido è 'pending' (vedi errore shipments_status_check).
-          status: "pending",
+          status: 'pending',
           idempotency_key: idempotencyKey,
           carrier: validated.carrier,
           tracking_number: courierResponse.trackingNumber,
@@ -743,11 +683,7 @@ export async function POST(request: Request) {
         .single();
 
       if (shipmentError || !newShipment) {
-        throw new Error(
-          `Shipment creation failed: ${
-            shipmentError?.message || "Unknown error"
-          }`
-        );
+        throw new Error(`Shipment creation failed: ${shipmentError?.message || 'Unknown error'}`);
       }
 
       shipment = newShipment;
@@ -756,10 +692,10 @@ export async function POST(request: Request) {
       // COMPLETE IDEMPOTENCY LOCK
       // ============================================
       // Mark lock as completed after successful shipment creation
-      await supabaseAdmin.rpc("complete_idempotency_lock", {
+      await supabaseAdmin.rpc('complete_idempotency_lock', {
         p_idempotency_key: idempotencyKey,
         p_shipment_id: shipment.id,
-        p_status: "completed",
+        p_status: 'completed',
       });
 
       // ============================================
@@ -783,30 +719,25 @@ export async function POST(request: Request) {
       // Mark lock as failed if error occurred after debit
       // This prevents re-debit on retry
       try {
-        await supabaseAdmin.rpc("fail_idempotency_lock", {
+        await supabaseAdmin.rpc('fail_idempotency_lock', {
           p_idempotency_key: idempotencyKey,
-          p_error_message:
-            dbError.message || "Database error after wallet debit",
+          p_error_message: dbError.message || 'Database error after wallet debit',
         });
 
         // Log strutturato per observability
         console.log(
           JSON.stringify({
-            event_type: "idempotency_lock_marked_failed",
+            event_type: 'idempotency_lock_marked_failed',
             idempotency_key: idempotencyKey,
             user_id: targetId,
-            error_message:
-              dbError.message || "Database error after wallet debit",
-            note: "Lock marked as failed after wallet debit, preventing re-debit on retry",
+            error_message: dbError.message || 'Database error after wallet debit',
+            note: 'Lock marked as failed after wallet debit, preventing re-debit on retry',
             timestamp: new Date().toISOString(),
           })
         );
       } catch (failError: any) {
         // Fail-open: log but don't block error response
-        console.error(
-          "⚠️ [IDEMPOTENCY] Failed to mark lock as failed:",
-          failError
-        );
+        console.error('⚠️ [IDEMPOTENCY] Failed to mark lock as failed:', failError);
       }
 
       // ============================================
@@ -816,16 +747,13 @@ export async function POST(request: Request) {
       // (etichetta creata ma non salvata nel DB)
       if (walletDebited && !isSuperadmin) {
         try {
-          const { error: compensateError } = await supabaseAdmin.rpc(
-            "increment_wallet_balance",
-            {
-              p_user_id: targetId,
-              p_amount: walletDebitAmount,
-            }
-          );
+          const { error: compensateError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            p_user_id: targetId,
+            p_amount: walletDebitAmount,
+          });
 
           if (compensateError) {
-            console.error("❌ [WALLET] Compensation failed after DB error:", {
+            console.error('❌ [WALLET] Compensation failed after DB error:', {
               userId: targetId,
               amount: walletDebitAmount,
               error: compensateError.message,
@@ -833,32 +761,30 @@ export async function POST(request: Request) {
             });
 
             // ⚠️ CRITICAL: Se compensazione fallisce, accoda per retry manuale
-            await supabaseAdmin.from("compensation_queue").insert({
+            await supabaseAdmin.from('compensation_queue').insert({
               user_id: targetId,
               provider_id:
-                validated.provider === "spediscionline"
-                  ? "spediscionline"
-                  : validated.provider,
+                validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
               carrier: validated.carrier,
-              action: "REFUND",
+              action: 'REFUND',
               original_cost: walletDebitAmount,
               error_context: {
                 db_error: dbError.message,
                 compensation_error: compensateError.message,
-                retry_strategy: "MANUAL",
+                retry_strategy: 'MANUAL',
                 actor_id: actorId,
                 impersonation_active: impersonationActive,
               },
-              status: "PENDING",
+              status: 'PENDING',
             });
           } else {
-            console.log("✅ [WALLET] Compensation successful after DB error:", {
+            console.log('✅ [WALLET] Compensation successful after DB error:', {
               userId: targetId,
               amount: walletDebitAmount,
             });
           }
         } catch (compError) {
-          console.error("❌ [WALLET] Compensation exception:", compError);
+          console.error('❌ [WALLET] Compensation exception:', compError);
         }
       }
 
@@ -876,55 +802,45 @@ export async function POST(request: Request) {
 
         // Normalizza provider_id per compatibilità DB
         const providerIdForQueue =
-          validated.provider === "spediscionline"
-            ? "spediscionline"
-            : validated.provider;
+          validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider;
 
-        await supabaseAdmin.from("compensation_queue").insert({
+        await supabaseAdmin.from('compensation_queue').insert({
           user_id: targetId, // Target ID (who pays)
           provider_id: providerIdForQueue,
           carrier: validated.carrier,
           shipment_id_external: courierResponse.shipmentId,
           tracking_number: courierResponse.trackingNumber,
-          action: "DELETE",
+          action: 'DELETE',
           original_cost: finalCost,
           error_context: {
             db_error: dbError.message,
             delete_error: deleteError.message,
-            retry_strategy: "MANUAL", // Esplicito: retry manuale
+            retry_strategy: 'MANUAL', // Esplicito: retry manuale
             actor_id: actorId, // Track who clicked (if impersonation)
             impersonation_active: impersonationActive,
           },
           next_retry_at: new Date(Date.now() + 60000).toISOString(),
-          status: "PENDING",
+          status: 'PENDING',
         });
       }
 
-      return Response.json(
-        { error: "Errore salvataggio. Riprova." },
-        { status: 500 }
-      );
+      return Response.json({ error: 'Errore salvataggio. Riprova.' }, { status: 500 });
     }
 
     // ============================================
     // AUDIT LOG (solo se try interno OK)
     // ============================================
     try {
-      await writeShipmentAuditLog(
-        context,
-        AUDIT_ACTIONS.CREATE_SHIPMENT,
-        shipment.id,
-        {
-          carrier: validated.carrier,
-          tracking_number: shipment.tracking_number,
-          cost: finalCost,
-          provider: validated.provider,
-          recipient_email_fallback: usedEmailFallback, // Track if email fallback was used
-        }
-      );
+      await writeShipmentAuditLog(context, AUDIT_ACTIONS.CREATE_SHIPMENT, shipment.id, {
+        carrier: validated.carrier,
+        tracking_number: shipment.tracking_number,
+        cost: finalCost,
+        provider: validated.provider,
+        recipient_email_fallback: usedEmailFallback, // Track if email fallback was used
+      });
     } catch (auditError) {
       // Fail-open: non bloccare se audit fallisce
-      console.warn("⚠️ [AUDIT] Failed to log shipment creation:", auditError);
+      console.warn('⚠️ [AUDIT] Failed to log shipment creation:', auditError);
     }
 
     // SUCCESS
@@ -955,14 +871,24 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Error:", error);
-    // Se è errore di validazione Zod
-    if (error.name === "ZodError") {
+    console.error('Error:', error);
+
+    // Se è errore di autenticazione (da requireSafeAuth)
+    if (
+      error.message?.includes('UNAUTHORIZED') ||
+      error.message?.includes('Authentication required')
+    ) {
       return Response.json(
-        { error: "Dati non validi", details: error.errors },
-        { status: 400 }
+        { error: 'Non autenticato', message: 'Autenticazione richiesta' },
+        { status: 401 }
       );
     }
-    return Response.json({ error: "Errore interno" }, { status: 500 });
+
+    // Se è errore di validazione Zod
+    if (error.name === 'ZodError') {
+      return Response.json({ error: 'Dati non validi', details: error.errors }, { status: 400 });
+    }
+
+    return Response.json({ error: 'Errore interno' }, { status: 500 });
   }
 }

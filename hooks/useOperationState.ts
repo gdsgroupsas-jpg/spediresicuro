@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useCallback, useRef, useState } from 'react'
-import type { ErrorData, ErrorAction } from '@/components/feedback'
+import { useCallback, useRef, useState } from 'react';
+import type { ErrorData, ErrorAction } from '@/components/feedback';
 
 /**
  * Stato operazione (4-state machine)
@@ -14,60 +14,60 @@ import type { ErrorData, ErrorAction } from '@/components/feedback'
  * - Button disabled during LOADING
  * - No re-submit possible
  */
-export type OperationState = 'idle' | 'loading' | 'success' | 'error'
+export type OperationState = 'idle' | 'loading' | 'success' | 'error';
 
 export interface OperationData<T = unknown> {
   /** Dati restituiti dall'operazione (solo in success) */
-  data: T | null
+  data: T | null;
   /** Errore strutturato (solo in error) */
-  error: ErrorData | null
+  error: ErrorData | null;
   /** Azioni di recovery disponibili (solo in error) */
-  errorActions: ErrorAction[]
+  errorActions: ErrorAction[];
 }
 
 export interface UseOperationStateOptions<T = unknown> {
   /** Stato iniziale (default: idle) */
-  initialState?: OperationState
+  initialState?: OperationState;
   /** Dati iniziali */
-  initialData?: T | null
+  initialData?: T | null;
   /** Callback on success */
-  onSuccess?: (data: T) => void
+  onSuccess?: (data: T) => void;
   /** Callback on error */
-  onError?: (error: ErrorData) => void
+  onError?: (error: ErrorData) => void;
   /** Timeout auto-reset dopo success (ms, 0 = no auto-reset) */
-  autoResetOnSuccessMs?: number
+  autoResetOnSuccessMs?: number;
 }
 
 export interface UseOperationStateReturn<T = unknown> {
   /** Stato corrente */
-  state: OperationState
+  state: OperationState;
   /** Dati operazione */
-  data: T | null
+  data: T | null;
   /** Errore strutturato */
-  error: ErrorData | null
+  error: ErrorData | null;
   /** Azioni recovery error */
-  errorActions: ErrorAction[]
+  errorActions: ErrorAction[];
   /** True se in loading */
-  isLoading: boolean
+  isLoading: boolean;
   /** True se success */
-  isSuccess: boolean
+  isSuccess: boolean;
   /** True se error */
-  isError: boolean
+  isError: boolean;
   /** True se form deve essere bloccato */
-  isFormLocked: boolean
+  isFormLocked: boolean;
   /** Messaggio display corrente */
-  displayMessage: string | null
+  displayMessage: string | null;
   /** Idempotency key per retry sicuro */
-  idempotencyKey: string
+  idempotencyKey: string;
   /** Transizioni stato */
-  setIdle: () => void
-  setLoading: (message?: string) => void
-  setSuccess: (data: T, message?: string) => void
-  setError: (error: ErrorData, actions?: ErrorAction[]) => void
+  setIdle: () => void;
+  setLoading: (message?: string) => void;
+  setSuccess: (data: T, message?: string) => void;
+  setError: (error: ErrorData, actions?: ErrorAction[]) => void;
   /** Reset completo */
-  reset: () => void
+  reset: () => void;
   /** Genera nuova idempotency key */
-  regenerateIdempotencyKey: () => string
+  regenerateIdempotencyKey: () => string;
 }
 
 /**
@@ -76,14 +76,14 @@ export interface UseOperationStateReturn<T = unknown> {
 function generateIdempotencyKey(): string {
   // Crypto.randomUUID disponibile in browser moderni
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
+    return crypto.randomUUID();
   }
   // Fallback per browser più vecchi
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 /**
@@ -136,111 +136,112 @@ export function useOperationState<T = unknown>(
     onSuccess,
     onError,
     autoResetOnSuccessMs = 0,
-  } = options
+  } = options;
 
-  const [state, setState] = useState<OperationState>(initialState)
-  const [data, setData] = useState<T | null>(initialData)
-  const [error, setErrorState] = useState<ErrorData | null>(null)
-  const [errorActions, setErrorActions] = useState<ErrorAction[]>([])
-  const [displayMessage, setDisplayMessage] = useState<string | null>(null)
-  const [idempotencyKey, setIdempotencyKey] = useState<string>(() =>
-    generateIdempotencyKey()
-  )
+  const [state, setState] = useState<OperationState>(initialState);
+  const [data, setData] = useState<T | null>(initialData);
+  const [error, setErrorState] = useState<ErrorData | null>(null);
+  const [errorActions, setErrorActions] = useState<ErrorAction[]>([]);
+  const [displayMessage, setDisplayMessage] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() => generateIdempotencyKey());
 
   // Ref per timeout auto-reset
-  const autoResetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const autoResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timeout
   const clearAutoResetTimeout = useCallback(() => {
     if (autoResetTimeoutRef.current) {
-      clearTimeout(autoResetTimeoutRef.current)
-      autoResetTimeoutRef.current = null
+      clearTimeout(autoResetTimeoutRef.current);
+      autoResetTimeoutRef.current = null;
     }
-  }, [])
+  }, []);
 
   // Transizione a IDLE
   const setIdle = useCallback(() => {
-    clearAutoResetTimeout()
-    setState('idle')
-    setDisplayMessage(null)
+    clearAutoResetTimeout();
+    setState('idle');
+    setDisplayMessage(null);
     // Non resettiamo data/error per permettere accesso dopo transizione
-  }, [clearAutoResetTimeout])
+  }, [clearAutoResetTimeout]);
 
   // Transizione a LOADING
-  const setLoading = useCallback((message?: string) => {
-    clearAutoResetTimeout()
-    setState('loading')
-    setDisplayMessage(message || 'Operazione in corso...')
-    // Reset error/data quando inizia nuova operazione
-    setErrorState(null)
-    setErrorActions([])
-    // NOTA: Non resettiamo data per permettere optimistic updates
-  }, [clearAutoResetTimeout])
+  const setLoading = useCallback(
+    (message?: string) => {
+      clearAutoResetTimeout();
+      setState('loading');
+      setDisplayMessage(message || 'Operazione in corso...');
+      // Reset error/data quando inizia nuova operazione
+      setErrorState(null);
+      setErrorActions([]);
+      // NOTA: Non resettiamo data per permettere optimistic updates
+    },
+    [clearAutoResetTimeout]
+  );
 
   // Transizione a SUCCESS
   const setSuccess = useCallback(
     (successData: T, message?: string) => {
-      clearAutoResetTimeout()
-      setState('success')
-      setData(successData)
-      setDisplayMessage(message || 'Operazione completata')
-      setErrorState(null)
-      setErrorActions([])
+      clearAutoResetTimeout();
+      setState('success');
+      setData(successData);
+      setDisplayMessage(message || 'Operazione completata');
+      setErrorState(null);
+      setErrorActions([]);
 
       // Callback
-      onSuccess?.(successData)
+      onSuccess?.(successData);
 
       // Auto-reset opzionale
       if (autoResetOnSuccessMs > 0) {
         autoResetTimeoutRef.current = setTimeout(() => {
-          setIdle()
+          setIdle();
           // Genera nuova idempotency key per prossima operazione
-          setIdempotencyKey(generateIdempotencyKey())
-        }, autoResetOnSuccessMs)
+          setIdempotencyKey(generateIdempotencyKey());
+        }, autoResetOnSuccessMs);
       }
     },
     [clearAutoResetTimeout, onSuccess, autoResetOnSuccessMs, setIdle]
-  )
+  );
 
   // Transizione a ERROR
   const setError = useCallback(
     (errorData: ErrorData, actions: ErrorAction[] = []) => {
-      clearAutoResetTimeout()
-      setState('error')
-      setErrorState(errorData)
-      setErrorActions(actions)
-      setDisplayMessage(errorData.message)
+      clearAutoResetTimeout();
+      setState('error');
+      setErrorState(errorData);
+      setErrorActions(actions);
+      setDisplayMessage(errorData.message);
 
       // Callback
-      onError?.(errorData)
+      onError?.(errorData);
     },
     [clearAutoResetTimeout, onError]
-  )
+  );
 
   // Reset completo
   const reset = useCallback(() => {
-    clearAutoResetTimeout()
-    setState('idle')
-    setData(null)
-    setErrorState(null)
-    setErrorActions([])
-    setDisplayMessage(null)
+    clearAutoResetTimeout();
+    setState('idle');
+    setData(null);
+    setErrorState(null);
+    setErrorActions([]);
+    setDisplayMessage(null);
     // Genera nuova idempotency key
-    setIdempotencyKey(generateIdempotencyKey())
-  }, [clearAutoResetTimeout])
+    setIdempotencyKey(generateIdempotencyKey());
+  }, [clearAutoResetTimeout]);
 
   // Rigenera idempotency key manualmente
   const regenerateIdempotencyKey = useCallback(() => {
-    const newKey = generateIdempotencyKey()
-    setIdempotencyKey(newKey)
-    return newKey
-  }, [])
+    const newKey = generateIdempotencyKey();
+    setIdempotencyKey(newKey);
+    return newKey;
+  }, []);
 
   // Computed values
-  const isLoading = state === 'loading'
-  const isSuccess = state === 'success'
-  const isError = state === 'error'
-  const isFormLocked = state === 'loading'
+  const isLoading = state === 'loading';
+  const isSuccess = state === 'success';
+  const isError = state === 'error';
+  const isFormLocked = state === 'loading';
 
   return {
     state,
@@ -259,7 +260,7 @@ export function useOperationState<T = unknown>(
     setError,
     reset,
     regenerateIdempotencyKey,
-  }
+  };
 }
 
-export default useOperationState
+export default useOperationState;

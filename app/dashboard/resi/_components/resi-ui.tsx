@@ -1,6 +1,6 @@
 /**
  * Client Component: UI Resi
- * 
+ *
  * Gestisce UI, filtri, search e realtime updates.
  * Riceve dati iniziali come props dal Server Component.
  */
@@ -146,9 +146,7 @@ export default function ResiUI({ initialReturns, userId }: ResiUIProps) {
                       <div className="text-sm font-medium text-gray-900">
                         {ret.tracking_number || 'N/A'}
                       </div>
-                      {ret.ldv && (
-                        <div className="text-xs text-gray-500">LDV: {ret.ldv}</div>
-                      )}
+                      {ret.ldv && <div className="text-xs text-gray-500">LDV: {ret.ldv}</div>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{ret.original_tracking || 'N/A'}</div>

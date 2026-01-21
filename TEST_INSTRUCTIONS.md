@@ -5,6 +5,7 @@
 L'ambiente di sviluppo corrente **non ha accesso alla rete esterna** per motivi di sicurezza, quindi i test automatici con chiamate API reali non possono essere eseguiti qui.
 
 **Errore riscontrato:**
+
 ```
 Error: getaddrinfo EAI_AGAIN pxwmposcsvsusjxdjues.supabase.co
 curl: (56) CONNECT tunnel failed, response 403
@@ -13,22 +14,26 @@ curl: (56) CONNECT tunnel failed, response 403
 ## ✅ COSA È STATO COMPLETATO
 
 ### 1. **Tutti i fix implementati e committati** ✅
+
 - Commit `9f38d0f`: Fix metadata MERGE logic
 - Commit `4784b5e`: Rimosso fallback pericoloso `courier_id`
 - Commit `a513a18`: Documentazione PR completa
 - Commit `8f0e609`: Script di test e query di validazione
 
 ### 2. **Script di test pronti** ✅
+
 - `scripts/test-multi-contract-real.ts` - Test completo con API reali
 - `scripts/test-connection.ts` - Test connessione Supabase
 - `VALIDATION_QUERIES.sql` - Query SQL per validazione manuale
 
 ### 3. **Ambiente configurato** ✅
+
 - `.env.local` creato con credenziali Supabase
 - npm dependencies installate (1073 packages)
 - TypeScript configurato
 
 ### 4. **Documentazione completa** ✅
+
 - `PR_INSTRUCTIONS.md` - Template completo per Pull Request
 - Commit messages dettagliati con analisi tecnica
 
@@ -191,6 +196,7 @@ ORDER BY updated_at DESC;
 Una volta che il test ha passato con successo:
 
 1. **Apri questo URL nel browser:**
+
    ```
    https://github.com/gdsgroupsas-jpg/spediresicuro/compare/master...claude/audit-listini-sync-bug-tXnmq
    ```
@@ -340,6 +346,7 @@ AND provider_id = 'spedisci_online';
 ## 📞 CONTATTI
 
 Per problemi durante il test o deploy, contattare:
+
 - **Product Owner:** @gdsgroupsas
 - **Email Test:** testspediresicuro+postaexpress@gmail.com
 

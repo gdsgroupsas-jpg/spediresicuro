@@ -21,14 +21,14 @@ Questo documento descrive il sistema di autenticazione di SpedireSicuro basato s
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| NextAuth Configuration | docs/8-SECURITY/AUTHENTICATION.md | [Configuration](#nextauth-configuration) |
-| Provider Supportati | docs/8-SECURITY/AUTHENTICATION.md | [Providers](#authentication-providers) |
-| Session Management | docs/8-SECURITY/AUTHENTICATION.md | [Sessions](#session-management) |
-| Password Security | docs/8-SECURITY/AUTHENTICATION.md | [Password](#password-security) |
-| Acting Context | docs/8-SECURITY/AUTHORIZATION.md | [Acting Context](../8-SECURITY/AUTHORIZATION.md) |
-| Authorization | docs/8-SECURITY/AUTHORIZATION.md | [Authorization](../8-SECURITY/AUTHORIZATION.md) |
+| Sezione                | Pagina                            | Link                                             |
+| ---------------------- | --------------------------------- | ------------------------------------------------ |
+| NextAuth Configuration | docs/8-SECURITY/AUTHENTICATION.md | [Configuration](#nextauth-configuration)         |
+| Provider Supportati    | docs/8-SECURITY/AUTHENTICATION.md | [Providers](#authentication-providers)           |
+| Session Management     | docs/8-SECURITY/AUTHENTICATION.md | [Sessions](#session-management)                  |
+| Password Security      | docs/8-SECURITY/AUTHENTICATION.md | [Password](#password-security)                   |
+| Acting Context         | docs/8-SECURITY/AUTHORIZATION.md  | [Acting Context](../8-SECURITY/AUTHORIZATION.md) |
+| Authorization          | docs/8-SECURITY/AUTHORIZATION.md  | [Authorization](../8-SECURITY/AUTHORIZATION.md)  |
 
 ## Content
 
@@ -37,22 +37,24 @@ Questo documento descrive il sistema di autenticazione di SpedireSicuro basato s
 **File:** `lib/auth-config.ts`
 
 **Architettura:**
+
 - NextAuth.js v5 con App Router
 - JWT strategy per sessioni (no database session)
 - Supporto multi-provider (Credentials, Google OAuth, GitHub OAuth)
 - Callbacks personalizzati per session e JWT
 
 **Configurazione Base:**
+
 ```typescript
 export const authOptions = {
-  basePath: "/api/auth",
+  basePath: '/api/auth',
   trustHost: true, // Importante per Vercel
   url: nextAuthUrl, // Auto-rilevato da VERCEL_URL o NEXTAUTH_URL
   providers: [
     // Credentials, Google, GitHub
   ],
   session: {
-    strategy: "jwt" as const,
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 giorni
   },
   secret: process.env.NEXTAUTH_SECRET, // OBBLIGATORIO
@@ -60,6 +62,7 @@ export const authOptions = {
 ```
 
 **Route Handler:**
+
 ```typescript
 // app/api/auth/[...nextauth]/route.ts
 import { handlers } from '@/lib/auth-config';
@@ -73,11 +76,13 @@ export const { GET, POST } = handlers;
 #### 1. Credentials Provider (Email/Password)
 
 **Configurazione:**
+
 - Provider: `CredentialsProvider`
 - Validazione: `verifyUserCredentials()` da `lib/database.ts`
 - Password hashing: bcrypt (hash `$2a$`, `$2b$`, `$2x$`, `$2y$`)
 
 **Flow:**
+
 ```
 1. User inserisce email + password
 2. NextAuth chiama authorize()
@@ -90,30 +95,34 @@ export const { GET, POST } = handlers;
 ```
 
 **Esempio Authorize:**
+
 ```typescript
 CredentialsProvider({
-  name: "Credentials",
+  name: 'Credentials',
   credentials: {
-    email: { label: "Email", type: "email" },
-    password: { label: "Password", type: "password" },
+    email: { label: 'Email', type: 'email' },
+    password: { label: 'Password', type: 'password' },
   },
   async authorize(credentials) {
-    const { verifyUserCredentials } = await import("@/lib/database");
+    const { verifyUserCredentials } = await import('@/lib/database');
     const user = await verifyUserCredentials(
       credentials.email as string,
       credentials.password as string
     );
-    return user ? {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    } : null;
+    return user
+      ? {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        }
+      : null;
   },
-})
+});
 ```
 
 **Error Handling:**
+
 - `EMAIL_NOT_CONFIRMED` → Errore esplicito per email non confermata
 - Password errata → `null` (NextAuth mostra errore generico)
 - Utente non trovato → `null`
@@ -123,17 +132,20 @@ CredentialsProvider({
 #### 2. Google OAuth Provider
 
 **Configurazione:**
+
 - Provider: `GoogleProvider`
 - Variabili ambiente: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - Account linking: `allowDangerousEmailAccountLinking: true` (stessa email = stesso account)
 
 **Setup Google Console:**
+
 1. Vai su [Google Cloud Console](https://console.cloud.google.com/)
 2. Crea OAuth 2.0 Client ID
 3. Configura callback URL: `https://yourdomain.com/api/auth/callback/google`
 4. Copia `CLIENT_ID` e `CLIENT_SECRET` in Vercel env vars
 
 **Flow:**
+
 ```
 1. User clicca "Sign in with Google"
 2. Redirect a Google OAuth consent screen
@@ -145,6 +157,7 @@ CredentialsProvider({
 ```
 
 **Callback URL:**
+
 - Produzione: `https://spediresicuro.vercel.app/api/auth/callback/google`
 - Sviluppo: `http://localhost:3000/api/auth/callback/google`
 
@@ -153,11 +166,13 @@ CredentialsProvider({
 #### 3. GitHub OAuth Provider
 
 **Configurazione:**
+
 - Provider: `GitHubProvider`
 - Variabili ambiente: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 - Account linking: `allowDangerousEmailAccountLinking: true`
 
 **Setup GitHub:**
+
 1. Vai su [GitHub Developer Settings](https://github.com/settings/developers)
 2. Crea OAuth App
 3. Configura callback URL: `https://yourdomain.com/api/auth/callback/github`
@@ -172,11 +187,13 @@ CredentialsProvider({
 **Strategy:** JWT (JSON Web Token)
 
 **Vantaggi:**
+
 - No database queries per validare sessione
 - Stateless (scalabile)
 - Funziona con serverless (Vercel)
 
 **Session Data:**
+
 ```typescript
 interface SessionUser {
   id: string;
@@ -193,6 +210,7 @@ interface SessionUser {
 ```
 
 **JWT Token Structure:**
+
 ```typescript
 {
   sub: string,        // User ID
@@ -209,6 +227,7 @@ interface SessionUser {
 ```
 
 **Session Callback:**
+
 ```typescript
 async session({ session, token }) {
   if (session.user && token) {
@@ -222,6 +241,7 @@ async session({ session, token }) {
 ```
 
 **JWT Callback:**
+
 ```typescript
 async jwt({ token, user, account }) {
   // Prima chiamata (login): user presente
@@ -231,15 +251,16 @@ async jwt({ token, user, account }) {
     token.provider = account?.provider || 'credentials';
     // ... altri campi
   }
-  
+
   // Chiamate successive: aggiorna da database se necessario
   // (es. wallet_balance cambia)
-  
+
   return token;
 }
 ```
 
 **Session TTL:**
+
 - Default: 30 giorni (`maxAge: 30 * 24 * 60 * 60`)
 - Configurabile via `NEXTAUTH_SESSION_MAX_AGE` (opzionale)
 
@@ -250,10 +271,12 @@ async jwt({ token, user, account }) {
 **Hashing Algorithm:** bcrypt
 
 **Formato Hash:**
+
 - `$2a$`, `$2b$`, `$2x$`, `$2y$` → bcrypt hash
 - Password in chiaro (backward compatibility, deprecato)
 
 **Verifica Password:**
+
 ```typescript
 // lib/database.ts - verifyUserCredentials()
 if (dbUser.password.startsWith('$2')) {
@@ -266,6 +289,7 @@ if (dbUser.password.startsWith('$2')) {
 ```
 
 **Best Practices:**
+
 - ✅ Usa sempre bcrypt per nuove password
 - ✅ Salt automatico (bcrypt gestisce)
 - ✅ Cost factor: default 10 (configurabile)
@@ -273,6 +297,7 @@ if (dbUser.password.startsWith('$2')) {
 - ❌ Mai log password (nemmeno hash)
 
 **Password Reset:**
+
 - TODO: Implementare flow password reset
 - Suggerito: Token temporaneo via email, scadenza 1h
 
@@ -281,11 +306,13 @@ if (dbUser.password.startsWith('$2')) {
 ### Environment Variables
 
 **Obbligatorie:**
+
 ```bash
 NEXTAUTH_SECRET=<random-32-chars>  # OBBLIGATORIO
 ```
 
 **Opzionali (OAuth):**
+
 ```bash
 GOOGLE_CLIENT_ID=<google-client-id>
 GOOGLE_CLIENT_SECRET=<google-client-secret>
@@ -294,11 +321,13 @@ GITHUB_CLIENT_SECRET=<github-client-secret>
 ```
 
 **Opzionali (URL):**
+
 ```bash
 NEXTAUTH_URL=https://yourdomain.com  # Auto-rilevato su Vercel
 ```
 
 **Generazione NEXTAUTH_SECRET:**
+
 ```bash
 # Genera secret sicuro (32+ caratteri)
 openssl rand -base64 32
@@ -308,6 +337,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
 **Validazione Config:**
+
 - `validateOAuthConfig()` verifica configurazione all'avvio
 - Log errori critici se `NEXTAUTH_SECRET` mancante
 - Warning se OAuth configurato ma URL non HTTPS
@@ -319,6 +349,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 **⚠️ IMPORTANTE:** L'autenticazione supporta impersonation tramite Acting Context.
 
 **Pattern:**
+
 - `getSafeAuth()` / `requireSafeAuth()` → Ritorna `ActingContext`
 - `ActingContext.actor` → Chi esegue l'azione (SuperAdmin se impersonating)
 - `ActingContext.target` → Per chi viene eseguita l'azione (cliente)
@@ -326,21 +357,20 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 **Vedi:** [Authorization & Acting Context](AUTHORIZATION.md) per dettagli completi.
 
 **Esempio:**
+
 ```typescript
 import { requireSafeAuth } from '@/lib/safe-auth';
 
 export async function createShipment(data: ShipmentData) {
   const context = await requireSafeAuth();
-  
+
   // target.id = chi paga (cliente, anche se impersonating)
   // actor.id = chi clicca (SuperAdmin se impersonating)
-  
-  const { data: shipment } = await supabaseAdmin
-    .from('shipments')
-    .insert({
-      user_id: context.target.id, // ⚠️ Usa TARGET, non actor
-      // ...
-    });
+
+  const { data: shipment } = await supabaseAdmin.from('shipments').insert({
+    user_id: context.target.id, // ⚠️ Usa TARGET, non actor
+    // ...
+  });
 }
 ```
 
@@ -413,11 +443,11 @@ import { auth } from '@/lib/auth-config';
 
 export async function getMyData() {
   const session = await auth();
-  
+
   if (!session?.user) {
     throw new Error('UNAUTHORIZED');
   }
-  
+
   const userId = session.user.id;
   // ... query database
 }
@@ -431,10 +461,10 @@ import { requireSafeAuth } from '@/lib/safe-auth';
 
 export async function rechargeWallet(amount: number) {
   const context = await requireSafeAuth();
-  
+
   // context.target.id = chi riceve credito (cliente)
   // context.actor.id = chi esegue (SuperAdmin se impersonating)
-  
+
   const { error } = await supabaseAdmin.rpc('add_wallet_credit', {
     p_user_id: context.target.id,
     p_amount: amount,
@@ -447,15 +477,15 @@ export async function rechargeWallet(amount: number) {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Errore "Configuration" in NextAuth | Verifica `NEXTAUTH_SECRET` configurato in Vercel env vars |
-| OAuth callback redirect a localhost | Configura `NEXTAUTH_URL` o usa `VERCEL_URL` (auto-rilevato) |
-| Session non persiste | Verifica cookie SameSite/Secure settings, controlla browser console |
-| Password non funziona | Verifica hash bcrypt nel database, controlla `verifyUserCredentials()` |
-| Impersonation non funziona | Verifica cookie `sp_impersonate_id`, controlla middleware validation |
-| Email non confermata | Verifica `email_confirmed_at` nel database, implementa flow conferma |
-| OAuth account linking fallisce | Verifica `allowDangerousEmailAccountLinking: true` in provider config |
+| Issue                               | Soluzione                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| Errore "Configuration" in NextAuth  | Verifica `NEXTAUTH_SECRET` configurato in Vercel env vars              |
+| OAuth callback redirect a localhost | Configura `NEXTAUTH_URL` o usa `VERCEL_URL` (auto-rilevato)            |
+| Session non persiste                | Verifica cookie SameSite/Secure settings, controlla browser console    |
+| Password non funziona               | Verifica hash bcrypt nel database, controlla `verifyUserCredentials()` |
+| Impersonation non funziona          | Verifica cookie `sp_impersonate_id`, controlla middleware validation   |
+| Email non confermata                | Verifica `email_confirmed_at` nel database, implementa flow conferma   |
+| OAuth account linking fallisce      | Verifica `allowDangerousEmailAccountLinking: true` in provider config  |
 
 ---
 
@@ -471,11 +501,12 @@ export async function rechargeWallet(amount: number) {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version - NextAuth v5, OAuth support, Acting Context | AI Agent |
+| Date       | Version | Changes                                                      | Author   |
+| ---------- | ------- | ------------------------------------------------------------ | -------- |
+| 2026-01-12 | 1.0.0   | Initial version - NextAuth v5, OAuth support, Acting Context | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

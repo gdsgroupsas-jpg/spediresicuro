@@ -1,8 +1,8 @@
-import { auth } from "@/lib/auth-config";
-import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
-import { supabaseAdmin } from "@/lib/db/client";
-import { createPriceList } from "@/lib/db/price-lists";
-import { testSpedisciOnlineRates } from "./spedisci-online-rates";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix';
+import { supabaseAdmin } from '@/lib/db/client';
+import { createPriceList } from '@/lib/db/price-lists';
+import { testSpedisciOnlineRates } from './spedisci-online-rates';
 
 /**
  * Sincronizza listini completi (Matrice Pesi x Zone) da spedisci.online
@@ -29,22 +29,20 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
   };
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id')
+      .eq('email', context.actor.email)
       .single();
 
-    if (!user) return { success: false, error: "Utente non trovato" };
+    if (!user) return { success: false, error: 'Utente non trovato' };
 
-    console.log(
-      "🚀 [MATRIX SYNC] Avvio sincronizzazione completa (Smart Probe)..."
-    );
+    console.log('🚀 [MATRIX SYNC] Avvio sincronizzazione completa (Smart Probe)...');
     console.log(
       `📋 [MATRIX SYNC] Matrix: ${PRICING_MATRIX.WEIGHTS.length} pesi x ${PRICING_MATRIX.ZONES.length} zone`
     );
@@ -57,9 +55,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
       }
     }
 
-    console.log(
-      `🔢 [MATRIX SYNC] Totale richieste da effettuare: ${probes.length}`
-    );
+    console.log(`🔢 [MATRIX SYNC] Totale richieste da effettuare: ${probes.length}`);
 
     // 2. Execute Probes (in batches to avoid rate limits)
     const BATCH_SIZE = options?.batchSize || 3;
@@ -68,8 +64,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
     let probesSuccessful = 0;
 
     // Helper for delay
-    const delay = (ms: number) =>
-      new Promise((resolve) => setTimeout(resolve, ms));
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     for (let i = 0; i < probes.length; i += BATCH_SIZE) {
       const batch = probes.slice(i, i + BATCH_SIZE);
@@ -92,23 +87,23 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
           ],
           shipFrom: {
             // Standard Sender (Rome)
-            name: "Mittente Probe",
-            street1: "Via Roma 1",
-            city: "Roma",
-            state: "RM",
-            postalCode: "00100",
-            country: "IT",
-            email: "probe@test.com",
+            name: 'Mittente Probe',
+            street1: 'Via Roma 1',
+            city: 'Roma',
+            state: 'RM',
+            postalCode: '00100',
+            country: 'IT',
+            email: 'probe@test.com',
           },
           shipTo: {
             // Receiver based on Zone
-            name: "Destinatario Probe",
-            street1: "Via Test 1",
+            name: 'Destinatario Probe',
+            street1: 'Via Test 1',
             city: probe.zone.sampleAddress.city,
             state: probe.zone.sampleAddress.state,
             postalCode: probe.zone.sampleAddress.postalCode,
             country: probe.zone.sampleAddress.country,
-            email: "receiver@probe.com",
+            email: 'receiver@probe.com',
           },
         };
 
@@ -137,9 +132,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
       if (i + BATCH_SIZE < probes.length) await delay(1000);
     }
 
-    console.log(
-      `✅ [MATRIX SYNC] Scansione completata. Rates raccolti: ${allRates.length}`
-    );
+    console.log(`✅ [MATRIX SYNC] Scansione completata. Rates raccolti: ${allRates.length}`);
 
     // 3. Process Data & Save to DB
     // Group by Carrier
@@ -160,11 +153,11 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
 
       // Find existing List
       const { data: existingList } = await supabaseAdmin
-        .from("price_lists")
-        .select("id")
-        .eq("created_by", user.id)
-        .eq("list_type", "supplier")
-        .ilike("name", `%${carrierCode}%`)
+        .from('price_lists')
+        .select('id')
+        .eq('created_by', user.id)
+        .eq('list_type', 'supplier')
+        .ilike('name', `%${carrierCode}%`)
         .maybeSingle();
 
       let listId = existingList?.id;
@@ -176,10 +169,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
           // Default true
           console.log(`   🔄 Aggiornamento listino esistente: ${listId}`);
           // Delete old entries
-          await supabaseAdmin
-            .from("price_list_entries")
-            .delete()
-            .eq("price_list_id", listId);
+          await supabaseAdmin.from('price_list_entries').delete().eq('price_list_id', listId);
           priceListsUpdated++;
         } else {
           console.log(`   ⏭️ Listino esistente, skip overwrite.`);
@@ -190,12 +180,12 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
         const newList = await createPriceList(
           {
             name: listName,
-            version: "2.0", // V2 Matrix
-            status: "active",
+            version: '2.0', // V2 Matrix
+            status: 'active',
             courier_id: null, // Link later if needed
-            list_type: "supplier",
-            source_type: "api",
-            notes: "Matrix Sync V2 - Full Zone/Weight scan",
+            list_type: 'supplier',
+            source_type: 'api',
+            notes: 'Matrix Sync V2 - Full Zone/Weight scan',
           },
           user.id
         );
@@ -226,10 +216,10 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
 
         // Determine Service Type
         const contractLower = rate.contractCode.toLowerCase();
-        let serviceType = "standard";
-        if (contractLower.includes("express") || contractLower.includes("fast"))
-          serviceType = "express";
-        if (contractLower.includes("economy")) serviceType = "economy";
+        let serviceType = 'standard';
+        if (contractLower.includes('express') || contractLower.includes('fast'))
+          serviceType = 'express';
+        if (contractLower.includes('economy')) serviceType = 'economy';
 
         return {
           price_list_id: listId,
@@ -247,11 +237,9 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
       // e.g. "GLS Standard" and "GLS Express" will both appear for 3kg/Roma.
 
       // We can insert all of them.
-      const { error: insertError } = await supabaseAdmin
-        .from("price_list_entries")
-        .insert(entries);
+      const { error: insertError } = await supabaseAdmin.from('price_list_entries').insert(entries);
       if (insertError) {
-        console.error("   ❌ Errore inserimento voci:", insertError.message);
+        console.error('   ❌ Errore inserimento voci:', insertError.message);
       } else {
         console.log(`   ✅ Inserite ${entries.length} voci.`);
         entriesAddedTotal += entries.length;
@@ -270,7 +258,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
       },
     };
   } catch (error: any) {
-    console.error("❌ [MATRIX SYNC] Error:", error);
+    console.error('❌ [MATRIX SYNC] Error:', error);
     return { success: false, error: error.message };
   }
 }

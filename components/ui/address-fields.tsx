@@ -26,13 +26,116 @@ interface LocationResult {
 
 // Lista province italiane (sigle)
 const PROVINCE_ITALIANE = [
-  'AG', 'AL', 'AN', 'AO', 'AR', 'AP', 'AT', 'AV', 'BA', 'BT', 'BL', 'BN', 'BG', 'BI', 'BO', 'BZ', 'BS', 'BR',
-  'CA', 'CL', 'CB', 'CI', 'CE', 'CT', 'CZ', 'CH', 'CO', 'CS', 'CR', 'KR', 'CN', 'EN', 'FM', 'FE', 'FI', 'FG',
-  'FC', 'FR', 'GE', 'GO', 'GR', 'IM', 'IS', 'SP', 'AQ', 'LT', 'LE', 'LC', 'LI', 'LO', 'LU', 'MC', 'MN', 'MS',
-  'MT', 'ME', 'MI', 'MO', 'MB', 'NA', 'NO', 'NU', 'OT', 'OR', 'PD', 'PA', 'PR', 'PV', 'PG', 'PU', 'PE', 'PC',
-  'PI', 'PT', 'PN', 'PZ', 'PO', 'RG', 'RA', 'RC', 'RE', 'RI', 'RN', 'RM', 'RO', 'SA', 'VS', 'SS', 'SV', 'SI',
-  'SR', 'SO', 'TA', 'TE', 'TR', 'TO', 'OG', 'TP', 'TN', 'TV', 'TS', 'UD', 'VA', 'VE', 'VB', 'VC', 'VR', 'VV',
-  'VI', 'VT'
+  'AG',
+  'AL',
+  'AN',
+  'AO',
+  'AR',
+  'AP',
+  'AT',
+  'AV',
+  'BA',
+  'BT',
+  'BL',
+  'BN',
+  'BG',
+  'BI',
+  'BO',
+  'BZ',
+  'BS',
+  'BR',
+  'CA',
+  'CL',
+  'CB',
+  'CI',
+  'CE',
+  'CT',
+  'CZ',
+  'CH',
+  'CO',
+  'CS',
+  'CR',
+  'KR',
+  'CN',
+  'EN',
+  'FM',
+  'FE',
+  'FI',
+  'FG',
+  'FC',
+  'FR',
+  'GE',
+  'GO',
+  'GR',
+  'IM',
+  'IS',
+  'SP',
+  'AQ',
+  'LT',
+  'LE',
+  'LC',
+  'LI',
+  'LO',
+  'LU',
+  'MC',
+  'MN',
+  'MS',
+  'MT',
+  'ME',
+  'MI',
+  'MO',
+  'MB',
+  'NA',
+  'NO',
+  'NU',
+  'OT',
+  'OR',
+  'PD',
+  'PA',
+  'PR',
+  'PV',
+  'PG',
+  'PU',
+  'PE',
+  'PC',
+  'PI',
+  'PT',
+  'PN',
+  'PZ',
+  'PO',
+  'RG',
+  'RA',
+  'RC',
+  'RE',
+  'RI',
+  'RN',
+  'RM',
+  'RO',
+  'SA',
+  'VS',
+  'SS',
+  'SV',
+  'SI',
+  'SR',
+  'SO',
+  'TA',
+  'TE',
+  'TR',
+  'TO',
+  'OG',
+  'TP',
+  'TN',
+  'TV',
+  'TS',
+  'UD',
+  'VA',
+  'VE',
+  'VB',
+  'VC',
+  'VR',
+  'VV',
+  'VI',
+  'VT',
 ];
 
 /**
@@ -68,7 +171,7 @@ export default function AddressFields({
       if (!response.ok) throw new Error('Errore ricerca');
 
       const data = await response.json();
-      
+
       // Deduplica e trasforma risultati
       const results: LocationResult[] = [];
       const seen = new Set<string>();
@@ -131,27 +234,27 @@ export default function AddressFields({
 
   const handleSelectResult = (result: LocationResult) => {
     console.log('🔍 [AddressFields] handleSelectResult chiamato:', result);
-    
+
     // ⚠️ Flag per prevenire ricerca automatica dopo selezione
     setIsSelectionInProgress(true);
-    
+
     // Chiudi dropdown immediatamente
     setShowResults(false);
     setSearchResults([]);
-    
+
     // Aggiorna input
     setCityInput(result.city);
-    
+
     // ⚠️ Chiama i callback nell'ordine corretto
     console.log('🔍 [AddressFields] Chiamando onCityChange:', result.city);
     onCityChange(result.city);
-    
+
     console.log('🔍 [AddressFields] Chiamando onProvinceChange:', result.province);
     onProvinceChange(result.province);
-    
+
     console.log('🔍 [AddressFields] Chiamando onPostalCodeChange:', result.postal_code);
     onPostalCodeChange(result.postal_code);
-    
+
     // Reset flag dopo un breve delay per permettere ai callback di completare
     setTimeout(() => {
       setIsSelectionInProgress(false);
@@ -161,10 +264,10 @@ export default function AddressFields({
   const handleCityInputChange = (value: string) => {
     // Se l'utente sta modificando manualmente, reset flag selezione
     setIsSelectionInProgress(false);
-    
+
     setCityInput(value);
     onCityChange(value);
-    
+
     // Mostra risultati solo se non è validata (non selezionata)
     if (value.length >= 2 && !cityValid) {
       setShowResults(true);
@@ -205,7 +308,7 @@ export default function AddressFields({
                     : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
                 } focus:outline-none placeholder:text-gray-500`}
               />
-              
+
               {cityValid && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
                   <CheckCircle2 className="w-5 h-5" />
@@ -231,7 +334,9 @@ export default function AddressFields({
                       className="px-4 py-2 cursor-pointer hover:bg-gray-100 aria-selected:bg-gray-100 text-gray-900 font-medium flex items-center gap-2"
                     >
                       <MapPin className="w-4 h-4 text-gray-400" />
-                      <span>{result.city} ({result.province}) - {result.postal_code}</span>
+                      <span>
+                        {result.city} ({result.province}) - {result.postal_code}
+                      </span>
                     </Command.Item>
                   ))}
                 </Command.List>
@@ -240,9 +345,7 @@ export default function AddressFields({
           </Command>
         </div>
         {cityInput && !cityValid && (
-          <p className="mt-1 text-xs text-red-600">
-            ⚠️ Seleziona una città dall&apos;autocomplete
-          </p>
+          <p className="mt-1 text-xs text-red-600">⚠️ Seleziona una città dall&apos;autocomplete</p>
         )}
       </div>
 
@@ -269,9 +372,7 @@ export default function AddressFields({
             } focus:outline-none placeholder:text-gray-500`}
           />
           {postalCodeValue && !postalCodeValid && (
-            <p className="mt-1 text-xs text-red-600">
-              ⚠️ CAP deve essere 5 cifre
-            </p>
+            <p className="mt-1 text-xs text-red-600">⚠️ CAP deve essere 5 cifre</p>
           )}
         </div>
 
@@ -297,13 +398,10 @@ export default function AddressFields({
             ))}
           </select>
           {provinceValue && !provinceValid && (
-            <p className="mt-1 text-xs text-red-600">
-              ⚠️ Provincia non valida
-            </p>
+            <p className="mt-1 text-xs text-red-600">⚠️ Provincia non valida</p>
           )}
         </div>
       </div>
     </div>
   );
 }
-

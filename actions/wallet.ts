@@ -1,44 +1,50 @@
-'use server'
+'use server';
 
 /**
  * Server Actions per Gestione Wallet Utente
- * 
+ *
  * CRITICAL: Migrato a Acting Context (Impersonation Support)
  * - Usa requireSafeAuth() per supportare impersonation
  * - Opera sempre su context.target (chi paga), non su actor (chi clicca)
  * - Audit log completo con actor + target
- * 
+ *
  * Permette all'utente di:
  * - Richiedere una ricarica wallet (se non è admin)
  * - Ricaricare direttamente il proprio wallet (se è admin/superadmin)
  * - Visualizzare le proprie transazioni
  */
 
-import { requireSafeAuth, getSafeAuth, isSuperAdmin } from '@/lib/safe-auth'
-import { supabaseAdmin } from '@/lib/db/client'
-import { writeWalletAuditLog } from '@/lib/security/audit-log'
-import { AUDIT_ACTIONS } from '@/lib/security/audit-actions'
+import { requireSafeAuth, getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
+import { writeWalletAuditLog } from '@/lib/security/audit-log';
+import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 /**
  * DEPRECATED: Legacy function, migrato a getSafeAuth() + isSuperAdmin()
  * Mantenuto per compatibilità temporanea, ma NON usare in nuovo codice
  */
-async function isCurrentUserAdmin_DEPRECATED(): Promise<{ isAdmin: boolean; userId?: string; isSuperAdmin?: boolean }> {
-  console.warn('⚠️ [DEPRECATED] isCurrentUserAdmin() is deprecated. Use getSafeAuth() + isSuperAdmin() instead.');
-  
+async function isCurrentUserAdmin_DEPRECATED(): Promise<{
+  isAdmin: boolean;
+  userId?: string;
+  isSuperAdmin?: boolean;
+}> {
+  console.warn(
+    '⚠️ [DEPRECATED] isCurrentUserAdmin() is deprecated. Use getSafeAuth() + isSuperAdmin() instead.'
+  );
+
   try {
     const context = await getSafeAuth();
-    
+
     if (!context) {
       return { isAdmin: false };
     }
 
     const isAdmin = isSuperAdmin(context);
 
-    return { 
+    return {
       isAdmin,
       isSuperAdmin: isAdmin,
-      userId: context.target.id 
+      userId: context.target.id,
     };
   } catch (error: any) {
     console.error('Errore verifica Admin:', error);
@@ -48,10 +54,10 @@ async function isCurrentUserAdmin_DEPRECATED(): Promise<{ isAdmin: boolean; user
 
 /**
  * Server Action: Ricarica wallet dell'utente corrente
- * 
+ *
  * Se l'utente è admin/superadmin, può ricaricare direttamente.
  * Se l'utente è normale, crea una richiesta di ricarica.
- * 
+ *
  * @param amount - Importo da aggiungere (deve essere positivo)
  * @param reason - Motivo della ricarica
  * @returns Risultato operazione
@@ -60,16 +66,16 @@ export async function rechargeMyWallet(
   amount: number,
   reason: string = 'Ricarica wallet utente'
 ): Promise<{
-  success: boolean
-  message?: string
-  error?: string
-  transactionId?: string
-  newBalance?: number
+  success: boolean;
+  message?: string;
+  error?: string;
+  transactionId?: string;
+  newBalance?: number;
 }> {
   try {
     // 1. Get Safe Auth (Acting Context)
     const context = await requireSafeAuth();
-    
+
     // 2. Extract target and actor (target = who receives credit, actor = who clicked)
     const targetId = context.target.id;
     const actorId = context.actor.id;
@@ -79,8 +85,8 @@ export async function rechargeMyWallet(
     if (amount <= 0) {
       return {
         success: false,
-        error: 'L\'importo deve essere positivo.',
-      }
+        error: "L'importo deve essere positivo.",
+      };
     }
 
     // 4. Verifica se l'actor è admin/superadmin
@@ -94,28 +100,22 @@ export async function rechargeMyWallet(
         p_amount: amount,
         p_description: reason,
         p_created_by: actorId, // Actor ID (who clicked)
-      })
+      });
 
       if (txError) {
         // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
-        console.error('Errore RPC add_wallet_credit:', txError)
+        console.error('Errore RPC add_wallet_credit:', txError);
         return {
           success: false,
           error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
-        }
+        };
       } else {
         // Funzione SQL ha funzionato - Audit log con Acting Context
         try {
-          await writeWalletAuditLog(
-            context,
-            AUDIT_ACTIONS.WALLET_RECHARGE,
-            amount,
-            txData,
-            {
-              reason,
-              type: impersonationActive ? 'admin_recharge_for_user' : 'self_recharge',
-            }
-          );
+          await writeWalletAuditLog(context, AUDIT_ACTIONS.WALLET_RECHARGE, amount, txData, {
+            reason,
+            type: impersonationActive ? 'admin_recharge_for_user' : 'self_recharge',
+          });
         } catch (auditError) {
           console.warn('⚠️ [AUDIT] Errore audit log (fail-open):', auditError);
         }
@@ -124,14 +124,14 @@ export async function rechargeMyWallet(
           .from('users')
           .select('wallet_balance')
           .eq('id', targetId) // Target ID (who received credit)
-          .single()
+          .single();
 
         return {
           success: true,
           message: `Ricarica di €${amount} completata con successo.`,
           transactionId: txData,
           newBalance: updatedUser?.wallet_balance || 0,
-        }
+        };
       }
     } else {
       // Utente normale: crea richiesta di ricarica (per ora ricarica direttamente)
@@ -148,28 +148,22 @@ export async function rechargeMyWallet(
           },
         ])
         .select('id')
-        .single()
+        .single();
 
       if (insertError) {
         return {
           success: false,
           error: insertError.message || 'Errore durante la creazione della richiesta.',
-        }
+        };
       }
 
       // Audit log
       try {
-        await writeWalletAuditLog(
-          context,
-          AUDIT_ACTIONS.WALLET_RECHARGE,
-          amount,
-          tx.id,
-          {
-            reason,
-            type: 'user_recharge_request',
-            status: 'pending_approval',
-          }
-        );
+        await writeWalletAuditLog(context, AUDIT_ACTIONS.WALLET_RECHARGE, amount, tx.id, {
+          reason,
+          type: 'user_recharge_request',
+          status: 'pending_approval',
+        });
       } catch (auditError) {
         console.warn('⚠️ [AUDIT] Errore audit log (fail-open):', auditError);
       }
@@ -178,33 +172,33 @@ export async function rechargeMyWallet(
         success: true,
         message: 'Richiesta di ricarica inviata. Verrà processata a breve.',
         transactionId: tx.id,
-      }
+      };
     }
   } catch (error: any) {
-    console.error('Errore in rechargeMyWallet:', error)
+    console.error('Errore in rechargeMyWallet:', error);
     return {
       success: false,
       error: error.message || 'Errore durante la ricarica del wallet.',
-    }
+    };
   }
 }
 
 /**
  * Server Action: Ottieni transazioni wallet dell'utente corrente
- * 
+ *
  * CRITICAL: Migrato a Acting Context (Impersonation Support)
  * - Usa requireSafeAuth() per supportare impersonation
  * - Ritorna transazioni del TARGET (non dell'actor se impersonating)
  */
 export async function getMyWalletTransactions(): Promise<{
-  success: boolean
-  transactions?: any[]
-  error?: string
+  success: boolean;
+  transactions?: any[];
+  error?: string;
 }> {
   try {
     // Get Safe Auth (Acting Context)
     const context = await requireSafeAuth();
-    
+
     // Extract target ID (who owns the wallet)
     const targetId = context.target.id;
 
@@ -214,13 +208,13 @@ export async function getMyWalletTransactions(): Promise<{
       .select('*')
       .eq('user_id', targetId) // Target ID (wallet owner)
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(100);
 
     if (error) {
       return {
         success: false,
         error: error.message || 'Errore durante il caricamento delle transazioni.',
-      }
+      };
     }
 
     // Audit log (view wallet transactions)
@@ -241,12 +235,12 @@ export async function getMyWalletTransactions(): Promise<{
     return {
       success: true,
       transactions: transactions || [],
-    }
+    };
   } catch (error: any) {
-    console.error('Errore in getMyWalletTransactions:', error)
+    console.error('Errore in getMyWalletTransactions:', error);
     return {
       success: false,
       error: error.message || 'Errore durante il caricamento delle transazioni.',
-    }
+    };
   }
 }

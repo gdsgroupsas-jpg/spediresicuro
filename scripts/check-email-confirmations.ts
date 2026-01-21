@@ -1,6 +1,6 @@
 /**
  * Script per verificare la configurazione "Email confirmations" in Supabase Auth
- * 
+ *
  * Questo script controlla se la conferma email è abilitata nel progetto Supabase.
  */
 
@@ -46,11 +46,11 @@ async function checkEmailConfirmations() {
     // Prova a verificare tramite API Management se abbiamo l'access token
     if (supabaseAccessToken) {
       console.log('🔑 Access token trovato, tentativo verifica tramite API Management...\n');
-      
+
       // Estrai project ID dall'URL
       const projectIdMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
       if (!projectIdMatch) {
-        throw new Error('Impossibile estrarre project ID dall\'URL');
+        throw new Error("Impossibile estrarre project ID dall'URL");
       }
       const projectId = projectIdMatch[1];
 
@@ -58,19 +58,18 @@ async function checkEmailConfirmations() {
       const managementUrl = `https://api.supabase.com/v1/projects/${projectId}/config/auth`;
       const response = await fetch(managementUrl, {
         headers: {
-          'Authorization': `Bearer ${supabaseAccessToken}`,
+          Authorization: `Bearer ${supabaseAccessToken}`,
           'Content-Type': 'application/json',
         },
       });
 
       if (response.ok) {
         const config = await response.json();
-        
+
         // La configurazione email confirmations si trova in config.ENABLE_SIGNUP
         // o in config.SMTP_ENABLED o in config.EMAIL_CONFIRMATION_ENABLED
-        const emailConfirmationsEnabled = 
-          config.ENABLE_EMAIL_CONFIRMATIONS !== false &&
-          config.ENABLE_SIGNUP !== false;
+        const emailConfirmationsEnabled =
+          config.ENABLE_EMAIL_CONFIRMATIONS !== false && config.ENABLE_SIGNUP !== false;
 
         if (emailConfirmationsEnabled) {
           console.log('✅ Email confirmations: ON (Abilitato)');
@@ -85,7 +84,9 @@ async function checkEmailConfirmations() {
         }
         return;
       } else {
-        console.log('⚠️  Impossibile accedere all\'API Management (potrebbe richiedere permessi aggiuntivi)');
+        console.log(
+          "⚠️  Impossibile accedere all'API Management (potrebbe richiedere permessi aggiuntivi)"
+        );
         console.log('   Fallback a verifica manuale...\n');
       }
     }
@@ -104,13 +105,12 @@ async function checkEmailConfirmations() {
     console.log('💡 Se è OFF:');
     console.log('   - Clicca sul toggle per attivarlo');
     console.log('   - Salva le modifiche');
-    console.log('   - Gli utenti dovranno confermare l\'email prima di poter accedere');
+    console.log("   - Gli utenti dovranno confermare l'email prima di poter accedere");
     console.log('');
     console.log('🔒 IMPORTANTE:');
     console.log('   - Email confirmations è importante per sicurezza');
     console.log('   - Previene registrazioni con email non verificate');
     console.log('   - Consigliato: mantenerlo sempre ON in produzione');
-
   } catch (error: any) {
     console.error('❌ Errore durante la verifica:', error.message);
     console.log('\n📋 VERIFICA MANUALE:\n');
@@ -132,11 +132,3 @@ checkEmailConfirmations()
     console.error('\n❌ Errore:', error);
     process.exit(1);
   });
-
-
-
-
-
-
-
-

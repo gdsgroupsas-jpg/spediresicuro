@@ -37,6 +37,7 @@ Questa cartella contiene script batch utili per lo sviluppo locale.
    ```
 
 Oppure naviga nella cartella:
+
 ```bash
 cd scripts\tools
 VERIFICA-ANNE-LOCALE.bat

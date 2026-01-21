@@ -17,9 +17,7 @@
   "paths": {
     "/shipping/rates": {
       "post": {
-        "tags": [
-          "shipping"
-        ],
+        "tags": ["shipping"],
         "summary": "Get Rates",
         "description": "Get shipping rates and carriers contracts available.",
         "operationId": "getRates",
@@ -50,12 +48,7 @@
                           "type": "number"
                         }
                       },
-                      "required": [
-                        "length",
-                        "width",
-                        "height",
-                        "weight"
-                      ]
+                      "required": ["length", "width", "height", "weight"]
                     }
                   },
                   "shipFrom": {
@@ -413,9 +406,7 @@
     },
     "/shipping/create": {
       "post": {
-        "tags": [
-          "shipping"
-        ],
+        "tags": ["shipping"],
         "summary": "Create Label",
         "description": "Creates a shipping label. The labelData field returned in the response is a base64 encoded PDF value. Simply decode and save the output as a PDF file to retrieve a printable label. The body of this request has the following attributes:",
         "operationId": "createShipment",
@@ -687,9 +678,7 @@
     },
     "/shipping/delete": {
       "post": {
-        "tags": [
-          "shipping"
-        ],
+        "tags": ["shipping"],
         "summary": "Delete Label",
         "description": "Delete a shipping label",
         "operationId": "deleteShipment",
@@ -705,9 +694,7 @@
                     "type": "integer"
                   }
                 },
-                "required": [
-                  "increment_id"
-                ],
+                "required": ["increment_id"],
                 "x-examples": {
                   "example-1": {
                     "carrierCode": "liccardi",
@@ -789,9 +776,7 @@
     },
     "/stock/update": {
       "post": {
-        "tags": [
-          "stocks"
-        ],
+        "tags": ["stocks"],
         "summary": "Update Stock",
         "description": "Update shipping locked in stock.\nYou can choose for \"action\" between: \"RETRY\",\"NEWADDRESS\" or \"RETURN\".\nFor \"NEWADDRESS\" action the \"newaddress\" object is also requi  red. ",
         "operationId": "Stock Update",
@@ -863,11 +848,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "ldv",
-                  "action",
-                  "scheduled_at"
-                ],
+                "required": ["ldv", "action", "scheduled_at"],
                 "x-examples": {
                   "example-1": {
                     "ldv": "281095I072409",
@@ -935,9 +916,7 @@
     },
     "/shippinglist/create": {
       "post": {
-        "tags": [
-          "shipping"
-        ],
+        "tags": ["shipping"],
         "summary": "Close Day",
         "operationId": "Confirm",
         "requestBody": {
@@ -958,15 +937,10 @@
                     "minLength": 1
                   }
                 },
-                "required": [
-                  "shipment_ids",
-                  "contract_code"
-                ],
+                "required": ["shipment_ids", "contract_code"],
                 "x-examples": {
                   "example-1": {
-                    "shipment_ids": [
-                      1462677
-                    ],
+                    "shipment_ids": [1462677],
                     "contract_code": "liccardi-LICCARDI"
                   }
                 }
@@ -974,11 +948,7 @@
               "examples": {
                 "example-1": {
                   "value": {
-                    "shipment_ids": [
-                      7,
-                      8,
-                      9
-                    ],
+                    "shipment_ids": [7, 8, 9],
                     "contract_code": "brt-Test"
                   }
                 }
@@ -1002,10 +972,7 @@
                       "minLength": 1
                     }
                   },
-                  "required": [
-                    "bordero",
-                    "pdf"
-                  ],
+                  "required": ["bordero", "pdf"],
                   "x-examples": {
                     "example-1": {
                       "bordero": 163273,
@@ -1040,9 +1007,7 @@
     },
     "/tracking/{ldv}": {
       "get": {
-        "tags": [
-          "tracking"
-        ],
+        "tags": ["tracking"],
         "summary": "Tracking",
         "operationId": "get-tracking-ldv",
         "parameters": [
@@ -1083,17 +1048,11 @@
                             "minLength": 1
                           }
                         },
-                        "required": [
-                          "Data",
-                          "Stato",
-                          "Luogo"
-                        ]
+                        "required": ["Data", "Stato", "Luogo"]
                       }
                     }
                   },
-                  "required": [
-                    "TrackingDettaglio"
-                  ],
+                  "required": ["TrackingDettaglio"],
                   "x-examples": {
                     "example-1": {
                       "TrackingDettaglio": [
@@ -1196,11 +1155,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "length",
-          "width",
-          "height"
-        ],
+        "required": ["length", "width", "height"],
         "x-examples": {
           "example-1": {
             "length": 17,
@@ -1258,10 +1213,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "street2",
-          "email"
-        ],
+        "required": ["street2", "email"],
         "x-examples": {
           "example-1": {
             "name": "Antonio Esposito",

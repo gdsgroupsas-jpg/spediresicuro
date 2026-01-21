@@ -21,86 +21,88 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<string>('Sto analizzando l\'immagine...');
+  const [agentStatus, setAgentStatus] = useState<string>("Sto analizzando l'immagine...");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [confidence, setConfidence] = useState<number>(0);
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    // Validazione file
-    if (!file.type.startsWith('image/')) {
-      const err = 'Il file deve essere un&apos;immagine (JPG, PNG, etc.)';
-      setError(err);
-      onError?.(err);
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      const err = 'Il file è troppo grande (max 10MB)';
-      setError(err);
-      onError?.(err);
-      return;
-    }
-
-    setError(null);
-    setSuccess(false);
-    setUploading(true);
-    setAgentStatus('Caricamento immagine...');
-
-    // Preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    try {
-      // Converti in base64
-      const base64 = await fileToBase64(file);
-
-      setUploading(false);
-      setAnalyzing(true);
-      setAgentStatus('Gemini sta analizzando la chat...');
-
-      // 🧠 Chiamata al nuovo LOGISTICS AGENT
-      const response = await fetch('/api/agent/process-shipment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: base64,
-          // text: opzionale, se volessimo passare testo manuale
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Errore durante l\'analisi dell\'Agente');
+      // Validazione file
+      if (!file.type.startsWith('image/')) {
+        const err = 'Il file deve essere un&apos;immagine (JPG, PNG, etc.)';
+        setError(err);
+        onError?.(err);
+        return;
       }
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'L\'agente non è riuscito a elaborare la richiesta');
+      if (file.size > 10 * 1024 * 1024) {
+        const err = 'Il file è troppo grande (max 10MB)';
+        setError(err);
+        onError?.(err);
+        return;
       }
 
-      // Successo!
-      setSuccess(true);
-      setConfidence(result.confidence || 0);
-      onDataExtracted(result.data); // Passa i dati "intelligenti" al form
-      
-    } catch (err: any) {
-      const errorMsg = err.message || 'Errore imprevisto';
-      setError(errorMsg);
-      onError?.(errorMsg);
-    } finally {
-      setUploading(false);
-      setAnalyzing(false);
-    }
-  }, [onDataExtracted, onError]);
+      setError(null);
+      setSuccess(false);
+      setUploading(true);
+      setAgentStatus('Caricamento immagine...');
+
+      // Preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      try {
+        // Converti in base64
+        const base64 = await fileToBase64(file);
+
+        setUploading(false);
+        setAnalyzing(true);
+        setAgentStatus('Gemini sta analizzando la chat...');
+
+        // 🧠 Chiamata al nuovo LOGISTICS AGENT
+        const response = await fetch('/api/agent/process-shipment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            image: base64,
+            // text: opzionale, se volessimo passare testo manuale
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Errore durante l'analisi dell'Agente");
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || "L'agente non è riuscito a elaborare la richiesta");
+        }
+
+        // Successo!
+        setSuccess(true);
+        setConfidence(result.confidence || 0);
+        onDataExtracted(result.data); // Passa i dati "intelligenti" al form
+      } catch (err: any) {
+        const errorMsg = err.message || 'Errore imprevisto';
+        setError(errorMsg);
+        onError?.(errorMsg);
+      } finally {
+        setUploading(false);
+        setAnalyzing(false);
+      }
+    },
+    [onDataExtracted, onError]
+  );
 
   const handleClear = () => {
     setPreview(null);
@@ -108,7 +110,6 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
     setSuccess(false);
     setConfidence(0);
   };
-
 
   return (
     <div className="w-full">
@@ -121,13 +122,12 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
             className="w-full"
           >
             <label className="group relative flex flex-col items-center justify-center w-full h-56 sm:h-64 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-white hover:border-blue-400 hover:shadow-lg transition-all duration-300 overflow-hidden touch-manipulation active:scale-[0.98] active:bg-blue-50/20">
-              
               {/* Sfondo animato hover e touch */}
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-50/0 group-hover:from-blue-50/50 group-hover:to-indigo-50/50 transition-all duration-500" />
-              
+
               <div className="relative z-10 flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
                 <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-white rounded-full shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-300">
-                   <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
+                  <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
                 </div>
                 <p className="mb-2 text-base sm:text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
                   Carica Foto o Screenshot
@@ -163,15 +163,19 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
                 className={`w-full h-full object-contain transition-all duration-700 ${analyzing ? 'blur-sm scale-105' : ''}`}
                 unoptimized
               />
-              
+
               {/* Overlay Analisi in corso */}
               {analyzing && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-20">
-                  <motion.div 
-                    animate={{ 
+                  <motion.div
+                    animate={{
                       scale: [1, 1.1, 1],
                       rotate: [0, 5, -5, 0],
-                      boxShadow: ["0px 0px 0px 0px rgba(59, 130, 246, 0.5)", "0px 0px 20px 10px rgba(59, 130, 246, 0.3)", "0px 0px 0px 0px rgba(59, 130, 246, 0.5)"]
+                      boxShadow: [
+                        '0px 0px 0px 0px rgba(59, 130, 246, 0.5)',
+                        '0px 0px 20px 10px rgba(59, 130, 246, 0.3)',
+                        '0px 0px 0px 0px rgba(59, 130, 246, 0.5)',
+                      ],
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4 shadow-xl"
@@ -197,46 +201,50 @@ export default function AgentUpload({ onDataExtracted, onError }: AgentUploadPro
 
             {/* Footer Risultato */}
             <div className="p-4 bg-white border-t border-gray-100">
-               {analyzing ? (
-                 <div className="flex items-center gap-3 text-blue-600">
-                   <Loader2 className="w-5 h-5 animate-spin" />
-                   <span className="text-sm font-medium">Elaborazione in corso...</span>
-                 </div>
-               ) : success ? (
-                 <motion.div 
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="flex items-center justify-between"
-                 >
-                   <div className="flex items-center gap-3">
-                     <div className="p-2 bg-green-100 text-green-600 rounded-full">
-                       <CheckCircle2 className="w-5 h-5" />
-                     </div>
-                     <div>
-                       <p className="text-sm font-bold text-gray-900">Analisi Completata</p>
-                       <p className="text-xs text-gray-500">I dati sono stati inseriti nel form</p>
-                     </div>
-                   </div>
-                   
-                   {confidence > 0 && (
-                     <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                       confidence > 80 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                     }`}>
-                       {confidence}% Sicurezza
-                     </div>
-                   )}
-                 </motion.div>
-               ) : error ? (
-                 <div className="flex items-center gap-3 text-red-600">
-                   <AlertTriangle className="w-5 h-5" />
-                   <span className="text-sm font-medium">{error}</span>
-                 </div>
-               ) : (
-                 <div className="flex items-center gap-2 text-gray-500 text-sm">
-                   <Sparkles className="w-4 h-4" />
-                   <span>Immagine pronta per l&apos;invio</span>
-                 </div>
-               )}
+              {analyzing ? (
+                <div className="flex items-center gap-3 text-blue-600">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm font-medium">Elaborazione in corso...</span>
+                </div>
+              ) : success ? (
+                <motion.div
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 text-green-600 rounded-full">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Analisi Completata</p>
+                      <p className="text-xs text-gray-500">I dati sono stati inseriti nel form</p>
+                    </div>
+                  </div>
+
+                  {confidence > 0 && (
+                    <div
+                      className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                        confidence > 80
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      }`}
+                    >
+                      {confidence}% Sicurezza
+                    </div>
+                  )}
+                </motion.div>
+              ) : error ? (
+                <div className="flex items-center gap-3 text-red-600">
+                  <AlertTriangle className="w-5 h-5" />
+                  <span className="text-sm font-medium">{error}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Immagine pronta per l&apos;invio</span>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

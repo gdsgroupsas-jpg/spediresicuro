@@ -19,10 +19,7 @@ interface UseKeyboardNavOptions {
   onNavigate?: (item: NavItem) => void;
 }
 
-export function useKeyboardNav(
-  items: NavItem[],
-  options: UseKeyboardNavOptions = {}
-) {
+export function useKeyboardNav(items: NavItem[], options: UseKeyboardNavOptions = {}) {
   const { enabled = true, onNavigate } = options;
   const router = useRouter();
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -126,9 +123,7 @@ export function useKeyboardNav(
   // Auto-scroll focused item into view
   useEffect(() => {
     if (focusedIndex >= 0 && isKeyboardMode) {
-      const element = document.querySelector(
-        `[data-nav-index="${focusedIndex}"]`
-      );
+      const element = document.querySelector(`[data-nav-index="${focusedIndex}"]`);
       if (element) {
         element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }

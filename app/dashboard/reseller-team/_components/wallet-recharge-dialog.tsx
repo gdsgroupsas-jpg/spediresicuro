@@ -1,147 +1,177 @@
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { Loader2, Wallet, Plus, Minus } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useState, useTransition } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { Loader2, Wallet, Plus, Minus } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog'
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 
-import { manageWallet } from '@/actions/super-admin'
-import { manageSubUserWallet } from '@/actions/admin-reseller'
-import { walletOperationSchema, type WalletOperationInput, QUICK_AMOUNTS, WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema'
-import { formatCurrency, cn } from '@/lib/utils'
+import { manageWallet } from '@/actions/super-admin';
+import { manageSubUserWallet } from '@/actions/admin-reseller';
+import {
+  walletOperationSchema,
+  type WalletOperationInput,
+  QUICK_AMOUNTS,
+  WALLET_THRESHOLDS,
+} from '@/lib/validations/wallet-schema';
+import { formatCurrency, cn } from '@/lib/utils';
 
 interface User {
-  id: string
-  name: string
-  email: string
-  wallet_balance: number
+  id: string;
+  name: string;
+  email: string;
+  wallet_balance: number;
 }
 
 interface WalletRechargeDialogProps {
-  user: User | null
-  isOpen: boolean
-  onClose: () => void
-  onSuccess?: () => void
+  user: User | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function WalletRechargeDialog({ user, isOpen, onClose, onSuccess }: WalletRechargeDialogProps) {
-  const { data: session } = useSession()
-  const [isPending, startTransition] = useTransition()
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [pendingData, setPendingData] = useState<WalletOperationInput | null>(null)
+export function WalletRechargeDialog({
+  user,
+  isOpen,
+  onClose,
+  onSuccess,
+}: WalletRechargeDialogProps) {
+  const { data: session } = useSession();
+  const [isPending, startTransition] = useTransition();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingData, setPendingData] = useState<WalletOperationInput | null>(null);
 
   // Determina se è un Reseller (solo ricariche) o Super Admin (ricariche + prelievi)
-  const isReseller = (session?.user as any)?.is_reseller === true && (session?.user as any)?.account_type !== 'superadmin'
-  const isSuperAdmin = (session?.user as any)?.account_type === 'superadmin'
+  const isReseller =
+    (session?.user as any)?.is_reseller === true &&
+    (session?.user as any)?.account_type !== 'superadmin';
+  const isSuperAdmin = (session?.user as any)?.account_type === 'superadmin';
 
   // Per Reseller: solo ricariche positive, schema modificato
   const resellerSchema = walletOperationSchema.extend({
     amount: walletOperationSchema.shape.amount.refine((val) => val > 0, {
       message: 'I Reseller possono solo aggiungere credito, non rimuoverlo',
     }),
-  })
+  });
 
   const form = useForm<Omit<WalletOperationInput, 'userId'>>({
-    resolver: zodResolver(isReseller ? resellerSchema.omit({ userId: true }) : walletOperationSchema.omit({ userId: true })),
+    resolver: zodResolver(
+      isReseller
+        ? resellerSchema.omit({ userId: true })
+        : walletOperationSchema.omit({ userId: true })
+    ),
     defaultValues: {
       amount: 0,
       reason: '',
     },
-  })
+  });
 
-  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = form
-  const amount = watch('amount')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+    setValue,
+  } = form;
+  const amount = watch('amount');
 
-  const currentBalance = user?.wallet_balance || 0
-  const newBalance = currentBalance + (amount || 0)
-  const isDebit = amount < 0
-  const wouldGoNegative = newBalance < 0
-  const isLargeAmount = Math.abs(amount) > WALLET_THRESHOLDS.WARNING_DEBIT
+  const currentBalance = user?.wallet_balance || 0;
+  const newBalance = currentBalance + (amount || 0);
+  const isDebit = amount < 0;
+  const wouldGoNegative = newBalance < 0;
+  const isLargeAmount = Math.abs(amount) > WALLET_THRESHOLDS.WARNING_DEBIT;
 
   const handleQuickAmount = (quickAmount: number) => {
-    setValue('amount', (amount || 0) + quickAmount)
-  }
+    setValue('amount', (amount || 0) + quickAmount);
+  };
 
   async function executeOperation(data: WalletOperationInput) {
     startTransition(async () => {
       try {
-        let result
+        let result;
 
         if (isReseller) {
           // Reseller: usa action specifica (solo ricariche)
-          result = await manageSubUserWallet(data.userId, data.amount, data.reason)
+          result = await manageSubUserWallet(data.userId, data.amount, data.reason);
         } else if (isSuperAdmin) {
           // Super Admin: usa action completa (ricariche + prelievi)
-          result = await manageWallet(data.userId, data.amount, data.reason)
+          result = await manageWallet(data.userId, data.amount, data.reason);
         } else {
-          toast.error('Non hai i permessi per gestire il wallet')
-          return
+          toast.error('Non hai i permessi per gestire il wallet');
+          return;
         }
 
         if (!result.success) {
-          toast.error(result.error || 'Errore nella gestione wallet')
-          return
+          toast.error(result.error || 'Errore nella gestione wallet');
+          return;
         }
 
         toast.success(
           data.amount > 0
             ? `Ricarica di ${formatCurrency(data.amount)} completata!`
             : `Prelievo di ${formatCurrency(Math.abs(data.amount))} completato!`
-        )
-        reset()
-        onClose()
-        onSuccess?.()
+        );
+        reset();
+        onClose();
+        onSuccess?.();
       } catch (error) {
-        toast.error('Errore imprevisto. Riprova.')
-        console.error('Wallet operation error:', error)
+        toast.error('Errore imprevisto. Riprova.');
+        console.error('Wallet operation error:', error);
       }
-    })
+    });
   }
 
   function onSubmit(data: Omit<WalletOperationInput, 'userId'>) {
-    if (!user) return
+    if (!user) return;
 
     const fullData: WalletOperationInput = {
       ...data,
       userId: user.id,
-    }
+    };
 
     // Se è un importo grande, chiedi conferma
     if (isLargeAmount) {
-      setPendingData(fullData)
-      setShowConfirm(true)
-      return
+      setPendingData(fullData);
+      setShowConfirm(true);
+      return;
     }
 
-    executeOperation(fullData)
+    executeOperation(fullData);
   }
 
   const handleConfirm = () => {
     if (pendingData) {
-      executeOperation(pendingData)
+      executeOperation(pendingData);
     }
-    setShowConfirm(false)
-    setPendingData(null)
-  }
+    setShowConfirm(false);
+    setPendingData(null);
+  };
 
   const handleClose = () => {
     if (!isPending) {
-      reset()
-      setPendingData(null)
-      onClose()
+      reset();
+      setPendingData(null);
+      onClose();
     }
-  }
+  };
 
-  if (!user) return null
+  if (!user) return null;
 
   return (
     <>
@@ -162,10 +192,12 @@ export function WalletRechargeDialog({ user, isOpen, onClose, onSuccess }: Walle
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 mb-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Saldo attuale</span>
-                <span className={cn(
-                  'text-lg font-bold',
-                  currentBalance < WALLET_THRESHOLDS.LOW ? 'text-red-600' : 'text-gray-900'
-                )}>
+                <span
+                  className={cn(
+                    'text-lg font-bold',
+                    currentBalance < WALLET_THRESHOLDS.LOW ? 'text-red-600' : 'text-gray-900'
+                  )}
+                >
                   {formatCurrency(currentBalance)}
                 </span>
               </div>
@@ -224,45 +256,39 @@ export function WalletRechargeDialog({ user, isOpen, onClose, onSuccess }: Walle
                     {...register('amount', { valueAsNumber: true })}
                     error={!!errors.amount || wouldGoNegative}
                     disabled={isPending}
-                    className={cn(
-                      'pr-12',
-                      isDebit && 'text-red-600'
-                    )}
+                    className={cn('pr-12', isDebit && 'text-red-600')}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                     €
                   </span>
                 </div>
-                {errors.amount && (
-                  <p className="text-xs text-red-500">{errors.amount.message}</p>
-                )}
+                {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
                 {wouldGoNegative && (
-                  <p className="text-xs text-red-500">
-                    Il saldo non può andare in negativo
-                  </p>
+                  <p className="text-xs text-red-500">Il saldo non può andare in negativo</p>
                 )}
               </div>
 
               {/* Preview Nuovo Saldo */}
               {amount !== 0 && !wouldGoNegative && (
-                <div className={cn(
-                  'rounded-lg p-3 border',
-                  isDebit
-                    ? 'bg-red-50 border-red-200'
-                    : 'bg-green-50 border-green-200'
-                )}>
+                <div
+                  className={cn(
+                    'rounded-lg p-3 border',
+                    isDebit ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
+                  )}
+                >
                   <div className="flex items-center justify-between text-sm">
                     <span className={isDebit ? 'text-red-700' : 'text-green-700'}>
                       {isDebit ? 'Prelievo' : 'Ricarica'}
                     </span>
-                    <span className={cn('font-medium', isDebit ? 'text-red-700' : 'text-green-700')}>
-                      {isDebit ? '-' : '+'}{formatCurrency(Math.abs(amount))}
+                    <span
+                      className={cn('font-medium', isDebit ? 'text-red-700' : 'text-green-700')}
+                    >
+                      {isDebit ? '-' : '+'}
+                      {formatCurrency(Math.abs(amount))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1 pt-1 border-t border-current/10">
-                    <span className={isDebit ? 'text-red-700' : 'text-green-700'}>
-                      Nuovo saldo
-                    </span>
+                    <span className={isDebit ? 'text-red-700' : 'text-green-700'}>Nuovo saldo</span>
                     <span className={cn('font-bold', isDebit ? 'text-red-700' : 'text-green-700')}>
                       {formatCurrency(newBalance)}
                     </span>
@@ -281,23 +307,18 @@ export function WalletRechargeDialog({ user, isOpen, onClose, onSuccess }: Walle
                   disabled={isPending}
                   rows={2}
                 />
-                {errors.reason && (
-                  <p className="text-xs text-red-500">{errors.reason.message}</p>
-                )}
+                {errors.reason && <p className="text-xs text-red-500">{errors.reason.message}</p>}
               </div>
 
               <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={isPending}
-                >
+                <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
                   Annulla
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isPending || amount === 0 || wouldGoNegative || (isReseller && amount < 0)}
+                  disabled={
+                    isPending || amount === 0 || wouldGoNegative || (isReseller && amount < 0)
+                  }
                   variant={isDebit ? 'destructive' : 'default'}
                 >
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -313,8 +334,8 @@ export function WalletRechargeDialog({ user, isOpen, onClose, onSuccess }: Walle
       <ConfirmActionDialog
         isOpen={showConfirm}
         onClose={() => {
-          setShowConfirm(false)
-          setPendingData(null)
+          setShowConfirm(false);
+          setPendingData(null);
         }}
         onConfirm={handleConfirm}
         title={`Conferma ${isDebit ? 'prelievo' : 'ricarica'} importante`}
@@ -324,5 +345,5 @@ export function WalletRechargeDialog({ user, isOpen, onClose, onSuccess }: Walle
         isLoading={isPending}
       />
     </>
-  )
+  );
 }

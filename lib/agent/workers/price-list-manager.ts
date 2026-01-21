@@ -13,18 +13,18 @@ import {
   assignPriceListTool,
   clonePriceListTool,
   searchMasterPriceListsTool,
-} from "@/lib/agent/tools/price-list-tools";
-import { toolRegistry } from "@/lib/agent/tools/registry"; // Usa il registry per compatibilità
-import { llmConfig } from "@/lib/config";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { defaultLogger, type ILogger } from "../logger";
-import { AgentState } from "../orchestrator/state";
+} from '@/lib/agent/tools/price-list-tools';
+import { toolRegistry } from '@/lib/agent/tools/registry'; // Usa il registry per compatibilità
+import { llmConfig } from '@/lib/config';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { defaultLogger, type ILogger } from '../logger';
+import { AgentState } from '../orchestrator/state';
 
 // Helper per ottenere LLM
 const getLLM = (logger: ILogger = defaultLogger) => {
   if (!process.env.GOOGLE_API_KEY) {
-    logger.warn("⚠️ GOOGLE_API_KEY mancante - Price List Worker disabilitato");
+    logger.warn('⚠️ GOOGLE_API_KEY mancante - Price List Worker disabilitato');
     return null;
   }
   return new ChatGoogleGenerativeAI({
@@ -42,28 +42,24 @@ export async function priceListManagerWorker(
   state: AgentState,
   logger: ILogger = defaultLogger
 ): Promise<Partial<AgentState>> {
-  logger.log("🏷️ [Price List Worker] Esecuzione...");
+  logger.log('🏷️ [Price List Worker] Esecuzione...');
 
   try {
     const llm = getLLM(logger);
     if (!llm) {
       return {
-        clarification_request:
-          "Servizio AI non configurato correttamente (API Key mancante).",
-        processingStatus: "error",
+        clarification_request: 'Servizio AI non configurato correttamente (API Key mancante).',
+        processingStatus: 'error',
       };
     }
 
     const lastMessage = state.messages[state.messages.length - 1];
-    const messageText =
-      lastMessage && "content" in lastMessage
-        ? String(lastMessage.content)
-        : "";
+    const messageText = lastMessage && 'content' in lastMessage ? String(lastMessage.content) : '';
 
     // Convert tool definitions for LangChain
     const context = {
       userId: state.userId,
-      userRole: state.agent_context?.user_role || "user",
+      userRole: state.agent_context?.user_role || 'user',
       actingContext: state.agent_context?.acting_context,
     };
 
@@ -94,25 +90,18 @@ Regole:
 
 Contesto Utente:
 - ID: ${state.userId}
-- Ruolo: ${state.agent_context?.user_role || "N/A"}
+- Ruolo: ${state.agent_context?.user_role || 'N/A'}
 `;
 
     // Invoca LLM
-    const messages = [
-      new SystemMessage(systemPrompt),
-      new HumanMessage(messageText),
-    ];
+    const messages = [new SystemMessage(systemPrompt), new HumanMessage(messageText)];
 
-    logger.log(
-      `🤖 [Price List Worker] Invoco LLM con ${tools.length} tools...`
-    );
+    logger.log(`🤖 [Price List Worker] Invoco LLM con ${tools.length} tools...`);
     const result = await llmWithTools.invoke(messages);
 
     // Controlla se il modello ha deciso di chiamare un tool
     if (result.tool_calls && result.tool_calls.length > 0) {
-      logger.log(
-        `🛠️ [Price List Worker] Tool call richiesta: ${result.tool_calls[0].name}`
-      );
+      logger.log(`🛠️ [Price List Worker] Tool call richiesta: ${result.tool_calls[0].name}`);
 
       // Esegui i tool (uno per volta per semplicità in questo worker base)
       const toolCall = result.tool_calls[0];
@@ -122,7 +111,7 @@ Contesto Utente:
         assignPriceListTool,
       ].find((t) => t.name === toolCall.name);
 
-      let toolOutput = "Errore: Tool non trovato";
+      let toolOutput = 'Errore: Tool non trovato';
 
       if (selectedTool) {
         try {
@@ -136,12 +125,10 @@ Contesto Utente:
       // Ritorna il risultato
       return {
         price_list_result: {
-          success:
-            !toolOutput.startsWith("Error") &&
-            !toolOutput.startsWith("PERMISSION_DENIED"),
+          success: !toolOutput.startsWith('Error') && !toolOutput.startsWith('PERMISSION_DENIED'),
           message: toolOutput,
         },
-        next_step: "END", // O potremmo fare un loop se vogliamo multi-step
+        next_step: 'END', // O potremmo fare un loop se vogliamo multi-step
         // Usiamo clarification_request come output generico per l'utente se non c'è un campo specifico user_message
         clarification_request: toolOutput,
       };
@@ -150,13 +137,13 @@ Contesto Utente:
     // Se no tool calls, ritorna la risposta testuale
     return {
       clarification_request: result.content.toString(),
-      next_step: "END",
+      next_step: 'END',
     };
   } catch (error: any) {
-    logger.error("❌ [Price List Worker] Errore:", error);
+    logger.error('❌ [Price List Worker] Errore:', error);
     return {
       clarification_request: `Errore durante l'operazione sui listini: ${error.message}`,
-      processingStatus: "error",
+      processingStatus: 'error',
     };
   }
 }

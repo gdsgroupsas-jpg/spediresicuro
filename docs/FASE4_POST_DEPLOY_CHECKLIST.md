@@ -78,6 +78,7 @@
 **Causa:** Capability `can_view_all_clients` non assegnata o `account_type` non è `superadmin`
 
 **Fix:**
+
 1. Verifica in Supabase che utente abbia `account_type = 'superadmin'`
 2. Oppure assegna capability `can_view_all_clients`:
    ```sql
@@ -93,6 +94,7 @@
 **Causa:** Query database fallisce o RLS policy blocca accesso
 
 **Fix:**
+
 1. Controlla log Vercel per errore specifico
 2. Verifica RLS policies su tabella `users`
 3. Verifica che `supabaseAdmin` client abbia service role key configurata
@@ -102,6 +104,7 @@
 **Causa:** Cache React Query o verifica superadmin fallisce
 
 **Fix:**
+
 1. Hard refresh browser (Ctrl+Shift+R)
 2. Verifica che `/api/user/info` restituisca `account_type: 'superadmin'`
 3. Controlla console browser per errori fetch
@@ -132,6 +135,7 @@ Dopo aver completato tutti i test, segna come completato:
 **Status Finale:** ✅ **COMPLETATO** / ❌ **PROBLEMI RISCONTRATI**
 
 **Note aggiuntive:**
+
 ```
 [Spazio per note su eventuali problemi o osservazioni]
 ```

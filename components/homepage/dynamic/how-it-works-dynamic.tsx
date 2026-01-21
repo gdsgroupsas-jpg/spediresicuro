@@ -20,7 +20,7 @@ import {
   Image,
   MessageSquare,
   Mail,
-  FileText
+  FileText,
 } from 'lucide-react';
 
 const steps = [
@@ -35,15 +35,16 @@ const steps = [
       { icon: MessageSquare, label: 'WhatsApp' },
       { icon: Mail, label: 'Email' },
       { icon: FileText, label: 'Documento' },
-    ]
+    ],
   },
   {
     number: '02',
     title: 'Anne AI Elabora',
-    description: 'La nostra AI legge, estrae i dati, valida l\'indirizzo e trova il corriere migliore.',
+    description:
+      "La nostra AI legge, estrae i dati, valida l'indirizzo e trova il corriere migliore.",
     icon: Sparkles,
     gradient: 'from-violet-500 to-purple-500',
-    features: ['OCR Avanzato', 'Validazione Indirizzo', 'Confronto Prezzi', 'Suggerimenti AI']
+    features: ['OCR Avanzato', 'Validazione Indirizzo', 'Confronto Prezzi', 'Suggerimenti AI'],
   },
   {
     number: '03',
@@ -51,7 +52,7 @@ const steps = [
     description: 'Verifica i dati estratti, modifica se necessario, e conferma. Un solo click.',
     icon: CheckCircle,
     gradient: 'from-emerald-500 to-green-500',
-    time: '~3 secondi'
+    time: '~3 secondi',
   },
   {
     number: '04',
@@ -59,7 +60,7 @@ const steps = [
     description: 'Etichetta pronta. Stampala, attaccala al pacco, consegna al corriere. Fatto!',
     icon: Printer,
     gradient: 'from-amber-500 to-orange-500',
-    badge: 'Tutto qui!'
+    badge: 'Tutto qui!',
   },
 ];
 
@@ -69,10 +70,7 @@ export default function HowItWorksDynamic() {
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative py-32 bg-[#09090b] overflow-hidden"
-    >
+    <section ref={sectionRef} className="relative py-32 bg-[#09090b] overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <div className="absolute top-1/3 left-0 w-[600px] h-[600px] bg-violet-500/10 rounded-full blur-[150px]" />
@@ -138,14 +136,18 @@ export default function HowItWorksDynamic() {
                     <div className="absolute left-[39px] top-[80px] w-0.5 h-[calc(100%-20px)] bg-gradient-to-b from-white/20 to-transparent" />
                   )}
 
-                  <div className={`relative p-6 rounded-2xl border transition-all duration-500 ${
-                    isActive
-                      ? 'bg-white/10 border-white/20 shadow-2xl shadow-white/5'
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
-                  }`}>
+                  <div
+                    className={`relative p-6 rounded-2xl border transition-all duration-500 ${
+                      isActive
+                        ? 'bg-white/10 border-white/20 shadow-2xl shadow-white/5'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
                     <div className="flex gap-6">
                       {/* Icon */}
-                      <div className={`relative flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg transition-transform duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
+                      <div
+                        className={`relative flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center shadow-lg transition-transform duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}
+                      >
                         <Icon className="w-8 h-8 text-white" />
                         <span className="absolute -top-2 -right-2 w-7 h-7 bg-[#09090b] rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white/20">
                           {step.number}
@@ -157,9 +159,7 @@ export default function HowItWorksDynamic() {
                         <h3 className="text-xl font-bold text-white mb-2 group-hover:text-amber-400 transition-colors">
                           {step.title}
                         </h3>
-                        <p className="text-gray-400 leading-relaxed">
-                          {step.description}
-                        </p>
+                        <p className="text-gray-400 leading-relaxed">{step.description}</p>
 
                         {/* Step-specific content */}
                         <AnimatePresence mode="wait">
@@ -176,7 +176,10 @@ export default function HowItWorksDynamic() {
                                   {step.examples.map((example, i) => {
                                     const ExIcon = example.icon;
                                     return (
-                                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/80">
+                                      <span
+                                        key={i}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/80"
+                                      >
                                         <ExIcon className="w-3.5 h-3.5" />
                                         {example.label}
                                       </span>
@@ -187,7 +190,10 @@ export default function HowItWorksDynamic() {
                               {step.features && (
                                 <div className="grid grid-cols-2 gap-2">
                                   {step.features.map((feature, i) => (
-                                    <span key={i} className="flex items-center gap-2 text-sm text-white/80">
+                                    <span
+                                      key={i}
+                                      className="flex items-center gap-2 text-sm text-white/80"
+                                    >
                                       <CheckCircle className="w-4 h-4 text-emerald-400" />
                                       {feature}
                                     </span>
@@ -196,7 +202,9 @@ export default function HowItWorksDynamic() {
                               )}
                               {step.time && (
                                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 rounded-full">
-                                  <span className="text-emerald-400 font-semibold">{step.time}</span>
+                                  <span className="text-emerald-400 font-semibold">
+                                    {step.time}
+                                  </span>
                                 </div>
                               )}
                               {step.badge && (
@@ -211,7 +219,9 @@ export default function HowItWorksDynamic() {
                       </div>
 
                       {/* Arrow indicator */}
-                      <ArrowRight className={`w-5 h-5 text-white/40 flex-shrink-0 mt-1 transition-all duration-300 ${isActive ? 'text-amber-400 translate-x-1' : ''}`} />
+                      <ArrowRight
+                        className={`w-5 h-5 text-white/40 flex-shrink-0 mt-1 transition-all duration-300 ${isActive ? 'text-amber-400 translate-x-1' : ''}`}
+                      />
                     </div>
                   </div>
                 </motion.div>
@@ -228,7 +238,9 @@ export default function HowItWorksDynamic() {
           >
             <div className="relative">
               {/* Glow */}
-              <div className={`absolute -inset-4 rounded-3xl blur-2xl opacity-40 transition-all duration-500 bg-gradient-to-r ${steps[activeStep].gradient}`} />
+              <div
+                className={`absolute -inset-4 rounded-3xl blur-2xl opacity-40 transition-all duration-500 bg-gradient-to-r ${steps[activeStep].gradient}`}
+              />
 
               {/* Demo Card */}
               <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8 overflow-hidden">
@@ -259,13 +271,18 @@ export default function HowItWorksDynamic() {
                         <div className="border-2 border-dashed border-white/20 rounded-2xl p-12 text-center hover:border-amber-500/50 transition-colors cursor-pointer">
                           <Upload className="w-12 h-12 text-white/40 mx-auto mb-4" />
                           <p className="text-white/60">Trascina qui il tuo file</p>
-                          <p className="text-white/40 text-sm mt-2">oppure clicca per selezionare</p>
+                          <p className="text-white/40 text-sm mt-2">
+                            oppure clicca per selezionare
+                          </p>
                         </div>
                         <div className="flex justify-center gap-4">
                           {steps[0].examples?.map((ex, i) => {
                             const ExIcon = ex.icon;
                             return (
-                              <div key={i} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer">
+                              <div
+                                key={i}
+                                className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                              >
                                 <ExIcon className="w-6 h-6 text-white/60" />
                               </div>
                             );
@@ -284,7 +301,12 @@ export default function HowItWorksDynamic() {
                           />
                         </div>
                         <div className="space-y-3">
-                          {['Lettura OCR...', 'Estrazione dati...', 'Validazione indirizzo...', 'Calcolo prezzi...'].map((text, i) => (
+                          {[
+                            'Lettura OCR...',
+                            'Estrazione dati...',
+                            'Validazione indirizzo...',
+                            'Calcolo prezzi...',
+                          ].map((text, i) => (
                             <motion.div
                               key={i}
                               initial={{ opacity: 0, x: -20 }}
@@ -345,7 +367,9 @@ export default function HowItWorksDynamic() {
                         </motion.div>
                         <div>
                           <h4 className="text-2xl font-bold text-white mb-2">Etichetta Pronta!</h4>
-                          <p className="text-gray-400">La tua spedizione e stata creata con successo</p>
+                          <p className="text-gray-400">
+                            La tua spedizione e stata creata con successo
+                          </p>
                         </div>
                         <div className="flex justify-center gap-4">
                           <button className="px-6 py-3 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition-colors">

@@ -56,10 +56,7 @@ export async function POST(request: NextRequest) {
     const { image, options } = body;
 
     if (!image) {
-      return NextResponse.json(
-        { success: false, error: 'Immagine mancante' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Immagine mancante' }, { status: 400 });
     }
 
     // ============================================
@@ -67,10 +64,12 @@ export async function POST(request: NextRequest) {
     // ============================================
     // 1. Se consent + vision enabled → Auto (Google/Claude Vision)
     // 2. Se NO consent OR vision disabled → Tesseract only
-    const adapterType = (visionEnabled && consentGiven) ? 'auto' : 'tesseract';
+    const adapterType = visionEnabled && consentGiven ? 'auto' : 'tesseract';
     const ocr = createOCRAdapter(adapterType);
 
-    console.log(`🔍 OCR Adapter: ${adapterType} | Consent: ${consentGiven} | Vision enabled: ${visionEnabled}`);
+    console.log(
+      `🔍 OCR Adapter: ${adapterType} | Consent: ${consentGiven} | Vision enabled: ${visionEnabled}`
+    );
 
     // Check disponibilità
     const available = await ocr.isAvailable();
@@ -78,7 +77,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Servizio OCR non disponibile. Contattare l\'amministratore.',
+          error: "Servizio OCR non disponibile. Contattare l'amministratore.",
         },
         { status: 503 }
       );
@@ -119,7 +118,8 @@ export async function POST(request: NextRequest) {
     // ============================================
     // GDPR: Log processing event
     // ============================================
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ipAddress =
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     const processingStatus = result.success ? 'success' : 'failed';
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Errore durante l\'estrazione OCR',
+          error: result.error || "Errore durante l'estrazione OCR",
         },
         { status: 500 }
       );
@@ -183,8 +183,8 @@ function getProviderName(ocr: any): string {
   const mapping: Record<string, string> = {
     'google-vision': 'google_vision',
     'claude-vision': 'claude_vision',
-    'tesseract': 'tesseract',
-    'mock': 'mock',
+    tesseract: 'tesseract',
+    mock: 'mock',
   };
 
   return mapping[name] || name;

@@ -140,4 +140,3 @@ Per ottimizzare le performance:
 - Ottimizza le immagini prima di caricarle (usa TinyPNG o simili)
 - Mantieni le proporzioni originali del logo
 - Non distorcere o modificare il logo
-

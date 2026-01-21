@@ -29,14 +29,14 @@ export class ClaudeOCRAdapter extends OCRAdapter {
 
   async extract(imageData: Buffer | string, options?: OCROptions): Promise<OCRResult> {
     if (!this.client) {
-      throw new Error('Claude Vision API non disponibile. Configura ANTHROPIC_API_KEY in .env.local');
+      throw new Error(
+        'Claude Vision API non disponibile. Configura ANTHROPIC_API_KEY in .env.local'
+      );
     }
 
     try {
       // Converti immagine in base64 se è un Buffer
-      const base64Image = typeof imageData === 'string'
-        ? imageData
-        : imageData.toString('base64');
+      const base64Image = typeof imageData === 'string' ? imageData : imageData.toString('base64');
 
       // Determina media type (assumiamo JPEG, ma potremmo rilevarlo)
       const mediaType = this.detectMediaType(base64Image);
@@ -169,7 +169,12 @@ Esempio output corretto:
    * Calcola confidence score basato su completezza dati
    */
   private calculateConfidence(data: Record<string, string>): number {
-    const requiredFields = ['recipient_name', 'recipient_address', 'recipient_city', 'recipient_zip'];
+    const requiredFields = [
+      'recipient_name',
+      'recipient_address',
+      'recipient_city',
+      'recipient_zip',
+    ];
     const optionalFields = ['recipient_province', 'recipient_phone', 'recipient_email'];
 
     let score = 0;

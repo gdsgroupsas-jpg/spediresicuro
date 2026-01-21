@@ -20,12 +20,12 @@ Questo documento descrive il sistema di toggle features di SpedireSicuro, che pe
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Platform Features | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [Platform Features](#platform-features-global-toggle) |
-| Capability Flags | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [Capabilities](#capability-flags-granular-permissions) |
-| User Features | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [User Features](#user-features-per-user-toggle) |
-| Usage Examples | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [Examples](#examples) |
+| Sezione           | Pagina                                 | Link                                                   |
+| ----------------- | -------------------------------------- | ------------------------------------------------------ |
+| Platform Features | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [Platform Features](#platform-features-global-toggle)  |
+| Capability Flags  | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [Capabilities](#capability-flags-granular-permissions) |
+| User Features     | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [User Features](#user-features-per-user-toggle)        |
+| Usage Examples    | docs/11-FEATURES/AI_FEATURES_TOGGLE.md | [Examples](#examples)                                  |
 
 ## Content
 
@@ -42,31 +42,31 @@ Le platform features sono toggle globali gestiti dal superadmin per attivare/dis
 ```sql
 CREATE TABLE platform_features (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  
+
   -- Identificativo feature
   code TEXT UNIQUE NOT NULL, -- es. 'integrations', 'automation', 'ldv_scanner'
   name TEXT NOT NULL, -- Nome visualizzato
   description TEXT, -- Descrizione feature
-  
+
   -- Categoria
   category TEXT NOT NULL, -- 'integrations', 'automation', 'admin', 'analytics'
-  
+
   -- Stato
   is_enabled BOOLEAN DEFAULT true, -- Se la feature è attiva globalmente
   is_visible BOOLEAN DEFAULT true, -- Se la feature è visibile nel menu
-  
+
   -- Configurazione
   config JSONB DEFAULT '{}', -- Configurazioni specifiche feature
-  
+
   -- Ordine visualizzazione
   display_order INTEGER DEFAULT 100,
-  
+
   -- Icona (nome icona lucide-react)
   icon TEXT,
-  
+
   -- Route/path associato (opzionale)
   route_path TEXT, -- es. '/dashboard/integrazioni', '/dashboard/admin'
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -99,12 +99,12 @@ export async function isPlatformFeatureEnabled(featureCode: string): Promise<boo
     .select('is_enabled')
     .eq('code', featureCode)
     .single();
-  
+
   if (error || !data) {
     // Se feature non esiste, ritorna true (compatibilità)
     return true;
   }
-  
+
   return data.is_enabled === true;
 }
 ```
@@ -119,11 +119,11 @@ export async function isPlatformFeatureVisible(featureCode: string): Promise<boo
     .select('is_visible')
     .eq('code', featureCode)
     .single();
-  
+
   if (error || !data) {
     return true; // Default: visibile
   }
-  
+
   return data.is_visible === true;
 }
 ```
@@ -143,25 +143,25 @@ Le capability flags sono permessi granulari per utenti, con fallback automatico 
 ```sql
 CREATE TABLE account_capabilities (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  
+
   -- Riferimento utente
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  
+
   -- Nome capability
   capability_name TEXT NOT NULL,
-  
+
   -- Audit trail
   granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   granted_by UUID REFERENCES users(id),
-  
+
   -- Revoca (soft delete per audit trail)
   revoked_at TIMESTAMPTZ, -- NULL = capability attiva
   revoked_by UUID REFERENCES users(id),
-  
+
   -- Metadata
   notes TEXT,
   metadata JSONB DEFAULT '{}'::jsonb,
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -170,15 +170,15 @@ CREATE TABLE account_capabilities (
 
 #### Capability Disponibili
 
-| Capability | Descrizione | Fallback |
-|------------|-------------|----------|
-| `can_manage_pricing` | Modifica prezzi/listini | `admin`, `superadmin` |
-| `can_create_subusers` | Crea sub-users | `reseller`, `admin`, `superadmin` |
-| `can_access_api` | Accesso API | `byoc`, `admin`, `superadmin` |
-| `can_manage_wallet` | Gestione wallet altri utenti | `admin`, `superadmin` |
-| `can_view_all_clients` | Vedi tutti i clienti | `admin`, `superadmin` |
-| `can_manage_resellers` | Gestione reseller | `superadmin` |
-| `can_bypass_rls` | Bypass RLS | `superadmin` |
+| Capability             | Descrizione                  | Fallback                          |
+| ---------------------- | ---------------------------- | --------------------------------- |
+| `can_manage_pricing`   | Modifica prezzi/listini      | `admin`, `superadmin`             |
+| `can_create_subusers`  | Crea sub-users               | `reseller`, `admin`, `superadmin` |
+| `can_access_api`       | Accesso API                  | `byoc`, `admin`, `superadmin`     |
+| `can_manage_wallet`    | Gestione wallet altri utenti | `admin`, `superadmin`             |
+| `can_view_all_clients` | Vedi tutti i clienti         | `admin`, `superadmin`             |
+| `can_manage_resellers` | Gestione reseller            | `superadmin`                      |
+| `can_bypass_rls`       | Bypass RLS                   | `superadmin`                      |
 
 #### Helper TypeScript
 
@@ -207,6 +207,7 @@ Il sistema usa **fallback automatico** se capability non trovata:
 2. **Se non trovata:** Usa fallback a `role`/`account_type`/`is_reseller`
 
 **Vantaggi:**
+
 - ✅ Retrocompatibilità garantita
 - ✅ Nessuna regressione
 - ✅ Migrazione graduale possibile
@@ -263,7 +264,7 @@ CREATE TABLE user_features (
   activation_type TEXT, -- 'manual', 'trial', 'beta'
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   UNIQUE(user_email, feature_id)
 );
 ```
@@ -276,20 +277,20 @@ CREATE TABLE user_features (
 export async function POST(request: NextRequest) {
   const adminAuth = await requireAdminRole();
   if (!adminAuth.authorized) return adminAuth.response;
-  
+
   const { targetUserEmail, featureCode, activate, expiresAt } = await request.json();
-  
+
   // 1. Verifica che la feature esista
   const { data: feature } = await supabaseAdmin
     .from('killer_features')
     .select('id')
     .eq('code', featureCode)
     .single();
-  
+
   if (!feature) {
     return ApiErrors.NOT_FOUND('Feature');
   }
-  
+
   // 2. Inserisci o aggiorna user_feature
   const { data: existingUserFeature } = await supabaseAdmin
     .from('user_features')
@@ -297,7 +298,7 @@ export async function POST(request: NextRequest) {
     .eq('user_email', targetUserEmail)
     .eq('feature_id', feature.id)
     .single();
-  
+
   if (existingUserFeature) {
     // Aggiorna feature esistente
     await supabaseAdmin
@@ -310,17 +311,15 @@ export async function POST(request: NextRequest) {
       .eq('id', existingUserFeature.id);
   } else {
     // Crea nuova user feature
-    await supabaseAdmin
-      .from('user_features')
-      .insert({
-        user_email: targetUserEmail,
-        feature_id: feature.id,
-        is_active: activate,
-        activated_at: activate ? new Date().toISOString() : null,
-        expires_at: expiresAt,
-      });
+    await supabaseAdmin.from('user_features').insert({
+      user_email: targetUserEmail,
+      feature_id: feature.id,
+      is_active: activate,
+      activated_at: activate ? new Date().toISOString() : null,
+      expires_at: expiresAt,
+    });
   }
-  
+
   return Response.json({ success: true });
 }
 ```
@@ -329,26 +328,23 @@ export async function POST(request: NextRequest) {
 
 ```typescript
 // Verifica se utente ha feature attiva
-export async function hasUserFeature(
-  userEmail: string,
-  featureCode: string
-): Promise<boolean> {
+export async function hasUserFeature(userEmail: string, featureCode: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('user_features')
     .select('is_active, expires_at')
     .eq('user_email', userEmail)
     .eq('killer_features.code', featureCode)
     .single();
-  
+
   if (error || !data) {
     return false;
   }
-  
+
   // Verifica scadenza
   if (data.expires_at && new Date(data.expires_at) < new Date()) {
     return false;
   }
-  
+
   return data.is_active === true;
 }
 ```
@@ -399,11 +395,11 @@ import { isPlatformFeatureEnabled } from '@/lib/platform-features';
 
 export async function GET() {
   const isIntegrationsEnabled = await isPlatformFeatureEnabled('integrations');
-  
+
   if (!isIntegrationsEnabled) {
     return Response.json({ error: 'Feature non disponibile' }, { status: 503 });
   }
-  
+
   // Feature attiva, procedi
   return Response.json({ data: '...' });
 }
@@ -418,17 +414,17 @@ import { requireSafeAuth } from '@/lib/safe-auth';
 
 export async function updatePriceList(priceListId: string, data: any) {
   const context = await requireSafeAuth();
-  
+
   // Verifica capability
   const canManage = await hasCapability(context.actor.id, 'can_manage_pricing', {
     role: context.actor.role,
     account_type: context.actor.account_type,
   });
-  
+
   if (!canManage) {
     throw new Error('Permesso negato: can_manage_pricing');
   }
-  
+
   // Procedi con update
   // ...
 }
@@ -443,22 +439,20 @@ import { requireAdminRole } from '@/lib/api-middleware';
 export async function POST(request: Request) {
   const adminAuth = await requireAdminRole();
   if (!adminAuth.authorized) return adminAuth.response;
-  
+
   const { targetUserEmail, featureCode, activate } = await request.json();
-  
+
   // Toggle feature per utente
-  const { error } = await supabaseAdmin
-    .from('user_features')
-    .upsert({
-      user_email: targetUserEmail,
-      feature_code: featureCode,
-      is_active: activate,
-    });
-  
+  const { error } = await supabaseAdmin.from('user_features').upsert({
+    user_email: targetUserEmail,
+    feature_code: featureCode,
+    is_active: activate,
+  });
+
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-  
+
   return Response.json({ success: true });
 }
 ```
@@ -472,7 +466,7 @@ import { useSession } from 'next-auth/react';
 export function FeatureGate({ featureCode, children }: { featureCode: string; children: React.ReactNode }) {
   const { data: session } = useSession();
   const [hasFeature, setHasFeature] = useState(false);
-  
+
   useEffect(() => {
     if (session?.user?.email) {
       fetch(`/api/features/check?feature=${featureCode}`)
@@ -480,11 +474,11 @@ export function FeatureGate({ featureCode, children }: { featureCode: string; ch
         .then(data => setHasFeature(data.enabled));
     }
   }, [session, featureCode]);
-  
+
   if (!hasFeature) {
     return null; // Feature non disponibile
   }
-  
+
   return <>{children}</>;
 }
 ```
@@ -493,13 +487,13 @@ export function FeatureGate({ featureCode, children }: { featureCode: string; ch
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Feature non trovata | Verifica che feature esista in `platform_features` o `killer_features` |
-| Capability non funziona | Verifica fallback a role/account_type, controlla migration 083 |
-| User feature non attiva | Verifica `is_active = true` e `expires_at` non scaduto |
-| Platform feature sempre attiva | Verifica che `is_enabled = false` in database, controlla helper |
-| RLS blocca capability query | Verifica policy `account_capabilities_select`, controlla auth.uid() |
+| Issue                          | Soluzione                                                              |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| Feature non trovata            | Verifica che feature esista in `platform_features` o `killer_features` |
+| Capability non funziona        | Verifica fallback a role/account_type, controlla migration 083         |
+| User feature non attiva        | Verifica `is_active = true` e `expires_at` non scaduto                 |
+| Platform feature sempre attiva | Verifica che `is_enabled = false` in database, controlla helper        |
+| RLS blocca capability query    | Verifica policy `account_capabilities_select`, controlla auth.uid()    |
 
 ---
 
@@ -513,11 +507,12 @@ export function FeatureGate({ featureCode, children }: { featureCode: string; ch
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version - Platform Features, Capability Flags, User Features | AI Agent |
+| Date       | Version | Changes                                                              | Author   |
+| ---------- | ------- | -------------------------------------------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version - Platform Features, Capability Flags, User Features | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

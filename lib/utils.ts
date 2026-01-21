@@ -1,24 +1,21 @@
 // Funzioni utility per il progetto
-import { type ClassValue, clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 /**
  * Utility per unire classi CSS in modo sicuro
  * Combina clsx e tailwind-merge per gestire conflitti Tailwind
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
  * Calcola il prezzo finale aggiungendo il margine al prezzo base
  */
-export function calcolaPrezzoConMargine(
-  prezzoBase: number,
-  marginePercentuale: number
-): number {
-  const margine = (prezzoBase * marginePercentuale) / 100
-  return prezzoBase + margine
+export function calcolaPrezzoConMargine(prezzoBase: number, marginePercentuale: number): number {
+  const margine = (prezzoBase * marginePercentuale) / 100;
+  return prezzoBase + margine;
 }
 
 /**
@@ -29,11 +26,11 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
-  }).format(amount)
+  }).format(amount);
 }
 
 // Alias per retrocompatibilità
-export const formattaPrezzo = formatCurrency
+export const formattaPrezzo = formatCurrency;
 
 /**
  * Formatta una data in formato italiano corto
@@ -44,7 +41,7 @@ export function formatDate(date: string | Date): string {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(date))
+  }).format(new Date(date));
 }
 
 /**
@@ -58,29 +55,29 @@ export function formatDateTime(date: string | Date): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(date))
+  }).format(new Date(date));
 }
 
 /**
  * Formatta una data relativa (es. "2 giorni fa")
  */
 export function formatRelativeDate(date: string | Date): string {
-  const now = new Date()
-  const targetDate = new Date(date)
-  const diffInMs = now.getTime() - targetDate.getTime()
-  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+  const now = new Date();
+  const targetDate = new Date(date);
+  const diffInMs = now.getTime() - targetDate.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
   if (diffInDays === 0) {
-    return 'Oggi'
+    return 'Oggi';
   } else if (diffInDays === 1) {
-    return 'Ieri'
+    return 'Ieri';
   } else if (diffInDays < 7) {
-    return `${diffInDays} giorni fa`
+    return `${diffInDays} giorni fa`;
   } else if (diffInDays < 30) {
-    const weeks = Math.floor(diffInDays / 7)
-    return `${weeks} settiman${weeks === 1 ? 'a' : 'e'} fa`
+    const weeks = Math.floor(diffInDays / 7);
+    return `${weeks} settiman${weeks === 1 ? 'a' : 'e'} fa`;
   } else {
-    return formatDate(date)
+    return formatDate(date);
   }
 }
 
@@ -89,21 +86,21 @@ export function formatRelativeDate(date: string | Date): string {
  * @example getInitials("Mario Rossi") => "MR"
  */
 export function getInitials(name: string): string {
-  if (!name) return ''
+  if (!name) return '';
   return name
     .split(' ')
-    .map(part => part[0])
+    .map((part) => part[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2)
+    .slice(0, 2);
 }
 
 /**
  * Tronca un testo a una lunghezza massima
  */
 export function truncate(text: string, maxLength: number): string {
-  if (!text || text.length <= maxLength) return text
-  return text.slice(0, maxLength) + '...'
+  if (!text || text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
 }
 
 /**
@@ -111,10 +108,10 @@ export function truncate(text: string, maxLength: number): string {
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text)
-    return true
+    await navigator.clipboard.writeText(text);
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -122,37 +119,33 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  * Genera un ID casuale
  */
 export function generateId(): string {
-  return crypto.randomUUID()
+  return crypto.randomUUID();
 }
 
 /**
  * Valida le dimensioni di un pacco
  */
 export function validaDimensioni(dimensioni: {
-  lunghezza: number
-  larghezza: number
-  altezza: number
+  lunghezza: number;
+  larghezza: number;
+  altezza: number;
 }): boolean {
-  return (
-    dimensioni.lunghezza > 0 &&
-    dimensioni.larghezza > 0 &&
-    dimensioni.altezza > 0
-  )
+  return dimensioni.lunghezza > 0 && dimensioni.larghezza > 0 && dimensioni.altezza > 0;
 }
 
 /**
  * Formatta un numero con separatore delle migliaia italiano
  */
 export function formatNumber(num: number): string {
-  return new Intl.NumberFormat('it-IT').format(num)
+  return new Intl.NumberFormat('it-IT').format(num);
 }
 
 /**
  * Calcola la percentuale di variazione tra due valori
  */
 export function calculatePercentageChange(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0
-  return Math.round(((current - previous) / previous) * 100)
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
 }
 
 /**
@@ -160,7 +153,6 @@ export function calculatePercentageChange(current: number, previous: number): nu
  * @example formatUuid("a1b2c3d4-e5f6-7890-abcd-ef1234567890") => "a1b2...7890"
  */
 export function formatUuid(uuid: string): string {
-  if (!uuid || uuid.length < 8) return uuid
-  return `${uuid.slice(0, 4)}...${uuid.slice(-4)}`
+  if (!uuid || uuid.length < 8) return uuid;
+  return `${uuid.slice(0, 4)}...${uuid.slice(-4)}`;
 }
-

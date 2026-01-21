@@ -1,19 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
-import path from "path";
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
 
 // 1. Load Environment Variables
-dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-if (
-  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  !process.env.SUPABASE_SERVICE_ROLE_KEY
-) {
-  console.error("❌ Missing env vars");
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ Missing env vars');
   process.exit(1);
 }
 
-const TEST_EMAIL = "testspediresicuro+postaexpress@gmail.com";
+const TEST_EMAIL = 'testspediresicuro+postaexpress@gmail.com';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -22,41 +19,31 @@ const supabase = createClient(
 
 async function main() {
   // Dynamic imports
-  const { SpedisciOnlineAdapter } = await import(
-    "../lib/adapters/couriers/spedisci-online"
-  );
-  const { createPriceList, addPriceListEntries } = await import(
-    "../lib/db/price-lists"
-  );
-  const { decryptCredential, isEncrypted } = await import(
-    "../lib/security/encryption"
-  );
+  const { SpedisciOnlineAdapter } = await import('../lib/adapters/couriers/spedisci-online');
+  const { createPriceList, addPriceListEntries } = await import('../lib/db/price-lists');
+  const { decryptCredential, isEncrypted } = await import('../lib/security/encryption');
 
-  console.log("🚀 REAL FORCE SYNC for:", TEST_EMAIL);
+  console.log('🚀 REAL FORCE SYNC for:', TEST_EMAIL);
 
   // 1. Get User
-  const { data: user } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", TEST_EMAIL)
-    .single();
+  const { data: user } = await supabase.from('users').select('id').eq('email', TEST_EMAIL).single();
 
   if (!user) {
-    console.error("❌ User not found");
+    console.error('❌ User not found');
     return;
   }
-  console.log("✅ User found:", user.id);
+  console.log('✅ User found:', user.id);
 
   // 2. Get Real Credentials
   const { data: config } = await supabase
-    .from("courier_configs")
-    .select("*")
-    .eq("owner_user_id", user.id)
-    .eq("provider_id", "spedisci_online")
+    .from('courier_configs')
+    .select('*')
+    .eq('owner_user_id', user.id)
+    .eq('provider_id', 'spedisci_online')
     .single();
 
   if (!config) {
-    console.error("❌ Config not found");
+    console.error('❌ Config not found');
     return;
   }
 
@@ -65,16 +52,16 @@ async function main() {
   let apiKey = rawKey;
 
   if (isEncrypted(rawKey)) {
-    console.log("🔐 API Key is encrypted, decrypting...");
+    console.log('🔐 API Key is encrypted, decrypting...');
     try {
       apiKey = decryptCredential(rawKey);
-      console.log("🔓 Decryption successful.");
+      console.log('🔓 Decryption successful.');
     } catch (e: any) {
-      console.error("❌ Decryption failed:", e.message);
+      console.error('❌ Decryption failed:', e.message);
       return;
     }
   } else {
-    console.log("⚠️ API Key is NOT encrypted (Plain Text).");
+    console.log('⚠️ API Key is NOT encrypted (Plain Text).');
   }
 
   // 4. Init Adapter (REAL)
@@ -86,57 +73,55 @@ async function main() {
   // Verify Connection (Non-blocking for debug)
   const isConnected = await adapter.connect();
   if (!isConnected) {
-    console.warn("⚠️ Connection check failed. Proceeding anyway to debug...");
+    console.warn('⚠️ Connection check failed. Proceeding anyway to debug...');
   } else {
-    console.log("✅ Connection verified with Spedisci.Online API.");
+    console.log('✅ Connection verified with Spedisci.Online API.');
   }
 
   // Debug: Manual Fetch to check what's wrong
-  const apiUrl = config.base_url.endsWith("/")
-    ? config.base_url
-    : `${config.base_url}/`;
-  console.log("🔍 DEBUG Fetching manually to:", `${apiUrl}shipping/rates`);
+  const apiUrl = config.base_url.endsWith('/') ? config.base_url : `${config.base_url}/`;
+  console.log('🔍 DEBUG Fetching manually to:', `${apiUrl}shipping/rates`);
 
   try {
     const response = await fetch(`${apiUrl}shipping/rates`, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({}), // Empty body to trigger validation error instead of 404
     });
-    console.log("   Response Status:", response.status);
+    console.log('   Response Status:', response.status);
     const text = await response.text();
-    console.log("   Response Text (First 200 chars):", text.substring(0, 200));
+    console.log('   Response Text (First 200 chars):', text.substring(0, 200));
   } catch (e: any) {
-    console.error("   Fetch Error:", e.message);
+    console.error('   Fetch Error:', e.message);
   }
 
   // 5. Fetch Rates (REAL API CALL)
-  console.log("📡 Fetching REAL rates from Spedisci.Online API...");
+  console.log('📡 Fetching REAL rates from Spedisci.Online API...');
 
   const testParams = {
     packages: [{ length: 30, width: 20, height: 15, weight: 2 }],
     shipFrom: {
-      name: "Mittente Test",
-      street1: "Via Roma 1",
-      city: "Roma",
-      state: "RM",
-      postalCode: "00100",
-      country: "IT",
-      email: "test@example.com",
+      name: 'Mittente Test',
+      street1: 'Via Roma 1',
+      city: 'Roma',
+      state: 'RM',
+      postalCode: '00100',
+      country: 'IT',
+      email: 'test@example.com',
     },
     shipTo: {
-      name: "Destinatario Test",
-      street1: "Via Milano 2",
-      city: "Milano",
-      state: "MI",
-      postalCode: "20100",
-      country: "IT",
-      email: "dest@example.com",
+      name: 'Destinatario Test',
+      street1: 'Via Milano 2',
+      city: 'Milano',
+      state: 'MI',
+      postalCode: '20100',
+      country: 'IT',
+      email: 'dest@example.com',
     },
-    notes: "Test Real Sync",
+    notes: 'Test Real Sync',
     insuranceValue: 0,
     codValue: 0,
     accessoriServices: [],
@@ -145,7 +130,7 @@ async function main() {
   const result = await adapter.getRates(testParams);
 
   if (!result.success || !result.rates) {
-    console.error("❌ Failed to get rates:", result.error);
+    console.error('❌ Failed to get rates:', result.error);
     return;
   }
   console.log(`✅ Received ${result.rates.length} rates from API.`);
@@ -166,11 +151,11 @@ async function main() {
 
     // Check existing via local client
     const { data: existing } = await supabase
-      .from("price_lists")
-      .select("id")
-      .eq("created_by", user.id)
-      .eq("list_type", "supplier")
-      .ilike("name", `%${carrierCode}%`)
+      .from('price_lists')
+      .select('id')
+      .eq('created_by', user.id)
+      .eq('list_type', 'supplier')
+      .ilike('name', `%${carrierCode}%`)
       .maybeSingle();
 
     let listId;
@@ -178,19 +163,16 @@ async function main() {
       console.log(`   🔄 Updating existing list: ${existing.id}`);
       listId = existing.id;
       // Clean old entries
-      await supabase
-        .from("price_list_entries")
-        .delete()
-        .eq("price_list_id", listId);
+      await supabase.from('price_list_entries').delete().eq('price_list_id', listId);
     } else {
       const priceListData = {
         name: priceListName,
-        version: "1.0",
-        status: "active",
+        version: '1.0',
+        status: 'active',
         courier_id: null,
-        list_type: "supplier",
+        list_type: 'supplier',
         is_global: false,
-        source_type: "api",
+        source_type: 'api',
         notes: `Real Sync from API`,
       } as any;
       const newList = await createPriceList(priceListData, user.id);
@@ -202,9 +184,9 @@ async function main() {
     const entries = carrierRates.map((rate: any) => ({
       weight_from: 0,
       weight_to: 999.999,
-      zone_code: "IT",
+      zone_code: 'IT',
       base_price: parseFloat(rate.total_price),
-      service_type: rate.contractCode.includes("fast") ? "express" : "standard",
+      service_type: rate.contractCode.includes('fast') ? 'express' : 'standard',
       fuel_surcharge_percent: 0,
     }));
 
@@ -214,11 +196,11 @@ async function main() {
       price_list_id: listId,
     }));
     const { error: insertError } = await supabase
-      .from("price_list_entries")
+      .from('price_list_entries')
       .insert(entriesWithListId);
 
     if (insertError) {
-      console.error("❌ Error adding entries:", insertError.message);
+      console.error('❌ Error adding entries:', insertError.message);
     } else {
       console.log(`   ✅ Added ${entries.length} entries.`);
     }
@@ -226,6 +208,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("Unhandled:", e);
+  console.error('Unhandled:', e);
   process.exit(1);
 });

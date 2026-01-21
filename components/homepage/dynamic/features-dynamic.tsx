@@ -22,36 +22,39 @@ import {
   Bot,
   Camera,
   FileText,
-  Truck
+  Truck,
 } from 'lucide-react';
 
 const features = [
   {
     icon: Zap,
     title: 'AI-First',
-    description: 'Screenshot → Etichetta in 10 secondi. Anne legge qualsiasi cosa: foto, vocali, PDF, chat.',
+    description:
+      'Screenshot → Etichetta in 10 secondi. Anne legge qualsiasi cosa: foto, vocali, PDF, chat.',
     gradient: 'from-amber-500 to-orange-600',
     shadowColor: 'shadow-amber-500/25',
     stat: '94%',
-    statLabel: 'time-saving reale'
+    statLabel: 'time-saving reale',
   },
   {
     icon: Bot,
     title: 'OCR 90% Confidence',
-    description: 'AI Vision estrae dati con 90% confidence. Validazione indirizzi automatica CAP/Comuni.',
+    description:
+      'AI Vision estrae dati con 90% confidence. Validazione indirizzi automatica CAP/Comuni.',
     gradient: 'from-violet-500 to-purple-600',
     shadowColor: 'shadow-violet-500/25',
     stat: '90%',
-    statLabel: 'OCR confidence'
+    statLabel: 'OCR confidence',
   },
   {
     icon: TrendingUp,
     title: '3 Modelli Business',
-    description: 'Broker (spread 29%) per agenzie. BYOC per e-commerce. Web B2C per privati. Multi-target.',
+    description:
+      'Broker (spread 29%) per agenzie. BYOC per e-commerce. Web B2C per privati. Multi-target.',
     gradient: 'from-cyan-500 to-blue-600',
     shadowColor: 'shadow-cyan-500/25',
     stat: '3',
-    statLabel: 'revenue streams'
+    statLabel: 'revenue streams',
   },
   {
     icon: Shield,
@@ -60,25 +63,27 @@ const features = [
     gradient: 'from-emerald-500 to-green-600',
     shadowColor: 'shadow-emerald-500/25',
     stat: 'GDPR',
-    statLabel: 'compliant'
+    statLabel: 'compliant',
   },
   {
     icon: Globe,
     title: 'Multi-Corriere',
-    description: 'GLS, BRT, Poste via Spedisci.Online. Courier adapter pattern = plug & play nuovi corrieri.',
+    description:
+      'GLS, BRT, Poste via Spedisci.Online. Courier adapter pattern = plug & play nuovi corrieri.',
     gradient: 'from-rose-500 to-pink-600',
     shadowColor: 'shadow-rose-500/25',
     stat: '3+',
-    statLabel: 'corrieri integrati'
+    statLabel: 'corrieri integrati',
   },
   {
     icon: FileText,
     title: 'White-Label Ready',
-    description: 'Architettura pensata per rivendita. Consorzi logistici possono brandizzare e rivendere.',
+    description:
+      'Architettura pensata per rivendita. Consorzi logistici possono brandizzare e rivendere.',
     gradient: 'from-indigo-500 to-blue-600',
     shadowColor: 'shadow-indigo-500/25',
     stat: 'B2B2C',
-    statLabel: 'scalabile'
+    statLabel: 'scalabile',
   },
 ];
 
@@ -110,10 +115,7 @@ export default function FeaturesDynamic() {
   const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative py-32 bg-white overflow-hidden"
-    >
+    <section ref={sectionRef} className="relative py-32 bg-white overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#09090b] to-transparent" />
@@ -178,7 +180,8 @@ export default function FeaturesDynamic() {
           </h2>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Architettura AI-First. Multi-tenant nativo. White-label ready. 3 modelli business in uno.
+            Architettura AI-First. Multi-tenant nativo. White-label ready. 3 modelli business in
+            uno.
           </p>
         </motion.div>
 
@@ -198,14 +201,20 @@ export default function FeaturesDynamic() {
                 whileHover={{ y: -8, transition: { duration: 0.3 } }}
                 className="group relative"
               >
-                <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} rounded-3xl blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} rounded-3xl blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500`}
+                />
 
                 <div className="relative h-full p-8 rounded-3xl bg-white border border-gray-100 shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden">
                   {/* Decorative corner */}
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${feature.gradient} opacity-5 rounded-bl-full`} />
+                  <div
+                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${feature.gradient} opacity-5 rounded-bl-full`}
+                  />
 
                   {/* Icon */}
-                  <div className={`relative inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} ${feature.shadowColor} shadow-lg mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                  <div
+                    className={`relative inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} ${feature.shadowColor} shadow-lg mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}
+                  >
                     <Icon className="w-7 h-7 text-white" />
                   </div>
 
@@ -214,20 +223,22 @@ export default function FeaturesDynamic() {
                     {feature.title}
                   </h3>
 
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    {feature.description}
-                  </p>
+                  <p className="text-gray-600 leading-relaxed mb-6">{feature.description}</p>
 
                   {/* Stat */}
                   <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-                    <span className={`text-2xl font-bold bg-gradient-to-r ${feature.gradient} bg-clip-text text-transparent`}>
+                    <span
+                      className={`text-2xl font-bold bg-gradient-to-r ${feature.gradient} bg-clip-text text-transparent`}
+                    >
                       {feature.stat}
                     </span>
                     <span className="text-sm text-gray-500">{feature.statLabel}</span>
                   </div>
 
                   {/* Hover line */}
-                  <div className={`absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r ${feature.gradient} group-hover:w-full transition-all duration-500`} />
+                  <div
+                    className={`absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r ${feature.gradient} group-hover:w-full transition-all duration-500`}
+                  />
                 </div>
               </motion.div>
             );

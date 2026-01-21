@@ -3,6 +3,7 @@
 ## Prerequisiti
 
 1. **File `.env.local`** nella root del progetto con:
+
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://tuo-progetto.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=la_tua_service_role_key
@@ -88,18 +89,22 @@ Se tutto funziona correttamente:
 ## Risoluzione Problemi
 
 ### Errore: "Variabili d'ambiente mancanti"
+
 - **Causa**: File `.env.local` non trovato o variabili mancanti
 - **Soluzione**: Crea `.env.local` nella root del progetto con le variabili necessarie
 
 ### Errore: "Errore decriptazione"
+
 - **Causa**: `ENCRYPTION_KEY` diversa da quella usata per criptare
 - **Soluzione**: Usa la stessa chiave o ricrea la configurazione tramite wizard
 
 ### Errore: "Errore autenticazione" (401/403)
+
 - **Causa**: Client ID o Secret ID errati
 - **Soluzione**: Verifica le credenziali in Supabase e ricrea la configurazione
 
 ### Errore: "Errore autenticazione" (500)
+
 - **Causa**: Problema con l'API Poste o Base URL errato
 - **Soluzione**: Verifica che il Base URL sia `https://apiw.gp.posteitaliane.it/gp/internet`
 
@@ -118,4 +123,3 @@ Se lo script non funziona, puoi testare manualmente:
 - Il test **NON crea** spedizioni reali (solo verifica autenticazione)
 - Per testare la creazione completa, usa l'interfaccia web
 - I log dettagliati sono mostrati in console per debugging
-

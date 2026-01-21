@@ -1,6 +1,6 @@
 /**
  * Cache System per Anne
- * 
+ *
  * Cache in-memory per ottimizzare performance e ridurre costi API.
  * Cachea contesti e risultati di calcoli costosi.
  */
@@ -14,52 +14,53 @@ interface CacheEntry<T> {
 class MemoryCache {
   private cache: Map<string, CacheEntry<any>> = new Map();
   private maxSize: number = 100; // Massimo 100 entry
-  
+
   /**
    * Ottieni valore dalla cache
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
-    
+
     // Verifica se è scaduto
     const now = Date.now();
     if (now - entry.timestamp > entry.ttl) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data as T;
   }
-  
+
   /**
    * Salva valore in cache
    */
   set<T>(key: string, data: T, ttlSeconds: number = 300): void {
     // Se cache è piena, rimuovi entry più vecchia
     if (this.cache.size >= this.maxSize) {
-      const oldestKey = Array.from(this.cache.entries())
-        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
+      const oldestKey = Array.from(this.cache.entries()).sort(
+        (a, b) => a[1].timestamp - b[1].timestamp
+      )[0][0];
       this.cache.delete(oldestKey);
     }
-    
+
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       ttl: ttlSeconds * 1000,
     });
   }
-  
+
   /**
    * Rimuovi entry dalla cache
    */
   delete(key: string): void {
     this.cache.delete(key);
   }
-  
+
   /**
    * Pulisci cache scaduta
    */
@@ -71,14 +72,14 @@ class MemoryCache {
       }
     }
   }
-  
+
   /**
    * Pulisci tutta la cache
    */
   clear(): void {
     this.cache.clear();
   }
-  
+
   /**
    * Ottieni statistiche cache
    */
@@ -96,9 +97,12 @@ const cache = new MemoryCache();
 
 // Cleanup automatico ogni 5 minuti
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    cache.cleanup();
-  }, 5 * 60 * 1000);
+  setInterval(
+    () => {
+      cache.cleanup();
+    },
+    5 * 60 * 1000
+  );
 }
 
 /**
@@ -148,4 +152,3 @@ export function clearUserContextCache(userId: string): void {
 export function getCacheStats() {
   return cache.getStats();
 }
-

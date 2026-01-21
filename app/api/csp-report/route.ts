@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * CSP Reporting Endpoint
- * 
+ *
  * Riceve e logga le violazioni della Content Security Policy.
- * 
+ *
  * POST /api/csp-report
  * Body: JSON con report CSP (formato standard browser)
- * 
+ *
  * ⚠️ SECURITY:
  * - Non logga dati sensibili (PII)
  * - Rate limiting implicito (browser invia solo violazioni)
@@ -17,11 +17,11 @@ import { NextRequest, NextResponse } from 'next/server';
 interface CSPReport {
   'csp-report': {
     'document-uri'?: string;
-    'referrer'?: string;
+    referrer?: string;
     'violated-directive'?: string;
     'effective-directive'?: string;
     'original-policy'?: string;
-    'disposition'?: string;
+    disposition?: string;
     'blocked-uri'?: string;
     'status-code'?: number;
     'source-file'?: string;
@@ -91,4 +91,3 @@ export async function GET() {
     },
   });
 }
-

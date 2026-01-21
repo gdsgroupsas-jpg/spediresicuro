@@ -19,9 +19,9 @@ Questo documento descrive le misure di compliance GDPR di SpedireSicuro, inclusi
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Data Export | docs/8-SECURITY/GDPR.md | [Data Export](#data-export-gdpr-right-to-access) |
+| Sezione            | Pagina                  | Link                                                       |
+| ------------------ | ----------------------- | ---------------------------------------------------------- |
+| Data Export        | docs/8-SECURITY/GDPR.md | [Data Export](#data-export-gdpr-right-to-access)           |
 | Data Anonymization | docs/8-SECURITY/GDPR.md | [Anonymization](#data-anonymization-gdpr-right-to-erasure) |
 
 ## Content
@@ -35,6 +35,7 @@ User can export all personal data via `/dashboard/impostazioni/privacy`
 **Format:** JSON file with all tables (shipments, wallet_transactions, audit_logs referencing user)
 
 **Included Data:**
+
 - User profile (name, email, phone, address)
 - Shipments (all shipments created by user)
 - Wallet transactions (all transactions)
@@ -69,12 +70,12 @@ User can request account deletion via same page
 // app/actions/privacy.ts
 export async function exportUserData(userId: string) {
   const context = await requireSafeAuth();
-  
+
   // Verifica che utente richieda i propri dati
   if (context.target.id !== userId && !isSuperAdmin(context)) {
     throw new Error('FORBIDDEN');
   }
-  
+
   // Raccogli tutti i dati
   const [user, shipments, transactions, auditLogs] = await Promise.all([
     supabaseAdmin.from('users').select('*').eq('id', userId).single(),
@@ -82,7 +83,7 @@ export async function exportUserData(userId: string) {
     supabaseAdmin.from('wallet_transactions').select('*').eq('user_id', userId),
     supabaseAdmin.from('audit_logs').select('*').or(`actor_id.eq.${userId},target_id.eq.${userId}`),
   ]);
-  
+
   return {
     user: user.data,
     shipments: shipments.data,
@@ -98,14 +99,14 @@ export async function exportUserData(userId: string) {
 ```typescript
 export async function anonymizeUser(userId: string) {
   const context = await requireSafeAuth();
-  
+
   // Verifica autorizzazione
   if (context.target.id !== userId && !isSuperAdmin(context)) {
     throw new Error('FORBIDDEN');
   }
-  
+
   const timestamp = Date.now();
-  
+
   // Anonymize user
   await supabaseAdmin
     .from('users')
@@ -120,7 +121,7 @@ export async function anonymizeUser(userId: string) {
       province: null,
     })
     .eq('id', userId);
-  
+
   // Anonymize shipments (keep for business records)
   await supabaseAdmin
     .from('shipments')
@@ -131,10 +132,10 @@ export async function anonymizeUser(userId: string) {
       recipient_address: '[Anonymized]',
     })
     .eq('user_id', userId);
-  
+
   // Freeze wallet (admin must manually refund)
   // Wallet balance remains but user cannot access
-  
+
   // Audit log
   await writeAuditLog({
     context,
@@ -149,11 +150,11 @@ export async function anonymizeUser(userId: string) {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Export fallisce | Verifica autorizzazione e accesso database |
-| Anonymization incompleta | Verifica che tutti i campi PII siano anonimizzati |
-| Wallet balance perso | Admin deve rimborsare manualmente prima di anonymization |
+| Issue                    | Soluzione                                                |
+| ------------------------ | -------------------------------------------------------- |
+| Export fallisce          | Verifica autorizzazione e accesso database               |
+| Anonymization incompleta | Verifica che tutti i campi PII siano anonimizzati        |
+| Wallet balance perso     | Admin deve rimborsare manualmente prima di anonymization |
 
 ---
 
@@ -166,11 +167,12 @@ export async function anonymizeUser(userId: string) {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

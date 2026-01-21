@@ -5,30 +5,30 @@
  * Dati basati su peso in kg e prezzi
  */
 
-"use client";
+'use client';
 
-import { approvePriceListAction } from "@/actions/approve-price-list";
-import { updateCustomerPriceListMarginAction } from "@/actions/customer-price-lists";
-import { upsertPriceListEntriesAction } from "@/actions/price-list-entries";
-import { getPriceListByIdAction } from "@/actions/price-lists";
-import DashboardNav from "@/components/dashboard-nav";
-import { ImportCsvDialog } from "@/components/listini/import-csv-dialog";
-import { ManualPriceListEntriesForm } from "@/components/listini/manual-price-list-entries-form";
-import { SupplierPriceListConfigDialog } from "@/components/listini/supplier-price-list-config-dialog";
-import { SyncIncrementalDialog } from "@/components/listini/sync-incremental-dialog";
-import { TestApiValidationDialog } from "@/components/listini/test-api-validation-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { approvePriceListAction } from '@/actions/approve-price-list';
+import { updateCustomerPriceListMarginAction } from '@/actions/customer-price-lists';
+import { upsertPriceListEntriesAction } from '@/actions/price-list-entries';
+import { getPriceListByIdAction } from '@/actions/price-lists';
+import DashboardNav from '@/components/dashboard-nav';
+import { ImportCsvDialog } from '@/components/listini/import-csv-dialog';
+import { ManualPriceListEntriesForm } from '@/components/listini/manual-price-list-entries-form';
+import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog';
+import { SyncIncrementalDialog } from '@/components/listini/sync-incremental-dialog';
+import { TestApiValidationDialog } from '@/components/listini/test-api-validation-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { PRICING_MATRIX } from "@/lib/constants/pricing-matrix";
-import type { PriceList, PriceListEntry } from "@/types/listini";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix';
+import type { PriceList, PriceListEntry } from '@/types/listini';
 import {
   ArrowLeft,
   Calendar,
@@ -45,26 +45,26 @@ import {
   Truck,
   Upload,
   X,
-} from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 // Formatta valuta
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
   }).format(value);
 }
 
 // Formatta data
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("it-IT", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  return new Date(dateString).toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
@@ -72,16 +72,16 @@ function formatDate(dateString: string): string {
 function getStatusBadge(status: string) {
   const statusConfig: Record<string, { label: string; className: string }> = {
     draft: {
-      label: "Bozza",
-      className: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      label: 'Bozza',
+      className: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     },
     active: {
-      label: "Attivo",
-      className: "bg-green-100 text-green-700 border-green-200",
+      label: 'Attivo',
+      className: 'bg-green-100 text-green-700 border-green-200',
     },
     archived: {
-      label: "Archiviato",
-      className: "bg-gray-100 text-gray-700 border-gray-200",
+      label: 'Archiviato',
+      className: 'bg-gray-100 text-gray-700 border-gray-200',
     },
   };
 
@@ -97,11 +97,11 @@ function getStatusBadge(status: string) {
 // Badge tipo servizio
 function getServiceTypeBadge(serviceType: string) {
   const serviceConfig: Record<string, { label: string; className: string }> = {
-    standard: { label: "Standard", className: "bg-blue-100 text-blue-700" },
-    express: { label: "Express", className: "bg-purple-100 text-purple-700" },
-    economy: { label: "Economy", className: "bg-green-100 text-green-700" },
-    same_day: { label: "Same Day", className: "bg-red-100 text-red-700" },
-    next_day: { label: "Next Day", className: "bg-orange-100 text-orange-700" },
+    standard: { label: 'Standard', className: 'bg-blue-100 text-blue-700' },
+    express: { label: 'Express', className: 'bg-purple-100 text-purple-700' },
+    economy: { label: 'Economy', className: 'bg-green-100 text-green-700' },
+    same_day: { label: 'Same Day', className: 'bg-red-100 text-red-700' },
+    next_day: { label: 'Next Day', className: 'bg-orange-100 text-orange-700' },
   };
 
   const config = serviceConfig[serviceType] || serviceConfig.standard;
@@ -126,8 +126,7 @@ export default function PriceListDetailPage() {
   const [showManualFormDialog, setShowManualFormDialog] = useState(false);
   const [showImportCsvDialog, setShowImportCsvDialog] = useState(false);
   const [showTestApiDialog, setShowTestApiDialog] = useState(false);
-  const [showSyncIncrementalDialog, setShowSyncIncrementalDialog] =
-    useState(false);
+  const [showSyncIncrementalDialog, setShowSyncIncrementalDialog] = useState(false);
 
   // Stato locale per editing batch della matrice
   type MatrixRow = {
@@ -143,128 +142,123 @@ export default function PriceListDetailPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Inizializza matrice editing dai dati esistenti
-  const initializeEditingMatrix = useCallback(
-    (entriesData: PriceListEntry[]) => {
-      const sortedZones = [...PRICING_MATRIX.ZONES]
-        .map((z) => z.code)
-        .sort((a, b) => {
-          const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
-          const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
-          return (zoneA?.priority || 999) - (zoneB?.priority || 999);
-        });
+  const initializeEditingMatrix = useCallback((entriesData: PriceListEntry[]) => {
+    const sortedZones = [...PRICING_MATRIX.ZONES]
+      .map((z) => z.code)
+      .sort((a, b) => {
+        const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
+        const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
+        return (zoneA?.priority || 999) - (zoneB?.priority || 999);
+      });
 
-      const normalizeZoneCode = (
-        code: string | undefined | null
-      ): string | null => {
-        if (!code) return null;
+    const normalizeZoneCode = (code: string | undefined | null): string | null => {
+      if (!code) return null;
 
-        // Normalizza il codice (lowercase, rimuovi underscore e trattini)
-        const normalized = code.toLowerCase().replace(/[_\-\s]+/g, "_");
+      // Normalizza il codice (lowercase, rimuovi underscore e trattini)
+      const normalized = code.toLowerCase().replace(/[_\-\s]+/g, '_');
 
-        // Mappatura codici legacy
-        const legacyMap: Record<string, string> = {
-          it_std: "IT-ITALIA",
-          it_cal: "IT-CALABRIA",
-          it_sic: "IT-SICILIA",
-          it_sar: "IT-SARDEGNA",
-          it_ven: "IT-DISAGIATE",
-          it_liv: "IT-LIVIGNO",
-          it_iso: "IT-ISOLE-MINORI",
-          eu_z1: "EU-ZONA1",
-          eu_z2: "EU-ZONA2",
-        };
-
-        // Mappatura nomi semplici (da CSV import)
-        const nameMap: Record<string, string> = {
-          italia: "IT-ITALIA",
-          sardegna: "IT-SARDEGNA",
-          calabria: "IT-CALABRIA",
-          sicilia: "IT-SICILIA",
-          livigno: "IT-LIVIGNO",
-          campione: "IT-LIVIGNO",
-          livigno_campione: "IT-LIVIGNO",
-          isole_minori: "IT-ISOLE-MINORI",
-          isole: "IT-ISOLE-MINORI",
-          localita_disagiate: "IT-DISAGIATE",
-          disagiate: "IT-DISAGIATE",
-          europa1: "EU-ZONA1",
-          europa_1: "EU-ZONA1",
-          europa_zona_1: "EU-ZONA1",
-          europa2: "EU-ZONA2",
-          europa_2: "EU-ZONA2",
-          europa_zona_2: "EU-ZONA2",
-        };
-
-        // Prova prima con mappatura legacy
-        if (legacyMap[normalized]) {
-          return legacyMap[normalized];
-        }
-
-        // Prova con mappatura nomi semplici
-        if (nameMap[normalized]) {
-          return nameMap[normalized];
-        }
-
-        // Se il codice è già nel formato corretto (IT-*, EU-*), ritorna così com'è
-        if (code.match(/^(IT|EU)-/i)) {
-          return code.toUpperCase();
-        }
-
-        // Altrimenti ritorna il codice originale (potrebbe essere già corretto)
-        return code;
+      // Mappatura codici legacy
+      const legacyMap: Record<string, string> = {
+        it_std: 'IT-ITALIA',
+        it_cal: 'IT-CALABRIA',
+        it_sic: 'IT-SICILIA',
+        it_sar: 'IT-SARDEGNA',
+        it_ven: 'IT-DISAGIATE',
+        it_liv: 'IT-LIVIGNO',
+        it_iso: 'IT-ISOLE-MINORI',
+        eu_z1: 'EU-ZONA1',
+        eu_z2: 'EU-ZONA2',
       };
 
-      const uniqueWeights = Array.from(
-        new Set(entriesData.map((e) => e.weight_to))
-      ).sort((a, b) => a - b);
+      // Mappatura nomi semplici (da CSV import)
+      const nameMap: Record<string, string> = {
+        italia: 'IT-ITALIA',
+        sardegna: 'IT-SARDEGNA',
+        calabria: 'IT-CALABRIA',
+        sicilia: 'IT-SICILIA',
+        livigno: 'IT-LIVIGNO',
+        campione: 'IT-LIVIGNO',
+        livigno_campione: 'IT-LIVIGNO',
+        isole_minori: 'IT-ISOLE-MINORI',
+        isole: 'IT-ISOLE-MINORI',
+        localita_disagiate: 'IT-DISAGIATE',
+        disagiate: 'IT-DISAGIATE',
+        europa1: 'EU-ZONA1',
+        europa_1: 'EU-ZONA1',
+        europa_zona_1: 'EU-ZONA1',
+        europa2: 'EU-ZONA2',
+        europa_2: 'EU-ZONA2',
+        europa_zona_2: 'EU-ZONA2',
+      };
 
-      const matrixRows: MatrixRow[] = [];
-
-      for (let i = 0; i < uniqueWeights.length; i++) {
-        const weightTo = uniqueWeights[i];
-        const weightFrom = i > 0 ? uniqueWeights[i - 1] : 0;
-
-        const prices: Record<string, number> = {};
-        const entryIds: Record<string, string | undefined> = {};
-        let fuelSurcharge = 0;
-
-        sortedZones.forEach((zoneCode) => {
-          const entry = entriesData.find((e) => {
-            const normalizedEntryZone = normalizeZoneCode(e.zone_code);
-            return (
-              (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) &&
-              e.weight_to === weightTo
-            );
-          });
-
-          if (entry) {
-            prices[zoneCode] = entry.base_price;
-            entryIds[zoneCode] = entry.id;
-            // Prendi fuel_surcharge dalla prima entry trovata (assumiamo sia uguale per tutte le zone della riga)
-            if (fuelSurcharge === 0 && entry.fuel_surcharge_percent) {
-              fuelSurcharge = entry.fuel_surcharge_percent;
-            }
-          } else {
-            prices[zoneCode] = -1; // -1 = mancante
-            entryIds[zoneCode] = undefined;
-          }
-        });
-
-        matrixRows.push({
-          id: `row-${weightTo}`,
-          weightFrom,
-          weightTo,
-          prices,
-          fuelSurcharge,
-          entryIds,
-        });
+      // Prova prima con mappatura legacy
+      if (legacyMap[normalized]) {
+        return legacyMap[normalized];
       }
 
-      setEditingMatrix(matrixRows);
-      setHasUnsavedChanges(false);
-    },
-    []
-  );
+      // Prova con mappatura nomi semplici
+      if (nameMap[normalized]) {
+        return nameMap[normalized];
+      }
+
+      // Se il codice è già nel formato corretto (IT-*, EU-*), ritorna così com'è
+      if (code.match(/^(IT|EU)-/i)) {
+        return code.toUpperCase();
+      }
+
+      // Altrimenti ritorna il codice originale (potrebbe essere già corretto)
+      return code;
+    };
+
+    const uniqueWeights = Array.from(new Set(entriesData.map((e) => e.weight_to))).sort(
+      (a, b) => a - b
+    );
+
+    const matrixRows: MatrixRow[] = [];
+
+    for (let i = 0; i < uniqueWeights.length; i++) {
+      const weightTo = uniqueWeights[i];
+      const weightFrom = i > 0 ? uniqueWeights[i - 1] : 0;
+
+      const prices: Record<string, number> = {};
+      const entryIds: Record<string, string | undefined> = {};
+      let fuelSurcharge = 0;
+
+      sortedZones.forEach((zoneCode) => {
+        const entry = entriesData.find((e) => {
+          const normalizedEntryZone = normalizeZoneCode(e.zone_code);
+          return (
+            (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) &&
+            e.weight_to === weightTo
+          );
+        });
+
+        if (entry) {
+          prices[zoneCode] = entry.base_price;
+          entryIds[zoneCode] = entry.id;
+          // Prendi fuel_surcharge dalla prima entry trovata (assumiamo sia uguale per tutte le zone della riga)
+          if (fuelSurcharge === 0 && entry.fuel_surcharge_percent) {
+            fuelSurcharge = entry.fuel_surcharge_percent;
+          }
+        } else {
+          prices[zoneCode] = -1; // -1 = mancante
+          entryIds[zoneCode] = undefined;
+        }
+      });
+
+      matrixRows.push({
+        id: `row-${weightTo}`,
+        weightFrom,
+        weightTo,
+        prices,
+        fuelSurcharge,
+        entryIds,
+      });
+    }
+
+    setEditingMatrix(matrixRows);
+    setHasUnsavedChanges(false);
+  }, []);
 
   const loadPriceList = useCallback(
     async (id: string) => {
@@ -281,13 +275,13 @@ export default function PriceListDetailPage() {
           // Inizializza matrice editing dai dati esistenti
           initializeEditingMatrix(list.entries || []);
         } else {
-          toast.error(result.error || "Listino non trovato");
-          router.push("/dashboard/reseller/listini-fornitore");
+          toast.error(result.error || 'Listino non trovato');
+          router.push('/dashboard/reseller/listini-fornitore');
         }
       } catch (error: any) {
-        toast.error("Errore caricamento listino");
+        toast.error('Errore caricamento listino');
         console.error(error);
-        router.push("/dashboard/reseller/listini-fornitore");
+        router.push('/dashboard/reseller/listini-fornitore');
       } finally {
         setIsLoading(false);
       }
@@ -358,9 +352,7 @@ export default function PriceListDetailPage() {
       });
 
     const lastWeight =
-      editingMatrix.length > 0
-        ? editingMatrix[editingMatrix.length - 1].weightTo
-        : 0;
+      editingMatrix.length > 0 ? editingMatrix[editingMatrix.length - 1].weightTo : 0;
 
     const newRow: MatrixRow = {
       id: `row-new-${Date.now()}`,
@@ -379,7 +371,7 @@ export default function PriceListDetailPage() {
 
   // Elimina riga
   function removeRow(rowId: string) {
-    if (!confirm("Sei sicuro di voler eliminare questa fascia di peso?")) {
+    if (!confirm('Sei sicuro di voler eliminare questa fascia di peso?')) {
       return;
     }
 
@@ -414,7 +406,7 @@ export default function PriceListDetailPage() {
         weight_to: number;
         zone_code?: string;
         base_price: number;
-        service_type: "standard";
+        service_type: 'standard';
         fuel_surcharge_percent: number;
       }> = [];
 
@@ -428,7 +420,7 @@ export default function PriceListDetailPage() {
               weight_to: row.weightTo,
               zone_code: zoneCode,
               base_price: price,
-              service_type: "standard",
+              service_type: 'standard',
               fuel_surcharge_percent: row.fuelSurcharge,
             });
           }
@@ -436,26 +428,21 @@ export default function PriceListDetailPage() {
       });
 
       // Usa upsert per salvare tutto insieme
-      const result = await upsertPriceListEntriesAction(
-        priceList.id,
-        entriesToSave
-      );
+      const result = await upsertPriceListEntriesAction(priceList.id, entriesToSave);
 
       if (result.success) {
         toast.success(
-          `Modifiche salvate: ${result.inserted || 0} inserite, ${
-            result.updated || 0
-          } aggiornate`
+          `Modifiche salvate: ${result.inserted || 0} inserite, ${result.updated || 0} aggiornate`
         );
         setHasUnsavedChanges(false);
         // Ricarica listino per aggiornare entries
         await loadPriceList(priceList.id);
       } else {
-        toast.error(result.error || "Errore salvataggio");
+        toast.error(result.error || 'Errore salvataggio');
       }
     } catch (error: any) {
-      console.error("Errore salvataggio batch:", error);
-      toast.error("Errore durante il salvataggio");
+      console.error('Errore salvataggio batch:', error);
+      toast.error('Errore durante il salvataggio');
     } finally {
       setIsSaving(false);
     }
@@ -464,9 +451,7 @@ export default function PriceListDetailPage() {
   // Annulla modifiche e ricarica dati originali
   function cancelEditing() {
     if (hasUnsavedChanges) {
-      if (
-        !confirm("Hai modifiche non salvate. Sei sicuro di voler annullare?")
-      ) {
+      if (!confirm('Hai modifiche non salvate. Sei sicuro di voler annullare?')) {
         return;
       }
     }
@@ -485,46 +470,44 @@ export default function PriceListDetailPage() {
         return (zoneA?.priority || 999) - (zoneB?.priority || 999);
       });
 
-    const normalizeZoneCode = (
-      code: string | undefined | null
-    ): string | null => {
+    const normalizeZoneCode = (code: string | undefined | null): string | null => {
       if (!code) return null;
 
       // Normalizza il codice (lowercase, rimuovi underscore e trattini)
-      const normalized = code.toLowerCase().replace(/[_\-\s]+/g, "_");
+      const normalized = code.toLowerCase().replace(/[_\-\s]+/g, '_');
 
       // Mappatura codici legacy
       const legacyMap: Record<string, string> = {
-        it_std: "IT-ITALIA",
-        it_cal: "IT-CALABRIA",
-        it_sic: "IT-SICILIA",
-        it_sar: "IT-SARDEGNA",
-        it_ven: "IT-DISAGIATE",
-        it_liv: "IT-LIVIGNO",
-        it_iso: "IT-ISOLE-MINORI",
-        eu_z1: "EU-ZONA1",
-        eu_z2: "EU-ZONA2",
+        it_std: 'IT-ITALIA',
+        it_cal: 'IT-CALABRIA',
+        it_sic: 'IT-SICILIA',
+        it_sar: 'IT-SARDEGNA',
+        it_ven: 'IT-DISAGIATE',
+        it_liv: 'IT-LIVIGNO',
+        it_iso: 'IT-ISOLE-MINORI',
+        eu_z1: 'EU-ZONA1',
+        eu_z2: 'EU-ZONA2',
       };
 
       // Mappatura nomi semplici (da CSV import)
       const nameMap: Record<string, string> = {
-        italia: "IT-ITALIA",
-        sardegna: "IT-SARDEGNA",
-        calabria: "IT-CALABRIA",
-        sicilia: "IT-SICILIA",
-        livigno: "IT-LIVIGNO",
-        campione: "IT-LIVIGNO",
-        livigno_campione: "IT-LIVIGNO",
-        isole_minori: "IT-ISOLE-MINORI",
-        isole: "IT-ISOLE-MINORI",
-        localita_disagiate: "IT-DISAGIATE",
-        disagiate: "IT-DISAGIATE",
-        europa1: "EU-ZONA1",
-        europa_1: "EU-ZONA1",
-        europa_zona_1: "EU-ZONA1",
-        europa2: "EU-ZONA2",
-        europa_2: "EU-ZONA2",
-        europa_zona_2: "EU-ZONA2",
+        italia: 'IT-ITALIA',
+        sardegna: 'IT-SARDEGNA',
+        calabria: 'IT-CALABRIA',
+        sicilia: 'IT-SICILIA',
+        livigno: 'IT-LIVIGNO',
+        campione: 'IT-LIVIGNO',
+        livigno_campione: 'IT-LIVIGNO',
+        isole_minori: 'IT-ISOLE-MINORI',
+        isole: 'IT-ISOLE-MINORI',
+        localita_disagiate: 'IT-DISAGIATE',
+        disagiate: 'IT-DISAGIATE',
+        europa1: 'EU-ZONA1',
+        europa_1: 'EU-ZONA1',
+        europa_zona_1: 'EU-ZONA1',
+        europa2: 'EU-ZONA2',
+        europa_2: 'EU-ZONA2',
+        europa_zona_2: 'EU-ZONA2',
       };
 
       // Prova prima con mappatura legacy
@@ -546,9 +529,9 @@ export default function PriceListDetailPage() {
       return code;
     };
 
-    const uniqueWeights = Array.from(
-      new Set(entries.map((e) => e.weight_to))
-    ).sort((a, b) => a - b);
+    const uniqueWeights = Array.from(new Set(entries.map((e) => e.weight_to))).sort(
+      (a, b) => a - b
+    );
 
     type MergedRow = {
       weightFrom: number;
@@ -564,8 +547,7 @@ export default function PriceListDetailPage() {
         const entry = entries.find((e) => {
           const normalizedEntryZone = normalizeZoneCode(e.zone_code);
           return (
-            (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) &&
-            e.weight_to === w
+            (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) && e.weight_to === w
           );
         });
         rowPrices[zoneCode] = entry ? entry.base_price : -1;
@@ -573,10 +555,7 @@ export default function PriceListDetailPage() {
       return rowPrices;
     };
 
-    const arePricesIdentical = (
-      p1: Record<string, number>,
-      p2: Record<string, number>
-    ) => {
+    const arePricesIdentical = (p1: Record<string, number>, p2: Record<string, number>) => {
       return sortedZones.every((z) => p1[z] === p2[z]);
     };
 
@@ -633,7 +612,7 @@ export default function PriceListDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/dashboard/reseller/listini-fornitore")}
+            onClick={() => router.push('/dashboard/reseller/listini-fornitore')}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -649,13 +628,11 @@ export default function PriceListDetailPage() {
                 <Package className="w-8 h-8 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {priceList.name}
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900">{priceList.name}</h1>
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <Truck className="w-4 h-4" />
-                    {priceList.courier?.name || "Corriere non specificato"}
+                    {priceList.courier?.name || 'Corriere non specificato'}
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
@@ -668,26 +645,19 @@ export default function PriceListDetailPage() {
             <div className="flex items-center gap-3">
               {getStatusBadge(priceList.status)}
               {/* ✨ FASE 5: Pulsante Approvazione (solo se draft) */}
-              {priceList.status === "draft" && (
+              {priceList.status === 'draft' && (
                 <Button
                   variant="default"
                   size="sm"
                   onClick={async () => {
-                    const result = await approvePriceListAction(
-                      priceList.id,
-                      "balanced"
-                    );
+                    const result = await approvePriceListAction(priceList.id, 'balanced');
                     if (result.success) {
-                      toast.success(
-                        "Listino approvato e attivato con successo"
-                      );
+                      toast.success('Listino approvato e attivato con successo');
                       loadPriceList(priceList.id);
                     } else {
-                      toast.error(
-                        result.error || "Errore approvazione listino"
-                      );
+                      toast.error(result.error || 'Errore approvazione listino');
                       if (result.validation) {
-                        console.log("Dettagli validazione:", result.validation);
+                        console.log('Dettagli validazione:', result.validation);
                       }
                     }
                   }}
@@ -713,15 +683,11 @@ export default function PriceListDetailPage() {
           <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-600 font-medium">Righe Tariffe</p>
-              <p className="text-2xl font-bold text-blue-900">
-                {entries.length}
-              </p>
+              <p className="text-2xl font-bold text-blue-900">{entries.length}</p>
             </div>
             <div className="p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">
-                Margine Default
-              </p>
-              {priceList.list_type === "custom" && isEditing ? (
+              <p className="text-sm text-green-600 font-medium">Margine Default</p>
+              {priceList.list_type === 'custom' && isEditing ? (
                 <div className="flex items-center gap-2 mt-2">
                   <Input
                     type="number"
@@ -736,9 +702,9 @@ export default function PriceListDetailPage() {
                       );
                       if (result.success && result.priceList) {
                         setPriceList(result.priceList);
-                        toast.success("Margine aggiornato");
+                        toast.success('Margine aggiornato');
                       } else {
-                        toast.error(result.error || "Errore aggiornamento");
+                        toast.error(result.error || 'Errore aggiornamento');
                       }
                     }}
                     className="w-20 text-center"
@@ -748,12 +714,10 @@ export default function PriceListDetailPage() {
                 </div>
               ) : (
                 <p className="text-2xl font-bold text-green-900">
-                  {priceList.default_margin_percent
-                    ? `${priceList.default_margin_percent}%`
-                    : "-"}
+                  {priceList.default_margin_percent ? `${priceList.default_margin_percent}%` : '-'}
                 </p>
               )}
-              {priceList.list_type === "custom" && !isEditing && (
+              {priceList.list_type === 'custom' && !isEditing && (
                 <p className="text-xs text-gray-500 mt-1">
                   Clicca &quot;Modifica Manuale&quot; per modificare
                 </p>
@@ -762,13 +726,13 @@ export default function PriceListDetailPage() {
             <div className="p-4 bg-purple-50 rounded-lg">
               <p className="text-sm text-purple-600 font-medium">Tipo</p>
               <p className="text-2xl font-bold text-purple-900 capitalize">
-                {priceList.list_type || "supplier"}
+                {priceList.list_type || 'supplier'}
               </p>
             </div>
             <div className="p-4 bg-orange-50 rounded-lg">
               <p className="text-sm text-orange-600 font-medium">Fonte</p>
               <p className="text-2xl font-bold text-orange-900 capitalize">
-                {priceList.source_type || "manual"}
+                {priceList.source_type || 'manual'}
               </p>
             </div>
           </div>
@@ -782,8 +746,7 @@ export default function PriceListDetailPage() {
                 Tariffe per Peso e Zona (Matrice Completa)
               </h2>
               <p className="text-sm text-gray-500">
-                Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne =
-                Zone Geografiche
+                Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne = Zone Geografiche
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -859,7 +822,7 @@ export default function PriceListDetailPage() {
                     className="gap-2 bg-green-600 hover:bg-green-700"
                   >
                     <Save className="h-4 w-4" />
-                    {isSaving ? "Salvataggio..." : "Salva Tutto"}
+                    {isSaving ? 'Salvataggio...' : 'Salva Tutto'}
                   </Button>
                   <Button
                     variant="outline"
@@ -882,10 +845,7 @@ export default function PriceListDetailPage() {
                     Nuova Fascia
                   </Button>
                   {hasUnsavedChanges && (
-                    <Badge
-                      variant="outline"
-                      className="bg-orange-50 text-orange-700"
-                    >
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700">
                       Modifiche non salvate
                     </Badge>
                   )}
@@ -900,20 +860,14 @@ export default function PriceListDetailPage() {
             const displayRows = isEditing ? editingMatrix : buildMergedRows();
 
             // Mostra messaggio vuoto solo se non ci sono entries E non siamo in editing
-            if (
-              displayRows.length === 0 &&
-              entries.length === 0 &&
-              !isEditing
-            ) {
+            if (displayRows.length === 0 && entries.length === 0 && !isEditing) {
               return (
                 <div className="p-12 text-center">
                   <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">
-                    Nessuna tariffa nel listino
-                  </p>
+                  <p className="text-gray-600 mb-2">Nessuna tariffa nel listino</p>
                   <p className="text-sm text-gray-500">
-                    Le tariffe vengono aggiunte durante la sincronizzazione da
-                    Spedisci.Online o importando da CSV
+                    Le tariffe vengono aggiunte durante la sincronizzazione da Spedisci.Online o
+                    importando da CSV
                   </p>
                 </div>
               );
@@ -937,9 +891,7 @@ export default function PriceListDetailPage() {
                         Peso (KG)
                       </th>
                       {sortedZones.map((zoneCode) => {
-                        const zone = PRICING_MATRIX.ZONES.find(
-                          (z) => z.code === zoneCode
-                        );
+                        const zone = PRICING_MATRIX.ZONES.find((z) => z.code === zoneCode);
                         const zoneName = zone?.name || zoneCode;
                         return (
                           <th
@@ -963,9 +915,7 @@ export default function PriceListDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {displayRows.map((row, idx) => {
-                      const rowId = isEditing
-                        ? (row as MatrixRow).id
-                        : `row-${idx}`;
+                      const rowId = isEditing ? (row as MatrixRow).id : `row-${idx}`;
                       const rowData = isEditing
                         ? (row as MatrixRow)
                         : {
@@ -988,22 +938,19 @@ export default function PriceListDetailPage() {
                                   step="0.1"
                                   value={rowData.weightTo}
                                   onChange={(e) => {
-                                    const newWeight =
-                                      parseFloat(e.target.value) || 0;
+                                    const newWeight = parseFloat(e.target.value) || 0;
                                     updateMatrixWeight(rowId, newWeight);
                                   }}
                                   className="w-20 text-center"
                                   disabled={isSaving}
                                 />
-                                <span className="text-xs text-gray-500">
-                                  kg
-                                </span>
+                                <span className="text-xs text-gray-500">kg</span>
                               </div>
                             ) : (
                               <>
                                 {rowData.weightFrom === 0
                                   ? `Fino a ${rowData.weightTo}`
-                                  : `${rowData.weightFrom} - ${rowData.weightTo}`}{" "}
+                                  : `${rowData.weightFrom} - ${rowData.weightTo}`}{' '}
                                 kg
                               </>
                             )}
@@ -1012,18 +959,15 @@ export default function PriceListDetailPage() {
                           {sortedZones.map((zoneCode) => {
                             const price = rowData.prices[zoneCode] ?? -1;
                             return (
-                              <td
-                                key={`${rowId}-${zoneCode}`}
-                                className="px-4 py-3 text-center"
-                              >
+                              <td key={`${rowId}-${zoneCode}`} className="px-4 py-3 text-center">
                                 {isEditing ? (
                                   <Input
                                     type="number"
                                     step="0.01"
-                                    value={price >= 0 ? price : ""}
+                                    value={price >= 0 ? price : ''}
                                     onChange={(e) => {
                                       const value =
-                                        e.target.value === ""
+                                        e.target.value === ''
                                           ? -1
                                           : parseFloat(e.target.value) || 0;
                                       updateMatrixPrice(rowId, zoneCode, value);
@@ -1038,14 +982,10 @@ export default function PriceListDetailPage() {
                                       <>
                                         <span
                                           className={`font-bold ${
-                                            price === 0
-                                              ? "text-gray-400"
-                                              : "text-gray-900"
+                                            price === 0 ? 'text-gray-400' : 'text-gray-900'
                                           }`}
                                         >
-                                          {price === 0
-                                            ? "0,00 €"
-                                            : formatCurrency(price)}
+                                          {price === 0 ? '0,00 €' : formatCurrency(price)}
                                         </span>
                                         {price === 0 && (
                                           <span className="text-[10px] text-orange-500 font-medium">
@@ -1077,9 +1017,7 @@ export default function PriceListDetailPage() {
                               />
                             ) : (
                               <span className="font-semibold text-gray-900">
-                                {rowData.fuelSurcharge > 0
-                                  ? `${rowData.fuelSurcharge}%`
-                                  : "-"}
+                                {rowData.fuelSurcharge > 0 ? `${rowData.fuelSurcharge}%` : '-'}
                               </span>
                             )}
                           </td>
@@ -1111,9 +1049,7 @@ export default function PriceListDetailPage() {
         {priceList.notes && (
           <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Note</h3>
-            <p className="text-gray-600 whitespace-pre-wrap">
-              {priceList.notes}
-            </p>
+            <p className="text-gray-600 whitespace-pre-wrap">{priceList.notes}</p>
           </div>
         )}
 
@@ -1133,10 +1069,7 @@ export default function PriceListDetailPage() {
 
         {/* ✨ FASE 2: Dialog Form Manuale Entries */}
         {priceList && (
-          <Dialog
-            open={showManualFormDialog}
-            onOpenChange={setShowManualFormDialog}
-          >
+          <Dialog open={showManualFormDialog} onOpenChange={setShowManualFormDialog}>
             <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Aggiungi Entries Manualmente</DialogTitle>

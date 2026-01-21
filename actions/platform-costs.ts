@@ -7,10 +7,10 @@
  * @since Sprint 1 - Financial Tracking
  */
 
-"use server";
+'use server';
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
 
 // ============================================
 // TYPES
@@ -90,33 +90,33 @@ async function verifySuperAdmin(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user, error } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (error || !user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
-    if (user.account_type !== "superadmin") {
+    if (user.account_type !== 'superadmin') {
       return {
         success: false,
-        error: "Accesso non autorizzato: solo SuperAdmin",
+        error: 'Accesso non autorizzato: solo SuperAdmin',
       };
     }
 
     return { success: true, userId: user.id };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] verifySuperAdmin error:", error);
-    return { success: false, error: error?.message || "Errore di autenticazione" };
+    console.error('[PLATFORM_COSTS] verifySuperAdmin error:', error);
+    return { success: false, error: error?.message || 'Errore di autenticazione' };
   }
 }
 
@@ -139,21 +139,16 @@ export async function getDailyPnLAction(days: number = 30): Promise<{
 
   try {
     const { data, error } = await supabaseAdmin
-      .from("v_platform_daily_pnl")
-      .select("*")
-      .gte(
-        "date",
-        new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0]
-      )
-      .order("date", { ascending: false });
+      .from('v_platform_daily_pnl')
+      .select('*')
+      .gte('date', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .order('date', { ascending: false });
 
     if (error) throw error;
 
     return { success: true, data: data || [] };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getDailyPnLAction error:", error);
+    console.error('[PLATFORM_COSTS] getDailyPnLAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -173,16 +168,16 @@ export async function getMonthlyPnLAction(months: number = 12): Promise<{
 
   try {
     const { data, error } = await supabaseAdmin
-      .from("v_platform_monthly_pnl")
-      .select("*")
-      .order("month", { ascending: false })
+      .from('v_platform_monthly_pnl')
+      .select('*')
+      .order('month', { ascending: false })
       .limit(months);
 
     if (error) throw error;
 
     return { success: true, data: data || [] };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getMonthlyPnLAction error:", error);
+    console.error('[PLATFORM_COSTS] getMonthlyPnLAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -202,12 +197,12 @@ export async function getResellerUsageAction(month?: string): Promise<{
 
   try {
     let query = supabaseAdmin
-      .from("v_reseller_monthly_platform_usage")
-      .select("*")
-      .order("total_spent", { ascending: false });
+      .from('v_reseller_monthly_platform_usage')
+      .select('*')
+      .order('total_spent', { ascending: false });
 
     if (month) {
-      query = query.eq("month", month);
+      query = query.eq('month', month);
     } else {
       query = query.limit(100);
     }
@@ -218,7 +213,7 @@ export async function getResellerUsageAction(month?: string): Promise<{
 
     return { success: true, data: data || [] };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getResellerUsageAction error:", error);
+    console.error('[PLATFORM_COSTS] getResellerUsageAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -242,16 +237,16 @@ export async function getMarginAlertsAction(): Promise<{
 
   try {
     const { data, error } = await supabaseAdmin
-      .from("v_platform_margin_alerts")
-      .select("*")
-      .order("created_at", { ascending: false })
+      .from('v_platform_margin_alerts')
+      .select('*')
+      .order('created_at', { ascending: false })
       .limit(100);
 
     if (error) throw error;
 
     return { success: true, data: data || [] };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getMarginAlertsAction error:", error);
+    console.error('[PLATFORM_COSTS] getMarginAlertsAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -271,19 +266,16 @@ export async function getReconciliationPendingAction(): Promise<{
 
   try {
     const { data, error } = await supabaseAdmin
-      .from("v_reconciliation_pending")
-      .select("*")
-      .order("created_at", { ascending: true })
+      .from('v_reconciliation_pending')
+      .select('*')
+      .order('created_at', { ascending: true })
       .limit(200);
 
     if (error) throw error;
 
     return { success: true, data: data || [] };
   } catch (error: any) {
-    console.error(
-      "[PLATFORM_COSTS] getReconciliationPendingAction error:",
-      error
-    );
+    console.error('[PLATFORM_COSTS] getReconciliationPendingAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -293,7 +285,7 @@ export async function getReconciliationPendingAction(): Promise<{
  */
 export async function updateReconciliationStatusAction(
   costId: string,
-  status: "matched" | "discrepancy" | "resolved",
+  status: 'matched' | 'discrepancy' | 'resolved',
   notes?: string
 ): Promise<{
   success: boolean;
@@ -306,35 +298,30 @@ export async function updateReconciliationStatusAction(
 
   try {
     const { error } = await supabaseAdmin
-      .from("platform_provider_costs")
+      .from('platform_provider_costs')
       .update({
         reconciliation_status: status,
         reconciliation_notes: notes,
         reconciled_at: new Date().toISOString(),
         reconciled_by: authCheck.userId,
       })
-      .eq("id", costId);
+      .eq('id', costId);
 
     if (error) throw error;
 
     // Log audit
-    await supabaseAdmin.rpc("log_financial_event", {
+    await supabaseAdmin.rpc('log_financial_event', {
       p_event_type:
-        status === "resolved"
-          ? "reconciliation_completed"
-          : "reconciliation_discrepancy",
+        status === 'resolved' ? 'reconciliation_completed' : 'reconciliation_discrepancy',
       p_platform_cost_id: costId,
       p_message: notes || `Status changed to ${status}`,
-      p_severity: status === "discrepancy" ? "warning" : "info",
+      p_severity: status === 'discrepancy' ? 'warning' : 'info',
       p_actor_id: authCheck.userId,
     });
 
     return { success: true };
   } catch (error: any) {
-    console.error(
-      "[PLATFORM_COSTS] updateReconciliationStatusAction error:",
-      error
-    );
+    console.error('[PLATFORM_COSTS] updateReconciliationStatusAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -367,15 +354,13 @@ export async function getPlatformStatsAction(): Promise<{
 
   try {
     // Usa funzione RPC che esclude test e cancellate
-    console.log("[PLATFORM_COSTS] Chiamata RPC get_platform_stats()...");
-    const { data: statsData, error: rpcError } = await supabaseAdmin.rpc(
-      "get_platform_stats"
-    );
+    console.log('[PLATFORM_COSTS] Chiamata RPC get_platform_stats()...');
+    const { data: statsData, error: rpcError } = await supabaseAdmin.rpc('get_platform_stats');
 
-    console.log("[PLATFORM_COSTS] Risposta RPC:", { 
-      hasData: !!statsData, 
+    console.log('[PLATFORM_COSTS] Risposta RPC:', {
+      hasData: !!statsData,
       dataLength: statsData?.length,
-      error: rpcError?.message 
+      error: rpcError?.message,
     });
 
     if (rpcError) {
@@ -384,51 +369,49 @@ export async function getPlatformStatsAction(): Promise<{
       // Quindi restituisce dati SENZA filtri (include test e cancellate)
       // Questo è un problema! La RPC deve funzionare.
       console.error(
-        "[PLATFORM_COSTS] ⚠️ CRITICO: get_platform_stats RPC ERRORE, uso fallback SENZA filtri:",
+        '[PLATFORM_COSTS] ⚠️ CRITICO: get_platform_stats RPC ERRORE, uso fallback SENZA filtri:',
         rpcError.message,
         rpcError.details,
         rpcError.hint
       );
       console.error(
-        "[PLATFORM_COSTS] ⚠️ I dati mostrati includono test e cancellate! Applica migration 104."
+        '[PLATFORM_COSTS] ⚠️ I dati mostrati includono test e cancellate! Applica migration 104.'
       );
 
       // ⚠️ FALLBACK: Query dirette SENZA filtri (include test e cancellate)
       // Questo è temporaneo - la RPC deve funzionare!
       const { data: totalStats, error: totalError } = await supabaseAdmin
-        .from("platform_provider_costs")
-        .select("billed_amount, provider_cost, platform_margin")
-        .eq("api_source", "platform");
+        .from('platform_provider_costs')
+        .select('billed_amount, provider_cost, platform_margin')
+        .eq('api_source', 'platform');
 
       if (totalError) throw totalError;
 
       // Pending reconciliation
       const { count: pendingCount, error: pendingError } = await supabaseAdmin
-        .from("platform_provider_costs")
-        .select("*", { count: "exact", head: true })
-        .eq("api_source", "platform")
-        .in("reconciliation_status", ["pending", "discrepancy"]);
+        .from('platform_provider_costs')
+        .select('*', { count: 'exact', head: true })
+        .eq('api_source', 'platform')
+        .in('reconciliation_status', ['pending', 'discrepancy']);
 
       if (pendingError) throw pendingError;
 
       // Negative margins
       const { count: negativeCount, error: negativeError } = await supabaseAdmin
-        .from("platform_provider_costs")
-        .select("*", { count: "exact", head: true })
-        .eq("api_source", "platform")
-        .lt("platform_margin", 0);
+        .from('platform_provider_costs')
+        .select('*', { count: 'exact', head: true })
+        .eq('api_source', 'platform')
+        .lt('platform_margin', 0);
 
       if (negativeError) throw negativeError;
 
       // Last 30 days
-      const thirtyDaysAgo = new Date(
-        Date.now() - 30 * 24 * 60 * 60 * 1000
-      ).toISOString();
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { count: last30Days, error: last30Error } = await supabaseAdmin
-        .from("platform_provider_costs")
-        .select("*", { count: "exact", head: true })
-        .eq("api_source", "platform")
-        .gte("created_at", thirtyDaysAgo);
+        .from('platform_provider_costs')
+        .select('*', { count: 'exact', head: true })
+        .eq('api_source', 'platform')
+        .gte('created_at', thirtyDaysAgo);
 
       if (last30Error) throw last30Error;
 
@@ -463,12 +446,12 @@ export async function getPlatformStatsAction(): Promise<{
     }
 
     // Usa dati dalla funzione RPC (corretti, escludono test e cancellate)
-    console.log("[PLATFORM_COSTS] Processing statsData:", statsData);
+    console.log('[PLATFORM_COSTS] Processing statsData:', statsData);
     const stats = statsData?.[0];
-    
+
     if (!stats) {
       console.error(
-        "[PLATFORM_COSTS] ❌ get_platform_stats() restituito vuoto. statsData:",
+        '[PLATFORM_COSTS] ❌ get_platform_stats() restituito vuoto. statsData:',
         JSON.stringify(statsData, null, 2)
       );
       // Se la RPC restituisce array vuoto, significa 0 spedizioni (corretto!)
@@ -488,14 +471,11 @@ export async function getPlatformStatsAction(): Promise<{
       };
     }
 
-    console.log(
-      "[PLATFORM_COSTS] get_platform_stats() successo:",
-      {
-        total_shipments: stats.total_shipments,
-        total_revenue: stats.total_revenue,
-        total_cost: stats.total_cost,
-      }
-    );
+    console.log('[PLATFORM_COSTS] get_platform_stats() successo:', {
+      total_shipments: stats.total_shipments,
+      total_revenue: stats.total_revenue,
+      total_cost: stats.total_cost,
+    });
 
     return {
       success: true,
@@ -511,7 +491,7 @@ export async function getPlatformStatsAction(): Promise<{
       },
     };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getPlatformStatsAction error:", error);
+    console.error('[PLATFORM_COSTS] getPlatformStatsAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -553,24 +533,24 @@ export async function getMarginByCourierAction(startDate?: string): Promise<{
 
   try {
     // Usa funzione RPC che esclude test e cancellate
-    const { data, error } = await supabaseAdmin.rpc("get_margin_by_courier", {
+    const { data, error } = await supabaseAdmin.rpc('get_margin_by_courier', {
       p_start_date: startDate || null,
     });
 
     if (error) {
       // Fallback: se la funzione non esiste, usa query dirette (legacy)
       console.warn(
-        "[PLATFORM_COSTS] get_margin_by_courier RPC non disponibile, uso fallback:",
+        '[PLATFORM_COSTS] get_margin_by_courier RPC non disponibile, uso fallback:',
         error.message
       );
 
       let query = supabaseAdmin
-        .from("platform_provider_costs")
-        .select("courier_code, billed_amount, provider_cost, platform_margin")
-        .eq("api_source", "platform");
+        .from('platform_provider_costs')
+        .select('courier_code, billed_amount, provider_cost, platform_margin')
+        .eq('api_source', 'platform');
 
       if (startDate) {
-        query = query.gte("created_at", startDate);
+        query = query.gte('created_at', startDate);
       }
 
       const { data: fallbackData, error: fallbackError } = await query;
@@ -612,9 +592,7 @@ export async function getMarginByCourierAction(startDate?: string): Promise<{
           gross_margin: Math.round(stats.gross_margin * 100) / 100,
           avg_margin_percent:
             stats.total_cost > 0
-              ? Math.round(
-                  (stats.gross_margin / stats.total_cost) * 100 * 100
-                ) / 100
+              ? Math.round((stats.gross_margin / stats.total_cost) * 100 * 100) / 100
               : 0,
         })
       );
@@ -634,7 +612,7 @@ export async function getMarginByCourierAction(startDate?: string): Promise<{
 
     return { success: true, data: result };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getMarginByCourierAction error:", error);
+    console.error('[PLATFORM_COSTS] getMarginByCourierAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -657,7 +635,7 @@ export async function getTopResellersAction(
 
   try {
     // Usa funzione RPC che esclude test e cancellate
-    const { data, error } = await supabaseAdmin.rpc("get_top_resellers", {
+    const { data, error } = await supabaseAdmin.rpc('get_top_resellers', {
       p_limit: limit,
       p_start_date: startDate || null,
     });
@@ -665,12 +643,12 @@ export async function getTopResellersAction(
     if (error) {
       // Fallback: se la funzione non esiste, usa query dirette (legacy)
       console.warn(
-        "[PLATFORM_COSTS] get_top_resellers RPC non disponibile, uso fallback:",
+        '[PLATFORM_COSTS] get_top_resellers RPC non disponibile, uso fallback:',
         error.message
       );
 
       let query = supabaseAdmin
-        .from("platform_provider_costs")
+        .from('platform_provider_costs')
         .select(
           `
         billed_user_id,
@@ -683,10 +661,10 @@ export async function getTopResellersAction(
         )
       `
         )
-        .eq("api_source", "platform");
+        .eq('api_source', 'platform');
 
       if (startDate) {
-        query = query.gte("created_at", startDate);
+        query = query.gte('created_at', startDate);
       }
 
       const { data: fallbackData, error: fallbackError } = await query;
@@ -709,9 +687,7 @@ export async function getTopResellersAction(
         // Gestisce sia array che oggetto singolo (Supabase può restituire entrambi)
         const usersData = row.users;
         const userInfo = Array.isArray(usersData)
-          ? (usersData[0] as
-              | { id: string; email: string; name: string | null }
-              | undefined) || null
+          ? (usersData[0] as { id: string; email: string; name: string | null } | undefined) || null
           : (usersData as {
               id: string;
               email: string;
@@ -719,7 +695,7 @@ export async function getTopResellersAction(
             } | null);
 
         const existing = userMap.get(userId) || {
-          user_email: userInfo?.email || "unknown",
+          user_email: userInfo?.email || 'unknown',
           user_name: userInfo?.name || null,
           total_shipments: 0,
           total_billed: 0,
@@ -731,8 +707,7 @@ export async function getTopResellersAction(
           user_name: existing.user_name,
           total_shipments: existing.total_shipments + 1,
           total_billed: existing.total_billed + (row.billed_amount || 0),
-          margin_generated:
-            existing.margin_generated + (row.platform_margin || 0),
+          margin_generated: existing.margin_generated + (row.platform_margin || 0),
         });
       });
 
@@ -754,7 +729,7 @@ export async function getTopResellersAction(
     // Usa dati dalla funzione RPC (corretti, escludono test e cancellate)
     const result: TopResellerData[] = (data || []).map((row: any) => ({
       user_id: row.user_id,
-      user_email: row.user_email || "unknown",
+      user_email: row.user_email || 'unknown',
       user_name: row.user_name,
       total_shipments: Number(row.total_shipments) || 0,
       total_billed: Number(row.total_billed) || 0,
@@ -763,7 +738,7 @@ export async function getTopResellersAction(
 
     return { success: true, data: result };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] getTopResellersAction error:", error);
+    console.error('[PLATFORM_COSTS] getTopResellersAction error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -783,7 +758,7 @@ export async function exportFinancialCSVAction(startDate?: string): Promise<{
 
   try {
     let query = supabaseAdmin
-      .from("platform_provider_costs")
+      .from('platform_provider_costs')
       .select(
         `
         id,
@@ -800,11 +775,11 @@ export async function exportFinancialCSVAction(startDate?: string): Promise<{
         users!platform_provider_costs_billed_user_id_fkey(email)
       `
       )
-      .eq("api_source", "platform")
-      .order("created_at", { ascending: false });
+      .eq('api_source', 'platform')
+      .order('created_at', { ascending: false });
 
     if (startDate) {
-      query = query.gte("created_at", startDate);
+      query = query.gte('created_at', startDate);
     }
 
     const { data, error } = await query;
@@ -813,16 +788,16 @@ export async function exportFinancialCSVAction(startDate?: string): Promise<{
 
     // Genera CSV
     const headers = [
-      "Data",
-      "Tracking",
-      "Corriere",
-      "Email Cliente",
-      "Importo Addebitato",
-      "Costo Provider",
-      "Margine",
-      "Margine %",
-      "Stato Riconciliazione",
-      "Fonte Costo",
+      'Data',
+      'Tracking',
+      'Corriere',
+      'Email Cliente',
+      'Importo Addebitato',
+      'Costo Provider',
+      'Margine',
+      'Margine %',
+      'Stato Riconciliazione',
+      'Fonte Costo',
     ];
 
     const rows = (data || []).map((row) => {
@@ -832,24 +807,24 @@ export async function exportFinancialCSVAction(startDate?: string): Promise<{
         ? (usersData[0] as { email: string } | undefined) || null
         : (usersData as { email: string } | null);
       return [
-        new Date(row.created_at).toLocaleString("it-IT"),
-        row.shipment_tracking_number || "",
-        row.courier_code || "",
-        userInfo?.email || "",
-        row.billed_amount?.toFixed(2) || "0.00",
-        row.provider_cost?.toFixed(2) || "0.00",
-        row.platform_margin?.toFixed(2) || "0.00",
-        row.platform_margin_percent?.toFixed(2) || "0.00",
-        row.reconciliation_status || "pending",
-        row.cost_source || "unknown",
-      ].join(";");
+        new Date(row.created_at).toLocaleString('it-IT'),
+        row.shipment_tracking_number || '',
+        row.courier_code || '',
+        userInfo?.email || '',
+        row.billed_amount?.toFixed(2) || '0.00',
+        row.provider_cost?.toFixed(2) || '0.00',
+        row.platform_margin?.toFixed(2) || '0.00',
+        row.platform_margin_percent?.toFixed(2) || '0.00',
+        row.reconciliation_status || 'pending',
+        row.cost_source || 'unknown',
+      ].join(';');
     });
 
-    const csv = [headers.join(";"), ...rows].join("\n");
+    const csv = [headers.join(';'), ...rows].join('\n');
 
     return { success: true, csv };
   } catch (error: any) {
-    console.error("[PLATFORM_COSTS] exportFinancialCSVAction error:", error);
+    console.error('[PLATFORM_COSTS] exportFinancialCSVAction error:', error);
     return { success: false, error: error.message };
   }
 }

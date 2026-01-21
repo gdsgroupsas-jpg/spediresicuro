@@ -2,9 +2,9 @@
 
 > **Sprint:** 1 of 3  
 > **Durata:** 2 settimane  
-> **Start Date:** ___________  
-> **End Date:** ___________  
-> **Owner:** ___________  
+> **Start Date:** \***\*\_\_\_\*\***  
+> **End Date:** \***\*\_\_\_\*\***  
+> **Owner:** \***\*\_\_\_\*\***
 
 ---
 
@@ -37,6 +37,7 @@ Prima di iniziare, verificare:
 - [x] **REVIEW:** Code review
 
 **Comando test:**
+
 ```bash
 npx supabase db push --db-url $STAGING_DB_URL
 ```
@@ -73,6 +74,7 @@ npx supabase db push --db-url $STAGING_DB_URL
 ### ✅ MILESTONE DAY 2: Schema Complete
 
 **Acceptance Criteria:**
+
 - [x] Tutte le migration applicate (090-093) ✅
 - [x] Zero errori
 - [x] RLS policies attive
@@ -87,12 +89,13 @@ npx supabase db push --db-url $STAGING_DB_URL
 **File:** `lib/shipments/create-shipment-core.ts`
 
 **Modifiche:**
+
 - [x] Importare dipendenze necessarie
 - [x] Aggiungere parametro `priceListId` se mancante
 - [x] Implementare logica detection:
   ```
   SE listino ha master_list_id → 'platform'
-  SE listino is_global → 'platform'  
+  SE listino is_global → 'platform'
   SE listino assegnato da superadmin → 'platform'
   ALTRIMENTI → 'reseller_own' o 'byoc_own'
   ```
@@ -130,6 +133,7 @@ npx supabase db push --db-url $STAGING_DB_URL
 ### ✅ MILESTONE DAY 4: Logic Complete
 
 **Acceptance Criteria:**
+
 - [x] Detection logic 100% coverage (16 test)
 - [x] Recording funziona end-to-end (13 test)
 - [x] Cost calculation ha fallback robusti
@@ -210,6 +214,7 @@ export async function logFinancialEvent(params: {
 ### ✅ MILESTONE DAY 7: Testing Complete
 
 **Acceptance Criteria:**
+
 - [x] Coverage > 85% (29 test specifici + 590 suite)
 - [x] All tests green (590/590)
 - [x] Performance within limits
@@ -228,14 +233,14 @@ export async function logFinancialEvent(params: {
 
 ### Task 5.2: Validation Checklist
 
-| Scenario | Expected | Actual | Pass? |
-|----------|----------|--------|-------|
-| Reseller usa proprio listino | api_source='reseller_own' | | |
-| Reseller usa listino assegnato | api_source='platform', record in costs | | |
-| BYOC usa proprio contratto | api_source='byoc_own' | | |
-| Superadmin vede costs | Tutti i record visibili | | |
-| Reseller vede costs | Nessun record visibile | | |
-| Margin negativo | Alert/discrepancy flag | | |
+| Scenario                       | Expected                               | Actual | Pass? |
+| ------------------------------ | -------------------------------------- | ------ | ----- |
+| Reseller usa proprio listino   | api_source='reseller_own'              |        |       |
+| Reseller usa listino assegnato | api_source='platform', record in costs |        |       |
+| BYOC usa proprio contratto     | api_source='byoc_own'                  |        |       |
+| Superadmin vede costs          | Tutti i record visibili                |        |       |
+| Reseller vede costs            | Nessun record visibile                 |        |       |
+| Margin negativo                | Alert/discrepancy flag                 |        |       |
 
 ### Task 5.3: Backfill Script (Optional)
 
@@ -308,50 +313,50 @@ git push origin master
 
 ### Deliverables
 
-| Item | Status |
-|------|--------|
-| Migration 090 | ✅ APPLICATA |
-| Migration 091 | ✅ APPLICATA |
-| Migration 092 | ✅ APPLICATA |
-| Migration 093 | ✅ APPLICATA |
-| Migration 094 | ✅ APPLICATA |
-| Migration 095 | ✅ APPLICATA |
-| API Source Detection | ✅ DONE |
-| Platform Cost Recording | ✅ DONE |
-| Provider Cost Calculator | ✅ DONE |
-| Unit Tests | ✅ 29 test (13+16) |
-| Integration Tests | ✅ 8 test cases |
-| UI Dashboard | ✅ COMPLETA |
-| Server Actions | ✅ COMPLETI |
-| Error Handling | ✅ MIGLIORATO |
-| Production Deploy | ✅ DONE |
+| Item                     | Status             |
+| ------------------------ | ------------------ |
+| Migration 090            | ✅ APPLICATA       |
+| Migration 091            | ✅ APPLICATA       |
+| Migration 092            | ✅ APPLICATA       |
+| Migration 093            | ✅ APPLICATA       |
+| Migration 094            | ✅ APPLICATA       |
+| Migration 095            | ✅ APPLICATA       |
+| API Source Detection     | ✅ DONE            |
+| Platform Cost Recording  | ✅ DONE            |
+| Provider Cost Calculator | ✅ DONE            |
+| Unit Tests               | ✅ 29 test (13+16) |
+| Integration Tests        | ✅ 8 test cases    |
+| UI Dashboard             | ✅ COMPLETA        |
+| Server Actions           | ✅ COMPLETI        |
+| Error Handling           | ✅ MIGLIORATO      |
+| Production Deploy        | ✅ DONE            |
 
 **Sprint 1 Status:** ✅ **COMPLETATO E MERGIATO** (7 Gennaio 2026)
 
 ### Metrics
 
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Test Coverage | > 85% | |
-| Query Performance | < 500ms | |
-| Zero Downtime Deploy | Yes | |
-| Critical Bugs | 0 | |
+| Metric               | Target  | Actual |
+| -------------------- | ------- | ------ |
+| Test Coverage        | > 85%   |        |
+| Query Performance    | < 500ms |        |
+| Zero Downtime Deploy | Yes     |        |
+| Critical Bugs        | 0       |        |
 
 ### Lessons Learned
 
-*Da compilare a fine sprint*
+_Da compilare a fine sprint_
 
-1. ___________
-2. ___________
-3. ___________
+1. ***
+2. ***
+3. ***
 
 ---
 
 ## 🚨 BLOCKERS & ESCALATIONS
 
 | Issue | Owner | Status | Resolution |
-|-------|-------|--------|------------|
-| | | | |
+| ----- | ----- | ------ | ---------- |
+|       |       |        |            |
 
 ---
 
@@ -361,13 +366,13 @@ git push origin master
 ### [DATA]
 
 **Ieri:**
-- 
+-
 
 **Oggi:**
-- 
+-
 
 **Blockers:**
-- 
+-
 ```
 
 ---

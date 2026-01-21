@@ -57,7 +57,16 @@ async function main() {
       console.log('');
 
       // Verifica colonne richieste
-      const requiredColumns = ['id', 'name', 'province', 'region', 'caps', 'search_vector', 'created_at', 'updated_at'];
+      const requiredColumns = [
+        'id',
+        'name',
+        'province',
+        'region',
+        'caps',
+        'search_vector',
+        'created_at',
+        'updated_at',
+      ];
       const missingColumns = requiredColumns.filter((col) => !columns.includes(col));
 
       if (missingColumns.length > 0) {

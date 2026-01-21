@@ -1,6 +1,6 @@
 /**
  * Unit Tests: AUDIT_ACTIONS per AI Agent
- * 
+ *
  * Test per verificare:
  * - AUDIT_ACTIONS contiene azioni agent
  * - AUDIT_RESOURCE_TYPES contiene AGENT_SESSION
@@ -112,4 +112,3 @@ describe('AUDIT_ACTIONS per AI Agent', () => {
     });
   });
 });
-

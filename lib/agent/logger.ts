@@ -1,6 +1,6 @@
 /**
  * Interfaccia Logger minimale per disaccoppiare logging dalla business logic.
- * 
+ *
  * Implementazione default usa console, ma può essere sostituita per test o telemetria.
  */
 
@@ -47,4 +47,3 @@ export class NullLogger implements ILogger {
   warn(): void {}
   error(): void {}
 }
-

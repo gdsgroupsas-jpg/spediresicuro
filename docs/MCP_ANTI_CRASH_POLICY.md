@@ -24,7 +24,7 @@ File `.cursorrules` contiene regole per evitare l'uso automatico dei tool MCP pe
 #### ✅ CORRETTO: Usa le funzioni del codice
 
 ```typescript
-import { getSystemLogs } from "@/actions/get-logs";
+import { getSystemLogs } from '@/actions/get-logs';
 
 // Limite sicuro (max 100)
 const logs = await getSystemLogs(50);
@@ -119,7 +119,3 @@ const logs = await getSystemLogs(1000); // Diventa 100 automaticamente
 
 **Ultimo aggiornamento**: 2025-02-01
 **Versione**: 1.0.0
-
-
-
-

@@ -12,17 +12,13 @@ interface ExportDialogProps {
   fiscalContext?: FiscalContext;
 }
 
-export function ExportDialog({
-  isOpen,
-  onClose,
-  fiscalContext,
-}: ExportDialogProps) {
+export function ExportDialog({ isOpen, onClose, fiscalContext }: ExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<'pdf' | 'excel' | null>(null);
 
   const handleExport = async (type: 'pdf' | 'excel') => {
     if (!fiscalContext) {
-      toast.error('Nessun dato disponibile per l\'esportazione');
+      toast.error("Nessun dato disponibile per l'esportazione");
       return;
     }
 
@@ -40,7 +36,7 @@ export function ExportDialog({
       onClose();
     } catch (error: any) {
       console.error('Export error:', error);
-      toast.error('Errore durante l\'esportazione', {
+      toast.error("Errore durante l'esportazione", {
         description: error.message || 'Riprova più tardi',
       });
     } finally {
@@ -62,9 +58,7 @@ export function ExportDialog({
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Esporta Report</h2>
-              <p className="text-sm text-slate-400">
-                Scarica i dati fiscali
-              </p>
+              <p className="text-sm text-slate-400">Scarica i dati fiscali</p>
             </div>
           </div>
           <button
@@ -80,8 +74,8 @@ export function ExportDialog({
         {/* Content */}
         <div className="p-6 space-y-4">
           <p className="text-slate-300 leading-relaxed">
-            Scegli il formato per esportare il report fiscale completo con
-            margini, ricavi, COD e scadenze.
+            Scegli il formato per esportare il report fiscale completo con margini, ricavi, COD e
+            scadenze.
           </p>
 
           {/* Export Options */}
@@ -117,9 +111,7 @@ export function ExportDialog({
               </div>
               <div className="flex-1 text-left">
                 <h3 className="font-semibold text-white">Foglio Excel</h3>
-                <p className="text-xs text-slate-400">
-                  Formato editabile per analisi e calcoli
-                </p>
+                <p className="text-xs text-slate-400">Formato editabile per analisi e calcoli</p>
               </div>
               {isExporting && exportType === 'excel' && (
                 <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
@@ -130,8 +122,8 @@ export function ExportDialog({
           {/* Info */}
           <div className="bg-slate-900/50 rounded-xl p-4 mt-6">
             <p className="text-xs text-slate-400 leading-relaxed">
-              💡 <strong>Tip:</strong> I report includono tutti i dati del
-              periodo selezionato con grafici e analisi dettagliate.
+              💡 <strong>Tip:</strong> I report includono tutti i dati del periodo selezionato con
+              grafici e analisi dettagliate.
             </p>
           </div>
         </div>

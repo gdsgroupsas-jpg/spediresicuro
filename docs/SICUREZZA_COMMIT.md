@@ -32,6 +32,7 @@ npm run verify:security
 ```
 
 Questo script controlla:
+
 - ✅ Se ci sono dati sensibili nei file tracciati
 - ✅ Se `.gitignore` protegge correttamente i file `.env`
 - ✅ Se ci sono password, token o chiavi API hardcoded
@@ -41,9 +42,11 @@ Questo script controlla:
 Prima di fare `git add` e `git commit`, controlla:
 
 1. **Non hai aggiunto file `.env` per errore:**
+
    ```bash
    git status
    ```
+
    Se vedi `.env.local` o `automation-service/.env` nella lista, **NON committarli!**
 
 2. **Non hai hardcoded credenziali nel codice:**
@@ -62,6 +65,7 @@ Prima di fare `git add` e `git commit`, controlla:
 ### Se hai appena committato (ma non ancora pushato):
 
 1. **Rimuovi il file dal commit:**
+
    ```bash
    git reset HEAD~1
    # Oppure
@@ -84,11 +88,13 @@ Prima di fare `git add` e `git commit`, controlla:
 
 1. **Rigenera IMMEDIATAMENTE tutte le chiavi compromesse**
 2. **Rimuovi il file dalla cronologia Git** (richiede force push):
+
    ```bash
    git filter-branch --force --index-filter \
      "git rm --cached --ignore-unmatch .env.local" \
      --prune-empty --tag-name-filter cat -- --all
    ```
+
    ⚠️ **ATTENZIONE**: Questo riscrive la cronologia Git!
 
 3. **Notifica il team** se lavori in gruppo
@@ -122,6 +128,7 @@ Queste variabili **NON devono mai** essere nel codice o nei file tracciati:
 - ❌ API keys private
 
 **Dove metterle:**
+
 - ✅ File `.env.local` (locale, non tracciato)
 - ✅ Variabili d'ambiente su Vercel (produzione)
 - ✅ Variabili d'ambiente su Railway (automation-service)
@@ -131,28 +138,31 @@ Queste variabili **NON devono mai** essere nel codice o nei file tracciati:
 ## 🛡️ BEST PRACTICES
 
 1. **Usa sempre variabili d'ambiente:**
+
    ```typescript
    // ❌ SBAGLIATO
-   const apiKey = "eyJhbGc...";
-   
+   const apiKey = 'eyJhbGc...';
+
    // ✅ CORRETTO
    const apiKey = process.env.API_KEY;
    ```
 
 2. **Non loggare mai credenziali:**
+
    ```typescript
    // ❌ SBAGLIATO
-   console.log("API Key:", process.env.API_KEY);
-   
+   console.log('API Key:', process.env.API_KEY);
+
    // ✅ CORRETTO
-   console.log("API Key configured:", !!process.env.API_KEY);
+   console.log('API Key configured:', !!process.env.API_KEY);
    ```
 
 3. **Usa placeholder nei file di esempio:**
+
    ```env
    # ✅ CORRETTO (file ESEMPIO_ENV_LOCALE.txt)
    SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...placeholder
-   
+
    # ❌ SBAGLIATO
    SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4dDI...
    ```
@@ -183,4 +193,3 @@ Se hai dubbi o hai committato dati sensibili per errore:
 - ✅ Rigenera le chiavi se le hai committate per errore
 
 **Mantieni i tuoi dati al sicuro! 🔒**
-

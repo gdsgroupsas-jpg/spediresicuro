@@ -20,13 +20,13 @@ Questo documento descrive il sistema di gerarchia reseller di SpedireSicuro, che
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Gerarchia Overview | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Overview](#overview) |
-| Struttura Database | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Database](#struttura-database) |
-| Reseller Tiers | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Tiers](#reseller-tiers) |
-| Team Roles | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Roles](#team-roles) |
-| RLS Isolation | docs/8-SECURITY/OVERVIEW.md | [RLS](../8-SECURITY/OVERVIEW.md) |
+| Sezione            | Pagina                                 | Link                             |
+| ------------------ | -------------------------------------- | -------------------------------- |
+| Gerarchia Overview | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Overview](#overview)            |
+| Struttura Database | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Database](#struttura-database)  |
+| Reseller Tiers     | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Tiers](#reseller-tiers)         |
+| Team Roles         | docs/11-FEATURES/RESELLER_HIERARCHY.md | [Roles](#team-roles)             |
+| RLS Isolation      | docs/8-SECURITY/OVERVIEW.md            | [RLS](../8-SECURITY/OVERVIEW.md) |
 
 ## Content
 
@@ -36,6 +36,7 @@ Questo documento descrive il sistema di gerarchia reseller di SpedireSicuro, che
 Un reseller è un utente che può creare e gestire sub-users (utenti finali). I reseller operano come "tenant" isolati, vedendo solo i propri sub-users e le loro spedizioni.
 
 **Struttura Gerarchica:**
+
 ```
 SuperAdmin
   └─ Reseller (parent_id = NULL, is_reseller = true)
@@ -46,6 +47,7 @@ SuperAdmin
 ```
 
 **Isolamento Multi-Tenant:**
+
 - Reseller vede solo propri sub-users (via RLS)
 - Sub-users vedono solo se stessi
 - SuperAdmin vede tutto
@@ -61,21 +63,21 @@ CREATE TABLE users (
   id UUID PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  
+
   -- Reseller flags
   is_reseller BOOLEAN DEFAULT false,
   reseller_role TEXT, -- 'admin', 'user', 'agent', 'courier', 'team_administrator'
   reseller_tier TEXT, -- 'small', 'medium', 'enterprise'
-  
+
   -- Gerarchia
   parent_id UUID REFERENCES users(id), -- ID reseller (per sub-users)
   parent_reseller_id UUID REFERENCES users(id), -- ID reseller principale (per team members)
   tenant_id UUID REFERENCES users(id), -- ID tenant (con fallback a parent_id)
-  
+
   -- Account type
   account_type TEXT, -- 'user', 'admin', 'superadmin', 'byoc', 'reseller'
   role TEXT, -- Legacy: 'user', 'admin', 'superadmin'
-  
+
   -- ...
 );
 ```
@@ -103,16 +105,19 @@ I reseller sono classificati in 3 tier basati sul numero di sub-users:
 #### Limiti per Tier
 
 **Small:**
+
 - Max sub-users: 10
 - Features: base
 - Descrizione: Reseller piccolo, base features
 
 **Medium:**
+
 - Max sub-users: 100
 - Features: base, advanced
 - Descrizione: Reseller medio, advanced features
 
 **Enterprise:**
+
 - Max sub-users: unlimited
 - Features: base, advanced, unlimited, sla
 - Descrizione: Reseller enterprise, all features, SLA dedicato
@@ -120,20 +125,22 @@ I reseller sono classificati in 3 tier basati sul numero di sub-users:
 #### Calcolo Tier
 
 **Funzione TypeScript:**
+
 ```typescript
 // lib/db/tier-helpers.ts
 export function calculateTierFromSubUsers(subUsersCount: number): ResellerTier {
   if (subUsersCount < 10) {
-    return "small";
+    return 'small';
   } else if (subUsersCount <= 100) {
-    return "medium";
+    return 'medium';
   } else {
-    return "enterprise";
+    return 'enterprise';
   }
 }
 ```
 
 **Funzione SQL:**
+
 ```sql
 -- supabase/migrations/089_get_reseller_tier_function.sql
 CREATE OR REPLACE FUNCTION get_reseller_tier(p_user_id UUID)
@@ -146,17 +153,17 @@ BEGIN
   SELECT is_reseller INTO v_is_reseller
   FROM users
   WHERE id = p_user_id;
-  
+
   IF v_is_reseller IS NULL OR v_is_reseller IS NOT TRUE THEN
     RETURN NULL;
   END IF;
-  
+
   -- Conta sub-users
   SELECT COUNT(*) INTO v_sub_count
   FROM users
   WHERE parent_id = p_user_id
     AND is_reseller = false;
-  
+
   -- Calcola tier
   IF v_sub_count < 10 THEN
     RETURN 'small'::reseller_tier;
@@ -173,17 +180,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 ```typescript
 // lib/db/tier-helpers.ts
-export function isTierAtLimit(
-  tier: ResellerTier,
-  currentSubUsersCount: number
-): boolean {
+export function isTierAtLimit(tier: ResellerTier, currentSubUsersCount: number): boolean {
   const limits = getTierLimits(tier);
-  
+
   // Enterprise è sempre unlimited
   if (limits.maxSubUsers === null) {
     return false;
   }
-  
+
   return currentSubUsersCount >= limits.maxSubUsers;
 }
 ```
@@ -216,7 +220,7 @@ reseller_admin (reseller_role = 'admin')
 
 ```sql
 -- Constraint per reseller_role
-ALTER TABLE users ADD CONSTRAINT users_reseller_role_check 
+ALTER TABLE users ADD CONSTRAINT users_reseller_role_check
   CHECK (reseller_role IN ('admin', 'user', 'agent', 'courier', 'team_administrator'));
 ```
 
@@ -257,24 +261,24 @@ export async function createSubUser(data: {
   if (!session?.user?.email) {
     return { success: false, error: 'Non autenticato' };
   }
-  
+
   // 2. Verifica che l'utente sia un Reseller
   const resellerCheck = await isCurrentUserReseller();
   if (!resellerCheck.isReseller || !resellerCheck.userId) {
     return { success: false, error: 'Solo i Reseller possono creare Sub-Users' };
   }
-  
+
   // 3. Verifica limite tier
   const tier = await getResellerTier(resellerCheck.userId);
   const subUsersCount = await countSubUsers(resellerCheck.userId);
-  
+
   if (tier && isTierAtLimit(tier, subUsersCount)) {
-    return { 
-      success: false, 
-      error: `Limite tier raggiunto (${getTierLimits(tier).maxSubUsers} sub-users)` 
+    return {
+      success: false,
+      error: `Limite tier raggiunto (${getTierLimits(tier).maxSubUsers} sub-users)`,
     };
   }
-  
+
   // 4. Crea sub-user
   const { data: newUser, error } = await supabaseAdmin
     .from('users')
@@ -289,11 +293,11 @@ export async function createSubUser(data: {
     })
     .select()
     .single();
-  
+
   if (error) {
     return { success: false, error: error.message };
   }
-  
+
   return { success: true, userId: newUser.id };
 }
 ```
@@ -338,9 +342,9 @@ BEGIN
       SELECT id, parent_id
       FROM users
       WHERE id = p_sub_user_id
-      
+
       UNION ALL
-      
+
       -- Recursive: risale la gerarchia
       SELECT u.id, u.parent_id
       FROM users u
@@ -383,6 +387,7 @@ CREATE POLICY shipments_select_reseller ON shipments
 Il campo `tenant_id` è stato aggiunto per isolamento multi-tenant più robusto, con fallback a `parent_id` per retrocompatibilità.
 
 **Logica:**
+
 - Reseller: `tenant_id = user_id` (self-tenant)
 - Sub-User: `tenant_id = parent_id` (tenant del reseller)
 - BYOC: `tenant_id = user_id` (self-tenant)
@@ -402,18 +407,18 @@ BEGIN
   INTO v_tenant_id, v_parent_id
   FROM users
   WHERE id = p_user_id;
-  
+
   -- 2. Se tenant_id è NULL, usa fallback
   IF v_tenant_id IS NULL THEN
     -- Fallback 1: usa parent_id se esiste (Sub-User)
     IF v_parent_id IS NOT NULL THEN
       RETURN v_parent_id;
     END IF;
-    
+
     -- Fallback 2: usa user_id (self-tenant)
     RETURN p_user_id;
   END IF;
-  
+
   RETURN v_tenant_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -461,7 +466,7 @@ import { getSubUsers } from '@/actions/admin-reseller';
 
 const { subUsers } = await getSubUsers();
 
-subUsers.forEach(user => {
+subUsers.forEach((user) => {
   console.log(`${user.name} (${user.email})`);
 });
 ```
@@ -484,13 +489,13 @@ if (tier && isTierAtLimit(tier, subUsersCount)) {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
+| Issue                       | Soluzione                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------- |
 | Reseller non vede sub-users | Verifica RLS policy, controlla che `is_reseller = true` e `is_sub_user_of()` funzioni |
-| Tier non calcolato | Esegui migration 090, verifica che `get_reseller_tier()` sia chiamata |
-| Limite tier raggiunto | Verifica `isTierAtLimit()`, considera upgrade a tier superiore |
-| Sub-user non isolato | Verifica che `tenant_id` sia popolato correttamente (migration 086) |
-| RLS blocca query | Verifica che `auth.uid()` sia impostato, controlla policy `users_select_reseller` |
+| Tier non calcolato          | Esegui migration 090, verifica che `get_reseller_tier()` sia chiamata                 |
+| Limite tier raggiunto       | Verifica `isTierAtLimit()`, considera upgrade a tier superiore                        |
+| Sub-user non isolato        | Verifica che `tenant_id` sia popolato correttamente (migration 086)                   |
+| RLS blocca query            | Verifica che `auth.uid()` sia impostato, controlla policy `users_select_reseller`     |
 
 ---
 
@@ -505,11 +510,12 @@ if (tier && isTierAtLimit(tier, subUsersCount)) {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version - Gerarchia reseller, Tiers, Team Roles, RLS | AI Agent |
+| Date       | Version | Changes                                                      | Author   |
+| ---------- | ------- | ------------------------------------------------------------ | -------- |
+| 2026-01-12 | 1.0.0   | Initial version - Gerarchia reseller, Tiers, Team Roles, RLS | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

@@ -1,6 +1,6 @@
 /**
  * Pagina: Spedizioni Cancellate
- * 
+ *
  * Visualizza tutte le spedizioni cancellate (soft delete) con tracciabilità completa
  * - User normale: vede solo le proprie
  * - Reseller: vede le proprie + quelle dei suoi user
@@ -13,7 +13,16 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Search, Filter, Trash2, User, Calendar, Package, AlertCircle, ArrowLeft } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Trash2,
+  User,
+  Calendar,
+  Package,
+  AlertCircle,
+  ArrowLeft,
+} from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 
 interface SpedizioneCancellata {
@@ -54,7 +63,7 @@ export default function SpedizioniCancellatePage() {
       try {
         setIsLoading(true);
         const response = await fetch(`/api/spedizioni/cancellate?page=${page}&limit=${limit}`);
-        
+
         if (!response.ok) {
           throw new Error('Errore nel caricamento delle spedizioni cancellate');
         }
@@ -81,15 +90,16 @@ export default function SpedizioniCancellatePage() {
   // Filtra spedizioni in base alla ricerca
   const filteredSpedizioni = useMemo(() => {
     if (!searchQuery.trim()) return spedizioni;
-    
+
     const query = searchQuery.toLowerCase();
-    return spedizioni.filter(s => 
-      s.tracking_number?.toLowerCase().includes(query) ||
-      s.ldv?.toLowerCase().includes(query) ||
-      s.sender_name?.toLowerCase().includes(query) ||
-      s.recipient_name?.toLowerCase().includes(query) ||
-      s.recipient_city?.toLowerCase().includes(query) ||
-      s.deleted_by_user_email?.toLowerCase().includes(query)
+    return spedizioni.filter(
+      (s) =>
+        s.tracking_number?.toLowerCase().includes(query) ||
+        s.ldv?.toLowerCase().includes(query) ||
+        s.sender_name?.toLowerCase().includes(query) ||
+        s.recipient_name?.toLowerCase().includes(query) ||
+        s.recipient_city?.toLowerCase().includes(query) ||
+        s.deleted_by_user_email?.toLowerCase().includes(query)
     );
   }, [spedizioni, searchQuery]);
 
@@ -179,9 +189,13 @@ export default function SpedizioniCancellatePage() {
         ) : filteredSpedizioni.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
             <Trash2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg font-medium">Nessuna spedizione cancellata trovata</p>
+            <p className="text-gray-600 text-lg font-medium">
+              Nessuna spedizione cancellata trovata
+            </p>
             <p className="text-gray-500 text-sm mt-2">
-              {searchQuery ? 'Prova a modificare i filtri di ricerca' : 'Non ci sono spedizioni eliminate'}
+              {searchQuery
+                ? 'Prova a modificare i filtri di ricerca'
+                : 'Non ci sono spedizioni eliminate'}
             </p>
           </div>
         ) : (
@@ -224,16 +238,23 @@ export default function SpedizioniCancellatePage() {
                               <div className="text-sm font-medium text-gray-900">
                                 {spedizione.tracking_number || spedizione.ldv || 'N/A'}
                               </div>
-                              {spedizione.tracking_number && spedizione.ldv && spedizione.tracking_number !== spedizione.ldv && (
-                                <div className="text-xs text-gray-500">LDV: {spedizione.ldv}</div>
-                              )}
+                              {spedizione.tracking_number &&
+                                spedizione.ldv &&
+                                spedizione.tracking_number !== spedizione.ldv && (
+                                  <div className="text-xs text-gray-500">LDV: {spedizione.ldv}</div>
+                                )}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{spedizione.recipient_name || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">
+                            {spedizione.recipient_name || 'N/A'}
+                          </div>
                           <div className="text-xs text-gray-500">
-                            {spedizione.recipient_city}{spedizione.recipient_province ? ` (${spedizione.recipient_province})` : ''}
+                            {spedizione.recipient_city}
+                            {spedizione.recipient_province
+                              ? ` (${spedizione.recipient_province})`
+                              : ''}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -257,11 +278,13 @@ export default function SpedizioniCancellatePage() {
                               <div className="text-sm text-gray-900">
                                 {spedizione.deleted_by_user_email || 'N/A'}
                               </div>
-                              {spedizione.created_by_user_email && spedizione.created_by_user_email !== spedizione.deleted_by_user_email && (
-                                <div className="text-xs text-gray-500">
-                                  Creata da: {spedizione.created_by_user_email}
-                                </div>
-                              )}
+                              {spedizione.created_by_user_email &&
+                                spedizione.created_by_user_email !==
+                                  spedizione.deleted_by_user_email && (
+                                  <div className="text-xs text-gray-500">
+                                    Creata da: {spedizione.created_by_user_email}
+                                  </div>
+                                )}
                             </div>
                           </div>
                         </td>
@@ -276,18 +299,19 @@ export default function SpedizioniCancellatePage() {
             {totalPages > 1 && (
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
-                  Mostrando {((page - 1) * limit) + 1} - {Math.min(page * limit, totalCount)} di {totalCount} spedizioni
+                  Mostrando {(page - 1) * limit + 1} - {Math.min(page * limit, totalCount)} di{' '}
+                  {totalCount} spedizioni
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Precedente
                   </button>
                   <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -302,4 +326,3 @@ export default function SpedizioniCancellatePage() {
     </div>
   );
 }
-

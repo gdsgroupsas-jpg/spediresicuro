@@ -12,16 +12,18 @@ function extractErrorFromReport() {
     if (!fs.existsSync(reportPath)) {
       return null;
     }
-    
+
     const content = fs.readFileSync(reportPath, 'utf-8');
-    
+
     // Estrai errori dal JSON embedded nel report
-    const jsonMatch = content.match(/<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/);
+    const jsonMatch = content.match(
+      /<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/
+    );
     if (jsonMatch) {
       try {
         const data = JSON.parse(jsonMatch[1]);
         const errors = [];
-        
+
         // Naviga nella struttura del report
         if (data.props && data.props.pageProps) {
           const tests = data.props.pageProps.tests || [];
@@ -32,23 +34,23 @@ function extractErrorFromReport() {
                   errors.push({
                     test: test.title,
                     error: result.error || result.message,
-                    status: result.status
+                    status: result.status,
                   });
                 }
               }
             }
           }
         }
-        
+
         return errors.length > 0 ? errors : null;
       } catch (e) {
         // Fallback: estrai errori dal testo HTML
-        const errorMatches = content.match(/Error:([^<]+)/gi) || 
-                           content.match(/TimeoutError:([^<]+)/gi);
+        const errorMatches =
+          content.match(/Error:([^<]+)/gi) || content.match(/TimeoutError:([^<]+)/gi);
         return errorMatches;
       }
     }
-    
+
     return null;
   } catch (e) {
     return null;

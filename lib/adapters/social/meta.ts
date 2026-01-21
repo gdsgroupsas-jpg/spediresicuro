@@ -5,7 +5,12 @@
  * TODO: Implementazione completa
  */
 
-import { SocialAdapter, type SocialCredentials, type TrendMetric, type CampaignPerformance } from './base';
+import {
+  SocialAdapter,
+  type SocialCredentials,
+  type TrendMetric,
+  type CampaignPerformance,
+} from './base';
 
 export class MetaAdapter extends SocialAdapter {
   constructor(credentials: SocialCredentials) {
@@ -17,19 +22,12 @@ export class MetaAdapter extends SocialAdapter {
     return true;
   }
 
-  async getTrendMetrics(
-    dateFrom: Date,
-    dateTo: Date,
-    filters?: any
-  ): Promise<TrendMetric[]> {
+  async getTrendMetrics(dateFrom: Date, dateTo: Date, filters?: any): Promise<TrendMetric[]> {
     // TODO: Implementare chiamate Meta Insights API
     return [];
   }
 
-  async getCampaignPerformance(
-    dateFrom: Date,
-    dateTo: Date
-  ): Promise<CampaignPerformance[]> {
+  async getCampaignPerformance(dateFrom: Date, dateTo: Date): Promise<CampaignPerformance[]> {
     // TODO: Implementare Meta Ads API
     return [];
   }

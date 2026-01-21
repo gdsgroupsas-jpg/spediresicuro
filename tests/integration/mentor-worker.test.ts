@@ -1,12 +1,12 @@
 /**
  * Mentor Worker Integration Tests (P1)
- * 
+ *
  * Test di integrazione per il worker mentor.
  * Verifica:
  * 1. Routing: messaggio con intent mentor -> mentor_worker
  * 2. RAG: ricerca documentazione e restituisce risposta con sources
  * 3. Flusso completo: supervisor -> mentor_worker -> END
- * 
+ *
  * ⚠️ NO assert su output LLM (deterministico)
  * ⚠️ NO PII nei log di test
  */
@@ -75,13 +75,15 @@ function createTestState(message: string, actingContext?: any): AgentState {
     validationErrors: [],
     confidenceScore: 0,
     needsHumanReview: false,
-    agent_context: actingContext ? {
-      session_id: 'test-session',
-      conversation_history: [new HumanMessage(message)],
-      user_role: 'user',
-      is_impersonating: false,
-      acting_context: actingContext,
-    } : undefined,
+    agent_context: actingContext
+      ? {
+          session_id: 'test-session',
+          conversation_history: [new HumanMessage(message)],
+          user_role: 'user',
+          is_impersonating: false,
+          acting_context: actingContext,
+        }
+      : undefined,
   };
 }
 
@@ -99,7 +101,7 @@ describe('Mentor Worker Integration', () => {
   describe('Intent Detection', () => {
     it('dovrebbe rilevare intent mentor per domande tecniche', () => {
       expect(detectMentorIntent('Come funziona il wallet?')).toBe(true);
-      expect(detectMentorIntent('Spiega l\'architettura')).toBe(true);
+      expect(detectMentorIntent("Spiega l'architettura")).toBe(true);
       expect(detectMentorIntent('Perché il sistema usa RLS?')).toBe(true);
     });
 
@@ -120,16 +122,17 @@ describe('Mentor Worker Integration', () => {
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
       // AgentState non ha index signature, quindi usiamo cast per compatibilità con LangGraph
-      const result = await pricingGraph.invoke(state as any) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(state as any)) as unknown as AgentState;
 
       // Verifica che il supervisor abbia routato a mentor_worker
       // NOTA: Il grafo potrebbe raggiungere MAX_ITERATIONS, quindi verifichiamo
       // che almeno il routing sia stato tentato (next_step = mentor_worker o mentor_response presente)
-      const hasMentorRouting = 
-        result.next_step === 'mentor_worker' || 
+      const hasMentorRouting =
+        result.next_step === 'mentor_worker' ||
         result.mentor_response !== undefined ||
-        (typeof result.clarification_request === 'string' && result.clarification_request.includes('wallet'));
-      
+        (typeof result.clarification_request === 'string' &&
+          result.clarification_request.includes('wallet'));
+
       expect(hasMentorRouting).toBe(true);
     });
 
@@ -141,17 +144,17 @@ describe('Mentor Worker Integration', () => {
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
       // AgentState non ha index signature, quindi usiamo cast per compatibilità con LangGraph
-      const result = await pricingGraph.invoke(state as any) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(state as any)) as unknown as AgentState;
 
       // Mentor worker imposta next_step = 'END' e mentor_response
       // NOTA: Il grafo potrebbe raggiungere MAX_ITERATIONS (2) prima che mentor_worker completi
       // In questo caso, il grafo termina con next_step ancora 'mentor_worker'
       // Verifichiamo che almeno il routing sia stato tentato
-      const hasMentorRouting = 
+      const hasMentorRouting =
         result.next_step === 'mentor_worker' ||
         result.mentor_response !== undefined ||
         result.next_step === 'END';
-      
+
       // Se il grafo ha raggiunto MAX_ITERATIONS, next_step sarà 'mentor_worker'
       // ma questo è accettabile perché indica che il routing è stato tentato
       expect(hasMentorRouting).toBe(true);
@@ -166,10 +169,14 @@ describe('Mentor Worker Integration', () => {
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
       // AgentState non ha index signature, quindi usiamo cast per compatibilità con LangGraph
-      const result = await pricingGraph.invoke(state as any) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(state as any)) as unknown as AgentState;
 
       // Type guard: verifica che mentor_response esista e abbia la struttura corretta
-      if (result.mentor_response && typeof result.mentor_response === 'object' && 'sources' in result.mentor_response) {
+      if (
+        result.mentor_response &&
+        typeof result.mentor_response === 'object' &&
+        'sources' in result.mentor_response
+      ) {
         expect(result.mentor_response.sources).toContain('docs/MONEY_FLOWS.md');
         expect(result.mentor_response.answer).toContain('wallet');
         expect(result.mentor_response.confidence).toBeGreaterThan(0);
@@ -179,14 +186,18 @@ describe('Mentor Worker Integration', () => {
     it('dovrebbe cercare in ARCHITECTURE.md per domande su architettura', async () => {
       vi.mocked(readFile).mockResolvedValueOnce(MOCK_ARCHITECTURE);
 
-      const state = createTestState('Spiega l\'architettura del sistema');
+      const state = createTestState("Spiega l'architettura del sistema");
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
       // AgentState non ha index signature, quindi usiamo cast per compatibilità con LangGraph
-      const result = await pricingGraph.invoke(state as any) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(state as any)) as unknown as AgentState;
 
       // Type guard: verifica che mentor_response esista e abbia la struttura corretta
-      if (result.mentor_response && typeof result.mentor_response === 'object' && 'sources' in result.mentor_response) {
+      if (
+        result.mentor_response &&
+        typeof result.mentor_response === 'object' &&
+        'sources' in result.mentor_response
+      ) {
         expect(result.mentor_response.sources.length).toBeGreaterThan(0);
         expect(result.mentor_response.confidence).toBeGreaterThan(0);
       }
@@ -199,7 +210,7 @@ describe('Mentor Worker Integration', () => {
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
       // AgentState non ha index signature, quindi usiamo cast per compatibilità con LangGraph
-      const result = await pricingGraph.invoke(state as any) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(state as any)) as unknown as AgentState;
 
       // Dovrebbe comunque restituire una risposta (anche se con confidence bassa)
       expect(result.mentor_response || result.clarification_request).toBeDefined();
@@ -215,7 +226,7 @@ describe('Mentor Worker Integration', () => {
 
       // Type assertion: pricingGraph.invoke() richiede un tipo con index signature
       // AgentState non ha index signature, quindi usiamo cast per compatibilità con LangGraph
-      const result = await pricingGraph.invoke(state as any) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(state as any)) as unknown as AgentState;
 
       // Quando tutti i documenti falliscono, readDocument restituisce null
       // searchDocuments restituisce array vuoto
@@ -223,19 +234,22 @@ describe('Mentor Worker Integration', () => {
       // Quindi mentor_worker restituisce mentor_response (non clarification_request)
       // NOTA: Il grafo potrebbe raggiungere MAX_ITERATIONS prima che mentor_worker completi
       // Verifichiamo che almeno il routing sia stato tentato
-      const hasMentorRouting = 
+      const hasMentorRouting =
         result.next_step === 'mentor_worker' ||
         result.mentor_response !== undefined ||
         result.clarification_request !== undefined;
-      
+
       expect(hasMentorRouting).toBe(true);
-      
+
       // Type guard: verifica che mentor_response esista e abbia la struttura corretta
-      if (result.mentor_response && typeof result.mentor_response === 'object' && 'sources' in result.mentor_response) {
+      if (
+        result.mentor_response &&
+        typeof result.mentor_response === 'object' &&
+        'sources' in result.mentor_response
+      ) {
         expect(result.mentor_response.sources).toEqual([]);
         expect(result.mentor_response.confidence).toBe(0);
       }
     });
   });
 });
-

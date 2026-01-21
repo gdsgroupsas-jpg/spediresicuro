@@ -1,4 +1,5 @@
 # 📦 Manuale Utente Reseller / Point Fisico
+
 ## SpedireSicuro - Versione 1.0
 
 > **Per chi è questo manuale:** Operatori di agenzie, point fisici, reseller che spediscono per conto dei clienti.  
@@ -34,6 +35,7 @@
 3. Clicca **"Accedi"**
 
 **Cosa succede:**
+
 - Se è la prima volta, ti porta a completare i dati cliente
 - Se hai già completato, vai direttamente alla dashboard
 
@@ -42,6 +44,7 @@
 Se vedi la pagina **"Completa i Tuoi Dati Cliente"**, compila:
 
 **Obbligatori:**
+
 - Nome
 - Cognome
 - Codice Fiscale (16 caratteri, es. `ABCDEF12G34H567I`)
@@ -52,6 +55,7 @@ Se vedi la pagina **"Completa i Tuoi Dati Cliente"**, compila:
 - CAP (5 cifre)
 
 **Se sei un'azienda:**
+
 - Tipo Cliente: seleziona **"Azienda"**
 - Ragione Sociale
 - Partita IVA (11 caratteri)
@@ -59,6 +63,7 @@ Se vedi la pagina **"Completa i Tuoi Dati Cliente"**, compila:
 Clicca **"Salva e Completa Registrazione"**.
 
 **Cosa succede:**
+
 - I dati vengono salvati
 - Vieni reindirizzato alla dashboard
 - Non devi più rifarlo (a meno che non cambi account)
@@ -69,6 +74,7 @@ Clicca **"Salva e Completa Registrazione"**.
 2. Controlla il saldo in alto
 
 **Se il saldo è €0 o insufficiente:**
+
 - Clicca **"Ricarica"**
 - Carica PDF/immagine del bonifico
 - Inserisci importo
@@ -76,6 +82,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - **ATTENZIONE:** Devi aspettare l'approvazione admin (non è immediato)
 
 **Se il saldo è OK:**
+
 - Procedi al passo successivo
 
 ### Passo 4: Crea Spedizione
@@ -86,6 +93,7 @@ Clicca **"Salva e Completa Registrazione"**.
 **Compila il form:**
 
 **Mittente:**
+
 - Nome completo
 - Indirizzo
 - Città/Provincia/CAP (usa l'autocompletamento)
@@ -93,6 +101,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - Email (opzionale)
 
 **Destinatario:**
+
 - Nome completo
 - Indirizzo
 - Città/Provincia/CAP (usa l'autocompletamento)
@@ -100,18 +109,21 @@ Clicca **"Salva e Completa Registrazione"**.
 - Email (opzionale)
 
 **Pacco:**
+
 - Peso (kg) - obbligatorio
 - Dimensioni (cm) - opzionali
 - Tipo spedizione: Standard / Express / Assicurata
 - Corriere: GLS / SDA / Bartolini / Poste Italiane
 
 **Contrassegno (opzionale):**
+
 - Spunta la casella se serve
 - Inserisci importo
 
 3. Clicca **"Genera Spedizione"** (pulsante arancione in basso a destra)
 
 **Cosa succede:**
+
 - Il sistema controlla il credito
 - Se OK, addebita il wallet
 - Crea la spedizione
@@ -120,6 +132,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - Dopo 3 secondi ti porta alla lista spedizioni
 
 **Se va tutto bene:**
+
 - Vedi la spedizione nella lista
 - Hai il PDF dell'etichetta scaricato
 - Il wallet è stato scalato
@@ -133,14 +146,17 @@ Clicca **"Salva e Completa Registrazione"**.
 **URL:** `spediresicuro.it/login`
 
 **Opzioni di accesso:**
+
 1. **Email/Password:** Inserisci credenziali → clicca "Accedi"
 2. **OAuth:** Clicca "Continua con Google/GitHub/Facebook"
 
 **Cosa succede dopo il login:**
+
 - Se dati cliente completati → vai a `/dashboard`
 - Se dati cliente NON completati → vai a `/dashboard/dati-cliente` (obbligatorio)
 
 **Se non riesci ad accedere:**
+
 - Verifica email confermata (controlla spam)
 - Se OAuth fallisce, usa email/password
 - Contatta admin se password dimenticata
@@ -154,6 +170,7 @@ Clicca **"Salva e Completa Registrazione"**.
 #### Se sei Persona Fisica:
 
 **Obbligatori:**
+
 - Nome
 - Cognome
 - Codice Fiscale (esattamente 16 caratteri, maiuscolo)
@@ -164,6 +181,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - CAP (5 cifre)
 
 **Opzionali:**
+
 - Data di nascita
 - Luogo di nascita
 - Sesso
@@ -175,32 +193,38 @@ Clicca **"Salva e Completa Registrazione"**.
 #### Se sei Azienda:
 
 **Tutto quello sopra + obbligatori:**
+
 - Tipo Cliente: seleziona **"Azienda"**
 - Ragione Sociale
 - Partita IVA (esattamente 11 caratteri)
 
 **Opzionali:**
+
 - Codice SDI (fatturazione elettronica)
 - PEC
 - Indirizzo fatturazione (se diverso da sede)
 
 **Validazione:**
+
 - Codice Fiscale: deve essere 16 caratteri (se inserito)
 - Partita IVA: deve essere 11 caratteri (se azienda)
 - Provincia: massimo 2 lettere maiuscole
 - CAP: massimo 5 cifre
 
 **Cosa succede se sbagli:**
+
 - Il form mostra errore in rosso sotto il campo
 - Non puoi salvare finché non correggi
 - Esempio: "Il codice fiscale deve essere di 16 caratteri"
 
 **Dopo il salvataggio:**
+
 - Messaggio verde: "Dati salvati con successo!"
 - Reindirizzamento automatico a dashboard dopo 1.5 secondi
 - Non devi più rifarlo
 
 **Se non salva:**
+
 - Controlla tutti i campi obbligatori
 - Verifica formato codice fiscale (16 caratteri)
 - Verifica formato partita IVA se azienda (11 caratteri)
@@ -219,10 +243,12 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 3.2 Due Modalità
 
 **Manuale (default):**
+
 - Compili tutto a mano
 - Usa per spedizioni normali
 
 **AI Import:**
+
 - Clicca su **"AI Import"** in alto (icona stella)
 - Carica immagine (screenshot WhatsApp, foto documento)
 - Il sistema estrae automaticamente i dati destinatario
@@ -233,108 +259,129 @@ Clicca **"Salva e Completa Registrazione"**.
 #### Sezione Mittente
 
 **Campi obbligatori:**
+
 - Nome Completo
 - Indirizzo
 - Città/Provincia/CAP (usa autocompletamento)
 - Telefono
 
 **Campi opzionali:**
+
 - Email
 
 **Autocompletamento Città:**
+
 - Clicca nel campo "Città, Provincia, CAP"
 - Inizia a digitare il nome della città
 - Seleziona dalla lista
 - Il sistema compila automaticamente Provincia e CAP
 
 **Se il mittente è sempre lo stesso:**
+
 - Il sistema carica automaticamente i dati predefiniti (se configurati)
 - Puoi modificarli se serve
 
 #### Sezione Destinatario
 
 **Campi obbligatori:**
+
 - Nome Completo
 - Indirizzo
 - Città/Provincia/CAP (usa autocompletamento)
 - Telefono (obbligatorio SOLO se attivi contrassegno)
 
 **Campi opzionali:**
+
 - Email
 
 **Validazione real-time:**
+
 - Icona verde = campo valido
 - Icona rossa = campo non valido
 - Messaggio errore sotto il campo
 
 **Formato telefono:**
+
 - Accetta: `+39 312 345 6789`, `0039 312 345 6789`, `312 345 6789`
 - Il sistema normalizza automaticamente a `+39...`
 
 #### Sezione Dettagli Pacco
 
 **Peso (obbligatorio):**
+
 - Inserisci in kg (es. `2.5`)
 - Minimo: `0.01`
 - Il sistema valida che sia > 0
 
 **Dimensioni (opzionali):**
+
 - Lunghezza (cm)
 - Larghezza (cm)
 - Altezza (cm)
 - Se non inserisci, il sistema usa valori di default
 
 **Tipo Spedizione:**
+
 - **Standard:** normale (default)
 - **Express:** urgente (+50% costo)
 - **Assicurata:** con assicurazione (+30% costo)
 
 **Corriere:**
+
 - Seleziona: **GLS**, **SDA**, **Bartolini**, **Poste Italiane**
 - Il sistema mostra suggerimento AI se disponibile (colonna destra)
 
 **Note (opzionale):**
+
 - Campo libero per informazioni aggiuntive
 
 #### Contrassegno (COD)
 
 **Quando usarlo:**
+
 - Il cliente paga alla consegna
 - Devi riscuotere denaro dal destinatario
 
 **Come attivarlo:**
+
 1. Spunta la casella **"💰 Contrassegno (COD - Cash On Delivery)"**
 2. Inserisci l'importo in euro (es. `50.00`)
 3. **IMPORTANTE:** Il telefono destinatario diventa obbligatorio
 
 **Cosa succede:**
+
 - Il corriere riscuote l'importo alla consegna
 - L'importo viene accreditato sul tuo wallet (dopo elaborazione)
 - Tempi accredito: TBD (verificare con admin)
 
 **Se attivi contrassegno senza telefono destinatario:**
+
 - Il sistema mostra avviso giallo: "⚠️ Il telefono destinatario è obbligatorio per il contrassegno"
 - Non puoi salvare finché non inserisci il telefono
 
 ### 3.4 Preview e Calcolo Costo
 
 **Colonna destra (sticky):**
+
 - Mostra preview ticket spedizione
 - Visualizza percorso (mittente → destinatario)
 - Mostra costo stimato in tempo reale
 - Suggerimento AI corriere (se disponibile)
 
 **Costo stimato:**
+
 - Base: €10
 - Peso: €2 per kg
 - Express: +50%
 - Assicurata: +30%
 
 **Esempio:**
+
 - Peso 2.5 kg, Standard → €10 + (2.5 × €2) = €15
 - Peso 2.5 kg, Express → €15 × 1.5 = €22.50
 
 **Progress bar:**
+
 - Mostra completamento form (%)
 - Deve essere 100% per salvare
 
@@ -370,11 +417,13 @@ Clicca **"Salva e Completa Registrazione"**.
    - La nuova spedizione appare in cima
 
 **Messaggi di successo:**
+
 - Verde: "Spedizione creata con successo!"
 - Mostra tracking number
 - "Reindirizzamento alla lista spedizioni..."
 
 **Se qualcosa va storto:**
+
 - Vedi sezione [Errori comuni](#6-errori-comuni-e-cosa-fare)
 
 ---
@@ -390,6 +439,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - Devi ricaricare il wallet prima di spedire
 
 **Regola fondamentale: "No Credit, No Label"**
+
 - Nessuna etichetta viene generata senza credito
 - Il sistema blocca la creazione se il saldo è insufficiente
 - Non puoi "andare in negativo"
@@ -399,11 +449,13 @@ Clicca **"Salva e Completa Registrazione"**.
 **Dove:** Dashboard → **"Wallet"** nel menu
 
 **Cosa vedi:**
+
 - Saldo corrente (in alto, grande)
 - Statistiche: totale crediti, totale debiti, numero transazioni
 - Lista transazioni (cronologica, più recenti prima)
 
 **Filtri:**
+
 - Tutte
 - Solo crediti (ricariche)
 - Solo debiti (spedizioni)
@@ -423,20 +475,24 @@ Clicca **"Salva e Completa Registrazione"**.
 5. Clicca **"Invia Richiesta"**
 
 **Cosa succede:**
+
 - La richiesta viene salvata con status `pending`
 - Un admin deve approvare manualmente
 - **NON è immediato** (può richiedere ore/giorni)
 
 **Dopo l'approvazione:**
+
 - Il saldo viene aggiornato
 - Appare transazione tipo "deposit"
 - Ricevi notifica (TBD - verificare se implementato)
 
 **Se la richiesta viene rifiutata:**
+
 - Ricevi notifica (TBD)
 - Puoi inviare nuova richiesta con bonifico corretto
 
 **Limiti:**
+
 - Max €10.000 per singola operazione
 - Max €100.000 saldo totale
 
@@ -450,6 +506,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - **refund:** Rimborso (importo positivo)
 
 **Visualizzazione:**
+
 - Importo (verde se positivo, rosso se negativo)
 - Tipo
 - Descrizione
@@ -457,6 +514,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - Saldo dopo transazione
 
 **Export:**
+
 - TBD (verificare se disponibile)
 
 ### 4.5 Cosa Succede Quando Spedisci
@@ -476,11 +534,13 @@ Clicca **"Salva e Completa Registrazione"**.
    - Se KO → rimborso automatico (refund)
 
 **Regola "No Credit, No Label":**
+
 - Se non hai credito, non puoi creare spedizioni
 - Il sistema non permette saldo negativo
 - Superadmin può bypassare (solo per testing)
 
 **Costo reale vs stimato:**
+
 - Il sistema addebita una stima (costo stimato + 20% buffer)
 - Se il costo reale è diverso, viene fatto un aggiustamento
 - Vedi transazione "adjustment" nel wallet
@@ -494,11 +554,13 @@ Clicca **"Salva e Completa Registrazione"**.
 **Dove:** Dashboard → **"Lista Spedizioni"**
 
 **Cosa vedi:**
+
 - Lista di tutte le tue spedizioni
 - Colonne: Destinatario, Tracking, Status, Tipo, Peso, Data, Prezzo
 - Filtri: ricerca, status, data, corriere, resi
 
 **Status possibili:**
+
 - **In Preparazione:** appena creata
 - **In Transito:** spedita, in viaggio
 - **Consegnata:** consegnata al destinatario
@@ -506,6 +568,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - **Annullata:** cancellata
 
 **Azioni disponibili:**
+
 - Clicca sulla riga → dettaglio spedizione
 - Icona occhio → visualizza dettagli
 - Icona PDF → scarica LDV
@@ -517,6 +580,7 @@ Clicca **"Salva e Completa Registrazione"**.
 **Dove:** Clicca su una spedizione dalla lista
 
 **Cosa vedi:**
+
 - Tutti i dati mittente/destinatario
 - Dettagli pacco
 - Tracking number
@@ -525,6 +589,7 @@ Clicca **"Salva e Completa Registrazione"**.
 - Note
 
 **Azioni:**
+
 - Scarica LDV (PDF)
 - Modifica (solo se in preparazione)
 - Elimina (solo se in preparazione)
@@ -536,12 +601,14 @@ Clicca **"Salva e Completa Registrazione"**.
 **Per chi:** Cliente finale (non richiede login)
 
 **Cosa vedono:**
+
 - Status spedizione
 - Stima consegna
 - Posizione corrente
 - Storico eventi
 
 **Come condividere:**
+
 - Copia l'URL completo
 - Invia al cliente via email/WhatsApp
 - Il cliente può tracciare senza account
@@ -558,17 +625,20 @@ Clicca **"Salva e Completa Registrazione"**.
 2. Oppure dal dettaglio, clicca "Scarica LDV"
 
 **Formati disponibili:**
+
 - PDF (default)
 - CSV (TBD - verificare)
 - XLSX (TBD - verificare)
 
 **Cosa contiene:**
+
 - Dati mittente/destinatario
 - Tracking number
 - Barcode per scansione
 - Note spedizione
 
 **Se l'etichetta non si scarica:**
+
 - Verifica che la spedizione sia stata creata correttamente
 - Controlla errori nella creazione (vedi Errori)
 - Se è un ticket locale (non etichetta reale), funziona comunque
@@ -578,15 +648,18 @@ Clicca **"Salva e Completa Registrazione"**.
 **Dove:** Lista Spedizioni → pulsante **"Esporta"** (in alto a destra)
 
 **Formati:**
+
 - CSV
 - XLSX
 - PDF
 
 **Selezione:**
+
 - Seleziona spedizioni con checkbox
 - Oppure esporta tutte (filtri applicati)
 
 **Uso:**
+
 - Backup dati
 - Import in altri sistemi
 - Report contabilità
@@ -600,10 +673,12 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** `Credito insufficiente. Disponibile: €X.XX`
 
 **Cosa significa:**
+
 - Il wallet non ha abbastanza credito per la spedizione
 - Regola "No Credit, No Label" blocca la creazione
 
 **Cosa fare:**
+
 1. Vai a **"Wallet"**
 2. Controlla saldo corrente
 3. Se insufficiente:
@@ -615,11 +690,13 @@ Clicca **"Salva e Completa Registrazione"**.
 4. Dopo approvazione, riprova a creare spedizione
 
 **Prevenzione:**
+
 - Mantieni sempre almeno €50-100 nel wallet
 - Controlla saldo prima di creare molte spedizioni
 - Ricarica in anticipo se sai che spedirai molto
 
 **Se l'errore persiste:**
+
 - Verifica che la ricarica sia stata approvata
 - Controlla transazioni wallet (vedi se c'è stato un addebito)
 - Contatta admin se il saldo non si aggiorna
@@ -629,10 +706,12 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** Campo specifico in rosso con messaggio errore
 
 **Cosa significa:**
+
 - Un campo obbligatorio non è compilato o non è valido
 
 **Cosa fare:**
-1. Controlla tutti i campi con asterisco rosso (*)
+
+1. Controlla tutti i campi con asterisco rosso (\*)
 2. Verifica formato:
    - Codice Fiscale: esattamente 16 caratteri
    - Partita IVA: esattamente 11 caratteri (se azienda)
@@ -643,6 +722,7 @@ Clicca **"Salva e Completa Registrazione"**.
 4. Riprova a salvare
 
 **Campi obbligatori spedizione:**
+
 - Mittente: nome, indirizzo, città, provincia, CAP, telefono
 - Destinatario: nome, indirizzo, città, provincia, CAP, telefono (se contrassegno)
 - Pacco: peso
@@ -652,6 +732,7 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** `⚠️ Errore Creazione LDV` con dettagli
 
 **Cosa significa:**
+
 - La creazione dell'etichetta via broker (Spedisci.online) è fallita
 - La spedizione è stata salvata localmente, ma senza etichetta reale
 
@@ -678,12 +759,14 @@ Clicca **"Salva e Completa Registrazione"**.
      - Non puoi risolvere da solo
 
 **Cosa succede:**
+
 - La spedizione viene salvata comunque
 - Viene generato un PDF locale (ticket di riserva)
 - Puoi usare questo PDF temporaneamente
 - Devi creare l'etichetta manualmente su Spedisci.online (se hai accesso)
 
 **Se l'errore persiste:**
+
 - Prova con un altro corriere
 - Contatta admin per risolvere configurazione
 - Usa il PDF locale come backup
@@ -693,9 +776,11 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** Sotto il campo Codice Fiscale
 
 **Cosa significa:**
+
 - Il codice fiscale inserito non ha esattamente 16 caratteri
 
 **Cosa fare:**
+
 1. Controlla il codice fiscale
 2. Deve essere esattamente 16 caratteri (lettere e numeri)
 3. Formato: `ABCDEF12G34H567I` (maiuscolo)
@@ -708,9 +793,11 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** Sotto il campo Partita IVA (solo se azienda)
 
 **Cosa significa:**
+
 - La partita IVA inserita non ha esattamente 11 caratteri
 
 **Cosa fare:**
+
 1. Controlla la partita IVA
 2. Deve essere esattamente 11 caratteri (solo numeri)
 3. Formato: `12345678901`
@@ -721,15 +808,18 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** Sotto il campo Telefono Destinatario (se contrassegno attivo)
 
 **Cosa significa:**
+
 - Hai attivato il contrassegno ma non hai inserito il telefono destinatario
 
 **Cosa fare:**
+
 1. Inserisci il telefono destinatario
 2. Formato: `+39 312 345 6789` o `312 345 6789`
 3. Il sistema normalizza automaticamente
 4. Riprova a salvare
 
 **Perché è obbligatorio:**
+
 - Il corriere deve contattare il destinatario per la consegna
 - Senza telefono, il contrassegno non può essere gestito
 
@@ -738,9 +828,11 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** `Supabase non è configurato. Configura le variabili ambiente necessarie.`
 
 **Cosa significa:**
+
 - Errore tecnico del sistema (non dipende da te)
 
 **Cosa fare:**
+
 - Contatta immediatamente l'admin
 - Non puoi risolvere da solo
 - Il sistema non funziona finché non viene risolto
@@ -750,16 +842,19 @@ Clicca **"Salva e Completa Registrazione"**.
 **Messaggio:** `Non autenticato` o redirect a `/login`
 
 **Cosa significa:**
+
 - La sessione è scaduta
 - Devi rifare il login
 
 **Cosa fare:**
+
 1. Vai a `/login`
 2. Inserisci email e password
 3. Clicca "Accedi"
 4. Riprova l'operazione
 
 **Prevenzione:**
+
 - Il sistema mantiene la sessione attiva per diverse ore
 - Se lavori a lungo, potrebbe scadere
 - Salva sempre il lavoro prima di lasciare la pagina
@@ -767,10 +862,12 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 6.9 Spedizione non appare nella lista
 
 **Cosa significa:**
+
 - La spedizione potrebbe non essere stata salvata
 - Oppure è stata filtrata
 
 **Cosa fare:**
+
 1. Controlla i filtri (in alto nella lista)
 2. Rimuovi tutti i filtri
 3. Cerca per nome destinatario o tracking
@@ -780,6 +877,7 @@ Clicca **"Salva e Completa Registrazione"**.
    - Contatta admin se necessario
 
 **Se la spedizione è stata creata ma non vedi l'etichetta:**
+
 - Vedi errore [6.3](#63-errore-errore-creazione-ldv--errore-spediscionline)
 - La spedizione esiste ma senza etichetta reale
 
@@ -790,16 +888,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.1 NON creare spedizioni senza credito
 
 **Cosa NON fare:**
+
 - Tentare di creare spedizioni con wallet a €0
 - Aspettarsi che il sistema "faccia credito"
 - Chiedere all'admin di bypassare per "questa volta"
 
 **Perché:**
+
 - Regola "No Credit, No Label" è inviolabile
 - Il sistema blocca automaticamente
 - Anche l'admin non può bypassare facilmente (solo superadmin)
 
 **Cosa fare invece:**
+
 - Ricarica sempre in anticipo
 - Mantieni buffer di sicurezza (€50-100)
 - Monitora il saldo regolarmente
@@ -807,16 +908,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.2 NON modificare dati cliente dopo onboarding
 
 **Cosa NON fare:**
+
 - Cambiare codice fiscale o partita IVA dopo il primo salvataggio
 - Usare dati di un'altra persona/azienda
 - Saltare la compilazione dati cliente
 
 **Perché:**
+
 - I dati cliente sono legati all'account
 - Cambiamenti possono causare problemi fiscali
 - Il sistema potrebbe richiedere verifica admin
 
 **Cosa fare invece:**
+
 - Compila correttamente la prima volta
 - Se devi cambiare, contatta admin
 - Usa account separati per persone/aziende diverse
@@ -824,16 +928,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.3 NON usare contrassegno senza telefono destinatario
 
 **Cosa NON fare:**
+
 - Attivare contrassegno senza inserire telefono
 - Inserire telefono falso o non valido
 - Saltare la validazione telefono
 
 **Perché:**
+
 - Il corriere deve contattare il destinatario
 - Senza telefono, la consegna fallisce
 - Il contrassegno non può essere riscosso
 
 **Cosa fare invece:**
+
 - Chiedi sempre il telefono al cliente se usi contrassegno
 - Verifica che il telefono sia corretto
 - Se il cliente non vuole dare telefono, non usare contrassegno
@@ -841,16 +948,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.4 NON creare spedizioni duplicate
 
 **Cosa NON fare:**
+
 - Creare la stessa spedizione due volte
 - Cliccare "Genera Spedizione" più volte
 - Non aspettare il completamento
 
 **Perché:**
+
 - Crei spedizioni duplicate
 - Il wallet viene scalato più volte
 - Confusione nella lista spedizioni
 
 **Cosa fare invece:**
+
 - Clicca "Genera Spedizione" UNA volta
 - Aspetta il completamento (3-5 secondi)
 - Se non succede nulla, controlla errori prima di riprovare
@@ -859,16 +969,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.5 NON eliminare spedizioni già spedite
 
 **Cosa NON fare:**
+
 - Eliminare spedizioni con status "In Transito" o "Consegnata"
 - Modificare spedizioni già create
 - Cancellare per "sbaglio"
 
 **Perché:**
+
 - Le spedizioni già spedite non possono essere annullate
 - L'eliminazione può causare problemi di tracciabilità
 - Il wallet è già stato scalato
 
 **Cosa fare invece:**
+
 - Elimina solo spedizioni "In Preparazione"
 - Se hai sbagliato, contatta il corriere direttamente
 - Non eliminare mai spedizioni consegnate
@@ -876,16 +989,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.6 NON condividere account
 
 **Cosa NON fare:**
+
 - Dare password a colleghi
 - Usare lo stesso account su più computer contemporaneamente
 - Condividere credenziali OAuth
 
 **Perché:**
+
 - Problemi di sicurezza
 - Confusione nelle spedizioni (chi ha fatto cosa)
 - Impossibilità di tracciare operazioni
 
 **Cosa fare invece:**
+
 - Ogni operatore ha il proprio account
 - Se sei reseller, crea sub-utenti (vedi sezione Reseller Team)
 - Usa logout quando finisci
@@ -893,16 +1009,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.7 NON ignorare errori di validazione
 
 **Cosa NON fare:**
+
 - Inserire dati casuali per "bypassare" validazione
 - Usare codici fiscale/partita IVA falsi
 - Saltare campi obbligatori
 
 **Perché:**
+
 - I dati errati causano problemi alla consegna
 - Il corriere può rifiutare la spedizione
 - Problemi fiscali/legali
 
 **Cosa fare invece:**
+
 - Compila sempre tutti i campi correttamente
 - Verifica dati con il cliente prima di salvare
 - Se non hai un dato, chiedilo al cliente (non inventare)
@@ -910,16 +1029,19 @@ Clicca **"Salva e Completa Registrazione"**.
 ### 7.8 NON aspettare approvazione ricarica all'ultimo minuto
 
 **Cosa NON fare:**
+
 - Ricaricare solo quando il wallet è a €0
 - Aspettare approvazione per spedire urgente
 - Contare su approvazione immediata
 
 **Perché:**
+
 - L'approvazione non è automatica
 - Può richiedere ore o giorni
 - Blocchi le spedizioni in attesa
 
 **Cosa fare invece:**
+
 - Ricarica sempre in anticipo
 - Mantieni buffer di sicurezza
 - Pianifica le ricariche settimanali/mensili
@@ -970,6 +1092,7 @@ Clicca **"Salva e Completa Registrazione"**.
 ## Changelog
 
 **Versione 1.0** (28/12/2025)
+
 - Prima versione manuale operativo
 - Basato su codebase reale
 - Zero assunzioni, solo funzionalità verificate
@@ -977,4 +1100,3 @@ Clicca **"Salva e Completa Registrazione"**.
 ---
 
 **Fine Manuale**
-

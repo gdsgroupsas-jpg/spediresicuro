@@ -9,31 +9,38 @@
 ## 📋 Migrazioni Eseguite
 
 ### ✅ 081_account_capabilities_table.sql
+
 **Status:** ✅ Eseguita con successo  
 **Fix Applicato:** CONSTRAINT UNIQUE spostato a CREATE UNIQUE INDEX separato  
 **Risultato:** Tabella `account_capabilities` creata con indici e RLS policies
 
 ### ✅ 082_has_capability_function.sql
+
 **Status:** ✅ Eseguita con successo  
 **Risultato:** Funzione `has_capability()` creata e verificata
 
 ### ✅ 083_populate_capabilities_from_roles.sql
+
 **Status:** ✅ Eseguita con successo  
 **Risultato:** Capability popolate da `role`/`account_type` esistenti
 
 ### ✅ 084_add_tenant_id_to_users.sql
+
 **Status:** ✅ Eseguita con successo  
 **Risultato:** Campo `tenant_id` aggiunto a tabella `users` con indici
 
 ### ✅ 085_get_user_tenant_function.sql
+
 **Status:** ✅ Eseguita con successo  
 **Risultato:** Funzione `get_user_tenant()` creata con fallback
 
 ### ✅ 086_populate_tenant_id_from_parent.sql
+
 **Status:** ✅ Eseguita con successo  
 **Risultato:** `tenant_id` popolato da `parent_id`/`user_id` esistenti
 
 ### ✅ 087_update_rls_users_tenant_id.sql
+
 **Status:** ✅ Eseguita con successo  
 **Risultato:** RLS policy `users_select_reseller` aggiornata con supporto `tenant_id`
 
@@ -69,12 +76,14 @@ Eseguire: `scripts/test-migrations-081-087.sql`
 ## 📊 Statistiche Migrazione
 
 ### Capability Flags (Fase 1)
+
 - ✅ Tabella `account_capabilities` creata
 - ✅ Funzione `has_capability()` creata
 - ✅ Capability popolate da `role`/`account_type`
 - ✅ RLS policies attive
 
 ### Tenant ID (Fase 2)
+
 - ✅ Campo `tenant_id` aggiunto a `users`
 - ✅ Funzione `get_user_tenant()` creata
 - ✅ `tenant_id` popolato per tutti gli utenti
@@ -116,6 +125,7 @@ Eseguire: `scripts/test-migrations-081-087.sql`
 ## 📝 Fix Applicati
 
 ### Migrazione 081
+
 **Problema:** `CONSTRAINT UNIQUE` con `WHERE` clause non supportato in `CREATE TABLE`  
 **Soluzione:** Spostato a `CREATE UNIQUE INDEX` separato  
 **Status:** ✅ Fix applicato e testato

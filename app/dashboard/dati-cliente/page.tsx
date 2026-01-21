@@ -1,84 +1,84 @@
-'use client'
+'use client';
 
 /**
  * Pagina Dati Cliente - Completamento Obbligatorio
- * 
+ *
  * Questa pagina viene mostrata obbligatoriamente ai nuovi utenti
  * dopo la registrazione per completare tutti i dati anagrafici,
  * fiscali e bancari necessari.
  */
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import DashboardNav from '@/components/dashboard-nav'
-import { 
-  User, 
-  Building2, 
-  CreditCard, 
-  FileText, 
-  Upload, 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import DashboardNav from '@/components/dashboard-nav';
+import {
+  User,
+  Building2,
+  CreditCard,
+  FileText,
+  Upload,
   Save,
   AlertCircle,
-  CheckCircle2
-} from 'lucide-react'
+  CheckCircle2,
+} from 'lucide-react';
 
 interface FormData {
   // Dati anagrafici
-  nome: string
-  cognome: string
-  codiceFiscale: string
-  dataNascita: string
-  luogoNascita: string
-  sesso: 'M' | 'F' | ''
-  telefono: string
-  cellulare: string
-  
+  nome: string;
+  cognome: string;
+  codiceFiscale: string;
+  dataNascita: string;
+  luogoNascita: string;
+  sesso: 'M' | 'F' | '';
+  telefono: string;
+  cellulare: string;
+
   // Indirizzo
-  indirizzo: string
-  citta: string
-  provincia: string
-  cap: string
-  nazione: string
-  
+  indirizzo: string;
+  citta: string;
+  provincia: string;
+  cap: string;
+  nazione: string;
+
   // Tipo cliente
-  tipoCliente: 'persona' | 'azienda'
-  
+  tipoCliente: 'persona' | 'azienda';
+
   // Dati azienda
-  ragioneSociale: string
-  partitaIva: string
-  codiceSDI: string
-  pec: string
-  
+  ragioneSociale: string;
+  partitaIva: string;
+  codiceSDI: string;
+  pec: string;
+
   // Fatturazione
-  indirizzoFatturazione: string
-  cittaFatturazione: string
-  provinciaFatturazione: string
-  capFatturazione: string
-  
+  indirizzoFatturazione: string;
+  cittaFatturazione: string;
+  provinciaFatturazione: string;
+  capFatturazione: string;
+
   // Bancari
-  iban: string
-  banca: string
-  nomeIntestatario: string
-  
+  iban: string;
+  banca: string;
+  nomeIntestatario: string;
+
   // Documento identità
-  tipoDocumento: 'carta_identita' | 'patente' | 'passaporto' | ''
-  numeroDocumento: string
-  rilasciatoDa: string
-  dataRilascio: string
-  dataScadenza: string
+  tipoDocumento: 'carta_identita' | 'patente' | 'passaporto' | '';
+  numeroDocumento: string;
+  rilasciatoDa: string;
+  dataRilascio: string;
+  dataScadenza: string;
 }
 
 export default function DatiClientePage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
   // ⚠️ NOTA: CSS inline rimosso - fix definitivo in app/globals.css
   // Il CSS globale ora esclude input con bg-gray-800 e forza testo bianco
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     nome: '',
     cognome: '',
@@ -110,7 +110,7 @@ export default function DatiClientePage() {
     rilasciatoDa: '',
     dataRilascio: '',
     dataScadenza: '',
-  })
+  });
 
   // Carica dati esistenti se presenti e verifica se sono già completati
   useEffect(() => {
@@ -126,14 +126,17 @@ export default function DatiClientePage() {
             // Se i dati sono già completati nel database, NON reindirizzare automaticamente
             // Questo previene loop infiniti se il Server Layout (Source of Truth) ci ha mandato qui
             if (data.datiCliente && data.datiCliente.datiCompletati) {
-              console.log('✅ [DATI CLIENTE] Dati completi, ma rimango qui per evitare loop. Utente può rivedere i dati.', {
-                email: session?.user?.email
-              });
-              
+              console.log(
+                '✅ [DATI CLIENTE] Dati completi, ma rimango qui per evitare loop. Utente può rivedere i dati.',
+                {
+                  email: session?.user?.email,
+                }
+              );
+
               if (typeof window !== 'undefined' && session?.user?.email) {
                 localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
               }
-              
+
               // ⚠️ P0 FIX: Carica comunque i dati nel form invece di redirect
               loadExistingData();
               return;
@@ -147,16 +150,16 @@ export default function DatiClientePage() {
           loadExistingData();
         }
       }
-      
+
       checkAndLoad();
     }
-  }, [status, session, router])
+  }, [status, session, router]);
 
   const loadExistingData = async () => {
     try {
-      const response = await fetch('/api/user/dati-cliente')
+      const response = await fetch('/api/user/dati-cliente');
       if (response.ok) {
-        const data = await response.json()
+        const data = await response.json();
         if (data.datiCliente) {
           setFormData({
             nome: data.datiCliente.nome || '',
@@ -189,108 +192,114 @@ export default function DatiClientePage() {
             rilasciatoDa: data.datiCliente.documentoIdentita?.rilasciatoDa || '',
             dataRilascio: data.datiCliente.documentoIdentita?.dataRilascio || '',
             dataScadenza: data.datiCliente.documentoIdentita?.dataScadenza || '',
-          })
+          });
         }
       }
     } catch (err) {
-      console.error('Errore caricamento dati:', err)
+      console.error('Errore caricamento dati:', err);
     }
-  }
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-    setError(null)
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError(null);
+  };
 
   const validateForm = (): boolean => {
     // Email dell'utente corrente
-    const userEmail = session?.user?.email?.toLowerCase() || ''
-    
+    const userEmail = session?.user?.email?.toLowerCase() || '';
+
     // Per l'utenza test@spediresicuro.it, i campi sono opzionali
-    const isTestUser = userEmail === 'test@spediresicuro.it'
+    const isTestUser = userEmail === 'test@spediresicuro.it';
 
     // Validazione campi obbligatori base (solo se NON è l'utente test)
     if (!isTestUser) {
       if (!formData.nome.trim()) {
-        setError('Il nome è obbligatorio')
-        return false
+        setError('Il nome è obbligatorio');
+        return false;
       }
       if (!formData.cognome.trim()) {
-        setError('Il cognome è obbligatorio')
-        return false
+        setError('Il cognome è obbligatorio');
+        return false;
       }
       if (!formData.codiceFiscale.trim()) {
-        setError('Il codice fiscale è obbligatorio')
-        return false
+        setError('Il codice fiscale è obbligatorio');
+        return false;
       }
       if (formData.codiceFiscale.length !== 16) {
-        setError('Il codice fiscale deve essere di 16 caratteri')
-        return false
+        setError('Il codice fiscale deve essere di 16 caratteri');
+        return false;
       }
       if (!formData.telefono.trim()) {
-        setError('Il telefono è obbligatorio')
-        return false
+        setError('Il telefono è obbligatorio');
+        return false;
       }
       if (!formData.indirizzo.trim()) {
-        setError('L\'indirizzo è obbligatorio')
-        return false
+        setError("L'indirizzo è obbligatorio");
+        return false;
       }
       if (!formData.citta.trim()) {
-        setError('La città è obbligatoria')
-        return false
+        setError('La città è obbligatoria');
+        return false;
       }
       if (!formData.provincia.trim()) {
-        setError('La provincia è obbligatoria')
-        return false
+        setError('La provincia è obbligatoria');
+        return false;
       }
       if (!formData.cap.trim()) {
-        setError('Il CAP è obbligatorio')
-        return false
+        setError('Il CAP è obbligatorio');
+        return false;
       }
 
       // Validazione dati azienda se tipoCliente === 'azienda'
       if (formData.tipoCliente === 'azienda') {
         if (!formData.ragioneSociale.trim()) {
-          setError('La ragione sociale è obbligatoria per le aziende')
-          return false
+          setError('La ragione sociale è obbligatoria per le aziende');
+          return false;
         }
         if (!formData.partitaIva.trim()) {
-          setError('La partita IVA è obbligatoria per le aziende')
-          return false
+          setError('La partita IVA è obbligatoria per le aziende');
+          return false;
         }
         if (formData.partitaIva.length !== 11) {
-          setError('La partita IVA deve essere di 11 caratteri')
-          return false
+          setError('La partita IVA deve essere di 11 caratteri');
+          return false;
         }
       }
     } else {
       // Per utente test: validazione codice fiscale solo se fornito
       if (formData.codiceFiscale.trim() && formData.codiceFiscale.length !== 16) {
-        setError('Il codice fiscale deve essere di 16 caratteri')
-        return false
+        setError('Il codice fiscale deve essere di 16 caratteri');
+        return false;
       }
-      
+
       // Per utente test: validazione partita IVA solo se tipoCliente === 'azienda' e partitaIva è fornita
-      if (formData.tipoCliente === 'azienda' && formData.partitaIva.trim() && formData.partitaIva.length !== 11) {
-        setError('La partita IVA deve essere di 11 caratteri')
-        return false
+      if (
+        formData.tipoCliente === 'azienda' &&
+        formData.partitaIva.trim() &&
+        formData.partitaIva.length !== 11
+      ) {
+        setError('La partita IVA deve essere di 11 caratteri');
+        return false;
       }
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setSuccess(false)
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
 
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       const response = await fetch('/api/user/dati-cliente', {
@@ -301,51 +310,55 @@ export default function DatiClientePage() {
         body: JSON.stringify({
           ...formData,
           email: session?.user?.email,
-          documentoIdentita: formData.tipoDocumento ? {
-            tipo: formData.tipoDocumento,
-            numero: formData.numeroDocumento,
-            rilasciatoDa: formData.rilasciatoDa,
-            dataRilascio: formData.dataRilascio,
-            dataScadenza: formData.dataScadenza || undefined,
-          } : undefined,
+          documentoIdentita: formData.tipoDocumento
+            ? {
+                tipo: formData.tipoDocumento,
+                numero: formData.numeroDocumento,
+                rilasciatoDa: formData.rilasciatoDa,
+                dataRilascio: formData.dataRilascio,
+                dataScadenza: formData.dataScadenza || undefined,
+              }
+            : undefined,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Errore durante il salvataggio')
-        setIsSaving(false)
-        return
+        setError(data.error || 'Errore durante il salvataggio');
+        setIsSaving(false);
+        return;
       }
 
       // Salvataggio riuscito!
-      setSuccess(true)
-      setIsSaving(false) // Importante: resetta lo stato di salvataggio
-      
-      console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data)
+      setSuccess(true);
+      setIsSaving(false); // Importante: resetta lo stato di salvataggio
+
+      console.log('✅ [DATI CLIENTE] Dati salvati con successo:', data);
       console.log('✅ [DATI CLIENTE] Verifica dati salvati:', {
         datiCompletati: data.datiCliente?.datiCompletati,
         hasDatiCliente: !!data.datiCliente,
-      })
-      
+      });
+
       // Salva IMMEDIATAMENTE in localStorage per evitare controlli futuri nella dashboard
       if (typeof window !== 'undefined' && session?.user?.email) {
-        localStorage.setItem(`datiCompletati_${session.user.email}`, 'true')
-        console.log('💾 [DATI CLIENTE] Flag salvato in localStorage:', session.user.email)
+        localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
+        console.log('💾 [DATI CLIENTE] Flag salvato in localStorage:', session.user.email);
       }
-      
+
       // Reindirizza alla dashboard con parametro URL per indicare che i dati sono stati appena salvati
       // Questo evita che il controllo nella dashboard reindirizzi di nuovo qui
       setTimeout(() => {
-        console.log('🔄 [DATI CLIENTE] Reindirizzamento a /dashboard?saved=true con refresh completo...')
-        window.location.href = '/dashboard?saved=true'
-      }, 1500)
+        console.log(
+          '🔄 [DATI CLIENTE] Reindirizzamento a /dashboard?saved=true con refresh completo...'
+        );
+        window.location.href = '/dashboard?saved=true';
+      }, 1500);
     } catch (err: any) {
-      setError('Errore durante il salvataggio: ' + err.message)
-      setIsSaving(false)
+      setError('Errore durante il salvataggio: ' + err.message);
+      setIsSaving(false);
     }
-  }
+  };
 
   if (status === 'loading') {
     return (
@@ -369,10 +382,10 @@ export default function DatiClientePage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Verifica credenziali corso...</h2>
           <p className="text-gray-600 mb-6">
-            La tua sessione è in fase di sincronizzazione con il server.
-            Se la pagina non cambia entro pochi secondi, prova a ricaricare.
+            La tua sessione è in fase di sincronizzazione con il server. Se la pagina non cambia
+            entro pochi secondi, prova a ricaricare.
           </p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="w-full px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
@@ -385,7 +398,7 @@ export default function DatiClientePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
-      <DashboardNav 
+      <DashboardNav
         title="Completa i Tuoi Dati Cliente"
         subtitle="Compila tutti i campi obbligatori per completare la registrazione"
       />
@@ -403,7 +416,9 @@ export default function DatiClientePage() {
             <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-base font-bold text-green-300">✅ Dati salvati con successo!</p>
-              <p className="text-sm text-green-400 mt-1">Reindirizzamento alla dashboard in corso...</p>
+              <p className="text-sm text-green-400 mt-1">
+                Reindirizzamento alla dashboard in corso...
+              </p>
             </div>
           </div>
         )}
@@ -447,7 +462,8 @@ export default function DatiClientePage() {
           <div className="glass-strong rounded-xl shadow-sm p-6 border border-[#FACC15]/20">
             <h2 className="text-xl font-bold text-gray-100 mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-[#FACC15]" />
-              Dati Anagrafici {formData.tipoCliente === 'persona' ? 'Persona Fisica' : 'Rappresentante Legale'}
+              Dati Anagrafici{' '}
+              {formData.tipoCliente === 'persona' ? 'Persona Fisica' : 'Rappresentante Legale'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -516,9 +532,7 @@ export default function DatiClientePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Sesso
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Sesso</label>
                 <select
                   name="sesso"
                   value={formData.sesso}
@@ -544,9 +558,7 @@ export default function DatiClientePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Cellulare
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Cellulare</label>
                 <input
                   type="tel"
                   name="cellulare"
@@ -686,9 +698,7 @@ export default function DatiClientePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Nazione
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Nazione</label>
                 <input
                   type="text"
                   name="nazione"
@@ -770,9 +780,7 @@ export default function DatiClientePage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  IBAN
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">IBAN</label>
                 <input
                   type="text"
                   name="iban"
@@ -783,9 +791,7 @@ export default function DatiClientePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Banca
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Banca</label>
                 <input
                   type="text"
                   name="banca"
@@ -886,7 +892,9 @@ export default function DatiClientePage() {
                 </label>
                 <div className="flex items-center gap-4 p-4 border-2 border-dashed border-[#FACC15]/30 rounded-lg glass-subtle">
                   <Upload className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Funzionalità di upload documenti in arrivo</span>
+                  <span className="text-sm text-gray-600">
+                    Funzionalità di upload documenti in arrivo
+                  </span>
                 </div>
               </div>
             </div>
@@ -920,6 +928,5 @@ export default function DatiClientePage() {
         </form>
       </div>
     </div>
-  )
+  );
 }
-

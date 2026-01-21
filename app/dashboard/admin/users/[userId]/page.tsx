@@ -7,29 +7,16 @@
  * - Storico modifiche fee
  */
 
-import { AiFeaturesCard } from "@/components/admin/ai-features/AiFeaturesCard";
-import {
-  CurrentFeeDisplay,
-  FeeHistoryTable,
-} from "@/components/admin/platform-fee";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
-import {
-  getPlatformFee,
-  getPlatformFeeHistory,
-} from "@/lib/services/pricing/platform-fee";
-import {
-  ArrowLeft,
-  Calendar,
-  CreditCard,
-  Mail,
-  Shield,
-  User,
-} from "lucide-react";
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { AiFeaturesCard } from '@/components/admin/ai-features/AiFeaturesCard';
+import { CurrentFeeDisplay, FeeHistoryTable } from '@/components/admin/platform-fee';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { auth } from '@/lib/auth-config';
+import { supabaseAdmin } from '@/lib/db/client';
+import { getPlatformFee, getPlatformFeeHistory } from '@/lib/services/pricing/platform-fee';
+import { ArrowLeft, Calendar, CreditCard, Mail, Shield, User } from 'lucide-react';
+import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -42,32 +29,32 @@ export default async function UserDetailPage({ params }: PageProps) {
   // Verifica autenticazione
   const session = await auth();
   if (!session?.user?.email) {
-    redirect("/login");
+    redirect('/login');
   }
 
   // Verifica ruolo SUPERADMIN
   const { data: adminUser } = await supabaseAdmin
-    .from("users")
-    .select("role, account_type")
-    .eq("email", session.user.email)
+    .from('users')
+    .select('role, account_type')
+    .eq('email', session.user.email)
     .single();
 
   const isSuperAdmin =
-    adminUser?.account_type === "superadmin" ||
-    adminUser?.role === "admin" ||
-    adminUser?.role === "SUPERADMIN";
+    adminUser?.account_type === 'superadmin' ||
+    adminUser?.role === 'admin' ||
+    adminUser?.role === 'SUPERADMIN';
 
   if (!isSuperAdmin) {
-    redirect("/dashboard");
+    redirect('/dashboard');
   }
 
   // Recupera dati utente
   const { data: user, error: userError } = await supabaseAdmin
-    .from("users")
+    .from('users')
     .select(
-      "id, email, name, role, account_type, is_reseller, wallet_balance, created_at, provider, metadata"
+      'id, email, name, role, account_type, is_reseller, wallet_balance, created_at, provider, metadata'
     )
-    .eq("id", userId)
+    .eq('id', userId)
     .single();
 
   if (userError || !user) {
@@ -82,24 +69,24 @@ export default async function UserDetailPage({ params }: PageProps) {
     feeData = await getPlatformFee(userId);
     feeHistory = await getPlatformFeeHistory(userId);
   } catch (error) {
-    console.error("[UserDetail] Error fetching fee data:", error);
+    console.error('[UserDetail] Error fetching fee data:', error);
     feeData = { fee: 0.5, isCustom: false, notes: null };
     feeHistory = [];
   }
 
   // Formatta data
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat("it-IT", {
-      dateStyle: "long",
-      timeStyle: "short",
+    return new Intl.DateTimeFormat('it-IT', {
+      dateStyle: 'long',
+      timeStyle: 'short',
     }).format(new Date(dateString));
   };
 
   // Formatta valuta
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("it-IT", {
-      style: "currency",
-      currency: "EUR",
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
     }).format(value);
   };
 
@@ -123,9 +110,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <User className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {user.name || "Utente"}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">{user.name || 'Utente'}</h1>
               <p className="text-gray-600">{user.email}</p>
             </div>
           </div>
@@ -156,7 +141,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                 <p className="text-sm text-gray-500 mb-1">Ruolo</p>
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const { RoleBadge } = require("@/lib/utils/role-badges");
+                    const { RoleBadge } = require('@/lib/utils/role-badges');
                     return (
                       <RoleBadge
                         accountType={user.account_type}
@@ -165,7 +150,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                       />
                     );
                   })()}
-                  {user.provider && user.provider !== "credentials" && (
+                  {user.provider && user.provider !== 'credentials' && (
                     <Badge variant="outline">{user.provider}</Badge>
                   )}
                 </div>
@@ -188,9 +173,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <p className="text-sm text-gray-500 mb-1">Registrato il</p>
-                <p className="font-medium text-gray-900">
-                  {formatDate(user.created_at)}
-                </p>
+                <p className="font-medium text-gray-900">{formatDate(user.created_at)}</p>
               </div>
             </div>
           </div>
@@ -213,8 +196,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               Platform Fee (BYOC)
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              Fee addebitata per ogni spedizione con modello BYOC (Bring Your
-              Own Courier)
+              Fee addebitata per ogni spedizione con modello BYOC (Bring Your Own Courier)
             </p>
           </div>
 
@@ -229,9 +211,7 @@ export default async function UserDetailPage({ params }: PageProps) {
 
             {/* Fee History */}
             <div>
-              <h3 className="text-lg font-medium mb-4 text-gray-900">
-                Storico Modifiche
-              </h3>
+              <h3 className="text-lg font-medium mb-4 text-gray-900">Storico Modifiche</h3>
               <FeeHistoryTable history={feeHistory} />
             </div>
           </div>

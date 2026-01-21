@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Value Stats Calculation (P4 Task 1)
- * 
+ *
  * Test per il calcolo delle statistiche di valore (minuti risparmiati, errori evitati).
  */
 
@@ -27,9 +27,7 @@ describe('Value Stats Calculation', () => {
           gte: vi.fn().mockReturnValue({
             order: vi.fn().mockReturnValue({
               limit: vi.fn().mockResolvedValue({
-                data: [
-                  { state: { confidenceScore: 80 }, created_at: new Date().toISOString() },
-                ],
+                data: [{ state: { confidenceScore: 80 }, created_at: new Date().toISOString() }],
                 error: null,
               }),
             }),
@@ -47,13 +45,15 @@ describe('Value Stats Calculation', () => {
   });
 
   it('dovrebbe calcolare minuti risparmiati con abbastanza richieste', async () => {
-    const mockSessions = Array(5).fill(null).map((_, i) => ({
-      state: {
-        confidenceScore: 80 + i,
-        validationErrors: i < 2 ? ['test'] : [],
-      },
-      created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-    }));
+    const mockSessions = Array(5)
+      .fill(null)
+      .map((_, i) => ({
+        state: {
+          confidenceScore: 80 + i,
+          validationErrors: i < 2 ? ['test'] : [],
+        },
+        created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+      }));
 
     const mockFrom = vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
@@ -135,4 +135,3 @@ describe('Value Stats Calculation', () => {
     expect(result.averageConfidence).toBeCloseTo(85, 0); // Media di 80, 90, 85, 95, 75 = 85
   });
 });
-

@@ -1,14 +1,14 @@
 /**
  * Script di Setup Automatico Supabase
- * 
+ *
  * Questo script automatizza la configurazione di Supabase:
  * 1. Verifica connessione
  * 2. Esegue lo schema SQL
  * 3. Verifica che tutto sia configurato correttamente
- * 
+ *
  * Utilizzo:
  *   npm run setup:supabase
- * 
+ *
  * Requisiti:
  *   - Variabili SUPABASE configurate in .env.local
  *   - Account Supabase creato
@@ -30,7 +30,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
  */
 function readSchemaSQL(): string {
   const schemaPath = path.join(process.cwd(), 'supabase', 'schema.sql');
-  
+
   if (!fs.existsSync(schemaPath)) {
     throw new Error(`File schema.sql non trovato in ${schemaPath}`);
   }
@@ -44,13 +44,13 @@ function readSchemaSQL(): string {
 async function executeSQL(supabase: ReturnType<typeof createClient>, sql: string): Promise<void> {
   // Supabase non ha un metodo diretto per eseguire SQL arbitrario
   // Dobbiamo usare l'API REST direttamente
-  
+
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'apikey': SUPABASE_SERVICE_KEY!,
-      'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      apikey: SUPABASE_SERVICE_KEY!,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
     },
     body: JSON.stringify({ sql }),
   });
@@ -64,7 +64,7 @@ async function executeSQL(supabase: ReturnType<typeof createClient>, sql: string
 
 /**
  * Esegue SQL dividendolo in parti (per query che non supportano RPC)
- * 
+ *
  * ⚠️ IMPORTANTE: Supabase NON supporta l'esecuzione di DDL (CREATE TABLE, ALTER, DROP)
  * via API REST. Le query DDL devono essere eseguite manualmente nel SQL Editor.
  * Questa funzione serve solo per informare l'utente.
@@ -93,15 +93,19 @@ async function executeSQLByParts(
   });
 
   if (ddlQueries.length > 0) {
-    console.log('⚠️  IMPORTANTE: Supabase non supporta l\'esecuzione di DDL via API\n');
-    console.log(`   Trovate ${ddlQueries.length} query DDL che devono essere eseguite manualmente.\n`);
+    console.log("⚠️  IMPORTANTE: Supabase non supporta l'esecuzione di DDL via API\n");
+    console.log(
+      `   Trovate ${ddlQueries.length} query DDL che devono essere eseguite manualmente.\n`
+    );
     console.log('   Le query DDL (CREATE TABLE, ALTER, DROP) devono essere eseguite');
     console.log('   direttamente nel SQL Editor del dashboard Supabase.\n');
     return; // Esci, non possiamo eseguire DDL via API
   }
 
   // Se ci sono solo query SELECT/INSERT/UPDATE, potremmo provare (ma di solito non serve)
-  console.log('ℹ️  Nessuna query DDL trovata. Se ci sono query DML, verranno gestite separatamente.\n');
+  console.log(
+    'ℹ️  Nessuna query DDL trovata. Se ci sono query DML, verranno gestite separatamente.\n'
+  );
 }
 
 /**
@@ -113,14 +117,20 @@ async function verifyTable(supabase: any): Promise<{
   recordCount: number;
   missingColumns: string[];
 }> {
-  const requiredColumns = ['id', 'name', 'province', 'region', 'caps', 'search_vector', 'created_at', 'updated_at'];
-  
+  const requiredColumns = [
+    'id',
+    'name',
+    'province',
+    'region',
+    'caps',
+    'search_vector',
+    'created_at',
+    'updated_at',
+  ];
+
   try {
     // Prova a fare una query sulla tabella
-    const { data, error } = await supabase
-      .from('geo_locations')
-      .select('*')
-      .limit(1);
+    const { data, error } = await supabase.from('geo_locations').select('*').limit(1);
 
     if (error) {
       if (error.message.includes('does not exist') || error.message.includes('relation')) {
@@ -149,7 +159,7 @@ async function verifyTable(supabase: any): Promise<{
         .from('geo_locations')
         .select('id, name, province, region, caps, search_vector, created_at, updated_at')
         .limit(0);
-      
+
       if (structureError) {
         // Se anche questa query fallisce, la struttura è sbagliata
         return {
@@ -188,7 +198,7 @@ async function verifyTable(supabase: any): Promise<{
  */
 async function main() {
   console.log('🚀 Setup Automatico Supabase\n');
-  console.log('=' .repeat(50));
+  console.log('='.repeat(50));
   console.log('');
 
   // 1. Verifica configurazione
@@ -220,7 +230,7 @@ async function main() {
   // Test connessione
   try {
     const { data, error } = await supabase.from('geo_locations').select('id').limit(0);
-    
+
     if (error && !error.message.includes('does not exist')) {
       // Se l'errore non è "tabella non esiste", c'è un problema di connessione
       throw error;
@@ -317,4 +327,3 @@ main().catch((error) => {
   }
   process.exit(1);
 });
-

@@ -11,11 +11,13 @@ Questa documentazione descrive l'implementazione delle funzionalità GDPR per la
 **File:** `components/legal/CookieBanner.tsx`
 
 Banner per gestione consenso cookie granulare con tre categorie:
+
 - **Necessari** (sempre attivi)
 - **Analitici** (opzionali - es. Google Analytics)
 - **Marketing** (opzionali - es. Facebook Pixel)
 
 **Caratteristiche:**
+
 - Salvataggio preferenze in `localStorage`
 - Blocco automatico script di tracciamento se consenso non dato
 - UI moderna e non invasiva
@@ -31,6 +33,7 @@ Il banner è integrato nel layout principale (`app/layout.tsx`) e viene mostrato
 Permette all'utente di scaricare tutti i propri dati in formato JSON.
 
 **Dati esportati:**
+
 - Profilo utente completo
 - Storico spedizioni
 - Preventivi salvati
@@ -38,6 +41,7 @@ Permette all'utente di scaricare tutti i propri dati in formato JSON.
 - Statistiche
 
 **Utilizzo:**
+
 ```typescript
 const result = await exportUserData();
 if (result.success) {
@@ -54,6 +58,7 @@ if (result.success) {
 ⚠️ **IMPORTANTE:** Non possiamo fare DELETE brutale delle spedizioni per motivi fiscali/legali.
 
 **Logica di anonimizzazione:**
+
 1. **Profilo utente:**
    - Email → `deleted_[uuid]@void.com`
    - Nome → `Utente Eliminato`
@@ -66,6 +71,7 @@ if (result.success) {
 3. **Logout immediato** (gestito dal client)
 
 **Sicurezza:**
+
 - Richiede conferma esplicita: utente deve digitare "ELIMINA"
 - Operazione irreversibile
 
@@ -74,6 +80,7 @@ if (result.success) {
 **File:** `app/dashboard/profile/privacy/page.tsx`
 
 Pagina nella dashboard utente con:
+
 - Sezione export dati con pulsante download
 - Sezione cancellazione account con conferma a doppio step
 - Link alle pagine legali
@@ -103,11 +110,13 @@ Pagine statiche con contenuto placeholder strutturato:
 **File:** `supabase/migrations/009_gdpr_privacy_policies.sql`
 
 Aggiunge:
+
 - Policy RLS per UPDATE su `users` e `shipments`
 - Funzione helper `can_anonymize_user()` per validazioni
 - Funzione `anonymize_user_account()` per anonimizzazione (solo service role/admin)
 
 **Esecuzione:**
+
 ```sql
 -- Esegui la migration in Supabase SQL Editor
 \i supabase/migrations/009_gdpr_privacy_policies.sql
@@ -138,6 +147,7 @@ Aggiunge:
 ### Per lo Sviluppatore
 
 **Test Export:**
+
 ```typescript
 import { exportUserData } from '@/actions/privacy';
 
@@ -146,6 +156,7 @@ console.log(result);
 ```
 
 **Test Anonimizzazione:**
+
 ```typescript
 import { requestAccountDeletion } from '@/actions/privacy';
 
@@ -195,6 +206,7 @@ console.log(result);
 ## 📞 Supporto
 
 Per domande o problemi:
+
 - Email: privacy@spediresicuro.it
 - Documentazione: `/docs/GDPR_IMPLEMENTATION.md`
 
@@ -202,4 +214,3 @@ Per domande o problemi:
 
 **Ultimo aggiornamento:** [DATA]
 **Versione:** 1.0
-

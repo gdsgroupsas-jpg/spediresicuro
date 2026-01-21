@@ -1,8 +1,8 @@
 /**
  * Security Events - Audit Logging Standardizzato
- * 
+ *
  * Estende lib/security/audit-log.ts con eventi impersonation
- * 
+ *
  * CRITICAL: Usa getSafeAuth() invece di auth() per supportare impersonation
  */
 
@@ -37,32 +37,32 @@ export type SecurityEventType =
  */
 export interface SecurityEvent {
   action: SecurityEventType;
-  resource_type: string;  // 'impersonation' | 'courier_config' | 'api_credential' | etc.
+  resource_type: string; // 'impersonation' | 'courier_config' | 'api_credential' | etc.
   resource_id: string;
-  
+
   // Actor/Target (per impersonation)
   actor_id?: string;
   target_id?: string;
   impersonation_active?: boolean;
-  
+
   // Legacy (compatibility)
   user_id?: string;
   user_email?: string;
-  
+
   // Metadata
   metadata?: Record<string, any>;
   audit_metadata?: Record<string, any>;
-  
+
   // Timestamp
   created_at?: string;
 }
 
 /**
  * Log security event (impersonation-aware)
- * 
+ *
  * CRITICAL: NON usa auth() direttamente per evitare circular dependency
  * Context deve essere passato dal chiamante
- * 
+ *
  * @param event - Security event da loggare
  */
 export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
@@ -72,39 +72,37 @@ export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
       action: event.action,
       resource_type: event.resource_type,
       resource_id: event.resource_id,
-      
+
       // Actor/Target (se presenti)
       actor_id: event.actor_id || null,
       target_id: event.target_id || null,
       impersonation_active: event.impersonation_active || false,
-      
+
       // Legacy fields (compatibility)
       user_id: event.target_id || event.user_id || null,
       user_email: event.user_email || null,
-      
+
       // Metadata
       metadata: event.metadata || {},
       audit_metadata: {
         ...event.audit_metadata,
         logged_at: new Date().toISOString(),
       },
-      
+
       // Timestamp
       created_at: event.created_at || new Date().toISOString(),
     };
-    
+
     // Insert in audit_logs
-    const { error } = await supabaseAdmin
-      .from('audit_logs')
-      .insert([logEntry]);
-    
+    const { error } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+
     if (error) {
       // Fallback: log in console
       console.warn('⚠️ [SECURITY-EVENT] DB insert failed, logging to console:', error.message);
       console.log('📋 [SECURITY-EVENT]', JSON.stringify(logEntry, null, 2));
       return;
     }
-    
+
     // Success
     console.log('✅ [SECURITY-EVENT] Logged:', {
       action: event.action,
@@ -302,4 +300,3 @@ export async function logSuperAdminWalletBypass(
     },
   });
 }
-

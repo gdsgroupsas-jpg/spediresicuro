@@ -17,7 +17,7 @@ Nel comparatore preventivi:
 
 ```typescript
 // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
-if (priceList.master_list_id && priceList.list_type === "custom") {
+if (priceList.master_list_id && priceList.list_type === 'custom') {
   // Recupera prezzo dal listino master
   supplierBasePrice = masterMatrixResult.basePrice;
   supplierSurcharges = masterMatrixResult.surcharges || 0;
@@ -53,10 +53,7 @@ const finalPrice = totalCost + margin;
 
 ```typescript
 const supplierPrice =
-  quoteResult.supplierPrice ??
-  quoteResult.totalCost ??
-  quoteResult.basePrice ??
-  0;
+  quoteResult.supplierPrice ?? quoteResult.totalCost ?? quoteResult.basePrice ?? 0;
 ```
 
 **Problema del fallback:**
@@ -68,8 +65,8 @@ const supplierPrice =
 ### 3. Visualizzazione nel Comparatore (`components/shipments/intelligent-quote-comparator.tsx`, linea 1407-1410)
 
 ```typescript
-const supplierPrice = bestRate ? parseFloat(bestRate.weight_price || "0") : 0;
-const totalPrice = bestRate ? parseFloat(bestRate.total_price || "0") : 0;
+const supplierPrice = bestRate ? parseFloat(bestRate.weight_price || '0') : 0;
+const totalPrice = bestRate ? parseFloat(bestRate.total_price || '0') : 0;
 const margin = totalPrice - supplierPrice;
 ```
 
@@ -206,7 +203,7 @@ Modificare `app/api/quotes/db/route.ts` (linea 345):
 // ✨ FIX: Se listino è SUPPLIER senza master, usa basePrice invece di totalCost
 const supplierPrice =
   quoteResult.supplierPrice ??
-  (quoteResult.appliedPriceList?.list_type === "supplier" &&
+  (quoteResult.appliedPriceList?.list_type === 'supplier' &&
   !quoteResult.appliedPriceList?.master_list_id
     ? quoteResult.basePrice // Per listini supplier, usa basePrice come costo fornitore
     : quoteResult.totalCost) ??

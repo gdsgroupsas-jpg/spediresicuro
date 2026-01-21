@@ -1,4 +1,4 @@
-**# Compensation Queue - Observability & Alerting Setup
+\*\*# Compensation Queue - Observability & Alerting Setup
 
 **Document Type**: Operations / Monitoring
 **Date**: 2026-01-11
@@ -14,6 +14,7 @@ Il **Compensation Queue** traccia operazioni finanziarie fallite che richiedono 
 **Risk**: Orphan financial records → contabilità incoerente → perdita economica.
 
 **Questo documento** fornisce setup completo per:
+
 - ✅ Real-time monitoring
 - ✅ Alerting automatico
 - ✅ SLA tracking
@@ -53,22 +54,22 @@ Shipment Creation
 
 ### 3.1 Health Indicators
 
-| Metric | Healthy | Warning | Critical |
-|--------|---------|---------|----------|
-| **Pending < 24h** | Any number | >10 records | >50 records |
-| **Pending 24h-7d** | <5 records | 5-10 records | >10 records |
-| **Pending >7d** | 0 records | 1-2 records | >2 records (SLA breach) |
-| **Dead letter** | 0 records | 1-3 records | >3 records |
-| **Total exposure (pending)** | <€500 | €500-€1000 | >€1000 |
-| **Avg resolution time** | <4h | 4-24h | >24h |
+| Metric                       | Healthy    | Warning      | Critical                |
+| ---------------------------- | ---------- | ------------ | ----------------------- |
+| **Pending < 24h**            | Any number | >10 records  | >50 records             |
+| **Pending 24h-7d**           | <5 records | 5-10 records | >10 records             |
+| **Pending >7d**              | 0 records  | 1-2 records  | >2 records (SLA breach) |
+| **Dead letter**              | 0 records  | 1-3 records  | >3 records              |
+| **Total exposure (pending)** | <€500      | €500-€1000   | >€1000                  |
+| **Avg resolution time**      | <4h        | 4-24h        | >24h                    |
 
 ### 3.2 SLAs
 
-| Priority | Target Resolution Time | Alert Threshold |
-|----------|------------------------|-----------------|
-| **P0 (High value)** | 4 hours | >2h no action |
-| **P1 (Standard)** | 24 hours | >12h no action |
-| **P2 (Low value)** | 7 giorni | >5d no action |
+| Priority            | Target Resolution Time | Alert Threshold |
+| ------------------- | ---------------------- | --------------- |
+| **P0 (High value)** | 4 hours                | >2h no action   |
+| **P1 (Standard)**   | 24 hours               | >12h no action  |
+| **P2 (Low value)**  | 7 giorni               | >5d no action   |
 
 **High value**: `original_cost > €100`
 **Standard**: `original_cost €20-€100`
@@ -83,6 +84,7 @@ Shipment Creation
 **GET** `/api/admin/compensation-queue/stats`
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -138,6 +140,7 @@ Shipment Creation
 **Connection**: Supabase DB (read-only credentials recommended)
 
 **Query connection string**:
+
 ```
 postgres://readonly_user:password@db.supabase.co:5432/postgres
 ```
@@ -173,6 +176,7 @@ FROM compensation_queue;
 
 **Visualization**: Gauge
 **Thresholds**:
+
 - Green: >95%
 - Yellow: 90-95%
 - Red: <90%
@@ -249,6 +253,7 @@ WHERE status = 'resolved'
 #### Alert 1: SLA Breach (P0)
 
 **Condition**:
+
 ```sql
 SELECT COUNT(*) AS count
 FROM compensation_queue
@@ -261,6 +266,7 @@ WHERE status = 'pending'
 **Notification**: Email + Slack + PagerDuty
 
 **Message**:
+
 > 🚨 **CRITICAL: Compensation Queue SLA Breach**
 >
 > **Count**: {{count}} records
@@ -274,6 +280,7 @@ WHERE status = 'pending'
 #### Alert 2: High Pending Volume (P1)
 
 **Condition**:
+
 ```sql
 SELECT COUNT(*) AS count
 FROM compensation_queue
@@ -285,6 +292,7 @@ WHERE status = 'pending';
 **Notification**: Slack
 
 **Message**:
+
 > ⚠️ **WARNING: High Compensation Queue Volume**
 >
 > **Count**: {{count}} pending records
@@ -298,6 +306,7 @@ WHERE status = 'pending';
 #### Alert 3: Dead Letter Queue (P1)
 
 **Condition**:
+
 ```sql
 SELECT COUNT(*) AS count
 FROM compensation_queue
@@ -309,6 +318,7 @@ WHERE status = 'dead_letter';
 **Notification**: Slack
 
 **Message**:
+
 > ⚠️ **WARNING: Dead Letter Queue Not Empty**
 >
 > **Count**: {{count}} records
@@ -322,11 +332,13 @@ WHERE status = 'dead_letter';
 ### 6.2 Slack Webhook Integration
 
 **Setup**:
+
 1. Create Slack App: https://api.slack.com/apps
 2. Enable Incoming Webhooks
 3. Add webhook URL to env: `SLACK_WEBHOOK_COMPENSATION_ALERTS`
 
 **Code** (lib/alerting/slack.ts):
+
 ```typescript
 export async function sendSlackAlert(message: string, severity: 'critical' | 'warning') {
   const webhookUrl = process.env.SLACK_WEBHOOK_COMPENSATION_ALERTS;
@@ -348,11 +360,13 @@ export async function sendSlackAlert(message: string, severity: 'critical' | 'wa
 ### 6.3 PagerDuty Integration (P0 only)
 
 **Setup**:
+
 1. Create PagerDuty service: https://app.pagerduty.com
 2. Get Integration Key
 3. Add to env: `PAGERDUTY_INTEGRATION_KEY`
 
 **Trigger** (solo per SLA breach):
+
 ```typescript
 import { EventV2 } from '@pagerduty/pdjs';
 
@@ -381,6 +395,7 @@ export async function triggerPagerDuty(alertData: any) {
 **Endpoint**: `GET /api/cron/compensation-stats-refresh`
 
 **Vercel cron config** (vercel.json):
+
 ```json
 {
   "crons": [
@@ -393,6 +408,7 @@ export async function triggerPagerDuty(alertData: any) {
 ```
 
 **SQL**:
+
 ```sql
 SELECT refresh_compensation_stats();
 ```
@@ -404,6 +420,7 @@ SELECT refresh_compensation_stats();
 **Endpoint**: `GET /api/cron/compensation-auto-retry`
 
 **Logic**:
+
 1. Fetch pending records con `retry_count < 3`
 2. Exponential backoff: retry dopo `2^retry_count` ore
 3. Call `retry_compensation(id)`
@@ -418,6 +435,7 @@ SELECT refresh_compensation_stats();
 **Endpoint**: `GET /api/cron/compensation-alerting`
 
 **Logic**:
+
 1. Call `get_compensation_alerts()`
 2. Per ogni alert:
    - Se CRITICAL → PagerDuty + Slack + Email
@@ -432,6 +450,7 @@ SELECT refresh_compensation_stats();
 **URL**: `/admin/compensation-queue`
 
 **Features**:
+
 - 📊 Stats overview (pending, resolved, dead letter)
 - 📋 Table con pending records (sortable, filterable)
 - 🔄 Manual retry button
@@ -499,6 +518,7 @@ SELECT mark_compensation_resolved(
 **Response time**: Immediate (on-call)
 
 **Steps**:
+
 1. **Verify**: Check Grafana dashboard per confirm alert
 2. **Assess**: Query pending records, check `original_cost`
 3. **Triage**:
@@ -521,6 +541,7 @@ SELECT mark_compensation_resolved(
 **Response time**: 4 hours
 
 **Steps**:
+
 1. **Check**: Dashboard per verify trend (spike or sustained?)
 2. **Identify pattern**:
    - Specific carrier failing? (error_context)
@@ -537,6 +558,7 @@ SELECT mark_compensation_resolved(
 **Response time**: 24 hours
 
 **Steps**:
+
 1. **Review records**: Check `dead_letter_reason`
 2. **Manual refund**: Non-automatable (max retries failed)
 3. **Update system**: Se common failure pattern → fix + redeploy
@@ -553,16 +575,15 @@ npm run test:compensation-queue
 ```
 
 **Script** (scripts/test-compensation-queue.ts):
+
 ```typescript
 // Create test record
-const { data, error } = await supabase
-  .from('compensation_queue')
-  .insert({
-    user_id: testUserId,
-    action: 'REFUND',
-    original_cost: 10.00,
-    status: 'pending',
-  });
+const { data, error } = await supabase.from('compensation_queue').insert({
+  user_id: testUserId,
+  action: 'REFUND',
+  original_cost: 10.0,
+  status: 'pending',
+});
 
 // Verify stats update
 const stats = await fetch('/api/admin/compensation-queue/stats');

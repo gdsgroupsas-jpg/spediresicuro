@@ -1,6 +1,6 @@
 /**
  * Componente: Anne Pilot Modal
- * 
+ *
  * Modal per la chat con Anne, Executive Business Partner.
  * Design moderno con supporto voice input e quick actions.
  */
@@ -79,7 +79,7 @@ export function PilotModal({
       content: isVoice ? `[VOX]${messageText}` : messageText,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
     setError(null);
@@ -95,10 +95,12 @@ export function PilotModal({
 
       // ⚠️ Leggi il testo prima di fare parse JSON per evitare "Unexpected end of JSON input"
       const responseText = await response.text();
-      
+
       // Verifica che ci sia contenuto
       if (!responseText || responseText.trim().length === 0) {
-        throw new Error('Risposta vuota dal server. Verifica che il server sia in esecuzione e che ANTHROPIC_API_KEY sia configurata.');
+        throw new Error(
+          'Risposta vuota dal server. Verifica che il server sia in esecuzione e che ANTHROPIC_API_KEY sia configurata.'
+        );
       }
 
       // Prova a fare parse JSON
@@ -114,13 +116,15 @@ export function PilotModal({
       if (!response.ok) {
         // ⚠️ Mostra dettagli errore in sviluppo
         const errorMessage = data.error || data.message || 'Errore sconosciuto';
-        const errorDetails = data.details ? `\n\nDettagli: ${JSON.stringify(data.details, null, 2)}` : '';
+        const errorDetails = data.details
+          ? `\n\nDettagli: ${JSON.stringify(data.details, null, 2)}`
+          : '';
         const errorHint = data.hint ? `\n\n💡 ${data.hint}` : '';
-        
+
         throw new Error(`${errorMessage}${errorDetails}${errorHint}`);
       }
 
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
@@ -131,7 +135,7 @@ export function PilotModal({
       console.error('Error sending message:', error);
       setError(error.message || 'Errore di connessione');
 
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
@@ -150,51 +154,53 @@ export function PilotModal({
     }
   };
 
-  const quickActions = userRole === 'admin'
-    ? [
-        {
-          icon: <TrendingUp size={16} />,
-          label: '📊 Analizza business',
-          action: 'Analizza il business dell\'ultimo mese con confronto periodo precedente',
-        },
-        {
-          icon: <AlertCircle size={16} />,
-          label: '⚠️ Check sistema',
-          action: 'Controlla gli ultimi errori di sistema e dimmi se ci sono criticità',
-        },
-        {
-          icon: <Package size={16} />,
-          label: '💰 Report fatturato',
-          action: 'Genera report fatturato mese corrente con breakdown per corriere',
-        },
-        {
-          icon: <Sparkles size={16} />,
-          label: '💡 Suggerimenti',
-          action: 'Dammi 3 suggerimenti operativi per ottimizzare margini basandoti sui dati attuali',
-        },
-      ]
-    : [
-        {
-          icon: <Package size={16} />,
-          label: '📦 Nuova spedizione',
-          action: 'Voglio spedire un pacco, aiutami a calcolare il costo',
-        },
-        {
-          icon: <TrendingUp size={16} />,
-          label: '📊 Le mie spedizioni',
-          action: 'Fammi un riepilogo delle mie spedizioni questo mese',
-        },
-        {
-          icon: <AlertCircle size={16} />,
-          label: '🔍 Traccia pacco',
-          action: 'Voglio tracciare una spedizione',
-        },
-        {
-          icon: <Sparkles size={16} />,
-          label: '💰 Calcola costo',
-          action: 'Calcola il costo per una spedizione',
-        },
-      ];
+  const quickActions =
+    userRole === 'admin'
+      ? [
+          {
+            icon: <TrendingUp size={16} />,
+            label: '📊 Analizza business',
+            action: "Analizza il business dell'ultimo mese con confronto periodo precedente",
+          },
+          {
+            icon: <AlertCircle size={16} />,
+            label: '⚠️ Check sistema',
+            action: 'Controlla gli ultimi errori di sistema e dimmi se ci sono criticità',
+          },
+          {
+            icon: <Package size={16} />,
+            label: '💰 Report fatturato',
+            action: 'Genera report fatturato mese corrente con breakdown per corriere',
+          },
+          {
+            icon: <Sparkles size={16} />,
+            label: '💡 Suggerimenti',
+            action:
+              'Dammi 3 suggerimenti operativi per ottimizzare margini basandoti sui dati attuali',
+          },
+        ]
+      : [
+          {
+            icon: <Package size={16} />,
+            label: '📦 Nuova spedizione',
+            action: 'Voglio spedire un pacco, aiutami a calcolare il costo',
+          },
+          {
+            icon: <TrendingUp size={16} />,
+            label: '📊 Le mie spedizioni',
+            action: 'Fammi un riepilogo delle mie spedizioni questo mese',
+          },
+          {
+            icon: <AlertCircle size={16} />,
+            label: '🔍 Traccia pacco',
+            action: 'Voglio tracciare una spedizione',
+          },
+          {
+            icon: <Sparkles size={16} />,
+            label: '💰 Calcola costo',
+            action: 'Calcola il costo per una spedizione',
+          },
+        ];
 
   if (!isOpen) return null;
 
@@ -251,7 +257,8 @@ export function PilotModal({
                   <Sparkles className="text-purple-500 mt-1" size={24} />
                   <div>
                     <p className="text-gray-800 leading-relaxed font-medium">
-                      👋 Ciao <strong>{userName}</strong>! Sono Anne, il tuo Executive Business Partner.
+                      👋 Ciao <strong>{userName}</strong>! Sono Anne, il tuo Executive Business
+                      Partner.
                     </p>
                     <p className="text-gray-600 text-sm mt-2">
                       {userRole === 'admin'
@@ -317,7 +324,9 @@ export function PilotModal({
                     : 'bg-gray-100 text-gray-900 border border-gray-200'
                 }`}
               >
-                <div className={`prose prose-sm max-w-none ${message.role === 'user' ? 'prose-invert' : ''}`}>
+                <div
+                  className={`prose prose-sm max-w-none ${message.role === 'user' ? 'prose-invert' : ''}`}
+                >
                   <ReactMarkdown>{message.content.replace('[VOX]', '')}</ReactMarkdown>
                 </div>
               </div>
@@ -329,9 +338,18 @@ export function PilotModal({
               <div className="bg-gray-100 rounded-2xl px-5 py-3 border border-gray-200">
                 <div className="flex items-center gap-3">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div
+                      className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style={{ animationDelay: '0ms' }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style={{ animationDelay: '150ms' }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style={{ animationDelay: '300ms' }}
+                    ></div>
                   </div>
                   <span className="text-sm text-gray-500 font-medium">Anne sta pensando...</span>
                 </div>
@@ -397,8 +415,3 @@ export function PilotModal({
     </div>
   );
 }
-
-
-
-
-

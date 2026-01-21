@@ -32,11 +32,13 @@ git push origin master
 ### 3. Verifica
 
 Dopo deploy, testa:
+
 ```bash
 curl https://tuo-dominio.vercel.app/api/test-supabase
 ```
 
 Dovresti vedere:
+
 ```json
 {
   "isConfigured": true,

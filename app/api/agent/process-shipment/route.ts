@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logisticsGraph } from '@/lib/agent/orchestrator/graph';
 import { HumanMessage } from '@langchain/core/messages';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 
 export const maxDuration = 60; // Allow longer timeout for agent execution (OCR + LLM)
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const { image, text, options } = await request.json();
@@ -24,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Initialize State
+    // 1. Initialize State - use target for business operations (supports impersonation)
     const initialState = {
       messages: [
         new HumanMessage({
@@ -36,8 +33,8 @@ export async function POST(request: NextRequest) {
       validationErrors: [],
       confidenceScore: 0,
       needsHumanReview: false,
-      userEmail: session.user.email,
-      userId: session.user.id || '', // Fallback if ID is missing in session type
+      userEmail: context.target.email || '',
+      userId: context.target.id || '',
     };
 
     // 2. Run Graph
@@ -56,13 +53,12 @@ export async function POST(request: NextRequest) {
       // Debug info
       selectedCourier: finalState.selectedCourier,
     });
-
   } catch (error: any) {
     console.error('Agent Execution Error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Errore interno dell\'agente',
+        error: error.message || "Errore interno dell'agente",
       },
       { status: 500 }
     );

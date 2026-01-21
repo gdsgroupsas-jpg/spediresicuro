@@ -1,11 +1,11 @@
 /**
  * Diagnostica Email Confirmation
- * 
+ *
  * Verifica:
  * 1. Configurazione Supabase Auth (Enable email confirmations ON/OFF)
  * 2. admin.createUser(email_confirm: false) -> confirmation_sent_at
  * 3. auth.signUp (flusso reale) -> confirmation_sent_at
- * 
+ *
  * Output binario: ON/OFF, NULL/non-NULL per entrambi i metodi
  */
 
@@ -59,12 +59,12 @@ interface TestResult {
 
 async function diagnoseEmailConfirmation() {
   console.log('🔍 Diagnostica Email Confirmation\n');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('');
 
   // 1. Verifica configurazione Auth (se possibile via API)
   console.log('1️⃣  Verifica configurazione Supabase Auth...\n');
-  
+
   // Nota: Non c'è API diretta per verificare "Enable email confirmations"
   // Dobbiamo inferirlo dal comportamento
   console.log('⚠️  Nota: Non esiste API per verificare "Enable email confirmations"');
@@ -124,21 +124,27 @@ async function diagnoseEmailConfirmation() {
   console.log('');
 
   // Attendi breve momento
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // Verifica stato dopo attesa (potrebbe essere aggiornato)
   if (result1.userId) {
     try {
-      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      const {
+        data: { users },
+        error: listError,
+      } = await supabaseAdmin.auth.admin.listUsers();
       if (!listError && users) {
         const user = users.find((u: any) => u.id === result1.userId);
         if (user) {
           // Aggiorna con valori più recenti
           result1.confirmation_sent_at = user.confirmation_sent_at || null;
           result1.email_confirmed_at = user.email_confirmed_at || null;
-          
+
           if (user.confirmation_sent_at && !result1.confirmation_sent_at) {
-            console.log('ℹ️  confirmation_sent_at aggiornato dopo attesa:', user.confirmation_sent_at);
+            console.log(
+              'ℹ️  confirmation_sent_at aggiornato dopo attesa:',
+              user.confirmation_sent_at
+            );
           }
         }
       }
@@ -197,20 +203,26 @@ async function diagnoseEmailConfirmation() {
   console.log('');
 
   // Attendi breve momento
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // Verifica stato dopo attesa
   if (result2.userId) {
     try {
-      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      const {
+        data: { users },
+        error: listError,
+      } = await supabaseAdmin.auth.admin.listUsers();
       if (!listError && users) {
         const user = users.find((u: any) => u.id === result2.userId);
         if (user) {
           result2.confirmation_sent_at = user.confirmation_sent_at || null;
           result2.email_confirmed_at = user.email_confirmed_at || null;
-          
+
           if (user.confirmation_sent_at && !result2.confirmation_sent_at) {
-            console.log('ℹ️  confirmation_sent_at aggiornato dopo attesa:', user.confirmation_sent_at);
+            console.log(
+              'ℹ️  confirmation_sent_at aggiornato dopo attesa:',
+              user.confirmation_sent_at
+            );
           }
         }
       }
@@ -220,9 +232,9 @@ async function diagnoseEmailConfirmation() {
   }
 
   console.log('');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('📊 RISULTATI DIAGNOSTICA');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('');
 
   // Output binario
@@ -235,11 +247,15 @@ async function diagnoseEmailConfirmation() {
   console.log(`   Email: ${result1.email}`);
   console.log(`   Success: ${result1.success ? '✅' : '❌'}`);
   if (result1.success) {
-    console.log(`   confirmation_sent_at: ${result1.confirmation_sent_at ? '✅ NON-NULL' : '❌ NULL'}`);
+    console.log(
+      `   confirmation_sent_at: ${result1.confirmation_sent_at ? '✅ NON-NULL' : '❌ NULL'}`
+    );
     if (result1.confirmation_sent_at) {
       console.log(`   Timestamp: ${result1.confirmation_sent_at}`);
     }
-    console.log(`   email_confirmed_at: ${result1.email_confirmed_at ? '✅ NON-NULL' : '✅ NULL (atteso)'}`);
+    console.log(
+      `   email_confirmed_at: ${result1.email_confirmed_at ? '✅ NON-NULL' : '✅ NULL (atteso)'}`
+    );
   } else {
     console.log(`   Error: ${result1.error}`);
   }
@@ -249,20 +265,24 @@ async function diagnoseEmailConfirmation() {
   console.log(`   Email: ${result2.email}`);
   console.log(`   Success: ${result2.success ? '✅' : '❌'}`);
   if (result2.success) {
-    console.log(`   confirmation_sent_at: ${result2.confirmation_sent_at ? '✅ NON-NULL' : '❌ NULL'}`);
+    console.log(
+      `   confirmation_sent_at: ${result2.confirmation_sent_at ? '✅ NON-NULL' : '❌ NULL'}`
+    );
     if (result2.confirmation_sent_at) {
       console.log(`   Timestamp: ${result2.confirmation_sent_at}`);
     }
-    console.log(`   email_confirmed_at: ${result2.email_confirmed_at ? '✅ NON-NULL' : '✅ NULL (atteso)'}`);
+    console.log(
+      `   email_confirmed_at: ${result2.email_confirmed_at ? '✅ NON-NULL' : '✅ NULL (atteso)'}`
+    );
   } else {
     console.log(`   Error: ${result2.error}`);
   }
   console.log('');
 
   // Analisi
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('🔍 ANALISI');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('');
 
   if (!result1.success && !result2.success) {
@@ -320,4 +340,3 @@ diagnoseEmailConfirmation()
     console.error('❌ Errore fatale:', error);
     process.exit(1);
   });
-

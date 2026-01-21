@@ -1,33 +1,43 @@
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { X, Wallet, Download, Loader2 } from 'lucide-react'
+import { useState, useTransition } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { X, Wallet, Download, Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
-import { useBulkWalletOperation } from '@/lib/queries/use-all-users'
-import { bulkWalletOperationSchema, type BulkWalletOperationInput } from '@/lib/validations/wallet-schema'
-import { formatCurrency, cn } from '@/lib/utils'
+import { useBulkWalletOperation } from '@/lib/queries/use-all-users';
+import {
+  bulkWalletOperationSchema,
+  type BulkWalletOperationInput,
+} from '@/lib/validations/wallet-schema';
+import { formatCurrency, cn } from '@/lib/utils';
 
 interface User {
-  id: string
-  name: string
-  email: string
-  wallet_balance: number
+  id: string;
+  name: string;
+  email: string;
+  wallet_balance: number;
 }
 
 interface BulkActionsBarProps {
-  selectedCount: number
-  selectedUsers: User[]
-  onClearSelection: () => void
-  onSuccess?: () => void
+  selectedCount: number;
+  selectedUsers: User[];
+  onClearSelection: () => void;
+  onSuccess?: () => void;
 }
 
 export function BulkActionsBar({
@@ -36,9 +46,9 @@ export function BulkActionsBar({
   onClearSelection,
   onSuccess,
 }: BulkActionsBarProps) {
-  const [showRechargeDialog, setShowRechargeDialog] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const bulkWalletMutation = useBulkWalletOperation()
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const bulkWalletMutation = useBulkWalletOperation();
 
   const form = useForm<Omit<BulkWalletOperationInput, 'userIds'>>({
     resolver: zodResolver(bulkWalletOperationSchema.omit({ userIds: true })),
@@ -46,11 +56,17 @@ export function BulkActionsBar({
       amount: 0,
       reason: '',
     },
-  })
+  });
 
-  const { register, handleSubmit, formState: { errors }, reset, watch } = form
-  const amount = watch('amount')
-  const totalAmount = amount * selectedCount
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+  } = form;
+  const amount = watch('amount');
+  const totalAmount = amount * selectedCount;
 
   async function onSubmit(data: Omit<BulkWalletOperationInput, 'userIds'>) {
     startTransition(async () => {
@@ -59,45 +75,40 @@ export function BulkActionsBar({
           userIds: selectedUsers.map((u) => u.id),
           amount: data.amount,
           reason: data.reason,
-        })
+        });
 
         if (result.failed > 0) {
           toast.warning(
             `${result.successful}/${result.total} operazioni completate. ${result.failed} fallite.`
-          )
+          );
         } else {
-          toast.success(`Tutte le ${result.total} operazioni completate con successo!`)
+          toast.success(`Tutte le ${result.total} operazioni completate con successo!`);
         }
 
-        reset()
-        setShowRechargeDialog(false)
-        onSuccess?.()
+        reset();
+        setShowRechargeDialog(false);
+        onSuccess?.();
       } catch (error: any) {
-        toast.error(error.message || 'Errore nella ricarica massiva')
+        toast.error(error.message || 'Errore nella ricarica massiva');
       }
-    })
+    });
   }
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Nome', 'Email', 'Saldo Wallet']
-    const rows = selectedUsers.map((u) => [
-      u.id,
-      u.name,
-      u.email,
-      u.wallet_balance.toString(),
-    ])
+    const headers = ['ID', 'Nome', 'Email', 'Saldo Wallet'];
+    const rows = selectedUsers.map((u) => [u.id, u.name, u.email, u.wallet_balance.toString()]);
 
-    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `utenti-selezionati-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `utenti-selezionati-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
 
-    toast.success(`Esportati ${selectedCount} utenti`)
-  }
+    toast.success(`Esportati ${selectedCount} utenti`);
+  };
 
   return (
     <>
@@ -159,11 +170,12 @@ export function BulkActionsBar({
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
             {/* Preview Utenti */}
             <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Utenti interessati:
-              </p>
+              <p className="text-sm font-medium text-gray-700 mb-2">Utenti interessati:</p>
               <p className="text-sm text-gray-600">
-                {selectedUsers.slice(0, 3).map((u) => u.name).join(', ')}
+                {selectedUsers
+                  .slice(0, 3)
+                  .map((u) => u.name)
+                  .join(', ')}
                 {selectedUsers.length > 3 && ` (+${selectedUsers.length - 3} altri)`}
               </p>
             </div>
@@ -186,9 +198,7 @@ export function BulkActionsBar({
                   €
                 </span>
               </div>
-              {errors.amount && (
-                <p className="text-xs text-red-500">{errors.amount.message}</p>
-              )}
+              {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
             </div>
 
             {/* Total Preview */}
@@ -196,9 +206,7 @@ export function BulkActionsBar({
               <div className="rounded-lg bg-green-50 border border-green-200 p-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-green-700">Totale operazione</span>
-                  <span className="font-bold text-green-700">
-                    {formatCurrency(totalAmount)}
-                  </span>
+                  <span className="font-bold text-green-700">{formatCurrency(totalAmount)}</span>
                 </div>
                 <p className="text-xs text-green-600 mt-1">
                   {formatCurrency(amount)} × {selectedCount} utenti
@@ -217,9 +225,7 @@ export function BulkActionsBar({
                 disabled={isPending}
                 rows={2}
               />
-              {errors.reason && (
-                <p className="text-xs text-red-500">{errors.reason.message}</p>
-              )}
+              {errors.reason && <p className="text-xs text-red-500">{errors.reason.message}</p>}
             </div>
 
             <DialogFooter className="pt-2">
@@ -240,5 +246,5 @@ export function BulkActionsBar({
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

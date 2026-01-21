@@ -2,10 +2,10 @@
  * Test DIRETTO delle API - USANDO L'ENDPOINT CORRETTO PER OGNI CONFIG
  */
 
-import { decryptCredential, isEncrypted } from "@/lib/security/encryption";
-import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
-config({ path: ".env.local" });
+import { decryptCredential, isEncrypted } from '@/lib/security/encryption';
+import { createClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,19 +13,17 @@ const supabase = createClient(
 );
 
 async function testWithCorrectEndpoints() {
-  console.log(
-    "\n🔬 TEST DIRETTO API - CON ENDPOINT CORRETTO PER OGNI CONFIG\n"
-  );
-  console.log("Ogni account Spedisci.Online ha il suo endpoint dedicato!\n");
+  console.log('\n🔬 TEST DIRETTO API - CON ENDPOINT CORRETTO PER OGNI CONFIG\n');
+  console.log('Ogni account Spedisci.Online ha il suo endpoint dedicato!\n');
 
   // Recupera le config con i loro endpoint
   const { data: configs } = await supabase
-    .from("courier_configs")
-    .select("name, api_key, base_url")
-    .eq("owner_user_id", "904dc243-e9da-408d-8c0b-5dbe2a48b739");
+    .from('courier_configs')
+    .select('name, api_key, base_url')
+    .eq('owner_user_id', '904dc243-e9da-408d-8c0b-5dbe2a48b739');
 
   for (const cfg of configs || []) {
-    console.log("═".repeat(60));
+    console.log('═'.repeat(60));
     console.log(`📡 Config: ${cfg.name}`);
     console.log(`   Endpoint: ${cfg.base_url}`);
 
@@ -43,20 +41,20 @@ async function testWithCorrectEndpoints() {
     const payload = {
       packages: [{ length: 30, width: 20, height: 15, weight: 2 }],
       shipFrom: {
-        name: "Test",
-        street1: "Via Roma 1",
-        city: "Roma",
-        state: "RM",
-        postalCode: "00100",
-        country: "IT",
+        name: 'Test',
+        street1: 'Via Roma 1',
+        city: 'Roma',
+        state: 'RM',
+        postalCode: '00100',
+        country: 'IT',
       },
       shipTo: {
-        name: "Test",
-        street1: "Via Milano 1",
-        city: "Milano",
-        state: "MI",
-        postalCode: "20100",
-        country: "IT",
+        name: 'Test',
+        street1: 'Via Milano 1',
+        city: 'Milano',
+        state: 'MI',
+        postalCode: '20100',
+        country: 'IT',
       },
     };
 
@@ -64,9 +62,9 @@ async function testWithCorrectEndpoints() {
       console.log(`\n   🌐 POST ${url}`);
 
       const response = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
@@ -78,16 +76,10 @@ async function testWithCorrectEndpoints() {
 
       if (response.ok) {
         const data = JSON.parse(text);
-        console.log(
-          `   ✅ SUCCESSO! Rates ricevuti: ${data.data?.length || 0}`
-        );
+        console.log(`   ✅ SUCCESSO! Rates ricevuti: ${data.data?.length || 0}`);
         if (data.data?.length > 0) {
-          const carriers = [
-            ...new Set(
-              data.data.map((r: any) => r.carrier_code || r.carrierCode)
-            ),
-          ];
-          console.log(`   📦 Corrieri: ${carriers.join(", ")}`);
+          const carriers = [...new Set(data.data.map((r: any) => r.carrier_code || r.carrierCode))];
+          console.log(`   📦 Corrieri: ${carriers.join(', ')}`);
         }
       } else {
         console.log(`   ❌ ERRORE: ${text}`);

@@ -27,18 +27,22 @@ CREATE TABLE price_list_assignments (
 ```
 
 **Funzioni RPC disponibili:**
+
 - `assign_price_list(p_price_list_id, p_user_id, p_notes)` → UUID (assignment_id)
 - `revoke_price_list_assignment(p_assignment_id)` → BOOLEAN
 
 **Vista ottimizzata:**
+
 - `v_active_assignments` - Join con price_lists e users per query rapide
 
 ### File Implementati
 
 #### 1. Server Actions
+
 **File:** `actions/price-list-assignments.ts`
 
 **Funzioni:**
+
 ```typescript
 // Assegna listino a utente
 assignPriceListToUser(priceListId: string, userId: string, notes?: string)
@@ -58,14 +62,17 @@ listAssignablePriceLists()
 ```
 
 **Sicurezza:**
+
 - Tutte le funzioni verificano permessi superadmin
 - Chiamano RPC functions per validazioni DB e audit trail
 - Gestiscono errori con messaggi user-friendly
 
 #### 2. Dialog React
+
 **File:** `components/admin/manage-price-list-assignments-dialog.tsx`
 
 **Caratteristiche:**
+
 - Mostra listini già assegnati con pulsante rimuovi
 - Form per assegnare nuovo listino (dropdown + note opzionali)
 - Loading states durante operazioni async
@@ -73,17 +80,21 @@ listAssignablePriceLists()
 - Filtra listini già assegnati dal dropdown
 
 #### 3. API Overview
+
 **File:** `app/api/admin/overview/route.ts`
 
 **Modifica:**
+
 - Aggiunta query aggregata per conteggio listini assegnati
 - Campo `price_lists_count` aggiunto a ogni user object
 - Performance: 1 query aggregata invece di N query
 
 #### 4. Dashboard Admin
+
 **File:** `app/dashboard/admin/page.tsx`
 
 **Modifiche:**
+
 - Nuova colonna "Listini Personalizzati" nella tabella utenti
 - Badge cliccabile che mostra count listini (blu se > 0, grigio se 0)
 - Dialog integrato per gestione assegnazioni
@@ -123,14 +134,17 @@ listAssignablePriceLists()
 ### Destinatari Ammessi
 
 **SÌ - Possono ricevere assegnazioni:**
+
 - ✅ Reseller (is_reseller = true, parent_user_id = null)
 - ✅ Clienti diretti (utenti normali, parent_user_id = null)
 
 **NO - Non possono ricevere assegnazioni:**
+
 - ❌ Sub-utenti dei reseller (parent_user_id != null)
 - ❌ Utenti di test (filtrati automaticamente)
 
 **Logica filtro:**
+
 ```typescript
 const canReceiveAssignments = !user.parent_user_id;
 ```
@@ -138,11 +152,13 @@ const canReceiveAssignments = !user.parent_user_id;
 ### Listini Assegnabili
 
 **Criteri:**
+
 - `list_type` IN ('custom', 'supplier')
 - `status` = 'active'
 - Non già assegnato all'utente (filtrato in UI)
 
 **Esclusi:**
+
 - Listini global (sempre visibili a tutti)
 - Listini draft o archived
 - Listini già assegnati (per evitare duplicati)
@@ -169,6 +185,7 @@ CREATE POLICY pla_insert ON price_list_assignments FOR INSERT
 ### Server Actions
 
 Ogni funzione verifica:
+
 1. Autenticazione (session attiva)
 2. Permessi superadmin (account_type = 'superadmin')
 3. Validazione input (UUID validi, campi obbligatori)
@@ -176,6 +193,7 @@ Ogni funzione verifica:
 ### Audit Trail
 
 Tracciato automaticamente:
+
 - `assigned_by` - ID superadmin che ha creato l'assegnazione
 - `assigned_at` - Timestamp assegnazione
 - `revoked_by` - ID superadmin che ha revocato (se applicabile)
@@ -183,6 +201,7 @@ Tracciato automaticamente:
 - `notes` - Note dell'assegnazione
 
 **Query audit:**
+
 ```sql
 SELECT * FROM v_active_assignments
 WHERE user_id = '<user_id>';
@@ -193,6 +212,7 @@ WHERE user_id = '<user_id>';
 ### Query Aggregata
 
 **Prima (N query):**
+
 ```typescript
 // Per ogni utente
 const count = await supabase
@@ -202,6 +222,7 @@ const count = await supabase
 ```
 
 **Dopo (1 query aggregata):**
+
 ```typescript
 // Singola query per tutti gli utenti
 const assignmentCounts = await supabase
@@ -211,12 +232,13 @@ const assignmentCounts = await supabase
 
 // Aggregazione in-memory
 const countsMap = new Map();
-assignmentCounts.forEach(a => {
+assignmentCounts.forEach((a) => {
   countsMap.set(a.user_id, (countsMap.get(a.user_id) || 0) + 1);
 });
 ```
 
 **Benefici:**
+
 - ✅ Riduce carico DB (1 query invece di N)
 - ✅ Scalabile con migliaia di utenti
 - ✅ Compatibile con paginazione esistente (20 utenti/pagina)
@@ -224,6 +246,7 @@ assignmentCounts.forEach(a => {
 ### Indici Database
 
 Ottimizzazioni già implementate (migration 070):
+
 ```sql
 CREATE INDEX idx_pla_price_list_id ON price_list_assignments(price_list_id);
 CREATE INDEX idx_pla_user_id ON price_list_assignments(user_id);
@@ -239,11 +262,13 @@ CREATE UNIQUE INDEX idx_pla_unique_active
 ### Stati UI
 
 **Badge:**
+
 - Grigio "Nessuno" → nessun listino assegnato
 - Blu "N Listini" → uno o più listini assegnati
 - Grigio "N/A" → sub-utente (non ammesso)
 
 **Dialog:**
+
 - Loading spinner durante fetch iniziale
 - Skeleton durante assegnazione/rimozione
 - Pulsanti disabilitati durante operazioni
@@ -252,10 +277,12 @@ CREATE UNIQUE INDEX idx_pla_unique_active
 ### Toast Notifications
 
 **Success:**
+
 - "Listino assegnato con successo"
 - "Assegnazione rimossa con successo"
 
 **Error:**
+
 - "Questo listino è già assegnato a questo utente"
 - "Assegnazione non trovata o già rimossa"
 - "Solo i superadmin possono gestire le assegnazioni listini"
@@ -265,18 +292,23 @@ CREATE UNIQUE INDEX idx_pla_unique_active
 Il sistema supporta **due meccanismi** di assegnazione:
 
 ### 1. Legacy (1:1)
+
 **Campo:** `price_lists.assigned_to_user_id`
+
 - Assegnazione diretta 1:1
 - Ancora funzionante
 - Non gestito da questa UI
 
 ### 2. Nuovo (N:N)
+
 **Tabella:** `price_list_assignments`
+
 - Assegnazioni multiple
 - Gestito da questa UI
 - Audit trail completo
 
 **RLS Policy supporta entrambi:**
+
 ```sql
 -- Utente vede listino se:
 assigned_to_user_id = auth.uid()  -- Legacy
@@ -347,11 +379,12 @@ SELECT * FROM v_active_assignments;
 **Causa:** Cache non aggiornata dopo assegnazione/rimozione
 
 **Soluzione:**
+
 ```typescript
 // In onSuccess callback del dialog
-fetch("/api/admin/overview")
-  .then(res => res.json())
-  .then(data => {
+fetch('/api/admin/overview')
+  .then((res) => res.json())
+  .then((data) => {
     if (data.success) setUsers(data.users || []);
   });
 ```
@@ -365,11 +398,13 @@ fetch("/api/admin/overview")
 ### Problema: Utente non vede listino assegnato
 
 **Causa possibile:**
+
 1. RLS policy non aggiornata
 2. Assegnazione revocata (`revoked_at` != null)
 3. Listino non attivo (`status` != 'active')
 
 **Verifica:**
+
 ```sql
 -- Controlla assegnazione
 SELECT * FROM price_list_assignments

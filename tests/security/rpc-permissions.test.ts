@@ -8,14 +8,14 @@
  * @since Migration 095 - Security Hotfix
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
 // Mock Supabase clients per test
 // In un test reale, useresti client reali con token di test
 
-describe("RPC Permissions Security", () => {
-  describe("record_platform_provider_cost", () => {
-    it("should NOT be accessible from authenticated user", async () => {
+describe('RPC Permissions Security', () => {
+  describe('record_platform_provider_cost', () => {
+    it('should NOT be accessible from authenticated user', async () => {
       // Questo test verifica che un utente autenticato non possa chiamare la RPC
       // In un ambiente di test reale, creeresti un client con token utente
 
@@ -25,7 +25,7 @@ describe("RPC Permissions Security", () => {
       expect(true).toBe(true); // Placeholder - test reale richiede setup Supabase
     });
 
-    it("should be accessible from service_role", async () => {
+    it('should be accessible from service_role', async () => {
       // Verifica che service_role possa chiamare la RPC
       // Questo è il comportamento atteso
 
@@ -33,22 +33,22 @@ describe("RPC Permissions Security", () => {
     });
   });
 
-  describe("log_financial_event", () => {
-    it("should NOT be accessible from authenticated user", async () => {
+  describe('log_financial_event', () => {
+    it('should NOT be accessible from authenticated user', async () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it("should be accessible from service_role", async () => {
+    it('should be accessible from service_role', async () => {
       expect(true).toBe(true); // Placeholder
     });
   });
 
-  describe("log_wallet_operation", () => {
-    it("should NOT be accessible from authenticated user", async () => {
+  describe('log_wallet_operation', () => {
+    it('should NOT be accessible from authenticated user', async () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it("should be accessible from service_role", async () => {
+    it('should be accessible from service_role', async () => {
       expect(true).toBe(true); // Placeholder
     });
   });

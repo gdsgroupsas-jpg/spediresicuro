@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 interface DataTableSkeletonProps {
-  rows?: number
-  columns?: number
-  showHeader?: boolean
-  className?: string
+  rows?: number;
+  columns?: number;
+  showHeader?: boolean;
+  className?: string;
 }
 
 /**
@@ -51,7 +51,7 @@ export function DataTableSkeleton({
         </tbody>
       </table>
     </div>
-  )
+  );
 }
 
 /**
@@ -75,7 +75,7 @@ export function StatsCardsSkeleton({ count = 4 }: { count?: number }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 /**
@@ -86,9 +86,12 @@ export function RowSkeleton({ columns = 5 }: { columns?: number }) {
     <tr className="bg-white animate-pulse">
       {Array.from({ length: columns }).map((_, i) => (
         <td key={i} className="px-4 py-4">
-          <div className="h-4 bg-gray-100 rounded" style={{ width: `${60 + Math.random() * 30}%` }} />
+          <div
+            className="h-4 bg-gray-100 rounded"
+            style={{ width: `${60 + Math.random() * 30}%` }}
+          />
         </td>
       ))}
     </tr>
-  )
+  );
 }

@@ -11,10 +11,10 @@
  * Riferimento: supabase/migrations/058_rls_courier_configs_reseller_isolation.sql
  */
 
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // Assicura che si usi il client reale e non un mock ereditato da altri test
-vi.unmock("@/lib/db/client");
+vi.unmock('@/lib/db/client');
 
 // Rimuoviamo import top-level che potrebbe usare la versione mockata
 // import { supabaseAdmin } from "@/lib/db/client";
@@ -22,18 +22,18 @@ vi.unmock("@/lib/db/client");
 // Definizione interfaccia per il client Supabase (semplificata per il test)
 type SupabaseClient = any;
 
-import * as dotenv from "dotenv";
-import path from "path";
+import * as dotenv from 'dotenv';
+import path from 'path';
 
 // Carica variabili d'ambiente
 try {
-  const envPath = path.resolve(process.cwd(), ".env.local");
+  const envPath = path.resolve(process.cwd(), '.env.local');
   dotenv.config({ path: envPath });
 } catch (error) {
-  console.warn("⚠️ Impossibile caricare .env.local");
+  console.warn('⚠️ Impossibile caricare .env.local');
 }
 
-describe("RLS Policies - Isolamento Multi-Tenant", () => {
+describe('RLS Policies - Isolamento Multi-Tenant', () => {
   let resellerAId: string;
   let resellerBId: string;
   let byocAId: string;
@@ -47,15 +47,15 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
 
   beforeAll(async () => {
     // IMPORTANTE: Usiamo importActual per scavalcare qualsiasi mock globale/leaked
-    const dbModule = await vi.importActual<any>("@/lib/db/client");
+    const dbModule = await vi.importActual<any>('@/lib/db/client');
     supabaseAdmin = dbModule.supabaseAdmin;
 
     // Verifica se Supabase è configurato
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes("mock")) {
-      console.warn("⚠️ Supabase non configurato - test verranno saltati");
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('mock')) {
+      console.warn('⚠️ Supabase non configurato - test verranno saltati');
       return;
     }
 
@@ -64,68 +64,63 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const { data: resellerA } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .insert({
         email: `test-rls-reseller-a-${suffix}@test.local`,
-        name: "Reseller A Test",
-        account_type: "user",
+        name: 'Reseller A Test',
+        account_type: 'user',
         is_reseller: true,
-        role: "user",
+        role: 'user',
         wallet_balance: 0,
       })
       .select()
       .single();
 
     const { data: resellerB } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .insert({
         email: `test-rls-reseller-b-${suffix}@test.local`,
-        name: "Reseller B Test",
-        account_type: "user",
+        name: 'Reseller B Test',
+        account_type: 'user',
         is_reseller: true,
-        role: "user",
+        role: 'user',
         wallet_balance: 0,
       })
       .select()
       .single();
 
     const { data: byocA } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .insert({
         email: `test-rls-byoc-a-${suffix}@test.local`,
-        name: "BYOC A Test",
-        account_type: "byoc",
+        name: 'BYOC A Test',
+        account_type: 'byoc',
         is_reseller: false,
-        role: "user",
+        role: 'user',
         wallet_balance: 0,
       })
       .select()
       .single();
 
     const { data: admin } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .insert({
         email: `test-rls-admin-${suffix}@test.local`,
-        name: "Admin Test",
-        account_type: "admin",
+        name: 'Admin Test',
+        account_type: 'admin',
         is_reseller: false,
-        role: "admin",
+        role: 'admin',
         wallet_balance: 0,
       })
       .select()
       .single();
 
     if (!resellerA || !resellerB || !byocA || !admin) {
-      throw new Error(
-        "Errore creazione utenti test: " +
-          JSON.stringify({ resellerA, resellerB })
-      );
+      throw new Error('Errore creazione utenti test: ' + JSON.stringify({ resellerA, resellerB }));
     }
 
     if (resellerA.id === resellerB.id) {
-      throw new Error(
-        `FATAL: User IDs are identical (${resellerA.id})! Mock leakage detected.`
-      );
+      throw new Error(`FATAL: User IDs are identical (${resellerA.id})! Mock leakage detected.`);
     }
 
     resellerAId = resellerA.id;
@@ -135,67 +130,67 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
 
     // Crea configurazioni di test
     const { data: configA } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .insert({
-        name: "Config Reseller A",
-        provider_id: "spedisci_online",
+        name: 'Config Reseller A',
+        provider_id: 'spedisci_online',
         owner_user_id: resellerAId,
         is_active: true,
         is_default: false,
-        api_key: "enc:test-key-a",
-        base_url: "https://api.test.local",
-        contract_mapping: { GLS: "CODE-A" },
+        api_key: 'enc:test-key-a',
+        base_url: 'https://api.test.local',
+        contract_mapping: { GLS: 'CODE-A' },
       })
       .select()
       .single();
 
     const { data: configB } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .insert({
-        name: "Config Reseller B",
-        provider_id: "spedisci_online",
+        name: 'Config Reseller B',
+        provider_id: 'spedisci_online',
         owner_user_id: resellerBId,
         is_active: true,
         is_default: false,
-        api_key: "enc:test-key-b",
-        base_url: "https://api.test.local",
-        contract_mapping: { GLS: "CODE-B" },
+        api_key: 'enc:test-key-b',
+        base_url: 'https://api.test.local',
+        contract_mapping: { GLS: 'CODE-B' },
       })
       .select()
       .single();
 
     const { data: configByoc } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .insert({
-        name: "Config BYOC A",
-        provider_id: "spedisci_online",
+        name: 'Config BYOC A',
+        provider_id: 'spedisci_online',
         owner_user_id: byocAId,
         is_active: true,
         is_default: false,
-        api_key: "enc:test-key-byoc",
-        base_url: "https://api.test.local",
-        contract_mapping: { BRT: "CODE-BYOC" },
+        api_key: 'enc:test-key-byoc',
+        base_url: 'https://api.test.local',
+        contract_mapping: { BRT: 'CODE-BYOC' },
       })
       .select()
       .single();
 
     const { data: configDef } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .insert({
-        name: "Config Default",
-        provider_id: "spedisci_online",
+        name: 'Config Default',
+        provider_id: 'spedisci_online',
         owner_user_id: null, // Default
         is_active: true,
         is_default: true,
-        api_key: "enc:test-key-default",
-        base_url: "https://api.test.local",
-        contract_mapping: { GLS: "CODE-DEFAULT" },
+        api_key: 'enc:test-key-default',
+        base_url: 'https://api.test.local',
+        contract_mapping: { GLS: 'CODE-DEFAULT' },
       })
       .select()
       .single();
 
     if (!configA || !configB || !configByoc || !configDef) {
-      throw new Error("Errore creazione configurazioni test");
+      throw new Error('Errore creazione configurazioni test');
     }
 
     configResellerA = configA.id;
@@ -211,27 +206,22 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
     // Cleanup
     if (configResellerA) {
       await supabaseAdmin
-        .from("courier_configs")
+        .from('courier_configs')
         .delete()
-        .in("id", [
-          configResellerA,
-          configResellerB,
-          configByocA,
-          configDefault,
-        ]);
+        .in('id', [configResellerA, configResellerB, configByocA, configDefault]);
     }
     if (resellerAId) {
       await supabaseAdmin
-        .from("users")
+        .from('users')
         .delete()
-        .in("id", [resellerAId, resellerBId, byocAId, adminId]);
+        .in('id', [resellerAId, resellerBId, byocAId, adminId]);
     }
   });
 
-  describe("SELECT Policy - Isolamento", () => {
-    it("Reseller A dovrebbe vedere SOLO la propria config", async () => {
+  describe('SELECT Policy - Isolamento', () => {
+    it('Reseller A dovrebbe vedere SOLO la propria config', async () => {
       if (!resellerAId || !configResellerA) {
-        console.log("⏭️ Test saltato: setup incompleto");
+        console.log('⏭️ Test saltato: setup incompleto');
         return;
       }
 
@@ -269,9 +259,9 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
       expect(canSeeConfig(byocAId, false, resellerAId, false)).toBe(false); // Config BYOC A
     });
 
-    it("Admin dovrebbe vedere TUTTE le config", async () => {
+    it('Admin dovrebbe vedere TUTTE le config', async () => {
       if (!adminId) {
-        console.log("⏭️ Test saltato: setup incompleto");
+        console.log('⏭️ Test saltato: setup incompleto');
         return;
       }
 
@@ -294,7 +284,7 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
       expect(canSeeConfig(null, true, adminId, true)).toBe(true);
     });
 
-    it("Config default dovrebbe essere visibile a tutti", async () => {
+    it('Config default dovrebbe essere visibile a tutti', async () => {
       function canSeeConfig(
         configOwnerId: string | null,
         isDefault: boolean,
@@ -314,13 +304,11 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
     });
   });
 
-  describe("INSERT Policy", () => {
-    it("Reseller può creare SOLO config per se stesso", () => {
+  describe('INSERT Policy', () => {
+    it('Reseller può creare SOLO config per se stesso', () => {
       // Guard: Setup verification
       if (!resellerAId || !resellerBId) {
-        console.log(
-          "⏭️ Test saltato: setup incompleto (Reseller IDs mancanti)"
-        );
+        console.log('⏭️ Test saltato: setup incompleto (Reseller IDs mancanti)');
         return;
       }
 
@@ -342,22 +330,16 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
       }
 
       // Reseller può creare per se stesso
-      expect(
-        canInsertConfig(resellerAId, resellerAId, false, true, false)
-      ).toBe(true);
+      expect(canInsertConfig(resellerAId, resellerAId, false, true, false)).toBe(true);
 
       // Reseller NON può creare per altri
-      expect(
-        canInsertConfig(resellerBId, resellerAId, false, true, false)
-      ).toBe(false);
+      expect(canInsertConfig(resellerBId, resellerAId, false, true, false)).toBe(false);
     });
 
-    it("BYOC può creare SOLO config per se stesso", () => {
+    it('BYOC può creare SOLO config per se stesso', () => {
       // Guard: Setup verification
       if (!byocAId || !resellerAId) {
-        console.log(
-          "⏭️ Test saltato: setup incompleto (BYOC/Reseller IDs mancanti)"
-        );
+        console.log('⏭️ Test saltato: setup incompleto (BYOC/Reseller IDs mancanti)');
         return;
       }
 
@@ -382,16 +364,14 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
       expect(canInsertConfig(byocAId, byocAId, false, false, true)).toBe(true);
 
       // BYOC NON può creare per altri
-      expect(canInsertConfig(resellerAId, byocAId, false, false, true)).toBe(
-        false
-      );
+      expect(canInsertConfig(resellerAId, byocAId, false, false, true)).toBe(false);
     });
   });
 
-  describe("UPDATE Policy", () => {
-    it("Reseller può aggiornare SOLO le proprie config", () => {
+  describe('UPDATE Policy', () => {
+    it('Reseller può aggiornare SOLO le proprie config', () => {
       if (!resellerAId || !resellerBId) {
-        console.log("⏭️ Test saltato: setup incompleto");
+        console.log('⏭️ Test saltato: setup incompleto');
         return;
       }
 
@@ -412,9 +392,9 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
       expect(canUpdateConfig(resellerBId, resellerAId, false)).toBe(false);
     });
 
-    it("NON può cambiare owner_user_id a altro utente", () => {
+    it('NON può cambiare owner_user_id a altro utente', () => {
       if (!resellerAId || !resellerBId) {
-        console.log("⏭️ Test saltato: setup incompleto");
+        console.log('⏭️ Test saltato: setup incompleto');
         return;
       }
 
@@ -433,21 +413,17 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
       }
 
       // Reseller A NON può cambiare owner a Reseller B
-      expect(canChangeOwner(resellerAId, resellerBId, resellerAId, false)).toBe(
-        false
-      );
+      expect(canChangeOwner(resellerAId, resellerBId, resellerAId, false)).toBe(false);
 
       // Reseller A può cambiare owner a se stesso (no-op)
-      expect(canChangeOwner(resellerAId, resellerAId, resellerAId, false)).toBe(
-        true
-      );
+      expect(canChangeOwner(resellerAId, resellerAId, resellerAId, false)).toBe(true);
     });
   });
 
-  describe("DELETE Policy", () => {
-    it("Reseller può eliminare SOLO le proprie config", () => {
+  describe('DELETE Policy', () => {
+    it('Reseller può eliminare SOLO le proprie config', () => {
       if (!resellerAId || !resellerBId) {
-        console.log("⏭️ Test saltato: setup incompleto");
+        console.log('⏭️ Test saltato: setup incompleto');
         return;
       }
 
@@ -469,4 +445,3 @@ describe("RLS Policies - Isolamento Multi-Tenant", () => {
     });
   });
 });
-

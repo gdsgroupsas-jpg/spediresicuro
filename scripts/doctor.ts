@@ -13,17 +13,17 @@ const DEBOUNCE_MS = 2000; // Wait 2s after last error line before analyzing
 const REMOTE_POLL_MS = 10000; // Poll remote diagnostics every 10s
 const IGNORED_ERRORS = [
   'ELIFECYCLE', // Generic npm error
-  'warnings',   // Skip warnings for now
+  'warnings', // Skip warnings for now
 ];
 
 const EXTERNAL_ERROR_KEYWORDS = [
-  'timeout', 
-  '502 Bad Gateway', 
-  'ECONNRESET', 
-  'Spedisci.Online', 
+  'timeout',
+  '502 Bad Gateway',
+  'ECONNRESET',
+  'Spedisci.Online',
   'Google API',
   'socket hang up',
-  'ETIMEDOUT'
+  'ETIMEDOUT',
 ];
 
 // Supabase Setup
@@ -46,7 +46,9 @@ let devProcess: ChildProcess | null = null;
 // ==========================================
 
 function isExternalError(errorLog: string): boolean {
-  return EXTERNAL_ERROR_KEYWORDS.some(keyword => errorLog.toLowerCase().includes(keyword.toLowerCase()));
+  return EXTERNAL_ERROR_KEYWORDS.some((keyword) =>
+    errorLog.toLowerCase().includes(keyword.toLowerCase())
+  );
 }
 
 function gitExec(command: string) {
@@ -73,7 +75,11 @@ function checkBranchExists(branchName: string): boolean {
  * Executes a function safely within an isolated git branch.
  * Returns true if successful, false otherwise.
  */
-async function runIdeallyInIsolation(correlationId: string, errorType: string, operation: () => Promise<boolean>): Promise<boolean> {
+async function runIdeallyInIsolation(
+  correlationId: string,
+  errorType: string,
+  operation: () => Promise<boolean>
+): Promise<boolean> {
   const timestamp = new Date().getTime();
   const safeId = (correlationId || 'unknown').slice(0, 8);
   const branchName = `fix/doctor-${safeId}-${timestamp}`;
@@ -82,18 +88,22 @@ async function runIdeallyInIsolation(correlationId: string, errorType: string, o
   try {
     const existingBranches = gitExec('git branch --list "fix/doctor-*"');
     if (existingBranches && existingBranches.includes(`fix/doctor-${safeId}`)) {
-      console.log(`🛡️ [ANTIGRAVITY] Fix branch for ${safeId} already exists. Aborting to avoid loops.`);
+      console.log(
+        `🛡️ [ANTIGRAVITY] Fix branch for ${safeId} already exists. Aborting to avoid loops.`
+      );
       return false;
     }
-  } catch(e) {}
+  } catch (e) {}
 
   console.log(`🌿 [ANTIGRAVITY] Isolating workspace...`);
-  
+
   // Save current branch name
   let originalBranch = 'main';
   try {
     originalBranch = gitExec('git rev-parse --abbrev-ref HEAD') || 'main';
-  } catch(e) { console.warn('⚠️ Could not determine current branch, assuming main'); }
+  } catch (e) {
+    console.warn('⚠️ Could not determine current branch, assuming main');
+  }
 
   let stashed = false;
   try {
@@ -116,7 +126,9 @@ async function runIdeallyInIsolation(correlationId: string, errorType: string, o
       console.log('⚠️ Operation failed or no fix needed. Rolling back...');
       gitExec(`git checkout ${originalBranch}`);
       if (stashed) gitExec('git stash pop');
-      try { gitExec(`git branch -D ${branchName}`); } catch(e) {}
+      try {
+        gitExec(`git branch -D ${branchName}`);
+      } catch (e) {}
       return false;
     }
 
@@ -128,19 +140,18 @@ async function runIdeallyInIsolation(correlationId: string, errorType: string, o
     console.log('📦 Committing fix...');
     gitExec('git add .');
     gitExec(`git commit -m "FIX(Doctor): Auto-healing for error ${safeId} (${errorType})"`);
-    
+
     console.log('🚀 Pushing to origin...');
     try {
       gitExec(`git push origin ${branchName}`);
       console.log(`✅ [ANTIGRAVITY] Fix pushed to ${branchName}. Waiting for review.`);
-      
+
       // Notify (Log for now)
       console.log(`📢 ACTION REQUIRED: Review and merge branch '${branchName}'`);
     } catch (e: any) {
       console.error(`❌ Push failed (maybe no remote?): ${e.message}`);
       // Don't rollback if push fails, user can check local branch
     }
-
   } catch (e: any) {
     console.error(`❌ [ANTIGRAVITY] Critical Failure:`, e);
     // Emergency Rollback
@@ -159,18 +170,17 @@ async function runIdeallyInIsolation(correlationId: string, errorType: string, o
         console.log(`🔙 Returning to ${originalBranch}...`);
         gitExec(`git checkout ${originalBranch}`);
         if (stashed) {
-            console.log('📦 Restoring user stash...');
-            gitExec('git stash pop');
+          console.log('📦 Restoring user stash...');
+          gitExec('git stash pop');
         }
       }
-    } catch (e) { 
-        // ignore errors during final restore assumption 
+    } catch (e) {
+      // ignore errors during final restore assumption
     }
   }
 
   return true;
 }
-
 
 /**
  * LOCAL WARD: Watch `npm run dev`
@@ -182,7 +192,7 @@ function startLocalWard() {
   devProcess = spawn('npm', ['run', 'dev'], {
     shell: true,
     stdio: 'pipe',
-    env: { ...process.env, FORCE_COLOR: 'true' }
+    env: { ...process.env, FORCE_COLOR: 'true' },
   });
 
   if (!devProcess.stdout || !devProcess.stderr) {
@@ -213,10 +223,10 @@ function handleOutput(chunk: string) {
   // Check for error keywords
   if (chunk.includes('Error:') || chunk.includes('Failed to compile')) {
     errorBuffer += chunk;
-    
+
     // Debounce detection logic
     if (debounceTimer) clearTimeout(debounceTimer);
-    
+
     debounceTimer = setTimeout(() => {
       analyzeLocalExpection();
     }, DEBOUNCE_MS);
@@ -225,14 +235,14 @@ function handleOutput(chunk: string) {
 
 async function analyzeLocalExpection() {
   if (isFixing || !errorBuffer) return;
-  
+
   const currentError = errorBuffer;
   errorBuffer = ''; // Reset buffer immediately
-  
+
   console.log('\n🔍 [DOCTOR] Detected error burst. Analyzing...');
 
   const culpritFile = extractFileFromError(currentError);
-  
+
   if (!culpritFile) {
     console.log('   ⚠️ No file context found. Waiting for next error.');
     return;
@@ -240,13 +250,13 @@ async function analyzeLocalExpection() {
 
   // Check if file was recently modified (avoid race condition with user typing)
   try {
-      const stats = fs.statSync(culpritFile);
-      const msSinceModified = Date.now() - stats.mtimeMs;
-      if (msSinceModified < 2000) {
-        console.log('   ⚠️ File was just modified by user. Skipping fix to avoid conflict.');
-        return;
-      }
-  } catch(e) {}
+    const stats = fs.statSync(culpritFile);
+    const msSinceModified = Date.now() - stats.mtimeMs;
+    if (msSinceModified < 2000) {
+      console.log('   ⚠️ File was just modified by user. Skipping fix to avoid conflict.');
+      return;
+    }
+  } catch (e) {}
 
   isFixing = true;
   await attemptFix(currentError, culpritFile, false); // Local ward applies directly for now (dev speed)
@@ -261,7 +271,7 @@ async function startRemoteWard() {
     console.warn('⚠️ [DOCTOR] Remote Ward disabled: Supabase not configured.');
     return;
   }
-  
+
   console.log('📡 [DOCTOR] Starting Remote Ward (Polling diagnostics_events)...');
 
   setInterval(async () => {
@@ -282,17 +292,18 @@ async function startRemoteWard() {
       if (data && data.length > 0) {
         const event = data[0];
         console.log(`\n📡 [DOCTOR] Received REMOTE error: ${event.type} (${event.id})`);
-        
+
         // 1. External Service Check (Triage)
-        const contextStr = typeof event.context === 'string' 
-            ? event.context 
-            : JSON.stringify(event.context);
+        const contextStr =
+          typeof event.context === 'string' ? event.context : JSON.stringify(event.context);
 
         if (isExternalError(contextStr)) {
-            console.log('🛡️ [ANTIGRAVITY] Error deemed external (network/timeout). No code fix required.');
-            // Mark as handled to ignore
-            // await supabase.from('diagnostics_events').update({ handled: true }).eq('id', event.id);
-            return;
+          console.log(
+            '🛡️ [ANTIGRAVITY] Error deemed external (network/timeout). No code fix required.'
+          );
+          // Mark as handled to ignore
+          // await supabase.from('diagnostics_events').update({ handled: true }).eq('id', event.id);
+          return;
         }
 
         const culpritFile = extractFileFromError(contextStr);
@@ -300,18 +311,18 @@ async function startRemoteWard() {
         if (culpritFile) {
           isFixing = true;
           console.log(`   Context points to ${path.basename(culpritFile)}`);
-          
+
           // ANTIGRAVITY PROTOCOL for Remote Errors
           await runIdeallyInIsolation(event.correlation_id || event.id, event.type, async () => {
-             return await attemptFix(contextStr, culpritFile, true); 
+            return await attemptFix(contextStr, culpritFile, true);
           });
 
           // Mark as handled
           // await supabase.from('diagnostics_events').update({ handled: true }).eq('id', event.id);
-          
+
           isFixing = false;
         } else {
-            console.log('   ⚠️ No file context in remote error. Skipping.');
+          console.log('   ⚠️ No file context in remote error. Skipping.');
         }
       }
     } catch (e) {
@@ -337,16 +348,16 @@ async function attemptFix(errorLog: string, filePath: string, isRemote: boolean)
     }
 
     if (!isRemote) {
-        // Local mode: Backup and Apply directly
-        fs.writeFileSync(`${filePath}.bak`, fileContent);
-        fs.writeFileSync(filePath, fixedContent);
-        console.log(`✅ [DOCTOR] SURGERY SUCCESSFUL! Fixed ${path.basename(filePath)}`);
+      // Local mode: Backup and Apply directly
+      fs.writeFileSync(`${filePath}.bak`, fileContent);
+      fs.writeFileSync(filePath, fixedContent);
+      console.log(`✅ [DOCTOR] SURGERY SUCCESSFUL! Fixed ${path.basename(filePath)}`);
     } else {
-        // Remote mode (Antigravity): Just apply to current branch (which is already isolated)
-        fs.writeFileSync(filePath, fixedContent);
-        console.log(`✅ [DOCTOR] Fixed applied to branch.`);
+      // Remote mode (Antigravity): Just apply to current branch (which is already isolated)
+      fs.writeFileSync(filePath, fixedContent);
+      console.log(`✅ [DOCTOR] Fixed applied to branch.`);
     }
-    
+
     return true;
   } catch (e) {
     console.error('❌ [DOCTOR] Surgery failed:', e);
@@ -359,11 +370,11 @@ async function attemptFix(errorLog: string, filePath: string, isRemote: boolean)
  */
 function main() {
   const mode = process.argv[2] || '--all';
-  
+
   if (mode === '--all' || mode === '--local') {
     startLocalWard();
   }
-  
+
   if (mode === '--all' || mode === '--remote') {
     startRemoteWard();
   }

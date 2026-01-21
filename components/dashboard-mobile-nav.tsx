@@ -16,17 +16,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import {
-  Home,
-  Package,
-  Plus,
-  Mail,
-  Menu,
-  X,
-  LogOut,
-  ChevronRight,
-  User,
-} from 'lucide-react';
+import { Home, Package, Plus, Mail, Menu, X, LogOut, ChevronRight, User } from 'lucide-react';
 import {
   getNavigationForUser,
   isNavItemActive,
@@ -129,7 +119,9 @@ export default function DashboardMobileNav() {
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Home className={`w-6 h-6 transition-all ${isActive('/dashboard') && pathname === '/dashboard' ? 'fill-orange-600 drop-shadow-md' : ''}`} />
+            <Home
+              className={`w-6 h-6 transition-all ${isActive('/dashboard') && pathname === '/dashboard' ? 'fill-orange-600 drop-shadow-md' : ''}`}
+            />
             <span className="text-[10px] font-semibold">Home</span>
           </Link>
 
@@ -142,7 +134,9 @@ export default function DashboardMobileNav() {
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Package className={`w-6 h-6 transition-all ${isActive('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova' ? 'fill-orange-600 drop-shadow-md' : ''}`} />
+            <Package
+              className={`w-6 h-6 transition-all ${isActive('/dashboard/spedizioni') && pathname !== '/dashboard/spedizioni/nuova' ? 'fill-orange-600 drop-shadow-md' : ''}`}
+            />
             <span className="text-[10px] font-semibold">Spedizioni</span>
           </Link>
 
@@ -151,11 +145,13 @@ export default function DashboardMobileNav() {
             href="/dashboard/spedizioni/nuova"
             className="flex flex-col items-center gap-1 -mt-4"
           >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 transform ${
-              isActive('/dashboard/spedizioni/nuova')
-                ? 'bg-gradient-to-br from-orange-600 to-amber-600 scale-110 rotate-6'
-                : 'bg-gradient-to-br from-orange-500 to-amber-500 hover:scale-110 hover:rotate-3'
-            }`}>
+            <div
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 transform ${
+                isActive('/dashboard/spedizioni/nuova')
+                  ? 'bg-gradient-to-br from-orange-600 to-amber-600 scale-110 rotate-6'
+                  : 'bg-gradient-to-br from-orange-500 to-amber-500 hover:scale-110 hover:rotate-3'
+              }`}
+            >
               <Plus className="w-7 h-7 text-white drop-shadow-lg" strokeWidth={3} />
             </div>
             <span className="text-[10px] font-bold text-orange-600 mt-1">Nuova</span>
@@ -170,7 +166,9 @@ export default function DashboardMobileNav() {
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <Mail className={`w-6 h-6 transition-all ${isActive('/dashboard/posta') ? 'fill-orange-600 drop-shadow-md' : ''}`} />
+            <Mail
+              className={`w-6 h-6 transition-all ${isActive('/dashboard/posta') ? 'fill-orange-600 drop-shadow-md' : ''}`}
+            />
             <span className="text-[10px] font-semibold">Posta</span>
           </Link>
 
@@ -228,7 +226,9 @@ export default function DashboardMobileNav() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-200">
-                  {session.user?.name?.[0]?.toUpperCase() || session.user?.email?.[0]?.toUpperCase() || 'U'}
+                  {session.user?.name?.[0]?.toUpperCase() ||
+                    session.user?.email?.[0]?.toUpperCase() ||
+                    'U'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-orange-600 transition-colors">
@@ -323,9 +323,7 @@ export default function DashboardMobileNav() {
 
             {/* Footer con versione */}
             <div className="p-6 border-t border-gray-100 text-center">
-              <p className="text-xs text-gray-400">
-                SpediRe Sicuro Dashboard v2.0
-              </p>
+              <p className="text-xs text-gray-400">SpediRe Sicuro Dashboard v2.0</p>
             </div>
           </div>
         </>

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const createShipmentSchema = z.object({
   sender: z.object({
@@ -11,7 +11,7 @@ export const createShipmentSchema = z.object({
     postalCode: z.string().min(1, 'CAP mittente obbligatorio'),
     country: z.string().default('IT'),
     phone: z.string().optional(),
-    email: z.string().email('Email mittente non valida')
+    email: z.string().email('Email mittente non valida'),
   }),
   recipient: z.object({
     name: z.string().min(1, 'Nome destinatario obbligatorio'),
@@ -23,29 +23,38 @@ export const createShipmentSchema = z.object({
     postalCode: z.string().min(1, 'CAP destinatario obbligatorio'),
     country: z.string().default('IT'),
     phone: z.string().optional(),
-    email: z.string().email('Email destinatario non valida').optional()
+    email: z.string().email('Email destinatario non valida').optional(),
   }),
-  packages: z.array(z.object({
-    length: z.number().positive('Lunghezza deve essere positiva'),
-    width: z.number().positive('Larghezza deve essere positiva'),
-    height: z.number().positive('Altezza deve essere positiva'),
-    weight: z.number().positive('Peso deve essere positivo')
-  })).min(1, 'Almeno un pacco richiesto'),
-  insurance: z.object({
-    value: z.number().nonnegative('Valore assicurazione non valido')
-  }).optional(),
-  cod: z.object({
-    value: z.number().nonnegative('Valore contrassegno non valido')
-  }).optional(),
+  packages: z
+    .array(
+      z.object({
+        length: z.number().positive('Lunghezza deve essere positiva'),
+        width: z.number().positive('Larghezza deve essere positiva'),
+        height: z.number().positive('Altezza deve essere positiva'),
+        weight: z.number().positive('Peso deve essere positivo'),
+      })
+    )
+    .min(1, 'Almeno un pacco richiesto'),
+  insurance: z
+    .object({
+      value: z.number().nonnegative('Valore assicurazione non valido'),
+    })
+    .optional(),
+  cod: z
+    .object({
+      value: z.number().nonnegative('Valore contrassegno non valido'),
+    })
+    .optional(),
   notes: z.string().optional(),
-  provider: z.enum(['spediscionline', 'poste_native', 'gls_native', 'brt_native']).default('spediscionline'),
+  provider: z
+    .enum(['spediscionline', 'poste_native', 'gls_native', 'brt_native'])
+    .default('spediscionline'),
   carrier: z.enum(['GLS', 'POSTE', 'BRT', 'UPS', 'DHL', 'SDA', 'TNT', 'FEDEX']),
-  contract_id: z.string().optional(),  // Se user ha più contratti stesso corriere
-  configId: z.string().optional(),  // ID configurazione API specifica (per multi-config)
+  contract_id: z.string().optional(), // Se user ha più contratti stesso corriere
+  configId: z.string().optional(), // ID configurazione API specifica (per multi-config)
   // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
-  vat_mode: z.enum(['included', 'excluded']).optional().nullable(),  // NULL = legacy (assume 'excluded')
-  vat_rate: z.number().positive().optional()  // Default 22.0 se non specificato
-})
+  vat_mode: z.enum(['included', 'excluded']).optional().nullable(), // NULL = legacy (assume 'excluded')
+  vat_rate: z.number().positive().optional(), // Default 22.0 se non specificato
+});
 
-export type CreateShipmentInput = z.infer<typeof createShipmentSchema>
-
+export type CreateShipmentInput = z.infer<typeof createShipmentSchema>;

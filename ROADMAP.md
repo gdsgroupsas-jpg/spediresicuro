@@ -341,7 +341,6 @@ Features are prioritized using RICE framework:
 
 1. Check if feature is already listed (above or in [GitHub Issues](https://github.com/gdsgroupsas-jpg/spediresicuro/issues))
 2. If not, create a new issue with template:
-
    - **Problem:** What problem does this solve?
    - **Solution:** How would you solve it?
    - **Alternatives:** What alternatives did you consider?

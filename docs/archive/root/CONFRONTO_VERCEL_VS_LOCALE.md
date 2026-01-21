@@ -28,6 +28,7 @@ Queste variabili sono già configurate correttamente:
 **Su Vercel manca:** `AUTOMATION_SERVICE_TOKEN` ❌
 
 **Spiegazione:**
+
 - `AUTOMATION_SERVICE_URL` = URL del servizio automation separato (Railway)
   - Esempio: `https://automation-service.railway.app`
   - Serve per chiamare il servizio da Next.js
@@ -38,6 +39,7 @@ Queste variabili sono già configurate correttamente:
   - ❌ **MANCA su Vercel!**
 
 **Cosa fare:**
+
 - ✅ Mantieni `AUTOMATION_SERVICE_URL` (già presente)
 - ⚠️ **Aggiungi `AUTOMATION_SERVICE_TOKEN`** (manca!)
 
@@ -47,6 +49,7 @@ Queste variabili sono già configurate correttamente:
 **Consigliato:** Production, Preview, Development
 
 **Cosa fare:**
+
 - Aggiungi anche per Preview e Development
 - Per Preview usa: `https://spediresicuro-git-<branch>-gdsgroupsas-6132s.vercel.app`
 - Per Development: `http://localhost:3000` (se usi Vercel CLI)
