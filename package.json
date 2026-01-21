@@ -35,6 +35,8 @@
     "check:rls": "ts-node --project tsconfig.scripts.json scripts/check-supabase-rls.ts",
     "check:email-confirmations": "ts-node --project tsconfig.scripts.json scripts/check-email-confirmations.ts",
     "audit:security": "ts-node --project tsconfig.scripts.json scripts/audit-security.ts",
+    "security:audit": "npm audit --audit-level=high",
+    "security:scan": "npm audit --audit-level=high && npm run audit:security",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:debug": "npx playwright test --debug",
