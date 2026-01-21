@@ -1,112 +1,99 @@
 /**
  * API Route per Gestione Integrazioni
- * 
+ *
  * GET: Recupera tutte le integrazioni dell'utente
  * POST: Salva/aggiorna un'integrazione
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getSafeAuth } from '@/lib/safe-auth'
-import { findUserByEmail, updateUser } from '@/lib/database'
+import { NextRequest, NextResponse } from 'next/server';
+import { getSafeAuth } from '@/lib/safe-auth';
+import { findUserByEmail, updateUser } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getSafeAuth()
+    const context = await getSafeAuth();
 
     if (!context?.actor?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const user = await findUserByEmail(context.actor.email)
+    const user = await findUserByEmail(context.actor.email);
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
     }
 
     // Recupera integrazioni dall'utente (da implementare nel database)
-    const integrations = user.integrazioni || []
+    const integrations = user.integrazioni || [];
 
     return NextResponse.json({
       integrations,
-    })
+    });
   } catch (error: any) {
-    console.error('Errore recupero integrazioni:', error)
+    console.error('Errore recupero integrazioni:', error);
     return NextResponse.json(
       { error: 'Errore durante il recupero delle integrazioni' },
       { status: 500 }
-    )
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await getSafeAuth()
+    const context = await getSafeAuth();
 
     if (!context?.actor?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const user = await findUserByEmail(context.actor.email)
+    const user = await findUserByEmail(context.actor.email);
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
     }
 
-    const body = await request.json()
-    const { platform, credentials } = body
+    const body = await request.json();
+    const { platform, credentials } = body;
 
     if (!platform || !credentials) {
       return NextResponse.json(
         { error: 'Platform e credentials sono obbligatori' },
         { status: 400 }
-      )
+      );
     }
 
     // Salva integrazione (da implementare nel database)
-    const integrations = user.integrazioni || []
-    const existingIndex = integrations.findIndex((i: any) => i.platform === platform)
+    const integrations = user.integrazioni || [];
+    const existingIndex = integrations.findIndex((i: any) => i.platform === platform);
 
     const integration = {
       platform,
       credentials,
       connectedAt: new Date().toISOString(),
       status: 'active' as const,
-    }
+    };
 
     if (existingIndex >= 0) {
-      integrations[existingIndex] = integration
+      integrations[existingIndex] = integration;
     } else {
-      integrations.push(integration)
+      integrations.push(integration);
     }
 
     // Aggiorna utente (da estendere il database per supportare integrazioni)
     await updateUser(user.id, {
       integrazioni: integrations,
-    })
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Integrazione salvata con successo',
       integration,
-    })
+    });
   } catch (error: any) {
-    console.error('Errore salvataggio integrazione:', error)
+    console.error('Errore salvataggio integrazione:', error);
     return NextResponse.json(
-      { error: 'Errore durante il salvataggio dell\'integrazione' },
+      { error: "Errore durante il salvataggio dell'integrazione" },
       { status: 500 }
-    )
+    );
   }
 }
-

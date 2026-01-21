@@ -1,6 +1,6 @@
 /**
  * API Route: Cost Validations (SuperAdmin)
- * 
+ *
  * GET - Lista tutte le validazioni costi (differenze DB vs API)
  */
 

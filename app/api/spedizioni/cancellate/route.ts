@@ -1,8 +1,8 @@
 /**
  * API Route: GET /api/spedizioni/cancellate
- * 
+ *
  * Recupera tutte le spedizioni cancellate (soft delete)
- * 
+ *
  * Filtri:
  * - User normale: vede solo le proprie spedizioni cancellate
  * - Reseller: vede le proprie + quelle dei suoi user
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
   let session: any = null;
-  
+
   try {
     logger.info('GET /api/spedizioni/cancellate - Richiesta spedizioni cancellate');
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         .select('id')
         .eq('parent_id', userId);
 
-      const resellerUserIds = resellerUsers?.map(u => u.id) || [];
+      const resellerUserIds = resellerUsers?.map((u) => u.id) || [];
       const allUserIds = [userId, ...resellerUserIds];
 
       console.log('✅ [CANCELLATE] Reseller: vedo spedizioni di', allUserIds.length, 'user');
@@ -99,7 +99,13 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    console.log('✅ [CANCELLATE] Recuperate', shipments?.length || 0, 'spedizioni cancellate su', count || 0, 'totali');
+    console.log(
+      '✅ [CANCELLATE] Recuperate',
+      shipments?.length || 0,
+      'spedizioni cancellate su',
+      count || 0,
+      'totali'
+    );
 
     return NextResponse.json({
       success: true,
@@ -114,4 +120,3 @@ export async function GET(request: NextRequest) {
     return handleApiError(error, 'GET /api/spedizioni/cancellate', requestId, userId);
   }
 }
-

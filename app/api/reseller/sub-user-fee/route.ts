@@ -10,10 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
-import {
-  setParentImposedFee,
-  getSubUsersWithFees,
-} from '@/lib/services/pricing/platform-fee';
+import { setParentImposedFee, getSubUsersWithFees } from '@/lib/services/pricing/platform-fee';
 
 /**
  * GET /api/reseller/sub-user-fee
@@ -26,10 +23,7 @@ export async function GET() {
     const context = await getSafeAuth();
 
     if (!context?.actor?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const subUsers = await getSubUsersWithFees(context.actor.id);
@@ -41,10 +35,7 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error('[API] GET /reseller/sub-user-fee error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -64,10 +55,7 @@ export async function PUT(request: NextRequest) {
     const context = await getSafeAuth();
 
     if (!context?.actor?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -75,30 +63,18 @@ export async function PUT(request: NextRequest) {
 
     // Validazione input
     if (!childUserId) {
-      return NextResponse.json(
-        { error: 'childUserId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'childUserId is required' }, { status: 400 });
     }
 
     if (fee !== null && typeof fee !== 'number') {
-      return NextResponse.json(
-        { error: 'fee must be a number or null' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'fee must be a number or null' }, { status: 400 });
     }
 
     if (fee !== null && fee < 0) {
-      return NextResponse.json(
-        { error: 'fee cannot be negative' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'fee cannot be negative' }, { status: 400 });
     }
 
-    const result = await setParentImposedFee(
-      { childUserId, fee, notes },
-      context.actor.id
-    );
+    const result = await setParentImposedFee({ childUserId, fee, notes }, context.actor.id);
 
     return NextResponse.json(result);
   } catch (error: any) {
@@ -106,22 +82,13 @@ export async function PUT(request: NextRequest) {
 
     // Errori noti
     if (error.message?.includes('not a sub-user')) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     if (error.message?.includes('Only RESELLER or SUPERADMIN')) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

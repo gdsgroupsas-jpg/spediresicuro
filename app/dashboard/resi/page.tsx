@@ -1,6 +1,6 @@
 /**
  * Server Component: Gestione Resi
- * 
+ *
  * Fetch iniziale server-side con AuthContext + getSpedizioni.
  * Passa dati a Client Component per UI e realtime.
  */

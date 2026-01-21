@@ -62,8 +62,15 @@ export async function PUT(request: NextRequest) {
 
     // Validazione mittente predefinito
     if (defaultSender) {
-      if (!defaultSender.nome || !defaultSender.indirizzo || !defaultSender.citta || !defaultSender.cap) {
-        return ApiErrors.BAD_REQUEST('Dati mittente incompleti. Campi obbligatori: nome, indirizzo, città, CAP');
+      if (
+        !defaultSender.nome ||
+        !defaultSender.indirizzo ||
+        !defaultSender.citta ||
+        !defaultSender.cap
+      ) {
+        return ApiErrors.BAD_REQUEST(
+          'Dati mittente incompleti. Campi obbligatori: nome, indirizzo, città, CAP'
+        );
       }
 
       // Valida CAP italiano (5 cifre)
@@ -73,7 +80,9 @@ export async function PUT(request: NextRequest) {
 
       // Valida provincia (2 lettere)
       if (defaultSender.provincia && !/^[A-Z]{2}$/.test(defaultSender.provincia)) {
-        return ApiErrors.VALIDATION_ERROR('Provincia non valida. Deve essere 2 lettere (es: MI, RM)');
+        return ApiErrors.VALIDATION_ERROR(
+          'Provincia non valida. Deve essere 2 lettere (es: MI, RM)'
+        );
       }
     }
 

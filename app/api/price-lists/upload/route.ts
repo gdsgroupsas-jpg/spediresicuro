@@ -8,12 +8,12 @@
  * - Immagini (screenshot con OCR)
  */
 
-import { getSafeAuth } from "@/lib/safe-auth";
-import { existsSync, mkdirSync } from "fs";
-import { unlink, writeFile } from "fs/promises";
-import { NextRequest, NextResponse } from "next/server";
-import path from "path"; // ✅ FIX P0-3: Import path module
-import crypto from "crypto"; // ✅ FIX P0-3: For secure random filenames
+import { getSafeAuth } from '@/lib/safe-auth';
+import { existsSync, mkdirSync } from 'fs';
+import { unlink, writeFile } from 'fs/promises';
+import { NextRequest, NextResponse } from 'next/server';
+import path from 'path'; // ✅ FIX P0-3: Import path module
+import crypto from 'crypto'; // ✅ FIX P0-3: For secure random filenames
 
 // Limite upload: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -23,16 +23,16 @@ export async function POST(request: NextRequest) {
     // Verifica autenticazione
     const context = await getSafeAuth();
     if (!context?.actor?.email) {
-      return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const priceListId = formData.get("priceListId") as string;
-    const sourceType = (formData.get("sourceType") as string) || "manual";
+    const file = formData.get('file') as File;
+    const priceListId = formData.get('priceListId') as string;
+    const sourceType = (formData.get('sourceType') as string) || 'manual';
 
     if (!file) {
-      return NextResponse.json({ error: "File mancante" }, { status: 400 });
+      return NextResponse.json({ error: 'File mancante' }, { status: 400 });
     }
 
     // Verifica dimensione
@@ -46,34 +46,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica tipo file
-    const fileType = file.type || "";
+    const fileType = file.type || '';
     const fileName = file.name;
-    const fileExtension = fileName.split(".").pop()?.toLowerCase();
+    const fileExtension = fileName.split('.').pop()?.toLowerCase();
 
     const allowedTypes = [
-      "text/csv",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "image/jpg",
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
     ];
 
     if (
       !allowedTypes.includes(fileType) &&
-      !["csv", "xls", "xlsx", "pdf", "jpg", "jpeg", "png"].includes(
-        fileExtension || ""
-      )
+      !['csv', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png'].includes(fileExtension || '')
     ) {
       return NextResponse.json(
-        { error: "Tipo file non supportato. Usa CSV, Excel, PDF o immagini" },
+        { error: 'Tipo file non supportato. Usa CSV, Excel, PDF o immagini' },
         { status: 400 }
       );
     }
 
     // Salva file temporaneo
-    const uploadsDir = path.join(process.cwd(), "uploads", "price-lists");
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'price-lists');
     if (!existsSync(uploadsDir)) {
       mkdirSync(uploadsDir, { recursive: true });
     }
@@ -81,9 +79,9 @@ export async function POST(request: NextRequest) {
     // ✅ FIX P0-3: Enhanced filename sanitization
     // Step 1: Rimuovi caratteri pericolosi
     let sanitizedFileName = fileName
-      .replace(/[^a-zA-Z0-9.-]/g, "_")
-      .replace(/^\.+/, "") // Rimuovi leading dots
-      .replace(/\.+/g, "."); // Replace multiple dots con single dot
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .replace(/^\.+/, '') // Rimuovi leading dots
+      .replace(/\.+/g, '.'); // Replace multiple dots con single dot
 
     // Step 2: Usa solo basename (elimina directory components)
     sanitizedFileName = path.basename(sanitizedFileName);
@@ -99,7 +97,7 @@ export async function POST(request: NextRequest) {
     const safeFileName = sanitizedFileName || `upload-${Date.now()}.dat`;
 
     // ✅ FIX P0-3: Usa random ID invece di timestamp (previene race condition)
-    const randomId = crypto.randomBytes(16).toString("hex");
+    const randomId = crypto.randomBytes(16).toString('hex');
     const tempFileName = `${randomId}-${safeFileName}`;
     const tempFilePath = path.join(uploadsDir, tempFileName);
 
@@ -112,7 +110,7 @@ export async function POST(request: NextRequest) {
         `[SECURITY] Path traversal attempt detected: ${fileName} → ${resolvedUploadPath}`
       );
       return NextResponse.json(
-        { error: "Invalid filename: path traversal attempt detected" },
+        { error: 'Invalid filename: path traversal attempt detected' },
         { status: 400 }
       );
     }
@@ -120,10 +118,7 @@ export async function POST(request: NextRequest) {
     // ✅ FIX P0-3: Verifica che il file non esista già
     if (existsSync(tempFilePath)) {
       console.error(`[SECURITY] File collision detected: ${tempFilePath}`);
-      return NextResponse.json(
-        { error: "File collision detected, please retry" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'File collision detected, please retry' }, { status: 500 });
     }
 
     const bytes = await file.arrayBuffer();
@@ -131,14 +126,11 @@ export async function POST(request: NextRequest) {
 
     // ✅ FIX P0-3: Write atomico con flag 'wx' (fails se file esiste)
     try {
-      await writeFile(tempFilePath, buffer, { flag: "wx" });
+      await writeFile(tempFilePath, buffer, { flag: 'wx' });
     } catch (writeError: any) {
-      if (writeError.code === "EEXIST") {
+      if (writeError.code === 'EEXIST') {
         console.error(`[SECURITY] Race condition in file write: ${tempFilePath}`);
-        return NextResponse.json(
-          { error: "File write collision, please retry" },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'File write collision, please retry' }, { status: 500 });
       }
       throw writeError;
     }
@@ -154,14 +146,14 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      if (fileExtension === "csv") {
+      if (fileExtension === 'csv') {
         parsedData = await parseCSV(tempFilePath);
-      } else if (fileExtension === "xlsx" || fileExtension === "xls") {
+      } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
         parsedData = await parseExcel(tempFilePath);
-      } else if (fileExtension === "pdf") {
+      } else if (fileExtension === 'pdf') {
         parsedData = await parsePDF(tempFilePath);
         metadata.ocrUsed = true;
-      } else if (["jpg", "jpeg", "png"].includes(fileExtension || "")) {
+      } else if (['jpg', 'jpeg', 'png'].includes(fileExtension || '')) {
         parsedData = await parseImageOCR(tempFilePath);
         metadata.ocrUsed = true;
       }
@@ -185,11 +177,8 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error("Errore upload tariffe:", error);
-    return NextResponse.json(
-      { error: error.message || "Errore sconosciuto" },
-      { status: 500 }
-    );
+    console.error('Errore upload tariffe:', error);
+    return NextResponse.json({ error: error.message || 'Errore sconosciuto' }, { status: 500 });
   }
 }
 
@@ -199,14 +188,14 @@ export async function POST(request: NextRequest) {
  * Formula injection characters: = + - @ | % (Excel, Google Sheets, LibreOffice)
  */
 function sanitizeCSVCell(value: string): string {
-  if (!value || typeof value !== "string") {
+  if (!value || typeof value !== 'string') {
     return value;
   }
 
   const trimmed = value.trim();
 
   // Lista di caratteri pericolosi all'inizio della cella
-  const dangerousChars = ["=", "+", "-", "@", "|", "%", "\t", "\r"];
+  const dangerousChars = ['=', '+', '-', '@', '|', '%', '\t', '\r'];
 
   // Se la cella inizia con carattere pericoloso, prefix con apostrofo
   // L'apostrofo disabilita l'esecuzione di formule in Excel/Sheets
@@ -215,7 +204,7 @@ function sanitizeCSVCell(value: string): string {
   }
 
   // Rimuovi carriage return e tab interni (possono causare cell splitting)
-  return trimmed.replace(/[\r\t]/g, " ");
+  return trimmed.replace(/[\r\t]/g, ' ');
 }
 
 /**
@@ -223,28 +212,26 @@ function sanitizeCSVCell(value: string): string {
  * ✅ FIX P0-4: Aggiunta sanitizzazione celle per prevenire formula injection
  */
 async function parseCSV(filePath: string): Promise<any[]> {
-  const fs = await import("fs/promises");
-  const content = await fs.readFile(filePath, "utf-8");
+  const fs = await import('fs/promises');
+  const content = await fs.readFile(filePath, 'utf-8');
 
   // ✅ FIX P0-4: Normalize line endings (handle \r\n, \n, \r)
-  const normalizedContent = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const lines = normalizedContent.split("\n").filter((line) => line.trim());
+  const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalizedContent.split('\n').filter((line) => line.trim());
 
   if (lines.length === 0) return [];
 
   // Estrai header (sanitizza anche gli headers)
-  const headers = lines[0]
-    .split(",")
-    .map((h) => sanitizeCSVCell(h).trim().toLowerCase());
+  const headers = lines[0].split(',').map((h) => sanitizeCSVCell(h).trim().toLowerCase());
 
   // Parse righe
   const rows: any[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(",").map((v) => v.trim());
+    const values = lines[i].split(',').map((v) => v.trim());
     const row: any = {};
     headers.forEach((header, index) => {
       // ✅ FIX P0-4: Sanitize OGNI cella prima di salvarla
-      const rawValue = values[index] || "";
+      const rawValue = values[index] || '';
       row[header] = sanitizeCSVCell(rawValue);
     });
     if (Object.keys(row).length > 0) {
@@ -261,15 +248,15 @@ async function parseCSV(filePath: string): Promise<any[]> {
 async function parseExcel(filePath: string): Promise<any[]> {
   try {
     // Usa ExcelJS (alternativa sicura a xlsx)
-    const ExcelJS = await import("exceljs");
+    const ExcelJS = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
-    
+
     await workbook.xlsx.readFile(filePath);
-    
+
     // Leggi il primo worksheet
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {
-      throw new Error("Nessun worksheet trovato nel file Excel");
+      throw new Error('Nessun worksheet trovato nel file Excel');
     }
 
     // Converti in array di oggetti
@@ -279,14 +266,14 @@ async function parseExcel(filePath: string): Promise<any[]> {
         // Prima riga = header, salta
         return;
       }
-      
+
       const rowData: any = {};
       row.eachCell((cell, colNumber) => {
         const headerCell = worksheet.getRow(1).getCell(colNumber);
         const header = headerCell.value?.toString() || `Column${colNumber}`;
         rowData[header] = cell.value;
       });
-      
+
       if (Object.keys(rowData).length > 0) {
         data.push(rowData);
       }
@@ -294,8 +281,8 @@ async function parseExcel(filePath: string): Promise<any[]> {
 
     return data;
   } catch (error: any) {
-    if (error.message.includes("non installata") || error.message.includes("Cannot find module")) {
-      throw new Error("Libreria exceljs non installata. Esegui: npm install exceljs");
+    if (error.message.includes('non installata') || error.message.includes('Cannot find module')) {
+      throw new Error('Libreria exceljs non installata. Esegui: npm install exceljs');
     }
     throw new Error(`Errore lettura file Excel: ${error.message}`);
   }
@@ -307,7 +294,7 @@ async function parseExcel(filePath: string): Promise<any[]> {
 async function parsePDF(filePath: string): Promise<any[]> {
   // TODO: Implementare OCR PDF con Tesseract o Google Vision
   // Per ora restituisce array vuoto
-  console.warn("Parsing PDF non ancora implementato completamente");
+  console.warn('Parsing PDF non ancora implementato completamente');
   return [];
 }
 
@@ -317,6 +304,6 @@ async function parsePDF(filePath: string): Promise<any[]> {
 async function parseImageOCR(filePath: string): Promise<any[]> {
   // TODO: Implementare OCR immagini con Tesseract
   // Per ora restituisce array vuoto
-  console.warn("OCR immagini non ancora implementato completamente");
+  console.warn('OCR immagini non ancora implementato completamente');
   return [];
 }

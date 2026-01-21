@@ -1,10 +1,10 @@
 /**
  * API Route: Download Invoice XML (FatturaPA)
- * 
+ *
  * GET /api/invoices/[id]/xml
- * 
+ *
  * Scarica XML FatturaPA per una fattura emessa.
- * 
+ *
  * SECURITY:
  * - Verifica autenticazione
  * - Utenti vedono solo proprie fatture
@@ -15,18 +15,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getSafeAuth } from '@/lib/safe-auth';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const context = await getSafeAuth();
 
     if (!context?.actor?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     const invoiceId = params.id;
@@ -34,34 +28,31 @@ export async function GET(
     // Recupera fattura
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
-      .select(`
+      .select(
+        `
         id,
         user_id,
         invoice_number,
         xml_url,
         status,
         user:users(id, email, account_type)
-      `)
+      `
+      )
       .eq('id', invoiceId)
       .single();
 
     if (invoiceError || !invoice) {
-      return NextResponse.json(
-        { error: 'Fattura non trovata' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Fattura non trovata' }, { status: 404 });
     }
 
     // Verifica permessi
-    const isAdmin = (invoice.user as any)?.account_type === 'admin' ||
-                    (invoice.user as any)?.account_type === 'superadmin';
+    const isAdmin =
+      (invoice.user as any)?.account_type === 'admin' ||
+      (invoice.user as any)?.account_type === 'superadmin';
     const isOwner = invoice.user_id === context.actor.id;
 
     if (!isAdmin && !isOwner) {
-      return NextResponse.json(
-        { error: 'Non autorizzato' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
     }
 
     // Verifica che la fattura sia emessa
@@ -91,10 +82,7 @@ export async function GET(
         .download(xmlPath);
 
       if (downloadError || !xmlData) {
-        return NextResponse.json(
-          { error: 'Errore download XML' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Errore download XML' }, { status: 500 });
       }
 
       const arrayBuffer = await xmlData.arrayBuffer();
@@ -115,10 +103,7 @@ export async function GET(
       .download(xmlPath);
 
     if (downloadError || !xmlData) {
-      return NextResponse.json(
-        { error: 'Errore download XML' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Errore download XML' }, { status: 500 });
     }
 
     const arrayBuffer = await xmlData.arrayBuffer();
@@ -132,9 +117,6 @@ export async function GET(
     });
   } catch (error: any) {
     console.error('Errore download XML fattura:', error);
-    return NextResponse.json(
-      { error: error.message || 'Errore sconosciuto' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Errore sconosciuto' }, { status: 500 });
   }
 }

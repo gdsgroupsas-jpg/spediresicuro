@@ -14,10 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
-import {
-  getBusinessMetrics,
-  getQuickStats,
-} from '@/lib/metrics/business-metrics';
+import { getBusinessMetrics, getQuickStats } from '@/lib/metrics/business-metrics';
 import { createLogger } from '@/lib/logger';
 
 // Allowed roles for metrics access
@@ -132,16 +129,14 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Business metrics error', { error: errorMessage });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to fetch metrics',
-        message:
-          process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        message: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
       },
       { status: 500 }
     );

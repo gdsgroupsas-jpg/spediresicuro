@@ -1,6 +1,6 @@
 /**
  * Server Component: Gestione Contrassegni
- * 
+ *
  * Fetch iniziale server-side con AuthContext + getSpedizioni.
  * Passa dati a Client Component per UI e realtime.
  */
@@ -29,41 +29,41 @@ function enrichShipment(shipment: any): CashOnDeliveryShipment {
       const daysSince = Math.floor(
         (Date.now() - new Date(s.delivered_at).getTime()) / (1000 * 60 * 60 * 24)
       );
-      
+
       if (daysSince > 7) {
         return 'paid';
       }
-      
+
       return 'payment_expected';
     }
-    
+
     if (s.status === 'delivered') {
       return 'delivered';
     }
-    
+
     return 'pending';
   }
 
   function calculateExpectedPaymentDate(s: any): string | null {
     if (!s.delivered_at) return null;
-    
+
     const deliveredDate = new Date(s.delivered_at);
     const expectedDate = new Date(deliveredDate);
     expectedDate.setDate(expectedDate.getDate() + 7);
-    
+
     return expectedDate.toISOString();
   }
 
   const contrassegnoInCarica = checkContrassegnoInCarica(shipment);
   const contrassegnoEvaso = checkContrassegnoEvaso(shipment);
-  
+
   let paymentStatus = calculatePaymentStatus(shipment);
   if (contrassegnoEvaso) {
     paymentStatus = 'evaso';
   } else if (contrassegnoInCarica) {
     paymentStatus = 'in_carica';
   }
-  
+
   const expectedPaymentDate = calculateExpectedPaymentDate(shipment);
   const daysSinceDelivery = shipment.delivered_at
     ? Math.floor((Date.now() - new Date(shipment.delivered_at).getTime()) / (1000 * 60 * 60 * 24))

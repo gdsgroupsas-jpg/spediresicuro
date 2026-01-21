@@ -1,6 +1,6 @@
 /**
  * API Route: Verifica se un utente ha accesso a una feature
- * 
+ *
  * GET /api/features/check?feature=ocr_scan
  */
 
@@ -117,13 +117,9 @@ export async function GET(request: NextRequest) {
       });
     } catch (error: any) {
       console.error('Errore verifica feature:', error);
-      return NextResponse.json(
-        { hasAccess: false, reason: error.message },
-        { status: 200 }
-      );
+      return NextResponse.json({ hasAccess: false, reason: error.message }, { status: 200 });
     }
   } catch (error: any) {
     return handleApiError(error, 'GET /api/features/check');
   }
 }
-

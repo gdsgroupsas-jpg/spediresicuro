@@ -1,52 +1,52 @@
 /**
  * Test per Admin Reseller Actions
- * 
+ *
  * Verifica funzionamento getAllClientsForUser() e getSubUsers() aggiornato
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getAllClientsForUser, getSubUsers } from '@/actions/admin-reseller'
-import { supabaseAdmin } from '@/lib/db/client'
-import { getSafeAuth } from '@/lib/safe-auth'
-import { hasCapability } from '@/lib/db/capability-helpers'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getAllClientsForUser, getSubUsers } from '@/actions/admin-reseller';
+import { supabaseAdmin } from '@/lib/db/client';
+import { getSafeAuth } from '@/lib/safe-auth';
+import { hasCapability } from '@/lib/db/capability-helpers';
 
 // Mock dependencies
 vi.mock('@/lib/db/client', () => ({
   supabaseAdmin: {
     from: vi.fn(),
   },
-}))
+}));
 
 vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(),
-}))
+}));
 
 vi.mock('@/lib/db/capability-helpers', () => ({
   hasCapability: vi.fn(),
-}))
+}));
 
 describe('Admin Reseller Actions', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   describe('getAllClientsForUser', () => {
     it('should return error if not authenticated', async () => {
-      ;(getSafeAuth as any).mockResolvedValue(null)
+      (getSafeAuth as any).mockResolvedValue(null);
 
-      const result = await getAllClientsForUser()
+      const result = await getAllClientsForUser();
 
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Non autenticato')
-    })
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Non autenticato');
+    });
 
     it('should return error if user cannot view all clients', async () => {
-      ;(getSafeAuth as any).mockResolvedValue({
+      (getSafeAuth as any).mockResolvedValue({
         actor: { email: 'user@test.com' },
-      })
+      });
 
       // Mock user query
-      ;(supabaseAdmin.from as any).mockReturnValue({
+      (supabaseAdmin.from as any).mockReturnValue({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             single: vi.fn().mockResolvedValue({
@@ -55,20 +55,19 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      })
+      });
+      (hasCapability as any).mockResolvedValue(false);
 
-      ;(hasCapability as any).mockResolvedValue(false)
+      const result = await getAllClientsForUser();
 
-      const result = await getAllClientsForUser()
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Solo Superadmin/Admin')
-    })
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Solo Superadmin/Admin');
+    });
 
     it('should return hierarchical clients for superadmin', async () => {
-      ;(getSafeAuth as any).mockResolvedValue({
+      (getSafeAuth as any).mockResolvedValue({
         actor: { email: 'admin@test.com' },
-      })
+      });
 
       // Mock user query (superadmin)
       const userQuery = {
@@ -80,7 +79,7 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      }
+      };
 
       // Mock resellers query
       const resellersQuery = {
@@ -102,7 +101,7 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      }
+      };
 
       // Mock sub-users query
       const subUsersQuery = {
@@ -126,7 +125,7 @@ describe('Admin Reseller Actions', () => {
             })),
           })),
         })),
-      }
+      };
 
       // Mock BYOC query
       const byocQuery = {
@@ -148,31 +147,31 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      }
+      };
 
-      ;(supabaseAdmin.from as any)
+      (supabaseAdmin.from as any)
         .mockReturnValueOnce(userQuery) // User query
         .mockReturnValueOnce(resellersQuery) // Resellers query
         .mockReturnValueOnce(subUsersQuery) // Sub-users query
-        .mockReturnValueOnce(byocQuery) // BYOC query
+        .mockReturnValueOnce(byocQuery); // BYOC query
 
-      const result = await getAllClientsForUser()
+      const result = await getAllClientsForUser();
 
-      expect(result.success).toBe(true)
-      expect(result.clients).toBeDefined()
-      expect(result.clients?.resellers).toHaveLength(1)
-      expect(result.clients?.byocClients).toHaveLength(1)
-      expect(result.clients?.stats.totalResellers).toBe(1)
-      expect(result.clients?.stats.totalSubUsers).toBe(1)
-      expect(result.clients?.stats.totalBYOC).toBe(1)
-    })
-  })
+      expect(result.success).toBe(true);
+      expect(result.clients).toBeDefined();
+      expect(result.clients?.resellers).toHaveLength(1);
+      expect(result.clients?.byocClients).toHaveLength(1);
+      expect(result.clients?.stats.totalResellers).toBe(1);
+      expect(result.clients?.stats.totalSubUsers).toBe(1);
+      expect(result.clients?.stats.totalBYOC).toBe(1);
+    });
+  });
 
   describe('getSubUsers (updated)', () => {
     it('should return all sub-users for superadmin', async () => {
-      ;(getSafeAuth as any).mockResolvedValue({
+      (getSafeAuth as any).mockResolvedValue({
         actor: { email: 'admin@test.com' },
-      })
+      });
 
       // Mock user query (superadmin)
       const userQuery = {
@@ -184,7 +183,7 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      }
+      };
 
       // Mock all sub-users query (for superadmin - uses .not().eq())
       const allSubUsersQuery = {
@@ -208,27 +207,26 @@ describe('Admin Reseller Actions', () => {
             })),
           })),
         })),
-      }
+      };
 
       // Mock chain: user query (canViewAllClients) -> user query (isCurrentUserReseller) -> all sub-users query
-      ;(supabaseAdmin.from as any)
+      (supabaseAdmin.from as any)
         .mockReturnValueOnce(userQuery) // canViewAllClients - user query
-        .mockReturnValueOnce(userQuery) // isCurrentUserReseller - user query  
-        .mockReturnValueOnce(allSubUsersQuery) // getSubUsers - all sub-users query
+        .mockReturnValueOnce(userQuery) // isCurrentUserReseller - user query
+        .mockReturnValueOnce(allSubUsersQuery); // getSubUsers - all sub-users query
+      (hasCapability as any).mockResolvedValue(true);
 
-      ;(hasCapability as any).mockResolvedValue(true)
+      const result = await getSubUsers();
 
-      const result = await getSubUsers()
-
-      expect(result.success).toBe(true)
-      expect(result.subUsers).toBeDefined()
-      expect(result.subUsers?.length).toBeGreaterThan(0)
-    })
+      expect(result.success).toBe(true);
+      expect(result.subUsers).toBeDefined();
+      expect(result.subUsers?.length).toBeGreaterThan(0);
+    });
 
     it('should return only reseller sub-users for reseller', async () => {
-      ;(getSafeAuth as any).mockResolvedValue({
+      (getSafeAuth as any).mockResolvedValue({
         actor: { email: 'reseller@test.com' },
-      })
+      });
 
       // Mock user queries
       const userQuery1 = {
@@ -240,7 +238,7 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      }
+      };
 
       const userQuery2 = {
         select: vi.fn(() => ({
@@ -251,7 +249,7 @@ describe('Admin Reseller Actions', () => {
             }),
           })),
         })),
-      }
+      };
 
       // Mock sub-users query
       const subUsersQuery = {
@@ -275,20 +273,19 @@ describe('Admin Reseller Actions', () => {
             })),
           })),
         })),
-      }
+      };
 
-      ;(supabaseAdmin.from as any)
+      (supabaseAdmin.from as any)
         .mockReturnValueOnce(userQuery1)
         .mockReturnValueOnce(userQuery2)
-        .mockReturnValueOnce(subUsersQuery)
+        .mockReturnValueOnce(subUsersQuery);
+      (hasCapability as any).mockResolvedValue(false);
 
-      ;(hasCapability as any).mockResolvedValue(false)
+      const result = await getSubUsers();
 
-      const result = await getSubUsers()
-
-      expect(result.success).toBe(true)
-      expect(result.subUsers).toBeDefined()
-      expect(result.subUsers?.length).toBe(1)
-    })
-  })
-})
+      expect(result.success).toBe(true);
+      expect(result.subUsers).toBeDefined();
+      expect(result.subUsers?.length).toBe(1);
+    });
+  });
+});

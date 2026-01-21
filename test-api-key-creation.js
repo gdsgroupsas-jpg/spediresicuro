@@ -10,7 +10,7 @@ async function createTestKey() {
 
     const result = await generateApiKey(TEST_USER_ID, 'E2E Test Key', {
       scopes: ['quotes:read', 'shipments:read'],
-      expiresInDays: 90
+      expiresInDays: 90,
     });
 
     console.log('\n✅ API Key Created Successfully!\n');
@@ -26,4 +26,6 @@ async function createTestKey() {
   }
 }
 
-createTestKey().then(() => process.exit(0)).catch(() => process.exit(1));
+createTestKey()
+  .then(() => process.exit(0))
+  .catch(() => process.exit(1));

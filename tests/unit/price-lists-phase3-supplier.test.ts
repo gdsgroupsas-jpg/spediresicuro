@@ -1,12 +1,12 @@
 /**
  * Test Fase 3: Listini Fornitore - Server Actions & Permessi
- * 
+ *
  * Verifica:
  * - Server Actions per listini fornitore (Reseller/BYOC)
  * - Permessi e isolamento listini
  * - CRUD operations per Reseller e BYOC
  * - Isolamento: Reseller/BYOC NON vedono listini globali
- * 
+ *
  * NOTA: Questo test verifica principalmente la logica delle Server Actions
  * usando mock per l'autenticazione. Per test end-to-end completi, vedere
  * tests/integration/price-lists-phase3-integration.test.ts
@@ -20,17 +20,23 @@ import path from 'path';
 try {
   const envPath = path.resolve(process.cwd(), '.env.local');
   dotenv.config({ path: envPath });
-  console.log('✅ Variabili d\'ambiente caricate da .env.local');
+  console.log("✅ Variabili d'ambiente caricate da .env.local");
 } catch (error) {
   console.warn('⚠️  Impossibile caricare .env.local, uso valori mock');
 }
 
 // Setup variabili d'ambiente mock se non presenti
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('mock')) {
+if (
+  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL.includes('mock')
+) {
   console.warn('⚠️  Usando valori mock per Supabase');
-  process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co';
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
-  process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-key';
+  process.env.NEXT_PUBLIC_SUPABASE_URL =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co';
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
+  process.env.SUPABASE_SERVICE_ROLE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-key';
 } else {
   console.log('✅ Supabase configurato correttamente');
   console.log(`   URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30)}...`);
@@ -71,7 +77,7 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
     // Verifica se Supabase è configurato
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('mock')) {
       console.warn('⚠️  Supabase non configurato - alcuni test verranno saltati');
       // Usa ID mock per i test
@@ -124,7 +130,11 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         .single();
 
       if (resellerError || byocError || adminError || !reseller || !byoc || !admin) {
-        console.warn('⚠️  Errore creazione utenti di test:', { resellerError, byocError, adminError });
+        console.warn('⚠️  Errore creazione utenti di test:', {
+          resellerError,
+          byocError,
+          adminError,
+        });
         // Usa ID mock
         resellerUserId = 'mock-reseller-id';
         byocUserId = 'mock-byoc-id';
@@ -174,23 +184,20 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
     try {
       // Cleanup: elimina listini creati
       if (createdPriceLists.length > 0) {
-        await supabaseAdmin
-          .from('price_lists')
-          .delete()
-          .in('id', createdPriceLists);
+        await supabaseAdmin.from('price_lists').delete().in('id', createdPriceLists);
       }
 
       // Cleanup: elimina configurazioni create
       if (createdConfigs.length > 0) {
-        await supabaseAdmin
-          .from('courier_configs')
-          .delete()
-          .in('id', createdConfigs);
+        await supabaseAdmin.from('courier_configs').delete().in('id', createdConfigs);
       }
 
       // Elimina utenti di test
-      await supabaseAdmin.from('users').delete().in('id', [resellerUserId, byocUserId, adminUserId]);
-      
+      await supabaseAdmin
+        .from('users')
+        .delete()
+        .in('id', [resellerUserId, byocUserId, adminUserId]);
+
       // Elimina corrieri di test
       await supabaseAdmin.from('couriers').delete().eq('id', testCourierId);
     } catch (error) {
@@ -564,7 +571,7 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
 
       // Rimuovi mock per questo test
       vi.restoreAllMocks();
-      
+
       const couriers = await getAvailableCouriersForUser('user-senza-config-12345');
 
       expect(couriers).toBeDefined();

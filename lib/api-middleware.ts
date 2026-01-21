@@ -7,10 +7,10 @@
  * ⚠️ MIGRATED: Ora usa getSafeAuth() per supportare impersonation
  */
 
-import { getSafeAuth, ActingContext, ActingUser } from "@/lib/safe-auth";
-import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
-import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { getSafeAuth, ActingContext, ActingUser } from '@/lib/safe-auth';
+import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export interface AuthResult {
   authorized: boolean;
@@ -40,20 +40,20 @@ export async function requireAuth(): Promise<AuthResult> {
   // ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
   try {
     const headersList = headers();
-    const testHeader = headersList.get("x-test-mode");
-    const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === "true";
+    const testHeader = headersList.get('x-test-mode');
+    const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
 
     if (
-      (testHeader === "playwright" || isPlaywrightMode) &&
-      process.env.NODE_ENV !== "production"
+      (testHeader === 'playwright' || isPlaywrightMode) &&
+      process.env.NODE_ENV !== 'production'
     ) {
-      console.log("🧪 [API AUTH] Test mode bypass active");
+      console.log('🧪 [API AUTH] Test mode bypass active');
       const testUser: ActingUser = {
-        id: "00000000-0000-0000-0000-000000000000",
-        email: process.env.TEST_USER_EMAIL || "test@example.com",
-        name: "Test User E2E",
-        role: "admin", // Force admin role for tests
-        account_type: "superadmin",
+        id: '00000000-0000-0000-0000-000000000000',
+        email: process.env.TEST_USER_EMAIL || 'test@example.com',
+        name: 'Test User E2E',
+        role: 'admin', // Force admin role for tests
+        account_type: 'superadmin',
         is_reseller: true,
       };
       return {
@@ -74,10 +74,7 @@ export async function requireAuth(): Promise<AuthResult> {
   if (!context?.actor?.email) {
     return {
       authorized: false,
-      response: NextResponse.json(
-        { error: "Non autenticato" },
-        { status: 401 }
-      ),
+      response: NextResponse.json({ error: 'Non autenticato' }, { status: 401 }),
     };
   }
 
@@ -99,10 +96,7 @@ export async function requireAuth(): Promise<AuthResult> {
  */
 export function checkSupabaseConfig(): NextResponse | undefined {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { error: "Supabase non configurato" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Supabase non configurato' }, { status: 500 });
   }
   return undefined;
 }
@@ -117,7 +111,7 @@ export function checkSupabaseConfig(): NextResponse | undefined {
  */
 export async function findUserByEmail(
   email: string,
-  select: string = "id, email, role"
+  select: string = 'id, email, role'
 ): Promise<{
   id: string;
   email: string;
@@ -125,9 +119,9 @@ export async function findUserByEmail(
   [key: string]: any;
 } | null> {
   const { data: user, error } = await supabaseAdmin
-    .from("users")
+    .from('users')
     .select(select)
-    .eq("email", email)
+    .eq('email', email)
     .single();
 
   if (error || !user) {
@@ -156,9 +150,7 @@ export async function findUserByEmail(
  * if (!adminAuth.authorized) return adminAuth.response;
  * const { context, user } = adminAuth;
  */
-export async function requireAdminRole(
-  customErrorMessage?: string
-): Promise<AdminAuthResult> {
+export async function requireAdminRole(customErrorMessage?: string): Promise<AdminAuthResult> {
   // Prima verifica autenticazione
   const authResult = await requireAuth();
   if (!authResult.authorized) {
@@ -179,14 +171,14 @@ export async function requireAdminRole(
   // Cerca utente e verifica ruolo admin
   const user = await findUserByEmail(context!.actor.email!);
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== 'admin') {
     return {
       authorized: false,
       response: NextResponse.json(
         {
           error:
             customErrorMessage ||
-            "Accesso negato. Solo gli admin possono accedere a questa risorsa.",
+            'Accesso negato. Solo gli admin possono accedere a questa risorsa.',
         },
         { status: 403 }
       ),
@@ -226,13 +218,12 @@ export async function requireResellerRole(): Promise<AdminAuthResult> {
 
   const user = await findUserByEmail(context!.actor.email!);
 
-  if (!user || (user.role !== "reseller" && user.role !== "admin")) {
+  if (!user || (user.role !== 'reseller' && user.role !== 'admin')) {
     return {
       authorized: false,
       response: NextResponse.json(
         {
-          error:
-            "Accesso negato. Solo i reseller possono accedere a questa risorsa.",
+          error: 'Accesso negato. Solo i reseller possono accedere a questa risorsa.',
         },
         { status: 403 }
       ),

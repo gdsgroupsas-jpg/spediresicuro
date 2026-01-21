@@ -109,20 +109,14 @@ export async function POST(request: NextRequest) {
 
     // Validate URL
     if (!webhookUrl.startsWith('https://')) {
-      return NextResponse.json(
-        { error: 'Webhook URL must use HTTPS' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Webhook URL must use HTTPS' }, { status: 400 });
     }
 
     // Set webhook
     const result = await setWebhook(webhookUrl);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to set webhook' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: result.error || 'Failed to set webhook' }, { status: 500 });
     }
 
     // Send test message
@@ -138,10 +132,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[TELEGRAM_SETUP] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to configure webhook' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to configure webhook' }, { status: 500 });
   }
 }
 
