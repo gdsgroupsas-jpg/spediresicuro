@@ -15,7 +15,7 @@ export {
   formatApiError,
   type RawError,
   type FormattedError,
-} from './error-formatter'
+} from './error-formatter';
 
 export {
   errorActionMap,
@@ -23,4 +23,4 @@ export {
   isKnownErrorCode,
   type KnownErrorCode,
   type ErrorActionConfig,
-} from './error-action-map'
+} from './error-action-map';

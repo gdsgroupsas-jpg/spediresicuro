@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import { cn } from '@/lib/utils'
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'secondary' | 'success' | 'warning' | 'error' | 'outline'
+  variant?: 'default' | 'secondary' | 'success' | 'warning' | 'error' | 'outline';
 }
 
 const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
@@ -16,7 +16,7 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
       warning: 'bg-amber-100 text-amber-800 border-amber-200', // Viola/Amber per Admin
       error: 'bg-red-100 text-red-800 border-red-200', // Rosso per Super Admin
       outline: 'bg-transparent text-gray-700 border-gray-300',
-    }
+    };
 
     return (
       <div
@@ -28,10 +28,10 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
         )}
         {...props}
       />
-    )
+    );
   }
-)
+);
 
-Badge.displayName = 'Badge'
+Badge.displayName = 'Badge';
 
-export { Badge }
+export { Badge };

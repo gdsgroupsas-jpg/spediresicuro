@@ -9,12 +9,14 @@
 ## 📋 COSA FA QUESTO SISTEMA
 
 Sistema di **automazione intelligente** per estrarre e aggiornare automaticamente:
+
 - ✅ **Session cookies** da Spedisci.Online
 - ✅ **CSRF tokens** per autenticazione
 - ✅ **Codici contratto** (client_id, vector_contract_id)
 - ✅ **Dati configurazione** necessari per creare spedizioni
 
 **Perché è legale:**
+
 - ✅ È il **TUO account** Spedisci.Online
 - ✅ I **soldi sono tuoi** (paghi le spedizioni)
 - ✅ I **contratti corrieri sono tuoi** (non di Spedisci.Online)
@@ -66,6 +68,7 @@ npm install puppeteer imap @types/imap cheerio qs
 ```
 
 **Note:**
+
 - `puppeteer`: Browser automation (installa anche Chromium)
 - `imap`: Lettura email per 2FA
 - `cheerio`: Parsing HTML (opzionale, già usato)
@@ -97,6 +100,7 @@ CRON_SECRET_TOKEN=your-secret-token-here
 ### **1. Configurazione Iniziale**
 
 1. **Vai su Dashboard Admin:**
+
    ```
    /dashboard/admin/automation
    ```
@@ -121,6 +125,7 @@ CRON_SECRET_TOKEN=your-secret-token-here
 **IMPORTANTE:** Prima di fare sync, verifica che non ci sia lock manuale attivo!
 
 1. **Vai su Dashboard Admin:**
+
    ```
    /dashboard/admin/automation
    ```
@@ -136,6 +141,7 @@ CRON_SECRET_TOKEN=your-secret-token-here
 5. **Verifica stato session** nella tabella
 
 **Se sync fallisce con errore "Lock attivo":**
+
 - Verifica se stai usando Spedisci.Online manualmente
 - Rilascia lock manuale se presente
 - Oppure usa "Forza Sync" (ignora lock, usa con cautela)
@@ -148,16 +154,19 @@ Aggiungi a `vercel.json`:
 
 ```json
 {
-  "crons": [{
-    "path": "/api/cron/automation-sync",
-    "schedule": "0 */6 * * *"
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/automation-sync",
+      "schedule": "0 */6 * * *"
+    }
+  ]
 }
 ```
 
 **Opzione B: Sistema Esterno**
 
 Chiama periodicamente:
+
 ```bash
 curl -X GET https://tuo-dominio.com/api/cron/automation-sync \
   -H "Authorization: Bearer YOUR_SECRET_TOKEN"
@@ -256,6 +265,7 @@ Il sistema previene conflitti con **lock intelligenti**:
 4. Quando finisci, clicca **"Rilascia"** per permettere sync
 
 **Se dimentichi di rilasciare:**
+
 - Lock scade automaticamente dopo 60 minuti
 - Oppure usa **"Forza Sync"** per ignorare lock (usa con cautela)
 
@@ -292,6 +302,7 @@ Il sistema previene conflitti con **lock intelligenti**:
 ### **Problema: "Puppeteer non installato"**
 
 **Soluzione:**
+
 ```bash
 npm install puppeteer
 ```
@@ -299,6 +310,7 @@ npm install puppeteer
 ### **Problema: "IMAP client non disponibile"**
 
 **Soluzione:**
+
 ```bash
 npm install imap @types/imap
 ```
@@ -306,6 +318,7 @@ npm install imap @types/imap
 ### **Problema: "Login fallito"**
 
 **Verifica:**
+
 - Credenziali Spedisci.Online corrette
 - Account non bloccato
 - 2FA configurato correttamente
@@ -313,6 +326,7 @@ npm install imap @types/imap
 ### **Problema: "Codice 2FA non trovato"**
 
 **Verifica:**
+
 - Email IMAP configurata correttamente
 - App Password valida (Gmail)
 - Email 2FA arriva in tempo (attendi 10-30 secondi)
@@ -320,6 +334,7 @@ npm install imap @types/imap
 ### **Problema: "Session scaduta"**
 
 **Soluzione:**
+
 - Esegui sync manuale
 - Verifica che cron job funzioni
 - Riduci `auto_refresh_interval_hours` se necessario
@@ -329,6 +344,7 @@ npm install imap @types/imap
 **Causa:** Lock manuale attivo (stai usando Spedisci.Online manualmente)
 
 **Soluzione:**
+
 1. Vai su dashboard automation
 2. Verifica lock attivo nella colonna "Lock"
 3. Se lock manuale:
@@ -343,6 +359,7 @@ npm install imap @types/imap
 **Causa:** Non hai acquisito lock manuale prima di usare Spedisci.Online
 
 **Soluzione:**
+
 1. **SEMPRE** acquisisci lock manuale prima di usare Spedisci.Online
 2. Vai su dashboard automation
 3. Clicca "Lock Manuale" sulla configurazione
@@ -356,6 +373,7 @@ npm install imap @types/imap
 ### **Dashboard Admin**
 
 Vai su `/dashboard/admin/automation` per vedere:
+
 - ✅ Stato automation (abilitata/disabilitata)
 - ✅ Ultimo sync eseguito
 - ✅ Validità session (valida/scaduta)
@@ -364,6 +382,7 @@ Vai su `/dashboard/admin/automation` per vedere:
 ### **Logs**
 
 Controlla logs server per:
+
 - `🚀 [AGENT]` - Avvio estrazione
 - `✅ [AGENT]` - Operazione completata
 - `❌ [AGENT]` - Errori
@@ -398,6 +417,7 @@ Controlla logs server per:
   - ❌ Scraping massivo o abusivo
 
 **Raccomandazione:**
+
 - Usa con moderazione
 - Rispetta rate limits
 - Monitora uso risorse
@@ -407,4 +427,3 @@ Controlla logs server per:
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0  
 **Autore:** Sistema Automation SpedireSicuro
-

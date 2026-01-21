@@ -7,7 +7,10 @@ interface AnneDoctorBridgeProps {
   hasDoctorSubscription?: boolean;
 }
 
-export default function AnneDoctorBridge({ userRole, hasDoctorSubscription = false }: AnneDoctorBridgeProps) {
+export default function AnneDoctorBridge({
+  userRole,
+  hasDoctorSubscription = false,
+}: AnneDoctorBridgeProps) {
   const { addSuggestion } = useAnneContext();
 
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function AnneDoctorBridge({ userRole, hasDoctorSubscription = fal
           // Simulate "Auto-Fix" message (in reality backend should mark it as fixed)
           // For now we just alert that we detected and "handled" it.
           const eventType = payload.new.type;
-          
+
           addSuggestion({
             id: `doctor-alert-${payload.new.id}`,
             type: 'feature', // Use 'feature' icon or add new type
@@ -46,7 +49,7 @@ export default function AnneDoctorBridge({ userRole, hasDoctorSubscription = fal
 
           // Simulate follow-up "Fixed" message after 3 seconds
           setTimeout(() => {
-             addSuggestion({
+            addSuggestion({
               id: `doctor-fixed-${payload.new.id}`,
               type: 'tip', // Green tip
               message: `✅ Doctor AI: Problema ${eventType} risolto con successo! Nessun impatto sui clienti.`,

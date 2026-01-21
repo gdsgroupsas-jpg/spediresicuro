@@ -26,6 +26,7 @@ Evolvere `courier_configs` a Integration Hub per tutti i corrieri (BYOC + Resell
 ```
 
 **Verifica**:
+
 ```sql
 SELECT column_name, data_type, is_nullable
 FROM information_schema.columns

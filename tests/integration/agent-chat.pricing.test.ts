@@ -1,6 +1,6 @@
 /**
  * Integration Tests: Agent Chat API - Supervisor Router Flow
- * 
+ *
  * Test end-to-end del flusso routing nella route API.
  * Il supervisor router decide tra pricing graph e legacy handler.
  * Mock completo: auth, supabase, Anthropic, supervisorRouter, context builder
@@ -140,24 +140,24 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
   beforeEach(async () => {
     // Reset moduli per reinizializzare stato
     vi.resetModules();
-    
+
     // Re-importa i moduli mockati dopo reset
     const authModule = await import('@/lib/auth-config');
     const contextModule = await import('@/lib/ai/context-builder');
     const cacheModule = await import('@/lib/ai/cache');
     const safeAuthModule = await import('@/lib/safe-auth');
-    
+
     auth = authModule.auth as ReturnType<typeof vi.fn>;
     buildContext = contextModule.buildContext as ReturnType<typeof vi.fn>;
     getCachedContext = cacheModule.getCachedContext as ReturnType<typeof vi.fn>;
-    
+
     // Re-importa la route
     const routeModule = await import('@/app/api/ai/agent-chat/route');
     POST = routeModule.POST;
-    
+
     // Clear mocks
     vi.clearAllMocks();
-    
+
     // Reset mock rate limiter - default: allowed
     mockRateLimit.mockResolvedValue({
       allowed: true,
@@ -165,7 +165,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       resetAt: Date.now() + 60000,
       source: 'memory',
     });
-    
+
     // Default mock supervisor router - decision: legacy (default)
     mockSupervisorRouter.mockResolvedValue({
       decision: 'legacy',
@@ -183,18 +183,18 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
         success: true,
       },
     });
-    
+
     // Reset mock Anthropic messages.create
     mockMessagesCreate.mockResolvedValue({
       content: [{ type: 'text', text: 'Default legacy response' }],
     });
-    
+
     // Mock format pricing response
     mockFormatPricingResponse.mockImplementation((options) => {
       if (!options || options.length === 0) return 'Nessun preventivo';
       return `💰 Preventivo: €${options[0].finalPrice.toFixed(2)}`;
     });
-    
+
     // Default mock: sessione valida (per compatibilità)
     vi.mocked(auth).mockResolvedValue({
       user: {
@@ -203,7 +203,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
         name: 'Test User',
       },
     } as any);
-    
+
     // Default mock: getSafeAuth restituisce ActingContext valido
     // ⚠️ IMPORTANTE: getSafeAuth è ora usato dalla route invece di auth diretto
     mockGetSafeAuth.mockResolvedValue({
@@ -221,7 +221,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       },
       isImpersonating: false,
     });
-    
+
     // Default mock: getSafeAuth restituisce ActingContext valido
     // ⚠️ IMPORTANTE: getSafeAuth è ora usato dalla route invece di auth diretto
     mockGetSafeAuth.mockResolvedValue({
@@ -242,7 +242,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
 
     // Default mock: no cached context
     vi.mocked(getCachedContext).mockReturnValue(null);
-    
+
     // Default mock: buildContext success
     vi.mocked(buildContext).mockResolvedValue({
       user: {
@@ -303,7 +303,8 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Mock supervisor che ritorna END con clarification
       mockSupervisorRouter.mockResolvedValue({
         decision: 'END',
-        clarificationRequest: 'Per calcolare un preventivo preciso, ho bisogno di: peso, CAP destinazione.',
+        clarificationRequest:
+          'Per calcolare un preventivo preciso, ho bisogno di: peso, CAP destinazione.',
         executionTimeMs: 20,
         source: 'pricing_graph',
       });
@@ -513,7 +514,7 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
 
         expect(response.status).toBe(testCase.expectedStatus);
         expect(mockSupervisorRouter).toHaveBeenCalled();
-        
+
         if (testCase.shouldUsePricingGraph) {
           expect(data.metadata?.usingPricingGraph).toBe(true);
         }
@@ -563,11 +564,11 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
   });
 
   // ==================== STEP 2.2: GUARDRAIL TESTS ====================
-  
+
   describe('Step 2.2 Guardrail: Pricing Intent Routing', () => {
     /**
      * TEST 1: pricing intent -> uses pricing_graph, NOT legacy
-     * 
+     *
      * Verifica che quando l'intent è pricing:
      * - Il pricing graph viene usato
      * - Legacy handler NON viene chiamato
@@ -618,28 +619,28 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Assert: risposta OK
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      
+
       // Assert: supervisor chiamato
       expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
-      
+
       // Assert: legacy handler NON chiamato (check che Anthropic messages.create non è stato chiamato)
       expect(mockMessagesCreate).not.toHaveBeenCalled();
-      
+
       // Assert: telemetria corretta (via metadata o result)
       expect(data.metadata.usingPricingGraph).toBe(true);
-      
+
       // Assert: telemetry dal mock (verifichiamo che il mock è stato configurato correttamente)
       // Il mock restituisce una Promise, quindi verifichiamo i dati del mock call
       const supervisorCallArgs = mockSupervisorRouter.mock.calls[0];
       expect(supervisorCallArgs).toBeDefined();
-      
+
       // Il mock è stato chiamato con i parametri corretti (message, userId, etc.)
       expect(supervisorCallArgs[0].message).toContain('Preventivo');
     });
 
     /**
      * TEST 2: pricing intent + graph throws -> fallback to legacy WITH reason
-     * 
+     *
      * Verifica che quando il graph fallisce:
      * - Legacy handler viene chiamato
      * - telemetry.fallbackToLegacy === true
@@ -682,17 +683,17 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Assert: NON 500, fallback funziona
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      
+
       // Assert: supervisor chiamato
       expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
-      
+
       // Assert: legacy handler chiamato (Anthropic messages.create)
       expect(mockMessagesCreate).toHaveBeenCalled();
-      
+
       // Assert: supervisor chiamato con message di pricing
       const supervisorCallArgs = mockSupervisorRouter.mock.calls[0];
       expect(supervisorCallArgs[0].message).toContain('Preventivo');
-      
+
       // Il mock supervisor è configurato per restituire fallbackToLegacy=true, fallbackReason='graph_error'
       // La route usa decision='legacy' per chiamare il legacy handler
       // Questo test verifica che la route gestisce correttamente il fallback
@@ -700,11 +701,11 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
   });
 
   // ==================== SPRINT 2.3: ADDRESS WORKER TESTS ====================
-  
+
   describe('Sprint 2.3: Address Worker Integration', () => {
     /**
      * TEST 1: pricing intent but missing postalCode -> routes to address_worker
-     * 
+     *
      * Input: "Spedisci a Mario Rossi, Via Roma 10, Milano"
      * Expect: clarification question asking for CAP
      * Expect: telemetry.workerRun === 'address'
@@ -743,23 +744,23 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Assert: risposta OK
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      
+
       // Assert: contiene richiesta chiarimento
       expect(data.message).toContain('CAP');
-      
+
       // Assert: supervisor chiamato
       expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
-      
+
       // Assert: legacy handler NON chiamato (gestito da address_worker nel graph)
       expect(mockMessagesCreate).not.toHaveBeenCalled();
-      
+
       // Assert: usingPricingGraph = true (perché è gestito dal graph)
       expect(data.metadata.usingPricingGraph).toBe(true);
     });
 
     /**
      * TEST 2: address complete -> routes to pricing_worker
-     * 
+     *
      * Input include: addressLine1 + city + province + CAP + weight
      * Expect: pricing_graph invoked successfully
      * Expect: legacy NOT called
@@ -813,16 +814,16 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       // Assert: risposta OK
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      
+
       // Assert: contiene preventivo
       expect(data.message).toContain('Preventivo');
-      
+
       // Assert: supervisor chiamato
       expect(mockSupervisorRouter).toHaveBeenCalledTimes(1);
-      
+
       // Assert: legacy handler NON chiamato
       expect(mockMessagesCreate).not.toHaveBeenCalled();
-      
+
       // Assert: telemetria corretta
       expect(data.metadata.usingPricingGraph).toBe(true);
       expect(data.metadata.pricingOptionsCount).toBe(1);
@@ -830,10 +831,10 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
 
     /**
      * TEST 3: address worker merges partial data without deleting existing
-     * 
+     *
      * Questo test verifica che i dati vengano accumulati progressivamente.
      * Simuliamo due chiamate: prima con città/indirizzo, poi con CAP/provincia.
-     * 
+     *
      * Nota: Questo è un test concettuale. In realtà il merge avviene dentro
      * il pricing graph, che mantiene lo state tra i messaggi.
      * Qui testiamo che la route gestisce correttamente la risposta quando
@@ -924,13 +925,12 @@ describe('Agent Chat API - Pricing Flow Integration', () => {
       expect(response2.status).toBe(200);
       expect(data2.success).toBe(true);
       expect(data2.message).toContain('Preventivo');
-      
+
       // Assert: supervisor chiamato 2 volte totali
       expect(mockSupervisorRouter).toHaveBeenCalledTimes(2);
-      
+
       // Assert: legacy mai chiamato
       expect(mockMessagesCreate).not.toHaveBeenCalled();
     });
   });
 });
-

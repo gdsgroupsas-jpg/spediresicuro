@@ -14,10 +14,10 @@ module.exports = {
           'yellow-start': '#FFD700',
           'yellow-end': '#FF9500',
           // Azzurro tech (orbita)
-          'cyan': '#00B8D4',
+          cyan: '#00B8D4',
           // Neutri
-          'black': '#000000',
-          'gray': '#666666',
+          black: '#000000',
+          gray: '#666666',
         },
         // Colori legacy (mantenuti per compatibilità)
         primary: '#FF9500', // Arancione brand
@@ -39,5 +39,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
-
+};

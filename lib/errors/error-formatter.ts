@@ -10,23 +10,23 @@
  * - No tech jargon (avoid: "HTTP 402", "RPC call failed")
  */
 
-import type { ErrorData, ErrorAction } from '@/components/feedback'
-import { getActionsForError, type KnownErrorCode } from './error-action-map'
+import type { ErrorData, ErrorAction } from '@/components/feedback';
+import { getActionsForError, type KnownErrorCode } from './error-action-map';
 
 /**
  * Input errore raw (da API, exception, etc.)
  */
 export interface RawError {
   /** Codice errore (opzionale) */
-  code?: string
+  code?: string;
   /** Messaggio originale */
-  message?: string
+  message?: string;
   /** Status HTTP (opzionale) */
-  status?: number
+  status?: number;
   /** Dettagli aggiuntivi */
-  details?: Record<string, unknown>
+  details?: Record<string, unknown>;
   /** Error object originale */
-  originalError?: Error | unknown
+  originalError?: Error | unknown;
 }
 
 /**
@@ -34,11 +34,11 @@ export interface RawError {
  */
 export interface FormattedError {
   /** Dati errore formattati */
-  error: ErrorData
+  error: ErrorData;
   /** Azioni recovery */
-  actions: ErrorAction[]
+  actions: ErrorAction[];
   /** Se retry è disponibile */
-  canRetry: boolean
+  canRetry: boolean;
 }
 
 /**
@@ -144,7 +144,7 @@ const errorMessageMap: Record<string, { title: string; message: string }> = {
     title: 'Errore del Server',
     message: 'Il server ha riscontrato un problema. Riprova tra qualche istante.',
   },
-}
+};
 
 /**
  * Mappa status HTTP → codice errore
@@ -152,30 +152,30 @@ const errorMessageMap: Record<string, { title: string; message: string }> = {
 function statusToErrorCode(status: number): KnownErrorCode {
   switch (status) {
     case 400:
-      return 'INVALID_ADDRESS' // Generic validation
+      return 'INVALID_ADDRESS'; // Generic validation
     case 401:
-      return 'UNAUTHORIZED'
+      return 'UNAUTHORIZED';
     case 402:
-      return 'WALLET_INSUFFICIENT'
+      return 'WALLET_INSUFFICIENT';
     case 403:
-      return 'UNAUTHORIZED'
+      return 'UNAUTHORIZED';
     case 404:
-      return 'COURIER_NOT_AVAILABLE'
+      return 'COURIER_NOT_AVAILABLE';
     case 408:
-      return 'API_TIMEOUT'
+      return 'API_TIMEOUT';
     case 409:
-      return 'GENERIC_ERROR' // Conflict
+      return 'GENERIC_ERROR'; // Conflict
     case 422:
-      return 'RECIPIENT_VALIDATION_ERROR'
+      return 'RECIPIENT_VALIDATION_ERROR';
     case 429:
-      return 'RATE_LIMIT'
+      return 'RATE_LIMIT';
     case 500:
     case 502:
     case 503:
     case 504:
-      return 'SERVER_ERROR'
+      return 'SERVER_ERROR';
     default:
-      return 'GENERIC_ERROR'
+      return 'GENERIC_ERROR';
   }
 }
 
@@ -183,61 +183,64 @@ function statusToErrorCode(status: number): KnownErrorCode {
  * Estrae codice errore da messaggio
  */
 function extractErrorCode(message: string): KnownErrorCode | null {
-  const lowered = message.toLowerCase()
+  const lowered = message.toLowerCase();
 
   // Wallet
-  if (lowered.includes('wallet') && (lowered.includes('insufficient') || lowered.includes('saldo'))) {
-    return 'WALLET_INSUFFICIENT'
+  if (
+    lowered.includes('wallet') &&
+    (lowered.includes('insufficient') || lowered.includes('saldo'))
+  ) {
+    return 'WALLET_INSUFFICIENT';
   }
 
   // Corriere
   if (lowered.includes('corriere') && lowered.includes('selezion')) {
-    return 'COURIER_NOT_SELECTED'
+    return 'COURIER_NOT_SELECTED';
   }
   if (lowered.includes('courier') && lowered.includes('not available')) {
-    return 'COURIER_NOT_AVAILABLE'
+    return 'COURIER_NOT_AVAILABLE';
   }
 
   // Contratto
   if (lowered.includes('contratto') || lowered.includes('contract')) {
-    return 'CONTRACT_NOT_CONFIGURED'
+    return 'CONTRACT_NOT_CONFIGURED';
   }
 
   // Indirizzo
   if (lowered.includes('indirizzo') || lowered.includes('address')) {
-    return 'INVALID_ADDRESS'
+    return 'INVALID_ADDRESS';
   }
   if (lowered.includes('provincia') || lowered.includes('cap') || lowered.includes('postal')) {
-    return 'INVALID_ADDRESS'
+    return 'INVALID_ADDRESS';
   }
 
   // Telefono/Email
   if (lowered.includes('telefono') || lowered.includes('phone')) {
-    return 'RECIPIENT_VALIDATION_ERROR'
+    return 'RECIPIENT_VALIDATION_ERROR';
   }
   if (lowered.includes('email')) {
-    return 'RECIPIENT_VALIDATION_ERROR'
+    return 'RECIPIENT_VALIDATION_ERROR';
   }
 
   // Network
   if (lowered.includes('timeout') || lowered.includes('timed out')) {
-    return 'API_TIMEOUT'
+    return 'API_TIMEOUT';
   }
   if (lowered.includes('network') || lowered.includes('fetch') || lowered.includes('connection')) {
-    return 'NETWORK_ERROR'
+    return 'NETWORK_ERROR';
   }
 
   // Auth
   if (lowered.includes('unauthorized') || lowered.includes('401')) {
-    return 'UNAUTHORIZED'
+    return 'UNAUTHORIZED';
   }
 
   // Rate limit
   if (lowered.includes('rate limit') || lowered.includes('too many')) {
-    return 'RATE_LIMIT'
+    return 'RATE_LIMIT';
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -249,44 +252,44 @@ function findBestMessage(
 ): { title: string; message: string } | null {
   // Prova codice esatto
   if (code) {
-    const codeKey = code.toLowerCase().replace(/_/g, '_')
+    const codeKey = code.toLowerCase().replace(/_/g, '_');
     if (errorMessageMap[codeKey]) {
-      return errorMessageMap[codeKey]
+      return errorMessageMap[codeKey];
     }
   }
 
   // Prova a estrarre da messaggio
   if (message) {
-    const lowered = message.toLowerCase()
+    const lowered = message.toLowerCase();
     for (const [key, value] of Object.entries(errorMessageMap)) {
       if (lowered.includes(key.replace(/_/g, ' '))) {
-        return value
+        return value;
       }
     }
   }
 
-  return null
+  return null;
 }
 
 /**
  * Formatta dettagli aggiuntivi per errori wallet
  */
 function formatWalletDetails(details: Record<string, unknown> | undefined): string | undefined {
-  if (!details) return undefined
+  if (!details) return undefined;
 
-  const parts: string[] = []
+  const parts: string[] = [];
 
   if (typeof details.required === 'number') {
-    parts.push(`Importo richiesto: €${details.required.toFixed(2)}`)
+    parts.push(`Importo richiesto: €${details.required.toFixed(2)}`);
   }
   if (typeof details.balance === 'number') {
-    parts.push(`Saldo attuale: €${details.balance.toFixed(2)}`)
+    parts.push(`Saldo attuale: €${details.balance.toFixed(2)}`);
   }
   if (typeof details.shortfall === 'number') {
-    parts.push(`Mancano: €${details.shortfall.toFixed(2)}`)
+    parts.push(`Mancano: €${details.shortfall.toFixed(2)}`);
   }
 
-  return parts.length > 0 ? parts.join(' | ') : undefined
+  return parts.length > 0 ? parts.join(' | ') : undefined;
 }
 
 /**
@@ -315,22 +318,22 @@ function formatWalletDetails(details: Record<string, unknown> | undefined): stri
  */
 export function formatError(raw: RawError): FormattedError {
   // 1. Determina codice errore
-  let errorCode: KnownErrorCode = 'GENERIC_ERROR'
+  let errorCode: KnownErrorCode = 'GENERIC_ERROR';
 
   if (raw.code) {
     // Codice esplicito
-    errorCode = raw.code.toUpperCase().replace(/-/g, '_') as KnownErrorCode
+    errorCode = raw.code.toUpperCase().replace(/-/g, '_') as KnownErrorCode;
   } else if (raw.status) {
     // Deduci da status HTTP
-    errorCode = statusToErrorCode(raw.status)
+    errorCode = statusToErrorCode(raw.status);
   } else if (raw.message) {
     // Estrai da messaggio
-    const extracted = extractErrorCode(raw.message)
-    if (extracted) errorCode = extracted
+    const extracted = extractErrorCode(raw.message);
+    if (extracted) errorCode = extracted;
   }
 
   // 2. Trova messaggio user-friendly
-  const friendlyMessage = findBestMessage(errorCode, raw.message)
+  const friendlyMessage = findBestMessage(errorCode, raw.message);
 
   // 3. Costruisci ErrorData
   const error: ErrorData = {
@@ -342,16 +345,16 @@ export function formatError(raw: RawError): FormattedError {
     ...(raw.details?.required !== undefined && { required: raw.details.required as number }),
     ...(raw.details?.balance !== undefined && { balance: raw.details.balance as number }),
     ...(raw.details?.shortfall !== undefined && { shortfall: raw.details.shortfall as number }),
-  }
+  };
 
   // 4. Ottieni azioni recovery
-  const actionConfig = getActionsForError(errorCode)
+  const actionConfig = getActionsForError(errorCode);
 
   return {
     error,
     actions: actionConfig.actions,
     canRetry: actionConfig.canRetry,
-  }
+  };
 }
 
 /**
@@ -362,13 +365,13 @@ export function formatException(err: Error | unknown): FormattedError {
     return formatError({
       message: err.message,
       originalError: err,
-    })
+    });
   }
 
   return formatError({
     message: String(err),
     originalError: err,
-  })
+  });
 }
 
 /**
@@ -376,17 +379,17 @@ export function formatException(err: Error | unknown): FormattedError {
  */
 export async function formatApiError(response: Response): Promise<FormattedError> {
   try {
-    const data = await response.json()
+    const data = await response.json();
     return formatError({
       code: data.code || data.error_code,
       message: data.message || data.error || data.error_message,
       status: response.status,
       details: data.details || data,
-    })
+    });
   } catch {
     return formatError({
       message: response.statusText || 'Errore nella risposta del server',
       status: response.status,
-    })
+    });
   }
 }

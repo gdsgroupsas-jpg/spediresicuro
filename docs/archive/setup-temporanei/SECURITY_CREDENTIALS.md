@@ -60,9 +60,9 @@ Tutte le operazioni sulle credenziali vengono registrate:
 Solo gli **admin** possono visualizzare i log di audit:
 
 ```sql
-SELECT * FROM audit_logs 
-WHERE resource_type = 'courier_config' 
-ORDER BY created_at DESC 
+SELECT * FROM audit_logs
+WHERE resource_type = 'courier_config'
+ORDER BY created_at DESC
 LIMIT 50;
 ```
 
@@ -84,24 +84,24 @@ export ENCRYPTION_KEY="your-encryption-key-here"
 
 ```typescript
 // scripts/migrate-credentials.ts
-import { encryptCredential } from '@/lib/security/encryption'
-import { supabaseAdmin } from '@/lib/db/client'
+import { encryptCredential } from '@/lib/security/encryption';
+import { supabaseAdmin } from '@/lib/db/client';
 
 async function migrateCredentials() {
   // Recupera tutte le credenziali non criptate
   const { data: configs } = await supabaseAdmin
     .from('courier_configs')
     .select('id, api_key, api_secret, encrypted')
-    .eq('encrypted', false)
+    .eq('encrypted', false);
 
   for (const config of configs || []) {
     // Cripta api_key
-    const encryptedKey = encryptCredential(config.api_key)
-    
+    const encryptedKey = encryptCredential(config.api_key);
+
     // Cripta api_secret se presente
-    let encryptedSecret = null
+    let encryptedSecret = null;
     if (config.api_secret) {
-      encryptedSecret = encryptCredential(config.api_secret)
+      encryptedSecret = encryptCredential(config.api_secret);
     }
 
     // Aggiorna nel database
@@ -112,7 +112,7 @@ async function migrateCredentials() {
         api_secret: encryptedSecret,
         encrypted: true,
       })
-      .eq('id', config.id)
+      .eq('id', config.id);
   }
 }
 ```
@@ -147,7 +147,7 @@ async function migrateCredentials() {
 
 ```sql
 -- Conta credenziali criptate vs non criptate
-SELECT 
+SELECT
   encrypted,
   COUNT(*) as count
 FROM courier_configs
@@ -158,7 +158,7 @@ GROUP BY encrypted;
 
 ```sql
 -- Ultimi accessi a credenziali
-SELECT 
+SELECT
   action,
   user_email,
   resource_id,
@@ -178,6 +178,7 @@ LIMIT 20;
 **Causa:** Variabile d'ambiente mancante
 
 **Soluzione:**
+
 1. Verifica che `ENCRYPTION_KEY` sia configurata su Vercel
 2. Riavvia il deployment dopo aver aggiunto la variabile
 
@@ -186,6 +187,7 @@ LIMIT 20;
 **Causa:** Chiave di criptazione errata o credenziale corrotta
 
 **Soluzione:**
+
 1. Verifica che `ENCRYPTION_KEY` sia corretta
 2. Controlla che le credenziali non siano state modificate manualmente
 3. Se necessario, re-cripta le credenziali
@@ -195,6 +197,7 @@ LIMIT 20;
 **Causa:** Credenziali create prima dell'implementazione della criptazione
 
 **Soluzione:**
+
 1. Esegui script di migrazione (vedi sopra)
 2. Oppure re-inserisci le credenziali tramite l'interfaccia admin
 
@@ -205,4 +208,3 @@ LIMIT 20;
 - [AES-256-GCM Specification](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf)
 - [Node.js Crypto Documentation](https://nodejs.org/api/crypto.html)
 - [OWASP Cryptographic Storage](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
-

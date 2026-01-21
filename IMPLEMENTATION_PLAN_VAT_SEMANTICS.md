@@ -197,7 +197,7 @@ export interface PriceList {
   // ... campi esistenti ...
 
   // ✨ NUOVO: VAT Semantics (ADR-001)
-  vat_mode?: "included" | "excluded" | null; // NULL = legacy (assume 'excluded')
+  vat_mode?: 'included' | 'excluded' | null; // NULL = legacy (assume 'excluded')
   vat_rate?: number; // Default 22.00
 }
 ```
@@ -209,7 +209,7 @@ export interface Shipment {
   // ... campi esistenti ...
 
   // ✨ NUOVO: VAT Semantics (ADR-001)
-  vat_mode?: "included" | "excluded" | null; // NULL = legacy (assume 'excluded')
+  vat_mode?: 'included' | 'excluded' | null; // NULL = legacy (assume 'excluded')
   vat_rate?: number; // Default 22.00
 }
 ```
@@ -221,7 +221,7 @@ export interface PriceCalculationResult {
   // ... campi esistenti ...
 
   // ✨ NUOVO: VAT Semantics (ADR-001)
-  vatMode?: "included" | "excluded" | null;
+  vatMode?: 'included' | 'excluded' | null;
   vatRate?: number;
   vatAmount?: number; // Calcolato se vatMode = 'excluded'
   totalPriceWithVAT?: number; // Calcolato se vatMode = 'excluded'
@@ -252,7 +252,7 @@ export interface PriceCalculationResult {
  * Backward compatible: gestisce vat_mode = null come 'excluded'
  */
 
-export type VATMode = "included" | "excluded" | null;
+export type VATMode = 'included' | 'excluded' | null;
 
 const DEFAULT_VAT_RATE = 22.0;
 
@@ -272,17 +272,17 @@ export function normalizePrice(
   vatRate: number = DEFAULT_VAT_RATE
 ): number {
   // Normalizza null a 'excluded' (retrocompatibilità)
-  const from = fromMode || "excluded";
-  const to = toMode || "excluded";
+  const from = fromMode || 'excluded';
+  const to = toMode || 'excluded';
 
   if (from === to) return price;
 
-  if (from === "included" && to === "excluded") {
+  if (from === 'included' && to === 'excluded') {
     // IVA inclusa → esclusa: price / (1 + vatRate/100)
     return price / (1 + vatRate / 100);
   }
 
-  if (from === "excluded" && to === "included") {
+  if (from === 'excluded' && to === 'included') {
     // IVA esclusa → inclusa: price * (1 + vatRate/100)
     return price * (1 + vatRate / 100);
   }
@@ -323,40 +323,36 @@ export function extractPriceExclVAT(
 /**
  * Verifica se vat_mode è valido (non null o 'excluded'/'included')
  */
-export function isValidVATMode(mode: VATMode): mode is "included" | "excluded" {
-  return mode === "included" || mode === "excluded";
+export function isValidVATMode(mode: VATMode): mode is 'included' | 'excluded' {
+  return mode === 'included' || mode === 'excluded';
 }
 
 /**
  * Ottiene modalità IVA con fallback (null → 'excluded')
  */
-export function getVATModeWithFallback(mode: VATMode): "included" | "excluded" {
-  return mode || "excluded";
+export function getVATModeWithFallback(mode: VATMode): 'included' | 'excluded' {
+  return mode || 'excluded';
 }
 ```
 
 **Test:** `tests/pricing/vat-utils.test.ts` (nuovo)
 
 ```typescript
-import {
-  normalizePrice,
-  calculateVATAmount,
-  extractPriceExclVAT,
-} from "@/lib/pricing/vat-utils";
+import { normalizePrice, calculateVATAmount, extractPriceExclVAT } from '@/lib/pricing/vat-utils';
 
-describe("VAT Utils", () => {
-  it("normalizes price from excluded to included", () => {
-    const result = normalizePrice(100, "excluded", "included", 22);
+describe('VAT Utils', () => {
+  it('normalizes price from excluded to included', () => {
+    const result = normalizePrice(100, 'excluded', 'included', 22);
     expect(result).toBeCloseTo(122, 2);
   });
 
-  it("normalizes price from included to excluded", () => {
-    const result = normalizePrice(122, "included", "excluded", 22);
+  it('normalizes price from included to excluded', () => {
+    const result = normalizePrice(122, 'included', 'excluded', 22);
     expect(result).toBeCloseTo(100, 2);
   });
 
-  it("handles null as excluded (backward compatibility)", () => {
-    const result = normalizePrice(100, null, "included", 22);
+  it('handles null as excluded (backward compatibility)', () => {
+    const result = normalizePrice(100, null, 'included', 22);
     expect(result).toBeCloseTo(122, 2);
   });
 
@@ -390,7 +386,7 @@ import {
   getVATModeWithFallback,
   calculateVATAmount,
   calculatePriceWithVAT,
-} from "@/lib/pricing/vat-utils";
+} from '@/lib/pricing/vat-utils';
 
 async function calculatePriceWithRule(
   priceList: PriceList,
@@ -407,13 +403,8 @@ async function calculatePriceWithRule(
 
   // Normalizza basePrice a IVA esclusa per calcoli
   let basePriceExclVAT = basePrice;
-  if (vatMode === "included") {
-    basePriceExclVAT = normalizePrice(
-      basePrice,
-      "included",
-      "excluded",
-      vatRate
-    );
+  if (vatMode === 'included') {
+    basePriceExclVAT = normalizePrice(basePrice, 'included', 'excluded', vatRate);
   }
 
   // Surcharges sono sempre IVA esclusa (assunzione)
@@ -421,9 +412,9 @@ async function calculatePriceWithRule(
 
   // Calcola margine su base IVA esclusa (Invariant #1)
   let margin = 0;
-  if (rule.margin_type === "percent" && rule.margin_value) {
+  if (rule.margin_type === 'percent' && rule.margin_value) {
     margin = totalCostExclVAT * (rule.margin_value / 100);
-  } else if (rule.margin_type === "fixed" && rule.margin_value) {
+  } else if (rule.margin_type === 'fixed' && rule.margin_value) {
     margin = rule.margin_value;
   }
 
@@ -431,13 +422,11 @@ async function calculatePriceWithRule(
 
   // Se listino ha IVA inclusa, converti prezzo finale
   const finalPrice =
-    vatMode === "included"
-      ? calculatePriceWithVAT(finalPriceExclVAT, vatRate)
-      : finalPriceExclVAT;
+    vatMode === 'included' ? calculatePriceWithVAT(finalPriceExclVAT, vatRate) : finalPriceExclVAT;
 
   // Calcola importo IVA se necessario
   const vatAmount =
-    vatMode === "excluded"
+    vatMode === 'excluded'
       ? calculateVATAmount(finalPriceExclVAT, vatRate)
       : finalPrice - finalPriceExclVAT;
 
@@ -447,11 +436,10 @@ async function calculatePriceWithRule(
     margin,
     totalCost: totalCostExclVAT, // Sempre IVA esclusa
     finalPrice, // Nella modalità IVA del listino
-    vatMode: priceList.vat_mode || "excluded", // Propaga vat_mode
+    vatMode: priceList.vat_mode || 'excluded', // Propaga vat_mode
     vatRate,
     vatAmount,
-    totalPriceWithVAT:
-      vatMode === "excluded" ? finalPrice + vatAmount : finalPrice,
+    totalPriceWithVAT: vatMode === 'excluded' ? finalPrice + vatAmount : finalPrice,
     // ... altri campi esistenti ...
   };
 }
@@ -486,13 +474,8 @@ async function calculateWithDefaultMargin(
 
   // Normalizza basePrice a IVA esclusa
   let basePriceExclVAT = basePrice;
-  if (vatMode === "included") {
-    basePriceExclVAT = normalizePrice(
-      basePrice,
-      "included",
-      "excluded",
-      vatRate
-    );
+  if (vatMode === 'included') {
+    basePriceExclVAT = normalizePrice(basePrice, 'included', 'excluded', vatRate);
   }
 
   const totalCostExclVAT = basePriceExclVAT + surcharges;
@@ -507,9 +490,7 @@ async function calculateWithDefaultMargin(
 
   const finalPriceExclVAT = totalCostExclVAT + margin;
   const finalPrice =
-    vatMode === "included"
-      ? calculatePriceWithVAT(finalPriceExclVAT, vatRate)
-      : finalPriceExclVAT;
+    vatMode === 'included' ? calculatePriceWithVAT(finalPriceExclVAT, vatRate) : finalPriceExclVAT;
 
   // ... resto della logica ...
 }
@@ -535,16 +516,15 @@ if (quoteResult && quoteResult.finalPrice) {
     total_price: quoteResult.finalPrice.toString(),
     weight_price: supplierPrice.toString(),
     base_price: quoteResult.basePrice?.toString() || supplierPrice.toString(),
-    surcharges: quoteResult.surcharges?.toString() || "0",
-    margin: quoteResult.margin?.toString() || "0",
+    surcharges: quoteResult.surcharges?.toString() || '0',
+    margin: quoteResult.margin?.toString() || '0',
 
     // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali
-    vat_mode: quoteResult.vatMode || "excluded", // Default per retrocompatibilità
+    vat_mode: quoteResult.vatMode || 'excluded', // Default per retrocompatibilità
     vat_rate: (quoteResult.vatRate || 22.0).toString(),
-    vat_amount: quoteResult.vatAmount?.toString() || "0",
+    vat_amount: quoteResult.vatAmount?.toString() || '0',
     total_price_with_vat:
-      quoteResult.totalPriceWithVAT?.toString() ||
-      quoteResult.finalPrice.toString(),
+      quoteResult.totalPriceWithVAT?.toString() || quoteResult.finalPrice.toString(),
 
     // ... altri campi esistenti ...
   };
@@ -578,7 +558,7 @@ export const featureFlags = {
    * Abilita visualizzazione semantica IVA (ADR-001)
    * Default: false (gradual rollout)
    */
-  showVATSemantics: process.env.NEXT_PUBLIC_SHOW_VAT_SEMANTICS === "true",
+  showVATSemantics: process.env.NEXT_PUBLIC_SHOW_VAT_SEMANTICS === 'true',
 };
 ```
 
@@ -686,7 +666,7 @@ import { featureFlags } from "@/lib/config/feature-flags";
 
 ```typescript
 // Nel insertShipmentFn
-const { data, error } = await supabaseAdmin.from("shipments").insert({
+const { data, error } = await supabaseAdmin.from('shipments').insert({
   // ... campi esistenti ...
   total_cost: args.finalCost,
 
@@ -920,17 +900,14 @@ ALTER TABLE shipments DROP COLUMN IF EXISTS vat_rate;
 ### Metriche da Monitorare
 
 1. **Errori Pricing:**
-
    - Conteggio errori in calcolo prezzi
    - Confronto pre/post implementazione
 
 2. **Performance:**
-
    - Tempo risposta Quote API
    - Tempo calcolo pricing engine
 
 3. **Dati:**
-
    - % listini con `vat_mode` esplicito
    - % spedizioni con `vat_mode` esplicito
 

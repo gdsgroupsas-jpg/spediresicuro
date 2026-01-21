@@ -1,6 +1,6 @@
 /**
  * Script di test per verificare connessione Redis Upstash
- * 
+ *
  * Verifica:
  * 1. Variabili d'ambiente configurate
  * 2. Connessione a Redis funzionante
@@ -21,19 +21,19 @@ async function testRedisConnection() {
   console.log('🔍 [REDIS TEST] Inizio test connessione Redis...\n');
 
   // 1. Verifica variabili d'ambiente
-  console.log('📋 [REDIS TEST] Verifica variabili d\'ambiente...');
+  console.log("📋 [REDIS TEST] Verifica variabili d'ambiente...");
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 
   if (!url || !token) {
-    console.error('❌ [REDIS TEST] ERRORE: Variabili d\'ambiente mancanti!');
+    console.error("❌ [REDIS TEST] ERRORE: Variabili d'ambiente mancanti!");
     console.error('   UPSTASH_REDIS_REST_URL:', url ? '✅ Configurato' : '❌ Mancante');
     console.error('   UPSTASH_REDIS_REST_TOKEN:', token ? '✅ Configurato' : '❌ Mancante');
     console.error('\n💡 Soluzione: Aggiungi le variabili in .env.local o Vercel');
     process.exit(1);
   }
 
-  console.log('✅ [REDIS TEST] Variabili d\'ambiente configurate');
+  console.log("✅ [REDIS TEST] Variabili d'ambiente configurate");
   console.log(`   URL: ${url.substring(0, 30)}...`);
   console.log(`   TOKEN: ${token.substring(0, 10)}...\n`);
 
@@ -55,7 +55,7 @@ async function testRedisConnection() {
     const testValue = `test-${Date.now()}`;
 
     console.log('🧪 [REDIS TEST] Test operazioni SET/GET...');
-    
+
     // SET
     await redis.set(testKey, testValue);
     console.log(`   ✅ SET: ${testKey} = ${testValue}`);
@@ -65,7 +65,9 @@ async function testRedisConnection() {
     if (retrieved === testValue) {
       console.log(`   ✅ GET: ${testKey} = ${retrieved}`);
     } else {
-      console.error(`   ❌ GET: Valore non corrispondente (atteso: ${testValue}, ricevuto: ${retrieved})`);
+      console.error(
+        `   ❌ GET: Valore non corrispondente (atteso: ${testValue}, ricevuto: ${retrieved})`
+      );
       process.exit(1);
     }
 
@@ -92,7 +94,7 @@ async function testRedisConnection() {
 
     await redis.setex(quoteKey, 300, JSON.stringify(mockQuote));
     const cached = await redis.get<any>(quoteKey);
-    
+
     if (cached) {
       // Upstash Redis restituisce già l'oggetto parsato se era JSON
       const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
@@ -120,7 +122,7 @@ async function testRedisConnection() {
     }
     const endTime = Date.now();
     const avgTime = (endTime - startTime) / 10;
-    
+
     console.log(`   ✅ 10 operazioni SET/GET completate in ${endTime - startTime}ms`);
     console.log(`   ✅ Tempo medio per operazione: ${avgTime.toFixed(2)}ms`);
 
@@ -140,7 +142,6 @@ async function testRedisConnection() {
     console.log('   ✅ Cache quote funzionante');
     console.log('   ✅ Performance ottimale\n');
     console.log('💡 Redis è pronto per essere usato in produzione!');
-
   } catch (error: any) {
     console.error('❌ [REDIS TEST] ERRORE durante i test:');
     console.error('   Messaggio:', error.message);

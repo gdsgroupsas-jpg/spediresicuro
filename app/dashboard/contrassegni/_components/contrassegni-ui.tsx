@@ -1,6 +1,6 @@
 /**
  * Client Component: UI Contrassegni
- * 
+ *
  * Gestisce UI, filtri, search e realtime updates.
  * Riceve dati iniziali come props dal Server Component.
  */
@@ -8,7 +8,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { DollarSign, Search, Filter, CheckCircle2, Clock, AlertCircle, Calendar, Package, Euro } from 'lucide-react';
+import {
+  DollarSign,
+  Search,
+  Filter,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Calendar,
+  Package,
+  Euro,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { markContrassegnoInCarica, markContrassegnoEvaso } from '@/actions/contrassegni';
 import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
@@ -32,7 +42,14 @@ export interface CashOnDeliveryShipment {
   contrassegnoEvaso: boolean;
 }
 
-type FilterStatus = 'all' | 'pending' | 'delivered' | 'payment_expected' | 'paid' | 'in_carica' | 'evaso';
+type FilterStatus =
+  | 'all'
+  | 'pending'
+  | 'delivered'
+  | 'payment_expected'
+  | 'paid'
+  | 'in_carica'
+  | 'evaso';
 
 interface ContrassegniUIProps {
   initialShipments: CashOnDeliveryShipment[];
@@ -60,9 +77,7 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
       // Aggiorna solo se è un contrassegno
       if (updatedShipment.cash_on_delivery === true && updatedShipment.deleted !== true) {
         const enriched = enrichShipment(updatedShipment);
-        setShipments((prev) =>
-          prev.map((s) => (s.id === enriched.id ? enriched : s))
-        );
+        setShipments((prev) => prev.map((s) => (s.id === enriched.id ? enriched : s)));
       } else {
         // Rimuovi se non è più un contrassegno o è stato eliminato
         setShipments((prev) => prev.filter((s) => s.id !== updatedShipment.id));
@@ -77,14 +92,14 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
   function enrichShipment(shipment: any): CashOnDeliveryShipment {
     const contrassegnoInCarica = checkContrassegnoInCarica(shipment);
     const contrassegnoEvaso = checkContrassegnoEvaso(shipment);
-    
+
     let paymentStatus = calculatePaymentStatus(shipment);
     if (contrassegnoEvaso) {
       paymentStatus = 'evaso';
     } else if (contrassegnoInCarica) {
       paymentStatus = 'in_carica';
     }
-    
+
     const expectedPaymentDate = calculateExpectedPaymentDate(shipment);
     const daysSinceDelivery = shipment.delivered_at
       ? Math.floor((Date.now() - new Date(shipment.delivered_at).getTime()) / (1000 * 60 * 60 * 24))
@@ -109,7 +124,8 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
   // Verifica se contrassegno è evaso
   function checkContrassegnoEvaso(shipment: any): boolean {
     if (shipment.notes && shipment.notes.includes('CONTRASSEGNO EVASO')) return true;
-    if (shipment.internal_notes && shipment.internal_notes.includes('Contrassegno EVASO')) return true;
+    if (shipment.internal_notes && shipment.internal_notes.includes('Contrassegno EVASO'))
+      return true;
     return false;
   }
 
@@ -119,29 +135,29 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
       const daysSince = Math.floor(
         (Date.now() - new Date(shipment.delivered_at).getTime()) / (1000 * 60 * 60 * 24)
       );
-      
+
       if (daysSince > 7) {
         return 'paid';
       }
-      
+
       return 'payment_expected';
     }
-    
+
     if (shipment.status === 'delivered') {
       return 'delivered';
     }
-    
+
     return 'pending';
   }
 
   // Calcola data prevista pagamento
   function calculateExpectedPaymentDate(shipment: any): string | null {
     if (!shipment.delivered_at) return null;
-    
+
     const deliveredDate = new Date(shipment.delivered_at);
     const expectedDate = new Date(deliveredDate);
     expectedDate.setDate(expectedDate.getDate() + 7);
-    
+
     return expectedDate.toISOString();
   }
 
@@ -172,7 +188,9 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
     const pending = shipments.filter((s) => s.paymentStatus === 'pending').length;
     const delivered = shipments.filter((s) => s.paymentStatus === 'delivered').length;
     const paymentExpected = shipments.filter((s) => s.paymentStatus === 'payment_expected').length;
-    const paid = shipments.filter((s) => s.paymentStatus === 'paid' || s.paymentStatus === 'evaso').length;
+    const paid = shipments.filter(
+      (s) => s.paymentStatus === 'paid' || s.paymentStatus === 'evaso'
+    ).length;
     const inCaricaCount = shipments.filter((s) => s.paymentStatus === 'in_carica').length;
     const evasoCount = shipments.filter((s) => s.paymentStatus === 'evaso').length;
     const totalAmount = shipments.reduce((sum, s) => sum + (s.cash_on_delivery_amount || 0), 0);
@@ -308,9 +326,7 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             </div>
             <Clock className="w-8 h-8 text-yellow-500" />
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Importo: €{stats.pendingAmount.toFixed(2)}
-          </p>
+          <p className="text-xs text-gray-500 mt-2">Importo: €{stats.pendingAmount.toFixed(2)}</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500">
@@ -354,10 +370,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             <button
               onClick={() => setFilterStatus('all')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 filterStatus === 'all'
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
               Tutti
@@ -365,10 +381,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             <button
               onClick={() => setFilterStatus('pending')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 filterStatus === 'pending'
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
               In Attesa
@@ -376,10 +392,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             <button
               onClick={() => setFilterStatus('delivered')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 filterStatus === 'delivered'
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
               Consegnate
@@ -387,10 +403,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             <button
               onClick={() => setFilterStatus('payment_expected')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 filterStatus === 'payment_expected'
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
               Pagamento Previsto
@@ -398,10 +414,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             <button
               onClick={() => setFilterStatus('in_carica')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 filterStatus === 'in_carica'
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
               In Carica
@@ -409,10 +425,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
             <button
               onClick={() => setFilterStatus('evaso')}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 filterStatus === 'evaso'
-                  ? "bg-orange-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               )}
             >
               Evaso
@@ -483,17 +499,21 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={cn(
-                        "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                        shipment.status === 'delivered'
-                          ? "bg-green-100 text-green-800"
+                      <span
+                        className={cn(
+                          'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
+                          shipment.status === 'delivered'
+                            ? 'bg-green-100 text-green-800'
+                            : shipment.status === 'in_transit'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                        )}
+                      >
+                        {shipment.status === 'delivered'
+                          ? 'Consegnata'
                           : shipment.status === 'in_transit'
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      )}>
-                        {shipment.status === 'delivered' ? 'Consegnata' : 
-                         shipment.status === 'in_transit' ? 'In Transito' : 
-                         shipment.status}
+                            ? 'In Transito'
+                            : shipment.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -503,8 +523,8 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
                       {shipment.delivered_at
                         ? new Date(shipment.delivered_at).toLocaleDateString('it-IT')
                         : shipment.shipped_at
-                        ? `Spedita: ${new Date(shipment.shipped_at).toLocaleDateString('it-IT')}`
-                        : 'Non ancora spedita'}
+                          ? `Spedita: ${new Date(shipment.shipped_at).toLocaleDateString('it-IT')}`
+                          : 'Non ancora spedita'}
                       {shipment.daysSinceDelivery !== null && shipment.daysSinceDelivery > 0 && (
                         <div className="text-xs text-gray-400">
                           {shipment.daysSinceDelivery} giorni fa
@@ -540,9 +560,7 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
                           {processingId === shipment.id ? 'Elaborazione...' : 'Segna evaso'}
                         </button>
                       )}
-                      {shipment.contrassegnoEvaso && (
-                        <span className="text-green-600">Evaso</span>
-                      )}
+                      {shipment.contrassegnoEvaso && <span className="text-green-600">Evaso</span>}
                     </td>
                   </tr>
                 ))}

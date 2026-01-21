@@ -69,18 +69,14 @@ export function FeeHistoryTable({ history }: FeeHistoryTableProps) {
                 {formatFee(entry.newFee)}
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                {entry.changedByName || entry.changedByEmail || entry.changedBy.substring(0, 8) + '...'}
+                {entry.changedByName ||
+                  entry.changedByEmail ||
+                  entry.changedBy.substring(0, 8) + '...'}
               </td>
               <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px]">
                 {entry.notes ? (
-                  <span 
-                    className="truncate block" 
-                    title={entry.notes}
-                  >
-                    {entry.notes.length > 40 
-                      ? entry.notes.substring(0, 40) + '...' 
-                      : entry.notes
-                    }
+                  <span className="truncate block" title={entry.notes}>
+                    {entry.notes.length > 40 ? entry.notes.substring(0, 40) + '...' : entry.notes}
                   </span>
                 ) : (
                   <span className="text-gray-400 italic">-</span>
@@ -93,4 +89,3 @@ export function FeeHistoryTable({ history }: FeeHistoryTableProps) {
     </div>
   );
 }
-

@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -10,15 +9,15 @@ const envContent = fs.readFileSync(ENV_PATH, 'utf-8');
 const secretMatch = envContent.match(/SUPABASE_SERVICE_ROLE_KEY=(.*)/);
 
 if (!secretMatch) {
-    console.error('❌ Service Role Key not found!');
-    process.exit(1);
+  console.error('❌ Service Role Key not found!');
+  process.exit(1);
 }
 
 let secretJWT = secretMatch[1].trim();
 if (secretJWT.startsWith('"')) secretJWT = secretJWT.slice(1, -1);
 if (secretJWT.startsWith("'")) secretJWT = secretJWT.slice(1, -1);
 
-// Extract the secret (last part of JWT) OR use the whole thing? 
+// Extract the secret (last part of JWT) OR use the whole thing?
 // Supabase Service Key IS a JWT. The "secret" used to sign the Anon Key is the "JWT Secret" of the project.
 // Wait, we don't have the "JWT Secret" (roughly 32-40 chars), we have the Service Role Key (full JWT).
 // WE CANNOT SIGN A NEW TOKEN WITHOUT THE RAW JWT SECRET.
@@ -60,35 +59,36 @@ if (secretJWT.startsWith("'")) secretJWT = secretJWT.slice(1, -1);
 
 console.log('Secret seems to be:', secretJWT);
 if (secretJWT.startsWith('eyJ')) {
-    console.error('⚠️  SUPABASE_SERVICE_ROLE_KEY looks like a JWT, not a raw secret.');
-    console.error('   I cannot sign a new token without the raw JWT Secret.');
-    // Check if we can parse it to maybe find the secret? No.
+  console.error('⚠️  SUPABASE_SERVICE_ROLE_KEY looks like a JWT, not a raw secret.');
+  console.error('   I cannot sign a new token without the raw JWT Secret.');
+  // Check if we can parse it to maybe find the secret? No.
 } else {
-    console.log('✅  SUPABASE_SERVICE_ROLE_KEY looks like a raw secret. Proceeding.');
+  console.log('✅  SUPABASE_SERVICE_ROLE_KEY looks like a raw secret. Proceeding.');
 }
 
 // 2. Prepare Payload
 // Standard Supabase Anon Payload
 const now = Math.floor(Date.now() / 1000);
 const payload = {
-    "role": "anon",
-    "iss": "supabase",
-    "iat": now,
-    "exp": now + (10 * 365 * 24 * 60 * 60), // 10 years
-    "email": "anon",
-    "aud": "anon" // Usually just "anon"
+  role: 'anon',
+  iss: 'supabase',
+  iat: now,
+  exp: now + 10 * 365 * 24 * 60 * 60, // 10 years
+  email: 'anon',
+  aud: 'anon', // Usually just "anon"
 };
 
 const header = {
-    "alg": "HS256",
-    "typ": "JWT"
+  alg: 'HS256',
+  typ: 'JWT',
 };
 
 function base64Url(str) {
-    return Buffer.from(str).toString('base64')
-        .replace(/=/g, '')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_');
+  return Buffer.from(str)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
 }
 
 const sHeader = base64Url(JSON.stringify(header));
@@ -96,12 +96,12 @@ const sPayload = base64Url(JSON.stringify(payload));
 const data = `${sHeader}.${sPayload}`;
 
 const signature = crypto
-    .createHmac('sha256', secretJWT)
-    .update(data)
-    .digest('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
+  .createHmac('sha256', secretJWT)
+  .update(data)
+  .digest('base64')
+  .replace(/=/g, '')
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_');
 
 const newToken = `${data}.${signature}`;
 
@@ -110,8 +110,8 @@ console.log(newToken);
 
 // 3. Update File
 const newContent = envContent.replace(
-    /NEXT_PUBLIC_SUPABASE_ANON_KEY=.*/,
-    `NEXT_PUBLIC_SUPABASE_ANON_KEY="${newToken}"`
+  /NEXT_PUBLIC_SUPABASE_ANON_KEY=.*/,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY="${newToken}"`
 );
 
 fs.writeFileSync(ENV_PATH, newContent, 'utf-8');

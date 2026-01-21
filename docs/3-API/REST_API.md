@@ -1,29 +1,33 @@
 # REST API - Complete Endpoints Documentation
 
 ## Overview
+
 Documentazione completa di tutti gli endpoint REST API disponibili in SpedireSicuro. Gli endpoint sono organizzati per categoria funzionale.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Autenticazione NextAuth (session cookie)
 - Conoscenza base di HTTP REST
 - Accesso a Supabase (per operazioni admin)
 
 ## Quick Reference
-| Categoria | Endpoint Base | Documentazione |
-|-----------|---------------|----------------|
-| Shipments | `/api/shipments/*` | [Shipments](#shipments) |
-| Quotes | `/api/quotes/*` | [Quotes](#quotes) |
-| Wallet | `/api/wallet/*` | [Wallet](#wallet) |
-| Users | `/api/user/*` | [Users](#users) |
-| Admin | `/api/admin/*` | [Admin](#admin) |
-| AI Agent | `/api/ai/*`, `/api/anne/*` | [AI Agent](#ai-agent) |
-| Integrations | `/api/integrations/*` | [Integrations](#integrations) |
+
+| Categoria    | Endpoint Base              | Documentazione                |
+| ------------ | -------------------------- | ----------------------------- |
+| Shipments    | `/api/shipments/*`         | [Shipments](#shipments)       |
+| Quotes       | `/api/quotes/*`            | [Quotes](#quotes)             |
+| Wallet       | `/api/wallet/*`            | [Wallet](#wallet)             |
+| Users        | `/api/user/*`              | [Users](#users)               |
+| Admin        | `/api/admin/*`             | [Admin](#admin)               |
+| AI Agent     | `/api/ai/*`, `/api/anne/*` | [AI Agent](#ai-agent)         |
+| Integrations | `/api/integrations/*`      | [Integrations](#integrations) |
 
 ---
 
@@ -32,16 +36,19 @@ Documentazione completa di tutti gli endpoint REST API disponibili in SpedireSic
 Tutti gli endpoint (eccetto `/api/health` e webhooks) richiedono autenticazione NextAuth.
 
 **Headers richiesti:**
+
 ```
 Cookie: next-auth.session-token=<token>
 ```
 
 **Risposta non autenticato:**
+
 ```json
 {
   "error": "Non autenticato"
 }
 ```
+
 Status: `401 Unauthorized`
 
 **Vedi:** [Authentication](../8-SECURITY/AUTHENTICATION.md) - Dettagli autenticazione
@@ -55,6 +62,7 @@ Status: `401 Unauthorized`
 Crea una nuova spedizione.
 
 **Request Body:**
+
 ```typescript
 {
   recipient: {
@@ -83,6 +91,7 @@ Crea una nuova spedizione.
 ```
 
 **Response Success (200):**
+
 ```json
 {
   "success": true,
@@ -90,7 +99,7 @@ Crea una nuova spedizione.
     "id": "uuid",
     "tracking_number": "string",
     "carrier": "GLS",
-    "total_cost": 12.50,
+    "total_cost": 12.5,
     "label_data": "base64_pdf",
     "sender_name": "...",
     "recipient_name": "..."
@@ -99,6 +108,7 @@ Crea una nuova spedizione.
 ```
 
 **Error Codes:**
+
 - `401` - Non autenticato
 - `400` - Validazione fallita
 - `409` - Duplicato (idempotency)
@@ -117,12 +127,14 @@ L'endpoint supporta idempotency tramite hash dei parametri. Se una richiesta ide
 Lista tutte le spedizioni dell'utente autenticato.
 
 **Query Parameters:**
+
 - `limit?: number` - Numero risultati (default: 50, max: 100)
 - `offset?: number` - Paginazione
 - `status?: string` - Filtro per stato
 - `carrier?: string` - Filtro per corriere
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -132,7 +144,7 @@ Lista tutte le spedizioni dell'utente autenticato.
       "tracking_number": "string",
       "carrier": "GLS",
       "status": "created",
-      "total_cost": 12.50,
+      "total_cost": 12.5,
       "created_at": "2026-01-12T10:00:00Z"
     }
   ],
@@ -151,10 +163,12 @@ Lista tutte le spedizioni dell'utente autenticato.
 Download etichetta spedizione (PDF).
 
 **Response (200):**
+
 - Content-Type: `application/pdf`
 - Body: PDF binary
 
 **Error Codes:**
+
 - `404` - Spedizione non trovata
 - `403` - Accesso negato (non è tua spedizione)
 
@@ -165,6 +179,7 @@ Download etichetta spedizione (PDF).
 Cancella una spedizione (solo se non ancora processata dal corriere).
 
 **Request Body:**
+
 ```json
 {
   "shipmentId": "uuid"
@@ -172,6 +187,7 @@ Cancella una spedizione (solo se non ancora processata dal corriere).
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -188,6 +204,7 @@ Cancella una spedizione (solo se non ancora processata dal corriere).
 Ottiene preventivi real-time da API corriere (Spedisci.Online).
 
 **Request Body:**
+
 ```typescript
 {
   weight: number; // kg
@@ -207,6 +224,7 @@ Ottiene preventivi real-time da API corriere (Spedisci.Online).
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -214,7 +232,7 @@ Ottiene preventivi real-time da API corriere (Spedisci.Online).
     {
       "carrier": "GLS",
       "service": "Standard",
-      "price": 12.50,
+      "price": 12.5,
       "currency": "EUR",
       "estimated_days": 2,
       "contractCode": "GLS5000"
@@ -234,13 +252,14 @@ Ottiene preventivi da database (price lists) senza chiamate API esterne.
 **Request Body:** (stesso formato di `/api/quotes/realtime`)
 
 **Response (200):**
+
 ```json
 {
   "success": true,
   "quotes": [
     {
       "carrier": "GLS",
-      "price": 11.00,
+      "price": 11.0,
       "source": "price_list",
       "price_list_id": "uuid"
     }
@@ -259,6 +278,7 @@ Confronta preventivi tra real-time e database.
 **Request Body:** (stesso formato di `/api/quotes/realtime`)
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -281,11 +301,13 @@ Confronta preventivi tra real-time e database.
 Ottiene storico transazioni wallet.
 
 **Query Parameters:**
+
 - `limit?: number` - Numero risultati (default: 50)
 - `offset?: number` - Paginazione
 - `type?: string` - Filtro tipo ("credit", "debit")
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -293,7 +315,7 @@ Ottiene storico transazioni wallet.
     {
       "id": "uuid",
       "type": "credit",
-      "amount": 100.00,
+      "amount": 100.0,
       "description": "Ricarica wallet",
       "created_at": "2026-01-12T10:00:00Z"
     }
@@ -313,6 +335,7 @@ Ottiene storico transazioni wallet.
 Ottiene informazioni utente corrente.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -321,7 +344,7 @@ Ottiene informazioni utente corrente.
     "email": "user@example.com",
     "name": "Nome Utente",
     "account_type": "user",
-    "wallet_balance": 150.00,
+    "wallet_balance": 150.0,
     "is_reseller": false
   }
 }
@@ -334,6 +357,7 @@ Ottiene informazioni utente corrente.
 Ottiene dati cliente salvati (per autocompletamento form).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -354,6 +378,7 @@ Ottiene dati cliente salvati (per autocompletamento form).
 Salva dati cliente per autocompletamento.
 
 **Request Body:**
+
 ```json
 {
   "nome": "Azienda SRL",
@@ -371,6 +396,7 @@ Salva dati cliente per autocompletamento.
 Ottiene impostazioni utente.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -389,6 +415,7 @@ Ottiene impostazioni utente.
 Aggiorna impostazioni utente.
 
 **Request Body:**
+
 ```json
 {
   "notifications": false,
@@ -405,13 +432,14 @@ Aggiorna impostazioni utente.
 Statistiche dashboard admin (solo admin/superadmin).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
   "stats": {
     "total_users": 150,
     "total_shipments": 5000,
-    "total_revenue": 50000.00,
+    "total_revenue": 50000.0,
     "active_resellers": 10
   }
 }
@@ -426,13 +454,14 @@ Statistiche dashboard admin (solo admin/superadmin).
 Ottiene dettagli utente (solo admin).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
   "user": {
     "id": "uuid",
     "email": "user@example.com",
-    "wallet_balance": 100.00,
+    "wallet_balance": 100.0,
     "account_type": "user",
     "created_at": "2026-01-01T00:00:00Z"
   }
@@ -446,6 +475,7 @@ Ottiene dettagli utente (solo admin).
 Ottiene features attive per un utente.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -466,6 +496,7 @@ Ottiene features attive per un utente.
 Attiva/disattiva feature per utente.
 
 **Request Body:**
+
 ```json
 {
   "targetUserEmail": "user@example.com",
@@ -483,6 +514,7 @@ Attiva/disattiva feature per utente.
 Ottiene stato feature globali piattaforma.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -503,6 +535,7 @@ Ottiene stato feature globali piattaforma.
 Aggiorna fee piattaforma (solo superadmin).
 
 **Request Body:**
+
 ```json
 {
   "fee_percentage": 5.0
@@ -516,6 +549,7 @@ Aggiorna fee piattaforma (solo superadmin).
 Eventi diagnostici sistema (solo superadmin).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -538,6 +572,7 @@ Eventi diagnostici sistema (solo superadmin).
 Chat con agente AI Anne.
 
 **Request Body:**
+
 ```json
 {
   "message": "Crea una spedizione per Milano",
@@ -546,6 +581,7 @@ Chat con agente AI Anne.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -564,6 +600,7 @@ Chat con agente AI Anne.
 Chat generica con AI agent (alternativa a Anne).
 
 **Request Body:**
+
 ```json
 {
   "message": "string",
@@ -578,9 +615,11 @@ Chat generica con AI agent (alternativa a Anne).
 Suggerimenti intelligenti basati su storico.
 
 **Query Parameters:**
+
 - `type?: string` - Tipo suggerimento ("carrier", "address", ecc.)
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -601,12 +640,13 @@ Suggerimenti intelligenti basati su storico.
 Statistiche valori spedizioni (per AI).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
   "stats": {
-    "average_insurance": 500.00,
-    "average_cod": 100.00
+    "average_insurance": 500.0,
+    "average_cod": 100.0
   }
 }
 ```
@@ -620,6 +660,7 @@ Statistiche valori spedizioni (per AI).
 Valida credenziali Spedisci.Online.
 
 **Request Body:**
+
 ```json
 {
   "api_key": "string",
@@ -628,6 +669,7 @@ Valida credenziali Spedisci.Online.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -643,6 +685,7 @@ Valida credenziali Spedisci.Online.
 Testa credenziali corriere generico.
 
 **Request Body:**
+
 ```json
 {
   "provider": "spediscionline",
@@ -660,6 +703,7 @@ Testa credenziali corriere generico.
 Ottiene corrieri disponibili per l'utente.
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -685,11 +729,13 @@ Ottiene corrieri disponibili per l'utente.
 Upload listino prezzi (CSV/Excel).
 
 **Request Body:**
+
 - `file`: File (multipart/form-data)
 - `courier`: string
 - `name`: string
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -709,6 +755,7 @@ Upload listino prezzi (CSV/Excel).
 Genera fattura.
 
 **Request Body:**
+
 ```json
 {
   "shipment_ids": ["uuid1", "uuid2"],
@@ -720,6 +767,7 @@ Genera fattura.
 ```
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -734,6 +782,7 @@ Genera fattura.
 Download PDF fattura.
 
 **Response (200):**
+
 - Content-Type: `application/pdf`
 - Body: PDF binary
 
@@ -746,9 +795,11 @@ Download PDF fattura.
 Estrae dati da immagine (OCR AI).
 
 **Request Body:**
+
 - `image`: File (multipart/form-data) o base64
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -770,10 +821,12 @@ Estrae dati da immagine (OCR AI).
 Ricerca indirizzi (autocomplete).
 
 **Query Parameters:**
+
 - `q`: string - Query ricerca
 - `country?: string` - Default: "IT"
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -797,6 +850,7 @@ Ricerca indirizzi (autocomplete).
 Health check endpoint (pubblico, no auth).
 
 **Response (200):**
+
 ```json
 {
   "status": "ok",
@@ -812,6 +866,7 @@ Health check endpoint (pubblico, no auth).
 Diagnostica sistema (solo superadmin).
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -856,6 +911,7 @@ Riconciliazione automatica costi (solo interno).
 Tutti gli endpoint seguono il formato standardizzato:
 
 **Success Response:**
+
 ```json
 {
   "success": true,
@@ -864,6 +920,7 @@ Tutti gli endpoint seguono il formato standardizzato:
 ```
 
 **Error Response:**
+
 ```json
 {
   "error": "Messaggio errore",
@@ -901,12 +958,12 @@ Tutti gli endpoint seguono il formato standardizzato:
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

@@ -1,9 +1,9 @@
-import React from 'react'
+import React from 'react';
 
 interface LogoBlackProps {
-  className?: string
-  width?: number
-  height?: number
+  className?: string;
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -26,14 +26,8 @@ export default function LogoBlack({ className = '', width = 600, height = 200 }:
           d="M512 850C325.3 850 174 698.7 174 512C174 325.3 325.3 174 512 174C605 174 690 211 751 272L810 213C733 136 627 88 512 88C277 88 88 277 88 512C88 747 277 936 512 936C627 936 733 888 810 811L751 752C690 813 605 850 512 850Z"
           fill="#000000"
         />
-        <path
-          d="M280 800L580 150L450 450L650 450L350 1100L480 800L280 800Z"
-          fill="#000000"
-        />
-        <path
-          d="M380 700L680 50L550 350L750 350L450 1000L580 700L380 700Z"
-          fill="#000000"
-        />
+        <path d="M280 800L580 150L450 450L650 450L350 1100L480 800L280 800Z" fill="#000000" />
+        <path d="M380 700L680 50L550 350L750 350L450 1000L580 700L380 700Z" fill="#000000" />
       </g>
 
       <text
@@ -60,5 +54,5 @@ export default function LogoBlack({ className = '', width = 600, height = 200 }:
         Powered by AI
       </text>
     </svg>
-  )
+  );
 }

@@ -4,13 +4,13 @@
 
 ### Tabella Output per Reseller
 
-| **Corriere** | **Contract Code** | **Costo Fornitore** | **Prezzo Vendita** | **Margine** | **Stato** |
-|--------------|-------------------|---------------------|---------------------|-------------|-----------|
-| **GLS** | `gls-express-2024` | €8.50 | €12.75 | +50% | ✅ Disponibile |
-| **Poste Italiane** | `postedelivery-SDA-Express` | €7.20 | €10.80 | +50% | ✅ Disponibile |
-| **Poste Italiane** | `postedelivery-Standard` | €5.80 | €8.70 | +50% | ✅ Disponibile |
-| **UPS** | `ups-standard-it` | €15.00 | €22.50 | +50% | ⏳ Caricamento... |
-| **Interno** | `interno-warehouse` | €3.50 | €5.25 | +50% | ✅ Disponibile |
+| **Corriere**       | **Contract Code**           | **Costo Fornitore** | **Prezzo Vendita** | **Margine** | **Stato**         |
+| ------------------ | --------------------------- | ------------------- | ------------------ | ----------- | ----------------- |
+| **GLS**            | `gls-express-2024`          | €8.50               | €12.75             | +50%        | ✅ Disponibile    |
+| **Poste Italiane** | `postedelivery-SDA-Express` | €7.20               | €10.80             | +50%        | ✅ Disponibile    |
+| **Poste Italiane** | `postedelivery-Standard`    | €5.80               | €8.70              | +50%        | ✅ Disponibile    |
+| **UPS**            | `ups-standard-it`           | €15.00              | €22.50             | +50%        | ⏳ Caricamento... |
+| **Interno**        | `interno-warehouse`         | €3.50               | €5.25              | +50%        | ✅ Disponibile    |
 
 ---
 
@@ -73,32 +73,32 @@
 ```typescript
 interface CourierQuote {
   // Identificazione
-  courierName: string;           // "GLS", "Poste Italiane"
-  displayName: string;           // "GLS", "Poste Italiane"
-  contractCode: string;          // "gls-express-2024"
-  providerId: string;            // "spedisci_online"
-  configId: string;              // ID configurazione API
-  
+  courierName: string; // "GLS", "Poste Italiane"
+  displayName: string; // "GLS", "Poste Italiane"
+  contractCode: string; // "gls-express-2024"
+  providerId: string; // "spedisci_online"
+  configId: string; // ID configurazione API
+
   // Prezzi
-  providerCost: number;          // €8.50 (da API real-time)
-  sellingPrice: number;          // €12.75 (da listino personale)
+  providerCost: number; // €8.50 (da API real-time)
+  sellingPrice: number; // €12.75 (da listino personale)
   margin: {
-    amount: number;              // €4.25
-    percentage: number;           // 50%
+    amount: number; // €4.25
+    percentage: number; // 50%
   };
-  
+
   // Breakdown
   breakdown: {
-    base: number;                // €6.00
-    weight: number;              // €2.50
-    surcharges: number;          // €0.00
-    margin: number;              // €4.25
+    base: number; // €6.00
+    weight: number; // €2.50
+    surcharges: number; // €0.00
+    margin: number; // €4.25
   };
-  
+
   // Stato
   status: 'loading' | 'ready' | 'error' | 'unavailable';
   error?: string;
-  
+
   // Metadata
   lastUpdated: Date;
   source: 'api_realtime' | 'cached' | 'estimated';
@@ -221,13 +221,13 @@ interface CourierQuote {
 
 ### Tabella Output con Servizi Accessori
 
-| **Corriere** | **Base** | **+ Contrassegno** | **+ Assicurazione** | **+ Exchange** | **Totale** |
-|--------------|----------|-------------------|---------------------|----------------|------------|
-| **GLS** | €8.50 → €12.75 | +€3.00 → +€4.50 | +€2.00 → +€3.00 | +€5.00 → +€7.50 | €23.75 |
-| **Poste It. (Express)** | €7.20 → €10.80 | +€2.50 → +€3.75 | +€1.50 → +€2.25 | ❌ Non disponibile | €16.80 |
-| **Poste It. (Standard)** | €5.80 → €8.70 | +€2.00 → +€3.00 | +€1.00 → +€1.50 | ❌ Non disponibile | €13.20 |
-| **UPS** | €15.00 → €22.50 | +€4.00 → +€6.00 | +€3.00 → +€4.50 | ❌ Non disponibile | €33.00 |
-| **Interno** | €3.50 → €5.25 | +€1.00 → +€1.50 | ❌ Non disponibile | ❌ Non disponibile | €6.75 |
+| **Corriere**             | **Base**        | **+ Contrassegno** | **+ Assicurazione** | **+ Exchange**     | **Totale** |
+| ------------------------ | --------------- | ------------------ | ------------------- | ------------------ | ---------- |
+| **GLS**                  | €8.50 → €12.75  | +€3.00 → +€4.50    | +€2.00 → +€3.00     | +€5.00 → +€7.50    | €23.75     |
+| **Poste It. (Express)**  | €7.20 → €10.80  | +€2.50 → +€3.75    | +€1.50 → +€2.25     | ❌ Non disponibile | €16.80     |
+| **Poste It. (Standard)** | €5.80 → €8.70   | +€2.00 → +€3.00    | +€1.00 → +€1.50     | ❌ Non disponibile | €13.20     |
+| **UPS**                  | €15.00 → €22.50 | +€4.00 → +€6.00    | +€3.00 → +€4.50     | ❌ Non disponibile | €33.00     |
+| **Interno**              | €3.50 → €5.25   | +€1.00 → +€1.50    | ❌ Non disponibile  | ❌ Non disponibile | €6.75      |
 
 ---
 
@@ -368,47 +368,47 @@ interface CourierQuote {
 ```typescript
 interface CourierQuote {
   // ... campi esistenti ...
-  
+
   // Servizi Accessori Disponibili
   availableServices: {
     cashOnDelivery: {
       available: boolean;
-      providerCost: number;      // €3.00
-      sellingPrice: number;       // €4.50 (con margine)
-      description: string;        // "Contrassegno"
+      providerCost: number; // €3.00
+      sellingPrice: number; // €4.50 (con margine)
+      description: string; // "Contrassegno"
     };
     insurance: {
       available: boolean;
-      providerCost: number;       // €2.00 (per €500 valore)
-      sellingPrice: number;       // €3.00
-      description: string;        // "Assicurazione"
-      minValue?: number;          // Valore minimo assicurabile
-      maxValue?: number;          // Valore massimo assicurabile
+      providerCost: number; // €2.00 (per €500 valore)
+      sellingPrice: number; // €3.00
+      description: string; // "Assicurazione"
+      minValue?: number; // Valore minimo assicurabile
+      maxValue?: number; // Valore massimo assicurabile
     };
     exchange: {
-      available: boolean;          // Solo per GLS
-      providerCost: number;       // €5.00
-      sellingPrice: number;        // €7.50
-      description: string;        // "Exchange (solo GLS)"
-      courierSpecific: string[];   // ["GLS"]
+      available: boolean; // Solo per GLS
+      providerCost: number; // €5.00
+      sellingPrice: number; // €7.50
+      description: string; // "Exchange (solo GLS)"
+      courierSpecific: string[]; // ["GLS"]
     };
     homePickup: {
       available: boolean;
-      providerCost: number;       // €8.00
-      sellingPrice: number;       // €12.00
-      description: string;        // "Ritiro a domicilio"
+      providerCost: number; // €8.00
+      sellingPrice: number; // €12.00
+      description: string; // "Ritiro a domicilio"
     };
   };
-  
+
   // Servizi Attivi (selezionati dall'utente)
   activeServices: {
     cashOnDelivery?: {
       enabled: boolean;
-      amount?: number;            // Importo contrassegno (se specificato)
+      amount?: number; // Importo contrassegno (se specificato)
     };
     insurance?: {
       enabled: boolean;
-      declaredValue?: number;     // Valore dichiarato
+      declaredValue?: number; // Valore dichiarato
     };
     exchange?: {
       enabled: boolean;
@@ -417,22 +417,22 @@ interface CourierQuote {
       enabled: boolean;
     };
   };
-  
+
   // Prezzi Aggiornati (con servizi)
-  providerCost: number;          // €13.50 (base + servizi)
-  sellingPrice: number;           // €20.25 (con margine)
-  
+  providerCost: number; // €13.50 (base + servizi)
+  sellingPrice: number; // €20.25 (con margine)
+
   // Breakdown Aggiornato
   breakdown: {
-    base: number;                 // €8.50
-    weight: number;               // €0.00
+    base: number; // €8.50
+    weight: number; // €0.00
     services: {
-      cashOnDelivery: number;     // €3.00
-      insurance: number;          // €2.00
-      exchange: number;           // €0.00 (non attivo)
+      cashOnDelivery: number; // €3.00
+      insurance: number; // €2.00
+      exchange: number; // €0.00 (non attivo)
     };
-    surcharges: number;           // €5.00 (totale servizi)
-    margin: number;               // €6.75
+    surcharges: number; // €5.00 (totale servizi)
+    margin: number; // €6.75
   };
 }
 ```

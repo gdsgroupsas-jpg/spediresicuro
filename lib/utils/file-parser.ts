@@ -1,7 +1,7 @@
 /**
  * Parser per file CSV/XLS/XLSX
  * Supporta import da Spedisci.Online, Amazon, Shopify, PrestaShop, etc.
- * 
+ *
  * ⚠️ MIGRATO: Usa ExcelJS invece di xlsx per sicurezza
  */
 
@@ -61,7 +61,8 @@ export function normalizeImportedOrder(order: ImportedOrder): any {
   const trackingValue = order.ldv || order.tracking || order.tracking_number || '';
 
   // Nome destinatario
-  const nomeDestinatario = order.nominativo ||
+  const nomeDestinatario =
+    order.nominativo ||
     (order.nome && order.cognome ? `${order.nome} ${order.cognome}` : order.nome) ||
     '';
 
@@ -69,13 +70,18 @@ export function normalizeImportedOrder(order: ImportedOrder): any {
   const emailDestinatario = order.email_dest || order.email || '';
 
   // Peso normalizzato
-  const peso = typeof order.peso === 'number' ? order.peso : parseFloat(order.peso as string || '0') || 0;
+  const peso =
+    typeof order.peso === 'number' ? order.peso : parseFloat((order.peso as string) || '0') || 0;
 
   // Colli normalizzati
-  const colli = typeof order.colli === 'number' ? order.colli : parseInt(order.colli as string || '1', 10) || 1;
+  const colli =
+    typeof order.colli === 'number'
+      ? order.colli
+      : parseInt((order.colli as string) || '1', 10) || 1;
 
   // Costo normalizzato
-  const costo = typeof order.costo === 'number' ? order.costo : parseFloat(order.costo as string || '0') || 0;
+  const costo =
+    typeof order.costo === 'number' ? order.costo : parseFloat((order.costo as string) || '0') || 0;
 
   return {
     // IMPORTANTE: Mantieni LDV originale E tracking normalizzato
@@ -89,8 +95,10 @@ export function normalizeImportedOrder(order: ImportedOrder): any {
       nome: nomeDestinatario,
       indirizzo: order.indirizzo || '',
       cap: order.cap || '',
-      citta: order.citta || order.localita || (order as any).city || (order as any).recipient_city || '',
-      provincia: order.provincia || (order as any).province || (order as any).recipient_province || '',
+      citta:
+        order.citta || order.localita || (order as any).city || (order as any).recipient_city || '',
+      provincia:
+        order.provincia || (order as any).province || (order as any).recipient_province || '',
       telefono: order.telefono || order.cellulare || '',
       email: emailDestinatario,
     },
@@ -130,26 +138,26 @@ export function normalizeImportedOrder(order: ImportedOrder): any {
 
 /**
  * Parsa file CSV (accetta File o stringa)
- * 
+ *
  * ⚠️ NOTA: ExcelJS non supporta nativamente CSV, usiamo parsing manuale
  */
 export async function parseCSV(input: File | string): Promise<ImportedOrder[]> {
   return new Promise((resolve, reject) => {
     try {
       const parseCSVText = (text: string) => {
-        const lines = text.split('\n').filter(line => line.trim());
+        const lines = text.split('\n').filter((line) => line.trim());
         if (lines.length === 0) {
           resolve([]);
           return;
         }
 
         // Prima riga = header
-        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-        
+        const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+
         // Parse righe successive
         const data: any[] = [];
         for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const values = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
           const row: any = {};
           headers.forEach((header, index) => {
             row[header] = values[index] || '';
@@ -200,7 +208,7 @@ export async function parseCSV(input: File | string): Promise<ImportedOrder[]> {
 
 /**
  * Parsa file Excel (XLS/XLSX)
- * 
+ *
  * ⚠️ MIGRATO: Usa ExcelJS invece di xlsx
  */
 export async function parseExcel(file: File): Promise<ImportedOrder[]> {

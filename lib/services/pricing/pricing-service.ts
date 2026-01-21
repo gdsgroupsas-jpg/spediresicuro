@@ -8,13 +8,10 @@
  * @since Sprint 3 - Refactoring
  */
 
-import {
-  calculatePriceWithRules,
-  getApplicablePriceList,
-} from "@/lib/db/price-lists-advanced";
-import type { PriceCalculationResult, PriceList } from "@/types/listini";
-import type { CourierServiceType } from "@/types/shipments";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { calculatePriceWithRules, getApplicablePriceList } from '@/lib/db/price-lists-advanced';
+import type { PriceCalculationResult, PriceList } from '@/types/listini';
+import type { CourierServiceType } from '@/types/shipments';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface QuoteParams {
   weight: number;
@@ -49,8 +46,7 @@ export interface PricingServiceOptions {
  * Servizio centralizzato per pricing
  */
 export class PricingService {
-  private cache: Map<string, { result: QuoteResult; expiry: number }> =
-    new Map();
+  private cache: Map<string, { result: QuoteResult; expiry: number }> = new Map();
   private options: PricingServiceOptions;
 
   constructor(
@@ -101,7 +97,7 @@ export class PricingService {
 
       return enrichedResult;
     } catch (error) {
-      console.error("[PRICING_SERVICE] Quote calculation error:", error);
+      console.error('[PRICING_SERVICE] Quote calculation error:', error);
       return null;
     }
   }
@@ -109,14 +105,11 @@ export class PricingService {
   /**
    * Ottiene il listino applicabile per un utente
    */
-  async getApplicablePriceList(
-    userId: string,
-    courierCode?: string
-  ): Promise<PriceList | null> {
+  async getApplicablePriceList(userId: string, courierCode?: string): Promise<PriceList | null> {
     try {
       return await getApplicablePriceList(userId, courierCode);
     } catch (error) {
-      console.error("[PRICING_SERVICE] Get price list error:", error);
+      console.error('[PRICING_SERVICE] Get price list error:', error);
       return null;
     }
   }
@@ -124,13 +117,9 @@ export class PricingService {
   /**
    * Calcola margine tra prezzo vendita e costo
    */
-  calculateMargin(
-    sellingPrice: number,
-    costPrice: number
-  ): { amount: number; percent: number } {
+  calculateMargin(sellingPrice: number, costPrice: number): { amount: number; percent: number } {
     const amount = sellingPrice - costPrice;
-    const percent =
-      costPrice > 0 ? Math.round((amount / costPrice) * 100 * 100) / 100 : 0;
+    const percent = costPrice > 0 ? Math.round((amount / costPrice) * 100 * 100) / 100 : 0;
 
     return { amount, percent };
   }
@@ -170,14 +159,10 @@ export class PricingService {
   /**
    * Costruisce chiave cache
    */
-  private buildCacheKey(
-    userId: string,
-    params: QuoteParams,
-    priceListId?: string
-  ): string {
-    return `${userId}:${params.weight}:${params.destination.zip || ""}:${
-      params.courierId || ""
-    }:${params.serviceType || ""}:${priceListId || ""}`;
+  private buildCacheKey(userId: string, params: QuoteParams, priceListId?: string): string {
+    return `${userId}:${params.weight}:${params.destination.zip || ''}:${
+      params.courierId || ''
+    }:${params.serviceType || ''}:${priceListId || ''}`;
   }
 }
 

@@ -1,17 +1,17 @@
 /**
  * Supervisor Router
- * 
+ *
  * Entry point UNICO per la route /api/ai/agent-chat.
  * Decide e gestisce il routing tra:
  * - pricing_worker: Calcolo preventivi via pricing graph
  * - legacy: Handler Claude legacy per messaggi non-pricing
  * - END: Risposta pronta (con pricing_options o clarification_request)
- * 
+ *
  * ARCHITETTURA STRANGLER PATTERN:
  * - La route chiama SOLO supervisorRouter()
  * - Il router decide internamente se usare pricing graph o legacy
  * - Nessun branching sparso nella route
- * 
+ *
  * GUARDRAIL (Step 2.2):
  * - Se intent = pricing → SEMPRE pricing_graph (legacy solo se graph_error)
  * - Se intent != pricing → legacy (temporaneo, vedi TODO Sprint 3)
@@ -27,10 +27,10 @@ import { assertAgentState } from './type-guards';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { HumanMessage } from '@langchain/core/messages';
-import { 
-  logIntentDetected, 
-  logUsingPricingGraph, 
-  logGraphFailed, 
+import {
+  logIntentDetected,
+  logUsingPricingGraph,
+  logGraphFailed,
   logFallbackToLegacy,
   logSupervisorDecision,
   logSupervisorRouterComplete,
@@ -63,10 +63,10 @@ export interface SupervisorResult {
   // Non restituiamo nulla, la route gestirà
   executionTimeMs: number;
   source: 'pricing_graph' | 'supervisor_only';
-  
+
   // P4: AgentState finale (per componenti P4)
   agentState?: AgentState;
-  
+
   // Telemetria Step 2.2 (per test e monitoring)
   telemetry: SupervisorRouterTelemetry;
 }
@@ -90,18 +90,18 @@ function hasEnoughDataForPricing(details?: AgentState['shipment_details']): bool
 
 /**
  * Supervisor Router - Entry Point Unico
- * 
+ *
  * Flusso:
  * 1. Rileva intent (pricing vs non-pricing)
  * 2. Se pricing -> invoca pricing graph completo
  * 3. Se non-pricing -> ritorna 'legacy' (la route chiamerà Claude)
  * 4. Se graph fallisce -> ritorna 'legacy' (fallback safe)
- * 
+ *
  * GUARDRAIL Step 2.2:
  * - Pricing intent → SEMPRE pricing_graph prima
  * - Legacy solo se graph_error o non-pricing
  * - 1 evento telemetria finale SEMPRE
- * 
+ *
  * @param input - Dati dalla route
  * @returns Risultato con decisione e eventuali dati
  */
@@ -111,10 +111,11 @@ export async function supervisorRouter(
 ): Promise<SupervisorResult> {
   const startTime = Date.now();
   const { message, userId, userEmail, traceId, actingContext } = input;
-  
+
   // Telemetria da costruire progressivamente
   let intentDetected: IntentType = 'unknown';
-  let supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'end' = 'legacy';
+  let supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'legacy' | 'end' =
+    'legacy';
   let backendUsed: BackendUsed = 'legacy';
   let fallbackToLegacy = false;
   let fallbackReason: FallbackReason = null;
@@ -125,13 +126,15 @@ export async function supervisorRouter(
   let workerRun: 'address' | 'pricing' | 'ocr' | null = null;
   let missingFieldsCount = 0;
   let addressNormalized = false;
-  
+
   // Sprint 2.4: OCR telemetry
   let ocrSource: 'image' | 'text' | null = null;
   let ocrExtractedFieldsCount = 0;
-  
+
   // Helper per emettere evento finale e restituire risultato
-  const emitFinalTelemetryAndReturn = (result: Omit<SupervisorResult, 'telemetry'>): SupervisorResult => {
+  const emitFinalTelemetryAndReturn = (
+    result: Omit<SupervisorResult, 'telemetry'>
+  ): SupervisorResult => {
     const telemetryData: SupervisorRouterTelemetry = {
       intentDetected,
       supervisorDecision,
@@ -147,27 +150,27 @@ export async function supervisorRouter(
       missingFieldsCount,
       addressNormalized,
     };
-    
+
     // Emetti SEMPRE 1 evento finale per request
     logSupervisorRouterComplete(traceId, userId, telemetryData);
-    
+
     return {
       ...result,
       telemetry: telemetryData,
     };
   };
-  
+
   // 1. Rileva intent + pattern OCR
   let isPricingIntent = false;
   let hasOcrPatterns = false;
-  
+
   try {
     // Sprint 2.4: Rileva pattern OCR nel messaggio
     hasOcrPatterns = containsOcrPatterns(message);
     if (hasOcrPatterns) {
       logger.log('📸 [Supervisor Router] Pattern OCR rilevati nel messaggio');
     }
-    
+
     isPricingIntent = await detectPricingIntent(message, false);
     intentDetected = isPricingIntent ? 'pricing' : 'non_pricing';
     logIntentDetected(traceId, userId, isPricingIntent);
@@ -177,7 +180,7 @@ export async function supervisorRouter(
     fallbackToLegacy = true;
     fallbackReason = 'intent_error';
     logIntentDetected(traceId, userId, false);
-    
+
     // LEGACY PATH (temporary). Remove after Sprint 3 when all intents are handled.
     return emitFinalTelemetryAndReturn({
       decision: 'legacy',
@@ -185,7 +188,7 @@ export async function supervisorRouter(
       source: 'supervisor_only',
     });
   }
-  
+
   // 2. Decisione iniziale (prima di invocare graph)
   const initialDecision: DecisionInput = {
     isPricingIntent,
@@ -194,10 +197,10 @@ export async function supervisorRouter(
     hasEnoughData: false, // Non sappiamo ancora, il graph lo valuterà
     hasOcrPatterns, // Sprint 2.4
   };
-  
+
   const decision = decideNextStep(initialDecision);
   logSupervisorDecision(traceId, userId, decision, 0);
-  
+
   // Se non è pricing intent e non ha OCR patterns -> legacy subito
   // LEGACY PATH (temporary). Remove after Sprint 3 when all intents are handled.
   if (decision === 'legacy') {
@@ -205,7 +208,7 @@ export async function supervisorRouter(
     backendUsed = 'legacy';
     fallbackToLegacy = true;
     fallbackReason = 'non_pricing';
-    
+
     logFallbackToLegacy(traceId, userId, 'no_pricing_intent');
     return emitFinalTelemetryAndReturn({
       decision: 'legacy',
@@ -213,30 +216,34 @@ export async function supervisorRouter(
       source: 'supervisor_only',
     });
   }
-  
+
   // Sprint 2.4: Traccia decisione per telemetria
   // NOTA: Il routing effettivo è deciso da supervisor.ts, non qui.
   // Qui registriamo solo la decisione iniziale per telemetria.
   if (decision === 'ocr_worker') {
     supervisorDecision = 'ocr_worker';
-    logger.log('📸 [Supervisor Router] Pattern OCR rilevati, invoco pricing graph (supervisor deciderà routing)');
+    logger.log(
+      '📸 [Supervisor Router] Pattern OCR rilevati, invoco pricing graph (supervisor deciderà routing)'
+    );
   } else {
     // 3. È pricing intent -> DEVE usare pricing_graph (GUARDRAIL)
     // Legacy è consentito SOLO se pricing_graph fallisce
     supervisorDecision = 'pricing_worker';
-    logger.log('💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph (supervisor deciderà routing)');
+    logger.log(
+      '💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph (supervisor deciderà routing)'
+    );
   }
-  
+
   try {
     // ARCHITETTURA: supervisor-router NON imposta next_step.
     // Il routing è deciso ESCLUSIVAMENTE da supervisor.ts basandosi sullo stato.
     // supervisor-router rileva solo segnali (intent, OCR patterns) e li passa al graph.
     // ⚠️ ActingContext iniettato in agent_context per accesso worker
     const sessionId = traceId; // Usa traceId come session_id
-    
+
     // P3 Task 1: Recupera stato esistente se presente (checkpoint)
     let existingState = await agentSessionService.getSession(userId, sessionId);
-    
+
     const initialState: Partial<AgentState> = existingState || {
       messages: [new HumanMessage(message)],
       userId,
@@ -257,16 +264,16 @@ export async function supervisorRouter(
         acting_context: actingContext,
       },
     };
-    
+
     // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio
     if (existingState) {
       initialState.messages = [...(existingState.messages || []), new HumanMessage(message)];
     }
-    
+
     // P3 Task 1: Crea checkpointer e graph con persistenza
     const checkpointer = createCheckpointer();
     const graphWithCheckpointer = createPricingGraphWithCheckpointer(checkpointer);
-    
+
     const graphStartTime = Date.now();
     // P3 Task 1: Usa graph con checkpointer, passa thread_id e user_id in config
     const graphResult = await graphWithCheckpointer.invoke(initialState, {
@@ -278,12 +285,12 @@ export async function supervisorRouter(
     // P3 Task 5: Usa type guard per validazione type-safe invece di cast diretto
     const result = assertAgentState(graphResult);
     const graphExecutionTime = Date.now() - graphStartTime;
-    
+
     // Pricing graph usato con successo
     backendUsed = 'pricing_graph';
     pricingOptionsCount = result.pricing_options?.length ?? 0;
     hasClarification = !!result.clarification_request;
-    
+
     // Sprint 2.3: Traccia worker usati e campi mancanti
     if (result.shipmentDraft) {
       missingFieldsCount = result.shipmentDraft.missingFields?.length ?? 0;
@@ -295,10 +302,10 @@ export async function supervisorRouter(
     } else if (result.shipmentDraft || hasClarification) {
       workerRun = 'address';
     }
-    
+
     // Log telemetria intermedia
     logUsingPricingGraph(traceId, userId, graphExecutionTime, pricingOptionsCount);
-    
+
     // 4. Valuta risultato del graph
     if (result.pricing_options && result.pricing_options.length > 0) {
       // Abbiamo preventivi!
@@ -312,7 +319,7 @@ export async function supervisorRouter(
         source: 'pricing_graph',
       });
     }
-    
+
     // P2: Se abbiamo risposta explain, restituiscila
     if (result.explain_response) {
       supervisorDecision = 'end';
@@ -327,13 +334,13 @@ export async function supervisorRouter(
         source: 'pricing_graph',
       });
     }
-    
+
     // P2: Se abbiamo risposta debug, restituiscila
     if (result.debug_response) {
       supervisorDecision = 'end';
       workerRun = null; // Debug non è un worker standard
       // Formatta risposta debug con analysis e suggestions
-      const debugMessage = `${result.debug_response.analysis}\n\n**Suggerimenti:**\n${result.debug_response.suggestions.map(s => `• ${s}`).join('\n')}`;
+      const debugMessage = `${result.debug_response.analysis}\n\n**Suggerimenti:**\n${result.debug_response.suggestions.map((s) => `• ${s}`).join('\n')}`;
       return emitFinalTelemetryAndReturn({
         decision: 'END',
         clarificationRequest: debugMessage,
@@ -342,7 +349,7 @@ export async function supervisorRouter(
         source: 'pricing_graph',
       });
     }
-    
+
     // P1: Se abbiamo risposta mentor, restituiscila
     if (result.mentor_response) {
       supervisorDecision = 'end';
@@ -355,7 +362,7 @@ export async function supervisorRouter(
         source: 'pricing_graph',
       });
     }
-    
+
     if (result.clarification_request) {
       // Serve chiarimento (gestito dal graph, potrebbe essere da address_worker)
       supervisorDecision = 'end';
@@ -371,7 +378,7 @@ export async function supervisorRouter(
         source: 'pricing_graph',
       });
     }
-    
+
     // Graph completato ma senza risultati utili -> fallback legacy
     // LEGACY PATH (temporary). Remove after Sprint 3 when graph handles all cases.
     logger.warn('⚠️ [Supervisor Router] Graph completato senza risultati, fallback legacy');
@@ -379,29 +386,28 @@ export async function supervisorRouter(
     backendUsed = 'legacy';
     fallbackToLegacy = true;
     fallbackReason = 'graph_error'; // No results = graph didn't handle correctly
-    
+
     logFallbackToLegacy(traceId, userId, 'graph_failed');
     return emitFinalTelemetryAndReturn({
       decision: 'legacy',
       executionTimeMs: Date.now() - startTime,
       source: 'pricing_graph',
     });
-    
   } catch (error: unknown) {
     // Graph fallito -> fallback legacy (UNICO CASO LEGITTIMO per pricing intent)
     // LEGACY PATH (temporary). Remove after Sprint 3 when graph is stable.
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('❌ [Supervisor Router] Errore pricing graph:', errorMessage);
-    
+
     supervisorDecision = 'legacy';
     backendUsed = 'legacy';
     fallbackToLegacy = true;
     fallbackReason = 'graph_error';
     success = true; // La richiesta non fallirà, useremo legacy
-    
+
     logGraphFailed(traceId, error, userId);
     logFallbackToLegacy(traceId, userId, 'graph_failed');
-    
+
     return emitFinalTelemetryAndReturn({
       decision: 'legacy',
       executionTimeMs: Date.now() - startTime,
@@ -420,26 +426,25 @@ export function formatPricingResponse(
   if (pricingOptions.length === 0) {
     return 'Non sono riuscita a calcolare preventivi. Puoi fornirmi peso, CAP e provincia di destinazione?';
   }
-  
+
   const bestOption = pricingOptions[0];
   const otherOptions = pricingOptions.slice(1, 4); // Max 3 alternative
-  
+
   let response = `💰 **Preventivo Spedizione**\n\n`;
   response += `**Opzione Consigliata:**\n`;
   response += `• Corriere: ${bestOption.courier}\n`;
   response += `• Servizio: ${bestOption.serviceType}\n`;
   response += `• Prezzo: €${bestOption.finalPrice.toFixed(2)}\n`;
   response += `• Consegna stimata: ${bestOption.estimatedDeliveryDays.min}-${bestOption.estimatedDeliveryDays.max} giorni\n\n`;
-  
+
   if (otherOptions.length > 0) {
     response += `**Altre opzioni disponibili:**\n`;
     otherOptions.forEach((opt, idx) => {
       response += `${idx + 2}. ${opt.courier} (${opt.serviceType}): €${opt.finalPrice.toFixed(2)}\n`;
     });
   }
-  
+
   response += `\n💡 *Prezzi calcolati con margine applicato. I dati sono indicativi.*`;
-  
+
   return response;
 }
-

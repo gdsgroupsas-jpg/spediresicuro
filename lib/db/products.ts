@@ -11,11 +11,7 @@ import type { Product, ProductFilters, CreateProductInput } from '@/types/produc
  * Crea nuovo prodotto
  */
 export async function createProduct(data: CreateProductInput): Promise<Product> {
-  const { data: product, error } = await supabase
-    .from('products')
-    .insert(data)
-    .select()
-    .single();
+  const { data: product, error } = await supabase.from('products').insert(data).select().single();
 
   if (error) {
     console.error('Error creating product:', error);
@@ -48,11 +44,7 @@ export async function getProductById(id: string): Promise<Product | null> {
  * Ottieni prodotto per SKU
  */
 export async function getProductBySKU(sku: string): Promise<Product | null> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('sku', sku)
-    .single();
+  const { data, error } = await supabase.from('products').select('*').eq('sku', sku).single();
 
   if (error) {
     if (error.code === 'PGRST116') return null;
@@ -67,9 +59,7 @@ export async function getProductBySKU(sku: string): Promise<Product | null> {
  * Lista prodotti con filtri
  */
 export async function listProducts(filters?: ProductFilters) {
-  let query = supabase
-    .from('products')
-    .select('*', { count: 'exact' });
+  let query = supabase.from('products').select('*', { count: 'exact' });
 
   // Filtri
   if (filters?.category) {
@@ -136,10 +126,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
  * Elimina prodotto
  */
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('products').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting product:', error);
@@ -161,13 +148,11 @@ export async function linkProductToSupplier(
     priority?: number;
   }
 ): Promise<void> {
-  const { error } = await supabase
-    .from('product_suppliers')
-    .insert({
-      product_id: productId,
-      supplier_id: supplierId,
-      ...data,
-    });
+  const { error } = await supabase.from('product_suppliers').insert({
+    product_id: productId,
+    supplier_id: supplierId,
+    ...data,
+  });
 
   if (error) {
     console.error('Error linking product to supplier:', error);

@@ -1,6 +1,6 @@
 /**
  * Pricing Worker
- * 
+ *
  * Worker che calcola i preventivi usando il pricing-engine legacy.
  * Input: Dati spedizione grezzi o parziali da shipment_details
  * Output: Lista preventivi standardizzata o richiesta di chiarimenti
@@ -17,7 +17,7 @@ import { agentCache } from '@/lib/services/cache';
  * La fee reale viene calcolata al momento del booking.
  */
 function addPlatformFeeToResults(results: PricingResult[]): PricingResult[] {
-  return results.map(option => ({
+  return results.map((option) => ({
     ...option,
     // Aggiungi la platform fee al prezzo finale
     // NOTA: La fee reale potrebbe essere diversa per utenti con override
@@ -33,19 +33,19 @@ function hasMinimumDataForPricing(details: AgentState['shipment_details']): {
   missingFields: string[];
 } {
   const missing: string[] = [];
-  
+
   if (!details?.weight || details.weight <= 0) {
     missing.push('peso');
   }
-  
+
   if (!details?.destinationZip || details.destinationZip.length !== 5) {
     missing.push('CAP destinazione');
   }
-  
+
   if (!details?.destinationProvince || details.destinationProvince.length !== 2) {
     missing.push('provincia destinazione');
   }
-  
+
   return {
     valid: missing.length === 0,
     missingFields: missing,
@@ -58,16 +58,16 @@ function hasMinimumDataForPricing(details: AgentState['shipment_details']): {
  */
 function extractPricingDataFromState(state: AgentState): PricingRequest | null {
   const details = state.shipment_details;
-  
+
   if (!details) {
     return null;
   }
-  
+
   const validation = hasMinimumDataForPricing(details);
   if (!validation.valid) {
     return null;
   }
-  
+
   return {
     weight: details.weight!,
     destinationZip: details.destinationZip!,
@@ -81,7 +81,7 @@ function extractPricingDataFromState(state: AgentState): PricingRequest | null {
 
 /**
  * Pricing Worker Node
- * 
+ *
  * Calcola i preventivi usando il pricing-engine esistente.
  * Se mancano dati, restituisce una richiesta di chiarimento.
  */
@@ -90,22 +90,22 @@ export async function pricingWorker(
   logger: ILogger = defaultLogger
 ): Promise<Partial<AgentState>> {
   logger.log('🔄 [Pricing Worker] Esecuzione...');
-  
+
   try {
     // Estrai dati per il preventivo
     const pricingRequest = extractPricingDataFromState(state);
-    
+
     if (!pricingRequest) {
       const details = state.shipment_details;
       const validation = hasMinimumDataForPricing(details);
-      
+
       return {
         clarification_request: `Per calcolare un preventivo preciso, ho bisogno di: ${validation.missingFields.join(', ')}. Puoi fornirmi questi dati?`,
         next_step: 'END', // Termina con clarification_request popolato
         processingStatus: 'error',
       };
     }
-    
+
     // P3 Task 6: Check cache pricing
     const cachedPricing = agentCache.getPricing({
       weight: pricingRequest.weight,
@@ -115,9 +115,9 @@ export async function pricingWorker(
       cashOnDelivery: pricingRequest.cashOnDelivery,
       declaredValue: pricingRequest.declaredValue,
     });
-    
+
     let pricingOptions: PricingResult[];
-    
+
     if (cachedPricing) {
       logger.log('✅ [Pricing Worker] Risultato da cache');
       pricingOptions = cachedPricing;
@@ -125,31 +125,37 @@ export async function pricingWorker(
       // Chiama il pricing-engine legacy
       logger.log('💰 [Pricing Worker] Calcolo preventivo con:', pricingRequest);
       pricingOptions = await calculateOptimalPrice(pricingRequest);
-      
+
       // P3 Task 6: Salva in cache
-      agentCache.setPricing({
-        weight: pricingRequest.weight,
-        destinationZip: pricingRequest.destinationZip,
-        destinationProvince: pricingRequest.destinationProvince,
-        serviceType: pricingRequest.serviceType,
-        cashOnDelivery: pricingRequest.cashOnDelivery,
-        declaredValue: pricingRequest.declaredValue,
-      }, pricingOptions);
+      agentCache.setPricing(
+        {
+          weight: pricingRequest.weight,
+          destinationZip: pricingRequest.destinationZip,
+          destinationProvince: pricingRequest.destinationProvince,
+          serviceType: pricingRequest.serviceType,
+          cashOnDelivery: pricingRequest.cashOnDelivery,
+          declaredValue: pricingRequest.declaredValue,
+        },
+        pricingOptions
+      );
     }
-    
+
     if (pricingOptions.length === 0) {
       return {
-        clarification_request: 'Non sono riuscito a calcolare preventivi per questa destinazione. Verifica che il CAP e la provincia siano corretti.',
+        clarification_request:
+          'Non sono riuscito a calcolare preventivi per questa destinazione. Verifica che il CAP e la provincia siano corretti.',
         next_step: 'END', // Termina con clarification_request popolato
         processingStatus: 'error',
       };
     }
-    
+
     // Sprint 2.7: Aggiungi platform fee (MVP hardcoded) ai preventivi
     const optionsWithFee = addPlatformFeeToResults(pricingOptions);
-    
-    logger.log(`✅ [Pricing Worker] Trovati ${optionsWithFee.length} preventivi (+ fee €${DEFAULT_PLATFORM_FEE.toFixed(2)})`);
-    
+
+    logger.log(
+      `✅ [Pricing Worker] Trovati ${optionsWithFee.length} preventivi (+ fee €${DEFAULT_PLATFORM_FEE.toFixed(2)})`
+    );
+
     // Restituisci i preventivi con fee inclusa
     // NOTA: Il preventivo include già la platform fee MVP (€0.50)
     // La fee reale potrebbe essere diversa per utenti con tariffe personalizzate
@@ -160,7 +166,6 @@ export async function pricingWorker(
       // Disclaimer per l'utente: la fee potrebbe variare
       // Questo non è un clarification_request ma un'info aggiuntiva
     };
-    
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('❌ [Pricing Worker] Errore:', errorMessage);
@@ -172,4 +177,3 @@ export async function pricingWorker(
     };
   }
 }
-

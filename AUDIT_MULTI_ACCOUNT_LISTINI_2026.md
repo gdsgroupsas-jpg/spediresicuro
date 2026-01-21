@@ -226,27 +226,26 @@ if (configId) {
 ```typescript
 if (configId) {
   const { data: specificConfig } = await supabaseAdmin
-    .from("courier_configs")
-    .select("*")
-    .eq("id", configId)
-    .eq("provider_id", "spedisci_online")
-    .eq("owner_user_id", userId) // ✅ AGGIUNGI: Verifica ownership
+    .from('courier_configs')
+    .select('*')
+    .eq('id', configId)
+    .eq('provider_id', 'spedisci_online')
+    .eq('owner_user_id', userId) // ✅ AGGIUNGI: Verifica ownership
     .single();
 
   if (!specificConfig) {
     return {
       success: false,
-      error: "Configurazione non trovata o non autorizzata",
+      error: 'Configurazione non trovata o non autorizzata',
     };
   }
 
   // Verifica aggiuntiva: admin può vedere tutto, utente solo proprie
-  const isAdmin =
-    user.account_type === "admin" || user.account_type === "superadmin";
+  const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
   if (!isAdmin && specificConfig.owner_user_id !== userId) {
     return {
       success: false,
-      error: "Non autorizzato ad accedere a questa configurazione",
+      error: 'Non autorizzato ad accedere a questa configurazione',
     };
   }
 }
@@ -275,8 +274,8 @@ if (configId) {
 
 ```typescript
 // Aggiungi lock per sync (usando idempotency_locks o nuovo lock table)
-const lockKey = `sync_price_lists_${userId}_${courierId || "all"}`;
-const { data: lock } = await supabaseAdmin.rpc("acquire_idempotency_lock", {
+const lockKey = `sync_price_lists_${userId}_${courierId || 'all'}`;
+const { data: lock } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
   p_idempotency_key: lockKey,
   p_user_id: userId,
   p_ttl_minutes: 30,
@@ -285,16 +284,16 @@ const { data: lock } = await supabaseAdmin.rpc("acquire_idempotency_lock", {
 if (!lock || !lock.acquired) {
   return {
     success: false,
-    error: "Sincronizzazione già in corso. Attendi il completamento.",
+    error: 'Sincronizzazione già in corso. Attendi il completamento.',
   };
 }
 
 try {
   // ... sync logic ...
 } finally {
-  await supabaseAdmin.rpc("complete_idempotency_lock", {
+  await supabaseAdmin.rpc('complete_idempotency_lock', {
     p_idempotency_key: lockKey,
-    p_status: "completed",
+    p_status: 'completed',
   });
 }
 ```
@@ -327,9 +326,9 @@ console.log(
 ```typescript
 // Usa hash parziale invece di UUID completo
 const configIdHash = crypto
-  .createHash("sha256")
+  .createHash('sha256')
   .update(specificConfig.id)
-  .digest("hex")
+  .digest('hex')
   .substring(0, 8);
 
 console.log(`✅ [SPEDISCI.ONLINE] Configurazione trovata: ${configIdHash}...`);
@@ -346,9 +345,7 @@ console.log(`✅ [SPEDISCI.ONLINE] Configurazione trovata: ${configIdHash}...`);
 ```typescript
 // Se ENCRYPTION_KEY non è configurata, restituisci in chiaro (con warning)
 if (!process.env.ENCRYPTION_KEY) {
-  console.warn(
-    "⚠️ ENCRYPTION_KEY non configurata. Le credenziali verranno salvate in chiaro."
-  );
+  console.warn('⚠️ ENCRYPTION_KEY non configurata. Le credenziali verranno salvate in chiaro.');
   return plaintext;
 }
 ```
@@ -368,10 +365,10 @@ if (!process.env.ENCRYPTION_KEY) {
 
 ```typescript
 if (!process.env.ENCRYPTION_KEY) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("ENCRYPTION_KEY must be configured in production");
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_KEY must be configured in production');
   }
-  console.warn("⚠️ ENCRYPTION_KEY non configurata (solo sviluppo)");
+  console.warn('⚠️ ENCRYPTION_KEY non configurata (solo sviluppo)');
   return plaintext;
 }
 ```
@@ -396,9 +393,9 @@ if (!process.env.ENCRYPTION_KEY) {
 ```typescript
 // Creare costante
 export const PROVIDER_IDS = {
-  SPEDISCI_ONLINE: "spedisci_online",
-  POSTE: "poste",
-  GLS: "gls",
+  SPEDISCI_ONLINE: 'spedisci_online',
+  POSTE: 'poste',
+  GLS: 'gls',
   // ...
 } as const;
 ```
@@ -421,16 +418,16 @@ export const PROVIDER_IDS = {
 
 ```typescript
 // tests/integration/multi-account-security.test.ts
-describe("Multi-Account Security", () => {
-  it("should prevent user A from accessing user B configId", async () => {
+describe('Multi-Account Security', () => {
+  it('should prevent user A from accessing user B configId', async () => {
     // Test isolamento
   });
 
-  it("should respect priority: personal > assigned > default", async () => {
+  it('should respect priority: personal > assigned > default', async () => {
     // Test priorità
   });
 
-  it("should handle concurrent syncs gracefully", async () => {
+  it('should handle concurrent syncs gracefully', async () => {
     // Test race condition
   });
 });
@@ -642,21 +639,21 @@ Stesso problema della sync multi-account.
 
 ```typescript
 // Validazione enum
-const VALID_LIST_TYPES = ["supplier", "custom", "global"] as const;
+const VALID_LIST_TYPES = ['supplier', 'custom', 'global'] as const;
 if (data.list_type && !VALID_LIST_TYPES.includes(data.list_type)) {
-  return { success: false, error: "list_type non valido" };
+  return { success: false, error: 'list_type non valido' };
 }
 
 // Validazione courier_id se fornito
 if (data.courier_id) {
   const { data: courier } = await supabaseAdmin
-    .from("couriers")
-    .select("id")
-    .eq("id", data.courier_id)
+    .from('couriers')
+    .select('id')
+    .eq('id', data.courier_id)
     .single();
 
   if (!courier) {
-    return { success: false, error: "Corriere non trovato" };
+    return { success: false, error: 'Corriere non trovato' };
   }
 }
 ```
@@ -689,9 +686,9 @@ async function verifyPriceListAccess(
 
 // Usare costanti
 export const LIST_TYPES = {
-  SUPPLIER: "supplier",
-  CUSTOM: "custom",
-  GLOBAL: "global",
+  SUPPLIER: 'supplier',
+  CUSTOM: 'custom',
+  GLOBAL: 'global',
 } as const;
 ```
 
@@ -729,23 +726,22 @@ export const LIST_TYPES = {
 ```typescript
 if (configId) {
   const { data: specificConfig } = await supabaseAdmin
-    .from("courier_configs")
-    .select("*")
-    .eq("id", configId)
-    .eq("provider_id", "spedisci_online")
+    .from('courier_configs')
+    .select('*')
+    .eq('id', configId)
+    .eq('provider_id', 'spedisci_online')
     .single();
 
   if (!specificConfig) {
-    return { success: false, error: "Configurazione non trovata" };
+    return { success: false, error: 'Configurazione non trovata' };
   }
 
   // ✅ AGGIUNGI: Verifica ownership
-  const isAdmin =
-    user.account_type === "admin" || user.account_type === "superadmin";
+  const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
   if (!isAdmin && specificConfig.owner_user_id !== userId) {
     return {
       success: false,
-      error: "Non autorizzato ad accedere a questa configurazione",
+      error: 'Non autorizzato ad accedere a questa configurazione',
     };
   }
 }
@@ -851,13 +847,11 @@ if (configId) {
 ### Prossimi Passi Prioritari
 
 1. **Immediato (P1):**
-
    - Fix validazione ownership `configId` (P1-1)
    - Aggiungere lock per sync listini (P1-2)
    - Migliorare logging (P1-3)
 
 2. **Breve termine (P2):**
-
    - Espandere test coverage
    - Fail-closed encryption in production
    - Validazione input migliorata

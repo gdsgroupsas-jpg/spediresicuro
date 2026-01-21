@@ -6,7 +6,7 @@
 2. **Seleziona**: Progetto "spediresicuro"
 3. **Clicca**: "Deployments" nel menu
 4. **Per ogni deploy vecchio**:
-   - Clicca sui **tre puntini (...)** 
+   - Clicca sui **tre puntini (...)**
    - Seleziona **"Delete"**
    - Conferma
 5. **Forza nuovo deploy**:
@@ -16,6 +16,7 @@
 ## ✅ VERIFICA
 
 Dopo il nuovo deploy:
+
 - Controlla i log
 - Dovrebbe usare l'ultimo commit (non `6ff208d2`)
 - Build senza errori TypeScript

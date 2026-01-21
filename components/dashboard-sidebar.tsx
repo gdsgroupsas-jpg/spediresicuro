@@ -14,12 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import {
-  Package,
-  LogOut,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
+import { Package, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   getNavigationForUser,
   isNavItemActive,
@@ -48,7 +43,7 @@ export default function DashboardSidebar() {
   // Il caricamento da localStorage avviene dopo il mount per evitare mismatch
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
-  
+
   // 🔧 FIX HYDRATION: Flag per indicare quando il componente è montato sul client
   const [mounted, setMounted] = useState(false);
 
@@ -123,12 +118,16 @@ export default function DashboardSidebar() {
 
     // Carica stato salvato da localStorage
     try {
-           const storedExpanded = localStorage.getItem(STORAGE_KEYS.expandedSections);
-           const storedCollapsed = localStorage.getItem(STORAGE_KEYS.manuallyCollapsed);
-           
-           const loadedExpanded = storedExpanded ? new Set<string>(JSON.parse(storedExpanded) as string[]) : new Set<string>();
-           const loadedCollapsed = storedCollapsed ? new Set<string>(JSON.parse(storedCollapsed) as string[]) : new Set<string>();
-      
+      const storedExpanded = localStorage.getItem(STORAGE_KEYS.expandedSections);
+      const storedCollapsed = localStorage.getItem(STORAGE_KEYS.manuallyCollapsed);
+
+      const loadedExpanded = storedExpanded
+        ? new Set<string>(JSON.parse(storedExpanded) as string[])
+        : new Set<string>();
+      const loadedCollapsed = storedCollapsed
+        ? new Set<string>(JSON.parse(storedCollapsed) as string[])
+        : new Set<string>();
+
       setManuallyCollapsed(loadedCollapsed);
 
       // Applica auto-espansione basata su pathname e configurazione
@@ -185,7 +184,13 @@ export default function DashboardSidebar() {
     } catch (error) {
       console.error('Errore caricamento stato sidebar:', error);
     }
-  }, [mounted, pathname, navigationConfig, STORAGE_KEYS.expandedSections, STORAGE_KEYS.manuallyCollapsed]);
+  }, [
+    mounted,
+    pathname,
+    navigationConfig,
+    STORAGE_KEYS.expandedSections,
+    STORAGE_KEYS.manuallyCollapsed,
+  ]);
 
   // 🆕 Salva stato in localStorage quando cambia (solo dopo mount)
   useEffect(() => {
@@ -258,7 +263,9 @@ export default function DashboardSidebar() {
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-semibold text-gray-900 truncate">SpediRe Sicuro</h1>
           {isSuperAdmin && (
-            <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">Super Admin</p>
+            <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">
+              Super Admin
+            </p>
           )}
         </div>
       </div>
@@ -271,14 +278,14 @@ export default function DashboardSidebar() {
             href={navigationConfig.dashboardItem.href}
             data-nav-index={getNavIndex(navigationConfig.dashboardItem)}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
               isNavItemActive(navigationConfig.dashboardItem.href, pathname || '')
-                ? "bg-gray-100 text-gray-900"
-                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+                ? 'bg-gray-100 text-gray-900'
+                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
               // 🆕 Keyboard focus ring
               isKeyboardMode &&
                 focusedIndex === getNavIndex(navigationConfig.dashboardItem) &&
-                "ring-2 ring-orange-500 ring-offset-1"
+                'ring-2 ring-orange-500 ring-offset-1'
             )}
           >
             <navigationConfig.dashboardItem.icon className="w-4 h-4 flex-shrink-0" />
@@ -311,11 +318,11 @@ export default function DashboardSidebar() {
           const isExpanded = expandedSections.has(section.id);
 
           // Verifica active state sia per items diretti che nested
-          const hasActiveItem = section.items.some(item =>
+          const hasActiveItem = section.items.some((item) =>
             isNavItemActive(item.href, pathname || '')
           );
-          const hasActiveNestedItem = section.subsections?.some(subsection =>
-            subsection.items.some(item => isNavItemActive(item.href, pathname || ''))
+          const hasActiveNestedItem = section.subsections?.some((subsection) =>
+            subsection.items.some((item) => isNavItemActive(item.href, pathname || ''))
           );
           const hasActive = hasActiveItem || hasActiveNestedItem;
 
@@ -326,9 +333,9 @@ export default function DashboardSidebar() {
                 <button
                   onClick={() => toggleSection(section.id)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 uppercase tracking-wider transition-colors",
-                    hasActive && "text-gray-900",
-                    "hover:text-gray-900"
+                    'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 uppercase tracking-wider transition-colors',
+                    hasActive && 'text-gray-900',
+                    'hover:text-gray-900'
                   )}
                 >
                   {isExpanded ? (
@@ -360,31 +367,35 @@ export default function DashboardSidebar() {
                         href={item.href}
                         data-nav-index={navIndex}
                         className={cn(
-                          "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group",
+                          'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors group',
                           isItemActive
                             ? isPrimary
-                              ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm"
-                              : "bg-gray-100 text-gray-900 font-medium"
+                              ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm'
+                              : 'bg-gray-100 text-gray-900 font-medium'
                             : isPrimary
-                            ? "text-gray-700 hover:bg-gray-50"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                              ? 'text-gray-700 hover:bg-gray-50'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                           // 🆕 Keyboard focus ring
-                          isFocused && "ring-2 ring-orange-500 ring-offset-1"
+                          isFocused && 'ring-2 ring-orange-500 ring-offset-1'
                         )}
                         title={item.description}
                       >
-                        <item.icon className={cn(
-                          "w-4 h-4 flex-shrink-0",
-                          isItemActive && isPrimary ? "text-white" : ""
-                        )} />
+                        <item.icon
+                          className={cn(
+                            'w-4 h-4 flex-shrink-0',
+                            isItemActive && isPrimary ? 'text-white' : ''
+                          )}
+                        />
                         <span className="flex-1 truncate">{item.label}</span>
                         {item.badge && (
-                          <span className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded font-medium",
-                            isItemActive && isPrimary
-                              ? "bg-white/20 text-white"
-                              : "bg-gray-200 text-gray-700"
-                          )}>
+                          <span
+                            className={cn(
+                              'text-[10px] px-1.5 py-0.5 rounded font-medium',
+                              isItemActive && isPrimary
+                                ? 'bg-white/20 text-white'
+                                : 'bg-gray-200 text-gray-700'
+                            )}
+                          >
                             {item.badge}
                           </span>
                         )}
@@ -395,7 +406,7 @@ export default function DashboardSidebar() {
                   {/* 🆕 Subsections (nested) */}
                   {section.subsections?.map((subsection) => {
                     const isSubExpanded = expandedSections.has(subsection.id);
-                    const hasActiveSubItem = subsection.items.some(item =>
+                    const hasActiveSubItem = subsection.items.some((item) =>
                       isNavItemActive(item.href, pathname || '')
                     );
 
@@ -406,8 +417,10 @@ export default function DashboardSidebar() {
                           <button
                             onClick={() => toggleSection(subsection.id)}
                             className={cn(
-                              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wide transition-colors",
-                              hasActiveSubItem ? "text-orange-600" : "text-gray-500 hover:text-gray-700"
+                              'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wide transition-colors',
+                              hasActiveSubItem
+                                ? 'text-orange-600'
+                                : 'text-gray-500 hover:text-gray-700'
                             )}
                           >
                             {isSubExpanded ? (
@@ -430,7 +443,8 @@ export default function DashboardSidebar() {
                           <div className="space-y-0.5 pl-3">
                             {subsection.items.map((item) => {
                               const isItemActive = isNavItemActive(item.href, pathname || '');
-                              const isPrimary = item.variant === 'primary' || item.variant === 'gradient';
+                              const isPrimary =
+                                item.variant === 'primary' || item.variant === 'gradient';
                               const navIndex = getNavIndex(item);
                               const isFocused = isKeyboardMode && focusedIndex === navIndex;
 
@@ -440,31 +454,35 @@ export default function DashboardSidebar() {
                                   href={item.href}
                                   data-nav-index={navIndex}
                                   className={cn(
-                                    "flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors group",
+                                    'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors group',
                                     isItemActive
                                       ? isPrimary
-                                        ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm"
-                                        : "bg-gray-100 text-gray-900 font-medium"
+                                        ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-900 font-medium'
                                       : isPrimary
-                                      ? "text-gray-700 hover:bg-gray-50"
-                                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                                        ? 'text-gray-700 hover:bg-gray-50'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                                     // 🆕 Keyboard focus ring
-                                    isFocused && "ring-2 ring-orange-500 ring-offset-1"
+                                    isFocused && 'ring-2 ring-orange-500 ring-offset-1'
                                   )}
                                   title={item.description}
                                 >
-                                  <item.icon className={cn(
-                                    "w-3.5 h-3.5 flex-shrink-0",
-                                    isItemActive && isPrimary ? "text-white" : ""
-                                  )} />
+                                  <item.icon
+                                    className={cn(
+                                      'w-3.5 h-3.5 flex-shrink-0',
+                                      isItemActive && isPrimary ? 'text-white' : ''
+                                    )}
+                                  />
                                   <span className="flex-1 truncate text-sm">{item.label}</span>
                                   {item.badge && (
-                                    <span className={cn(
-                                      "text-[10px] px-1.5 py-0.5 rounded font-medium",
-                                      isItemActive && isPrimary
-                                        ? "bg-white/20 text-white"
-                                        : "bg-gray-200 text-gray-700"
-                                    )}>
+                                    <span
+                                      className={cn(
+                                        'text-[10px] px-1.5 py-0.5 rounded font-medium',
+                                        isItemActive && isPrimary
+                                          ? 'bg-white/20 text-white'
+                                          : 'bg-gray-200 text-gray-700'
+                                      )}
+                                    >
                                       {item.badge}
                                     </span>
                                   )}
@@ -491,7 +509,9 @@ export default function DashboardSidebar() {
             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white transition-colors group"
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-xs font-semibold">
-              {session.user?.name?.[0]?.toUpperCase() || session.user?.email?.[0]?.toUpperCase() || 'U'}
+              {session.user?.name?.[0]?.toUpperCase() ||
+                session.user?.email?.[0]?.toUpperCase() ||
+                'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">

@@ -1,13 +1,13 @@
 /**
  * Test di Sicurezza: Database Functions
- * 
+ *
  * Verifica che:
  * 1. User A non vede shipments user B
  * 2. Select shipments where user_id is null non ritorna nulla per user normale
  * 3. assertValidUserId blocca userId invalidi
- * 
+ *
  * ⚠️ IMPORTANTE: Questi test verificano i fix di sicurezza HIGH
- * 
+ *
  * MOCK: Tutte le chiamate DB sono mockate per evitare accesso a Supabase reale
  */
 
@@ -130,9 +130,7 @@ describe('Database Security Tests', () => {
       const mockSupabaseChain = {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            data: [
-              { id: 'shipment-1', user_id: userContext.userId },
-            ],
+            data: [{ id: 'shipment-1', user_id: userContext.userId }],
             error: null,
           })),
         })),
@@ -142,7 +140,9 @@ describe('Database Security Tests', () => {
       const shipments = await getSpedizioni(userContext);
 
       // Verifica: nessuna shipment con user_id=null
-      const nullUserIdShipments = shipments.filter((s: any) => s.user_id === null || s.user_id === undefined);
+      const nullUserIdShipments = shipments.filter(
+        (s: any) => s.user_id === null || s.user_id === undefined
+      );
       expect(nullUserIdShipments.length).toBe(0);
 
       // Verifica query diretta
@@ -168,7 +168,9 @@ describe('Database Security Tests', () => {
       );
 
       // Verifica che lancia errore
-      await expect(getSpedizioni(anonymousContext)).rejects.toThrow(/Non autenticato|accesso negato/i);
+      await expect(getSpedizioni(anonymousContext)).rejects.toThrow(
+        /Non autenticato|accesso negato/i
+      );
     });
   });
 

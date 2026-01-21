@@ -11,7 +11,7 @@ Garantire che **OGNI corriere nel comparatore** (ora e in futuro) segua la **ste
 #### 1. Import Configurazione Margine Globale
 
 ```typescript
-import { pricingConfig } from '@/lib/config'
+import { pricingConfig } from '@/lib/config';
 ```
 
 Usa `pricingConfig.DEFAULT_MARGIN_PERCENT = 20%` come margine di fallback.
@@ -19,6 +19,7 @@ Usa `pricingConfig.DEFAULT_MARGIN_PERCENT = 20%` come margine di fallback.
 #### 2. Fix in `calculateWithDefaultMargin` - Branch `else` (prezzi identici al master)
 
 **Prima:**
+
 ```typescript
 } else {
   // Prezzi non modificati: applica margine di default
@@ -33,6 +34,7 @@ Usa `pricingConfig.DEFAULT_MARGIN_PERCENT = 20%` come margine di fallback.
 ```
 
 **Dopo:**
+
 ```typescript
 } else {
   // Prezzi non modificati: applica margine di default
@@ -55,29 +57,33 @@ Usa `pricingConfig.DEFAULT_MARGIN_PERCENT = 20%` come margine di fallback.
 #### 3. Fix nel Fallback (quando non trova entry nella matrice)
 
 **Prima:**
+
 ```typescript
-let margin = 0
+let margin = 0;
 if (priceList.default_margin_percent) {
-  margin = totalCost * (priceList.default_margin_percent / 100)
+  margin = totalCost * (priceList.default_margin_percent / 100);
 } else if (priceList.default_margin_fixed) {
-  margin = priceList.default_margin_fixed
+  margin = priceList.default_margin_fixed;
 }
 // Se non c'è margine → margin = 0 ❌
 ```
 
 **Dopo:**
+
 ```typescript
-let margin = 0
+let margin = 0;
 if (priceList.default_margin_percent) {
-  margin = totalCost * (priceList.default_margin_percent / 100)
+  margin = totalCost * (priceList.default_margin_percent / 100);
 } else if (priceList.default_margin_fixed) {
-  margin = priceList.default_margin_fixed
+  margin = priceList.default_margin_fixed;
 } else {
   // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
   // applica margine di default globale
   if (priceList.list_type === 'custom' && priceList.master_list_id) {
-    margin = totalCost * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100)
-    console.log(`⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato (fallback), applicato margine default globale ${pricingConfig.DEFAULT_MARGIN_PERCENT}%: €${margin.toFixed(2)}`)
+    margin = totalCost * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+    console.log(
+      `⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato (fallback), applicato margine default globale ${pricingConfig.DEFAULT_MARGIN_PERCENT}%: €${margin.toFixed(2)}`
+    );
   }
 }
 ```
@@ -91,6 +97,7 @@ Aggiunto `supplierPrice` nel risultato anche quando `isManuallyModified = false`
 ### Scenario: Listino CUSTOM con Master, Prezzi Identici, Senza Margine Configurato
 
 **Prima della fix:**
+
 - `isManuallyModified = false` (prezzi identici al master)
 - `default_margin_percent = NULL`
 - `margin = 0` ❌
@@ -99,6 +106,7 @@ Aggiunto `supplierPrice` nel risultato anche quando `isManuallyModified = false`
 - **Risultato**: costo = prezzo vendita = 4.40 ❌
 
 **Dopo la fix:**
+
 - `isManuallyModified = false` (prezzi identici al master)
 - `default_margin_percent = NULL`
 - **`margin = totalCost * 20% = 0.88`** ✅ (margine default globale)
@@ -132,6 +140,7 @@ Questo aiuta a identificare listini che potrebbero beneficiare di una configuraz
 ## 🎯 Risultato
 
 **OGNI corriere nel comparatore** (GLS, Poste Italiane, e qualsiasi futuro corriere) mostrerà sempre:
+
 - ✅ Costo fornitore (dal master)
 - ✅ Margine (configurato o default globale)
 - ✅ Prezzo vendita (costo + margine)

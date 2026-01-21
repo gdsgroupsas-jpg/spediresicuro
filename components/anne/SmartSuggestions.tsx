@@ -1,11 +1,11 @@
 /**
  * Smart Suggestions Component - P4 Task 4
- * 
+ *
  * Mostra suggerimenti proattivi basati su pattern ricorrenti dell'utente.
  * - Salvare destinatario ricorrente
  * - Impostare corriere predefinito
  * - Usare peso standard
- * 
+ *
  * Rate limiting: max 1 suggerimento ogni 24h per tipo.
  */
 
@@ -13,7 +13,12 @@
 
 import { useEffect, useState } from 'react';
 import { Lightbulb, X, Check, ArrowRight } from 'lucide-react';
-import { getSmartSuggestion, markSuggestionShown, shouldShowSuggestion, type Suggestion } from '@/lib/agent/smart-suggestions';
+import {
+  getSmartSuggestion,
+  markSuggestionShown,
+  shouldShowSuggestion,
+  type Suggestion,
+} from '@/lib/agent/smart-suggestions';
 
 interface SmartSuggestionsProps {
   /** ID utente */
@@ -36,11 +41,11 @@ export function SmartSuggestions({ userId, onAccept, onDismiss }: SmartSuggestio
       setIsLoading(true);
       try {
         const suggestion = await getSmartSuggestion(userId);
-        
+
         if (suggestion) {
           // Verifica rate limiting (lato client)
           const canShow = shouldShowSuggestion(userId, suggestion.type);
-          
+
           if (canShow) {
             setSuggestion(suggestion);
             setIsVisible(true);
@@ -63,10 +68,10 @@ export function SmartSuggestions({ userId, onAccept, onDismiss }: SmartSuggestio
 
     // Marca come mostrato (rate limiting)
     markSuggestionShown(userId, suggestion.type);
-    
+
     // Callback
     onAccept?.(suggestion);
-    
+
     // Nascondi
     setIsVisible(false);
     setSuggestion(null);
@@ -77,10 +82,10 @@ export function SmartSuggestions({ userId, onAccept, onDismiss }: SmartSuggestio
 
     // Marca come mostrato (rate limiting) anche se rifiutato
     markSuggestionShown(userId, suggestion.type);
-    
+
     // Callback
     onDismiss?.(suggestion);
-    
+
     // Nascondi
     setIsVisible(false);
     setSuggestion(null);
@@ -97,9 +102,7 @@ export function SmartSuggestions({ userId, onAccept, onDismiss }: SmartSuggestio
     >
       <Lightbulb className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-yellow-900 mb-2">
-          {suggestion.message}
-        </p>
+        <p className="text-sm font-medium text-yellow-900 mb-2">{suggestion.message}</p>
         <div className="flex gap-2">
           <button
             onClick={handleAccept}
@@ -127,4 +130,3 @@ export function SmartSuggestions({ userId, onAccept, onDismiss }: SmartSuggestio
     </div>
   );
 }
-

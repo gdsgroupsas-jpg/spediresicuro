@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Supervisor Decision Function
- * 
+ *
  * Test della funzione pura decideNextStep per il routing del supervisor.
  * Niente mock di LLM/DB, solo logica pura.
  */
@@ -17,7 +17,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: false,
         hasEnoughData: true,
       };
-      
+
       expect(decideNextStep(input)).toBe('END');
     });
 
@@ -28,10 +28,9 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: true,
         hasEnoughData: false,
       };
-      
+
       expect(decideNextStep(input)).toBe('END');
     });
-
   });
 
   describe('pricing_worker routing', () => {
@@ -42,7 +41,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: false,
         hasEnoughData: true,
       };
-      
+
       expect(decideNextStep(input)).toBe('pricing_worker');
     });
   });
@@ -55,7 +54,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: false,
         hasEnoughData: false,
       };
-      
+
       expect(decideNextStep(input)).toBe('address_worker');
     });
 
@@ -67,7 +66,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasEnoughData: false,
         hasPartialAddressData: true,
       };
-      
+
       expect(decideNextStep(input)).toBe('address_worker');
     });
   });
@@ -80,7 +79,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: false,
         hasEnoughData: false,
       };
-      
+
       expect(decideNextStep(input)).toBe('legacy');
     });
 
@@ -91,7 +90,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: false,
         hasEnoughData: true,
       };
-      
+
       expect(decideNextStep(input)).toBe('legacy');
     });
   });
@@ -105,7 +104,7 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: false,
         hasEnoughData: false,
       };
-      
+
       expect(decideNextStep(input)).toBe('END');
     });
 
@@ -116,9 +115,8 @@ describe('Supervisor Decision - decideNextStep', () => {
         hasClarificationRequest: true,
         hasEnoughData: false,
       };
-      
+
       expect(decideNextStep(input)).toBe('END');
     });
   });
 });
-

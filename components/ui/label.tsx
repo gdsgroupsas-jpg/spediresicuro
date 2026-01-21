@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import { cn } from '@/lib/utils'
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
-  required?: boolean
+  required?: boolean;
 }
 
 const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
@@ -22,10 +22,10 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
         {children}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
-    )
+    );
   }
-)
+);
 
-Label.displayName = 'Label'
+Label.displayName = 'Label';
 
-export { Label }
+export { Label };

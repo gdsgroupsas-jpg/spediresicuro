@@ -1,8 +1,8 @@
 /**
  * API Route: Test Auth Bypass
- * 
+ *
  * ⚠️ SOLO PER TEST E2E - NON USARE IN PRODUZIONE
- * 
+ *
  * Questo endpoint permette di bypassare l'autenticazione nei test
  * creando una sessione valida per l'utente di test.
  */
@@ -45,4 +45,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

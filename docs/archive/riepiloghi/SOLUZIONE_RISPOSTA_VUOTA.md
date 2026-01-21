@@ -7,6 +7,7 @@ Anne mostra "Risposta vuota dal server" anche se la chiave API è corretta.
 ## ✅ Fix Applicato
 
 Ho corretto un bug nel codice dove:
+
 1. Variabili non definite nel catch block causavano crash
 2. La route poteva non restituire una risposta in alcuni casi
 
@@ -38,6 +39,7 @@ Quando invii un messaggio ad Anne, **guarda la console del server**. Dovresti ve
 ```
 
 **Se vedi `ANTHROPIC_API_KEY presente: false`**:
+
 - Il file `.env.local` non viene letto
 - Riavvia completamente il server
 - Verifica che `.env.local` sia nella root del progetto
@@ -51,6 +53,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-ABC123XYZ789...
 ```
 
 **Controlla**:
+
 - ✅ NO spazi prima/dopo il `=`
 - ✅ NO virgolette
 - ✅ NO `#` all'inizio

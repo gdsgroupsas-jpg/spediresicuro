@@ -1,9 +1,9 @@
 /**
  * Vitest Setup File
- * 
+ *
  * File di setup globale per i test Vitest.
  * Viene eseguito prima di ogni test suite.
- * 
+ *
  * Usa questo file per:
  * - Configurare variabili d'ambiente di test
  * - Mockare moduli globali
@@ -23,7 +23,7 @@ try {
   const envPath = resolve(process.cwd(), '.env.local');
   dotenv.config({ path: envPath });
   if (!SILENT_TEST_LOGS) {
-    console.log('✅ Variabili d\'ambiente caricate da .env.local');
+    console.log("✅ Variabili d'ambiente caricate da .env.local");
   }
 } catch (error) {
   // Ignora errori, le variabili potrebbero essere già configurate
@@ -33,7 +33,7 @@ try {
 if (SILENT_TEST_LOGS) {
   const originalWarn = console.warn;
   const originalError = console.error;
-  
+
   console.warn = (...args: unknown[]) => {
     const msg = String(args[0] || '');
     // Silenzio warning attesi durante i test
@@ -48,7 +48,7 @@ if (SILENT_TEST_LOGS) {
     }
     originalWarn.apply(console, args);
   };
-  
+
   console.error = (...args: unknown[]) => {
     const msg = String(args[0] || '');
     // Silenzio errori attesi durante i test (mock/fallback)
@@ -93,9 +93,9 @@ vi.mock('next/server', async () => {
     },
     next: () => new Response(null, { status: 200 }),
     redirect: (url: string | URL) => {
-      return new Response(null, { 
+      return new Response(null, {
         status: 307,
-        headers: { Location: String(url) }
+        headers: { Location: String(url) },
       });
     },
   };
@@ -123,9 +123,9 @@ vi.mock('next/server.js', async () => {
     },
     next: () => new Response(null, { status: 200 }),
     redirect: (url: string | URL) => {
-      return new Response(null, { 
+      return new Response(null, {
         status: 307,
-        headers: { Location: String(url) }
+        headers: { Location: String(url) },
       });
     },
   };

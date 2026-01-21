@@ -92,7 +92,12 @@ function useAnimatedCounter(end: number, duration: number = 2000, startOnView: b
 }
 
 // Typing Effect Hook
-function useTypingEffect(texts: string[], typingSpeed: number = 100, deleteSpeed: number = 50, pauseDuration: number = 2000) {
+function useTypingEffect(
+  texts: string[],
+  typingSpeed: number = 100,
+  deleteSpeed: number = 50,
+  pauseDuration: number = 2000
+) {
   const [displayText, setDisplayText] = useState('');
   const [textIndex, setTextIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -100,22 +105,25 @@ function useTypingEffect(texts: string[], typingSpeed: number = 100, deleteSpeed
   useEffect(() => {
     const currentText = texts[textIndex];
 
-    const timeout = setTimeout(() => {
-      if (!isDeleting) {
-        if (displayText.length < currentText.length) {
-          setDisplayText(currentText.slice(0, displayText.length + 1));
+    const timeout = setTimeout(
+      () => {
+        if (!isDeleting) {
+          if (displayText.length < currentText.length) {
+            setDisplayText(currentText.slice(0, displayText.length + 1));
+          } else {
+            setTimeout(() => setIsDeleting(true), pauseDuration);
+          }
         } else {
-          setTimeout(() => setIsDeleting(true), pauseDuration);
+          if (displayText.length > 0) {
+            setDisplayText(displayText.slice(0, -1));
+          } else {
+            setIsDeleting(false);
+            setTextIndex((prev) => (prev + 1) % texts.length);
+          }
         }
-      } else {
-        if (displayText.length > 0) {
-          setDisplayText(displayText.slice(0, -1));
-        } else {
-          setIsDeleting(false);
-          setTextIndex((prev) => (prev + 1) % texts.length);
-        }
-      }
-    }, isDeleting ? deleteSpeed : typingSpeed);
+      },
+      isDeleting ? deleteSpeed : typingSpeed
+    );
 
     return () => clearTimeout(timeout);
   }, [displayText, textIndex, isDeleting, texts, typingSpeed, deleteSpeed, pauseDuration]);
@@ -146,12 +154,12 @@ export default function HeroDynamic() {
   }, []);
 
   // Typing effect per tagline
-  const typingText = useTypingEffect([
-    'Screenshot WhatsApp',
-    'Foto del pacco',
-    'Messaggio vocale',
-    'Email del cliente'
-  ], 80, 40, 2500);
+  const typingText = useTypingEffect(
+    ['Screenshot WhatsApp', 'Foto del pacco', 'Messaggio vocale', 'Email del cliente'],
+    80,
+    40,
+    2500
+  );
 
   // Counters - METRICHE REALI
   const { count: timeSavingCount, ref: timeSavingRef } = useAnimatedCounter(94, 2000);
@@ -162,15 +170,18 @@ export default function HeroDynamic() {
     setMounted(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    // Disabilita parallax su dispositivi touch (mobile)
-    if (isTouchDevice || !containerRef.current) return;
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      // Disabilita parallax su dispositivi touch (mobile)
+      if (isTouchDevice || !containerRef.current) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
-    // Solo asse Y per evitare effetto "ballerino"
-    const y = (e.clientY - rect.top) / rect.height;
-    mouseY.set(y);
-  }, [mouseY, isTouchDevice]);
+      const rect = containerRef.current.getBoundingClientRect();
+      // Solo asse Y per evitare effetto "ballerino"
+      const y = (e.clientY - rect.top) / rect.height;
+      mouseY.set(y);
+    },
+    [mouseY, isTouchDevice]
+  );
 
   return (
     <section
@@ -228,10 +239,7 @@ export default function HeroDynamic() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left Content */}
-          <motion.div
-            style={{ y: isTouchDevice ? 0 : layer1Y }}
-            className="space-y-8"
-          >
+          <motion.div style={{ y: isTouchDevice ? 0 : layer1Y }} className="space-y-8">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -290,9 +298,10 @@ export default function HeroDynamic() {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="text-xl text-gray-400 max-w-xl leading-relaxed"
             >
-              <span className="text-white font-semibold">Non un comparatore prezzi.</span> Un Logistics Operating System con AI.{' '}
-              <span className="text-amber-400 font-semibold">Anne</span> legge screenshot, foto, vocali.{' '}
-              Compila, valida, crea etichetta.{' '}
+              <span className="text-white font-semibold">Non un comparatore prezzi.</span> Un
+              Logistics Operating System con AI.{' '}
+              <span className="text-amber-400 font-semibold">Anne</span> legge screenshot, foto,
+              vocali. Compila, valida, crea etichetta.{' '}
               <span className="text-emerald-400 font-medium">90% confidence. Zero errori.</span>
             </motion.p>
 
@@ -335,21 +344,15 @@ export default function HeroDynamic() {
               className="flex flex-wrap gap-8 pt-8 border-t border-white/10"
             >
               <div ref={timeSavingRef} className="text-center">
-                <div className="text-3xl font-bold text-white">
-                  {timeSavingCount}%
-                </div>
+                <div className="text-3xl font-bold text-white">{timeSavingCount}%</div>
                 <div className="text-sm text-gray-500">Time-Saving</div>
               </div>
               <div ref={ocrConfidenceRef} className="text-center">
-                <div className="text-3xl font-bold text-white">
-                  {ocrConfidenceCount}%
-                </div>
+                <div className="text-3xl font-bold text-white">{ocrConfidenceCount}%</div>
                 <div className="text-sm text-gray-500">OCR Confidence</div>
               </div>
               <div ref={secondsRef} className="text-center">
-                <div className="text-3xl font-bold text-white">
-                  {secondsCount}s
-                </div>
+                <div className="text-3xl font-bold text-white">{secondsCount}s</div>
                 <div className="text-sm text-gray-500">Screenshot → Label</div>
               </div>
             </motion.div>
@@ -383,8 +386,10 @@ export default function HeroDynamic() {
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex-shrink-0" />
                       <div className="bg-[#1F2C34] rounded-2xl rounded-tl-none p-3 max-w-[80%]">
                         <p className="text-white text-sm">
-                          Ciao! Mi servirebbe spedire un pacco a:<br />
-                          <span className="text-green-400">Mario Rossi</span><br />
+                          Ciao! Mi servirebbe spedire un pacco a:
+                          <br />
+                          <span className="text-green-400">Mario Rossi</span>
+                          <br />
                           Via Roma 123, 20121 Milano
                         </p>
                         <span className="text-[10px] text-gray-400 float-right mt-1">14:32</span>
@@ -491,8 +496,13 @@ export default function HeroDynamic() {
       {/* Custom Styles */}
       <style jsx>{`
         @keyframes gradient-shift {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(50px, 50px) rotate(180deg); }
+          0%,
+          100% {
+            transform: translate(0, 0) rotate(0deg);
+          }
+          50% {
+            transform: translate(50px, 50px) rotate(180deg);
+          }
         }
         .animate-gradient-shift {
           animation: gradient-shift 20s ease-in-out infinite;
@@ -507,8 +517,13 @@ export default function HeroDynamic() {
           animation: blink 1s step-end infinite;
         }
         @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0;
+          }
         }
       `}</style>
     </section>

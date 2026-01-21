@@ -1,6 +1,6 @@
 /**
  * Utility per badge ruoli con colori distintivi
- * 
+ *
  * Ogni ruolo ha un colore unico e riconoscibile:
  * - Super Admin: Rosso/Arancione (error)
  * - Admin: Viola/Amber (warning)
@@ -123,7 +123,10 @@ export function RoleBadge({ accountType, isReseller, role, className }: RoleBadg
   // BYOC: Blu
   if (type === 'byoc') {
     return (
-      <Badge variant="default" className={`bg-blue-600 text-white border-blue-700 ${className || ''}`}>
+      <Badge
+        variant="default"
+        className={`bg-blue-600 text-white border-blue-700 ${className || ''}`}
+      >
         {label}
       </Badge>
     );
@@ -144,9 +147,5 @@ export function RoleBadgeSpan({ accountType, isReseller, role, className }: Role
   const classes = getRoleBadgeClasses(accountType, isReseller, role);
   const label = getRoleLabel(accountType, isReseller, role);
 
-  return (
-    <span className={`${classes} ${className || ''}`}>
-      {label}
-    </span>
-  );
+  return <span className={`${classes} ${className || ''}`}>{label}</span>;
 }

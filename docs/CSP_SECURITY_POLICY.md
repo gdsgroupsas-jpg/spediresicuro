@@ -34,10 +34,12 @@ La **Content Security Policy (CSP)** è un meccanismo di sicurezza che previene 
 ### **Rischio di Sicurezza**
 
 `unsafe-eval` permette l'esecuzione di stringhe come JavaScript, il che può essere sfruttato da attaccanti se:
+
 - C'è un XSS vulnerability nel codice
 - Input utente non validato viene processato
 
 **Mitigazioni Implementate:**
+
 - ✅ Validazione input con Zod
 - ✅ Sanitizzazione dati utente
 - ✅ Server Actions per operazioni sensibili
@@ -93,7 +95,7 @@ La **Content Security Policy (CSP)** è un meccanismo di sicurezza che previene 
 Dopo aver rimosso le dipendenze client-side che richiedono `unsafe-eval`:
 
 ```javascript
-"script-src 'self' 'unsafe-inline' https://widget.spediresicuro.it"
+"script-src 'self' 'unsafe-inline' https://widget.spediresicuro.it";
 // ❌ Rimosso: 'unsafe-eval'
 ```
 
@@ -102,21 +104,25 @@ Dopo aver rimosso le dipendenze client-side che richiedono `unsafe-eval`:
 ## 🛡️ MITIGAZIONI ATTUALE
 
 ### **1. Validazione Input**
+
 - ✅ Zod schema validation
 - ✅ TypeScript type checking
 - ✅ Server-side validation
 
 ### **2. Sanitizzazione**
+
 - ✅ React automaticamente escape HTML
 - ✅ No `dangerouslySetInnerHTML` con input utente
 - ✅ Validazione URL e dati esterni
 
 ### **3. Autenticazione**
+
 - ✅ NextAuth.js per session management
 - ✅ RLS su database
 - ✅ Server Actions protette
 
 ### **4. Monitoring**
+
 - ✅ Audit logging
 - ✅ Error tracking
 - ✅ Security headers
@@ -151,4 +157,3 @@ Dopo aver rimosso le dipendenze client-side che richiedono `unsafe-eval`:
 **Documento generato:** 2025-12-03  
 **Status:** ⚠️ Configurazione attuale funzionante ma con `unsafe-eval`  
 **Piano:** Migrazione a server-side per rimuovere `unsafe-eval`
-

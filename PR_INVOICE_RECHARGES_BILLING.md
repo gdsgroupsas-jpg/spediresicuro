@@ -3,6 +3,7 @@
 ## 🎯 Obiettivo
 
 Implementazione sistema completo per fatturazione ricariche wallet con supporto:
+
 - ✅ **Fatturazione automatica** per ricariche Stripe
 - ✅ **Fatturazione manuale** per bonifici (dopo approvazione)
 - ✅ **Fatturazione periodica** (mensile/trimestrale/riepilogativa)
@@ -26,15 +27,18 @@ Implementazione sistema completo per fatturazione ricariche wallet con supporto:
 **File:** `supabase/migrations/110_invoice_xml_and_recharge_billing.sql` (NUOVO)
 
 **Estensioni tabella `invoices`:**
+
 - `xml_url` (TEXT): URL XML FatturaPA su Storage
 - `invoice_type` (TEXT): Tipo fattura (`shipment` | `recharge` | `periodic` | `manual`)
 - `period_start` / `period_end` (DATE): Date periodo per fatture periodiche
 
 **Nuove tabelle:**
+
 - `invoice_recharge_links`: Collegamento N:N ricariche → fatture
 - `invoice_generation_rules`: Regole generazione automatica/manuale/periodica
 
 **Nuova funzione SQL:**
+
 - `generate_invoice_from_recharges()`: Genera fattura da ricariche wallet
 
 ### 3. Server Actions
@@ -42,6 +46,7 @@ Implementazione sistema completo per fatturazione ricariche wallet con supporto:
 **File:** `actions/invoice-recharges.ts` (NUOVO)
 
 **Funzioni principali:**
+
 - `generateInvoiceFromRechargesAction()`: Genera fattura da ricariche
 - `generateAutomaticInvoiceForStripeRecharge()`: Fatturazione automatica Stripe
 - `generatePeriodicInvoiceAction()`: Fatturazione periodica
@@ -80,12 +85,14 @@ Implementazione sistema completo per fatturazione ricariche wallet con supporto:
 ### 8. Test
 
 **File:** `tests/unit/invoice-xml-generator.test.ts` (NUOVO)
+
 - Test generazione XML
 - Test validazione dati
 - Test escape caratteri speciali
 - Test calcolo IVA e totali
 
 **File:** `tests/integration/invoice-recharges.integration.test.ts` (NUOVO)
+
 - Test generazione fattura da ricariche
 - Test collegamento ricariche → fatture
 - Test prevenzione doppia fatturazione
@@ -146,6 +153,7 @@ supabase migration up 110_invoice_xml_and_recharge_billing
 ### Breaking Changes
 
 **Nessuno** - Tutte le modifiche sono retrocompatibili:
+
 - Campi nuovi sono opzionali
 - Fatture esistenti continuano a funzionare
 - `invoice_type` default `'shipment'` per fatture esistenti
@@ -169,7 +177,9 @@ supabase migration up 110_invoice_xml_and_recharge_billing
 ```typescript
 import { generateInvoiceXML, validateFatturaPAData } from '@/lib/invoices/xml-generator';
 
-const data = { /* dati fattura */ };
+const data = {
+  /* dati fattura */
+};
 const errors = validateFatturaPAData(data);
 if (errors.length === 0) {
   const xml = await generateInvoiceXML(data);

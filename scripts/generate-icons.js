@@ -43,7 +43,7 @@ console.log('ℹ️  Per convertire SVG in PNG, usa un tool online o sharp');
 console.log('ℹ️  Icone SVG salvate in:', outputDir);
 
 // Salva SVG per ogni dimensione
-sizes.forEach(size => {
+sizes.forEach((size) => {
   const svgContent = createSVG(size);
   const svgPath = path.join(outputDir, `icon-${size}x${size}.svg`);
   fs.writeFileSync(svgPath, svgContent);
@@ -71,7 +71,7 @@ const createMaskableSVG = (size) => `<?xml version="1.0" encoding="UTF-8"?>
   </g>
 </svg>`;
 
-[192, 512].forEach(size => {
+[192, 512].forEach((size) => {
   const svgContent = createMaskableSVG(size);
   const svgPath = path.join(outputDir, `icon-maskable-${size}x${size}.svg`);
   fs.writeFileSync(svgPath, svgContent);

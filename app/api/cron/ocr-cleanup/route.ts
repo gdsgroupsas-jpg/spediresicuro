@@ -30,9 +30,7 @@ export async function GET(request: NextRequest) {
     const isVercelCron = request.headers.get('x-vercel-cron-id');
 
     // Check secret token (se configurato)
-    const isAuthorized =
-      isVercelCron ||
-      (cronSecret && authHeader === `Bearer ${cronSecret}`);
+    const isAuthorized = isVercelCron || (cronSecret && authHeader === `Bearer ${cronSecret}`);
 
     if (!isAuthorized) {
       console.error('❌ [OCR_CLEANUP] Unauthorized access attempt', {
@@ -41,10 +39,7 @@ export async function GET(request: NextRequest) {
         hasAuthHeader: !!authHeader,
       });
 
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // ============================================

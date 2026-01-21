@@ -12,4 +12,3 @@ console.log('Hash generato:', hash);
 // Salva in un file temporaneo
 fs.writeFileSync('temp-hash.txt', hash);
 console.log('Hash salvato in temp-hash.txt');
-

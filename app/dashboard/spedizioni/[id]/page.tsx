@@ -1,6 +1,6 @@
 /**
  * Pagina: Dettaglio Spedizione / Modifica Ordine Importato
- * 
+ *
  * Permette di visualizzare e modificare una spedizione
  * Con supporto speciale per ordini importati (verifica e modifica)
  */
@@ -58,7 +58,11 @@ interface Spedizione {
   colli?: number;
 }
 
-export default function DettaglioSpedizionePage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+export default function DettaglioSpedizionePage({
+  params,
+}: {
+  params: Promise<{ id: string }> | { id: string };
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
@@ -82,7 +86,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
 
   useEffect(() => {
     if (!spedizioneId) return;
-    
+
     async function loadSpedizione() {
       try {
         setIsLoading(true);
@@ -94,7 +98,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
         const result = await response.json();
         const data = result.data;
         setSpedizione(data);
-        
+
         // Prepara form data per modifica
         if (isEditMode) {
           setFormData({
@@ -150,7 +154,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
       // Ricarica spedizione
       const result = await response.json();
       setSpedizione(result.data);
-      
+
       // Esci dalla modalità modifica
       router.push(`/dashboard/spedizioni/${spedizioneId}`);
     } catch (err) {
@@ -184,21 +188,25 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <DashboardNav
           title={isEditMode ? 'Modifica Ordine Importato' : 'Dettaglio Spedizione'}
-          subtitle={isImported ? 'Verifica e modifica i dati prima dell\'export' : ''}
+          subtitle={isImported ? "Verifica e modifica i dati prima dell'export" : ''}
           showBackButton={true}
         />
 
         {/* Banner Ordine Importato */}
         {spedizione.imported && (
-          <div className={`mb-6 p-4 rounded-xl border-2 ${
-            spedizione.verified
-              ? 'bg-green-50 border-green-300'
-              : 'bg-purple-50 border-purple-300'
-          }`}>
+          <div
+            className={`mb-6 p-4 rounded-xl border-2 ${
+              spedizione.verified
+                ? 'bg-green-50 border-green-300'
+                : 'bg-purple-50 border-purple-300'
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                spedizione.verified ? 'bg-green-100' : 'bg-purple-100'
-              }`}>
+              <div
+                className={`p-2 rounded-lg ${
+                  spedizione.verified ? 'bg-green-100' : 'bg-purple-100'
+                }`}
+              >
                 {spedizione.verified ? (
                   <CheckCircle2 className="w-6 h-6 text-green-600" />
                 ) : (
@@ -207,12 +215,14 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">
-                  {spedizione.verified ? 'Ordine Verificato' : 'Ordine Importato - Verifica Richiesta'}
+                  {spedizione.verified
+                    ? 'Ordine Verificato'
+                    : 'Ordine Importato - Verifica Richiesta'}
                 </h3>
                 <p className="text-sm text-gray-600">
                   {spedizione.verified
                     ? 'Questo ordine è stato verificato e può essere esportato.'
-                    : 'Verifica e modifica i dati prima di esportare. Dopo la modifica, l\'ordine sarà marcato come verificato.'}
+                    : "Verifica e modifica i dati prima di esportare. Dopo la modifica, l'ordine sarà marcato come verificato."}
                 </p>
                 {spedizione.importPlatform && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -228,7 +238,7 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
         {isEditMode ? (
           <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Modifica Dati Ordine</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Destinatario */}
               <div className="md:col-span-2">
@@ -239,16 +249,22 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                     <input
                       type="text"
                       value={formData.destinatarioNome || ''}
-                      onChange={(e) => setFormData({ ...formData, destinatarioNome: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, destinatarioNome: e.target.value })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Indirizzo
+                    </label>
                     <input
                       type="text"
                       value={formData.destinatarioIndirizzo || ''}
-                      onChange={(e) => setFormData({ ...formData, destinatarioIndirizzo: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, destinatarioIndirizzo: e.target.value })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                     />
                   </div>
@@ -258,7 +274,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                       <input
                         type="text"
                         value={formData.destinatarioCap || ''}
-                        onChange={(e) => setFormData({ ...formData, destinatarioCap: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, destinatarioCap: e.target.value })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                       />
                     </div>
@@ -267,27 +285,43 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                       <input
                         type="text"
                         value={formData.destinatarioCitta || ''}
-                        onChange={(e) => setFormData({ ...formData, destinatarioCitta: e.target.value.toUpperCase() })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            destinatarioCitta: e.target.value.toUpperCase(),
+                          })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Provincia
+                      </label>
                       <input
                         type="text"
                         value={formData.destinatarioProvincia || ''}
-                        onChange={(e) => setFormData({ ...formData, destinatarioProvincia: e.target.value.toUpperCase().slice(0, 2) })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            destinatarioProvincia: e.target.value.toUpperCase().slice(0, 2),
+                          })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Telefono
+                      </label>
                       <input
                         type="text"
                         value={formData.destinatarioTelefono || ''}
-                        onChange={(e) => setFormData({ ...formData, destinatarioTelefono: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, destinatarioTelefono: e.target.value })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                       />
                     </div>
@@ -296,7 +330,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                       <input
                         type="email"
                         value={formData.destinatarioEmail || ''}
-                        onChange={(e) => setFormData({ ...formData, destinatarioEmail: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, destinatarioEmail: e.target.value })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent text-gray-900"
                       />
                     </div>
@@ -309,7 +345,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Dettagli Pacco</h3>
                 <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Peso (kg)
+                    </label>
                     <input
                       type="number"
                       step="0.1"
@@ -319,7 +357,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Lunghezza (cm)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lunghezza (cm)
+                    </label>
                     <input
                       type="number"
                       value={formData.lunghezza || ''}
@@ -328,7 +368,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Larghezza (cm)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Larghezza (cm)
+                    </label>
                     <input
                       type="number"
                       value={formData.larghezza || ''}
@@ -337,7 +379,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Altezza (cm)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Altezza (cm)
+                    </label>
                     <input
                       type="number"
                       value={formData.altezza || ''}
@@ -353,7 +397,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Opzioni</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contrassegno (€)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contrassegno (€)
+                    </label>
                     <input
                       type="number"
                       step="0.01"
@@ -363,7 +409,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assicurazione (€)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assicurazione (€)
+                    </label>
                     <input
                       type="number"
                       step="0.01"
@@ -421,24 +469,29 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
               <h2 className="text-xl font-bold text-gray-900">Dettagli Spedizione</h2>
               {spedizione.imported && !spedizione.verified && (
                 <button
-                  onClick={() => router.push(`/dashboard/spedizioni/${spedizioneId}?edit=true&imported=true`)}
+                  onClick={() =>
+                    router.push(`/dashboard/spedizioni/${spedizioneId}?edit=true&imported=true`)
+                  }
                   className="px-4 py-2 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg hover:shadow-lg transition-all"
                 >
                   Verifica e Modifica
                 </button>
               )}
             </div>
-            
+
             {/* Mostra dati spedizione */}
             <div className="space-y-6">
               {/* Destinatario */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Destinatario</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <p className="text-lg font-semibold text-gray-900">{spedizione.destinatario?.nome || 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {spedizione.destinatario?.nome || 'N/A'}
+                  </p>
                   <p className="text-gray-700">{spedizione.destinatario?.indirizzo || 'N/A'}</p>
                   <p className="text-gray-600">
-                    {spedizione.destinatario?.cap || ''} {spedizione.destinatario?.citta || ''} ({spedizione.destinatario?.provincia || ''})
+                    {spedizione.destinatario?.cap || ''} {spedizione.destinatario?.citta || ''} (
+                    {spedizione.destinatario?.provincia || ''})
                   </p>
                   {spedizione.destinatario?.telefono && (
                     <p className="text-gray-600">Tel: {spedizione.destinatario.telefono}</p>
@@ -453,13 +506,16 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Mittente</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <p className="text-lg font-semibold text-gray-900">{spedizione.mittente?.nome || 'N/A'}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {spedizione.mittente?.nome || 'N/A'}
+                  </p>
                   {spedizione.mittente?.indirizzo && (
                     <p className="text-gray-700">{spedizione.mittente.indirizzo}</p>
                   )}
                   {(spedizione.mittente?.citta || spedizione.mittente?.provincia) && (
                     <p className="text-gray-600">
-                      {spedizione.mittente?.cap || ''} {spedizione.mittente?.citta || ''} ({spedizione.mittente?.provincia || ''})
+                      {spedizione.mittente?.cap || ''} {spedizione.mittente?.citta || ''} (
+                      {spedizione.mittente?.provincia || ''})
                     </p>
                   )}
                 </div>
@@ -467,7 +523,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
 
               {/* Dettagli Spedizione */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Dettagli Spedizione</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                  Dettagli Spedizione
+                </h3>
                 <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 uppercase mb-1">Tracking / LDV</p>
@@ -480,7 +538,9 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase mb-1">Status</p>
-                    <p className="text-sm font-medium text-gray-900">{spedizione.status || 'N/A'}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {spedizione.status || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase mb-1">Peso</p>
@@ -489,7 +549,10 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
                   <div>
                     <p className="text-xs text-gray-500 uppercase mb-1">Prezzo</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(spedizione.prezzoFinale || 0)}
+                      {new Intl.NumberFormat('it-IT', {
+                        style: 'currency',
+                        currency: 'EUR',
+                      }).format(spedizione.prezzoFinale || 0)}
                     </p>
                   </div>
                 </div>
@@ -511,4 +574,3 @@ export default function DettaglioSpedizionePage({ params }: { params: Promise<{ 
     </div>
   );
 }
-

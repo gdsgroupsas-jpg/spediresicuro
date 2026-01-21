@@ -5,7 +5,12 @@
  * TODO: Implementazione completa
  */
 
-import { SocialAdapter, type SocialCredentials, type TrendMetric, type CampaignPerformance } from './base';
+import {
+  SocialAdapter,
+  type SocialCredentials,
+  type TrendMetric,
+  type CampaignPerformance,
+} from './base';
 
 export class TikTokAdapter extends SocialAdapter {
   constructor(credentials: SocialCredentials) {
@@ -17,19 +22,12 @@ export class TikTokAdapter extends SocialAdapter {
     return true;
   }
 
-  async getTrendMetrics(
-    dateFrom: Date,
-    dateTo: Date,
-    filters?: any
-  ): Promise<TrendMetric[]> {
+  async getTrendMetrics(dateFrom: Date, dateTo: Date, filters?: any): Promise<TrendMetric[]> {
     // TODO: Implementare TikTok Analytics API
     return [];
   }
 
-  async getCampaignPerformance(
-    dateFrom: Date,
-    dateTo: Date
-  ): Promise<CampaignPerformance[]> {
+  async getCampaignPerformance(dateFrom: Date, dateTo: Date): Promise<CampaignPerformance[]> {
     // TODO: Implementare TikTok Ads API
     return [];
   }

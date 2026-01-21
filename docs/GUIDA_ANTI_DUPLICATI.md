@@ -9,6 +9,7 @@
 ### 1. Duplicare Funzioni tra File
 
 **❌ SBAGLIATO:**
+
 ```typescript
 // app/actions/topups-admin.ts
 export async function approveTopUpRequest() { ... }
@@ -18,11 +19,13 @@ export async function approveTopUpRequest() { ... } // DUPLICATO!
 ```
 
 **Errore Build Vercel:**
+
 ```
 Type error: Module '"@/app/actions/topups-admin"' has no exported member 'approveTopUpRequest'.
 ```
 
 **✅ CORRETTO:**
+
 ```typescript
 // app/actions/wallet.ts (UNICO LUOGO)
 export async function approveTopUpRequest() { ... }
@@ -38,7 +41,9 @@ export async function approveTopUpRequest() { ... }
 ### Server Actions Wallet/Top-Up
 
 #### `app/actions/wallet.ts`
+
 **Contiene SOLO funzioni di modifica:**
+
 - ✅ `approveTopUpRequest(requestId, approvedAmount?)`
 - ✅ `rejectTopUpRequest(requestId, reason)`
 - ✅ `deleteTopUpRequest(requestId)`
@@ -46,15 +51,19 @@ export async function approveTopUpRequest() { ... }
 - ✅ `uploadBankTransferReceipt(file, amount)`
 
 **NON contiene:**
+
 - ❌ Funzioni di lettura admin (`getTopUpRequestsAdmin`, `getTopUpRequestAdmin`)
 
 #### `app/actions/topups-admin.ts`
+
 **Contiene SOLO funzioni di lettura:**
+
 - ✅ `getTopUpRequestsAdmin({ status, search, limit, offset })`
 - ✅ `getTopUpRequestAdmin(id)`
 - ✅ `verifyAdminAccess()`
 
 **NON contiene:**
+
 - ❌ Funzioni di modifica (`approveTopUpRequest`, `rejectTopUpRequest`, `deleteTopUpRequest`)
 
 ---
@@ -68,23 +77,26 @@ Prima di fare commit, verifica:
 **File**: `app/dashboard/admin/bonifici/page.tsx`
 
 **✅ CORRETTO:**
+
 ```typescript
 import { getTopUpRequestsAdmin, getTopUpRequestAdmin } from '@/app/actions/topups-admin';
 import { approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest } from '@/app/actions/wallet';
 ```
 
 **❌ SBAGLIATO:**
+
 ```typescript
-import { 
-  getTopUpRequestsAdmin, 
-  approveTopUpRequest,  // ❌ Non esiste qui!
-  rejectTopUpRequest   // ❌ Non esiste qui!
+import {
+  getTopUpRequestsAdmin,
+  approveTopUpRequest, // ❌ Non esiste qui!
+  rejectTopUpRequest, // ❌ Non esiste qui!
 } from '@/app/actions/topups-admin';
 ```
 
 ### 2. Nessun Merge Conflict Marker
 
 **Cerca nel codice:**
+
 ```bash
 grep -r "<<<<<<< HEAD" app/
 grep -r "=======" app/
@@ -92,6 +104,7 @@ grep -r ">>>>>>>" app/
 ```
 
 **Se trovi questi marker:**
+
 1. Risolvi manualmente il conflitto
 2. Rimuovi tutti i marker (`<<<<<<<`, `=======`, `>>>>>>>`)
 3. Verifica che il codice risultante sia corretto
@@ -99,6 +112,7 @@ grep -r ">>>>>>>" app/
 ### 3. Nessuna Funzione Duplicata
 
 **Cerca duplicati:**
+
 ```bash
 # Cerca approveTopUpRequest in entrambi i file
 grep -n "approveTopUpRequest" app/actions/wallet.ts
@@ -118,6 +132,7 @@ grep -n "approveTopUpRequest" app/actions/topups-admin.ts
    - `getTopUpRequestsAdmin` → `app/actions/topups-admin.ts`
 
 2. **Rimuovi duplicato:**
+
    ```bash
    # Apri il file sbagliato
    # Rimuovi la funzione duplicata
@@ -125,6 +140,7 @@ grep -n "approveTopUpRequest" app/actions/topups-admin.ts
    ```
 
 3. **Verifica import nella UI:**
+
    ```bash
    # Cerca tutti gli import
    grep -r "from '@/app/actions/topups-admin'" app/
@@ -151,6 +167,7 @@ grep -n "approveTopUpRequest" app/actions/topups-admin.ts
    - Modifica wallet → `wallet.ts`
 
 3. **Verifica Build Prima di Push**
+
    ```bash
    npm run build
    # Se fallisce → FIX prima di push
@@ -199,4 +216,3 @@ Prima di push su `master`:
 
 **Ultimo aggiornamento**: Gennaio 2025  
 **Versione**: 1.0.0
-

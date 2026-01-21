@@ -58,11 +58,12 @@ export function AnneAssistant({
   currentPage = '/dashboard',
 }: AnneAssistantProps) {
   // Disabilita Anne durante i test Playwright
-  const isTestMode = typeof window !== 'undefined' && 
-    (window.location.search.includes('test=true') || 
-     document.documentElement.getAttribute('data-test-mode') === 'true' ||
-     document.documentElement.getAttribute('x-test-mode') === 'playwright');
-  
+  const isTestMode =
+    typeof window !== 'undefined' &&
+    (window.location.search.includes('test=true') ||
+      document.documentElement.getAttribute('data-test-mode') === 'true' ||
+      document.documentElement.getAttribute('x-test-mode') === 'playwright');
+
   // State
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
@@ -71,8 +72,10 @@ export function AnneAssistant({
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   // P2: Telemetria per debug panel (solo admin)
-  const [lastTelemetry, setLastTelemetry] = useState<SupervisorRouterTelemetry | undefined>(undefined);
-  
+  const [lastTelemetry, setLastTelemetry] = useState<SupervisorRouterTelemetry | undefined>(
+    undefined
+  );
+
   // P4: AgentState corrente (per componenti P4)
   const [currentAgentState, setCurrentAgentState] = useState<AgentState | null>(null);
   const [showAutoProceed, setShowAutoProceed] = useState(false);
@@ -106,10 +109,11 @@ export function AnneAssistant({
     if (!hasGreeted && preferences.autoGreet) {
       // Ritarda molto di più (30 secondi) per non interferire con le azioni iniziali
       // E solo se non siamo in modalità test
-      const isTestMode = typeof window !== 'undefined' && 
-        (window.location.search.includes('test=true') || 
-         document.documentElement.getAttribute('data-test-mode') === 'true');
-      
+      const isTestMode =
+        typeof window !== 'undefined' &&
+        (window.location.search.includes('test=true') ||
+          document.documentElement.getAttribute('data-test-mode') === 'true');
+
       if (!isTestMode) {
         setTimeout(() => {
           setIsMinimized(false);
@@ -247,7 +251,7 @@ export function AnneAssistant({
       // P4: Salva AgentState corrente (per componenti P4)
       if (data.metadata?.agentState) {
         setCurrentAgentState(data.metadata.agentState);
-        
+
         // P4 Task 2: Mostra auto-proceed banner se attivato
         if (data.metadata.agentState.autoProceed) {
           setShowAutoProceed(true);
@@ -264,19 +268,22 @@ export function AnneAssistant({
       ]);
     } catch (error: any) {
       console.error('Errore Anne:', error);
-      
+
       // Gestione errori più specifica per mobile
       let errorMessage = 'Mi dispiace, ho avuto un problema tecnico.';
-      
+
       if (error.name === 'AbortError' || error.message?.includes('timeout')) {
         errorMessage = '⏱️ La richiesta è scaduta. Verifica la connessione internet e riprova.';
-      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+      } else if (
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError')
+      ) {
         errorMessage = '📡 Errore di connessione. Verifica la connessione internet e riprova.';
       } else if (error.message) {
         // Usa il messaggio di errore originale se disponibile
         errorMessage = error.message;
       }
-      
+
       setMessages((prev) => [
         ...prev,
         {
@@ -450,9 +457,7 @@ export function AnneAssistant({
                   </label>
 
                   <div>
-                    <label className="text-xs text-gray-600 block mb-1">
-                      Livello notifiche
-                    </label>
+                    <label className="text-xs text-gray-600 block mb-1">Livello notifiche</label>
                     <select
                       value={preferences.notificationLevel}
                       onChange={(e) =>
@@ -478,17 +483,20 @@ export function AnneAssistant({
                   <>
                     {/* P4 Task 1: Value Dashboard */}
                     <ValueDashboard userId={userId} />
-                    
+
                     {/* P4 Task 3: Human Error Messages */}
                     <HumanError
                       agentState={currentAgentState}
                       onResolved={() => setCurrentAgentState(null)}
                     />
-                    
+
                     {/* P4 Task 2: Auto-Proceed Banner */}
                     {showAutoProceed && currentAgentState?.autoProceed && (
                       <AutoProceedBanner
-                        message={currentAgentState.userMessage || '✅ Dati verificati, procedo automaticamente'}
+                        message={
+                          currentAgentState.userMessage ||
+                          '✅ Dati verificati, procedo automaticamente'
+                        }
                         cancellationWindowMs={autoProceedConfig.CANCELLATION_WINDOW_MS}
                         onCancel={() => {
                           setShowAutoProceed(false);
@@ -500,7 +508,7 @@ export function AnneAssistant({
                         operationType="pricing"
                       />
                     )}
-                    
+
                     {/* P4 Task 4: Smart Suggestions */}
                     <SmartSuggestions
                       userId={userId}
@@ -533,8 +541,8 @@ export function AnneAssistant({
                         msg.role === 'user'
                           ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
                           : msg.role === 'suggestion'
-                          ? 'bg-amber-50 border border-amber-200 text-amber-900'
-                          : 'bg-gray-100 text-gray-900'
+                            ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                            : 'bg-gray-100 text-gray-900'
                       }`}
                     >
                       {msg.role === 'suggestion' && (
@@ -592,9 +600,7 @@ export function AnneAssistant({
                     <Send className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Anne può commettere errori
-                </p>
+                <p className="text-xs text-gray-500 mt-2 text-center">Anne può commettere errori</p>
               </div>
             </div>
           </motion.div>
@@ -627,13 +633,13 @@ function getGreetingMessage(userName: string, userRole: string): string {
  */
 function getContextualSuggestion(page: string, userRole: string): string | null {
   const suggestions: Record<string, string> = {
-    '/dashboard': '💡 Da qui puoi vedere un riepilogo completo. Vuoi che ti aiuti a trovare qualcosa?',
+    '/dashboard':
+      '💡 Da qui puoi vedere un riepilogo completo. Vuoi che ti aiuti a trovare qualcosa?',
     '/dashboard/spedizioni':
       '📦 Gestisci le tue spedizioni qui. Posso aiutarti a filtrare o cercare una spedizione specifica.',
     '/dashboard/spedizioni/nuova':
       '🚀 Pronto a creare una nuova spedizione? Posso suggerirti il corriere più conveniente!',
-    '/dashboard/wallet':
-      '💰 Tieni d\'occhio il tuo saldo. Ti serve aiuto per ricaricare il wallet?',
+    '/dashboard/wallet': "💰 Tieni d'occhio il tuo saldo. Ti serve aiuto per ricaricare il wallet?",
     '/dashboard/impostazioni':
       '⚙️ Personalizza la tua esperienza! Posso spiegarti le varie opzioni.',
   };

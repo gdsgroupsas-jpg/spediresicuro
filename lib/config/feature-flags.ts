@@ -11,5 +11,5 @@ export const featureFlags = {
    * Mostra badge VAT nei componenti UI (comparator, dashboard)
    * Default: false (rollout graduale)
    */
-  showVATSemantics: process.env.NEXT_PUBLIC_SHOW_VAT_SEMANTICS === "true",
+  showVATSemantics: process.env.NEXT_PUBLIC_SHOW_VAT_SEMANTICS === 'true',
 } as const;

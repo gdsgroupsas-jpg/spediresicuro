@@ -1,6 +1,6 @@
 /**
  * Pagina: Privacy & Dati Personali
- * 
+ *
  * Gestione diritti GDPR:
  * - Export dati (Diritto alla Portabilità - Art. 20)
  * - Cancellazione account (Diritto all'Oblio - Art. 17)
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
       setTimeout(() => setExportSuccess(false), 5000);
     } catch (error: any) {
       console.error('Errore export:', error);
-        setExportError(error.message || 'Errore durante l&apos;export dei dati');
+      setExportError(error.message || 'Errore durante l&apos;export dei dati');
     } finally {
       setIsExporting(false);
     }
@@ -123,13 +123,11 @@ export default function PrivacyPage() {
             <div className="flex items-start gap-4">
               <Shield className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-lg font-semibold text-blue-900 mb-2">
-                  I tuoi diritti GDPR
-                </h2>
+                <h2 className="text-lg font-semibold text-blue-900 mb-2">I tuoi diritti GDPR</h2>
                 <p className="text-sm text-blue-800 leading-relaxed">
-                  In conformità al Regolamento Generale sulla Protezione dei Dati (GDPR), 
-                  hai il diritto di accedere, esportare e cancellare i tuoi dati personali. 
-                  Utilizza le funzionalità qui sotto per esercitare i tuoi diritti.
+                  In conformità al Regolamento Generale sulla Protezione dei Dati (GDPR), hai il
+                  diritto di accedere, esportare e cancellare i tuoi dati personali. Utilizza le
+                  funzionalità qui sotto per esercitare i tuoi diritti.
                 </p>
               </div>
             </div>
@@ -146,8 +144,8 @@ export default function PrivacyPage() {
                   Esporta i tuoi dati (Diritto alla Portabilità)
                 </h3>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                  Scarica una copia completa di tutti i tuoi dati in formato JSON. 
-                  Il file include il tuo profilo, storico spedizioni, preventivi e configurazioni.
+                  Scarica una copia completa di tutti i tuoi dati in formato JSON. Il file include
+                  il tuo profilo, storico spedizioni, preventivi e configurazioni.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <div className="flex items-start gap-2">
@@ -212,9 +210,9 @@ export default function PrivacyPage() {
                   Elimina il mio account (Diritto all&apos;Oblio)
                 </h3>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                  Puoi richiedere la cancellazione del tuo account. I tuoi dati personali 
-                  verranno anonimizzati, mentre i dati delle spedizioni (necessari per 
-                  tracciabilità fiscale) verranno mantenuti in forma anonima.
+                  Puoi richiedere la cancellazione del tuo account. I tuoi dati personali verranno
+                  anonimizzati, mentre i dati delle spedizioni (necessari per tracciabilità fiscale)
+                  verranno mantenuti in forma anonima.
                 </p>
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                   <div className="flex items-start gap-2">
@@ -222,9 +220,13 @@ export default function PrivacyPage() {
                     <div className="text-xs text-amber-800">
                       <p className="font-medium mb-1">⚠️ Attenzione:</p>
                       <ul className="list-disc list-inside space-y-1 ml-2">
-                        <li>Questa azione è <strong>irreversibile</strong></li>
+                        <li>
+                          Questa azione è <strong>irreversibile</strong>
+                        </li>
                         <li>Il tuo profilo verrà anonimizzato (email e nome rimossi)</li>
-                        <li>Le spedizioni verranno anonimizzate ma mantenute per obblighi fiscali</li>
+                        <li>
+                          Le spedizioni verranno anonimizzate ma mantenute per obblighi fiscali
+                        </li>
                         <li>Verrai disconnesso immediatamente dopo la cancellazione</li>
                       </ul>
                     </div>
@@ -255,7 +257,8 @@ export default function PrivacyPage() {
                     Conferma la cancellazione
                   </p>
                   <p className="text-xs text-red-800 mb-4">
-                    Per confermare, digita <strong className="font-mono">ELIMINA</strong> nel campo sottostante:
+                    Per confermare, digita <strong className="font-mono">ELIMINA</strong> nel campo
+                    sottostante:
                   </p>
                   <input
                     type="text"
@@ -325,9 +328,7 @@ export default function PrivacyPage() {
                 className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <h4 className="font-medium text-gray-900 mb-1">Termini e Condizioni</h4>
-                <p className="text-xs text-gray-600">
-                  Condizioni di utilizzo del servizio
-                </p>
+                <p className="text-xs text-gray-600">Condizioni di utilizzo del servizio</p>
               </a>
               <a
                 href="/cookie-policy"
@@ -336,9 +337,7 @@ export default function PrivacyPage() {
                 className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <h4 className="font-medium text-gray-900 mb-1">Cookie Policy</h4>
-                <p className="text-xs text-gray-600">
-                  Informativa sull&apos;utilizzo dei cookie
-                </p>
+                <p className="text-xs text-gray-600">Informativa sull&apos;utilizzo dei cookie</p>
               </a>
             </div>
           </div>
@@ -347,4 +346,3 @@ export default function PrivacyPage() {
     </>
   );
 }
-

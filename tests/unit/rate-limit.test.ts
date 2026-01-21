@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Rate Limit Utility
- * 
+ *
  * Test della utility di rate limiting con mock Redis e clock deterministico.
  */
 
@@ -60,30 +60,30 @@ describe('Rate Limit Utility', () => {
     it('should return same bucket for timestamps in same window', () => {
       const windowSeconds = 60;
       const now = 1703592000000; // Fixed timestamp
-      
+
       const bucket1 = getWindowBucket(windowSeconds, now);
       const bucket2 = getWindowBucket(windowSeconds, now + 30000); // +30s
-      
+
       expect(bucket1).toBe(bucket2);
     });
 
     it('should return different bucket for timestamps in different windows', () => {
       const windowSeconds = 60;
       const now = 1703592000000;
-      
+
       const bucket1 = getWindowBucket(windowSeconds, now);
       const bucket2 = getWindowBucket(windowSeconds, now + 61000); // +61s
-      
+
       expect(bucket1).not.toBe(bucket2);
     });
 
     it('should increment bucket by 1 for each window', () => {
       const windowSeconds = 60;
       const now = 1703592000000;
-      
+
       const bucket1 = getWindowBucket(windowSeconds, now);
       const bucket2 = getWindowBucket(windowSeconds, now + 60000);
-      
+
       expect(bucket2 - bucket1).toBe(1);
     });
   });
@@ -91,7 +91,7 @@ describe('Rate Limit Utility', () => {
   describe('generateKey', () => {
     it('should generate key with correct format', () => {
       const key = generateKey('agent-chat', 'user-123', 60, 1703592000000);
-      
+
       expect(key).toMatch(/^rl:agent-chat:[a-f0-9]{12}:\d+$/);
     });
 
@@ -99,7 +99,7 @@ describe('Rate Limit Utility', () => {
       const nowMs = 1703592000000;
       const key1 = generateKey('agent-chat', 'user-123', 60, nowMs);
       const key2 = generateKey('agent-chat', 'user-123', 60, nowMs);
-      
+
       expect(key1).toBe(key2);
     });
 
@@ -107,7 +107,7 @@ describe('Rate Limit Utility', () => {
       const nowMs = 1703592000000;
       const key1 = generateKey('agent-chat', 'user-123', 60, nowMs);
       const key2 = generateKey('other-route', 'user-123', 60, nowMs);
-      
+
       expect(key1).not.toBe(key2);
     });
 
@@ -115,14 +115,14 @@ describe('Rate Limit Utility', () => {
       const nowMs = 1703592000000;
       const key1 = generateKey('agent-chat', 'user-123', 60, nowMs);
       const key2 = generateKey('agent-chat', 'user-456', 60, nowMs);
-      
+
       expect(key1).not.toBe(key2);
     });
 
     it('should generate different key for different windows', () => {
       const key1 = generateKey('agent-chat', 'user-123', 60, 1703592000000);
       const key2 = generateKey('agent-chat', 'user-123', 60, 1703592061000); // +61s
-      
+
       expect(key1).not.toBe(key2);
     });
   });
@@ -177,14 +177,18 @@ describe('Rate Limit Utility', () => {
       await rateLimit('test-route', 'user-123', { limit: 3, windowSeconds, nowMs: now });
 
       // 4th request in same window - blocked
-      const blocked = await rateLimit('test-route', 'user-123', { limit: 3, windowSeconds, nowMs: now });
+      const blocked = await rateLimit('test-route', 'user-123', {
+        limit: 3,
+        windowSeconds,
+        nowMs: now,
+      });
       expect(blocked.allowed).toBe(false);
 
       // Request in new window - allowed
-      const newWindow = await rateLimit('test-route', 'user-123', { 
-        limit: 3, 
-        windowSeconds, 
-        nowMs: now + 61000 // +61 seconds
+      const newWindow = await rateLimit('test-route', 'user-123', {
+        limit: 3,
+        windowSeconds,
+        nowMs: now + 61000, // +61 seconds
       });
       expect(newWindow.allowed).toBe(true);
       expect(newWindow.remaining).toBe(2);
@@ -215,7 +219,7 @@ describe('Rate Limit Utility', () => {
       await rateLimit('route-1', 'user-123', options);
       await rateLimit('route-1', 'user-123', options);
       await rateLimit('route-1', 'user-123', options);
-      
+
       const route1Blocked = await rateLimit('route-1', 'user-123', options);
       expect(route1Blocked.allowed).toBe(false);
 
@@ -238,4 +242,3 @@ describe('Rate Limit Utility', () => {
     });
   });
 });
-

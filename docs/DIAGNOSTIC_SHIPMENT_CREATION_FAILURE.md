@@ -1,6 +1,7 @@
 # 🔍 Diagnostica: Creazione Spedizione Fallisce in Produzione
 
 ## 📋 Contesto
+
 - **Problema**: Creazione spedizione fallisce in produzione
 - **Login**: Funziona correttamente ✅
 - **Endpoint**: `POST /api/spedizioni`
@@ -40,6 +41,7 @@ POST /api/spedizioni
 **Perché**: Login usa `NEXT_PUBLIC_SUPABASE_ANON_KEY` (client-side), mentre creazione spedizione usa `SUPABASE_SERVICE_ROLE_KEY` (server-side).
 
 **Verifica**:
+
 ```bash
 # In Vercel Dashboard > Settings > Environment Variables
 # Verifica che esista:
@@ -52,11 +54,13 @@ SUPABASE_SERVICE_ROLE_KEY
 ```
 
 **Log da cercare in Vercel**:
+
 ```
 ❌ [SUPABASE] Supabase non configurato. Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY
 ```
 
 **Fix**:
+
 1. Vai su Supabase Dashboard > Settings > API
 2. Copia la nuova `service_role` key (secret)
 3. Aggiorna in Vercel: Settings > Environment Variables > `SUPABASE_SERVICE_ROLE_KEY`
@@ -67,10 +71,12 @@ SUPABASE_SERVICE_ROLE_KEY
 ### **Ipotesi 2: Errore RLS (Row Level Security) o Permessi**
 
 **Perché**: Anche se `supabaseAdmin` bypassa RLS, potrebbe esserci un problema con:
+
 - Policy INSERT sulla tabella `shipments`
 - Permessi sulla tabella `user_profiles` (usata da `getSupabaseUserIdFromEmail`)
 
 **Verifica nei log Vercel**:
+
 ```
 ❌ [SUPABASE] Errore salvataggio: {
   message: "new row violates row-level security policy"
@@ -79,20 +85,23 @@ SUPABASE_SERVICE_ROLE_KEY
 ```
 
 **Oppure**:
+
 ```
 ❌ [SUPABASE] Errore getSupabaseUserIdFromEmail: permission denied
 ```
 
 **Fix**:
+
 1. Verifica in Supabase Studio > Authentication > Policies
 2. Controlla che esista policy INSERT per `shipments`
 3. Verifica che `service_role` abbia accesso completo
 
 **Query SQL per verificare**:
+
 ```sql
 -- Verifica policy INSERT su shipments
-SELECT * FROM pg_policies 
-WHERE tablename = 'shipments' 
+SELECT * FROM pg_policies
+WHERE tablename = 'shipments'
 AND cmd = 'INSERT';
 
 -- Se non esiste, crea policy per service_role
@@ -107,11 +116,13 @@ WITH CHECK (true);
 ### **Ipotesi 3: Schema Mismatch - Campo Mancante o Tipo Errato**
 
 **Perché**: Dopo rotazione secrets, potrebbe esserci un problema con:
+
 - Campi obbligatori mancanti nel payload
 - Tipo di dato errato (es. stringa invece di numero)
 - Vincoli NOT NULL violati
 
 **Verifica nei log Vercel**:
+
 ```
 ❌ [SUPABASE] Errore salvataggio: {
   message: "column \"X\" does not exist"
@@ -120,6 +131,7 @@ WITH CHECK (true);
 ```
 
 **Oppure**:
+
 ```
 ❌ [SUPABASE] Errore salvataggio: {
   message: "null value in column \"X\" violates not-null constraint"
@@ -128,6 +140,7 @@ WITH CHECK (true);
 ```
 
 **Fix**:
+
 1. Controlla il payload completo nei log: `📋 [SUPABASE] Payload FINALE da inserire:`
 2. Confronta con schema Supabase: `supabase/migrations/`
 3. Verifica che tutti i campi NOT NULL siano presenti
@@ -139,12 +152,14 @@ WITH CHECK (true);
 **Perché**: Problemi di connettività tra Vercel e Supabase.
 
 **Verifica nei log Vercel**:
+
 ```
 ❌ [SUPABASE] Errore generico salvataggio: fetch failed
 ❌ [SUPABASE] Errore generico salvataggio: timeout
 ```
 
 **Fix**:
+
 1. Verifica che `NEXT_PUBLIC_SUPABASE_URL` sia corretto
 2. Controlla status Supabase: https://status.supabase.com/
 3. Verifica rate limits in Supabase Dashboard
@@ -156,6 +171,7 @@ WITH CHECK (true);
 ### 1. Verifica Variabili Ambiente in Produzione
 
 **In Vercel Dashboard**:
+
 1. Vai su: Project > Settings > Environment Variables
 2. Verifica che esistano TUTTE queste variabili:
    - `NEXT_PUBLIC_SUPABASE_URL`
@@ -167,6 +183,7 @@ WITH CHECK (true);
 ### 2. Test Endpoint Health Check
 
 **Crea endpoint di test** (temporaneo):
+
 ```typescript
 // app/api/test-supabase/route.ts
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
@@ -183,10 +200,7 @@ export async function GET() {
   let connectionTest = null;
   if (config.isConfigured) {
     try {
-      const { data, error } = await supabaseAdmin
-        .from('shipments')
-        .select('id')
-        .limit(1);
+      const { data, error } = await supabaseAdmin.from('shipments').select('id').limit(1);
       connectionTest = { success: !error, error: error?.message };
     } catch (e: any) {
       connectionTest = { success: false, error: e.message };
@@ -198,6 +212,7 @@ export async function GET() {
 ```
 
 **Test**:
+
 ```bash
 curl https://tuo-dominio.vercel.app/api/test-supabase
 ```
@@ -224,13 +239,13 @@ grep "📋 \[SUPABASE\] Payload FINALE" vercel-logs.txt
 
 ## 📊 Matrice Decisionale
 
-| Sintomo | Log Pattern | Causa Probabile | Fix |
-|---------|-------------|-----------------|-----|
-| Errore immediato | "Supabase non configurato" | `SUPABASE_SERVICE_ROLE_KEY` mancante | Aggiungi variabile in Vercel |
-| Errore 401/403 | "permission denied" | RLS policy mancante | Crea policy INSERT |
-| Errore 400 | "column does not exist" | Schema mismatch | Verifica migrazioni |
-| Errore 500 | "null value violates constraint" | Campo obbligatorio mancante | Verifica payload |
-| Timeout | "fetch failed" | Problema network | Verifica URL Supabase |
+| Sintomo          | Log Pattern                      | Causa Probabile                      | Fix                          |
+| ---------------- | -------------------------------- | ------------------------------------ | ---------------------------- |
+| Errore immediato | "Supabase non configurato"       | `SUPABASE_SERVICE_ROLE_KEY` mancante | Aggiungi variabile in Vercel |
+| Errore 401/403   | "permission denied"              | RLS policy mancante                  | Crea policy INSERT           |
+| Errore 400       | "column does not exist"          | Schema mismatch                      | Verifica migrazioni          |
+| Errore 500       | "null value violates constraint" | Campo obbligatorio mancante          | Verifica payload             |
+| Timeout          | "fetch failed"                   | Problema network                     | Verifica URL Supabase        |
 
 ---
 
@@ -252,6 +267,7 @@ grep "📋 \[SUPABASE\] Payload FINALE" vercel-logs.txt
    - Salva
 
 3. **Redeploy**:
+
    ```bash
    # Opzione 1: Push vuoto per triggerare redeploy
    git commit --allow-empty -m "fix: update SUPABASE_SERVICE_ROLE_KEY"
@@ -278,6 +294,7 @@ Dopo il fix, verifica:
 4. ✅ **Dettaglio spedizione funziona**
 
 **Comandi test**:
+
 ```bash
 # 1. Test login (già funziona)
 curl -X POST https://tuo-dominio.vercel.app/api/auth/signin \
@@ -321,4 +338,3 @@ curl -X POST https://tuo-dominio.vercel.app/api/spedizioni \
 
 3. **Rollback temporaneo**:
    - Se possibile, ripristina vecchia `SUPABASE_SERVICE_ROLE_KEY` per verificare se era quella
-

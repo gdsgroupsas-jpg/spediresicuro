@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * Server Actions per Integrazione Spedisci.Online e Fulfillment Orchestrator
@@ -7,30 +7,23 @@
  * per la creazione automatica delle LDV con routing ottimale.
  */
 
-import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
-import { auth } from "@/lib/auth-config";
-import { getShippingProvider } from "@/lib/couriers/factory";
-import { findUserByEmail } from "@/lib/database";
-import { supabaseAdmin } from "@/lib/db/client";
-import {
-  getFulfillmentOrchestrator,
-  ShipmentResult,
-} from "@/lib/engine/fulfillment-orchestrator";
-import { createServerActionClient } from "@/lib/supabase-server";
-import type { CreateShipmentInput, Shipment } from "@/types/shipments";
-import crypto from "crypto";
+import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
+import { getSafeAuth } from '@/lib/safe-auth';
+import { getShippingProvider } from '@/lib/couriers/factory';
+import { findUserByEmail } from '@/lib/database';
+import { supabaseAdmin } from '@/lib/db/client';
+import { getFulfillmentOrchestrator, ShipmentResult } from '@/lib/engine/fulfillment-orchestrator';
+import { createServerActionClient } from '@/lib/supabase-server';
+import type { CreateShipmentInput, Shipment } from '@/types/shipments';
+import crypto from 'crypto';
 
 /**
  * AUDIT FIX P1-3: Sanitizza UUID per log production-safe
  * Genera hash parziale (primi 8 caratteri) invece di UUID completo
  */
 function sanitizeIdForLog(id: string | null | undefined): string {
-  if (!id) return "N/A";
-  return crypto
-    .createHash("sha256")
-    .update(String(id))
-    .digest("hex")
-    .substring(0, 8);
+  if (!id) return 'N/A';
+  return crypto.createHash('sha256').update(String(id)).digest('hex').substring(0, 8);
 }
 
 /**
@@ -38,12 +31,14 @@ function sanitizeIdForLog(id: string | null | undefined): string {
  * Rimuove caratteri sensibili e limita lunghezza
  */
 function sanitizeNameForLog(name: string | null | undefined): string {
-  if (!name) return "N/A";
+  if (!name) return 'N/A';
   // Rimuove caratteri speciali e limita a 20 caratteri
-  return name
-    .replace(/[^a-zA-Z0-9\s]/g, "")
-    .substring(0, 20)
-    .trim() || "N/A";
+  return (
+    name
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .substring(0, 20)
+      .trim() || 'N/A'
+  );
 }
 
 /**
@@ -57,37 +52,34 @@ function sanitizeNameForLog(name: string | null | undefined): string {
  */
 export async function getSpedisciOnlineCredentials(configId?: string) {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email!;
     const { data: currentUser } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, assigned_config_id")
-      .eq("email", userEmail)
+      .from('users')
+      .select('id, account_type, assigned_config_id')
+      .eq('email', userEmail)
       .maybeSingle();
     const currentUserId = currentUser?.id ?? null;
     const assignedConfigId = currentUser?.assigned_config_id ?? null;
     const isAdmin =
-      currentUser?.account_type === "admin" ||
-      currentUser?.account_type === "superadmin";
+      currentUser?.account_type === 'admin' || currentUser?.account_type === 'superadmin';
 
     // PRIORITÀ 1: Configurazione API Corriere (courier_configs)
     // ============================================
-    const { decryptCredential, isEncrypted } = await import(
-      "@/lib/security/encryption"
-    );
+    const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption');
 
     // 0. Se fornito configId, cerca quella specifica configurazione
     if (configId) {
       const { data: specificConfig } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("id", configId)
-        .eq("provider_id", "spedisci_online")
+        .from('courier_configs')
+        .select('*')
+        .eq('id', configId)
+        .eq('provider_id', 'spedisci_online')
         // .eq('created_by', userEmail) // Opzionale: se vogliamo forzare ownership
         .single();
 
@@ -101,21 +93,20 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         // NOTE: Rimosso fallback created_by (email) - tutte le config hanno owner_user_id
         const isDefaultVisible =
           specificConfig.is_default === true && !specificConfig.owner_user_id;
-        const isOwner =
-          !!currentUserId && specificConfig.owner_user_id === currentUserId;
+        const isOwner = !!currentUserId && specificConfig.owner_user_id === currentUserId;
         const isAssigned = assignedConfigId === configId;
 
         if (!isAdmin && !isDefaultVisible && !isOwner && !isAssigned) {
           return {
             success: false,
-            error: "Configurazione non trovata o non autorizzata",
+            error: 'Configurazione non trovata o non autorizzata',
           };
         }
 
         const configIdHash = crypto
-          .createHash("sha256")
+          .createHash('sha256')
           .update(String(specificConfig.id))
-          .digest("hex")
+          .digest('hex')
           .substring(0, 8);
         console.log(
           `✅ [SPEDISCI.ONLINE] Configurazione specifica trovata (id_hash=${configIdHash})`
@@ -125,16 +116,14 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         let apiSecret = specificConfig.api_secret;
 
         if (apiKey && isEncrypted(apiKey)) apiKey = decryptCredential(apiKey);
-        if (apiSecret && isEncrypted(apiSecret))
-          apiSecret = decryptCredential(apiSecret);
+        if (apiSecret && isEncrypted(apiSecret)) apiSecret = decryptCredential(apiSecret);
 
         return {
           success: true,
           credentials: {
             api_key: apiKey,
             api_secret: apiSecret,
-            base_url:
-              specificConfig.base_url || "https://api.spedisci.online/api/v2",
+            base_url: specificConfig.base_url || 'https://api.spedisci.online/api/v2',
             contract_mapping: specificConfig.contract_mapping || {},
           },
         };
@@ -144,17 +133,15 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     // 1.1. PRIORITÀ: Configurazione assegnata (assigned_config_id)
     if (assignedConfigId && currentUserId) {
       const { data: assignedConfig } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("id", assignedConfigId)
-        .eq("provider_id", "spedisci_online")
-        .eq("is_active", true)
+        .from('courier_configs')
+        .select('*')
+        .eq('id', assignedConfigId)
+        .eq('provider_id', 'spedisci_online')
+        .eq('is_active', true)
         .maybeSingle();
 
       if (assignedConfig) {
-        console.log(
-          "✅ [SPEDISCI.ONLINE] Configurazione assegnata trovata (assigned_config_id)"
-        );
+        console.log('✅ [SPEDISCI.ONLINE] Configurazione assegnata trovata (assigned_config_id)');
 
         let apiKey = assignedConfig.api_key;
         let apiSecret = assignedConfig.api_secret;
@@ -171,8 +158,7 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
           credentials: {
             api_key: apiKey,
             api_secret: apiSecret,
-            base_url:
-              assignedConfig.base_url || "https://api.spedisci.online/api/v2",
+            base_url: assignedConfig.base_url || 'https://api.spedisci.online/api/v2',
             contract_mapping: assignedConfig.contract_mapping || {},
           },
         };
@@ -182,17 +168,15 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     // 1.2. Cerca configurazione con owner_user_id = currentUserId
     if (currentUserId) {
       const { data: ownedConfig } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("provider_id", "spedisci_online")
-        .eq("owner_user_id", currentUserId)
-        .eq("is_active", true)
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', 'spedisci_online')
+        .eq('owner_user_id', currentUserId)
+        .eq('is_active', true)
         .maybeSingle();
 
       if (ownedConfig) {
-        console.log(
-          "✅ [SPEDISCI.ONLINE] Configurazione personale trovata (owner_user_id)"
-        );
+        console.log('✅ [SPEDISCI.ONLINE] Configurazione personale trovata (owner_user_id)');
 
         let apiKey = ownedConfig.api_key;
         let apiSecret = ownedConfig.api_secret;
@@ -209,8 +193,7 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
           credentials: {
             api_key: apiKey,
             api_secret: apiSecret,
-            base_url:
-              ownedConfig.base_url || "https://api.spedisci.online/api/v2",
+            base_url: ownedConfig.base_url || 'https://api.spedisci.online/api/v2',
             contract_mapping: ownedConfig.contract_mapping || {},
           },
         };
@@ -219,17 +202,15 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
 
     // 1.3. Cerca configurazione personale dell'utente (created_by)
     const { data: personalConfig } = await supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .eq("provider_id", "spedisci_online")
-      .eq("created_by", userEmail)
-      .eq("is_active", true)
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('created_by', userEmail)
+      .eq('is_active', true)
       .maybeSingle();
 
     if (personalConfig) {
-      console.log(
-        "✅ [SPEDISCI.ONLINE] Configurazione personale trovata (created_by)"
-      );
+      console.log('✅ [SPEDISCI.ONLINE] Configurazione personale trovata (created_by)');
 
       // Decripta credenziali se necessario
       let apiKey = personalConfig.api_key;
@@ -247,8 +228,7 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         credentials: {
           api_key: apiKey,
           api_secret: apiSecret,
-          base_url:
-            personalConfig.base_url || "https://api.spedisci.online/api/v2",
+          base_url: personalConfig.base_url || 'https://api.spedisci.online/api/v2',
           contract_mapping: personalConfig.contract_mapping || {},
         },
       };
@@ -256,17 +236,15 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
 
     // 1.2. Fallback: Configurazione globale
     const { data: globalConfig } = await supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .eq("provider_id", "spedisci_online")
-      .eq("is_default", true)
-      .eq("is_active", true)
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('is_default', true)
+      .eq('is_active', true)
       .maybeSingle();
 
     if (globalConfig) {
-      console.log(
-        "✅ [SPEDISCI.ONLINE] Configurazione globale trovata in courier_configs"
-      );
+      console.log('✅ [SPEDISCI.ONLINE] Configurazione globale trovata in courier_configs');
 
       // Decripta credenziali se necessario
       let apiKey = globalConfig.api_key;
@@ -284,8 +262,7 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
         credentials: {
           api_key: apiKey,
           api_secret: apiSecret,
-          base_url:
-            globalConfig.base_url || "https://api.spedisci.online/api/v2",
+          base_url: globalConfig.base_url || 'https://api.spedisci.online/api/v2',
           contract_mapping: globalConfig.contract_mapping || {},
         },
       };
@@ -303,16 +280,14 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
 
       if (supabaseUser) {
         const { data, error } = await supabase
-          .from("user_integrations")
-          .select("credentials")
-          .eq("provider", "spedisci-online")
-          .eq("is_active", true)
+          .from('user_integrations')
+          .select('credentials')
+          .eq('provider', 'spedisci-online')
+          .eq('is_active', true)
           .single();
 
         if (!error && data) {
-          console.log(
-            "✅ [SPEDISCI.ONLINE] Credenziali trovate in user_integrations (legacy)"
-          );
+          console.log('✅ [SPEDISCI.ONLINE] Credenziali trovate in user_integrations (legacy)');
           return {
             success: true,
             credentials: data.credentials,
@@ -327,13 +302,10 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     const user = await findUserByEmail(userEmail);
     if (user?.integrazioni) {
       const spedisciOnlineIntegration = user.integrazioni.find(
-        (i: any) =>
-          i.platform === "spedisci_online" || i.platform === "spedisci-online"
+        (i: any) => i.platform === 'spedisci_online' || i.platform === 'spedisci-online'
       );
       if (spedisciOnlineIntegration) {
-        console.log(
-          "✅ [SPEDISCI.ONLINE] Credenziali trovate in database locale (legacy)"
-        );
+        console.log('✅ [SPEDISCI.ONLINE] Credenziali trovate in database locale (legacy)');
         return {
           success: true,
           credentials: spedisciOnlineIntegration.credentials,
@@ -344,23 +316,23 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
     return {
       success: false,
       error:
-        "Credenziali spedisci.online non configurate. Configura le credenziali in /dashboard/integrazioni",
+        'Credenziali spedisci.online non configurate. Configura le credenziali in /dashboard/integrazioni',
     };
   } catch (error) {
-    console.error("Errore recupero credenziali spedisci.online:", error);
+    console.error('Errore recupero credenziali spedisci.online:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Errore sconosciuto",
+      error: error instanceof Error ? error.message : 'Errore sconosciuto',
     };
   }
 }
 
 /**
  * ✨ NUOVA FUNZIONE: Recupera TUTTE le configurazioni Spedisci.Online dell'utente
- * 
+ *
  * Ogni reseller può avere N configurazioni API con credenziali diverse.
  * Questa funzione le recupera TUTTE per permettere chiamate API multiple.
- * 
+ *
  * @returns Array di configurazioni con credenziali decriptate
  */
 export async function getAllUserSpedisciOnlineConfigs(): Promise<{
@@ -376,25 +348,23 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email!;
     const { data: currentUser } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, assigned_config_id")
-      .eq("email", userEmail)
+      .from('users')
+      .select('id, account_type, assigned_config_id')
+      .eq('email', userEmail)
       .maybeSingle();
-    
+
     const currentUserId = currentUser?.id ?? null;
     const assignedConfigId = currentUser?.assigned_config_id ?? null;
 
-    const { decryptCredential, isEncrypted } = await import(
-      "@/lib/security/encryption"
-    );
+    const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption');
 
     const configs: Array<{
       configId: string;
@@ -407,14 +377,16 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
 
     // 1. Recupera TUTTE le configurazioni personali (owner_user_id = currentUserId)
     if (currentUserId) {
-      console.log(`🔍 [SPEDISCI.ONLINE] Cerco configurazioni per owner_user_id: ${sanitizeIdForLog(currentUserId)}`);
-      
+      console.log(
+        `🔍 [SPEDISCI.ONLINE] Cerco configurazioni per owner_user_id: ${sanitizeIdForLog(currentUserId)}`
+      );
+
       const { data: personalConfigs, error: personalError } = await supabaseAdmin
-        .from("courier_configs")
-        .select("*")
-        .eq("provider_id", "spedisci_online")
-        .eq("owner_user_id", currentUserId)
-        .eq("is_active", true);
+        .from('courier_configs')
+        .select('*')
+        .eq('provider_id', 'spedisci_online')
+        .eq('owner_user_id', currentUserId)
+        .eq('is_active', true);
 
       if (personalError) {
         console.error(`❌ [SPEDISCI.ONLINE] Errore query configurazioni personali:`, personalError);
@@ -424,12 +396,18 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
       console.log(`📊 [SPEDISCI.ONLINE] Query risultato:`, {
         query: `provider_id=spedisci_online, owner_user_id=${sanitizeIdForLog(currentUserId)}, is_active=true`,
         found: personalConfigs?.length || 0,
-        configs: personalConfigs?.map(c => ({ id: sanitizeIdForLog(c.id), name: sanitizeNameForLog(c.name) })) || [],
+        configs:
+          personalConfigs?.map((c) => ({
+            id: sanitizeIdForLog(c.id),
+            name: sanitizeNameForLog(c.name),
+          })) || [],
       });
 
       if (!personalError && personalConfigs && personalConfigs.length > 0) {
-        console.log(`✅ [SPEDISCI.ONLINE] Trovate ${personalConfigs.length} configurazioni personali`);
-        
+        console.log(
+          `✅ [SPEDISCI.ONLINE] Trovate ${personalConfigs.length} configurazioni personali`
+        );
+
         for (const config of personalConfigs) {
           let apiKey = config.api_key;
           let apiSecret = config.api_secret;
@@ -446,7 +424,7 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
             configName: config.name || config.config_label || `Config ${config.id.substring(0, 8)}`,
             api_key: apiKey,
             api_secret: apiSecret,
-            base_url: config.base_url || "https://api.spedisci.online/api/v2",
+            base_url: config.base_url || 'https://api.spedisci.online/api/v2',
             contract_mapping: config.contract_mapping || {},
           });
         }
@@ -455,20 +433,20 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
 
     // 2. Aggiungi configurazione assegnata (se non già presente)
     if (assignedConfigId) {
-      const alreadyIncluded = configs.some(c => c.configId === assignedConfigId);
-      
+      const alreadyIncluded = configs.some((c) => c.configId === assignedConfigId);
+
       if (!alreadyIncluded) {
         const { data: assignedConfig } = await supabaseAdmin
-          .from("courier_configs")
-          .select("*")
-          .eq("id", assignedConfigId)
-          .eq("provider_id", "spedisci_online")
-          .eq("is_active", true)
+          .from('courier_configs')
+          .select('*')
+          .eq('id', assignedConfigId)
+          .eq('provider_id', 'spedisci_online')
+          .eq('is_active', true)
           .maybeSingle();
 
         if (assignedConfig) {
           console.log(`✅ [SPEDISCI.ONLINE] Aggiunta configurazione assegnata`);
-          
+
           let apiKey = assignedConfig.api_key;
           let apiSecret = assignedConfig.api_secret;
 
@@ -484,7 +462,7 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
             configName: assignedConfig.name || assignedConfig.config_label || `Config Assegnata`,
             api_key: apiKey,
             api_secret: apiSecret,
-            base_url: assignedConfig.base_url || "https://api.spedisci.online/api/v2",
+            base_url: assignedConfig.base_url || 'https://api.spedisci.online/api/v2',
             contract_mapping: assignedConfig.contract_mapping || {},
           });
         }
@@ -493,20 +471,20 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
 
     // 3. Aggiungi configurazioni default globali (se non già presenti)
     const { data: defaultConfigs } = await supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .eq("provider_id", "spedisci_online")
-      .eq("is_default", true)
-      .eq("is_active", true)
-      .is("owner_user_id", null);
+      .from('courier_configs')
+      .select('*')
+      .eq('provider_id', 'spedisci_online')
+      .eq('is_default', true)
+      .eq('is_active', true)
+      .is('owner_user_id', null);
 
     if (defaultConfigs && defaultConfigs.length > 0) {
       for (const config of defaultConfigs) {
-        const alreadyIncluded = configs.some(c => c.configId === config.id);
-        
+        const alreadyIncluded = configs.some((c) => c.configId === config.id);
+
         if (!alreadyIncluded) {
           console.log(`✅ [SPEDISCI.ONLINE] Aggiunta configurazione default globale`);
-          
+
           let apiKey = config.api_key;
           let apiSecret = config.api_secret;
 
@@ -522,7 +500,7 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
             configName: config.name || config.config_label || `Config Default`,
             api_key: apiKey,
             api_secret: apiSecret,
-            base_url: config.base_url || "https://api.spedisci.online/api/v2",
+            base_url: config.base_url || 'https://api.spedisci.online/api/v2',
             contract_mapping: config.contract_mapping || {},
           });
         }
@@ -532,17 +510,17 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
     if (configs.length === 0) {
       return {
         success: false,
-        error: "Nessuna configurazione Spedisci.Online attiva trovata",
+        error: 'Nessuna configurazione Spedisci.Online attiva trovata',
       };
     }
 
     console.log(`✅ [SPEDISCI.ONLINE] Totale configurazioni trovate: ${configs.length}`);
     return { success: true, configs };
   } catch (error) {
-    console.error("Errore recupero configurazioni spedisci.online:", error);
+    console.error('Errore recupero configurazioni spedisci.online:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Errore sconosciuto",
+      error: error instanceof Error ? error.message : 'Errore sconosciuto',
     };
   }
 }
@@ -559,36 +537,36 @@ export async function createShipmentWithOrchestrator(
   shipmentData: Shipment | CreateShipmentInput | any,
   courierCode: string
 ): Promise<ShipmentResult> {
-  console.log("🚀 [ORCHESTRATOR] createShipmentWithOrchestrator chiamato", {
+  console.log('🚀 [ORCHESTRATOR] createShipmentWithOrchestrator chiamato', {
     courierCode,
     hasShipmentData: !!shipmentData,
   });
 
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      console.warn("⚠️ [ORCHESTRATOR] Non autenticato");
+    if (!context?.actor?.email) {
+      console.warn('⚠️ [ORCHESTRATOR] Non autenticato');
       return {
         success: false,
-        tracking_number: "",
+        tracking_number: '',
         carrier: courierCode,
-        method: "fallback",
-        error: "Non autenticato",
+        method: 'fallback',
+        error: 'Non autenticato',
       };
     }
 
-    console.log("✅ [ORCHESTRATOR] Utente autenticato:", session.user.email);
+    console.log('✅ [ORCHESTRATOR] Utente autenticato:', context.actor.email);
 
     // 2. Ottieni user_id (prova prima in users, poi user_profiles, poi auth.users)
     let userId: string | null = null;
 
     // Prova prima nella tabella users
     const { data: userFromUsers } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id')
+      .eq('email', context.actor.email)
       .single();
 
     if (userFromUsers?.id) {
@@ -596,21 +574,19 @@ export async function createShipmentWithOrchestrator(
     } else {
       // Prova a recuperare da user_profiles o auth.users
       try {
-        const { getSupabaseUserIdFromEmail } = await import("@/lib/database");
+        const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
         // FIX: Passa NextAuth user.id come fallback
-        userId = await getSupabaseUserIdFromEmail(
-          session.user.email,
-          session.user.id
-        );
+        userId = await getSupabaseUserIdFromEmail(context.actor.email!, context.actor.id);
       } catch (error) {
-        console.warn("⚠️ Impossibile recuperare user_id:", error);
+        console.warn('⚠️ Impossibile recuperare user_id:', error);
         // FALLBACK: Usa NextAuth ID se disponibile
-        if (session.user.id) {
-          userId = session.user.id;
+        if (context.actor.id) {
+          userId = context.actor.id;
           console.log(
-            `ℹ️ [ORCHESTRATOR] Usando NextAuth user.id come fallback: ${(
-              userId || ""
-            ).substring(0, 8)}...`
+            `ℹ️ [ORCHESTRATOR] Usando NextAuth user.id come fallback: ${(userId || '').substring(
+              0,
+              8
+            )}...`
           );
         }
       }
@@ -624,27 +600,23 @@ export async function createShipmentWithOrchestrator(
     // Se userId è null, prova comunque a recuperare configurazione default
     if (userId) {
       try {
-        const provider = await getShippingProvider(
-          userId,
-          "spedisci_online",
-          shipmentData
-        );
+        const provider = await getShippingProvider(userId, 'spedisci_online', shipmentData);
         if (provider && provider instanceof SpedisciOnlineAdapter) {
           orchestrator.registerBrokerAdapter(provider);
           console.log(
-            "✅ [BROKER] Broker adapter (Spedisci.Online) registrato tramite configurazione DB"
+            '✅ [BROKER] Broker adapter (Spedisci.Online) registrato tramite configurazione DB'
           );
           console.log(
             '✅ [BROKER] Questo adapter verrà usato quando l\'utente seleziona corrieri come "Poste Italiane" (fallback broker)'
           );
         } else {
           console.warn(
-            "⚠️ Spedisci.Online non configurato per questo utente. Provo configurazione default..."
+            '⚠️ Spedisci.Online non configurato per questo utente. Provo configurazione default...'
           );
           // Continua - proveremo a recuperare config default
         }
       } catch (error) {
-        console.warn("⚠️ Errore recupero configurazione per utente:", error);
+        console.warn('⚠️ Errore recupero configurazione per utente:', error);
         // Continua - proveremo config default
       }
     }
@@ -665,9 +637,7 @@ export async function createShipmentWithOrchestrator(
         // FIX: Usa getCourierConfigForUser con userId null per ottenere config default
         // Questo garantisce che la priorità sia rispettata (default, non prima config attiva)
         // Se userId è null, la funzione RPC restituirà la config default
-        const { getCourierConfigForUser } = await import(
-          "@/lib/couriers/factory"
-        );
+        const { getCourierConfigForUser } = await import('@/lib/couriers/factory');
 
         // Prova prima con un userId dummy per vedere se c'è una default
         // Se non c'è userId, usa query diretta ma SOLO per default
@@ -675,11 +645,11 @@ export async function createShipmentWithOrchestrator(
 
         // Prova a recuperare configurazione default (is_default = true) - PRIORITÀ ASSOLUTA
         const { data: defaultConfigData } = await supabaseAdmin
-          .from("courier_configs")
-          .select("*")
-          .eq("provider_id", "spedisci_online") // Normalizzato
-          .eq("is_active", true)
-          .eq("is_default", true)
+          .from('courier_configs')
+          .select('*')
+          .eq('provider_id', 'spedisci_online') // Normalizzato
+          .eq('is_active', true)
+          .eq('is_default', true)
           .single();
 
         if (defaultConfigData) {
@@ -687,22 +657,18 @@ export async function createShipmentWithOrchestrator(
         } else {
           // HARD FAIL: Se non c'è default, NON prendere la prima config attiva
           // Questo potrebbe essere una config con token vecchio
+          console.error('❌ [BROKER] Nessuna configurazione DEFAULT trovata per spedisci_online');
           console.error(
-            "❌ [BROKER] Nessuna configurazione DEFAULT trovata per spedisci_online"
-          );
-          console.error(
-            "❌ [BROKER] Configura una config con is_default=true in /dashboard/admin/configurations"
+            '❌ [BROKER] Configura una config con is_default=true in /dashboard/admin/configurations'
           );
           throw new Error(
-            "Spedisci.Online: Nessuna configurazione default trovata. Configura una config default in /dashboard/admin/configurations"
+            'Spedisci.Online: Nessuna configurazione default trovata. Configura una config default in /dashboard/admin/configurations'
           );
         }
 
         if (defaultConfig) {
           // Decripta credenziali se necessario
-          const { decryptCredential, isEncrypted } = await import(
-            "@/lib/security/encryption"
-          );
+          const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption');
 
           let api_key = defaultConfig.api_key;
           let api_secret = defaultConfig.api_secret;
@@ -712,20 +678,19 @@ export async function createShipmentWithOrchestrator(
             try {
               api_key = decryptCredential(api_key).trim(); // FIX: trim dopo decrypt
             } catch (decryptError: any) {
-              const errorMsg =
-                decryptError?.message || "Unknown decryption error";
+              const errorMsg = decryptError?.message || 'Unknown decryption error';
               // Gestione ENCRYPTION_KEY rotation: errore gestibile
-              if (errorMsg.includes("CREDENTIAL_DECRYPT_FAILED")) {
+              if (errorMsg.includes('CREDENTIAL_DECRYPT_FAILED')) {
                 console.error(
-                  "❌ [BROKER] Errore decriptazione api_key (ENCRYPTION_KEY rotation):",
+                  '❌ [BROKER] Errore decriptazione api_key (ENCRYPTION_KEY rotation):',
                   errorMsg
                 );
                 throw new Error(
                   "CREDENTIAL_DECRYPT_FAILED: Impossibile decriptare credenziali API. La chiave di criptazione potrebbe essere stata cambiata. Ricontrolla le credenziali dell'integrazione Spedisci.Online in /dashboard/admin/configurations"
                 );
               }
-              console.error("❌ Errore decriptazione api_key:", errorMsg);
-              throw new Error("Impossibile decriptare credenziali");
+              console.error('❌ Errore decriptazione api_key:', errorMsg);
+              throw new Error('Impossibile decriptare credenziali');
             }
           } else if (api_key) {
             api_key = api_key.trim(); // FIX: trim anche se non criptata
@@ -735,16 +700,15 @@ export async function createShipmentWithOrchestrator(
             try {
               api_secret = decryptCredential(api_secret).trim(); // FIX: trim dopo decrypt
             } catch (decryptError: any) {
-              const errorMsg =
-                decryptError?.message || "Unknown decryption error";
+              const errorMsg = decryptError?.message || 'Unknown decryption error';
               // api_secret è opzionale, ma logga l'errore
-              if (errorMsg.includes("CREDENTIAL_DECRYPT_FAILED")) {
+              if (errorMsg.includes('CREDENTIAL_DECRYPT_FAILED')) {
                 console.warn(
-                  "⚠️ [BROKER] Errore decriptazione api_secret (ENCRYPTION_KEY rotation) - continuo senza secret"
+                  '⚠️ [BROKER] Errore decriptazione api_secret (ENCRYPTION_KEY rotation) - continuo senza secret'
                 );
               } else {
                 console.warn(
-                  "⚠️ [BROKER] Errore decriptazione api_secret - continuo senza secret:",
+                  '⚠️ [BROKER] Errore decriptazione api_secret - continuo senza secret:',
                   errorMsg
                 );
               }
@@ -757,15 +721,13 @@ export async function createShipmentWithOrchestrator(
           // Prepara contract_mapping
           let contractMapping: Record<string, string> = {};
           if (defaultConfig.contract_mapping) {
-            if (typeof defaultConfig.contract_mapping === "string") {
+            if (typeof defaultConfig.contract_mapping === 'string') {
               try {
                 contractMapping = JSON.parse(defaultConfig.contract_mapping);
               } catch {
-                console.warn(
-                  "⚠️ Errore parsing contract_mapping, uso come oggetto"
-                );
+                console.warn('⚠️ Errore parsing contract_mapping, uso come oggetto');
               }
-            } else if (typeof defaultConfig.contract_mapping === "object") {
+            } else if (typeof defaultConfig.contract_mapping === 'object') {
               contractMapping = defaultConfig.contract_mapping;
             }
           }
@@ -775,7 +737,7 @@ export async function createShipmentWithOrchestrator(
             api_key: api_key,
             api_secret: api_secret,
             base_url: defaultConfig.base_url,
-            customer_code: contractMapping["default"] || undefined,
+            customer_code: contractMapping['default'] || undefined,
             contract_mapping: contractMapping, // Passa il mapping completo
           };
 
@@ -785,91 +747,72 @@ export async function createShipmentWithOrchestrator(
           }
 
           // Guard: Verifica che non sia un token demo/example + min length
-          const knownDemoTokens = [
-            "qCL7FN2RKFQDngWb6kJ7",
-            "8ZZmDdwA",
-            "demo",
-            "example",
-            "test",
-          ];
-          const apiKeyLower = credentials.api_key?.toLowerCase() || "";
+          const knownDemoTokens = ['qCL7FN2RKFQDngWb6kJ7', '8ZZmDdwA', 'demo', 'example', 'test'];
+          const apiKeyLower = credentials.api_key?.toLowerCase() || '';
           const isDemoToken = knownDemoTokens.some(
             (demo) =>
-              apiKeyLower.includes(demo.toLowerCase()) ||
-              credentials.api_key?.startsWith(demo)
+              apiKeyLower.includes(demo.toLowerCase()) || credentials.api_key?.startsWith(demo)
           );
 
           if (isDemoToken) {
             throw new Error(
-              "Spedisci.Online API key not configured correctly (using demo token). Please configure a valid API key in /dashboard/integrazioni"
+              'Spedisci.Online API key not configured correctly (using demo token). Please configure a valid API key in /dashboard/integrazioni'
             );
           }
 
           if (!credentials.api_key || credentials.api_key.length < 10) {
             throw new Error(
-              "Spedisci.Online API key too short. Please configure a valid API key in /dashboard/integrazioni"
+              'Spedisci.Online API key too short. Please configure a valid API key in /dashboard/integrazioni'
             );
           }
 
           // Genera fingerprint SHA256 della key per log production-safe
-          const crypto = require("crypto");
+          const crypto = require('crypto');
           const keyFingerprint = credentials.api_key
-            ? crypto
-                .createHash("sha256")
-                .update(credentials.api_key)
-                .digest("hex")
-                .substring(0, 8)
-            : "N/A";
+            ? crypto.createHash('sha256').update(credentials.api_key).digest('hex').substring(0, 8)
+            : 'N/A';
 
           // Log production-safe: sempre (dev + production)
           // AUDIT FIX P1-3: Sanitizza configId e configName
-          console.log("🔧 [BROKER] Spedisci.Online adapter istanziato:", {
+          console.log('🔧 [BROKER] Spedisci.Online adapter istanziato:', {
             configId: sanitizeIdForLog(defaultConfig.id),
             configName: sanitizeNameForLog(defaultConfig.name),
             providerId: defaultConfig.provider_id,
             baseUrl: defaultConfig.base_url,
             apiKeyFingerprint: keyFingerprint, // SHA256 primi 8 caratteri (production-safe)
             apiKeyLength: credentials.api_key?.length || 0,
-            contract_mapping_count: Object.keys(
-              credentials.contract_mapping || {}
-            ).length,
+            contract_mapping_count: Object.keys(credentials.contract_mapping || {}).length,
           });
 
           const provider = new SpedisciOnlineAdapter(credentials);
           orchestrator.registerBrokerAdapter(provider);
-          console.log(
-            "✅ [BROKER] Broker adapter registrato tramite configurazione DEFAULT"
-          );
+          console.log('✅ [BROKER] Broker adapter registrato tramite configurazione DEFAULT');
           console.log(
             '✅ [BROKER] Questo adapter verrà usato quando l\'utente seleziona corrieri come "Poste Italiane" (fallback broker)'
           );
           // AUDIT FIX P1-3: Sanitizza configId
-          console.log("✅ [BROKER] Config usata:", {
+          console.log('✅ [BROKER] Config usata:', {
             configId: sanitizeIdForLog(defaultConfig.id),
             providerId: defaultConfig.provider_id,
             baseUrl: defaultConfig.base_url,
             apiKeyFingerprint: keyFingerprint,
           });
           console.log(
-            "✅ [BROKER] Contratti configurati:",
+            '✅ [BROKER] Contratti configurati:',
             Object.keys(credentials.contract_mapping || {})
           );
         } else {
+          console.warn('⚠️ Spedisci.Online non configurato (né per utente né default).');
           console.warn(
-            "⚠️ Spedisci.Online non configurato (né per utente né default)."
-          );
-          console.warn(
-            "⚠️ Configura Spedisci.Online in /dashboard/integrazioni per abilitare chiamate API reali."
+            '⚠️ Configura Spedisci.Online in /dashboard/integrazioni per abilitare chiamate API reali.'
           );
         }
       } catch (error: any) {
         console.warn(
-          "⚠️ Impossibile registrare broker adapter (Spedisci.Online):",
+          '⚠️ Impossibile registrare broker adapter (Spedisci.Online):',
           error?.message || error
         );
-        console.warn(
-          "⚠️ La spedizione verrà creata solo localmente (fallback CSV)."
-        );
+        console.warn('⚠️ La spedizione verrà creata solo localmente (fallback CSV).');
         // Non bloccare il processo - continuerà con fallback CSV
       }
     }
@@ -877,13 +820,13 @@ export async function createShipmentWithOrchestrator(
     // 4.5 Tentativo registrazione Adapter Diretto per il corriere richiesto
     // Mappa codici UI -> Provider ID
     const providerMap: Record<string, string> = {
-      poste: "poste",
-      "poste italiane": "poste",
-      posteitaliane: "poste",
-      brt: "brt",
-      bartolini: "brt",
-      gls: "gls",
-      sda: "sda", // SDA è un corriere separato, non mappare a Poste
+      poste: 'poste',
+      'poste italiane': 'poste',
+      posteitaliane: 'poste',
+      brt: 'brt',
+      bartolini: 'brt',
+      gls: 'gls',
+      sda: 'sda', // SDA è un corriere separato, non mappare a Poste
     };
 
     const normalizedCourier = courierCode.toLowerCase().trim();
@@ -892,26 +835,18 @@ export async function createShipmentWithOrchestrator(
     console.log(`🔍 [ORCHESTRATOR] Cerco adapter diretto per ${courierCode}`);
     console.log(`   - Normalizzato: "${normalizedCourier}"`);
     console.log(`   - Provider ID: "${providerId}"`);
-    console.log(`   - User ID: ${userId || "NON DISPONIBILE"}`);
+    console.log(`   - User ID: ${userId || 'NON DISPONIBILE'}`);
     console.log(
-      `   - Provider Map contiene "${normalizedCourier}": ${
-        normalizedCourier in providerMap
-      }`
+      `   - Provider Map contiene "${normalizedCourier}": ${normalizedCourier in providerMap}`
     );
 
     if (userId) {
       try {
-        console.log(
-          `🔍 [FACTORY] Chiamo getShippingProvider(${userId}, ${providerId})...`
-        );
-        const directProvider = await getShippingProvider(
-          userId,
-          providerId,
-          shipmentData
-        );
+        console.log(`🔍 [FACTORY] Chiamo getShippingProvider(${userId}, ${providerId})...`);
+        const directProvider = await getShippingProvider(userId, providerId, shipmentData);
         console.log(
           `🔍 [FACTORY] Risultato: ${
-            directProvider ? "✅ Adapter trovato" : "❌ Adapter NON trovato"
+            directProvider ? '✅ Adapter trovato' : '❌ Adapter NON trovato'
           }`
         );
         if (directProvider) {
@@ -923,24 +858,16 @@ export async function createShipmentWithOrchestrator(
           }
           // Registra anche con il codice originale (con maiuscole) per sicurezza
           if (normalizedCourier !== courierCode.toLowerCase()) {
-            orchestrator.registerDirectAdapter(
-              courierCode.toLowerCase(),
-              directProvider
-            );
+            orchestrator.registerDirectAdapter(courierCode.toLowerCase(), directProvider);
           }
           console.log(
             `✅ [ORCHESTRATOR] Adapter diretto (${providerId}) registrato con chiavi: ${normalizedCourier}, ${providerId}`
           );
         } else {
-          console.log(
-            `ℹ️ [ORCHESTRATOR] Nessun adapter diretto trovato per ${providerId}`
-          );
+          console.log(`ℹ️ [ORCHESTRATOR] Nessun adapter diretto trovato per ${providerId}`);
         }
       } catch (error) {
-        console.warn(
-          `⚠️ [ORCHESTRATOR] Errore caricamento adapter diretto:`,
-          error
-        );
+        console.warn(`⚠️ [ORCHESTRATOR] Errore caricamento adapter diretto:`, error);
       }
     }
 
@@ -949,12 +876,9 @@ export async function createShipmentWithOrchestrator(
     // 1. Adapter diretto (se disponibile per il corriere)
     // 2. Broker Spedisci.Online (se registrato sopra)
     // 3. Fallback CSV (se tutto fallisce)
-    console.log(
-      "🎯 [ORCHESTRATOR] Chiamo orchestrator.createShipment con corriere:",
-      courierCode
-    );
+    console.log('🎯 [ORCHESTRATOR] Chiamo orchestrator.createShipment con corriere:', courierCode);
     const result = await orchestrator.createShipment(shipmentData, courierCode);
-    console.log("🎯 [ORCHESTRATOR] Risultato orchestrator:", {
+    console.log('🎯 [ORCHESTRATOR] Risultato orchestrator:', {
       success: result.success,
       method: result.method,
       has_tracking: !!result.tracking_number,
@@ -963,15 +887,14 @@ export async function createShipmentWithOrchestrator(
 
     return result;
   } catch (error) {
-    console.error("Errore creazione spedizione tramite orchestrator:", error);
+    console.error('Errore creazione spedizione tramite orchestrator:', error);
     return {
       success: false,
-      tracking_number: "",
+      tracking_number: '',
       carrier: courierCode,
-      method: "fallback",
-      error:
-        error instanceof Error ? error.message : "Errore durante la creazione",
-      message: "Errore durante la creazione LDV",
+      method: 'fallback',
+      error: error instanceof Error ? error.message : 'Errore durante la creazione',
+      message: 'Errore durante la creazione LDV',
     };
   }
 }
@@ -981,13 +904,13 @@ export async function createShipmentWithOrchestrator(
  * Mantenuto per retrocompatibilità
  */
 export async function sendShipmentToSpedisciOnline(shipmentData: any) {
-  const result = await createShipmentWithOrchestrator(shipmentData, "GLS");
+  const result = await createShipmentWithOrchestrator(shipmentData, 'GLS');
 
   return {
     success: result.success,
     tracking_number: result.tracking_number,
     label_url: result.label_url,
-    message: result.message || "Spedizione processata",
+    message: result.message || 'Spedizione processata',
     error: result.error,
   };
 }
@@ -1002,15 +925,15 @@ export async function saveSpedisciOnlineCredentials(credentials: {
   base_url?: string;
 }) {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Validazione base
     if (!credentials.api_key) {
-      return { success: false, error: "API Key obbligatoria" };
+      return { success: false, error: 'API Key obbligatoria' };
     }
 
     // Prova Supabase
@@ -1022,43 +945,40 @@ export async function saveSpedisciOnlineCredentials(credentials: {
       } = await supabase.auth.getUser();
 
       if (supabaseUser) {
-        const { error } = await supabase.from("user_integrations").upsert(
+        const { error } = await supabase.from('user_integrations').upsert(
           {
             user_id: supabaseUser.id,
-            provider: "spedisci-online",
+            provider: 'spedisci-online',
             credentials: credentials,
             is_active: true,
             updated_at: new Date().toISOString(),
           },
           {
-            onConflict: "user_id,provider",
+            onConflict: 'user_id,provider',
           }
         );
 
         if (!error) {
-          return { success: true, message: "Credenziali salvate con successo" };
+          return { success: true, message: 'Credenziali salvate con successo' };
         }
       }
     }
 
     // Fallback: database locale
-    const { findUserByEmail: findUser, updateUser } = await import(
-      "@/lib/database"
-    );
-    const user = await findUser(session.user.email);
+    const { findUserByEmail: findUser, updateUser } = await import('@/lib/database');
+    const user = await findUser(context.actor.email!);
 
     if (user) {
       const integrations = user.integrazioni || [];
       const existingIndex = integrations.findIndex(
-        (i: any) =>
-          i.platform === "spedisci_online" || i.platform === "spedisci-online"
+        (i: any) => i.platform === 'spedisci_online' || i.platform === 'spedisci-online'
       );
 
       const integration = {
-        platform: "spedisci-online",
+        platform: 'spedisci-online',
         credentials,
         connectedAt: new Date().toISOString(),
-        status: "active" as const,
+        status: 'active' as const,
       };
 
       if (existingIndex >= 0) {
@@ -1069,18 +989,15 @@ export async function saveSpedisciOnlineCredentials(credentials: {
 
       await updateUser(user.id, { integrazioni: integrations });
 
-      return { success: true, message: "Credenziali salvate con successo" };
+      return { success: true, message: 'Credenziali salvate con successo' };
     }
 
-    return { success: false, error: "Utente non trovato" };
+    return { success: false, error: 'Utente non trovato' };
   } catch (error) {
-    console.error("Errore salvataggio credenziali spedisci.online:", error);
+    console.error('Errore salvataggio credenziali spedisci.online:', error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Errore durante il salvataggio",
+      error: error instanceof Error ? error.message : 'Errore durante il salvataggio',
     };
   }
 }

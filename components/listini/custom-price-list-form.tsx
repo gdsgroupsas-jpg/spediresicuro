@@ -1,6 +1,6 @@
 /**
  * Form per creazione/modifica listino personalizzato
- * 
+ *
  * Componente per Reseller per creare listini personalizzati per sub-users
  */
 
@@ -156,13 +156,13 @@ export function CustomPriceListForm({
       {/* Status */}
       <div>
         <Label htmlFor="status">Status *</Label>
-          <Select
-            id="status"
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as PriceListStatus })}
-            required
-            className="mt-1"
-          >
+        <Select
+          id="status"
+          value={formData.status}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value as PriceListStatus })}
+          required
+          className="mt-1"
+        >
           <option value="draft">Bozza</option>
           <option value="active">Attivo</option>
           <option value="archived">Archiviato</option>
@@ -198,17 +198,20 @@ export function CustomPriceListForm({
       {/* ✨ NUOVO: VAT Semantics (ADR-001) */}
       <div className="pt-4 border-t space-y-4">
         <div className="text-sm font-medium text-gray-700">Impostazioni IVA</div>
-        
+
         {/* VAT Mode */}
         <div>
           <Label htmlFor="vat_mode">Modalità IVA</Label>
           <Select
             id="vat_mode"
             value={formData.vat_mode || ''}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              vat_mode: e.target.value === '' ? null : (e.target.value as 'included' | 'excluded')
-            })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vat_mode:
+                  e.target.value === '' ? null : (e.target.value as 'included' | 'excluded'),
+              })
+            }
             className="mt-1"
           >
             <option value="">IVA Esclusa (default)</option>
@@ -230,10 +233,12 @@ export function CustomPriceListForm({
             max="100"
             step="0.01"
             value={formData.vat_rate}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              vat_rate: parseFloat(e.target.value) || 22.0 
-            })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vat_rate: parseFloat(e.target.value) || 22.0,
+              })
+            }
             placeholder="22.00"
             className="mt-1"
           />
@@ -265,4 +270,3 @@ export function CustomPriceListForm({
     </form>
   );
 }
-

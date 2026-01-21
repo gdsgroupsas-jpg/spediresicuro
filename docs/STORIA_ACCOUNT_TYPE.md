@@ -9,59 +9,71 @@ Il campo `account_type` è stato introdotto per distinguere i diversi tipi di ac
 ## 📅 Timeline Evoluzione
 
 ### **Fase 1: Creazione Iniziale (Migration 008)**
+
 **File:** `supabase/migrations/008_admin_user_system.sql`  
 **Data:** 2024  
 **Valori iniziali:**
+
 - `'user'` - Utente base
 - `'admin'` - Amministratore avanzato
 - `'superadmin'` - Super amministratore (gestione completa)
 
 **Scopo:**
+
 - Sistema gerarchico multi-livello admin
 - Distinzione tra utenti normali e amministratori
 - Supporto per `admin_level` (0-5) e `parent_admin_id`
 
 **Commento originale:**
+
 ```sql
-COMMENT ON COLUMN users.account_type IS 
+COMMENT ON COLUMN users.account_type IS
 'Tipo account: user (base), admin (avanzato), superadmin (gestione completa)';
 ```
 
 ---
 
 ### **Fase 2: Aggiunta BYOC (Migration 056.5)**
+
 **File:** `supabase/migrations/056.5_add_byoc_to_account_type_enum.sql`  
 **Data:** 2026-01  
 **Nuovo valore:**
+
 - `'byoc'` - Bring Your Own Carrier (utenti con propri contratti corriere)
 
 **Scopo:**
+
 - Supportare utenti che usano i propri contratti corriere
 - Modello di business BYOC (non usano wallet interno per spedizioni)
 - Gestione listini fornitore personalizzati
 
 **Commento aggiornato:**
+
 ```sql
-COMMENT ON COLUMN users.account_type IS 
+COMMENT ON COLUMN users.account_type IS
 'Tipo account: user (base), admin (avanzato), superadmin (gestione completa), byoc (Bring Your Own Carrier)';
 ```
 
 ---
 
 ### **Fase 3: Aggiunta Reseller (Migration 080)**
+
 **File:** `supabase/migrations/080_add_reseller_to_account_type_enum.sql`  
 **Data:** 2026-01 (questa PR)  
 **Nuovo valore:**
+
 - `'reseller'` - Rivenditore (utenti che rivendono il servizio)
 
 **Scopo:**
+
 - Supportare sistema reseller completo
 - Distinzione chiara tra user base e reseller
 - Migliore tracciabilità e reporting
 
 **Commento aggiornato:**
+
 ```sql
-COMMENT ON COLUMN users.account_type IS 
+COMMENT ON COLUMN users.account_type IS
 'Tipo account: user (base), admin (avanzato), superadmin (gestione completa), byoc (Bring Your Own Carrier), reseller (rivenditore)';
 ```
 
@@ -126,12 +138,13 @@ Il sistema usa una **logica combinata** per determinare il ruolo effettivo:
 3. **Terza priorità:** `role` (legacy)
 
 **Esempio:**
+
 ```typescript
 // Reseller identificato da:
-account_type === 'reseller' || is_reseller === true
+account_type === 'reseller' || is_reseller === true;
 
 // Super Admin identificato da:
-account_type === 'superadmin' || (role === 'admin' && admin_level === 0)
+account_type === 'superadmin' || (role === 'admin' && admin_level === 0);
 ```
 
 ---
@@ -149,18 +162,21 @@ account_type === 'superadmin' || (role === 'admin' && admin_level === 0)
 ## 🔍 Differenza tra `role` e `account_type`
 
 ### `role` (Legacy)
+
 - Campo TEXT (non enum)
 - Valori: 'user', 'admin', 'agent', 'manager', etc.
 - Usato principalmente per compatibilità
 - Meno specifico
 
 ### `account_type` (Moderno)
+
 - Campo ENUM (type-safe)
 - Valori: 'user', 'admin', 'superadmin', 'byoc', 'reseller'
 - Più specifico e granulare
 - Supporta modelli di business diversi (BYOC, Reseller)
 
 **Best Practice:**
+
 - ✅ Usa `account_type` per nuova logica
 - ✅ Usa `role` solo per compatibilità legacy
 - ✅ Combina `account_type` + `is_reseller` per reseller
@@ -191,8 +207,12 @@ export type AccountType = 'user' | 'admin' | 'reseller' | 'superadmin' | 'byoc';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   reseller: [
-    'view_dashboard', 'create_shipment', 'view_shipments', 
-    'manage_users', 'manage_integrations', 'view_analytics', 
+    'view_dashboard',
+    'create_shipment',
+    'view_shipments',
+    'manage_users',
+    'manage_integrations',
+    'view_analytics',
     'manage_wallet',
   ],
   // ...

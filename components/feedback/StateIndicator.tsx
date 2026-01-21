@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export type OperationState = 'idle' | 'loading' | 'success' | 'error'
+export type OperationState = 'idle' | 'loading' | 'success' | 'error';
 
 export interface StateIndicatorProps {
   /** Stato corrente dell'operazione */
-  state: OperationState
+  state: OperationState;
   /** Messaggio opzionale da mostrare */
-  message?: string
+  message?: string;
   /** Dimensione del badge */
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg';
   /** Se mostrare l'icona */
-  showIcon?: boolean
+  showIcon?: boolean;
   /** Custom className */
-  className?: string
+  className?: string;
   /** Variante display: badge compatto o inline */
-  variant?: 'badge' | 'inline' | 'minimal'
+  variant?: 'badge' | 'inline' | 'minimal';
 }
 
 /** Configurazione per stato */
@@ -62,7 +62,7 @@ const stateConfig = {
     dotColor: 'bg-red-500',
     animate: false,
   },
-}
+};
 
 /** Dimensioni */
 const sizeConfig = {
@@ -84,7 +84,7 @@ const sizeConfig = {
     icon: 'w-5 h-5',
     dot: 'w-2.5 h-2.5',
   },
-}
+};
 
 /**
  * StateIndicator - Badge che mostra lo stato corrente di un'operazione
@@ -102,9 +102,9 @@ export function StateIndicator({
   className,
   variant = 'badge',
 }: StateIndicatorProps) {
-  const config = stateConfig[state]
-  const sizeStyles = sizeConfig[size]
-  const IconComponent = config.icon
+  const config = stateConfig[state];
+  const sizeStyles = sizeConfig[size];
+  const IconComponent = config.icon;
 
   // Minimal variant - just a dot
   if (variant === 'minimal') {
@@ -118,33 +118,23 @@ export function StateIndicator({
             state === 'loading' && 'animate-pulse'
           )}
         />
-        {message && (
-          <span className={cn(sizeStyles.text, config.textColor)}>{message}</span>
-        )}
+        {message && <span className={cn(sizeStyles.text, config.textColor)}>{message}</span>}
       </div>
-    )
+    );
   }
 
   // Inline variant - icon + text, no background
   if (variant === 'inline') {
     return (
-      <div
-        className={cn('flex items-center gap-1.5', config.textColor, className)}
-      >
+      <div className={cn('flex items-center gap-1.5', config.textColor, className)}>
         {showIcon && (
           <IconComponent
-            className={cn(
-              sizeStyles.icon,
-              config.iconColor,
-              config.animate && 'animate-spin'
-            )}
+            className={cn(sizeStyles.icon, config.iconColor, config.animate && 'animate-spin')}
           />
         )}
-        <span className={cn(sizeStyles.text, 'font-medium')}>
-          {message || config.label}
-        </span>
+        <span className={cn(sizeStyles.text, 'font-medium')}>{message || config.label}</span>
       </div>
-    )
+    );
   }
 
   // Badge variant (default) - full background
@@ -162,18 +152,14 @@ export function StateIndicator({
     >
       {showIcon && (
         <IconComponent
-          className={cn(
-            sizeStyles.icon,
-            config.iconColor,
-            config.animate && 'animate-spin'
-          )}
+          className={cn(sizeStyles.icon, config.iconColor, config.animate && 'animate-spin')}
         />
       )}
       <span className={cn(sizeStyles.text, 'font-medium', config.textColor)}>
         {message || config.label}
       </span>
     </div>
-  )
+  );
 }
 
-export default StateIndicator
+export default StateIndicator;

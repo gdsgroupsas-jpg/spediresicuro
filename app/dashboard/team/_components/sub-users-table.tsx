@@ -1,152 +1,152 @@
-'use client'
+'use client';
 
-import { useState, useMemo, useCallback } from 'react'
-import { Users, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState, useMemo, useCallback } from 'react';
+import { Users, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Select } from '@/components/ui/select'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { SearchInputDebounced } from '@/components/shared/search-input-debounced'
-import { EmptyState } from '@/components/shared/empty-state'
-import { DataTableSkeleton } from '@/components/shared/data-table-skeleton'
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SearchInputDebounced } from '@/components/shared/search-input-debounced';
+import { EmptyState } from '@/components/shared/empty-state';
+import { DataTableSkeleton } from '@/components/shared/data-table-skeleton';
 
-import { UserActionsMenu } from './user-actions-menu'
-import { WalletRechargeDialog } from './wallet-recharge-dialog'
+import { UserActionsMenu } from './user-actions-menu';
+import { WalletRechargeDialog } from './wallet-recharge-dialog';
 
-import { useSubUsers, useInvalidateSubUsers } from '@/lib/queries/use-sub-users'
-import { formatCurrency, formatDate, formatRelativeDate, cn } from '@/lib/utils'
-import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema'
+import { useSubUsers, useInvalidateSubUsers } from '@/lib/queries/use-sub-users';
+import { formatCurrency, formatDate, formatRelativeDate, cn } from '@/lib/utils';
+import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema';
 
 interface SubUser {
-  id: string
-  email: string
-  name: string
-  company_name: string | null
-  phone: string | null
-  wallet_balance: number
-  created_at: string
+  id: string;
+  email: string;
+  name: string;
+  company_name: string | null;
+  phone: string | null;
+  wallet_balance: number;
+  created_at: string;
 }
 
-type SortField = 'name' | 'wallet_balance' | 'created_at'
-type SortOrder = 'asc' | 'desc'
+type SortField = 'name' | 'wallet_balance' | 'created_at';
+type SortOrder = 'asc' | 'desc';
 
-const ITEMS_PER_PAGE = 50
+const ITEMS_PER_PAGE = 50;
 
 export function SubUsersTable() {
-  const { data: users = [], isLoading, error } = useSubUsers()
-  const invalidate = useInvalidateSubUsers()
+  const { data: users = [], isLoading, error } = useSubUsers();
+  const invalidate = useInvalidateSubUsers();
 
   // Filtri e ordinamento
-  const [search, setSearch] = useState('')
-  const [walletFilter, setWalletFilter] = useState<'all' | 'low' | 'high'>('all')
-  const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | '90d'>('all')
-  const [sortField, setSortField] = useState<SortField>('created_at')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState('');
+  const [walletFilter, setWalletFilter] = useState<'all' | 'low' | 'high'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | '90d'>('all');
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Wallet dialog
-  const [selectedUser, setSelectedUser] = useState<SubUser | null>(null)
-  const [walletDialogOpen, setWalletDialogOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<SubUser | null>(null);
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
 
   // Filtra utenti
   const filteredUsers = useMemo(() => {
-    let result = [...users]
+    let result = [...users];
 
     // Ricerca
     if (search) {
-      const searchLower = search.toLowerCase()
+      const searchLower = search.toLowerCase();
       result = result.filter(
         (u) =>
           u.name.toLowerCase().includes(searchLower) ||
           u.email.toLowerCase().includes(searchLower) ||
           u.company_name?.toLowerCase().includes(searchLower)
-      )
+      );
     }
 
     // Filtro wallet
     if (walletFilter === 'low') {
-      result = result.filter((u) => u.wallet_balance < WALLET_THRESHOLDS.LOW)
+      result = result.filter((u) => u.wallet_balance < WALLET_THRESHOLDS.LOW);
     } else if (walletFilter === 'high') {
-      result = result.filter((u) => u.wallet_balance >= WALLET_THRESHOLDS.HIGH)
+      result = result.filter((u) => u.wallet_balance >= WALLET_THRESHOLDS.HIGH);
     }
 
     // Filtro data
     if (dateFilter !== 'all') {
-      const now = new Date()
-      const daysMap = { '7d': 7, '30d': 30, '90d': 90 }
-      const days = daysMap[dateFilter]
-      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-      result = result.filter((u) => new Date(u.created_at) >= cutoff)
+      const now = new Date();
+      const daysMap = { '7d': 7, '30d': 30, '90d': 90 };
+      const days = daysMap[dateFilter];
+      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      result = result.filter((u) => new Date(u.created_at) >= cutoff);
     }
 
     // Ordinamento
     result.sort((a, b) => {
-      let comparison = 0
+      let comparison = 0;
       switch (sortField) {
         case 'name':
-          comparison = a.name.localeCompare(b.name)
-          break
+          comparison = a.name.localeCompare(b.name);
+          break;
         case 'wallet_balance':
-          comparison = a.wallet_balance - b.wallet_balance
-          break
+          comparison = a.wallet_balance - b.wallet_balance;
+          break;
         case 'created_at':
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          break
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
       }
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
-    return result
-  }, [users, search, walletFilter, dateFilter, sortField, sortOrder])
+    return result;
+  }, [users, search, walletFilter, dateFilter, sortField, sortOrder]);
 
   // Paginazione
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredUsers.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredUsers, currentPage])
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredUsers, currentPage]);
 
   // Handlers
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field)
-      setSortOrder('asc')
+      setSortField(field);
+      setSortOrder('asc');
     }
-  }
+  };
 
   const handleSearch = useCallback((value: string) => {
-    setSearch(value)
-    setCurrentPage(1)
-  }, [])
+    setSearch(value);
+    setCurrentPage(1);
+  }, []);
 
   const handleRechargeWallet = (user: SubUser) => {
-    setSelectedUser(user)
-    setWalletDialogOpen(true)
-  }
+    setSelectedUser(user);
+    setWalletDialogOpen(true);
+  };
 
   const handleWalletSuccess = () => {
-    invalidate()
-    toast.success('Wallet aggiornato con successo')
-  }
+    invalidate();
+    toast.success('Wallet aggiornato con successo');
+  };
 
   const isNewUser = (createdAt: string) => {
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    return new Date(createdAt) >= sevenDaysAgo
-  }
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return new Date(createdAt) >= sevenDaysAgo;
+  };
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-30" />
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-30" />;
     return sortOrder === 'asc' ? (
       <ArrowUp className="h-4 w-4 ml-1 text-[#FF9500]" />
     ) : (
       <ArrowDown className="h-4 w-4 ml-1 text-[#FF9500]" />
-    )
-  }
+    );
+  };
 
   if (error) {
     return (
@@ -156,7 +156,7 @@ export function SubUsersTable() {
           Riprova
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -172,8 +172,8 @@ export function SubUsersTable() {
         <Select
           value={walletFilter}
           onChange={(e) => {
-            setWalletFilter(e.target.value as typeof walletFilter)
-            setCurrentPage(1)
+            setWalletFilter(e.target.value as typeof walletFilter);
+            setCurrentPage(1);
           }}
           className="w-full sm:w-40"
         >
@@ -185,8 +185,8 @@ export function SubUsersTable() {
         <Select
           value={dateFilter}
           onChange={(e) => {
-            setDateFilter(e.target.value as typeof dateFilter)
-            setCurrentPage(1)
+            setDateFilter(e.target.value as typeof dateFilter);
+            setCurrentPage(1);
           }}
           className="w-full sm:w-40"
         >
@@ -216,9 +216,9 @@ export function SubUsersTable() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setSearch('')
-                  setWalletFilter('all')
-                  setDateFilter('all')
+                  setSearch('');
+                  setWalletFilter('all');
+                  setDateFilter('all');
                 }}
               >
                 Resetta filtri
@@ -274,9 +274,7 @@ export function SubUsersTable() {
                         </Avatar>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900 truncate">
-                              {user.name}
-                            </span>
+                            <span className="font-medium text-gray-900 truncate">{user.name}</span>
                             {isNewUser(user.created_at) && (
                               <Badge variant="success" className="shrink-0">
                                 Nuovo
@@ -289,7 +287,9 @@ export function SubUsersTable() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-900">{formatDate(user.created_at)}</div>
-                      <div className="text-xs text-gray-500">{formatRelativeDate(user.created_at)}</div>
+                      <div className="text-xs text-gray-500">
+                        {formatRelativeDate(user.created_at)}
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-right">
                       <Badge
@@ -297,8 +297,8 @@ export function SubUsersTable() {
                           user.wallet_balance < WALLET_THRESHOLDS.LOW
                             ? 'error'
                             : user.wallet_balance >= WALLET_THRESHOLDS.HIGH
-                            ? 'success'
-                            : 'secondary'
+                              ? 'success'
+                              : 'secondary'
                         }
                         className="font-mono"
                       >
@@ -306,10 +306,7 @@ export function SubUsersTable() {
                       </Badge>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <UserActionsMenu
-                        user={user}
-                        onRechargeWallet={handleRechargeWallet}
-                      />
+                      <UserActionsMenu user={user} onRechargeWallet={handleRechargeWallet} />
                     </td>
                   </tr>
                 ))}
@@ -358,11 +355,11 @@ export function SubUsersTable() {
         user={selectedUser}
         isOpen={walletDialogOpen}
         onClose={() => {
-          setWalletDialogOpen(false)
-          setSelectedUser(null)
+          setWalletDialogOpen(false);
+          setSelectedUser(null);
         }}
         onSuccess={handleWalletSuccess}
       />
     </div>
-  )
+  );
 }

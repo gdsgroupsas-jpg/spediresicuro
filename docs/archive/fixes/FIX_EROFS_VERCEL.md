@@ -3,6 +3,7 @@
 ## 🎯 Problema
 
 Quando provi a creare utenti su Vercel, vedi questo errore:
+
 ```json
 {
   "success": false,
@@ -91,16 +92,19 @@ Dopo aver creato gli utenti:
 ### Errori Comuni
 
 #### Errore: "relation 'users' does not exist"
+
 **Causa:** La tabella `users` non esiste in Supabase
 
 **Soluzione:** Crea la tabella con lo SQL sopra
 
 #### Errore: "permission denied for table users"
+
 **Causa:** La Service Role Key non ha i permessi
 
 **Soluzione:** Verifica che `SUPABASE_SERVICE_ROLE_KEY` sia configurata correttamente su Vercel
 
 #### Errore: "invalid input syntax for type uuid"
+
 **Causa:** Il campo `id` nella tabella è UUID ma stai usando TEXT
 
 **Soluzione:** Modifica lo schema della tabella o usa UUID per gli ID
@@ -119,4 +123,3 @@ Prima di considerare il problema risolto:
 ---
 
 **Nota**: Su Vercel, **NON puoi usare il database JSON** perché il file system è read-only. Devi usare **Supabase** per salvare gli utenti.
-

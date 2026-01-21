@@ -1,6 +1,6 @@
 /**
  * System Prompts per Anne
- * 
+ *
  * Prompt di sistema ottimizzati per Anne, Executive Business Partner.
  * Diversi prompt per admin e user standard.
  */
@@ -115,9 +115,9 @@ export function buildSystemPrompt(
       },
     };
   }
-  
+
   const basePrompt = isAdmin ? getAdminPrompt() : getBasePrompt();
-  
+
   // ⚠️ Proteggi formatContextForPrompt da errori
   let contextString = '';
   try {
@@ -126,7 +126,7 @@ export function buildSystemPrompt(
     console.error('❌ [buildSystemPrompt] Errore formatContextForPrompt:', formatError);
     contextString = `**CONTESTO UTENTE:**\n- Nome: ${userContext.user.userName}\n- Ruolo: ${userContext.user.userRole}\n`;
   }
-  
+
   return `${basePrompt}
 
 ${contextString}
@@ -150,4 +150,3 @@ Usa i tools quando necessario, ma spiega i risultati in modo conciso.
 
 Rispondi sempre in italiano.`;
 }
-

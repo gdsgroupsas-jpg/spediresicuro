@@ -11,19 +11,19 @@
  * 4. Se END: risposta pronta
  */
 
-import { graphConfig } from "@/lib/config";
-import { END, StateGraph } from "@langchain/langgraph";
-import { defaultLogger } from "../logger";
-import { addressWorker } from "../workers/address";
-import { bookingWorker } from "../workers/booking";
-import { debugWorker } from "../workers/debug";
-import { explainWorker } from "../workers/explain";
-import { mentorWorker } from "../workers/mentor";
-import { ocrWorker } from "../workers/ocr";
-import { priceListManagerWorker } from "../workers/price-list-manager";
-import { pricingWorker } from "../workers/pricing";
-import { AgentState } from "./state";
-import { supervisor } from "./supervisor";
+import { graphConfig } from '@/lib/config';
+import { END, StateGraph } from '@langchain/langgraph';
+import { defaultLogger } from '../logger';
+import { addressWorker } from '../workers/address';
+import { bookingWorker } from '../workers/booking';
+import { debugWorker } from '../workers/debug';
+import { explainWorker } from '../workers/explain';
+import { mentorWorker } from '../workers/mentor';
+import { ocrWorker } from '../workers/ocr';
+import { priceListManagerWorker } from '../workers/price-list-manager';
+import { pricingWorker } from '../workers/pricing';
+import { AgentState } from './state';
+import { supervisor } from './supervisor';
 
 /**
  * Router dopo Supervisor: decide se andare a pricing_worker, address_worker, ocr_worker, o END
@@ -35,60 +35,60 @@ const routeAfterSupervisor = (state: AgentState): string => {
     defaultLogger.warn(
       `⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`
     );
-    return "END";
+    return 'END';
   }
 
   // Se abbiamo già preventivi, termina
   if (state.pricing_options && state.pricing_options.length > 0) {
-    return "END";
+    return 'END';
   }
 
   // Se il supervisor dice di andare a pricing_worker, vai
-  if (state.next_step === "pricing_worker") {
-    return "pricing_worker";
+  if (state.next_step === 'pricing_worker') {
+    return 'pricing_worker';
   }
 
   // Sprint 2.4: Se il supervisor dice di andare a ocr_worker, vai
-  if (state.next_step === "ocr_worker") {
-    return "ocr_worker";
+  if (state.next_step === 'ocr_worker') {
+    return 'ocr_worker';
   }
 
   // Sprint 2.6: Se il supervisor dice di andare a booking_worker, vai
-  if (state.next_step === "booking_worker") {
-    return "booking_worker";
+  if (state.next_step === 'booking_worker') {
+    return 'booking_worker';
   }
 
   // P2: Se il supervisor dice di andare a explain_worker, vai
-  if (state.next_step === "explain_worker") {
-    return "explain_worker";
+  if (state.next_step === 'explain_worker') {
+    return 'explain_worker';
   }
 
-  if (state.next_step === "debug_worker") {
-    return "debug_worker";
+  if (state.next_step === 'debug_worker') {
+    return 'debug_worker';
   }
 
   // P3: Se il supervisor dice di andare a price_list_worker, vai
-  if (state.next_step === "price_list_worker") {
-    return "price_list_worker";
+  if (state.next_step === 'price_list_worker') {
+    return 'price_list_worker';
   }
 
   // P1: Se il supervisor dice di andare a mentor_worker, vai
-  if (state.next_step === "mentor_worker") {
-    return "mentor_worker";
+  if (state.next_step === 'mentor_worker') {
+    return 'mentor_worker';
   }
 
   // Sprint 2.3: Se il supervisor dice di andare a address_worker, vai
-  if (state.next_step === "address_worker") {
-    return "address_worker";
+  if (state.next_step === 'address_worker') {
+    return 'address_worker';
   }
 
   // Se il supervisor dice END o legacy, termina (l'API gestirà la risposta)
-  if (state.next_step === "END" || state.next_step === "legacy") {
-    return "END";
+  if (state.next_step === 'END' || state.next_step === 'legacy') {
+    return 'END';
   }
 
   // Default: termina
-  return "END";
+  return 'END';
 };
 
 /**
@@ -101,21 +101,21 @@ const routeAfterPricingWorker = (state: AgentState): string => {
     defaultLogger.warn(
       `⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`
     );
-    return "END";
+    return 'END';
   }
 
   // Se abbiamo preventivi, il supervisor deciderà se terminare
   if (state.pricing_options && state.pricing_options.length > 0) {
-    return "supervisor";
+    return 'supervisor';
   }
 
   // Se c'è un errore o richiesta chiarimento, termina
-  if (state.clarification_request || state.processingStatus === "error") {
-    return "END";
+  if (state.clarification_request || state.processingStatus === 'error') {
+    return 'END';
   }
 
   // Altrimenti torna al supervisor per valutare
-  return "supervisor";
+  return 'supervisor';
 };
 
 /**
@@ -132,26 +132,26 @@ const routeAfterAddressWorker = (state: AgentState): string => {
     defaultLogger.warn(
       `⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`
     );
-    return "END";
+    return 'END';
   }
 
   // Se address_worker dice di andare a pricing_worker
-  if (state.next_step === "pricing_worker") {
-    return "pricing_worker";
+  if (state.next_step === 'pricing_worker') {
+    return 'pricing_worker';
   }
 
   // Se c'è richiesta chiarimento, termina
   if (state.clarification_request) {
-    return "END";
+    return 'END';
   }
 
   // Se c'è errore, termina
-  if (state.processingStatus === "error") {
-    return "END";
+  if (state.processingStatus === 'error') {
+    return 'END';
   }
 
   // Default: termina (l'address_worker avrà impostato next_step = END)
-  return "END";
+  return 'END';
 };
 
 /**
@@ -162,16 +162,16 @@ const routeAfterAddressWorker = (state: AgentState): string => {
 const routeAfterMentorWorker = (state: AgentState): string => {
   // Mentor worker termina sempre (ha già impostato next_step = END)
   if (state.mentor_response) {
-    return "END";
+    return 'END';
   }
 
   // Se c'è errore o clarification, termina
-  if (state.clarification_request || state.processingStatus === "error") {
-    return "END";
+  if (state.clarification_request || state.processingStatus === 'error') {
+    return 'END';
   }
 
   // Default: termina
-  return "END";
+  return 'END';
 };
 
 /**
@@ -188,31 +188,31 @@ const routeAfterOcrWorker = (state: AgentState): string => {
     defaultLogger.warn(
       `⚠️ [Pricing Graph] Limite iterazioni raggiunto (${iterationCount}), termino`
     );
-    return "END";
+    return 'END';
   }
 
   // Se ocr_worker dice di andare a address_worker
-  if (state.next_step === "address_worker") {
-    return "address_worker";
+  if (state.next_step === 'address_worker') {
+    return 'address_worker';
   }
 
   // Se ocr_worker dice di andare direttamente a pricing_worker
-  if (state.next_step === "pricing_worker") {
-    return "pricing_worker";
+  if (state.next_step === 'pricing_worker') {
+    return 'pricing_worker';
   }
 
   // Se c'è richiesta chiarimento, termina
   if (state.clarification_request) {
-    return "END";
+    return 'END';
   }
 
   // Se c'è errore, termina
-  if (state.processingStatus === "error") {
-    return "END";
+  if (state.processingStatus === 'error') {
+    return 'END';
   }
 
   // Default: termina
-  return "END";
+  return 'END';
 };
 
 /**
@@ -223,7 +223,7 @@ const routeAfterOcrWorker = (state: AgentState): string => {
  */
 const routeAfterBookingWorker = (state: AgentState): string => {
   // Booking sempre termina, non c'è retry automatico
-  return "END";
+  return 'END';
 };
 
 /**
@@ -233,7 +233,7 @@ const routeAfterBookingWorker = (state: AgentState): string => {
  */
 const routeAfterDebugWorker = (state: AgentState): string => {
   // Debug worker sempre termina con risposta pronta
-  return "END";
+  return 'END';
 };
 
 /**
@@ -243,7 +243,7 @@ const routeAfterDebugWorker = (state: AgentState): string => {
  */
 const routeAfterExplainWorker = (state: AgentState): string => {
   // Explain worker sempre termina con risposta pronta
-  return "END";
+  return 'END';
 };
 
 /**
@@ -251,7 +251,7 @@ const routeAfterExplainWorker = (state: AgentState): string => {
  */
 const routeAfterPriceListWorker = (state: AgentState): string => {
   // Price List worker sempre termina con risposta pronta
-  return "END";
+  return 'END';
 };
 
 // Crea il grafo
@@ -344,19 +344,18 @@ const bookingWorkerWrapper = (state: AgentState) => bookingWorker(state);
 const mentorWorkerWrapper = (state: AgentState) => mentorWorker(state); // P1
 const debugWorkerWrapper = (state: AgentState) => debugWorker(state); // P2
 const explainWorkerWrapper = (state: AgentState) => explainWorker(state); // P2
-const priceListWorkerWrapper = (state: AgentState) =>
-  priceListManagerWorker(state); // P3
+const priceListWorkerWrapper = (state: AgentState) => priceListManagerWorker(state); // P3
 
 // Aggiungi nodi
-pricingWorkflow.addNode("supervisor", supervisorWrapper);
-pricingWorkflow.addNode("pricing_worker", pricingWorkerWrapper);
-pricingWorkflow.addNode("address_worker", addressWorkerWrapper); // Sprint 2.3
-pricingWorkflow.addNode("ocr_worker", ocrWorkerWrapper); // Sprint 2.4
-pricingWorkflow.addNode("booking_worker", bookingWorkerWrapper); // Sprint 2.6
-pricingWorkflow.addNode("mentor_worker", mentorWorkerWrapper); // P1
-pricingWorkflow.addNode("debug_worker", debugWorkerWrapper); // P2
-pricingWorkflow.addNode("explain_worker", explainWorkerWrapper); // P2
-pricingWorkflow.addNode("price_list_worker", priceListWorkerWrapper); // P3
+pricingWorkflow.addNode('supervisor', supervisorWrapper);
+pricingWorkflow.addNode('pricing_worker', pricingWorkerWrapper);
+pricingWorkflow.addNode('address_worker', addressWorkerWrapper); // Sprint 2.3
+pricingWorkflow.addNode('ocr_worker', ocrWorkerWrapper); // Sprint 2.4
+pricingWorkflow.addNode('booking_worker', bookingWorkerWrapper); // Sprint 2.6
+pricingWorkflow.addNode('mentor_worker', mentorWorkerWrapper); // P1
+pricingWorkflow.addNode('debug_worker', debugWorkerWrapper); // P2
+pricingWorkflow.addNode('explain_worker', explainWorkerWrapper); // P2
+pricingWorkflow.addNode('price_list_worker', priceListWorkerWrapper); // P3
 
 // NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
 // LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
@@ -364,92 +363,64 @@ pricingWorkflow.addNode("price_list_worker", priceListWorkerWrapper); // P3
 // P3 Task 5: Manteniamo cast per compatibilità LangGraph API, ma documentati.
 
 // Entry point: supervisor
-pricingWorkflow.setEntryPoint("supervisor" as any);
+pricingWorkflow.setEntryPoint('supervisor' as any);
 
 // Conditional edge dopo supervisor
-pricingWorkflow.addConditionalEdges("supervisor" as any, routeAfterSupervisor, {
-  pricing_worker: "pricing_worker",
-  address_worker: "address_worker", // Sprint 2.3
-  ocr_worker: "ocr_worker", // Sprint 2.4
-  booking_worker: "booking_worker", // Sprint 2.6
-  mentor_worker: "mentor_worker", // P1
-  debug_worker: "debug_worker", // P2
-  explain_worker: "explain_worker", // P2
-  price_list_worker: "price_list_worker", // P3
+pricingWorkflow.addConditionalEdges('supervisor' as any, routeAfterSupervisor, {
+  pricing_worker: 'pricing_worker',
+  address_worker: 'address_worker', // Sprint 2.3
+  ocr_worker: 'ocr_worker', // Sprint 2.4
+  booking_worker: 'booking_worker', // Sprint 2.6
+  mentor_worker: 'mentor_worker', // P1
+  debug_worker: 'debug_worker', // P2
+  explain_worker: 'explain_worker', // P2
+  price_list_worker: 'price_list_worker', // P3
   END: END,
 } as any);
 
 // Conditional edge dopo pricing_worker
-pricingWorkflow.addConditionalEdges(
-  "pricing_worker" as any,
-  routeAfterPricingWorker,
-  {
-    supervisor: "supervisor",
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('pricing_worker' as any, routeAfterPricingWorker, {
+  supervisor: 'supervisor',
+  END: END,
+} as any);
 
 // Sprint 2.3: Conditional edge dopo address_worker
-pricingWorkflow.addConditionalEdges(
-  "address_worker" as any,
-  routeAfterAddressWorker,
-  {
-    pricing_worker: "pricing_worker",
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('address_worker' as any, routeAfterAddressWorker, {
+  pricing_worker: 'pricing_worker',
+  END: END,
+} as any);
 
 // Sprint 2.4: Conditional edge dopo ocr_worker
-pricingWorkflow.addConditionalEdges("ocr_worker" as any, routeAfterOcrWorker, {
-  address_worker: "address_worker",
-  pricing_worker: "pricing_worker",
+pricingWorkflow.addConditionalEdges('ocr_worker' as any, routeAfterOcrWorker, {
+  address_worker: 'address_worker',
+  pricing_worker: 'pricing_worker',
   END: END,
 } as any);
 
 // Sprint 2.6: Conditional edge dopo booking_worker
-pricingWorkflow.addConditionalEdges(
-  "booking_worker" as any,
-  routeAfterBookingWorker,
-  {
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('booking_worker' as any, routeAfterBookingWorker, {
+  END: END,
+} as any);
 
 // P1: Conditional edge dopo mentor_worker
-pricingWorkflow.addConditionalEdges(
-  "mentor_worker" as any,
-  routeAfterMentorWorker,
-  {
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('mentor_worker' as any, routeAfterMentorWorker, {
+  END: END,
+} as any);
 
 // P2: Conditional edge dopo debug_worker
-pricingWorkflow.addConditionalEdges(
-  "debug_worker" as any,
-  routeAfterDebugWorker,
-  {
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('debug_worker' as any, routeAfterDebugWorker, {
+  END: END,
+} as any);
 
 // P2: Conditional edge dopo explain_worker
-pricingWorkflow.addConditionalEdges(
-  "explain_worker" as any,
-  routeAfterExplainWorker,
-  {
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('explain_worker' as any, routeAfterExplainWorker, {
+  END: END,
+} as any);
 
 // P3: Conditional edge dopo price_list_worker
-pricingWorkflow.addConditionalEdges(
-  "price_list_worker" as any,
-  routeAfterPriceListWorker,
-  {
-    END: END,
-  } as any
-);
+pricingWorkflow.addConditionalEdges('price_list_worker' as any, routeAfterPriceListWorker, {
+  END: END,
+} as any);
 
 // Compila il grafo
 // P3 Task 1: Checkpointer opzionale per persistenza stato

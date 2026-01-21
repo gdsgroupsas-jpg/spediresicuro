@@ -1,6 +1,6 @@
 /**
  * useDebounce Hook - Enterprise-Grade Debouncing
- * 
+ *
  * Previene chiamate multiple a funzioni costose (es. API calls)
  * Aspetta che l'utente finisca di interagire prima di eseguire
  */
@@ -9,7 +9,7 @@ import { useEffect, useState, useRef } from 'react';
 
 /**
  * Debounce un valore
- * 
+ *
  * @param value - Valore da debounce
  * @param delay - Delay in millisecondi (default: 500ms)
  * @returns Valore debounced
@@ -32,7 +32,7 @@ export function useDebounce<T>(value: T, delay: number = 500): T {
 
 /**
  * Debounce una funzione callback
- * 
+ *
  * @param callback - Funzione da debounce
  * @param delay - Delay in millisecondi (default: 500ms)
  * @returns Funzione debounced

@@ -1,15 +1,18 @@
 # Vercel Deployment
 
 ## Overview
+
 Guida completa per il deployment su Vercel della applicazione Next.js SpedireSicuro.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Account Vercel collegato a GitHub
 - Repository: `gdsgroupsas-jpg/spediresicuro`
 - Branch `master` configurato
@@ -23,12 +26,14 @@ Guida completa per il deployment su Vercel della applicazione Next.js SpedireSic
 **Trigger:** Push su branch `master`
 
 **Process:**
+
 1. Vercel rileva push su `master`
 2. Esegue build automatico
 3. Deploy su production (https://spediresicuro.it)
 4. Tempo medio: 2-5 minuti
 
 **Configurazione:**
+
 - **Framework Preset:** Next.js
 - **Build Command:** `npm run build` (automatico)
 - **Output Directory:** `.next` (automatico)
@@ -41,12 +46,14 @@ Guida completa per il deployment su Vercel della applicazione Next.js SpedireSic
 **Trigger:** Pull Request su GitHub
 
 **Process:**
+
 1. PR creata → Vercel crea preview deployment
 2. URL univoco per ogni PR (es. `pr-33-spediresicuro.vercel.app`)
 3. Commento automatico su PR con link preview
 4. Deploy aggiornato ad ogni push sul branch PR
 
 **Utilizzo:**
+
 - Testare modifiche prima del merge
 - Condividere preview con team
 - Verificare UI/UX changes
@@ -81,6 +88,7 @@ Guida completa per il deployment su Vercel della applicazione Next.js SpedireSic
 ```
 
 **Configurazioni:**
+
 - **Function Timeout:** 300s per automation e cron jobs
 - **Cron Jobs:** Scheduled tasks per financial alerts e reconciliation
 
@@ -91,6 +99,7 @@ Guida completa per il deployment su Vercel della applicazione Next.js SpedireSic
 ### Production Environment
 
 **Critical (P0):**
+
 ```bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
@@ -106,6 +115,7 @@ ENCRYPTION_KEY=[random-32-char-string]
 ```
 
 **Important (P1):**
+
 ```bash
 # AI
 GOOGLE_API_KEY=[gemini-api-key]
@@ -122,6 +132,7 @@ GITHUB_CLIENT_SECRET=[github-oauth-secret]
 ```
 
 **Optional (P2):**
+
 ```bash
 # Monitoring
 DIAGNOSTICS_TOKEN=[diagnostics-token]
@@ -149,11 +160,13 @@ IMPERSONATION_TTL=3600
 ## Build Configuration
 
 ### Build Command
+
 ```bash
 npm run build
 ```
 
 **Process:**
+
 1. Install dependencies: `npm ci`
 2. Run build: `npm run build`
 3. Type check: `npm run type-check` (in CI)
@@ -162,12 +175,14 @@ npm run build
 ### Build Optimization
 
 **Next.js 14 App Router:**
+
 - Automatic code splitting
 - Static optimization
 - Image optimization
 - Edge runtime per API routes
 
 **Function Configuration:**
+
 - Long-running functions (automation, cron): 300s timeout
 - Standard API routes: 10s timeout (default)
 
@@ -180,6 +195,7 @@ npm run build
 **Trigger:** Push su `master`
 
 **Steps:**
+
 1. GitHub webhook → Vercel
 2. Vercel clones repository
 3. Install dependencies (`npm ci`)
@@ -188,6 +204,7 @@ npm run build
 6. Health check (`/api/health`)
 
 **Monitoring:**
+
 - Build logs disponibili in Vercel Dashboard
 - Email notifications per deploy failures
 - Slack integration (opzionale)
@@ -197,6 +214,7 @@ npm run build
 ### Manual Deployment
 
 **Via Vercel CLI:**
+
 ```bash
 # Install Vercel CLI
 npm i -g vercel
@@ -209,6 +227,7 @@ vercel --prod
 ```
 
 **Via Vercel Dashboard:**
+
 1. Go to Deployments
 2. Click "Redeploy" su deployment esistente
 3. Choose environment (Production/Preview)
@@ -220,11 +239,13 @@ vercel --prod
 ### PR Preview
 
 **Automatic:**
+
 - Ogni PR → preview deployment
 - URL: `pr-[number]-spediresicuro.vercel.app`
 - Commento automatico su PR con link
 
 **Manual Promote:**
+
 1. Go to Vercel Dashboard → Deployments
 2. Find preview deployment
 3. Click "Promote to Production"
@@ -236,11 +257,13 @@ vercel --prod
 ### Scheduled Tasks
 
 **Financial Alerts:**
+
 - Path: `/api/cron/financial-alerts`
 - Schedule: `0 8 * * *` (ogni giorno alle 8:00)
 - Purpose: Genera alert margini negativi
 
 **Auto-Reconciliation:**
+
 - Path: `/api/cron/auto-reconciliation`
 - Schedule: `0 2 * * *` (ogni giorno alle 2:00)
 - Purpose: Riconciliazione automatica costi
@@ -249,6 +272,7 @@ vercel --prod
 Definiti in `vercel.json` → `crons` array
 
 **Security:**
+
 - Richiedono header `X-Cron-Secret` (configurato in env vars)
 - Solo chiamate da Vercel Cron sono autorizzate
 
@@ -259,18 +283,21 @@ Definiti in `vercel.json` → `crons` array
 ### Vercel Dashboard
 
 **Deployments:**
+
 - Status (Ready, Building, Error)
 - Build logs
 - Deployment URL
 - Commit SHA
 
 **Logs:**
+
 - Real-time logs
 - Function logs
 - Error logs
 - Filter by time range
 
 **Analytics:**
+
 - Page views
 - Performance metrics
 - Web Vitals
@@ -284,12 +311,14 @@ Definiti in `vercel.json` → `crons` array
 **Common Issues:**
 
 1. **Type Errors:**
+
    ```bash
    # Fix: Run type-check locally
    npm run type-check
    ```
 
 2. **Missing Environment Variables:**
+
    ```bash
    # Fix: Add missing vars in Vercel Dashboard
    ```
@@ -302,6 +331,7 @@ Definiti in `vercel.json` → `crons` array
 ### Deployment Failures
 
 **Check:**
+
 1. Build logs in Vercel Dashboard
 2. Environment variables configured
 3. Database migrations applied
@@ -332,12 +362,12 @@ Definiti in `vercel.json` → `crons` array
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

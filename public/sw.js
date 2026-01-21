@@ -7,12 +7,7 @@
 
 const CACHE_NAME = 'spediresicuro-v1';
 const RUNTIME_CACHE = 'spediresicuro-runtime';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/offline.html',
-];
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/offline.html'];
 
 // Installa il service worker
 self.addEventListener('install', (event) => {
@@ -67,9 +62,12 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => {
           return caches.match(request).then((response) => {
-            return response || new Response(
-              JSON.stringify({ offline: true, error: 'API non disponibile offline' }),
-              { headers: { 'Content-Type': 'application/json' } }
+            return (
+              response ||
+              new Response(
+                JSON.stringify({ offline: true, error: 'API non disponibile offline' }),
+                { headers: { 'Content-Type': 'application/json' } }
+              )
             );
           });
         })
@@ -87,13 +85,16 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       caches.match(request).then((response) => {
-        return response || fetch(request).then((response) => {
-          const clonedResponse = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clonedResponse);
-          });
-          return response;
-        });
+        return (
+          response ||
+          fetch(request).then((response) => {
+            const clonedResponse = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clonedResponse);
+            });
+            return response;
+          })
+        );
       })
     );
     return;
@@ -145,9 +146,7 @@ self.addEventListener('push', (event) => {
   if (data.title) options.title = data.title;
   if (data.url) options.data = { url: data.url };
 
-  event.waitUntil(
-    self.registration.showNotification('SpedireSicuro', options)
-  );
+  event.waitUntil(self.registration.showNotification('SpedireSicuro', options));
 });
 
 // Click su notifica

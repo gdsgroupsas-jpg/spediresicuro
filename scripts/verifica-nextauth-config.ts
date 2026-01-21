@@ -1,6 +1,6 @@
 /**
  * Script di Verifica Configurazione NextAuth
- * 
+ *
  * Verifica che tutte le variabili d'ambiente necessarie per NextAuth siano configurate correttamente.
  */
 
@@ -58,10 +58,10 @@ const requiredVars = {
 };
 
 console.log('🔍 Verifica Configurazione NextAuth\n');
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 console.log(`Vercel URL: ${process.env.VERCEL_URL || 'N/A'}`);
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 console.log('');
 
 let hasErrors = false;
@@ -70,21 +70,22 @@ let hasWarnings = false;
 for (const [varName, config] of Object.entries(requiredVars)) {
   const value = process.env[varName];
   const result = config.validate(value || '');
-  
+
   const status = result.includes('✅') ? '✅' : result.includes('❌') ? '❌' : '⚠️';
   const isError = result.includes('❌');
   const isWarning = result.includes('⚠️');
-  
+
   if (isError) hasErrors = true;
   if (isWarning) hasWarnings = true;
-  
+
   console.log(`${status} ${varName}`);
   console.log(`   ${config.description}`);
   if (value) {
     // Mostra solo i primi e ultimi caratteri per sicurezza
-    const masked = value.length > 20 
-      ? `${value.substring(0, 10)}...${value.substring(value.length - 5)}`
-      : '***';
+    const masked =
+      value.length > 20
+        ? `${value.substring(0, 10)}...${value.substring(value.length - 5)}`
+        : '***';
     console.log(`   Valore: ${masked} (${value.length} caratteri)`);
   } else {
     console.log(`   Valore: NON CONFIGURATO`);
@@ -93,7 +94,7 @@ for (const [varName, config] of Object.entries(requiredVars)) {
   console.log('');
 }
 
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 
 if (hasErrors) {
   console.log('❌ ERRORE: Configurazione incompleta!');
@@ -107,4 +108,3 @@ if (hasErrors) {
   console.log('✅ Configurazione NextAuth completa e valida!');
   process.exit(0);
 }
-

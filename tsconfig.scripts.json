@@ -11,9 +11,3 @@
   "include": ["scripts/**/*"],
   "exclude": ["node_modules", ".next"]
 }
-
-
-
-
-
-

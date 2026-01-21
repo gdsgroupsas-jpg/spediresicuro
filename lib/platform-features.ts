@@ -1,6 +1,6 @@
 /**
  * Helper per verificare se una platform feature è attiva
- * 
+ *
  * Queste funzioni controllano se una feature è abilitata globalmente
  * nella piattaforma (gestita dal superadmin).
  */
@@ -105,9 +105,3 @@ export async function getAllPlatformFeatures() {
     return [];
   }
 }
-
-
-
-
-
-

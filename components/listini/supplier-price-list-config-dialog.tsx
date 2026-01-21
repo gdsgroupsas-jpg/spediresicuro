@@ -10,38 +10,38 @@
  * - Extra
  */
 
-"use client";
+'use client';
 
-import type { CourierConfig } from "@/actions/configurations";
-import { listConfigurations } from "@/actions/configurations";
-import { updatePriceListAction } from "@/actions/price-lists";
+import type { CourierConfig } from '@/actions/configurations';
+import { listConfigurations } from '@/actions/configurations';
+import { updatePriceListAction } from '@/actions/price-lists';
 import {
   getSupplierPriceListConfig,
   upsertSupplierPriceListConfig,
-} from "@/actions/supplier-price-list-config";
-import { Button } from "@/components/ui/button";
+} from '@/actions/supplier-price-list-config';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { PriceList } from "@/types/listini";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { PriceList } from '@/types/listini';
 import type {
   AccessoryServiceConfig,
   CODConfigRow,
   InsuranceConfig,
   PickupServiceConfig,
   StorageConfig,
-} from "@/types/supplier-price-list-config";
+} from '@/types/supplier-price-list-config';
 import {
   COMMON_ACCESSORY_SERVICES,
   COMMON_STORAGE_SERVICES,
-} from "@/types/supplier-price-list-config";
+} from '@/types/supplier-price-list-config';
 import {
   CreditCard,
   Loader2,
@@ -53,9 +53,9 @@ import {
   Trash2,
   Truck,
   Warehouse,
-} from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface SupplierPriceListConfigDialogProps {
   open: boolean;
@@ -72,54 +72,49 @@ export function SupplierPriceListConfigDialog({
 }: SupplierPriceListConfigDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState('general');
 
   // Metadata editabili - inizializzati dai metadata del priceList
-  const initialMetadata = (priceList.metadata ||
-    priceList.source_metadata ||
-    {}) as any;
+  const initialMetadata = (priceList.metadata || priceList.source_metadata || {}) as any;
   const [metadataFields, setMetadataFields] = useState({
-    courier_config_id: initialMetadata.courier_config_id || "",
-    carrier_code: initialMetadata.carrier_code || "",
-    contract_code: initialMetadata.contract_code || "",
+    courier_config_id: initialMetadata.courier_config_id || '',
+    carrier_code: initialMetadata.carrier_code || '',
+    contract_code: initialMetadata.contract_code || '',
   });
   const [configurations, setConfigurations] = useState<CourierConfig[]>([]);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
-  const [availableContractCodes, setAvailableContractCodes] = useState<
-    string[]
-  >([]);
+  const [availableContractCodes, setAvailableContractCodes] = useState<string[]>([]);
 
   // Configurazioni
   const [insuranceConfig, setInsuranceConfig] = useState<InsuranceConfig>({
     max_value: 0,
     fixed_price: 0,
     percent: 0,
-    percent_on: "totale",
+    percent_on: 'totale',
   });
 
   const [codConfig, setCodConfig] = useState<CODConfigRow[]>([]);
-  const [accessoryServicesConfig, setAccessoryServicesConfig] = useState<
-    AccessoryServiceConfig[]
-  >([]);
+  const [accessoryServicesConfig, setAccessoryServicesConfig] = useState<AccessoryServiceConfig[]>(
+    []
+  );
   const [storageConfig, setStorageConfig] = useState<StorageConfig>({
     services: [],
     dossier_opening_cost: 0,
   });
   const [pickupConfig, setPickupConfig] = useState<PickupServiceConfig[]>([]);
   const [extraConfig, setExtraConfig] = useState<Record<string, any>>({});
-  const [volumetricDensityFactor, setVolumetricDensityFactor] =
-    useState<number>(200); // Default: 200 kg/m³
+  const [volumetricDensityFactor, setVolumetricDensityFactor] = useState<number>(200); // Default: 200 kg/m³
 
   const initializeDefaults = useCallback(() => {
     // Estrai carrier_code dai metadata
     const metadata = priceList.source_metadata || {};
-    let carrierCode = (metadata.carrier_code || "").toLowerCase();
+    let carrierCode = (metadata.carrier_code || '').toLowerCase();
 
     // Normalizza alias comuni per Poste
     const carrierAliases: Record<string, string> = {
-      poste: "postedeliverybusiness",
-      posteitaliane: "postedeliverybusiness",
-      "poste italiane": "postedeliverybusiness",
+      poste: 'postedeliverybusiness',
+      posteitaliane: 'postedeliverybusiness',
+      'poste italiane': 'postedeliverybusiness',
     };
 
     // Se c'è un alias, usa quello
@@ -150,7 +145,7 @@ export function SupplierPriceListConfigDialog({
     // Inizializza ritiro
     setPickupConfig([
       {
-        service: "Ritiro",
+        service: 'Ritiro',
         fixed_price: 0,
         percent_of_freight: 0,
       },
@@ -180,8 +175,8 @@ export function SupplierPriceListConfigDialog({
         initializeDefaults();
       }
     } catch (error) {
-      console.error("Errore caricamento configurazione:", error);
-      toast.error("Errore caricamento configurazione");
+      console.error('Errore caricamento configurazione:', error);
+      toast.error('Errore caricamento configurazione');
       initializeDefaults();
     } finally {
       setIsLoading(false);
@@ -194,12 +189,12 @@ export function SupplierPriceListConfigDialog({
       const result = await listConfigurations();
       if (result.success && result.configs) {
         const spedisciConfigs = result.configs.filter(
-          (c) => c.provider_id === "spedisci_online" && c.is_active
+          (c) => c.provider_id === 'spedisci_online' && c.is_active
         );
         setConfigurations(spedisciConfigs);
       }
     } catch (error) {
-      console.error("Errore caricamento configurazioni:", error);
+      console.error('Errore caricamento configurazioni:', error);
     } finally {
       setIsLoadingConfigs(false);
     }
@@ -215,9 +210,7 @@ export function SupplierPriceListConfigDialog({
   // Carica contract codes quando cambia configurazione
   useEffect(() => {
     if (metadataFields.courier_config_id) {
-      const config = configurations.find(
-        (c) => c.id === metadataFields.courier_config_id
-      );
+      const config = configurations.find((c) => c.id === metadataFields.courier_config_id);
       if (config && config.contract_mapping) {
         const contractCodes = Object.keys(config.contract_mapping);
         setAvailableContractCodes(contractCodes);
@@ -230,9 +223,7 @@ export function SupplierPriceListConfigDialog({
   // Auto-fill carrier_code quando cambia contract_code
   useEffect(() => {
     if (metadataFields.contract_code) {
-      const carrierCode = metadataFields.contract_code
-        .split("-")[0]
-        .toLowerCase();
+      const carrierCode = metadataFields.contract_code.split('-')[0].toLowerCase();
       if (carrierCode && carrierCode !== metadataFields.carrier_code) {
         setMetadataFields((prev) => ({ ...prev, carrier_code: carrierCode }));
       }
@@ -241,13 +232,11 @@ export function SupplierPriceListConfigDialog({
 
   // Aggiorna metadata fields quando cambia priceList
   useEffect(() => {
-    const metadata = (priceList.metadata ||
-      priceList.source_metadata ||
-      {}) as any;
+    const metadata = (priceList.metadata || priceList.source_metadata || {}) as any;
     setMetadataFields({
-      courier_config_id: metadata.courier_config_id || "",
-      carrier_code: metadata.carrier_code || "",
-      contract_code: metadata.contract_code || "",
+      courier_config_id: metadata.courier_config_id || '',
+      carrier_code: metadata.carrier_code || '',
+      contract_code: metadata.contract_code || '',
     });
   }, [priceList.metadata, priceList.source_metadata]);
 
@@ -263,33 +252,25 @@ export function SupplierPriceListConfigDialog({
     try {
       // Usa i valori dai campi editabili invece di metadata esistenti
       const carrierCode =
-        metadataFields.carrier_code ||
-        priceList.courier?.code?.toLowerCase() ||
-        "";
+        metadataFields.carrier_code || priceList.courier?.code?.toLowerCase() || '';
 
       // Valida metadata obbligatori
-      if (
-        !metadataFields.courier_config_id ||
-        !carrierCode ||
-        !metadataFields.contract_code
-      ) {
+      if (!metadataFields.courier_config_id || !carrierCode || !metadataFields.contract_code) {
         toast.error(
           `Metadata incompleti: mancano ${[
-            !metadataFields.courier_config_id && "Config ID",
-            !carrierCode && "Carrier Code",
-            !metadataFields.contract_code && "Contract Code",
+            !metadataFields.courier_config_id && 'Config ID',
+            !carrierCode && 'Carrier Code',
+            !metadataFields.contract_code && 'Contract Code',
           ]
             .filter(Boolean)
-            .join(", ")}. Completa tutti i campi nel tab "Generale".`
+            .join(', ')}. Completa tutti i campi nel tab "Generale".`
         );
         setIsSaving(false);
         return;
       }
 
       // 1. Aggiorna metadata nel price_list stesso
-      const existingMetadata = (priceList.metadata ||
-        priceList.source_metadata ||
-        {}) as any;
+      const existingMetadata = (priceList.metadata || priceList.source_metadata || {}) as any;
       const updatedMetadata = {
         ...existingMetadata,
         courier_config_id: metadataFields.courier_config_id,
@@ -303,7 +284,7 @@ export function SupplierPriceListConfigDialog({
       });
 
       if (!updateResult.success) {
-        toast.error(updateResult.error || "Errore aggiornamento metadata");
+        toast.error(updateResult.error || 'Errore aggiornamento metadata');
         setIsSaving(false);
         return;
       }
@@ -324,15 +305,15 @@ export function SupplierPriceListConfigDialog({
       });
 
       if (result.success) {
-        toast.success("Configurazione e metadata salvati con successo");
+        toast.success('Configurazione e metadata salvati con successo');
         onSaveComplete?.();
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Errore durante il salvataggio");
+        toast.error(result.error || 'Errore durante il salvataggio');
       }
     } catch (error: any) {
-      console.error("Errore salvataggio configurazione:", error);
-      toast.error(error.message || "Errore durante il salvataggio");
+      console.error('Errore salvataggio configurazione:', error);
+      toast.error(error.message || 'Errore durante il salvataggio');
     } finally {
       setIsSaving(false);
     }
@@ -346,7 +327,7 @@ export function SupplierPriceListConfigDialog({
         max_value: 0,
         fixed_price: 0,
         percent: 0,
-        percent_on: "totale",
+        percent_on: 'totale',
       },
     ]);
   }
@@ -361,7 +342,7 @@ export function SupplierPriceListConfigDialog({
     setAccessoryServicesConfig([
       ...accessoryServicesConfig,
       {
-        service: "",
+        service: '',
         price: 0,
         percent: 0,
       },
@@ -370,9 +351,7 @@ export function SupplierPriceListConfigDialog({
 
   // Helper per rimuovere servizio accessorio
   function removeAccessoryService(index: number) {
-    setAccessoryServicesConfig(
-      accessoryServicesConfig.filter((_, i) => i !== index)
-    );
+    setAccessoryServicesConfig(accessoryServicesConfig.filter((_, i) => i !== index));
   }
 
   // Helper per aggiungere servizio giacenza
@@ -382,7 +361,7 @@ export function SupplierPriceListConfigDialog({
       services: [
         ...storageConfig.services,
         {
-          service: "",
+          service: '',
           price: 0,
           percent: 0,
         },
@@ -421,7 +400,7 @@ export function SupplierPriceListConfigDialog({
           </DialogTitle>
           <DialogDescription>
             Configura le sezioni non disponibili via API per questo listino
-            {priceList.list_type === "custom" ? " cliente" : " fornitore"}
+            {priceList.list_type === 'custom' ? ' cliente' : ' fornitore'}
           </DialogDescription>
         </DialogHeader>
 
@@ -471,9 +450,8 @@ export function SupplierPriceListConfigDialog({
                 Metadata API (Obbligatori per Sincronizzazione)
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Questi campi sono necessari per sincronizzare il listino con
-                l&apos;API Spedisci.Online. Se mancanti, la sincronizzazione
-                incrementale non funzionerà.
+                Questi campi sono necessari per sincronizzare il listino con l&apos;API
+                Spedisci.Online. Se mancanti, la sincronizzazione incrementale non funzionerà.
               </p>
 
               <div className="space-y-4">
@@ -489,35 +467,30 @@ export function SupplierPriceListConfigDialog({
                       setMetadataFields((prev) => ({
                         ...prev,
                         courier_config_id: e.target.value,
-                        contract_code: "", // Reset contract code quando cambia config
+                        contract_code: '', // Reset contract code quando cambia config
                       }));
                     }}
                     disabled={isLoadingConfigs}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1"
                   >
                     <option value="">
-                      {isLoadingConfigs
-                        ? "Caricamento..."
-                        : "Seleziona configurazione"}
+                      {isLoadingConfigs ? 'Caricamento...' : 'Seleziona configurazione'}
                     </option>
                     {configurations.map((config) => (
                       <option key={config.id} value={config.id}>
-                        {config.name} {config.is_default ? "(Default)" : ""}
+                        {config.name} {config.is_default ? '(Default)' : ''}
                       </option>
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Configurazione Spedisci.Online da utilizzare per questo
-                    listino
+                    Configurazione Spedisci.Online da utilizzare per questo listino
                   </p>
                 </div>
 
                 {/* Contract Code */}
                 {metadataFields.courier_config_id && (
                   <div>
-                    <Label htmlFor="metadata-contract-code">
-                      Contract Code *
-                    </Label>
+                    <Label htmlFor="metadata-contract-code">Contract Code *</Label>
                     <select
                       id="metadata-contract-code"
                       value={metadataFields.contract_code}
@@ -535,8 +508,7 @@ export function SupplierPriceListConfigDialog({
                           (c) => c.id === metadataFields.courier_config_id
                         );
                         const courierName =
-                          config?.contract_mapping?.[contractCode] ||
-                          contractCode;
+                          config?.contract_mapping?.[contractCode] || contractCode;
                         return (
                           <option key={contractCode} value={contractCode}>
                             {contractCode} ({courierName})
@@ -545,8 +517,7 @@ export function SupplierPriceListConfigDialog({
                       })}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Contract code specifico per questo listino (auto-compila
-                      carrier_code)
+                      Contract code specifico per questo listino (auto-compila carrier_code)
                     </p>
                   </div>
                 )}
@@ -567,8 +538,7 @@ export function SupplierPriceListConfigDialog({
                     className="mt-1"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Codice corriere (auto-compilato dal contract code se
-                    selezionato)
+                    Codice corriere (auto-compilato dal contract code se selezionato)
                   </p>
                 </div>
               </div>
@@ -576,40 +546,30 @@ export function SupplierPriceListConfigDialog({
 
             {/* Fattore Peso/Volume */}
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Fattore Peso/Volume (Densità)
-              </h3>
+              <h3 className="font-semibold text-gray-900 mb-4">Fattore Peso/Volume (Densità)</h3>
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="volumetric-density-factor">
-                    Densità (kg/m³)
-                  </Label>
+                  <Label htmlFor="volumetric-density-factor">Densità (kg/m³)</Label>
                   <Input
                     id="volumetric-density-factor"
                     type="number"
                     step="0.01"
                     min="1"
                     value={volumetricDensityFactor}
-                    onChange={(e) =>
-                      setVolumetricDensityFactor(
-                        parseFloat(e.target.value) || 200
-                      )
-                    }
+                    onChange={(e) => setVolumetricDensityFactor(parseFloat(e.target.value) || 200)}
                     className="mt-2"
                   />
                   <p className="text-xs text-gray-600 mt-2">
-                    Fattore densità per calcolo peso volumetrico. Default: 200
-                    kg/m³ (corrisponde a divisore 5000).
+                    Fattore densità per calcolo peso volumetrico. Default: 200 kg/m³ (corrisponde a
+                    divisore 5000).
                     <br />
-                    Formula: Peso volumetrico (kg) = (L × W × H in cm) /
-                    (1,000,000 / densità)
+                    Formula: Peso volumetrico (kg) = (L × W × H in cm) / (1,000,000 / densità)
                     <br />
                     Esempio: 200 kg/m³ → divisore 5000
                   </p>
                   {volumetricDensityFactor > 0 && (
                     <p className="text-xs text-blue-700 mt-1 font-medium">
-                      Divisore equivalente:{" "}
-                      {Math.round(1000000 / volumetricDensityFactor)}
+                      Divisore equivalente: {Math.round(1000000 / volumetricDensityFactor)}
                     </p>
                   )}
                 </div>
@@ -620,40 +580,30 @@ export function SupplierPriceListConfigDialog({
           {/* Tab Generale */}
           <TabsContent value="general" className="space-y-4 mt-4">
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Fattore Peso/Volume (Densità)
-              </h3>
+              <h3 className="font-semibold text-gray-900 mb-4">Fattore Peso/Volume (Densità)</h3>
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="volumetric-density-factor">
-                    Densità (kg/m³)
-                  </Label>
+                  <Label htmlFor="volumetric-density-factor">Densità (kg/m³)</Label>
                   <Input
                     id="volumetric-density-factor"
                     type="number"
                     step="0.01"
                     min="1"
                     value={volumetricDensityFactor}
-                    onChange={(e) =>
-                      setVolumetricDensityFactor(
-                        parseFloat(e.target.value) || 200
-                      )
-                    }
+                    onChange={(e) => setVolumetricDensityFactor(parseFloat(e.target.value) || 200)}
                     className="mt-2"
                   />
                   <p className="text-xs text-gray-600 mt-2">
-                    Fattore densità per calcolo peso volumetrico. Default: 200
-                    kg/m³ (corrisponde a divisore 5000).
+                    Fattore densità per calcolo peso volumetrico. Default: 200 kg/m³ (corrisponde a
+                    divisore 5000).
                     <br />
-                    Formula: Peso volumetrico (kg) = (L × W × H in cm) /
-                    (1,000,000 / densità)
+                    Formula: Peso volumetrico (kg) = (L × W × H in cm) / (1,000,000 / densità)
                     <br />
                     Esempio: 200 kg/m³ → divisore 5000
                   </p>
                   {volumetricDensityFactor > 0 && (
                     <p className="text-xs text-blue-700 mt-1 font-medium">
-                      Divisore equivalente:{" "}
-                      {Math.round(1000000 / volumetricDensityFactor)}
+                      Divisore equivalente: {Math.round(1000000 / volumetricDensityFactor)}
                     </p>
                   )}
                 </div>
@@ -664,13 +614,11 @@ export function SupplierPriceListConfigDialog({
           {/* Tab Pesi / Zone */}
           <TabsContent value="weights-zones" className="space-y-4 mt-4">
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Matrice Pesi / Zone
-              </h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Matrice Pesi / Zone</h3>
               <p className="text-sm text-gray-600 mb-4">
-                La matrice pesi/zone viene gestita nella pagina dettaglio del
-                listino. Puoi modificare manualmente tutti i valori per ogni
-                combinazione di peso e zona geografica.
+                La matrice pesi/zone viene gestita nella pagina dettaglio del listino. Puoi
+                modificare manualmente tutti i valori per ogni combinazione di peso e zona
+                geografica.
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -680,10 +628,10 @@ export function SupplierPriceListConfigDialog({
                     // Apri pagina dettaglio listino in nuova tab
                     // Usa route corretta in base al tipo di listino
                     const detailUrl =
-                      priceList.list_type === "custom"
+                      priceList.list_type === 'custom'
                         ? `/dashboard/listini/${priceList.id}`
                         : `/dashboard/reseller/listini-fornitore/${priceList.id}`;
-                    window.open(detailUrl, "_blank");
+                    window.open(detailUrl, '_blank');
                   }}
                   className="gap-2"
                 >
@@ -693,9 +641,8 @@ export function SupplierPriceListConfigDialog({
               </div>
               <div className="mt-4 p-3 bg-white rounded border border-gray-200">
                 <p className="text-xs text-gray-600">
-                  <strong>Nota:</strong> La configurazione della matrice
-                  pesi/zone è gestita direttamente nella pagina dettaglio del
-                  listino, dove puoi:
+                  <strong>Nota:</strong> La configurazione della matrice pesi/zone è gestita
+                  direttamente nella pagina dettaglio del listino, dove puoi:
                 </p>
                 <ul className="text-xs text-gray-600 mt-2 list-disc list-inside space-y-1">
                   <li>Visualizzare tutte le zone geografiche</li>
@@ -763,7 +710,7 @@ export function SupplierPriceListConfigDialog({
                   onChange={(e) =>
                     setInsuranceConfig({
                       ...insuranceConfig,
-                      percent_on: e.target.value as "totale" | "base",
+                      percent_on: e.target.value as 'totale' | 'base',
                     })
                   }
                 >
@@ -778,22 +725,14 @@ export function SupplierPriceListConfigDialog({
           <TabsContent value="cod" className="space-y-4 mt-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">Scaglioni Contrassegno</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addCodRow}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addCodRow}>
                 <Plus className="h-4 w-4 mr-1" />
                 Aggiungi riga
               </Button>
             </div>
             <div className="space-y-3">
               {codConfig.map((row, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-5 gap-3 p-3 border rounded-lg"
-                >
+                <div key={index} className="grid grid-cols-5 gap-3 p-3 border rounded-lg">
                   <div>
                     <Label>Valore massimo</Label>
                     <Input
@@ -801,8 +740,7 @@ export function SupplierPriceListConfigDialog({
                       value={row.max_value}
                       onChange={(e) => {
                         const newCod = [...codConfig];
-                        newCod[index].max_value =
-                          parseFloat(e.target.value) || 0;
+                        newCod[index].max_value = parseFloat(e.target.value) || 0;
                         setCodConfig(newCod);
                       }}
                     />
@@ -815,8 +753,7 @@ export function SupplierPriceListConfigDialog({
                       value={row.fixed_price}
                       onChange={(e) => {
                         const newCod = [...codConfig];
-                        newCod[index].fixed_price =
-                          parseFloat(e.target.value) || 0;
+                        newCod[index].fixed_price = parseFloat(e.target.value) || 0;
                         setCodConfig(newCod);
                       }}
                     />
@@ -841,9 +778,7 @@ export function SupplierPriceListConfigDialog({
                       value={row.percent_on}
                       onChange={(e) => {
                         const newCod = [...codConfig];
-                        newCod[index].percent_on = e.target.value as
-                          | "totale"
-                          | "base";
+                        newCod[index].percent_on = e.target.value as 'totale' | 'base';
                         setCodConfig(newCod);
                       }}
                     >
@@ -865,8 +800,7 @@ export function SupplierPriceListConfigDialog({
               ))}
               {codConfig.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessuna riga configurata. Clicca &quot;Aggiungi riga&quot; per
-                  iniziare.
+                  Nessuna riga configurata. Clicca &quot;Aggiungi riga&quot; per iniziare.
                 </p>
               )}
             </div>
@@ -876,22 +810,14 @@ export function SupplierPriceListConfigDialog({
           <TabsContent value="services" className="space-y-4 mt-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">Servizi Accessori</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addAccessoryService}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addAccessoryService}>
                 <Plus className="h-4 w-4 mr-1" />
                 Aggiungi servizio
               </Button>
             </div>
             <div className="space-y-3">
               {accessoryServicesConfig.map((service, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-4 gap-3 p-3 border rounded-lg"
-                >
+                <div key={index} className="grid grid-cols-4 gap-3 p-3 border rounded-lg">
                   <div>
                     <Label>Servizio</Label>
                     <Input
@@ -912,8 +838,7 @@ export function SupplierPriceListConfigDialog({
                       value={service.price}
                       onChange={(e) => {
                         const newServices = [...accessoryServicesConfig];
-                        newServices[index].price =
-                          parseFloat(e.target.value) || 0;
+                        newServices[index].price = parseFloat(e.target.value) || 0;
                         setAccessoryServicesConfig(newServices);
                       }}
                     />
@@ -926,8 +851,7 @@ export function SupplierPriceListConfigDialog({
                       value={service.percent}
                       onChange={(e) => {
                         const newServices = [...accessoryServicesConfig];
-                        newServices[index].percent =
-                          parseFloat(e.target.value) || 0;
+                        newServices[index].percent = parseFloat(e.target.value) || 0;
                         setAccessoryServicesConfig(newServices);
                       }}
                     />
@@ -946,8 +870,7 @@ export function SupplierPriceListConfigDialog({
               ))}
               {accessoryServicesConfig.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessun servizio configurato. Clicca &quot;Aggiungi
-                  servizio&quot; per iniziare.
+                  Nessun servizio configurato. Clicca &quot;Aggiungi servizio&quot; per iniziare.
                 </p>
               )}
             </div>
@@ -957,22 +880,14 @@ export function SupplierPriceListConfigDialog({
           <TabsContent value="storage" className="space-y-4 mt-4">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold">Servizi Giacenza</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addStorageService}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addStorageService}>
                 <Plus className="h-4 w-4 mr-1" />
                 Aggiungi servizio
               </Button>
             </div>
             <div className="space-y-3">
               {storageConfig.services.map((service, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-4 gap-3 p-3 border rounded-lg"
-                >
+                <div key={index} className="grid grid-cols-4 gap-3 p-3 border rounded-lg">
                   <div>
                     <Label>Servizio</Label>
                     <Input
@@ -996,8 +911,7 @@ export function SupplierPriceListConfigDialog({
                       value={service.price}
                       onChange={(e) => {
                         const newServices = [...storageConfig.services];
-                        newServices[index].price =
-                          parseFloat(e.target.value) || 0;
+                        newServices[index].price = parseFloat(e.target.value) || 0;
                         setStorageConfig({
                           ...storageConfig,
                           services: newServices,
@@ -1013,8 +927,7 @@ export function SupplierPriceListConfigDialog({
                       value={service.percent}
                       onChange={(e) => {
                         const newServices = [...storageConfig.services];
-                        newServices[index].percent =
-                          parseFloat(e.target.value) || 0;
+                        newServices[index].percent = parseFloat(e.target.value) || 0;
                         setStorageConfig({
                           ...storageConfig,
                           services: newServices,
@@ -1036,15 +949,12 @@ export function SupplierPriceListConfigDialog({
               ))}
               {storageConfig.services.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  Nessun servizio configurato. Clicca &quot;Aggiungi
-                  servizio&quot; per iniziare.
+                  Nessun servizio configurato. Clicca &quot;Aggiungi servizio&quot; per iniziare.
                 </p>
               )}
             </div>
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <Label htmlFor="dossier-opening-cost">
-                Apertura dossier giacenza (€)
-              </Label>
+              <Label htmlFor="dossier-opening-cost">Apertura dossier giacenza (€)</Label>
               <Input
                 id="dossier-opening-cost"
                 type="number"
@@ -1059,8 +969,7 @@ export function SupplierPriceListConfigDialog({
                 className="mt-2"
               />
               <p className="text-xs text-gray-600 mt-2">
-                * Il costo sarà addebitato solo nella fase di svincolo da parte
-                del cliente
+                * Il costo sarà addebitato solo nella fase di svincolo da parte del cliente
               </p>
             </div>
           </TabsContent>
@@ -1069,10 +978,7 @@ export function SupplierPriceListConfigDialog({
           <TabsContent value="pickup" className="space-y-4 mt-4">
             <div className="space-y-3">
               {pickupConfig.map((service, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-3 gap-3 p-3 border rounded-lg"
-                >
+                <div key={index} className="grid grid-cols-3 gap-3 p-3 border rounded-lg">
                   <div>
                     <Label>Servizio</Label>
                     <Input
@@ -1093,8 +999,7 @@ export function SupplierPriceListConfigDialog({
                       value={service.fixed_price}
                       onChange={(e) => {
                         const newPickup = [...pickupConfig];
-                        newPickup[index].fixed_price =
-                          parseFloat(e.target.value) || 0;
+                        newPickup[index].fixed_price = parseFloat(e.target.value) || 0;
                         setPickupConfig(newPickup);
                       }}
                     />
@@ -1107,8 +1012,7 @@ export function SupplierPriceListConfigDialog({
                       value={service.percent_of_freight}
                       onChange={(e) => {
                         const newPickup = [...pickupConfig];
-                        newPickup[index].percent_of_freight =
-                          parseFloat(e.target.value) || 0;
+                        newPickup[index].percent_of_freight = parseFloat(e.target.value) || 0;
                         setPickupConfig(newPickup);
                       }}
                     />
@@ -1121,9 +1025,8 @@ export function SupplierPriceListConfigDialog({
           {/* Tab Extra */}
           <TabsContent value="extra" className="space-y-4 mt-4">
             <p className="text-sm text-gray-600">
-              Configurazioni extra per questo listino. Questa sezione può essere
-              estesa in futuro per configurazioni aggiuntive specifiche del
-              corriere.
+              Configurazioni extra per questo listino. Questa sezione può essere estesa in futuro
+              per configurazioni aggiuntive specifiche del corriere.
             </p>
             <div className="p-4 bg-gray-50 rounded-lg border">
               <p className="text-sm text-gray-500">

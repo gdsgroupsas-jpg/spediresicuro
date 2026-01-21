@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Intent Detector
- * 
+ *
  * Test approfonditi per detectPricingIntentSimple
  * Verifica edge cases, maiuscole, emoji, formati peso/CAP vari
  */
@@ -144,4 +144,3 @@ describe('detectPricingIntentSimple', () => {
     });
   });
 });
-

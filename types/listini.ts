@@ -5,10 +5,10 @@
  * gerarchia multi-utente, versionamento e supporto multi-formato.
  */
 
-import type { CourierServiceType } from "./shipments";
+import type { CourierServiceType } from './shipments';
 
-export type PriceListStatus = "draft" | "active" | "archived";
-export type PriceListPriority = "global" | "partner" | "client" | "default";
+export type PriceListStatus = 'draft' | 'active' | 'archived';
+export type PriceListPriority = 'global' | 'partner' | 'client' | 'default';
 export type { CourierServiceType };
 
 /**
@@ -48,7 +48,7 @@ export interface PriceRule {
   service_types?: CourierServiceType[]; // Tipi servizio (vuoto = tutti)
 
   // Calcolo prezzo
-  margin_type: "percent" | "fixed" | "none"; // Tipo margine
+  margin_type: 'percent' | 'fixed' | 'none'; // Tipo margine
   margin_value?: number; // Valore margine (percentuale o fisso in €)
   base_price_override?: number; // Prezzo base fisso (sovrascrive calcolo)
 
@@ -88,7 +88,7 @@ export interface PriceList {
   priority: PriceListPriority; // 'global' | 'partner' | 'client' | 'default'
   is_global: boolean; // Se true, listino globale (admin)
   assigned_to_user_id?: string; // Se specificato, listino personalizzato per utente
-  list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
+  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
 
   // Tracciabilità derivazione (master/clone)
   master_list_id?: string; // ID listino master da cui questo deriva (null = listino originale)
@@ -104,7 +104,7 @@ export interface PriceList {
   default_margin_fixed?: number; // Margine fisso di default
 
   // Sorgente dati
-  source_type?: "csv" | "excel" | "pdf" | "manual" | "api" | "ocr";
+  source_type?: 'csv' | 'excel' | 'pdf' | 'manual' | 'api' | 'ocr';
   source_file_url?: string;
   source_file_name?: string;
   source_metadata?: Record<string, any>; // Metadati file sorgente
@@ -128,7 +128,7 @@ export interface PriceList {
   last_used_at?: string; // Ultima volta utilizzato
 
   // ✨ NUOVO: VAT Semantics (ADR-001)
-  vat_mode?: "included" | "excluded" | null; // NULL = legacy (assume 'excluded')
+  vat_mode?: 'included' | 'excluded' | null; // NULL = legacy (assume 'excluded')
   vat_rate?: number; // Default 22.00
 }
 
@@ -169,20 +169,20 @@ export interface CreatePriceListInput {
   priority?: PriceListPriority;
   is_global?: boolean;
   assigned_to_user_id?: string;
-  list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
+  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   valid_from?: string;
   valid_until?: string;
   rules?: PriceRule[]; // Regole avanzate
   default_margin_percent?: number;
   default_margin_fixed?: number;
-  source_type?: "csv" | "excel" | "pdf" | "manual" | "api" | "ocr";
+  source_type?: 'csv' | 'excel' | 'pdf' | 'manual' | 'api' | 'ocr';
   source_file_url?: string;
   source_file_name?: string;
   description?: string;
   notes?: string;
   metadata?: Record<string, any>;
   // ✨ NUOVO: VAT Semantics (ADR-001) - Opzionali per retrocompatibilità
-  vat_mode?: "included" | "excluded" | null;
+  vat_mode?: 'included' | 'excluded' | null;
   vat_rate?: number;
 }
 
@@ -194,7 +194,7 @@ export interface UpdatePriceListInput {
   version?: string;
   status?: PriceListStatus;
   priority?: PriceListPriority;
-  list_type?: "supplier" | "custom" | "global"; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
+  list_type?: 'supplier' | 'custom' | 'global'; // Tipo listino: supplier (fornitore), custom (personalizzato), global (globale)
   valid_from?: string;
   valid_until?: string;
   rules?: PriceRule[];
@@ -204,7 +204,7 @@ export interface UpdatePriceListInput {
   notes?: string;
   metadata?: Record<string, any>;
   // ✨ NUOVO: VAT Semantics (ADR-001) - Opzionali per retrocompatibilità
-  vat_mode?: "included" | "excluded" | null;
+  vat_mode?: 'included' | 'excluded' | null;
   vat_rate?: number;
 }
 
@@ -246,7 +246,7 @@ export interface PriceCalculationResult {
     selectionReason: string; // Motivo selezione
   };
   // ✨ NUOVO: VAT Semantics (ADR-001)
-  vatMode?: "included" | "excluded" | null;
+  vatMode?: 'included' | 'excluded' | null;
   vatRate?: number;
   vatAmount?: number; // Calcolato se vatMode = 'excluded'
   totalPriceWithVAT?: number; // Calcolato se vatMode = 'excluded'

@@ -7,10 +7,12 @@
 ## 📜 Riferimento Costituzione
 
 **Prima di leggere questo documento, leggi OBBLIGATORIAMENTE:**
+
 - [README.md](../README.md) - Costituzione del sistema (Courier Adapter pattern, 3 modelli operativi)
 - [docs/VISION_BUSINESS.md](VISION_BUSINESS.md) - Visione business completa e modelli di ricavo
 
 **Questo documento implementa:**
+
 - Pattern Courier Adapter (sistema agnostico rispetto al fornitore)
 - Stack tecnologico per i 3 modelli operativi
 - Patterns architetturali (Acting Context, Wallet, RLS)
@@ -54,6 +56,7 @@ SpedireSicuro is a **Next.js 14** application with **App Router** architecture, 
 ## Stack Reality Check
 
 ### Frontend
+
 - **Next.js 14.2+** - App Router (NOT Pages Router)
 - **React 18+** - Server Components + Client Components
 - **TypeScript** - Strict mode enabled
@@ -62,32 +65,38 @@ SpedireSicuro is a **Next.js 14** application with **App Router** architecture, 
 - **Framer Motion** - Animations (glassmorphism effects)
 
 ### Backend
+
 - **Next.js API Routes** - `/app/api/**` (Node.js runtime)
 - **Server Actions** - `/app/actions/**` (React Server Actions)
 - **Supabase Client** - RLS-enforced queries
 - **Supabase Admin** - Bypass RLS (server-side only)
 
 ### Database
+
 - **PostgreSQL 15+** - Via Supabase
 - **Row Level Security (RLS)** - Tenant isolation
 - **Triggers** - Auto-update wallet balance
 - **Functions (RPC)** - Business logic in DB
 
 ### Authentication
+
 - **NextAuth.js v5** - Session management
 - **Supabase Auth** - User storage (auth.users)
 - **Custom Impersonation** - Acting Context system
 
 ### AI/Automation
+
 - **Google Gemini 2.0 Flash** - Multimodal AI (text + vision)
 - **LangGraph** - AI workflow orchestration (LIVE - Agent Orchestrator)
 - **Puppeteer** - Browser automation (external service)
 
 ### Payments
+
 - **Intesa XPay** - Credit card processing (integration ready, not live)
 - **Manual Bank Transfer** - Current live payment method
 
 ### Monitoring
+
 - **Vercel Analytics** - Performance monitoring
 - **Supabase Logs** - Database query logs
 - **Custom Diagnostics** - `diagnostics_events` table
@@ -100,7 +109,7 @@ SpedireSicuro is a **Next.js 14** application with **App Router** architecture, 
 spediresicuro/
 ├── app/                          # Next.js App Router
 │   ├── (auth)/                   # Auth group routes
-│   │   └── login/               
+│   │   └── login/
 │   ├── dashboard/                # Protected dashboard
 │   │   ├── page.tsx             # Main dashboard
 │   │   ├── wallet/              # Wallet management
@@ -158,12 +167,14 @@ spediresicuro/
 **Solution:** Cookie-based impersonation with middleware validation.
 
 **Files:**
+
 - `middleware.ts` - Validates impersonation cookie, injects headers
 - `lib/safe-auth.ts` - `getSafeAuth()` reads headers, builds `ActingContext`
 - `app/api/impersonate/start/route.ts` - Start impersonation
 - `app/api/impersonate/stop/route.ts` - Stop impersonation
 
 **Flow:**
+
 1. Admin UI calls `/api/impersonate/start` with `targetUserId`
 2. API validates: Actor is SuperAdmin, Target exists
 3. Set cookie: `impersonate-context` with signed data
@@ -183,10 +194,12 @@ spediresicuro/
 **Solution:** Atomic RPC functions with pessimistic locking + immutable transaction ledger.
 
 **Tables:**
+
 - `users.wallet_balance` - Current balance (CHECK >= 0)
 - `wallet_transactions` - Immutable ledger (append-only, audit trail)
 
 **Flow:**
+
 1. Admin approves top-up request
 2. Call `add_wallet_credit(user_id, amount, description, admin_id)`
 3. Function calls `increment_wallet_balance()` (ATOMIC with FOR UPDATE NOWAIT)
@@ -195,6 +208,7 @@ spediresicuro/
 6. If sufficient, call `decrement_wallet_balance()` (ATOMIC) → then insert transaction
 
 **Key Insight:** Balance is NEVER updated directly. Only atomic RPC functions can modify `wallet_balance`:
+
 - `increment_wallet_balance()` - Atomic credit with pessimistic lock
 - `decrement_wallet_balance()` - Atomic debit with pessimistic lock
 - `add_wallet_credit()` - Wrapper that calls `increment_wallet_balance()` + inserts transaction
@@ -202,6 +216,7 @@ spediresicuro/
 **⚠️ IMPORTANTE:** Trigger legacy rimosso in migration `041_remove_wallet_balance_trigger.sql` (causava doppio accredito).
 
 **Reconciliation:**
+
 ```sql
 -- Daily job verifies integrity
 SELECT u.id, u.wallet_balance, SUM(wt.amount) AS calculated
@@ -220,13 +235,19 @@ HAVING u.wallet_balance != SUM(wt.amount);
 **Solution:** Hash key fields + timestamp window.
 
 **Implementation:**
+
 ```typescript
-const idempotencyKey = crypto.createHash('sha256').update(JSON.stringify({
-  userId: context.target.id,
-  recipient: validated.recipient,
-  packages: validated.packages,
-  timestamp: Math.floor(Date.now() / 5000) // 5-second buckets
-})).digest('hex')
+const idempotencyKey = crypto
+  .createHash('sha256')
+  .update(
+    JSON.stringify({
+      userId: context.target.id,
+      recipient: validated.recipient,
+      packages: validated.packages,
+      timestamp: Math.floor(Date.now() / 5000), // 5-second buckets
+    })
+  )
+  .digest('hex');
 
 // Check last 60 seconds for duplicate
 const { data: duplicate } = await supabaseAdmin
@@ -235,10 +256,10 @@ const { data: duplicate } = await supabaseAdmin
   .eq('user_id', context.target.id)
   .eq('idempotency_key', idempotencyKey)
   .gte('created_at', oneMinuteAgo)
-  .maybeSingle()
+  .maybeSingle();
 
 if (duplicate) {
-  return Response.json({ error: 'DUPLICATE_REQUEST' }, { status: 409 })
+  return Response.json({ error: 'DUPLICATE_REQUEST' }, { status: 409 });
 }
 ```
 
@@ -253,6 +274,7 @@ if (duplicate) {
 **Solution:** Abstract adapter interface with provider-specific implementations.
 
 **Core Interface:**
+
 ```typescript
 // lib/adapters/couriers/base.ts
 export abstract class CourierAdapter {
@@ -264,11 +286,13 @@ export abstract class CourierAdapter {
 ```
 
 **Implementations:**
+
 - `SpedisciOnlineAdapter` - Spedisci.Online API (JSON + CSV fallback)
 - `PosteAdapter` - Poste Italiane API
 - `MockCourierAdapter` - Testing
 
 **Factory Pattern:**
+
 ```typescript
 // lib/couriers/factory.ts
 export async function getShippingProvider(
@@ -285,12 +309,14 @@ export async function getShippingProvider(
 **Key Insight:** Business logic (shipment creation, tracking) NEVER calls courier APIs directly. Always uses `CourierAdapter` interface.
 
 **Benefits:**
+
 - ✅ Easy to add new couriers (just implement adapter)
 - ✅ Testing with MockCourierAdapter
 - ✅ BYOC support (user provides own credentials)
 - ✅ Multi-tenant isolation (each user can have different config)
 
 **Files:**
+
 - `lib/adapters/couriers/base.ts` - Abstract base class
 - `lib/adapters/couriers/spedisci-online.ts` - Spedisci.Online implementation
 - `lib/couriers/factory.ts` - Factory for instantiating adapters
@@ -304,6 +330,7 @@ export async function getShippingProvider(
 **Solution:** Architettura LangGraph Supervisor con worker specializzati e Single Decision Point.
 
 **Architettura Logica:**
+
 ```
 User Input (messaggio)
     │
@@ -331,6 +358,7 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 ```
 
 **Data Flow Pattern:**
+
 1. **Input Utente** → `supervisorRouter()` rileva intent/pattern
 2. **Supervisor Decision** → `decideNextStep()` (funzione pura) decide routing basato su stato
 3. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
@@ -365,6 +393,7 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
    - **Booking Worker** (`lib/agent/workers/booking.ts`) - Prenota spedizioni (preflight + adapter)
 
 **State Management:**
+
 - `AgentState` (`lib/agent/orchestrator/state.ts`) - Stato centralizzato con:
   - `shipmentDraft` - Bozza progressiva (merge non distruttivo)
   - `pricing_options` - Risultati calcolo preventivi
@@ -396,11 +425,13 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
    - Verifica: `grep -r "logger\.\(log\|info\|warn\|error\)" lib/agent/ | grep -i "addressLine\|postalCode\|fullName\|phone"`
 
 **Known Limits:**
+
 - LangGraph typing constraints: alcuni cast `as any` necessari per nomi nodi (documentati in codice)
 - OCR immagini: placeholder, ritorna clarification request (TODO Sprint 2.5)
 - MAX_ITERATIONS: limite hardcoded a 2 (configurabile in `lib/config.ts`)
 
 **Files:**
+
 - `lib/agent/orchestrator/supervisor-router.ts` - Entry point
 - `lib/agent/orchestrator/supervisor.ts` - Decision logic
 - `lib/agent/orchestrator/pricing-graph.ts` - LangGraph workflow
@@ -409,26 +440,31 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 **P3 Architecture Improvements (1 Gennaio 2026):**
 
 **State Persistence:**
+
 - `lib/agent/orchestrator/checkpointer.ts` - LangGraph checkpointer per persistenza stato
 - `lib/services/agent-session.ts` - Service layer con cache in-memory (TTL 5 min)
 - Persistenza conversazioni multi-turn in `agent_sessions` table
 - Ripristino stato da checkpoint quando utente riapre chat
 
 **Wallet Integration:**
+
 - `lib/wallet/credit-check.ts` - Verifica credito pre-booking
 - Check in `supervisor.ts` prima di routing a `booking_worker`
 - Prevenzione tentativi booking con credito insufficiente
 
 **Tool Registry:**
+
 - `lib/agent/tools/registry.ts` - Registry centralizzato per tools
 - Auto-discovery e validazione input/output con Zod
 - Compatibilità con tools esistenti
 
 **Type Safety:**
+
 - `lib/agent/orchestrator/type-guards.ts` - Type guards per AgentState
 - Rimossi TODO, migliorata type safety senza `as any` non gestiti
 
 **Performance:**
+
 - `lib/services/cache.ts` - Cache in-memory per RAG (TTL 1 ora) e pricing (TTL 5 min)
 - Integrato in `mentor_worker.ts`, `explain_worker.ts`, `pricing_worker.ts`
 - Query Supabase ottimizzate (select solo campi necessari)
@@ -437,6 +473,7 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 - `MIGRATION_MEMORY.md` - Documentazione completa migrazione e stato
 
 **Verifica Componenti:**
+
 ```bash
 # Windows PowerShell
 Get-ChildItem lib/agent/orchestrator/ | Select-Object Name
@@ -454,6 +491,7 @@ Get-ChildItem lib/agent/workers/ | Select-Object Name
 **Solution:** PostgreSQL RLS policies on ALL tenant tables.
 
 **Pattern:**
+
 ```sql
 -- Enable RLS
 ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
@@ -468,12 +506,13 @@ CREATE POLICY "shipments_select" ON shipments FOR SELECT USING (
 ```
 
 **Bypass (Server-Side Only):**
+
 ```typescript
 // Uses service role key (bypasses RLS)
-import { supabaseAdmin } from '@/lib/db/client'
+import { supabaseAdmin } from '@/lib/db/client';
 
 // Safe: Server-side only
-const { data } = await supabaseAdmin.from('shipments').select('*')
+const { data } = await supabaseAdmin.from('shipments').select('*');
 ```
 
 **Key Insight:** NEVER use `supabaseAdmin` in client components, only Server Actions/API Routes.
@@ -487,11 +526,13 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 **Solution:** Hierarchical price lists with fallback.
 
 **Tables:**
+
 - `price_lists` - Base price list per courier
 - `advanced_price_lists` - Reseller-specific overrides
 - `price_list_entries` - Zone-based pricing rules
 
 **Query Logic:**
+
 1. Check if user has custom price list (via reseller)
 2. If yes, use custom pricing
 3. If no entry for zone, fallback to base price list
@@ -508,11 +549,12 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 **Solution:** Compensation queue for manual cleanup.
 
 **Flow:**
+
 ```typescript
 try {
   // 1. Call courier API
   const courierResponse = await courierClient.createShipping(...)
-  
+
   // 2. Insert shipment in DB
   const { data: shipment } = await supabaseAdmin.from('shipments').insert(...)
 } catch (dbError) {
@@ -539,6 +581,7 @@ try {
 ## Feature Flags
 
 ### Live Features (Production Ready)
+
 - ✅ **User Dashboard** - Shipment creation, tracking
 - ✅ **Wallet System** - Prepaid credit, top-ups
 - ✅ **Multi-Courier** - GLS, BRT, Poste (via Spedisci.Online)
@@ -551,6 +594,7 @@ try {
 - ✅ **Cancelled Shipments** - Soft delete with audit trail, simultaneous deletion on Spedisci.Online, reseller visibility (31 Dicembre 2025)
 
 ### Partially Implemented (Infrastructure Ready, UI Missing)
+
 - ✅ **AI Anne Chat UI** - Backend orchestrator completo, chat UI implementata (P2 completato)
   - `components/anne/AnneAssistant.tsx` - Chat UI completa con floating ghost icon
   - `components/agent/AgentDebugPanel.tsx` - Debug panel per admin/superadmin (P2)
@@ -562,6 +606,7 @@ try {
 - 🟡 **Doctor Service** - Diagnostics logging active, UI dashboard missing
 
 ### Planned (Backlog)
+
 - 📋 **OCR Immagini** - Supporto completo per estrazione dati da immagini (attualmente placeholder)
 - 📋 **Fiscal Brain** - F24, LIPE tracking
 - 📋 **Multi-Region** - Database sharding
@@ -575,18 +620,21 @@ try {
 ## Environment-Specific Behavior
 
 ### Development (`npm run dev`)
+
 - Uses `NEXT_PUBLIC_SUPABASE_URL` from `.env.local`
 - NextAuth callback: `http://localhost:3000/api/auth/callback`
 - Hot reload enabled
 - Source maps enabled
 
 ### Production (Vercel)
+
 - Uses environment variables from Vercel dashboard
 - NextAuth callback: `https://spediresicuro.it/api/auth/callback`
 - Optimized builds (tree shaking, minification)
 - Edge functions for faster response
 
 ### Preview (Vercel Preview Deployments)
+
 - Separate DB instance (or same as dev)
 - Unique preview URL per branch
 - Same env vars as production (configurable)
@@ -596,16 +644,19 @@ try {
 ## Security Boundaries
 
 ### Client-Side (Browser)
+
 - **Can access:** Public Supabase anon key (RLS enforced)
 - **Cannot access:** Service role key, API secrets, encrypted passwords
 - **Pattern:** Use Server Actions for sensitive operations
 
 ### Server-Side (Node.js)
+
 - **Can access:** All secrets via environment variables
 - **Can bypass:** RLS via `supabaseAdmin`
 - **Pattern:** Validate input, enforce business rules
 
 ### Database (PostgreSQL)
+
 - **Enforces:** RLS policies, CHECK constraints, foreign keys
 - **Trusted:** Only server-side code (service role)
 - **Pattern:** Defense in depth, never trust client
@@ -615,17 +666,20 @@ try {
 ## Performance Optimizations
 
 ### Caching Strategy
+
 - **User profiles:** 5 minutes (React Query)
 - **Courier configs:** 15 minutes
 - **Price lists:** 1 hour
 - **Static assets:** CDN (Vercel Edge)
 
 ### Database Indexes
+
 - All foreign keys indexed
 - Composite indexes on (user_id, created_at) for pagination
 - GIN index on JSONB metadata columns
 
 ### Query Patterns
+
 - Use `.select('id, name, email')` (specific columns, not `*`)
 - Paginate with `.range(0, 49)` (50 per page)
 - Use `.maybeSingle()` when expecting 0 or 1 result
@@ -635,6 +689,7 @@ try {
 ## Error Handling
 
 ### Client-Side
+
 ```typescript
 try {
   const result = await serverAction(...)
@@ -648,20 +703,25 @@ try {
 ```
 
 ### Server-Side (API Routes)
+
 ```typescript
 try {
-  const context = await requireSafeAuth()
+  const context = await requireSafeAuth();
   // ... business logic
-  return Response.json({ success: true, data })
+  return Response.json({ success: true, data });
 } catch (error: any) {
-  console.error('API Error:', error)
-  return Response.json({
-    error: error.message || 'Internal error'
-  }, { status: error.status || 500 })
+  console.error('API Error:', error);
+  return Response.json(
+    {
+      error: error.message || 'Internal error',
+    },
+    { status: error.status || 500 }
+  );
 }
 ```
 
 ### Server-Side (Server Actions)
+
 ```typescript
 export async function createShipment(...) {
   try {
@@ -680,11 +740,13 @@ export async function createShipment(...) {
 ## Testing Strategy
 
 ### Current State
+
 - **E2E Tests:** Playwright (smoke tests exist)
 - **Unit Tests:** None (TODO)
 - **Integration Tests:** None (TODO)
 
 ### Recommended Additions
+
 - Unit tests for `safe-auth.ts` (Acting Context logic)
 - Integration tests for wallet operations
 - API route tests with mock Supabase
@@ -695,6 +757,7 @@ export async function createShipment(...) {
 ## Deployment Pipeline
 
 ### CI/CD (GitHub Actions)
+
 ```
 1. Push to branch → GitHub Actions
 2. Run linting: `npm run lint`
@@ -705,6 +768,7 @@ export async function createShipment(...) {
 ```
 
 ### Production Deploy
+
 ```
 1. Merge PR to main
 2. Vercel auto-deploys to production
@@ -721,6 +785,7 @@ export async function createShipment(...) {
 **Status:** ✅ **IMPLEMENTATO** (P2 completato)
 
 **Componenti:**
+
 - `components/anne/AnneAssistant.tsx` - Chat UI principale
   - Floating ghost icon in basso a destra
   - Chat panel espandibile con animazioni Framer Motion
@@ -730,12 +795,14 @@ export async function createShipment(...) {
   - Supporto markdown per risposte AI
 
 **Features:**
+
 - Conversazioni multi-turn (P1: `agent_sessions` table)
 - State persistence (P3: LangGraph checkpointer)
 - Telemetria integrata per debugging
 - Responsive design (mobile + desktop)
 
 **Integrazione:**
+
 ```typescript
 // In layout.tsx o page.tsx
 <AnneAssistant
@@ -747,6 +814,7 @@ export async function createShipment(...) {
 ```
 
 **Riferimenti:**
+
 - `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 4: Mobile Anne
 - `STATO_P1_P2_P3.md` - P2 completato
 
@@ -757,6 +825,7 @@ export async function createShipment(...) {
 **Status:** ✅ **IMPLEMENTATO** (P2 completato)
 
 **Componenti:**
+
 - `components/agent/AgentDebugPanel.tsx` - Debug panel per admin
   - Visibile solo per admin/superadmin
   - Mostra routing decisions del supervisor
@@ -764,12 +833,14 @@ export async function createShipment(...) {
   - Toggle on/off con localStorage
 
 **Features:**
+
 - Mostra: `intent_detected`, `supervisor_decision`, `backend_used`
 - Mostra: `iteration_count`, `processingStatus`, `confidenceScore`
 - Mostra: `mentor_response` con sources e confidence
 - Animazioni Framer Motion per expand/collapse
 
 **Integrazione:**
+
 ```typescript
 // In AnneAssistant.tsx
 {(userRole === 'admin' || userRole === 'superadmin') && (
@@ -778,6 +849,7 @@ export async function createShipment(...) {
 ```
 
 **Riferimenti:**
+
 - `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 1: AgentDebugPanel
 - `STATO_P1_P2_P3.md` - P2 completato
 
@@ -788,22 +860,26 @@ export async function createShipment(...) {
 **Status:** ✅ **IMPLEMENTATO** (P2 completato)
 
 **Componenti:**
+
 - Icona ghost nel menu mobile per aprire Anne Assistant
 - Accessibilità migliorata su dispositivi mobili
 - Gestione errori robusta per connessioni mobile instabili
 
 **Features Mobile:**
+
 - ✅ Timeout esplicito di 60 secondi per evitare richieste bloccate
 - ✅ Gestione robusta errori di rete (timeout, connessione instabile)
 - ✅ Parsing JSON più sicuro (legge testo prima di fare parse)
 - ✅ Messaggi di errore specifici per mobile
 
 **Fix Applicato (2025-01-17):**
+
 - Migliorata gestione errori in `components/anne/AnneAssistant.tsx`
 - Timeout controller per evitare richieste bloccate su mobile
 - Gestione specifica per errori di rete e timeout
 
 **Riferimenti:**
+
 - `PROMPT_P2_AI_AGENT_FEATURES.md` - Task 4: Mobile Anne
 - `STATO_P1_P2_P3.md` - P2 completato
 - `FIX_ANTHROPIC_API_KEY_VERCEL.md` - Fix mobile errori (2025-01-17)
@@ -813,23 +889,27 @@ export async function createShipment(...) {
 ### UI/UX Alignment Status
 
 **P1 (Prerequisiti):**
+
 - ✅ Backend infrastructure completa
 - ✅ API endpoints unificati
 - ✅ Database schema per conversazioni
 
 **P2 (UX e Debugging):**
+
 - ✅ Chat UI completa (AnneAssistant)
 - ✅ Debug panel per admin (AgentDebugPanel)
 - ✅ Mobile integration (Mobile Anne)
 - ✅ Persistenza preferenze utente
 
 **P3 (Architecture & Technical Debt):**
+
 - ✅ State persistence (checkpointer)
 - ✅ Performance optimization (cache)
 - ✅ Type safety improvements
 - ⚠️ Nessun nuovo componente UI (focus su backend)
 
 **Conclusione:**
+
 - **UI/UX allineata:** ✅ Sì, tutti i componenti P1/P2/P3 sono implementati e funzionanti
 - **Documentazione:** ✅ Completa - Componenti documentati in questa sezione
 

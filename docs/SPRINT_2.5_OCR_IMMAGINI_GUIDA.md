@@ -10,19 +10,20 @@
 
 ### 1. ARCHITETTURA
 
-| Decisione | Opzioni | Scelta | Motivazione |
-|-----------|---------|--------|-------------|
-| **Riuso vs Riscrittura** | A) Riusare `extractData()` + mapping | ✅ | Riuso infrastruttura esistente, mapping esplicito con `mapVisionOutputToShipmentDraft` |
+| Decisione                | Opzioni                              | Scelta | Motivazione                                                                            |
+| ------------------------ | ------------------------------------ | ------ | -------------------------------------------------------------------------------------- |
+| **Riuso vs Riscrittura** | A) Riusare `extractData()` + mapping | ✅     | Riuso infrastruttura esistente, mapping esplicito con `mapVisionOutputToShipmentDraft` |
 
 ---
 
 ### 2. TEST & FIXTURE
 
-| Decisione | Opzioni | Scelta | Motivazione |
-|-----------|---------|--------|-------------|
-| **Immagini di test** | D) Mix di tutte | ✅ | Copertura completa scenari reali |
+| Decisione            | Opzioni         | Scelta | Motivazione                      |
+| -------------------- | --------------- | ------ | -------------------------------- |
+| **Immagini di test** | D) Mix di tutte | ✅     | Copertura completa scenari reali |
 
 **Requisiti fixture (in `tests/fixtures/ocr-images/`):**
+
 - [x] Almeno 5 immagini con dati completi (CAP, città, provincia, peso)
 - [x] Almeno 3 immagini con dati parziali
 - [x] Almeno 2 immagini "rumorose" (blur, rotazione, basso contrasto)
@@ -32,12 +33,13 @@
 
 ### 3. FALLBACK STRATEGY
 
-| Decisione | Opzioni | Scelta | Motivazione |
-|-----------|---------|--------|-------------|
-| **Se Gemini fallisce** | B) Retry 1x + Clarification | ✅ | Resilienza a errori transienti, fallback esplicito |
-| **Se confidence basso** | C) Blocca e chiedi chiarimento | ✅ | Anti-hallucination |
+| Decisione               | Opzioni                        | Scelta | Motivazione                                        |
+| ----------------------- | ------------------------------ | ------ | -------------------------------------------------- |
+| **Se Gemini fallisce**  | B) Retry 1x + Clarification    | ✅     | Resilienza a errori transienti, fallback esplicito |
+| **Se confidence basso** | C) Blocca e chiedi chiarimento | ✅     | Anti-hallucination                                 |
 
 **Policy implementata:**
+
 1. Primary: Gemini Vision (`extractData`)
 2. If transient error (timeout/429/5xx): 1 retry massimo
 3. If still failing OR Gemini unavailable: `clarification_request` + END
@@ -47,19 +49,19 @@
 
 ### 4. FEATURE FLAG
 
-| Decisione | Opzioni | Scelta | Motivazione |
-|-----------|---------|--------|-------------|
-| **Nome flag** | A) `ENABLE_OCR_IMAGES` | ✅ | Chiaro e descrittivo |
-| **Default** | A) `false` (opt-in) | ✅ | Attivazione graduale |
+| Decisione     | Opzioni                | Scelta | Motivazione          |
+| ------------- | ---------------------- | ------ | -------------------- |
+| **Nome flag** | A) `ENABLE_OCR_IMAGES` | ✅     | Chiaro e descrittivo |
+| **Default**   | A) `false` (opt-in)    | ✅     | Attivazione graduale |
 
 ---
 
 ### 5. CONFIDENCE SCORING
 
-| Decisione | Opzioni | Scelta | Motivazione |
-|-----------|---------|--------|-------------|
-| **Granularità** | A) Score globale | ✅ | Semplicità, Gemini fornisce score unico |
-| **Soglia minima** | C) Configurabile (`OCR_MIN_CONFIDENCE`) | ✅ | Default 0.7, tunable |
+| Decisione         | Opzioni                                 | Scelta | Motivazione                             |
+| ----------------- | --------------------------------------- | ------ | --------------------------------------- |
+| **Granularità**   | A) Score globale                        | ✅     | Semplicità, Gemini fornisce score unico |
+| **Soglia minima** | C) Configurabile (`OCR_MIN_CONFIDENCE`) | ✅     | Default 0.7, tunable                    |
 
 ---
 
@@ -68,6 +70,7 @@
 ### Unit Tests (`npm run test:ocr`)
 
 **Cosa coprono:**
+
 - `mapVisionOutputToShipmentDraft`: mapping campi (pure function)
 - Validazione CAP (5 cifre)
 - Validazione provincia (2 lettere)
@@ -76,15 +79,18 @@
 - `ocrConfig` feature flags
 
 **Cosa NON coprono:**
+
 - Chiamate reali a Gemini Vision
 - Errori di rete
 
 **Mock attivi:**
+
 - Supabase, database, nodes, LangChain, fetch
 
 ### Integration Tests (`npm run test:ocr:integration`)
 
 **Cosa coprono:**
+
 - Chiamate reali a Gemini Vision
 - Estrazione da immagini fixture
 - Retry policy (errori transienti)
@@ -92,9 +98,11 @@
 - Anti-PII nei log
 
 **Cosa NON coprono:**
+
 - Persistenza Supabase
 
 **Prerequisiti:**
+
 - `GOOGLE_API_KEY` in `.env.local`
 - Immagini in `tests/fixtures/ocr-images/`
 
@@ -102,49 +110,52 @@
 
 ## 📊 ACCEPTANCE CRITERIA
 
-| Metrica | Target | Misurazione |
-|---------|--------|-------------|
-| **CAP/Città/Provincia accuracy** | ≥ 70% | `fieldMatches / (fieldMatches + fieldMismatches)` |
-| **Clarification rate** | ≤ 40% | `clarificationRequested / processed` |
-| **Zero PII in log** | 100% | Assert che verifica assenza base64 e nomi nei log |
-| **Retry resilience** | 1 retry per transient | Classificazione errori in `vision-fallback.ts` |
+| Metrica                          | Target                | Misurazione                                       |
+| -------------------------------- | --------------------- | ------------------------------------------------- |
+| **CAP/Città/Provincia accuracy** | ≥ 70%                 | `fieldMatches / (fieldMatches + fieldMismatches)` |
+| **Clarification rate**           | ≤ 40%                 | `clarificationRequested / processed`              |
+| **Zero PII in log**              | 100%                  | Assert che verifica assenza base64 e nomi nei log |
+| **Retry resilience**             | 1 retry per transient | Classificazione errori in `vision-fallback.ts`    |
 
 ### Campi critici
 
-| Campo | Priorità | Note |
-|-------|----------|------|
-| `recipient_zip` (CAP) | 🔴 CRITICO | Deve essere sempre tentato |
-| `recipient_province` | 🟠 ALTO | 2 lettere uppercase |
-| `recipient_city` | 🟠 ALTO | Necessario per routing |
-| `recipient_name` | 🟡 MEDIO | Opzionale per pricing |
-| `weight` | 🟡 MEDIO | Spesso non presente in screenshot |
+| Campo                 | Priorità   | Note                              |
+| --------------------- | ---------- | --------------------------------- |
+| `recipient_zip` (CAP) | 🔴 CRITICO | Deve essere sempre tentato        |
+| `recipient_province`  | 🟠 ALTO    | 2 lettere uppercase               |
+| `recipient_city`      | 🟠 ALTO    | Necessario per routing            |
+| `recipient_name`      | 🟡 MEDIO   | Opzionale per pricing             |
+| `weight`              | 🟡 MEDIO   | Spesso non presente in screenshot |
 
 ---
 
 ## 📁 FILE MODIFICATI/CREATI
 
 ### Implementazione
-| File | Descrizione |
-|------|-------------|
-| `lib/agent/workers/ocr.ts` | ocrWorker con retry policy |
+
+| File                                   | Descrizione                        |
+| -------------------------------------- | ---------------------------------- |
+| `lib/agent/workers/ocr.ts`             | ocrWorker con retry policy         |
 | `lib/agent/workers/vision-fallback.ts` | Retry logic + error classification |
-| `lib/config.ts` | `ocrConfig` con feature flags |
+| `lib/config.ts`                        | `ocrConfig` con feature flags      |
 
 ### Test
-| File | Descrizione |
-|------|-------------|
-| `tests/unit/ocr-vision.test.ts` | 23 unit tests mapping |
-| `tests/integration/ocr-vision.integration.test.ts` | Integration con Gemini |
-| `tests/setup-ocr-isolated.ts` | Setup unit (mock tutto) |
-| `tests/setup-ocr-integration.ts` | Setup integration (mock solo Supabase) |
-| `vitest.config.ocr.ts` | Config unit |
-| `vitest.config.ocr-integration.ts` | Config integration |
+
+| File                                               | Descrizione                            |
+| -------------------------------------------------- | -------------------------------------- |
+| `tests/unit/ocr-vision.test.ts`                    | 23 unit tests mapping                  |
+| `tests/integration/ocr-vision.integration.test.ts` | Integration con Gemini                 |
+| `tests/setup-ocr-isolated.ts`                      | Setup unit (mock tutto)                |
+| `tests/setup-ocr-integration.ts`                   | Setup integration (mock solo Supabase) |
+| `vitest.config.ocr.ts`                             | Config unit                            |
+| `vitest.config.ocr-integration.ts`                 | Config integration                     |
 
 ### Fixture
-| File | Descrizione |
-|------|-------------|
+
+| File                                      | Descrizione                  |
+| ----------------------------------------- | ---------------------------- |
 | `tests/fixtures/ocr-images/expected.json` | Expected output per immagini |
-| `tests/fixtures/ocr-images/README.md` | Istruzioni aggiunta fixture |
+| `tests/fixtures/ocr-images/README.md`     | Istruzioni aggiunta fixture  |
 
 ---
 

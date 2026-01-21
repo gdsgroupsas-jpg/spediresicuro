@@ -1,4 +1,4 @@
-import { Shield } from 'lucide-react'
+import { Shield } from 'lucide-react';
 
 export default function SuperAdminLoading() {
   return (
@@ -22,10 +22,7 @@ export default function SuperAdminLoading() {
         {/* Stats Cards Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm"
-            >
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-100 rounded-lg animate-pulse" />
                 <div className="flex-1">
@@ -70,5 +67,5 @@ export default function SuperAdminLoading() {
         </div>
       </main>
     </div>
-  )
+  );
 }

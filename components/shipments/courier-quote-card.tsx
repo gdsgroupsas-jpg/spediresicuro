@@ -1,6 +1,6 @@
 /**
  * Courier Quote Card - Enterprise-Grade Component
- * 
+ *
  * Mostra corriere con:
  * - Quote real-time al click
  * - Loading states (skeleton loader)
@@ -127,9 +127,7 @@ export function CourierQuoteCard({
           <div>
             <h3 className="font-semibold text-gray-900">{courier.displayName}</h3>
             {estimatedPrice && (
-              <p className="text-sm text-gray-500 mt-1">
-                Stima: €{estimatedPrice.toFixed(2)}
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Stima: €{estimatedPrice.toFixed(2)}</p>
             )}
           </div>
           <div className="text-sm text-gray-400">Clicca per preventivo</div>
@@ -146,7 +144,7 @@ export function CourierQuoteCard({
           <h3 className="font-semibold text-gray-900">{courier.displayName}</h3>
           <Loader2 className="w-5 h-5 animate-spin text-[#FF9500]" />
         </div>
-        
+
         {/* Ottimistic update: mostra stima mentre carica */}
         {estimatedPrice && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
@@ -171,7 +169,7 @@ export function CourierQuoteCard({
           <h3 className="font-semibold text-gray-900">{courier.displayName}</h3>
           <AlertCircle className="w-5 h-5 text-red-500" />
         </div>
-        
+
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
           <p className="text-sm text-red-700 mb-2">{error}</p>
           <button
@@ -184,9 +182,7 @@ export function CourierQuoteCard({
         </div>
 
         {estimatedPrice && (
-          <div className="text-sm text-gray-500">
-            Prezzo stimato: €{estimatedPrice.toFixed(2)}
-          </div>
+          <div className="text-sm text-gray-500">Prezzo stimato: €{estimatedPrice.toFixed(2)}</div>
         )}
       </div>
     );
@@ -223,7 +219,7 @@ export function CourierQuoteCard({
               €{parseFloat(bestRate.total_price || '0').toFixed(2)}
             </span>
           </div>
-          
+
           {/* Prezzo vendita (da calcolare con margine listino) */}
           <div className="flex justify-between items-center pt-2 border-t">
             <span className="text-sm font-medium text-gray-700">Prezzo Vendita:</span>

@@ -1,18 +1,22 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { AlertTriangle, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import type { MarginAlert } from '@/actions/platform-costs'
+import { useState } from 'react';
+import { AlertTriangle, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { MarginAlert } from '@/actions/platform-costs';
 
 interface AlertsTableProps {
-  alerts: MarginAlert[]
-  isLoading: boolean
-  onResolve?: (id: string, status: 'matched' | 'discrepancy' | 'resolved', notes?: string) => Promise<void>
+  alerts: MarginAlert[];
+  isLoading: boolean;
+  onResolve?: (
+    id: string,
+    status: 'matched' | 'discrepancy' | 'resolved',
+    notes?: string
+  ) => Promise<void>;
 }
 
 export function AlertsTable({ alerts, isLoading, onResolve }: AlertsTableProps) {
-  const [resolving, setResolving] = useState<string | null>(null)
+  const [resolving, setResolving] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -26,7 +30,7 @@ export function AlertsTable({ alerts, isLoading, onResolve }: AlertsTableProps) 
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   if (alerts.length === 0) {
@@ -44,18 +48,18 @@ export function AlertsTable({ alerts, isLoading, onResolve }: AlertsTableProps) 
           <p className="text-sm text-gray-400 mt-1">Tutti i margini sono nella norma</p>
         </div>
       </div>
-    )
+    );
   }
 
   const handleResolve = async (id: string, status: 'matched' | 'discrepancy' | 'resolved') => {
-    if (!onResolve) return
-    setResolving(id)
+    if (!onResolve) return;
+    setResolving(id);
     try {
-      await onResolve(id, status)
+      await onResolve(id, status);
     } finally {
-      setResolving(null)
+      setResolving(null);
     }
-  }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -109,7 +113,7 @@ export function AlertsTable({ alerts, isLoading, onResolve }: AlertsTableProps) 
                     <span className="font-mono text-sm text-gray-900">
                       {alert.shipment_tracking_number}
                     </span>
-                    <a 
+                    <a
                       href={`/dashboard/super-admin/shipments/${alert.shipment_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -131,37 +135,42 @@ export function AlertsTable({ alerts, isLoading, onResolve }: AlertsTableProps) 
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className="text-sm text-gray-900">
-                    €{alert.billed_amount.toFixed(2)}
-                  </span>
+                  <span className="text-sm text-gray-900">€{alert.billed_amount.toFixed(2)}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className="text-sm text-gray-900">
-                    €{alert.provider_cost.toFixed(2)}
-                  </span>
+                  <span className="text-sm text-gray-900">€{alert.provider_cost.toFixed(2)}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className={`text-sm font-semibold ${
-                    alert.platform_margin < 0 ? 'text-red-600' : 'text-green-600'
-                  }`}>
+                  <span
+                    className={`text-sm font-semibold ${
+                      alert.platform_margin < 0 ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
                     €{alert.platform_margin.toFixed(2)}
                   </span>
-                  <p className={`text-xs ${
-                    alert.platform_margin_percent < 0 ? 'text-red-500' : 'text-green-500'
-                  }`}>
+                  <p
+                    className={`text-xs ${
+                      alert.platform_margin_percent < 0 ? 'text-red-500' : 'text-green-500'
+                    }`}
+                  >
                     {alert.platform_margin_percent.toFixed(1)}%
                   </p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    alert.alert_type === 'negative_margin' 
-                      ? 'bg-red-100 text-red-700'
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      alert.alert_type === 'negative_margin'
+                        ? 'bg-red-100 text-red-700'
+                        : alert.alert_type === 'low_margin'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-orange-100 text-orange-700'
+                    }`}
+                  >
+                    {alert.alert_type === 'negative_margin'
+                      ? 'Perdita'
                       : alert.alert_type === 'low_margin'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {alert.alert_type === 'negative_margin' ? 'Perdita' :
-                     alert.alert_type === 'low_margin' ? 'Basso' : 'Anomalo'}
+                        ? 'Basso'
+                        : 'Anomalo'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -194,5 +203,5 @@ export function AlertsTable({ alerts, isLoading, onResolve }: AlertsTableProps) 
         </table>
       </div>
     </div>
-  )
+  );
 }

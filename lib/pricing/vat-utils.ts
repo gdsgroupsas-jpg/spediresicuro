@@ -7,7 +7,7 @@
  * @module lib/pricing/vat-utils
  */
 
-export type VATMode = "included" | "excluded" | null;
+export type VATMode = 'included' | 'excluded' | null;
 
 const DEFAULT_VAT_RATE = 22.0;
 
@@ -37,17 +37,17 @@ export function normalizePrice(
   vatRate: number = DEFAULT_VAT_RATE
 ): number {
   // Normalizza null a 'excluded' (retrocompatibilità)
-  const from = fromMode || "excluded";
-  const to = toMode || "excluded";
+  const from = fromMode || 'excluded';
+  const to = toMode || 'excluded';
 
   if (from === to) return price;
 
-  if (from === "included" && to === "excluded") {
+  if (from === 'included' && to === 'excluded') {
     // IVA inclusa → esclusa: price / (1 + vatRate/100)
     return price / (1 + vatRate / 100);
   }
 
-  if (from === "excluded" && to === "included") {
+  if (from === 'excluded' && to === 'included') {
     // IVA esclusa → inclusa: price * (1 + vatRate/100)
     return price * (1 + vatRate / 100);
   }
@@ -112,8 +112,8 @@ export function extractPriceExclVAT(
  * @param mode - Modalità IVA da verificare
  * @returns true se valido, false altrimenti
  */
-export function isValidVATMode(mode: VATMode): mode is "included" | "excluded" {
-  return mode === "included" || mode === "excluded";
+export function isValidVATMode(mode: VATMode): mode is 'included' | 'excluded' {
+  return mode === 'included' || mode === 'excluded';
 }
 
 /**
@@ -126,8 +126,6 @@ export function isValidVATMode(mode: VATMode): mode is "included" | "excluded" {
  * getVATModeWithFallback(null) // 'excluded'
  * getVATModeWithFallback('included') // 'included'
  */
-export function getVATModeWithFallback(
-  mode: VATMode
-): "included" | "excluded" {
-  return mode || "excluded";
+export function getVATModeWithFallback(mode: VATMode): 'included' | 'excluded' {
+  return mode || 'excluded';
 }

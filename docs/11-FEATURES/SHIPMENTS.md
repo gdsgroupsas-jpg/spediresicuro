@@ -20,13 +20,13 @@ Questo documento descrive il sistema di gestione spedizioni di SpedireSicuro, in
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Creazione Spedizione | docs/11-FEATURES/SHIPMENTS.md | [Creazione](#creazione-spedizione) |
-| Idempotency | docs/11-FEATURES/SHIPMENTS.md | [Idempotency](#idempotency-duplicate-prevention) |
-| Compensation Queue | docs/11-FEATURES/SHIPMENTS.md | [Compensation](#compensation-queue-failure-recovery) |
-| Wallet Integration | docs/11-FEATURES/WALLET.md | [Wallet](WALLET.md) |
-| Database Architecture | docs/2-ARCHITECTURE/DATABASE.md | [Database](../2-ARCHITECTURE/DATABASE.md) |
+| Sezione               | Pagina                          | Link                                                 |
+| --------------------- | ------------------------------- | ---------------------------------------------------- |
+| Creazione Spedizione  | docs/11-FEATURES/SHIPMENTS.md   | [Creazione](#creazione-spedizione)                   |
+| Idempotency           | docs/11-FEATURES/SHIPMENTS.md   | [Idempotency](#idempotency-duplicate-prevention)     |
+| Compensation Queue    | docs/11-FEATURES/SHIPMENTS.md   | [Compensation](#compensation-queue-failure-recovery) |
+| Wallet Integration    | docs/11-FEATURES/WALLET.md      | [Wallet](WALLET.md)                                  |
+| Database Architecture | docs/2-ARCHITECTURE/DATABASE.md | [Database](../2-ARCHITECTURE/DATABASE.md)            |
 
 ## Content
 
@@ -56,62 +56,70 @@ Questo documento descrive il sistema di gestione spedizioni di SpedireSicuro, in
 export async function POST(request: Request) {
   const context = await requireSafeAuth();
   const targetId = context.target.id; // Who pays
-  
+
   const validated = createShipmentSchema.parse(await request.json());
-  
+
   // 1. Genera idempotency key
-  const idempotencyKey = crypto.createHash('sha256').update(JSON.stringify({
-    userId: targetId,
-    recipient: validated.recipient,
-    packages: validated.packages,
-    timestamp: Math.floor(Date.now() / 5000), // 5-second window
-  })).digest('hex');
-  
+  const idempotencyKey = crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        userId: targetId,
+        recipient: validated.recipient,
+        packages: validated.packages,
+        timestamp: Math.floor(Date.now() / 5000), // 5-second window
+      })
+    )
+    .digest('hex');
+
   // 2. Acquire idempotency lock (CRASH-SAFE)
   const { data: lockResult } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
     p_idempotency_key: idempotencyKey,
     p_user_id: targetId,
     p_ttl_minutes: 30,
   });
-  
+
   if (!lockResult?.[0]?.acquired) {
     // Duplicato o lock già acquisito
     return Response.json({ error: 'DUPLICATE_REQUEST' }, { status: 409 });
   }
-  
+
   // 3. Verifica saldo wallet
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('wallet_balance, role')
     .eq('id', targetId)
     .single();
-  
-  const estimatedCost = 8.50; // TODO: Real quote
+
+  const estimatedCost = 8.5; // TODO: Real quote
   const isSuperadmin = user.role === 'SUPERADMIN';
-  
+
   if (!isSuperadmin && user.wallet_balance < estimatedCost) {
-    return Response.json({
-      error: 'INSUFFICIENT_CREDIT',
-      available: user.wallet_balance,
-      required: estimatedCost
-    }, { status: 402 });
+    return Response.json(
+      {
+        error: 'INSUFFICIENT_CREDIT',
+        available: user.wallet_balance,
+        required: estimatedCost,
+      },
+      { status: 402 }
+    );
   }
-  
+
   // 4. Debit wallet (ATOMICO)
   if (!isSuperadmin) {
     const { error: walletError } = await supabaseAdmin.rpc('decrement_wallet_balance', {
       p_user_id: targetId,
       p_amount: estimatedCost,
     });
-    
+
     if (walletError) {
       return Response.json({ error: 'WALLET_DEBIT_FAILED' }, { status: 500 });
     }
   }
-  
+
   // 5. Chiama API corriere
   const courierResponse = await courierClient.createShipping(validated);
-  
+
   // 6. Inserisci spedizione in DB
   const { data: shipment, error: dbError } = await supabaseAdmin
     .from('shipments')
@@ -124,7 +132,7 @@ export async function POST(request: Request) {
     })
     .select()
     .single();
-  
+
   if (dbError) {
     // Compensation: Tenta di cancellare da corriere
     try {
@@ -139,13 +147,13 @@ export async function POST(request: Request) {
     }
     throw dbError;
   }
-  
+
   // 7. Rilascia lock
   await supabaseAdmin.rpc('complete_idempotency_lock', {
     p_idempotency_key: idempotencyKey,
     p_shipment_id: shipment.id,
   });
-  
+
   return Response.json({ success: true, shipment });
 }
 ```
@@ -155,6 +163,7 @@ export async function POST(request: Request) {
 **File:** `lib/shipments/create-shipment-core.ts`
 
 Funzione riusabile per creazione spedizione, usata da:
+
 - API Route (`app/api/shipments/create/route.ts`)
 - Smoke test scripts (con courier mock + failure injection)
 
@@ -188,16 +197,23 @@ Hash key fields + timestamp window + crash-safe lock.
 #### Implementazione
 
 **Idempotency Key:**
+
 ```typescript
-const idempotencyKey = crypto.createHash('sha256').update(JSON.stringify({
-  userId: context.target.id,
-  recipient: validated.recipient,
-  packages: validated.packages,
-  timestamp: Math.floor(Date.now() / 5000), // 5-second buckets
-})).digest('hex');
+const idempotencyKey = crypto
+  .createHash('sha256')
+  .update(
+    JSON.stringify({
+      userId: context.target.id,
+      recipient: validated.recipient,
+      packages: validated.packages,
+      timestamp: Math.floor(Date.now() / 5000), // 5-second buckets
+    })
+  )
+  .digest('hex');
 ```
 
 **Crash-Safe Lock:**
+
 ```typescript
 // Acquire lock PRIMA di wallet debit
 const { data: lockResult } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
@@ -210,9 +226,9 @@ if (!lockResult?.[0]?.acquired) {
   // Lock già acquisito = duplicato
   if (lockResult?.[0]?.status === 'completed') {
     // Spedizione già creata, ritorna esistente
-    return Response.json({ 
+    return Response.json({
       shipment_id: lockResult[0].shipment_id,
-      duplicate: true 
+      duplicate: true,
     });
   }
   return Response.json({ error: 'DUPLICATE_REQUEST' }, { status: 409 });
@@ -220,10 +236,12 @@ if (!lockResult?.[0]?.acquired) {
 ```
 
 **Why 5-second window:**
+
 - Permette retry legittimi (utente doppio click)
 - Previene stessa spedizione creata multiple volte in burst
 
 **Why 30-minute TTL:**
+
 - Previene TOCTOU (Time-Of-Check-Time-Of-Use) race condition
 - Se lock scade prima del retry, potrebbe causare doppio debit
 
@@ -245,19 +263,17 @@ if (!lockResult?.[0]?.acquired) {
 try {
   // 1. Chiama API corriere
   const courierResponse = await courierClient.createShipping(validated);
-  
+
   // 2. Inserisci spedizione in DB
-  const { data: shipment } = await supabaseAdmin
-    .from('shipments')
-    .insert({
-      tracking_number: courierResponse.trackingNumber,
-      // ...
-    });
+  const { data: shipment } = await supabaseAdmin.from('shipments').insert({
+    tracking_number: courierResponse.trackingNumber,
+    // ...
+  });
 } catch (dbError) {
   // 3. DB fallito, prova a cancellare da corriere
   try {
-    await courierClient.deleteShipping({ 
-      shipmentId: courierResponse.shipmentId 
+    await courierClient.deleteShipping({
+      shipmentId: courierResponse.shipmentId,
     });
   } catch (deleteError) {
     // 4. Non può cancellare, metti in coda per intervento manuale
@@ -278,7 +294,7 @@ try {
       status: 'PENDING',
     });
   }
-  
+
   throw new Error('Shipment creation failed. Support notified.');
 }
 ```
@@ -288,6 +304,7 @@ try {
 **Location:** `/dashboard/admin/compensation` (TODO: Build UI)
 
 **Actions:**
+
 - Visualizza pending compensations
 - Retry delete su corriere API
 - Mark as resolved
@@ -314,15 +331,18 @@ const { data: user } = await supabaseAdmin
   .eq('id', context.target.id)
   .single();
 
-const estimatedCost = 8.50;
+const estimatedCost = 8.5;
 const isSuperadmin = user.role === 'SUPERADMIN';
 
 if (!isSuperadmin && user.wallet_balance < estimatedCost) {
-  return Response.json({
-    error: 'INSUFFICIENT_CREDIT',
-    available: user.wallet_balance,
-    required: estimatedCost
-  }, { status: 402 });
+  return Response.json(
+    {
+      error: 'INSUFFICIENT_CREDIT',
+      available: user.wallet_balance,
+      required: estimatedCost,
+    },
+    { status: 402 }
+  );
 }
 ```
 
@@ -336,12 +356,12 @@ if (!isSuperadmin) {
     p_user_id: targetId,
     p_amount: estimatedCost,
   });
-  
+
   if (walletError) {
     // Fail-fast: Non procedere senza debit atomico
     throw new Error(`Wallet debit failed: ${walletError.message}`);
   }
-  
+
   // Registra transazione (audit trail)
   await supabaseAdmin.from('wallet_transactions').insert({
     user_id: targetId,
@@ -385,10 +405,12 @@ if (Math.abs(costDifference) > 0.01) {
 **⚠️ IMPORTANTE:** Le spedizioni supportano impersonation tramite Acting Context.
 
 **Pattern:**
+
 - `context.target.id` → Chi paga (cliente, anche se impersonating)
 - `context.actor.id` → Chi esegue (SuperAdmin se impersonating)
 
 **Esempio:**
+
 ```typescript
 const context = await requireSafeAuth();
 
@@ -412,6 +434,7 @@ const { data: shipment } = await supabaseAdmin.from('shipments').insert({
 **Soluzione:** Abstract adapter interface con implementazioni provider-specific.
 
 **Core Interface:**
+
 ```typescript
 // lib/adapters/couriers/base.ts
 export abstract class CourierAdapter {
@@ -423,6 +446,7 @@ export abstract class CourierAdapter {
 ```
 
 **Implementations:**
+
 - `SpedisciOnlineAdapter` - Spedisci.Online API (JSON + CSV fallback)
 - `PosteAdapter` - Poste Italiane API
 - `MockCourierAdapter` - Testing
@@ -443,7 +467,7 @@ import { createShipmentCore } from '@/lib/shipments/create-shipment-core';
 export async function POST(request: Request) {
   const context = await requireSafeAuth();
   const validated = createShipmentSchema.parse(await request.json());
-  
+
   const result = await createShipmentCore({
     context,
     validated,
@@ -453,7 +477,7 @@ export async function POST(request: Request) {
       now: () => new Date(),
     },
   });
-  
+
   return Response.json(result.json, { status: result.status });
 }
 ```
@@ -471,9 +495,9 @@ const { data: existing } = await supabaseAdmin
 
 if (existing?.status === 'completed') {
   // Spedizione già creata, ritorna esistente
-  return Response.json({ 
+  return Response.json({
     shipment_id: existing.shipment_id,
-    duplicate: true 
+    duplicate: true,
   });
 }
 ```
@@ -493,14 +517,14 @@ const { data: compensations } = await supabaseAdmin
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Doppia spedizione creata | Verifica che idempotency lock sia acquisito PRIMA di wallet debit |
-| Wallet debit fallito | Verifica che `decrement_wallet_balance()` sia chiamato correttamente |
-| Compensation queue piena | Verifica log errori, risolvi manualmente, retry delete su corriere |
-| Courier API timeout | Implementa retry con exponential backoff, fallback a compensation queue |
-| Costo finale diverso | Verifica che adjustment wallet sia eseguito correttamente |
-| Impersonation non funziona | Verifica che `context.target.id` sia usato (non `context.actor.id`) |
+| Issue                      | Soluzione                                                               |
+| -------------------------- | ----------------------------------------------------------------------- |
+| Doppia spedizione creata   | Verifica che idempotency lock sia acquisito PRIMA di wallet debit       |
+| Wallet debit fallito       | Verifica che `decrement_wallet_balance()` sia chiamato correttamente    |
+| Compensation queue piena   | Verifica log errori, risolvi manualmente, retry delete su corriere      |
+| Courier API timeout        | Implementa retry con exponential backoff, fallback a compensation queue |
+| Costo finale diverso       | Verifica che adjustment wallet sia eseguito correttamente               |
+| Impersonation non funziona | Verifica che `context.target.id` sia usato (non `context.actor.id`)     |
 
 ---
 
@@ -516,11 +540,12 @@ const { data: compensations } = await supabaseAdmin
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version - Shipments system, Idempotency, Compensation Queue | AI Agent |
+| Date       | Version | Changes                                                             | Author   |
+| ---------- | ------- | ------------------------------------------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version - Shipments system, Idempotency, Compensation Queue | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

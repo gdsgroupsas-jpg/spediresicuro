@@ -10,7 +10,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Variabili d\'ambiente mancanti!');
+  console.error("❌ Variabili d'ambiente mancanti!");
   console.error('Richiesto: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
   console.error('Assicurati di avere un file .env.local nella root del progetto');
   process.exit(1);
@@ -27,14 +27,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function testDecrypt() {
   console.log('🔐 Test decriptazione credenziali Poste...\n');
-  
+
   const { data: config, error } = await supabase
     .from('courier_configs')
     .select('id, name, api_key, api_secret')
     .eq('provider_id', 'poste')
     .eq('is_active', true)
     .single();
-  
+
   if (error) {
     console.error('❌ Errore query:', error);
     if (error.code === 'PGRST116') {
@@ -43,16 +43,16 @@ async function testDecrypt() {
     }
     return;
   }
-  
+
   if (!config) {
     console.error('❌ Nessuna config attiva');
     return;
   }
-  
+
   console.log('📋 Configurazione trovata:', config.name);
   console.log('ID:', config.id);
   console.log('');
-  
+
   // Test decriptazione API Key
   if (config.api_key) {
     try {
@@ -70,9 +70,9 @@ async function testDecrypt() {
   } else {
     console.warn('⚠️  API Key mancante');
   }
-  
+
   console.log('');
-  
+
   // Test decriptazione API Secret
   if (config.api_secret) {
     try {
@@ -90,7 +90,7 @@ async function testDecrypt() {
   } else {
     console.warn('⚠️  API Secret mancante');
   }
-  
+
   console.log('');
   console.log('✅ Test decriptazione completato');
 }
@@ -103,4 +103,3 @@ testDecrypt()
     console.error('\n❌ Errore durante test:', error);
     process.exit(1);
   });
-

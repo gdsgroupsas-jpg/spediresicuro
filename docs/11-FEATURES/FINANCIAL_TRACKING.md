@@ -20,13 +20,13 @@ Questo documento descrive il sistema di tracking finanziario di SpedireSicuro, c
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Platform Costs | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Platform Costs](#platform-provider-costs) |
-| P&L Views | docs/11-FEATURES/FINANCIAL_TRACKING.md | [P&L](#p-l-views) |
-| Cost Calculation | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Cost Calculation](#cost-calculation) |
-| Financial Alerts | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Alerts](#financial-alerts) |
-| Reconciliation | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Reconciliation](#reconciliation) |
+| Sezione          | Pagina                                 | Link                                       |
+| ---------------- | -------------------------------------- | ------------------------------------------ |
+| Platform Costs   | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Platform Costs](#platform-provider-costs) |
+| P&L Views        | docs/11-FEATURES/FINANCIAL_TRACKING.md | [P&L](#p-l-views)                          |
+| Cost Calculation | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Cost Calculation](#cost-calculation)      |
+| Financial Alerts | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Alerts](#financial-alerts)                |
+| Reconciliation   | docs/11-FEATURES/FINANCIAL_TRACKING.md | [Reconciliation](#reconciliation)          |
 
 ## Content
 
@@ -35,6 +35,7 @@ Questo documento descrive il sistema di tracking finanziario di SpedireSicuro, c
 #### Concetto
 
 Quando un Reseller/BYOC usa un listino assegnato dal SuperAdmin (contratti piattaforma), SpedireSicuro paga il corriere per conto del Reseller. La tabella `platform_provider_costs` traccia:
+
 - Quanto abbiamo addebitato al Reseller (`billed_amount`)
 - Quanto paghiamo noi al corriere (`provider_cost`)
 - Il margine effettivo (`platform_margin`)
@@ -46,36 +47,36 @@ Quando un Reseller/BYOC usa un listino assegnato dal SuperAdmin (contratti piatt
 ```sql
 CREATE TABLE platform_provider_costs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  
+
   -- Riferimento spedizione
   shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
   shipment_tracking_number TEXT NOT NULL,
-  
+
   -- Chi ha pagato (Reseller o suo sub-user)
   billed_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  
+
   -- Importi
   billed_amount DECIMAL(10,2) NOT NULL CHECK (billed_amount >= 0), -- Quanto addebitato
   provider_cost DECIMAL(10,2) NOT NULL CHECK (provider_cost >= 0), -- Quanto paghiamo
   platform_margin DECIMAL(10,2), -- Calcolato via trigger: billed_amount - provider_cost
   platform_margin_percent DECIMAL(5,2), -- Calcolato via trigger
-  
+
   -- Fonte API
   api_source TEXT NOT NULL CHECK (api_source IN ('platform', 'reseller_own', 'byoc_own')),
   price_list_id UUID REFERENCES price_lists(id),
   master_price_list_id UUID REFERENCES price_lists(id),
-  
+
   -- Dettagli corriere
   courier_code TEXT NOT NULL,
   service_type TEXT,
-  
+
   -- Fonte costo
   cost_source TEXT CHECK (cost_source IN ('api_realtime', 'master_list', 'historical_avg', 'estimate')),
-  
+
   -- Riconciliazione
   reconciliation_status TEXT DEFAULT 'pending' CHECK (reconciliation_status IN ('pending', 'matched', 'discrepancy', 'resolved')),
   reconciliation_notes TEXT,
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -90,17 +91,17 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Calcola margine assoluto
   NEW.platform_margin := NEW.billed_amount - NEW.provider_cost;
-  
+
   -- Calcola margine percentuale
   IF NEW.provider_cost > 0 THEN
     NEW.platform_margin_percent := ROUND(
-      ((NEW.billed_amount - NEW.provider_cost) / NEW.provider_cost * 100)::numeric, 
+      ((NEW.billed_amount - NEW.provider_cost) / NEW.provider_cost * 100)::numeric,
       2
     );
   ELSE
     NEW.platform_margin_percent := 0;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -124,7 +125,7 @@ export async function recordPlatformCost(
   if (params.apiSource !== 'platform') {
     return { success: true };
   }
-  
+
   // Usa funzione RPC per insert sicuro
   const { data, error } = await supabaseAdmin.rpc('record_platform_provider_cost', {
     p_shipment_id: params.shipmentId,
@@ -136,13 +137,13 @@ export async function recordPlatformCost(
     p_courier_code: params.courierCode,
     p_cost_source: params.costSource || 'estimate',
   });
-  
+
   if (error) {
     // NON bloccare la spedizione, solo log
     console.error('[PLATFORM_COST] Failed to record:', error);
     return { success: false, error: error.message };
   }
-  
+
   return { success: true, recordId: data as string };
 }
 ```
@@ -171,7 +172,7 @@ export async function determineApiSource(
   params: DetermineApiSourceParams
 ): Promise<DetermineApiSourceResult> {
   const { userId, priceListId } = params;
-  
+
   // Se abbiamo un priceListId, verifica caratteristiche
   if (priceListId) {
     const { data: priceList } = await supabaseAdmin
@@ -179,7 +180,7 @@ export async function determineApiSource(
       .select('id, master_list_id, is_global, list_type')
       .eq('id', priceListId)
       .single();
-    
+
     // Check 1: Listino derivato da master
     if (priceList?.master_list_id) {
       return {
@@ -188,7 +189,7 @@ export async function determineApiSource(
         reason: 'Listino derivato da master',
       };
     }
-    
+
     // Check 2: Listino globale
     if (priceList?.is_global) {
       return {
@@ -197,18 +198,18 @@ export async function determineApiSource(
       };
     }
   }
-  
+
   // Check 3: Verifica tipo utente
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('account_type')
     .eq('id', userId)
     .single();
-  
+
   if (user?.account_type === 'byoc') {
     return { apiSource: 'byoc_own', reason: 'Utente BYOC' };
   }
-  
+
   // Default: reseller con proprio contratto
   return { apiSource: 'reseller_own', reason: 'Contratto proprio' };
 }
@@ -239,7 +240,7 @@ export async function calculateProviderCost(
   } catch (error) {
     // Fallback a listino
   }
-  
+
   // 2. Usa master price list
   if (params.masterPriceListId) {
     const listCost = await getCostFromPriceList(
@@ -251,16 +252,13 @@ export async function calculateProviderCost(
       return { cost: listCost, source: 'master_list' };
     }
   }
-  
+
   // 3. Fallback: historical average
-  const avgCost = await getHistoricalAverageCost(
-    params.courierCode,
-    params.destination
-  );
+  const avgCost = await getHistoricalAverageCost(params.courierCode, params.destination);
   if (avgCost) {
     return { cost: avgCost, source: 'historical_avg' };
   }
-  
+
   // 4. Ultimo fallback: stima
   return { cost: estimateCost(params), source: 'estimate' };
 }
@@ -278,30 +276,30 @@ export async function calculateProviderCost(
 
 ```sql
 CREATE OR REPLACE VIEW v_platform_daily_pnl AS
-SELECT 
+SELECT
   DATE(ppc.created_at) AS date,
   ppc.courier_code,
-  
+
   -- Volumi
   COUNT(*) AS shipments_count,
-  
+
   -- Fatturato (quanto abbiamo incassato)
   SUM(ppc.billed_amount) AS total_billed,
   AVG(ppc.billed_amount) AS avg_billed,
-  
+
   -- Costi (quanto paghiamo)
   SUM(ppc.provider_cost) AS total_provider_cost,
   AVG(ppc.provider_cost) AS avg_provider_cost,
-  
+
   -- Margine
   SUM(ppc.platform_margin) AS total_margin,
   AVG(ppc.platform_margin) AS avg_margin,
   AVG(ppc.platform_margin_percent) AS avg_margin_percent,
-  
+
   -- Alert
   COUNT(*) FILTER (WHERE ppc.platform_margin < 0) AS negative_margin_count,
   COUNT(*) FILTER (WHERE ppc.reconciliation_status = 'discrepancy') AS discrepancy_count,
-  
+
   -- Cost source breakdown
   COUNT(*) FILTER (WHERE ppc.cost_source = 'api_realtime') AS cost_from_api,
   COUNT(*) FILTER (WHERE ppc.cost_source = 'master_list') AS cost_from_list,
@@ -319,34 +317,34 @@ ORDER BY date DESC, courier_code;
 
 ```sql
 CREATE OR REPLACE VIEW v_platform_monthly_pnl AS
-SELECT 
+SELECT
   DATE_TRUNC('month', ppc.created_at)::DATE AS month,
-  
+
   -- Volumi
   COUNT(*) AS total_shipments,
   COUNT(DISTINCT ppc.billed_user_id) AS unique_users,
-  
+
   -- Fatturato
   SUM(ppc.billed_amount) AS total_revenue,
-  
+
   -- Costi
   SUM(ppc.provider_cost) AS total_cost,
-  
+
   -- Margine
   SUM(ppc.platform_margin) AS gross_margin,
   ROUND(
-    (SUM(ppc.platform_margin) / NULLIF(SUM(ppc.billed_amount), 0) * 100)::numeric, 
+    (SUM(ppc.platform_margin) / NULLIF(SUM(ppc.billed_amount), 0) * 100)::numeric,
     2
   ) AS margin_percent_of_revenue,
-  
+
   -- Qualità dati
   COUNT(*) FILTER (WHERE ppc.cost_source IN ('api_realtime', 'master_list')) AS accurate_cost_count,
   ROUND(
-    (COUNT(*) FILTER (WHERE ppc.cost_source IN ('api_realtime', 'master_list'))::DECIMAL / 
+    (COUNT(*) FILTER (WHERE ppc.cost_source IN ('api_realtime', 'master_list'))::DECIMAL /
      NULLIF(COUNT(*), 0) * 100)::numeric,
     1
   ) AS cost_accuracy_percent,
-  
+
   -- Issues
   COUNT(*) FILTER (WHERE ppc.platform_margin < 0) AS negative_margin_count,
   COUNT(*) FILTER (WHERE ppc.reconciliation_status = 'discrepancy') AS unresolved_discrepancies
@@ -363,33 +361,33 @@ ORDER BY month DESC;
 
 ```sql
 CREATE OR REPLACE VIEW v_reseller_monthly_platform_usage AS
-SELECT 
+SELECT
   DATE_TRUNC('month', ppc.created_at)::DATE AS month,
   ppc.billed_user_id,
   u.email AS user_email,
   u.name AS user_name,
-  
+
   -- Volumi
   COUNT(*) AS shipments_count,
-  
+
   -- Spesa (quanto ha pagato il reseller)
   SUM(ppc.billed_amount) AS total_spent,
   AVG(ppc.billed_amount) AS avg_per_shipment,
-  
+
   -- Margine generato per noi
   SUM(ppc.platform_margin) AS margin_generated,
   AVG(ppc.platform_margin_percent) AS avg_margin_percent,
-  
+
   -- Trend (vs mese precedente)
   LAG(COUNT(*)) OVER (
-    PARTITION BY ppc.billed_user_id 
+    PARTITION BY ppc.billed_user_id
     ORDER BY DATE_TRUNC('month', ppc.created_at)
   ) AS prev_month_shipments
 
 FROM platform_provider_costs ppc
 JOIN users u ON u.id = ppc.billed_user_id
 WHERE ppc.api_source = 'platform'
-GROUP BY 
+GROUP BY
   DATE_TRUNC('month', ppc.created_at),
   ppc.billed_user_id,
   u.email,
@@ -407,7 +405,7 @@ ORDER BY month DESC, total_spent DESC;
 
 ```sql
 CREATE OR REPLACE VIEW v_platform_margin_alerts AS
-SELECT 
+SELECT
   ppc.id,
   ppc.shipment_id,
   ppc.shipment_tracking_number,
@@ -480,7 +478,7 @@ I record in `platform_provider_costs` hanno un campo `reconciliation_status`:
 
 ```sql
 CREATE OR REPLACE VIEW v_reconciliation_pending AS
-SELECT 
+SELECT
   ppc.id,
   ppc.shipment_id,
   ppc.shipment_tracking_number,
@@ -532,7 +530,7 @@ if (apiSourceResult.apiSource === 'platform') {
     },
     masterPriceListId: apiSourceResult.masterPriceListId,
   });
-  
+
   // 3. Registra costo piattaforma (NON blocca se fallisce)
   await recordPlatformCost(supabaseAdmin, {
     shipmentId: shipment.id,
@@ -602,13 +600,13 @@ await recordPlatformCost(supabaseAdmin, {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Costo non registrato | Verifica che `api_source = 'platform'`, controlla log errori (non blocca spedizione) |
-| Margine negativo | Verifica listino master, controlla calcolo provider_cost, verifica alert |
-| P&L view vuota | Verifica che spedizioni abbiano `api_source = 'platform'`, controlla RLS |
-| Reconciliation fallisce | Verifica matching tracking numbers, controlla importi fattura |
-| Cost source sempre 'estimate' | Verifica che master price list esista, controlla API corriere disponibile |
+| Issue                         | Soluzione                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| Costo non registrato          | Verifica che `api_source = 'platform'`, controlla log errori (non blocca spedizione) |
+| Margine negativo              | Verifica listino master, controlla calcolo provider_cost, verifica alert             |
+| P&L view vuota                | Verifica che spedizioni abbiano `api_source = 'platform'`, controlla RLS             |
+| Reconciliation fallisce       | Verifica matching tracking numbers, controlla importi fattura                        |
+| Cost source sempre 'estimate' | Verifica che master price list esista, controlla API corriere disponibile            |
 
 ---
 
@@ -623,11 +621,12 @@ await recordPlatformCost(supabaseAdmin, {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version - Platform Costs, P&L Views, Cost Calculation, Alerts | AI Agent |
+| Date       | Version | Changes                                                               | Author   |
+| ---------- | ------- | --------------------------------------------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version - Platform Costs, P&L Views, Cost Calculation, Alerts | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

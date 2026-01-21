@@ -21,13 +21,13 @@ Questo documento descrive l'architettura generale di SpedireSicuro, un Logistics
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| System Overview | docs/2-ARCHITECTURE/OVERVIEW.md | [System Overview](#system-overview) |
-| Courier Adapter | docs/2-ARCHITECTURE/OVERVIEW.md | [Courier Adapter Pattern](#courier-adapter-pattern) |
-| Directory Structure | docs/2-ARCHITECTURE/OVERVIEW.md | [Directory Structure](#directory-structure) |
-| Feature Flags | docs/2-ARCHITECTURE/OVERVIEW.md | [Feature Flags](#feature-flags) |
-| Stack | docs/2-ARCHITECTURE/OVERVIEW.md | [Stack Reality Check](#stack-reality-check) |
+| Sezione             | Pagina                          | Link                                                |
+| ------------------- | ------------------------------- | --------------------------------------------------- |
+| System Overview     | docs/2-ARCHITECTURE/OVERVIEW.md | [System Overview](#system-overview)                 |
+| Courier Adapter     | docs/2-ARCHITECTURE/OVERVIEW.md | [Courier Adapter Pattern](#courier-adapter-pattern) |
+| Directory Structure | docs/2-ARCHITECTURE/OVERVIEW.md | [Directory Structure](#directory-structure)         |
+| Feature Flags       | docs/2-ARCHITECTURE/OVERVIEW.md | [Feature Flags](#feature-flags)                     |
+| Stack               | docs/2-ARCHITECTURE/OVERVIEW.md | [Stack Reality Check](#stack-reality-check)         |
 
 ## Content
 
@@ -62,6 +62,7 @@ SpedireSicuro è un'**applicazione Next.js 14** con architettura **App Router**,
 ```
 
 **Riferimento Costituzione:**
+
 - [README.md](../../README.md) - Costituzione del sistema (Courier Adapter pattern, 3 modelli operativi)
 - [Business Vision](../9-BUSINESS/VISION.md) - Visione business completa
 
@@ -70,6 +71,7 @@ SpedireSicuro è un'**applicazione Next.js 14** con architettura **App Router**,
 ### Stack Reality Check
 
 #### Frontend
+
 - **Next.js 14.2+** - App Router (NOT Pages Router)
 - **React 18+** - Server Components + Client Components
 - **TypeScript** - Strict mode enabled
@@ -78,32 +80,38 @@ SpedireSicuro è un'**applicazione Next.js 14** con architettura **App Router**,
 - **Framer Motion** - Animations (glassmorphism effects)
 
 #### Backend
+
 - **Next.js API Routes** - `/app/api/**` (Node.js runtime)
 - **Server Actions** - `/app/actions/**` (React Server Actions)
 - **Supabase Client** - RLS-enforced queries
 - **Supabase Admin** - Bypass RLS (server-side only)
 
 #### Database
+
 - **PostgreSQL 15+** - Via Supabase
 - **Row Level Security (RLS)** - Tenant isolation
 - **Triggers** - Auto-update wallet balance
 - **Functions (RPC)** - Business logic in DB
 
 #### Authentication
+
 - **NextAuth.js v5** - Session management
 - **Supabase Auth** - User storage (auth.users)
 - **Custom Impersonation** - Acting Context system
 
 #### AI/Automation
+
 - **Google Gemini 2.0 Flash** - Multimodal AI (text + vision)
 - **LangGraph** - AI workflow orchestration (LIVE - Agent Orchestrator)
 - **Puppeteer** - Browser automation (external service)
 
 #### Payments
+
 - **Intesa XPay** - Credit card processing (integration ready, not live)
 - **Manual Bank Transfer** - Current live payment method
 
 #### Monitoring
+
 - **Vercel Analytics** - Performance monitoring
 - **Supabase Logs** - Database query logs
 - **Custom Diagnostics** - `diagnostics_events` table
@@ -118,7 +126,7 @@ Vedi [Backend](BACKEND.md) e [Frontend](FRONTEND.md) per dettagli specifici.
 spediresicuro/
 ├── app/                          # Next.js App Router
 │   ├── (auth)/                   # Auth group routes
-│   │   └── login/               
+│   │   └── login/
 │   ├── dashboard/                # Protected dashboard
 │   │   ├── page.tsx             # Main dashboard
 │   │   ├── wallet/              # Wallet management
@@ -219,12 +227,14 @@ export async function getShippingProvider(
 **Key Insight:** La business logic (creazione spedizione, tracking) NON chiama mai direttamente le API corriere. Usa sempre l'interfaccia `CourierAdapter`.
 
 **Benefici:**
+
 - ✅ Facile aggiungere nuovi corrieri (basta implementare adapter)
 - ✅ Testing con MockCourierAdapter
 - ✅ Supporto BYOC (utente fornisce proprie credenziali)
 - ✅ Isolamento multi-tenant (ogni utente può avere config diversa)
 
 **Files:**
+
 - `lib/adapters/couriers/base.ts` - Classe base astratta
 - `lib/adapters/couriers/spedisci-online.ts` - Implementazione Spedisci.Online
 - `lib/adapters/couriers/poste.ts` - Implementazione Poste
@@ -237,6 +247,7 @@ export async function getShippingProvider(
 ### Feature Flags
 
 #### Live Features (Production Ready)
+
 - ✅ **User Dashboard** - Shipment creation, tracking
 - ✅ **Wallet System** - Prepaid credit, top-ups
 - ✅ **Multi-Courier** - GLS, BRT, Poste (via Spedisci.Online)
@@ -249,6 +260,7 @@ export async function getShippingProvider(
 - ✅ **Cancelled Shipments** - Soft delete with audit trail
 
 #### Partially Implemented (Infrastructure Ready, UI Missing)
+
 - ✅ **AI Anne Chat UI** - Backend orchestrator completo, chat UI implementata
 - 🟡 **Smart Top-Up OCR** - Gemini Vision integration exists, not exposed
 - 🟡 **Invoice System** - Tables exist, PDF generation missing
@@ -256,6 +268,7 @@ export async function getShippingProvider(
 - 🟡 **Doctor Service** - Diagnostics logging active, UI dashboard missing
 
 #### Planned (Backlog)
+
 - 📋 **OCR Immagini** - Supporto completo per estrazione dati da immagini (attualmente placeholder)
 - 📋 **Fiscal Brain** - F24, LIPE tracking
 - 📋 **Multi-Region** - Database sharding
@@ -269,18 +282,21 @@ export async function getShippingProvider(
 ### Environment-Specific Behavior
 
 #### Development (`npm run dev`)
+
 - Uses `NEXT_PUBLIC_SUPABASE_URL` from `.env.local`
 - NextAuth callback: `http://localhost:3000/api/auth/callback`
 - Hot reload enabled
 - Source maps enabled
 
 #### Production (Vercel)
+
 - Uses environment variables from Vercel dashboard
 - NextAuth callback: `https://spediresicuro.it/api/auth/callback`
 - Optimized builds (tree shaking, minification)
 - Edge functions for faster response
 
 #### Preview (Vercel Preview Deployments)
+
 - Separate DB instance (or same as dev)
 - Unique preview URL per branch
 - Same env vars as production (configurable)
@@ -292,16 +308,19 @@ Vedi [6-DEPLOYMENT/ENV_VARS.md](../6-DEPLOYMENT/ENV_VARS.md) per dettagli sulle 
 ### Security Boundaries
 
 #### Client-Side (Browser)
+
 - **Can access:** Public Supabase anon key (RLS enforced)
 - **Cannot access:** Service role key, API secrets, encrypted passwords
 - **Pattern:** Use Server Actions for sensitive operations
 
 #### Server-Side (Node.js)
+
 - **Can access:** All secrets via environment variables
 - **Can bypass:** RLS via `supabaseAdmin`
 - **Pattern:** Validate input, enforce business rules
 
 #### Database (PostgreSQL)
+
 - **Enforces:** RLS policies, CHECK constraints, foreign keys
 - **Trusted:** Only server-side code (service role)
 - **Pattern:** Defense in depth, never trust client
@@ -326,8 +345,12 @@ if (!adapter) {
 
 // Usa adapter (agnostico rispetto al provider)
 const label = await adapter.createShipment({
-  recipient: { /* ... */ },
-  packages: [/* ... */]
+  recipient: {
+    /* ... */
+  },
+  packages: [
+    /* ... */
+  ],
 });
 ```
 
@@ -348,12 +371,12 @@ const hasAIFeatures = user?.capabilities?.includes('ai_chat');
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Provider non disponibile | Verifica che esista configurazione in `courier_configs` per l'utente |
-| Credenziali criptate non decriptate | Verifica che `ENCRYPTION_KEY` sia configurata correttamente |
-| Adapter ritorna null | Controlla log per errori di decriptazione o configurazione mancante |
-| Feature flag non funziona | Verifica che `users.capabilities` contenga il flag richiesto |
+| Issue                               | Soluzione                                                            |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| Provider non disponibile            | Verifica che esista configurazione in `courier_configs` per l'utente |
+| Credenziali criptate non decriptate | Verifica che `ENCRYPTION_KEY` sia configurata correttamente          |
+| Adapter ritorna null                | Controlla log per errori di decriptazione o configurazione mancante  |
+| Feature flag non funziona           | Verifica che `users.capabilities` contenga il flag richiesto         |
 
 ---
 
@@ -370,11 +393,12 @@ const hasAIFeatures = user?.capabilities?.includes('ai_chat');
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Team_

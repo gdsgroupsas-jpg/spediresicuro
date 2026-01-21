@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
-export type SkeletonShape = 'ticket' | 'table-row' | 'form-fields' | 'message' | 'card' | 'custom'
+export type SkeletonShape = 'ticket' | 'table-row' | 'form-fields' | 'message' | 'card' | 'custom';
 
 export interface OperationSkeletonProps {
   /** Tipo di contenuto da simulare */
-  shape?: SkeletonShape
+  shape?: SkeletonShape;
   /** Messaggio da mostrare durante il loading */
-  message?: string
+  message?: string;
   /** Numero di righe (per table-row shape) */
-  rows?: number
+  rows?: number;
   /** Custom className */
-  className?: string
+  className?: string;
   /** Se true, mostra un'animazione shimmer */
-  shimmer?: boolean
+  shimmer?: boolean;
 }
 
 /**
@@ -33,7 +33,7 @@ export function OperationSkeleton({
   className,
   shimmer = true,
 }: OperationSkeletonProps) {
-  const baseAnimation = shimmer ? 'animate-pulse' : ''
+  const baseAnimation = shimmer ? 'animate-pulse' : '';
 
   return (
     <div className={cn('w-full', className)}>
@@ -47,17 +47,13 @@ export function OperationSkeleton({
 
       {/* Shape-specific skeleton */}
       {shape === 'ticket' && <TicketSkeleton baseAnimation={baseAnimation} />}
-      {shape === 'table-row' && (
-        <TableRowSkeleton rows={rows} baseAnimation={baseAnimation} />
-      )}
+      {shape === 'table-row' && <TableRowSkeleton rows={rows} baseAnimation={baseAnimation} />}
       {shape === 'form-fields' && <FormFieldsSkeleton baseAnimation={baseAnimation} />}
       {shape === 'message' && <MessageSkeleton baseAnimation={baseAnimation} />}
       {shape === 'card' && <CardSkeleton baseAnimation={baseAnimation} />}
-      {shape === 'custom' && (
-        <div className={cn('h-32 bg-gray-200 rounded-xl', baseAnimation)} />
-      )}
+      {shape === 'custom' && <div className={cn('h-32 bg-gray-200 rounded-xl', baseAnimation)} />}
     </div>
-  )
+  );
 }
 
 /** Skeleton per ticket/preview spedizione */
@@ -102,26 +98,17 @@ function TicketSkeleton({ baseAnimation }: { baseAnimation: string }) {
         <div className={cn('h-12 bg-gray-200 rounded-xl mt-4', baseAnimation)} />
       </div>
     </div>
-  )
+  );
 }
 
 /** Skeleton per righe tabella */
-function TableRowSkeleton({
-  rows,
-  baseAnimation,
-}: {
-  rows: number
-  baseAnimation: string
-}) {
+function TableRowSkeleton({ rows, baseAnimation }: { rows: number; baseAnimation: string }) {
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className={cn(
-            'flex items-center gap-4 p-3 bg-gray-50 rounded-lg',
-            baseAnimation
-          )}
+          className={cn('flex items-center gap-4 p-3 bg-gray-50 rounded-lg', baseAnimation)}
           style={{ animationDelay: `${i * 100}ms` }}
         >
           <div className={cn('w-10 h-10 bg-gray-200 rounded-lg', baseAnimation)} />
@@ -133,7 +120,7 @@ function TableRowSkeleton({
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 /** Skeleton per campi form */
@@ -162,7 +149,7 @@ function FormFieldsSkeleton({ baseAnimation }: { baseAnimation: string }) {
         <div className={cn('h-20 bg-gray-200 rounded-lg w-full', baseAnimation)} />
       </div>
     </div>
-  )
+  );
 }
 
 /** Skeleton per messaggi AI/chat */
@@ -176,7 +163,7 @@ function MessageSkeleton({ baseAnimation }: { baseAnimation: string }) {
         <div className={cn('h-4 bg-gray-200 rounded w-2/3', baseAnimation)} />
       </div>
     </div>
-  )
+  );
 }
 
 /** Skeleton per card generica */
@@ -193,7 +180,7 @@ function CardSkeleton({ baseAnimation }: { baseAnimation: string }) {
         <div className={cn('h-4 bg-gray-200 rounded w-1/2', baseAnimation)} />
       </div>
     </div>
-  )
+  );
 }
 
-export default OperationSkeleton
+export default OperationSkeleton;

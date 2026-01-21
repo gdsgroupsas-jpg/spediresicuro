@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Pricing Graph Routing
- * 
+ *
  * Test del routing del pricing graph:
  * - Verifica che con pricing_options presenti -> END
  * - Verifica che con clarification_request -> END
@@ -70,7 +70,7 @@ describe('Pricing Graph Routing', () => {
         iteration_count: 0,
       };
 
-      const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(initialState)) as unknown as AgentState;
 
       // Verifica che supervisor sia stato chiamato
       expect(supervisor).toHaveBeenCalledTimes(1);
@@ -83,7 +83,8 @@ describe('Pricing Graph Routing', () => {
 
   describe('Routing: clarification_request -> END', () => {
     it('should end when clarification_request is present', async () => {
-      const clarificationMsg = 'Per calcolare un preventivo preciso, ho bisogno di: peso, CAP destinazione.';
+      const clarificationMsg =
+        'Per calcolare un preventivo preciso, ho bisogno di: peso, CAP destinazione.';
 
       vi.mocked(supervisor).mockResolvedValueOnce({
         clarification_request: clarificationMsg,
@@ -103,7 +104,7 @@ describe('Pricing Graph Routing', () => {
         iteration_count: 0,
       };
 
-      const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(initialState)) as unknown as AgentState;
 
       expect(supervisor).toHaveBeenCalledTimes(1);
       expect(pricingWorker).not.toHaveBeenCalled();
@@ -165,7 +166,7 @@ describe('Pricing Graph Routing', () => {
         iteration_count: 0,
       };
 
-      const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(initialState)) as unknown as AgentState;
 
       // Verifica che supervisor sia stato chiamato almeno una volta
       expect(supervisor).toHaveBeenCalled();
@@ -207,7 +208,7 @@ describe('Pricing Graph Routing', () => {
         iteration_count: 2, // Già al limite
       };
 
-      const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(initialState)) as unknown as AgentState;
 
       // Verifica che il grafo termini (non loop infinito)
       // Il routing dovrebbe fermarsi quando iteration_count > MAX_ITERATIONS
@@ -236,7 +237,7 @@ describe('Pricing Graph Routing', () => {
         iteration_count: 0,
       };
 
-      const result = await pricingGraph.invoke(initialState) as unknown as AgentState;
+      const result = (await pricingGraph.invoke(initialState)) as unknown as AgentState;
 
       expect(supervisor).toHaveBeenCalled();
       expect(pricingWorker).not.toHaveBeenCalled();
@@ -247,4 +248,3 @@ describe('Pricing Graph Routing', () => {
     });
   });
 });
-

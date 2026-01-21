@@ -1,9 +1,9 @@
 /**
  * Normalizzazione Indirizzi Italiani (Sprint 2.3)
- * 
+ *
  * Funzioni pure per estrarre e normalizzare dati indirizzo da testo libero.
  * NO LLM, NO API esterne, solo regex e logica deterministica.
- * 
+ *
  * ⚠️ NO PII nei log
  */
 
@@ -24,33 +24,175 @@ const WEIGHT_REGEX = /(\d+(?:[.,]\d+)?)\s*(?:kg|chili|kilo|chilogrammi)/i;
 const WEIGHT_ALT_REGEX = /peso\s*[:\s]*(\d+(?:[.,]\d+)?)/i;
 
 // Via/Piazza/Corso + indirizzo
-const ADDRESS_REGEX = /(?:via|v\.|piazza|p\.zza|p\.za|corso|c\.so|viale|v\.le|largo|l\.go)\s+[\w\s]+\s*(?:\d+[a-z]?)?/i;
+const ADDRESS_REGEX =
+  /(?:via|v\.|piazza|p\.zza|p\.za|corso|c\.so|viale|v\.le|largo|l\.go)\s+[\w\s]+\s*(?:\d+[a-z]?)?/i;
 
 // Nome (prima di "via" o dopo comuni pattern)
 const NAME_BEFORE_ADDRESS_REGEX = /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*,?\s*(?:via|piazza|corso)/i;
 
 // Città comuni italiane (subset)
 const COMMON_CITIES = new Set([
-  'milano', 'roma', 'napoli', 'torino', 'palermo', 'genova', 'bologna', 'firenze',
-  'bari', 'catania', 'venezia', 'verona', 'messina', 'padova', 'trieste', 'taranto',
-  'brescia', 'parma', 'prato', 'modena', 'reggio calabria', 'reggio emilia',
-  'perugia', 'livorno', 'ravenna', 'cagliari', 'foggia', 'rimini', 'salerno',
-  'ferrara', 'sassari', 'siracusa', 'pescara', 'monza', 'bergamo', 'forlì',
-  'trento', 'vicenza', 'terni', 'bolzano', 'novara', 'piacenza', 'ancona',
-  'andria', 'arezzo', 'udine', 'cesena', 'lecce', 'pesaro', 'barletta',
+  'milano',
+  'roma',
+  'napoli',
+  'torino',
+  'palermo',
+  'genova',
+  'bologna',
+  'firenze',
+  'bari',
+  'catania',
+  'venezia',
+  'verona',
+  'messina',
+  'padova',
+  'trieste',
+  'taranto',
+  'brescia',
+  'parma',
+  'prato',
+  'modena',
+  'reggio calabria',
+  'reggio emilia',
+  'perugia',
+  'livorno',
+  'ravenna',
+  'cagliari',
+  'foggia',
+  'rimini',
+  'salerno',
+  'ferrara',
+  'sassari',
+  'siracusa',
+  'pescara',
+  'monza',
+  'bergamo',
+  'forlì',
+  'trento',
+  'vicenza',
+  'terni',
+  'bolzano',
+  'novara',
+  'piacenza',
+  'ancona',
+  'andria',
+  'arezzo',
+  'udine',
+  'cesena',
+  'lecce',
+  'pesaro',
+  'barletta',
 ]);
 
 // Province italiane valide
 const VALID_PROVINCES = new Set([
-  'AG', 'AL', 'AN', 'AO', 'AR', 'AP', 'AT', 'AV', 'BA', 'BT', 'BL', 'BN', 'BG',
-  'BI', 'BO', 'BZ', 'BS', 'BR', 'CA', 'CL', 'CB', 'CE', 'CT', 'CZ', 'CH', 'CO',
-  'CS', 'CR', 'KR', 'CN', 'EN', 'FM', 'FE', 'FI', 'FG', 'FC', 'FR', 'GE', 'GO',
-  'GR', 'IM', 'IS', 'SP', 'AQ', 'LT', 'LE', 'LC', 'LI', 'LO', 'LU', 'MC', 'MN',
-  'MS', 'MT', 'ME', 'MI', 'MO', 'MB', 'NA', 'NO', 'NU', 'OR', 'PD', 'PA', 'PR',
-  'PV', 'PG', 'PU', 'PE', 'PC', 'PI', 'PT', 'PN', 'PZ', 'PO', 'RG', 'RA', 'RC',
-  'RE', 'RI', 'RN', 'RM', 'RO', 'SA', 'SS', 'SV', 'SI', 'SR', 'SO', 'SU', 'TA',
-  'TE', 'TR', 'TO', 'TP', 'TN', 'TV', 'TS', 'UD', 'VA', 'VE', 'VB', 'VC', 'VR',
-  'VV', 'VI', 'VT',
+  'AG',
+  'AL',
+  'AN',
+  'AO',
+  'AR',
+  'AP',
+  'AT',
+  'AV',
+  'BA',
+  'BT',
+  'BL',
+  'BN',
+  'BG',
+  'BI',
+  'BO',
+  'BZ',
+  'BS',
+  'BR',
+  'CA',
+  'CL',
+  'CB',
+  'CE',
+  'CT',
+  'CZ',
+  'CH',
+  'CO',
+  'CS',
+  'CR',
+  'KR',
+  'CN',
+  'EN',
+  'FM',
+  'FE',
+  'FI',
+  'FG',
+  'FC',
+  'FR',
+  'GE',
+  'GO',
+  'GR',
+  'IM',
+  'IS',
+  'SP',
+  'AQ',
+  'LT',
+  'LE',
+  'LC',
+  'LI',
+  'LO',
+  'LU',
+  'MC',
+  'MN',
+  'MS',
+  'MT',
+  'ME',
+  'MI',
+  'MO',
+  'MB',
+  'NA',
+  'NO',
+  'NU',
+  'OR',
+  'PD',
+  'PA',
+  'PR',
+  'PV',
+  'PG',
+  'PU',
+  'PE',
+  'PC',
+  'PI',
+  'PT',
+  'PN',
+  'PZ',
+  'PO',
+  'RG',
+  'RA',
+  'RC',
+  'RE',
+  'RI',
+  'RN',
+  'RM',
+  'RO',
+  'SA',
+  'SS',
+  'SV',
+  'SI',
+  'SR',
+  'SO',
+  'SU',
+  'TA',
+  'TE',
+  'TR',
+  'TO',
+  'TP',
+  'TN',
+  'TV',
+  'TS',
+  'UD',
+  'VA',
+  'VE',
+  'VB',
+  'VC',
+  'VR',
+  'VV',
+  'VI',
+  'VT',
 ]);
 
 // ==================== EXTRACTION FUNCTIONS ====================
@@ -107,20 +249,20 @@ export function extractAddressLine1(text: string): string | undefined {
  */
 export function extractCity(text: string): string | undefined {
   const lowerText = text.toLowerCase();
-  
+
   // Cerca città comuni
   for (const city of COMMON_CITIES) {
     if (lowerText.includes(city)) {
       return capitalizeWords(city);
     }
   }
-  
+
   // Pattern: dopo CAP spesso c'è la città
   const afterCapMatch = text.match(/\b\d{5}\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
   if (afterCapMatch) {
     return afterCapMatch[1];
   }
-  
+
   return undefined;
 }
 
@@ -133,14 +275,14 @@ export function extractFullName(text: string): string | undefined {
     /(?:a|per|destinatario|consegna)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
     NAME_BEFORE_ADDRESS_REGEX,
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
       return normalizeText(match[1]);
     }
   }
-  
+
   return undefined;
 }
 
@@ -162,7 +304,7 @@ export function normalizeText(text: string): string {
 export function capitalizeWords(text: string): string {
   return text
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
 
@@ -176,14 +318,14 @@ export interface AddressExtractionResult {
 
 /**
  * Estrae tutti i dati indirizzo/spedizione da testo libero
- * 
+ *
  * @param text - Messaggio utente
  * @returns Dati estratti (parziali)
  */
 export function extractAddressDataFromText(text: string): AddressExtractionResult {
   const recipient: Partial<Recipient> = {};
   const parcel: Partial<Parcel> = {};
-  
+
   // Estrai dati
   const postalCode = extractPostalCode(text);
   const province = extractProvince(text);
@@ -191,7 +333,7 @@ export function extractAddressDataFromText(text: string): AddressExtractionResul
   const addressLine1 = extractAddressLine1(text);
   const fullName = extractFullName(text);
   const weightKg = extractWeight(text);
-  
+
   // Popola recipient
   if (postalCode) recipient.postalCode = postalCode;
   if (province) recipient.province = province;
@@ -199,12 +341,19 @@ export function extractAddressDataFromText(text: string): AddressExtractionResul
   if (addressLine1) recipient.addressLine1 = addressLine1;
   if (fullName) recipient.fullName = fullName;
   recipient.country = 'IT'; // Default
-  
+
   // Popola parcel
   if (weightKg) parcel.weightKg = weightKg;
-  
-  const extractedAnything = !!(postalCode || province || city || addressLine1 || fullName || weightKg);
-  
+
+  const extractedAnything = !!(
+    postalCode ||
+    province ||
+    city ||
+    addressLine1 ||
+    fullName ||
+    weightKg
+  );
+
   return {
     recipient,
     parcel,
@@ -217,10 +366,9 @@ export function extractAddressDataFromText(text: string): AddressExtractionResul
  */
 export function extractAndMerge(text: string, existingDraft?: ShipmentDraft): ShipmentDraft {
   const { recipient, parcel } = extractAddressDataFromText(text);
-  
+
   return mergeShipmentDraft(existingDraft, {
     recipient,
     parcel,
   });
 }
-

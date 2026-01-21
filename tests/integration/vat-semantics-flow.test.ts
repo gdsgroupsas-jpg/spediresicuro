@@ -7,37 +7,37 @@
  * - Pricing engine propaga VAT mode correttamente
  */
 
-import { describe, expect, it, beforeEach, vi } from "vitest";
-import { supabaseAdmin } from "@/lib/db/client";
-import { calculatePriceWithRules } from "@/lib/db/price-lists-advanced";
-import { calculatePriceFromList } from "@/lib/pricing/calculator";
+import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { supabaseAdmin } from '@/lib/db/client';
+import { calculatePriceWithRules } from '@/lib/db/price-lists-advanced';
+import { calculatePriceFromList } from '@/lib/pricing/calculator';
 
 // Mock Supabase
-vi.mock("@/lib/db/client", () => ({
+vi.mock('@/lib/db/client', () => ({
   supabaseAdmin: {
     from: vi.fn(),
   },
 }));
 
 // Mock calculatePriceFromList
-vi.mock("@/lib/pricing/calculator", () => ({
+vi.mock('@/lib/pricing/calculator', () => ({
   calculatePriceFromList: vi.fn(),
 }));
 
-describe("VAT Semantics - Integration Flow (ADR-001)", () => {
-  const mockUserId = "test-user-id";
+describe('VAT Semantics - Integration Flow (ADR-001)', () => {
+  const mockUserId = 'test-user-id';
   const mockParams = {
     weight: 5.0,
     volume: 0.01,
     destination: {
-      zip: "20100",
-      city: "Milano",
-      province: "MI",
-      region: "Lombardia",
-      country: "IT",
+      zip: '20100',
+      city: 'Milano',
+      province: 'MI',
+      region: 'Lombardia',
+      country: 'IT',
     },
-    courierId: "gls",
-    serviceType: "standard" as const,
+    courierId: 'gls',
+    serviceType: 'standard' as const,
     options: {
       cashOnDelivery: false,
       insurance: false,
@@ -49,14 +49,14 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
     vi.clearAllMocks();
   });
 
-  describe("1. Quote API - VAT Fields Propagation", () => {
-    it.skip("propaga vat_mode e vat_rate dal price list al risultato", async () => {
+  describe('1. Quote API - VAT Fields Propagation', () => {
+    it.skip('propaga vat_mode e vat_rate dal price list al risultato', async () => {
       const priceList = {
-        id: "test-list-id",
-        name: "Test List",
-        list_type: "custom",
-        status: "active",
-        vat_mode: "included",
+        id: 'test-list-id',
+        name: 'Test List',
+        list_type: 'custom',
+        status: 'active',
+        vat_mode: 'included',
         vat_rate: 22.0,
         metadata: {},
       };
@@ -73,8 +73,8 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
       // Mock: calculatePriceFromList
       (calculatePriceFromList as any).mockResolvedValue({
         basePrice: 122.0, // IVA inclusa (100€ + 22%)
-        surcharges: 12.20, // IVA inclusa (10€ + 22%)
-        totalCost: 134.20, // IVA inclusa
+        surcharges: 12.2, // IVA inclusa (10€ + 22%)
+        totalCost: 134.2, // IVA inclusa
       });
 
       // Mock: Recupera price list entries (vuoto)
@@ -87,14 +87,10 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
         }),
       });
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "test-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'test-list-id');
 
       expect(result).not.toBeNull();
-      expect(result?.vatMode).toBe("included");
+      expect(result?.vatMode).toBe('included');
       expect(result?.vatRate).toBe(22.0);
       expect(result?.vatAmount).toBeDefined();
       expect(result?.totalPriceWithVAT).toBeDefined();
@@ -102,11 +98,11 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
 
     it.skip("propaga vat_mode = 'excluded' correttamente", async () => {
       const priceList = {
-        id: "test-list-id",
-        name: "Test List",
-        list_type: "custom",
-        status: "active",
-        vat_mode: "excluded",
+        id: 'test-list-id',
+        name: 'Test List',
+        list_type: 'custom',
+        status: 'active',
+        vat_mode: 'excluded',
         vat_rate: 22.0,
         metadata: {},
       };
@@ -135,14 +131,10 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
         }),
       });
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "test-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'test-list-id');
 
       expect(result).not.toBeNull();
-      expect(result?.vatMode).toBe("excluded");
+      expect(result?.vatMode).toBe('excluded');
       expect(result?.vatRate).toBe(22.0);
       expect(result?.vatAmount).toBeDefined();
       expect(result?.totalPriceWithVAT).toBeDefined();
@@ -150,10 +142,10 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
 
     it.skip("gestisce vat_mode = null (legacy) come 'excluded'", async () => {
       const priceList = {
-        id: "test-list-id",
-        name: "Test List Legacy",
-        list_type: "custom",
-        status: "active",
+        id: 'test-list-id',
+        name: 'Test List Legacy',
+        list_type: 'custom',
+        status: 'active',
         vat_mode: null, // Legacy
         vat_rate: 22.0,
         metadata: {},
@@ -183,27 +175,23 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
         }),
       });
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "test-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'test-list-id');
 
       expect(result).not.toBeNull();
       // vatMode dovrebbe essere 'excluded' (fallback da null)
-      expect(result?.vatMode).toBe("excluded");
+      expect(result?.vatMode).toBe('excluded');
       expect(result?.vatRate).toBe(22.0);
     });
   });
 
-  describe("2. Pricing Engine - VAT Normalization", () => {
+  describe('2. Pricing Engine - VAT Normalization', () => {
     it.skip("normalizza basePrice e surcharges separatamente quando vat_mode = 'included'", async () => {
       const priceList = {
-        id: "test-list-id",
-        name: "Test List",
-        list_type: "custom",
-        status: "active",
-        vat_mode: "included",
+        id: 'test-list-id',
+        name: 'Test List',
+        list_type: 'custom',
+        status: 'active',
+        vat_mode: 'included',
         vat_rate: 22.0,
         metadata: {},
       };
@@ -211,8 +199,8 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
       // Mock: calculatePriceFromList restituisce prezzi IVA inclusa
       (calculatePriceFromList as any).mockResolvedValue({
         basePrice: 122.0, // 100€ + 22% IVA
-        surcharges: 12.20, // 10€ + 22% IVA
-        totalCost: 134.20, // 110€ + 22% IVA
+        surcharges: 12.2, // 10€ + 22% IVA
+        totalCost: 134.2, // 110€ + 22% IVA
       });
 
       // Mock setup
@@ -233,11 +221,7 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
         }),
       });
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "test-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'test-list-id');
 
       expect(result).not.toBeNull();
       // basePrice e surcharges dovrebbero essere normalizzati a IVA esclusa internamente
@@ -247,14 +231,14 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
     });
   });
 
-  describe("3. Margin Calculation - VAT Excluded Base", () => {
-    it.skip("calcola margine sempre su base IVA esclusa (Invariant #1)", async () => {
+  describe('3. Margin Calculation - VAT Excluded Base', () => {
+    it.skip('calcola margine sempre su base IVA esclusa (Invariant #1)', async () => {
       const priceList = {
-        id: "test-list-id",
-        name: "Test List",
-        list_type: "custom",
-        status: "active",
-        vat_mode: "included",
+        id: 'test-list-id',
+        name: 'Test List',
+        list_type: 'custom',
+        status: 'active',
+        vat_mode: 'included',
         vat_rate: 22.0,
         default_margin_percent: 20,
         metadata: {},
@@ -285,11 +269,7 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
         }),
       });
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "test-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'test-list-id');
 
       expect(result).not.toBeNull();
       // Nota: Se non ci sono entries nella matrice, usa default fallback (10€)
@@ -298,7 +278,7 @@ describe("VAT Semantics - Integration Flow (ADR-001)", () => {
       expect(result?.margin).toBeGreaterThanOrEqual(0);
       expect(result?.finalPrice).toBeGreaterThan(0);
       // Verifichiamo che vatMode sia propagato correttamente
-      expect(result?.vatMode).toBe("included");
+      expect(result?.vatMode).toBe('included');
       expect(result?.vatRate).toBe(22.0);
     });
   });

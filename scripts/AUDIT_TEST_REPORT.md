@@ -1,4 +1,5 @@
 # 🔒 AUDIT TEST REPORT - SpedireSicuro
+
 ## Security Audit P0 Verification Suite
 
 **Data creazione:** 2026-01-12  
@@ -21,22 +22,25 @@
 
 Questo pacchetto contiene query SQL di test per verificare le funzionalità di sicurezza critiche (P0) del sistema SpedireSicuro:
 
-| Priorità | Feature | Descrizione | File di Test |
-|----------|---------|-------------|--------------|
-| P0.1 | Kill-Switches | Configurazione fail-closed | `test-p0.1-kill-switches.sql` |
-| P0.2 | Wallet Idempotency | Prevenzione doppi addebiti | `test-p0.2-wallet-idempotency.sql` |
-| P0.3 | OCR GDPR | Consent flow e TTL 7 giorni | `test-p0.3-ocr-gdpr-compliance.sql` |
-| P0.4 | Compensation Queue | Dead-letter e observability | `test-p0.4-compensation-queue.sql` |
+| Priorità | Feature            | Descrizione                 | File di Test                        |
+| -------- | ------------------ | --------------------------- | ----------------------------------- |
+| P0.1     | Kill-Switches      | Configurazione fail-closed  | `test-p0.1-kill-switches.sql`       |
+| P0.2     | Wallet Idempotency | Prevenzione doppi addebiti  | `test-p0.2-wallet-idempotency.sql`  |
+| P0.3     | OCR GDPR           | Consent flow e TTL 7 giorni | `test-p0.3-ocr-gdpr-compliance.sql` |
+| P0.4     | Compensation Queue | Dead-letter e observability | `test-p0.4-compensation-queue.sql`  |
 
 ---
 
 ## File di Test Creati
 
 ### 📁 `scripts/test-audit-master-runner.sql`
+
 **Master runner** che verifica i prerequisiti prima di eseguire i test.
 
 ### 📁 `scripts/test-p0.2-wallet-idempotency.sql`
+
 Test per verificare che il wallet idempotency funzioni:
+
 - ✅ Simula doppio addebito con STESSO idempotency_key
 - ✅ Verifica che il secondo addebito venga rifiutato
 - ✅ Verifica che il balance sia decrementato UNA sola volta
@@ -44,7 +48,9 @@ Test per verificare che il wallet idempotency funzioni:
 - ✅ Cleanup automatico
 
 ### 📁 `scripts/test-p0.3-ocr-gdpr-compliance.sql`
+
 Test per verificare il consent flow GDPR per OCR:
+
 - ✅ Test grant_ocr_vision_consent() - salva IP + user_agent + timestamp
 - ✅ Test revoke_ocr_vision_consent() - cancella consent
 - ✅ Test log_ocr_processing() - logga provider + timestamp
@@ -53,7 +59,9 @@ Test per verificare il consent flow GDPR per OCR:
 - ✅ Cleanup automatico
 
 ### 📁 `scripts/test-p0.4-compensation-queue.sql`
+
 Test per verificare il dead-letter mechanism:
+
 - ✅ Crea record compensation_queue (status='pending')
 - ✅ Test retry_compensation() - verifica 3 retry
 - ✅ Test 4° retry → dead_letter
@@ -63,7 +71,9 @@ Test per verificare il dead-letter mechanism:
 - ✅ Cleanup automatico
 
 ### 📁 `scripts/test-p0.1-kill-switches.sql`
+
 Verifica configurazione kill-switches:
+
 - ✅ Verifica security_events table
 - ✅ Query eventi di bypass loggati
 - ✅ Procedura verifica env vars Vercel
@@ -78,9 +88,9 @@ Verifica configurazione kill-switches:
 1. **Accesso a Supabase SQL Editor** o client PostgreSQL
 2. **Migration applicate:**
    - 040-045 (Wallet Atomic Operations)
-   - 098 (Wallet Idempotency Standalone) - *se disponibile*
-   - 099 (OCR GDPR Compliance) - *se disponibile*
-   - 100 (Compensation Queue Observability) - *se disponibile*
+   - 098 (Wallet Idempotency Standalone) - _se disponibile_
+   - 099 (OCR GDPR Compliance) - _se disponibile_
+   - 100 (Compensation Queue Observability) - _se disponibile_
 
 ### Ordine di Esecuzione
 
@@ -114,45 +124,45 @@ Dopo aver eseguito tutti i test, compila questa checklist:
 
 ### ✅ P0.2 Wallet Idempotency
 
-| Test | Risultato | Note |
-|------|-----------|------|
-| Doppio addebito bloccato? | ⬜ SÌ / ⬜ NO | |
-| idempotent_replay funziona? | ⬜ SÌ / ⬜ NO | status='completed' al retry |
-| Balance decrementato UNA volta? | ⬜ SÌ / ⬜ NO | |
-| increment_wallet_balance OK? | ⬜ SÌ / ⬜ NO | |
+| Test                            | Risultato     | Note                        |
+| ------------------------------- | ------------- | --------------------------- |
+| Doppio addebito bloccato?       | ⬜ SÌ / ⬜ NO |                             |
+| idempotent_replay funziona?     | ⬜ SÌ / ⬜ NO | status='completed' al retry |
+| Balance decrementato UNA volta? | ⬜ SÌ / ⬜ NO |                             |
+| increment_wallet_balance OK?    | ⬜ SÌ / ⬜ NO |                             |
 
 ### ✅ P0.3 GDPR OCR
 
-| Test | Risultato | Note |
-|------|-----------|------|
-| Consent flow funziona? | ⬜ SÌ / ⬜ NO | IP+UserAgent+Timestamp |
+| Test                    | Risultato     | Note                       |
+| ----------------------- | ------------- | -------------------------- |
+| Consent flow funziona?  | ⬜ SÌ / ⬜ NO | IP+UserAgent+Timestamp     |
 | TTL 7 giorni applicato? | ⬜ SÌ / ⬜ NO | cleanup_expired_ocr_logs() |
-| RLS policies attive? | ⬜ SÌ / ⬜ NO | rowsecurity=true |
-| Provider loggati? | ⬜ SÌ / ⬜ NO | google_vision, tesseract |
+| RLS policies attive?    | ⬜ SÌ / ⬜ NO | rowsecurity=true           |
+| Provider loggati?       | ⬜ SÌ / ⬜ NO | google_vision, tesseract   |
 
 ### ✅ P0.4 Compensation Queue
 
-| Test | Risultato | Note |
-|------|-----------|------|
-| Dead-letter dopo 3+ retry? | ⬜ SÌ / ⬜ NO | |
-| Alert per pending > 7d? | ⬜ SÌ / ⬜ NO | get_compensation_alerts() |
-| Stats materialized view OK? | ⬜ SÌ / ⬜ NO | compensation_queue_stats |
-| mark_compensation_resolved()? | ⬜ SÌ / ⬜ NO | resolved_at settato |
+| Test                          | Risultato     | Note                      |
+| ----------------------------- | ------------- | ------------------------- |
+| Dead-letter dopo 3+ retry?    | ⬜ SÌ / ⬜ NO |                           |
+| Alert per pending > 7d?       | ⬜ SÌ / ⬜ NO | get_compensation_alerts() |
+| Stats materialized view OK?   | ⬜ SÌ / ⬜ NO | compensation_queue_stats  |
+| mark_compensation_resolved()? | ⬜ SÌ / ⬜ NO | resolved_at settato       |
 
 ### ✅ P0.1 Kill-Switches
 
-| Test | Risultato | Note |
-|------|-----------|------|
+| Test                                    | Risultato     | Note                |
+| --------------------------------------- | ------------- | ------------------- |
 | ALLOW_SUPERADMIN_WALLET_BYPASS = false? | ⬜ SÌ / ⬜ NO | Verifica env Vercel |
-| ENABLE_OCR_VISION = true? | ⬜ SÌ / ⬜ NO | Verifica env Vercel |
-| security_events table esiste? | ⬜ SÌ / ⬜ NO | |
+| ENABLE_OCR_VISION = true?               | ⬜ SÌ / ⬜ NO | Verifica env Vercel |
+| security_events table esiste?           | ⬜ SÌ / ⬜ NO |                     |
 
 ### ❌ REGRESSIONI TROVATE
 
-| ID | Descrizione | Severità | Azione |
-|----|-------------|----------|--------|
-| | | | |
-| | | | |
+| ID  | Descrizione | Severità | Azione |
+| --- | ----------- | -------- | ------ |
+|     |             |          |        |
+|     |             |          |        |
 
 ---
 
@@ -163,6 +173,7 @@ Dopo aver eseguito tutti i test, compila questa checklist:
 **Problema:** La tabella `ocr_processing_log` o le funzioni GDPR non esistono.
 
 **Soluzione:**
+
 ```bash
 # Crea il file migration se non esiste
 # Poi esegui:
@@ -174,6 +185,7 @@ supabase db push
 **Problema:** La tabella o le funzioni di observability mancano.
 
 **Soluzione:**
+
 ```bash
 # Verifica che migration 100 sia presente in supabase/migrations/
 # Se manca, creala basandoti su verify-audit-migrations.sql
@@ -185,6 +197,7 @@ supabase db push
 **Problema:** Errore durante la creazione dell'utente di test.
 
 **Soluzione:**
+
 1. Verifica che la tabella `users` esista
 2. Verifica i constraint (email unique, etc.)
 3. Controlla i permessi RLS
@@ -194,9 +207,10 @@ supabase db push
 **Problema:** Durante test idempotency, il lock è già presente.
 
 **Soluzione:**
+
 ```sql
 -- Pulisci lock di test manualmente
-DELETE FROM idempotency_locks 
+DELETE FROM idempotency_locks
 WHERE idempotency_key LIKE 'test-%';
 ```
 
@@ -220,4 +234,4 @@ WHERE idempotency_key LIKE 'test-%';
 
 ---
 
-*Generato automaticamente - SpedireSicuro Security Audit Suite v1.0*
+_Generato automaticamente - SpedireSicuro Security Audit Suite v1.0_

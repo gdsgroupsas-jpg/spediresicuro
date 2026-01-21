@@ -78,6 +78,7 @@ Eseguire security audit completo e classificare rischi secondo regole in SECURIT
 ### Per Audit Interni
 
 1. **Verifica commit deployato:**
+
    ```bash
    git log origin/master -1 --oneline
    ```
@@ -93,6 +94,7 @@ Eseguire security audit completo e classificare rischi secondo regole in SECURIT
 ## 📊 Template Output Audit
 
 ### Executive Summary
+
 ```
 Overall: GO / NO-GO
 Conteggio: P0 passati, P1 passati, P2 passati
@@ -101,6 +103,7 @@ Data: [data]
 ```
 
 ### Checklist Tabellare
+
 ```
 | Requisito | Status | Evidenza | Rischio | Fix Concept |
 |-----------|--------|----------|---------|-------------|
@@ -108,23 +111,30 @@ Data: [data]
 ```
 
 ### Evidence Snippets
-```
+
+````
 ### ❌ G1 - Titolo Problema
 **File:** `path/to/file.ts`
 **Righe:** 123-145
 ```typescript
 // Snippet codice rilevante
-```
+````
+
 **Evidenza:** [spiegazione]
+
 ```
 
 ### Riproduzione (solo se CRITICAL)
 ```
+
 **Test su Produzione:**
+
 ```bash
 curl -i https://spediresicuro.vercel.app/...
 ```
+
 **Risultato:** [output atteso vs reale]
+
 ```
 
 ---
@@ -167,3 +177,4 @@ curl -i https://spediresicuro.vercel.app/...
 ---
 
 **Status:** ✅ Prompt standard definito
+```

@@ -1,35 +1,40 @@
 # Error Codes - Standardized API Errors
 
 ## Overview
+
 Documentazione completa dei codici errore standardizzati utilizzati nelle API di SpedireSicuro. Tutti gli endpoint REST e Server Actions seguono questo formato.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Conoscenza HTTP status codes
 - Familiarità con error handling
 
 ## Quick Reference
-| Status Code | Categoria | Codice Errore | Descrizione |
-|-------------|-----------|---------------|-------------|
-| 400 | Client Error | `BAD_REQUEST` | Richiesta non valida |
-| 401 | Auth Error | `UNAUTHORIZED` | Non autenticato |
-| 403 | Auth Error | `FORBIDDEN` | Accesso negato |
-| 404 | Client Error | `NOT_FOUND` | Risorsa non trovata |
-| 409 | Client Error | `DUPLICATE_REQUEST` | Richiesta duplicata |
-| 422 | Validation | `VALIDATION_ERROR` | Validazione fallita |
-| 500 | Server Error | `INTERNAL_ERROR` | Errore interno |
-| 503 | Server Error | `SERVICE_UNAVAILABLE` | Servizio non disponibile |
+
+| Status Code | Categoria    | Codice Errore         | Descrizione              |
+| ----------- | ------------ | --------------------- | ------------------------ |
+| 400         | Client Error | `BAD_REQUEST`         | Richiesta non valida     |
+| 401         | Auth Error   | `UNAUTHORIZED`        | Non autenticato          |
+| 403         | Auth Error   | `FORBIDDEN`           | Accesso negato           |
+| 404         | Client Error | `NOT_FOUND`           | Risorsa non trovata      |
+| 409         | Client Error | `DUPLICATE_REQUEST`   | Richiesta duplicata      |
+| 422         | Validation   | `VALIDATION_ERROR`    | Validazione fallita      |
+| 500         | Server Error | `INTERNAL_ERROR`      | Errore interno           |
+| 503         | Server Error | `SERVICE_UNAVAILABLE` | Servizio non disponibile |
 
 ---
 
 ## Error Response Format
 
 **Standard Format:**
+
 ```json
 {
   "error": "Messaggio errore leggibile",
@@ -38,6 +43,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 ```
 
 **Con Dettagli (opzionale):**
+
 ```json
 {
   "error": "Validazione fallita",
@@ -58,11 +64,13 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Richiesta malformata o parametri mancanti.
 
 **Codici:**
+
 - `BAD_REQUEST` - Richiesta non valida (generico)
 - `MISSING_PARAMETER` - Parametro obbligatorio mancante
 - `INVALID_PARAMETER` - Parametro non valido
 
 **Esempio:**
+
 ```json
 {
   "error": "Peso obbligatorio e deve essere > 0",
@@ -77,11 +85,13 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Autenticazione mancante o invalida.
 
 **Codici:**
+
 - `UNAUTHORIZED` - Non autenticato
 - `INVALID_TOKEN` - Token non valido
 - `SESSION_EXPIRED` - Sessione scaduta
 
 **Esempio:**
+
 ```json
 {
   "error": "Non autenticato",
@@ -98,11 +108,13 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Autenticato ma senza permessi.
 
 **Codici:**
+
 - `FORBIDDEN` - Accesso negato (generico)
 - `INSUFFICIENT_PERMISSIONS` - Permessi insufficienti
 - `ROLE_REQUIRED` - Ruolo specifico richiesto
 
 **Esempio:**
+
 ```json
 {
   "error": "Accesso negato. Solo gli admin possono accedere.",
@@ -119,12 +131,14 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Risorsa non trovata.
 
 **Codici:**
+
 - `NOT_FOUND` - Risorsa non trovata (generico)
 - `USER_NOT_FOUND` - Utente non trovato
 - `SHIPMENT_NOT_FOUND` - Spedizione non trovata
 - `PRICE_LIST_NOT_FOUND` - Listino non trovato
 
 **Esempio:**
+
 ```json
 {
   "error": "Spedizione non trovata",
@@ -139,11 +153,13 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Conflitto con stato esistente (es. duplicato).
 
 **Codici:**
+
 - `CONFLICT` - Conflitto generico
 - `DUPLICATE_REQUEST` - Richiesta duplicata (idempotency)
 - `RESOURCE_EXISTS` - Risorsa già esistente
 
 **Esempio:**
+
 ```json
 {
   "error": "Richiesta duplicata. Spedizione già creata.",
@@ -162,18 +178,20 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Credito insufficiente per operazione.
 
 **Codici:**
+
 - `WALLET_INSUFFICIENT` - Credito wallet insufficiente
 - `PAYMENT_REQUIRED` - Pagamento richiesto
 
 **Esempio:**
+
 ```json
 {
   "error": "Credito insufficiente. Saldo attuale: €10.00, richiesto: €15.00",
   "code": "WALLET_INSUFFICIENT",
   "details": {
-    "current_balance": 10.00,
-    "required_amount": 15.00,
-    "shortfall": 5.00
+    "current_balance": 10.0,
+    "required_amount": 15.0,
+    "shortfall": 5.0
   }
 }
 ```
@@ -187,6 +205,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Validazione input fallita.
 
 **Codici:**
+
 - `VALIDATION_ERROR` - Errore validazione (generico)
 - `INVALID_EMAIL` - Email non valida
 - `INVALID_PASSWORD` - Password non valida
@@ -194,6 +213,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 - `INVALID_PROVINCE` - Provincia non valida
 
 **Esempio:**
+
 ```json
 {
   "error": "Errore di validazione",
@@ -212,12 +232,14 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Errore interno del server.
 
 **Codici:**
+
 - `INTERNAL_ERROR` - Errore interno (generico)
 - `DATABASE_ERROR` - Errore database
 - `EXTERNAL_API_ERROR` - Errore API esterna
 - `PROCESSING_ERROR` - Errore elaborazione
 
 **Esempio:**
+
 ```json
 {
   "error": "Errore interno del server",
@@ -234,12 +256,14 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 **Quando:** Servizio temporaneamente non disponibile.
 
 **Codici:**
+
 - `SERVICE_UNAVAILABLE` - Servizio non disponibile (generico)
 - `DATABASE_UNAVAILABLE` - Database non disponibile
 - `REDIS_UNAVAILABLE` - Redis non disponibile
 - `COURIER_API_UNAVAILABLE` - API corriere non disponibile
 
 **Esempio:**
+
 ```json
 {
   "error": "Servizio temporaneamente non disponibile",
@@ -254,6 +278,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 ### PostgreSQL Error Codes
 
 **23505 - Unique Violation:**
+
 ```json
 {
   "error": "Risorsa già esistente",
@@ -262,6 +287,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 ```
 
 **23503 - Foreign Key Violation:**
+
 ```json
 {
   "error": "Riferimento non valido",
@@ -270,6 +296,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 ```
 
 **PGRST116 - Not Found:**
+
 ```json
 {
   "error": "Risorsa non trovata",
@@ -278,6 +305,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 ```
 
 **42501 - Permission Denied:**
+
 ```json
 {
   "error": "Accesso negato",
@@ -343,6 +371,7 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 ```
 
 **Headers:**
+
 - `X-RateLimit-Limit`: 20
 - `X-RateLimit-Remaining`: 0
 - `X-RateLimit-Reset`: 1704040000
@@ -355,13 +384,10 @@ Documentazione completa dei codici errore standardizzati utilizzati nelle API di
 
 ```typescript
 // ✅ Good
-return NextResponse.json(
-  { error: "Utente non trovato", code: "USER_NOT_FOUND" },
-  { status: 404 }
-);
+return NextResponse.json({ error: 'Utente non trovato', code: 'USER_NOT_FOUND' }, { status: 404 });
 
 // ❌ Bad
-return NextResponse.json({ message: "Not found" }, { status: 404 });
+return NextResponse.json({ message: 'Not found' }, { status: 404 });
 ```
 
 ---
@@ -374,7 +400,7 @@ try {
 } catch (error: any) {
   console.error('Operation failed:', error); // Log interno
   return NextResponse.json(
-    { error: "Operazione fallita", code: "INTERNAL_ERROR" },
+    { error: 'Operazione fallita', code: 'INTERNAL_ERROR' },
     { status: 500 }
   );
 }
@@ -388,14 +414,14 @@ try {
 // ❌ Bad - Espone dettagli tecnici
 return NextResponse.json({
   error: error.message, // "Connection to database failed: password=xxx"
-  code: "DATABASE_ERROR"
+  code: 'DATABASE_ERROR',
 });
 
 // ✅ Good - Messaggio generico
 console.error('Database error:', error); // Log interno
 return NextResponse.json({
-  error: "Errore database",
-  code: "DATABASE_ERROR"
+  error: 'Errore database',
+  code: 'DATABASE_ERROR',
 });
 ```
 
@@ -407,20 +433,17 @@ return NextResponse.json({
 // ✅ Good - Codice specifico
 if (user.wallet_balance < requiredAmount) {
   return NextResponse.json(
-    { 
-      error: "Credito insufficiente",
-      code: "WALLET_INSUFFICIENT",
-      details: { current_balance: user.wallet_balance, required: requiredAmount }
+    {
+      error: 'Credito insufficiente',
+      code: 'WALLET_INSUFFICIENT',
+      details: { current_balance: user.wallet_balance, required: requiredAmount },
     },
     { status: 402 }
   );
 }
 
 // ❌ Bad - Codice generico
-return NextResponse.json(
-  { error: "Operazione fallita", code: "ERROR" },
-  { status: 400 }
-);
+return NextResponse.json({ error: 'Operazione fallita', code: 'ERROR' }, { status: 400 });
 ```
 
 ---
@@ -436,12 +459,12 @@ return NextResponse.json(
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

@@ -1,16 +1,16 @@
 /**
  * Smoke Test Supabase
- * 
+ *
  * Test rapido per verificare:
  * 1. SELECT su price_lists con user anon -> OK
  * 1b. SELECT su price_lists con user autenticato -> OK
  * 2. INSERT su price_lists con user -> FAIL atteso (RLS)
  * 3. INSERT con service role -> OK
  * 4. SELECT dalle view migrate -> OK
- * 
+ *
  * Utilizzo:
  *   npm run test:supabase:smoke
- * 
+ *
  * Variabili ambiente opzionali per Test 1b:
  *   SUPABASE_TEST_EMAIL - Email utente di test (default: skip test)
  *   SUPABASE_TEST_PASSWORD - Password utente di test
@@ -43,7 +43,9 @@ async function main() {
   // Verifica configurazione
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY) {
     console.error('❌ ERRORE: Variabili ambiente mancanti');
-    console.error('   Richieste: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY');
+    console.error(
+      '   Richieste: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY'
+    );
     process.exit(1);
   }
 
@@ -161,7 +163,9 @@ async function main() {
     }
   } else {
     console.log('\n📋 Test 1b: SELECT con user autenticato...');
-    console.log('   ⏭️  SKIP - Variabili SUPABASE_TEST_EMAIL e SUPABASE_TEST_PASSWORD non configurate');
+    console.log(
+      '   ⏭️  SKIP - Variabili SUPABASE_TEST_EMAIL e SUPABASE_TEST_PASSWORD non configurate'
+    );
     results.push({
       name: 'Test 1b: SELECT con user autenticato',
       status: 'PASS',
@@ -180,10 +184,7 @@ async function main() {
       status: 'draft',
     };
 
-    const { data, error } = await clientAnon
-      .from('price_lists')
-      .insert(testData)
-      .select();
+    const { data, error } = await clientAnon.from('price_lists').insert(testData).select();
 
     if (error) {
       // Errore atteso (RLS dovrebbe bloccare)
@@ -201,13 +202,10 @@ async function main() {
         message: 'ERRORE: INSERT riuscito ma doveva essere bloccato da RLS!',
       });
       console.log('   ❌ FAIL - INSERT riuscito ma doveva essere bloccato!');
-      
+
       // Pulisci: elimina il record inserito
       if (data && data[0]?.id) {
-        await clientService
-          .from('price_lists')
-          .delete()
-          .eq('id', data[0].id);
+        await clientService.from('price_lists').delete().eq('id', data[0].id);
       }
     }
   } catch (err: any) {
@@ -232,10 +230,7 @@ async function main() {
       status: 'draft',
     };
 
-    const { data, error } = await clientService
-      .from('price_lists')
-      .insert(testData)
-      .select();
+    const { data, error } = await clientService.from('price_lists').insert(testData).select();
 
     if (error) {
       results.push({
@@ -267,10 +262,7 @@ async function main() {
   // Pulisci: elimina record di test se creato
   if (insertedId) {
     try {
-      await clientService
-        .from('price_lists')
-        .delete()
-        .eq('id', insertedId);
+      await clientService.from('price_lists').delete().eq('id', insertedId);
       console.log(`   🧹 Pulizia: record di test eliminato`);
     } catch (err) {
       console.log(`   ⚠️  Avviso: impossibile eliminare record di test`);
@@ -281,28 +273,25 @@ async function main() {
   // TEST 4: SELECT dalle view migrate -> OK
   // ============================================
   console.log('\n📋 Test 4: SELECT dalle view migrate...');
-  
+
   // Prova direttamente alcune possibili view migrate o view comuni
   try {
     const possibleViews = [
-      'migrate', 
-      'migrations', 
-      'migrate_status', 
-      'schema_migrations', 
+      'migrate',
+      'migrations',
+      'migrate_status',
+      'schema_migrations',
       'supabase_migrations',
       'anne_all_shipments_view', // View esistente nel progetto
-      'admin_monthly_stats',     // View esistente nel progetto
-      'top_customers'            // View esistente nel progetto
+      'admin_monthly_stats', // View esistente nel progetto
+      'top_customers', // View esistente nel progetto
     ];
     let found = false;
     let viewName = '';
 
     for (const vName of possibleViews) {
       try {
-        const { data, error } = await clientAnon
-          .from(vName)
-          .select('*')
-          .limit(1);
+        const { data, error } = await clientAnon.from(vName).select('*').limit(1);
 
         if (!error && data !== null) {
           viewName = vName;
@@ -325,7 +314,8 @@ async function main() {
       results.push({
         name: 'Test 4: SELECT view migrate',
         status: 'FAIL',
-        message: 'Nessuna view migrate trovata o accessibile. View provate: ' + possibleViews.join(', '),
+        message:
+          'Nessuna view migrate trovata o accessibile. View provate: ' + possibleViews.join(', '),
       });
       console.log('   ❌ FAIL - Nessuna view migrate trovata');
       console.log(`   ℹ️  View provate: ${possibleViews.join(', ')}`);
@@ -346,10 +336,10 @@ async function main() {
   console.log('\n' + '='.repeat(60));
   console.log('\n📊 RIEPILOGO TEST\n');
 
-  const passed = results.filter(r => r.status === 'PASS').length;
-  const failed = results.filter(r => r.status === 'FAIL').length;
+  const passed = results.filter((r) => r.status === 'PASS').length;
+  const failed = results.filter((r) => r.status === 'FAIL').length;
 
-  results.forEach(result => {
+  results.forEach((result) => {
     const icon = result.status === 'PASS' ? '✅' : '❌';
     console.log(`${icon} ${result.name}: ${result.status}`);
     console.log(`   ${result.message}`);
@@ -360,7 +350,7 @@ async function main() {
 
   console.log('\n' + '='.repeat(60));
   console.log(`\n📈 Risultato: ${passed}/${results.length} test passati`);
-  
+
   if (failed === 0) {
     console.log('✅ TUTTI I TEST PASSATI\n');
     process.exit(0);
@@ -370,8 +360,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('\n❌ Errore fatale:', err);
   process.exit(1);
 });
-

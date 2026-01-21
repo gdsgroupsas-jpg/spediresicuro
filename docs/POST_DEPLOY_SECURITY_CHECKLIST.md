@@ -1,6 +1,7 @@
 # ✅ Checklist Post-Deploy: Security Hardening
 
 ## 🎯 Obiettivo
+
 Verificare che le modifiche di sicurezza (AuthContext, assertValidUserId) funzionino correttamente in produzione.
 
 ---
@@ -8,6 +9,7 @@ Verificare che le modifiche di sicurezza (AuthContext, assertValidUserId) funzio
 ## 1️⃣ Endpoint Authentication (401 senza session)
 
 ### Test: `/api/spedizioni` (GET)
+
 ```bash
 # Senza autenticazione
 curl -X GET https://[YOUR_DOMAIN]/api/spedizioni
@@ -17,10 +19,12 @@ curl -X GET https://[YOUR_DOMAIN]/api/spedizioni
 ```
 
 **Verifica codice:**
+
 - ✅ `app/api/spedizioni/route.ts:22-24` - Verifica `session?.user?.email`
 - ✅ Ritorna `401` se non autenticato
 
 **Log da cercare:**
+
 ```
 ❌ [SECURITY] Tentativo accesso getSpedizioni senza autenticazione
 ```
@@ -28,6 +32,7 @@ curl -X GET https://[YOUR_DOMAIN]/api/spedizioni
 ---
 
 ### Test: `/api/spedizioni` (POST)
+
 ```bash
 # Senza autenticazione
 curl -X POST https://[YOUR_DOMAIN]/api/spedizioni \
@@ -38,12 +43,14 @@ curl -X POST https://[YOUR_DOMAIN]/api/spedizioni \
 ```
 
 **Verifica codice:**
+
 - ✅ `app/api/spedizioni/route.ts:196-198` - Verifica `session?.user?.email`
 - ✅ Ritorna `401` se non autenticato
 
 ---
 
 ### Test: `/api/corrieri/reliability` (GET)
+
 ```bash
 # Senza autenticazione
 curl -X GET "https://[YOUR_DOMAIN]/api/corrieri/reliability?citta=Roma&provincia=RM"
@@ -52,6 +59,7 @@ curl -X GET "https://[YOUR_DOMAIN]/api/corrieri/reliability?citta=Roma&provincia
 ```
 
 **Verifica codice:**
+
 - ✅ `app/api/corrieri/reliability/route.ts:18-23` - Verifica `session?.user?.email`
 - ✅ Ritorna `401` se non autenticato
 
@@ -62,29 +70,34 @@ curl -X GET "https://[YOUR_DOMAIN]/api/corrieri/reliability?citta=Roma&provincia
 ### Test: Con session utente A, non vedere shipments utente B
 
 **Setup:**
+
 1. Login come User A
 2. Crea spedizione come User A
 3. Login come User B
 4. Chiama GET `/api/spedizioni`
 
 **Atteso:**
+
 - User B vede SOLO le proprie spedizioni
 - Spedizione User A NON visibile a User B
 
 **Verifica codice:**
+
 - ✅ `lib/database.ts:932-941` - Filtra con `query.eq('user_id', authContext.userId)`
 - ✅ `lib/database.ts:934-937` - Throw se `userId` mancante
 
 **Log da cercare:**
+
 ```
 ✅ [SUPABASE] Filtro per user_id: [UUID]... (user: [email])
 ```
 
 **Query Supabase da verificare:**
+
 ```sql
 -- Come User B, questa query NON deve restituire shipments User A
-SELECT id, user_id, tracking_number 
-FROM shipments 
+SELECT id, user_id, tracking_number
+FROM shipments
 WHERE user_id = '[USER_B_UUID]'
 ORDER BY created_at DESC;
 ```
@@ -94,18 +107,22 @@ ORDER BY created_at DESC;
 ### Test: Service Role vede tutto (solo per admin verificato)
 
 **Setup:**
+
 1. Usa service_role context (solo in operazioni admin verificate)
 2. Chiama `getSpedizioni(serviceRoleContext)`
 
 **Atteso:**
+
 - Service role vede tutte le spedizioni
 - Audit log registrato
 
 **Verifica codice:**
+
 - ✅ `lib/database.ts:942-950` - Service role bypass RLS
 - ✅ `lib/auth-context.ts:88-103` - `createServiceRoleContext()` verifica service key
 
 **Log da cercare:**
+
 ```
 🔐 [AUDIT] Service Role Operation: getSpedizioni
 🔐 [SUPABASE] Service role: recupero tutte le spedizioni (bypass RLS)
@@ -118,6 +135,7 @@ ORDER BY created_at DESC;
 ### Test: Insert shipment senza userId valido
 
 **Test 1: userId = undefined**
+
 ```typescript
 // In test o script
 try {
@@ -129,9 +147,10 @@ try {
 ```
 
 **Test 2: userId = ""**
+
 ```typescript
 try {
-  await createShipment(shipmentData, "");
+  await createShipment(shipmentData, '');
   // FAIL: dovrebbe throw
 } catch (error) {
   // Atteso: Error con "USER_ID_REQUIRED"
@@ -139,9 +158,10 @@ try {
 ```
 
 **Test 3: userId = "not-a-uuid"**
+
 ```typescript
 try {
-  await createShipment(shipmentData, "not-a-uuid");
+  await createShipment(shipmentData, 'not-a-uuid');
   // FAIL: dovrebbe throw
 } catch (error) {
   // Atteso: Error con "INVALID_USER_ID"
@@ -149,11 +169,13 @@ try {
 ```
 
 **Verifica codice:**
+
 - ✅ `lib/db/shipments.ts:26` - `assertValidUserId(userId)` prima di insert
 - ✅ `lib/ai/tools/shipments-batch.ts:319` - `assertValidUserId(userId)` prima di insert
 - ✅ `lib/validators.ts:75-95` - Validazione completa
 
 **Log da cercare:**
+
 ```
 USER_ID_REQUIRED: userId è obbligatorio...
 INVALID_USER_ID: userId deve essere un UUID valido...
@@ -166,6 +188,7 @@ INVALID_USER_ID: userId deve essere un UUID valido...
 ### Test: Nessuna shipment con user_id=null per utenti normali
 
 **Query Supabase:**
+
 ```sql
 -- Questa query NON deve restituire risultati per utenti normali
 -- (solo service_role può vedere shipments con user_id=null)
@@ -178,6 +201,7 @@ AND created_by_admin_id IS NULL;  -- Non create da admin
 ```
 
 **Verifica RLS:**
+
 ```sql
 -- Verifica policy RLS
 SELECT schemaname, tablename, policyname, qual
@@ -193,6 +217,7 @@ AND policyname LIKE '%select%';
 ## 📊 Risultati Attesi
 
 ### ✅ OK se:
+
 - [ ] Tutti gli endpoint ritornano 401 senza session
 - [ ] User A non vede shipments User B
 - [ ] Query filtrata per `user_id` nei log
@@ -201,6 +226,7 @@ AND policyname LIKE '%select%';
 - [ ] Log audit per operazioni service_role
 
 ### ❌ KO se:
+
 - [ ] Endpoint ritorna 200 senza session
 - [ ] User A vede shipments User B
 - [ ] Query senza filtro `user_id` nei log
@@ -212,6 +238,7 @@ AND policyname LIKE '%select%';
 ## 🔍 Comandi Rapidi Verifica
 
 ### 1. Test 401 (senza auth)
+
 ```bash
 # GET /api/spedizioni
 curl -v https://[DOMAIN]/api/spedizioni 2>&1 | grep -E "HTTP|error"
@@ -221,17 +248,19 @@ curl -v "https://[DOMAIN]/api/corrieri/reliability?citta=Roma&provincia=RM" 2>&1
 ```
 
 ### 2. Test Tenant Isolation
+
 ```bash
 # Con session User A
 curl -H "Cookie: [SESSION_A]" https://[DOMAIN]/api/spedizioni | jq '.data[].user_id'
 
-# Con session User B  
+# Con session User B
 curl -H "Cookie: [SESSION_B]" https://[DOMAIN]/api/spedizioni | jq '.data[].user_id'
 
 # Verifica: tutti gli user_id devono essere [USER_B_UUID]
 ```
 
 ### 3. Verifica Log Vercel
+
 ```bash
 # Cerca log di sicurezza
 vercel logs --follow | grep -E "SECURITY|AUDIT|USER_ID_REQUIRED|INVALID_USER_ID"
@@ -247,7 +276,6 @@ vercel logs --follow | grep -E "SECURITY|AUDIT|USER_ID_REQUIRED|INVALID_USER_ID"
 
 ---
 
-**Data verifica:** _______________  
-**Verificato da:** _______________  
+**Data verifica:** **\*\***\_\_\_**\*\***  
+**Verificato da:** **\*\***\_\_\_**\*\***  
 **Stato:** ✅ OK / ❌ KO
-

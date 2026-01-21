@@ -16,6 +16,7 @@ This guide explains how to set up Grafana Cloud (FREE tier) for monitoring Spedi
 4. Select the closest region (e.g., `eu-west-1` for Europe)
 
 ### Free Tier Limits
+
 - **10,000 active metric series**
 - **14-day retention**
 - **50GB logs/month** (with Loki)
@@ -296,8 +297,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "High number of pending top-ups"
-          description: "{{ $value }} top-up requests are pending"
+          summary: 'High number of pending top-ups'
+          description: '{{ $value }} top-up requests are pending'
 
       - alert: LowSuccessRate
         expr: spedire_shipments_success_rate < 0.9
@@ -305,8 +306,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "Shipment success rate below 90%"
-          description: "Current success rate: {{ $value | humanizePercentage }}"
+          summary: 'Shipment success rate below 90%'
+          description: 'Current success rate: {{ $value | humanizePercentage }}'
 
       - alert: NoShipmentsToday
         expr: spedire_shipments_created{period="today"} == 0
@@ -314,7 +315,7 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "No shipments created today"
+          summary: 'No shipments created today'
 ```
 
 ### Contact Points
@@ -368,10 +369,10 @@ Metrics queries can take 1-5 seconds on large datasets. This is normal for the F
 
 ## Cost Summary
 
-| Service | Tier | Cost | Usage |
-|---------|------|------|-------|
-| Grafana Cloud | FREE | €0/month | 10K series, 14d retention |
-| Prometheus endpoint | N/A | €0/month | Self-hosted in Vercel |
+| Service             | Tier | Cost     | Usage                     |
+| ------------------- | ---- | -------- | ------------------------- |
+| Grafana Cloud       | FREE | €0/month | 10K series, 14d retention |
+| Prometheus endpoint | N/A  | €0/month | Self-hosted in Vercel     |
 
 **Total M4 cost: €0/month**
 

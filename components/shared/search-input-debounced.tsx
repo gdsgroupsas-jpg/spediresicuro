@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { Search, X } from 'lucide-react'
-import { useDebounce } from '@/lib/hooks/use-debounce'
-import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { useDebounce } from '@/lib/hooks/use-debounce';
+import { cn } from '@/lib/utils';
 
 interface SearchInputDebouncedProps {
-  onSearch: (value: string) => void
-  placeholder?: string
-  delay?: number
-  className?: string
-  defaultValue?: string
+  onSearch: (value: string) => void;
+  placeholder?: string;
+  delay?: number;
+  className?: string;
+  defaultValue?: string;
 }
 
 /**
@@ -24,16 +24,16 @@ export function SearchInputDebounced({
   className,
   defaultValue = '',
 }: SearchInputDebouncedProps) {
-  const [value, setValue] = useState(defaultValue)
-  const debouncedValue = useDebounce(value, delay)
+  const [value, setValue] = useState(defaultValue);
+  const debouncedValue = useDebounce(value, delay);
 
   useEffect(() => {
-    onSearch(debouncedValue)
-  }, [debouncedValue, onSearch])
+    onSearch(debouncedValue);
+  }, [debouncedValue, onSearch]);
 
   const handleClear = () => {
-    setValue('')
-  }
+    setValue('');
+  };
 
   return (
     <div className={cn('relative', className)}>
@@ -63,5 +63,5 @@ export function SearchInputDebounced({
         </button>
       )}
     </div>
-  )
+  );
 }

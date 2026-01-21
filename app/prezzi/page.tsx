@@ -1,5 +1,5 @@
-import Header from '@/components/header'
-import Footer from '@/components/footer'
+import Header from '@/components/header';
+import Footer from '@/components/footer';
 
 export default function PrezziPage() {
   return (
@@ -20,23 +20,13 @@ export default function PrezziPage() {
               <li>Supporto AI per estrazione dati</li>
             </ul>
             <p className="text-sm text-gray-500">
-              I prezzi delle spedizioni vengono calcolati in base al corriere e alle dimensioni del pacco.
-              Appliciamo un margine configurabile sul costo base.
+              I prezzi delle spedizioni vengono calcolati in base al corriere e alle dimensioni del
+              pacco. Appliciamo un margine configurabile sul costo base.
             </p>
           </div>
         </div>
       </main>
       <Footer />
     </>
-  )
+  );
 }
-
-
-
-
-
-
-
-
-
-

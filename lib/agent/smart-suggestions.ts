@@ -1,8 +1,8 @@
 ﻿/**
  * Smart Suggestions - P4 Task 4
- * 
+ *
  * Analizza telemetria utente per suggerimenti proattivi basati su pattern ricorrenti.
- * 
+ *
  * âš ï¸ SICUREZZA:
  * - RLS enforcement: usa requireSafeAuth()
  * - NO PII: mai mostrare indirizzi completi, solo "destinatario a Milano"
@@ -77,8 +77,7 @@ async function detectPatterns(
         (recipientCounts[shipment.recipient_city] || 0) + 1;
     }
     if (shipment.courier_name) {
-      courierCounts[shipment.courier_name] =
-        (courierCounts[shipment.courier_name] || 0) + 1;
+      courierCounts[shipment.courier_name] = (courierCounts[shipment.courier_name] || 0) + 1;
     }
     if (shipment.weight) {
       weightCounts[shipment.weight] = (weightCounts[shipment.weight] || 0) + 1;
@@ -99,28 +98,19 @@ async function detectPatterns(
   )?.[0];
 
   return {
-    recurringRecipient: recurringRecipient
-      ? { recipientCity: recurringRecipient }
-      : null,
-    recurringCourier: recurringCourier
-      ? { courierName: recurringCourier }
-      : null,
-    recurringWeight: recurringWeight
-      ? { weight: parseFloat(String(recurringWeight)) }
-      : null,
+    recurringRecipient: recurringRecipient ? { recipientCity: recurringRecipient } : null,
+    recurringCourier: recurringCourier ? { courierName: recurringCourier } : null,
+    recurringWeight: recurringWeight ? { weight: parseFloat(String(recurringWeight)) } : null,
   };
 }
 
 /**
  * Verifica rate limiting (max 1 suggerimento ogni 24h per tipo)
- * 
+ *
  * NOTA: Per ora, il rate limiting Ã¨ gestito lato client.
  * In produzione, potresti usare una tabella DB per rate limiting server-side.
  */
-function checkRateLimit(
-  userId: string,
-  suggestionType: SuggestionType
-): boolean {
+function checkRateLimit(userId: string, suggestionType: SuggestionType): boolean {
   // Server-side: sempre permetti (rate limiting gestito lato client)
   // Il client chiamerÃ  markSuggestionShown() per salvare il timestamp
   return true;
@@ -128,14 +118,11 @@ function checkRateLimit(
 
 /**
  * Salva timestamp suggerimento per rate limiting
- * 
+ *
  * NOTA: Questa funzione Ã¨ chiamata lato client.
  * In produzione, potresti salvare in DB.
  */
-export function markSuggestionShown(
-  userId: string,
-  suggestionType: SuggestionType
-): void {
+export function markSuggestionShown(userId: string, suggestionType: SuggestionType): void {
   if (typeof window === 'undefined') return;
 
   try {
@@ -154,10 +141,7 @@ export function markSuggestionShown(
 /**
  * Verifica se un suggerimento Ã¨ giÃ  stato mostrato recentemente (lato client)
  */
-export function shouldShowSuggestion(
-  userId: string,
-  suggestionType: SuggestionType
-): boolean {
+export function shouldShowSuggestion(userId: string, suggestionType: SuggestionType): boolean {
   if (typeof window === 'undefined') return true;
 
   try {
@@ -224,13 +208,11 @@ async function generateSuggestion(
 
 /**
  * Ottieni suggerimento proattivo per l'utente
- * 
+ *
  * @param userId - ID utente (da requireSafeAuth())
  * @returns Suggestion o null se nessun pattern rilevato
  */
-export async function getSmartSuggestion(
-  userId: string
-): Promise<Suggestion | null> {
+export async function getSmartSuggestion(userId: string): Promise<Suggestion | null> {
   try {
     // âš ï¸ SICUREZZA: Verifica autenticazione (in produzione, usa requireSafeAuth())
     // Per ora, assumiamo che userId sia giÃ  validato dalla route
@@ -243,8 +225,7 @@ export async function getSmartSuggestion(
 
     return suggestion;
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('âŒ [Smart Suggestions] Errore:', errorMessage);
     return null;
   }

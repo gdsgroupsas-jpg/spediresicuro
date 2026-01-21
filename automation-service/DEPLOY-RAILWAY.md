@@ -5,12 +5,14 @@
 Railway è la piattaforma di deploy per il **servizio di automazione** (`automation-service`).
 
 **Struttura deploy:**
+
 - **Vercel** → Progetto Next.js principale (`spediresicuro/`)
 - **Railway** → Servizio automazione (`automation-service/`)
 
 ## ✅ COME FUNZIONA IL DEPLOY
 
 Railway è **sincronizzato automaticamente** con GitHub:
+
 - Ogni **push su `master`** → Railway scarica automaticamente
 - Railway usa il **Dockerfile** in `automation-service/Dockerfile`
 - Build automatico quando rileva cambiamenti
@@ -18,11 +20,13 @@ Railway è **sincronizzato automaticamente** con GitHub:
 ## 🔧 CORREZIONE ERRORI BUILD
 
 ### Errore risolto oggi:
+
 ```
 error TS2339: Property 'find' does not exist on type 'NodeListOf<HTMLTableCellElement>'
 ```
 
 ### Soluzione applicata:
+
 - Convertito `NodeListOf` in array con `Array.from()`
 - Aggiunto tipi espliciti per parametri `find()`
 - File corretto: `automation-service/src/agent.ts`
@@ -30,17 +34,22 @@ error TS2339: Property 'find' does not exist on type 'NodeListOf<HTMLTableCellEl
 ## 📋 VERIFICA DEPLOY
 
 ### 1. GitHub
+
 Vai su: **https://github.com/gdsgroupsas-jpg/spediresicuro**
+
 - Controlla commit recenti
 - Dovresti vedere: "fix: Risolti errori TypeScript in agent.ts..."
 
 ### 2. Railway Dashboard
+
 Vai su: **https://railway.app/dashboard**
+
 - Seleziona progetto `spediresicuro-automation-service`
 - Controlla deploy recenti
 - Dovresti vedere un nuovo deploy in corso/completato
 
 ### 3. Log Railway
+
 - Clicca sul deploy → **Logs**
 - Verifica che il build sia completato senza errori
 - Dovresti vedere: "Build successful" o "Deployment successful"

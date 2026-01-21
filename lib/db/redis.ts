@@ -5,7 +5,7 @@
  * Supporta Upstash Redis (HTTP based) per edge compatibility.
  */
 
-import { Redis } from "@upstash/redis";
+import { Redis } from '@upstash/redis';
 
 let redis: Redis | null = null;
 let redisInitAttempted = false;
@@ -18,13 +18,10 @@ export function getRedis(): Redis | null {
 
   // Supporta sia UPSTASH_* che KV_* (Vercel Marketplace)
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 
   if (!url || !token) {
-    console.warn(
-      "⚠️ [REDIS] Configurazione mancante - funzionalità distribuite disabilitate"
-    );
+    console.warn('⚠️ [REDIS] Configurazione mancante - funzionalità distribuite disabilitate');
     return null;
   }
 
@@ -33,7 +30,7 @@ export function getRedis(): Redis | null {
     // Quick ping/connection check optional here, but we keep it lazy
     return redis;
   } catch (error) {
-    console.error("❌ [REDIS] Errore inizializzazione:", error);
+    console.error('❌ [REDIS] Errore inizializzazione:', error);
     return null;
   }
 }

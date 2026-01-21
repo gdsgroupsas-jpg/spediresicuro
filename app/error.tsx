@@ -2,7 +2,7 @@
 
 /**
  * Error Boundary Component
- * 
+ *
  * Gestisce gli errori globali dell'applicazione
  */
 
@@ -16,9 +16,7 @@ export default function Error({
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          Qualcosa è andato storto
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Qualcosa è andato storto</h1>
         <p className="text-gray-600 mb-6">
           {error.message || 'Si è verificato un errore imprevisto'}
         </p>
@@ -32,4 +30,3 @@ export default function Error({
     </div>
   );
 }
-

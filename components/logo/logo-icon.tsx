@@ -1,9 +1,9 @@
-import React from 'react'
+import React from 'react';
 
 interface LogoIconProps {
-  className?: string
-  width?: number
-  height?: number
+  className?: string;
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -48,5 +48,5 @@ export default function LogoIcon({ className = '', width = 40, height = 40 }: Lo
         />
       </g>
     </svg>
-  )
+  );
 }

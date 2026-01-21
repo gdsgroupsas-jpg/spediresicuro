@@ -1,6 +1,6 @@
 /**
  * Test Automatico API Poste Italiane (versione semplificata)
- * 
+ *
  * Verifica:
  * 1. Configurazione nel database
  * 2. Autenticazione OAuth (tramite fetch diretto)
@@ -20,10 +20,10 @@ try {
 
 // Carica variabili da .env.local (prova vari path)
 const envPaths = [
-  path.join(process.cwd(), '.env.local'),           // Root progetto corrente
-  path.join(process.cwd(), '..', '.env.local'),     // Directory parent
-  path.join(__dirname, '..', '.env.local'),         // Relativo a scripts/
-  path.join(__dirname, '..', '..', '.env.local')     // Parent di parent
+  path.join(process.cwd(), '.env.local'), // Root progetto corrente
+  path.join(process.cwd(), '..', '.env.local'), // Directory parent
+  path.join(__dirname, '..', '.env.local'), // Relativo a scripts/
+  path.join(__dirname, '..', '..', '.env.local'), // Parent di parent
 ];
 
 let envLoaded = false;
@@ -35,7 +35,7 @@ for (const envPath of envPaths) {
     } else {
       console.log(`📄 Caricamento variabili manualmente da: ${envPath}`);
       const envContent = fs.readFileSync(envPath, 'utf8');
-      envContent.split('\n').forEach(line => {
+      envContent.split('\n').forEach((line) => {
         const trimmedLine = line.trim();
         if (trimmedLine && !trimmedLine.startsWith('#')) {
           const [key, ...valueParts] = trimmedLine.split('=');
@@ -58,12 +58,16 @@ if (!envLoaded) {
 
 // Debug: mostra tutte le variabili NEXT_PUBLIC e SUPABASE disponibili
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.log('🔍 Debug: Variabili d\'ambiente disponibili:');
+  console.log("🔍 Debug: Variabili d'ambiente disponibili:");
   Object.keys(process.env)
-    .filter(key => key.includes('SUPABASE') || key.includes('ENCRYPTION'))
-    .forEach(key => {
+    .filter((key) => key.includes('SUPABASE') || key.includes('ENCRYPTION'))
+    .forEach((key) => {
       const value = process.env[key];
-      const preview = value ? (value.length > 50 ? value.substring(0, 50) + '...' : value) : 'undefined';
+      const preview = value
+        ? value.length > 50
+          ? value.substring(0, 50) + '...'
+          : value
+        : 'undefined';
       console.log(`   ${key} = ${preview}`);
     });
 }
@@ -73,7 +77,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const encryptionKey = process.env.ENCRYPTION_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('\n❌ Variabili d\'ambiente mancanti!');
+  console.error("\n❌ Variabili d'ambiente mancanti!");
   console.error('Richiesto: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
   console.error('\n💡 Suggerimento:');
   console.error('   - Verifica che il file .env.local esista nella root del progetto');
@@ -137,17 +141,17 @@ async function testPosteAPI() {
       `${supabaseUrl}/rest/v1/courier_configs?provider_id=eq.poste&is_active=eq.true&is_default=eq.true&select=*`,
       {
         headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        }
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
       }
     );
 
     if (!response.ok) {
       logResult('Configurazione DB', false, 'Errore query database', {
         status: response.status,
-        statusText: response.statusText
+        statusText: response.statusText,
       });
       return;
     }
@@ -164,7 +168,7 @@ async function testPosteAPI() {
       base_url: config.base_url,
       has_api_key: !!config.api_key,
       has_api_secret: !!config.api_secret,
-      has_cdc: !!(config.contract_mapping?.cdc)
+      has_cdc: !!config.contract_mapping?.cdc,
     });
 
     // STEP 2: Decripta credenziali
@@ -196,9 +200,10 @@ async function testPosteAPI() {
     }
 
     // Estrai CDC
-    const contractMapping = typeof config.contract_mapping === 'string'
-      ? JSON.parse(config.contract_mapping)
-      : config.contract_mapping;
+    const contractMapping =
+      typeof config.contract_mapping === 'string'
+        ? JSON.parse(config.contract_mapping)
+        : config.contract_mapping;
     cdc = contractMapping?.cdc || 'CDC-DEFAULT';
     logResult('CDC', true, `CDC: ${cdc}`);
 
@@ -211,15 +216,15 @@ async function testPosteAPI() {
       const authResponse = await fetch(authUrl, {
         method: 'POST',
         headers: {
-          'POSTE_clientID': clientId,
-          'Content-Type': 'application/json'
+          POSTE_clientID: clientId,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           clientId: clientId,
           secretId: clientSecret,
           grantType: 'client_credentials',
-          scope: 'api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default'
-        })
+          scope: 'api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default',
+        }),
       });
 
       if (!authResponse.ok) {
@@ -227,7 +232,7 @@ async function testPosteAPI() {
         logResult('Autenticazione', false, 'Errore autenticazione', {
           status: authResponse.status,
           statusText: authResponse.statusText,
-          body: errorData
+          body: errorData,
         });
         return;
       }
@@ -240,7 +245,7 @@ async function testPosteAPI() {
 
       logResult('Autenticazione', true, 'Token OAuth ottenuto con successo', {
         token_length: authData.access_token.length,
-        expires_in: authData.expires_in || 'N/A'
+        expires_in: authData.expires_in || 'N/A',
       });
 
       // STEP 4: Test endpoint waybill (solo verifica che l'endpoint esista)
@@ -253,11 +258,11 @@ async function testPosteAPI() {
       console.log('📊 RIEPILOGO TEST');
       console.log('='.repeat(60));
 
-      const successCount = results.filter(r => r.success).length;
+      const successCount = results.filter((r) => r.success).length;
       const totalCount = results.length;
       const allSuccess = successCount === totalCount;
 
-      results.forEach(result => {
+      results.forEach((result) => {
         const icon = result.success ? '✅' : '❌';
         console.log(`${icon} ${result.step}`);
       });
@@ -265,7 +270,7 @@ async function testPosteAPI() {
       console.log('\n' + '='.repeat(60));
       if (allSuccess) {
         console.log('✅ TUTTI I TEST SUPERATI!');
-        console.log('   L\'integrazione Poste Italiane è configurata correttamente.');
+        console.log("   L'integrazione Poste Italiane è configurata correttamente.");
         console.log('   Puoi procedere con la creazione di spedizioni reali.');
       } else {
         console.log('❌ ALCUNI TEST FALLITI');
@@ -273,14 +278,12 @@ async function testPosteAPI() {
         console.log('   Controlla i dettagli sopra per risolvere i problemi.');
       }
       console.log('='.repeat(60));
-
     } catch (error) {
       logResult('Autenticazione', false, 'Errore durante autenticazione', {
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
     }
-
   } catch (error) {
     console.error('\n❌ Errore fatale durante il test:', error);
     process.exit(1);
@@ -295,4 +298,3 @@ testPosteAPI()
     console.error('\n❌ Errore fatale:', error);
     process.exit(1);
   });
-

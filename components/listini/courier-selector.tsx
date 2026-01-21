@@ -7,20 +7,14 @@
  * @security Le preferenze sono salvate in courier_configs.automation_settings.enabled_carriers
  */
 
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle2, Loader2, Save, Truck } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, CheckCircle2, Loader2, Save, Truck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface CourierSelectorProps {
   configId: string;
@@ -35,15 +29,15 @@ interface CourierSelectorProps {
 
 // Mapping per nomi display corrieri
 const COURIER_DISPLAY_NAMES: Record<string, string> = {
-  gls: "GLS",
-  postedeliverybusiness: "Poste Delivery Business",
-  brt: "BRT/Bartolini",
-  dhl: "DHL",
-  ups: "UPS",
-  fedex: "FedEx",
-  tnt: "TNT",
-  sda: "SDA",
-  interno: "Corriere Interno",
+  gls: 'GLS',
+  postedeliverybusiness: 'Poste Delivery Business',
+  brt: 'BRT/Bartolini',
+  dhl: 'DHL',
+  ups: 'UPS',
+  fedex: 'FedEx',
+  tnt: 'TNT',
+  sda: 'SDA',
+  interno: 'Corriere Interno',
 };
 
 export function CourierSelector({
@@ -78,7 +72,7 @@ export function CourierSelector({
       if (next.has(courier)) {
         // Non permettere di disabilitare tutti
         if (next.size <= 1) {
-          toast.error("Devi mantenere almeno un corriere abilitato");
+          toast.error('Devi mantenere almeno un corriere abilitato');
           return prev;
         }
         next.delete(courier);
@@ -103,29 +97,26 @@ export function CourierSelector({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(
-        "/api/configurations/update-courier-settings",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            configId,
-            enabledCouriers: [...selectedCouriers],
-          }),
-        }
-      );
+      const response = await fetch('/api/configurations/update-courier-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          configId,
+          enabledCouriers: [...selectedCouriers],
+        }),
+      });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Errore salvataggio");
+        throw new Error(error.error || 'Errore salvataggio');
       }
 
-      toast.success("Preferenze corrieri salvate");
+      toast.success('Preferenze corrieri salvate');
       onSave?.([...selectedCouriers]);
       setHasChanges(false);
     } catch (error: any) {
-      console.error("Errore salvataggio preferenze:", error);
-      toast.error(error.message || "Errore salvataggio preferenze");
+      console.error('Errore salvataggio preferenze:', error);
+      toast.error(error.message || 'Errore salvataggio preferenze');
     } finally {
       setIsSaving(false);
     }
@@ -138,8 +129,7 @@ export function CourierSelector({
           <div className="flex items-center gap-2 text-yellow-700">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">
-              Nessun corriere rilevato. Esegui un test per rilevare i corrieri
-              disponibili.
+              Nessun corriere rilevato. Esegui un test per rilevare i corrieri disponibili.
             </span>
           </div>
         </CardContent>
@@ -170,20 +160,10 @@ export function CourierSelector({
       <CardContent className="space-y-4">
         {/* Azioni rapide */}
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSelectAll}
-            disabled={isSaving}
-          >
+          <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={isSaving}>
             Seleziona tutti
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDeselectAll}
-            disabled={isSaving}
-          >
+          <Button variant="outline" size="sm" onClick={handleDeselectAll} disabled={isSaving}>
             Deseleziona tutti
           </Button>
         </div>
@@ -192,8 +172,7 @@ export function CourierSelector({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {availableCouriers.map((courier) => {
             const isChecked = selectedCouriers.has(courier);
-            const displayName =
-              COURIER_DISPLAY_NAMES[courier.toLowerCase()] || courier;
+            const displayName = COURIER_DISPLAY_NAMES[courier.toLowerCase()] || courier;
 
             return (
               <div
@@ -202,8 +181,8 @@ export function CourierSelector({
                   flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors
                   ${
                     isChecked
-                      ? "bg-green-50 border-green-200 hover:bg-green-100"
-                      : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                      ? 'bg-green-50 border-green-200 hover:bg-green-100'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                   }
                 `}
                 onClick={() => handleToggle(courier)}
@@ -221,9 +200,7 @@ export function CourierSelector({
                 >
                   {displayName}
                 </Label>
-                {isChecked && (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                )}
+                {isChecked && <CheckCircle2 className="h-4 w-4 text-green-600" />}
               </div>
             );
           })}
@@ -232,14 +209,9 @@ export function CourierSelector({
         {/* Info e salvataggio */}
         <div className="flex items-center justify-between pt-2 border-t">
           <span className="text-sm text-muted-foreground">
-            {selectedCouriers.size} di {availableCouriers.length} corrieri
-            selezionati
+            {selectedCouriers.size} di {availableCouriers.length} corrieri selezionati
           </span>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasChanges}
-            size="sm"
-          >
+          <Button onClick={handleSave} disabled={isSaving || !hasChanges} size="sm">
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

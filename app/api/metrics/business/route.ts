@@ -12,12 +12,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
-import {
-  getBusinessMetrics,
-  getQuickStats,
-} from '@/lib/metrics/business-metrics';
+import { getBusinessMetrics, getQuickStats } from '@/lib/metrics/business-metrics';
 import { createLogger } from '@/lib/logger';
 
 // Allowed roles for metrics access
@@ -30,15 +27,15 @@ async function verifyAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    // Use NextAuth for authentication (same as middleware)
-    const session = await auth();
+    // Use getSafeAuth for authentication (supports impersonation)
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { authorized: false, error: 'No session found' };
     }
 
     // Get user from database to verify role
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context.actor.email);
 
     if (!user) {
       return { authorized: false, error: 'User not found' };
@@ -132,16 +129,14 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Business metrics error', { error: errorMessage });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to fetch metrics',
-        message:
-          process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        message: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
       },
       { status: 500 }
     );
