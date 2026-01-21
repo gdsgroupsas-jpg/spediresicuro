@@ -1,34 +1,28 @@
 /**
  * API Route: Admin Shipment Management
- * 
+ *
  * DELETE /api/admin/shipments/[id] - Cancella spedizione come admin (qualsiasi utente)
- * 
+ *
  * ⚠️ SOLO PER ADMIN: Verifica che l'utente sia admin prima di eseguire operazioni
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+
+    if (!context || !context.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     // 2. Verifica che l'utente sia admin
-    const adminUser = await findUserByEmail(session.user.email);
-    
+    const adminUser = await findUserByEmail(context.actor.email);
+
     if (!adminUser || adminUser.role !== 'admin') {
       return NextResponse.json(
         { error: 'Accesso negato. Solo gli admin possono cancellare spedizioni di altri utenti.' },
@@ -40,18 +34,12 @@ export async function DELETE(
     const shipmentId = params.id;
 
     if (!shipmentId) {
-      return NextResponse.json(
-        { error: 'ID spedizione mancante' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'ID spedizione mancante' }, { status: 400 });
     }
 
     // 4. Verifica che la spedizione esista
     if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { error: 'Supabase non configurato' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'Supabase non configurato' }, { status: 503 });
     }
 
     const { data: shipment, error: shipmentError } = await supabaseAdmin
@@ -61,10 +49,7 @@ export async function DELETE(
       .single();
 
     if (shipmentError || !shipment) {
-      return NextResponse.json(
-        { error: 'Spedizione non trovata' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Spedizione non trovata' }, { status: 404 });
     }
 
     // 5. Soft delete spedizione (come admin, può cancellare qualsiasi spedizione)
@@ -91,13 +76,8 @@ export async function DELETE(
       success: true,
       message: `Spedizione ${shipment.tracking_number || shipmentId} cancellata con successo`,
     });
-
   } catch (error: any) {
     console.error('Errore API admin delete shipment:', error);
-    return NextResponse.json(
-      { error: 'Errore interno del server' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Errore interno del server' }, { status: 500 });
   }
 }
-

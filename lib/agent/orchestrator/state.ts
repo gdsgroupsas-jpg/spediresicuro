@@ -1,10 +1,10 @@
-import { ShipmentDraft } from "@/lib/address/shipment-draft";
-import { BookingResult } from "@/lib/agent/workers/booking";
-import { PricingResult } from "@/lib/ai/pricing-engine";
-import { UserRole } from "@/lib/rbac";
-import { ActingContext } from "@/lib/safe-auth";
-import { CourierServiceType, Shipment } from "@/types/shipments";
-import { BaseMessage } from "@langchain/core/messages";
+import { ShipmentDraft } from '@/lib/address/shipment-draft';
+import { BookingResult } from '@/lib/agent/workers/booking';
+import { PricingResult } from '@/lib/ai/pricing-engine';
+import { UserRole } from '@/lib/rbac';
+import { ActingContext } from '@/lib/safe-auth';
+import { CourierServiceType, Shipment } from '@/types/shipments';
+import { BaseMessage } from '@langchain/core/messages';
 
 export interface AgentState {
   // Messaggi della conversazione (per debugging e chat history)
@@ -21,13 +21,7 @@ export interface AgentState {
   shipmentData: Partial<Shipment>;
 
   // Metadati di processo
-  processingStatus:
-    | "idle"
-    | "extracting"
-    | "validating"
-    | "calculating"
-    | "error"
-    | "complete";
+  processingStatus: 'idle' | 'extracting' | 'validating' | 'calculating' | 'error' | 'complete';
   validationErrors: string[];
   confidenceScore: number; // 0-100 (derivato da OCR e validazione)
 
@@ -51,7 +45,7 @@ export interface AgentState {
     weight?: number;
     destinationZip?: string;
     destinationProvince?: string;
-    serviceType?: "standard" | "express" | "economy";
+    serviceType?: 'standard' | 'express' | 'economy';
     cashOnDelivery?: number;
     declaredValue?: number;
     insurance?: boolean;
@@ -72,16 +66,16 @@ export interface AgentState {
   // 'price_list_worker' = gestisce listini prezzi (clona, assegna, cerca)
   // 'END' = risposta pronta, termina
   next_step?:
-    | "pricing_worker"
-    | "address_worker"
-    | "ocr_worker"
-    | "booking_worker"
-    | "mentor_worker"
-    | "debug_worker"
-    | "explain_worker"
-    | "price_list_worker"
-    | "legacy"
-    | "END";
+    | 'pricing_worker'
+    | 'address_worker'
+    | 'ocr_worker'
+    | 'booking_worker'
+    | 'mentor_worker'
+    | 'debug_worker'
+    | 'explain_worker'
+    | 'price_list_worker'
+    | 'legacy'
+    | 'END';
 
   // Messaggio di chiarimento (se servono più dati)
   clarification_request?: string;

@@ -4,11 +4,13 @@
 
 **Problema**: 401 Unauthorized dopo aggiornamento API key
 
-**Causa**: 
+**Causa**:
+
 - Il codice provava **multiple strategie di autenticazione** (Bearer, Token, X-API-KEY) invece di usare **SOLO Bearer** come richiesto dall'OpenAPI spec
 - Base URL non validato (possibile mismatch demo vs production)
 
 **Evidenza OpenAPI Spec**:
+
 - Documentazione: `Authorization: Bearer {api_key}`
 - Codice precedente: provava 3 strategie diverse in sequenza
 
@@ -21,6 +23,7 @@
 #### 1. Rimossa strategie fallback multiple ✅
 
 **PRIMA** (Lines 357-468):
+
 ```typescript
 // Provava 3 strategie in sequenza
 const authStrategies = [
@@ -35,12 +38,13 @@ for (let i = 0; i < authStrategies.length; i++) {
 ```
 
 **DOPO** (Lines 344-469):
+
 ```typescript
 // Usa SOLO Bearer token (OpenAPI spec)
 const headers: Record<string, string> = {
   'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  'Authorization': `Bearer ${this.API_KEY}`,
+  Accept: 'application/json',
+  Authorization: `Bearer ${this.API_KEY}`,
 };
 
 // Singola chiamata con Bearer
@@ -54,6 +58,7 @@ const response = await fetch(url, {
 #### 2. Validazione baseUrl ✅
 
 **Aggiunto** (Lines 156-180):
+
 - Validazione che baseUrl contenga `spedisci.online`
 - Validazione che baseUrl contenga `/api/v2`
 - Log per distinguere demo vs production
@@ -62,6 +67,7 @@ const response = await fetch(url, {
 #### 3. Logging diagnostico migliorato ✅
 
 **Aggiunto**:
+
 - Log pre-request con baseUrl e fingerprint API key
 - Log errore 401 con hint diagnostici specifici
 - Messaggio errore più dettagliato per 401
@@ -73,17 +79,20 @@ const response = await fetch(url, {
 ### `lib/adapters/couriers/spedisci-online.ts`
 
 **Lines 156-180** (Constructor):
+
 - ✅ Aggiunta validazione baseUrl
 - ✅ Aggiunto logging baseUrl (demo vs production)
 - ✅ Warning se formato errato
 
 **Lines 344-469** (createShipmentJSON):
+
 - ✅ Rimossa logica loop strategie multiple
 - ✅ Usa SOLO Bearer token
 - ✅ Migliorato logging diagnostico
 - ✅ Messaggi errore più chiari per 401
 
-**Note**: 
+**Note**:
+
 - `getTracking()` (Line 320) - ✅ Già usa Bearer correttamente
 - `connect()` (Line 185) - ✅ Già usa Bearer correttamente
 
@@ -94,6 +103,7 @@ const response = await fetch(url, {
 ### Test 1: Verifica Base URL
 
 **Dopo deploy, cerca nei log Vercel**:
+
 ```
 🔧 [SPEDISCI.ONLINE] Base URL configurato: {
   baseUrl: "https://tuodominio.spedisci.online/api/v2/",
@@ -103,6 +113,7 @@ const response = await fetch(url, {
 ```
 
 **Se `isDemo: true` ma dovrebbe essere production**:
+
 - Verifica in `/dashboard/admin/configurations`
 - Base URL production: `https://{tuodominio}.spedisci.online/api/v2/`
 
@@ -113,6 +124,7 @@ const response = await fetch(url, {
 3. **Verifica log Vercel**:
 
 **Successo**:
+
 ```
 📡 [SPEDISCI.ONLINE] API call: {
   method: "POST",
@@ -130,6 +142,7 @@ const response = await fetch(url, {
 ```
 
 **Errore 401 (se ancora presente)**:
+
 ```
 ❌ [SPEDISCI.ONLINE] API error: {
   status: 401,
@@ -149,6 +162,7 @@ AND is_active = true;
 ```
 
 **Verifica**:
+
 - ✅ `base_url` contiene `spedisci.online`
 - ✅ `base_url` contiene `/api/v2`
 - ✅ `base_url` corretto per ambiente

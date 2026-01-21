@@ -13,6 +13,7 @@ In Cursor, quando configuri un provider personalizzato, il campo **"Model Name"*
 In alcune versioni di Cursor, il **nome del modello** è lo stesso del **nome del provider**.
 
 **Come fare:**
+
 1. Vai su **Settings** → **Models**
 2. Seleziona il provider "GLM 4.7"
 3. Cerca un campo **"Name"** o **"Provider Name"**
@@ -26,6 +27,7 @@ In alcune versioni di Cursor, il **nome del modello** è lo stesso del **nome de
 Il campo potrebbe essere visibile solo dopo aver salvato il provider.
 
 **Come fare:**
+
 1. Vai su **Settings** → **Models**
 2. Seleziona il provider
 3. **Salva** le impostazioni (anche se non hai cambiato nulla)
@@ -39,6 +41,7 @@ Il campo potrebbe essere visibile solo dopo aver salvato il provider.
 Alcune versioni di Cursor permettono di specificare il modello nell'URL o in campi avanzati.
 
 **Come fare:**
+
 1. Vai su **Settings** → **Models**
 2. Seleziona il provider
 3. Cerca:
@@ -54,6 +57,7 @@ Alcune versioni di Cursor permettono di specificare il modello nell'URL o in cam
 In alcune configurazioni, Cursor usa automaticamente il modello basandosi sull'endpoint.
 
 **Verifica:**
+
 1. Vai su **Settings** → **Models**
 2. Seleziona il provider
 3. Verifica che:
@@ -71,6 +75,7 @@ In alcune configurazioni, Cursor usa automaticamente il modello basandosi sull'e
 Se nulla funziona, ricrea il provider con il nome corretto fin dall'inizio.
 
 **Procedura:**
+
 1. **Elimina** il provider esistente (icona cestino)
 2. **Crea nuovo provider**:
    - Settings → Models → **Add Custom Model** o **Add Provider**
@@ -88,6 +93,7 @@ Se nulla funziona, ricrea il provider con il nome corretto fin dall'inizio.
 Dopo aver configurato, verifica:
 
 ### Checklist:
+
 - [ ] Provider creato con nome che contiene "GLM-4.7"
 - [ ] Base URL: `https://api.z.ai/api/coding/paas/v4`
 - [ ] API Key inserita e attiva
@@ -101,7 +107,7 @@ Dopo aver configurato, verifica:
 
 1. **Seleziona "GLM-4.7"** dal menu modelli in alto
 2. Apri **Cursor Chat**
-3. Scrivi: *"Ciao"*
+3. Scrivi: _"Ciao"_
 4. Dovrebbe rispondere
 
 ---
@@ -109,6 +115,7 @@ Dopo aver configurato, verifica:
 ## 🐛 Se Ancora Non Funziona
 
 ### Verifica Account Z.AI:
+
 1. Vai su https://z.ai
 2. Verifica:
    - Account attivo
@@ -117,17 +124,21 @@ Dopo aver configurato, verifica:
    - API Key valida
 
 ### Verifica Endpoint:
+
 Il Base URL **DEVE** essere:
+
 ```
 https://api.z.ai/api/coding/paas/v4
 ```
 
 **NON**:
+
 ```
 https://api.z.ai/api/paas/v4  ❌
 ```
 
 ### Riavvia Cursor:
+
 1. Chiudi completamente Cursor
 2. Riapri Cursor
 3. Riprova
@@ -137,6 +148,7 @@ https://api.z.ai/api/paas/v4  ❌
 ## 📸 Screenshot Utili
 
 Se puoi, fai uno screenshot di:
+
 1. La schermata **Settings → Models** con il provider selezionato
 2. Tutti i campi visibili nella configurazione del provider
 
@@ -144,4 +156,4 @@ Questo mi aiuterà a capire esattamente dove inserire il Model Name nella tua ve
 
 ---
 
-*Ultimo aggiornamento: 2025-01-27*
+_Ultimo aggiornamento: 2025-01-27_

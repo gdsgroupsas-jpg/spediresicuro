@@ -3,6 +3,7 @@
 ## 📊 Root Cause Analysis
 
 ### Evidence from Vercel Logs:
+
 1. ✅ **Supabase insert succeeds**: "Spedizione salvata con successo"
 2. ❌ **Orchestrator fails** with 3 errors:
    - **RPC error 42702**: `column reference "id" is ambiguous` in `get_courier_config_for_user`
@@ -21,6 +22,7 @@
 **Problem**: Function `get_courier_config_for_user` uses unqualified `id` in subqueries, causing error 42702.
 
 **Fix**: Qualify all column references in subqueries:
+
 ```sql
 -- BEFORE: WHERE id = p_user_id
 -- AFTER: WHERE u.id = p_user_id (with alias u)
@@ -36,12 +38,14 @@
 
 **Problem**: `decryptCredential()` throws generic error on ENCRYPTION_KEY rotation, crashing orchestrator.
 
-**Fix**: 
+**Fix**:
+
 - Detect decryption errors (Unsupported state, unable to authenticate)
 - Return clear error message: `CREDENTIAL_DECRYPT_FAILED` with actionable hint
 - Allow graceful handling in calling code
 
 **Changes**:
+
 - Lines 139-151: Enhanced error handling with specific error detection
 - Returns `CREDENTIAL_DECRYPT_FAILED` error for rotation scenarios
 
@@ -54,17 +58,20 @@
 **Problem**: `getSupabaseUserIdFromEmail()` returns null when user not found in Supabase, causing shipments with `user_id = null`.
 
 **Fix**:
+
 - Add `nextAuthUserId` parameter to `getSupabaseUserIdFromEmail()`
 - Use `session.user.id` as fallback when Supabase user_id not found
 - Update `addSpedizione()` to pass NextAuth user.id
 
 **Changes**:
+
 - Lines 281-366: Enhanced `getSupabaseUserIdFromEmail()` with NextAuth fallback
 - Lines 678-700: Updated `addSpedizione()` to get and pass NextAuth user.id
 
 **File**: `lib/actions/spedisci-online.ts`
 
 **Changes**:
+
 - Lines 128-137: Pass `session.user.id` to `getSupabaseUserIdFromEmail()`
 
 ---
@@ -76,11 +83,13 @@
 **Problem**: Full payload logged in production, potentially exposing sensitive data.
 
 **Fix**:
+
 - Only log full payload in development
 - In production, log structure with sensitive fields redacted
 - Sensitive fields: `api_key`, `api_secret`, `password`, `token`, `secret`, `credential`
 
 **Changes**:
+
 - Lines 756-767: Conditional logging based on NODE_ENV
 
 ---
@@ -92,11 +101,13 @@
 **Problem**: RPC error 42702 not clearly identified, causing confusion.
 
 **Fix**:
+
 - Detect ambiguous column error (code 42702)
 - Log clear message with migration hint
 - Fallback to direct query works correctly
 
 **Changes**:
+
 - Lines 58-66: Enhanced error detection and logging
 
 ---
@@ -116,12 +127,14 @@
 ### Step 1: Apply SQL Migration
 
 **Option A: Supabase Dashboard**
+
 1. Go to: https://supabase.com/dashboard → Your project → SQL Editor
 2. Copy contents of `supabase/migrations/031_fix_ambiguous_id_rpc.sql`
 3. Execute SQL
 4. Verify: Function should update without errors
 
 **Option B: Supabase CLI**
+
 ```bash
 supabase db push
 ```
@@ -192,6 +205,7 @@ SELECT * FROM get_courier_config_for_user(
 ### Test 4: Verify Decryption Error Handling
 
 **If ENCRYPTION_KEY was rotated**:
+
 1. Try to create shipment
 2. Should see clear error: `CREDENTIAL_DECRYPT_FAILED: Impossibile decriptare credenziali...`
 3. Error should NOT crash the system
@@ -217,18 +231,21 @@ SELECT * FROM get_courier_config_for_user(
 ### Log Patterns to Watch
 
 **Success**:
+
 ```
 ✅ [SUPABASE] Spedizione salvata con successo! ID: ...
 ✅ [ORCHESTRATOR] LDV creata (method): ...
 ```
 
 **Warnings (non-critical)**:
+
 ```
 ⚠️ [SUPABASE] Usando NextAuth user.id come fallback: ...
 ⚠️ [BROKER] Errore decriptazione api_secret (ENCRYPTION_KEY rotation) - continuo senza secret
 ```
 
 **Errors (action required)**:
+
 ```
 ❌ [BROKER] Errore decriptazione api_key (ENCRYPTION_KEY rotation)
 → Action: Reconfigure integration credentials
@@ -242,7 +259,8 @@ SELECT * FROM get_courier_config_for_user(
 
 **Cause**: Migration not applied
 
-**Fix**: 
+**Fix**:
+
 1. Verify migration executed: `SELECT * FROM pg_proc WHERE proname = 'get_courier_config_for_user';`
 2. Re-run migration manually
 
@@ -251,6 +269,7 @@ SELECT * FROM get_courier_config_for_user(
 **Cause**: NextAuth session.user.id not available
 
 **Fix**:
+
 1. Verify session structure: Check `lib/auth-config.ts` session callback
 2. Verify `session.user.id` is set in token callback
 
@@ -259,6 +278,7 @@ SELECT * FROM get_courier_config_for_user(
 **Cause**: ENCRYPTION_KEY mismatch
 
 **Fix**:
+
 1. Verify ENCRYPTION_KEY in Vercel matches the one used to encrypt
 2. If rotated, reconfigure integration credentials in `/dashboard/admin/configurations`
 

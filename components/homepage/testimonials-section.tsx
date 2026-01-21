@@ -1,6 +1,6 @@
 /**
  * Testimonials Section
- * 
+ *
  * Sezione con testimonianze e social proof
  */
 
@@ -120,4 +120,3 @@ export default function TestimonialsSection() {
     </section>
   );
 }
-

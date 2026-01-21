@@ -3,16 +3,18 @@
  *
  * Utility condivise per autenticazione e autorizzazione nelle API routes
  * Consolida i pattern duplicati di auth check, admin verification, etc.
+ *
+ * ⚠️ MIGRATED: Ora usa getSafeAuth() per supportare impersonation
  */
 
-import { auth } from "@/lib/auth-config";
-import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
-import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { getSafeAuth, ActingContext, ActingUser } from '@/lib/safe-auth';
+import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 export interface AuthResult {
   authorized: boolean;
-  session?: any;
+  context?: ActingContext;
   response?: NextResponse;
 }
 
@@ -24,36 +26,42 @@ export interface AdminAuthResult extends AuthResult {
  * Verifica che l'utente sia autenticato
  * Consolida il pattern ripetuto 30+ volte nelle API routes
  *
- * @returns AuthResult con session se autorizzato, altrimenti response di errore
+ * ⚠️ MIGRATED: Ora ritorna context (ActingContext) invece di session
+ *
+ * @returns AuthResult con context se autorizzato, altrimenti response di errore
  *
  * @example
  * const authResult = await requireAuth();
  * if (!authResult.authorized) return authResult.response;
- * const { session } = authResult;
+ * const { context } = authResult;
+ * // Usa context.actor per chi esegue, context.target per chi è target
  */
 export async function requireAuth(): Promise<AuthResult> {
   // ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
   try {
     const headersList = headers();
-    const testHeader = headersList.get("x-test-mode");
-    const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === "true";
+    const testHeader = headersList.get('x-test-mode');
+    const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
 
     if (
-      (testHeader === "playwright" || isPlaywrightMode) &&
-      process.env.NODE_ENV !== "production"
+      (testHeader === 'playwright' || isPlaywrightMode) &&
+      process.env.NODE_ENV !== 'production'
     ) {
-      console.log("🧪 [API AUTH] Test mode bypass active");
+      console.log('🧪 [API AUTH] Test mode bypass active');
+      const testUser: ActingUser = {
+        id: '00000000-0000-0000-0000-000000000000',
+        email: process.env.TEST_USER_EMAIL || 'test@example.com',
+        name: 'Test User E2E',
+        role: 'admin', // Force admin role for tests
+        account_type: 'superadmin',
+        is_reseller: true,
+      };
       return {
         authorized: true,
-        session: {
-          user: {
-            id: "00000000-0000-0000-0000-000000000000",
-            email: process.env.TEST_USER_EMAIL || "test@example.com",
-            name: "Test User E2E",
-            role: "admin", // Force admin role for tests
-            account_type: "superadmin",
-            is_reseller: true,
-          },
+        context: {
+          actor: testUser,
+          target: testUser,
+          isImpersonating: false,
         },
       };
     }
@@ -61,21 +69,18 @@ export async function requireAuth(): Promise<AuthResult> {
     // Ignore error if headers() is not available (e.g. outside request context)
   }
 
-  const session = await auth();
+  const context = await getSafeAuth();
 
-  if (!session?.user?.email) {
+  if (!context?.actor?.email) {
     return {
       authorized: false,
-      response: NextResponse.json(
-        { error: "Non autenticato" },
-        { status: 401 }
-      ),
+      response: NextResponse.json({ error: 'Non autenticato' }, { status: 401 }),
     };
   }
 
   return {
     authorized: true,
-    session,
+    context,
   };
 }
 
@@ -91,10 +96,7 @@ export async function requireAuth(): Promise<AuthResult> {
  */
 export function checkSupabaseConfig(): NextResponse | undefined {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { error: "Supabase non configurato" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Supabase non configurato' }, { status: 500 });
   }
   return undefined;
 }
@@ -109,7 +111,7 @@ export function checkSupabaseConfig(): NextResponse | undefined {
  */
 export async function findUserByEmail(
   email: string,
-  select: string = "id, email, role"
+  select: string = 'id, email, role'
 ): Promise<{
   id: string;
   email: string;
@@ -117,9 +119,9 @@ export async function findUserByEmail(
   [key: string]: any;
 } | null> {
   const { data: user, error } = await supabaseAdmin
-    .from("users")
+    .from('users')
     .select(select)
-    .eq("email", email)
+    .eq('email', email)
     .single();
 
   if (error || !user) {
@@ -139,23 +141,23 @@ export async function findUserByEmail(
  * Verifica che l'utente abbia ruolo admin
  * Consolida il pattern ripetuto 25+ volte nelle API routes
  *
+ * ⚠️ MIGRATED: Ora ritorna context invece di session
+ *
  * @returns AdminAuthResult con user se autorizzato, altrimenti response di errore
  *
  * @example
  * const adminAuth = await requireAdminRole();
  * if (!adminAuth.authorized) return adminAuth.response;
- * const { user } = adminAuth;
+ * const { context, user } = adminAuth;
  */
-export async function requireAdminRole(
-  customErrorMessage?: string
-): Promise<AdminAuthResult> {
+export async function requireAdminRole(customErrorMessage?: string): Promise<AdminAuthResult> {
   // Prima verifica autenticazione
   const authResult = await requireAuth();
   if (!authResult.authorized) {
     return authResult;
   }
 
-  const { session } = authResult;
+  const { context } = authResult;
 
   // Verifica Supabase configurato
   const configCheck = checkSupabaseConfig();
@@ -167,16 +169,16 @@ export async function requireAdminRole(
   }
 
   // Cerca utente e verifica ruolo admin
-  const user = await findUserByEmail(session.user.email);
+  const user = await findUserByEmail(context!.actor.email!);
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== 'admin') {
     return {
       authorized: false,
       response: NextResponse.json(
         {
           error:
             customErrorMessage ||
-            "Accesso negato. Solo gli admin possono accedere a questa risorsa.",
+            'Accesso negato. Solo gli admin possono accedere a questa risorsa.',
         },
         { status: 403 }
       ),
@@ -185,7 +187,7 @@ export async function requireAdminRole(
 
   return {
     authorized: true,
-    session,
+    context,
     user,
   };
 }
@@ -193,6 +195,8 @@ export async function requireAdminRole(
 /**
  * Verifica che l'utente abbia ruolo reseller
  * Utility per verificare permessi reseller
+ *
+ * ⚠️ MIGRATED: Ora ritorna context invece di session
  *
  * @returns AdminAuthResult con user se autorizzato, altrimenti response di errore
  */
@@ -202,7 +206,7 @@ export async function requireResellerRole(): Promise<AdminAuthResult> {
     return authResult;
   }
 
-  const { session } = authResult;
+  const { context } = authResult;
 
   const configCheck = checkSupabaseConfig();
   if (configCheck) {
@@ -212,15 +216,14 @@ export async function requireResellerRole(): Promise<AdminAuthResult> {
     };
   }
 
-  const user = await findUserByEmail(session.user.email);
+  const user = await findUserByEmail(context!.actor.email!);
 
-  if (!user || (user.role !== "reseller" && user.role !== "admin")) {
+  if (!user || (user.role !== 'reseller' && user.role !== 'admin')) {
     return {
       authorized: false,
       response: NextResponse.json(
         {
-          error:
-            "Accesso negato. Solo i reseller possono accedere a questa risorsa.",
+          error: 'Accesso negato. Solo i reseller possono accedere a questa risorsa.',
         },
         { status: 403 }
       ),
@@ -229,7 +232,7 @@ export async function requireResellerRole(): Promise<AdminAuthResult> {
 
   return {
     authorized: true,
-    session,
+    context,
     user,
   };
 }

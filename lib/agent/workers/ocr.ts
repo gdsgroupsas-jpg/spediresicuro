@@ -1,23 +1,23 @@
 /**
  * OCR Worker (Sprint 2.4)
- * 
+ *
  * Worker per estrazione dati da:
  * - Immagini/screenshot (usando Gemini Vision esistente)
  * - Testo OCR grezzo (parsing deterministico)
- * 
+ *
  * INPUT: AgentState con immagine base64 o testo OCR
  * OUTPUT:
  * - Aggiorna state.shipmentDraft (merge non distruttivo)
  * - Calcola missingFields
  * - Setta next_step = "address_worker" (per normalizzazione) o "END" (se mancano dati critici)
- * 
+ *
  * ⚠️ NO PII nei log (no addressLine1, fullName, phone, etc.)
  * ⚠️ NON chiama LLM per "inventare" dati mancanti
  */
 
 import { AgentState } from '../orchestrator/state';
-import { 
-  ShipmentDraft, 
+import {
+  ShipmentDraft,
   calculateMissingFieldsForPricing,
   mergeShipmentDraft,
   type ShipmentDraftUpdates,
@@ -25,8 +25,8 @@ import {
 import { defaultLogger, type ILogger } from '../logger';
 import { ocrConfig } from '@/lib/config';
 import { HumanMessage } from '@langchain/core/messages';
-import { 
-  executeVisionWithRetry, 
+import {
+  executeVisionWithRetry,
   generateVisionClarificationMessage,
   type VisionResult,
 } from './vision-fallback';
@@ -69,11 +69,11 @@ interface VisionExtractedData {
 
 /**
  * Mappa output di extractData() (legacy) a ShipmentDraftUpdates (nuovo schema).
- * 
+ *
  * NON inventa dati: se un campo è undefined/null, non viene incluso.
  * Normalizza provincia a uppercase.
  * Valida CAP a 5 cifre.
- * 
+ *
  * @param visionData - Dati estratti da Gemini Vision
  * @returns ShipmentDraftUpdates pronto per merge
  */
@@ -82,7 +82,7 @@ export function mapVisionOutputToShipmentDraft(
 ): ShipmentDraftUpdates {
   const recipient: ShipmentDraftUpdates['recipient'] = {};
   const parcel: ShipmentDraftUpdates['parcel'] = {};
-  
+
   // Map recipient fields (solo se presenti e non vuoti)
   if (visionData.recipient_name?.trim()) {
     recipient.fullName = visionData.recipient_name.trim();
@@ -93,7 +93,7 @@ export function mapVisionOutputToShipmentDraft(
   if (visionData.recipient_city?.trim()) {
     recipient.city = visionData.recipient_city.trim();
   }
-  
+
   // CAP: valida 5 cifre
   if (visionData.recipient_zip?.trim()) {
     const zip = visionData.recipient_zip.trim();
@@ -102,7 +102,7 @@ export function mapVisionOutputToShipmentDraft(
     }
     // Se non valido, non includerlo (sarà chiesto come missing field)
   }
-  
+
   // Provincia: normalizza a uppercase, valida 2 lettere
   if (visionData.recipient_province?.trim()) {
     const prov = visionData.recipient_province.trim().toUpperCase();
@@ -110,7 +110,7 @@ export function mapVisionOutputToShipmentDraft(
       recipient.province = prov;
     }
   }
-  
+
   // Telefono: normalizza rimuovendo spazi
   if (visionData.recipient_phone?.trim()) {
     const phone = visionData.recipient_phone.replace(/[\s\-]/g, '');
@@ -118,12 +118,12 @@ export function mapVisionOutputToShipmentDraft(
       recipient.phone = phone;
     }
   }
-  
+
   // Peso: se presente
   if (visionData.weight && visionData.weight > 0 && visionData.weight <= 100) {
     parcel.weightKg = visionData.weight;
   }
-  
+
   return {
     recipient: Object.keys(recipient).length > 0 ? recipient : undefined,
     parcel: Object.keys(parcel).length > 0 ? parcel : undefined,
@@ -136,10 +136,10 @@ export function mapVisionOutputToShipmentDraft(
 function countVisionExtractedFields(updates: ShipmentDraftUpdates): number {
   let count = 0;
   if (updates.recipient) {
-    count += Object.values(updates.recipient).filter(v => v !== undefined).length;
+    count += Object.values(updates.recipient).filter((v) => v !== undefined).length;
   }
   if (updates.parcel) {
-    count += Object.values(updates.parcel).filter(v => v !== undefined).length;
+    count += Object.values(updates.parcel).filter((v) => v !== undefined).length;
   }
   return count;
 }
@@ -173,7 +173,7 @@ export const OCR_TEXT_PATTERNS = [
  */
 export function containsOcrPatterns(text: string): boolean {
   if (!text || text.trim().length < 20) return false;
-  
+
   let matchCount = 0;
   for (const pattern of OCR_TEXT_PATTERNS) {
     if (pattern.test(text)) {
@@ -181,7 +181,7 @@ export function containsOcrPatterns(text: string): boolean {
       if (matchCount >= 2) return true; // Almeno 2 pattern per essere sicuri
     }
   }
-  
+
   return false;
 }
 
@@ -197,14 +197,14 @@ function extractPostalCode(text: string): string | undefined {
     /\b(\d{5})\s+[A-Za-zàèéìòù]+\s*\(?[A-Z]{2}\)?/i, // 20100 Milano (MI)
     /\b(\d{5})\b(?!\d)/, // standalone 5 digits
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
       return match[1];
     }
   }
-  
+
   return undefined;
 }
 
@@ -219,7 +219,7 @@ function extractProvince(text: string): string | undefined {
     /\d{5}\s+[A-Za-zàèéìòù]+\s+([A-Z]{2})\b/i, // 20100 Milano MI
     /[A-Za-zàèéìòù]+\s+\(([A-Z]{2})\)/i, // Milano (MI)
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -230,7 +230,7 @@ function extractProvince(text: string): string | undefined {
       }
     }
   }
-  
+
   return undefined;
 }
 
@@ -245,7 +245,7 @@ function extractCity(text: string): string | undefined {
     // Pattern per "(MI)" con città prima
     /([A-Za-zàèéìòù]+)\s*\([A-Z]{2}\)/i,
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -256,7 +256,7 @@ function extractCity(text: string): string | undefined {
       }
     }
   }
-  
+
   return undefined;
 }
 
@@ -270,7 +270,7 @@ function extractRecipientName(text: string): string | undefined {
     /spedizione\s*a\s*[:;]?\s*([A-Za-zàèéìòù\s]+?)(?=\n|via|$)/i,
     /consegna\s*(?:a|per)\s*[:;]?\s*([A-Za-zàèéìòù\s]+?)(?=\n|via|$)/i,
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
@@ -281,7 +281,7 @@ function extractRecipientName(text: string): string | undefined {
       }
     }
   }
-  
+
   return undefined;
 }
 
@@ -297,7 +297,7 @@ function extractAddress(text: string): string | undefined {
     /(viale\s+[A-Za-zàèéìòù\s']+(?:,?\s*\d+[a-z]?)?)/i,
     /(largo\s+[A-Za-zàèéìòù\s']+(?:,?\s*\d+[a-z]?)?)/i,
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -307,7 +307,7 @@ function extractAddress(text: string): string | undefined {
       }
     }
   }
-  
+
   return undefined;
 }
 
@@ -321,7 +321,7 @@ function extractPhone(text: string): string | undefined {
     /cell\.?\s*[:;]?\s*([\+]?[\d\s\-]{6,15})/i,
     /(\+39[\s\-]?)?3\d{2}[\s\-]?\d{6,7}/i, // Mobile italiano
   ];
-  
+
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -332,7 +332,7 @@ function extractPhone(text: string): string | undefined {
       }
     }
   }
-  
+
   return undefined;
 }
 
@@ -345,7 +345,7 @@ function extractWeight(text: string): number | undefined {
     /peso\s*[:;]?\s*(\d+[,.]?\d*)\s*kg/i,
     /(\d+[,.]?\d*)\s*kg\b/i, // Generico con kg
   ];
-  
+
   for (const pattern of kgPatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -356,14 +356,14 @@ function extractWeight(text: string): number | undefined {
       }
     }
   }
-  
+
   // Poi cerca pattern in grammi
   const gramPatterns = [
     /peso\s*[:;]?\s*(\d+[,.]?\d*)\s*grammi/i,
     /peso\s*[:;]?\s*(\d+[,.]?\d*)\s*g\b/i,
     /(\d+[,.]?\d*)\s*grammi\b/i,
   ];
-  
+
   for (const pattern of gramPatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
@@ -375,7 +375,7 @@ function extractWeight(text: string): number | undefined {
       }
     }
   }
-  
+
   return undefined;
 }
 
@@ -386,29 +386,29 @@ function extractWeight(text: string): number | undefined {
 function parseOcrText(text: string): ShipmentDraftUpdates {
   const recipient: ShipmentDraftUpdates['recipient'] = {};
   const parcel: ShipmentDraftUpdates['parcel'] = {};
-  
+
   // Estrai ogni campo
   const postalCode = extractPostalCode(text);
   if (postalCode) recipient.postalCode = postalCode;
-  
+
   const province = extractProvince(text);
   if (province) recipient.province = province;
-  
+
   const city = extractCity(text);
   if (city) recipient.city = city;
-  
+
   const fullName = extractRecipientName(text);
   if (fullName) recipient.fullName = fullName;
-  
+
   const addressLine1 = extractAddress(text);
   if (addressLine1) recipient.addressLine1 = addressLine1;
-  
+
   const phone = extractPhone(text);
   if (phone) recipient.phone = phone;
-  
+
   const weight = extractWeight(text);
   if (weight) parcel.weightKg = weight;
-  
+
   return {
     recipient: Object.keys(recipient).length > 0 ? recipient : undefined,
     parcel: Object.keys(parcel).length > 0 ? parcel : undefined,
@@ -420,17 +420,17 @@ function parseOcrText(text: string): ShipmentDraftUpdates {
  */
 function countExtractedFields(updates: ShipmentDraftUpdates): number {
   let count = 0;
-  
+
   if (updates.recipient) {
-    count += Object.values(updates.recipient).filter(v => v !== undefined).length;
+    count += Object.values(updates.recipient).filter((v) => v !== undefined).length;
   }
   if (updates.parcel) {
-    count += Object.values(updates.parcel).filter(v => v !== undefined).length;
+    count += Object.values(updates.parcel).filter((v) => v !== undefined).length;
   }
   if (updates.sender) {
-    count += Object.values(updates.sender).filter(v => v !== undefined).length;
+    count += Object.values(updates.sender).filter((v) => v !== undefined).length;
   }
-  
+
   return count;
 }
 
@@ -448,23 +448,21 @@ function generateClarificationQuestion(missingFields: string[]): string {
     'recipient.fullName': 'nome destinatario',
     'parcel.weightKg': 'peso del pacco in kg',
   };
-  
-  const missingLabels = missingFields
-    .map(f => fieldLabels[f] || f)
-    .filter(Boolean);
-  
+
+  const missingLabels = missingFields.map((f) => fieldLabels[f] || f).filter(Boolean);
+
   if (missingLabels.length === 0) {
     return 'Ho estratto i dati dallo screenshot. Puoi verificare e correggere se necessario.';
   }
-  
+
   if (missingLabels.length === 1) {
     return `Ho estratto alcuni dati, ma mi manca: **${missingLabels[0]}**.`;
   }
-  
+
   if (missingLabels.length === 2) {
     return `Dai dati estratti mancano: **${missingLabels[0]}** e **${missingLabels[1]}**.`;
   }
-  
+
   const lastLabel = missingLabels.pop();
   return `Ho estratto dati parziali. Mancano: **${missingLabels.join(', ')}** e **${lastLabel}**.`;
 }
@@ -474,7 +472,7 @@ function generateClarificationQuestion(missingFields: string[]): string {
 /**
  * Logica core condivisa per estrazione OCR e decisione next step.
  * Elimina duplicazione tra versione async e sync.
- * 
+ *
  * Esportata per test unitari diretti.
  */
 export function processOcrCore(
@@ -489,7 +487,7 @@ export function processOcrCore(
   const extractedFieldsCount = countExtractedFields(extractedUpdates);
   const updatedDraft = mergeShipmentDraft(existingDraft, extractedUpdates);
   const missingFields = calculateMissingFieldsForPricing(updatedDraft);
-  
+
   return {
     updatedDraft,
     missingFields,
@@ -501,11 +499,11 @@ export function processOcrCore(
 
 /**
  * OCR Worker
- * 
+ *
  * Estrae dati da immagine o testo OCR.
  * Merge con dati esistenti (non distruttivo).
  * Determina se procedere ad address_worker o chiedere chiarimenti.
- * 
+ *
  * @param state - AgentState corrente
  * @returns Partial<AgentState> con shipmentDraft aggiornato
  */
@@ -514,50 +512,51 @@ export async function ocrWorker(
   logger: ILogger = defaultLogger
 ): Promise<Partial<AgentState>> {
   logger.log('📸 [OCR Worker] Esecuzione...');
-  
+
   try {
     // Estrai ultimo messaggio
     const lastMessage = state.messages[state.messages.length - 1];
-    const messageContent = lastMessage && 'content' in lastMessage 
-      ? lastMessage.content 
-      : '';
-    
+    const messageContent = lastMessage && 'content' in lastMessage ? lastMessage.content : '';
+
     // Determina tipo input (immagine o testo)
     let ocrSource: 'image' | 'text' = 'text';
     let textToProcess = '';
-    
+
     // Check se è un'immagine base64
     if (typeof messageContent === 'string' && messageContent.startsWith('data:image')) {
       ocrSource = 'image';
-      
+
       // Feature flag: se OCR immagini disabilitato, chiedi testo
       if (!ocrConfig.ENABLE_OCR_IMAGES) {
-        logger.log('📸 [OCR Worker] Immagine rilevata - OCR immagini disabilitato (ENABLE_OCR_IMAGES=false)');
+        logger.log(
+          '📸 [OCR Worker] Immagine rilevata - OCR immagini disabilitato (ENABLE_OCR_IMAGES=false)'
+        );
         return {
-          clarification_request: 'Ho ricevuto un\'immagine, ma l\'estrazione automatica non è ancora attiva. Puoi incollare il testo dello screenshot?',
+          clarification_request:
+            "Ho ricevuto un'immagine, ma l'estrazione automatica non è ancora attiva. Puoi incollare il testo dello screenshot?",
           next_step: 'END',
           processingStatus: 'idle',
         };
       }
-      
+
       // Sprint 2.5 Phase 2: Estrazione immagine via Gemini Vision con retry policy
       logger.log('📸 [OCR Worker] Immagine rilevata - avvio estrazione Vision con retry policy');
-      
+
       // Esegui Vision con retry (max 1 retry per errori transienti)
       const visionResult: VisionResult = await executeVisionWithRetry(
         state,
         messageContent,
         logger
       );
-      
+
       // Se Vision fallisce dopo tutti i tentativi
       if (!visionResult.success || !visionResult.data) {
-        const clarificationMsg = visionResult.error 
+        const clarificationMsg = visionResult.error
           ? generateVisionClarificationMessage(visionResult.error)
-          : 'Non sono riuscita a leggere l\'immagine. Puoi incollare il testo dello screenshot?';
-        
+          : "Non sono riuscita a leggere l'immagine. Puoi incollare il testo dello screenshot?";
+
         logger.warn(`⚠️ [OCR Worker] Vision fallito dopo ${visionResult.attempts} tentativo/i`);
-        
+
         // ⚠️ NO fallback a Claude per immagini - solo clarification_request
         // Claude può essere usato SOLO per:
         // - Post-processing di output Vision già ottenuto
@@ -566,35 +565,42 @@ export async function ocrWorker(
           clarification_request: clarificationMsg,
           next_step: 'END',
           processingStatus: 'error', // ⚠️ FIX: Setta 'error' quando Vision fallisce
-          validationErrors: visionResult.error ? [`Vision Error: ${visionResult.error.message}`] : undefined,
+          validationErrors: visionResult.error
+            ? [`Vision Error: ${visionResult.error.message}`]
+            : undefined,
         };
       }
-      
+
       // Vision success - processa risultato
       const extractedState = visionResult.data;
-      
+
       // Mappa output Vision a ShipmentDraftUpdates
       const visionData = extractedState.shipmentData as VisionExtractedData;
       const visionUpdates = mapVisionOutputToShipmentDraft(visionData);
       const extractedCount = countVisionExtractedFields(visionUpdates);
-      
+
       // Log telemetria (NO PII - solo conteggi)
-      logger.log(`📸 [OCR Worker] Vision: campi estratti: ${extractedCount}, tentativi: ${visionResult.attempts}`);
-      
+      logger.log(
+        `📸 [OCR Worker] Vision: campi estratti: ${extractedCount}, tentativi: ${visionResult.attempts}`
+      );
+
       // Se non abbiamo estratto nulla
       if (extractedCount === 0) {
         logger.log('⚠️ [OCR Worker] Vision: nessun dato estratto');
         return {
-          clarification_request: 'Non sono riuscita a estrarre dati dall\'immagine. Puoi indicarmi CAP, città, provincia e peso del pacco?',
+          clarification_request:
+            "Non sono riuscita a estrarre dati dall'immagine. Puoi indicarmi CAP, città, provincia e peso del pacco?",
           next_step: 'END',
           processingStatus: 'idle',
         };
       }
-      
+
       // Verifica confidence (se disponibile)
       const confidence = (extractedState.confidenceScore || 0) / 100; // 0-1
       if (confidence < ocrConfig.MIN_VISION_CONFIDENCE) {
-        logger.log(`⚠️ [OCR Worker] Vision: confidence basso (${(confidence * 100).toFixed(0)}% < ${(ocrConfig.MIN_VISION_CONFIDENCE * 100).toFixed(0)}%)`);
+        logger.log(
+          `⚠️ [OCR Worker] Vision: confidence basso (${(confidence * 100).toFixed(0)}% < ${(ocrConfig.MIN_VISION_CONFIDENCE * 100).toFixed(0)}%)`
+        );
         // Blocca e chiedi conferma (scelta C per confidence basso)
         return {
           clarification_request: `Ho estratto alcuni dati dall'immagine ma non sono sicura. Puoi confermare: CAP, città, provincia e peso?`,
@@ -602,13 +608,13 @@ export async function ocrWorker(
           processingStatus: 'idle',
         };
       }
-      
+
       // Merge con draft esistente
       const updatedDraft = mergeShipmentDraft(state.shipmentDraft, visionUpdates);
       const missingFields = calculateMissingFieldsForPricing(updatedDraft);
-      
+
       logger.log(`📸 [OCR Worker] Vision: campi mancanti: ${missingFields.length}`);
-      
+
       // Decidi next step
       if (missingFields.length === 0) {
         logger.log('✅ [OCR Worker] Vision: dati sufficienti, routing a address_worker');
@@ -623,11 +629,11 @@ export async function ocrWorker(
           processingStatus: 'extracting',
         };
       }
-      
+
       // Mancano dati -> salva quello che abbiamo e chiedi
       const clarificationQuestion = generateClarificationQuestion(missingFields);
       logger.log(`⚠️ [OCR Worker] Vision: dati parziali, mancano: ${missingFields.join(', ')}`);
-      
+
       return {
         shipmentDraft: updatedDraft,
         clarification_request: clarificationQuestion,
@@ -635,39 +641,41 @@ export async function ocrWorker(
         processingStatus: 'idle',
       };
     }
-    
+
     // Tratta come testo OCR
     textToProcess = typeof messageContent === 'string' ? messageContent : String(messageContent);
-    
+
     if (!textToProcess.trim()) {
       logger.warn('⚠️ [OCR Worker] Testo vuoto');
       return {
-        clarification_request: 'Non ho ricevuto dati. Puoi incollare il testo dello screenshot o indicare i dati della spedizione?',
+        clarification_request:
+          'Non ho ricevuto dati. Puoi incollare il testo dello screenshot o indicare i dati della spedizione?',
         next_step: 'END',
         processingStatus: 'idle',
       };
     }
-    
+
     // Usa logica core condivisa
     const { updatedDraft, missingFields, extractedFieldsCount } = processOcrCore(
       textToProcess,
       state.shipmentDraft
     );
-    
+
     // Log telemetria (NO PII - solo conteggi)
     logger.log(`📸 [OCR Worker] Campi estratti: ${extractedFieldsCount}, source: ${ocrSource}`);
     logger.log(`📸 [OCR Worker] Campi mancanti per pricing: ${missingFields.length}`);
-    
+
     // Se non abbiamo estratto nulla, chiedi chiarimenti
     if (extractedFieldsCount === 0) {
       logger.log('⚠️ [OCR Worker] Nessun dato estratto, richiedo chiarimenti');
       return {
-        clarification_request: 'Non sono riuscita a estrarre dati dallo screenshot. Puoi indicarmi CAP, città, provincia e peso del pacco?',
+        clarification_request:
+          'Non sono riuscita a estrarre dati dallo screenshot. Puoi indicarmi CAP, città, provincia e peso del pacco?',
         next_step: 'END',
         processingStatus: 'idle',
       };
     }
-    
+
     // Se abbiamo estratto qualcosa
     if (missingFields.length === 0) {
       // Abbiamo tutto per il pricing -> address_worker per normalizzazione
@@ -683,18 +691,17 @@ export async function ocrWorker(
         processingStatus: 'extracting',
       };
     }
-    
+
     // Mancano dati per pricing -> clarification ma salva quello che abbiamo
     const clarificationQuestion = generateClarificationQuestion(missingFields);
     logger.log(`⚠️ [OCR Worker] Dati parziali, mancano: ${missingFields.join(', ')}`);
-    
+
     return {
       shipmentDraft: updatedDraft,
       clarification_request: clarificationQuestion,
       next_step: 'END',
       processingStatus: 'idle',
     };
-    
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('❌ [OCR Worker] Errore:', errorMessage);
@@ -711,23 +718,21 @@ export async function ocrWorker(
  * Versione sincrona per uso in unit test o pre-elaborazione
  * Usa la stessa logica core della versione async
  */
-export function processOcrSync(
-  text: string, 
-  existingDraft?: ShipmentDraft
-): OcrWorkerResult {
+export function processOcrSync(text: string, existingDraft?: ShipmentDraft): OcrWorkerResult {
   const { updatedDraft, missingFields, extractedFieldsCount } = processOcrCore(text, existingDraft);
-  
+
   let nextStep: OcrWorkerResult['nextStep'] = 'END';
   let clarificationQuestion: string | undefined;
-  
+
   if (extractedFieldsCount === 0) {
-    clarificationQuestion = 'Non sono riuscita a estrarre dati. Puoi indicarmi CAP, città, provincia e peso?';
+    clarificationQuestion =
+      'Non sono riuscita a estrarre dati. Puoi indicarmi CAP, città, provincia e peso?';
   } else if (missingFields.length === 0) {
     nextStep = 'address_worker';
   } else {
     clarificationQuestion = generateClarificationQuestion(missingFields);
   }
-  
+
   return {
     shipmentDraft: updatedDraft,
     missingFields,
@@ -737,4 +742,3 @@ export function processOcrSync(
     extractedFieldsCount,
   };
 }
-

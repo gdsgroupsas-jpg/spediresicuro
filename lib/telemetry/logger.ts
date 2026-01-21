@@ -1,6 +1,6 @@
 /**
  * Modulo Telemetria Strutturata - Anne V2
- * 
+ *
  * Log strutturati per pricing graph con trace_id.
  * ⚠️ NO PII nei log (no email, no nomi, no indirizzi)
  */
@@ -50,7 +50,7 @@ function formatEvent(event: TelemetryEvent): string {
  */
 function logStructured(level: LogLevel, event: TelemetryEvent): void {
   const formattedEvent = formatEvent(event);
-  
+
   switch (level) {
     case 'error':
       console.error(`[TELEMETRY] ${formattedEvent}`);
@@ -115,15 +115,11 @@ export function logUsingPricingGraph(
  * Log: Graph Failed
  * Evento quando il pricing graph fallisce
  */
-export function logGraphFailed(
-  traceId: string,
-  error: Error | unknown,
-  userId: string
-): void {
+export function logGraphFailed(traceId: string, error: Error | unknown, userId: string): void {
   // Estrai messaggio errore in modo sicuro (no stack trace in prod)
   let errorMessage = 'Unknown error';
   let errorType = 'unknown';
-  
+
   if (error instanceof Error) {
     errorMessage = error.message;
     errorType = error.name;
@@ -131,7 +127,7 @@ export function logGraphFailed(
     errorMessage = error;
     errorType = 'string_error';
   }
-  
+
   logStructured('error', {
     event: 'graphFailed',
     trace_id: traceId,
@@ -140,9 +136,12 @@ export function logGraphFailed(
     error_message: errorMessage,
     error_type: errorType,
     // NO stack trace in prod (potrebbe contenere path con PII)
-    stack_trace: process.env.NODE_ENV === 'development' 
-      ? (error instanceof Error ? error.stack : undefined)
-      : undefined,
+    stack_trace:
+      process.env.NODE_ENV === 'development'
+        ? error instanceof Error
+          ? error.stack
+          : undefined
+        : undefined,
   });
 }
 
@@ -232,13 +231,25 @@ export function logRequestCompleted(
 
 export type IntentType = 'pricing' | 'non_pricing' | 'unknown';
 export type BackendUsed = 'pricing_graph' | 'legacy';
-export type FallbackReason = 'graph_error' | 'non_pricing' | 'unknown_intent' | 'intent_error' | 'address_unparsable' | null;
+export type FallbackReason =
+  | 'graph_error'
+  | 'non_pricing'
+  | 'unknown_intent'
+  | 'intent_error'
+  | 'address_unparsable'
+  | null;
 export type WorkerRun = 'address' | 'pricing' | 'ocr' | 'booking' | null;
 export type OcrSource = 'image' | 'text' | null;
 
 export interface SupervisorRouterTelemetry {
   intentDetected: IntentType;
-  supervisorDecision: 'pricing_worker' | 'address_worker' | 'ocr_worker' | 'booking_worker' | 'legacy' | 'end';
+  supervisorDecision:
+    | 'pricing_worker'
+    | 'address_worker'
+    | 'ocr_worker'
+    | 'booking_worker'
+    | 'legacy'
+    | 'end';
   backendUsed: BackendUsed;
   fallbackToLegacy: boolean;
   fallbackReason: FallbackReason;
@@ -246,26 +257,26 @@ export interface SupervisorRouterTelemetry {
   pricingOptionsCount?: number;
   hasClarification?: boolean;
   success: boolean;
-  
+
   // Sprint 2.3: Address Worker telemetry
   workerRun?: WorkerRun;
   missingFieldsCount?: number;
   addressNormalized?: boolean;
-  
+
   // Sprint 2.4: OCR Worker telemetry
   ocrSource?: OcrSource;
   ocrExtractedFieldsCount?: number;
-  
+
   // Sprint 2.6: Booking Worker telemetry
   bookingStatus?: 'success' | 'failed' | 'retryable' | null;
 }
 
 /**
  * Log: Supervisor Router Complete (EVENTO FINALE UNIFICATO)
- * 
+ *
  * Emesso SEMPRE 1 volta per richiesta, anche in caso di errore.
  * Contiene tutti i campi per tracciare il flusso decisionale.
- * 
+ *
  * ⚠️ NO PII: userId è hashato, no payload utente
  */
 export function logSupervisorRouterComplete(
@@ -303,11 +314,7 @@ export function logSupervisorRouterComplete(
  * Log: Booking Attempt
  * Evento quando si tenta una prenotazione
  */
-export function logBookingAttempt(
-  traceId: string,
-  userId: string,
-  carrier: string
-): void {
+export function logBookingAttempt(traceId: string, userId: string, carrier: string): void {
   logStructured('info', {
     event: 'bookingAttempt',
     trace_id: traceId,
@@ -377,4 +384,3 @@ export const telemetry = {
 };
 
 export default telemetry;
-

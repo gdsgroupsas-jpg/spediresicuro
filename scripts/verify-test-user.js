@@ -2,11 +2,11 @@
  * Script per verificare che l'utente di test esista e le credenziali siano corrette
  */
 
-require("dotenv").config({ path: ".env.local" });
-require("dotenv").config();
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config();
 
-const bcrypt = require("bcryptjs");
-const { createClient } = require("@supabase/supabase-js");
+const bcrypt = require('bcryptjs');
+const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -19,34 +19,34 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function verifyTestUser() {
-  const testEmail = "testspediresicuro+postaexpress@gmail.com";
-  const testPassword = "Striano1382-";
+  const testEmail = 'testspediresicuro+postaexpress@gmail.com';
+  const testPassword = 'Striano1382-';
 
-  console.log("🔍 Verifica utente di test...\n");
+  console.log('🔍 Verifica utente di test...\n');
 
   // Cerca l'utente
   const { data: user, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", testEmail)
+    .from('users')
+    .select('*')
+    .eq('email', testEmail)
     .single();
 
   if (error || !user) {
-    console.error("❌ Utente non trovato nel database!");
+    console.error('❌ Utente non trovato nel database!');
     console.error("   Esegui lo script SQL per creare l'utente:");
-    console.error("   - CREATE_TEST_USER.sql");
-    console.error("   - supabase/migrations/022_create_test_user.sql");
+    console.error('   - CREATE_TEST_USER.sql');
+    console.error('   - supabase/migrations/022_create_test_user.sql');
     process.exit(1);
   }
 
-  console.log("✅ Utente trovato:");
-  console.log("   ID:", user.id);
-  console.log("   Email:", user.email);
-  console.log("   Name:", user.name);
-  console.log("   Role:", user.role);
-  console.log("   Provider:", user.provider);
-  console.log("   Password hash presente:", !!user.password);
-  console.log("");
+  console.log('✅ Utente trovato:');
+  console.log('   ID:', user.id);
+  console.log('   Email:', user.email);
+  console.log('   Name:', user.name);
+  console.log('   Role:', user.role);
+  console.log('   Provider:', user.provider);
+  console.log('   Password hash presente:', !!user.password);
+  console.log('');
 
   // Verifica password
   if (!user.password) {
@@ -59,17 +59,13 @@ async function verifyTestUser() {
   const passwordMatch = await bcrypt.compare(testPassword, user.password);
 
   if (passwordMatch) {
-    console.log("✅ Password corretta!");
-    console.log(
-      '   La password "testpassword123" corrisponde all\'hash nel database.'
-    );
+    console.log('✅ Password corretta!');
+    console.log('   La password "testpassword123" corrisponde all\'hash nel database.');
   } else {
-    console.error("❌ Password NON corrisponde!");
-    console.error(
-      '   La password "testpassword123" NON corrisponde all\'hash nel database.'
-    );
-    console.error("");
-    console.error("   Soluzione:");
+    console.error('❌ Password NON corrisponde!');
+    console.error('   La password "testpassword123" NON corrisponde all\'hash nel database.');
+    console.error('');
+    console.error('   Soluzione:');
     console.error(
       "   1. Genera nuovo hash: node -e \"const bc=require('bcryptjs');console.log(bc.hashSync('testpassword123',10))\""
     );
@@ -77,14 +73,14 @@ async function verifyTestUser() {
     process.exit(1);
   }
 
-  console.log("\n");
+  console.log('\n');
   console.log("✅ Tutto OK! L'utente di test è configurato correttamente.");
-  console.log("   Credenziali:");
-  console.log("   - Email: testspediresicuro+postaexpress@gmail.com");
-  console.log("   - Password: Striano1382-");
+  console.log('   Credenziali:');
+  console.log('   - Email: testspediresicuro+postaexpress@gmail.com');
+  console.log('   - Password: Striano1382-');
 }
 
 verifyTestUser().catch((error) => {
-  console.error("❌ Errore:", error);
+  console.error('❌ Errore:', error);
   process.exit(1);
 });

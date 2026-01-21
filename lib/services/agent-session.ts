@@ -1,9 +1,9 @@
 /**
  * AgentSession Service
- * 
+ *
  * Service layer per gestione agent_sessions (astrazione da Supabase).
  * Fornisce cache in-memory per sessioni attive (TTL 5 minuti).
- * 
+ *
  * P3 Task 3: Abstraction Layer per checkpointer
  */
 
@@ -36,7 +36,7 @@ interface CachedState {
  */
 function serializeAgentState(state: AgentState): Record<string, unknown> {
   // Serializza messages usando toJSON() di LangChain
-  const serializedMessages = state.messages.map(msg => {
+  const serializedMessages = state.messages.map((msg) => {
     // BaseMessage ha metodo toJSON() che restituisce formato standard
     try {
       return msg.toJSON();
@@ -82,7 +82,7 @@ function deserializeAgentState(data: Record<string, unknown>): AgentState {
           const msgType = msgJson.id?.[0] || 'human';
           const content = msgJson.lc_kwargs?.content || '';
           const additional_kwargs = msgJson.lc_kwargs?.additional_kwargs || {};
-          
+
           if (msgType === 'ai' || msgType === 'AIMessage') {
             return new AIMessage({
               content,
@@ -95,18 +95,19 @@ function deserializeAgentState(data: Record<string, unknown>): AgentState {
               additional_kwargs,
             });
           }
-          
+
           // Default: HumanMessage
           return new HumanMessage({
             content,
             additional_kwargs,
           });
         }
-        
+
         // Fallback: crea HumanMessage da content
         return new HumanMessage({
           content: msgJson.content || msgJson.lc_kwargs?.content || '',
-          additional_kwargs: msgJson.additional_kwargs || msgJson.lc_kwargs?.additional_kwargs || {},
+          additional_kwargs:
+            msgJson.additional_kwargs || msgJson.lc_kwargs?.additional_kwargs || {},
         });
       } catch (error) {
         // Fallback: HumanMessage minimale
@@ -209,10 +210,7 @@ export class AgentSessionService {
    * Recupera sessione (check cache, fallback DB).
    * Restituisce AgentState completo se presente.
    */
-  async getSession(
-    userId: string,
-    sessionId: string
-  ): Promise<AgentState | null> {
+  async getSession(userId: string, sessionId: string): Promise<AgentState | null> {
     this.cleanExpiredCache();
 
     // Check cache
@@ -250,11 +248,7 @@ export class AgentSessionService {
    * Aggiorna sessione con nuovo AgentState.
    * Invalida cache e salva in DB.
    */
-  async updateSession(
-    userId: string,
-    sessionId: string,
-    state: AgentState
-  ): Promise<void> {
+  async updateSession(userId: string, sessionId: string, state: AgentState): Promise<void> {
     this.cleanExpiredCache();
 
     const serializedState = serializeAgentState(state);
@@ -284,10 +278,7 @@ export class AgentSessionService {
   /**
    * Lista sessioni per utente (ordine updated_at DESC).
    */
-  async listSessions(
-    userId: string,
-    limit = 10
-  ): Promise<AgentSession[]> {
+  async listSessions(userId: string, limit = 10): Promise<AgentSession[]> {
     // P3 Task 6: Select solo campi necessari (ottimizzazione query)
     const { data, error } = await supabaseAdmin
       .from('agent_sessions')
@@ -300,7 +291,7 @@ export class AgentSessionService {
       throw new Error(`Errore lista sessioni: ${error.message}`);
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row) => ({
       id: row.id,
       user_id: row.user_id,
       session_id: row.session_id,
@@ -339,4 +330,3 @@ export class AgentSessionService {
  * Istanza singleton del service (riutilizzabile).
  */
 export const agentSessionService = new AgentSessionService();
-

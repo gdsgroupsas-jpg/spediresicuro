@@ -18,7 +18,10 @@ export default function VoiceDashboardPage() {
     () => [
       { title: 'Hands-free', desc: 'Gestisci spedizioni e tracking solo con la voce.' },
       { title: 'Tool calling', desc: 'Gemini invoca tRPC o API per creare, tracciare, quotare.' },
-      { title: 'Audio duplex', desc: 'Streaming bidirezionale: ascolta le risposte in tempo reale.' },
+      {
+        title: 'Audio duplex',
+        desc: 'Streaming bidirezionale: ascolta le risposte in tempo reale.',
+      },
     ],
     []
   );
@@ -32,8 +35,9 @@ export default function VoiceDashboardPage() {
             <p className="text-sm font-semibold text-blue-600">Gemini Live · Voice Ops</p>
             <h1 className="text-3xl font-bold text-gray-900 mt-1">Cockpit vocale spedizioni</h1>
             <p className="text-gray-600 mt-2 max-w-2xl">
-              Avvia una sessione live: il microfono invia audio a Gemini, che restituisce risposte vocali e
-              chiama i tool per creare spedizioni, tracciare pacchi, aprire ticket e ottenere statistiche.
+              Avvia una sessione live: il microfono invia audio a Gemini, che restituisce risposte
+              vocali e chiama i tool per creare spedizioni, tracciare pacchi, aprire ticket e
+              ottenere statistiche.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-2 text-sm text-gray-700">

@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * Server Actions per Gestione Log Diagnostici
@@ -9,8 +9,8 @@
  * ⚠️ ANTI-CRASH: Limiti e timeout per evitare crash durante lettura log
  */
 
-import { createServerActionClient } from "@/lib/supabase-server";
-import type { DiagnosticEvent } from "@/types/diagnostics";
+import { createServerActionClient } from '@/lib/supabase-server';
+import type { DiagnosticEvent } from '@/types/diagnostics';
 
 // Limiti di sicurezza per evitare crash
 const MAX_LOG_LIMIT = 100; // Massimo 100 log per query
@@ -25,9 +25,7 @@ const QUERY_TIMEOUT_MS = 5000; // Timeout 5 secondi
  * @param limit - Numero massimo di log da recuperare (default: 50, max: 100)
  * @returns Array di eventi diagnostici ordinati per data decrescente
  */
-export async function getSystemLogs(
-  limit: number = DEFAULT_LIMIT
-): Promise<DiagnosticEvent[]> {
+export async function getSystemLogs(limit: number = DEFAULT_LIMIT): Promise<DiagnosticEvent[]> {
   try {
     // ⚠️ ANTI-CRASH: Limita il numero di log richiesti
     const safeLimit = Math.min(Math.max(1, limit), MAX_LOG_LIMIT);
@@ -36,9 +34,9 @@ export async function getSystemLogs(
 
     // ⚠️ ANTI-CRASH: Timeout per evitare query infinite
     const queryPromise = supabase
-      .from("diagnostics_events")
-      .select("*")
-      .order("created_at", { ascending: false })
+      .from('diagnostics_events')
+      .select('*')
+      .order('created_at', { ascending: false })
       .limit(safeLimit);
 
     const timeoutPromise = new Promise<null>((resolve) => {
@@ -49,14 +47,14 @@ export async function getSystemLogs(
 
     // Se timeout, ritorna array vuoto
     if (result === null) {
-      console.warn("⚠️ [getSystemLogs] Timeout durante recupero log");
+      console.warn('⚠️ [getSystemLogs] Timeout durante recupero log');
       return [];
     }
 
     const { data, error } = result as any;
 
     if (error) {
-      console.error("Errore recupero log diagnostici:", error);
+      console.error('Errore recupero log diagnostici:', error);
       return [];
     }
 
@@ -65,11 +63,10 @@ export async function getSystemLogs(
 
     // Mappa i dati dal database al tipo DiagnosticEvent con validazione
     return safeData.map((event: any) => ({
-      id: event.id || "",
-      type: event.type || "info",
-      severity: event.severity || "info",
-      context:
-        event.context && typeof event.context === "object" ? event.context : {},
+      id: event.id || '',
+      type: event.type || 'info',
+      severity: event.severity || 'info',
+      context: event.context && typeof event.context === 'object' ? event.context : {},
       created_at: event.created_at || new Date().toISOString(),
       correlation_id: event.correlation_id || undefined,
       ip_address: event.ip_address || undefined,
@@ -78,7 +75,7 @@ export async function getSystemLogs(
     }));
   } catch (error: any) {
     // ⚠️ ANTI-CRASH: Gestione errori robusta - non lancia eccezioni
-    console.error("Errore in getSystemLogs:", error?.message || error);
+    console.error('Errore in getSystemLogs:', error?.message || error);
     return [];
   }
 }

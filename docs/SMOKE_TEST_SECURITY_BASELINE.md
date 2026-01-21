@@ -1,6 +1,7 @@
 # 📘 SMOKE TEST & SECURITY BASELINE — SpedireSicuro.it
 
 ## Scopo
+
 Documentare il sistema di **smoke test Supabase** e il **gate di sicurezza CI/CD**
 che garantiscono che RLS, ruoli e view critiche funzionino correttamente
 dopo ogni migration o deploy.
@@ -12,12 +13,14 @@ Questo documento è la **baseline ufficiale di sicurezza** del progetto.
 ## 🔐 Cosa viene testato
 
 ### Test 1 — SELECT con utente anonimo
+
 - **Client**: anon key
 - **Operazione**: SELECT su `price_lists`
 - **Atteso**: ✅ PASS
 - **Scopo**: Verifica che le policy RLS permettano la lettura pubblica
 
 ### Test 1b — SELECT con utente autenticato
+
 - **Client**: user autenticato (email/password)
 - **Operazione**: SELECT su `price_lists`
 - **Atteso**: ✅ PASS
@@ -25,18 +28,21 @@ Questo documento è la **baseline ufficiale di sicurezza** del progetto.
 - **Scopo**: Verifica che le policy "authenticated" funzionino correttamente
 
 ### Test 2 — INSERT bloccato da RLS
+
 - **Client**: anon / user
 - **Operazione**: INSERT su `price_lists`
 - **Atteso**: ❌ FAIL (RLS deve bloccare)
 - **Scopo**: Verifica che RLS impedisca inserimenti non autorizzati
 
 ### Test 3 — INSERT con service role
+
 - **Client**: service role key
 - **Operazione**: INSERT su `price_lists`
 - **Atteso**: ✅ PASS
 - **Scopo**: Verifica che service role bypassi RLS correttamente
 
 ### Test 4 — SELECT su view critiche
+
 - **Client**: anon / user
 - **Operazione**: SELECT su view principali (es. `anne_all_shipments_view`)
 - **Atteso**: ✅ PASS
@@ -47,6 +53,7 @@ Questo documento è la **baseline ufficiale di sicurezza** del progetto.
 ## 👤 Utente Smoke Test
 
 Esiste uno script dedicato che:
+
 - Crea utente in `auth.users` (Supabase Auth)
 - Crea record in tabella `users` (database)
 - Assegna ruolo standard `user` (nessun privilegio extra)
@@ -56,11 +63,13 @@ Esiste uno script dedicato che:
 ⚠️ **Email mascherata nei log** (es. `sm***@spediresicuro.it`)
 
 ### Script di creazione
+
 ```bash
 npm run create:smoke-test-user
 ```
 
 Lo script:
+
 1. Genera password unica basata su timestamp
 2. Crea utente in `auth.users` via Admin API
 3. Crea record in tabella `users` con hash bcrypt
@@ -68,6 +77,7 @@ Lo script:
 5. Aggiorna password se utente esiste già
 
 **Output esempio:**
+
 ```
 📋 Credenziali utente smoke test:
    Email: smoke-test@spediresicuro.it
@@ -85,11 +95,13 @@ Lo script:
 ### Esecuzione Locale
 
 #### Test base (senza autenticazione)
+
 ```bash
 npm run test:supabase:smoke
 ```
 
 #### Test completo (con autenticazione)
+
 ```bash
 # Aggiungi credenziali in .env.local
 SUPABASE_TEST_EMAIL=smoke-test@spediresicuro.it
@@ -100,6 +112,7 @@ npm run test:supabase:smoke
 ```
 
 #### Test con variabili ambiente inline
+
 ```bash
 # Windows PowerShell
 $env:SUPABASE_TEST_EMAIL="smoke-test@spediresicuro.it"
@@ -115,6 +128,7 @@ npm run test:supabase:smoke
 ### Esecuzione CI/CD
 
 #### Gate opzionale (skip se non configurato)
+
 ```bash
 # In pipeline CI/CD
 SUPABASE_SMOKE=1 npm run test:supabase:smoke:ci
@@ -124,6 +138,7 @@ Se `SUPABASE_SMOKE` non è settato, lo script skippa silenziosamente (exit 0).
 Se `SUPABASE_SMOKE=1`, esegue il test e propaga l'exit code.
 
 #### Configurazione in Vercel
+
 1. Vai su **Settings** → **Environment Variables**
 2. Aggiungi:
    - `SUPABASE_SMOKE=1` (per abilitare il test)
@@ -139,6 +154,7 @@ Se `SUPABASE_SMOKE=1`, esegue il test e propaga l'exit code.
 ## 📊 Output e Risultati
 
 ### Esempio Output Completo
+
 ```
 🧪 Smoke Test Supabase
 
@@ -177,6 +193,7 @@ Se `SUPABASE_SMOKE=1`, esegue il test e propaga l'exit code.
 ```
 
 ### Exit Codes
+
 - **0**: Tutti i test passati
 - **1**: Almeno un test fallito o errore fatale
 
@@ -187,18 +204,21 @@ Se `SUPABASE_SMOKE=1`, esegue il test e propaga l'exit code.
 ## 🔒 Sicurezza e Best Practices
 
 ### Credenziali
+
 - ✅ **Mai loggate in chiaro** - Email mascherata nei log
 - ✅ **Password unica** - Generata con timestamp per ogni creazione
 - ✅ **Ruolo standard** - Utente con ruolo `user`, nessun privilegio extra
 - ✅ **Secret in CI** - Credenziali solo come environment variables segrete
 
 ### Utente Smoke Test
+
 - ✅ **Dedicato** - Account separato solo per test
 - ✅ **Nessun privilegio extra** - Ruolo standard `user`
 - ✅ **Password temporanea** - Può essere rigenerata quando necessario
 - ✅ **Non usare in produzione** - Solo per test automatici
 
 ### CI/CD
+
 - ✅ **Gate opzionale** - Non blocca se `SUPABASE_SMOKE` non è settato
 - ✅ **Exit code hard** - Blocca pipeline se test fallisce
 - ✅ **No log credenziali** - Script non stampa mai password in chiaro
@@ -208,9 +228,11 @@ Se `SUPABASE_SMOKE=1`, esegue il test e propaga l'exit code.
 ## 🛠️ Troubleshooting
 
 ### Test 1b fallisce: "Invalid login credentials"
+
 **Causa**: Utente non creato in `auth.users` o password errata.
 
 **Soluzione**:
+
 ```bash
 # Ricrea utente smoke test
 npm run create:smoke-test-user
@@ -221,22 +243,27 @@ npm run test:supabase:smoke
 ```
 
 ### Test 2 fallisce: INSERT riuscito (doveva essere bloccato)
+
 **Causa**: RLS non configurato correttamente su `price_lists`.
 
 **Soluzione**:
+
 1. Verifica policy RLS in Supabase Dashboard
 2. Assicurati che policy "anon" non permetta INSERT
 3. Controlla migration SQL per policy corrette
 
 ### Test 4 fallisce: Nessuna view trovata
+
 **Causa**: View migrate non esistono o hanno nomi diversi.
 
 **Soluzione**:
+
 1. Verifica view esistenti in Supabase Dashboard
 2. Aggiorna array `possibleViews` in `scripts/smoke-test-supabase.ts`
 3. Aggiungi nome view corretto
 
 ### Exit code sempre 0 anche con test falliti
+
 **Causa**: Script non gestisce correttamente exit code.
 
 **Soluzione**: Verifica che lo script chiami `process.exit(1)` quando ci sono test falliti.
@@ -246,11 +273,13 @@ npm run test:supabase:smoke
 ## 📝 File e Script
 
 ### Script Principali
+
 - **`scripts/smoke-test-supabase.ts`** - Script principale smoke test
 - **`scripts/create-smoke-test-user.ts`** - Creazione utente smoke test
 - **`scripts/smoke-test-ci.js`** - Gate CI/CD opzionale
 
 ### Variabili Ambiente
+
 - `NEXT_PUBLIC_SUPABASE_URL` - URL Supabase (richiesto)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Anon key (richiesto)
 - `SUPABASE_SERVICE_ROLE_KEY` - Service role key (richiesto)
@@ -259,6 +288,7 @@ npm run test:supabase:smoke
 - `SUPABASE_SMOKE` - Flag per abilitare test in CI (opzionale)
 
 ### Comandi NPM
+
 - `npm run test:supabase:smoke` - Esegue smoke test
 - `npm run test:supabase:smoke:ci` - Gate CI/CD (skip se non configurato)
 - `npm run create:smoke-test-user` - Crea/aggiorna utente smoke test
@@ -290,6 +320,7 @@ Il sistema è considerato **completo e funzionante** quando:
 ## 🔄 Changelog
 
 ### 2025-01-17
+
 - ✅ Creato sistema smoke test completo
 - ✅ Aggiunto Test 1b (SELECT autenticato)
 - ✅ Implementato gate CI/CD opzionale
@@ -302,4 +333,3 @@ Il sistema è considerato **completo e funzionante** quando:
 **Ultimo aggiornamento**: 2025-01-17  
 **Versione**: 1.0  
 **Autore**: Sistema SpedireSicuro.it
-

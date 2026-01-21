@@ -33,41 +33,38 @@ Monitora lo stato delle API in tempo reale:
 ### Registrare una Nuova Versione API
 
 ```typescript
-import { registerAPIVersion } from '@/lib/monitoring/api-versioning'
+import { registerAPIVersion } from '@/lib/monitoring/api-versioning';
 
 await registerAPIVersion('spedisci_online', 'v2', 'https://api.spedisci.online/v2', {
   changelog: 'Aggiunto supporto per contratti multipli',
   breakingChanges: false,
   deprecated: false,
   supportedUntil: '2025-12-31',
-})
+});
 ```
 
 ### Verificare Salute API
 
 ```typescript
-import { checkAPIHealth } from '@/lib/monitoring/api-versioning'
+import { checkAPIHealth } from '@/lib/monitoring/api-versioning';
 
-const monitor = await checkAPIHealth(
-  'spedisci_online',
-  'https://api.spedisci.online/v2'
-)
+const monitor = await checkAPIHealth('spedisci_online', 'https://api.spedisci.online/v2');
 
-console.log(`Status: ${monitor.status}`)
-console.log(`Response Time: ${monitor.response_time_ms}ms`)
+console.log(`Status: ${monitor.status}`);
+console.log(`Response Time: ${monitor.response_time_ms}ms`);
 ```
 
 ### Recuperare Versione Corrente
 
 ```typescript
-import { getCurrentAPIVersion } from '@/lib/monitoring/api-versioning'
+import { getCurrentAPIVersion } from '@/lib/monitoring/api-versioning';
 
-const version = await getCurrentAPIVersion('spedisci_online')
+const version = await getCurrentAPIVersion('spedisci_online');
 if (version) {
-  console.log(`Versione: ${version.version}`)
-  console.log(`URL: ${version.base_url}`)
+  console.log(`Versione: ${version.version}`);
+  console.log(`URL: ${version.base_url}`);
   if (version.deprecated) {
-    console.warn('⚠️ Versione deprecata!')
+    console.warn('⚠️ Versione deprecata!');
   }
 }
 ```
@@ -80,7 +77,7 @@ if (version) {
 
 ```sql
 -- Stato salute API per tutti i provider
-SELECT 
+SELECT
   provider_id,
   status,
   last_check,
@@ -94,7 +91,7 @@ ORDER BY last_check DESC;
 
 ```sql
 -- Versioni non deprecate
-SELECT 
+SELECT
   provider_id,
   version,
   base_url,
@@ -119,7 +116,7 @@ export async function checkAndAlert() {
   const { data: monitors } = await supabaseAdmin
     .from('api_monitors')
     .select('*')
-    .eq('status', 'down')
+    .eq('status', 'down');
 
   for (const monitor of monitors || []) {
     // Invia email/notifica
@@ -127,7 +124,7 @@ export async function checkAndAlert() {
       provider: monitor.provider_id,
       status: monitor.status,
       error: monitor.error_message,
-    })
+    });
   }
 }
 ```
@@ -137,26 +134,29 @@ export async function checkAndAlert() {
 ```typescript
 // app/api/cron/monitor-apis/route.ts
 export async function GET(request: NextRequest) {
-  const providers = ['spedisci_online', 'gls', 'brt', 'poste']
-  
+  const providers = ['spedisci_online', 'gls', 'brt', 'poste'];
+
   for (const providerId of providers) {
-    const config = await getCurrentAPIVersion(providerId)
+    const config = await getCurrentAPIVersion(providerId);
     if (config) {
-      await checkAPIHealth(providerId, config.base_url)
+      await checkAPIHealth(providerId, config.base_url);
     }
   }
-  
-  return NextResponse.json({ success: true })
+
+  return NextResponse.json({ success: true });
 }
 ```
 
 Configura su Vercel Cron:
+
 ```json
 {
-  "crons": [{
-    "path": "/api/cron/monitor-apis",
-    "schedule": "*/5 * * * *"
-  }]
+  "crons": [
+    {
+      "path": "/api/cron/monitor-apis",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
 ```
 
@@ -175,25 +175,21 @@ Configura su Vercel Cron:
 
 ```typescript
 // Migra configurazioni a nuova versione
-async function migrateToNewVersion(
-  providerId: string,
-  oldVersion: string,
-  newVersion: string
-) {
+async function migrateToNewVersion(providerId: string, oldVersion: string, newVersion: string) {
   // 1. Recupera tutte le config che usano vecchia versione
   const { data: configs } = await supabaseAdmin
     .from('courier_configs')
     .select('*')
-    .eq('provider_id', providerId)
+    .eq('provider_id', providerId);
 
   // 2. Aggiorna base_url per ogni config
   for (const config of configs || []) {
-    const newBaseUrl = getBaseUrlForVersion(providerId, newVersion)
-    
+    const newBaseUrl = getBaseUrlForVersion(providerId, newVersion);
+
     await supabaseAdmin
       .from('courier_configs')
       .update({ base_url: newBaseUrl })
-      .eq('id', config.id)
+      .eq('id', config.id);
   }
 }
 ```
@@ -206,7 +202,7 @@ async function migrateToNewVersion(
 
 ```sql
 -- Uptime per provider (ultimi 30 giorni)
-SELECT 
+SELECT
   provider_id,
   COUNT(*) FILTER (WHERE status = 'healthy') * 100.0 / COUNT(*) as uptime_percent,
   AVG(response_time_ms) as avg_response_time
@@ -223,18 +219,19 @@ export async function generateWeeklyReport() {
   const { data: monitors } = await supabaseAdmin
     .from('api_monitors')
     .select('*')
-    .gte('last_check', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .gte('last_check', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
 
   // Calcola metriche
   const metrics = {
     total_checks: monitors?.length || 0,
-    healthy_count: monitors?.filter(m => m.status === 'healthy').length || 0,
-    degraded_count: monitors?.filter(m => m.status === 'degraded').length || 0,
-    down_count: monitors?.filter(m => m.status === 'down').length || 0,
-    avg_response_time: monitors?.reduce((sum, m) => sum + (m.response_time_ms || 0), 0) / (monitors?.length || 1),
-  }
+    healthy_count: monitors?.filter((m) => m.status === 'healthy').length || 0,
+    degraded_count: monitors?.filter((m) => m.status === 'degraded').length || 0,
+    down_count: monitors?.filter((m) => m.status === 'down').length || 0,
+    avg_response_time:
+      monitors?.reduce((sum, m) => sum + (m.response_time_ms || 0), 0) / (monitors?.length || 1),
+  };
 
-  return metrics
+  return metrics;
 }
 ```
 
@@ -245,11 +242,13 @@ export async function generateWeeklyReport() {
 ### API Sempre in Stato "down"
 
 **Possibili cause:**
+
 1. URL base errato
 2. Firewall/network blocking
 3. API effettivamente non disponibile
 
 **Soluzione:**
+
 1. Verifica URL base nella configurazione
 2. Testa manualmente con `curl` o Postman
 3. Controlla log errori per dettagli
@@ -257,11 +256,13 @@ export async function generateWeeklyReport() {
 ### Response Time Elevato
 
 **Possibili cause:**
+
 1. Network latency
 2. API sovraccarica
 3. Problemi infrastruttura corriere
 
 **Soluzione:**
+
 1. Monitora trend nel tempo
 2. Contatta supporto corriere se persistente
 3. Considera fallback a API alternative
@@ -273,4 +274,3 @@ export async function generateWeeklyReport() {
 - [API Health Check Best Practices](https://www.healthchecks.io/)
 - [Semantic Versioning](https://semver.org/)
 - [API Versioning Strategies](https://restfulapi.net/versioning/)
-

@@ -3,6 +3,7 @@
 ## ⚠️ PROBLEMA
 
 Quando crei una spedizione, il sistema:
+
 - ✅ Crea la spedizione localmente
 - ✅ Genera il PDF
 - ❌ **NON chiama le API di Spedisci.Online**
@@ -24,6 +25,7 @@ Ho modificato il codice per registrare **SEMPRE** Spedisci.Online come broker se
 **File modificato**: `lib/actions/spedisci-online.ts`
 
 Ora il sistema:
+
 1. Prova adapter diretto (se disponibile per il corriere)
 2. Se non trova, usa **Spedisci.Online come broker** (se configurato)
 3. Se fallisce tutto, fa fallback CSV
@@ -46,6 +48,7 @@ Ora il sistema:
 La configurazione deve essere nella tabella `courier_configs` in Supabase.
 
 Per verificare:
+
 1. Vai su **Supabase Dashboard** → **Table Editor**
 2. Cerca la tabella `courier_configs`
 3. Dovresti vedere almeno una riga con `provider_id = 'spedisci_online'`
@@ -60,6 +63,7 @@ Se la tabella non esiste, devi crearla (vedi migration 006 o schema).
 4. Clicca "Genera Spedizione"
 
 **Cosa dovrebbe succedere**:
+
 - ✅ Il sistema cerca adapter diretto per "GLS" (non lo trova)
 - ✅ Il sistema usa Spedisci.Online come broker
 - ✅ Chiama le API di Spedisci.Online
@@ -67,11 +71,13 @@ Se la tabella non esiste, devi crearla (vedi migration 006 o schema).
 - ✅ Mostra "LDV Creata con Successo!" con tracking reale
 
 **Se invece vedi**:
+
 - ⚠️ Tracking number generato localmente (tipo "GLS123456789")
 - ⚠️ Nessuna chiamata API effettuata
 - ⚠️ Messaggio di errore nei log
 
 Significa che:
+
 - La configurazione non è nel database
 - O la configurazione non è attiva
 - O ci sono errori nelle credenziali
@@ -95,12 +101,14 @@ Dopo aver creato una spedizione, controlla i log su Vercel:
 ### Messaggi da Cercare
 
 **Se tutto OK, vedrai**:
+
 ```
 ✅ Broker adapter (Spedisci.Online) registrato tramite configurazione DB
 ✅ LDV creata (broker): ABC123XYZ
 ```
 
 **Se c'è problema, vedrai**:
+
 ```
 ⚠️ Spedisci.Online non configurato. La spedizione verrà creata solo localmente (fallback CSV).
 ⚠️ Configura Spedisci.Online in /dashboard/integrazioni per abilitare chiamate API reali.
@@ -151,14 +159,3 @@ Dopo aver configurato tutto correttamente:
 
 **Ultimo aggiornamento**: 3 Dicembre 2025  
 **File modificato**: `lib/actions/spedisci-online.ts`
-
-
-
-
-
-
-
-
-
-
-

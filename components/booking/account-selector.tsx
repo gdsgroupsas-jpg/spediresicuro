@@ -7,12 +7,12 @@
  * @security Mostra solo configurazioni attive dell'utente corrente
  */
 
-"use client";
+'use client';
 
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Building2, CheckCircle2, Loader2, Server } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Building2, CheckCircle2, Loader2, Server } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface AccountConfig {
   id: string;
@@ -35,37 +35,35 @@ interface AccountSelectorProps {
 
 // Mapping nomi display corrieri
 const COURIER_DISPLAY: Record<string, string> = {
-  gls: "GLS",
-  postedeliverybusiness: "Poste",
-  brt: "BRT",
-  dhl: "DHL",
-  ups: "UPS",
-  fedex: "FedEx",
-  interno: "Interno",
+  gls: 'GLS',
+  postedeliverybusiness: 'Poste',
+  brt: 'BRT',
+  dhl: 'DHL',
+  ups: 'UPS',
+  fedex: 'FedEx',
+  interno: 'Interno',
 };
 
 export function AccountSelector({
   selectedAccountId,
   onSelect,
   hideIfSingle = true,
-  className = "",
+  className = '',
 }: AccountSelectorProps) {
   const [accounts, setAccounts] = useState<AccountConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | undefined>(
-    selectedAccountId
-  );
+  const [selectedId, setSelectedId] = useState<string | undefined>(selectedAccountId);
 
   // Carica configurazioni
   useEffect(() => {
     async function loadAccounts() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/configurations/list-for-booking");
+        const response = await fetch('/api/configurations/list-for-booking');
 
         if (!response.ok) {
-          throw new Error("Errore caricamento account");
+          throw new Error('Errore caricamento account');
         }
 
         const data = await response.json();
@@ -75,9 +73,7 @@ export function AccountSelector({
 
           // Seleziona default o il primo
           if (!selectedId) {
-            const defaultAccount = data.configs.find(
-              (c: AccountConfig) => c.isDefault
-            );
+            const defaultAccount = data.configs.find((c: AccountConfig) => c.isDefault);
             const firstAccount = data.configs[0];
             const toSelect = defaultAccount || firstAccount;
             setSelectedId(toSelect.id);
@@ -85,7 +81,7 @@ export function AccountSelector({
           }
         }
       } catch (err: any) {
-        console.error("Errore caricamento account:", err);
+        console.error('Errore caricamento account:', err);
         setError(err.message);
       } finally {
         setIsLoading(false);
@@ -114,9 +110,7 @@ export function AccountSelector({
 
   if (isLoading) {
     return (
-      <div
-        className={`flex items-center gap-2 p-4 bg-gray-50 rounded-lg ${className}`}
-      >
+      <div className={`flex items-center gap-2 p-4 bg-gray-50 rounded-lg ${className}`}>
         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
         <span className="text-sm text-gray-500">Caricamento account...</span>
       </div>
@@ -149,7 +143,7 @@ export function AccountSelector({
           const isSelected = selectedId === account.id;
           const courierList = account.couriers
             .map((c) => COURIER_DISPLAY[c.toLowerCase()] || c)
-            .join(", ");
+            .join(', ');
 
           return (
             <div
@@ -159,8 +153,8 @@ export function AccountSelector({
                 relative p-3 rounded-lg border-2 cursor-pointer transition-all
                 ${
                   isSelected
-                    ? "border-amber-400 bg-amber-50 ring-2 ring-amber-200"
-                    : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                    ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200'
+                    : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                 }
               `}
             >
@@ -168,14 +162,10 @@ export function AccountSelector({
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <Building2
-                      className={`h-4 w-4 ${
-                        isSelected ? "text-amber-600" : "text-gray-400"
-                      }`}
+                      className={`h-4 w-4 ${isSelected ? 'text-amber-600' : 'text-gray-400'}`}
                     />
                     <span
-                      className={`font-medium ${
-                        isSelected ? "text-amber-900" : "text-gray-700"
-                      }`}
+                      className={`font-medium ${isSelected ? 'text-amber-900' : 'text-gray-700'}`}
                     >
                       {account.name}
                     </span>
@@ -186,14 +176,10 @@ export function AccountSelector({
                     )}
                   </div>
                   {courierList && (
-                    <p className="text-xs text-gray-500 mt-1 ml-6">
-                      Corrieri: {courierList}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1 ml-6">Corrieri: {courierList}</p>
                   )}
                 </div>
-                {isSelected && (
-                  <CheckCircle2 className="h-5 w-5 text-amber-600" />
-                )}
+                {isSelected && <CheckCircle2 className="h-5 w-5 text-amber-600" />}
               </div>
             </div>
           );

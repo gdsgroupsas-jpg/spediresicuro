@@ -7,19 +7,19 @@
    ============================================ */
 :root {
   --font-sans: system-ui, -apple-system, sans-serif;
-  
+
   /* Palette principale */
-  --electric-yellow: #FACC15;
+  --electric-yellow: #facc15;
   --electric-yellow-glow: rgba(250, 204, 21, 0.4);
   --deep-void: #09090b;
   --void-elevated: #0f0f11;
   --void-surface: #18181b;
-  
+
   /* Gradienti animati */
-  --gradient-yellow-start: #FACC15;
-  --gradient-yellow-mid: #FDE047;
-  --gradient-yellow-end: #FBBF24;
-  
+  --gradient-yellow-start: #facc15;
+  --gradient-yellow-mid: #fde047;
+  --gradient-yellow-end: #fbbf24;
+
   /* Glassmorphism */
   --glass-bg: rgba(15, 15, 17, 0.7);
   --glass-border: rgba(250, 204, 21, 0.1);
@@ -44,9 +44,21 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
-    repeating-linear-gradient(0deg, rgba(250, 204, 21, 0.03) 0px, transparent 1px, transparent 2px, rgba(250, 204, 21, 0.03) 3px),
-    repeating-linear-gradient(90deg, rgba(250, 204, 21, 0.03) 0px, transparent 1px, transparent 2px, rgba(250, 204, 21, 0.03) 3px);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(250, 204, 21, 0.03) 0px,
+      transparent 1px,
+      transparent 2px,
+      rgba(250, 204, 21, 0.03) 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(250, 204, 21, 0.03) 0px,
+      transparent 1px,
+      transparent 2px,
+      rgba(250, 204, 21, 0.03) 3px
+    );
   background-size: 4px 4px;
   pointer-events: none;
   z-index: 0;
@@ -68,9 +80,15 @@ html {
    ============================================ */
 /* ⚠️ P0-3 FIX: Input con sfondo chiaro: testo nero */
 /* Input con sfondo scuro sono esclusi e usano testo bianco */
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]),
-textarea:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]),
-select:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]) {
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']),
+textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']),
+select:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']) {
   color: #111827 !important; /* Grigio scuro/nero - sempre visibile */
   -webkit-text-fill-color: #111827 !important;
   -webkit-user-select: text;
@@ -78,21 +96,21 @@ select:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\
 }
 
 /* ⚠️ P0-3 FIX: Input con sfondo scuro: testo bianco (override) */
-input[class*="bg-gray-800"],
-input[class*="bg-gray-900"],
-input[class*="bg-\[#0f0f11\]"],
-input[class*="bg-slate-800"],
-input[class*="bg-slate-900"],
-textarea[class*="bg-gray-800"],
-textarea[class*="bg-gray-900"],
-textarea[class*="bg-\[#0f0f11\]"],
-textarea[class*="bg-slate-800"],
-textarea[class*="bg-slate-900"],
-select[class*="bg-gray-800"],
-select[class*="bg-gray-900"],
-select[class*="bg-\[#0f0f11\]"],
-select[class*="bg-slate-800"],
-select[class*="bg-slate-900"] {
+input[class*='bg-gray-800'],
+input[class*='bg-gray-900'],
+input[class*='bg-\[#0f0f11\]'],
+input[class*='bg-slate-800'],
+input[class*='bg-slate-900'],
+textarea[class*='bg-gray-800'],
+textarea[class*='bg-gray-900'],
+textarea[class*='bg-\[#0f0f11\]'],
+textarea[class*='bg-slate-800'],
+textarea[class*='bg-slate-900'],
+select[class*='bg-gray-800'],
+select[class*='bg-gray-900'],
+select[class*='bg-\[#0f0f11\]'],
+select[class*='bg-slate-800'],
+select[class*='bg-slate-900'] {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   -webkit-user-select: text;
@@ -100,84 +118,104 @@ select[class*="bg-slate-900"] {
 }
 
 /* Placeholder visibile per input con sfondo chiaro */
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"])::placeholder,
-textarea:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"])::placeholder {
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900'])::placeholder,
+textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900'])::placeholder {
   color: #6b7280 !important; /* Grigio medio */
   opacity: 0.7 !important;
 }
 
 /* Placeholder visibile per input con sfondo scuro (contrasto WCAG) */
-input[class*="bg-gray-800"]::placeholder,
-input[class*="bg-gray-900"]::placeholder,
-input[class*="bg-\[#0f0f11\]"]::placeholder,
-input[class*="bg-slate-800"]::placeholder,
-input[class*="bg-slate-900"]::placeholder,
-textarea[class*="bg-gray-800"]::placeholder,
-textarea[class*="bg-gray-900"]::placeholder,
-textarea[class*="bg-\[#0f0f11\]"]::placeholder,
-textarea[class*="bg-slate-800"]::placeholder,
-textarea[class*="bg-slate-900"]::placeholder {
+input[class*='bg-gray-800']::placeholder,
+input[class*='bg-gray-900']::placeholder,
+input[class*='bg-\[#0f0f11\]']::placeholder,
+input[class*='bg-slate-800']::placeholder,
+input[class*='bg-slate-900']::placeholder,
+textarea[class*='bg-gray-800']::placeholder,
+textarea[class*='bg-gray-900']::placeholder,
+textarea[class*='bg-\[#0f0f11\]']::placeholder,
+textarea[class*='bg-slate-800']::placeholder,
+textarea[class*='bg-slate-900']::placeholder {
   color: #9ca3af !important; /* Grigio chiaro - contrasto WCAG AA su bg-gray-800 */
   opacity: 1 !important;
 }
 
 /* Stile selezione personalizzato - input con sfondo chiaro */
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"])::selection,
-textarea:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"])::selection {
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900'])::selection,
+textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900'])::selection {
   background-color: rgba(250, 204, 21, 0.3) !important;
   color: #111827 !important;
 }
 
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"])::-moz-selection,
-textarea:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"])::-moz-selection {
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900'])::-moz-selection,
+textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900'])::-moz-selection {
   background-color: rgba(250, 204, 21, 0.3) !important;
   color: #111827 !important;
 }
 
 /* Stile selezione personalizzato - input con sfondo scuro */
-input[class*="bg-gray-800"]::selection,
-input[class*="bg-gray-900"]::selection,
-input[class*="bg-\[#0f0f11\]"]::selection,
-input[class*="bg-slate-800"]::selection,
-input[class*="bg-slate-900"]::selection,
-textarea[class*="bg-gray-800"]::selection,
-textarea[class*="bg-gray-900"]::selection,
-textarea[class*="bg-\[#0f0f11\]"]::selection,
-textarea[class*="bg-slate-800"]::selection,
-textarea[class*="bg-slate-900"]::selection,
-select[class*="bg-gray-800"]::selection,
-select[class*="bg-gray-900"]::selection,
-select[class*="bg-\[#0f0f11\]"]::selection,
-select[class*="bg-slate-800"]::selection,
-select[class*="bg-slate-900"]::selection {
+input[class*='bg-gray-800']::selection,
+input[class*='bg-gray-900']::selection,
+input[class*='bg-\[#0f0f11\]']::selection,
+input[class*='bg-slate-800']::selection,
+input[class*='bg-slate-900']::selection,
+textarea[class*='bg-gray-800']::selection,
+textarea[class*='bg-gray-900']::selection,
+textarea[class*='bg-\[#0f0f11\]']::selection,
+textarea[class*='bg-slate-800']::selection,
+textarea[class*='bg-slate-900']::selection,
+select[class*='bg-gray-800']::selection,
+select[class*='bg-gray-900']::selection,
+select[class*='bg-\[#0f0f11\]']::selection,
+select[class*='bg-slate-800']::selection,
+select[class*='bg-slate-900']::selection {
   background-color: rgba(250, 204, 21, 0.4) !important;
   color: #ffffff !important;
 }
 
-input[class*="bg-gray-800"]::-moz-selection,
-input[class*="bg-gray-900"]::-moz-selection,
-input[class*="bg-\[#0f0f11\]"]::-moz-selection,
-input[class*="bg-slate-800"]::-moz-selection,
-input[class*="bg-slate-900"]::-moz-selection,
-textarea[class*="bg-gray-800"]::-moz-selection,
-textarea[class*="bg-gray-900"]::-moz-selection,
-textarea[class*="bg-\[#0f0f11\]"]::-moz-selection,
-textarea[class*="bg-slate-800"]::-moz-selection,
-textarea[class*="bg-slate-900"]::-moz-selection,
-select[class*="bg-gray-800"]::-moz-selection,
-select[class*="bg-gray-900"]::-moz-selection,
-select[class*="bg-\[#0f0f11\]"]::-moz-selection,
-select[class*="bg-slate-800"]::-moz-selection,
-select[class*="bg-slate-900"]::-moz-selection {
+input[class*='bg-gray-800']::-moz-selection,
+input[class*='bg-gray-900']::-moz-selection,
+input[class*='bg-\[#0f0f11\]']::-moz-selection,
+input[class*='bg-slate-800']::-moz-selection,
+input[class*='bg-slate-900']::-moz-selection,
+textarea[class*='bg-gray-800']::-moz-selection,
+textarea[class*='bg-gray-900']::-moz-selection,
+textarea[class*='bg-\[#0f0f11\]']::-moz-selection,
+textarea[class*='bg-slate-800']::-moz-selection,
+textarea[class*='bg-slate-900']::-moz-selection,
+select[class*='bg-gray-800']::-moz-selection,
+select[class*='bg-gray-900']::-moz-selection,
+select[class*='bg-\[#0f0f11\]']::-moz-selection,
+select[class*='bg-slate-800']::-moz-selection,
+select[class*='bg-slate-900']::-moz-selection {
   background-color: rgba(250, 204, 21, 0.4) !important;
   color: #ffffff !important;
 }
 
 /* Previene comportamenti strani di autofill - input con sfondo chiaro */
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]):-webkit-autofill,
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]):-webkit-autofill:hover,
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]):-webkit-autofill:focus,
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]):-webkit-autofill:active {
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']):-webkit-autofill,
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']):-webkit-autofill:hover,
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']):-webkit-autofill:focus,
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']):-webkit-autofill:active {
   -webkit-text-fill-color: #111827 !important;
   -webkit-box-shadow: 0 0 0px 1000px white inset !important;
   transition: background-color 5000s ease-in-out 0s;
@@ -185,26 +223,26 @@ input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[
 }
 
 /* Previene comportamenti strani di autofill - input con sfondo scuro */
-input[class*="bg-gray-800"]:-webkit-autofill,
-input[class*="bg-gray-800"]:-webkit-autofill:hover,
-input[class*="bg-gray-800"]:-webkit-autofill:focus,
-input[class*="bg-gray-800"]:-webkit-autofill:active,
-input[class*="bg-gray-900"]:-webkit-autofill,
-input[class*="bg-gray-900"]:-webkit-autofill:hover,
-input[class*="bg-gray-900"]:-webkit-autofill:focus,
-input[class*="bg-gray-900"]:-webkit-autofill:active,
-input[class*="bg-\[#0f0f11\]"]:-webkit-autofill,
-input[class*="bg-\[#0f0f11\]"]:-webkit-autofill:hover,
-input[class*="bg-\[#0f0f11\]"]:-webkit-autofill:focus,
-input[class*="bg-\[#0f0f11\]"]:-webkit-autofill:active,
-input[class*="bg-slate-800"]:-webkit-autofill,
-input[class*="bg-slate-800"]:-webkit-autofill:hover,
-input[class*="bg-slate-800"]:-webkit-autofill:focus,
-input[class*="bg-slate-800"]:-webkit-autofill:active,
-input[class*="bg-slate-900"]:-webkit-autofill,
-input[class*="bg-slate-900"]:-webkit-autofill:hover,
-input[class*="bg-slate-900"]:-webkit-autofill:focus,
-input[class*="bg-slate-900"]:-webkit-autofill:active {
+input[class*='bg-gray-800']:-webkit-autofill,
+input[class*='bg-gray-800']:-webkit-autofill:hover,
+input[class*='bg-gray-800']:-webkit-autofill:focus,
+input[class*='bg-gray-800']:-webkit-autofill:active,
+input[class*='bg-gray-900']:-webkit-autofill,
+input[class*='bg-gray-900']:-webkit-autofill:hover,
+input[class*='bg-gray-900']:-webkit-autofill:focus,
+input[class*='bg-gray-900']:-webkit-autofill:active,
+input[class*='bg-\[#0f0f11\]']:-webkit-autofill,
+input[class*='bg-\[#0f0f11\]']:-webkit-autofill:hover,
+input[class*='bg-\[#0f0f11\]']:-webkit-autofill:focus,
+input[class*='bg-\[#0f0f11\]']:-webkit-autofill:active,
+input[class*='bg-slate-800']:-webkit-autofill,
+input[class*='bg-slate-800']:-webkit-autofill:hover,
+input[class*='bg-slate-800']:-webkit-autofill:focus,
+input[class*='bg-slate-800']:-webkit-autofill:active,
+input[class*='bg-slate-900']:-webkit-autofill,
+input[class*='bg-slate-900']:-webkit-autofill:hover,
+input[class*='bg-slate-900']:-webkit-autofill:focus,
+input[class*='bg-slate-900']:-webkit-autofill:active {
   -webkit-text-fill-color: #ffffff !important;
   -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important; /* bg-gray-800 */
   transition: background-color 5000s ease-in-out 0s;
@@ -212,28 +250,34 @@ input[class*="bg-slate-900"]:-webkit-autofill:active {
 }
 
 /* Forza color scheme light per input con sfondo chiaro */
-input:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]),
-textarea:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]),
-select:not([class*="bg-gray-800"]):not([class*="bg-gray-900"]):not([class*="bg-\[#0f0f11\]"]):not([class*="bg-slate-800"]):not([class*="bg-slate-900"]) {
+input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']),
+textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']),
+select:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
+    [class*='bg-slate-800']
+  ):not([class*='bg-slate-900']) {
   color-scheme: light !important;
 }
 
 /* Forza color scheme dark per input con sfondo scuro (migliora contrasto caret) */
-input[class*="bg-gray-800"],
-input[class*="bg-gray-900"],
-input[class*="bg-\[#0f0f11\]"],
-input[class*="bg-slate-800"],
-input[class*="bg-slate-900"],
-textarea[class*="bg-gray-800"],
-textarea[class*="bg-gray-900"],
-textarea[class*="bg-\[#0f0f11\]"],
-textarea[class*="bg-slate-800"],
-textarea[class*="bg-slate-900"],
-select[class*="bg-gray-800"],
-select[class*="bg-gray-900"],
-select[class*="bg-\[#0f0f11\]"],
-select[class*="bg-slate-800"],
-select[class*="bg-slate-900"] {
+input[class*='bg-gray-800'],
+input[class*='bg-gray-900'],
+input[class*='bg-\[#0f0f11\]'],
+input[class*='bg-slate-800'],
+input[class*='bg-slate-900'],
+textarea[class*='bg-gray-800'],
+textarea[class*='bg-gray-900'],
+textarea[class*='bg-\[#0f0f11\]'],
+textarea[class*='bg-slate-800'],
+textarea[class*='bg-slate-900'],
+select[class*='bg-gray-800'],
+select[class*='bg-gray-900'],
+select[class*='bg-\[#0f0f11\]'],
+select[class*='bg-slate-800'],
+select[class*='bg-slate-900'] {
   color-scheme: dark !important;
 }
 
@@ -260,14 +304,14 @@ header svg {
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
   }
-  
+
   .glass-strong {
     background: rgba(15, 15, 17, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(250, 204, 21, 0.2);
   }
-  
+
   .glass-subtle {
     background: rgba(15, 15, 17, 0.5);
     backdrop-filter: blur(8px);
@@ -280,7 +324,8 @@ header svg {
    GRADIENTI ANIMATI
    ============================================ */
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -308,23 +353,27 @@ header svg {
    GLOW EFFECTS
    ============================================ */
 @keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 20px var(--electric-yellow-glow),
-                0 0 40px var(--electric-yellow-glow),
-                0 0 60px var(--electric-yellow-glow);
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px var(--electric-yellow-glow),
+      0 0 40px var(--electric-yellow-glow),
+      0 0 60px var(--electric-yellow-glow);
   }
   50% {
-    box-shadow: 0 0 30px var(--electric-yellow-glow),
-                0 0 60px var(--electric-yellow-glow),
-                0 0 90px var(--electric-yellow-glow);
+    box-shadow:
+      0 0 30px var(--electric-yellow-glow),
+      0 0 60px var(--electric-yellow-glow),
+      0 0 90px var(--electric-yellow-glow);
   }
 }
 
 .glow-on-focus:focus {
   outline: none;
   border-color: var(--electric-yellow);
-  box-shadow: 0 0 0 3px var(--electric-yellow-glow),
-              0 0 20px var(--electric-yellow-glow);
+  box-shadow:
+    0 0 0 3px var(--electric-yellow-glow),
+    0 0 20px var(--electric-yellow-glow);
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
@@ -356,7 +405,7 @@ header svg {
   left: -50%;
   width: 200%;
   height: 200%;
-  background-image: 
+  background-image:
     linear-gradient(rgba(250, 204, 21, 0.1) 1px, transparent 1px),
     linear-gradient(90deg, rgba(250, 204, 21, 0.1) 1px, transparent 1px);
   background-size: 50px 50px;
@@ -370,14 +419,15 @@ header svg {
    ============================================ */
 @layer utilities {
   .btn-tactile {
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .btn-tactile:active {
     transform: scale(0.95);
   }
-  
+
   .btn-tactile:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(250, 204, 21, 0.3);
@@ -389,14 +439,16 @@ header svg {
    ============================================ */
 @layer utilities {
   .card-lift {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .card-lift:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 40px -10px rgba(250, 204, 21, 0.2),
-                0 0 0 1px rgba(250, 204, 21, 0.1);
+    box-shadow:
+      0 20px 40px -10px rgba(250, 204, 21, 0.2),
+      0 0 0 1px rgba(250, 204, 21, 0.1);
   }
 }
 
@@ -405,29 +457,30 @@ header svg {
    ============================================ */
 @layer utilities {
   .font-mono-numbers {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+    font-family:
+      'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro',
+      monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.05em;
   }
-  
+
   .status-badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
-  
+
   .status-success {
     @apply bg-green-500/20 text-green-400 border border-green-500/30;
   }
-  
+
   .status-warning {
     @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
   }
-  
+
   .status-error {
     @apply bg-red-500/20 text-red-400 border border-red-500/30;
   }
-  
+
   .status-info {
     @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
   }
 }
-

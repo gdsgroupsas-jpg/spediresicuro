@@ -8,6 +8,7 @@
 ## 🎯 LE TUE PAURE SONO LEGITTIME
 
 Hai paura che qualcuno possa:
+
 - ❌ Rubare le tue password
 - ❌ Accedere al tuo account Spedisci.Online
 - ❌ Usare i tuoi dati per frodi (PayPal, etc.)
@@ -30,11 +31,13 @@ Password nel Database: "aBc123XyZ789:iv:salt:encrypted..."
 ```
 
 **Cosa significa:**
+
 - ✅ Nel database vedi solo caratteri casuali
 - ✅ Senza la chiave di criptazione, **IMPOSSIBILE** leggere
 - ✅ Stesso sistema usato da banche
 
 **La chiave di criptazione:**
+
 - ✅ Salvata in `ENCRYPTION_KEY` (variabile d'ambiente Vercel)
 - ❌ **NON** nel database
 - ❌ **NON** nel codice
@@ -49,6 +52,7 @@ Password nel Database: "aBc123XyZ789:iv:salt:encrypted..."
 - ✅ Anche se qualcuno accede al database, RLS blocca
 
 **Esempio:**
+
 ```
 Utente Normale → Prova a vedere configurazioni → ❌ BLOCCATO
 Admin (Tu) → Prova a vedere configurazioni → ✅ PERMESSO
@@ -63,6 +67,7 @@ Admin (Tu) → Prova a vedere configurazioni → ✅ PERMESSO
 - ✅ Browser vede solo dati non sensibili
 
 **Flusso:**
+
 ```
 Browser → Chiede configurazione
 ↓
@@ -82,6 +87,7 @@ Browser → Riceve solo "OK" (NON riceve password)
 ### **Scenario 1: Qualcuno Accede al Database**
 
 **Cosa vede:**
+
 - ❌ Password criptate (inutilizzabili)
 - ❌ RLS blocca (se non è admin)
 - ✅ Solo dati non sensibili
@@ -91,6 +97,7 @@ Browser → Riceve solo "OK" (NON riceve password)
 ### **Scenario 2: Qualcuno Accede al Codice Repository**
 
 **Cosa vede:**
+
 - ✅ Codice sorgente (pubblico)
 - ❌ **NON** vede password (sono nel database criptate)
 - ❌ **NON** vede ENCRYPTION_KEY (è in variabile d'ambiente)
@@ -100,11 +107,13 @@ Browser → Riceve solo "OK" (NON riceve password)
 ### **Scenario 3: Qualcuno Accede a Vercel Environment Variables**
 
 **Cosa può fare:**
+
 - ⚠️ Può vedere ENCRYPTION_KEY
 - ⚠️ Può decriptare password
 - ⚠️ **RISCHIO ALTO**
 
 **Protezione:**
+
 - ✅ Limita accesso a Vercel (solo tu)
 - ✅ Usa 2FA su Vercel
 - ✅ Monitora accessi
@@ -114,11 +123,13 @@ Browser → Riceve solo "OK" (NON riceve password)
 ### **Scenario 4: Qualcuno Accede al Tuo Account Admin**
 
 **Cosa può fare:**
+
 - ⚠️ Può vedere configurazioni (ma password sono criptate)
 - ⚠️ Può modificare configurazioni
 - ⚠️ **RISCHIO MEDIO**
 
 **Protezione:**
+
 - ✅ Password criptate (serve ENCRYPTION_KEY per usarle)
 - ✅ Audit logging (vedi chi ha fatto cosa)
 - ✅ Limita account admin
@@ -147,6 +158,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 3. **Riavvia deployment**
 
 **⚠️ IMPORTANTE:**
+
 - ✅ **NON** condividere questa chiave
 - ✅ **NON** committare nel repository
 - ✅ **NON** perdere questa chiave
@@ -174,6 +186,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ## 🛡️ LIVELLI DI PROTEZIONE
 
 ### **Livello 1: Base** (Attuale)
+
 - ✅ Password criptate nel database
 - ✅ RLS policies attive
 - ✅ Server-side only
@@ -181,6 +194,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 **Protezione:** 🟡 **MEDIA** - Ok per uso personale
 
 ### **Livello 2: Medio** (Consigliato)
+
 - ✅ + ENCRYPTION_KEY configurata
 - ✅ + Audit logging attivo
 - ✅ + 2FA su Vercel/Supabase
@@ -188,6 +202,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 **Protezione:** 🟢 **ALTA** - Consigliato per produzione
 
 ### **Livello 3: Alto** (Massima Sicurezza)
+
 - ✅ + Limita accesso admin
 - ✅ + Monitoraggio continuo
 - ✅ + Backup ENCRYPTION_KEY sicuro
@@ -199,12 +214,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ## 📊 CONFRONTO: Con vs Senza Protezioni
 
 ### **SENZA Protezioni:**
+
 - ❌ Password in chiaro nel database
 - ❌ Chiunque può vedere
 - ❌ Facile da rubare
 - ❌ **RISCHIO ALTO**
 
 ### **CON Protezioni (Attuale):**
+
 - ✅ Password criptate
 - ✅ Solo admin possono vedere
 - ✅ Difficile da rubare
@@ -256,6 +273,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ---
 
 **⚠️ IMPORTANTE:**
+
 - Le password sono **criptate** ma non **irrecuperabili**
 - Se perdi ENCRYPTION_KEY, devi re-inserire password manualmente
 - **NON** perdere ENCRYPTION_KEY!
@@ -264,4 +282,3 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0
-

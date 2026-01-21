@@ -1,12 +1,12 @@
 /**
  * Cron Job: Auto-Sync Automation Spedisci.Online
- * 
+ *
  * Esegue sync automatico per tutte le configurazioni con automation abilitata
- * 
+ *
  * USO:
  * - Esegui ogni X ore (configurabile in automation_settings)
  * - Può essere eseguito via Vercel Cron Jobs o sistema esterno
- * 
+ *
  * ESEMPIO VERCEL CRON:
  * Aggiungi a vercel.json:
  * {
@@ -39,4 +39,3 @@ if (require.main === module) {
 }
 
 export { main as automationCronJob };
-

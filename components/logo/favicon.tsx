@@ -1,7 +1,7 @@
-import React from 'react'
+import React from 'react';
 
 interface FaviconProps {
-  size?: number
+  size?: number;
 }
 
 /**
@@ -44,5 +44,5 @@ export default function Favicon({ size = 32 }: FaviconProps) {
         />
       </g>
     </svg>
-  )
+  );
 }

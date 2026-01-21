@@ -3,6 +3,7 @@
 ## 🎯 Problema
 
 Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
+
 - Login non completa il redirect
 - Sessione non viene salvata
 - Redirect a `/login` invece che a `/dashboard`
@@ -15,16 +16,19 @@ Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
 ### 1. **Sostituito `window.location.href` con `router.push()`**
 
 **Problema:** `window.location.href` può causare problemi su mobile, specialmente con:
+
 - Cookie di sessione
 - State management di Next.js
 - Service Workers (PWA)
 
 **Soluzione:** Usare `router.push()` con `router.refresh()` per:
+
 - ✅ Migliore compatibilità mobile
 - ✅ Mantenere lo stato di Next.js
 - ✅ Funzionare correttamente con PWA
 
 **File modificati:**
+
 - `app/login/page.tsx` - Tutti i redirect ora usano `router.push()`
 
 ---
@@ -34,11 +38,13 @@ Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
 ### ❌ Problema 1: Cookie non salvati
 
 **Causa:** Su mobile, i cookie potrebbero non essere salvati se:
+
 - Il dominio non è configurato correttamente
 - Le impostazioni del browser bloccano i cookie
 - HTTPS non è configurato (richiesto per cookie sicuri)
 
 **Soluzione:**
+
 1. Verifica che l'app sia su HTTPS (non HTTP)
 2. Verifica che `NEXTAUTH_URL` sia configurato correttamente
 3. Controlla le impostazioni del browser mobile
@@ -48,6 +54,7 @@ Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
 **Causa:** Su alcuni browser mobile, localStorage potrebbe essere limitato o bloccato.
 
 **Soluzione:**
+
 - Il codice ora gestisce `typeof window !== 'undefined'` prima di usare localStorage
 - Se localStorage non è disponibile, il sistema usa solo il database
 
@@ -56,6 +63,7 @@ Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
 **Causa:** `window.location.href` può causare problemi su mobile.
 
 **Soluzione:**
+
 - ✅ Ora usa `router.push()` che è più compatibile
 - ✅ Usa `router.refresh()` per aggiornare la sessione
 
@@ -64,6 +72,7 @@ Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
 **Causa:** I cookie di sessione potrebbero non essere salvati correttamente.
 
 **Soluzione:**
+
 1. Verifica che `NEXTAUTH_SECRET` sia configurato
 2. Verifica che l'URL sia HTTPS
 3. Pulisci i cookie del browser mobile e riprova
@@ -122,6 +131,7 @@ Il login non funziona correttamente su dispositivi mobili. Possibili sintomi:
 ### Metodo 3: Log Console Mobile
 
 Se non puoi usare remote debugging:
+
 - Aggiungi `alert()` temporanei per vedere cosa succede
 - Usa `console.log()` e controlla i log del server
 
@@ -140,6 +150,7 @@ console.log('localStorage:', localStorage.getItem('datiCompletati_test@spediresi
 ### Verifica 2: Network Requests
 
 Controlla nella tab Network:
+
 - La chiamata a `/api/auth/callback/credentials` va a buon fine?
 - La chiamata a `/api/user/dati-cliente` funziona?
 - Ci sono errori 401 o 403?
@@ -147,6 +158,7 @@ Controlla nella tab Network:
 ### Verifica 3: Service Worker
 
 Se usi PWA, il Service Worker potrebbe interferire:
+
 - Disabilita temporaneamente il Service Worker
 - Pulisci la cache del browser mobile
 - Ricarica l'app
@@ -162,5 +174,3 @@ Se usi PWA, il Service Worker potrebbe interferire:
 ---
 
 **Ultimo aggiornamento:** $(Get-Date -Format "yyyy-MM-dd")
-
-

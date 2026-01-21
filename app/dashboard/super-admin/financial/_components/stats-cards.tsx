@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Package, 
-  AlertTriangle, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Package,
+  AlertTriangle,
   Clock,
   Percent,
-  CreditCard
-} from 'lucide-react'
+  CreditCard,
+} from 'lucide-react';
 
 interface StatsCardsProps {
   stats: {
-    totalShipments: number
-    totalRevenue: number
-    totalCost: number
-    totalMargin: number
-    avgMarginPercent: number
-    pendingReconciliation: number
-    negativeMarginCount: number
-    last30DaysShipments: number
-  } | null
-  isLoading: boolean
+    totalShipments: number;
+    totalRevenue: number;
+    totalCost: number;
+    totalMargin: number;
+    avgMarginPercent: number;
+    pendingReconciliation: number;
+    negativeMarginCount: number;
+    last30DaysShipments: number;
+  } | null;
+  isLoading: boolean;
 }
 
 export function StatsCards({ stats, isLoading }: StatsCardsProps) {
@@ -30,16 +30,13 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (
-          <div 
-            key={i} 
-            className="bg-white rounded-xl p-6 border border-gray-200 animate-pulse"
-          >
+          <div key={i} className="bg-white rounded-xl p-6 border border-gray-200 animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-24 mb-4"></div>
             <div className="h-8 bg-gray-200 rounded w-32"></div>
           </div>
         ))}
       </div>
-    )
+    );
   }
 
   if (!stats) {
@@ -47,7 +44,7 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700">
         Impossibile caricare le statistiche
       </div>
-    )
+    );
   }
 
   const cards = [
@@ -84,7 +81,8 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       value: `${stats.avgMarginPercent.toFixed(1)}%`,
       subtitle: 'Sul costo provider',
       icon: Percent,
-      color: stats.avgMarginPercent >= 15 ? 'emerald' : stats.avgMarginPercent >= 5 ? 'yellow' : 'red',
+      color:
+        stats.avgMarginPercent >= 15 ? 'emerald' : stats.avgMarginPercent >= 5 ? 'yellow' : 'red',
     },
     {
       title: 'Da Riconciliare',
@@ -107,7 +105,7 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       icon: Package,
       color: 'purple',
     },
-  ]
+  ];
 
   const colorClasses: Record<string, { bg: string; icon: string; text: string }> = {
     blue: { bg: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-900' },
@@ -117,16 +115,16 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
     red: { bg: 'bg-red-50', icon: 'text-red-600', text: 'text-red-900' },
     yellow: { bg: 'bg-yellow-50', icon: 'text-yellow-600', text: 'text-yellow-900' },
     purple: { bg: 'bg-purple-50', icon: 'text-purple-600', text: 'text-purple-900' },
-  }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, index) => {
-        const colors = colorClasses[card.color]
-        const Icon = card.icon
-        
+        const colors = colorClasses[card.color];
+        const Icon = card.icon;
+
         return (
-          <div 
+          <div
             key={index}
             className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow"
           >
@@ -141,8 +139,8 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
               </div>
             </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

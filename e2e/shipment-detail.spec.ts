@@ -1,6 +1,6 @@
 /**
  * E2E Test: Dettaglio Spedizione
- * 
+ *
  * Testa la visualizzazione e gestione del dettaglio spedizione:
  * - Visualizzazione dettagli completi
  * - Tracking in tempo reale (mock)
@@ -64,7 +64,7 @@ test.describe('Dettaglio Spedizione', () => {
         altezza: 15,
       },
       tipoSpedizione: 'standard',
-      prezzoFinale: 15.50,
+      prezzoFinale: 15.5,
       createdAt: new Date().toISOString(),
       corriere: 'GLS',
       trackingEvents: [
@@ -120,29 +120,34 @@ test.describe('Dettaglio Spedizione', () => {
     // La pagina dettaglio potrebbe non esistere, quindi testiamo nella lista
     // Mock API spedizioni per la lista
     await page.route(/\/api\/spedizioni/, async (route) => {
-      if (route.request().method() === 'GET' && !route.request().url().includes('/shipment-test-123')) {
+      if (
+        route.request().method() === 'GET' &&
+        !route.request().url().includes('/shipment-test-123')
+      ) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
             success: true,
-            data: [{
-              id: 'shipment-test-123',
-              tracking: 'GLSTEST123456',
-              status: 'in_transito',
-              mittente: {
-                nome: 'Mario Rossi',
-                citta: 'Milano',
+            data: [
+              {
+                id: 'shipment-test-123',
+                tracking: 'GLSTEST123456',
+                status: 'in_transito',
+                mittente: {
+                  nome: 'Mario Rossi',
+                  citta: 'Milano',
+                },
+                destinatario: {
+                  nome: 'Luigi Verdi',
+                  citta: 'Roma',
+                },
+                peso: 2.5,
+                prezzoFinale: 15.5,
+                createdAt: new Date().toISOString(),
+                corriere: 'GLS',
               },
-              destinatario: {
-                nome: 'Luigi Verdi',
-                citta: 'Roma',
-              },
-              peso: 2.5,
-              prezzoFinale: 15.50,
-              createdAt: new Date().toISOString(),
-              corriere: 'GLS',
-            }],
+            ],
             count: 1,
           }),
         });
@@ -194,29 +199,34 @@ test.describe('Dettaglio Spedizione', () => {
   test('Visualizza storia eventi tracking', async ({ page }) => {
     // Mock API spedizioni per la lista
     await page.route(/\/api\/spedizioni/, async (route) => {
-      if (route.request().method() === 'GET' && !route.request().url().includes('/shipment-test-123')) {
+      if (
+        route.request().method() === 'GET' &&
+        !route.request().url().includes('/shipment-test-123')
+      ) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
             success: true,
-            data: [{
-              id: 'shipment-test-123',
-              tracking: 'GLSTEST123456',
-              status: 'in_transito',
-              mittente: {
-                nome: 'Mario Rossi',
-                citta: 'Milano',
+            data: [
+              {
+                id: 'shipment-test-123',
+                tracking: 'GLSTEST123456',
+                status: 'in_transito',
+                mittente: {
+                  nome: 'Mario Rossi',
+                  citta: 'Milano',
+                },
+                destinatario: {
+                  nome: 'Luigi Verdi',
+                  citta: 'Roma',
+                },
+                peso: 2.5,
+                prezzoFinale: 15.5,
+                createdAt: new Date().toISOString(),
+                corriere: 'GLS',
               },
-              destinatario: {
-                nome: 'Luigi Verdi',
-                citta: 'Roma',
-              },
-              peso: 2.5,
-              prezzoFinale: 15.50,
-              createdAt: new Date().toISOString(),
-              corriere: 'GLS',
-            }],
+            ],
             count: 1,
           }),
         });
@@ -244,14 +254,15 @@ test.describe('Dettaglio Spedizione', () => {
 
     // Cerca la sezione tracking/eventi (potrebbe essere nella lista o in un modal)
     const trackingSection = page.locator('text=/Tracking|Eventi|Storia|Stato/i').first();
-    
+
     if (await trackingSection.isVisible().catch(() => false)) {
       // Verifica che ci siano eventi visibili
-      const hasEvents = await page.locator('text=/in transito|in preparazione|Milano/i').count() > 0;
+      const hasEvents =
+        (await page.locator('text=/in transito|in preparazione|Milano/i').count()) > 0;
       expect(hasEvents).toBeTruthy();
     } else {
       // Se non c'è sezione tracking, verifica almeno che la spedizione sia visibile
-      const hasShipment = await page.locator('text=/GLSTEST123456/i').count() > 0;
+      const hasShipment = (await page.locator('text=/GLSTEST123456/i').count()) > 0;
       expect(hasShipment).toBeTruthy();
       console.log('⚠️ Sezione tracking non trovata, ma spedizione presente nella lista');
     }
@@ -260,29 +271,34 @@ test.describe('Dettaglio Spedizione', () => {
   test('Download etichetta spedizione', async ({ page }) => {
     // Mock API spedizioni per la lista
     await page.route(/\/api\/spedizioni/, async (route) => {
-      if (route.request().method() === 'GET' && !route.request().url().includes('/shipment-test-123')) {
+      if (
+        route.request().method() === 'GET' &&
+        !route.request().url().includes('/shipment-test-123')
+      ) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
             success: true,
-            data: [{
-              id: 'shipment-test-123',
-              tracking: 'GLSTEST123456',
-              status: 'in_transito',
-              mittente: {
-                nome: 'Mario Rossi',
-                citta: 'Milano',
+            data: [
+              {
+                id: 'shipment-test-123',
+                tracking: 'GLSTEST123456',
+                status: 'in_transito',
+                mittente: {
+                  nome: 'Mario Rossi',
+                  citta: 'Milano',
+                },
+                destinatario: {
+                  nome: 'Luigi Verdi',
+                  citta: 'Roma',
+                },
+                peso: 2.5,
+                prezzoFinale: 15.5,
+                createdAt: new Date().toISOString(),
+                corriere: 'GLS',
               },
-              destinatario: {
-                nome: 'Luigi Verdi',
-                citta: 'Roma',
-              },
-              peso: 2.5,
-              prezzoFinale: 15.50,
-              createdAt: new Date().toISOString(),
-              corriere: 'GLS',
-            }],
+            ],
             count: 1,
           }),
         });
@@ -321,16 +337,18 @@ test.describe('Dettaglio Spedizione', () => {
     await page.waitForTimeout(1000);
 
     // Cerca il bottone per download etichetta (potrebbe essere nella lista o in un menu)
-    const downloadButton = page.getByRole('button', { name: /Download|Etichetta|LDV|PDF/i }).first();
-    
+    const downloadButton = page
+      .getByRole('button', { name: /Download|Etichetta|LDV|PDF/i })
+      .first();
+
     if (await downloadButton.isVisible().catch(() => false)) {
       // Setup listener per il download
       const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
-      
+
       await downloadButton.click();
-      
+
       const download = await downloadPromise;
-      
+
       if (download) {
         // Verifica che il filename sia un PDF valido
         // Può essere tracking number (GLSTEST123456.pdf) o UUID (764dd92e-2655-4609-810b-9e9fe0585775.pdf)
@@ -338,7 +356,9 @@ test.describe('Dettaglio Spedizione', () => {
         // Accetta sia tracking number che UUID come filename
         // UUID: formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 caratteri con trattini)
         // Tracking: formato alfanumerico senza trattini
-        expect(filename).toMatch(/^([A-Z0-9]+|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.pdf$/i);
+        expect(filename).toMatch(
+          /^([A-Z0-9]+|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.pdf$/i
+        );
         // Verifica che sia un PDF (già verificato dalla regex sopra)
       } else {
         // Se non c'è download, potrebbe essere un link diretto
@@ -346,7 +366,7 @@ test.describe('Dettaglio Spedizione', () => {
       }
     } else {
       // Se il bottone non è visibile, verifica almeno che la spedizione sia presente
-      const hasShipment = await page.locator('text=/GLSTEST123456/i').count() > 0;
+      const hasShipment = (await page.locator('text=/GLSTEST123456/i').count()) > 0;
       expect(hasShipment).toBeTruthy();
       console.log('⚠️ Bottone download etichetta non trovato, ma spedizione presente nella lista');
     }
@@ -355,29 +375,34 @@ test.describe('Dettaglio Spedizione', () => {
   test('Visualizza status spedizione', async ({ page }) => {
     // Mock API spedizioni per la lista
     await page.route(/\/api\/spedizioni/, async (route) => {
-      if (route.request().method() === 'GET' && !route.request().url().includes('/shipment-test-123')) {
+      if (
+        route.request().method() === 'GET' &&
+        !route.request().url().includes('/shipment-test-123')
+      ) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
             success: true,
-            data: [{
-              id: 'shipment-test-123',
-              tracking: 'GLSTEST123456',
-              status: 'in_transito',
-              mittente: {
-                nome: 'Mario Rossi',
-                citta: 'Milano',
+            data: [
+              {
+                id: 'shipment-test-123',
+                tracking: 'GLSTEST123456',
+                status: 'in_transito',
+                mittente: {
+                  nome: 'Mario Rossi',
+                  citta: 'Milano',
+                },
+                destinatario: {
+                  nome: 'Luigi Verdi',
+                  citta: 'Roma',
+                },
+                peso: 2.5,
+                prezzoFinale: 15.5,
+                createdAt: new Date().toISOString(),
+                corriere: 'GLS',
               },
-              destinatario: {
-                nome: 'Luigi Verdi',
-                citta: 'Roma',
-              },
-              peso: 2.5,
-              prezzoFinale: 15.50,
-              createdAt: new Date().toISOString(),
-              corriere: 'GLS',
-            }],
+            ],
             count: 1,
           }),
         });
@@ -413,7 +438,7 @@ test.describe('Dettaglio Spedizione', () => {
       'pending',
       'consegnata',
     ];
-    
+
     let statusFound = false;
     for (const pattern of statusPatterns) {
       const statusElement = page.locator(`text=/${pattern}/i`).first();
@@ -423,10 +448,10 @@ test.describe('Dettaglio Spedizione', () => {
         break;
       }
     }
-    
+
     // Se non troviamo lo status esplicito, verifichiamo che ci sia almeno la spedizione
     if (!statusFound) {
-      const hasShipment = await page.locator('text=/GLSTEST123456/i').count() > 0;
+      const hasShipment = (await page.locator('text=/GLSTEST123456/i').count()) > 0;
       expect(hasShipment).toBeTruthy();
       console.log('⚠️ Status non trovato esplicitamente, ma spedizione presente nella lista');
     }

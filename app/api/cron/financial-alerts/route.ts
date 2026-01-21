@@ -8,9 +8,9 @@
  * @since Sprint 3 - Monitoring & Alerting
  */
 
-import { supabaseAdmin } from "@/lib/db/client";
-import { createFinancialAlertsService } from "@/lib/services/financial";
-import { NextResponse } from "next/server";
+import { supabaseAdmin } from '@/lib/db/client';
+import { createFinancialAlertsService } from '@/lib/services/financial';
+import { NextResponse } from 'next/server';
 
 // Vercel Cron: Bearer token per sicurezza
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -18,12 +18,12 @@ const CRON_SECRET = process.env.CRON_SECRET;
 export async function GET(request: Request) {
   try {
     // Verifica autorizzazione
-    const authHeader = request.headers.get("authorization");
+    const authHeader = request.headers.get('authorization');
     if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log("[CRON] Starting financial alerts check...");
+    console.log('[CRON] Starting financial alerts check...');
 
     const alertsService = createFinancialAlertsService(supabaseAdmin);
     const alerts = await alertsService.runAllChecks();
@@ -50,14 +50,11 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("[CRON] Financial alerts error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error('[CRON] Financial alerts error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 // Vercel Cron config
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
 export const maxDuration = 30;

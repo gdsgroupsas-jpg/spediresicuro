@@ -1,13 +1,13 @@
 /**
  * Stripe Payment Integration
- * 
+ *
  * Sostituisce XPay (Intesa) con Stripe per pagamenti più universali e migliore UX.
- * 
+ *
  * SECURITY:
  * - PCI DSS Compliance: Stripe gestisce tutti i dati carta (no dati sui nostri server)
  * - Webhook Signature: Verifica firma in ogni webhook
  * - Idempotency: Usa idempotency_key per evitare doppi accrediti
- * 
+ *
  * COMMISSIONI:
  * - Stripe Fee: 1.4% + €0.25 per transazioni europee
  * - Platform Fee: Configurabile (default: 0%)
@@ -21,7 +21,7 @@ let _stripe: Stripe | null = null;
 
 /**
  * Ottiene l'istanza Stripe (lazy init)
- * 
+ *
  * Inizializza Stripe solo quando effettivamente necessario,
  * evitando errori durante il build di Next.js.
  */
@@ -41,9 +41,15 @@ export function getStripe(): Stripe {
 // Export per backward compatibility (deprecato)
 // ⚠️ Usare getStripe() nelle nuove implementazioni
 export const stripe = {
-  get webhooks() { return getStripe().webhooks; },
-  get checkout() { return getStripe().checkout; },
-  get paymentIntents() { return getStripe().paymentIntents; },
+  get webhooks() {
+    return getStripe().webhooks;
+  },
+  get checkout() {
+    return getStripe().checkout;
+  },
+  get paymentIntents() {
+    return getStripe().paymentIntents;
+  },
 };
 
 /**
@@ -57,17 +63,17 @@ export interface StripePaymentConfig {
 
 /**
  * Calcola commissioni Stripe
- * 
+ *
  * @param amountCredit - Importo netto da accreditare
  * @returns Fee Stripe e totale da addebitare
  */
 export function calculateStripeFee(amountCredit: number): { fee: number; total: number } {
   const STRIPE_PERCENTAGE = 0.014; // 1.4%
   const STRIPE_FIXED = 0.25; // €0.25
-  
-  const fee = Number(((amountCredit * STRIPE_PERCENTAGE) + STRIPE_FIXED).toFixed(2));
+
+  const fee = Number((amountCredit * STRIPE_PERCENTAGE + STRIPE_FIXED).toFixed(2));
   const total = Number((amountCredit + fee).toFixed(2));
-  
+
   return { fee, total };
 }
 
@@ -102,7 +108,7 @@ async function createPaymentTransaction(config: {
 
 /**
  * Crea una Stripe Checkout Session per pagamento
- * 
+ *
  * @param config - Configurazione pagamento
  * @returns Session ID e URL di redirect
  */
@@ -201,4 +207,3 @@ export async function updatePaymentTransaction(
     throw new Error(`Errore aggiornamento transazione: ${error.message}`);
   }
 }
-

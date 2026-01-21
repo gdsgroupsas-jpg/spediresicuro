@@ -1,30 +1,37 @@
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { Loader2, Plus, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { useState, useTransition } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { Loader2, Plus, Eye, EyeOff, Copy, Check } from 'lucide-react';
 
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-import { createSubUser } from '@/actions/admin-reseller'
-import { createUserSchema, type CreateUserInput } from '@/lib/validations/user-schema'
-import { formatCurrency } from '@/lib/utils'
+import { createSubUser } from '@/actions/admin-reseller';
+import { createUserSchema, type CreateUserInput } from '@/lib/validations/user-schema';
+import { formatCurrency } from '@/lib/utils';
 
 interface CreateUserDialogProps {
-  onSuccess?: () => void
+  onSuccess?: () => void;
 }
 
 export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const [showPassword, setShowPassword] = useState(false)
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -34,10 +41,16 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
       password: '',
       initialBalance: 0,
     },
-  })
+  });
 
-  const { register, handleSubmit, formState: { errors }, reset, watch } = form
-  const initialBalance = watch('initialBalance')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch,
+  } = form;
+  const initialBalance = watch('initialBalance');
 
   async function onSubmit(data: CreateUserInput) {
     startTransition(async () => {
@@ -46,55 +59,55 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
           name: data.name,
           email: data.email,
           password: data.password || undefined,
-        })
+        });
 
         if (!result.success) {
-          toast.error(result.error || 'Errore nella creazione del cliente')
-          return
+          toast.error(result.error || 'Errore nella creazione del cliente');
+          return;
         }
 
         // Se è stata generata una password, mostrala
         if (result.generatedPassword) {
-          setGeneratedPassword(result.generatedPassword)
-          toast.success(`Cliente ${data.name} creato con successo!`)
+          setGeneratedPassword(result.generatedPassword);
+          toast.success(`Cliente ${data.name} creato con successo!`);
         } else {
-          toast.success(`Cliente ${data.name} creato con successo!`)
-          reset()
-          setIsOpen(false)
-          onSuccess?.()
+          toast.success(`Cliente ${data.name} creato con successo!`);
+          reset();
+          setIsOpen(false);
+          onSuccess?.();
         }
       } catch (error) {
-        toast.error('Errore imprevisto. Riprova.')
-        console.error('Create user error:', error)
+        toast.error('Errore imprevisto. Riprova.');
+        console.error('Create user error:', error);
       }
-    })
+    });
   }
 
   const handleClose = () => {
     if (!isPending) {
-      reset()
-      setGeneratedPassword(null)
-      setCopied(false)
-      setIsOpen(false)
+      reset();
+      setGeneratedPassword(null);
+      setCopied(false);
+      setIsOpen(false);
     }
-  }
+  };
 
   const handleCopyPassword = async () => {
     if (generatedPassword) {
-      await navigator.clipboard.writeText(generatedPassword)
-      setCopied(true)
-      toast.success('Password copiata negli appunti')
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(generatedPassword);
+      setCopied(true);
+      toast.success('Password copiata negli appunti');
+      setTimeout(() => setCopied(false), 2000);
     }
-  }
+  };
 
   const handleCloseWithPassword = () => {
-    reset()
-    setGeneratedPassword(null)
-    setCopied(false)
-    setIsOpen(false)
-    onSuccess?.()
-  }
+    reset();
+    setGeneratedPassword(null);
+    setCopied(false);
+    setIsOpen(false);
+    onSuccess?.();
+  };
 
   return (
     <>
@@ -108,7 +121,8 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
           <DialogHeader>
             <DialogTitle>Crea Nuovo Cliente</DialogTitle>
             <DialogDescription>
-              Inserisci i dati del nuovo cliente. Se non specifichi una password, verrà generata automaticamente.
+              Inserisci i dati del nuovo cliente. Se non specifichi una password, verrà generata
+              automaticamente.
             </DialogDescription>
           </DialogHeader>
 
@@ -151,7 +165,9 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
             // Form creazione
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name" required>Nome completo</Label>
+                <Label htmlFor="name" required>
+                  Nome completo
+                </Label>
                 <Input
                   id="name"
                   placeholder="Mario Rossi"
@@ -160,13 +176,13 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                   disabled={isPending}
                   autoFocus
                 />
-                {errors.name && (
-                  <p className="text-xs text-red-500">{errors.name.message}</p>
-                )}
+                {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" required>Email</Label>
+                <Label htmlFor="email" required>
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -175,9 +191,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                   error={!!errors.email}
                   disabled={isPending}
                 />
-                {errors.email && (
-                  <p className="text-xs text-red-500">{errors.email.message}</p>
-                )}
+                {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -239,12 +253,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
               </div>
 
               <DialogFooter className="pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={isPending}
-                >
+                <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
                   Annulla
                 </Button>
                 <Button type="submit" disabled={isPending}>
@@ -257,5 +266,5 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

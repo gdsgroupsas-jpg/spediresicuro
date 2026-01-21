@@ -24,6 +24,7 @@ Le spedizioni di test vengono identificate da:
 2. **notes**: Contiene "TEST - DA CANCELLARE AUTOMATICAMENTE"
 
 **Fonti:**
+
 - `tests/integration/shipment-lifecycle.test.ts` (linea 44): `notes: 'TEST - DA CANCELLARE AUTOMATICAMENTE'`
 - `scripts/test-accessori-services-completo.ts` (linea 301): `trackingNumber: 'DRY-RUN-TEST'`
 
@@ -163,8 +164,8 @@ npx supabase db execute -f scripts/verify-exclude-test-shipments.sql
 3. **Testa Dashboard:**
 
 1. Accedi come SuperAdmin
-2. Vai a `/dashboard/super-admin/financial`
-3. Verifica che i dati siano corretti (senza spedizioni di test)
+1. Vai a `/dashboard/super-admin/financial`
+1. Verifica che i dati siano corretti (senza spedizioni di test)
 
 ### Rollback (se necessario)
 
@@ -188,6 +189,7 @@ npx supabase db execute -f supabase/migrations/092_platform_pnl_views.sql
 ### Migrations Successive
 
 Dopo questa migration, sono state applicate:
+
 - **Migration 103:** Esclude spedizioni cancellate dalle viste (vedi `103_exclude_deleted_shipments_from_pnl_views.sql`)
 - **Migration 104:** Funzioni RPC per platform stats che escludono test E cancellate (vedi `104_get_platform_stats_function.sql`)
 
@@ -205,6 +207,7 @@ Vedi `FIX_FINANCIAL_DASHBOARD_NUMBERS_SOURCE.md` per documentazione completa del
 ### Spedizioni di Test NON Cancellate
 
 Le spedizioni di test rimangono nel database:
+
 - Non vengono cancellate
 - Sono solo **escluse dalle viste finanziarie**
 - Mantengono l'audit trail completo
@@ -224,6 +227,7 @@ WHERE ppc.api_source = 'platform'
 ### Performance
 
 Il filtro `NOT LIKE '%TEST%'` non impatta significativamente la performance perché:
+
 - PostgreSQL usa il pattern matching efficientemente
 - La maggior parte dei tracking number non contiene "TEST"
 - L'operazione è semplice (string matching, non regex complessa)
@@ -246,13 +250,13 @@ Il filtro `NOT LIKE '%TEST%'` non impatta significativamente la performance perc
 
 ```sql
 -- 1. Conta spedizioni di test
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM platform_provider_costs ppc
 JOIN shipments s ON s.id = ppc.shipment_id
 WHERE s.tracking_number LIKE '%TEST%';
 
 -- 2. Verifica che non siano nelle viste
-SELECT 
+SELECT
   COUNT(*) FILTER (WHERE s.tracking_number LIKE '%TEST%') AS test_in_view
 FROM v_platform_daily_pnl p
 JOIN shipments s ON s.id = p.shipment_id;

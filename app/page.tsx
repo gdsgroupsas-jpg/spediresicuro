@@ -17,7 +17,7 @@ import {
   HowItWorksDynamic,
   AnneShowcase,
   BuildingInPublic,
-  CTADynamic
+  CTADynamic,
 } from '@/components/homepage/dynamic';
 
 export default function Home() {
@@ -47,4 +47,3 @@ export default function Home() {
     </>
   );
 }
-

@@ -73,6 +73,7 @@
 ```
 
 **Logica**:
+
 1. Cerca in `price_list_entries` (come ora)
 2. Se non trova, chiama `testSpedisciOnlineRates()`
 3. Salva risultato in `price_list_entries` (cache)
@@ -158,8 +159,9 @@
 ```
 
 **Query esempio**:
+
 ```sql
-SELECT 
+SELECT
   courier_id,
   weight,
   recipient_zip,
@@ -167,7 +169,7 @@ SELECT
   final_price,
   (final_price - total_cost) as margin
 FROM shipments
-WHERE courier_id = ? 
+WHERE courier_id = ?
   AND weight BETWEEN ? AND ?
   AND recipient_zip LIKE ?
   AND created_at >= ?
@@ -221,7 +223,7 @@ async function getPriceSmart(params) {
   if (dbPrice && isRecent(dbPrice)) {
     return { price: dbPrice, source: 'db_cache' };
   }
-  
+
   // 2. Cerca costi reali (se preferRealCosts)
   if (params.preferRealCosts) {
     const realCost = await getActualCostFromShipments(params);
@@ -229,7 +231,7 @@ async function getPriceSmart(params) {
       return { price: realCost, source: 'actual_cost' };
     }
   }
-  
+
   // 3. Chiama API (se allowAPICall)
   if (params.allowAPICall) {
     const apiPrice = await testSpedisciOnlineRates(params);
@@ -239,12 +241,12 @@ async function getPriceSmart(params) {
       return { price: apiPrice, source: 'api_cached' };
     }
   }
-  
+
   // 5. Fallback: usa DB anche se vecchio
   if (dbPrice) {
     return { price: dbPrice, source: 'db_old' };
   }
-  
+
   return null;
 }
 ```
@@ -253,12 +255,12 @@ async function getPriceSmart(params) {
 
 ## 📊 Confronto Soluzioni
 
-| Soluzione | Velocità | Accuratezza | Costo API | Complessità | Auto-Learning |
-|-----------|----------|-------------|-----------|-------------|---------------|
-| **1. Hybrid DB+API** | ⚡⚡⚡ | ⭐⭐⭐ | 💰 (solo se necessario) | 🟡 Media | ✅ |
-| **2. Anne Scrive DB** | ⚡⚡⚡ | ⭐⭐ | 💰💰 (iniziale) | 🔴 Alta | ✅✅ |
-| **3. Costi Reali** | ⚡⚡ | ⭐⭐⭐⭐⭐ | 💰💰💰 (zero) | 🟢 Bassa | ❌ |
-| **4. Ibrido Completo** | ⚡⚡⚡ | ⭐⭐⭐⭐⭐ | 💰 (solo se necessario) | 🔴 Alta | ✅✅ |
+| Soluzione              | Velocità | Accuratezza | Costo API               | Complessità | Auto-Learning |
+| ---------------------- | -------- | ----------- | ----------------------- | ----------- | ------------- |
+| **1. Hybrid DB+API**   | ⚡⚡⚡   | ⭐⭐⭐      | 💰 (solo se necessario) | 🟡 Media    | ✅            |
+| **2. Anne Scrive DB**  | ⚡⚡⚡   | ⭐⭐        | 💰💰 (iniziale)         | 🔴 Alta     | ✅✅          |
+| **3. Costi Reali**     | ⚡⚡     | ⭐⭐⭐⭐⭐  | 💰💰💰 (zero)           | 🟢 Bassa    | ❌            |
+| **4. Ibrido Completo** | ⚡⚡⚡   | ⭐⭐⭐⭐⭐  | 💰 (solo se necessario) | 🔴 Alta     | ✅✅          |
 
 ---
 
@@ -325,7 +327,7 @@ export async function getPriceSmart(params: {
   if (dbResult && isRecent(dbResult)) {
     return { price: dbResult.totalCost, source: 'db_cache', details: dbResult };
   }
-  
+
   // 2. Cerca costi reali
   if (params.preferRealCosts) {
     const realCost = await getActualCostFromShipments(params);
@@ -333,7 +335,7 @@ export async function getPriceSmart(params: {
       return { price: realCost.total_cost, source: 'actual_cost', details: realCost };
     }
   }
-  
+
   // 3. Chiama API
   if (params.allowAPICall) {
     const apiResult = await testSpedisciOnlineRates({
@@ -341,19 +343,19 @@ export async function getPriceSmart(params: {
       shipTo: { postalCode: params.destinationZip, state: params.destinationProvince, ... },
       // ...
     });
-    
+
     if (apiResult.success && apiResult.rates) {
       // Salva in cache
       await savePriceToCache(params, apiResult.rates[0]);
       return { price: parseFloat(apiResult.rates[0].total_price), source: 'api_cached', details: apiResult };
     }
   }
-  
+
   // 4. Fallback DB vecchio
   if (dbResult) {
     return { price: dbResult.totalCost, source: 'db_old', details: dbResult };
   }
-  
+
   return null;
 }
 ```
@@ -384,15 +386,15 @@ export async function getActualCostFromShipments(params: {
     .not('total_cost', 'is', null)
     .order('created_at', { ascending: false })
     .limit(10);
-  
+
   if (error || !data || data.length === 0) {
     return null;
   }
-  
+
   // Media costi reali
   const avgCost = data.reduce((sum, s) => sum + (s.total_cost || 0), 0) / data.length;
   const avgPrice = data.reduce((sum, s) => sum + (s.final_price || 0), 0) / data.length;
-  
+
   return {
     total_cost: avgCost,
     final_price: avgPrice,
@@ -428,17 +430,19 @@ export async function savePriceToCache(
     console.warn('Listino non trovato per cache');
     return;
   }
-  
+
   // Crea entry cache
-  await addPriceListEntries(priceList.id, [{
-    weight_from: params.weight - 0.5,
-    weight_to: params.weight + 0.5,
-    zone_code: params.zoneCode,
-    service_type: params.serviceType,
-    base_price: parseFloat(rate.weight_price),
-    fuel_surcharge_percent: calculateFuelPercent(rate),
-    // ...
-  }]);
+  await addPriceListEntries(priceList.id, [
+    {
+      weight_from: params.weight - 0.5,
+      weight_to: params.weight + 0.5,
+      zone_code: params.zoneCode,
+      service_type: params.serviceType,
+      base_price: parseFloat(rate.weight_price),
+      fuel_surcharge_percent: calculateFuelPercent(rate),
+      // ...
+    },
+  ]);
 }
 ```
 
@@ -459,7 +463,7 @@ case 'get_price_smart': {
     cashOnDelivery: toolCall.arguments.cashOnDelivery,
     declaredValue: toolCall.arguments.declaredValue,
   });
-  
+
   if (!result) {
     return {
       success: false,
@@ -467,7 +471,7 @@ case 'get_price_smart': {
       error: 'Prezzo non disponibile',
     };
   }
-  
+
   return {
     success: true,
     result: {
@@ -487,15 +491,18 @@ case 'get_price_smart': {
 ### Scenario: 100 preventivi/giorno
 
 **Soluzione Attuale (solo DB)**:
+
 - Costo API: €0
 - Problema: Prezzi obsoleti se sync non recente
 
 **Soluzione 1 (Hybrid DB+API)**:
+
 - Cache hit rate: 70% (70 preventivi da DB)
 - API calls: 30/giorno
 - Costo: 30 × €0.01 = €0.30/giorno = €9/mese
 
 **Soluzione 4 (Ibrido Completo)**:
+
 - Cache hit rate: 70% (70 da DB)
 - Costi reali: 20% (20 da spedizioni esistenti)
 - API calls: 10% (10/giorno)
@@ -523,4 +530,3 @@ case 'get_price_smart': {
 - **Auto-learning**: Sistema migliora nel tempo
 
 **Raccomandazione**: Implementare Soluzione 4 (Ibrido Completo) per best experience.
-

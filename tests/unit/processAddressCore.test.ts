@@ -1,6 +1,6 @@
 /**
  * Unit Tests: processAddressCore (funzione core address worker)
- * 
+ *
  * Test REALI della logica core senza wrapper async.
  * Coverage:
  * - Merge non distruttivo (existingDraft + nuovo input)
@@ -64,7 +64,7 @@ describe('processAddressCore - Merge non distruttivo', () => {
     // Dati esistenti preservati
     expect(result.updatedDraft.recipient?.postalCode).toBe('20100');
     expect(result.updatedDraft.recipient?.city).toBe('Milano');
-    
+
     // Nuovi dati aggiunti
     expect(result.updatedDraft.recipient?.province).toBe('MI');
     expect(result.updatedDraft.parcel?.weightKg).toBe(3);
@@ -313,4 +313,3 @@ describe('processAddressCore - Edge cases', () => {
     expect(result.missingFields).toContain('recipient.postalCode');
   });
 });
-

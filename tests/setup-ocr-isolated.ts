@@ -1,11 +1,11 @@
 /**
  * Setup isolato per test OCR Vision
- * 
+ *
  * Mocka TUTTI i moduli esterni per garantire:
  * - Nessuna chiamata di rete (Supabase, fetch, ecc.)
  * - Nessuna dipendenza da variabili d'ambiente
  * - Test completamente deterministici
- * 
+ *
  * Ordine critico: i mock devono essere definiti PRIMA degli import
  */
 
@@ -100,4 +100,3 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-

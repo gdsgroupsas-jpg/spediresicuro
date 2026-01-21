@@ -1,9 +1,11 @@
 # User Flows - SpedireSicuro
 
 ## Overview
+
 Questa documentazione descrive i principali user flows di SpedireSicuro, dal form spedizione al booking, passando per la gestione wallet e listini.
 
 ## Target Audience
+
 - [x] Developers
 - [ ] DevOps
 - [x] Business/PM
@@ -11,17 +13,19 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
 - [x] Nuovi team member
 
 ## Prerequisites
+
 - Conoscenza base UI/UX
 - Familiarità con sistema SpedireSicuro
 - Comprensione flusso business
 
 ## Quick Reference
-| Sezione | Pagina | Link |
-|---------|--------|------|
+
+| Sezione              | Pagina                            | Link                                             |
+| -------------------- | --------------------------------- | ------------------------------------------------ |
 | Creazione Spedizione | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Nuova Spedizione](#flow-1-creazione-spedizione) |
-| Gestione Wallet | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet) |
-| Gestione Listini | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Listini](#flow-3-gestione-listini) |
-| Admin Dashboard | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard) |
+| Gestione Wallet      | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet)                |
+| Gestione Listini     | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Listini](#flow-3-gestione-listini)              |
+| Admin Dashboard      | docs/4-UI-COMPONENTS/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard)                 |
 
 ## Content
 
@@ -43,7 +47,7 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
    - Città + Provincia + CAP (autocomplete con validazione)
    - Telefono (formato italiano +39)
    - Email (opzionale)
-   - *Validazione:* Campi obbligatori con feedback visivo in tempo reale
+   - _Validazione:_ Campi obbligatori con feedback visivo in tempo reale
 
 3. **Compilazione Dati Destinatario**
    - Nome completo
@@ -51,7 +55,7 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
    - Città + Provincia + CAP (autocomplete)
    - Telefono (obbligatorio se contrassegno attivo)
    - Email (opzionale)
-   - *Validazione:* Stesso pattern di mittente
+   - _Validazione:_ Stesso pattern di mittente
 
 4. **Inserimento Dati Pacco**
    - Peso (kg) - obbligatorio
@@ -115,6 +119,7 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
     - Reset form dopo 2 secondi (per inserimento rapido)
 
 **Edge Cases:**
+
 - **Nessun contratto disponibile:** Messaggio di avviso, pulsante disabilitato
 - **Credito insufficiente:** Errore 402 con messaggio specifico
 - **Corriere fallito:** Compensazione wallet + queue manuale retry
@@ -166,6 +171,7 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
    - Download immediato
 
 **Server Actions:**
+
 ```typescript
 import { rechargeMyWallet, getMyWalletTransactions } from '@/actions/wallet';
 
@@ -179,6 +185,7 @@ const transactions = await getMyWalletTransactions();
 ```
 
 **Edge Cases:**
+
 - **Utente normale:** Non può ricaricare direttamente, solo richiedere
 - **Saldo insufficiente:** Messaggio visibile, pulsante ricarica evidenziato
 - **Transazione fallita:** Stato = "failed", messaggio errore visibile
@@ -256,11 +263,12 @@ const transactions = await getMyWalletTransactions();
    - Confronta con voci listino
 
 **Server Actions:**
+
 ```typescript
-import { 
-  cloneSupplierPriceList, 
+import {
+  cloneSupplierPriceList,
   assignPriceListToCustomer,
-  syncPriceListWithSpedisciOnline
+  syncPriceListWithSpedisciOnline,
 } from '@/actions/reseller-price-lists';
 
 // Clona listino
@@ -284,6 +292,7 @@ await syncPriceListWithSpedisciOnline({
 ```
 
 **Edge Cases:**
+
 - **Listino non sincronizzato:** Avviso "Ultimo aggiornamento: 30 giorni fa"
 - **Nessun rate per destinazione:** Messaggio "Nessun servizio disponibile per questa zona"
 - **Margine eccessivo:** Warning se margine > 50%
@@ -376,6 +385,7 @@ await syncPriceListWithSpedisciOnline({
      - Audit logging completo
 
 **Acting Context (Impersonation):**
+
 ```typescript
 // Backend usa Acting Context per impersonation
 const context = await requireSafeAuth();
@@ -396,21 +406,23 @@ const isImpersonating = context.isImpersonating;
 ```
 
 **API Endpoints:**
+
 ```typescript
 // Admin overview
-GET /api/admin/overview
+GET / api / admin / overview;
 // Returns: { stats, users, shipments, killerFeatures }
 
 // User features
-GET /api/admin/users/[id]/features
+GET / api / admin / users / [id] / features;
 // Returns: { features, metadata }
 
 // Toggle feature
-POST /api/admin/features
+POST / api / admin / features;
 // Body: { targetUserEmail, featureCode, activate, activationType }
 ```
 
 **Edge Cases:**
+
 - **Utente non trovato:** Messaggio "Utente non trovato o eliminato"
 - **Permesso negato:** 403 se non admin/superadmin
 - **Feature già attiva:** Messaggio informativo
@@ -420,13 +432,13 @@ POST /api/admin/features
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Form non invia dati | Verifica campi obbligatori marcati con * |
-| Preventivo non appare | Verifica dati completi: peso, CAP, provincia, dimensioni |
-| Ricarica wallet non funziona | Solo admin/superadmin possono ricaricare |
-| Listino clone fallito | Verifica nome univoco e margini validi |
-| Features non salvate | Verifica se utente è reseller |
+| Issue                        | Soluzione                                                |
+| ---------------------------- | -------------------------------------------------------- |
+| Form non invia dati          | Verifica campi obbligatori marcati con \*                |
+| Preventivo non appare        | Verifica dati completi: peso, CAP, provincia, dimensioni |
+| Ricarica wallet non funziona | Solo admin/superadmin possono ricaricare                 |
+| Listino clone fallito        | Verifica nome univoco e margini validi                   |
+| Features non salvate         | Verifica se utente è reseller                            |
 
 ## Related Documentation
 
@@ -437,12 +449,12 @@ POST /api/admin/features
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
 
-*Last Updated: 2026-01-12*
-*Status: 🟢 Active*
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_
+_Status: 🟢 Active_
+_Maintainer: Dev Team_

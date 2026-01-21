@@ -105,12 +105,12 @@ Loggato quando viene fatto fallback al codice legacy.
 ### Utilizzo
 
 ```typescript
-import { 
-  generateTraceId, 
-  logIntentDetected, 
-  logUsingPricingGraph, 
-  logGraphFailed, 
-  logFallbackToLegacy 
+import {
+  generateTraceId,
+  logIntentDetected,
+  logUsingPricingGraph,
+  logGraphFailed,
+  logFallbackToLegacy,
 } from '@/lib/telemetry/logger';
 
 // All'inizio della richiesta
@@ -141,7 +141,7 @@ Il `trace_id` viene incluso nei metadata delle risposte API per permettere il tr
     "trace_id": "trace_1234567890_abc123",
     "userRole": "user",
     "usingPricingGraph": true,
-    "pricingOptionsCount": 3,
+    "pricingOptionsCount": 3
     // NO userId, NO email (PII)
   }
 }
@@ -169,4 +169,3 @@ Esempio query per tasso di fallback:
 ```logql
 {service="anne-v2"} | json | event="fallbackToLegacy" | rate(5m)
 ```
-

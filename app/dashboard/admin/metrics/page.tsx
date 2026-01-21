@@ -5,13 +5,13 @@
  * Dati in tempo reale da /api/metrics/business
  */
 
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import DashboardNav from "@/components/dashboard-nav";
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import DashboardNav from '@/components/dashboard-nav';
 import {
   Activity,
   AlertCircle,
@@ -25,7 +25,7 @@ import {
   TrendingUp,
   Users,
   Wallet,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -40,7 +40,7 @@ import {
   Legend,
   LineChart,
   Line,
-} from "recharts";
+} from 'recharts';
 
 interface BusinessMetrics {
   timestamp: string;
@@ -79,25 +79,17 @@ interface BusinessMetrics {
 
 // Colors for charts
 const COLORS = {
-  delivered: "#22c55e",
-  pending: "#eab308",
-  in_transit: "#3b82f6",
-  shipped: "#3b82f6",
-  failed: "#ef4444",
-  cancelled: "#6b7280",
-  draft: "#9ca3af",
-  returned: "#f97316",
+  delivered: '#22c55e',
+  pending: '#eab308',
+  in_transit: '#3b82f6',
+  shipped: '#3b82f6',
+  failed: '#ef4444',
+  cancelled: '#6b7280',
+  draft: '#9ca3af',
+  returned: '#f97316',
 };
 
-const PIE_COLORS = [
-  "#22c55e",
-  "#eab308",
-  "#3b82f6",
-  "#ef4444",
-  "#6b7280",
-  "#f97316",
-  "#8b5cf6",
-];
+const PIE_COLORS = ['#22c55e', '#eab308', '#3b82f6', '#ef4444', '#6b7280', '#f97316', '#8b5cf6'];
 
 export default function MetricsDashboardPage() {
   const router = useRouter();
@@ -112,15 +104,15 @@ export default function MetricsDashboardPage() {
   async function fetchMetrics() {
     try {
       setIsRefreshing(true);
-      const response = await fetch("/api/metrics/business");
+      const response = await fetch('/api/metrics/business');
 
       if (response.status === 401 || response.status === 403) {
-        setError("Accesso negato. Solo admin possono visualizzare le metriche.");
+        setError('Accesso negato. Solo admin possono visualizzare le metriche.');
         return;
       }
 
       if (!response.ok) {
-        throw new Error("Errore nel caricamento delle metriche");
+        throw new Error('Errore nel caricamento delle metriche');
       }
 
       const data = await response.json();
@@ -128,10 +120,10 @@ export default function MetricsDashboardPage() {
         setMetrics(data.data);
         setLastUpdated(new Date());
       } else {
-        throw new Error(data.error || "Errore sconosciuto");
+        throw new Error(data.error || 'Errore sconosciuto');
       }
     } catch (err: any) {
-      console.error("Error fetching metrics:", err);
+      console.error('Error fetching metrics:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -141,9 +133,9 @@ export default function MetricsDashboardPage() {
 
   // Initial load
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === 'loading') return;
     if (!session) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
     fetchMetrics();
@@ -157,9 +149,9 @@ export default function MetricsDashboardPage() {
 
   // Format currency
   function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("it-IT", {
-      style: "currency",
-      currency: "EUR",
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
     }).format(value);
   }
 
@@ -170,7 +162,7 @@ export default function MetricsDashboardPage() {
 
   // Format number
   function formatNumber(value: number): string {
-    return new Intl.NumberFormat("it-IT").format(value);
+    return new Intl.NumberFormat('it-IT').format(value);
   }
 
   // Stat Card component
@@ -187,7 +179,7 @@ export default function MetricsDashboardPage() {
     value: string | number;
     subtitle?: string;
     icon: React.ReactNode;
-    trend?: "up" | "down" | "neutral";
+    trend?: 'up' | 'down' | 'neutral';
     trendLabel?: string;
     gradient: string;
   }) {
@@ -201,21 +193,19 @@ export default function MetricsDashboardPage() {
         </div>
         <div className="p-5">
           <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-          {subtitle && (
-            <div className="text-sm text-gray-500">{subtitle}</div>
-          )}
+          {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
           {trendLabel && (
             <div
               className={`text-sm mt-2 ${
-                trend === "up"
-                  ? "text-green-600"
-                  : trend === "down"
-                  ? "text-red-600"
-                  : "text-gray-500"
+                trend === 'up'
+                  ? 'text-green-600'
+                  : trend === 'down'
+                    ? 'text-red-600'
+                    : 'text-gray-500'
               }`}
             >
-              {trend === "up" && "↑ "}
-              {trend === "down" && "↓ "}
+              {trend === 'up' && '↑ '}
+              {trend === 'down' && '↓ '}
               {trendLabel}
             </div>
           )}
@@ -225,7 +215,7 @@ export default function MetricsDashboardPage() {
   }
 
   // Loading state
-  if (status === "loading" || isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
         <div className="text-center">
@@ -241,11 +231,7 @@ export default function MetricsDashboardPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <DashboardNav
-            title="Business Metrics"
-            subtitle="Errore"
-            showBackButton={true}
-          />
+          <DashboardNav title="Business Metrics" subtitle="Errore" showBackButton={true} />
           <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Errore</h2>
@@ -267,34 +253,30 @@ export default function MetricsDashboardPage() {
   }
 
   // Prepare chart data
-  const statusChartData = Object.entries(metrics.shipments.byStatus).map(
-    ([status, count]) => ({
-      name: status.replace("_", " ").charAt(0).toUpperCase() + status.replace("_", " ").slice(1),
-      value: count,
-      color: COLORS[status as keyof typeof COLORS] || "#6b7280",
-    })
-  );
+  const statusChartData = Object.entries(metrics.shipments.byStatus).map(([status, count]) => ({
+    name: status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1),
+    value: count,
+    color: COLORS[status as keyof typeof COLORS] || '#6b7280',
+  }));
 
   const revenueChartData = [
-    { name: "Oggi", revenue: metrics.revenue.today },
-    { name: "Settimana", revenue: metrics.revenue.thisWeek },
-    { name: "Mese", revenue: metrics.revenue.thisMonth },
-    { name: "Totale", revenue: metrics.revenue.total },
+    { name: 'Oggi', revenue: metrics.revenue.today },
+    { name: 'Settimana', revenue: metrics.revenue.thisWeek },
+    { name: 'Mese', revenue: metrics.revenue.thisMonth },
+    { name: 'Totale', revenue: metrics.revenue.total },
   ];
 
   const userGrowthData = [
-    { name: "Oggi", users: metrics.users.newToday },
-    { name: "Settimana", users: metrics.users.newThisWeek },
-    { name: "Mese", users: metrics.users.newThisMonth },
+    { name: 'Oggi', users: metrics.users.newToday },
+    { name: 'Settimana', users: metrics.users.newThisWeek },
+    { name: 'Mese', users: metrics.users.newThisMonth },
   ];
 
-  const walletTypeData = Object.entries(metrics.wallet.byType).map(
-    ([type, count], index) => ({
-      name: type.replace("_", " "),
-      value: count,
-      color: PIE_COLORS[index % PIE_COLORS.length],
-    })
-  );
+  const walletTypeData = Object.entries(metrics.wallet.byType).map(([type, count], index) => ({
+    name: type.replace('_', ' '),
+    value: count,
+    color: PIE_COLORS[index % PIE_COLORS.length],
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
@@ -313,12 +295,10 @@ export default function MetricsDashboardPage() {
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Metriche Business
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">Metriche Business</h1>
               {lastUpdated && (
                 <p className="text-sm text-gray-500">
-                  Ultimo aggiornamento: {lastUpdated.toLocaleTimeString("it-IT")}
+                  Ultimo aggiornamento: {lastUpdated.toLocaleTimeString('it-IT')}
                 </p>
               )}
             </div>
@@ -329,9 +309,7 @@ export default function MetricsDashboardPage() {
               disabled={isRefreshing}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              <RefreshCw
-                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Aggiorna
             </button>
             <Link
@@ -366,10 +344,10 @@ export default function MetricsDashboardPage() {
               icon={<CheckCircle2 className="w-5 h-5" />}
               trend={
                 metrics.shipments.successRate > 0.9
-                  ? "up"
+                  ? 'up'
                   : metrics.shipments.successRate < 0.8
-                  ? "down"
-                  : "neutral"
+                    ? 'down'
+                    : 'neutral'
               }
               gradient="bg-gradient-to-r from-green-500 to-green-600"
             />
@@ -471,10 +449,10 @@ export default function MetricsDashboardPage() {
                 icon={<Clock className="w-5 h-5" />}
                 trend={
                   metrics.wallet.topupsPending > 10
-                    ? "down"
+                    ? 'down'
                     : metrics.wallet.topupsPending > 5
-                    ? "neutral"
-                    : "up"
+                      ? 'neutral'
+                      : 'up'
                 }
                 gradient="bg-gradient-to-r from-orange-500 to-orange-600"
               />
@@ -486,9 +464,7 @@ export default function MetricsDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Shipments by Status Pie Chart */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Spedizioni per Status
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Spedizioni per Status</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -500,17 +476,13 @@ export default function MetricsDashboardPage() {
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                    }
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {statusChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    formatter={(value) => [formatNumber(value as number), "Spedizioni"]}
-                  />
+                  <Tooltip formatter={(value) => [formatNumber(value as number), 'Spedizioni']} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -519,18 +491,14 @@ export default function MetricsDashboardPage() {
 
           {/* Revenue Bar Chart */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Fatturato per Periodo
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Fatturato per Periodo</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis tickFormatter={(value) => `€${value}`} />
-                  <Tooltip
-                    formatter={(value) => [formatCurrency(value as number), "Fatturato"]}
-                  />
+                  <Tooltip formatter={(value) => [formatCurrency(value as number), 'Fatturato']} />
                   <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -539,24 +507,20 @@ export default function MetricsDashboardPage() {
 
           {/* User Growth Line Chart */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Nuove Registrazioni
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Nuove Registrazioni</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={userGrowthData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip
-                    formatter={(value) => [formatNumber(value as number), "Nuovi utenti"]}
-                  />
+                  <Tooltip formatter={(value) => [formatNumber(value as number), 'Nuovi utenti']} />
                   <Line
                     type="monotone"
                     dataKey="users"
                     stroke="#6366f1"
                     strokeWidth={3}
-                    dot={{ fill: "#6366f1", r: 6 }}
+                    dot={{ fill: '#6366f1', r: 6 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -580,19 +544,14 @@ export default function MetricsDashboardPage() {
                       outerRadius={100}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                      }
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                     >
                       {walletTypeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value) => [
-                        formatNumber(value as number),
-                        "Transazioni",
-                      ]}
+                      formatter={(value) => [formatNumber(value as number), 'Transazioni']}
                     />
                     <Legend />
                   </PieChart>
@@ -612,8 +571,8 @@ export default function MetricsDashboardPage() {
             <div>
               <h3 className="text-xl font-bold mb-2">Grafana Cloud Dashboard</h3>
               <p className="text-white/80">
-                Per metriche avanzate, alerting e visualizzazioni personalizzate,
-                configura Grafana Cloud (FREE tier).
+                Per metriche avanzate, alerting e visualizzazioni personalizzate, configura Grafana
+                Cloud (FREE tier).
               </p>
             </div>
             <Link

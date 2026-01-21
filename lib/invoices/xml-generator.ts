@@ -1,14 +1,14 @@
 /**
  * Invoice XML Generator (FatturaPA)
- * 
+ *
  * Genera XML conformi al formato FatturaPA (standard italiano fatturazione elettronica).
  * Compatibile con:
  * - Sistema di Interscambio (SDI) Agenzia delle Entrate
  * - Aruba Fatturazione Elettronica
  * - Fatturazione e Corrispettivi
- * 
+ *
  * SPECIFICA: Formato FatturaPA 1.2.1 (D.M. 17/06/2014 e successive modifiche)
- * 
+ *
  * @module lib/invoices/xml-generator
  */
 
@@ -21,13 +21,13 @@ export interface FatturaPAData extends InvoiceData {
   // Codice destinatario SDI (7 caratteri) o PEC
   sdiCode?: string;
   pec?: string;
-  
+
   // Tipo documento (TD01 = Fattura, TD04 = Nota di credito)
   documentType?: 'TD01' | 'TD04';
-  
+
   // Causale pagamento (opzionale)
   paymentReason?: string;
-  
+
   // Dati mittente aggiuntivi
   sender: InvoiceData['sender'] & {
     sdiCode?: string; // Codice SDI mittente
@@ -37,14 +37,16 @@ export interface FatturaPAData extends InvoiceData {
 
 /**
  * Genera XML FatturaPA conforme normativa italiana
- * 
+ *
  * @param data - Dati fattura con informazioni SDI
  * @returns Buffer XML conforme FatturaPA
  */
 export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
   // Validazione dati obbligatori
   if (!data.sender.vatNumber || !data.sender.taxCode) {
-    throw new Error('Dati mittente incompleti: P.IVA e C.F. obbligatori per fatturazione elettronica');
+    throw new Error(
+      'Dati mittente incompleti: P.IVA e C.F. obbligatori per fatturazione elettronica'
+    );
   }
 
   if (!data.recipient.vatNumber && !data.recipient.taxCode) {
@@ -53,7 +55,7 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
 
   // Calcoli
   const subtotal = data.items.reduce((sum, item) => sum + item.total, 0);
-  const vat = data.items.reduce((sum, item) => sum + (item.total * item.vatRate / 100), 0);
+  const vat = data.items.reduce((sum, item) => sum + (item.total * item.vatRate) / 100, 0);
   const total = subtotal + vat;
 
   // Formatta date ISO 8601 (YYYY-MM-DD)
@@ -62,8 +64,8 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
   };
 
   // Formatta numero progressivo (rimuove prefisso anno se presente)
-  const progressivoNumero = data.invoiceNumber.includes('-') 
-    ? data.invoiceNumber.split('-')[1] 
+  const progressivoNumero = data.invoiceNumber.includes('-')
+    ? data.invoiceNumber.split('-')[1]
     : data.invoiceNumber;
 
   // Tipo documento (default: Fattura)
@@ -109,12 +111,16 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
     </CedentePrestatore>
     <CessionarioCommittente>
       <DatiAnagrafici>
-        ${data.recipient.vatNumber ? `
+        ${
+          data.recipient.vatNumber
+            ? `
         <IdFiscaleIVA>
           <IdPaese>IT</IdPaese>
           <IdCodice>${escapeXml(data.recipient.vatNumber.replace(/[^0-9]/g, '').substring(0, 11))}</IdCodice>
         </IdFiscaleIVA>
-        ` : ''}
+        `
+            : ''
+        }
         ${data.recipient.taxCode ? `<CodiceFiscale>${escapeXml(data.recipient.taxCode)}</CodiceFiscale>` : ''}
         <Anagrafica>
           <Denominazione>${escapeXml(data.recipient.name)}</Denominazione>
@@ -142,7 +148,9 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
       </DatiGeneraliDocumento>
     </DatiGenerali>
     <DatiBeniServizi>
-      ${data.items.map((item, index) => `
+      ${data.items
+        .map(
+          (item, index) => `
       <DettaglioLinee>
         <NumeroLinea>${index + 1}</NumeroLinea>
         <Descrizione>${escapeXml(item.description)}</Descrizione>
@@ -151,7 +159,9 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
         <PrezzoTotale>${item.total.toFixed(2)}</PrezzoTotale>
         <AliquotaIVA>${item.vatRate.toFixed(2)}</AliquotaIVA>
       </DettaglioLinee>
-      `).join('')}
+      `
+        )
+        .join('')}
       <DatiRiepilogo>
         <AliquotaIVA>${data.items[0]?.vatRate.toFixed(2) || '22.00'}</AliquotaIVA>
         <ImponibileImporto>${subtotal.toFixed(2)}</ImponibileImporto>
@@ -168,12 +178,16 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
         ${data.iban ? `<IBAN>${escapeXml(data.iban.replace(/\s/g, ''))}</IBAN>` : ''}
       </DettaglioPagamento>
     </DatiPagamento>
-    ${data.notes ? `
+    ${
+      data.notes
+        ? `
     <Allegati>
       <NomeAttachment>Note</NomeAttachment>
       <DescrizioneAttachment>${escapeXml(data.notes)}</DescrizioneAttachment>
     </Allegati>
-    ` : ''}
+    `
+        : ''
+    }
   </FatturaElettronicaBody>
 </p:FatturaElettronica>`;
 
@@ -186,7 +200,7 @@ export async function generateInvoiceXML(data: FatturaPAData): Promise<Buffer> {
  */
 function escapeXml(unsafe: string): string {
   if (!unsafe) return '';
-  
+
   return unsafe
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -197,7 +211,7 @@ function escapeXml(unsafe: string): string {
 
 /**
  * Valida XML FatturaPA prima della generazione
- * 
+ *
  * @param data - Dati fattura
  * @returns Array di errori (vuoto se valido)
  */

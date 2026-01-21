@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Invoice PDF Generation
- * 
+ *
  * Test per generazione PDF fatture, calcolo IVA, formato numero progressivo
  */
 
@@ -35,9 +35,9 @@ describe('Invoice PDF Generation - Unit Tests', () => {
       {
         description: 'Spedizione #TEST123',
         quantity: 1,
-        unitPrice: 100.00,
+        unitPrice: 100.0,
         vatRate: 22,
-        total: 100.00,
+        total: 100.0,
       },
     ],
     paymentMethod: 'Bonifico bancario',
@@ -47,7 +47,7 @@ describe('Invoice PDF Generation - Unit Tests', () => {
 
   it('genera PDF senza errori', async () => {
     const pdfBuffer = await generateInvoicePDF(mockInvoiceData);
-    
+
     expect(pdfBuffer).toBeInstanceOf(Buffer);
     expect(pdfBuffer.length).toBeGreaterThan(0);
   });
@@ -57,14 +57,14 @@ describe('Invoice PDF Generation - Unit Tests', () => {
     const vat = subtotal * 0.22;
     const total = subtotal + vat;
 
-    expect(subtotal).toBe(100.00);
-    expect(vat).toBe(22.00);
-    expect(total).toBe(122.00);
+    expect(subtotal).toBe(100.0);
+    expect(vat).toBe(22.0);
+    expect(total).toBe(122.0);
   });
 
   it('formato numero progressivo corretto', () => {
     const invoiceNumber = mockInvoiceData.invoiceNumber;
-    
+
     // Formato: YYYY-XXXX
     expect(invoiceNumber).toMatch(/^\d{4}-\d{4}$/);
     expect(invoiceNumber).toBe('2026-0001');
@@ -80,7 +80,7 @@ describe('Invoice PDF Generation - Unit Tests', () => {
     };
 
     const pdfBuffer = await generateInvoicePDF(multiItemData);
-    
+
     expect(pdfBuffer).toBeInstanceOf(Buffer);
     expect(pdfBuffer.length).toBeGreaterThan(0);
   });
@@ -95,12 +95,7 @@ describe('Invoice PDF Generation - Unit Tests', () => {
     };
 
     const pdfBuffer = await generateInvoicePDF(minimalData);
-    
+
     expect(pdfBuffer).toBeInstanceOf(Buffer);
   });
 });
-
-
-
-
-

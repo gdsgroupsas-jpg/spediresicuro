@@ -23,6 +23,7 @@ ls .env.local
 Apri `.env.local` e verifica che contenga **TUTTE** queste variabili:
 
 #### ✅ SUPABASE (3 variabili)
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://pxd2.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -30,37 +31,44 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Come verificare:**
+
 - Vai su Supabase Dashboard → Settings → API
 - `NEXT_PUBLIC_SUPABASE_URL` = Project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon public key
 - `SUPABASE_SERVICE_ROLE_KEY` = service_role secret (clicca "Reveal")
 
 #### ✅ NEXTAUTH (2 variabili)
+
 ```env
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=la_tua_chiave_segreta_casuale_minimo_32_caratteri
 ```
 
 **Come verificare:**
+
 - `NEXTAUTH_URL` = sempre `http://localhost:3000` per locale
 - `NEXTAUTH_SECRET` = chiave casuale (almeno 32 caratteri)
 
 #### ✅ DIAGNOSTICS (1 variabile)
+
 ```env
 DIAGNOSTICS_TOKEN=d4t1_d14gn0st1c1_s3gr3t1_2025_x9z
 ```
 
 #### ✅ AUTOMATION SERVICE (1 variabile)
+
 ```env
 AUTOMATION_SERVICE_TOKEN=genera_un_token_casuale_sicuro_qui
 ```
 
 #### ✅ ENCRYPTION (1 variabile)
+
 ```env
 ENCRYPTION_KEY=genera_64_caratteri_esadecimali_qui
 ```
 
 **Come generare:**
+
 - PowerShell: `[Convert]::ToHexString((1..32 | ForEach-Object {Get-Random -Minimum 0 -Maximum 256}))`
 
 ---
@@ -68,6 +76,7 @@ ENCRYPTION_KEY=genera_64_caratteri_esadecimali_qui
 ### Step 3: Test Connessione Supabase
 
 Avvia il server:
+
 ```bash
 npm run dev
 ```
@@ -75,6 +84,7 @@ npm run dev
 Apri il browser su `http://localhost:3000`
 
 **Verifica:**
+
 - ✅ La pagina carica senza errori
 - ✅ Non ci sono warning in console tipo "Supabase URL o Anon Key non configurati"
 - ✅ Puoi fare login
@@ -99,6 +109,7 @@ Apri il browser su `http://localhost:3000`
 **Causa:** Manca `NEXT_PUBLIC_SUPABASE_URL` o `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 **Soluzione:**
+
 1. Apri `.env.local`
 2. Verifica che entrambe le variabili siano presenti
 3. Riavvia il server (`Ctrl+C` e poi `npm run dev`)
@@ -110,6 +121,7 @@ Apri il browser su `http://localhost:3000`
 **Causa:** L'utente non è admin/superadmin
 
 **Soluzione:**
+
 1. Verifica in Supabase che l'utente abbia `account_type = 'admin'` o `'superadmin'`
 2. Oppure `role = 'admin'` nella tabella `users`
 
@@ -120,6 +132,7 @@ Apri il browser su `http://localhost:3000`
 **Causa:** `SUPABASE_SERVICE_ROLE_KEY` mancante o errata
 
 **Soluzione:**
+
 1. Verifica in Supabase Dashboard → Settings → API → service_role secret
 2. Copia TUTTA la chiave (è molto lunga!)
 3. Incolla in `.env.local` come `SUPABASE_SERVICE_ROLE_KEY=...`

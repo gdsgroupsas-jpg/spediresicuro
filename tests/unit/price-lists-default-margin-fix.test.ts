@@ -1,6 +1,6 @@
 /**
  * Test Pesanti: Fix Margine Default per Comparatore
- * 
+ *
  * Verifica che OGNI corriere nel comparatore segua la stessa logica
  * e mostri sempre un margine, anche se non configurato esplicitamente.
  */
@@ -47,7 +47,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         zone_code: 'ITALIA_STANDARD',
         weight_from: 0,
         weight_to: 2,
-        base_price: 4.40,
+        base_price: 4.4,
         fuel_surcharge_percent: 0,
         service_type: 'standard',
       },
@@ -73,7 +73,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         zone_code: 'ITALIA_STANDARD',
         weight_from: 0,
         weight_to: 2,
-        base_price: 4.40, // Identico al master
+        base_price: 4.4, // Identico al master
         fuel_surcharge_percent: 0,
         service_type: 'standard',
       },
@@ -99,7 +99,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         zone_code: 'ITALIA_STANDARD',
         weight_from: 0,
         weight_to: 2,
-        base_price: 8.00, // Modificato rispetto al master (4.40)
+        base_price: 8.0, // Modificato rispetto al master (4.40)
         fuel_surcharge_percent: 0,
         service_type: 'standard',
       },
@@ -125,7 +125,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         zone_code: 'ITALIA_STANDARD',
         weight_from: 0,
         weight_to: 2,
-        base_price: 4.40, // Identico al master
+        base_price: 4.4, // Identico al master
         fuel_surcharge_percent: 0,
         service_type: 'standard',
       },
@@ -163,9 +163,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       // Mock: Calcolo prezzo dal master (per supplierPrice)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: masterPriceList.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -174,9 +174,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       // Mock: Calcolo prezzo dal CUSTOM (per totalCost)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40, // Identico al master
+        totalCost: 4.4, // Identico al master
         details: {
           entry: customPriceListIdentical.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -200,14 +200,14 @@ describe('Fix Margine Default - Test Pesanti', () => {
       if (!result) return;
 
       // ✅ Verifica: supplierPrice viene calcolato dal master
-      expect(result.supplierPrice).toBe(4.40);
+      expect(result.supplierPrice).toBe(4.4);
 
       // ✅ Verifica: margin viene applicato (default globale 20%)
-      const expectedMargin = 4.40 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0.88
+      const expectedMargin = 4.4 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0.88
       expect(result.margin).toBeCloseTo(expectedMargin, 2);
 
       // ✅ Verifica: finalPrice = totalCost + margin
-      expect(result.finalPrice).toBeCloseTo(4.40 + expectedMargin, 2); // 5.28
+      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2); // 5.28
 
       // ✅ Verifica: supplierPrice ≠ finalPrice (NON devono essere uguali)
       expect(result.supplierPrice).not.toBe(result.finalPrice);
@@ -216,10 +216,10 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
     it('deve funzionare con diversi pesi e destinazioni', async () => {
       const testCases = [
-        { weight: 0.5, expectedBase: 4.40 },
-        { weight: 1.0, expectedBase: 4.40 },
-        { weight: 1.5, expectedBase: 4.40 },
-        { weight: 2.0, expectedBase: 4.40 },
+        { weight: 0.5, expectedBase: 4.4 },
+        { weight: 1.0, expectedBase: 4.4 },
+        { weight: 1.5, expectedBase: 4.4 },
+        { weight: 2.0, expectedBase: 4.4 },
       ];
 
       for (const testCase of testCases) {
@@ -311,9 +311,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       // Mock: Calcolo prezzo dal master
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: masterPriceList.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -322,9 +322,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       // Mock: Calcolo prezzo dal CUSTOM (modificato)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 8.00,
+        basePrice: 8.0,
         surcharges: 0,
-        totalCost: 8.00, // Diverso dal master
+        totalCost: 8.0, // Diverso dal master
         details: {
           entry: customPriceListModified.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -348,13 +348,13 @@ describe('Fix Margine Default - Test Pesanti', () => {
       if (!result) return;
 
       // ✅ Verifica: supplierPrice viene calcolato dal master
-      expect(result.supplierPrice).toBe(4.40);
+      expect(result.supplierPrice).toBe(4.4);
 
       // ✅ Verifica: margin viene calcolato automaticamente (differenza)
-      expect(result.margin).toBeCloseTo(8.00 - 4.40, 2); // 3.60
+      expect(result.margin).toBeCloseTo(8.0 - 4.4, 2); // 3.60
 
       // ✅ Verifica: finalPrice = totalCost (margine già incluso)
-      expect(result.finalPrice).toBe(8.00);
+      expect(result.finalPrice).toBe(8.0);
 
       // ✅ Verifica: supplierPrice ≠ finalPrice
       expect(result.supplierPrice).not.toBe(result.finalPrice);
@@ -384,9 +384,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       // Mock: Calcolo prezzo dal master
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: masterPriceList.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -395,9 +395,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       // Mock: Calcolo prezzo dal CUSTOM (identico)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: customPriceListWithMargin.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -421,14 +421,14 @@ describe('Fix Margine Default - Test Pesanti', () => {
       if (!result) return;
 
       // ✅ Verifica: supplierPrice viene calcolato dal master
-      expect(result.supplierPrice).toBe(4.40);
+      expect(result.supplierPrice).toBe(4.4);
 
       // ✅ Verifica: margin usa quello configurato (15%, non 20% default)
-      const expectedMargin = 4.40 * (15 / 100); // 0.66
+      const expectedMargin = 4.4 * (15 / 100); // 0.66
       expect(result.margin).toBeCloseTo(expectedMargin, 2);
 
       // ✅ Verifica: finalPrice = totalCost + margin configurato
-      expect(result.finalPrice).toBeCloseTo(4.40 + expectedMargin, 2); // 5.06
+      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2); // 5.06
 
       // ✅ Verifica: supplierPrice ≠ finalPrice
       expect(result.supplierPrice).not.toBe(result.finalPrice);
@@ -441,7 +441,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         ...customPriceListIdentical,
         id: 'custom-fixed-margin',
         default_margin_percent: null,
-        default_margin_fixed: 1.50, // Margine fisso
+        default_margin_fixed: 1.5, // Margine fisso
       };
 
       // Ordine corretto: prima custom (da getPriceListById), poi master (da calculateWithDefaultMargin)
@@ -464,9 +464,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: masterPriceList.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -474,9 +474,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: customWithFixedMargin.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -500,12 +500,12 @@ describe('Fix Margine Default - Test Pesanti', () => {
       if (!result) return;
 
       // ✅ Verifica: usa margine fisso
-      expect(result.margin).toBe(1.50);
-      expect(result.finalPrice).toBe(5.90); // 4.40 + 1.50
+      expect(result.margin).toBe(1.5);
+      expect(result.finalPrice).toBe(5.9); // 4.40 + 1.50
       expect(result.supplierPrice).not.toBe(result.finalPrice);
     });
 
-    it('deve garantire che supplierPrice sia sempre presente quando c\'è master', async () => {
+    it("deve garantire che supplierPrice sia sempre presente quando c'è master", async () => {
       // Ordine corretto: prima custom (da getPriceListById), poi master (da calculateWithDefaultMargin)
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
@@ -526,9 +526,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: masterPriceList.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -536,9 +536,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: customPriceListIdentical.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -567,7 +567,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       expect(result.supplierPrice).toBeGreaterThan(0);
     });
 
-    it('deve garantire che finalPrice sia sempre diverso da supplierPrice quando c\'è margine', async () => {
+    it("deve garantire che finalPrice sia sempre diverso da supplierPrice quando c'è margine", async () => {
       const scenarios = [
         { list: customPriceListIdentical, desc: 'senza margine configurato' },
         { list: customPriceListModified, desc: 'con prezzi modificati' },
@@ -597,16 +597,16 @@ describe('Fix Margine Default - Test Pesanti', () => {
         } as any);
 
         vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-          basePrice: 4.40,
+          basePrice: 4.4,
           surcharges: 0,
-          totalCost: 4.40,
+          totalCost: 4.4,
           details: {
             entry: masterPriceList.entries![0],
             estimatedDeliveryDays: { min: 3, max: 5 },
           },
         } as any);
 
-        const customTotalCost = scenario.list.id === 'custom-list-modified' ? 8.00 : 4.40;
+        const customTotalCost = scenario.list.id === 'custom-list-modified' ? 8.0 : 4.4;
         vi.mocked(calculatePriceFromList).mockReturnValueOnce({
           basePrice: customTotalCost,
           surcharges: 0,
@@ -644,7 +644,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
   describe('Scenario 5: Test con Valori Reali (GLS vs Poste Italiane)', () => {
     it('simula scenario GLS: listino CUSTOM con prezzi modificati', async () => {
       vi.clearAllMocks();
-      
+
       const glsMaster: PriceList = {
         ...masterPriceList,
         id: 'gls-master',
@@ -675,7 +675,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
             zone_code: 'ITALIA_STANDARD',
             weight_from: 0,
             weight_to: 2,
-            base_price: 8.00, // Modificato
+            base_price: 8.0, // Modificato
             fuel_surcharge_percent: 0,
             service_type: 'standard',
           },
@@ -712,9 +712,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 8.00,
+        basePrice: 8.0,
         surcharges: 0,
-        totalCost: 8.00,
+        totalCost: 8.0,
         details: {
           entry: glsCustom.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -740,13 +740,13 @@ describe('Fix Margine Default - Test Pesanti', () => {
       // ✅ Verifica: GLS funziona correttamente
       expect(result.supplierPrice).toBe(4.27);
       expect(result.margin).toBeCloseTo(3.73, 2); // 8.00 - 4.27
-      expect(result.finalPrice).toBe(8.00);
+      expect(result.finalPrice).toBe(8.0);
       expect(result.supplierPrice).not.toBe(result.finalPrice);
     });
 
     it('simula scenario Poste Italiane: listino CUSTOM con prezzi identici, senza margine', async () => {
       vi.clearAllMocks();
-      
+
       const posteMaster: PriceList = {
         ...masterPriceList,
         id: 'poste-master',
@@ -758,7 +758,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
             zone_code: 'ITALIA_STANDARD',
             weight_from: 0,
             weight_to: 2,
-            base_price: 4.40,
+            base_price: 4.4,
             fuel_surcharge_percent: 0,
             service_type: 'standard',
           },
@@ -777,7 +777,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
             zone_code: 'ITALIA_STANDARD',
             weight_from: 0,
             weight_to: 2,
-            base_price: 4.40, // Identico al master
+            base_price: 4.4, // Identico al master
             fuel_surcharge_percent: 0,
             service_type: 'standard',
           },
@@ -804,9 +804,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: posteMaster.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -814,9 +814,9 @@ describe('Fix Margine Default - Test Pesanti', () => {
       } as any);
 
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
-        basePrice: 4.40,
+        basePrice: 4.4,
         surcharges: 0,
-        totalCost: 4.40,
+        totalCost: 4.4,
         details: {
           entry: posteCustom.entries![0],
           estimatedDeliveryDays: { min: 3, max: 5 },
@@ -840,14 +840,14 @@ describe('Fix Margine Default - Test Pesanti', () => {
       if (!result) return;
 
       // ✅ Verifica: Poste ora funziona correttamente (dopo la fix)
-      expect(result.supplierPrice).toBe(4.40);
-      
+      expect(result.supplierPrice).toBe(4.4);
+
       // ✅ Verifica CRITICA: margin viene applicato (default globale 20%)
-      const expectedMargin = 4.40 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0.88
+      const expectedMargin = 4.4 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0.88
       expect(result.margin).toBeCloseTo(expectedMargin, 2);
-      
+
       // ✅ Verifica CRITICA: finalPrice ≠ supplierPrice (NON devono essere uguali)
-      expect(result.finalPrice).toBeCloseTo(4.40 + expectedMargin, 2); // 5.28
+      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2); // 5.28
       expect(result.supplierPrice).not.toBe(result.finalPrice);
       expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
     });

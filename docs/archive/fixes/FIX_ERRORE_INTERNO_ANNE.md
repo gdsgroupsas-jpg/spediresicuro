@@ -29,41 +29,51 @@ Quando vedi "Errore interno del server", **guarda immediatamente la console del 
 ### 2. **Errori Comuni e Soluzioni**
 
 #### Errore: "ANTHROPIC_API_KEY NON TROVATA"
+
 **Causa**: La chiave non è in `.env.local` o il server non è stato riavviato.
 
 **Soluzione**:
+
 1. Verifica che `.env.local` contenga: `ANTHROPIC_API_KEY=sk-ant-...`
 2. Riavvia il server: `Ctrl+C` e poi `npm run dev`
 
 #### Errore: "401 Unauthorized" o "Invalid API Key"
+
 **Causa**: Chiave API non valida o scaduta.
 
 **Soluzione**:
+
 1. Vai su https://console.anthropic.com/
 2. Verifica che la chiave sia attiva
 3. Crea una nuova chiave se necessario
 4. Aggiorna `.env.local` e riavvia il server
 
 #### Errore: "Cannot read property 'X' of undefined"
+
 **Causa**: Problema con la sessione utente o dati mancanti.
 
 **Soluzione**:
+
 1. Fai logout e login di nuovo
 2. Verifica che la sessione sia valida
 3. Controlla i log per vedere quale proprietà manca
 
 #### Errore: "Network error" o "ECONNREFUSED"
+
 **Causa**: Problema di connessione a Anthropic API.
 
 **Soluzione**:
+
 1. Verifica la connessione internet
 2. Controlla se ci sono firewall o proxy che bloccano le richieste
 3. Prova a riavviare il server
 
 #### Errore: "Errore autenticazione API" (solo su Mobile)
+
 **Causa**: Problema di timeout o connessione instabile su mobile.
 
 **Soluzione**:
+
 1. Verifica che `ANTHROPIC_API_KEY` sia configurata su Vercel (se funziona su desktop, è già configurata)
 2. Il problema è probabilmente nella gestione degli errori su mobile
 3. **Fix applicato (2025-01-17)**: Migliorata gestione errori con timeout e parsing JSON robusto

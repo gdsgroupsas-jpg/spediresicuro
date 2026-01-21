@@ -16,11 +16,13 @@
 ## 🎯 A COSA SERVE?
 
 Il pager è utile quando:
+
 - ✅ Hai centinaia di commit da vedere
 - ✅ Vuoi scrollare l'output in modo comodo
 - ✅ L'output è molto lungo
 
 **Ma può essere fastidioso quando**:
+
 - ❌ Blocca il terminale aspettando che premi un tasto
 - ❌ Non serve per output brevi
 - ❌ Interrompe script automatici
@@ -105,6 +107,7 @@ Disabilita solo per questo repository (più sicuro, non cambia altre cose)
 ## 💡 RACCOMANDAZIONE
 
 **Ti consiglio di disabilitarlo GLOBALMENTE** perché:
+
 - ✅ Non blocca più il terminale
 - ✅ Script funzionano meglio
 - ✅ Se ti serve, puoi sempre usare `git log | more` manualmente
@@ -144,14 +147,3 @@ git push
 ---
 
 **Vuoi che lo faccia io automaticamente?** 🚀
-
-
-
-
-
-
-
-
-
-
-

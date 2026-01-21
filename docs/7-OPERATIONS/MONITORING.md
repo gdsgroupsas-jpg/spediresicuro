@@ -1,15 +1,18 @@
 # Monitoring & Operations
 
 ## Overview
+
 Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzione.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Accesso a Vercel Dashboard
 - Accesso a Supabase Dashboard
 - Conoscenza monitoring concepts
@@ -21,12 +24,14 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### 1. Vercel Analytics
 
 **Metrics:**
+
 - Page views
 - Performance (Web Vitals)
 - Real User Monitoring (RUM)
 - Error tracking
 
 **Access:**
+
 - Vercel Dashboard → Analytics
 
 ---
@@ -34,12 +39,14 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### 2. Supabase Monitoring
 
 **Metrics:**
+
 - Database performance
 - Query performance
 - Connection pool
 - Storage usage
 
 **Access:**
+
 - Supabase Dashboard → Monitoring
 
 ---
@@ -47,11 +54,13 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### 3. Application Logs
 
 **Location:**
+
 - Vercel Dashboard → Logs
 - Server-side logs in Vercel Functions
 - Client-side errors in browser console
 
 **Log Levels:**
+
 - `error` - Critical errors
 - `warn` - Warnings
 - `info` - Informational
@@ -66,6 +75,7 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 **Endpoint:** `GET /api/health`
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -75,11 +85,13 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ```
 
 **Purpose:**
+
 - Verify application is running
 - Load balancer health check
 - Deployment verification
 
 **Monitoring:**
+
 - Check every 5 minutes
 - Alert if status != "ok"
 
@@ -90,14 +102,17 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### Application Metrics
 
 **Response Time:**
+
 - Target: < 2s (p95)
 - Alert: > 5s (p95)
 
 **Error Rate:**
+
 - Target: < 0.1%
 - Alert: > 1%
 
 **Uptime:**
+
 - Target: 99.9%
 - Alert: < 99%
 
@@ -106,16 +121,19 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### Business Metrics
 
 **Shipments:**
+
 - Created per day
 - Success rate
 - Average cost
 
 **Wallet:**
+
 - Transactions per day
 - Top-ups per day
 - Average balance
 
 **Users:**
+
 - Active users
 - New registrations
 - Conversion rate
@@ -127,16 +145,19 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### Critical Alerts (P0)
 
 **Application Down:**
+
 - `/api/health` returns non-200
 - Response time > 10s
 - Error rate > 5%
 
 **Database Issues:**
+
 - Connection pool exhausted
 - Query timeout
 - RLS policy failures
 
 **Security Issues:**
+
 - Unauthorized access attempts
 - Failed authentication spikes
 - RLS bypass attempts
@@ -146,11 +167,13 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### Important Alerts (P1)
 
 **Performance Degradation:**
+
 - Response time > 5s (p95)
 - Error rate > 1%
 - Database slow queries
 
 **Business Logic Issues:**
+
 - Wallet balance inconsistencies
 - Shipment creation failures
 - Payment processing failures
@@ -160,6 +183,7 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### Informational Alerts (P2)
 
 **Usage Spikes:**
+
 - Unusual traffic patterns
 - High API usage
 - Storage growth
@@ -171,17 +195,21 @@ Guida completa per monitoring, alerting e operazioni di SpedireSicuro in produzi
 ### Structured Logging
 
 **Good:**
+
 ```typescript
-console.log(JSON.stringify({
-  event: 'shipment_created',
-  shipment_id: shipmentId,
-  user_id_hash: userId.substring(0, 8) + '***',
-  cost: 12.50,
-  timestamp: new Date().toISOString(),
-}));
+console.log(
+  JSON.stringify({
+    event: 'shipment_created',
+    shipment_id: shipmentId,
+    user_id_hash: userId.substring(0, 8) + '***',
+    cost: 12.5,
+    timestamp: new Date().toISOString(),
+  })
+);
 ```
 
 **Bad:**
+
 ```typescript
 console.log('Shipment created:', shipmentId, userId); // PII exposed!
 ```
@@ -191,6 +219,7 @@ console.log('Shipment created:', shipmentId, userId); // PII exposed!
 ### Log Levels
 
 **Error:**
+
 ```typescript
 console.error('Operation failed:', error, {
   context: 'shipment_creation',
@@ -199,6 +228,7 @@ console.error('Operation failed:', error, {
 ```
 
 **Warn:**
+
 ```typescript
 console.warn('Slow query detected:', {
   query: 'SELECT * FROM shipments',
@@ -207,10 +237,11 @@ console.warn('Slow query detected:', {
 ```
 
 **Info:**
+
 ```typescript
 console.log('Shipment created:', {
   shipmentId,
-  cost: 12.50,
+  cost: 12.5,
 });
 ```
 
@@ -221,12 +252,14 @@ console.log('Shipment created:', {
 ### Error Monitoring
 
 **Vercel:**
+
 - Automatic error tracking
 - Error grouping
 - Stack traces
 - User context
 
 **Custom Error Tracking:**
+
 ```typescript
 import { trackApiError } from '@/lib/api/error-tracker';
 
@@ -243,6 +276,7 @@ try {
 ### Error Response Format
 
 **Standard:**
+
 ```json
 {
   "error": "Operation failed",
@@ -251,6 +285,7 @@ try {
 ```
 
 **With Details (Development):**
+
 ```json
 {
   "error": "Operation failed",
@@ -271,11 +306,13 @@ try {
 ### Web Vitals
 
 **Metrics:**
+
 - **LCP (Largest Contentful Paint):** < 2.5s
 - **FID (First Input Delay):** < 100ms
 - **CLS (Cumulative Layout Shift):** < 0.1
 
 **Monitoring:**
+
 - Vercel Analytics → Web Vitals
 - Real User Monitoring (RUM)
 
@@ -284,11 +321,13 @@ try {
 ### API Performance
 
 **Metrics:**
+
 - Response time (p50, p95, p99)
 - Throughput (requests/second)
 - Error rate
 
 **Monitoring:**
+
 - Vercel Dashboard → Functions
 - Custom logging
 
@@ -299,12 +338,14 @@ try {
 ### Supabase Dashboard
 
 **Metrics:**
+
 - Query performance
 - Connection pool usage
 - Storage usage
 - Active connections
 
 **Alerts:**
+
 - Slow queries (> 1s)
 - Connection pool exhaustion
 - Storage > 80%
@@ -314,8 +355,9 @@ try {
 ### Query Optimization
 
 **Slow Query Detection:**
+
 ```sql
-SELECT 
+SELECT
   query,
   calls,
   total_time,
@@ -343,11 +385,13 @@ LIMIT 10;
 ### Rollback Procedure
 
 **Vercel:**
+
 1. Go to Deployments
 2. Find previous working deployment
 3. Promote to Production
 
 **Database:**
+
 1. Check if migration has rollback
 2. Run rollback migration if available
 3. Manual intervention if needed
@@ -361,6 +405,7 @@ LIMIT 10;
 **Frequency:** Monthly (if needed)
 
 **Process:**
+
 1. Notify users (24h before)
 2. Put app in maintenance mode
 3. Apply updates
@@ -380,12 +425,12 @@ LIMIT 10;
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

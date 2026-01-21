@@ -1,10 +1,10 @@
 /**
  * Platform Cost Calculator
- * 
+ *
  * Determina:
  * 1. api_source - quale contratto è stato usato (platform, reseller_own, byoc_own)
  * 2. provider_cost - quanto SpedireSicuro paga effettivamente al corriere
- * 
+ *
  * @module lib/pricing/platform-cost-calculator
  * @since Sprint 1 - Financial Tracking
  */
@@ -27,14 +27,14 @@ export interface DetermineApiSourceResult {
 
 /**
  * Determina quale fonte API è stata usata per una spedizione.
- * 
+ *
  * Logica:
  * 1. Se listino ha master_list_id → 'platform' (derivato da master)
  * 2. Se listino is_global → 'platform' (listino globale SpedireSicuro)
  * 3. Se listino assegnato via price_list_assignments → 'platform'
  * 4. Se utente è BYOC con proprio contratto → 'byoc_own'
  * 5. Altrimenti → 'reseller_own' (contratto proprio del reseller)
- * 
+ *
  * @param supabaseAdmin - Client Supabase con privilegi admin
  * @param params - Parametri per determinare la fonte
  * @returns Risultato con api_source e metadata
@@ -96,7 +96,8 @@ export async function determineApiSource(
   // Check 4: Verifica se utente ha assegnazioni via price_list_assignments
   const { data: assignments } = await supabaseAdmin
     .from('price_list_assignments')
-    .select(`
+    .select(
+      `
       price_list_id,
       price_lists (
         id,
@@ -104,7 +105,8 @@ export async function determineApiSource(
         is_global,
         list_type
       )
-    `)
+    `
+    )
     .eq('user_id', userId)
     .is('revoked_at', null);
 
@@ -172,13 +174,13 @@ export interface CalculateProviderCostResult {
 
 /**
  * Calcola il costo reale che SpedireSicuro paga al corriere.
- * 
+ *
  * Fallback chain:
  * 1. API realtime corriere (se disponibile) → HIGH confidence
  * 2. Listino master (costi base) → HIGH confidence
  * 3. Media storica → MEDIUM confidence
  * 4. Stima percentuale → LOW confidence
- * 
+ *
  * @param supabaseAdmin - Client Supabase con privilegi admin
  * @param params - Parametri per il calcolo
  * @returns Costo stimato con fonte e confidence
@@ -198,7 +200,7 @@ export async function calculateProviderCost(
       destination,
       serviceType
     );
-    
+
     if (masterCost !== null) {
       return {
         cost: masterCost,
@@ -227,7 +229,7 @@ export async function calculateProviderCost(
       destination,
       serviceType
     );
-    
+
     if (masterCost !== null) {
       return {
         cost: masterCost,
@@ -240,7 +242,7 @@ export async function calculateProviderCost(
 
   // 3. Media storica (ultimi 30 giorni)
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  
+
   const { data: historicalCosts } = await supabaseAdmin
     .from('platform_provider_costs')
     .select('provider_cost')
@@ -250,7 +252,8 @@ export async function calculateProviderCost(
     .limit(100);
 
   if (historicalCosts && historicalCosts.length >= 10) {
-    const avgCost = historicalCosts.reduce((sum, r) => sum + r.provider_cost, 0) / historicalCosts.length;
+    const avgCost =
+      historicalCosts.reduce((sum, r) => sum + r.provider_cost, 0) / historicalCosts.length;
     return {
       cost: Math.round(avgCost * 100) / 100,
       source: 'historical_avg',
@@ -261,8 +264,8 @@ export async function calculateProviderCost(
 
   // 4. Stima basata su peso (fallback finale)
   // Stima conservativa: €5 base + €0.50/kg
-  const estimatedCost = 5 + (weight * 0.5);
-  
+  const estimatedCost = 5 + weight * 0.5;
+
   return {
     cost: Math.round(estimatedCost * 100) / 100,
     source: 'estimate',
@@ -293,12 +296,12 @@ async function getCostFromMasterList(
 
     if (entries && entries.length > 0) {
       let cost = entries[0].base_price;
-      
+
       // Aggiungi fuel surcharge se presente
       if (entries[0].fuel_surcharge_percent) {
         cost += cost * (entries[0].fuel_surcharge_percent / 100);
       }
-      
+
       return Math.round(cost * 100) / 100;
     }
 
@@ -331,14 +334,20 @@ async function getCostFromMasterList(
  * Calcola il margine dato billed_amount e provider_cost.
  * Utility function per consistenza.
  */
-export function calculateMargin(billedAmount: number, providerCost: number): {
+export function calculateMargin(
+  billedAmount: number,
+  providerCost: number
+): {
   margin: number;
   marginPercent: number;
 } {
   const margin = billedAmount - providerCost;
-  const marginPercent = providerCost > 0
-    ? Math.round((margin / providerCost * 100) * 100) / 100
-    : billedAmount > 0 ? 100 : 0;
+  const marginPercent =
+    providerCost > 0
+      ? Math.round((margin / providerCost) * 100 * 100) / 100
+      : billedAmount > 0
+        ? 100
+        : 0;
 
   return { margin, marginPercent };
 }

@@ -667,6 +667,7 @@ Val€ = Valore totale (costo × quantità)
 ## 🎨 DESIGN SYSTEM
 
 ### Colori Status
+
 ```
 🔴 Esaurito      #EF4444 (red-500)
 ⚠️ Stock Basso   #F59E0B (amber-500)
@@ -676,6 +677,7 @@ Val€ = Valore totale (costo × quantità)
 ```
 
 ### Typography
+
 ```
 Titoli:     Inter Bold 24px
 Sottotitoli: Inter Semibold 18px
@@ -684,6 +686,7 @@ Mono:       JetBrains Mono (SKU, Barcode)
 ```
 
 ### Spacing
+
 ```
 Padding Card:  p-6 (24px)
 Gap Elements:  gap-4 (16px)

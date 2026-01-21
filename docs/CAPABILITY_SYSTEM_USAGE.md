@@ -33,29 +33,29 @@ Il sistema **Capability Flags** permette permessi granulari per utenti, con fall
 ### Esempio Base
 
 ```typescript
-import { hasCapability } from "@/lib/db/capability-helpers";
+import { hasCapability } from '@/lib/db/capability-helpers';
 
 // Verifica capability
-const canManagePricing = await hasCapability(userId, "can_manage_pricing");
+const canManagePricing = await hasCapability(userId, 'can_manage_pricing');
 
 if (canManagePricing) {
   // Permesso concesso
   await updatePriceList();
 } else {
   // Accesso negato
-  throw new Error("Permesso negato");
+  throw new Error('Permesso negato');
 }
 ```
 
 ### Esempio con Fallback User (Performance)
 
 ```typescript
-import { hasCapability } from "@/lib/db/capability-helpers";
+import { hasCapability } from '@/lib/db/capability-helpers';
 
 // Se hai già i dati utente, passa fallbackUser per evitare query extra
 const user = await getUserById(userId);
 
-const canCreateSubUsers = await hasCapability(userId, "can_create_subusers", {
+const canCreateSubUsers = await hasCapability(userId, 'can_create_subusers', {
   role: user.role,
   account_type: user.account_type,
   is_reseller: user.is_reseller,
@@ -65,8 +65,8 @@ const canCreateSubUsers = await hasCapability(userId, "can_create_subusers", {
 ### Esempio in API Route
 
 ```typescript
-import { hasCapability } from "@/lib/db/capability-helpers";
-import { requireAuth } from "@/lib/api-middleware";
+import { hasCapability } from '@/lib/db/capability-helpers';
+import { requireAuth } from '@/lib/api-middleware';
 
 export async function POST(request: NextRequest) {
   // 1. Autenticazione
@@ -75,15 +75,15 @@ export async function POST(request: NextRequest) {
 
   // 2. Verifica capability
   const user = await findUserByEmail(authResult.session.user.email);
-  if (!user) return ApiErrors.NOT_FOUND("Utente");
+  if (!user) return ApiErrors.NOT_FOUND('Utente');
 
-  const canManagePricing = await hasCapability(user.id, "can_manage_pricing", {
+  const canManagePricing = await hasCapability(user.id, 'can_manage_pricing', {
     role: user.role,
     account_type: user.account_type,
   });
 
   if (!canManagePricing) {
-    return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
+    return NextResponse.json({ error: 'Permesso negato' }, { status: 403 });
   }
 
   // 3. Operazione autorizzata
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 ### Recuperare Tutte le Capability
 
 ```typescript
-import { getUserCapabilities } from "@/lib/db/capability-helpers";
+import { getUserCapabilities } from '@/lib/db/capability-helpers';
 
 const capabilities = await getUserCapabilities(userId);
 // ['can_manage_pricing', 'can_create_subusers', ...]
@@ -158,7 +158,7 @@ Il sistema usa **fallback automatico** se capability non trovata:
 
 ```typescript
 // Utente con role='admin' ma senza capability in DB
-const canManage = await hasCapability(userId, "can_manage_pricing");
+const canManage = await hasCapability(userId, 'can_manage_pricing');
 // → Restituisce TRUE (fallback a role='admin')
 ```
 
@@ -169,19 +169,19 @@ const canManage = await hasCapability(userId, "can_manage_pricing");
 ### Test Unit
 
 ```typescript
-import { hasCapability } from "@/lib/db/capability-helpers";
+import { hasCapability } from '@/lib/db/capability-helpers';
 
-describe("hasCapability", () => {
-  it("should return true for superadmin with capability", async () => {
-    const result = await hasCapability(superadminId, "can_manage_pricing", {
-      account_type: "superadmin",
+describe('hasCapability', () => {
+  it('should return true for superadmin with capability', async () => {
+    const result = await hasCapability(superadminId, 'can_manage_pricing', {
+      account_type: 'superadmin',
     });
     expect(result).toBe(true);
   });
 
-  it("should fallback to role if capability not found", async () => {
-    const result = await hasCapability(adminId, "can_manage_pricing", {
-      role: "admin",
+  it('should fallback to role if capability not found', async () => {
+    const result = await hasCapability(adminId, 'can_manage_pricing', {
+      role: 'admin',
     });
     expect(result).toBe(true); // Fallback funziona
   });

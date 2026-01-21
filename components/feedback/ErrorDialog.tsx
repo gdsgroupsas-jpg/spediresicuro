@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react';
 import {
   AlertCircle,
   CreditCard,
@@ -9,56 +9,56 @@ import {
   RefreshCw,
   Settings,
   X,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface ErrorAction {
   /** ID univoco azione */
-  id: string
+  id: string;
   /** Label descrittiva dell'azione */
-  label: string
+  label: string;
   /** Testo del bottone */
-  buttonText: string
+  buttonText: string;
   /** Destinazione (URL o null per azione locale) */
-  destination?: string | null
+  destination?: string | null;
   /** Tipo di bottone */
-  type: 'primary' | 'secondary' | 'tertiary'
+  type: 'primary' | 'secondary' | 'tertiary';
   /** Icona opzionale */
-  icon?: 'wallet' | 'courier' | 'support' | 'settings' | 'retry'
+  icon?: 'wallet' | 'courier' | 'support' | 'settings' | 'retry';
 }
 
 export interface ErrorData {
   /** Codice errore (es. WALLET_INSUFFICIENT) */
-  code: string
+  code: string;
   /** Titolo user-friendly */
-  title: string
+  title: string;
   /** Messaggio descrittivo */
-  message: string
+  message: string;
   /** Dettagli aggiuntivi (es. "Current balance: €20.00") */
-  details?: string
+  details?: string;
   /** Importo richiesto (per errori wallet) */
-  required?: number
+  required?: number;
   /** Balance attuale (per errori wallet) */
-  balance?: number
+  balance?: number;
   /** Shortfall (differenza) */
-  shortfall?: number
+  shortfall?: number;
 }
 
 export interface ErrorDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** Dati errore strutturati */
-  error: ErrorData
+  error: ErrorData;
   /** Azioni di recovery disponibili */
-  actions?: ErrorAction[]
+  actions?: ErrorAction[];
   /** Se retry e abilitato */
-  canRetry?: boolean
+  canRetry?: boolean;
   /** Callback per retry (usa stessa idempotency key) */
-  onRetry?: () => void
+  onRetry?: () => void;
   /** Callback quando utente clicca un'azione */
-  onAction?: (action: ErrorAction) => void
+  onAction?: (action: ErrorAction) => void;
   /** Indica se retry in corso */
-  isRetrying?: boolean
+  isRetrying?: boolean;
 }
 
 /** Mappa icone per tipo azione */
@@ -68,7 +68,7 @@ const iconMap = {
   support: MessageSquare,
   settings: Settings,
   retry: RefreshCw,
-}
+};
 
 /**
  * ErrorDialog - Dialog errore con azioni di recovery
@@ -90,34 +90,34 @@ export function ErrorDialog({
   onAction,
   isRetrying = false,
 }: ErrorDialogProps) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Lock body scroll when open
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
       // Focus close button for accessibility
-      setTimeout(() => closeButtonRef.current?.focus(), 100)
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
     } else {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = 'unset';
     }
     return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [open])
+      document.body.style.overflow = 'unset';
+    };
+  }, [open]);
 
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open && !isRetrying) {
-        onOpenChange(false)
+        onOpenChange(false);
       }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [open, onOpenChange, isRetrying])
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [open, onOpenChange, isRetrying]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
@@ -143,8 +143,7 @@ export function ErrorDialog({
         )}
         style={{
           // @ts-ignore - Custom keyframes via inline style
-          '--tw-animate-shake':
-            'shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both',
+          '--tw-animate-shake': 'shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both',
         }}
       >
         {/* Close Button */}
@@ -171,32 +170,23 @@ export function ErrorDialog({
               <AlertCircle className="w-6 h-6 text-red-600" />
             </div>
             <div>
-              <h2
-                id="error-dialog-title"
-                className="text-xl font-bold text-red-600 mb-1"
-              >
+              <h2 id="error-dialog-title" className="text-xl font-bold text-red-600 mb-1">
                 {error.title}
               </h2>
               <p id="error-dialog-description" className="text-gray-600">
                 {error.message}
               </p>
-              {error.details && (
-                <p className="text-sm text-gray-500 mt-2">{error.details}</p>
-              )}
+              {error.details && <p className="text-sm text-gray-500 mt-2">{error.details}</p>}
             </div>
           </div>
 
           {/* Actions Section */}
           {actions.length > 0 && (
             <div className="mb-6">
-              <p className="text-sm font-medium text-gray-700 mb-4">
-                Cosa vorresti fare?
-              </p>
+              <p className="text-sm font-medium text-gray-700 mb-4">Cosa vorresti fare?</p>
               <div className="space-y-3">
                 {actions.map((action) => {
-                  const IconComponent = action.icon
-                    ? iconMap[action.icon]
-                    : HelpCircle
+                  const IconComponent = action.icon ? iconMap[action.icon] : HelpCircle;
                   return (
                     <div
                       key={action.id}
@@ -204,9 +194,7 @@ export function ErrorDialog({
                     >
                       <div className="flex items-center gap-3">
                         <IconComponent className="w-5 h-5 text-gray-500" />
-                        <span className="text-sm text-gray-700">
-                          {action.label}
-                        </span>
+                        <span className="text-sm text-gray-700">{action.label}</span>
                       </div>
                       <button
                         onClick={() => onAction?.(action)}
@@ -217,14 +205,14 @@ export function ErrorDialog({
                           action.type === 'primary'
                             ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white hover:opacity-90'
                             : action.type === 'secondary'
-                            ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                              ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                         )}
                       >
                         {action.buttonText}
                       </button>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -290,7 +278,7 @@ export function ErrorDialog({
         }
       `}</style>
     </div>
-  )
+  );
 }
 
-export default ErrorDialog
+export default ErrorDialog;

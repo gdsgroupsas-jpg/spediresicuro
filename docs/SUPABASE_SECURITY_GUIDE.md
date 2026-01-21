@@ -49,7 +49,7 @@ on:
     branches:
       - main
     paths:
-      - "supabase/migrations/**"
+      - 'supabase/migrations/**'
 
 jobs:
   deploy:

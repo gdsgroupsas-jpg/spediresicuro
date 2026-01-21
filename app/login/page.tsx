@@ -1,6 +1,6 @@
 /**
  * Pagina Login
- * 
+ *
  * Pagina di autenticazione per accedere al dashboard.
  * Design moderno e professionale.
  */
@@ -10,7 +10,19 @@
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { LogIn, Mail, Lock, AlertCircle, Loader2, UserPlus, User, CheckCircle, Eye, EyeOff, Shield } from 'lucide-react';
+import {
+  LogIn,
+  Mail,
+  Lock,
+  AlertCircle,
+  Loader2,
+  UserPlus,
+  User,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Shield,
+} from 'lucide-react';
 import Link from 'next/link';
 import { LogoHorizontal } from '@/components/logo';
 
@@ -24,11 +36,11 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
   // Verifica quali provider OAuth sono configurati
   useEffect(() => {
     const providers: string[] = [];
-    
+
     // I provider OAuth sono configurati lato server, quindi mostriamo sempre i pulsanti
     // Se non configurati, NextAuth mostrerà un errore appropriato
     providers.push('google', 'github', 'facebook');
-    
+
     setOauthProviders(providers);
   }, []);
 
@@ -37,13 +49,13 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
     try {
       setOauthError(null);
       console.log('🔐 [LOGIN] Tentativo login Google OAuth...');
-      
+
       // NextAuth gestisce automaticamente il redirect per OAuth
       // Per provider OAuth, signIn reindirizza automaticamente e non ritorna un valore
-      await signIn('google', { 
+      await signIn('google', {
         callbackUrl: '/dashboard',
       });
-      
+
       console.log('✅ [LOGIN] signIn Google chiamato, redirect in corso...');
     } catch (error: any) {
       console.error('❌ [LOGIN] Errore Google OAuth:', error);
@@ -52,7 +64,9 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
         stack: error?.stack,
         name: error?.name,
       });
-      setOauthError(`Errore durante il login: ${error.message || 'Verifica la configurazione OAuth'}`);
+      setOauthError(
+        `Errore durante il login: ${error.message || 'Verifica la configurazione OAuth'}`
+      );
     }
   };
 
@@ -170,30 +184,30 @@ export default function LoginPage() {
     const errorParam = urlParams.get('error');
     const errorDescription = urlParams.get('error_description');
     const confirmed = urlParams.get('confirmed');
-    
+
     // ⚠️ CRITICO: Gestione conferma email (da callback Supabase)
     if (confirmed === '1') {
       console.log('✅ [LOGIN] Email confermata - mostra messaggio successo');
       setSuccess('Email confermata con successo! Ora puoi accedere.');
       // Rimuovi parametro confirmed dall'URL
       urlParams.delete('confirmed');
-      const newUrl = urlParams.toString() 
+      const newUrl = urlParams.toString()
         ? `${window.location.pathname}?${urlParams.toString()}`
         : window.location.pathname;
       window.history.replaceState({}, '', newUrl);
       return; // Esci, non processare altri parametri
     }
-    
+
     if (errorParam) {
       const errorDetails = {
         error: errorParam,
         description: errorDescription,
         fullUrl: window.location.href,
       };
-      
+
       console.error('❌ [LOGIN] Errore OAuth rilevato:', errorDetails);
       console.error('❌ [LOGIN] Dettagli completi:', JSON.stringify(errorDetails, null, 2));
-      
+
       // Messaggio errore più dettagliato
       let errorMessage = 'Errore durante il login con Google. ';
       if (errorDescription) {
@@ -209,7 +223,7 @@ export default function LoginPage() {
       } else {
         errorMessage += 'Riprova o contatta il supporto.';
       }
-      
+
       setError(errorMessage);
       // Rimuovi il parametro error dall'URL
       window.history.replaceState({}, '', window.location.pathname);
@@ -223,18 +237,20 @@ export default function LoginPage() {
         email: session.user.email,
         status,
       });
-      
+
       // Verifica se i dati cliente sono completati
       async function checkAndRedirect() {
         try {
           // Email dell'utente corrente
-          const userEmail = session?.user?.email?.toLowerCase() || ''
-          
+          const userEmail = session?.user?.email?.toLowerCase() || '';
+
           // Per l'utenza test@spediresicuro.it, NON reindirizzare mai a dati-cliente
-          const isTestUser = userEmail === 'test@spediresicuro.it'
-          
+          const isTestUser = userEmail === 'test@spediresicuro.it';
+
           if (isTestUser) {
-            console.log('✅ [LOGIN] Utente test rilevato, salvo flag e reindirizzo direttamente a dashboard');
+            console.log(
+              '✅ [LOGIN] Utente test rilevato, salvo flag e reindirizzo direttamente a dashboard'
+            );
             if (typeof window !== 'undefined' && session?.user?.email) {
               localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
             }
@@ -243,17 +259,17 @@ export default function LoginPage() {
             router.push('/dashboard');
             return; // Esci senza controllare il database
           }
-          
+
           console.log('📋 [LOGIN] Chiamata API per verificare dati cliente...');
           const userDataResponse = await fetch('/api/user/dati-cliente');
-          
+
           if (userDataResponse.ok) {
             const userData = await userDataResponse.json();
             console.log('📋 [LOGIN] Dati cliente ricevuti:', {
               hasDatiCliente: !!userData.datiCliente,
               datiCompletati: userData.datiCliente?.datiCompletati,
             });
-            
+
             // Se i dati sono completati, salva in localStorage per evitare controlli futuri
             if (userData.datiCliente && userData.datiCliente.datiCompletati) {
               console.log('✅ [LOGIN] Dati cliente completati, salvo in localStorage');
@@ -266,7 +282,9 @@ export default function LoginPage() {
               router.push('/dashboard');
             } else {
               // Se i dati non sono completati, reindirizza alla pagina dati-cliente
-              console.log('🔄 [LOGIN] Dati non completati, reindirizzamento a /dashboard/dati-cliente');
+              console.log(
+                '🔄 [LOGIN] Dati non completati, reindirizzamento a /dashboard/dati-cliente'
+              );
               // Usa router.push invece di window.location.href per migliore compatibilità mobile
               router.refresh();
               router.push('/dashboard/dati-cliente');
@@ -284,7 +302,7 @@ export default function LoginPage() {
           router.push('/dashboard');
         }
       }
-      
+
       // ⚠️ P0 FIX: Rimuove delay, esegue controllo immediato (no flash di dashboard)
       checkAndRedirect();
     }
@@ -342,7 +360,9 @@ export default function LoginPage() {
         // ⚠️ CRITICO: Se email confirmation è richiesta, mostra messaggio dedicato
         if (data.message === 'email_confirmation_required' || !data.user) {
           // Email di conferma inviata - NON permettere accesso immediato
-          setSuccess('Ti abbiamo inviato una email di conferma. Devi cliccare il link nell\'email prima di accedere. Controlla anche la cartella spam.');
+          setSuccess(
+            "Ti abbiamo inviato una email di conferma. Devi cliccare il link nell'email prima di accedere. Controlla anche la cartella spam."
+          );
           // NON passare a login mode - l'utente deve confermare l'email prima
           setPassword('');
           setConfirmPassword('');
@@ -371,28 +391,33 @@ export default function LoginPage() {
 
         if (result?.error) {
           console.error('❌ [LOGIN] Errore login:', result.error);
-          
+
           // ⚠️ CRITICO: Gestione errore email non confermata
-          if (result.error === 'EMAIL_NOT_CONFIRMED' || result.error?.includes('Email non confermata')) {
-            setError('Email non confermata. Controlla la posta e clicca il link di conferma prima di accedere. Controlla anche la cartella spam.');
+          if (
+            result.error === 'EMAIL_NOT_CONFIRMED' ||
+            result.error?.includes('Email non confermata')
+          ) {
+            setError(
+              'Email non confermata. Controlla la posta e clicca il link di conferma prima di accedere. Controlla anche la cartella spam.'
+            );
           } else {
             setError('Credenziali non valide. Riprova.');
           }
           setIsLoading(false);
         } else if (result?.ok) {
           console.log('✅ [LOGIN] Login riuscito, aggiornamento sessione...');
-          
+
           // Forza refresh della sessione usando getSession
           const { getSession } = await import('next-auth/react');
           await getSession();
-          
+
           // Piccolo delay per assicurarsi che la sessione sia salvata
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
           // ⚠️ IMPORTANTE: Aggiorna lo stato PRIMA della navigazione
           // per evitare warning React su aggiornamenti di stato su componenti smontati
           setIsLoading(false);
-          
+
           // Usa router.push con refresh per aggiornare la sessione
           router.refresh();
           router.push('/dashboard');
@@ -419,11 +444,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
-            <LogoHorizontal
-              className="h-16 w-auto mx-auto"
-              width={400}
-              height={133}
-            />
+            <LogoHorizontal className="h-16 w-auto mx-auto" width={400} height={133} />
           </Link>
         </div>
 
@@ -509,9 +530,7 @@ export default function LoginPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <Mail className="w-5 h-5" />
@@ -530,9 +549,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <Lock className="w-5 h-5" />
@@ -552,11 +569,7 @@ export default function LoginPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
@@ -614,9 +627,13 @@ export default function LoginPage() {
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        accountType === 'user' ? 'bg-[#FF9500] text-white' : 'bg-gray-100 text-gray-600'
-                      }`}>
+                      <div
+                        className={`p-2 rounded-lg ${
+                          accountType === 'user'
+                            ? 'bg-[#FF9500] text-white'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
                         <User className="w-5 h-5" />
                       </div>
                       <div className="flex-1">
@@ -646,9 +663,13 @@ export default function LoginPage() {
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        accountType === 'admin' ? 'bg-[#FF9500] text-white' : 'bg-gray-100 text-gray-600'
-                      }`}>
+                      <div
+                        className={`p-2 rounded-lg ${
+                          accountType === 'admin'
+                            ? 'bg-[#FF9500] text-white'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
                         <Shield className="w-5 h-5" />
                       </div>
                       <div className="flex-1">
@@ -717,10 +738,7 @@ export default function LoginPage() {
 
           {/* Link Home */}
           <div className="mt-6 text-center">
-            <Link
-              href="/"
-              className="text-sm text-gray-600 hover:text-[#FF9500] transition-colors"
-            >
+            <Link href="/" className="text-sm text-gray-600 hover:text-[#FF9500] transition-colors">
               ← Torna alla home
             </Link>
           </div>
@@ -729,4 +747,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

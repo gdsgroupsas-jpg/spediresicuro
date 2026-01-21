@@ -1,6 +1,6 @@
 /**
  * Dashboard BYOC: Gestione Listini Fornitore
- * 
+ *
  * Interfaccia per BYOC per gestire i propri listini fornitore
  */
 
@@ -13,7 +13,13 @@ import { Package, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import DashboardNav from '@/components/dashboard-nav';
 import { SupplierPriceListForm } from '@/components/listini/supplier-price-list-form';
 import { SupplierPriceListTable } from '@/components/listini/supplier-price-list-table';
@@ -32,7 +38,9 @@ export default function ByocListiniFornitorePage() {
   const { data: session } = useSession();
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [availableCouriers, setAvailableCouriers] = useState<Array<{ courierId: string; courierName: string }>>([]);
+  const [availableCouriers, setAvailableCouriers] = useState<
+    Array<{ courierId: string; courierName: string }>
+  >([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,7 +64,7 @@ export default function ByocListiniFornitorePage() {
         if (response.ok) {
           const data = await response.json();
           const userData = data.user || data;
-          
+
           if (userData.account_type !== 'byoc') {
             router.push('/dashboard?error=unauthorized');
             return;
@@ -65,10 +73,12 @@ export default function ByocListiniFornitorePage() {
           // Carica corrieri disponibili (tramite server action per evitare errori 401)
           const couriersResult = await getAvailableCouriersForUserAction();
           if (couriersResult.success && couriersResult.couriers) {
-            setAvailableCouriers(couriersResult.couriers.map(c => ({
-              courierId: c.courierId,
-              courierName: c.courierName,
-            })));
+            setAvailableCouriers(
+              couriersResult.couriers.map((c) => ({
+                courierId: c.courierId,
+                courierName: c.courierName,
+              }))
+            );
           }
 
           // Carica listini
@@ -87,7 +97,7 @@ export default function ByocListiniFornitorePage() {
     try {
       setIsLoading(true);
       const result = await listSupplierPriceListsAction();
-      
+
       if (result.success && result.priceLists) {
         setPriceLists(result.priceLists);
       } else {
@@ -121,7 +131,7 @@ export default function ByocListiniFornitorePage() {
 
     try {
       const result = await deletePriceListAction(priceListToDelete);
-      
+
       if (result.success) {
         toast.success('Listino eliminato con successo');
         setShowDeleteDialog(false);
@@ -198,10 +208,7 @@ export default function ByocListiniFornitorePage() {
               </div>
             </div>
             <div className="w-full md:w-48">
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-              >
+              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
                 <option value="all">Tutti gli status</option>
                 <option value="draft">Bozza</option>
                 <option value="active">Attivo</option>
@@ -223,12 +230,15 @@ export default function ByocListiniFornitorePage() {
         </div>
 
         {/* Dialog Creazione/Modifica */}
-        <Dialog open={showCreateDialog} onOpenChange={(open) => {
-          if (!open) {
-            setShowCreateDialog(false);
-            setEditingPriceList(null);
-          }
-        }}>
+        <Dialog
+          open={showCreateDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowCreateDialog(false);
+              setEditingPriceList(null);
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -287,6 +297,3 @@ export default function ByocListiniFornitorePage() {
     </div>
   );
 }
-
-
-

@@ -1,4 +1,5 @@
 # 📋 RECAP COMPLETO PROGETTO - SpedireSicuro.it
+
 ## Sistema di Diagnostica e Monitoring - Automation Service
 
 **Data:** Dicembre 2025  
@@ -11,6 +12,7 @@
 ## 🎯 OBIETTIVO INIZIALE
 
 Implementare un sistema di diagnostica e monitoring centralizzato per il servizio `automation-service`, che permetta di:
+
 - Tracciare eventi diagnostici, errori, warning e performance
 - Salvare gli eventi in un database Supabase centralizzato
 - Proteggere gli endpoint con rate limiting e autenticazione
@@ -45,6 +47,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 **Obiettivo:** Centralizzare la logica di login e migliorare la manutenibilità
 
 **Modifiche:**
+
 - ✅ Rinominata classe `SpedisciOnlineAgent` → `SOA`
 - ✅ Creato metodo privato `performLogin(page, settings, baseUrl)` per login centralizzato
 - ✅ Rimosso codice duplicato da `extractSessionData` e `syncShipmentsFromPortal`
@@ -52,6 +55,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 - ✅ Aggiunte funzioni helper `getSupabaseAdmin()` e `getSupabaseClient()`
 
 **File modificati:**
+
 - `automation-service/src/agent.ts`
 - `automation-service/dist/agent.js` (compilato)
 
@@ -62,6 +66,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 **Obiettivo:** Creare endpoint sicuro e scalabile per eventi diagnostici
 
 **Modifiche:**
+
 - ✅ Installato `express-rate-limit` (v7.1.5)
 - ✅ Configurato `diagnosticsLimiter`: 30 richieste/minuto
 - ✅ Configurato `syncLimiter`: 20 richieste/10 minuti
@@ -75,6 +80,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 - ✅ Implementato fallback graceful se Supabase non configurato
 
 **File modificati:**
+
 - `automation-service/src/index.ts`
 - `automation-service/dist/index.js` (compilato)
 - `automation-service/package.json` (dipendenze)
@@ -86,6 +92,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 **Obiettivo:** Creare tabella per eventi diagnostici con sicurezza e performance
 
 **Modifiche:**
+
 - ✅ Creata tabella `diagnostics_events` con schema:
   - `id` (UUID, primary key)
   - `type` (VARCHAR, enum: error, warning, info, performance, user_action)
@@ -105,6 +112,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
   - Inserimento solo tramite service role
 
 **File creati:**
+
 - `supabase/migrations/023_diagnostics_events.sql`
 
 ---
@@ -114,6 +122,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 **Obiettivo:** Gestire variabili d'ambiente in modo sicuro e centralizzato
 
 **Modifiche:**
+
 - ✅ Creato file `.env` in `automation-service/` con:
   - `SUPABASE_URL` (non `NEXT_PUBLIC_SUPABASE_URL`)
   - `SUPABASE_SERVICE_ROLE_KEY`
@@ -131,6 +140,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
   - `CREA_ENV.ps1`
 
 **File creati/modificati:**
+
 - `automation-service/.env` (non committato, in `.gitignore`)
 - `automation-service/ESEMPIO_ENV.txt`
 - `automation-service/src/index.ts`
@@ -143,6 +153,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 **Obiettivo:** Assicurare che il sistema funzioni correttamente
 
 **Modifiche:**
+
 - ✅ Creato script `test-diagnostics.ps1` per test endpoint
 - ✅ Creato script `test-diagnostics.bat` per esecuzione facile
 - ✅ Creato script `TEST_COMPLETO.ps1` per test completo:
@@ -152,6 +163,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 - ✅ Risolti errori PowerShell (sintassi variabili `${i}` invece di `$i:`)
 
 **File creati:**
+
 - `automation-service/test-diagnostics.ps1`
 - `automation-service/test-diagnostics.bat`
 - `automation-service/TEST_COMPLETO.ps1`
@@ -163,6 +175,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 **Obiettivo:** Fornire guide complete per setup e configurazione
 
 **Modifiche:**
+
 - ✅ Creato `GUIDA_VARIABILI_AMBIENTE.md` con:
   - Tutte le variabili necessarie
   - Istruzioni per ottenere valori da Supabase
@@ -173,6 +186,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 - ✅ Creato `GENERA_TOKEN.ps1` per generazione token sicuri
 
 **File creati:**
+
 - `GUIDA_VARIABILI_AMBIENTE.md`
 - `GUIDA_RAPIDA_VERCEL.md`
 - `ESEMPIO_ENV_LOCALE.txt`
@@ -184,60 +198,72 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 ## 🐛 PROBLEMI RISOLTI
 
 ### Problema 1: Build Error Next.js
+
 **Errore:** `Error: supabaseUrl is required` durante `npm run build`
 
 **Causa:** Inizializzazione Supabase client a livello di modulo in `app/api/diagnostics/route.ts`
 
 **Soluzione:**
+
 - ✅ Implementato lazy initialization con `getSupabaseClient()`
 - ✅ Ritorna `null` se variabili non disponibili
 - ✅ Gestione graceful con fallback `202 Accepted` e warning
 
 **File modificati:**
+
 - `app/api/diagnostics/route.ts` (poi rimosso, duplicato)
 
 ---
 
 ### Problema 2: Build Error TypeScript
+
 **Errore:** `Cannot find module 'express'` e `Parameter 'req' implicitly has an 'any' type`
 
 **Causa:** Dipendenze non installate e tipi mancanti
 
 **Soluzione:**
+
 - ✅ Eseguito `npm install` per installare dipendenze
 - ✅ Aggiunti tipi espliciti `Request` e `Response` da `express` a tutti gli handler
 
 **File modificati:**
+
 - `automation-service/src/index.ts`
 
 ---
 
 ### Problema 3: Server Crash all'Avvio
+
 **Errore:** `SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurati`
 
 **Causa:** Controllo rigido in `agent.ts` che bloccava l'avvio
 
 **Soluzione:**
+
 - ✅ Implementato lazy initialization in `agent.ts`
 - ✅ Sostituito `throw new Error` con `getSupabaseAdmin()` e `getSupabaseClient()`
 - ✅ Aggiunti controlli null-safe in tutto il codice
 
 **File modificati:**
+
 - `automation-service/src/agent.ts`
 - `automation-service/dist/agent.js`
 
 ---
 
 ### Problema 4: File .env Non Caricato
+
 **Errore:** Warning "DIAGNOSTICS_TOKEN non configurato" e "Supabase not configured"
 
-**Causa:** 
+**Causa:**
+
 1. File `.env` non esistente
 2. `dotenv` non caricato correttamente
 3. Variabile `NEXT_PUBLIC_SUPABASE_URL` invece di `SUPABASE_URL`
 4. URL Supabase errato (esempio invece di reale)
 
 **Soluzione:**
+
 - ✅ Creato file `.env` con valori corretti
 - ✅ Aggiunto caricamento `dotenv` all'inizio di `index.ts`
 - ✅ Corretto nome variabile: `SUPABASE_URL` (non `NEXT_PUBLIC_SUPABASE_URL`)
@@ -245,6 +271,7 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 - ✅ Aggiunto logging debug per verifica configurazione
 
 **File modificati:**
+
 - `automation-service/.env` (creato)
 - `automation-service/src/index.ts`
 - `automation-service/dist/index.js`
@@ -252,22 +279,25 @@ Implementare un sistema di diagnostica e monitoring centralizzato per il servizi
 ---
 
 ### Problema 5: Endpoint Diagnostics Non Salva nel DB
+
 **Errore:** Risposta con `"warning": "Supabase not configured - event not persisted"`
 
 **Causa:** Variabili d'ambiente non lette correttamente
 
 **Soluzione:**
+
 - ✅ Verificato e corretto file `.env`
 - ✅ Aggiunto logging per debug configurazione
 - ✅ Verificato che `dotenv.config()` venga eseguito correttamente
 - ✅ Testato con valori reali da `.env.local`
 
 **Risultato:**
+
 ```json
 {
-    "success": true,
-    "id": "22cc9f08-d5ee-4986-94b6-ff9f0ff72f78",  // UUID reale!
-    "message": "Evento diagnostico salvato con successo"
+  "success": true,
+  "id": "22cc9f08-d5ee-4986-94b6-ff9f0ff72f78", // UUID reale!
+  "message": "Evento diagnostico salvato con successo"
 }
 ```
 
@@ -355,6 +385,7 @@ NEXTAUTH_SECRET=<token_generato>
 ```
 
 **⚠️ IMPORTANTE:**
+
 - `ENCRYPTION_KEY` deve essere **IDENTICO** in entrambi i file
 - `AUTOMATION_SERVICE_TOKEN` deve essere **IDENTICO** in entrambi i file
 - `CRON_SECRET_TOKEN` deve essere **DIVERSO** da `AUTOMATION_SERVICE_TOKEN`
@@ -366,6 +397,7 @@ NEXTAUTH_SECRET=<token_generato>
 ### Funzionalità Implementate
 
 ✅ **Sistema di Diagnostica Completo**
+
 - Endpoint POST `/api/diagnostics` funzionante
 - Autenticazione Bearer token
 - Validazione payload (type, severity, context)
@@ -373,22 +405,26 @@ NEXTAUTH_SECRET=<token_generato>
 - Salvataggio in Supabase con UUID reali
 
 ✅ **Database Supabase**
+
 - Tabella `diagnostics_events` creata
 - Indici per performance ottimizzati
 - RLS configurato correttamente
 
 ✅ **Automation Service**
+
 - Login centralizzato in `performLogin()`
 - Lazy initialization Supabase (no crash se non configurato)
 - Rate limiting su tutti gli endpoint sync
 - Logging debug per troubleshooting
 
 ✅ **Configurazione**
+
 - File `.env` configurato correttamente
 - Script helper per setup automatico
 - Documentazione completa
 
 ✅ **Testing**
+
 - Script di test funzionanti
 - Verifica endpoint e rate limiting
 - Test completo sistema
@@ -405,6 +441,7 @@ npm start
 ```
 
 **Output atteso:**
+
 ```
 ✅ File .env caricato correttamente
 🔍 Debug Supabase Config:
@@ -421,11 +458,12 @@ cd d:\spediresicuro-master\automation-service
 ```
 
 **Output atteso:**
+
 ```json
 {
-    "success": true,
-    "id": "22cc9f08-d5ee-4986-94b6-ff9f0ff72f78",
-    "message": "Evento diagnostico salvato con successo"
+  "success": true,
+  "id": "22cc9f08-d5ee-4986-94b6-ff9f0ff72f78",
+  "message": "Evento diagnostico salvato con successo"
 }
 ```
 
@@ -442,17 +480,18 @@ cd d:\spediresicuro-master\automation-service
 
 ### Automation Service (porta 3000)
 
-| Endpoint | Metodo | Rate Limit | Descrizione |
-|----------|--------|------------|-------------|
-| `/health` | GET | - | Health check |
-| `/api/sync` | POST | 20/10min | Sync configurazione corriere |
-| `/api/sync-shipments` | POST | 20/10min | Sync spedizioni |
-| `/api/cron/sync` | GET | 20/10min | Sync automatico via cron |
-| `/api/diagnostics` | POST | 30/min | Salva evento diagnostico |
+| Endpoint              | Metodo | Rate Limit | Descrizione                  |
+| --------------------- | ------ | ---------- | ---------------------------- |
+| `/health`             | GET    | -          | Health check                 |
+| `/api/sync`           | POST   | 20/10min   | Sync configurazione corriere |
+| `/api/sync-shipments` | POST   | 20/10min   | Sync spedizioni              |
+| `/api/cron/sync`      | GET    | 20/10min   | Sync automatico via cron     |
+| `/api/diagnostics`    | POST   | 30/min     | Salva evento diagnostico     |
 
 ### Autenticazione
 
 Tutti gli endpoint (tranne `/health`) richiedono:
+
 - Header `Authorization: Bearer <token>`
 - Token valido in `DIAGNOSTICS_TOKEN` o `AUTOMATION_SERVICE_TOKEN`
 
@@ -461,26 +500,33 @@ Tutti gli endpoint (tranne `/health`) richiedono:
 ## 🔄 PROSSIMI PASSI SUGGERITI
 
 ### 1. Dashboard Eventi (Opzionale)
+
 Creare pagina Next.js per visualizzare eventi diagnostici:
+
 - Lista eventi in tempo reale
 - Filtri per type, severity, data
 - Grafici statistiche
 - Export dati
 
 ### 2. Alerting (Opzionale)
+
 Implementare notifiche per eventi critici:
+
 - Email per errori `critical`
 - Webhook per integrazioni
 - Dashboard alert
 
 ### 3. Monitoring Performance
+
 Aggiungere metriche:
+
 - Tempo risposta endpoint
 - Utilizzo memoria
 - Errori rate
 - Throughput richieste
 
 ### 4. Deploy Produzione
+
 - Configurare variabili su Vercel
 - Testare endpoint in produzione
 - Monitorare eventi reali
@@ -490,21 +536,25 @@ Aggiungere metriche:
 ## 📝 NOTE TECNICHE
 
 ### Rate Limiting
+
 - **Diagnostics:** 30 richieste/minuto (window 1 minuto)
 - **Sync:** 20 richieste/10 minuti (window 10 minuti)
 - Messaggio errore: `429 Too Many Requests`
 
 ### Validazione Context
+
 - **Dimensione max:** 10KB (JSON stringificato)
 - **Profondità max:** 3 livelli annidati
 - **Formato:** JSONB in Supabase
 
 ### Lazy Initialization
+
 - Supabase client inizializzato solo quando necessario
 - Evita crash se variabili non configurate
 - Permette sviluppo locale senza Supabase
 
 ### Sicurezza
+
 - Token Bearer per autenticazione
 - Rate limiting per prevenire abuse
 - RLS in Supabase per sicurezza dati
@@ -525,6 +575,7 @@ Aggiungere metriche:
 ## 📞 SUPPORTO
 
 Per problemi o domande:
+
 1. Verifica file `.env` contiene tutti i valori
 2. Controlla log server per errori
 3. Esegui `.\test-diagnostics.bat` per test rapido

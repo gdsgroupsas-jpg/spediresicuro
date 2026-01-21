@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { TrendingUp, TrendingDown, Calendar } from 'lucide-react'
-import type { PlatformMonthlyPnL } from '@/actions/platform-costs'
+import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import type { PlatformMonthlyPnL } from '@/actions/platform-costs';
 
 interface MonthlyPnLProps {
-  data: PlatformMonthlyPnL[]
-  isLoading: boolean
+  data: PlatformMonthlyPnL[];
+  isLoading: boolean;
 }
 
 export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
@@ -21,7 +21,7 @@ export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   if (data.length === 0) {
@@ -37,17 +37,30 @@ export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
           <p className="text-gray-500">Nessun dato disponibile</p>
         </div>
       </div>
-    )
+    );
   }
 
   // Calcola il max per la barra di progresso relativa
-  const maxMargin = Math.max(...data.map(d => Math.abs(d.gross_margin)))
+  const maxMargin = Math.max(...data.map((d) => Math.abs(d.gross_margin)));
 
   const formatMonth = (monthStr: string) => {
-    const [year, month] = monthStr.split('-')
-    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic']
-    return `${monthNames[parseInt(month) - 1]} ${year}`
-  }
+    const [year, month] = monthStr.split('-');
+    const monthNames = [
+      'Gen',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mag',
+      'Giu',
+      'Lug',
+      'Ago',
+      'Set',
+      'Ott',
+      'Nov',
+      'Dic',
+    ];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -61,9 +74,9 @@ export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
 
       <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
         {data.map((month, index) => {
-          const isPositive = month.gross_margin >= 0
-          const barWidth = maxMargin > 0 ? (Math.abs(month.gross_margin) / maxMargin) * 100 : 0
-          
+          const isPositive = month.gross_margin >= 0;
+          const barWidth = maxMargin > 0 ? (Math.abs(month.gross_margin) / maxMargin) * 100 : 0;
+
           return (
             <div key={month.month} className="group">
               <div className="flex items-center justify-between mb-2">
@@ -81,25 +94,32 @@ export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-500" />
                   )}
-                  <span className={`text-sm font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  <span
+                    className={`text-sm font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}
+                  >
                     €{month.gross_margin.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
-              
+
               {/* Progress bar */}
               <div className="h-6 bg-gray-100 rounded-lg overflow-hidden relative">
-                <div 
+                <div
                   className={`h-full rounded-lg transition-all duration-500 ${
-                    isPositive ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-red-400 to-red-600'
+                    isPositive
+                      ? 'bg-gradient-to-r from-green-400 to-green-600'
+                      : 'bg-gradient-to-r from-red-400 to-red-600'
                   }`}
                   style={{ width: `${Math.max(barWidth, 2)}%` }}
                 />
                 <div className="absolute inset-0 flex items-center px-3 justify-between text-xs">
                   <span className="text-white font-medium drop-shadow-sm">
-                    Ricavi: €{month.total_revenue.toLocaleString('it-IT', { minimumFractionDigits: 0 })}
+                    Ricavi: €
+                    {month.total_revenue.toLocaleString('it-IT', { minimumFractionDigits: 0 })}
                   </span>
-                  <span className={`font-medium ${barWidth > 50 ? 'text-white drop-shadow-sm' : 'text-gray-600'}`}>
+                  <span
+                    className={`font-medium ${barWidth > 50 ? 'text-white drop-shadow-sm' : 'text-gray-600'}`}
+                  >
                     {month.margin_percent_of_revenue.toFixed(1)}%
                   </span>
                 </div>
@@ -109,11 +129,15 @@ export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
               <div className="grid grid-cols-4 gap-2 mt-2 text-xs text-gray-500 opacity-60 group-hover:opacity-100 transition-opacity">
                 <div>
                   <span className="block text-gray-400">Ricavi</span>
-                  <span className="font-medium text-gray-700">€{month.total_revenue.toLocaleString('it-IT')}</span>
+                  <span className="font-medium text-gray-700">
+                    €{month.total_revenue.toLocaleString('it-IT')}
+                  </span>
                 </div>
                 <div>
                   <span className="block text-gray-400">Costi</span>
-                  <span className="font-medium text-gray-700">€{month.total_cost.toLocaleString('it-IT')}</span>
+                  <span className="font-medium text-gray-700">
+                    €{month.total_cost.toLocaleString('it-IT')}
+                  </span>
                 </div>
                 <div>
                   <span className="block text-gray-400">Utenti</span>
@@ -121,15 +145,17 @@ export function MonthlyPnL({ data, isLoading }: MonthlyPnLProps) {
                 </div>
                 <div>
                   <span className="block text-gray-400">Margini &lt;0</span>
-                  <span className={`font-medium ${month.negative_margin_count > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <span
+                    className={`font-medium ${month.negative_margin_count > 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {month.negative_margin_count}
                   </span>
                 </div>
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

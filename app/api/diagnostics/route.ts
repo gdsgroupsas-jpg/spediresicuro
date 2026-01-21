@@ -10,14 +10,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const supabaseAdmin = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null;
+const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    : null;
 
 /**
  * POST /api/diagnostics
@@ -52,9 +53,9 @@ export async function POST(request: NextRequest) {
     const validTypes = ['error', 'warning', 'info', 'performance', 'user_action'];
     if (!type || !validTypes.includes(type)) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `type deve essere uno di: ${validTypes.join(', ')}` 
+        {
+          success: false,
+          error: `type deve essere uno di: ${validTypes.join(', ')}`,
         },
         { status: 400 }
       );
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
           success: true,
           id: `temp-${Date.now()}`,
           message: 'Diagnostic event queued (database not configured)',
-          warning: 'Supabase not configured - event not persisted'
+          warning: 'Supabase not configured - event not persisted',
         },
         { status: 200 }
       );
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
         type,
         severity: severity || 'low',
         context: context || {},
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select('id')
       .single();
@@ -88,10 +89,10 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Errore salvando diagnostic event:', error);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Errore salvando evento diagnostico',
-          details: error.message 
+          details: error.message,
         },
         { status: 500 }
       );
@@ -102,18 +103,17 @@ export async function POST(request: NextRequest) {
         success: true,
         id: data.id,
         message: 'Evento diagnostico salvato con successo',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       { status: 200 }
     );
-
   } catch (error: any) {
     console.error('Errore in POST /api/diagnostics:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Errore interno del server',
-        details: error.message 
+        details: error.message,
       },
       { status: 500 }
     );
@@ -130,7 +130,7 @@ export async function GET() {
       status: 'ok',
       service: 'diagnostics-api',
       timestamp: new Date().toISOString(),
-      supabase_configured: !!supabaseAdmin
+      supabase_configured: !!supabaseAdmin,
     },
     { status: 200 }
   );

@@ -142,6 +142,7 @@ SELECT * FROM pg_policies WHERE tablename = 'users' AND policyname = 'users_sele
 ## ⚠️ Rollback (se necessario)
 
 Le migrazioni sono **non breaking** e usano `IF NOT EXISTS`, quindi:
+
 - Possono essere eseguite più volte senza problemi
 - Non rimuovono dati esistenti
 - Mantengono fallback a `parent_id` e `role`

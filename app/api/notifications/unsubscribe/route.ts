@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // 1. Verifica autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 2. Leggi endpoint dal body
     const { endpoint } = await request.json();
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       .from('push_subscriptions')
       .delete()
       .eq('endpoint', endpoint)
-      .eq('user_email', session.user.email);
+      .eq('user_email', context!.actor.email);
 
     if (error) {
       return handleApiError(error, 'POST /api/notifications/unsubscribe - delete subscription');

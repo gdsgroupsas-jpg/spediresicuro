@@ -12,11 +12,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Home,
-  ChevronRight,
-  ArrowLeft,
-} from 'lucide-react';
+import { Home, ChevronRight, ArrowLeft } from 'lucide-react';
 
 interface BreadcrumbItem {
   label: string;
@@ -42,42 +38,44 @@ export default function PageHeader({
   const router = useRouter();
 
   // Genera breadcrumbs automatici se non forniti
-  const autoBreadcrumbs: BreadcrumbItem[] = breadcrumbs || (() => {
-    const paths = pathname.split('/').filter(Boolean);
-    const items: BreadcrumbItem[] = [];
+  const autoBreadcrumbs: BreadcrumbItem[] =
+    breadcrumbs ||
+    (() => {
+      const paths = pathname.split('/').filter(Boolean);
+      const items: BreadcrumbItem[] = [];
 
-    if (paths.length > 1) {
-      if (paths[1] === 'spedizioni') {
-        items.push({ label: 'Spedizioni', href: '/dashboard/spedizioni' });
-        if (paths[2] === 'nuova') {
-          items.push({ label: 'Nuova Spedizione' });
-        } else if (paths[2]) {
-          items.push({ label: 'Dettaglio Spedizione' });
+      if (paths.length > 1) {
+        if (paths[1] === 'spedizioni') {
+          items.push({ label: 'Spedizioni', href: '/dashboard/spedizioni' });
+          if (paths[2] === 'nuova') {
+            items.push({ label: 'Nuova Spedizione' });
+          } else if (paths[2]) {
+            items.push({ label: 'Dettaglio Spedizione' });
+          }
+        } else if (paths[1] === 'listini') {
+          items.push({ label: 'Listini', href: '/dashboard/listini' });
+          if (paths[2]) {
+            items.push({ label: 'Dettaglio Listino' });
+          }
+        } else if (paths[1] === 'admin') {
+          items.push({ label: 'Admin Panel' });
+        } else if (paths[1] === 'super-admin') {
+          items.push({ label: 'Super Admin' });
+        } else if (paths[1] === 'team') {
+          items.push({ label: 'Gestione Team' });
+        } else if (paths[1] === 'posta') {
+          items.push({ label: 'Posta' });
+        } else if (paths[1] === 'integrazioni') {
+          items.push({ label: 'Integrazioni' });
+        } else if (paths[1] === 'impostazioni') {
+          items.push({ label: 'Impostazioni' });
+        } else if (paths[1] === 'dati-cliente') {
+          items.push({ label: 'Dati Cliente' });
         }
-      } else if (paths[1] === 'listini') {
-        items.push({ label: 'Listini', href: '/dashboard/listini' });
-        if (paths[2]) {
-          items.push({ label: 'Dettaglio Listino' });
-        }
-      } else if (paths[1] === 'admin') {
-        items.push({ label: 'Admin Panel' });
-      } else if (paths[1] === 'super-admin') {
-        items.push({ label: 'Super Admin' });
-      } else if (paths[1] === 'team') {
-        items.push({ label: 'Gestione Team' });
-      } else if (paths[1] === 'posta') {
-        items.push({ label: 'Posta' });
-      } else if (paths[1] === 'integrazioni') {
-        items.push({ label: 'Integrazioni' });
-      } else if (paths[1] === 'impostazioni') {
-        items.push({ label: 'Impostazioni' });
-      } else if (paths[1] === 'dati-cliente') {
-        items.push({ label: 'Dati Cliente' });
       }
-    }
 
-    return items;
-  })();
+      return items;
+    })();
 
   return (
     <div className="px-4 lg:px-8 py-6">
@@ -103,9 +101,7 @@ export default function PageHeader({
                   {item.label}
                 </Link>
               ) : (
-                <span className="text-orange-600 font-semibold">
-                  {item.label}
-                </span>
+                <span className="text-orange-600 font-semibold">{item.label}</span>
               )}
             </div>
           ))}
@@ -126,24 +122,14 @@ export default function PageHeader({
                   <ArrowLeft className="w-5 h-5 text-gray-700 group-hover:text-orange-600 transition-colors" />
                 </button>
               )}
-              {title && (
-                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-                  {title}
-                </h1>
-              )}
+              {title && <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{title}</h1>}
             </div>
-            {subtitle && (
-              <p className="text-gray-600 lg:ml-14 text-sm lg:text-base">
-                {subtitle}
-              </p>
-            )}
+            {subtitle && <p className="text-gray-600 lg:ml-14 text-sm lg:text-base">{subtitle}</p>}
           </div>
 
           {/* Quick Actions */}
           {actions && (
-            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-              {actions}
-            </div>
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">{actions}</div>
           )}
         </div>
       )}

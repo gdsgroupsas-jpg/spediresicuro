@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Agent Context (agent_context e ActingContext injection)
- * 
+ *
  * Test per verificare:
  * - AgentState contiene agent_context con ActingContext
  * - supervisor-router inietta ActingContext correttamente
@@ -131,11 +131,12 @@ describe('Agent Context', () => {
       if (state.agent_context) {
         expect(typeof state.agent_context.session_id).toBe('string');
         expect(Array.isArray(state.agent_context.conversation_history)).toBe(true);
-        expect(['user', 'admin', 'reseller', 'superadmin']).toContain(state.agent_context.user_role);
+        expect(['user', 'admin', 'reseller', 'superadmin']).toContain(
+          state.agent_context.user_role
+        );
         expect(typeof state.agent_context.is_impersonating).toBe('boolean');
         expect(state.agent_context.acting_context).toBeDefined();
       }
     });
   });
 });
-

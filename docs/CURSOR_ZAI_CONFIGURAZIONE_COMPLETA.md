@@ -38,6 +38,7 @@ Per completare la configurazione, verifica che:
 ## 🔍 Checklist Completa
 
 ### Configurazione Modello
+
 - [x] OpenAI API Key inserita e attiva
 - [x] Override OpenAI Base URL configurato correttamente
 - [ ] **Model Name**: `GLM-4.7` (verifica)
@@ -45,6 +46,7 @@ Per completare la configurazione, verifica che:
 - [ ] Modello selezionato e funzionante
 
 ### Configurazione MCP (Vision Server)
+
 - [x] Node.js v22.11.0 installato
 - [x] File `.cursor/mcp.json` creato
 - [x] API Key configurata in mcp.json
@@ -58,6 +60,7 @@ Per completare la configurazione, verifica che:
 ### 1. Verifica Model Name
 
 Se non l'hai già fatto:
+
 1. Vai su **Settings** → **Models**
 2. Seleziona il provider che hai configurato
 3. Verifica che "Model Name" sia esattamente: `GLM-4.7`
@@ -67,12 +70,13 @@ Se non l'hai già fatto:
 
 1. Seleziona "GLM-4.7" dal menu modelli in alto
 2. Apri Cursor Chat
-3. Prova una domanda semplice: *"Ciao, funzioni?"*
+3. Prova una domanda semplice: _"Ciao, funzioni?"_
 4. Verifica che risponda correttamente
 
 ### 3. Riavvia Cursor (per MCP)
 
 Per abilitare i tool Vision MCP:
+
 1. **Chiudi completamente Cursor**
 2. **Riapri Cursor**
 3. I tool MCP saranno disponibili automaticamente
@@ -82,16 +86,19 @@ Per abilitare i tool Vision MCP:
 ## 🐛 Se Qualcosa Non Funziona
 
 ### Modello non risponde
+
 - Verifica che "Model Name" sia esattamente `GLM-4.7` (maiuscolo)
 - Controlla i crediti su Z.AI
 - Verifica connessione internet
 
 ### Tool MCP non disponibili
+
 - Riavvia Cursor completamente
 - Verifica che `.cursor/mcp.json` esista
 - Controlla i log di Cursor per errori
 
 ### Errori di autenticazione
+
 - Verifica che l'API Key sia corretta
 - Controlla che sia la chiave del **GLM Coding Plan**
 - Verifica che l'account Z.AI sia attivo
@@ -101,6 +108,7 @@ Per abilitare i tool Vision MCP:
 ## 📋 Riepilogo Configurazione
 
 ### Modello GLM-4.7
+
 ```
 Protocol: OpenAI Protocol ✅
 API Key: Configurata ✅
@@ -109,6 +117,7 @@ Model Name: GLM-4.7 (verifica) ⚠️
 ```
 
 ### Vision MCP Server
+
 ```
 Node.js: v22.11.0 ✅
 Config File: .cursor/mcp.json ✅
@@ -128,4 +137,4 @@ Dopo aver verificato il Model Name e riavviato Cursor:
 
 ---
 
-*Ultimo aggiornamento: 2025-01-27*
+_Ultimo aggiornamento: 2025-01-27_

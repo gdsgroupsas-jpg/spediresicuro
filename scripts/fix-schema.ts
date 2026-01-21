@@ -28,7 +28,7 @@ async function main() {
   try {
     // 1. Verifica struttura attuale
     console.log('📋 1. Analisi struttura attuale...\n');
-    
+
     const { data: sample, error: sampleError } = await supabase
       .from('geo_locations')
       .select('*')
@@ -54,7 +54,7 @@ async function main() {
 
     // 3. Genera script di correzione
     console.log('📋 3. Generazione script correzione...\n');
-    
+
     const fixes: string[] = [];
 
     // Verifica e aggiungi colonne mancanti
@@ -63,7 +63,7 @@ async function main() {
       name: 'TEXT NOT NULL',
       province: 'TEXT NOT NULL',
       region: 'TEXT',
-      caps: 'TEXT[] NOT NULL DEFAULT \'{}\'',
+      caps: "TEXT[] NOT NULL DEFAULT '{}'",
       search_vector: 'tsvector',
       created_at: 'TIMESTAMPTZ DEFAULT NOW()',
       updated_at: 'TIMESTAMPTZ DEFAULT NOW()',
@@ -71,7 +71,7 @@ async function main() {
 
     if (sample && sample.length > 0) {
       const existingColumns = Object.keys(sample[0]);
-      
+
       for (const [colName, colDef] of Object.entries(requiredColumns)) {
         if (!existingColumns.includes(colName)) {
           if (colName === 'search_vector') {
@@ -124,7 +124,8 @@ async function main() {
     fixes.unshift('CREATE EXTENSION IF NOT EXISTS pg_trgm;');
 
     // 6. Aggiungi funzione e trigger per updated_at
-    fixes.push(`
+    fixes.push(
+      `
 CREATE OR REPLACE FUNCTION update_geo_locations_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -132,15 +133,18 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-    `.trim());
+    `.trim()
+    );
 
-    fixes.push(`
+    fixes.push(
+      `
 DROP TRIGGER IF EXISTS trigger_update_geo_locations_updated_at ON geo_locations;
 CREATE TRIGGER trigger_update_geo_locations_updated_at
   BEFORE UPDATE ON geo_locations
   FOR EACH ROW
   EXECUTE FUNCTION update_geo_locations_updated_at();
-    `.trim());
+    `.trim()
+    );
 
     // 7. Salva script di correzione
     const fixScript = fixes.join('\n\n');
@@ -164,7 +168,6 @@ CREATE TRIGGER trigger_update_geo_locations_updated_at
     console.log('3. Copia tutto il contenuto\n');
     console.log('4. Incolla nel SQL Editor e esegui (Ctrl+Enter)\n');
     console.log('5. Oppure dimmi "esegui" e lo faccio io automaticamente\n');
-
   } catch (error) {
     console.error('\n❌ ERRORE:', error);
     process.exit(1);
@@ -172,14 +175,3 @@ CREATE TRIGGER trigger_update_geo_locations_updated_at
 }
 
 main();
-
-
-
-
-
-
-
-
-
-
-

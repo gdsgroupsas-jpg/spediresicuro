@@ -1,11 +1,11 @@
 /**
  * Script di Seeding per Geo-Locations
- * 
+ *
  * Scarica i dati dei comuni italiani da GitHub e li popola in Supabase.
- * 
+ *
  * Utilizzo:
  *   npm run seed:geo
- * 
+ *
  * Requisiti:
  *   - Variabile SUPABASE_SERVICE_ROLE_KEY configurata in .env.local
  *   - Tabella geo_locations creata in Supabase (eseguire schema.sql prima)
@@ -21,7 +21,8 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 // Configurazione
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json';
+const GITHUB_JSON_URL =
+  'https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json';
 
 // Interfaccia per i dati dal JSON GitHub
 interface ComuneJSON {
@@ -53,9 +54,13 @@ function transformComune(comune: ComuneJSON): GeoLocationRow {
   // Controlli di sicurezza per evitare errori con valori undefined/null
   const nome = comune.nome?.trim() || '';
   // Usa la sigla (es. "PD", "RM") se disponibile, altrimenti il codice provincia
-  const provinciaCode = (comune.sigla?.trim() || comune.provincia?.codice?.trim() || '').toUpperCase();
+  const provinciaCode = (
+    comune.sigla?.trim() ||
+    comune.provincia?.codice?.trim() ||
+    ''
+  ).toUpperCase();
   const regione = comune.regione?.nome?.trim() || '';
-  const caps = Array.isArray(comune.cap) 
+  const caps = Array.isArray(comune.cap)
     ? comune.cap.map((cap) => String(cap || '').trim()).filter((cap) => cap.length > 0)
     : [];
 
@@ -89,9 +94,7 @@ async function insertBatch(
     try {
       // Upsert: inserisce o aggiorna se esiste già (basato su name + province)
       // Nota: upsert con onConflict richiede un unique constraint, usiamo insert con ignoreDuplicates
-      const { error } = await supabase
-        .from('geo_locations')
-        .insert(batch as any);
+      const { error } = await supabase.from('geo_locations').insert(batch as any);
 
       if (error) {
         console.error(`❌ Errore batch ${batchNum}/${totalBatches}:`, error.message);
@@ -170,15 +173,14 @@ async function main() {
       })
       .map(transformComune)
       .filter((loc) => loc.name && loc.province && loc.region); // Filtra anche dopo trasformazione per sicurezza
-    
-    console.log(`✅ Trasformati ${geoLocations.length} comuni (${comuniJSON.length - geoLocations.length} esclusi per dati incompleti)\n`);
+
+    console.log(
+      `✅ Trasformati ${geoLocations.length} comuni (${comuniJSON.length - geoLocations.length} esclusi per dati incompleti)\n`
+    );
 
     // 3. Verifica che la tabella esista
     console.log('🔍 Verifica tabella geo_locations...');
-    const { error: tableError } = await supabase
-      .from('geo_locations')
-      .select('id')
-      .limit(1);
+    const { error: tableError } = await supabase.from('geo_locations').select('id').limit(1);
 
     if (tableError) {
       console.error('❌ ERRORE: Tabella geo_locations non trovata!');
@@ -218,4 +220,3 @@ main().catch((error) => {
   console.error('Errore non gestito:', error);
   process.exit(1);
 });
-

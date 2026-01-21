@@ -24,28 +24,261 @@ SpedireSicuro espone API REST per:
 
 ## 🔐 **Authentication**
 
-Tutte le API richiedono autenticazione via NextAuth.js session.
+SpedireSicuro API supports **two authentication methods**:
 
-### **Session-based (Web)**
+### **1. Cookie-Based Authentication (Web/Browser)**
+
+Used automatically by the web application. Handled by NextAuth.js session cookies.
 
 ```typescript
-// Automatic via NextAuth.js
+// Automatic authentication via browser cookies
 // Cookie: next-auth.session-token
+
+// No special headers required when using web app
+fetch('/api/quotes/realtime', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    /* data */
+  }),
+  credentials: 'include', // Include cookies
+});
 ```
 
-### **API Key (Server-to-Server)**
+**Use case:** Web dashboard, browser-based integrations
+
+---
+
+### **2. API Key Authentication (Server-to-Server)**
+
+Used for external server integrations and programmatic access.
+
+#### **Obtaining an API Key**
+
+1. Log in to SpedireSicuro dashboard
+2. Navigate to **Settings → API Keys**
+3. Click **"Create New API Key"**
+4. Set permissions (scopes) and expiry
+5. **Copy the key immediately** (shown only once, never retrievable)
+
+#### **Using an API Key**
+
+Include the API key in the `Authorization` header as a Bearer token:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-  https://spediresicuro.vercel.app/api/shipments
+curl -X POST https://spediresicuro.vercel.app/api/quotes/realtime \
+  -H "Authorization: Bearer sk_live_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "weight": 5.0,
+    "origin": { "zip": "20100" },
+    "destination": { "zip": "00100" }
+  }'
 ```
 
-**Ottenere API key:**
+**JavaScript/TypeScript:**
 
-1. Login su dashboard
-2. Settings → API Keys
-3. Generate new key
-4. Store securely (mostrato solo una volta)
+```typescript
+const apiKey = process.env.SPEDIRESICURO_API_KEY; // Store in environment
+
+const response = await fetch('https://spediresicuro.vercel.app/api/quotes/realtime', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    weight: 5.0,
+    origin: { zip: '20100' },
+    destination: { zip: '00100' },
+  }),
+});
+
+const data = await response.json();
+```
+
+**Python:**
+
+```python
+import os
+import requests
+
+api_key = os.environ['SPEDIRESICURO_API_KEY']
+
+response = requests.post(
+    'https://spediresicuro.vercel.app/api/quotes/realtime',
+    headers={'Authorization': f'Bearer {api_key}'},
+    json={
+        'weight': 5.0,
+        'origin': {'zip': '20100'},
+        'destination': {'zip': '00100'},
+    }
+)
+
+data = response.json()
+```
+
+---
+
+#### **API Key Scopes (Permissions)**
+
+API keys have granular permissions. Request only the scopes you need:
+
+| Scope              | Description            | Example Use Case                |
+| ------------------ | ---------------------- | ------------------------------- |
+| `quotes:read`      | Get pricing quotes     | Price calculator widget         |
+| `quotes:create`    | Create price quotes    | Integration with booking system |
+| `shipments:read`   | List shipments         | Dashboard display               |
+| `shipments:create` | Create new shipment    | Automated order fulfillment     |
+| `shipments:update` | Update shipment status | Tracking updates                |
+| `wallet:read`      | View wallet balance    | Account monitoring              |
+| `*`                | Full access (admin)    | Complete integration            |
+
+**Example: Creating a key with limited scopes**
+
+```json
+POST /api/api-keys/create
+
+{
+  "name": "Production Price Calculator",
+  "scopes": ["quotes:read", "quotes:create"],
+  "expiresInDays": 90
+}
+```
+
+---
+
+#### **Security Best Practices**
+
+✅ **DO:**
+
+- Store keys in environment variables (never hardcode)
+- Use minimum required scopes
+- Rotate keys every 90 days
+- Revoke unused keys immediately
+- Monitor usage in dashboard
+- Use HTTPS for all requests
+
+❌ **DON'T:**
+
+- Commit keys to git repositories
+- Share keys in Slack/email
+- Use production keys in development
+- Store keys in client-side code
+- Use wildcard (`*`) scope unless necessary
+
+---
+
+#### **Rate Limiting**
+
+API keys have rate limits to prevent abuse:
+
+- **Default:** 1,000 requests/hour per key
+- **Custom limits:** Contact support for higher limits
+
+Rate limit headers in response:
+
+```http
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 847
+X-RateLimit-Reset: 2026-01-21T15:00:00Z
+```
+
+When rate limit is exceeded:
+
+```json
+HTTP/1.1 429 Too Many Requests
+
+{
+  "error": "Rate limit exceeded",
+  "message": "You have exceeded the rate limit of 1000 requests/hour",
+  "resetAt": "2026-01-21T15:00:00Z"
+}
+```
+
+---
+
+#### **API Key Management Endpoints**
+
+##### **Create API Key**
+
+```http
+POST /api/api-keys/create
+Authorization: Cookie (must be logged in)
+Content-Type: application/json
+
+{
+  "name": "My Integration",
+  "scopes": ["quotes:read", "shipments:read"],
+  "expiresInDays": 90
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-here",
+    "key": "sk_live_abc123...",
+    "keyPrefix": "sk_live_abc12345",
+    "name": "My Integration",
+    "scopes": ["quotes:read", "shipments:read"],
+    "expiresInDays": 90
+  },
+  "message": "⚠️ Save this key securely. It will NEVER be shown again."
+}
+```
+
+##### **List API Keys**
+
+```http
+GET /api/api-keys/list
+Authorization: Cookie (must be logged in)
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "keys": [
+      {
+        "id": "uuid-1",
+        "keyPrefix": "sk_live_abc12345",
+        "name": "Production Integration",
+        "scopes": ["quotes:read", "shipments:read"],
+        "expiresAt": "2026-04-21T00:00:00Z",
+        "rateLimitPerHour": 1000
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+##### **Revoke API Key**
+
+```http
+POST /api/api-keys/revoke
+Authorization: Cookie (must be logged in)
+Content-Type: application/json
+
+{
+  "keyId": "uuid-here"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "API key has been revoked successfully."
+}
+```
 
 ---
 

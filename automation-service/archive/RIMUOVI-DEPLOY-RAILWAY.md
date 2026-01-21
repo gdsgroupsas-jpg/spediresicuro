@@ -1,19 +1,23 @@
 # 🗑️ RIMUOVI TUTTI I DEPLOY PRECEDENTI SU RAILWAY
 
 ## 🎯 OBIETTIVO
+
 Rimuovere tutti i deploy precedenti su Railway per forzare un nuovo deploy pulito con il codice corretto.
 
 ## 📋 PROCEDURA
 
 ### Passo 1: Vai su Railway Dashboard
+
 1. Apri: https://railway.app/dashboard
 2. Seleziona il progetto **"spediresicuro"**
 
 ### Passo 2: Vai su Deployments
+
 1. Clicca su **"Deployments"** o **"Deploys"** nel menu laterale
 2. Vedrai una lista di tutti i deploy precedenti
 
 ### Passo 3: Rimuovi Deploy Vecchi
+
 Per ogni deploy (tranne quello più recente se vuoi tenerlo):
 
 1. **Clicca sui tre puntini (...)** accanto al deploy
@@ -27,6 +31,7 @@ Per ogni deploy (tranne quello più recente se vuoi tenerlo):
 3. Conferma l'eliminazione
 
 ### Passo 4: Forza Nuovo Deploy
+
 Dopo aver rimosso i deploy vecchi:
 
 1. Vai su **"Settings"** → **"Source"**
@@ -38,6 +43,7 @@ Dopo aver rimosso i deploy vecchi:
 3. **OPPURE** clicca su **"Deploy"** o **"New Deploy"** per forzare un nuovo deploy immediato
 
 ### Passo 5: Verifica Nuovo Deploy
+
 1. Vai su **"Deployments"**
 2. Dovresti vedere un nuovo deploy in corso
 3. Controlla i log per verificare che:
@@ -48,6 +54,7 @@ Dopo aver rimosso i deploy vecchi:
 ## ✅ RISULTATO ATTESO
 
 Dopo aver rimosso i deploy vecchi e forzato un nuovo deploy:
+
 - ✅ Railway userà l'ultimo commit da GitHub
 - ✅ Il codice corretto con `Array.from()` sarà usato
 - ✅ Il build completerà senza errori TypeScript
@@ -58,6 +65,7 @@ Dopo aver rimosso i deploy vecchi e forzato un nuovo deploy:
 **Non rimuovere il servizio stesso**, solo i deploy! Il servizio deve rimanere attivo.
 
 Se per sbaglio rimuovi il servizio:
+
 1. Vai su Railway Dashboard
 2. Clicca **"New Project"** o **"Add Service"**
 3. Seleziona **"Deploy from GitHub"**

@@ -1,9 +1,9 @@
 /**
  * Script Node.js per creare utente reseller di test in Supabase
- * 
+ *
  * Crea un utente reseller con email test@spediresicuro.it e password test123
  * Questo utente avrà i campi dati cliente opzionali (non obbligatori)
- * 
+ *
  * Uso:
  *   node scripts/create-test-reseller.js
  */
@@ -21,11 +21,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Errore: NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurati');
+  console.error(
+    '❌ Errore: NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurati'
+  );
   console.error('');
   console.error('   Variabili trovate:');
   console.error('   - NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Configurato' : '❌ Mancante');
-  console.error('   - SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✅ Configurato' : '❌ Mancante');
+  console.error(
+    '   - SUPABASE_SERVICE_ROLE_KEY:',
+    supabaseServiceKey ? '✅ Configurato' : '❌ Mancante'
+  );
   console.error('');
   console.error('   Aggiungi queste variabili al tuo .env.local:');
   console.error('   NEXT_PUBLIC_SUPABASE_URL=https://tuo-progetto.supabase.co');
@@ -39,27 +44,27 @@ async function createTestReseller() {
   const testEmail = 'test@spediresicuro.it';
   const testPassword = 'test123';
   const testName = 'Reseller Test';
-  
+
   // Genera hash password
   const hashedPassword = await bcrypt.hash(testPassword, 10);
-  
+
   console.log('🔐 Hash password generato');
   console.log('📧 Email:', testEmail);
   console.log('🔑 Password:', testPassword);
   console.log('👤 Nome:', testName);
   console.log('🏷️  Tipo: Reseller');
   console.log('');
-  
+
   // Verifica se l'utente esiste già
   const { data: existingUser } = await supabase
     .from('users')
     .select('id, email, is_reseller')
     .eq('email', testEmail)
     .single();
-  
+
   if (existingUser) {
     console.log('⚠️  Utente test@spediresicuro.it esiste già. Aggiornamento...');
-    
+
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -74,19 +79,19 @@ async function createTestReseller() {
       .eq('email', testEmail)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Errore aggiornamento utente:', error);
       process.exit(1);
     }
-    
+
     console.log('✅ Utente reseller aggiornato con successo!');
     console.log('   ID:', data.id);
     console.log('   Email:', data.email);
     console.log('   Is Reseller:', data.is_reseller);
   } else {
     console.log('➕ Creazione nuovo utente reseller di test...');
-    
+
     const { data, error } = await supabase
       .from('users')
       .insert([
@@ -98,25 +103,25 @@ async function createTestReseller() {
           account_type: 'user',
           is_reseller: true, // Flag reseller attivo
           provider: 'credentials',
-          wallet_balance: 0.00,
+          wallet_balance: 0.0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
       ])
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Errore creazione utente:', error);
       process.exit(1);
     }
-    
+
     console.log('✅ Utente reseller creato con successo!');
     console.log('   ID:', data.id);
     console.log('   Email:', data.email);
     console.log('   Is Reseller:', data.is_reseller);
   }
-  
+
   console.log('');
   console.log('📋 Credenziali utente reseller di test:');
   console.log('   Email: test@spediresicuro.it');
@@ -133,5 +138,3 @@ createTestReseller().catch((error) => {
   console.error('❌ Errore:', error);
   process.exit(1);
 });
-
-

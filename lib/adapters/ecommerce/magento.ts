@@ -5,7 +5,15 @@
  * TODO: Implementazione completa
  */
 
-import { EcommerceAdapter, type EcommerceCredentials, type Order, type OrderFilters, type TrackingInfo, type Product, type WebhookEvent } from './base';
+import {
+  EcommerceAdapter,
+  type EcommerceCredentials,
+  type Order,
+  type OrderFilters,
+  type TrackingInfo,
+  type Product,
+  type WebhookEvent,
+} from './base';
 
 export class MagentoAdapter extends EcommerceAdapter {
   constructor(credentials: EcommerceCredentials) {

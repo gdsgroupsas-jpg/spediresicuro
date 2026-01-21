@@ -5,6 +5,7 @@
 **Problema**: 401 Unauthorized dopo aggiornamento API key
 
 **Causa Identificata**:
+
 1. **Multiple auth strategies**: Il codice provava 3 strategie diverse (Bearer, Token, X-API-KEY) invece di usare SOLO Bearer come richiesto dall'OpenAPI spec
 2. **Base URL non validato**: Nessuna verifica che baseUrl sia corretto (demo vs production)
 
@@ -17,6 +18,7 @@
 #### Fix 1: Rimossa strategie fallback multiple (Lines 344-469)
 
 **PRIMA**: Provava 3 strategie in sequenza
+
 ```typescript
 const authStrategies = [
   { name: 'Bearer', header: 'Authorization', value: `Bearer ${this.API_KEY}` },
@@ -26,17 +28,19 @@ const authStrategies = [
 ```
 
 **DOPO**: Usa SOLO Bearer token (OpenAPI spec)
+
 ```typescript
 const headers: Record<string, string> = {
   'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  'Authorization': `Bearer ${this.API_KEY}`,
+  Accept: 'application/json',
+  Authorization: `Bearer ${this.API_KEY}`,
 };
 ```
 
 #### Fix 2: Validazione baseUrl (Lines 156-180)
 
 **Aggiunto**:
+
 - Validazione formato baseUrl
 - Warning se baseUrl non contiene `spedisci.online`
 - Warning se baseUrl non contiene `/api/v2`
@@ -45,6 +49,7 @@ const headers: Record<string, string> = {
 #### Fix 3: Logging diagnostico migliorato
 
 **Aggiunto**:
+
 - Log pre-request con baseUrl e fingerprint API key
 - Log errore 401 con hint diagnostici
 - Messaggio errore più dettagliato per 401
@@ -56,20 +61,24 @@ const headers: Record<string, string> = {
 ### `lib/adapters/couriers/spedisci-online.ts`
 
 **Lines 156-180** (Constructor):
+
 - Aggiunta validazione baseUrl
 - Aggiunto logging baseUrl (demo vs production)
 - Warning se formato errato
 
 **Lines 344-469** (createShipmentJSON):
+
 - Rimossa logica loop strategie multiple
 - Usa SOLO Bearer token
 - Migliorato logging diagnostico
 - Messaggi errore più chiari
 
 **Lines 320-335** (getTracking):
+
 - ✅ Già usa Bearer correttamente (nessun cambio)
 
 **Lines 182-195** (connect):
+
 - ✅ Già usa Bearer correttamente (nessun cambio)
 
 ---
@@ -79,6 +88,7 @@ const headers: Record<string, string> = {
 ### Test 1: Verifica Base URL nei Log
 
 **Dopo deploy, cerca nei log Vercel**:
+
 ```
 🔧 [SPEDISCI.ONLINE] Base URL configurato: {
   baseUrl: "https://...",
@@ -88,6 +98,7 @@ const headers: Record<string, string> = {
 ```
 
 **Se `isDemo: true` ma dovrebbe essere production**:
+
 - Verifica configurazione in `/dashboard/admin/configurations`
 - Base URL production: `https://{tuodominio}.spedisci.online/api/v2/`
 
@@ -98,6 +109,7 @@ const headers: Record<string, string> = {
 3. **Verifica log Vercel**:
 
 **Successo**:
+
 ```
 📡 [SPEDISCI.ONLINE] API call: {
   method: "POST",
@@ -115,6 +127,7 @@ const headers: Record<string, string> = {
 ```
 
 **Errore 401 (se ancora presente)**:
+
 ```
 ❌ [SPEDISCI.ONLINE] API error: {
   status: 401,
@@ -127,7 +140,7 @@ const headers: Record<string, string> = {
 
 ```sql
 -- In Supabase SQL Editor
-SELECT 
+SELECT
   name,
   provider_id,
   base_url,
@@ -140,6 +153,7 @@ ORDER BY is_default DESC;
 ```
 
 **Verifica**:
+
 - ✅ `base_url` contiene `spedisci.online`
 - ✅ `base_url` contiene `/api/v2`
 - ✅ `base_url` corretto per ambiente (demo vs production)

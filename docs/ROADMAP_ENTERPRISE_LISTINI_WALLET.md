@@ -4,7 +4,7 @@
 > **Versione:** 1.0.0  
 > **Data:** 2026-01-07  
 > **Owner:** Engineering Lead  
-> **Stakeholder:** Product, Finance, Security  
+> **Stakeholder:** Product, Finance, Security
 
 ---
 
@@ -14,12 +14,12 @@ Questo documento definisce il piano di implementazione per portare il sistema Li
 
 ### Criticità Identificate
 
-| ID | Criticità | Severità | Business Impact |
-|----|-----------|----------|-----------------|
-| **C-001** | Mancato tracking costi piattaforma | 🔴 CRITICAL | Impossibile calcolare P&L reale |
-| **C-002** | UX frammentata clienti/listini | 🟡 HIGH | Churn reseller, inefficienza operativa |
-| **C-003** | Nessuna riconciliazione automatica | 🔴 CRITICAL | Rischio contabile, audit failure |
-| **C-004** | Architettura non scalabile | 🟡 HIGH | Tech debt, difficoltà manutenzione |
+| ID        | Criticità                          | Severità    | Business Impact                        |
+| --------- | ---------------------------------- | ----------- | -------------------------------------- |
+| **C-001** | Mancato tracking costi piattaforma | 🔴 CRITICAL | Impossibile calcolare P&L reale        |
+| **C-002** | UX frammentata clienti/listini     | 🟡 HIGH     | Churn reseller, inefficienza operativa |
+| **C-003** | Nessuna riconciliazione automatica | 🔴 CRITICAL | Rischio contabile, audit failure       |
+| **C-004** | Architettura non scalabile         | 🟡 HIGH     | Tech debt, difficoltà manutenzione     |
 
 ### Obiettivi
 
@@ -52,7 +52,7 @@ Questo documento definisce il piano di implementazione per portare il sistema Li
 
 **Durata:** 2 settimane  
 **Priorità:** P0 - CRITICAL  
-**Obiettivo:** Tracciamento completo flusso finanziario piattaforma  
+**Obiettivo:** Tracciamento completo flusso finanziario piattaforma
 
 ---
 
@@ -60,7 +60,7 @@ Questo documento definisce il piano di implementazione per portare il sistema Li
 
 **Epic:** Financial Tracking Infrastructure  
 **Effort:** 3 giorni  
-**Risk:** Medium (migration su produzione)  
+**Risk:** Medium (migration su produzione)
 
 #### 1.1.1 Creare tabella `platform_provider_costs`
 
@@ -71,48 +71,48 @@ Questo documento definisce il piano di implementazione per portare il sistema Li
 
 CREATE TABLE platform_provider_costs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  
+
   -- Riferimento spedizione
   shipment_id UUID NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
   shipment_tracking_number TEXT NOT NULL,
-  
+
   -- Chi ha fatto la spedizione (Reseller o suo cliente)
   billed_user_id UUID NOT NULL REFERENCES users(id),
   billed_amount DECIMAL(10,2) NOT NULL, -- Quanto abbiamo addebitato al Reseller
-  
+
   -- Costo reale piattaforma
   provider_cost DECIMAL(10,2) NOT NULL, -- Quanto paghiamo noi al corriere
   platform_margin DECIMAL(10,2) GENERATED ALWAYS AS (billed_amount - provider_cost) STORED,
   platform_margin_percent DECIMAL(5,2) GENERATED ALWAYS AS (
-    CASE WHEN provider_cost > 0 
+    CASE WHEN provider_cost > 0
     THEN ((billed_amount - provider_cost) / provider_cost * 100)
     ELSE 0 END
   ) STORED,
-  
+
   -- Fonte API (quale contratto è stato usato)
   api_source TEXT NOT NULL CHECK (api_source IN ('platform', 'reseller_own', 'byoc_own')),
   price_list_id UUID REFERENCES price_lists(id),
   master_price_list_id UUID REFERENCES price_lists(id), -- Se derivato da master
-  
+
   -- Corriere e servizio
   courier_code TEXT NOT NULL,
   service_type TEXT,
-  
+
   -- Stato riconciliazione
-  reconciliation_status TEXT NOT NULL DEFAULT 'pending' 
+  reconciliation_status TEXT NOT NULL DEFAULT 'pending'
     CHECK (reconciliation_status IN ('pending', 'matched', 'discrepancy', 'resolved')),
   reconciliation_notes TEXT,
   reconciled_at TIMESTAMPTZ,
   reconciled_by UUID REFERENCES users(id),
-  
+
   -- Provider invoice matching
   provider_invoice_id TEXT, -- ID fattura corriere
   provider_invoice_date DATE,
-  
+
   -- Audit
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   -- Constraint: una sola entry per spedizione
   CONSTRAINT unique_shipment_cost UNIQUE (shipment_id)
 );
@@ -130,17 +130,18 @@ ALTER TABLE platform_provider_costs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ppc_superadmin_only ON platform_provider_costs
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
       AND users.account_type = 'superadmin'
     )
   );
 
-COMMENT ON TABLE platform_provider_costs IS 
+COMMENT ON TABLE platform_provider_costs IS
   'Traccia i costi reali che SpedireSicuro paga ai corrieri per spedizioni effettuate con contratti piattaforma. Usato per P&L e riconciliazione.';
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Tabella creata con tutti i campi
 - [ ] RLS policy attiva (solo superadmin)
 - [ ] Indici per query reporting < 100ms
@@ -157,7 +158,7 @@ COMMENT ON TABLE platform_provider_costs IS
 -- File: supabase/migrations/091_shipments_api_source.sql
 
 -- Aggiungere campo api_source
-ALTER TABLE shipments 
+ALTER TABLE shipments
 ADD COLUMN IF NOT EXISTS api_source TEXT DEFAULT 'unknown'
   CHECK (api_source IN ('platform', 'reseller_own', 'byoc_own', 'unknown'));
 
@@ -168,11 +169,12 @@ ADD COLUMN IF NOT EXISTS price_list_used_id UUID REFERENCES price_lists(id);
 -- Indice per filtering
 CREATE INDEX IF NOT EXISTS idx_shipments_api_source ON shipments(api_source);
 
-COMMENT ON COLUMN shipments.api_source IS 
+COMMENT ON COLUMN shipments.api_source IS
   'Indica quale API/contratto è stato usato: platform (SpedireSicuro), reseller_own (contratto proprio), byoc_own (BYOC), unknown (legacy)';
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Campo aggiunto senza downtime
 - [ ] Default 'unknown' per record esistenti
 - [ ] Backfill script per record storici (best-effort)
@@ -186,7 +188,7 @@ COMMENT ON COLUMN shipments.api_source IS
 
 -- Vista giornaliera P&L
 CREATE OR REPLACE VIEW v_platform_daily_pnl AS
-SELECT 
+SELECT
   DATE(ppc.created_at) AS date,
   ppc.courier_code,
   COUNT(*) AS shipments_count,
@@ -202,7 +204,7 @@ ORDER BY date DESC, courier_code;
 
 -- Vista mensile per reseller
 CREATE OR REPLACE VIEW v_reseller_monthly_platform_usage AS
-SELECT 
+SELECT
   DATE_TRUNC('month', ppc.created_at) AS month,
   ppc.billed_user_id,
   u.email AS user_email,
@@ -221,6 +223,7 @@ COMMENT ON VIEW v_reseller_monthly_platform_usage IS 'Usage mensile per reseller
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Viste create e query < 500ms su 100k record
 - [ ] Accesso limitato a superadmin via RLS underlying tables
 
@@ -230,7 +233,7 @@ COMMENT ON VIEW v_reseller_monthly_platform_usage IS 'Usage mensile per reseller
 
 **Epic:** Financial Tracking Infrastructure  
 **Effort:** 2 giorni  
-**Risk:** High (modifica flusso critico)  
+**Risk:** High (modifica flusso critico)
 
 #### 1.2.1 Modificare `create-shipment-core.ts`
 
@@ -270,7 +273,7 @@ async function recordPlatformCost(params: {
 
   // Determina api_source
   let apiSource: 'platform' | 'reseller_own' | 'byoc_own' = 'reseller_own';
-  
+
   if (masterPriceListId) {
     // Listino derivato da master = usa contratti piattaforma
     apiSource = 'platform';
@@ -281,7 +284,7 @@ async function recordPlatformCost(params: {
       .select('master_list_id, list_type, is_global')
       .eq('id', priceListId)
       .single();
-    
+
     if (priceList?.master_list_id || priceList?.is_global) {
       apiSource = 'platform';
     }
@@ -289,20 +292,18 @@ async function recordPlatformCost(params: {
 
   // Registra solo se usa piattaforma (gli altri non generano costo per noi)
   if (apiSource === 'platform') {
-    const { error } = await supabaseAdmin
-      .from('platform_provider_costs')
-      .insert({
-        shipment_id: shipmentId,
-        shipment_tracking_number: trackingNumber,
-        billed_user_id: billedUserId,
-        billed_amount: billedAmount,
-        provider_cost: providerCost,
-        api_source: apiSource,
-        price_list_id: priceListId,
-        master_price_list_id: masterPriceListId,
-        courier_code: courierCode,
-        service_type: serviceType,
-      });
+    const { error } = await supabaseAdmin.from('platform_provider_costs').insert({
+      shipment_id: shipmentId,
+      shipment_tracking_number: trackingNumber,
+      billed_user_id: billedUserId,
+      billed_amount: billedAmount,
+      provider_cost: providerCost,
+      api_source: apiSource,
+      price_list_id: priceListId,
+      master_price_list_id: masterPriceListId,
+      courier_code: courierCode,
+      service_type: serviceType,
+    });
 
     if (error) {
       // NON bloccare la spedizione, log error per investigation
@@ -310,7 +311,7 @@ async function recordPlatformCost(params: {
         shipmentId,
         error: error.message,
       });
-      
+
       // Audit log per recovery
       await supabaseAdmin.from('security_audit_log').insert({
         event_type: 'platform_cost_recording_failed',
@@ -327,7 +328,7 @@ async function recordPlatformCost(params: {
   // Aggiorna shipment con api_source
   await supabaseAdmin
     .from('shipments')
-    .update({ 
+    .update({
       api_source: apiSource,
       price_list_used_id: priceListId,
     })
@@ -336,6 +337,7 @@ async function recordPlatformCost(params: {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] `api_source` correttamente determinato per ogni spedizione
 - [ ] Record in `platform_provider_costs` per api_source='platform'
 - [ ] Nessun blocco spedizione se recording fallisce (graceful degradation)
@@ -353,7 +355,7 @@ async function recordPlatformCost(params: {
 
 /**
  * Calcola il costo reale che SpedireSicuro paga al corriere
- * 
+ *
  * IMPORTANTE: Questo è il costo BASE senza margini, usato per P&L
  */
 export async function calculatePlatformProviderCost(params: {
@@ -391,7 +393,7 @@ export async function calculatePlatformProviderCost(params: {
       destination,
       serviceType,
     });
-    
+
     return {
       cost: basePrice,
       source: 'master_list',
@@ -424,6 +426,7 @@ export async function calculatePlatformProviderCost(params: {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Provider cost sempre disponibile (fallback chain)
 - [ ] Source tracking per audit
 - [ ] Precisione > 95% vs costi reali (da verificare post-launch)
@@ -434,7 +437,7 @@ export async function calculatePlatformProviderCost(params: {
 
 **Epic:** Security & Compliance  
 **Effort:** 1 giorno  
-**Risk:** Low  
+**Risk:** Low
 
 #### 1.3.1 Audit Log Enhancement
 
@@ -444,7 +447,7 @@ export async function calculatePlatformProviderCost(params: {
 -- Tabella dedicata per audit finanziario (separata da security_audit_log)
 CREATE TABLE IF NOT EXISTS financial_audit_log (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  
+
   -- Evento
   event_type TEXT NOT NULL CHECK (event_type IN (
     'wallet_debit',
@@ -454,25 +457,25 @@ CREATE TABLE IF NOT EXISTS financial_audit_log (
     'reconciliation_discrepancy',
     'margin_alert'
   )),
-  
+
   -- Riferimenti
   user_id UUID REFERENCES users(id),
   shipment_id UUID REFERENCES shipments(id),
   price_list_id UUID REFERENCES price_lists(id),
-  
+
   -- Valori
   amount DECIMAL(10,2),
   old_value JSONB,
   new_value JSONB,
-  
+
   -- Context
   actor_id UUID REFERENCES users(id), -- Chi ha fatto l'azione
   actor_email TEXT,
   ip_address INET,
-  
+
   -- Metadata
   metadata JSONB DEFAULT '{}'::jsonb,
-  
+
   -- Timestamp
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -488,14 +491,15 @@ ALTER TABLE financial_audit_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY fal_superadmin_only ON financial_audit_log
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
       AND users.account_type = 'superadmin'
     )
   );
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Ogni operazione finanziaria ha audit record
 - [ ] Immutabilità garantita (no UPDATE/DELETE policy)
 - [ ] Retention policy definita (GDPR: 10 anni per dati fiscali)
@@ -504,7 +508,7 @@ CREATE POLICY fal_superadmin_only ON financial_audit_log
 
 ### TASK 1.4: Testing & Validation
 
-**Effort:** 2 giorni  
+**Effort:** 2 giorni
 
 #### 1.4.1 Test Suite
 
@@ -549,6 +553,7 @@ describe('Platform Provider Costs', () => {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Test coverage > 85% per nuovo codice
 - [ ] Integration test con DB reale (non mock)
 - [ ] Performance test: 1000 spedizioni in < 60s
@@ -559,14 +564,14 @@ describe('Platform Provider Costs', () => {
 
 **Durata:** 2 settimane  
 **Priorità:** P1 - HIGH  
-**Obiettivo:** Dashboard unificata clienti + listini  
+**Obiettivo:** Dashboard unificata clienti + listini
 
 ---
 
 ### TASK 2.1: Unified Client Dashboard
 
 **Epic:** UX Consolidation  
-**Effort:** 4 giorni  
+**Effort:** 4 giorni
 
 #### 2.1.1 Nuova pagina `/dashboard/reseller/clienti`
 
@@ -575,7 +580,7 @@ describe('Platform Provider Costs', () => {
 
 /**
  * Dashboard Unificata Clienti per Reseller
- * 
+ *
  * Combina:
  * - Lista clienti (da reseller-team)
  * - Gestione listini (da listini-personalizzati)
@@ -590,11 +595,11 @@ export default function UnifiedClientsPage() {
         title="I Miei Clienti"
         subtitle="Gestisci clienti, listini e wallet"
       />
-      
+
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Stats Cards */}
         <ClientStatsCards />
-        
+
         {/* Actions Bar */}
         <div className="flex gap-3">
           <Button onClick={openCreateClientDialog}>
@@ -606,9 +611,9 @@ export default function UnifiedClientsPage() {
             Assegna Listino
           </Button>
         </div>
-        
+
         {/* Client List with Inline Actions */}
-        <ClientListWithListini 
+        <ClientListWithListini
           clients={clients}
           onAssignListino={handleAssignListino}
           onCreateListino={handleCreateListino}
@@ -658,7 +663,7 @@ export function ClientCardWithListino({ client, ...actions }: ClientCardProps) {
             <p className="text-sm text-gray-500">{client.email}</p>
           </div>
         </div>
-        
+
         {/* Stats */}
         <div className="flex items-center gap-6">
           <div className="text-center">
@@ -670,7 +675,7 @@ export function ClientCardWithListino({ client, ...actions }: ClientCardProps) {
             <p className="font-semibold">{client.shipments_count}</p>
           </div>
         </div>
-        
+
         {/* Listino Badge */}
         <div className="flex items-center gap-3">
           {client.assigned_listino ? (
@@ -687,7 +692,7 @@ export function ClientCardWithListino({ client, ...actions }: ClientCardProps) {
             </Badge>
           )}
         </div>
-        
+
         {/* Actions Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -732,6 +737,7 @@ export function ClientCardWithListino({ client, ...actions }: ClientCardProps) {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Pagina unificata funzionante
 - [ ] Tutte le azioni disponibili inline
 - [ ] Nessuna navigazione necessaria per operazioni comuni
@@ -742,7 +748,7 @@ export function ClientCardWithListino({ client, ...actions }: ClientCardProps) {
 
 ### TASK 2.2: Reconciliation Dashboard (SuperAdmin)
 
-**Effort:** 3 giorni  
+**Effort:** 3 giorni
 
 #### 2.2.1 Pagina `/dashboard/super-admin/riconciliazione`
 
@@ -751,7 +757,7 @@ export function ClientCardWithListino({ client, ...actions }: ClientCardProps) {
 
 /**
  * Dashboard Riconciliazione per SuperAdmin
- * 
+ *
  * Visualizza:
  * - P&L giornaliero/mensile
  * - Discrepanze da risolvere
@@ -766,11 +772,11 @@ export default function ReconciliationDashboard() {
         title="Riconciliazione Finanziaria"
         subtitle="P&L e controllo margini piattaforma"
       />
-      
+
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Period Selector */}
         <PeriodSelector value={period} onChange={setPeriod} />
-        
+
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-4">
           <KPICard
@@ -795,7 +801,7 @@ export default function ReconciliationDashboard() {
             target="25%"
           />
         </div>
-        
+
         {/* Discrepancies Alert */}
         {discrepancies.length > 0 && (
           <Alert variant="destructive">
@@ -809,13 +815,13 @@ export default function ReconciliationDashboard() {
             </Button>
           </Alert>
         )}
-        
+
         {/* Charts */}
         <div className="grid grid-cols-2 gap-6">
           <MarginByCorriereChart data={marginByCorriereData} />
           <DailyPnLChart data={dailyPnLData} />
         </div>
-        
+
         {/* Top Resellers by Platform Usage */}
         <TopResellersPlatformUsageTable data={topResellers} />
       </div>
@@ -825,6 +831,7 @@ export default function ReconciliationDashboard() {
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Dashboard funzionante con dati reali
 - [ ] Filtri per periodo (giorno/settimana/mese)
 - [ ] Export CSV per contabilità
@@ -834,7 +841,7 @@ export default function ReconciliationDashboard() {
 
 ### TASK 2.3: Navigation Update
 
-**Effort:** 0.5 giorni  
+**Effort:** 0.5 giorni
 
 ```typescript
 // File: lib/config/navigationConfig.ts
@@ -886,7 +893,7 @@ const superAdminFinanceSection: NavSection = {
 
 **Durata:** 1 settimana  
 **Priorità:** P2 - MEDIUM  
-**Obiettivo:** Performance, monitoring, refactoring  
+**Obiettivo:** Performance, monitoring, refactoring
 
 ---
 
@@ -918,43 +925,43 @@ const superAdminFinanceSection: NavSection = {
 
 ### Sprint 1 (Foundation)
 
-| Deliverable | File | Status |
-|-------------|------|--------|
-| Migration platform_provider_costs | `090_platform_provider_costs.sql` | 🔲 |
-| Migration shipments extension | `091_shipments_api_source.sql` | 🔲 |
-| Migration P&L views | `092_platform_pnl_views.sql` | 🔲 |
-| Migration financial audit | `093_financial_audit_log.sql` | 🔲 |
-| API Source Detection | `create-shipment-core.ts` | 🔲 |
-| Platform Cost Calculator | `platform-cost-calculator.ts` | 🔲 |
-| Test Suite | `platform-costs.test.ts` | 🔲 |
+| Deliverable                       | File                              | Status |
+| --------------------------------- | --------------------------------- | ------ |
+| Migration platform_provider_costs | `090_platform_provider_costs.sql` | 🔲     |
+| Migration shipments extension     | `091_shipments_api_source.sql`    | 🔲     |
+| Migration P&L views               | `092_platform_pnl_views.sql`      | 🔲     |
+| Migration financial audit         | `093_financial_audit_log.sql`     | 🔲     |
+| API Source Detection              | `create-shipment-core.ts`         | 🔲     |
+| Platform Cost Calculator          | `platform-cost-calculator.ts`     | 🔲     |
+| Test Suite                        | `platform-costs.test.ts`          | 🔲     |
 
 ### Sprint 2 (UX)
 
-| Deliverable | File | Status |
-|-------------|------|--------|
-| Unified Clients Page | `reseller/clienti/page.tsx` | 🔲 |
-| Client Card Component | `client-card-with-listino.tsx` | 🔲 |
-| Reconciliation Dashboard | `super-admin/riconciliazione/page.tsx` | 🔲 |
-| Navigation Update | `navigationConfig.ts` | 🔲 |
+| Deliverable              | File                                   | Status |
+| ------------------------ | -------------------------------------- | ------ |
+| Unified Clients Page     | `reseller/clienti/page.tsx`            | 🔲     |
+| Client Card Component    | `client-card-with-listino.tsx`         | 🔲     |
+| Reconciliation Dashboard | `super-admin/riconciliazione/page.tsx` | 🔲     |
+| Navigation Update        | `navigationConfig.ts`                  | 🔲     |
 
 ### Sprint 3 (Optimization)
 
-| Deliverable | Status |
-|-------------|--------|
-| Performance Optimization | 🔲 |
-| Monitoring Setup | 🔲 |
-| Refactoring | 🔲 |
+| Deliverable              | Status |
+| ------------------------ | ------ |
+| Performance Optimization | 🔲     |
+| Monitoring Setup         | 🔲     |
+| Refactoring              | 🔲     |
 
 ---
 
 ## ⚠️ RISCHI E MITIGAZIONI
 
-| Rischio | Probabilità | Impatto | Mitigazione |
-|---------|-------------|---------|-------------|
-| Migration fallisce in prod | Medium | Critical | Test su staging, rollback script pronto |
-| Performance degradation | Medium | High | Load test prima del deploy |
-| Dati storici inconsistenti | High | Medium | Backfill script best-effort, alert per discrepanze |
-| Resistenza utenti (UX change) | Low | Medium | Comunicazione, training, feedback loop |
+| Rischio                       | Probabilità | Impatto  | Mitigazione                                        |
+| ----------------------------- | ----------- | -------- | -------------------------------------------------- |
+| Migration fallisce in prod    | Medium      | Critical | Test su staging, rollback script pronto            |
+| Performance degradation       | Medium      | High     | Load test prima del deploy                         |
+| Dati storici inconsistenti    | High        | Medium   | Backfill script best-effort, alert per discrepanze |
+| Resistenza utenti (UX change) | Low         | Medium   | Comunicazione, training, feedback loop             |
 
 ---
 
@@ -986,12 +993,12 @@ const superAdminFinanceSection: NavSection = {
 
 ## 📞 ESCALATION PATH
 
-| Severità | Contatto | SLA |
-|----------|----------|-----|
-| P0 (System Down) | Engineering Lead + CTO | 15 min |
-| P1 (Major Feature Broken) | Engineering Lead | 1 ora |
-| P2 (Minor Issue) | Team Lead | 4 ore |
-| P3 (Enhancement) | Product Owner | Next sprint |
+| Severità                  | Contatto               | SLA         |
+| ------------------------- | ---------------------- | ----------- |
+| P0 (System Down)          | Engineering Lead + CTO | 15 min      |
+| P1 (Major Feature Broken) | Engineering Lead       | 1 ora       |
+| P2 (Minor Issue)          | Team Lead              | 4 ore       |
+| P3 (Enhancement)          | Product Owner          | Next sprint |
 
 ---
 
@@ -1001,4 +1008,4 @@ const superAdminFinanceSection: NavSection = {
 
 ---
 
-> *"Move fast with stable infrastructure."* — Engineering Principle #3
+> _"Move fast with stable infrastructure."_ — Engineering Principle #3

@@ -1,9 +1,9 @@
 /**
  * ShipmentDraft Schema (Sprint 2.3)
- * 
+ *
  * Schema Zod per bozza spedizione con validazione indirizzi italiani.
  * Usato da Address Worker per normalizzare e validare input utente.
- * 
+ *
  * ⚠️ NO PII nei log: mai loggare addressLine1, phone, fullName, etc.
  */
 
@@ -14,22 +14,25 @@ import { z } from 'zod';
 /**
  * CAP italiano: esattamente 5 cifre
  */
-const italianPostalCodeSchema = z.string()
+const italianPostalCodeSchema = z
+  .string()
   .regex(/^\d{5}$/, 'CAP deve essere di 5 cifre')
   .optional();
 
 /**
  * Provincia italiana: esattamente 2 lettere uppercase
  */
-const italianProvinceSchema = z.string()
+const italianProvinceSchema = z
+  .string()
   .regex(/^[A-Z]{2}$/, 'Provincia deve essere 2 lettere (es. MI, RM)')
-  .transform(v => v.toUpperCase())
+  .transform((v) => v.toUpperCase())
   .optional();
 
 /**
  * Numero di telefono italiano (permissivo)
  */
-const italianPhoneSchema = z.string()
+const italianPhoneSchema = z
+  .string()
   .regex(/^(\+39)?[\s]?[0-9]{6,12}$/, 'Numero telefono non valido')
   .optional();
 
@@ -105,7 +108,7 @@ export const SHIPMENT_REQUIRED_FIELDS = [
  */
 export function calculateMissingFieldsForPricing(draft?: ShipmentDraft): string[] {
   const missing: string[] = [];
-  
+
   if (!draft?.recipient?.postalCode) {
     missing.push('recipient.postalCode');
   }
@@ -115,7 +118,7 @@ export function calculateMissingFieldsForPricing(draft?: ShipmentDraft): string[
   if (!draft?.parcel?.weightKg) {
     missing.push('parcel.weightKg');
   }
-  
+
   return missing;
 }
 
@@ -126,7 +129,7 @@ export function calculateMissingFieldsForPricing(draft?: ShipmentDraft): string[
  */
 export function calculateMissingFieldsForShipment(draft?: ShipmentDraft): string[] {
   const missing: string[] = [];
-  
+
   if (!draft?.recipient?.fullName) {
     missing.push('recipient.fullName');
   }
@@ -145,7 +148,7 @@ export function calculateMissingFieldsForShipment(draft?: ShipmentDraft): string
   if (!draft?.parcel?.weightKg) {
     missing.push('parcel.weightKg');
   }
-  
+
   return missing;
 }
 
@@ -188,10 +191,9 @@ export function mergeShipmentDraft(
     },
     missingFields: [], // Ricalcolato dopo
   };
-  
+
   // Ricalcola missing fields
   merged.missingFields = calculateMissingFieldsForPricing(merged);
-  
+
   return merged;
 }
-

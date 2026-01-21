@@ -1,6 +1,6 @@
 /**
  * Quote Cache Service - Enterprise-Grade Caching
- * 
+ *
  * Gestisce cache Redis per quote API real-time con:
  * - TTL configurabile (30s - 5min)
  * - Cache key generation
@@ -49,7 +49,7 @@ export function generateQuoteCacheKey(params: QuoteCacheParams): string {
   // Crea hash per key più corta
   const keyString = JSON.stringify(normalized);
   const hash = crypto.createHash('sha256').update(keyString).digest('hex').substring(0, 16);
-  
+
   return `quote:${hash}`;
 }
 
@@ -62,14 +62,14 @@ export async function getCachedQuote(
 ): Promise<CachedQuote | null> {
   try {
     const redis = getRedis();
-    
+
     if (!redis) {
       // Redis non disponibile, fallback a null (chiamerà API)
       return null;
     }
 
     const cached = await redis.get<CachedQuote>(cacheKey);
-    
+
     if (!cached) {
       return null;
     }
@@ -77,7 +77,7 @@ export async function getCachedQuote(
     // Verifica TTL
     const age = Date.now() - cached.timestamp;
     const maxAge = maxAgeSeconds * 1000;
-    
+
     if (age > maxAge) {
       // Cache scaduta, rimuovi e ritorna null
       await redis.del(cacheKey);
@@ -106,7 +106,7 @@ export async function setCachedQuote(
 ): Promise<void> {
   try {
     const redis = getRedis();
-    
+
     if (!redis) {
       // Redis non disponibile, ignora (non bloccante)
       return;
@@ -119,7 +119,7 @@ export async function setCachedQuote(
     };
 
     await redis.setex(cacheKey, ttlSeconds, cached);
-    
+
     console.log(`✅ [QUOTE_CACHE] Cache salvata: ${cacheKey} (TTL: ${ttlSeconds}s)`);
   } catch (error) {
     console.error('❌ [QUOTE_CACHE] Errore salvataggio cache:', error);
@@ -130,13 +130,10 @@ export async function setCachedQuote(
 /**
  * Invalida cache per un utente o pattern
  */
-export async function invalidateQuoteCache(
-  pattern?: string,
-  userId?: string
-): Promise<number> {
+export async function invalidateQuoteCache(pattern?: string, userId?: string): Promise<number> {
   try {
     const redis = getRedis();
-    
+
     if (!redis) {
       return 0;
     }
@@ -153,12 +150,12 @@ export async function invalidateQuoteCache(
       const pattern = `quote:*`;
       const keys = await redis.keys(pattern);
       // Filtra per userId (dovrebbe essere nel key, ma per sicurezza controlliamo)
-      const userKeys = keys.filter(key => {
+      const userKeys = keys.filter((key) => {
         // Estrai userId dal cached data se possibile
         // Per ora invalidiamo tutte (pattern matching più complesso richiede scan)
         return true;
       });
-      
+
       if (userKeys.length > 0) {
         await redis.del(...userKeys);
         return userKeys.length;
@@ -191,13 +188,13 @@ export async function getQuoteWithCache(
   cacheAge?: number;
 }> {
   const { ttlSeconds = 300, maxAgeSeconds = 300, forceRefresh = false } = options;
-  
+
   const cacheKey = generateQuoteCacheKey(params);
 
   // Se non è force refresh, controlla cache
   if (!forceRefresh) {
     const cached = await getCachedQuote(cacheKey, maxAgeSeconds);
-    
+
     if (cached) {
       const age = Math.floor((Date.now() - cached.timestamp) / 1000);
       return {

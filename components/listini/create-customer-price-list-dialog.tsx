@@ -1,30 +1,30 @@
 /**
  * Dialog: Crea Listino Cliente
- * 
+ *
  * Permette al reseller di creare un nuovo listino cliente vuoto
  * per un suo sub-user, con margine percentuale configurabile.
  */
 
-"use client";
+'use client';
 
 import {
   createCustomerPriceListAction,
   getResellerSubUsersAction,
-} from "@/actions/customer-price-lists";
-import { Button } from "@/components/ui/button";
+} from '@/actions/customer-price-lists';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Loader2, Plus, Save } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Loader2, Plus, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface CreateCustomerPriceListDialogProps {
   open: boolean;
@@ -39,15 +39,13 @@ export function CreateCustomerPriceListDialog({
 }: CreateCustomerPriceListDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [subUsers, setSubUsers] = useState<
-    Array<{ id: string; email: string; name?: string }>
-  >([]);
+  const [subUsers, setSubUsers] = useState<Array<{ id: string; email: string; name?: string }>>([]);
 
   // Form fields
-  const [name, setName] = useState("");
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [name, setName] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [marginPercent, setMarginPercent] = useState<number>(0);
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState('');
 
   // Carica sub-users quando si apre il dialog
   useEffect(() => {
@@ -63,11 +61,11 @@ export function CreateCustomerPriceListDialog({
       if (result.success && result.subUsers) {
         setSubUsers(result.subUsers);
       } else {
-        toast.error(result.error || "Errore caricamento clienti");
+        toast.error(result.error || 'Errore caricamento clienti');
       }
     } catch (error) {
-      console.error("Errore caricamento sub-users:", error);
-      toast.error("Errore caricamento clienti");
+      console.error('Errore caricamento sub-users:', error);
+      toast.error('Errore caricamento clienti');
     } finally {
       setIsLoading(false);
     }
@@ -75,17 +73,17 @@ export function CreateCustomerPriceListDialog({
 
   async function handleCreate() {
     if (!name.trim()) {
-      toast.error("Il nome del listino è obbligatorio");
+      toast.error('Il nome del listino è obbligatorio');
       return;
     }
 
     if (!selectedClientId) {
-      toast.error("Seleziona un cliente");
+      toast.error('Seleziona un cliente');
       return;
     }
 
     if (marginPercent < 0) {
-      toast.error("Il margine percentuale non può essere negativo");
+      toast.error('Il margine percentuale non può essere negativo');
       return;
     }
 
@@ -99,20 +97,20 @@ export function CreateCustomerPriceListDialog({
       });
 
       if (result.success) {
-        toast.success("Listino cliente creato con successo");
+        toast.success('Listino cliente creato con successo');
         // Reset form
-        setName("");
-        setSelectedClientId("");
+        setName('');
+        setSelectedClientId('');
         setMarginPercent(0);
-        setDescription("");
+        setDescription('');
         onOpenChange(false);
         onSuccess();
       } else {
-        toast.error(result.error || "Errore creazione listino");
+        toast.error(result.error || 'Errore creazione listino');
       }
     } catch (error: any) {
-      console.error("Errore creazione listino cliente:", error);
-      toast.error("Errore durante la creazione del listino");
+      console.error('Errore creazione listino cliente:', error);
+      toast.error('Errore durante la creazione del listino');
     } finally {
       setIsSaving(false);
     }
@@ -124,8 +122,8 @@ export function CreateCustomerPriceListDialog({
         <DialogHeader>
           <DialogTitle>Crea Nuovo Listino Cliente</DialogTitle>
           <DialogDescription>
-            Crea un nuovo listino personalizzato per un tuo cliente. Il listino
-            partirà vuoto e potrai completarlo manualmente.
+            Crea un nuovo listino personalizzato per un tuo cliente. Il listino partirà vuoto e
+            potrai completarlo manualmente.
           </DialogDescription>
         </DialogHeader>
 
@@ -148,9 +146,7 @@ export function CreateCustomerPriceListDialog({
             {isLoading ? (
               <div className="flex items-center gap-2 mt-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm text-gray-500">
-                  Caricamento clienti...
-                </span>
+                <span className="text-sm text-gray-500">Caricamento clienti...</span>
               </div>
             ) : (
               <Select
@@ -183,15 +179,12 @@ export function CreateCustomerPriceListDialog({
               step="0.01"
               min="0"
               value={marginPercent}
-              onChange={(e) =>
-                setMarginPercent(parseFloat(e.target.value) || 0)
-              }
+              onChange={(e) => setMarginPercent(parseFloat(e.target.value) || 0)}
               placeholder="es. 20 per +20%"
               disabled={isSaving}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Margine di ricarico applicato al prezzo base. Es: 20 = +20% sul
-              costo
+              Margine di ricarico applicato al prezzo base. Es: 20 = +20% sul costo
             </p>
           </div>
 
@@ -210,11 +203,11 @@ export function CreateCustomerPriceListDialog({
           {/* Info creazione */}
           <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
             <p className="text-xs text-gray-600">
-              <strong>Data creazione:</strong> {new Date().toLocaleString("it-IT")}
+              <strong>Data creazione:</strong> {new Date().toLocaleString('it-IT')}
             </p>
             <p className="text-xs text-gray-600 mt-1">
-              Il listino partirà vuoto. Dopo la creazione, potrai completare
-              manualmente la matrice dei prezzi.
+              Il listino partirà vuoto. Dopo la creazione, potrai completare manualmente la matrice
+              dei prezzi.
             </p>
           </div>
         </div>
@@ -223,10 +216,7 @@ export function CreateCustomerPriceListDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button
-            onClick={handleCreate}
-            disabled={isSaving || !name.trim() || !selectedClientId}
-          >
+          <Button onClick={handleCreate} disabled={isSaving || !name.trim() || !selectedClientId}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

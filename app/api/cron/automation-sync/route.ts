@@ -1,10 +1,10 @@
 /**
  * API Route: Cron Job Automation Sync
- * 
+ *
  * Endpoint: GET /api/cron/automation-sync
- * 
+ *
  * Esegue sync automatico per tutte le configurazioni con automation abilitata
- * 
+ *
  * ⚠️ PROTETTO: Richiede secret token per sicurezza
  */
 
@@ -24,17 +24,14 @@ export async function GET(request: NextRequest) {
       // Se non c'è secret token configurato, permettere solo da Vercel
       const vercelCron = request.headers.get('x-vercel-cron');
       if (!vercelCron) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        );
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
     }
 
     console.log('🔄 [CRON] Avvio sync automatico automation...');
-    
+
     await syncAllEnabledConfigs();
-    
+
     return NextResponse.json({
       success: true,
       message: 'Sync automatico completata',
@@ -51,4 +48,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

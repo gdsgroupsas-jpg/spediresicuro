@@ -162,8 +162,8 @@ Organizzato per categoria:
 ```typescript
 // Esempio: Cercare documentazione su wallet
 codebase_search({
-  query: "How does the wallet system work?",
-  target_directories: ["docs"],
+  query: 'How does the wallet system work?',
+  target_directories: ['docs'],
 });
 ```
 

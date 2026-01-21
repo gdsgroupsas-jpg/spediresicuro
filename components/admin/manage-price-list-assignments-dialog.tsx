@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
 import {
   assignPriceListToUser,
   listAssignablePriceLists,
   listUserPriceListAssignments,
   revokePriceListAssignment,
-} from "@/actions/price-list-assignments";
-import { AlertTriangle, FileText, Loader2, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+} from '@/actions/price-list-assignments';
+import { AlertTriangle, FileText, Loader2, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface ManagePriceListAssignmentsDialogProps {
   open: boolean;
@@ -32,8 +32,8 @@ export function ManagePriceListAssignmentsDialog({
   const [isLoading, setIsLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
-  const [selectedPriceListId, setSelectedPriceListId] = useState<string>("");
-  const [notes, setNotes] = useState("");
+  const [selectedPriceListId, setSelectedPriceListId] = useState<string>('');
+  const [notes, setNotes] = useState('');
 
   // Carica dati
   useEffect(() => {
@@ -59,8 +59,8 @@ export function ManagePriceListAssignmentsDialog({
           toast.error(priceListsRes.error);
         }
       } catch (error) {
-        console.error("Errore caricamento dati:", error);
-        toast.error("Errore nel caricamento dei dati");
+        console.error('Errore caricamento dati:', error);
+        toast.error('Errore nel caricamento dei dati');
       } finally {
         setIsLoading(false);
       }
@@ -75,16 +75,12 @@ export function ManagePriceListAssignmentsDialog({
 
     setIsAssigning(true);
     try {
-      const result = await assignPriceListToUser(
-        selectedPriceListId,
-        userId,
-        notes || undefined
-      );
+      const result = await assignPriceListToUser(selectedPriceListId, userId, notes || undefined);
 
       if (result.success) {
-        toast.success("Listino assegnato con successo");
-        setSelectedPriceListId("");
-        setNotes("");
+        toast.success('Listino assegnato con successo');
+        setSelectedPriceListId('');
+        setNotes('');
 
         // Ricarica assegnazioni
         const res = await listUserPriceListAssignments(userId);
@@ -97,7 +93,7 @@ export function ManagePriceListAssignmentsDialog({
         toast.error(result.error || "Errore nell'assegnazione");
       }
     } catch (error) {
-      console.error("Errore assegnazione:", error);
+      console.error('Errore assegnazione:', error);
       toast.error("Errore nell'assegnazione del listino");
     } finally {
       setIsAssigning(false);
@@ -111,7 +107,7 @@ export function ManagePriceListAssignmentsDialog({
       const result = await revokePriceListAssignment(assignmentId);
 
       if (result.success) {
-        toast.success("Assegnazione rimossa con successo");
+        toast.success('Assegnazione rimossa con successo');
 
         // Ricarica assegnazioni
         const res = await listUserPriceListAssignments(userId);
@@ -121,10 +117,10 @@ export function ManagePriceListAssignmentsDialog({
 
         onSuccess();
       } else {
-        toast.error(result.error || "Errore nella rimozione");
+        toast.error(result.error || 'Errore nella rimozione');
       }
     } catch (error) {
-      console.error("Errore rimozione:", error);
+      console.error('Errore rimozione:', error);
       toast.error("Errore nella rimozione dell'assegnazione");
     } finally {
       setIsRemoving(null);
@@ -140,9 +136,7 @@ export function ManagePriceListAssignmentsDialog({
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2 mb-2">
             <FileText className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">
-              Gestisci Listini Personalizzati
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900">Gestisci Listini Personalizzati</h2>
           </div>
           <p className="text-sm text-gray-600">
             Utente: <strong>{userName || userEmail}</strong>
@@ -163,9 +157,7 @@ export function ManagePriceListAssignmentsDialog({
               </h3>
               {assignments.length === 0 ? (
                 <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-500">
-                    Nessun listino assegnato
-                  </p>
+                  <p className="text-sm text-gray-500">Nessun listino assegnato</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -178,14 +170,14 @@ export function ManagePriceListAssignmentsDialog({
                         <FileText className="w-4 h-4 text-blue-600" />
                         <div>
                           <p className="font-medium text-gray-900">
-                            {assignment.price_list?.name || "Listino sconosciuto"}
+                            {assignment.price_list?.name || 'Listino sconosciuto'}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {assignment.price_list?.list_type === "custom"
-                              ? "Personalizzato"
-                              : "Fornitore"}
-                            {" • v"}
-                            {assignment.price_list?.version || "1.0"}
+                            {assignment.price_list?.list_type === 'custom'
+                              ? 'Personalizzato'
+                              : 'Fornitore'}
+                            {' • v'}
+                            {assignment.price_list?.version || '1.0'}
                             {assignment.notes && ` • ${assignment.notes}`}
                           </p>
                         </div>
@@ -209,9 +201,7 @@ export function ManagePriceListAssignmentsDialog({
 
             {/* Assegna Nuovo Listino */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                Assegna Nuovo Listino
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Assegna Nuovo Listino</h3>
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -224,16 +214,10 @@ export function ManagePriceListAssignmentsDialog({
                   >
                     <option value="">-- Seleziona un listino --</option>
                     {availablePriceLists
-                      .filter(
-                        (pl) =>
-                          !assignments.some(
-                            (a) => a.price_list_id === pl.id
-                          )
-                      )
+                      .filter((pl) => !assignments.some((a) => a.price_list_id === pl.id))
                       .map((priceList) => (
                         <option key={priceList.id} value={priceList.id}>
-                          {priceList.name} ({priceList.list_type}) - v
-                          {priceList.version}
+                          {priceList.name} ({priceList.list_type}) - v{priceList.version}
                           {priceList.default_margin_percent &&
                             ` - +${priceList.default_margin_percent}%`}
                         </option>
@@ -265,7 +249,7 @@ export function ManagePriceListAssignmentsDialog({
                       Assegnazione...
                     </>
                   ) : (
-                    "Assegna Listino"
+                    'Assegna Listino'
                   )}
                 </button>
               </div>
@@ -274,9 +258,7 @@ export function ManagePriceListAssignmentsDialog({
             {availablePriceLists.length === 0 && (
               <div className="text-center py-6 bg-amber-50 border border-amber-200 rounded-lg">
                 <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-                <p className="text-sm text-amber-800">
-                  Nessun listino disponibile da assegnare.
-                </p>
+                <p className="text-sm text-amber-800">Nessun listino disponibile da assegnare.</p>
               </div>
             )}
           </div>

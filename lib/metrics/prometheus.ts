@@ -25,11 +25,7 @@ export interface MetricValue {
 /**
  * Format a single metric line with labels
  */
-function formatMetricLine(
-  name: string,
-  value: number,
-  labels?: Record<string, string>
-): string {
+function formatMetricLine(name: string, value: number, labels?: Record<string, string>): string {
   if (!labels || Object.keys(labels).length === 0) {
     return `${name} ${value}`;
   }
@@ -45,10 +41,7 @@ function formatMetricLine(
  * Escape special characters in label values
  */
 function escapeLabel(value: string): string {
-  return value
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n');
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
 /**
@@ -281,8 +274,7 @@ export function buildSystemMetrics(data: {
   apiLatencyMs: number;
 }): MetricDefinition[] {
   // Convert health status to numeric
-  const healthValue =
-    data.healthStatus === 'ok' ? 1 : data.healthStatus === 'degraded' ? 0.5 : 0;
+  const healthValue = data.healthStatus === 'ok' ? 1 : data.healthStatus === 'degraded' ? 0.5 : 0;
 
   return [
     {

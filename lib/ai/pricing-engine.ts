@@ -1,12 +1,12 @@
 /**
  * Pricing Engine per Anne
- * 
+ *
  * Calcola il prezzo ottimale per una spedizione basandosi su:
  * - Peso e dimensioni
  * - Destinazione (CAP, provincia)
  * - Tipo servizio richiesto
  * - Opzioni (contrassegno, assicurazione)
- * 
+ *
  * Restituisce il corriere e servizio più conveniente
  */
 
@@ -43,18 +43,22 @@ export interface PricingResult {
  */
 function getZoneFromZip(zip: string): string {
   const cap = parseInt(zip);
-  
+
   // Nord (20xxx-29xxx)
   if (cap >= 20000 && cap <= 29999) return 'nord';
-  
+
   // Centro (00xxx-09xxx, 10xxx-19xxx, 30xxx-69xxx)
-  if ((cap >= 0 && cap <= 9999) || (cap >= 10000 && cap <= 19999) || (cap >= 30000 && cap <= 69999)) {
+  if (
+    (cap >= 0 && cap <= 9999) ||
+    (cap >= 10000 && cap <= 19999) ||
+    (cap >= 30000 && cap <= 69999)
+  ) {
     return 'centro';
   }
-  
+
   // Sud e Isole (70xxx-99xxx)
   if (cap >= 70000 && cap <= 99999) return 'sud';
-  
+
   return 'centro'; // Default
 }
 
@@ -76,23 +80,23 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
       .from('couriers')
       .select('id, name, code')
       .eq('status', 'active');
-    
+
     if (couriersError || !couriers || couriers.length === 0) {
       console.error('Errore recupero corrieri:', couriersError);
       return [];
     }
-    
+
     const results: PricingResult[] = [];
     const marginPercent = 15; // Margine di ricarico standard
-    
+
     // Calcola per ogni corriere
     for (const courier of couriers) {
       try {
         // Prova prima con il tipo servizio richiesto, poi con standard
-        const serviceTypes = request.serviceType 
-          ? [request.serviceType, 'standard'] 
+        const serviceTypes = request.serviceType
+          ? [request.serviceType, 'standard']
           : ['standard', 'express', 'economy'];
-        
+
         for (const serviceType of serviceTypes) {
           const priceResult = await calculatePrice(
             courier.id,
@@ -105,12 +109,12 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
               insurance: request.insurance,
             }
           );
-          
+
           if (priceResult) {
             // Applica margine
             const margin = (priceResult.totalCost * marginPercent) / 100;
             const finalPrice = priceResult.totalCost + margin;
-            
+
             results.push({
               courier: courier.name,
               serviceType,
@@ -119,10 +123,13 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
               totalCost: priceResult.totalCost,
               finalPrice: Math.round(finalPrice * 100) / 100,
               margin: Math.round(margin * 100) / 100,
-              estimatedDeliveryDays: priceResult.details.estimatedDeliveryDays || { min: 3, max: 5 },
+              estimatedDeliveryDays: priceResult.details.estimatedDeliveryDays || {
+                min: 3,
+                max: 5,
+              },
               recommendation: 'best_price', // TODO: calcolare in base a metriche
             });
-            
+
             // Se abbiamo trovato un prezzo per il servizio richiesto, non provare altri
             if (request.serviceType && serviceType === request.serviceType) {
               break;
@@ -134,17 +141,16 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
         // Continua con il prossimo corriere
       }
     }
-    
+
     // Ordina per prezzo finale (crescente)
     results.sort((a, b) => a.finalPrice - b.finalPrice);
-    
+
     // Assegna raccomandazione
     if (results.length > 0) {
       results[0].recommendation = 'best_price';
     }
-    
+
     return results;
-    
   } catch (error: any) {
     console.error('Errore calcolo prezzo ottimale:', error);
     return [];
@@ -164,27 +170,26 @@ export async function getBestCourierForDestination(
     destinationZip: zip,
     destinationProvince: province,
   });
-  
+
   if (results.length === 0) {
     return null;
   }
-  
+
   const best = results[0];
   const zone = getZoneFromZip(zip);
   const isIslandDest = isIsland(zip, province);
-  
+
   let reason = `Prezzo più conveniente: €${best.finalPrice.toFixed(2)}`;
-  
+
   if (isIslandDest) {
     reason += ' (destinazione isola)';
   } else if (zone === 'sud') {
     reason += ' (destinazione sud Italia)';
   }
-  
+
   return {
     courier: best.courier,
     price: best.finalPrice,
     reason,
   };
 }
-
