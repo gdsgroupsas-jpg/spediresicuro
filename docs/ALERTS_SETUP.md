@@ -38,7 +38,6 @@ TELEGRAM_CHAT_ID=-1001234567890
 **Come ottenerlo:**
 
 1. **Crea Bot:**
-
    - Apri Telegram → Cerca `@BotFather`
    - Invia `/newbot`
    - Segui istruzioni, ottieni il **token**

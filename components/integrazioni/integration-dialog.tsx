@@ -1,72 +1,66 @@
-'use client'
+'use client';
 
 /**
  * Integration Dialog Component
- * 
+ *
  * Dialog per inserire e configurare le credenziali delle integrazioni
  */
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { 
-  X, 
-  Loader2, 
-  CheckCircle2,
-  AlertCircle,
-  TestTube
-} from 'lucide-react'
-import { testIntegration, saveIntegration } from '@/lib/actions/integrations'
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { X, Loader2, CheckCircle2, AlertCircle, TestTube } from 'lucide-react';
+import { testIntegration, saveIntegration } from '@/lib/actions/integrations';
 
 interface Platform {
-  id: string
-  name: string
-  icon: any
-  description: string
-  color: string
-  credentials: Record<string, string>
+  id: string;
+  name: string;
+  icon: any;
+  description: string;
+  color: string;
+  credentials: Record<string, string>;
 }
 
 interface IntegrationDialogProps {
-  platform: Platform
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-  status: 'connected' | 'disconnected'
+  platform: Platform;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  status: 'connected' | 'disconnected';
 }
 
 // Schema validazione per URL
-const urlSchema = z.string().url('URL non valido').or(z.literal(''))
+const urlSchema = z.string().url('URL non valido').or(z.literal(''));
 
 // Schema base per credenziali
 const baseCredentialsSchema = z.object({
   store_url: urlSchema,
-})
+});
 
 // Schema per Shopify
 const shopifySchema = z.object({
   store_url: z.string().min(1, 'Shop URL obbligatorio'),
   access_token: z.string().min(1, 'Access Token obbligatorio'),
-})
+});
 
 // Schema per WooCommerce
 const woocommerceSchema = baseCredentialsSchema.extend({
   api_key: z.string().min(1, 'Consumer Key obbligatorio'),
   api_secret: z.string().min(1, 'Consumer Secret obbligatorio'),
-})
+});
 
 // Schema per Magento
 const magentoSchema = baseCredentialsSchema.extend({
   access_token: z.string().min(1, 'Access Token obbligatorio'),
-})
+});
 
 // Schema per PrestaShop
 const prestashopSchema = baseCredentialsSchema.extend({
   api_key: z.string().min(1, 'API Key obbligatoria'),
   api_secret: z.string().min(1, 'API Secret obbligatorio'),
-})
+});
 
 // Schema per Amazon
 const amazonSchema = z.object({
@@ -77,30 +71,30 @@ const amazonSchema = z.object({
   aws_secret_key: z.string().min(1, 'AWS Secret Key obbligatorio'),
   seller_id: z.string().min(1, 'Seller ID obbligatorio'),
   region: z.string().default('eu-west-1'),
-})
+});
 
 // Schema per Custom API
 const customSchema = baseCredentialsSchema.extend({
   api_key: z.string().optional(),
   api_secret: z.string().optional(),
-})
+});
 
 function getSchemaForPlatform(platformId: string) {
   switch (platformId) {
     case 'shopify':
-      return shopifySchema
+      return shopifySchema;
     case 'woocommerce':
-      return woocommerceSchema
+      return woocommerceSchema;
     case 'magento':
-      return magentoSchema
+      return magentoSchema;
     case 'prestashop':
-      return prestashopSchema
+      return prestashopSchema;
     case 'amazon':
-      return amazonSchema
+      return amazonSchema;
     case 'custom':
-      return customSchema
+      return customSchema;
     default:
-      return baseCredentialsSchema
+      return baseCredentialsSchema;
   }
 }
 
@@ -111,12 +105,12 @@ export default function IntegrationDialog({
   onSuccess,
   status,
 }: IntegrationDialogProps) {
-  const [isTesting, setIsTesting] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const schema = getSchemaForPlatform(platform.id)
+  const schema = getSchemaForPlatform(platform.id);
   const {
     register,
     handleSubmit,
@@ -125,56 +119,59 @@ export default function IntegrationDialog({
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: platform.credentials,
-  })
+  });
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleTest = async (data: any) => {
-    setIsTesting(true)
-    setTestResult(null)
-    setError(null)
+    setIsTesting(true);
+    setTestResult(null);
+    setError(null);
 
     try {
-      const result = await testIntegration(platform.id, data)
+      const result = await testIntegration(platform.id, data);
 
       if (result.success) {
-        setTestResult({ success: true, message: result.message || 'Connessione riuscita!' })
+        setTestResult({ success: true, message: result.message || 'Connessione riuscita!' });
       } else {
-        setTestResult({ success: false, message: result.error || 'Impossibile connettersi allo shop. Controlla i dati.' })
+        setTestResult({
+          success: false,
+          message: result.error || 'Impossibile connettersi allo shop. Controlla i dati.',
+        });
       }
     } catch (err: any) {
-      setTestResult({ success: false, message: err.message || 'Errore durante il test' })
+      setTestResult({ success: false, message: err.message || 'Errore durante il test' });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const onSubmit = async (data: any) => {
-    setIsSaving(true)
-    setError(null)
-    setTestResult(null)
+    setIsSaving(true);
+    setError(null);
+    setTestResult(null);
 
     try {
       // Salva usando Server Action (che testa automaticamente la connessione)
-      const result = await saveIntegration(platform.id, data)
+      const result = await saveIntegration(platform.id, data);
 
       if (result.success) {
-        onSuccess()
-        onClose()
-        reset()
+        onSuccess();
+        onClose();
+        reset();
       } else {
-        setError(result.error || 'Errore durante il salvataggio')
+        setError(result.error || 'Errore durante il salvataggio');
         // Mostra anche come test result se è un errore di connessione
         if (result.error?.includes('connettersi')) {
-          setTestResult({ success: false, message: result.error })
+          setTestResult({ success: false, message: result.error });
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Errore durante il salvataggio')
+      setError(err.message || 'Errore durante il salvataggio');
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const getFieldLabel = (key: string) => {
     const labels: Record<string, string> = {
@@ -190,9 +187,9 @@ export default function IntegrationDialog({
       aws_secret_key: 'AWS Secret Key',
       seller_id: 'Seller ID',
       region: 'Region',
-    }
-    return labels[key] || key
-  }
+    };
+    return labels[key] || key;
+  };
 
   const getFieldPlaceholder = (key: string) => {
     const placeholders: Record<string, string> = {
@@ -208,14 +205,14 @@ export default function IntegrationDialog({
       aws_secret_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
       seller_id: 'A1EXAMPLE123',
       region: 'eu-west-1',
-    }
-    return placeholders[key] || ''
-  }
+    };
+    return placeholders[key] || '';
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
@@ -250,19 +247,17 @@ export default function IntegrationDialog({
           )}
 
           {testResult && (
-            <div className={`p-4 glass border rounded-lg flex items-start gap-3 ${
-              testResult.success 
-                ? 'border-green-500/30' 
-                : 'border-red-500/30'
-            }`}>
+            <div
+              className={`p-4 glass border rounded-lg flex items-start gap-3 ${
+                testResult.success ? 'border-green-500/30' : 'border-red-500/30'
+              }`}
+            >
               {testResult.success ? (
                 <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
               ) : (
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               )}
-              <p className={`text-sm ${
-                testResult.success ? 'text-green-300' : 'text-red-300'
-              }`}>
+              <p className={`text-sm ${testResult.success ? 'text-green-300' : 'text-red-300'}`}>
                 {testResult.message}
               </p>
             </div>
@@ -273,9 +268,13 @@ export default function IntegrationDialog({
             <div key={key}>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 {getFieldLabel(key)}
-                {(key === 'store_url' || key.includes('lwa_') || key.includes('aws_') || key === 'seller_id' || key === 'api_key' || key === 'api_secret' || key === 'access_token') && (
-                  <span className="text-red-400 ml-1">*</span>
-                )}
+                {(key === 'store_url' ||
+                  key.includes('lwa_') ||
+                  key.includes('aws_') ||
+                  key === 'seller_id' ||
+                  key === 'api_key' ||
+                  key === 'api_secret' ||
+                  key === 'access_token') && <span className="text-red-400 ml-1">*</span>}
               </label>
               <input
                 type={key.includes('secret') || key.includes('token') ? 'password' : 'text'}
@@ -340,6 +339,5 @@ export default function IntegrationDialog({
         </form>
       </motion.div>
     </div>
-  )
+  );
 }
-

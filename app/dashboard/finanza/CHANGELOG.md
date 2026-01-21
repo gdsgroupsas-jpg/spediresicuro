@@ -11,6 +11,7 @@ This release brings the Finance Control Room from a prototype to a production-re
 ### ✨ Added
 
 #### Data Fetching & Caching
+
 - **SWR Integration** - Automatic data fetching with caching and revalidation
 - **Live Updates** - Automatic refresh every 30 seconds with visual indicator
 - **Manual Refresh** - Refresh button with loading state and toast feedback
@@ -19,6 +20,7 @@ This release brings the Finance Control Room from a prototype to a production-re
 - **Focus Revalidation** - Auto-refresh when user returns to tab
 
 #### Visualization & Charts
+
 - **Recharts Integration** - Professional bar charts for revenue vs costs
 - **Real Data Visualization** - 7-day breakdown with realistic variance
 - **Responsive Charts** - Mobile-optimized with touch support
@@ -27,6 +29,7 @@ This release brings the Finance Control Room from a prototype to a production-re
 - **Color-coded Metrics** - Revenue (indigo), Costs (red), Margin (green)
 
 #### Export Functionality
+
 - **PDF Export** - Professional reports with header, summary, and deadlines table
 - **Excel Export** - Multi-sheet workbook (Riepilogo, Scadenze, Metriche)
 - **Export Dialog** - User-friendly modal with format selection
@@ -34,6 +37,7 @@ This release brings the Finance Control Room from a prototype to a production-re
 - **Error Handling** - Toast notifications for export failures
 
 #### Payment Integration
+
 - **Stripe-ready Payment Dialog** - Modal for fiscal deadline payments
 - **Amount Validation** - Input validation with error messages
 - **Payment Simulation** - Simulated payment flow (95% success rate)
@@ -41,6 +45,7 @@ This release brings the Finance Control Room from a prototype to a production-re
 - **Saved Payment Methods** - Shows verified card (simulated)
 
 #### Loading & UX
+
 - **Page Skeleton** - Full-page loading state with realistic placeholders
 - **KPI Card Skeletons** - Individual card loading states
 - **Chart Skeletons** - Animated placeholders for charts
@@ -48,6 +53,7 @@ This release brings the Finance Control Room from a prototype to a production-re
 - **Progressive Enhancement** - Works without JavaScript fallbacks
 
 #### Developer Experience
+
 - **Complete API Documentation** - 300+ lines in API.md
 - **Type Safety** - Zero `any` types, full TypeScript coverage
 - **Custom Hooks** - Reusable `useFiscalData()` with variants
@@ -131,18 +137,18 @@ This release brings the Finance Control Room from a prototype to a production-re
 
 ## Comparison: v1.0 → v2.0
 
-| Feature | v1.0 | v2.0 |
-|---------|------|------|
-| Data Fetching | Manual useEffect | SWR with cache |
-| Charts | Mock HTML bars | Real Recharts |
-| Export | ❌ | ✅ PDF + Excel |
-| Payment | ❌ | ✅ Stripe-ready |
-| Loading States | Inline div | Skeleton components |
-| Live Updates | ❌ | ✅ 30s polling |
-| Error Handling | Console.error | Toast + Retry |
-| Test Coverage | ~60% | ~90% |
-| Documentation | Basic README | README + API.md |
-| Quality Score | 6.5/10 | 10/10 |
+| Feature        | v1.0             | v2.0                |
+| -------------- | ---------------- | ------------------- |
+| Data Fetching  | Manual useEffect | SWR with cache      |
+| Charts         | Mock HTML bars   | Real Recharts       |
+| Export         | ❌               | ✅ PDF + Excel      |
+| Payment        | ❌               | ✅ Stripe-ready     |
+| Loading States | Inline div       | Skeleton components |
+| Live Updates   | ❌               | ✅ 30s polling      |
+| Error Handling | Console.error    | Toast + Retry       |
+| Test Coverage  | ~60%             | ~90%                |
+| Documentation  | Basic README     | README + API.md     |
+| Quality Score  | 6.5/10           | 10/10               |
 
 ---
 

@@ -24,7 +24,7 @@ export interface OCRResult {
 export interface OCROptions {
   language?: string; // 'ita', 'eng', 'auto'
   enhance?: boolean; // Pre-processing immagine
-  timeout?: number;  // Timeout in ms
+  timeout?: number; // Timeout in ms
 }
 
 /**
@@ -136,7 +136,9 @@ export abstract class OCRAdapter {
 /**
  * Factory per creare OCR adapter
  */
-export function createOCRAdapter(type: 'mock' | 'tesseract' | 'claude' | 'google-vision' | 'auto' = 'auto'): OCRAdapter {
+export function createOCRAdapter(
+  type: 'mock' | 'tesseract' | 'claude' | 'google-vision' | 'auto' = 'auto'
+): OCRAdapter {
   switch (type) {
     case 'google-vision': {
       const { GoogleVisionOCRAdapter } = require('./google-vision');

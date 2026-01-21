@@ -37,11 +37,13 @@ Cerca questi messaggi nei log:
 ### ✅ Passo 1: Verifica che la Funzione venga Chiamata
 
 Cerca nei log:
+
 ```
 🚀 [ORCHESTRATOR] createShipmentWithOrchestrator chiamato
 ```
 
 **Se NON vedi questo messaggio**:
+
 - ❌ La funzione non viene chiamata
 - **Causa**: Il codice non è stato deployato o c'è un errore prima
 
@@ -52,14 +54,17 @@ Cerca nei log:
 ### ✅ Passo 2: Verifica Autenticazione
 
 Cerca nei log:
+
 ```
 ✅ [ORCHESTRATOR] Utente autenticato: admin@spediresicuro.it
 ```
 
 **Se vedi**:
+
 ```
 ⚠️ [ORCHESTRATOR] Non autenticato
 ```
+
 - ❌ Problema di autenticazione
 
 ---
@@ -67,18 +72,22 @@ Cerca nei log:
 ### ✅ Passo 3: Verifica Broker Adapter Registrato
 
 Cerca nei log:
+
 ```
 ✅ [SPEDISCI.ONLINE] Broker adapter registrato tramite configurazione DEFAULT
 ✅ [SPEDISCI.ONLINE] Contratti configurati: [lista contratti]
 ```
 
 **Se vedi**:
+
 ```
 ⚠️ Spedisci.Online non configurato
 ```
+
 - ❌ La configurazione non è nel database o non è attiva
 
 **Soluzione**:
+
 1. Vai su `/dashboard/integrazioni`
 2. Verifica che Spedisci.Online sia configurato
 3. Verifica che sia attivo (`is_active = true`)
@@ -89,6 +98,7 @@ Cerca nei log:
 ### ✅ Passo 4: Verifica che il Broker Sia Usato
 
 Cerca nei log:
+
 ```
 🔍 [ORCHESTRATOR] Controllo broker adapter...
 ✅ [ORCHESTRATOR] Broker adapter disponibile, uso Spedisci.Online
@@ -96,12 +106,15 @@ Cerca nei log:
 ```
 
 **Se vedi**:
+
 ```
 ⚠️ [ORCHESTRATOR] Broker adapter NON disponibile
 ```
+
 - ❌ Il broker non è stato registrato correttamente
 
 **Possibili cause**:
+
 - Configurazione non trovata nel DB
 - Errore durante la registrazione
 - Configurazione non è default
@@ -111,6 +124,7 @@ Cerca nei log:
 ### ✅ Passo 5: Verifica Chiamata API
 
 Cerca nei log:
+
 ```
 🚀 [SPEDISCI.ONLINE] Inizio creazione spedizione...
 🌐 [SPEDISCI.ONLINE] Tentativo chiamata API JSON a: https://...
@@ -118,18 +132,23 @@ Cerca nei log:
 ```
 
 **Se vedi**:
+
 ```
 ✅ [SPEDISCI.ONLINE] Chiamata API JSON riuscita!
 ```
+
 - ✅ La chiamata funziona!
 
 **Se vedi**:
+
 ```
 ❌ [SPEDISCI.ONLINE] Creazione JSON fallita: [errore]
 ```
+
 - ❌ La chiamata API sta fallendo
 
 **Controlla**:
+
 - URL corretto (BASE_URL)
 - API Key valida
 - Payload corretto
@@ -140,24 +159,29 @@ Cerca nei log:
 ### ✅ Passo 6: Verifica Codice Contratto
 
 Cerca nei log:
+
 ```
 🔍 [SPEDISCI.ONLINE] Cerco codice contratto per corriere: GLS
 🔍 [SPEDISCI.ONLINE] Codice contratto trovato: gls-NN6-STANDARD-(TR-VE)
 ```
 
 **Se vedi**:
+
 ```
 🔍 [SPEDISCI.ONLINE] Codice contratto trovato: NESSUNO
 ⚠️ [SPEDISCI.ONLINE] Nessun codice contratto trovato per corriere: GLS
 ```
+
 - ❌ Il mapping contratto non funziona
 
 **Possibili cause**:
+
 - Contract mapping non configurato correttamente
 - Nome corriere non corrisponde
 - Formato contract_mapping errato
 
 **Soluzione**:
+
 1. Vai su `/dashboard/integrazioni`
 2. Verifica i contratti nella tabella
 3. Verifica che il nome corriere corrisponda esattamente
@@ -167,15 +191,18 @@ Cerca nei log:
 ### ✅ Passo 7: Verifica Payload
 
 Cerca nei log:
+
 ```
 📦 [SPEDISCI.ONLINE] Payload preparato: { destinatario: "...", codice_contratto: "..." }
 📡 [SPEDISCI.ONLINE] Codice contratto nel payload: gls-NN6-STANDARD-(TR-VE)
 ```
 
 **Se vedi**:
+
 ```
 📡 [SPEDISCI.ONLINE] Codice contratto nel payload: MANCANTE
 ```
+
 - ❌ Il codice contratto non viene incluso nel payload
 
 ---
@@ -187,14 +214,16 @@ Cerca nei log:
 **Causa**: La configurazione non viene trovata
 
 **Soluzione**:
+
 1. Verifica che esista una configurazione in `courier_configs`
 2. Verifica che `is_active = true`
 3. Verifica che `provider_id = 'spedisci_online'`
 
 **Query SQL per verificare**:
+
 ```sql
-SELECT * FROM courier_configs 
-WHERE provider_id = 'spedisci_online' 
+SELECT * FROM courier_configs
+WHERE provider_id = 'spedisci_online'
 AND is_active = true;
 ```
 
@@ -205,6 +234,7 @@ AND is_active = true;
 **Causa**: Il contract_mapping non contiene il corriere selezionato
 
 **Soluzione**:
+
 1. Vai su `/dashboard/integrazioni`
 2. Aggiungi il contratto con:
    - Codice: `gls-NN6-STANDARD-(TR-VE)`
@@ -212,6 +242,7 @@ AND is_active = true;
 3. Salva
 
 **Verifica formato contract_mapping**:
+
 ```json
 {
   "gls-NN6-STANDARD-(TR-VE)": "Gls",
@@ -224,11 +255,13 @@ AND is_active = true;
 ### Problema 3: "Chiamata API fallisce"
 
 **Controlla**:
+
 - URL endpoint corretto (deve finire con `/api/v2/`)
 - API Key valida
 - Base URL corretto (es: `https://tuodominio.spedisci.online`)
 
 **Log da controllare**:
+
 ```
 ❌ [SPEDISCI.ONLINE] Errore risposta API: [dettagli errore]
 ```
@@ -270,14 +303,3 @@ AND is_active = true;
 ---
 
 **Ultimo aggiornamento**: 3 Dicembre 2025
-
-
-
-
-
-
-
-
-
-
-

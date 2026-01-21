@@ -11,7 +11,7 @@
  * Nota: Lock è stato rimosso intenzionalmente (non critico come spedizioni)
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from 'vitest';
 
 // Tipi per i test
 interface SyncResult {
@@ -26,7 +26,7 @@ interface PriceList {
   metadata?: { courier_config_id?: string; carrier_code?: string };
 }
 
-describe("Race Condition in Price List Sync", () => {
+describe('Race Condition in Price List Sync', () => {
   // Simula sync senza lock (comportamento attuale)
   async function simulateSyncWithoutLock(
     userId: string,
@@ -62,11 +62,11 @@ describe("Race Condition in Price List Sync", () => {
     };
   }
 
-  describe("Sync Simultanee senza Lock", () => {
-    it("dovrebbe permettere sync simultanee (senza lock)", async () => {
-      const userId = "user-123";
-      const carrierCode = "gls";
-      const configId = "config-123";
+  describe('Sync Simultanee senza Lock', () => {
+    it('dovrebbe permettere sync simultanee (senza lock)', async () => {
+      const userId = 'user-123';
+      const carrierCode = 'gls';
+      const configId = 'config-123';
       const existingLists: PriceList[] = [];
 
       // Simula due sync simultanee
@@ -83,17 +83,17 @@ describe("Race Condition in Price List Sync", () => {
       // Questo è accettabile per listini (non critico come spedizioni)
     });
 
-    it("dovrebbe gestire sync simultanee con listino esistente", async () => {
-      const userId = "user-123";
-      const carrierCode = "gls";
-      const configId = "config-123";
+    it('dovrebbe gestire sync simultanee con listino esistente', async () => {
+      const userId = 'user-123';
+      const carrierCode = 'gls';
+      const configId = 'config-123';
       const existingLists: PriceList[] = [
         {
-          id: "pl-existing",
-          name: "GLS - Account 1",
+          id: 'pl-existing',
+          name: 'GLS - Account 1',
           metadata: {
-            courier_config_id: "config-123",
-            carrier_code: "gls",
+            courier_config_id: 'config-123',
+            carrier_code: 'gls',
           },
         },
       ];
@@ -107,28 +107,28 @@ describe("Race Condition in Price List Sync", () => {
       // Entrambe dovrebbero trovare il listino esistente
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
-      expect(result1.priceListId).toBe("pl-existing");
-      expect(result2.priceListId).toBe("pl-existing");
+      expect(result1.priceListId).toBe('pl-existing');
+      expect(result2.priceListId).toBe('pl-existing');
     });
   });
 
-  describe("Prevenzione Duplicati con Metadata Matching", () => {
-    it("dovrebbe matchare listini per courier_config_id E carrier_code", () => {
+  describe('Prevenzione Duplicati con Metadata Matching', () => {
+    it('dovrebbe matchare listini per courier_config_id E carrier_code', () => {
       const existingLists: PriceList[] = [
         {
-          id: "pl-1",
-          name: "GLS - Account 1",
+          id: 'pl-1',
+          name: 'GLS - Account 1',
           metadata: {
-            courier_config_id: "config-123",
-            carrier_code: "gls",
+            courier_config_id: 'config-123',
+            carrier_code: 'gls',
           },
         },
         {
-          id: "pl-2",
-          name: "BRT - Account 1",
+          id: 'pl-2',
+          name: 'BRT - Account 1',
           metadata: {
-            courier_config_id: "config-123", // Stessa config
-            carrier_code: "brt", // Corriere diverso
+            courier_config_id: 'config-123', // Stessa config
+            carrier_code: 'brt', // Corriere diverso
           },
         },
       ];
@@ -137,31 +137,31 @@ describe("Race Condition in Price List Sync", () => {
       const matching = existingLists.find((pl) => {
         const metadata = pl.metadata || {};
         return (
-          metadata.courier_config_id === "config-123" &&
-          metadata.carrier_code?.toLowerCase() === "gls"
+          metadata.courier_config_id === 'config-123' &&
+          metadata.carrier_code?.toLowerCase() === 'gls'
         );
       });
 
-      expect(matching?.id).toBe("pl-1");
-      expect(matching?.metadata?.carrier_code).toBe("gls");
+      expect(matching?.id).toBe('pl-1');
+      expect(matching?.metadata?.carrier_code).toBe('gls');
     });
 
-    it("NON dovrebbe matchare listini con configId diverso", () => {
+    it('NON dovrebbe matchare listini con configId diverso', () => {
       const existingLists: PriceList[] = [
         {
-          id: "pl-1",
-          name: "GLS - Account 1",
+          id: 'pl-1',
+          name: 'GLS - Account 1',
           metadata: {
-            courier_config_id: "config-123",
-            carrier_code: "gls",
+            courier_config_id: 'config-123',
+            carrier_code: 'gls',
           },
         },
         {
-          id: "pl-2",
-          name: "GLS - Account 2",
+          id: 'pl-2',
+          name: 'GLS - Account 2',
           metadata: {
-            courier_config_id: "config-456", // Config diversa
-            carrier_code: "gls", // Stesso corriere
+            courier_config_id: 'config-456', // Config diversa
+            carrier_code: 'gls', // Stesso corriere
           },
         },
       ];
@@ -170,59 +170,59 @@ describe("Race Condition in Price List Sync", () => {
       const matching = existingLists.find((pl) => {
         const metadata = pl.metadata || {};
         return (
-          metadata.courier_config_id === "config-123" &&
-          metadata.carrier_code?.toLowerCase() === "gls"
+          metadata.courier_config_id === 'config-123' &&
+          metadata.carrier_code?.toLowerCase() === 'gls'
         );
       });
 
-      expect(matching?.id).toBe("pl-1");
-      expect(matching?.id).not.toBe("pl-2");
+      expect(matching?.id).toBe('pl-1');
+      expect(matching?.id).not.toBe('pl-2');
     });
   });
 
-  describe("Comportamento Atteso senza Lock", () => {
-    it("dovrebbe documentare che duplicati sono accettabili per listini", () => {
+  describe('Comportamento Atteso senza Lock', () => {
+    it('dovrebbe documentare che duplicati sono accettabili per listini', () => {
       // Documentazione comportamento attuale
       const behavior = {
         hasLock: false,
-        reason: "Listini non sono critici come spedizioni (no rischio finanziario)",
+        reason: 'Listini non sono critici come spedizioni (no rischio finanziario)',
         acceptableDuplicates: true,
-        mitigation: "Metadata matching previene la maggior parte dei duplicati",
+        mitigation: 'Metadata matching previene la maggior parte dei duplicati',
       };
 
       expect(behavior.hasLock).toBe(false);
       expect(behavior.acceptableDuplicates).toBe(true);
     });
 
-    it("dovrebbe gestire gracefully eventuali duplicati", () => {
+    it('dovrebbe gestire gracefully eventuali duplicati', () => {
       // Se duplicati vengono creati, il sistema deve gestirli gracefully
       const duplicateLists: PriceList[] = [
         {
-          id: "pl-1",
-          name: "GLS - Account 1",
+          id: 'pl-1',
+          name: 'GLS - Account 1',
           metadata: {
-            courier_config_id: "config-123",
-            carrier_code: "gls",
+            courier_config_id: 'config-123',
+            carrier_code: 'gls',
           },
         },
         {
-          id: "pl-2",
-          name: "GLS - Account 1", // Duplicato
+          id: 'pl-2',
+          name: 'GLS - Account 1', // Duplicato
           metadata: {
-            courier_config_id: "config-123",
-            carrier_code: "gls",
+            courier_config_id: 'config-123',
+            carrier_code: 'gls',
           },
         },
       ];
 
       // Sistema dovrebbe usare il più recente o permettere entrambi
       const mostRecent = duplicateLists[duplicateLists.length - 1];
-      expect(mostRecent.id).toBe("pl-2");
+      expect(mostRecent.id).toBe('pl-2');
     });
   });
 });
 
-describe("Sync Race Condition - Mitigazioni", () => {
+describe('Sync Race Condition - Mitigazioni', () => {
   /**
    * Anche senza lock, ci sono mitigazioni che prevengono la maggior parte
    * dei problemi di race condition:
@@ -231,7 +231,7 @@ describe("Sync Race Condition - Mitigazioni", () => {
    * 3. Order by created_at DESC (usa più recente)
    */
 
-  it("dovrebbe usare limit per prevenire falsi negativi", () => {
+  it('dovrebbe usare limit per prevenire falsi negativi', () => {
     // Se un utente ha molti listini, il limit previene falsi negativi
     const limit = 100;
 
@@ -259,34 +259,34 @@ describe("Sync Race Condition - Mitigazioni", () => {
       id: `pl-${i}`,
       name: `Listino ${i}`,
       metadata: {
-        courier_config_id: i < 100 ? "config-123" : "config-other",
-        carrier_code: "gls",
+        courier_config_id: i < 100 ? 'config-123' : 'config-other',
+        carrier_code: 'gls',
       },
     }));
 
-    const found = findPriceList(manyLists, "config-123", "gls", limit);
+    const found = findPriceList(manyLists, 'config-123', 'gls', limit);
 
     // Dovrebbe trovare il primo match (entro limit)
     expect(found).toBeDefined();
-    expect(found?.metadata?.courier_config_id).toBe("config-123");
+    expect(found?.metadata?.courier_config_id).toBe('config-123');
   });
 
-  it("dovrebbe usare order by created_at DESC per preferire più recente", () => {
+  it('dovrebbe usare order by created_at DESC per preferire più recente', () => {
     const lists: PriceList[] = [
       {
-        id: "pl-old",
-        name: "GLS - Old",
+        id: 'pl-old',
+        name: 'GLS - Old',
         metadata: {
-          courier_config_id: "config-123",
-          carrier_code: "gls",
+          courier_config_id: 'config-123',
+          carrier_code: 'gls',
         },
       },
       {
-        id: "pl-new",
-        name: "GLS - New",
+        id: 'pl-new',
+        name: 'GLS - New',
         metadata: {
-          courier_config_id: "config-123",
-          carrier_code: "gls",
+          courier_config_id: 'config-123',
+          carrier_code: 'gls',
         },
       },
     ];
@@ -297,14 +297,11 @@ describe("Sync Race Condition - Mitigazioni", () => {
     const mostRecent = sorted.find((pl) => {
       const metadata = pl.metadata || {};
       return (
-        metadata.courier_config_id === "config-123" &&
-        metadata.carrier_code?.toLowerCase() === "gls"
+        metadata.courier_config_id === 'config-123' &&
+        metadata.carrier_code?.toLowerCase() === 'gls'
       );
     });
 
-    expect(mostRecent?.id).toBe("pl-new");
+    expect(mostRecent?.id).toBe('pl-new');
   });
 });
-
-
-

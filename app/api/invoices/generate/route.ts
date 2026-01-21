@@ -1,8 +1,8 @@
 /**
  * API Endpoint: Genera Fattura per Spedizione
- * 
+ *
  * POST /api/invoices/generate
- * 
+ *
  * Genera una fattura PDF per una spedizione.
  * Body: { shipmentId: string }
  */
@@ -18,10 +18,7 @@ export async function POST(request: NextRequest) {
     const { shipmentId } = body;
 
     if (!shipmentId) {
-      return NextResponse.json(
-        { error: 'shipmentId richiesto' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'shipmentId richiesto' }, { status: 400 });
     }
 
     // Genera fattura
@@ -42,8 +39,3 @@ export async function POST(request: NextRequest) {
 }
 
 export const dynamic = 'force-dynamic';
-
-
-
-
-

@@ -3,6 +3,7 @@
 ## 🎯 Problema
 
 Quando provi a salvare i dati cliente, vedi questo errore:
+
 ```
 EROFS: read-only file system, open '/var/task/data/database.json'
 ```
@@ -24,15 +25,15 @@ Se il campo non esiste, esegui questo SQL in **Supabase Dashboard** → **SQL Ed
 
 ```sql
 -- Aggiungi campo dati_cliente alla tabella users
-ALTER TABLE users 
+ALTER TABLE users
   ADD COLUMN IF NOT EXISTS dati_cliente JSONB;
 
 -- Aggiungi anche default_sender se non esiste (per mittente predefinito)
-ALTER TABLE users 
+ALTER TABLE users
   ADD COLUMN IF NOT EXISTS default_sender JSONB;
 
 -- Aggiungi campo integrazioni se non esiste (per integrazioni e-commerce)
-ALTER TABLE users 
+ALTER TABLE users
   ADD COLUMN IF NOT EXISTS integrazioni JSONB;
 ```
 
@@ -42,7 +43,7 @@ Esegui questo SQL per verificare che tutti i campi siano presenti:
 
 ```sql
 -- Verifica struttura tabella users
-SELECT 
+SELECT
   column_name,
   data_type,
   is_nullable,
@@ -53,6 +54,7 @@ ORDER BY ordinal_position;
 ```
 
 Dovresti vedere questi campi:
+
 - ✅ `id` (UUID)
 - ✅ `email` (TEXT)
 - ✅ `password` (TEXT)
@@ -87,16 +89,19 @@ Dopo aver aggiunto il campo:
 ### Errori Comuni
 
 #### Errore: "column 'dati_cliente' does not exist"
+
 **Causa:** Il campo non esiste nella tabella
 
 **Soluzione:** Esegui lo SQL sopra per aggiungere il campo
 
 #### Errore: "invalid input syntax for type jsonb"
+
 **Causa:** I dati non sono in formato JSON valido
 
 **Soluzione:** Il codice gestisce automaticamente la conversione, ma verifica che i dati siano validi
 
 #### Errore: "permission denied for table users"
+
 **Causa:** La Service Role Key non ha i permessi
 
 **Soluzione:** Verifica che `SUPABASE_SERVICE_ROLE_KEY` sia configurata correttamente su Vercel
@@ -116,4 +121,3 @@ Prima di considerare il problema risolto:
 ---
 
 **Nota**: Ho aggiornato il codice per salvare automaticamente in Supabase quando disponibile. Ora devi solo assicurarti che la tabella abbia i campi necessari!
-

@@ -19,11 +19,11 @@ Questo documento descrive il sistema di audit logging di SpedireSicuro, che regi
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Audit Taxonomy | docs/8-SECURITY/AUDIT_LOGGING.md | [Taxonomy](#audit-taxonomy) |
-| Usage Pattern | docs/8-SECURITY/AUDIT_LOGGING.md | [Usage](#usage-pattern) |
-| Query Audit Logs | docs/8-SECURITY/AUDIT_LOGGING.md | [Query](#query-audit-logs) |
+| Sezione          | Pagina                           | Link                        |
+| ---------------- | -------------------------------- | --------------------------- |
+| Audit Taxonomy   | docs/8-SECURITY/AUDIT_LOGGING.md | [Taxonomy](#audit-taxonomy) |
+| Usage Pattern    | docs/8-SECURITY/AUDIT_LOGGING.md | [Usage](#usage-pattern)     |
+| Query Audit Logs | docs/8-SECURITY/AUDIT_LOGGING.md | [Query](#query-audit-logs)  |
 
 ## Content
 
@@ -33,32 +33,32 @@ Questo documento descrive il sistema di audit logging di SpedireSicuro, che regi
 
 ```typescript
 // Shipments
-CREATE_SHIPMENT, UPDATE_SHIPMENT, DELETE_SHIPMENT, CANCEL_SHIPMENT;
-DOWNLOAD_LABEL, TRACK_SHIPMENT, SHIPMENT_ADJUSTMENT;
+(CREATE_SHIPMENT, UPDATE_SHIPMENT, DELETE_SHIPMENT, CANCEL_SHIPMENT);
+(DOWNLOAD_LABEL, TRACK_SHIPMENT, SHIPMENT_ADJUSTMENT);
 
 // Wallet
-WALLET_RECHARGE, WALLET_DEBIT, WALLET_CREDIT, WALLET_REFUND;
-VIEW_WALLET_BALANCE, VIEW_WALLET_TRANSACTIONS;
+(WALLET_RECHARGE, WALLET_DEBIT, WALLET_CREDIT, WALLET_REFUND);
+(VIEW_WALLET_BALANCE, VIEW_WALLET_TRANSACTIONS);
 
 // Impersonation
-IMPERSONATION_STARTED, IMPERSONATION_ENDED;
-IMPERSONATION_DENIED, IMPERSONATION_EXPIRED;
-IMPERSONATION_INVALID_COOKIE, IMPERSONATION_TARGET_NOT_FOUND;
+(IMPERSONATION_STARTED, IMPERSONATION_ENDED);
+(IMPERSONATION_DENIED, IMPERSONATION_EXPIRED);
+(IMPERSONATION_INVALID_COOKIE, IMPERSONATION_TARGET_NOT_FOUND);
 
 // Users
-USER_LOGIN, USER_LOGOUT, USER_CREATED, USER_UPDATED;
-USER_ROLE_CHANGED, USER_PASSWORD_CHANGED;
+(USER_LOGIN, USER_LOGOUT, USER_CREATED, USER_UPDATED);
+(USER_ROLE_CHANGED, USER_PASSWORD_CHANGED);
 
 // Courier Configs
-COURIER_CONFIG_CREATED, COURIER_CONFIG_UPDATED;
-COURIER_CREDENTIAL_VIEWED, COURIER_CREDENTIAL_DECRYPTED;
+(COURIER_CONFIG_CREATED, COURIER_CONFIG_UPDATED);
+(COURIER_CREDENTIAL_VIEWED, COURIER_CREDENTIAL_DECRYPTED);
 ```
 
 ### Usage Pattern
 
 ```typescript
-import { writeAuditLog } from "@/lib/security/audit-log";
-import { AUDIT_ACTIONS } from "@/lib/security/audit-actions";
+import { writeAuditLog } from '@/lib/security/audit-log';
+import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 // In Server Action or API Route
 const context = await requireSafeAuth();
@@ -66,13 +66,13 @@ const context = await requireSafeAuth();
 await writeAuditLog({
   context,
   action: AUDIT_ACTIONS.CREATE_SHIPMENT,
-  resourceType: "shipment",
+  resourceType: 'shipment',
   resourceId: shipment.id,
   metadata: {
-    carrier: "GLS",
+    carrier: 'GLS',
     cost: 8.5,
-    reason: "Bulk import", // Optional
-    requestId: headers.get("x-request-id"), // Optional
+    reason: 'Bulk import', // Optional
+    requestId: headers.get('x-request-id'), // Optional
   },
 });
 ```
@@ -137,11 +137,11 @@ import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 export async function createShipment(data: ShipmentData) {
   const context = await requireSafeAuth();
-  
+
   const { data: shipment } = await supabaseAdmin
     .from('shipments')
     .insert({ ...data, user_id: context.target.id });
-  
+
   // Audit log
   await writeAuditLog({
     context,
@@ -152,9 +152,9 @@ export async function createShipment(data: ShipmentData) {
       carrier: data.carrier,
       cost: data.cost,
       tracking_number: shipment.tracking_number,
-    }
+    },
   });
-  
+
   return shipment;
 }
 ```
@@ -164,13 +164,13 @@ export async function createShipment(data: ShipmentData) {
 ```typescript
 export async function addWalletCredit(userId: string, amount: number) {
   const context = await requireSafeAuth();
-  
+
   await supabaseAdmin.rpc('add_wallet_credit', {
     p_user_id: userId,
     p_amount: amount,
-    p_admin_id: context.target.id
+    p_admin_id: context.target.id,
   });
-  
+
   // Audit log
   await writeAuditLog({
     context,
@@ -180,7 +180,7 @@ export async function addWalletCredit(userId: string, amount: number) {
     metadata: {
       amount,
       reason: 'Admin top-up',
-    }
+    },
   });
 }
 ```
@@ -189,11 +189,11 @@ export async function addWalletCredit(userId: string, amount: number) {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Audit log non scritto | Verifica che `writeAuditLog()` sia chiamato |
-| Metadata mancante | Aggiungi metadata rilevante per tracciabilità |
-| Query lenta | Usa indici su `target_id`, `action`, `created_at` |
+| Issue                 | Soluzione                                         |
+| --------------------- | ------------------------------------------------- |
+| Audit log non scritto | Verifica che `writeAuditLog()` sia chiamato       |
+| Metadata mancante     | Aggiungi metadata rilevante per tracciabilità     |
+| Query lenta           | Usa indici su `target_id`, `action`, `created_at` |
 
 ---
 
@@ -207,11 +207,12 @@ export async function addWalletCredit(userId: string, amount: number) {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

@@ -3,6 +3,7 @@
 ## 🆕 File Creati
 
 ### Scripts di Verifica e Diagnostica
+
 1. **`scripts/verifica-sicurezza-commit.ts`**
    - Script per verificare dati sensibili nei file tracciati da Git
    - Comando: `npm run verify:security`
@@ -19,6 +20,7 @@
    - Verifica che shipments sia protetto
 
 ### Documentazione
+
 4. **`docs/SICUREZZA_COMMIT.md`**
    - Guida completa sulla sicurezza nei commit
    - Spiega cosa è protetto da .gitignore
@@ -40,6 +42,7 @@
 ## ✏️ File Modificati
 
 ### Configurazione
+
 1. **`.gitignore`**
    - Aggiunto: `automation-service/.env`
    - Aggiunto: `automation-service/.env.local`
@@ -50,12 +53,14 @@
    - Nuovo comando: `npm run verify:security`
 
 ### Scripts
+
 3. **`scripts/verifica-config-locale.ts`**
    - **FIX CRITICO**: Aggiunto caricamento di `.env.local` con `dotenv`
    - Prima non leggeva il file .env.local (bug)
    - Ora funziona correttamente e verifica tutte le variabili
 
 ### API Routes
+
 4. **`app/api/geo/search/route.ts`**
    - Migliorato logging degli errori
    - Aggiunto fallback con query ILIKE se textSearch fallisce
@@ -67,9 +72,11 @@
 ## 🔧 Modifiche Funzionali
 
 ### 1. Fix Verifica Configurazione
+
 **Problema**: Lo script `verify:config` non leggeva il file `.env.local`
 
 **Soluzione**: Aggiunto:
+
 ```typescript
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -80,11 +87,13 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 **Risultato**: Ora lo script verifica correttamente tutte le variabili
 
 ### 2. Miglioramento Sicurezza Commit
+
 **Aggiunto**: Script automatico per verificare dati sensibili prima di committare
 
 **Uso**: `npm run verify:security`
 
 **Verifica**:
+
 - Pattern JWT tokens
 - API keys hardcoded
 - Password in chiaro
@@ -92,15 +101,18 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 - Chiavi lunghe sospette
 
 ### 3. Fix API Geo Search
+
 **Problema**: Errore 500 quando si cerca una città
 
 **Miglioramenti**:
+
 - Logging dettagliato degli errori
 - Fallback con query ILIKE se textSearch fallisce
 - Messaggi di errore più informativi
 - Hint per risolvere problemi comuni
 
 ### 4. Protezione .gitignore
+
 **Aggiunto**: Protezione esplicita per `automation-service/.env`
 
 **Motivo**: Doppia sicurezza per evitare commit accidentali
@@ -119,24 +131,30 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 ## ✅ Cosa Fare Ora
 
 ### 1. Verifica Configurazione
+
 ```bash
 npm run verify:config
 ```
+
 Dovrebbe mostrare tutte le variabili configurate ✅
 
 ### 2. Verifica Sicurezza (prima di ogni commit)
+
 ```bash
 npm run verify:security
 ```
+
 Verifica che non ci siano dati sensibili esposti
 
 ### 3. Fix Geo Locations RLS
+
 1. Vai su Supabase SQL Editor
 2. Esegui `supabase/DIAGNOSTICA_GEO_LOCATIONS.sql`
 3. Leggi il report e applica le fix necessarie
 4. Oppure esegui `supabase/migrations/024_fix_geo_locations_rls.sql`
 
 ### 4. Test API Geo Search
+
 1. Riavvia il server: `npm run dev`
 2. Prova a cercare una città nel form
 3. Guarda i log nel terminale per vedere l'errore esatto
@@ -172,4 +190,3 @@ git status --porcelain
 
 **Data creazione**: 2025-01-12
 **Sessione**: Fix verifica config, sicurezza commit, fix geo_locations RLS
-

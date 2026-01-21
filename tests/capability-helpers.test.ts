@@ -1,6 +1,6 @@
 /**
  * Test per Capability Helpers
- * 
+ *
  * Verifica funzionamento sistema capability con fallback
  */
 
@@ -53,14 +53,10 @@ describe('Capability Helpers', () => {
         error: null,
       });
 
-      const result = await hasCapability(
-        'user-id',
-        'can_manage_pricing',
-        {
-          role: 'admin',
-          account_type: 'admin',
-        }
-      );
+      const result = await hasCapability('user-id', 'can_manage_pricing', {
+        role: 'admin',
+        account_type: 'admin',
+      });
 
       // Dovrebbe usare fallback e restituire true
       expect(result).toBe(true);
@@ -72,13 +68,9 @@ describe('Capability Helpers', () => {
         error: null,
       });
 
-      const result = await hasCapability(
-        'user-id',
-        'unknown_capability',
-        {
-          role: 'admin',
-        }
-      );
+      const result = await hasCapability('user-id', 'unknown_capability', {
+        role: 'admin',
+      });
 
       expect(result).toBe(false);
     });
@@ -90,13 +82,9 @@ describe('Capability Helpers', () => {
         error: { message: 'Database error' },
       });
 
-      const result = await hasCapability(
-        'user-id',
-        'can_manage_pricing',
-        {
-          role: 'admin',
-        }
-      );
+      const result = await hasCapability('user-id', 'can_manage_pricing', {
+        role: 'admin',
+      });
 
       // Dovrebbe usare fallback
       expect(result).toBe(true);

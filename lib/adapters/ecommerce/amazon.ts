@@ -2,12 +2,20 @@
  * Amazon Seller Central E-commerce Adapter
  *
  * Integrazione con Amazon Seller Central via SP-API (Selling Partner API)
- * 
+ *
  * NOTA: Amazon richiede autenticazione OAuth 2.0 (LWA) e firma delle richieste
  * Questo è un adapter base che può essere esteso per supportare l'API completa
  */
 
-import { EcommerceAdapter, type EcommerceCredentials, type Order, type OrderFilters, type TrackingInfo, type Product, type WebhookEvent } from './base';
+import {
+  EcommerceAdapter,
+  type EcommerceCredentials,
+  type Order,
+  type OrderFilters,
+  type TrackingInfo,
+  type Product,
+  type WebhookEvent,
+} from './base';
 
 export class AmazonAdapter extends EcommerceAdapter {
   private baseUrl: string;
@@ -15,7 +23,7 @@ export class AmazonAdapter extends EcommerceAdapter {
 
   constructor(credentials: EcommerceCredentials) {
     super(credentials, 'amazon');
-    
+
     // Amazon SP-API usa regioni diverse
     this.region = credentials.region || 'eu-west-1'; // Default: Europa
     this.baseUrl = `https://sellingpartnerapi-${this.region}.amazon.com`;
@@ -29,7 +37,7 @@ export class AmazonAdapter extends EcommerceAdapter {
       if (!this.credentials.access_token && !this.credentials.lwa_refresh_token) {
         return false;
       }
-      
+
       // TODO: Implementare test reale con chiamata API
       // Per ora validiamo solo che le credenziali siano presenti
       return true;
@@ -47,7 +55,7 @@ export class AmazonAdapter extends EcommerceAdapter {
       // Amazon SP-API Orders endpoint
       // NOTA: Richiede autenticazione LWA e firma AWS
       // TODO: Implementare chiamata reale
-      
+
       // Placeholder - da implementare con chiamata reale
       return [];
     } catch (error) {
@@ -117,4 +125,3 @@ export class AmazonAdapter extends EcommerceAdapter {
     console.log('[Amazon] Webhook received:', event.type);
   }
 }
-

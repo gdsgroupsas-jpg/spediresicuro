@@ -22,9 +22,7 @@ describe('navigationConfig - RBAC Filtering', () => {
       const config = getNavigationForUser('user', { isReseller: false });
 
       const hasAdminSection = config.sections.some((s) => s.id === 'admin');
-      const hasSuperAdminFinance = config.sections.some(
-        (s) => s.id === 'superadmin-finance'
-      );
+      const hasSuperAdminFinance = config.sections.some((s) => s.id === 'superadmin-finance');
 
       expect(hasAdminSection).toBe(false);
       expect(hasSuperAdminFinance).toBe(false);
@@ -60,9 +58,7 @@ describe('navigationConfig - RBAC Filtering', () => {
       const config = getNavigationForUser('admin', { isReseller: false });
 
       const adminSection = config.sections.find((s) => s.id === 'admin');
-      const hasSuperAdminItem = adminSection?.items.some(
-        (item) => item.id === 'super-admin'
-      );
+      const hasSuperAdminItem = adminSection?.items.some((item) => item.id === 'super-admin');
 
       expect(hasSuperAdminItem).toBe(false);
     });
@@ -71,9 +67,7 @@ describe('navigationConfig - RBAC Filtering', () => {
       const config = getNavigationForUser('admin', { isReseller: false });
 
       const adminSection = config.sections.find((s) => s.id === 'admin');
-      const hasAdminPanel = adminSection?.items.some(
-        (item) => item.id === 'admin-panel'
-      );
+      const hasAdminPanel = adminSection?.items.some((item) => item.id === 'admin-panel');
 
       expect(hasAdminPanel).toBe(true);
     });
@@ -81,9 +75,7 @@ describe('navigationConfig - RBAC Filtering', () => {
     it('should NOT show superadmin finance section to admin', () => {
       const config = getNavigationForUser('admin', { isReseller: false });
 
-      const hasSuperAdminFinance = config.sections.some(
-        (s) => s.id === 'superadmin-finance'
-      );
+      const hasSuperAdminFinance = config.sections.some((s) => s.id === 'superadmin-finance');
 
       expect(hasSuperAdminFinance).toBe(false);
     });
@@ -94,9 +86,7 @@ describe('navigationConfig - RBAC Filtering', () => {
       const config = getNavigationForUser('superadmin', { isReseller: false });
 
       const hasAdmin = config.sections.some((s) => s.id === 'admin');
-      const hasSuperAdminFinance = config.sections.some(
-        (s) => s.id === 'superadmin-finance'
-      );
+      const hasSuperAdminFinance = config.sections.some((s) => s.id === 'superadmin-finance');
       const hasLogistics = config.sections.some((s) => s.id === 'logistics');
 
       expect(hasAdmin).toBe(true);
@@ -108,9 +98,7 @@ describe('navigationConfig - RBAC Filtering', () => {
       const config = getNavigationForUser('superadmin', { isReseller: false });
 
       const adminSection = config.sections.find((s) => s.id === 'admin');
-      const hasSuperAdminItem = adminSection?.items.some(
-        (item) => item.id === 'super-admin'
-      );
+      const hasSuperAdminItem = adminSection?.items.some((item) => item.id === 'super-admin');
 
       expect(hasSuperAdminItem).toBe(true);
     });
@@ -118,12 +106,8 @@ describe('navigationConfig - RBAC Filtering', () => {
     it('should have superadmin finance section BEFORE logistics (priority-first)', () => {
       const config = getNavigationForUser('superadmin', { isReseller: false });
 
-      const financeIndex = config.sections.findIndex(
-        (s) => s.id === 'superadmin-finance'
-      );
-      const logisticsIndex = config.sections.findIndex(
-        (s) => s.id === 'logistics'
-      );
+      const financeIndex = config.sections.findIndex((s) => s.id === 'superadmin-finance');
+      const logisticsIndex = config.sections.findIndex((s) => s.id === 'logistics');
 
       expect(financeIndex).toBeGreaterThanOrEqual(0);
       expect(logisticsIndex).toBeGreaterThanOrEqual(0);
@@ -140,12 +124,8 @@ describe('navigationConfig - RBAC Filtering', () => {
         isReseller: false,
       });
 
-      const hasResellerSection = configWithReseller.sections.some(
-        (s) => s.id === 'reseller'
-      );
-      const hasNoResellerSection = configWithoutReseller.sections.every(
-        (s) => s.id !== 'reseller'
-      );
+      const hasResellerSection = configWithReseller.sections.some((s) => s.id === 'reseller');
+      const hasNoResellerSection = configWithoutReseller.sections.every((s) => s.id !== 'reseller');
 
       expect(hasResellerSection).toBe(true);
       expect(hasNoResellerSection).toBe(true);
@@ -169,12 +149,8 @@ describe('navigationConfig - RBAC Filtering', () => {
         accountType: 'user',
       });
 
-      const hasByocSection = configWithBYOC.sections.some(
-        (s) => s.id === 'byoc'
-      );
-      const hasNoByocSection = configWithoutBYOC.sections.every(
-        (s) => s.id !== 'byoc'
-      );
+      const hasByocSection = configWithBYOC.sections.some((s) => s.id === 'byoc');
+      const hasNoByocSection = configWithoutBYOC.sections.every((s) => s.id !== 'byoc');
 
       expect(hasByocSection).toBe(true);
       expect(hasNoByocSection).toBe(true);
@@ -216,9 +192,7 @@ describe('navigationConfig - Nested Sections', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
-    const usersSubsection = adminSection?.subsections?.find(
-      (s) => s.id === 'admin-users'
-    );
+    const usersSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-users');
 
     expect(usersSubsection?.items).toBeDefined();
     expect(usersSubsection?.items.length).toBeGreaterThan(0);
@@ -228,9 +202,7 @@ describe('navigationConfig - Nested Sections', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
-    const usersSubsection = adminSection?.subsections?.find(
-      (s) => s.id === 'admin-users'
-    );
+    const usersSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-users');
     const itemIds = usersSubsection?.items.map((i) => i.id);
 
     expect(itemIds).toContain('team');
@@ -241,9 +213,7 @@ describe('navigationConfig - Nested Sections', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
-    const financeSubsection = adminSection?.subsections?.find(
-      (s) => s.id === 'admin-finance'
-    );
+    const financeSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-finance');
 
     expect(financeSubsection?.items).toHaveLength(7);
   });
@@ -252,9 +222,7 @@ describe('navigationConfig - Nested Sections', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
-    const systemSubsection = adminSection?.subsections?.find(
-      (s) => s.id === 'admin-system'
-    );
+    const systemSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-system');
 
     expect(systemSubsection?.items).toHaveLength(4);
   });
@@ -313,9 +281,7 @@ describe('navigationConfig - Dashboard and Main Actions', () => {
   it('should have AI assistant in main actions', () => {
     const config = getNavigationForUser('user');
 
-    const hasAiAssistant = config.mainActions.some(
-      (action) => action.id === 'ai-assistant'
-    );
+    const hasAiAssistant = config.mainActions.some((action) => action.id === 'ai-assistant');
 
     expect(hasAiAssistant).toBe(true);
     expect(config.mainActions).toHaveLength(1);

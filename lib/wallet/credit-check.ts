@@ -26,7 +26,7 @@ export interface CreditCheckResult {
 
 /**
  * Verifica credito disponibile PRIMA di procedere con booking.
- * 
+ *
  * @param userId - ID utente
  * @param estimatedCost - Costo stimato spedizione (con buffer)
  * @param actingContext - ActingContext per impersonation support
@@ -39,7 +39,7 @@ export async function checkCreditBeforeBooking(
 ): Promise<CreditCheckResult> {
   // Determina user target (supporta impersonation)
   const targetUserId = actingContext?.target.id || userId;
-  
+
   // Query wallet balance
   const { data, error } = await supabaseAdmin
     .from('users')
@@ -142,4 +142,3 @@ export async function checkCreditBeforeBooking(
 export function formatInsufficientCreditMessage(result: CreditCheckResult): string {
   return `Credito insufficiente. Disponibile: €${result.currentBalance.toFixed(2)}, Richiesto: €${result.required.toFixed(2)}. Vuoi ricaricare?`;
 }
-

@@ -1,9 +1,9 @@
 /**
  * Componente Import Ordini da CSV/XLS
- * 
+ *
  * Permette di importare ordini da file CSV o XLS/XLSX
  * e convertirli automaticamente in spedizioni
- * 
+ *
  * Layout ispirato a spedisci.online con:
  * - Layout a 2 colonne (upload a sinistra, istruzioni a destra)
  * - Istruzioni dettagliate con esempi scaricabili
@@ -14,7 +14,17 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, FileText, FileSpreadsheet, X, CheckCircle2, AlertCircle, Loader2, Download, Info } from 'lucide-react';
+import {
+  Upload,
+  FileText,
+  FileSpreadsheet,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Download,
+  Info,
+} from 'lucide-react';
 import { parseCSV, parseXLS, normalizeImportedOrder, ImportedOrder } from '@/lib/utils/file-parser';
 
 interface ImportOrdersProps {
@@ -68,7 +78,7 @@ export default function ImportOrders({ onImportComplete, onCancel }: ImportOrder
 
     try {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      
+
       if (!fileExtension || !['csv', 'xls', 'xlsx'].includes(fileExtension)) {
         throw new Error('Formato file non supportato. Usa CSV, XLS o XLSX');
       }
@@ -89,20 +99,25 @@ export default function ImportOrders({ onImportComplete, onCancel }: ImportOrder
       }
 
       // Normalizza e valida ordini
-      const normalizedOrders = orders.map((order, index) => {
-        try {
-          return normalizeImportedOrder(order);
-        } catch (error) {
-          setErrors(prev => [...prev, `Riga ${index + 2}: ${error instanceof Error ? error.message : 'Errore di normalizzazione'}`]);
-          return null;
-        }
-      }).filter(Boolean) as any[];
+      const normalizedOrders = orders
+        .map((order, index) => {
+          try {
+            return normalizeImportedOrder(order);
+          } catch (error) {
+            setErrors((prev) => [
+              ...prev,
+              `Riga ${index + 2}: ${error instanceof Error ? error.message : 'Errore di normalizzazione'}`,
+            ]);
+            return null;
+          }
+        })
+        .filter(Boolean) as any[];
 
       // Filtra ordini validi (devono avere almeno nome destinatario)
-      const validOrders = normalizedOrders.filter(order => {
+      const validOrders = normalizedOrders.filter((order) => {
         const nomeDestinatario = order.destinatario?.nome || order.destinatarioNome;
         if (!nomeDestinatario || nomeDestinatario.trim() === '') {
-          setErrors(prev => [...prev, `Ordine senza nome destinatario ignorato`]);
+          setErrors((prev) => [...prev, `Ordine senza nome destinatario ignorato`]);
           return false;
         }
         return true;
@@ -111,15 +126,16 @@ export default function ImportOrders({ onImportComplete, onCancel }: ImportOrder
       setImportedOrders(validOrders);
 
       // Prepara preview (prime 5 righe) - normalizzaImportedOrder restituisce oggetti annidati
-      setPreviewData(validOrders.slice(0, 5).map(order => ({
-        nome: order.destinatario?.nome || '',
-        indirizzo: order.destinatario?.indirizzo || '',
-        citta: order.destinatario?.citta || '',
-        cap: order.destinatario?.cap || '',
-        peso: order.peso || 0,
-        tracking: order.tracking || order.ldv || 'N/A',
-      })));
-
+      setPreviewData(
+        validOrders.slice(0, 5).map((order) => ({
+          nome: order.destinatario?.nome || '',
+          indirizzo: order.destinatario?.indirizzo || '',
+          citta: order.destinatario?.citta || '',
+          cap: order.destinatario?.cap || '',
+          peso: order.peso || 0,
+          tracking: order.tracking || order.ldv || 'N/A',
+        }))
+      );
     } catch (error) {
       setErrors([error instanceof Error ? error.message : 'Errore durante il parsing del file']);
     } finally {
@@ -203,16 +219,20 @@ export default function ImportOrders({ onImportComplete, onCancel }: ImportOrder
 
           if (!response.ok) {
             const errorData = await response.json();
-            importErrors.push(`Ordine ${i + 1} (${flatOrder.destinatarioNome}): ${errorData.message || 'Errore durante l\'importazione'}`);
+            importErrors.push(
+              `Ordine ${i + 1} (${flatOrder.destinatarioNome}): ${errorData.message || "Errore durante l'importazione"}`
+            );
           }
         } catch (error) {
           const nomeDestinatario = order.destinatario?.nome || 'N/A';
-          importErrors.push(`Ordine ${i + 1} (${nomeDestinatario}): ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+          importErrors.push(
+            `Ordine ${i + 1} (${nomeDestinatario}): ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
+          );
         }
       }
 
       const successCount = importedOrders.length - importErrors.length;
-      
+
       if (onImportComplete) {
         onImportComplete(successCount, importErrors);
       }
@@ -234,9 +254,8 @@ export default function ImportOrders({ onImportComplete, onCancel }: ImportOrder
           window.location.reload();
         }, 1000);
       }
-
     } catch (error) {
-      setErrors([error instanceof Error ? error.message : 'Errore durante l\'importazione']);
+      setErrors([error instanceof Error ? error.message : "Errore durante l'importazione"]);
     } finally {
       setIsProcessing(false);
     }
@@ -245,7 +264,7 @@ export default function ImportOrders({ onImportComplete, onCancel }: ImportOrder
   // Genera file CSV di esempio
   const downloadExampleFile = (type: 'simple' | 'complete') => {
     let csvContent = '';
-    
+
     if (type === 'simple') {
       // Esempio semplificato
       csvContent = `destinatario,indirizzo,localita,cap,provincia
@@ -262,7 +281,10 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', type === 'simple' ? 'esempio_semplificato.csv' : 'esempio_completo.csv');
+    link.setAttribute(
+      'download',
+      type === 'simple' ? 'esempio_semplificato.csv' : 'esempio_completo.csv'
+    );
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -299,10 +321,12 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <span className="bg-[#FF9500] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
+                <span className="bg-[#FF9500] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                  1
+                </span>
                 Seleziona file
               </h4>
-              
+
               {/* Area Upload */}
               <div
                 onDragOver={handleDragOver}
@@ -342,14 +366,10 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
                           Scegli file
                         </label>
                         {selectedFileName && (
-                          <p className="mt-2 text-sm text-gray-600">
-                            {selectedFileName}
-                          </p>
+                          <p className="mt-2 text-sm text-gray-600">{selectedFileName}</p>
                         )}
                         {!selectedFileName && (
-                          <p className="mt-2 text-sm text-gray-500">
-                            Nessun file selezionato
-                          </p>
+                          <p className="mt-2 text-sm text-gray-500">Nessun file selezionato</p>
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -366,7 +386,7 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
                   </>
                 )}
               </div>
-              
+
               {/* Checkbox salva in rubrica */}
               <div className="mt-4">
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900 transition-colors">
@@ -404,36 +424,60 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
                 <Info className="w-4 h-4 text-[#FF9500]" />
                 Istruzioni e Formato
               </h4>
-              
+
               <div className="bg-gray-50 rounded-lg p-5 space-y-4 text-sm text-gray-700 border border-gray-200">
                 <p className="leading-relaxed">
-                  Permette di generare nuove lettere di vettura importandole da qualsiasi file CSV o Excel.
+                  Permette di generare nuove lettere di vettura importandole da qualsiasi file CSV o
+                  Excel.
                 </p>
-                
+
                 <div>
-                  <p className="font-semibold text-gray-900 mb-2">📋 Colonne obbligatorie (prima riga):</p>
+                  <p className="font-semibold text-gray-900 mb-2">
+                    📋 Colonne obbligatorie (prima riga):
+                  </p>
                   <ul className="list-disc list-inside space-y-1 text-xs ml-2">
-                    <li><strong>destinatario</strong> (o nome, nominativo, recipient_name)</li>
-                    <li><strong>indirizzo</strong> (o address, recipient_address)</li>
-                    <li><strong>localita</strong> (o citta, city, recipient_city)</li>
-                    <li><strong>cap</strong> (o zip, recipient_zip)</li>
-                    <li><strong>provincia</strong> (o province, recipient_province)</li>
+                    <li>
+                      <strong>destinatario</strong> (o nome, nominativo, recipient_name)
+                    </li>
+                    <li>
+                      <strong>indirizzo</strong> (o address, recipient_address)
+                    </li>
+                    <li>
+                      <strong>localita</strong> (o citta, city, recipient_city)
+                    </li>
+                    <li>
+                      <strong>cap</strong> (o zip, recipient_zip)
+                    </li>
+                    <li>
+                      <strong>provincia</strong> (o province, recipient_province)
+                    </li>
                   </ul>
                 </div>
-                
+
                 <div>
                   <p className="font-semibold text-gray-900 mb-2">📦 Colonne opzionali:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs ml-2">
-                    <li><strong>peso</strong>, <strong>colli</strong>, <strong>contrassegno</strong></li>
-                    <li><strong>rif_mittente</strong> (o rif_mitt), <strong>rif_destinatario</strong> (o rif_dest)</li>
-                    <li><strong>note</strong>, <strong>telefono</strong>, <strong>email_destinatario</strong> (o email_dest)</li>
-                    <li><strong>order_id</strong>, <strong>totale_ordine</strong> (o costo)</li>
+                    <li>
+                      <strong>peso</strong>, <strong>colli</strong>, <strong>contrassegno</strong>
+                    </li>
+                    <li>
+                      <strong>rif_mittente</strong> (o rif_mitt), <strong>rif_destinatario</strong>{' '}
+                      (o rif_dest)
+                    </li>
+                    <li>
+                      <strong>note</strong>, <strong>telefono</strong>,{' '}
+                      <strong>email_destinatario</strong> (o email_dest)
+                    </li>
+                    <li>
+                      <strong>order_id</strong>, <strong>totale_ordine</strong> (o costo)
+                    </li>
                   </ul>
                 </div>
-                
+
                 <div className="pt-2 border-t border-gray-200">
                   <p className="text-xs text-gray-600 mb-1">
-                    ✅ <strong>Compatibile con:</strong> spedisci.online, Amazon, eBay, marketplace vari
+                    ✅ <strong>Compatibile con:</strong> spedisci.online, Amazon, eBay, marketplace
+                    vari
                   </p>
                 </div>
 
@@ -459,8 +503,8 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
 
                 <div className="pt-3 border-t border-gray-300">
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    💡 <strong>Suggerimento:</strong> Se importi da marketplace come eBay, Amazon, ecc., 
-                    assicurati che la prima riga contenga i nomi delle colonne obbligatorie.
+                    💡 <strong>Suggerimento:</strong> Se importi da marketplace come eBay, Amazon,
+                    ecc., assicurati che la prima riga contenga i nomi delle colonne obbligatorie.
                   </p>
                 </div>
               </div>
@@ -476,32 +520,46 @@ Luigi Verdi,"Corso Italia 15",Milano,20100,MI,2,1,0,MITTENTE,Luigi Verdi,,329123
                 <FileText className="w-4 h-4 text-[#FF9500]" />
                 Anteprima ({previewData.length} di {importedOrders.length} ordini)
               </h4>
-              <span className="text-xs text-gray-500">
-                Verifica i dati prima di importare
-              </span>
+              <span className="text-xs text-gray-500">Verifica i dati prima di importare</span>
             </div>
             <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indirizzo</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Città</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CAP</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking/LDV</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nome
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Indirizzo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Città
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        CAP
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Peso
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tracking/LDV
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {previewData.map((order, index) => (
                       <tr key={index} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.nome}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {order.nome}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{order.indirizzo}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{order.citta}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{order.cap}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{order.peso} kg</td>
-                        <td className="px-4 py-3 text-sm font-mono text-blue-600">{order.tracking}</td>
+                        <td className="px-4 py-3 text-sm font-mono text-blue-600">
+                          {order.tracking}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -5,7 +5,12 @@
  */
 
 import { supabase, supabaseAdmin } from './client';
-import type { Shipment, ShipmentFilters, CreateShipmentInput, UpdateShipmentInput } from '@/types/shipments';
+import type {
+  Shipment,
+  ShipmentFilters,
+  CreateShipmentInput,
+  UpdateShipmentInput,
+} from '@/types/shipments';
 import { assertValidUserId } from '@/lib/validators';
 
 /**
@@ -24,7 +29,7 @@ export function generateTrackingNumber(): string {
 export async function createShipment(data: CreateShipmentInput, userId: string): Promise<Shipment> {
   // ⚠️ SICUREZZA: Valida userId prima di inserire
   assertValidUserId(userId);
-  
+
   const trackingNumber = generateTrackingNumber();
 
   const shipmentData = {
@@ -94,9 +99,12 @@ export async function getShipmentByTracking(trackingNumber: string): Promise<Shi
  * Ottiene tutti gli ID utenti nella gerarchia (incluso l'utente stesso)
  * Se l'utente è admin, include anche tutti i sotto-admin fino a 5 livelli
  */
-async function getHierarchyUserIds(userId: string, includeSubAdmins: boolean = true): Promise<string[]> {
+async function getHierarchyUserIds(
+  userId: string,
+  includeSubAdmins: boolean = true
+): Promise<string[]> {
   if (!includeSubAdmins) {
-    return [userId]
+    return [userId];
   }
 
   try {
@@ -105,26 +113,26 @@ async function getHierarchyUserIds(userId: string, includeSubAdmins: boolean = t
       .from('users')
       .select('account_type')
       .eq('id', userId)
-      .single()
+      .single();
 
     // Se non è admin, ritorna solo l'ID utente
     if (!user || (user.account_type !== 'admin' && user.account_type !== 'superadmin')) {
-      return [userId]
+      return [userId];
     }
 
     // Se è admin, ottieni tutti i sotto-admin
     const { data: subAdmins } = await supabaseAdmin.rpc('get_all_sub_admins', {
       p_admin_id: userId,
       p_max_level: 5,
-    })
+    });
 
     // Include anche l'admin stesso
-    const allIds = [userId, ...(subAdmins?.map((u: any) => u.id) || [])]
-    return allIds
+    const allIds = [userId, ...(subAdmins?.map((u: any) => u.id) || [])];
+    return allIds;
   } catch (error: any) {
-    console.error('Errore recupero gerarchia:', error)
+    console.error('Errore recupero gerarchia:', error);
     // In caso di errore, ritorna solo l'ID utente
-    return [userId]
+    return [userId];
   }
 }
 
@@ -138,7 +146,7 @@ export async function listShipments(
   includeSubAdmins: boolean = true
 ): Promise<{ shipments: Shipment[]; total: number }> {
   // Ottieni tutti gli ID della gerarchia
-  const hierarchyIds = await getHierarchyUserIds(userId, includeSubAdmins)
+  const hierarchyIds = await getHierarchyUserIds(userId, includeSubAdmins);
 
   let query = supabase
     .from('shipments')
@@ -194,10 +202,7 @@ export async function listShipments(
 /**
  * Aggiorna spedizione
  */
-export async function updateShipment(
-  id: string,
-  updates: UpdateShipmentInput
-): Promise<Shipment> {
+export async function updateShipment(id: string, updates: UpdateShipmentInput): Promise<Shipment> {
   const { data, error } = await supabase
     .from('shipments')
     .update(updates)
@@ -217,10 +222,7 @@ export async function updateShipment(
  * Elimina spedizione
  */
 export async function deleteShipment(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('shipments')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('shipments').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting shipment:', error);
@@ -240,15 +242,13 @@ export async function addShipmentEvent(
     event_date?: Date;
   }
 ): Promise<void> {
-  const { error } = await supabase
-    .from('shipment_events')
-    .insert({
-      shipment_id: shipmentId,
-      status: event.status,
-      description: event.description,
-      location: event.location,
-      event_date: event.event_date || new Date(),
-    });
+  const { error } = await supabase.from('shipment_events').insert({
+    shipment_id: shipmentId,
+    status: event.status,
+    description: event.description,
+    location: event.location,
+    event_date: event.event_date || new Date(),
+  });
 
   if (error) {
     console.error('Error adding shipment event:', error);
@@ -287,7 +287,7 @@ export async function getShipmentStats(
   includeSubAdmins: boolean = true
 ) {
   // Ottieni tutti gli ID della gerarchia
-  const hierarchyIds = await getHierarchyUserIds(userId, includeSubAdmins)
+  const hierarchyIds = await getHierarchyUserIds(userId, includeSubAdmins);
 
   let query = supabase
     .from('shipments')
@@ -322,9 +322,9 @@ export async function getShipmentStats(
 
   const stats = {
     total: data.length,
-    in_transit: data.filter(s => s.status === 'in_transit' || s.status === 'shipped').length,
-    delivered: data.filter(s => s.status === 'delivered').length,
-    pending: data.filter(s => s.status === 'pending' || s.status === 'draft').length,
+    in_transit: data.filter((s) => s.status === 'in_transit' || s.status === 'shipped').length,
+    delivered: data.filter((s) => s.status === 'delivered').length,
+    pending: data.filter((s) => s.status === 'pending' || s.status === 'draft').length,
     total_revenue: data.reduce((sum, s) => sum + (parseFloat(s.final_price as any) || 0), 0),
   };
 
@@ -349,7 +349,7 @@ export function exportShipmentsToCSV(shipments: Shipment[]): string {
     'Prezzo Finale',
   ];
 
-  const rows = shipments.map(s => [
+  const rows = shipments.map((s) => [
     s.tracking_number,
     new Date(s.created_at).toLocaleDateString('it-IT'),
     s.recipient_name,
@@ -365,7 +365,7 @@ export function exportShipmentsToCSV(shipments: Shipment[]): string {
 
   const csvContent = [
     headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
   ].join('\n');
 
   // Aggiungi BOM UTF-8 per Excel

@@ -5,6 +5,7 @@
 Sistema completo per gestire configurazioni API corrieri in modo dinamico, sicuro e monitorato.
 
 **Caratteristiche principali:**
+
 - ✅ Gestione multi-tenant delle credenziali
 - ✅ Criptazione AES-256-GCM delle credenziali
 - ✅ Audit logging completo
@@ -96,7 +97,8 @@ Tutte le credenziali sono criptate usando **AES-256-GCM**:
 - ✅ Decriptazione automatica al recupero (solo per admin)
 - ✅ Chiave di criptazione in variabile d'ambiente
 
-**⚠️ IMPORTANTE:** 
+**⚠️ IMPORTANTE:**
+
 - Non condividere mai `ENCRYPTION_KEY`
 - Non committare la chiave nel repository
 - Ruota periodicamente la chiave
@@ -145,8 +147,8 @@ Se hai credenziali non criptate:
 
 ```typescript
 // Esegui script di migrazione
-import { migrateCredentials } from '@/scripts/migrate-credentials'
-await migrateCredentials()
+import { migrateCredentials } from '@/scripts/migrate-credentials';
+await migrateCredentials();
 ```
 
 ### Ruotare Chiave di Criptazione
@@ -174,7 +176,7 @@ COPY courier_configs TO '/backup/courier_configs.csv';
 Query per verificare stato API:
 
 ```sql
-SELECT 
+SELECT
   provider_id,
   status,
   last_check,
@@ -187,7 +189,7 @@ ORDER BY last_check DESC;
 
 ```sql
 -- Ultimi accessi a credenziali
-SELECT 
+SELECT
   action,
   user_email,
   resource_id,
@@ -235,6 +237,7 @@ LIMIT 50;
 ## 🤝 Supporto
 
 Per problemi o domande:
+
 1. Controlla questa documentazione
 2. Verifica log di audit e monitoraggio
 3. Contatta team sviluppo
@@ -242,4 +245,3 @@ Per problemi o domande:
 ---
 
 **Ultimo aggiornamento:** Dicembre 2024
-

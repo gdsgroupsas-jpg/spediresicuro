@@ -1,24 +1,19 @@
-'use client'
+'use client';
 
 /**
  * Pagina Integrazioni - Command Center
- * 
+ *
  * Centro di controllo per collegare store e-commerce e configurare
  * il Universal Widget per importare ordini in 1 click.
  */
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import DashboardNav from '@/components/dashboard-nav'
-import IntegrationCard from '@/components/integrazioni/integration-card'
-import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card'
-import CourierAPIConfig from '@/components/integrazioni/courier-api-config'
-import {
-  ShoppingBag,
-  Store,
-  Zap,
-  Code
-} from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import DashboardNav from '@/components/dashboard-nav';
+import IntegrationCard from '@/components/integrazioni/integration-card';
+import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card';
+import CourierAPIConfig from '@/components/integrazioni/courier-api-config';
+import { ShoppingBag, Store, Zap, Code } from 'lucide-react';
 
 // Piattaforme supportate
 const platforms = [
@@ -96,7 +91,7 @@ const platforms = [
       api_secret: '',
     } as Record<string, string>,
   },
-] as const
+] as const;
 
 // Varianti animazione container
 const containerVariants = {
@@ -108,7 +103,7 @@ const containerVariants = {
       delayChildren: 0.2,
     },
   },
-}
+};
 
 // Varianti animazione card
 const cardVariants = {
@@ -127,32 +122,32 @@ const cardVariants = {
       damping: 15,
     },
   },
-}
+};
 
 export default function IntegrazioniPage() {
-  const [integrations, setIntegrations] = useState<any[]>([])
+  const [integrations, setIntegrations] = useState<any[]>([]);
 
   // Carica integrazioni esistenti
   useEffect(() => {
-    loadIntegrations()
-  }, [])
+    loadIntegrations();
+  }, []);
 
   const loadIntegrations = async () => {
     try {
-      const { getIntegrations } = await import('@/lib/actions/integrations')
-      const result = await getIntegrations()
+      const { getIntegrations } = await import('@/lib/actions/integrations');
+      const result = await getIntegrations();
       if (result.success) {
-        setIntegrations(result.integrations || [])
+        setIntegrations(result.integrations || []);
       }
     } catch (err) {
-      console.error('Errore caricamento integrazioni:', err)
+      console.error('Errore caricamento integrazioni:', err);
     }
-  }
+  };
 
   const getIntegrationStatus = (platformId: string) => {
-    const integration = integrations.find(i => i.platform === platformId)
-    return integration ? 'connected' : 'disconnected'
-  }
+    const integration = integrations.find((i) => i.platform === platformId);
+    return integration ? 'connected' : 'disconnected';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
@@ -190,8 +185,8 @@ export default function IntegrazioniPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {platforms.map((platform) => {
-            const Icon = platform.icon
-            const status = getIntegrationStatus(platform.id)
+            const Icon = platform.icon;
+            const status = getIntegrationStatus(platform.id);
 
             return (
               <motion.div
@@ -200,17 +195,12 @@ export default function IntegrazioniPage() {
                 whileHover={{ scale: 1.02 }}
                 className="w-full"
               >
-                <IntegrationCard
-                  platform={platform}
-                  status={status}
-                  onConnect={loadIntegrations}
-                />
+                <IntegrationCard platform={platform} status={status} onConnect={loadIntegrations} />
               </motion.div>
-            )
+            );
           })}
         </motion.div>
       </div>
     </div>
-  )
+  );
 }
-

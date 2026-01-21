@@ -7,7 +7,6 @@
 ## 1. Piano Step-by-Step Eseguito
 
 1.  **Analisi Statica**:
-
     - **P1-1 (Ownership Validation)**: ✅ **RISOLTO**. `lib/actions/spedisci-online.ts` ora verifica esplicitamente l'ownership (`isOwner`, `isCreator`, `isAssigned`) o i permessi admin prima di restituire credenziali.
     - **P1-2 (Race Condition Sync)**: ✅ **RISOLTO**. `actions/spedisci-online-rates.ts` utilizza `acquire_idempotency_lock` RPC per gestire la concorrenza a livello DB.
     - **P1-3 (Sensitive Logging)**: ✅ **RISOLTO**. Utilizzo di `sanitizeIdForLog` (SHA256 substring) per loggare ID in modo sicuro senza esporre UUID completi.

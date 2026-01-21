@@ -1,12 +1,12 @@
 /**
  * Mentor Worker
- * 
+ *
  * Worker per Q&A tecnico su architettura, wallet, RLS, business flows.
  * Usa RAG (Retrieval Augmented Generation) su documentazione:
  * - docs/MONEY_FLOWS.md
  * - docs/ARCHITECTURE.md
  * - docs/DB_SCHEMA.md
- * 
+ *
  * Input: Domanda tecnica dell'utente
  * Output: Risposta con sources (file paths referenziati) e confidence
  */
@@ -21,10 +21,26 @@ import { agentCache } from '@/lib/services/cache';
  * Documenti disponibili per RAG
  */
 const DOCUMENTS = [
-  { path: 'docs/MONEY_FLOWS.md', name: 'Money Flows', keywords: ['wallet', 'pagamento', 'credito', 'addebito', 'transazione', 'balance'] },
-  { path: 'docs/ARCHITECTURE.md', name: 'Architecture', keywords: ['architettura', 'sistema', 'componente', 'pattern', 'design'] },
-  { path: 'docs/DB_SCHEMA.md', name: 'Database Schema', keywords: ['database', 'tabella', 'schema', 'sql', 'migration', 'rls'] },
-  { path: 'docs/SECURITY.md', name: 'Security', keywords: ['sicurezza', 'rls', 'autenticazione', 'authorization', 'audit'] },
+  {
+    path: 'docs/MONEY_FLOWS.md',
+    name: 'Money Flows',
+    keywords: ['wallet', 'pagamento', 'credito', 'addebito', 'transazione', 'balance'],
+  },
+  {
+    path: 'docs/ARCHITECTURE.md',
+    name: 'Architecture',
+    keywords: ['architettura', 'sistema', 'componente', 'pattern', 'design'],
+  },
+  {
+    path: 'docs/DB_SCHEMA.md',
+    name: 'Database Schema',
+    keywords: ['database', 'tabella', 'schema', 'sql', 'migration', 'rls'],
+  },
+  {
+    path: 'docs/SECURITY.md',
+    name: 'Security',
+    keywords: ['sicurezza', 'rls', 'autenticazione', 'authorization', 'audit'],
+  },
 ];
 
 /**
@@ -33,21 +49,21 @@ const DOCUMENTS = [
 function findRelevantSections(content: string, query: string, keywords: string[]): string[] {
   const queryLower = query.toLowerCase();
   const queryWords = queryLower.split(/\s+/);
-  
+
   // Cerca sezioni che contengono keyword o parole della query
   const lines = content.split('\n');
   const relevantSections: string[] = [];
   let currentSection: string[] = [];
   let inRelevantSection = false;
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineLower = line.toLowerCase();
-    
+
     // Verifica se la riga contiene keyword o parole della query
-    const hasKeyword = keywords.some(kw => lineLower.includes(kw.toLowerCase()));
-    const hasQueryWord = queryWords.some(word => word.length > 3 && lineLower.includes(word));
-    
+    const hasKeyword = keywords.some((kw) => lineLower.includes(kw.toLowerCase()));
+    const hasQueryWord = queryWords.some((word) => word.length > 3 && lineLower.includes(word));
+
     if (hasKeyword || hasQueryWord) {
       inRelevantSection = true;
       currentSection.push(line);
@@ -61,7 +77,7 @@ function findRelevantSections(content: string, query: string, keywords: string[]
         currentSection.push(line);
       }
     }
-    
+
     // Limita dimensione sezione (max 20 righe)
     if (currentSection.length > 20) {
       relevantSections.push(currentSection.slice(0, 20).join('\n'));
@@ -69,11 +85,11 @@ function findRelevantSections(content: string, query: string, keywords: string[]
       inRelevantSection = false;
     }
   }
-  
+
   if (currentSection.length > 0) {
     relevantSections.push(currentSection.join('\n'));
   }
-  
+
   return relevantSections.slice(0, 3); // Max 3 sezioni rilevanti
 }
 
@@ -94,13 +110,16 @@ async function readDocument(docPath: string, logger: ILogger): Promise<string | 
 /**
  * Cerca documenti rilevanti per la query
  */
-async function searchDocuments(query: string, logger: ILogger): Promise<Array<{ path: string; name: string; sections: string[] }>> {
+async function searchDocuments(
+  query: string,
+  logger: ILogger
+): Promise<Array<{ path: string; name: string; sections: string[] }>> {
   const results: Array<{ path: string; name: string; sections: string[] }> = [];
-  
+
   for (const doc of DOCUMENTS) {
     const content = await readDocument(doc.path, logger);
     if (!content) continue;
-    
+
     const sections = findRelevantSections(content, query, doc.keywords);
     if (sections.length > 0) {
       results.push({
@@ -110,32 +129,36 @@ async function searchDocuments(query: string, logger: ILogger): Promise<Array<{ 
       });
     }
   }
-  
+
   return results;
 }
 
 /**
  * Genera risposta basata sui documenti trovati
  */
-function generateAnswer(query: string, documents: Array<{ path: string; name: string; sections: string[] }>): {
+function generateAnswer(
+  query: string,
+  documents: Array<{ path: string; name: string; sections: string[] }>
+): {
   answer: string;
   sources: string[];
   confidence: number;
 } {
   if (documents.length === 0) {
     return {
-      answer: 'Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi riformulare la domanda o essere più specifico?',
+      answer:
+        'Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi riformulare la domanda o essere più specifico?',
       sources: [],
       confidence: 0,
     };
   }
-  
-  const sources = documents.map(d => d.path);
-  const confidence = Math.min(90, 50 + (documents.length * 10)); // 50-90% basato su numero documenti
-  
+
+  const sources = documents.map((d) => d.path);
+  const confidence = Math.min(90, 50 + documents.length * 10); // 50-90% basato su numero documenti
+
   // Costruisci risposta combinando sezioni rilevanti
   let answer = `Basandomi sulla documentazione, ecco cosa ho trovato:\n\n`;
-  
+
   for (const doc of documents) {
     answer += `**${doc.name}** (${doc.path}):\n`;
     for (const section of doc.sections.slice(0, 2)) {
@@ -144,15 +167,15 @@ function generateAnswer(query: string, documents: Array<{ path: string; name: st
       answer += `${lines}\n\n`;
     }
   }
-  
+
   answer += `\n💡 *Per maggiori dettagli, consulta i file nella documentazione.*`;
-  
+
   return { answer, sources, confidence };
 }
 
 /**
  * Mentor Worker Node
- * 
+ *
  * Risponde a domande tecniche usando RAG su documentazione.
  * Restituisce risposta con sources e confidence.
  */
@@ -161,7 +184,7 @@ export async function mentorWorker(
   logger: ILogger = defaultLogger
 ): Promise<Partial<AgentState>> {
   logger.log('🎓 [Mentor Worker] Esecuzione...');
-  
+
   try {
     // Estrai query dal messaggio più recente
     const lastMessage = state.messages[state.messages.length - 1];
@@ -170,14 +193,14 @@ export async function mentorWorker(
         clarification_request: 'Non ho capito la domanda. Puoi riformularla?',
       };
     }
-    
+
     const query = lastMessage.content.toString();
     logger.log(`🔍 [Mentor] Cerca risposta per: "${query.substring(0, 50)}..."`);
-    
+
     // P3 Task 6: Check cache RAG
     const cacheKey = `mentor:${query}`;
     const cachedResult = agentCache.getRAG(query, 'mentor');
-    
+
     if (cachedResult) {
       logger.log(`✅ [Mentor] Risultato da cache`);
       return {
@@ -185,18 +208,20 @@ export async function mentorWorker(
         next_step: 'END',
       };
     }
-    
+
     // Cerca documenti rilevanti
     const documents = await searchDocuments(query, logger);
-    
+
     // Genera risposta
     const { answer, sources, confidence } = generateAnswer(query, documents);
-    
+
     // P3 Task 6: Salva in cache
     agentCache.setRAG(query, { answer, sources, confidence }, 'mentor');
-    
-    logger.log(`✅ [Mentor] Risposta generata (confidence: ${confidence}%, sources: ${sources.length})`);
-    
+
+    logger.log(
+      `✅ [Mentor] Risposta generata (confidence: ${confidence}%, sources: ${sources.length})`
+    );
+
     return {
       mentor_response: {
         answer,
@@ -208,7 +233,8 @@ export async function mentorWorker(
   } catch (error: any) {
     logger.error('❌ [Mentor Worker] Errore:', error);
     return {
-      clarification_request: 'Mi dispiace, ho riscontrato un errore nel cercare la risposta. Riprova più tardi.',
+      clarification_request:
+        'Mi dispiace, ho riscontrato un errore nel cercare la risposta. Riprova più tardi.',
       processingStatus: 'error',
     };
   }
@@ -216,7 +242,7 @@ export async function mentorWorker(
 
 /**
  * Detect Mentor Intent - Verifica se il messaggio è una domanda tecnica
- * 
+ *
  * Pattern: "Come funziona...", "Spiega...", "Perché...", "Che cos'è..."
  */
 export function detectMentorIntent(message: string): boolean {
@@ -236,7 +262,6 @@ export function detectMentorIntent(message: string): boolean {
     /database/i,
     /schema/i,
   ];
-  
-  return mentorPatterns.some(pattern => pattern.test(message));
-}
 
+  return mentorPatterns.some((pattern) => pattern.test(message));
+}

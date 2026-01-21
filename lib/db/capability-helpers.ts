@@ -9,16 +9,16 @@ import { supabaseAdmin } from '@/lib/db/client';
 
 /**
  * Verifica se un utente ha una capability attiva
- * 
+ *
  * Fallback strategy:
  * 1. Verifica capability in account_capabilities
  * 2. Se non trovata, usa fallback a role/account_type
- * 
+ *
  * @param userId - ID utente
  * @param capabilityName - Nome capability (es: 'can_manage_pricing')
  * @param fallbackUser - Dati utente per fallback (opzionale, evita query extra)
  * @returns true se capability attiva, false altrimenti
- * 
+ *
  * @example
  * const hasPricing = await hasCapability(userId, 'can_manage_pricing');
  * if (hasPricing) {
@@ -36,11 +36,10 @@ export async function hasCapability(
 ): Promise<boolean> {
   try {
     // 1. Verifica capability in database
-    const { data: capability, error } = await supabaseAdmin
-      .rpc('has_capability', {
-        p_user_id: userId,
-        p_capability_name: capabilityName,
-      });
+    const { data: capability, error } = await supabaseAdmin.rpc('has_capability', {
+      p_user_id: userId,
+      p_capability_name: capabilityName,
+    });
 
     if (error) {
       console.warn(`⚠️ [CAPABILITY] Errore verifica capability ${capabilityName}:`, error);
@@ -60,7 +59,7 @@ export async function hasCapability(
 
 /**
  * Fallback: verifica capability basandosi su role/account_type
- * 
+ *
  * Mapping capability → role/account_type:
  * - can_manage_pricing → admin, superadmin
  * - can_create_subusers → reseller, admin, superadmin
@@ -69,7 +68,7 @@ export async function hasCapability(
  * - can_view_all_clients → admin, superadmin
  * - can_manage_resellers → superadmin
  * - can_bypass_rls → superadmin
- * 
+ *
  * @param capabilityName - Nome capability
  * @param user - Dati utente per fallback
  * @returns true se capability concessa via fallback
@@ -108,11 +107,7 @@ export function hasCapabilityFallback(
       );
 
     case 'can_access_api':
-      return (
-        account_type === 'byoc' ||
-        account_type === 'admin' ||
-        account_type === 'superadmin'
-      );
+      return account_type === 'byoc' || account_type === 'admin' || account_type === 'superadmin';
 
     case 'can_manage_wallet':
       return (
@@ -144,9 +139,9 @@ export function hasCapabilityFallback(
 
 /**
  * Verifica se un utente ha una capability (versione con query utente automatica)
- * 
+ *
  * Utile quando non hai già i dati utente in memoria
- * 
+ *
  * @param userId - ID utente
  * @param capabilityName - Nome capability
  * @returns true se capability attiva, false altrimenti
@@ -178,7 +173,7 @@ export async function hasCapabilityWithUserQuery(
 
 /**
  * Recupera tutte le capability attive di un utente
- * 
+ *
  * @param userId - ID utente
  * @returns Array di nomi capability attive
  */

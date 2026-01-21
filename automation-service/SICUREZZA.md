@@ -10,16 +10,19 @@
 ### Password e Credenziali
 
 ✅ **Criptazione AES-256-GCM**
+
 - Password Spedisci.Online: criptate
 - Password IMAP: criptate
 - Chiave: `ENCRYPTION_KEY` (variabile d'ambiente, mai nel codice)
 
 ✅ **Decriptazione Solo Server-Side**
+
 - Password decriptate solo quando necessario
 - Mai esposte nei log
 - Mai inviate al client
 
 ✅ **Storage Sicuro**
+
 - Credenziali salvate in database (Supabase)
 - Protette da RLS (Row Level Security)
 - Solo admin può accedere
@@ -27,12 +30,14 @@
 ### Dati Cliente
 
 ✅ **Nessun Dato Cliente Processato**
+
 - Automation gestisce solo session cookies
 - Non legge dati spedizioni
 - Non legge dati utenti
 - Non legge dati personali
 
 ✅ **Isolamento**
+
 - Servizio automation isolato
 - Accesso solo a `courier_configs` (configurazioni)
 - Nessun accesso a `shipments` o `users`
@@ -44,11 +49,13 @@
 ### Autenticazione
 
 ✅ **Token Obbligatorio**
+
 - `AUTOMATION_SERVICE_TOKEN` richiesto
 - Endpoint `/api/sync` protetto
 - Endpoint `/api/cron/sync` protetto
 
 ✅ **Validazione**
+
 - Token verificato ad ogni richiesta
 - Tentativi non autorizzati loggati
 - Risposta generica (non rivela dettagli)
@@ -56,6 +63,7 @@
 ### Rate Limiting
 
 ⚠️ **Consigliato (da implementare)**
+
 - Limite richieste per IP
 - Prevenzione abusi
 - Protezione DDoS
@@ -67,15 +75,18 @@
 ### Log Sanitizzati
 
 ✅ **UUID Parziali**
+
 - Solo primi 8 caratteri nei log
 - UUID completo mai esposto
 
 ✅ **Error Messages**
+
 - Dettagli nascosti in produzione
 - Solo messaggi generici esposti
 - Dettagli solo nei log server
 
 ✅ **Nessun Dato Sensibile**
+
 - Password mai nei log
 - Credenziali mai nei log
 - Session cookies mai nei log
@@ -105,11 +116,13 @@ NODE_ENV=production
 ### Sicurezza
 
 ✅ **Variabili su Railway:**
+
 - Criptate at rest
 - Accessibili solo al servizio
 - Mai esposte nei log
 
 ✅ **Variabili su Vercel:**
+
 - Criptate at rest
 - Accessibili solo alle API routes
 - Mai esposte al client
@@ -157,13 +170,13 @@ NODE_ENV=production
 
 ## 📊 VALUTAZIONE RISCHI
 
-| Categoria | Rischio | Mitigazione | Status |
-|-----------|---------|-------------|--------|
-| **Password** | Esposizione | Criptazione AES-256-GCM | ✅ Protetto |
-| **Dati Cliente** | Accesso non autorizzato | Isolamento, RLS | ✅ Protetto |
-| **Endpoint** | Accesso non autorizzato | Token obbligatorio | ✅ Protetto |
-| **Log** | Esposizione dati | Sanitizzazione | ✅ Protetto |
-| **Error Messages** | Info sistema | Sanitizzazione produzione | ✅ Protetto |
+| Categoria          | Rischio                 | Mitigazione               | Status      |
+| ------------------ | ----------------------- | ------------------------- | ----------- |
+| **Password**       | Esposizione             | Criptazione AES-256-GCM   | ✅ Protetto |
+| **Dati Cliente**   | Accesso non autorizzato | Isolamento, RLS           | ✅ Protetto |
+| **Endpoint**       | Accesso non autorizzato | Token obbligatorio        | ✅ Protetto |
+| **Log**            | Esposizione dati        | Sanitizzazione            | ✅ Protetto |
+| **Error Messages** | Info sistema            | Sanitizzazione produzione | ✅ Protetto |
 
 ---
 
@@ -182,4 +195,3 @@ NODE_ENV=production
 
 **Documento aggiornato:** 2025-12-03  
 **Versione:** 1.0
-

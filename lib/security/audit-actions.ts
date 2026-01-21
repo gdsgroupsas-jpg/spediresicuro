@@ -1,9 +1,9 @@
 /**
  * Audit Actions Taxonomy - Azioni Canoniche per Audit Log
- * 
+ *
  * Definisce il set completo di azioni tracciabili nel sistema.
  * Ogni azione ha un nome canonico e una descrizione.
- * 
+ *
  * USAGE:
  * - import { AUDIT_ACTIONS } from '@/lib/security/audit-actions'
  * - writeAuditLog({ action: AUDIT_ACTIONS.CREATE_SHIPMENT, ... })
@@ -11,7 +11,7 @@
 
 /**
  * Set completo di azioni audit (canoniche)
- * 
+ *
  * Naming convention: VERB_NOUN (snake_case)
  */
 export const AUDIT_ACTIONS = {
@@ -26,7 +26,7 @@ export const AUDIT_ACTIONS = {
   DOWNLOAD_LABEL: 'download_label',
   TRACK_SHIPMENT: 'track_shipment',
   SHIPMENT_ADJUSTMENT: 'shipment_adjustment', // Conguaglio peso
-  
+
   // ============================================
   // WALLET OPERATIONS
   // ============================================
@@ -38,7 +38,7 @@ export const AUDIT_ACTIONS = {
   VIEW_WALLET_BALANCE: 'view_wallet_balance',
   VIEW_WALLET_TRANSACTIONS: 'view_wallet_transactions',
   SUPERADMIN_WALLET_BYPASS: 'superadmin_wallet_bypass', // P0: Audit fix - bypass tracking
-  
+
   // ============================================
   // IMPERSONATION (ACTING CONTEXT)
   // ============================================
@@ -49,7 +49,7 @@ export const AUDIT_ACTIONS = {
   IMPERSONATION_EXPIRED: 'impersonation_expired',
   IMPERSONATION_TARGET_NOT_FOUND: 'impersonation_target_not_found',
   IMPERSONATION_AUTHZ_FAILED: 'impersonation_authz_failed',
-  
+
   // ============================================
   // USER OPERATIONS
   // ============================================
@@ -60,7 +60,7 @@ export const AUDIT_ACTIONS = {
   USER_DELETED: 'user_deleted',
   USER_PASSWORD_CHANGED: 'user_password_changed',
   USER_ROLE_CHANGED: 'user_role_changed',
-  
+
   // ============================================
   // COURIER CONFIG OPERATIONS
   // ============================================
@@ -71,7 +71,7 @@ export const AUDIT_ACTIONS = {
   COURIER_CONFIG_DEACTIVATED: 'courier_config_deactivated',
   COURIER_CREDENTIAL_VIEWED: 'courier_credential_viewed',
   COURIER_CREDENTIAL_DECRYPTED: 'courier_credential_decrypted',
-  
+
   // ============================================
   // SYSTEM EVENTS
   // ============================================
@@ -79,7 +79,7 @@ export const AUDIT_ACTIONS = {
   SYSTEM_MAINTENANCE: 'system_maintenance', // P2: Cleanup automatico (compensation_queue, etc.)
   UNAUTHORIZED_ACCESS: 'unauthorized_access',
   SECURITY_VIOLATION: 'security_violation',
-  
+
   // ============================================
   // AI AGENT OPERATIONS
   // ============================================
@@ -87,13 +87,12 @@ export const AUDIT_ACTIONS = {
   AGENT_MENTOR_RESPONSE: 'agent_mentor_response',
   AGENT_SESSION_CREATED: 'agent_session_created',
   AGENT_SESSION_UPDATED: 'agent_session_updated',
-  
 } as const;
 
 /**
  * Type per azioni audit (type-safe)
  */
-export type AuditAction = typeof AUDIT_ACTIONS[keyof typeof AUDIT_ACTIONS];
+export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 
 /**
  * Resource types per audit log
@@ -114,11 +113,11 @@ export const AUDIT_RESOURCE_TYPES = {
 /**
  * Type per resource types (type-safe)
  */
-export type AuditResourceType = typeof AUDIT_RESOURCE_TYPES[keyof typeof AUDIT_RESOURCE_TYPES];
+export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[keyof typeof AUDIT_RESOURCE_TYPES];
 
 /**
  * Metadata standard per audit log
- * 
+ *
  * Campi comuni che DOVREBBERO essere presenti in ogni log:
  * - reason: motivo dell'azione (opzionale)
  * - ip: IP address del client
@@ -148,4 +147,3 @@ export function isValidAuditAction(action: string): action is AuditAction {
 export function isValidResourceType(resourceType: string): resourceType is AuditResourceType {
   return Object.values(AUDIT_RESOURCE_TYPES).includes(resourceType as AuditResourceType);
 }
-

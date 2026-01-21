@@ -131,7 +131,7 @@ export async function enqueueMessage(
   };
 
   // Add to sorted set with priority (higher priority = lower score)
-  const score = Date.now() - ((message.priority || 0) * 1000000);
+  const score = Date.now() - (message.priority || 0) * 1000000;
 
   try {
     await redis.zadd(QUEUE_KEY, { score, member: JSON.stringify(message) });
@@ -174,14 +174,12 @@ export async function dequeueMessage(): Promise<QueuedMessage | null> {
     const messageData = messages[0];
 
     // @upstash/redis auto-deserializes JSON, so messageData might be object or string
-    const message: QueuedMessage = typeof messageData === 'string'
-      ? JSON.parse(messageData)
-      : messageData;
+    const message: QueuedMessage =
+      typeof messageData === 'string' ? JSON.parse(messageData) : messageData;
 
     // Remove from queue (must pass string for zrem)
-    const messageString = typeof messageData === 'string'
-      ? messageData
-      : JSON.stringify(messageData);
+    const messageString =
+      typeof messageData === 'string' ? messageData : JSON.stringify(messageData);
     await redis.zrem(QUEUE_KEY, messageString);
 
     console.log('[TELEGRAM_QUEUE] Message dequeued:', {

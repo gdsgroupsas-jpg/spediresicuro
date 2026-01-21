@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { MoreHorizontal, Wallet, Package, User, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Wallet, Package, User, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -8,25 +8,25 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface SubUser {
-  id: string
-  name: string
-  email: string
-  wallet_balance: number
-  company_name: string | null
-  phone: string | null
-  created_at: string
+  id: string;
+  name: string;
+  email: string;
+  wallet_balance: number;
+  company_name: string | null;
+  phone: string | null;
+  created_at: string;
 }
 
 interface UserActionsMenuProps {
-  user: SubUser
-  onRechargeWallet: (user: SubUser) => void
-  onViewShipments?: (user: SubUser) => void
-  onViewDetails?: (user: SubUser) => void
-  onDelete?: (user: SubUser) => void
+  user: SubUser;
+  onRechargeWallet: (user: SubUser) => void;
+  onViewShipments?: (user: SubUser) => void;
+  onViewDetails?: (user: SubUser) => void;
+  onDelete?: (user: SubUser) => void;
 }
 
 export function UserActionsMenu({
@@ -74,10 +74,7 @@ export function UserActionsMenu({
         {onDelete && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(user)}
-              destructive
-            >
+            <DropdownMenuItem onClick={() => onDelete(user)} destructive>
               <Trash2 className="mr-2 h-4 w-4" />
               Elimina Cliente
             </DropdownMenuItem>
@@ -85,5 +82,5 @@ export function UserActionsMenu({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

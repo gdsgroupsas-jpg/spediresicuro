@@ -19,14 +19,14 @@ export interface Invoice {
   invoice_date: string | null; // ISO Date
   due_date: string | null; // ISO Date
   status: InvoiceStatus;
-  
+
   // Totals
   subtotal: number;
   tax_amount: number;
   total: number;
   currency: string;
   amount_paid: number;
-  
+
   // Recipient Snapshot
   recipient_name?: string;
   recipient_vat_number?: string;
@@ -37,21 +37,21 @@ export interface Invoice {
   recipient_province?: string;
   recipient_zip?: string;
   recipient_country?: string;
-  
+
   pdf_url?: string | null;
   xml_url?: string | null; // ✨ NUOVO: URL XML FatturaPA
-  
+
   // ✨ NUOVO: Tipo fattura e periodo
   invoice_type?: 'shipment' | 'recharge' | 'periodic' | 'manual';
   period_start?: string | null; // ISO Date (per fatture periodiche)
   period_end?: string | null; // ISO Date (per fatture periodiche)
-  
+
   notes?: string;
   internal_notes?: string;
-  
+
   created_at: string;
   updated_at: string;
-  
+
   // Joined data (optional)
   items?: InvoiceItem[];
   user?: {

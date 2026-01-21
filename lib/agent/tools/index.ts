@@ -11,18 +11,18 @@ import {
   assignPriceListTool,
   clonePriceListTool,
   searchMasterPriceListsTool,
-} from "./price-list-tools";
-import { toolRegistry } from "./registry";
+} from './price-list-tools';
+import { toolRegistry } from './registry';
 
 export {
   AgentToolRegistry,
   toolRegistry,
   type AgentTool,
   type ToolExecutionContext,
-} from "./registry";
+} from './registry';
 
 // Re-export specific tools
-export * from "./price-list-tools";
+export * from './price-list-tools';
 
 // Registration
 toolRegistry.register(searchMasterPriceListsTool);
@@ -30,4 +30,4 @@ toolRegistry.register(clonePriceListTool);
 toolRegistry.register(assignPriceListTool);
 
 // Re-export tools esistenti per compatibilità
-export { createFiscalTools } from "../tools";
+export { createFiscalTools } from '../tools';

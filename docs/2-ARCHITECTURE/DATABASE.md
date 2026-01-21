@@ -21,13 +21,13 @@ Questo documento descrive l'architettura del database di SpedireSicuro, inclusi 
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Wallet System | docs/2-ARCHITECTURE/DATABASE.md | [Wallet System](#wallet-system-prepaid-credit) |
-| RLS | docs/2-ARCHITECTURE/DATABASE.md | [RLS](#row-level-security-rls) |
-| Idempotency | docs/2-ARCHITECTURE/DATABASE.md | [Idempotency](#idempotency-duplicate-prevention) |
+| Sezione            | Pagina                          | Link                                                 |
+| ------------------ | ------------------------------- | ---------------------------------------------------- |
+| Wallet System      | docs/2-ARCHITECTURE/DATABASE.md | [Wallet System](#wallet-system-prepaid-credit)       |
+| RLS                | docs/2-ARCHITECTURE/DATABASE.md | [RLS](#row-level-security-rls)                       |
+| Idempotency        | docs/2-ARCHITECTURE/DATABASE.md | [Idempotency](#idempotency-duplicate-prevention)     |
 | Compensation Queue | docs/2-ARCHITECTURE/DATABASE.md | [Compensation](#compensation-queue-failure-recovery) |
-| Migrations | docs/2-ARCHITECTURE/DATABASE.md | [Migrations](#migrations) |
+| Migrations         | docs/2-ARCHITECTURE/DATABASE.md | [Migrations](#migrations)                            |
 
 ## Content
 
@@ -83,7 +83,7 @@ BEGIN
 
   -- Verifica saldo sufficiente
   IF v_current_balance < p_amount THEN
-    RAISE EXCEPTION 'INSUFFICIENT_CREDIT: Balance % < required %', 
+    RAISE EXCEPTION 'INSUFFICIENT_CREDIT: Balance % < required %',
       v_current_balance, p_amount;
   END IF;
 
@@ -126,8 +126,8 @@ ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "shipments_select" ON shipments FOR SELECT USING (
   user_id = auth.uid()
   OR EXISTS (
-    SELECT 1 FROM users 
-    WHERE id = auth.uid() 
+    SELECT 1 FROM users
+    WHERE id = auth.uid()
     AND role IN ('admin', 'superadmin')
   )
 );
@@ -137,10 +137,10 @@ CREATE POLICY "shipments_select" ON shipments FOR SELECT USING (
 
 ```typescript
 // Usa service role key (bypassa RLS)
-import { supabaseAdmin } from '@/lib/db/client'
+import { supabaseAdmin } from '@/lib/db/client';
 
 // Safe: Solo server-side
-const { data } = await supabaseAdmin.from('shipments').select('*')
+const { data } = await supabaseAdmin.from('shipments').select('*');
 ```
 
 **Key Insight:** NON usare MAI `supabaseAdmin` in componenti client, solo in Server Actions/API Routes.
@@ -148,6 +148,7 @@ const { data } = await supabaseAdmin.from('shipments').select('*')
 #### Tabelle con RLS
 
 Tutte le tabelle tenant devono avere RLS abilitato:
+
 - `shipments`
 - `wallet_transactions`
 - `courier_configs`
@@ -161,8 +162,8 @@ Tutte le tabelle tenant devono avere RLS abilitato:
 CREATE POLICY "<table>_select" ON <table> FOR SELECT USING (
   user_id = auth.uid()
   OR EXISTS (
-    SELECT 1 FROM users 
-    WHERE id = auth.uid() 
+    SELECT 1 FROM users
+    WHERE id = auth.uid()
     AND role IN ('admin', 'superadmin')
   )
 );
@@ -171,8 +172,8 @@ CREATE POLICY "<table>_select" ON <table> FOR SELECT USING (
 CREATE POLICY "<table>_insert" ON <table> FOR INSERT WITH CHECK (
   user_id = auth.uid()
   OR EXISTS (
-    SELECT 1 FROM users 
-    WHERE id = auth.uid() 
+    SELECT 1 FROM users
+    WHERE id = auth.uid()
     AND role IN ('admin', 'superadmin')
   )
 );
@@ -181,8 +182,8 @@ CREATE POLICY "<table>_insert" ON <table> FOR INSERT WITH CHECK (
 CREATE POLICY "<table>_update" ON <table> FOR UPDATE USING (
   user_id = auth.uid()
   OR EXISTS (
-    SELECT 1 FROM users 
-    WHERE id = auth.uid() 
+    SELECT 1 FROM users
+    WHERE id = auth.uid()
     AND role IN ('admin', 'superadmin')
   )
 );
@@ -204,12 +205,17 @@ Vedi [8-SECURITY/OVERVIEW.md](../8-SECURITY/OVERVIEW.md) per dettagli completi s
 import crypto from 'crypto';
 
 // Genera idempotency key
-const idempotencyKey = crypto.createHash('sha256').update(JSON.stringify({
-  userId: context.target.id,
-  recipient: validated.recipient,
-  packages: validated.packages,
-  timestamp: Math.floor(Date.now() / 5000) // 5-second buckets
-})).digest('hex');
+const idempotencyKey = crypto
+  .createHash('sha256')
+  .update(
+    JSON.stringify({
+      userId: context.target.id,
+      recipient: validated.recipient,
+      packages: validated.packages,
+      timestamp: Math.floor(Date.now() / 5000), // 5-second buckets
+    })
+  )
+  .digest('hex');
 
 // Verifica duplicati negli ultimi 60 secondi
 const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
@@ -226,13 +232,11 @@ if (duplicate) {
 }
 
 // Inserisci spedizione con idempotency_key
-const { data: shipment } = await supabaseAdmin
-  .from('shipments')
-  .insert({
-    ...validated,
-    idempotency_key: idempotencyKey,
-    user_id: context.target.id
-  });
+const { data: shipment } = await supabaseAdmin.from('shipments').insert({
+  ...validated,
+  idempotency_key: idempotencyKey,
+  user_id: context.target.id,
+});
 ```
 
 **Key Insight:** Bucket di 5 secondi permettono retry, finestra di 60 secondi bilancia sicurezza vs performance.
@@ -280,7 +284,7 @@ Vedi [3-API/OVERVIEW.md](../3-API/OVERVIEW.md) per pattern idempotency nelle API
 try {
   // 1. Chiama API corriere
   const courierResponse = await courierClient.createShipping(...);
-  
+
   // 2. Inserisci spedizione in DB
   const { data: shipment } = await supabaseAdmin
     .from('shipments')
@@ -291,8 +295,8 @@ try {
 } catch (dbError) {
   // 3. DB fallito, prova a cancellare da corriere
   try {
-    await courierClient.deleteShipping({ 
-      shipmentId: courierResponse.shipmentId 
+    await courierClient.deleteShipping({
+      shipmentId: courierResponse.shipmentId
     });
   } catch (deleteError) {
     // 4. Non può cancellare, metti in coda per intervento manuale
@@ -300,9 +304,9 @@ try {
       action: 'DELETE',
       shipment_id_external: courierResponse.shipmentId,
       provider_id: 'spedisci_online',
-      error_context: { 
-        dbError: dbError.message, 
-        deleteError: deleteError.message 
+      error_context: {
+        dbError: dbError.message,
+        deleteError: deleteError.message
       },
       status: 'PENDING'
     });
@@ -321,6 +325,7 @@ try {
 ### Migrations
 
 Le migration sono in `supabase/migrations/` e seguono naming convention:
+
 - `XXX_description.sql` - Numerazione sequenziale
 - Ogni migration è idempotente (può essere eseguita multiple volte)
 
@@ -355,15 +360,15 @@ import { supabaseAdmin } from '@/lib/db/client';
 // Aggiungi credito (con audit trail)
 const { error } = await supabaseAdmin.rpc('add_wallet_credit', {
   p_user_id: userId,
-  p_amount: 100.00,
+  p_amount: 100.0,
   p_description: 'Top-up approvato',
-  p_admin_id: adminId
+  p_admin_id: adminId,
 });
 
 // Decrementa saldo (atomico)
 const { error } = await supabaseAdmin.rpc('decrement_wallet_balance', {
   p_user_id: userId,
-  p_amount: 25.50
+  p_amount: 25.5,
 });
 ```
 
@@ -371,15 +376,11 @@ const { error } = await supabaseAdmin.rpc('decrement_wallet_balance', {
 
 ```typescript
 // Client-side: RLS applicato automaticamente
-const { data } = await supabase
-  .from('shipments')
-  .select('*');
+const { data } = await supabase.from('shipments').select('*');
 // Utente vede solo proprie spedizioni
 
 // Server-side: Bypass RLS se necessario
-const { data } = await supabaseAdmin
-  .from('shipments')
-  .select('*');
+const { data } = await supabaseAdmin.from('shipments').select('*');
 // Admin vede tutte le spedizioni
 ```
 
@@ -387,13 +388,13 @@ const { data } = await supabaseAdmin
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Saldo negativo | Verifica che usi `decrement_wallet_balance()` invece di UPDATE diretto |
-| Race condition wallet | Usa sempre funzioni atomiche, mai UPDATE diretto |
-| RLS blocca query | Verifica che `auth.uid()` sia impostato correttamente |
-| Duplicati spedizioni | Verifica che `idempotency_key` sia generato correttamente |
-| Compensation queue piena | Verifica log errori e risolvi manualmente |
+| Issue                    | Soluzione                                                              |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Saldo negativo           | Verifica che usi `decrement_wallet_balance()` invece di UPDATE diretto |
+| Race condition wallet    | Usa sempre funzioni atomiche, mai UPDATE diretto                       |
+| RLS blocca query         | Verifica che `auth.uid()` sia impostato correttamente                  |
+| Duplicati spedizioni     | Verifica che `idempotency_key` sia generato correttamente              |
+| Compensation queue piena | Verifica log errori e risolvi manualmente                              |
 
 ---
 
@@ -408,11 +409,12 @@ const { data } = await supabaseAdmin
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Team_

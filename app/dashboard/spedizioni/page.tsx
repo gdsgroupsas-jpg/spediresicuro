@@ -1,6 +1,6 @@
 /**
  * Pagina: Lista Spedizioni
- * 
+ *
  * Dashboard premium per visualizzare e gestire tutte le spedizioni.
  * Design ispirato a Stripe, Linear, Flexport - moderno, pulito, professionale.
  */
@@ -11,10 +11,33 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Search, Filter, Download, X, FileText, FileSpreadsheet, File, Trash2, Upload, CheckSquare, Square, FileDown, CheckCircle2, AlertCircle, ChevronDown, Calendar, ArrowLeftRight, Package, Camera } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Download,
+  X,
+  FileText,
+  FileSpreadsheet,
+  File,
+  Trash2,
+  Upload,
+  CheckSquare,
+  Square,
+  FileDown,
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
+  Calendar,
+  ArrowLeftRight,
+  Package,
+  Camera,
+} from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
 import { ExportService } from '@/lib/adapters/export';
-import { generateMultipleShipmentsCSV, downloadMultipleCSV } from '@/lib/generate-shipment-document';
+import {
+  generateMultipleShipmentsCSV,
+  downloadMultipleCSV,
+} from '@/lib/generate-shipment-document';
 import ImportOrders from '@/components/import/import-orders';
 import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
 import { featureFlags } from '@/lib/config/feature-flags';
@@ -143,7 +166,15 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // Componente Badge Importato
-function ImportedBadge({ imported, verified, platform }: { imported?: boolean; verified?: boolean; platform?: string }) {
+function ImportedBadge({
+  imported,
+  verified,
+  platform,
+}: {
+  imported?: boolean;
+  verified?: boolean;
+  platform?: string;
+}) {
   if (!imported) return null;
 
   return (
@@ -154,7 +185,11 @@ function ImportedBadge({ imported, verified, platform }: { imported?: boolean; v
             ? 'bg-green-50 text-green-700 border-green-300'
             : 'bg-purple-50 text-purple-700 border-purple-300'
         }`}
-        title={verified ? 'Ordine verificato e pronto per export' : 'Ordine importato - Verifica richiesta'}
+        title={
+          verified
+            ? 'Ordine verificato e pronto per export'
+            : 'Ordine importato - Verifica richiesta'
+        }
       >
         {verified ? '✓ Verificato' : '📥 Importato'}
       </span>
@@ -190,12 +225,13 @@ function ReturnBadge({ isReturn, returnStatus }: { isReturn?: boolean; returnSta
     },
   };
 
-  const config = returnStatus && statusConfig[returnStatus]
-    ? statusConfig[returnStatus]
-    : {
-        label: 'Reso',
-        className: 'bg-purple-50 text-purple-700 border-purple-300',
-      };
+  const config =
+    returnStatus && statusConfig[returnStatus]
+      ? statusConfig[returnStatus]
+      : {
+          label: 'Reso',
+          className: 'bg-purple-50 text-purple-700 border-purple-300',
+        };
 
   return (
     <span
@@ -214,14 +250,14 @@ export default function ListaSpedizioniPage() {
   const [spedizioni, setSpedizioni] = useState<Spedizione[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Real-time: userId e killer feature
   const [userId, setUserId] = useState<string | null>(null);
   const [hasLDVScanner, setHasLDVScanner] = useState(false);
   const [showLDVScanner, setShowLDVScanner] = useState(false);
   // ✨ NUOVO: Verifica ruolo admin/superadmin per tooltip breakdown prezzo
   const [isAdminOrSuperadmin, setIsAdminOrSuperadmin] = useState(false);
-  
+
   // Filtri e ricerca
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -232,7 +268,7 @@ export default function ListaSpedizioniPage() {
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Selezione multipla per export CSV
   const [selectedShipments, setSelectedShipments] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
@@ -245,7 +281,9 @@ export default function ListaSpedizioniPage() {
 
   // Modale import ordini
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(
+    null
+  );
 
   // Modale scanner resi
   const [showReturnScanner, setShowReturnScanner] = useState(false);
@@ -269,8 +307,12 @@ export default function ListaSpedizioniPage() {
             const role = (userData.role || '').toUpperCase();
             const accountType = (userData.account_type || '').toLowerCase();
             const canSeeBreakdown =
-              role === 'ADMIN' || role === 'SUPERADMIN' || role === 'RESELLER' ||
-              accountType === 'admin' || accountType === 'superadmin' || accountType === 'reseller';
+              role === 'ADMIN' ||
+              role === 'SUPERADMIN' ||
+              role === 'RESELLER' ||
+              accountType === 'admin' ||
+              accountType === 'superadmin' ||
+              accountType === 'reseller';
             setIsAdminOrSuperadmin(canSeeBreakdown);
           }
         } catch (err) {
@@ -304,18 +346,21 @@ export default function ListaSpedizioniPage() {
       try {
         setIsLoading(true);
         const response = await fetch('/api/spedizioni');
-        
+
         if (!response.ok) {
           throw new Error('Errore nel caricamento delle spedizioni');
         }
 
         const result = await response.json();
         const spedizioniCaricate = result.data || [];
-        
+
         // Log per debug
         console.log('📦 Spedizioni caricate:', spedizioniCaricate.length);
-        console.log('📥 Spedizioni importate:', spedizioniCaricate.filter((s: any) => s.imported).length);
-        
+        console.log(
+          '📥 Spedizioni importate:',
+          spedizioniCaricate.filter((s: any) => s.imported).length
+        );
+
         setSpedizioni(spedizioniCaricate);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -386,14 +431,16 @@ export default function ListaSpedizioniPage() {
     enabled: !!userId && !isLoading,
     onInsert: (shipment: any) => {
       console.log('📦 [Real-Time] Nuova spedizione importata:', shipment);
-      
+
       // Verifica che non sia già nella lista
-      const exists = spedizioni.some(s => s.id === shipment.id || (s as any).tracking === shipment.tracking_number);
-      
+      const exists = spedizioni.some(
+        (s) => s.id === shipment.id || (s as any).tracking === shipment.tracking_number
+      );
+
       if (!exists) {
         // Aggiungi in cima alla lista
-        setSpedizioni(prev => [shipment, ...prev]);
-        
+        setSpedizioni((prev) => [shipment, ...prev]);
+
         // Notifica utente (opzionale, puoi aggiungere toast)
         console.log('✅ Nuova spedizione aggiunta in tempo reale!');
       }
@@ -401,14 +448,16 @@ export default function ListaSpedizioniPage() {
     onUpdate: (shipment: any) => {
       console.log('📝 [Real-Time] Spedizione aggiornata:', shipment);
       // Aggiorna spedizione esistente nella lista
-      setSpedizioni(prev => 
-        prev.map(s => (s.id === shipment.id || (s as any).tracking === shipment.tracking_number) ? shipment : s)
+      setSpedizioni((prev) =>
+        prev.map((s) =>
+          s.id === shipment.id || (s as any).tracking === shipment.tracking_number ? shipment : s
+        )
       );
     },
     onDelete: (shipmentId: string) => {
       console.log('🗑️ [Real-Time] Spedizione eliminata:', shipmentId);
       // Rimuovi dalla lista
-      setSpedizioni(prev => prev.filter(s => s.id !== shipmentId));
+      setSpedizioni((prev) => prev.filter((s) => s.id !== shipmentId));
     },
   });
 
@@ -472,9 +521,7 @@ export default function ListaSpedizioniPage() {
 
   // Conferma eliminazione (singola o multipla)
   const confirmDelete = async () => {
-    const idsToDelete = spedizioneToDelete 
-      ? [spedizioneToDelete] 
-      : Array.from(spedizioniToDelete);
+    const idsToDelete = spedizioneToDelete ? [spedizioneToDelete] : Array.from(spedizioniToDelete);
 
     if (idsToDelete.length === 0) {
       console.warn('⚠️ Nessun ID da eliminare');
@@ -485,11 +532,11 @@ export default function ListaSpedizioniPage() {
 
     try {
       console.log(`🗑️ Eliminazione di ${idsToDelete.length} spedizione/i:`, idsToDelete);
-      
+
       // Elimina tutte le spedizioni selezionate
       const deletePromises = idsToDelete.map(async (id) => {
         console.log(`🔄 Eliminazione spedizione: ${id}`);
-        
+
         try {
           const response = await fetch(`/api/spedizioni?id=${encodeURIComponent(id)}`, {
             method: 'DELETE',
@@ -516,14 +563,16 @@ export default function ListaSpedizioniPage() {
               console.error(`❌ Errore testo risposta per ${id}:`, errorText);
               errorMessage = errorText || errorMessage;
             }
-            
-            throw new Error(`Errore durante l'eliminazione della spedizione ${id}: ${errorMessage}`);
+
+            throw new Error(
+              `Errore durante l'eliminazione della spedizione ${id}: ${errorMessage}`
+            );
           }
 
           // Verifica che la risposta sia valida
           const result = await response.json();
           console.log(`✅ Spedizione ${id} eliminata con successo:`, result);
-          
+
           return { id, success: true };
         } catch (error: any) {
           console.error(`❌ Errore eliminazione spedizione ${id}:`, error);
@@ -532,18 +581,20 @@ export default function ListaSpedizioniPage() {
       });
 
       const results = await Promise.all(deletePromises);
-      
+
       // Verifica se tutte le eliminazioni sono riuscite
-      const failed = results.filter(r => !r.success);
+      const failed = results.filter((r) => !r.success);
       if (failed.length > 0) {
-        const errorMessages = failed.map(f => `${f.id}: ${f.error}`).join('\n');
-        throw new Error(`Errore durante l'eliminazione di ${failed.length} spedizione/i:\n${errorMessages}`);
+        const errorMessages = failed.map((f) => `${f.id}: ${f.error}`).join('\n');
+        throw new Error(
+          `Errore durante l'eliminazione di ${failed.length} spedizione/i:\n${errorMessages}`
+        );
       }
 
       // Rimuovi dalla lista locale solo le spedizioni eliminate con successo
-      const successfulIds = results.filter(r => r.success).map(r => r.id);
+      const successfulIds = results.filter((r) => r.success).map((r) => r.id);
       setSpedizioni((prev) => prev.filter((s) => !successfulIds.includes(s.id)));
-      
+
       // Deseleziona tutte
       setSelectedShipments(new Set());
       setSelectAll(false);
@@ -552,7 +603,7 @@ export default function ListaSpedizioniPage() {
       setShowDeleteModal(false);
       setSpedizioneToDelete(null);
       setSpedizioniToDelete(new Set());
-      
+
       console.log(`✅ Eliminazione completata: ${successfulIds.length} spedizione/i eliminate`);
     } catch (error: any) {
       console.error('❌ Errore eliminazione:', error);
@@ -627,7 +678,9 @@ export default function ListaSpedizioniPage() {
 
     // Filtro per corriere
     if (courierFilter !== 'all') {
-      filtered = filtered.filter((s) => (s.corriere || '').toLowerCase() === courierFilter.toLowerCase());
+      filtered = filtered.filter(
+        (s) => (s.corriere || '').toLowerCase() === courierFilter.toLowerCase()
+      );
     }
 
     // Filtro per resi
@@ -638,7 +691,16 @@ export default function ListaSpedizioniPage() {
     }
 
     return filtered;
-  }, [spedizioni, searchQuery, statusFilter, dateFilter, courierFilter, returnFilter, customDateFrom, customDateTo]);
+  }, [
+    spedizioni,
+    searchQuery,
+    statusFilter,
+    dateFilter,
+    courierFilter,
+    returnFilter,
+    customDateFrom,
+    customDateTo,
+  ]);
 
   // Gestione selezione multipla
   const handleToggleSelect = (id: string) => {
@@ -658,7 +720,7 @@ export default function ListaSpedizioniPage() {
       setSelectedShipments(new Set());
       setSelectAll(false);
     } else {
-      setSelectedShipments(new Set(filteredSpedizioni.map(s => s.id)));
+      setSelectedShipments(new Set(filteredSpedizioni.map((s) => s.id)));
       setSelectAll(true);
     }
   };
@@ -666,7 +728,7 @@ export default function ListaSpedizioniPage() {
   // Sincronizza selectAll con selectedShipments
   useEffect(() => {
     if (filteredSpedizioni.length > 0) {
-      const allSelected = filteredSpedizioni.every(s => selectedShipments.has(s.id));
+      const allSelected = filteredSpedizioni.every((s) => selectedShipments.has(s.id));
       setSelectAll(allSelected);
     } else {
       setSelectAll(false);
@@ -715,8 +777,22 @@ export default function ListaSpedizioniPage() {
       case 'ieri':
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0);
-        endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+        startDate = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+          0,
+          0,
+          0
+        );
+        endDate = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+          23,
+          59,
+          59
+        );
         break;
       case '3gg':
         startDate = new Date(now);
@@ -739,7 +815,7 @@ export default function ListaSpedizioniPage() {
         startDate.setHours(0, 0, 0, 0);
         break;
       case 'tutti':
-        setSelectedShipments(new Set(filteredSpedizioni.map(s => s.id)));
+        setSelectedShipments(new Set(filteredSpedizioni.map((s) => s.id)));
         setSelectAll(true);
         setShowSelectMenu(false);
         return;
@@ -748,12 +824,12 @@ export default function ListaSpedizioniPage() {
     }
 
     // Filtra spedizioni nel periodo
-    const spedizioniNelPeriodo = filteredSpedizioni.filter(s => {
+    const spedizioniNelPeriodo = filteredSpedizioni.filter((s) => {
       const spedizioneDate = new Date(s.createdAt);
       return spedizioneDate >= startDate && spedizioneDate <= endDate;
     });
 
-    setSelectedShipments(new Set(spedizioniNelPeriodo.map(s => s.id)));
+    setSelectedShipments(new Set(spedizioniNelPeriodo.map((s) => s.id)));
     setSelectAll(spedizioniNelPeriodo.length === filteredSpedizioni.length);
     setShowSelectMenu(false);
   };
@@ -773,12 +849,12 @@ export default function ListaSpedizioniPage() {
       const endDate = new Date(endInput);
       endDate.setHours(23, 59, 59, 999);
 
-      const spedizioniNelRange = filteredSpedizioni.filter(s => {
+      const spedizioniNelRange = filteredSpedizioni.filter((s) => {
         const spedizioneDate = new Date(s.createdAt);
         return spedizioneDate >= startDate && spedizioneDate <= endDate;
       });
 
-      setSelectedShipments(new Set(spedizioniNelRange.map(s => s.id)));
+      setSelectedShipments(new Set(spedizioniNelRange.map((s) => s.id)));
       setSelectAll(spedizioniNelRange.length === filteredSpedizioni.length);
       setShowSelectMenu(false);
     } catch (error) {
@@ -803,9 +879,10 @@ export default function ListaSpedizioniPage() {
 
   // Export CSV formato spedisci.online (solo spedizioni selezionate)
   const handleExportSpedisciOnlineCSV = async () => {
-    const spedizioniToExport = selectedShipments.size > 0
-      ? filteredSpedizioni.filter(s => selectedShipments.has(s.id))
-      : filteredSpedizioni;
+    const spedizioniToExport =
+      selectedShipments.size > 0
+        ? filteredSpedizioni.filter((s) => selectedShipments.has(s.id))
+        : filteredSpedizioni;
 
     if (spedizioniToExport.length === 0) {
       alert('Seleziona almeno una spedizione da esportare');
@@ -816,11 +893,11 @@ export default function ListaSpedizioniPage() {
     try {
       // Converti Spedizione[] a SpedizioneData[] normalizzando tutti i campi
       // ⚠️ IMPORTANTE: Mappatura completa per formato CSV spedisci.online
-      const spedizioniForCSV = spedizioniToExport.map(s => {
+      const spedizioniForCSV = spedizioniToExport.map((s) => {
         // Estrai indirizzo completo (indirizzo + numero civico se separati)
         const indirizzoCompleto = s.destinatario?.indirizzo || '';
         const numeroCivico = s.destinatario?.numeroCivico || '';
-        const indirizzoFinale = numeroCivico 
+        const indirizzoFinale = numeroCivico
           ? `${indirizzoCompleto}, n ${numeroCivico}`.trim()
           : indirizzoCompleto;
 
@@ -869,7 +946,7 @@ export default function ListaSpedizioniPage() {
       downloadMultipleCSV(csvData, filename);
     } catch (error) {
       console.error('Errore export CSV Spedisci.Online:', error);
-      alert('Errore durante l\'esportazione CSV Spedisci.Online');
+      alert("Errore durante l'esportazione CSV Spedisci.Online");
     } finally {
       setIsExporting(false);
     }
@@ -877,9 +954,10 @@ export default function ListaSpedizioniPage() {
 
   // Export multiplo usando formato corretto per importazione
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
-    const spedizioniToExport = selectedShipments.size > 0
-      ? filteredSpedizioni.filter(s => selectedShipments.has(s.id))
-      : filteredSpedizioni;
+    const spedizioniToExport =
+      selectedShipments.size > 0
+        ? filteredSpedizioni.filter((s) => selectedShipments.has(s.id))
+        : filteredSpedizioni;
 
     if (spedizioniToExport.length === 0) {
       alert('Seleziona almeno una spedizione da esportare');
@@ -957,9 +1035,8 @@ export default function ListaSpedizioniPage() {
         const result = await ExportService.exportShipments(shipmentsForExport, format);
 
         // Crea blob e scarica
-        const blobData = typeof result.data === 'string'
-          ? result.data
-          : new Uint8Array(result.data);
+        const blobData =
+          typeof result.data === 'string' ? result.data : new Uint8Array(result.data);
         const blob = new Blob([blobData], { type: result.mimeType });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -973,7 +1050,9 @@ export default function ListaSpedizioniPage() {
       }
     } catch (error) {
       console.error('Errore export:', error);
-      alert(`Errore durante l'export: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+      alert(
+        `Errore durante l'export: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
+      );
     } finally {
       setIsExporting(false);
     }
@@ -1105,12 +1184,7 @@ export default function ListaSpedizioniPage() {
                 href="/dashboard/spedizioni/nuova"
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all transform hover:scale-105"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1227,9 +1301,7 @@ export default function ListaSpedizioniPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data Fine
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Fine</label>
                   <input
                     type="date"
                     value={customDateTo}
@@ -1241,10 +1313,15 @@ export default function ListaSpedizioniPage() {
             )}
 
             {/* Risultati filtri */}
-            {(searchQuery || statusFilter !== 'all' || dateFilter !== 'all' || returnFilter !== 'all' || courierFilter !== 'all') && (
+            {(searchQuery ||
+              statusFilter !== 'all' ||
+              dateFilter !== 'all' ||
+              returnFilter !== 'all' ||
+              courierFilter !== 'all') && (
               <div className="mt-4 flex items-center justify-between">
                 <div className="text-sm text-gray-600">
-                  Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
+                  Mostrando{' '}
+                  <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
                   <span className="font-medium text-gray-900">{spedizioni.length}</span> spedizioni
                 </div>
                 <button
@@ -1315,9 +1392,7 @@ export default function ListaSpedizioniPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nessuna spedizione trovata
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna spedizione trovata</h3>
               <p className="text-sm text-gray-600 mb-6">
                 Crea la tua prima spedizione per iniziare
               </p>
@@ -1325,12 +1400,7 @@ export default function ListaSpedizioniPage() {
                 href="/dashboard/spedizioni/nuova"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1371,9 +1441,11 @@ export default function ListaSpedizioniPage() {
                             className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                           >
                             <span>Seleziona</span>
-                            <ChevronDown className={`w-3 h-3 transition-transform ${showSelectMenu ? 'rotate-180' : ''}`} />
+                            <ChevronDown
+                              className={`w-3 h-3 transition-transform ${showSelectMenu ? 'rotate-180' : ''}`}
+                            />
                           </button>
-                          
+
                           {showSelectMenu && (
                             <div className="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
                               <div className="p-1">
@@ -1498,7 +1570,7 @@ export default function ListaSpedizioniPage() {
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => handleViewDetails(spedizione.id)}
                     >
-                      <td 
+                      <td
                         className="px-6 py-4 whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -1519,8 +1591,8 @@ export default function ListaSpedizioniPage() {
                             <div className="text-sm font-medium text-gray-900">
                               {spedizione.destinatario?.nome || 'N/A'}
                             </div>
-                            <ImportedBadge 
-                              imported={spedizione.imported} 
+                            <ImportedBadge
+                              imported={spedizione.imported}
                               verified={spedizione.verified}
                               platform={spedizione.importPlatform}
                             />
@@ -1549,9 +1621,7 @@ export default function ListaSpedizioniPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <StatusBadge
-                            status={spedizione.status || 'in_preparazione'}
-                          />
+                          <StatusBadge status={spedizione.status || 'in_preparazione'} />
                           <ReturnBadge
                             isReturn={(spedizione as any).is_return}
                             returnStatus={(spedizione as any).return_status}
@@ -1583,41 +1653,51 @@ export default function ListaSpedizioniPage() {
 
                           {/* ✨ NUOVO: Tooltip breakdown prezzo (solo admin/superadmin con fee > 0) */}
                           {isAdminOrSuperadmin &&
-                           spedizione.prezzoFinale > 0 &&
-                           spedizione.platform_fee !== undefined &&
-                           spedizione.platform_fee > 0 && (
-                            <div className="hidden group-hover:block absolute z-20 bottom-full left-0 mb-2
+                            spedizione.prezzoFinale > 0 &&
+                            spedizione.platform_fee !== undefined &&
+                            spedizione.platform_fee > 0 && (
+                              <div
+                                className="hidden group-hover:block absolute z-20 bottom-full left-0 mb-2
                                             bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg
-                                            whitespace-nowrap min-w-[140px]">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-gray-300">Base:</span>
-                                  <span>{formatPrice(spedizione.prezzoFinale - spedizione.platform_fee)}</span>
+                                            whitespace-nowrap min-w-[140px]"
+                              >
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-gray-300">Base:</span>
+                                    <span>
+                                      {formatPrice(
+                                        spedizione.prezzoFinale - spedizione.platform_fee
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-gray-300">Fee:</span>
+                                    <span>{formatPrice(spedizione.platform_fee)}</span>
+                                  </div>
+                                  <div className="border-t border-gray-700 pt-1 mt-1 flex justify-between gap-4">
+                                    <span className="font-semibold">Totale:</span>
+                                    <span className="font-semibold">
+                                      {formatPrice(spedizione.prezzoFinale)}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-gray-300">Fee:</span>
-                                  <span>{formatPrice(spedizione.platform_fee)}</span>
-                                </div>
-                                <div className="border-t border-gray-700 pt-1 mt-1 flex justify-between gap-4">
-                                  <span className="font-semibold">Totale:</span>
-                                  <span className="font-semibold">{formatPrice(spedizione.prezzoFinale)}</span>
-                                </div>
+                                <div
+                                  className="absolute bottom-0 left-4 transform translate-y-1/2 rotate-45
+                                              w-2 h-2 bg-gray-900"
+                                ></div>
                               </div>
-                              <div className="absolute bottom-0 left-4 transform translate-y-1/2 rotate-45
-                                              w-2 h-2 bg-gray-900"></div>
-                            </div>
-                          )}
+                            )}
 
                           {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
                           {featureFlags.showVATSemantics &&
-                           spedizione.prezzoFinale > 0 &&
-                           spedizione.vat_mode && (
-                            <span className="text-xs text-gray-500 mt-0.5">
-                              {spedizione.vat_mode === "excluded"
-                                ? `+ IVA ${spedizione.vat_rate || 22}%`
-                                : "IVA incl."}
-                            </span>
-                          )}
+                            spedizione.prezzoFinale > 0 &&
+                            spedizione.vat_mode && (
+                              <span className="text-xs text-gray-500 mt-0.5">
+                                {spedizione.vat_mode === 'excluded'
+                                  ? `+ IVA ${spedizione.vat_rate || 22}%`
+                                  : 'IVA incl.'}
+                              </span>
+                            )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -1633,10 +1713,24 @@ export default function ListaSpedizioniPage() {
                                   ? 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
                                   : 'text-purple-500 hover:text-purple-700 hover:bg-purple-100'
                               }`}
-                              title={spedizione.verified ? 'Modifica ordine importato' : 'Verifica e modifica ordine'}
+                              title={
+                                spedizione.verified
+                                  ? 'Modifica ordine importato'
+                                  : 'Verifica e modifica ordine'
+                              }
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
                               </svg>
                             </button>
                           )}
@@ -1726,12 +1820,8 @@ export default function ListaSpedizioniPage() {
         {!isLoading && !error && spedizioni.length > 0 && filteredSpedizioni.length === 0 && (
           <div className="bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-xl p-12 text-center">
             <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Nessun risultato trovato
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Prova a modificare i filtri di ricerca
-            </p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun risultato trovato</h3>
+            <p className="text-sm text-gray-600 mb-6">Prova a modificare i filtri di ricerca</p>
             <button
               onClick={() => {
                 setSearchQuery('');
@@ -1749,8 +1839,8 @@ export default function ListaSpedizioniPage() {
         {/* Footer Stats */}
         {!isLoading && !error && filteredSpedizioni.length > 0 && (
           <div className="mt-6 text-sm text-gray-600 text-center">
-            Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span> di{' '}
-            <span className="font-medium text-gray-900">{spedizioni.length}</span>{' '}
+            Mostrando <span className="font-medium text-gray-900">{filteredSpedizioni.length}</span>{' '}
+            di <span className="font-medium text-gray-900">{spedizioni.length}</span>{' '}
             {spedizioni.length === 1 ? 'spedizione' : 'spedizioni'}
           </div>
         )}
@@ -1762,7 +1852,7 @@ export default function ListaSpedizioniPage() {
               <ImportOrders
                 onImportComplete={async (successCount, errors) => {
                   setImportResult({ success: successCount, errors });
-                  
+
                   // ⚠️ IMPORTANTE: Ricarica immediatamente le spedizioni senza ricaricare tutta la pagina
                   try {
                     console.log('🔄 Ricaricamento spedizioni dopo import...');
@@ -1771,13 +1861,16 @@ export default function ListaSpedizioniPage() {
                       const result = await response.json();
                       const nuoveSpedizioni = result.data || [];
                       console.log('✅ Spedizioni caricate:', nuoveSpedizioni.length);
-                      console.log('📥 Spedizioni importate:', nuoveSpedizioni.filter((s: any) => s.imported).length);
+                      console.log(
+                        '📥 Spedizioni importate:',
+                        nuoveSpedizioni.filter((s: any) => s.imported).length
+                      );
                       setSpedizioni(nuoveSpedizioni);
                     }
                   } catch (err) {
                     console.error('❌ Errore ricaricamento spedizioni:', err);
                   }
-                  
+
                   // Chiudi modale dopo 2 secondi se tutto ok
                   setTimeout(() => {
                     setShowImportModal(false);
@@ -1800,11 +1893,11 @@ export default function ListaSpedizioniPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-                  importResult.errors.length === 0 
-                    ? 'bg-green-100' 
-                    : 'bg-yellow-100'
-                }`}>
+                <div
+                  className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                    importResult.errors.length === 0 ? 'bg-green-100' : 'bg-yellow-100'
+                  }`}
+                >
                   {importResult.errors.length === 0 ? (
                     <CheckCircle2 className="w-6 h-6 text-green-600" />
                   ) : (
@@ -1812,9 +1905,7 @@ export default function ListaSpedizioniPage() {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Importazione Completata
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Importazione Completata</h3>
                   <p className="text-sm text-gray-600">
                     {importResult.success} ordini importati con successo
                   </p>
@@ -1857,7 +1948,7 @@ export default function ListaSpedizioniPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {spedizioniToDelete.size > 0 
+                    {spedizioniToDelete.size > 0
                       ? `Elimina ${spedizioniToDelete.size} Spedizioni`
                       : 'Elimina Spedizione'}
                   </h3>
@@ -1870,7 +1961,11 @@ export default function ListaSpedizioniPage() {
                 {spedizioniToDelete.size > 0 ? (
                   <div>
                     <p className="text-sm text-gray-700 mb-3">
-                      Sei sicuro di voler eliminare <strong className="text-red-600">{spedizioniToDelete.size} spedizioni selezionate</strong>?
+                      Sei sicuro di voler eliminare{' '}
+                      <strong className="text-red-600">
+                        {spedizioniToDelete.size} spedizioni selezionate
+                      </strong>
+                      ?
                     </p>
                     <p className="text-xs text-gray-600">
                       I dati saranno archiviati ma non visibili nella lista.
@@ -1878,7 +1973,8 @@ export default function ListaSpedizioniPage() {
                   </div>
                 ) : (
                   <p className="text-sm text-gray-700">
-                    Sei sicuro di voler eliminare questa spedizione? I dati saranno archiviati ma non visibili nella lista.
+                    Sei sicuro di voler eliminare questa spedizione? I dati saranno archiviati ma
+                    non visibili nella lista.
                   </p>
                 )}
               </div>
@@ -1919,7 +2015,7 @@ export default function ListaSpedizioniPage() {
           <ReturnScanner
             onClose={() => setShowReturnScanner(false)}
             onSuccess={(returnShipment, originalShipment) => {
-              console.log('Reso registrato:', returnShipment, originalShipment)
+              console.log('Reso registrato:', returnShipment, originalShipment);
               // Real-time aggiornerà automaticamente la lista
               // Non serve reload grazie a useRealtimeShipments
             }}
@@ -1932,7 +2028,7 @@ export default function ListaSpedizioniPage() {
             mode="import"
             onClose={() => setShowLDVScanner(false)}
             onSuccess={(shipment) => {
-              console.log('✅ Spedizione importata via scanner:', shipment)
+              console.log('✅ Spedizione importata via scanner:', shipment);
               // Real-time aggiornerà automaticamente la lista
               // La spedizione apparirà in tempo reale su tutti i dispositivi
             }}
@@ -1942,4 +2038,3 @@ export default function ListaSpedizioniPage() {
     </div>
   );
 }
-

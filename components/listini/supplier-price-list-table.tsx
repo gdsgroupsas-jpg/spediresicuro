@@ -4,11 +4,11 @@
  * Componente riutilizzabile per mostrare listini fornitore in formato tabella
  */
 
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import type { PriceList } from "@/types/listini";
-import { Calendar, Edit, Eye, Package, Trash2 } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import type { PriceList } from '@/types/listini';
+import { Calendar, Edit, Eye, Package, Trash2 } from 'lucide-react';
 
 interface SupplierPriceListTableProps {
   priceLists: PriceList[];
@@ -28,25 +28,25 @@ export function SupplierPriceListTable({
   canDelete = true,
 }: SupplierPriceListTableProps) {
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "-";
-    return new Intl.DateTimeFormat("it-IT", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+    if (!dateString) return '-';
+    return new Intl.DateTimeFormat('it-IT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     }).format(new Date(dateString));
   };
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      draft: "bg-gray-100 text-gray-700",
-      active: "bg-green-50 text-green-700",
-      archived: "bg-gray-100 text-gray-500",
+      draft: 'bg-gray-100 text-gray-700',
+      active: 'bg-green-50 text-green-700',
+      archived: 'bg-gray-100 text-gray-500',
     };
 
     const labels = {
-      draft: "Bozza",
-      active: "Attivo",
-      archived: "Archiviato",
+      draft: 'Bozza',
+      active: 'Attivo',
+      archived: 'Archiviato',
     };
 
     const style = styles[status as keyof typeof styles] || styles.draft;
@@ -76,12 +76,8 @@ export function SupplierPriceListTable({
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Package className="w-8 h-8 text-gray-400" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900">
-          Nessun listino trovato
-        </h3>
-        <p className="text-gray-500 mt-1">
-          Crea il tuo primo listino fornitore per iniziare.
-        </p>
+        <h3 className="text-lg font-medium text-gray-900">Nessun listino trovato</h3>
+        <p className="text-gray-500 mt-1">Crea il tuo primo listino fornitore per iniziare.</p>
       </div>
     );
   }
@@ -96,25 +92,16 @@ export function SupplierPriceListTable({
             <th className="px-6 py-4 font-medium text-gray-500">Versione</th>
             <th className="px-6 py-4 font-medium text-gray-500">Tariffe</th>
             <th className="px-6 py-4 font-medium text-gray-500">Status</th>
-            <th className="px-6 py-4 font-medium text-gray-500">
-              Data Creazione
-            </th>
-            <th className="px-6 py-4 font-medium text-gray-500 text-right">
-              Azioni
-            </th>
+            <th className="px-6 py-4 font-medium text-gray-500">Data Creazione</th>
+            <th className="px-6 py-4 font-medium text-gray-500 text-right">Azioni</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {priceLists.map((priceList) => (
-            <tr
-              key={priceList.id}
-              className="hover:bg-gray-50 transition-colors group"
-            >
-              <td className="px-6 py-4 font-medium text-gray-900">
-                {priceList.name}
-              </td>
+            <tr key={priceList.id} className="hover:bg-gray-50 transition-colors group">
+              <td className="px-6 py-4 font-medium text-gray-900">{priceList.name}</td>
               <td className="px-6 py-4 text-gray-600">
-                {priceList.courier?.name || priceList.courier_id || "-"}
+                {priceList.courier?.name || priceList.courier_id || '-'}
               </td>
               <td className="px-6 py-4 text-gray-600">{priceList.version}</td>
               <td className="px-6 py-4 text-gray-600">

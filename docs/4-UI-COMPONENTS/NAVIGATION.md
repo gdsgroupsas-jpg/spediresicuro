@@ -1,9 +1,11 @@
 # Navigation System - SpedireSicuro Dashboard
 
 ## Overview
+
 Sistema di navigazione enterprise-grade per la dashboard di SpedireSicuro, con supporto RBAC, nested sections, keyboard navigation e full test coverage.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
@@ -11,6 +13,7 @@ Sistema di navigazione enterprise-grade per la dashboard di SpedireSicuro, con s
 - [x] Nuovi team member
 
 ## Prerequisites
+
 - React hooks familiarity
 - TypeScript basics
 - Next.js App Router (usePathname, useRouter)
@@ -18,14 +21,14 @@ Sistema di navigazione enterprise-grade per la dashboard di SpedireSicuro, con s
 
 ## Quick Reference
 
-| Feature | Status | File | Description |
-|---------|--------|------|-------------|
-| Navigation Config | ✅ Active | `lib/config/navigationConfig.ts` | SSOT per navigazione |
-| Desktop Sidebar | ✅ Active | `components/dashboard-sidebar.tsx` | Sidebar collapsible con nested |
-| Mobile Nav | ✅ Active | `components/dashboard-mobile-nav.tsx` | Bottom nav + drawer menu |
-| Keyboard Nav Hook | ✅ Active | `hooks/useKeyboardNav.ts` | Arrow keys, Enter, Escape |
-| Test Coverage | ✅ Active | `tests/unit/navigationConfig.test.ts` | 33 tests RBAC + nested |
-| | | `tests/unit/useKeyboardNav.test.ts` | 23 tests keyboard nav |
+| Feature           | Status    | File                                  | Description                    |
+| ----------------- | --------- | ------------------------------------- | ------------------------------ |
+| Navigation Config | ✅ Active | `lib/config/navigationConfig.ts`      | SSOT per navigazione           |
+| Desktop Sidebar   | ✅ Active | `components/dashboard-sidebar.tsx`    | Sidebar collapsible con nested |
+| Mobile Nav        | ✅ Active | `components/dashboard-mobile-nav.tsx` | Bottom nav + drawer menu       |
+| Keyboard Nav Hook | ✅ Active | `hooks/useKeyboardNav.ts`             | Arrow keys, Enter, Escape      |
+| Test Coverage     | ✅ Active | `tests/unit/navigationConfig.test.ts` | 33 tests RBAC + nested         |
+|                   |           | `tests/unit/useKeyboardNav.test.ts`   | 23 tests keyboard nav          |
 
 ## Architecture
 
@@ -52,7 +55,7 @@ export interface NavSection {
   label: string;
   icon?: LucideIcon;
   items: NavItem[];
-  subsections?: NavSection[];  // 🆕 Nested sections support
+  subsections?: NavSection[]; // 🆕 Nested sections support
   collapsible?: boolean;
   defaultExpanded?: boolean;
   requiredRole?: UserRole[];
@@ -63,9 +66,9 @@ export type UserRole = 'user' | 'admin' | 'superadmin';
 
 // Feature flags
 export const FEATURES = {
-  KEYBOARD_NAV: true,      // Keyboard navigation
-  SIDEBAR_SEARCH: false,   // Search/filter (future)
-  TELEMETRY: false,        // Analytics (future)
+  KEYBOARD_NAV: true, // Keyboard navigation
+  SIDEBAR_SEARCH: false, // Search/filter (future)
+  TELEMETRY: false, // Analytics (future)
 } as const;
 ```
 
@@ -85,14 +88,15 @@ const navigationConfig = getNavigationForUser(
 
 **Logica Filtering:**
 
-| Role | Sezioni Visibili |
-|------|------------------|
-| `user` | Logistica, Resi, **Finanza** (personale), Account, Comunicazioni, Supporto |
-| `admin` | + Amministrazione (filtrata) |
-| `reseller` | + Finanza (personale + sub-user), Gestione Business |
-| `superadmin` | + Finanza Piattaforma (operativa), Amministrazione (completa) |
+| Role         | Sezioni Visibili                                                           |
+| ------------ | -------------------------------------------------------------------------- |
+| `user`       | Logistica, Resi, **Finanza** (personale), Account, Comunicazioni, Supporto |
+| `admin`      | + Amministrazione (filtrata)                                               |
+| `reseller`   | + Finanza (personale + sub-user), Gestione Business                        |
+| `superadmin` | + Finanza Piattaforma (operativa), Amministrazione (completa)              |
 
 **Feature Flags:**
+
 - `isReseller: true` → Mostra sezione "Gestione Business"
 - `accountType: 'byoc'` → Mostra sezione "BYOC"
 
@@ -116,27 +120,34 @@ const adminSection: NavSection = {
       label: 'Utenti & Team',
       icon: Users,
       collapsible: true,
-      items: [/* 2 items */]
+      items: [
+        /* 2 items */
+      ],
     },
     {
       id: 'admin-finance',
       label: 'Finanza & Fatturazione',
       icon: Wallet,
       collapsible: true,
-      items: [/* 7 items */]
+      items: [
+        /* 7 items */
+      ],
     },
     {
       id: 'admin-system',
       label: 'Sistema & Configurazione',
       icon: Settings,
       collapsible: true,
-      items: [/* 4 items */]
-    }
-  ]
-}
+      items: [
+        /* 4 items */
+      ],
+    },
+  ],
+};
 ```
 
 **Benefits:**
+
 - Max 7±2 items per livello (Miller's Law)
 - Reduce cognitive load
 - Better scanability
@@ -147,6 +158,7 @@ const adminSection: NavSection = {
 Le sezioni sono ordinate per priorità strategica:
 
 **Superadmin:**
+
 1. 🎯 **Strategic**: Finanza Piattaforma (operativa)
 2. 🛠️ **Administrative**: Amministrazione
 3. 📦 **Operational**: Logistica, Resi
@@ -155,6 +167,7 @@ Le sezioni sono ordinate per priorità strategica:
 6. 💬 **Support**: Comunicazioni, Supporto
 
 **User/Reseller:**
+
 1. 📦 **Operational**: Logistica, Resi
 2. 💰 **Finance**: Finanza (Dashboard fiscale personale)
 3. 👤 **Personal**: Account
@@ -167,6 +180,7 @@ Le sezioni sono ordinate per priorità strategica:
 Sidebar collapsible con supporto nested sections e keyboard navigation.
 
 **Features:**
+
 - ✅ Nested sections rendering (recursive)
 - ✅ Auto-expand on active route
 - ✅ localStorage persistence (expanded state)
@@ -176,6 +190,7 @@ Sidebar collapsible con supporto nested sections e keyboard navigation.
 - ✅ Performance optimization (useMemo)
 
 **Usage:**
+
 ```typescript
 import DashboardSidebar from '@/components/dashboard-sidebar';
 
@@ -190,10 +205,12 @@ export default function DashboardLayout({ children }) {
 ```
 
 **LocalStorage Keys:**
+
 - `sidebar-expanded-sections`: Set<string> di section IDs espanse
 - `sidebar-manually-collapsed`: Set<string> di section IDs collassate manualmente
 
 **Keyboard Navigation:**
+
 - `↑` / `↓`: Navigate items
 - `Enter`: Activate item
 - `Escape`: Clear focus
@@ -205,6 +222,7 @@ export default function DashboardLayout({ children }) {
 Bottom navigation bar + slide-in drawer menu.
 
 **Features:**
+
 - ✅ Fixed bottom bar (5 main actions)
 - ✅ Slide-in drawer (full menu)
 - ✅ Flattened sections (mobile UX)
@@ -213,6 +231,7 @@ Bottom navigation bar + slide-in drawer menu.
 - ✅ Prevent body scroll when open
 
 **Bottom Bar Items:**
+
 1. Home (Dashboard)
 2. Spedizioni
 3. Nuova Spedizione (CTA centrale)
@@ -220,6 +239,7 @@ Bottom navigation bar + slide-in drawer menu.
 5. Menu (drawer trigger)
 
 **Drawer Menu:**
+
 - User profile link
 - Main actions (AI Assistant)
 - All sections (flattened from desktop)
@@ -230,6 +250,7 @@ Bottom navigation bar + slide-in drawer menu.
 Reusable hook per keyboard navigation.
 
 **API:**
+
 ```typescript
 const { focusedIndex, isKeyboardMode, setFocusedIndex } = useKeyboardNav(
   items: NavItem[],
@@ -241,6 +262,7 @@ const { focusedIndex, isKeyboardMode, setFocusedIndex } = useKeyboardNav(
 ```
 
 **Features:**
+
 - ✅ Arrow Up/Down navigation (with loop)
 - ✅ Enter to activate
 - ✅ Escape to clear
@@ -252,12 +274,13 @@ const { focusedIndex, isKeyboardMode, setFocusedIndex } = useKeyboardNav(
 - ✅ Scoped to `[data-keyboard-nav]`
 
 **Example:**
+
 ```typescript
 const allItems = useMemo(() => {
   const items: NavItem[] = [];
-  navigationConfig.sections.forEach(section => {
+  navigationConfig.sections.forEach((section) => {
     items.push(...section.items);
-    section.subsections?.forEach(sub => {
+    section.subsections?.forEach((sub) => {
       items.push(...sub.items);
     });
   });
@@ -276,10 +299,12 @@ const { focusedIndex, isKeyboardMode } = useKeyboardNav(allItems, {
 Verifica se un nav item è attivo in base al pathname corrente.
 
 **Logic:**
+
 - Dashboard: Exact match (`/dashboard` === `/dashboard`)
 - Subpaths: Prefix match (`/dashboard/admin` starts with `/dashboard/admin`)
 
 **Example:**
+
 ```typescript
 const isActive = isNavItemActive('/dashboard/admin', '/dashboard/admin/features');
 // Returns: true
@@ -290,6 +315,7 @@ const isActive = isNavItemActive('/dashboard/admin', '/dashboard/admin/features'
 Ottieni configurazione navigazione filtrata per ruolo e features.
 
 **Returns:**
+
 ```typescript
 interface NavigationConfig {
   mainActions: NavItem[];
@@ -390,6 +416,7 @@ interface NavigationConfig {
 ## Performance Optimizations
 
 ### 1. useMemo for Navigation Config
+
 ```typescript
 const navigationConfig = useMemo(() => {
   return getNavigationForUser(userRole, { isReseller, accountType });
@@ -397,29 +424,28 @@ const navigationConfig = useMemo(() => {
 ```
 
 ### 2. useMemo for Flattened Sections (Mobile)
+
 ```typescript
 const flattenedSections = useMemo(() => {
-  return navigationConfig.sections.map(section => {
+  return navigationConfig.sections.map((section) => {
     if (!section.subsections) return section;
-    const allItems = [
-      ...section.items,
-      ...section.subsections.flatMap(sub => sub.items)
-    ];
+    const allItems = [...section.items, ...section.subsections.flatMap((sub) => sub.items)];
     return { ...section, items: allItems, subsections: undefined };
   });
 }, [navigationConfig.sections]);
 ```
 
 ### 3. useMemo for All Navigable Items (Keyboard Nav)
+
 ```typescript
 const allNavigableItems = useMemo(() => {
   const items: NavItem[] = [];
   if (navigationConfig.dashboardItem) {
     items.push(navigationConfig.dashboardItem);
   }
-  navigationConfig.sections.forEach(section => {
+  navigationConfig.sections.forEach((section) => {
     items.push(...section.items);
-    section.subsections?.forEach(sub => {
+    section.subsections?.forEach((sub) => {
       items.push(...sub.items);
     });
   });
@@ -432,13 +458,14 @@ const allNavigableItems = useMemo(() => {
 ### Adding a New Section
 
 1. **Define Section in `navigationConfig.ts`:**
+
 ```typescript
 const myNewSection: NavSection = {
   id: 'my-section',
   label: 'My Section',
   collapsible: true,
   defaultExpanded: true,
-  requiredRole: ['admin', 'superadmin'],  // Optional - ometti per accesso universale
+  requiredRole: ['admin', 'superadmin'], // Optional - ometti per accesso universale
   items: [
     {
       id: 'my-item',
@@ -446,16 +473,17 @@ const myNewSection: NavSection = {
       href: '/dashboard/my-item',
       icon: Star,
       description: 'My item description',
-    }
+    },
   ],
 };
 ```
 
 2. **Add to Section Order:**
+
 ```typescript
 // In getNavigationForUser()
 // Per sezione universale (tutti gli utenti):
-sections.push(myNewSection);  // Nessun controllo ruolo
+sections.push(myNewSection); // Nessun controllo ruolo
 
 // Per sezione con restrizioni:
 if (role === 'admin' || role === 'superadmin') {
@@ -466,10 +494,11 @@ if (role === 'admin' || role === 'superadmin') {
 **Note:** La sezione **Finanza** (`financeSection`) è un esempio di sezione universale accessibile a tutti gli utenti (user, reseller, admin, superadmin, BYOC). Ogni utente vede solo i propri dati fiscali (atomizzazione per `user_id`).
 
 3. **Test Coverage:**
+
 ```typescript
 it('should show my section to admin', () => {
   const config = getNavigationForUser('admin');
-  const hasMySection = config.sections.some(s => s.id === 'my-section');
+  const hasMySection = config.sections.some((s) => s.id === 'my-section');
   expect(hasMySection).toBe(true);
 });
 ```
@@ -480,7 +509,9 @@ it('should show my section to admin', () => {
 const mySection: NavSection = {
   id: 'my-section',
   label: 'My Section',
-  items: [/* top-level items */],
+  items: [
+    /* top-level items */
+  ],
   subsections: [
     {
       id: 'my-subsection',
@@ -494,9 +525,9 @@ const mySection: NavSection = {
           label: 'My Sub Item',
           href: '/dashboard/my-section/my-sub-item',
           icon: File,
-        }
+        },
       ],
-    }
+    },
   ],
 };
 ```
@@ -504,16 +535,18 @@ const mySection: NavSection = {
 ### Adding a Feature Flag
 
 1. **Add Flag:**
+
 ```typescript
 export const FEATURES = {
   KEYBOARD_NAV: true,
   SIDEBAR_SEARCH: false,
   TELEMETRY: false,
-  MY_NEW_FEATURE: false,  // 🆕 New feature (default OFF)
+  MY_NEW_FEATURE: false, // 🆕 New feature (default OFF)
 } as const;
 ```
 
 2. **Use Flag:**
+
 ```typescript
 if (FEATURES.MY_NEW_FEATURE) {
   // Feature code here
@@ -521,6 +554,7 @@ if (FEATURES.MY_NEW_FEATURE) {
 ```
 
 3. **Test Flag:**
+
 ```typescript
 it('should have MY_NEW_FEATURE disabled by default', () => {
   expect(FEATURES.MY_NEW_FEATURE).toBe(false);
@@ -532,6 +566,7 @@ it('should have MY_NEW_FEATURE disabled by default', () => {
 ### From Hardcoded Nav to SSOT
 
 **Before:**
+
 ```typescript
 // components/dashboard-mobile-nav.tsx
 const menuItems = [
@@ -542,6 +577,7 @@ const menuItems = [
 ```
 
 **After:**
+
 ```typescript
 const navigationConfig = useMemo(() => {
   return getNavigationForUser(userRole, { isReseller, accountType });
@@ -551,6 +587,7 @@ const navigationConfig = useMemo(() => {
 ```
 
 **Benefits:**
+
 - Desktop/Mobile guaranteed consistent
 - Single place to update
 - Automatic RBAC filtering
@@ -559,6 +596,7 @@ const navigationConfig = useMemo(() => {
 ## Accessibility (WCAG 2.1 AA)
 
 ### Keyboard Navigation
+
 - ✅ Arrow keys for navigation
 - ✅ Enter to activate
 - ✅ Escape to cancel
@@ -566,6 +604,7 @@ const navigationConfig = useMemo(() => {
 - ✅ Visual focus indicator (ring)
 
 ### ARIA Attributes
+
 ```typescript
 <div
   data-keyboard-nav
@@ -577,39 +616,42 @@ const navigationConfig = useMemo(() => {
 ```
 
 ### Focus Management
+
 - Visual ring only in keyboard mode
 - Auto-scroll focused item into view
 - No focus trap (mouse resets)
 
 ## Common Issues
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Section not showing | RBAC filtering | Check `requiredRole` / `requiredFeature` |
-| Nested items not rendering | Missing `subsections` mapping | Check `section.subsections?.map()` |
-| Keyboard nav not working | Not inside `[data-keyboard-nav]` | Add attribute to parent |
-| localStorage not persisting | SSR hydration mismatch | Check `if (typeof window === 'undefined')` |
-| Tests failing | Mock not set up | Check `vi.mock('next/navigation')` |
+| Issue                       | Cause                            | Solution                                   |
+| --------------------------- | -------------------------------- | ------------------------------------------ |
+| Section not showing         | RBAC filtering                   | Check `requiredRole` / `requiredFeature`   |
+| Nested items not rendering  | Missing `subsections` mapping    | Check `section.subsections?.map()`         |
+| Keyboard nav not working    | Not inside `[data-keyboard-nav]` | Add attribute to parent                    |
+| localStorage not persisting | SSR hydration mismatch           | Check `if (typeof window === 'undefined')` |
+| Tests failing               | Mock not set up                  | Check `vi.mock('next/navigation')`         |
 
 ## Related Documentation
+
 - [UI Components Overview](OVERVIEW.md) - General UI components
 - [Frontend Architecture](../2-ARCHITECTURE/FRONTEND.md) - Next.js patterns
 - [Testing Guide](../TESTING_GUIDE.md) - Vitest setup
 
 ## Changelog
 
-| Date | Version | Changes | Commits |
-|------|---------|---------|---------|
-| 2026-01-13 | 2.0.0 | Complete refactor with nested sections, RBAC, keyboard nav, test coverage | 805f472, 99b1009, 50c1ed2, e66da91 |
-| 2026-01-12 | 1.0.0 | Initial version (hardcoded nav) | - |
+| Date       | Version | Changes                                                                   | Commits                            |
+| ---------- | ------- | ------------------------------------------------------------------------- | ---------------------------------- |
+| 2026-01-13 | 2.0.0   | Complete refactor with nested sections, RBAC, keyboard nav, test coverage | 805f472, 99b1009, 50c1ed2, e66da91 |
+| 2026-01-12 | 1.0.0   | Initial version (hardcoded nav)                                           | -                                  |
 
 ---
 
 **Score Progression:**
+
 - v1.0.0: 7.5/10 (basic nav, no tests)
 - v2.0.0: **10/10** (enterprise-grade, full coverage) ✅
 
-*Last Updated: 2026-01-13*
-*Status: 🟢 Active*
-*Maintainer: Dev Team*
-*Test Coverage: 56 tests (100% passing)*
+_Last Updated: 2026-01-13_
+_Status: 🟢 Active_
+_Maintainer: Dev Team_
+_Test Coverage: 56 tests (100% passing)_

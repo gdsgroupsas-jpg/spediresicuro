@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { AlertTriangle, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ConfirmActionDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  title: string
-  description: string
-  confirmText?: string
-  cancelText?: string
-  variant?: 'default' | 'destructive'
-  requireConfirmation?: boolean
-  confirmationText?: string
-  isLoading?: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'default' | 'destructive';
+  requireConfirmation?: boolean;
+  confirmationText?: string;
+  isLoading?: boolean;
 }
 
 /**
@@ -34,25 +34,25 @@ export function ConfirmActionDialog({
   confirmationText = '',
   isLoading = false,
 }: ConfirmActionDialogProps) {
-  const [inputValue, setInputValue] = useState('')
+  const [inputValue, setInputValue] = useState('');
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
-  const isConfirmEnabled = !requireConfirmation || inputValue === confirmationText
+  const isConfirmEnabled = !requireConfirmation || inputValue === confirmationText;
 
   const handleConfirm = () => {
     if (isConfirmEnabled && !isLoading) {
-      onConfirm()
-      setInputValue('')
+      onConfirm();
+      setInputValue('');
     }
-  }
+  };
 
   const handleClose = () => {
     if (!isLoading) {
-      setInputValue('')
-      onClose()
+      setInputValue('');
+      onClose();
     }
-  }
+  };
 
   return (
     <div
@@ -116,9 +116,7 @@ export function ConfirmActionDialog({
               className={cn(
                 'w-full px-3 py-2 text-sm border rounded-lg',
                 'focus:outline-none focus:ring-2 focus:ring-[#FFD700]/50',
-                inputValue === confirmationText
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200'
+                inputValue === confirmationText ? 'border-green-500 bg-green-50' : 'border-gray-200'
               )}
               placeholder={confirmationText}
               disabled={isLoading}
@@ -179,5 +177,5 @@ export function ConfirmActionDialog({
         </div>
       </div>
     </div>
-  )
+  );
 }

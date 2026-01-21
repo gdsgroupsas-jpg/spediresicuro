@@ -16,16 +16,17 @@ export async function updateGeoAnalytics(
   periodEnd: Date,
   data: Partial<GeoAnalytics>
 ): Promise<void> {
-  const { error } = await supabase
-    .from('geo_analytics')
-    .upsert({
+  const { error } = await supabase.from('geo_analytics').upsert(
+    {
       zip_code: zipCode,
       period_start: periodStart.toISOString().split('T')[0],
       period_end: periodEnd.toISOString().split('T')[0],
       ...data,
-    }, {
+    },
+    {
       onConflict: 'zip_code,period_start,period_end',
-    });
+    }
+  );
 
   if (error) {
     console.error('Error updating geo analytics:', error);
@@ -82,7 +83,9 @@ export async function calculateAnalyticsFromShipments(
   // Query spedizioni nel periodo
   const { data: shipments, error } = await supabase
     .from('shipments')
-    .select('recipient_zip, recipient_city, recipient_province, final_price, courier_id, status, delivered_at')
+    .select(
+      'recipient_zip, recipient_city, recipient_province, final_price, courier_id, status, delivered_at'
+    )
     .gte('created_at', periodStart.toISOString())
     .lte('created_at', periodEnd.toISOString());
 
@@ -94,7 +97,7 @@ export async function calculateAnalyticsFromShipments(
   // Raggruppa per CAP
   const byZip: Record<string, any[]> = {};
 
-  shipments.forEach(s => {
+  shipments.forEach((s) => {
     if (!byZip[s.recipient_zip]) {
       byZip[s.recipient_zip] = [];
     }
@@ -104,13 +107,16 @@ export async function calculateAnalyticsFromShipments(
   // Calcola metriche per ogni CAP
   for (const [zip, shipmentList] of Object.entries(byZip)) {
     const totalShipments = shipmentList.length;
-    const totalRevenue = shipmentList.reduce((sum, s) => sum + (parseFloat(s.final_price as any) || 0), 0);
+    const totalRevenue = shipmentList.reduce(
+      (sum, s) => sum + (parseFloat(s.final_price as any) || 0),
+      0
+    );
     const averageValue = totalRevenue / totalShipments;
 
     // Performance corrieri
     const courierPerformance: Record<string, any> = {};
 
-    shipmentList.forEach(s => {
+    shipmentList.forEach((s) => {
       if (!s.courier_id) return;
 
       if (!courierPerformance[s.courier_id]) {
@@ -128,7 +134,9 @@ export async function calculateAnalyticsFromShipments(
         // Calcola giorni consegna (semplificato)
         const createdAt = new Date(s.created_at);
         const deliveredAt = new Date(s.delivered_at);
-        const days = Math.floor((deliveredAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        const days = Math.floor(
+          (deliveredAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        );
         courierPerformance[s.courier_id].avgDays.push(days);
       }
     });
@@ -137,9 +145,10 @@ export async function calculateAnalyticsFromShipments(
     const courierStats: Record<string, any> = {};
     for (const [courierId, perf] of Object.entries(courierPerformance)) {
       const successRate = (perf.delivered / perf.total) * 100;
-      const avgDays = perf.avgDays.length > 0
-        ? perf.avgDays.reduce((a: number, b: number) => a + b, 0) / perf.avgDays.length
-        : null;
+      const avgDays =
+        perf.avgDays.length > 0
+          ? perf.avgDays.reduce((a: number, b: number) => a + b, 0) / perf.avgDays.length
+          : null;
 
       courierStats[courierId] = {
         deliveries: perf.total,
@@ -180,13 +189,12 @@ export async function updateCourierZonePerformance(
 
   // Calcola quality score (0-10)
   const qualityScore =
-    (successRate / 100) * 5 +  // Max 5 punti per success rate
-    (onTimeRate / 100) * 3 +    // Max 3 punti per on-time rate
-    Math.max(0, 2 - (metrics.average_delivery_days / 5)); // Max 2 punti per velocità
+    (successRate / 100) * 5 + // Max 5 punti per success rate
+    (onTimeRate / 100) * 3 + // Max 3 punti per on-time rate
+    Math.max(0, 2 - metrics.average_delivery_days / 5); // Max 2 punti per velocità
 
-  const { error } = await supabase
-    .from('courier_zone_performance')
-    .upsert({
+  const { error } = await supabase.from('courier_zone_performance').upsert(
+    {
       courier_id: courierId,
       zip_code: zipCode,
       period_start: periodStart.toISOString().split('T')[0],
@@ -198,9 +206,11 @@ export async function updateCourierZonePerformance(
       on_time_deliveries: metrics.on_time_deliveries,
       on_time_rate: onTimeRate,
       quality_score: qualityScore,
-    }, {
+    },
+    {
       onConflict: 'courier_id,zip_code,period_start',
-    });
+    }
+  );
 
   if (error) {
     console.error('Error updating courier zone performance:', error);
@@ -215,10 +225,7 @@ export async function getCourierPerformance(
   zipCode?: string,
   province?: string
 ) {
-  let query = supabase
-    .from('courier_zone_performance')
-    .select('*')
-    .eq('courier_id', courierId);
+  let query = supabase.from('courier_zone_performance').select('*').eq('courier_id', courierId);
 
   if (zipCode) {
     query = query.eq('zip_code', zipCode);
@@ -269,9 +276,7 @@ export async function getBestCourierForZone(
  * Salva social insight
  */
 export async function saveSocialInsight(insight: Partial<SocialInsight>): Promise<void> {
-  const { error } = await supabase
-    .from('social_insights')
-    .insert(insight);
+  const { error } = await supabase.from('social_insights').insert(insight);
 
   if (error) {
     console.error('Error saving social insight:', error);
@@ -341,16 +346,16 @@ export async function calculateTrendScore(
 
   // Media ponderata dei metric_value per piattaforma
   const weights: Record<string, number> = {
-    'tiktok': 1.5,      // TikTok ha peso maggiore per trend
-    'instagram': 1.2,
-    'facebook': 1.0,
-    'google_trends': 1.3,
+    tiktok: 1.5, // TikTok ha peso maggiore per trend
+    instagram: 1.2,
+    facebook: 1.0,
+    google_trends: 1.3,
   };
 
   let totalScore = 0;
   let totalWeight = 0;
 
-  insights.forEach(insight => {
+  insights.forEach((insight) => {
     const weight = weights[insight.platform] || 1.0;
     totalScore += parseFloat(insight.metric_value as any) * weight;
     totalWeight += weight;

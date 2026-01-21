@@ -74,9 +74,7 @@ export function PaymentDialog({ isOpen, onClose, deadline }: PaymentDialogProps)
               <CheckCircle2 className="w-16 h-16 text-green-400" />
             </div>
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Pagamento Completato
-              </h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Pagamento Completato</h2>
               <p className="text-slate-300">
                 Il pagamento di €{amount} è stato processato con successo
               </p>
@@ -120,9 +118,7 @@ export function PaymentDialog({ isOpen, onClose, deadline }: PaymentDialogProps)
             <div className="bg-slate-900/50 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-400">
-                  Scadenza
-                </span>
+                <span className="text-sm font-medium text-yellow-400">Scadenza</span>
               </div>
               <p className="text-slate-300 text-sm">
                 <strong>Data:</strong>{' '}
@@ -171,17 +167,15 @@ export function PaymentDialog({ isOpen, onClose, deadline }: PaymentDialogProps)
                 <p className="text-white font-medium">Carta di credito</p>
                 <p className="text-xs text-slate-400">•••• •••• •••• 4242</p>
               </div>
-              <span className="text-xs text-green-400 font-medium">
-                Verificata
-              </span>
+              <span className="text-xs text-green-400 font-medium">Verificata</span>
             </div>
           </div>
 
           {/* Info Box */}
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
             <p className="text-sm text-blue-300 leading-relaxed">
-              💳 <strong>Pagamento sicuro</strong>: I tuoi dati sono protetti
-              con crittografia SSL. Il pagamento viene processato tramite Stripe.
+              💳 <strong>Pagamento sicuro</strong>: I tuoi dati sono protetti con crittografia SSL.
+              Il pagamento viene processato tramite Stripe.
             </p>
           </div>
 

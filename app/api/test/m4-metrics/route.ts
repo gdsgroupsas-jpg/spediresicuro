@@ -10,16 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createLogger } from '@/lib/logger';
 import { getBusinessMetrics, getQuickStats } from '@/lib/metrics/business-metrics';
-import {
-  formatMetrics,
-  buildShipmentMetrics,
-  MetricDefinition,
-} from '@/lib/metrics/prometheus';
-import {
-  AUDIT_ACTIONS,
-  logAuditEvent,
-  getRecentAuditLogs,
-} from '@/lib/services/audit-service';
+import { formatMetrics, buildShipmentMetrics, MetricDefinition } from '@/lib/metrics/prometheus';
+import { AUDIT_ACTIONS, logAuditEvent, getRecentAuditLogs } from '@/lib/services/audit-service';
 
 interface TestResult {
   name: string;

@@ -1,6 +1,6 @@
 /**
  * Intent Detector
- * 
+ *
  * Rileva se il messaggio dell'utente è una richiesta di preventivo.
  * Usa pattern matching semplice + LLM opzionale per maggiore accuratezza.
  */
@@ -53,25 +53,24 @@ const EXCLUDE_KEYWORDS = [
  */
 export function detectPricingIntentSimple(message: string): boolean {
   const lowerMessage = message.toLowerCase();
-  
+
   // Escludi se contiene keyword di esclusione
-  if (EXCLUDE_KEYWORDS.some(keyword => lowerMessage.includes(keyword))) {
+  if (EXCLUDE_KEYWORDS.some((keyword) => lowerMessage.includes(keyword))) {
     return false;
   }
-  
+
   // Controlla se contiene keyword di preventivo
-  const hasPricingKeyword = PRICING_KEYWORDS.some(keyword => 
-    lowerMessage.includes(keyword)
-  );
-  
+  const hasPricingKeyword = PRICING_KEYWORDS.some((keyword) => lowerMessage.includes(keyword));
+
   if (!hasPricingKeyword) {
     return false;
   }
-  
+
   // SAFE: Richiede keyword + almeno 1 dato (CAP o peso)
-  const hasData = /\b\d{5}\b/.test(message) || // CAP (5 cifre)
-                  /\b\d+(?:[.,]\d+)?\s*(?:kg|chili|peso)/i.test(message); // Peso
-  
+  const hasData =
+    /\b\d{5}\b/.test(message) || // CAP (5 cifre)
+    /\b\d+(?:[.,]\d+)?\s*(?:kg|chili|peso)/i.test(message); // Peso
+
   return hasPricingKeyword && hasData;
 }
 
@@ -80,12 +79,12 @@ export function detectPricingIntentSimple(message: string): boolean {
  */
 export async function detectPricingIntentLLM(message: string): Promise<boolean> {
   const llm = getLLM();
-  
+
   if (!llm) {
     // Fallback a pattern matching se LLM non disponibile
     return detectPricingIntentSimple(message);
   }
-  
+
   try {
     const prompt = `Analizza questo messaggio e determina se l'utente sta chiedendo un PREVENTIVO o QUOTAZIONE per una spedizione.
 
@@ -99,12 +98,15 @@ Rispondi ESCLUSIVAMENTE con JSON:
 }`;
 
     const result = await llm.invoke([new HumanMessage(prompt)]);
-    const jsonText = result.content.toString().replace(/```json/g, '').replace(/```/g, '').trim();
+    const jsonText = result.content
+      .toString()
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
     const parsed = JSON.parse(jsonText);
-    
+
     // Considera preventivo se confidence > 70
     return parsed.is_pricing_request === true && (parsed.confidence || 0) > 70;
-    
   } catch (error) {
     defaultLogger.warn('⚠️ [Intent Detector] Errore LLM, uso pattern matching:', error);
     return detectPricingIntentSimple(message);
@@ -131,10 +133,12 @@ function getLLM() {
 /**
  * Rileva intento preventivo (usa LLM se disponibile, altrimenti pattern matching)
  */
-export async function detectPricingIntent(message: string, useLLM: boolean = false): Promise<boolean> {
+export async function detectPricingIntent(
+  message: string,
+  useLLM: boolean = false
+): Promise<boolean> {
   if (useLLM) {
     return detectPricingIntentLLM(message);
   }
   return detectPricingIntentSimple(message);
 }
-

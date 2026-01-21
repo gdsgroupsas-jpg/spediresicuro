@@ -9,6 +9,7 @@
 ## 🎯 Obiettivo
 
 Creare sezione **"Gestione Clienti"** unificata che mostri:
+
 - **Superadmin/Admin:** Tutti i clienti in modo gerarchico (Reseller → Sub-Users, BYOC standalone)
 - **Reseller:** Solo i propri Sub-Users (comportamento attuale)
 
@@ -43,11 +44,13 @@ Creare sezione **"Gestione Clienti"** unificata che mostri:
 ### Opzione A: Estendere `/dashboard/reseller-team` (Consigliato)
 
 **Vantaggi:**
+
 - ✅ Riutilizza codice esistente
 - ✅ Unica pagina per tutti (superadmin + reseller)
 - ✅ Meno duplicazione
 
 **Implementazione:**
+
 1. Modificare `getSubUsers()` per supportare superadmin
 2. Creare `getAllClientsHierarchical()` per superadmin
 3. Aggiornare UI per mostrare gerarchia quando superadmin
@@ -56,10 +59,12 @@ Creare sezione **"Gestione Clienti"** unificata che mostri:
 ### Opzione B: Creare nuova pagina `/dashboard/clients` (Alternativa)
 
 **Vantaggi:**
+
 - ✅ Separazione netta
 - ✅ Non tocca codice esistente
 
 **Svantaggi:**
+
 - ❌ Duplicazione codice
 - ❌ Due pagine simili
 
@@ -78,7 +83,7 @@ export async function getAllClientsForUser(): Promise<{
   success: boolean;
   clients?: ClientHierarchy[];
   error?: string;
-}>
+}>;
 
 interface ClientHierarchy {
   reseller: User;
@@ -94,6 +99,7 @@ interface BYOCClient {
 ```
 
 **Logica:**
+
 - Se superadmin → restituisce tutti i reseller con sub-users + BYOC
 - Se reseller → restituisce solo i suoi sub-users (comportamento attuale)
 
@@ -137,7 +143,7 @@ interface BYOCClient {
 
 ```sql
 -- Recupera tutti i reseller con sub-users
-SELECT 
+SELECT
   r.id as reseller_id,
   r.email as reseller_email,
   r.name as reseller_name,
@@ -190,7 +196,7 @@ interface ClientsData {
       <SubUsersList subUsers={reseller.subUsers} />
     </ResellerCard>
   ))}
-  
+
   {/* BYOC Section */}
   <BYOCSection clients={byocClients} />
 </ClientsHierarchyView>
@@ -201,6 +207,7 @@ interface ClientsData {
 ## ✅ Checklist Implementazione
 
 ### Backend
+
 - [ ] Creare `getAllClientsForUser()` in `actions/admin-reseller.ts`
 - [ ] Aggiornare `getSubUsers()` per supportare superadmin
 - [ ] Creare query SQL ottimizzata
@@ -208,6 +215,7 @@ interface ClientsData {
 - [ ] Test backend con reseller (regressione)
 
 ### Frontend
+
 - [ ] Creare `ClientsHierarchyView` component
 - [ ] Creare `ResellerCard` component (expandable)
 - [ ] Creare `BYOCSection` component
@@ -215,6 +223,7 @@ interface ClientsData {
 - [ ] Aggiornare access control (superadmin + reseller)
 
 ### Testing
+
 - [ ] Test superadmin vede tutti i clienti
 - [ ] Test reseller vede solo sub-users
 - [ ] Test gerarchia corretta

@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Copy, ExternalLink, Plus, Printer, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, Copy, ExternalLink, Plus, Printer, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface SuccessModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** Tracking number della spedizione creata */
-  trackingNumber: string
+  trackingNumber: string;
   /** ID interno spedizione (opzionale) */
-  shipmentId?: string
+  shipmentId?: string;
   /** Costo della spedizione (opzionale) */
-  cost?: string
+  cost?: string;
   /** Corriere utilizzato */
-  courier?: string
+  courier?: string;
   /** Callback quando utente clicca "Stampa Etichetta" */
-  onPrintLabel?: () => void
+  onPrintLabel?: () => void;
   /** Callback quando utente clicca "Traccia Spedizione" */
-  onTrackShipment?: () => void
+  onTrackShipment?: () => void;
   /** Callback quando utente clicca "Crea Altra Spedizione" */
-  onCreateAnother?: () => void
+  onCreateAnother?: () => void;
   /** Messaggio custom (default: "Spedizione Creata") */
-  title?: string
+  title?: string;
   /** Descrizione aggiuntiva (opzionale) */
-  description?: string
+  description?: string;
 }
 
 /**
@@ -51,58 +51,58 @@ export function SuccessModal({
   title = 'Spedizione Creata',
   description,
 }: SuccessModalProps) {
-  const [copied, setCopied] = useState(false)
-  const trackingRef = useRef<HTMLDivElement>(null)
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const [copied, setCopied] = useState(false);
+  const trackingRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Lock body scroll when open
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
       // Focus close button for accessibility
-      setTimeout(() => closeButtonRef.current?.focus(), 100)
+      setTimeout(() => closeButtonRef.current?.focus(), 100);
     } else {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = 'unset';
     }
     return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [open])
+      document.body.style.overflow = 'unset';
+    };
+  }, [open]);
 
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
-        onOpenChange(false)
+        onOpenChange(false);
       }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [open, onOpenChange])
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [open, onOpenChange]);
 
   // Copy tracking number to clipboard
   const handleCopyTracking = async () => {
     try {
-      await navigator.clipboard.writeText(trackingNumber)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(trackingNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       // Fallback for older browsers
       if (trackingRef.current) {
-        const range = document.createRange()
-        range.selectNodeContents(trackingRef.current)
-        const selection = window.getSelection()
-        selection?.removeAllRanges()
-        selection?.addRange(range)
-        document.execCommand('copy')
-        selection?.removeAllRanges()
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        const range = document.createRange();
+        range.selectNodeContents(trackingRef.current);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        document.execCommand('copy');
+        selection?.removeAllRanges();
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
       }
     }
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
@@ -144,24 +144,17 @@ export function SuccessModal({
           <div className="mx-auto w-16 h-16 mb-6 relative">
             <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-25" />
             <div className="relative w-full h-full bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle2
-                className="w-10 h-10 text-green-600 animate-in zoom-in-50 duration-300"
-              />
+              <CheckCircle2 className="w-10 h-10 text-green-600 animate-in zoom-in-50 duration-300" />
             </div>
           </div>
 
           {/* Title */}
-          <h2
-            id="success-modal-title"
-            className="text-xl font-bold text-gray-900 mb-2"
-          >
+          <h2 id="success-modal-title" className="text-xl font-bold text-gray-900 mb-2">
             {title}
           </h2>
 
           {/* Description */}
-          {description && (
-            <p className="text-sm text-gray-500 mb-6">{description}</p>
-          )}
+          {description && <p className="text-sm text-gray-500 mb-6">{description}</p>}
 
           {/* Tracking Number - Large, copyable */}
           <div className="bg-gray-50 rounded-xl p-4 mb-6">
@@ -186,11 +179,7 @@ export function SuccessModal({
                 )}
                 title={copied ? 'Copiato!' : 'Copia tracking'}
               >
-                {copied ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
           </div>
@@ -251,8 +240,8 @@ export function SuccessModal({
             {onCreateAnother && (
               <button
                 onClick={() => {
-                  onCreateAnother()
-                  onOpenChange(false)
+                  onCreateAnother();
+                  onOpenChange(false);
                 }}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl',
@@ -269,7 +258,7 @@ export function SuccessModal({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default SuccessModal
+export default SuccessModal;

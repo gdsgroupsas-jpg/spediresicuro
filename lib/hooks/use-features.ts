@@ -30,7 +30,7 @@ export function useFeatures() {
       try {
         setIsLoading(true);
         const response = await fetch('/api/features/list');
-        
+
         if (!response.ok) {
           throw new Error('Errore nel caricamento delle features');
         }
@@ -58,7 +58,7 @@ export function useFeatures() {
 
     try {
       const response = await fetch(`/api/features/check?feature=${featureCode}`);
-      
+
       if (!response.ok) {
         return false;
       }
@@ -79,4 +79,3 @@ export function useFeatures() {
     featuresCount: features.length,
   };
 }
-

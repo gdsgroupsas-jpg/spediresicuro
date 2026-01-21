@@ -41,12 +41,7 @@ export type Permission =
  * Define what each role can do
  */
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  user: [
-    'view_dashboard',
-    'create_shipment',
-    'view_shipments',
-    'view_analytics',
-  ],
+  user: ['view_dashboard', 'create_shipment', 'view_shipments', 'view_analytics'],
   reseller: [
     'view_dashboard',
     'create_shipment',

@@ -3,16 +3,16 @@ import {
   getFiscalDeadlines,
   getPendingCOD,
   getShipmentsByPeriod,
-} from "@/lib/agent/fiscal-data";
-import * as supabaseServer from "@/lib/supabase-server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+} from '@/lib/agent/fiscal-data';
+import * as supabaseServer from '@/lib/supabase-server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Supabase client
-vi.mock("@/lib/supabase-server", () => ({
+vi.mock('@/lib/supabase-server', () => ({
   createServerActionClient: vi.fn(),
 }));
 
-describe("Fiscal Data Module", () => {
+describe('Fiscal Data Module', () => {
   let mockSupabaseClient: any;
 
   beforeEach(() => {
@@ -31,13 +31,11 @@ describe("Fiscal Data Module", () => {
       single: vi.fn(),
     };
 
-    vi.mocked(supabaseServer.createServerActionClient).mockReturnValue(
-      mockSupabaseClient
-    );
+    vi.mocked(supabaseServer.createServerActionClient).mockReturnValue(mockSupabaseClient);
   });
 
-  describe("getFiscalDeadlines", () => {
-    it("returns Italian fiscal calendar deadlines", () => {
+  describe('getFiscalDeadlines', () => {
+    it('returns Italian fiscal calendar deadlines', () => {
       const deadlines = getFiscalDeadlines();
 
       expect(deadlines).toBeInstanceOf(Array);
@@ -45,27 +43,27 @@ describe("Fiscal Data Module", () => {
 
       // Check structure of first deadline
       const firstDeadline = deadlines[0];
-      expect(firstDeadline).toHaveProperty("date");
-      expect(firstDeadline).toHaveProperty("description");
-      expect(firstDeadline).toHaveProperty("type");
+      expect(firstDeadline).toHaveProperty('date');
+      expect(firstDeadline).toHaveProperty('description');
+      expect(firstDeadline).toHaveProperty('type');
     });
 
-    it("includes F24 deadlines", () => {
+    it('includes F24 deadlines', () => {
       const deadlines = getFiscalDeadlines();
-      const f24Deadlines = deadlines.filter((d) => d.type === "F24");
+      const f24Deadlines = deadlines.filter((d) => d.type === 'F24');
 
       expect(f24Deadlines.length).toBeGreaterThan(0);
-      expect(f24Deadlines[0].description).toContain("F24");
+      expect(f24Deadlines[0].description).toContain('F24');
     });
 
-    it("includes LIPE deadlines", () => {
+    it('includes LIPE deadlines', () => {
       const deadlines = getFiscalDeadlines();
-      const lipeDeadlines = deadlines.filter((d) => d.type === "LIPE");
+      const lipeDeadlines = deadlines.filter((d) => d.type === 'LIPE');
 
       expect(lipeDeadlines.length).toBeGreaterThan(0);
     });
 
-    it("uses current year for all deadlines", () => {
+    it('uses current year for all deadlines', () => {
       const currentYear = new Date().getFullYear();
       const deadlines = getFiscalDeadlines();
 
@@ -75,33 +73,33 @@ describe("Fiscal Data Module", () => {
     });
   });
 
-  describe("getShipmentsByPeriod", () => {
+  describe('getShipmentsByPeriod', () => {
     const mockShipments = [
       {
-        id: "1",
-        created_at: "2026-01-10",
-        status: "delivered",
+        id: '1',
+        created_at: '2026-01-10',
+        status: 'delivered',
         total_price: 10.5,
         courier_cost: 7.2,
         margin: 3.3,
         cash_on_delivery: false,
         cod_status: null,
-        user_id: "user-123",
+        user_id: 'user-123',
       },
       {
-        id: "2",
-        created_at: "2026-01-12",
-        status: "in_transit",
+        id: '2',
+        created_at: '2026-01-12',
+        status: 'in_transit',
         total_price: 15.0,
         courier_cost: 10.0,
         margin: 5.0,
         cash_on_delivery: true,
-        cod_status: "pending",
-        user_id: "user-123",
+        cod_status: 'pending',
+        user_id: 'user-123',
       },
     ];
 
-    it("fetches shipments for standard user", async () => {
+    it('fetches shipments for standard user', async () => {
       // Mock che supporta chaining multiplo: .eq("deleted", false).eq("user_id", userId)
       const createQueryBuilder = () => {
         const builder: any = {
@@ -131,20 +129,15 @@ describe("Fiscal Data Module", () => {
 
       mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
-      const result = await getShipmentsByPeriod(
-        "user-123",
-        "user",
-        "2026-01-01",
-        "2026-01-31"
-      );
+      const result = await getShipmentsByPeriod('user-123', 'user', '2026-01-01', '2026-01-31');
 
       expect(result).toEqual(mockShipments);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith("shipments");
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('shipments');
     });
 
-    it("filters by user_id for standard user", async () => {
+    it('filters by user_id for standard user', async () => {
       let eqCalls: Array<[string, any]> = [];
-      
+
       const createQueryBuilder = () => {
         const builder: any = {
           select: vi.fn().mockReturnThis(),
@@ -170,30 +163,25 @@ describe("Fiscal Data Module", () => {
 
       mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
-      await getShipmentsByPeriod(
-        "user-123",
-        "user",
-        "2026-01-01",
-        "2026-01-31"
-      );
+      await getShipmentsByPeriod('user-123', 'user', '2026-01-01', '2026-01-31');
 
       // Verifica che .eq() sia stato chiamato con user_id
-      const userEqCall = eqCalls.find(([col]) => col === "user_id");
+      const userEqCall = eqCalls.find(([col]) => col === 'user_id');
       expect(userEqCall).toBeDefined();
-      expect(userEqCall?.[1]).toBe("user-123");
+      expect(userEqCall?.[1]).toBe('user-123');
     });
 
-    it("includes sub-users for reseller role", async () => {
+    it('includes sub-users for reseller role', async () => {
       // Mock sub-users query
       const subUsersQuery = {
-        data: [{ id: "sub-user-1" }, { id: "sub-user-2" }],
+        data: [{ id: 'sub-user-1' }, { id: 'sub-user-2' }],
         error: null,
       };
 
       let inCallArgs: any = null;
 
       mockSupabaseClient.from = vi.fn((tableName: string) => {
-        if (tableName === "users") {
+        if (tableName === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockResolvedValue(subUsersQuery),
@@ -217,23 +205,14 @@ describe("Fiscal Data Module", () => {
         return builder;
       });
 
-      await getShipmentsByPeriod(
-        "reseller-123",
-        "reseller",
-        "2026-01-01",
-        "2026-01-31"
-      );
+      await getShipmentsByPeriod('reseller-123', 'reseller', '2026-01-01', '2026-01-31');
 
       expect(inCallArgs).toBeDefined();
-      expect(inCallArgs[0]).toBe("user_id");
-      expect(inCallArgs[1]).toEqual([
-        "reseller-123",
-        "sub-user-1",
-        "sub-user-2",
-      ]);
+      expect(inCallArgs[0]).toBe('user_id');
+      expect(inCallArgs[1]).toEqual(['reseller-123', 'sub-user-1', 'sub-user-2']);
     });
 
-    it("throws error on database failure", async () => {
+    it('throws error on database failure', async () => {
       const createQueryBuilder = () => {
         const builder: any = {
           select: vi.fn().mockReturnThis(),
@@ -248,7 +227,7 @@ describe("Fiscal Data Module", () => {
           if (eqCallCount === 2) {
             return Promise.resolve({
               data: null,
-              error: { message: "Database error" },
+              error: { message: 'Database error' },
             });
           }
           return this;
@@ -259,49 +238,49 @@ describe("Fiscal Data Module", () => {
       mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
       await expect(
-        getShipmentsByPeriod("user-123", "user", "2026-01-01", "2026-01-31")
-      ).rejects.toThrow("Errore recupero spedizioni: Database error");
+        getShipmentsByPeriod('user-123', 'user', '2026-01-01', '2026-01-31')
+      ).rejects.toThrow('Errore recupero spedizioni: Database error');
     });
   });
 
-  describe("getPendingCOD", () => {
+  describe('getPendingCOD', () => {
     // ⚠️ Il codice usa cash_on_delivery_amount, non cash_on_delivery
     const mockCODShipments = [
       {
-        id: "1",
-        created_at: "2026-01-10",
+        id: '1',
+        created_at: '2026-01-10',
         cash_on_delivery_amount: 50.0,
-        cod_status: "pending",
-        user_id: "user-123",
+        cod_status: 'pending',
+        user_id: 'user-123',
       },
       {
-        id: "2",
-        created_at: "2026-01-12",
+        id: '2',
+        created_at: '2026-01-12',
         cash_on_delivery_amount: 75.5,
-        cod_status: "collected",
-        user_id: "user-123",
-      },
-    ];
-    
-    // Risultato mappato atteso (dopo il mapping nel codice)
-    const expectedMappedCODShipments = [
-      {
-        id: "1",
-        created_at: "2026-01-10",
-        cash_on_delivery: 50.0,
-        cod_status: "pending",
-        user_id: "user-123",
-      },
-      {
-        id: "2",
-        created_at: "2026-01-12",
-        cash_on_delivery: 75.5,
-        cod_status: "collected",
-        user_id: "user-123",
+        cod_status: 'collected',
+        user_id: 'user-123',
       },
     ];
 
-    it("fetches pending COD shipments", async () => {
+    // Risultato mappato atteso (dopo il mapping nel codice)
+    const expectedMappedCODShipments = [
+      {
+        id: '1',
+        created_at: '2026-01-10',
+        cash_on_delivery: 50.0,
+        cod_status: 'pending',
+        user_id: 'user-123',
+      },
+      {
+        id: '2',
+        created_at: '2026-01-12',
+        cash_on_delivery: 75.5,
+        cod_status: 'collected',
+        user_id: 'user-123',
+      },
+    ];
+
+    it('fetches pending COD shipments', async () => {
       // getPendingCOD fa: .select().eq("cash_on_delivery", true).neq().eq("deleted", false).eq("user_id", userId)
       // Quindi TRE chiamate a .eq(): cash_on_delivery, deleted, user_id
       const createQueryBuilder = () => {
@@ -326,73 +305,70 @@ describe("Fiscal Data Module", () => {
       };
       mockSupabaseClient.from = vi.fn().mockReturnValue(createQueryBuilder());
 
-      const result = await getPendingCOD("user-123", "user");
+      const result = await getPendingCOD('user-123', 'user');
 
       expect(result).toEqual(expectedMappedCODShipments);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith("shipments");
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('shipments');
     });
 
-    it("filters by cash_on_delivery = true", async () => {
+    it('filters by cash_on_delivery = true', async () => {
       const eqMock = vi.fn().mockReturnThis();
       const mockBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: eqMock,
         neq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        then: (resolve: any) =>
-          resolve({ data: mockCODShipments, error: null }),
+        then: (resolve: any) => resolve({ data: mockCODShipments, error: null }),
       };
       mockSupabaseClient.from = vi.fn().mockReturnValue(mockBuilder);
 
-      await getPendingCOD("user-123", "user");
+      await getPendingCOD('user-123', 'user');
 
-      expect(eqMock).toHaveBeenCalledWith("cash_on_delivery", true);
+      expect(eqMock).toHaveBeenCalledWith('cash_on_delivery', true);
     });
 
-    it("excludes paid COD shipments", async () => {
+    it('excludes paid COD shipments', async () => {
       const neqMock = vi.fn().mockReturnThis();
       const mockBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         neq: neqMock,
         is: vi.fn().mockReturnThis(),
-        then: (resolve: any) =>
-          resolve({ data: mockCODShipments, error: null }),
+        then: (resolve: any) => resolve({ data: mockCODShipments, error: null }),
       };
       mockSupabaseClient.from = vi.fn().mockReturnValue(mockBuilder);
 
-      await getPendingCOD("user-123", "user");
+      await getPendingCOD('user-123', 'user');
 
-      expect(neqMock).toHaveBeenCalledWith("cod_status", "paid");
+      expect(neqMock).toHaveBeenCalledWith('cod_status', 'paid');
     });
 
-    it("throws error on database failure", async () => {
+    it('throws error on database failure', async () => {
       const mockBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         neq: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        then: (resolve: any) =>
-          resolve({ data: null, error: { message: "COD query failed" } }),
+        then: (resolve: any) => resolve({ data: null, error: { message: 'COD query failed' } }),
       };
       mockSupabaseClient.from = vi.fn().mockReturnValue(mockBuilder);
 
-      await expect(getPendingCOD("user-123", "user")).rejects.toThrow(
-        "Errore recupero COD: COD query failed"
+      await expect(getPendingCOD('user-123', 'user')).rejects.toThrow(
+        'Errore recupero COD: COD query failed'
       );
     });
   });
 
-  describe("getFiscalContext", () => {
-    it("returns complete fiscal context structure", async () => {
+  describe('getFiscalContext', () => {
+    it('returns complete fiscal context structure', async () => {
       // Mock all database calls
       mockSupabaseClient.from = vi.fn((tableName: string) => {
-        if (tableName === "users") {
+        if (tableName === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { wallet_balance: "1500.50" },
+              data: { wallet_balance: '1500.50' },
               error: null,
             }),
           };
@@ -408,19 +384,19 @@ describe("Fiscal Data Module", () => {
         };
       });
 
-      const context = await getFiscalContext("user-123", "user");
+      const context = await getFiscalContext('user-123', 'user');
 
-      expect(context).toHaveProperty("userId");
-      expect(context).toHaveProperty("role");
-      expect(context).toHaveProperty("period");
-      expect(context).toHaveProperty("wallet");
-      expect(context).toHaveProperty("shipmentsSummary");
-      expect(context).toHaveProperty("pending_cod_count");
-      expect(context).toHaveProperty("pending_cod_value");
-      expect(context).toHaveProperty("deadlines");
+      expect(context).toHaveProperty('userId');
+      expect(context).toHaveProperty('role');
+      expect(context).toHaveProperty('period');
+      expect(context).toHaveProperty('wallet');
+      expect(context).toHaveProperty('shipmentsSummary');
+      expect(context).toHaveProperty('pending_cod_count');
+      expect(context).toHaveProperty('pending_cod_value');
+      expect(context).toHaveProperty('deadlines');
     });
 
-    it("calculates shipments summary correctly", async () => {
+    it('calculates shipments summary correctly', async () => {
       const mockShipments = [
         { margin: 10.5, total_price: 50.0 },
         { margin: 5.0, total_price: 25.0 },
@@ -428,17 +404,17 @@ describe("Fiscal Data Module", () => {
       ];
 
       mockSupabaseClient.from = vi.fn((tableName: string) => {
-        if (tableName === "users") {
+        if (tableName === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { wallet_balance: "100.00" },
+              data: { wallet_balance: '100.00' },
               error: null,
             }),
           };
         }
-        if (tableName === "shipments") {
+        if (tableName === 'shipments') {
           // We need to distinguish between getShipmentsByPeriod and getPendingCOD calls
           // One way is to check if 'cod_status' was selected or filtered.
           // Since we can't easily statefully switch based on call order in a shared builder without complex logic,
@@ -503,9 +479,8 @@ describe("Fiscal Data Module", () => {
               // If second -> return COD data.
 
               if (
-                mockSupabaseClient.from.mock.calls.filter(
-                  (c: any) => c[0] === "shipments"
-                ).length === 1
+                mockSupabaseClient.from.mock.calls.filter((c: any) => c[0] === 'shipments')
+                  .length === 1
               ) {
                 return resolve({ data: mockShipments, error: null });
               } else {
@@ -524,21 +499,21 @@ describe("Fiscal Data Module", () => {
         };
       });
 
-      const context = await getFiscalContext("user-123", "user");
+      const context = await getFiscalContext('user-123', 'user');
 
       expect(context.shipmentsSummary.count).toBe(3);
       expect(context.shipmentsSummary.total_margin).toBe(23.8);
       expect(context.shipmentsSummary.total_revenue).toBe(115.0);
     });
 
-    it("includes wallet balance from user data", async () => {
+    it('includes wallet balance from user data', async () => {
       mockSupabaseClient.from = vi.fn((tableName: string) => {
-        if (tableName === "users") {
+        if (tableName === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { wallet_balance: "2500.75" },
+              data: { wallet_balance: '2500.75' },
               error: null,
             }),
           };
@@ -554,19 +529,19 @@ describe("Fiscal Data Module", () => {
         };
       });
 
-      const context = await getFiscalContext("user-123", "user");
+      const context = await getFiscalContext('user-123', 'user');
 
       expect(context.wallet.balance).toBe(2500.75);
     });
 
-    it("returns only next 3 upcoming deadlines", async () => {
+    it('returns only next 3 upcoming deadlines', async () => {
       mockSupabaseClient.from = vi.fn((tableName: string) => {
-        if (tableName === "users") {
+        if (tableName === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { wallet_balance: "100" },
+              data: { wallet_balance: '100' },
               error: null,
             }),
           };
@@ -582,29 +557,26 @@ describe("Fiscal Data Module", () => {
         };
       });
 
-      const context = await getFiscalContext("user-123", "user");
+      const context = await getFiscalContext('user-123', 'user');
 
       expect(context.deadlines.length).toBeLessThanOrEqual(3);
       // All deadlines should be in the future
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString().split('T')[0];
       context.deadlines.forEach((deadline) => {
         expect(deadline.date >= today).toBe(true);
       });
     });
 
-    it("handles wallet balance fetch error gracefully", async () => {
-      const consoleWarnSpy = vi
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
+    it('handles wallet balance fetch error gracefully', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       mockSupabaseClient.from = vi.fn((tableName: string) => {
-        if (tableName === "users") {
+        if (tableName === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockReturnThis(),
-            then: (resolve: any, reject: any) =>
-              reject(new Error("User not found")),
+            then: (resolve: any, reject: any) => reject(new Error('User not found')),
           };
         }
         return {
@@ -618,7 +590,7 @@ describe("Fiscal Data Module", () => {
         };
       });
 
-      const context = await getFiscalContext("user-123", "user");
+      const context = await getFiscalContext('user-123', 'user');
 
       // Should default to 0 and continue execution
       expect(context.wallet.balance).toBe(0);

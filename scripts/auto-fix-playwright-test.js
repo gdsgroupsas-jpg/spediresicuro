@@ -1,11 +1,11 @@
 /**
  * 🚀 Script Auto-Fix Completo per Test Playwright
- * 
+ *
  * Esegue test, analizza errori, applica fix automatici e ripete fino al successo.
- * 
+ *
  * USO:
  *   node scripts/auto-fix-playwright-test.js
- * 
+ *
  * Oppure:
  *   npm run test:e2e:auto-fix
  */
@@ -39,7 +39,7 @@ const ERROR_PATTERNS = [
         return m;
       });
       return modified ? newContent : null;
-    }
+    },
   },
   {
     name: 'Element not found or not visible',
@@ -53,7 +53,7 @@ const ERROR_PATTERNS = [
         );
       }
       return null;
-    }
+    },
   },
   {
     name: 'Strict mode violation - multiple elements',
@@ -71,7 +71,7 @@ const ERROR_PATTERNS = [
         }
       }
       return null;
-    }
+    },
   },
   {
     name: 'Button disabled - form incomplete',
@@ -79,7 +79,8 @@ const ERROR_PATTERNS = [
     fix: (match, testContent) => {
       // Aggiungi verifica esplicita che il pulsante sia abilitato
       if (!testContent.includes('toBeEnabled')) {
-        const buttonPattern = /(const submitButton = .*getByRole\(['"]button['"].*Genera Spedizione[^;]+;)/;
+        const buttonPattern =
+          /(const submitButton = .*getByRole\(['"]button['"].*Genera Spedizione[^;]+;)/;
         if (buttonPattern.test(testContent)) {
           return testContent.replace(
             buttonPattern,
@@ -87,7 +88,7 @@ const ERROR_PATTERNS = [
           );
         }
       }
-      
+
       // Aggiungi verifica campi obbligatori prima del click
       if (!testContent.includes('Verifica campi obbligatori')) {
         const beforeClick = /(await submitButton\.click\(\))/;
@@ -128,7 +129,7 @@ const ERROR_PATTERNS = [
         }
       }
       return null;
-    }
+    },
   },
   {
     name: 'Timeout - element not found',
@@ -146,7 +147,7 @@ const ERROR_PATTERNS = [
         return m;
       });
       return modified ? newContent : null;
-    }
+    },
   },
   {
     name: 'Authentication bypass not working',
@@ -160,7 +161,7 @@ const ERROR_PATTERNS = [
         );
       }
       return null;
-    }
+    },
   },
   {
     name: 'City selection not working',
@@ -174,7 +175,7 @@ const ERROR_PATTERNS = [
         );
       }
       return null;
-    }
+    },
   },
   {
     name: 'API mock format incorrect',
@@ -191,8 +192,8 @@ const ERROR_PATTERNS = [
         }
       }
       return null;
-    }
-  }
+    },
+  },
 ];
 
 function startServer() {
@@ -201,16 +202,16 @@ function startServer() {
     serverProcess = spawn('npm', ['run', 'dev'], {
       shell: true,
       stdio: 'pipe',
-      env: { ...process.env, PLAYWRIGHT_TEST_MODE: 'true' }
+      env: { ...process.env, PLAYWRIGHT_TEST_MODE: 'true' },
     });
-    
+
     let serverReady = false;
     const timeout = setTimeout(() => {
       if (!serverReady) {
         reject(new Error('Server non avviato entro 2 minuti'));
       }
     }, SERVER_START_TIMEOUT);
-    
+
     serverProcess.stdout.on('data', (data) => {
       const output = data.toString();
       if (output.includes('Ready') || output.includes('localhost:3000')) {
@@ -220,7 +221,7 @@ function startServer() {
         setTimeout(resolve, 3000); // Attendi 3 secondi per stabilizzazione
       }
     });
-    
+
     serverProcess.stderr.on('data', (data) => {
       const output = data.toString();
       if (output.includes('Error') && !output.includes('EADDRINUSE')) {
@@ -240,12 +241,12 @@ function stopServer() {
 
 function runTest() {
   console.log('🧪 Eseguo test Playwright...\n');
-  
+
   // Pulisci risultati precedenti per avere output pulito
   try {
     if (fs.existsSync('test-results')) {
       const files = fs.readdirSync('test-results');
-      files.forEach(file => {
+      files.forEach((file) => {
         if (file.endsWith('.txt') || file.includes('error')) {
           fs.unlinkSync(path.join('test-results', file));
         }
@@ -254,20 +255,20 @@ function runTest() {
   } catch (e) {
     // Ignora errori di pulizia
   }
-  
+
   try {
     // Esegui con reporter dettagliato per catturare più errori
     // Usa --reporter=line per output più dettagliato
-    const output = execSync('npx playwright test --reporter=line,html 2>&1', { 
+    const output = execSync('npx playwright test --reporter=line,html 2>&1', {
       encoding: 'utf-8',
       stdio: 'pipe',
       timeout: 180000, // 3 minuti
-      maxBuffer: 10 * 1024 * 1024 // 10MB buffer per output grande
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer per output grande
     });
     return { success: true, output };
   } catch (error) {
     let fullOutput = (error.stdout || '') + (error.stderr || '');
-    
+
     // Cerca errori dettagliati nel report HTML usando lo script dedicato
     try {
       const reportErrors = extractErrorFromReport();
@@ -284,18 +285,21 @@ function runTest() {
     } catch (e) {
       // Ignora errori di lettura report
     }
-    
+
     // Cerca anche nei file di log se esistono
     try {
       if (fs.existsSync('test-results')) {
         const files = fs.readdirSync('test-results');
-        const logFiles = files.filter(f => f.endsWith('.txt') || f.includes('log'));
+        const logFiles = files.filter((f) => f.endsWith('.txt') || f.includes('log'));
         for (const logFile of logFiles.slice(0, 2)) {
           try {
             const logContent = fs.readFileSync(path.join('test-results', logFile), 'utf-8');
-            const errorLines = logContent.split('\n').filter(line => 
-              line.includes('Error') || line.includes('failed') || line.includes('Timeout')
-            );
+            const errorLines = logContent
+              .split('\n')
+              .filter(
+                (line) =>
+                  line.includes('Error') || line.includes('failed') || line.includes('Timeout')
+              );
             if (errorLines.length > 0) {
               fullOutput += '\n\n=== ERRORI DA LOG ===\n' + errorLines.slice(0, 10).join('\n');
             }
@@ -307,18 +311,18 @@ function runTest() {
     } catch (e) {
       // Ignora errori di lettura directory
     }
-    
-    return { 
-      success: false, 
+
+    return {
+      success: false,
       output: fullOutput,
-      error: error
+      error: error,
     };
   }
 }
 
 function analyzeError(output) {
   const errors = [];
-  
+
   for (const pattern of ERROR_PATTERNS) {
     const match = output.match(pattern.pattern);
     if (match) {
@@ -326,11 +330,11 @@ function analyzeError(output) {
         name: pattern.name,
         pattern: pattern.pattern,
         match,
-        fix: pattern.fix
+        fix: pattern.fix,
       });
     }
   }
-  
+
   return errors;
 }
 
@@ -351,47 +355,47 @@ async function autoFixTest() {
   console.log('='.repeat(70));
   console.log('Questo script eseguirà automaticamente i test e applicherà fix fino al successo.');
   console.log('='.repeat(70));
-  
+
   // Verifica che il file di test esista
   if (!fs.existsSync(TEST_FILE)) {
     console.error(`❌ File di test non trovato: ${TEST_FILE}`);
     process.exit(1);
   }
-  
+
   let iteration = 0;
   let lastError = null;
   let consecutiveSameErrors = 0;
-  
+
   // Avvia server se non è già in esecuzione
   try {
     await startServer();
   } catch (e) {
     console.log('⚠️ Server già in esecuzione o errore avvio, continuo...');
   }
-  
+
   try {
     while (iteration < MAX_ITERATIONS) {
       iteration++;
       console.log(`\n${'='.repeat(70)}`);
       console.log(`📋 Iterazione ${iteration}/${MAX_ITERATIONS}`);
       console.log('='.repeat(70));
-      
+
       // Esegui test
       const result = runTest();
-      
+
       if (result.success) {
         console.log('\n✅✅✅ TEST PASSATO! 🎉🎉🎉\n');
         console.log(`Completato in ${iteration} iterazioni`);
         return { success: true, iterations: iteration };
       }
-      
+
       // Analizza errori
       console.log('\n🔍 Analizzo errori...');
       const errors = analyzeError(result.output);
-      
+
       if (errors.length === 0) {
         console.log('⚠️ Nessun pattern di errore riconosciuto.');
-        
+
         // Estrai messaggio di errore più dettagliato dall'output
         const errorPatterns = [
           /Error:\s*([^\n]+)/gi,
@@ -400,9 +404,9 @@ async function autoFixTest() {
           /expect\([^)]+\)\.toBe[^(]+\([^)]*\)\s+failed/gi,
           /element is not enabled/gi,
           /strict mode violation/gi,
-          /locator.*not found/gi
+          /locator.*not found/gi,
         ];
-        
+
         let foundError = null;
         for (const pattern of errorPatterns) {
           const match = result.output.match(pattern);
@@ -411,10 +415,10 @@ async function autoFixTest() {
             break;
           }
         }
-        
+
         if (foundError) {
           console.log('\n🔍 Errore trovato:', foundError.substring(0, 200));
-          
+
           // Prova a estrarre più contesto (righe prima e dopo)
           const errorIndex = result.output.indexOf(foundError);
           const lines = result.output.split('\n');
@@ -422,20 +426,22 @@ async function autoFixTest() {
           const contextStart = Math.max(0, errorLineIndex - 5);
           const contextEnd = Math.min(lines.length, errorLineIndex + 15);
           const errorContext = lines.slice(contextStart, contextEnd).join('\n');
-          
+
           console.log('\n📄 Contesto errore (righe ' + contextStart + '-' + contextEnd + '):');
           console.log(errorContext);
         } else {
-          console.log('\n📄 Ultimi 1500 caratteri dell\'output:');
+          console.log("\n📄 Ultimi 1500 caratteri dell'output:");
           console.log(result.output.slice(-1500));
         }
-        
+
         // Se stesso errore 3 volte, interrompi
         if (lastError === result.output) {
           consecutiveSameErrors++;
           if (consecutiveSameErrors >= 3) {
             console.log('❌ Stesso errore per 3 volte consecutive, interrompo.');
-            console.log('\n💡 Suggerimento: Esegui manualmente "npm run test:e2e:ui" per vedere l\'errore completo.');
+            console.log(
+              '\n💡 Suggerimento: Esegui manualmente "npm run test:e2e:ui" per vedere l\'errore completo.'
+            );
             return { success: false, error: 'Stesso errore ripetuto', output: result.output };
           }
         } else {
@@ -444,15 +450,15 @@ async function autoFixTest() {
         lastError = result.output;
         continue;
       }
-      
+
       // Applica fix
       console.log(`\n🔧 Trovati ${errors.length} errori:`);
       errors.forEach((e, i) => console.log(`   ${i + 1}. ${e.name}`));
       console.log('\n🔧 Applico fix...');
-      
+
       let testContent = fs.readFileSync(TEST_FILE, 'utf-8');
       let fixed = false;
-      
+
       for (const error of errors) {
         const fixedContent = applyFix(testContent, error);
         if (fixedContent) {
@@ -463,7 +469,7 @@ async function autoFixTest() {
           console.log(`  ⚠️ Fix non applicabile: ${error.name}`);
         }
       }
-      
+
       if (!fixed) {
         console.log('  ⚠️ Nessun fix applicabile.');
         if (lastError === result.output) {
@@ -478,27 +484,26 @@ async function autoFixTest() {
         lastError = result.output;
         continue;
       }
-      
+
       // Salva file modificato
       fs.writeFileSync(TEST_FILE, testContent, 'utf-8');
       console.log(`\n💾 File ${TEST_FILE} aggiornato.`);
-      
+
       // Reset contatore errori uguali
       consecutiveSameErrors = 0;
       lastError = null;
-      
+
       // Attendi prima di rieseguire
       console.log('⏳ Attendo 3 secondi prima di rieseguire...\n');
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
-    
+
     console.log(`\n❌ Raggiunto limite di ${MAX_ITERATIONS} iterazioni.`);
     console.log('\n💡 Suggerimenti:');
     console.log('   1. Esegui manualmente: npm run test:e2e:ui');
     console.log('   2. Controlla il report: npx playwright show-report');
     console.log('   3. Verifica che il server sia in esecuzione su porta 3000');
     return { success: false, error: 'Max iterations reached', iterations: iteration };
-    
   } finally {
     stopServer();
   }
@@ -507,10 +512,10 @@ async function autoFixTest() {
 // Esegui
 if (require.main === module) {
   autoFixTest()
-    .then(result => {
+    .then((result) => {
       process.exit(result.success ? 0 : 1);
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('❌ Errore fatale:', error);
       stopServer();
       process.exit(1);

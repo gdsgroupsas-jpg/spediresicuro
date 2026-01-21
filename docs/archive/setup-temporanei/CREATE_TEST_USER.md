@@ -37,6 +37,7 @@ node scripts/create-test-user-supabase.js
 ```
 
 **Requisiti:**
+
 - Variabili d'ambiente configurate:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `SUPABASE_SERVICE_ROLE_KEY`
@@ -46,12 +47,13 @@ node scripts/create-test-user-supabase.js
 Dopo aver eseguito lo script, verifica che l'utente sia stato creato:
 
 ```sql
-SELECT id, email, name, role, created_at 
-FROM users 
+SELECT id, email, name, role, created_at
+FROM users
 WHERE email = 'test@example.com';
 ```
 
 Dovresti vedere l'utente con:
+
 - Email: `test@example.com`
 - Name: `Test User E2E`
 - Role: `user`
@@ -82,4 +84,3 @@ Se vuoi eliminare l'utente di test:
 ```sql
 DELETE FROM users WHERE email = 'test@example.com';
 ```
-

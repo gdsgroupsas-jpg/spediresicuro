@@ -1,6 +1,6 @@
 /**
  * Dashboard Premium - Ultra Web Designer
- * 
+ *
  * Dashboard moderna e professionale con:
  * - Statistiche in tempo reale
  * - Grafici e visualizzazioni
@@ -64,8 +64,8 @@ function StatCard({
                 trend === 'up'
                   ? 'bg-green-100 text-green-700'
                   : trend === 'down'
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-gray-100 text-gray-700'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-700'
               }`}
             >
               {change}
@@ -146,9 +146,7 @@ function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className={`text-sm font-bold ${colorClasses[color]}`}>
-          {percentage}%
-        </span>
+        <span className={`text-sm font-bold ${colorClasses[color]}`}>{percentage}%</span>
       </div>
     </div>
   );
@@ -183,41 +181,47 @@ export default function DashboardPage() {
       async function checkDatiCompletati() {
         try {
           // Email dell'utente corrente
-          const userEmail = session?.user?.email?.toLowerCase() || ''
-          
+          const userEmail = session?.user?.email?.toLowerCase() || '';
+
           // Per l'utenza test@spediresicuro.it, NON reindirizzare mai a dati-cliente
-          const isTestUser = userEmail === 'test@spediresicuro.it'
-          
+          const isTestUser = userEmail === 'test@spediresicuro.it';
+
           if (isTestUser) {
-            console.log('✅ [DASHBOARD] Utente test rilevato, salvo flag e NON reindirizzo a dati-cliente');
+            console.log(
+              '✅ [DASHBOARD] Utente test rilevato, salvo flag e NON reindirizzo a dati-cliente'
+            );
             if (typeof window !== 'undefined' && session?.user?.email) {
               localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
             }
             return; // Esci senza controllare il database
           }
-          
+
           // ⚠️ CRITICO: Controlla database (no localStorage bypass, no delay)
           const response = await fetch('/api/user/dati-cliente', {
             cache: 'no-store',
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             console.log('📋 [DASHBOARD] Verifica dati cliente dal database:', {
               hasDatiCliente: !!data.datiCliente,
               datiCompletati: data.datiCliente?.datiCompletati,
             });
-            
+
             // Se i dati sono completati nel database, salva in localStorage
             if (data.datiCliente && data.datiCliente.datiCompletati) {
-              console.log('✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage');
+              console.log(
+                '✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage'
+              );
               if (typeof window !== 'undefined' && session?.user?.email) {
                 localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
               }
               // NON reindirizzare se i dati sono completati
             } else {
               // ⚠️ P0 FIX: Se i dati NON sono completati → redirect OBBLIGATORIO
-              console.log('🔄 [DASHBOARD] Dati non completati nel database, reindirizzamento OBBLIGATORIO a /dashboard/dati-cliente');
+              console.log(
+                '🔄 [DASHBOARD] Dati non completati nel database, reindirizzamento OBBLIGATORIO a /dashboard/dati-cliente'
+              );
               router.push('/dashboard/dati-cliente');
             }
           } else {
@@ -227,11 +231,13 @@ export default function DashboardPage() {
           }
         } catch (err) {
           // ⚠️ P0-5 FIX: Fail-closed - se errore → redirect a dati-cliente
-          console.error('❌ [DASHBOARD] Errore verifica dati cliente, fail-closed: redirect a dati-cliente');
+          console.error(
+            '❌ [DASHBOARD] Errore verifica dati cliente, fail-closed: redirect a dati-cliente'
+          );
           router.push('/dashboard/dati-cliente');
         }
       }
-      
+
       // ⚠️ P0-3 FIX: Rimuove delay, esegue controllo immediato
       checkDatiCompletati();
     }
@@ -314,8 +320,7 @@ export default function DashboardPage() {
         // Ultime 5 spedizioni
         const recent = spedizioni
           .sort(
-            (a: any, b: any) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
           .slice(0, 5);
 
@@ -373,9 +378,7 @@ export default function DashboardPage() {
   // Calcola percentuale consegnate
   const consegnaRate =
     stats.totaleSpedizioni > 0
-      ? Math.round(
-          (stats.spedizioniConsegnate / stats.totaleSpedizioni) * 100
-        )
+      ? Math.round((stats.spedizioniConsegnate / stats.totaleSpedizioni) * 100)
       : 0;
 
   return (
@@ -410,17 +413,19 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-6 text-xs text-gray-500 font-medium">
-             <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-indigo-400" />
-                <span>API Keys Valid</span>
-             </div>
-             <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">A</div>
-                <span>Anne Ready</span>
-             </div>
-             <div className="hidden md:flex items-center gap-2 text-indigo-600 cursor-pointer hover:underline">
-                Vedi Report Completo &rarr;
-             </div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-indigo-400" />
+              <span>API Keys Valid</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                A
+              </div>
+              <span>Anne Ready</span>
+            </div>
+            <div className="hidden md:flex items-center gap-2 text-indigo-600 cursor-pointer hover:underline">
+              Vedi Report Completo &rarr;
+            </div>
           </div>
         </div>
       </div>
@@ -445,12 +450,7 @@ export default function DashboardPage() {
                 trend="up"
                 gradient="bg-gradient-to-r from-blue-500 to-blue-600"
                 icon={
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -468,12 +468,7 @@ export default function DashboardPage() {
                 trend="up"
                 gradient="bg-gradient-to-r from-green-500 to-emerald-600"
                 icon={
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -491,12 +486,7 @@ export default function DashboardPage() {
                 trend="neutral"
                 gradient="bg-gradient-to-r from-amber-500 to-orange-600"
                 icon={
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -514,12 +504,7 @@ export default function DashboardPage() {
                 trend="up"
                 gradient="bg-gradient-to-r from-purple-500 to-indigo-600"
                 icon={
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -537,12 +522,8 @@ export default function DashboardPage() {
               <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Spedizioni Settimanali
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Ultimi 7 giorni
-                    </p>
+                    <h3 className="text-lg font-semibold text-gray-900">Spedizioni Settimanali</h3>
+                    <p className="text-sm text-gray-600 mt-1">Ultimi 7 giorni</p>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -551,26 +532,20 @@ export default function DashboardPage() {
                 </div>
                 <MiniChart data={weeklyData} color="bg-blue-500" />
                 <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                  {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(
-                    (day, i) => (
-                      <span key={i}>{day}</span>
-                    )
-                  )}
+                  {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((day, i) => (
+                    <span key={i}>{day}</span>
+                  ))}
                 </div>
               </div>
 
               {/* Status Overview */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                  Stato Spedizioni
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Stato Spedizioni</h3>
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        In Preparazione
-                      </span>
+                      <span className="text-sm font-medium text-gray-700">In Preparazione</span>
                     </div>
                     <span className="text-lg font-bold text-gray-900">
                       {stats.spedizioniInPreparazione}
@@ -579,9 +554,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        In Transito
-                      </span>
+                      <span className="text-sm font-medium text-gray-700">In Transito</span>
                     </div>
                     <span className="text-lg font-bold text-gray-900">
                       {stats.spedizioniInTransito}
@@ -590,9 +563,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Consegnate
-                      </span>
+                      <span className="text-sm font-medium text-gray-700">Consegnate</span>
                     </div>
                     <span className="text-lg font-bold text-gray-900">
                       {stats.spedizioniConsegnate}
@@ -600,15 +571,9 @@ export default function DashboardPage() {
                   </div>
                   <div className="pt-4 border-t border-gray-200">
                     <div className="flex items-center justify-center">
-                      <ProgressRing
-                        percentage={consegnaRate}
-                        size={100}
-                        color="green"
-                      />
+                      <ProgressRing percentage={consegnaRate} size={100} color="green" />
                     </div>
-                    <p className="text-center text-sm text-gray-600 mt-2">
-                      Tasso di consegna
-                    </p>
+                    <p className="text-center text-sm text-gray-600 mt-2">Tasso di consegna</p>
                   </div>
                 </div>
               </div>
@@ -618,16 +583,12 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Statistiche Mensili */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                  Questo Mese
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Questo Mese</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                     <div>
                       <p className="text-sm text-gray-600">Spedizioni</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {stats.spedizioniMese}
-                      </p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.spedizioniMese}</p>
                     </div>
                     <div className="p-3 bg-blue-500 rounded-xl">
                       <svg
@@ -674,9 +635,7 @@ export default function DashboardPage() {
               {/* Attività Recente */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Attività Recente
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Attività Recente</h3>
                   <Link
                     href="/dashboard/spedizioni"
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -736,9 +695,7 @@ export default function DashboardPage() {
 
             {/* Quick Actions */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                Azioni Rapide
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Azioni Rapide</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Link
                   href="/dashboard/spedizioni"
@@ -761,10 +718,13 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900 text-base">Lista Spedizioni</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Visualizza, filtra e gestisci tutte le spedizioni</p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Visualizza, filtra e gestisci tutte le spedizioni
+                    </p>
                     {stats.totaleSpedizioni > 0 && (
                       <p className="text-xs font-medium text-indigo-600 mt-1">
-                        {stats.totaleSpedizioni} spedizione{stats.totaleSpedizioni !== 1 ? 'i' : ''} total{stats.totaleSpedizioni !== 1 ? 'i' : 'e'}
+                        {stats.totaleSpedizioni} spedizione{stats.totaleSpedizioni !== 1 ? 'i' : ''}{' '}
+                        total{stats.totaleSpedizioni !== 1 ? 'i' : 'e'}
                       </p>
                     )}
                   </div>
@@ -821,7 +781,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">Admin Dashboard</h3>
-                      <p className="text-sm text-gray-600 mt-1">Gestisci utenti, spedizioni e impostazioni globali</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Gestisci utenti, spedizioni e impostazioni globali
+                      </p>
                     </div>
                     <ArrowRight className="w-5 h-5 text-purple-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                   </Link>

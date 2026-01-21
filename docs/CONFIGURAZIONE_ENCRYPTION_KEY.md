@@ -5,6 +5,7 @@
 Il sistema di criptazione delle credenziali API richiede la variabile d'ambiente `ENCRYPTION_KEY` per funzionare in sicurezza.
 
 **ATTENZIONE (P0 Security Fix 2026-01-17)**: In produzione (`NODE_ENV=production`), se `ENCRYPTION_KEY` non è configurata:
+
 - ❌ Il salvataggio di nuove credenziali **FALLIRÀ** con errore `ENCRYPTION_KEY_MISSING`
 - ❌ Qualsiasi errore di criptazione **FALLIRÀ** con errore `ENCRYPTION_FAILED`
 - ✅ Le credenziali esistenti (già criptate) continueranno a funzionare
@@ -42,8 +43,8 @@ Oppure, se hai Node.js installato:
 
 ```javascript
 // Apri la console Node.js e esegui:
-const crypto = require("crypto");
-console.log(crypto.randomBytes(32).toString("hex"));
+const crypto = require('crypto');
+console.log(crypto.randomBytes(32).toString('hex'));
 ```
 
 Questo genererà una stringa di 64 caratteri esadecimali, tipo:
@@ -111,7 +112,6 @@ Se devi cambiare la `ENCRYPTION_KEY` (es. se è stata compromessa):
 3. **⚠️ PROBLEMA**: Le credenziali già criptate con la vecchia chiave non potranno più essere decriptate!
 
    **Soluzione**:
-
    - Prima di cambiare chiave, decripta tutte le credenziali esistenti (se possibile)
    - Dopo aver cambiato chiave, riconfigura tutte le credenziali API degli utenti
 

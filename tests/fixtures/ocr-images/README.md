@@ -29,16 +29,16 @@ Questa directory contiene immagini per integration test della pipeline OCR Visio
 
 ## Categorie disponibili
 
-| Categoria | Descrizione |
-|-----------|-------------|
-| `whatsapp` | Screenshot da WhatsApp |
-| `telegram` | Screenshot da Telegram |
-| `messaging` | Altre app messaggistica |
-| `label` | Etichette spedizione |
-| `handwritten` | Indirizzi scritti a mano |
-| `quality` | Test qualità immagine (blur, contrasto) |
-| `rotation` | Immagini ruotate |
-| `complex` | Casi complessi (multi-address) |
+| Categoria     | Descrizione                             |
+| ------------- | --------------------------------------- |
+| `whatsapp`    | Screenshot da WhatsApp                  |
+| `telegram`    | Screenshot da Telegram                  |
+| `messaging`   | Altre app messaggistica                 |
+| `label`       | Etichette spedizione                    |
+| `handwritten` | Indirizzi scritti a mano                |
+| `quality`     | Test qualità immagine (blur, contrasto) |
+| `rotation`    | Immagini ruotate                        |
+| `complex`     | Casi complessi (multi-address)          |
 
 ## Difficoltà
 
@@ -60,6 +60,7 @@ Definiti in `expected.json > acceptanceCriteria`:
 ⚠️ **NON includere immagini con dati reali di persone reali.**
 
 Usare:
+
 - Indirizzi fittizi
 - Numeri telefono fake
 - Nomi inventati
@@ -71,8 +72,8 @@ Per test con dati reali, usare ambiente dedicato con consent.
 Le fixture attuali sono placeholder. Sostituire con screenshot reali seguendo le istruzioni sopra.
 
 Per generare immagini di test:
+
 1. Creare chat WhatsApp/Telegram con indirizzo fittizio
 2. Screenshot
 3. Applicare trasformazioni (blur, rotate, compress) se necessario
 4. Salvare in questa directory
-

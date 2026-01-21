@@ -1,11 +1,11 @@
 /**
  * Setup Check Script
- * 
+ *
  * Verifica completa del setup locale:
  * 1. Verifica variabili ambiente (.env.local)
  * 2. Verifica errori nel log
  * 3. Verifica Supabase (solo se Docker disponibile)
- * 
+ *
  * Utilizzo: npm run setup:check
  */
 
@@ -39,10 +39,10 @@ let warnings = [];
 function runCommand(command, description, optional = false) {
   try {
     console.log(`\n📋 ${description}...`);
-    const output = execSync(command, { 
+    const output = execSync(command, {
       encoding: 'utf-8',
       stdio: 'pipe',
-      cwd: process.cwd()
+      cwd: process.cwd(),
     });
     console.log(`✅ ${description}: PASS`);
     if (output.trim()) {
@@ -67,16 +67,16 @@ function runCommand(command, description, optional = false) {
 // Helper per verificare se Docker è disponibile
 function isDockerAvailable() {
   try {
-    execSync('docker --version', { 
+    execSync('docker --version', {
       encoding: 'utf-8',
-      stdio: 'pipe'
+      stdio: 'pipe',
     });
     // Verifica anche se Docker daemon è in esecuzione
     try {
-      execSync('docker ps', { 
+      execSync('docker ps', {
         encoding: 'utf-8',
         stdio: 'pipe',
-        timeout: 3000
+        timeout: 3000,
       });
       return true;
     } catch {
@@ -94,11 +94,7 @@ function isDockerAvailable() {
 console.log('📦 STEP 1: Verifica Variabili Ambiente');
 console.log('-'.repeat(60));
 
-const envCheck = runCommand(
-  'npm run check:env:simple',
-  'Verifica variabili .env.local',
-  false
-);
+const envCheck = runCommand('npm run check:env:simple', 'Verifica variabili .env.local', false);
 
 if (!envCheck) {
   console.log('\n❌ Setup incompleto: variabili ambiente mancanti o non valide');
@@ -113,11 +109,7 @@ if (!envCheck) {
 console.log('\n📋 STEP 2: Verifica Errori nel Log');
 console.log('-'.repeat(60));
 
-const errorsCheck = runCommand(
-  'npm run check:errors',
-  'Verifica errori nel log',
-  false
-);
+const errorsCheck = runCommand('npm run check:errors', 'Verifica errori nel log', false);
 
 if (!errorsCheck) {
   console.log('\n⚠️  Trovati errori nel log (non bloccante)');
@@ -145,7 +137,7 @@ if (!dockerAvailable) {
     'Verifica Supabase locale',
     true // Opzionale: se fallisce, non blocca
   );
-  
+
   if (!supabaseCheck) {
     warnings.push('Supabase locale non disponibile - usa Supabase Cloud o avvia Supabase locale');
   }
@@ -167,8 +159,10 @@ if (hasErrors) {
 } else if (warnings.length > 0) {
   console.log('⚠️  SETUP PARZIALE');
   console.log('   Setup base OK, ma alcune verifiche opzionali fallite:');
-  warnings.forEach(w => console.log(`   - ${w}`));
-  console.log('\n💡 Puoi continuare con lo sviluppo, ma alcune funzionalità potrebbero non essere disponibili\n');
+  warnings.forEach((w) => console.log(`   - ${w}`));
+  console.log(
+    '\n💡 Puoi continuare con lo sviluppo, ma alcune funzionalità potrebbero non essere disponibili\n'
+  );
   process.exit(0);
 } else {
   console.log('✅ SETUP COMPLETO');
@@ -176,4 +170,3 @@ if (hasErrors) {
   console.log('   Puoi iniziare lo sviluppo con: npm run dev\n');
   process.exit(0);
 }
-

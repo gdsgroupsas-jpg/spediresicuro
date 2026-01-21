@@ -5,22 +5,18 @@
  * matching intelligente e calcolo prezzi dinamico.
  */
 
-import { pricingConfig } from "@/lib/config";
-import { calculatePriceFromList } from "@/lib/pricing/calculator";
+import { pricingConfig } from '@/lib/config';
+import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import {
   calculatePriceWithVAT,
   calculateVATAmount,
   getVATModeWithFallback,
   normalizePrice,
   type VATMode,
-} from "@/lib/pricing/vat-utils";
-import type {
-  PriceCalculationResult,
-  PriceList,
-  PriceRule,
-} from "@/types/listini";
-import type { CourierServiceType } from "@/types/shipments";
-import { supabaseAdmin } from "./client";
+} from '@/lib/pricing/vat-utils';
+import type { PriceCalculationResult, PriceList, PriceRule } from '@/types/listini';
+import type { CourierServiceType } from '@/types/shipments';
+import { supabaseAdmin } from './client';
 
 /**
  * Ottiene il listino applicabile per un utente
@@ -39,20 +35,17 @@ export async function getApplicablePriceList(
 ): Promise<PriceList | null> {
   try {
     const checkDate = date || new Date();
-    const dateStr = checkDate.toISOString().split("T")[0];
+    const dateStr = checkDate.toISOString().split('T')[0];
 
     // Usa funzione SQL se disponibile, altrimenti query manuale
-    const { data, error } = await supabaseAdmin.rpc(
-      "get_applicable_price_list",
-      {
-        p_user_id: userId,
-        p_courier_id: courierId || null,
-        p_date: dateStr,
-      }
-    );
+    const { data, error } = await supabaseAdmin.rpc('get_applicable_price_list', {
+      p_user_id: userId,
+      p_courier_id: courierId || null,
+      p_date: dateStr,
+    });
 
     if (error) {
-      console.warn("Errore funzione SQL, uso query manuale:", error);
+      console.warn('Errore funzione SQL, uso query manuale:', error);
       // Fallback: query manuale
       return await getApplicablePriceListManual(userId, courierId, checkDate);
     }
@@ -64,7 +57,7 @@ export async function getApplicablePriceList(
     // Recupera listino completo
     return await getPriceListById(data[0].id);
   } catch (error: any) {
-    console.error("Errore getApplicablePriceList:", error);
+    console.error('Errore getApplicablePriceList:', error);
     return null;
   }
 }
@@ -79,17 +72,17 @@ async function getApplicablePriceListManual(
   courierId?: string,
   date: Date = new Date()
 ): Promise<PriceList | null> {
-  const dateStr = date.toISOString().split("T")[0];
+  const dateStr = date.toISOString().split('T')[0];
 
   // 1. Prova listino assegnato direttamente (assigned_to_user_id)
   const { data: assignedList } = await supabaseAdmin
-    .from("price_lists")
-    .select("*")
-    .eq("assigned_to_user_id", userId)
-    .eq("status", "active")
-    .lte("valid_from", dateStr)
+    .from('price_lists')
+    .select('*')
+    .eq('assigned_to_user_id', userId)
+    .eq('status', 'active')
+    .lte('valid_from', dateStr)
     .or(`valid_until.is.null,valid_until.gte.${dateStr}`)
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -99,30 +92,28 @@ async function getApplicablePriceListManual(
 
   // 2. ✨ NUOVO: Prova listino assegnato tramite price_list_assignments
   const { data: assignments } = await supabaseAdmin
-    .from("price_list_assignments")
-    .select("price_list_id")
-    .eq("user_id", userId)
-    .is("revoked_at", null);
+    .from('price_list_assignments')
+    .select('price_list_id')
+    .eq('user_id', userId)
+    .is('revoked_at', null);
 
   if (assignments && assignments.length > 0) {
     const assignedPriceListIds = assignments.map((a) => a.price_list_id);
 
     // Recupera i listini assegnati
     const { data: assignedLists } = await supabaseAdmin
-      .from("price_lists")
-      .select("*")
-      .in("id", assignedPriceListIds)
-      .eq("status", "active")
-      .lte("valid_from", dateStr)
+      .from('price_lists')
+      .select('*')
+      .in('id', assignedPriceListIds)
+      .eq('status', 'active')
+      .lte('valid_from', dateStr)
       .or(`valid_until.is.null,valid_until.gte.${dateStr}`)
-      .order("created_at", { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (assignedLists && assignedLists.length > 0) {
       // Filtra per corriere se specificato
       const filtered = courierId
-        ? assignedLists.filter(
-            (pl) => !pl.courier_id || pl.courier_id === courierId
-          )
+        ? assignedLists.filter((pl) => !pl.courier_id || pl.courier_id === courierId)
         : assignedLists;
 
       if (filtered.length > 0) {
@@ -133,13 +124,13 @@ async function getApplicablePriceListManual(
 
   // 3. Prova listino globale
   const { data: globalList } = await supabaseAdmin
-    .from("price_lists")
-    .select("*")
-    .eq("is_global", true)
-    .eq("status", "active")
-    .lte("valid_from", dateStr)
+    .from('price_lists')
+    .select('*')
+    .eq('is_global', true)
+    .eq('status', 'active')
+    .lte('valid_from', dateStr)
     .or(`valid_until.is.null,valid_until.gte.${dateStr}`)
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -149,13 +140,13 @@ async function getApplicablePriceListManual(
 
   // 4. Prova listino di default
   const { data: defaultList } = await supabaseAdmin
-    .from("price_lists")
-    .select("*")
-    .eq("priority", "default")
-    .eq("status", "active")
-    .lte("valid_from", dateStr)
+    .from('price_lists')
+    .select('*')
+    .eq('priority', 'default')
+    .eq('status', 'active')
+    .lte('valid_from', dateStr)
     .or(`valid_until.is.null,valid_until.gte.${dateStr}`)
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -223,7 +214,7 @@ export async function calculatePriceWithRules(
     // 5. Calcola prezzo con regola selezionata
     return await calculatePriceWithRule(priceList, selectedRule, params);
   } catch (error: any) {
-    console.error("Errore calculatePriceWithRules:", error);
+    console.error('Errore calculatePriceWithRules:', error);
     return null;
   }
 }
@@ -232,43 +223,40 @@ export async function calculatePriceWithRules(
  * Helper: Mappa provincia/regione a zona geografica
  * Retrocompatibile: se non può determinare, ritorna null (regola viene comunque valutata)
  */
-function getZoneFromDestination(
-  province?: string,
-  region?: string
-): string | null {
+function getZoneFromDestination(province?: string, region?: string): string | null {
   if (!province && !region) return null;
 
   // Mappatura province/regioni a zone (basata su PRICING_MATRIX)
   const provinceToZone: Record<string, string> = {
     // Sardegna
-    CA: "IT-SARDEGNA",
-    NU: "IT-SARDEGNA",
-    OR: "IT-SARDEGNA",
-    SS: "IT-SARDEGNA",
+    CA: 'IT-SARDEGNA',
+    NU: 'IT-SARDEGNA',
+    OR: 'IT-SARDEGNA',
+    SS: 'IT-SARDEGNA',
     // Calabria
-    RC: "IT-CALABRIA",
-    CZ: "IT-CALABRIA",
-    CS: "IT-CALABRIA",
-    KR: "IT-CALABRIA",
-    VV: "IT-CALABRIA",
+    RC: 'IT-CALABRIA',
+    CZ: 'IT-CALABRIA',
+    CS: 'IT-CALABRIA',
+    KR: 'IT-CALABRIA',
+    VV: 'IT-CALABRIA',
     // Sicilia
-    PA: "IT-SICILIA",
-    CT: "IT-SICILIA",
-    ME: "IT-SICILIA",
-    AG: "IT-SICILIA",
-    CL: "IT-SICILIA",
-    EN: "IT-SICILIA",
-    RG: "IT-SICILIA",
-    SR: "IT-SICILIA",
-    TP: "IT-SICILIA",
+    PA: 'IT-SICILIA',
+    CT: 'IT-SICILIA',
+    ME: 'IT-SICILIA',
+    AG: 'IT-SICILIA',
+    CL: 'IT-SICILIA',
+    EN: 'IT-SICILIA',
+    RG: 'IT-SICILIA',
+    SR: 'IT-SICILIA',
+    TP: 'IT-SICILIA',
     // Livigno/Campione
-    SO: "IT-LIVIGNO", // Solo per Livigno specifico
+    SO: 'IT-LIVIGNO', // Solo per Livigno specifico
   };
 
   const regionToZone: Record<string, string> = {
-    Sardegna: "IT-SARDEGNA",
-    Calabria: "IT-CALABRIA",
-    Sicilia: "IT-SICILIA",
+    Sardegna: 'IT-SARDEGNA',
+    Calabria: 'IT-CALABRIA',
+    Sicilia: 'IT-SICILIA',
   };
 
   // Prova prima con provincia
@@ -282,7 +270,7 @@ function getZoneFromDestination(
   }
 
   // Default: Italia standard (non escludere la regola)
-  return "IT-ITALIA";
+  return 'IT-ITALIA';
 }
 
 /**
@@ -314,32 +302,23 @@ function findMatchingRules(
     if (rule.valid_until && rule.valid_until < now) return false;
 
     // Verifica peso
-    if (rule.weight_from !== undefined && params.weight < rule.weight_from)
-      return false;
-    if (rule.weight_to !== undefined && params.weight > rule.weight_to)
-      return false;
+    if (rule.weight_from !== undefined && params.weight < rule.weight_from) return false;
+    if (rule.weight_to !== undefined && params.weight > rule.weight_to) return false;
 
     // Verifica volume
     if (params.volume !== undefined) {
-      if (rule.volume_from !== undefined && params.volume < rule.volume_from)
-        return false;
-      if (rule.volume_to !== undefined && params.volume > rule.volume_to)
-        return false;
+      if (rule.volume_from !== undefined && params.volume < rule.volume_from) return false;
+      if (rule.volume_to !== undefined && params.volume > rule.volume_to) return false;
     }
 
     // Verifica corriere
     if (rule.courier_ids && rule.courier_ids.length > 0) {
-      if (!params.courierId || !rule.courier_ids.includes(params.courierId))
-        return false;
+      if (!params.courierId || !rule.courier_ids.includes(params.courierId)) return false;
     }
 
     // Verifica servizio
     if (rule.service_types && rule.service_types.length > 0) {
-      if (
-        !params.serviceType ||
-        !rule.service_types.includes(params.serviceType)
-      )
-        return false;
+      if (!params.serviceType || !rule.service_types.includes(params.serviceType)) return false;
     }
 
     // Verifica zona geografica
@@ -376,19 +355,13 @@ function findMatchingRules(
 
     // Verifica regione
     if (rule.regions && rule.regions.length > 0) {
-      if (
-        !params.destination.region ||
-        !rule.regions.includes(params.destination.region)
-      )
+      if (!params.destination.region || !rule.regions.includes(params.destination.region))
         return false;
     }
 
     // Verifica paese
     if (rule.countries && rule.countries.length > 0) {
-      if (
-        !params.destination.country ||
-        !rule.countries.includes(params.destination.country)
-      )
+      if (!params.destination.country || !rule.countries.includes(params.destination.country))
         return false;
     }
 
@@ -439,14 +412,14 @@ async function calculatePriceWithRule(
   let supplierTotalCostOriginal = 0; // ✨ FIX: Salva prezzo originale fornitore (per visualizzazione, nella modalità VAT del master)
 
   // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
-  let masterVATModeForRule: "included" | "excluded" = "excluded"; // Default per retrocompatibilità
+  let masterVATModeForRule: 'included' | 'excluded' = 'excluded'; // Default per retrocompatibilità
   let masterVATRateForRule = 22.0;
-  if (priceList.master_list_id && priceList.list_type === "custom") {
+  if (priceList.master_list_id && priceList.list_type === 'custom') {
     try {
       const { data: masterList } = await supabaseAdmin
-        .from("price_lists")
-        .select("*, entries:price_list_entries(*)")
-        .eq("id", priceList.master_list_id)
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)')
+        .eq('id', priceList.master_list_id)
         .single();
 
       if (masterList) {
@@ -458,8 +431,8 @@ async function calculatePriceWithRule(
           const masterMatrixResult = calculatePriceFromList(
             masterList as PriceList,
             params.weight,
-            params.destination.zip || "",
-            params.serviceType || "standard",
+            params.destination.zip || '',
+            params.serviceType || 'standard',
             params.options,
             params.destination.province,
             params.destination.region
@@ -477,33 +450,26 @@ async function calculatePriceWithRule(
         }
       }
     } catch (error) {
-      console.warn(
-        `⚠️ [PRICE CALC] Errore recupero costo fornitore originale:`,
-        error
-      );
+      console.warn(`⚠️ [PRICE CALC] Errore recupero costo fornitore originale:`, error);
     }
   }
 
   // Se non c'è override, calcola da price_list_entries (matrice) se disponibile
-  if (
-    !rule.base_price_override &&
-    priceList.entries &&
-    priceList.entries.length > 0
-  ) {
+  if (!rule.base_price_override && priceList.entries && priceList.entries.length > 0) {
     console.log(
       `🔍 [PRICE CALC] Calcolo prezzo da matrice listino "${priceList.name}" (${priceList.list_type}):`
     );
     console.log(`   - Peso: ${params.weight}kg`);
     console.log(`   - CAP: ${params.destination.zip}`);
-    console.log(`   - Provincia: ${params.destination.province || "N/A"}`);
-    console.log(`   - Service Type: ${params.serviceType || "standard"}`);
+    console.log(`   - Provincia: ${params.destination.province || 'N/A'}`);
+    console.log(`   - Service Type: ${params.serviceType || 'standard'}`);
     console.log(`   - Entries disponibili: ${priceList.entries.length}`);
 
     // ✨ NUOVO: Carica configurazioni manuali se presenti
     const { data: manualConfig } = await supabaseAdmin
-      .from("supplier_price_list_config")
-      .select("insurance_config, cod_config, accessory_services_config")
-      .eq("price_list_id", priceList.id)
+      .from('supplier_price_list_config')
+      .select('insurance_config, cod_config, accessory_services_config')
+      .eq('price_list_id', priceList.id)
       .maybeSingle();
 
     // Estendi options con config manuali (se presenti)
@@ -511,14 +477,16 @@ async function calculatePriceWithRule(
       ...params.options,
       ...(manualConfig?.insurance_config && { insuranceConfig: manualConfig.insurance_config }),
       ...(manualConfig?.cod_config && { codConfig: manualConfig.cod_config }),
-      ...(manualConfig?.accessory_services_config && { accessoryServices: manualConfig.accessory_services_config }),
+      ...(manualConfig?.accessory_services_config && {
+        accessoryServices: manualConfig.accessory_services_config,
+      }),
     };
 
     const matrixResult = calculatePriceFromList(
       priceList,
       params.weight,
-      params.destination.zip || "",
-      params.serviceType || "standard",
+      params.destination.zip || '',
+      params.serviceType || 'standard',
       extendedOptions, // ← Passa options esteso
       params.destination.province,
       params.destination.region
@@ -527,22 +495,16 @@ async function calculatePriceWithRule(
     if (matrixResult) {
       basePrice = matrixResult.basePrice;
       console.log(
-        `✅ [PRICE CALC] Entry trovata nella matrice: basePrice = €${basePrice.toFixed(
-          2
-        )}`
+        `✅ [PRICE CALC] Entry trovata nella matrice: basePrice = €${basePrice.toFixed(2)}`
       );
     } else {
       // Se non trova entry nella matrice, usa default (retrocompatibilità)
-      console.warn(
-        `⚠️ [PRICE CALC] Nessuna entry matcha nella matrice, uso default €10.00`
-      );
+      console.warn(`⚠️ [PRICE CALC] Nessuna entry matcha nella matrice, uso default €10.00`);
       basePrice = 10.0;
     }
   } else if (!rule.base_price_override) {
     // Nessuna matrice disponibile, usa default
-    console.warn(
-      `⚠️ [PRICE CALC] Nessuna matrice disponibile, uso default €10.00`
-    );
+    console.warn(`⚠️ [PRICE CALC] Nessuna matrice disponibile, uso default €10.00`);
     basePrice = 10.0;
   }
 
@@ -565,7 +527,7 @@ async function calculatePriceWithRule(
   }
 
   // Supplemento express
-  if (params.serviceType === "express" && rule.express_surcharge) {
+  if (params.serviceType === 'express' && rule.express_surcharge) {
     surcharges += rule.express_surcharge;
   }
 
@@ -575,73 +537,57 @@ async function calculatePriceWithRule(
   }
 
   // Assicurazione
-  if (
-    params.options?.insurance &&
-    params.options?.declaredValue &&
-    rule.insurance_rate_percent
-  ) {
-    surcharges +=
-      params.options.declaredValue * (rule.insurance_rate_percent / 100);
+  if (params.options?.insurance && params.options?.declaredValue && rule.insurance_rate_percent) {
+    surcharges += params.options.declaredValue * (rule.insurance_rate_percent / 100);
   }
 
   // ✨ NUOVO: Gestione VAT (ADR-001)
-  const vatMode: "included" | "excluded" = getVATModeWithFallback(
+  const vatMode: 'included' | 'excluded' = getVATModeWithFallback(
     (priceList.vat_mode ?? null) as VATMode
   ); // null → 'excluded'
   const vatRate = priceList.vat_rate || 22.0;
 
   // Normalizza basePrice a IVA esclusa per calcoli (Invariant #1: margine sempre su base IVA esclusa)
   let basePriceExclVAT = basePrice;
-  if (vatMode === "included") {
-    basePriceExclVAT = normalizePrice(
-      basePrice,
-      "included",
-      "excluded",
-      vatRate
-    );
+  if (vatMode === 'included') {
+    basePriceExclVAT = normalizePrice(basePrice, 'included', 'excluded', vatRate);
   }
 
   // ✨ FIX: Surcharges seguono lo stesso vat_mode del listino (non sono sempre IVA esclusa)
   // Se il listino è IVA inclusa, anche i surcharges sono IVA inclusa
   let surchargesExclVAT = surcharges;
-  if (vatMode === "included") {
-    surchargesExclVAT = normalizePrice(
-      surcharges,
-      "included",
-      "excluded",
-      vatRate
-    );
+  if (vatMode === 'included') {
+    surchargesExclVAT = normalizePrice(surcharges, 'included', 'excluded', vatRate);
   }
   const totalCostExclVAT = basePriceExclVAT + surchargesExclVAT;
 
   // ✨ FIX: Normalizza supplierTotalCost a IVA esclusa usando vat_mode del master list
   // Surcharges seguono lo stesso vat_mode del master list
   let supplierBasePriceExclVAT = supplierBasePrice;
-  if (supplierBasePrice > 0 && masterVATModeForRule === "included") {
+  if (supplierBasePrice > 0 && masterVATModeForRule === 'included') {
     supplierBasePriceExclVAT = normalizePrice(
       supplierBasePrice,
-      "included",
-      "excluded",
+      'included',
+      'excluded',
       masterVATRateForRule
     );
   }
   let supplierSurchargesExclVAT = supplierSurcharges;
-  if (supplierSurcharges > 0 && masterVATModeForRule === "included") {
+  if (supplierSurcharges > 0 && masterVATModeForRule === 'included') {
     supplierSurchargesExclVAT = normalizePrice(
       supplierSurcharges,
-      "included",
-      "excluded",
+      'included',
+      'excluded',
       masterVATRateForRule
     );
   }
-  const supplierTotalCostExclVAT =
-    supplierBasePriceExclVAT + supplierSurchargesExclVAT;
+  const supplierTotalCostExclVAT = supplierBasePriceExclVAT + supplierSurchargesExclVAT;
 
   // Calcola margine su base IVA esclusa (Invariant #1)
   let margin = 0;
-  if (rule.margin_type === "percent" && rule.margin_value) {
+  if (rule.margin_type === 'percent' && rule.margin_value) {
     margin = totalCostExclVAT * (rule.margin_value / 100);
-  } else if (rule.margin_type === "fixed" && rule.margin_value) {
+  } else if (rule.margin_type === 'fixed' && rule.margin_value) {
     margin = rule.margin_value;
   }
 
@@ -649,13 +595,11 @@ async function calculatePriceWithRule(
 
   // Se listino ha IVA inclusa, converti prezzo finale
   const finalPrice =
-    vatMode === "included"
-      ? calculatePriceWithVAT(finalPriceExclVAT, vatRate)
-      : finalPriceExclVAT;
+    vatMode === 'included' ? calculatePriceWithVAT(finalPriceExclVAT, vatRate) : finalPriceExclVAT;
 
   // Calcola importo IVA se necessario
   const vatAmount =
-    vatMode === "excluded"
+    vatMode === 'excluded'
       ? calculateVATAmount(finalPriceExclVAT, vatRate)
       : finalPrice - finalPriceExclVAT;
 
@@ -663,26 +607,20 @@ async function calculatePriceWithRule(
     basePrice: basePriceExclVAT, // Sempre IVA esclusa per consistenza
     surcharges: surchargesExclVAT, // Sempre IVA esclusa per consistenza
     margin,
-    totalCost:
-      supplierTotalCostExclVAT > 0
-        ? supplierTotalCostExclVAT
-        : totalCostExclVAT, // ✨ Se c'è costo fornitore, usa quello (sempre IVA esclusa)
+    totalCost: supplierTotalCostExclVAT > 0 ? supplierTotalCostExclVAT : totalCostExclVAT, // ✨ Se c'è costo fornitore, usa quello (sempre IVA esclusa)
     finalPrice, // Nella modalità IVA del listino
     appliedRule: rule,
     appliedPriceList: priceList,
     priceListId: priceList.id,
     // ✨ NUOVO: Aggiungi costo fornitore originale (sempre IVA esclusa per consistenza)
-    supplierPrice:
-      supplierTotalCostExclVAT > 0 ? supplierTotalCostExclVAT : undefined,
+    supplierPrice: supplierTotalCostExclVAT > 0 ? supplierTotalCostExclVAT : undefined,
     // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
-    supplierPriceOriginal:
-      supplierTotalCostOriginal > 0 ? supplierTotalCostOriginal : undefined,
+    supplierPriceOriginal: supplierTotalCostOriginal > 0 ? supplierTotalCostOriginal : undefined,
     // ✨ NUOVO: VAT Semantics (ADR-001)
-    vatMode: priceList.vat_mode || "excluded", // Propaga vat_mode
+    vatMode: priceList.vat_mode || 'excluded', // Propaga vat_mode
     vatRate,
     vatAmount,
-    totalPriceWithVAT:
-      vatMode === "excluded" ? finalPrice + vatAmount : finalPrice,
+    totalPriceWithVAT: vatMode === 'excluded' ? finalPrice + vatAmount : finalPrice,
     calculationDetails: {
       weight: params.weight,
       volume: params.volume,
@@ -726,14 +664,14 @@ async function calculateWithDefaultMargin(
   let totalCostOriginal = 0; // ✨ FIX: Salva prezzo originale matrice (per listini con IVA inclusa)
 
   // ✨ ENTERPRISE: Se è un listino personalizzato con master_list_id, recupera prezzo originale fornitore
-  let masterVATMode: "included" | "excluded" = "excluded"; // Default per retrocompatibilità
+  let masterVATMode: 'included' | 'excluded' = 'excluded'; // Default per retrocompatibilità
   let masterVATRate = 22.0;
-  if (priceList.master_list_id && priceList.list_type === "custom") {
+  if (priceList.master_list_id && priceList.list_type === 'custom') {
     try {
       const { data: masterList } = await supabaseAdmin
-        .from("price_lists")
-        .select("*, entries:price_list_entries(*)")
-        .eq("id", priceList.master_list_id)
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)')
+        .eq('id', priceList.master_list_id)
         .single();
 
       if (masterList && masterList.entries) {
@@ -744,8 +682,8 @@ async function calculateWithDefaultMargin(
         const masterMatrixResult = calculatePriceFromList(
           masterList as PriceList,
           params.weight,
-          params.destination.zip || "",
-          params.serviceType || "standard",
+          params.destination.zip || '',
+          params.serviceType || 'standard',
           params.options,
           params.destination.province,
           params.destination.region
@@ -762,31 +700,24 @@ async function calculateWithDefaultMargin(
         }
       }
     } catch (error) {
-      console.warn(
-        `⚠️ [PRICE CALC] Errore recupero prezzo fornitore originale:`,
-        error
-      );
+      console.warn(`⚠️ [PRICE CALC] Errore recupero prezzo fornitore originale:`, error);
     }
   }
 
   if (priceList.entries && priceList.entries.length > 0) {
     // 🔍 VERIFICA: Usa la matrice del listino personalizzato (priceList), non del master
-    console.log(
-      `🔍 [PRICE CALC] Calcolo prezzo da matrice listino personalizzato:`
-    );
+    console.log(`🔍 [PRICE CALC] Calcolo prezzo da matrice listino personalizzato:`);
     console.log(`   - Listino ID: ${priceList.id}`);
     console.log(`   - Listino nome: ${priceList.name}`);
     console.log(`   - Listino tipo: ${priceList.list_type}`);
     console.log(`   - Numero entries: ${priceList.entries.length}`);
-    console.log(
-      `   - ✅ Usando matrice del listino PERSONALIZZATO (non master)`
-    );
+    console.log(`   - ✅ Usando matrice del listino PERSONALIZZATO (non master)`);
 
     const matrixResult = calculatePriceFromList(
       priceList, // ✅ CORRETTO: Usa priceList (listino personalizzato), non masterList
       params.weight,
-      params.destination.zip || "",
-      params.serviceType || "standard",
+      params.destination.zip || '',
+      params.serviceType || 'standard',
       params.options,
       params.destination.province,
       params.destination.region
@@ -799,9 +730,7 @@ async function calculateWithDefaultMargin(
       const totalCost = basePrice + surcharges;
       totalCostOriginal = totalCost; // ✨ FIX: Salva prezzo originale matrice (già IVA inclusa se listino ha IVA inclusa)
 
-      console.log(
-        `✅ [PRICE CALC] Risultato da matrice listino personalizzato:`
-      );
+      console.log(`✅ [PRICE CALC] Risultato da matrice listino personalizzato:`);
       console.log(`   - basePrice: €${basePrice.toFixed(2)}`);
       console.log(`   - surcharges: €${surcharges.toFixed(2)}`);
       console.log(`   - totalCost: €${totalCost.toFixed(2)}`);
@@ -811,11 +740,11 @@ async function calculateWithDefaultMargin(
       // Quindi NON applichiamo margini aggiuntivi
       // ✨ FIX: Calcola supplierTotalCost e normalizza a IVA esclusa per confronto corretto
       // IMPORTANTE: Surcharges seguono lo stesso vat_mode del listino (non sono sempre IVA esclusa)
-      const customVATMode: "included" | "excluded" = getVATModeWithFallback(
+      const customVATMode: 'included' | 'excluded' = getVATModeWithFallback(
         priceList.vat_mode ?? null
       );
       const customVATRate = priceList.vat_rate || 22.0;
-      
+
       // 🔍 LOGGING: Verifica vat_mode recuperato
       console.log(`🔍 [PRICE CALC] VAT Mode recuperato per listino "${priceList.name}":`, {
         vat_mode_raw: priceList.vat_mode,
@@ -827,20 +756,20 @@ async function calculateWithDefaultMargin(
 
       // ✨ FIX: Normalizza basePrice e surcharges separatamente perché seguono lo stesso vat_mode del listino
       let basePriceExclVATForComparison = basePrice;
-      if (customVATMode === "included") {
+      if (customVATMode === 'included') {
         basePriceExclVATForComparison = normalizePrice(
           basePrice,
-          "included",
-          "excluded",
+          'included',
+          'excluded',
           customVATRate
         );
       }
       let surchargesExclVATForComparison = surcharges;
-      if (customVATMode === "included") {
+      if (customVATMode === 'included') {
         surchargesExclVATForComparison = normalizePrice(
           surcharges,
-          "included",
-          "excluded",
+          'included',
+          'excluded',
           customVATRate
         );
       }
@@ -850,11 +779,11 @@ async function calculateWithDefaultMargin(
       // ✨ FIX: Normalizza supplierBasePrice e supplierSurcharges separatamente perché seguono lo stesso vat_mode del master list
       let supplierBasePriceExclVATForComparison = 0;
       if (supplierBasePrice > 0) {
-        if (masterVATMode === "included") {
+        if (masterVATMode === 'included') {
           supplierBasePriceExclVATForComparison = normalizePrice(
             supplierBasePrice,
-            "included",
-            "excluded",
+            'included',
+            'excluded',
             masterVATRate
           );
         } else {
@@ -862,41 +791,30 @@ async function calculateWithDefaultMargin(
         }
       }
       let supplierSurchargesExclVATForComparison = supplierSurcharges;
-      if (supplierSurcharges > 0 && masterVATMode === "included") {
+      if (supplierSurcharges > 0 && masterVATMode === 'included') {
         supplierSurchargesExclVATForComparison = normalizePrice(
           supplierSurcharges,
-          "included",
-          "excluded",
+          'included',
+          'excluded',
           masterVATRate
         );
       }
       const supplierTotalCostExclVATForComparison =
-        supplierBasePriceExclVATForComparison +
-        supplierSurchargesExclVATForComparison;
+        supplierBasePriceExclVATForComparison + supplierSurchargesExclVATForComparison;
 
       // Confronta su base IVA esclusa per determinare se modificato manualmente
       const isManuallyModified =
         supplierTotalCostExclVATForComparison > 0 &&
-        Math.abs(
-          totalCostExclVATForComparison - supplierTotalCostExclVATForComparison
-        ) > 0.01;
+        Math.abs(totalCostExclVATForComparison - supplierTotalCostExclVATForComparison) > 0.01;
 
       // 🔍 LOGGING DETTAGLIATO: Traccia valori per debug
       console.log(
         `🔍 [PRICE CALC] Calcolo prezzo per listino "${priceList.name}" (${priceList.list_type}):`
       );
       console.log(`   - Listino ID: ${priceList.id}`);
-      console.log(`   - Master List ID: ${priceList.master_list_id || "N/A"}`);
-      console.log(
-        `   - Base Price (da matrice listino personalizzato): €${basePrice.toFixed(
-          2
-        )}`
-      );
-      console.log(
-        `   - Surcharges (da matrice listino personalizzato): €${surcharges.toFixed(
-          2
-        )}`
-      );
+      console.log(`   - Master List ID: ${priceList.master_list_id || 'N/A'}`);
+      console.log(`   - Base Price (da matrice listino personalizzato): €${basePrice.toFixed(2)}`);
+      console.log(`   - Surcharges (da matrice listino personalizzato): €${surcharges.toFixed(2)}`);
       console.log(
         `   - Total Cost (listino personalizzato, raw): €${totalCost.toFixed(
           2
@@ -912,18 +830,12 @@ async function calculateWithDefaultMargin(
           2
         )} (basePriceExclVAT + surcharges)`
       );
-      console.log(
-        `   - Supplier Base Price (da master): €${supplierBasePrice.toFixed(2)}`
-      );
-      console.log(
-        `   - Supplier Surcharges (da master): €${supplierSurcharges.toFixed(
-          2
-        )}`
-      );
+      console.log(`   - Supplier Base Price (da master): €${supplierBasePrice.toFixed(2)}`);
+      console.log(`   - Supplier Surcharges (da master): €${supplierSurcharges.toFixed(2)}`);
       console.log(
         `   - Supplier Base Price Excl VAT (per confronto): €${supplierBasePriceExclVATForComparison.toFixed(
           2
-        )} (vat_mode master: ${masterVATMode || "N/A"})`
+        )} (vat_mode master: ${masterVATMode || 'N/A'})`
       );
       console.log(
         `   - Supplier Total Cost Excl VAT (per confronto): €${supplierTotalCostExclVATForComparison.toFixed(
@@ -943,9 +855,7 @@ async function calculateWithDefaultMargin(
         supplierTotalCostExclVATForComparison > 0 && !isManuallyModified
           ? supplierTotalCostExclVATForComparison
           : totalCostExclVATForComparison;
-      console.log(
-        `   - Cost Base For Margin: €${costBaseForMargin.toFixed(2)}`
-      );
+      console.log(`   - Cost Base For Margin: €${costBaseForMargin.toFixed(2)}`);
 
       let margin = 0;
       let finalPrice = totalCost;
@@ -954,19 +864,14 @@ async function calculateWithDefaultMargin(
         // Prezzi modificati manualmente: il prezzo nel listino personalizzato è già il prezzo finale
         // Il margine è la differenza tra prezzo personalizzato e prezzo fornitore originale (su base IVA esclusa)
         // Nota: margin sarà ricalcolato nella sezione VAT, qui è solo per logging
-        margin =
-          totalCostExclVATForComparison - supplierTotalCostExclVATForComparison;
+        margin = totalCostExclVATForComparison - supplierTotalCostExclVATForComparison;
         finalPrice = totalCost; // Non aggiungiamo margine, è già incluso (nella modalità VAT del custom list)
         console.log(`✅ [PRICE CALC] Prezzi modificati manualmente:`);
         console.log(
-          `   - Margine calcolato (differenza su base IVA esclusa): €${margin.toFixed(
-            2
-          )}`
+          `   - Margine calcolato (differenza su base IVA esclusa): €${margin.toFixed(2)}`
         );
         console.log(
-          `   - Final Price (usando totalCost listino personalizzato): €${finalPrice.toFixed(
-            2
-          )}`
+          `   - Final Price (usando totalCost listino personalizzato): €${finalPrice.toFixed(2)}`
         );
         console.log(
           `   - ✅ RISULTATO: Fornitore €${supplierTotalCostExclVATForComparison.toFixed(
@@ -978,23 +883,11 @@ async function calculateWithDefaultMargin(
       } else {
         // Prezzi non modificati: applica margine di default
         // ✨ FIX: Usa costBaseForMargin (supplierTotalCost se disponibile) invece di totalCost
-        console.log(
-          `🔍 [PRICE CALC] Prezzi identici al master, applicazione margine:`
-        );
-        console.log(
-          `   - default_margin_percent: ${
-            priceList.default_margin_percent || "NULL"
-          }`
-        );
-        console.log(
-          `   - default_margin_fixed: ${
-            priceList.default_margin_fixed || "NULL"
-          }`
-        );
+        console.log(`🔍 [PRICE CALC] Prezzi identici al master, applicazione margine:`);
+        console.log(`   - default_margin_percent: ${priceList.default_margin_percent || 'NULL'}`);
+        console.log(`   - default_margin_fixed: ${priceList.default_margin_fixed || 'NULL'}`);
         console.log(`   - list_type: ${priceList.list_type}`);
-        console.log(
-          `   - master_list_id: ${priceList.master_list_id || "NULL"}`
-        );
+        console.log(`   - master_list_id: ${priceList.master_list_id || 'NULL'}`);
 
         if (priceList.default_margin_percent) {
           margin = costBaseForMargin * (priceList.default_margin_percent / 100);
@@ -1010,9 +903,8 @@ async function calculateWithDefaultMargin(
           // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
           // applica margine di default globale per garantire consistenza nel comparatore
           // Questo garantisce che OGNI corriere nel comparatore abbia sempre un margine
-          if (priceList.list_type === "custom" && priceList.master_list_id) {
-            margin =
-              costBaseForMargin * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+          if (priceList.list_type === 'custom' && priceList.master_list_id) {
+            margin = costBaseForMargin * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
             console.log(
               `   - ⚠️ Margine default globale: ${
                 pricingConfig.DEFAULT_MARGIN_PERCENT
@@ -1032,12 +924,10 @@ async function calculateWithDefaultMargin(
             : totalCostExclVATForComparison;
         finalPrice = baseForFinalPrice + margin; // Questo sarà sovrascritto nella sezione VAT
         console.log(
-          `   - Base per finalPrice (excl VAT): €${baseForFinalPrice.toFixed(
-            2
-          )} (${
+          `   - Base per finalPrice (excl VAT): €${baseForFinalPrice.toFixed(2)} (${
             supplierTotalCostExclVATForComparison > 0 && !isManuallyModified
-              ? "supplierTotalCostExclVAT"
-              : "totalCostExclVAT"
+              ? 'supplierTotalCostExclVAT'
+              : 'totalCostExclVAT'
           })`
         );
         console.log(
@@ -1061,19 +951,17 @@ async function calculateWithDefaultMargin(
       const resultTotalCost = isManuallyModified
         ? totalCostExclVATForComparison // ✅ Prezzi modificati: usa prezzo listino personalizzato (IVA esclusa)
         : supplierTotalCostExclVATForComparison > 0
-        ? supplierTotalCostExclVATForComparison
-        : totalCostExclVATForComparison; // Prezzi identici: usa supplierTotalCostExclVAT se disponibile
+          ? supplierTotalCostExclVATForComparison
+          : totalCostExclVATForComparison; // Prezzi identici: usa supplierTotalCostExclVAT se disponibile
 
       const resultSupplierPrice =
         supplierTotalCostExclVATForComparison > 0
           ? supplierTotalCostExclVATForComparison
           : undefined;
-      
+
       // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
       const resultSupplierPriceOriginal =
-        supplierTotalCostOriginal > 0
-          ? supplierTotalCostOriginal
-          : undefined;
+        supplierTotalCostOriginal > 0 ? supplierTotalCostOriginal : undefined;
 
       console.log(`📤 [PRICE CALC] Valori restituiti:`);
       console.log(`   - basePrice: €${basePrice.toFixed(2)}`);
@@ -1082,23 +970,17 @@ async function calculateWithDefaultMargin(
       console.log(
         `   - totalCost (excl VAT): €${resultTotalCost.toFixed(2)} (${
           isManuallyModified
-            ? "totalCostExclVAT listino personalizzato"
+            ? 'totalCostExclVAT listino personalizzato'
             : supplierTotalCostExclVATForComparison > 0
-            ? "supplierTotalCostExclVAT"
-            : "totalCostExclVAT"
+              ? 'supplierTotalCostExclVAT'
+              : 'totalCostExclVAT'
         })`
       );
       console.log(`   - finalPrice: €${finalPrice.toFixed(2)}`);
+      console.log(`   - supplierPrice: €${resultSupplierPrice?.toFixed(2) || 'undefined'}`);
       console.log(
-        `   - supplierPrice: €${resultSupplierPrice?.toFixed(2) || "undefined"}`
-      );
-      console.log(
-        `   - ✅ VERIFICA: finalPrice ${
-          finalPrice === resultTotalCost ? "=" : "≠"
-        } totalCost (${
-          finalPrice === resultTotalCost
-            ? "OK se isManuallyModified"
-            : "OK se margine applicato"
+        `   - ✅ VERIFICA: finalPrice ${finalPrice === resultTotalCost ? '=' : '≠'} totalCost (${
+          finalPrice === resultTotalCost ? 'OK se isManuallyModified' : 'OK se margine applicato'
         })`
       );
 
@@ -1107,24 +989,14 @@ async function calculateWithDefaultMargin(
 
       // Normalizza basePrice a IVA esclusa per calcoli
       let basePriceExclVAT = basePrice;
-      if (customVATMode === "included") {
-        basePriceExclVAT = normalizePrice(
-          basePrice,
-          "included",
-          "excluded",
-          customVATRate
-        );
+      if (customVATMode === 'included') {
+        basePriceExclVAT = normalizePrice(basePrice, 'included', 'excluded', customVATRate);
       }
 
       // ✨ FIX: Surcharges seguono lo stesso vat_mode del listino (non sono sempre IVA esclusa)
       let surchargesExclVAT = surcharges;
-      if (customVATMode === "included") {
-        surchargesExclVAT = normalizePrice(
-          surcharges,
-          "included",
-          "excluded",
-          customVATRate
-        );
+      if (customVATMode === 'included') {
+        surchargesExclVAT = normalizePrice(surcharges, 'included', 'excluded', customVATRate);
       }
       const totalCostExclVAT = basePriceExclVAT + surchargesExclVAT;
 
@@ -1147,9 +1019,7 @@ async function calculateWithDefaultMargin(
         console.log(
           `✅ [PRICE CALC] Margine calcolato (manually modified): €${totalCostExclVAT.toFixed(
             2
-          )} - €${supplierTotalCostExclVAT.toFixed(
-            2
-          )} = €${marginExclVAT.toFixed(2)}`
+          )} - €${supplierTotalCostExclVAT.toFixed(2)} = €${marginExclVAT.toFixed(2)}`
         );
         console.log(
           `✅ [PRICE CALC] Final Price (manually modified): usa prezzo listino personalizzato €${totalCostExclVAT.toFixed(
@@ -1159,22 +1029,14 @@ async function calculateWithDefaultMargin(
       } else {
         // Prezzi identici: applica margine di default su base IVA esclusa
         const costBaseForMarginExclVAT =
-          supplierTotalCostExclVAT > 0
-            ? supplierTotalCostExclVAT
-            : totalCostExclVAT;
+          supplierTotalCostExclVAT > 0 ? supplierTotalCostExclVAT : totalCostExclVAT;
         if (priceList.default_margin_percent) {
-          marginExclVAT =
-            costBaseForMarginExclVAT * (priceList.default_margin_percent / 100);
+          marginExclVAT = costBaseForMarginExclVAT * (priceList.default_margin_percent / 100);
         } else if (priceList.default_margin_fixed) {
           marginExclVAT = priceList.default_margin_fixed;
-        } else if (
-          priceList.list_type === "custom" &&
-          priceList.master_list_id
-        ) {
+        } else if (priceList.list_type === 'custom' && priceList.master_list_id) {
           // Margine default globale se listino CUSTOM con master ma senza margine configurato
-          marginExclVAT =
-            costBaseForMarginExclVAT *
-            (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+          marginExclVAT = costBaseForMarginExclVAT * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
         }
         // Quando i prezzi sono identici, finalPrice = supplierTotalCost + margin
         finalPriceExclVAT = costBaseForMarginExclVAT + marginExclVAT;
@@ -1189,7 +1051,7 @@ async function calculateWithDefaultMargin(
       // ✨ FIX: Quando listino è supplier (non custom) senza master_list_id e senza margine,
       // il prezzo dalla matrice è già IVA inclusa, quindi usa totalCost direttamente
       let finalPriceWithVAT: number;
-      if (customVATMode === "included") {
+      if (customVATMode === 'included') {
         if (isManuallyModified) {
           // Prezzi modificati manualmente: usa prezzo originale listino personalizzato (già con IVA inclusa)
           // ✨ IMPORTANTE: totalCostOriginal è il prezzo originale dalla matrice (già IVA inclusa se customVATMode === "included")
@@ -1199,17 +1061,21 @@ async function calculateWithDefaultMargin(
             totalCostOriginal: totalCostOriginal.toFixed(2),
             totalCostExclVAT_normalizzato: totalCostExclVAT.toFixed(2),
             finalPriceWithVAT: finalPriceWithVAT.toFixed(2),
-            note: "Usa totalCostOriginal (già IVA inclusa dalla matrice)"
+            note: 'Usa totalCostOriginal (già IVA inclusa dalla matrice)',
           });
         } else if (supplierTotalCostExclVAT === 0 && marginExclVAT === 0) {
           // ✨ FIX: Listino supplier senza margine: usa prezzo originale matrice (già IVA inclusa)
           // Evita doppia conversione che può causare arrotondamenti
           finalPriceWithVAT = totalCostOriginal > 0 ? totalCostOriginal : totalCostExclVAT;
-          console.log(`✅ [PRICE CALC] Final Price (supplier senza margine, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCostOriginal, evita doppia conversione)`);
+          console.log(
+            `✅ [PRICE CALC] Final Price (supplier senza margine, IVA inclusa): €${finalPriceWithVAT.toFixed(2)} (usa totalCostOriginal, evita doppia conversione)`
+          );
         } else {
           // Calcola IVA su prezzo + margine (normalizzato a IVA esclusa)
           finalPriceWithVAT = calculatePriceWithVAT(finalPriceExclVAT, customVATRate);
-          console.log(`✅ [PRICE CALC] Final Price (con margine, IVA inclusa): €${finalPriceExclVAT.toFixed(2)} (excl) → €${finalPriceWithVAT.toFixed(2)} (incl)`);
+          console.log(
+            `✅ [PRICE CALC] Final Price (con margine, IVA inclusa): €${finalPriceExclVAT.toFixed(2)} (excl) → €${finalPriceWithVAT.toFixed(2)} (incl)`
+          );
         }
       } else {
         finalPriceWithVAT = finalPriceExclVAT;
@@ -1218,7 +1084,7 @@ async function calculateWithDefaultMargin(
 
       // Calcola importo IVA
       const vatAmount =
-        customVATMode === "excluded"
+        customVATMode === 'excluded'
           ? calculateVATAmount(finalPriceExclVAT, customVATRate)
           : finalPriceWithVAT - finalPriceExclVAT;
 
@@ -1253,13 +1119,11 @@ async function calculateWithDefaultMargin(
         // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
         supplierPriceOriginal: resultSupplierPriceOriginal, // Nella modalità VAT del master list
         // ✨ NUOVO: VAT Semantics (ADR-001)
-        vatMode: priceList.vat_mode || "excluded",
+        vatMode: priceList.vat_mode || 'excluded',
         vatRate: customVATRate,
         vatAmount,
         totalPriceWithVAT:
-          customVATMode === "excluded"
-            ? finalPriceWithVAT + vatAmount
-            : finalPriceWithVAT,
+          customVATMode === 'excluded' ? finalPriceWithVAT + vatAmount : finalPriceWithVAT,
         calculationDetails: {
           weight: params.weight,
           volume: params.volume,
@@ -1274,7 +1138,7 @@ async function calculateWithDefaultMargin(
 
   // Fallback: se non trova entry nella matrice, usa default
   // ✨ FIX: Gestione VAT anche nel fallback (ADR-001)
-  const vatModeFallback: "included" | "excluded" = getVATModeWithFallback(
+  const vatModeFallback: 'included' | 'excluded' = getVATModeWithFallback(
     priceList.vat_mode ?? null
   );
   const vatRateFallback = priceList.vat_rate || 22.0;
@@ -1282,19 +1146,9 @@ async function calculateWithDefaultMargin(
   // Normalizza basePrice e surcharges a IVA esclusa se necessario
   let basePriceExclVATFallback = basePrice;
   let surchargesExclVATFallback = surcharges;
-  if (vatModeFallback === "included") {
-    basePriceExclVATFallback = normalizePrice(
-      basePrice,
-      "included",
-      "excluded",
-      vatRateFallback
-    );
-    surchargesExclVATFallback = normalizePrice(
-      surcharges,
-      "included",
-      "excluded",
-      vatRateFallback
-    );
+  if (vatModeFallback === 'included') {
+    basePriceExclVATFallback = normalizePrice(basePrice, 'included', 'excluded', vatRateFallback);
+    surchargesExclVATFallback = normalizePrice(surcharges, 'included', 'excluded', vatRateFallback);
   }
   const totalCostExclVATFallback = basePriceExclVATFallback + surchargesExclVATFallback;
 
@@ -1307,8 +1161,9 @@ async function calculateWithDefaultMargin(
   } else {
     // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
     // applica margine di default globale per garantire consistenza nel comparatore
-    if (priceList.list_type === "custom" && priceList.master_list_id) {
-      marginExclVATFallback = totalCostExclVATFallback * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+    if (priceList.list_type === 'custom' && priceList.master_list_id) {
+      marginExclVATFallback =
+        totalCostExclVATFallback * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
       console.log(
         `⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato (fallback), applicato margine default globale ${
           pricingConfig.DEFAULT_MARGIN_PERCENT
@@ -1320,18 +1175,19 @@ async function calculateWithDefaultMargin(
   const finalPriceExclVATFallback = totalCostExclVATFallback + marginExclVATFallback;
 
   // Se listino ha IVA inclusa, converti prezzo finale
-  const finalPriceFallback = vatModeFallback === "included"
-    ? calculatePriceWithVAT(finalPriceExclVATFallback, vatRateFallback)
-    : finalPriceExclVATFallback;
+  const finalPriceFallback =
+    vatModeFallback === 'included'
+      ? calculatePriceWithVAT(finalPriceExclVATFallback, vatRateFallback)
+      : finalPriceExclVATFallback;
 
   // Calcola importo IVA
-  const vatAmountFallback = vatModeFallback === "excluded"
-    ? calculateVATAmount(finalPriceExclVATFallback, vatRateFallback)
-    : finalPriceFallback - finalPriceExclVATFallback;
+  const vatAmountFallback =
+    vatModeFallback === 'excluded'
+      ? calculateVATAmount(finalPriceExclVATFallback, vatRateFallback)
+      : finalPriceFallback - finalPriceExclVATFallback;
 
   // ✨ FIX: Se listino CUSTOM con master, aggiungi supplierPrice anche nel fallback
-  const supplierTotalCost =
-    supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0;
+  const supplierTotalCost = supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0;
 
   return {
     basePrice: basePriceExclVATFallback, // Sempre IVA esclusa per consistenza
@@ -1344,12 +1200,11 @@ async function calculateWithDefaultMargin(
     // ✨ FIX: Aggiungi supplierPrice se disponibile (listino CUSTOM con master)
     supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
     // ✨ NUOVO: VAT Semantics (ADR-001) - anche nel fallback
-    vatMode: priceList.vat_mode || "excluded",
+    vatMode: priceList.vat_mode || 'excluded',
     vatRate: vatRateFallback,
     vatAmount: vatAmountFallback,
-    totalPriceWithVAT: vatModeFallback === "excluded"
-      ? finalPriceFallback + vatAmountFallback
-      : finalPriceFallback,
+    totalPriceWithVAT:
+      vatModeFallback === 'excluded' ? finalPriceFallback + vatAmountFallback : finalPriceFallback,
     calculationDetails: {
       weight: params.weight,
       volume: params.volume,
@@ -1367,14 +1222,14 @@ async function calculateWithDefaultMargin(
  */
 async function getPriceListById(id: string): Promise<PriceList | null> {
   const { data, error } = await supabaseAdmin
-    .from("price_lists")
-    .select("*, entries:price_list_entries(*)")
-    .eq("id", id)
+    .from('price_lists')
+    .select('*, entries:price_list_entries(*)')
+    .eq('id', id)
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") return null;
-    console.error("Errore recupero listino:", error);
+    if (error.code === 'PGRST116') return null;
+    console.error('Errore recupero listino:', error);
     return null;
   }
 
@@ -1415,7 +1270,7 @@ export async function calculateBestPriceForReseller(
   }
 ): Promise<{
   bestPrice: PriceCalculationResult;
-  apiSource: "reseller" | "master" | "default";
+  apiSource: 'reseller' | 'master' | 'default';
   resellerPrice?: PriceCalculationResult;
   masterPrice?: PriceCalculationResult;
   priceDifference?: number;
@@ -1423,13 +1278,13 @@ export async function calculateBestPriceForReseller(
   try {
     // Verifica ruolo utente
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, is_reseller, account_type")
-      .eq("id", userId)
+      .from('users')
+      .select('id, is_reseller, account_type')
+      .eq('id', userId)
       .single();
 
     const isReseller = user?.is_reseller === true;
-    const isSuperadmin = user?.account_type === "superadmin";
+    const isSuperadmin = user?.account_type === 'superadmin';
 
     // Per utenti normali (non reseller e non superadmin), usa calcolo base
     if (!user || (!isReseller && !isSuperadmin)) {
@@ -1437,7 +1292,7 @@ export async function calculateBestPriceForReseller(
       if (!normalPrice) return null;
       return {
         bestPrice: normalPrice,
-        apiSource: "default",
+        apiSource: 'default',
       };
     }
 
@@ -1455,39 +1310,39 @@ export async function calculateBestPriceForReseller(
     if (isSuperadmin) {
       // Superadmin: vede tutti i listini attivi
       const { data } = await supabaseAdmin
-        .from("price_lists")
-        .select("*, entries:price_list_entries(*)") // ✨ Carica anche entries (matrice)
-        .in("list_type", ["custom", "supplier"])
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
       activePriceLists = data || [];
     } else if (isReseller) {
       // RESELLER: vede TUTTI i suoi listini personalizzati attivi
       const { data } = await supabaseAdmin
-        .from("price_lists")
-        .select("*, entries:price_list_entries(*)") // ✨ Carica anche entries (matrice)
-        .in("list_type", ["custom", "supplier"])
-        .eq("status", "active")
-        .eq("created_by", userId)
-        .order("created_at", { ascending: false });
+        .from('price_lists')
+        .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false });
       activePriceLists = data || [];
     } else {
       // UTENTI NORMALI: vedono SOLO i listini assegnati
       const { data: assignments } = await supabaseAdmin
-        .from("price_list_assignments")
-        .select("price_list_id, price_lists(*)")
-        .eq("user_id", userId)
-        .is("revoked_at", null);
+        .from('price_list_assignments')
+        .select('price_list_id, price_lists(*)')
+        .eq('user_id', userId)
+        .is('revoked_at', null);
 
       if (assignments && assignments.length > 0) {
         const assignedListIds = assignments.map((a: any) => a.price_list_id);
         const { data } = await supabaseAdmin
-          .from("price_lists")
-          .select("*, entries:price_list_entries(*)") // ✨ Carica anche entries (matrice)
-          .in("id", assignedListIds)
-          .in("list_type", ["custom", "supplier"])
-          .eq("status", "active")
-          .order("created_at", { ascending: false });
+          .from('price_lists')
+          .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
+          .in('id', assignedListIds)
+          .in('list_type', ['custom', 'supplier'])
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
         activePriceLists = data || [];
       }
     }
@@ -1503,8 +1358,8 @@ export async function calculateBestPriceForReseller(
 
           // Match esatto o parziale con contractCode
           const contractCodeLower = params.contractCode.toLowerCase();
-          const listContractCodeLower = listContractCode?.toLowerCase() || "";
-          const listCarrierCodeLower = listCarrierCode?.toLowerCase() || "";
+          const listContractCodeLower = listContractCode?.toLowerCase() || '';
+          const listCarrierCodeLower = listCarrierCode?.toLowerCase() || '';
 
           // Match esatto
           if (
@@ -1516,13 +1371,13 @@ export async function calculateBestPriceForReseller(
 
           // Match parziale: contractCode contiene il prefisso (es. "gls-GLS-5000" contiene "gls")
           if (
-            contractCodeLower.startsWith(listCarrierCodeLower + "-") ||
+            contractCodeLower.startsWith(listCarrierCodeLower + '-') ||
             contractCodeLower === listCarrierCodeLower
           ) {
             return true;
           }
           if (
-            listContractCodeLower.startsWith(contractCodeLower + "-") ||
+            listContractCodeLower.startsWith(contractCodeLower + '-') ||
             listContractCodeLower === contractCodeLower
           ) {
             return true;
@@ -1557,25 +1412,18 @@ export async function calculateBestPriceForReseller(
         console.log(
           `🔍 [RESELLER] Calcolo prezzo per listino: "${priceList.name}" (${priceList.list_type})`
         );
-        console.log(`   - contract_code: ${contractCode || "N/A"}`);
-        console.log(`   - carrier_code: ${carrierCode || "N/A"}`);
-        console.log(
-          `   - master_list_id: ${priceList.master_list_id || "N/A"}`
-        );
+        console.log(`   - contract_code: ${contractCode || 'N/A'}`);
+        console.log(`   - carrier_code: ${carrierCode || 'N/A'}`);
+        console.log(`   - master_list_id: ${priceList.master_list_id || 'N/A'}`);
         console.log(`   - entries: ${priceList.entries?.length || 0}`);
 
-        const calculatedPrice = await calculatePriceWithRules(
-          userId,
-          params,
-          priceList.id
-        );
+        const calculatedPrice = await calculatePriceWithRules(userId, params, priceList.id);
         if (calculatedPrice) {
           console.log(
             `✅ [RESELLER] Prezzo calcolato: €${calculatedPrice.finalPrice.toFixed(
               2
             )} (fornitore: €${
-              calculatedPrice.supplierPrice?.toFixed(2) ||
-              calculatedPrice.totalCost.toFixed(2)
+              calculatedPrice.supplierPrice?.toFixed(2) || calculatedPrice.totalCost.toFixed(2)
             })`
           );
           priceResults.push({
@@ -1594,12 +1442,8 @@ export async function calculateBestPriceForReseller(
       if (priceResults.length > 0) {
         // ✨ FIX: Priorità ai listini CUSTOM rispetto ai SUPPLIER
         // I listini CUSTOM sono quelli configurati per la rivendita e devono essere sempre preferiti
-        const customLists = priceResults.filter(
-          (r) => r.list.list_type === "custom"
-        );
-        const supplierLists = priceResults.filter(
-          (r) => r.list.list_type === "supplier"
-        );
+        const customLists = priceResults.filter((r) => r.list.list_type === 'custom');
+        const supplierLists = priceResults.filter((r) => r.list.list_type === 'supplier');
 
         let bestResult: (typeof priceResults)[0];
 
@@ -1635,9 +1479,7 @@ export async function calculateBestPriceForReseller(
         if (courierConfigId) {
           customPrice._courierConfigId = courierConfigId;
           console.log(
-            `✅ [RESELLER] Usato listino personalizzato PIÙ ECONOMICO: ${
-              bestResult.list.name
-            } (${
+            `✅ [RESELLER] Usato listino personalizzato PIÙ ECONOMICO: ${bestResult.list.name} (${
               bestResult.list.id
             }) con prezzo €${bestResult.price.finalPrice.toFixed(
               2
@@ -1645,9 +1487,7 @@ export async function calculateBestPriceForReseller(
           );
         } else {
           console.log(
-            `✅ [RESELLER] Usato listino personalizzato PIÙ ECONOMICO: ${
-              bestResult.list.name
-            } (${
+            `✅ [RESELLER] Usato listino personalizzato PIÙ ECONOMICO: ${bestResult.list.name} (${
               bestResult.list.id
             }) con prezzo €${bestResult.price.finalPrice.toFixed(
               2
@@ -1660,17 +1500,14 @@ export async function calculateBestPriceForReseller(
           console.log(
             `📊 [RESELLER] Confrontati ${
               priceResults.length
-            } listini attivi per corriere ${params.courierId || "tutti"}:`
+            } listini attivi per corriere ${params.courierId || 'tutti'}:`
           );
           priceResults.forEach((result) => {
             const isSelected = result.list.id === bestResult.list.id;
-            const typeLabel =
-              result.list.list_type === "custom" ? "CUSTOM" : "SUPPLIER";
+            const typeLabel = result.list.list_type === 'custom' ? 'CUSTOM' : 'SUPPLIER';
             console.log(
-              `  - ${
-                result.list.name
-              } (${typeLabel}): €${result.price.finalPrice.toFixed(2)} ${
-                isSelected ? "✅ SCELTO" : ""
+              `  - ${result.list.name} (${typeLabel}): €${result.price.finalPrice.toFixed(2)} ${
+                isSelected ? '✅ SCELTO' : ''
               }`
             );
           });
@@ -1682,51 +1519,40 @@ export async function calculateBestPriceForReseller(
     if (customPrice) {
       return {
         bestPrice: customPrice,
-        apiSource: "reseller", // Listino personalizzato = reseller
+        apiSource: 'reseller', // Listino personalizzato = reseller
         resellerPrice: customPrice,
       };
     }
 
     // ✨ PRIORITÀ 2: Listino fornitore reseller (API Reseller)
-    const resellerPriceList = await getApplicablePriceList(
-      userId,
-      params.courierId
-    );
+    const resellerPriceList = await getApplicablePriceList(userId, params.courierId);
 
     let resellerPrice: PriceCalculationResult | null = null;
-    if (resellerPriceList && resellerPriceList.list_type === "supplier") {
-      resellerPrice = await calculatePriceWithRules(
-        userId,
-        params,
-        resellerPriceList.id
-      );
+    if (resellerPriceList && resellerPriceList.list_type === 'supplier') {
+      resellerPrice = await calculatePriceWithRules(userId, params, resellerPriceList.id);
     }
 
     // ✨ PRIORITÀ 3: Listino personalizzato assegnato (API Master)
     // Cerca listini assegnati tramite price_list_assignments
     const { data: assignments } = await supabaseAdmin
-      .from("price_list_assignments")
-      .select("price_list_id, price_lists(*)")
-      .eq("user_id", userId)
-      .is("revoked_at", null);
+      .from('price_list_assignments')
+      .select('price_list_id, price_lists(*)')
+      .eq('user_id', userId)
+      .is('revoked_at', null);
 
     let masterPrice: PriceCalculationResult | null = null;
     if (assignments && assignments.length > 0) {
       // Prendi il primo listino assegnato valido
       for (const assignment of assignments) {
         const assignedList = assignment.price_lists as any;
-        if (assignedList && assignedList.status === "active") {
+        if (assignedList && assignedList.status === 'active') {
           // Verifica che sia per lo stesso corriere (se specificato)
           if (
             !params.courierId ||
             !assignedList.courier_id ||
             assignedList.courier_id === params.courierId
           ) {
-            masterPrice = await calculatePriceWithRules(
-              userId,
-              params,
-              assignedList.id
-            );
+            masterPrice = await calculatePriceWithRules(userId, params, assignedList.id);
             if (masterPrice) break;
           }
         }
@@ -1736,15 +1562,15 @@ export async function calculateBestPriceForReseller(
     // 3. Confronta prezzi e seleziona il migliore
     const prices: Array<{
       price: PriceCalculationResult;
-      source: "reseller" | "master";
+      source: 'reseller' | 'master';
     }> = [];
 
     if (resellerPrice) {
-      prices.push({ price: resellerPrice, source: "reseller" });
+      prices.push({ price: resellerPrice, source: 'reseller' });
     }
 
     if (masterPrice) {
-      prices.push({ price: masterPrice, source: "master" });
+      prices.push({ price: masterPrice, source: 'master' });
     }
 
     if (prices.length === 0) {
@@ -1753,7 +1579,7 @@ export async function calculateBestPriceForReseller(
       if (!normalPrice) return null;
       return {
         bestPrice: normalPrice,
-        apiSource: "default",
+        apiSource: 'default',
       };
     }
 
@@ -1765,8 +1591,8 @@ export async function calculateBestPriceForReseller(
     const priceDifference =
       prices.length > 1
         ? Math.abs(
-            (prices.find((p) => p.source !== best.source)?.price.finalPrice ||
-              0) - best.price.finalPrice
+            (prices.find((p) => p.source !== best.source)?.price.finalPrice || 0) -
+              best.price.finalPrice
           )
         : undefined;
 
@@ -1778,7 +1604,7 @@ export async function calculateBestPriceForReseller(
       priceDifference,
     };
   } catch (error: any) {
-    console.error("Errore calculateBestPriceForReseller:", error);
+    console.error('Errore calculateBestPriceForReseller:', error);
     return null;
   }
 }

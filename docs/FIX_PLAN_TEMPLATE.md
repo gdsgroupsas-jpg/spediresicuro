@@ -23,6 +23,7 @@
 **Problema potenziale**: `SUPABASE_SERVICE_ROLE_KEY` mancante o errata
 
 **Fix**:
+
 - [ ] Verifica variabile ambiente in Vercel Production
 - [ ] Aggiorna se mancante/errata
 - [ ] Migliora logging (senza esporre secrets)
@@ -34,6 +35,7 @@
 **Problema potenziale**: Colonna mancante o constraint violato
 
 **Fix**:
+
 - [ ] Verifica schema tabella `shipments`
 - [ ] Applica migrazioni se necessario
 - [ ] Verifica mapping payload → schema
@@ -45,6 +47,7 @@
 **Problema potenziale**: RLS policy blocca INSERT (improbabile con service_role)
 
 **Fix**:
+
 - [ ] Verifica che `supabaseAdmin` usi service_role correttamente
 - [ ] Verifica RLS policies (service_role bypassa automaticamente)
 
@@ -55,6 +58,7 @@
 **Problema**: Potrebbe esporre dati sensibili
 
 **Fix**:
+
 - [ ] Rimuovi logging di payload completo in produzione
 - [ ] Log solo error code + message (no secrets)
 - [ ] Aggiungi correlation ID per tracciamento
@@ -66,6 +70,7 @@
 ### 1. `lib/database.ts`
 
 **Modifiche**:
+
 - Migliora logging errori (no secrets)
 - Aggiungi validazione payload pre-INSERT
 - Migliora messaggi errore per diagnostica
@@ -73,12 +78,14 @@
 ### 2. `lib/supabase.ts` (se necessario)
 
 **Modifiche**:
+
 - Migliora `isSupabaseConfigured()` per logging più dettagliato
 - Verifica che `supabaseAdmin` sia inizializzato correttamente
 
 ### 3. `app/api/spedizioni/route.ts` (se necessario)
 
 **Modifiche**:
+
 - Migliora error handling
 - Aggiungi correlation ID per tracciamento
 
@@ -99,6 +106,7 @@
 ## 🚀 Deploy Steps
 
 1. **Commit fix**:
+
    ```bash
    git add .
    git commit -m "fix: resolve POST /api/spedizioni production failure"
@@ -110,10 +118,11 @@
    - Verifica log per errori
 
 3. **Smoke test**:
+
    ```bash
    # Test endpoint diagnostico
    curl https://tuo-dominio.vercel.app/api/test-supabase
-   
+
    # Test creazione spedizione (dall'app)
    ```
 

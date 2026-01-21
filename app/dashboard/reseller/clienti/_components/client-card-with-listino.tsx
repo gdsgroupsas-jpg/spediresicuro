@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { formatCurrency } from "@/lib/utils";
-import { WALLET_THRESHOLDS } from "@/lib/validations/wallet-schema";
+} from '@/components/ui/dropdown-menu';
+import { formatCurrency } from '@/lib/utils';
+import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema';
 import {
   AlertTriangle,
   Edit,
@@ -22,7 +22,7 @@ import {
   Package,
   Plus,
   Wallet,
-} from "lucide-react";
+} from 'lucide-react';
 
 export interface ClientWithListino {
   id: string;
@@ -73,14 +73,13 @@ export function ClientCardWithListino({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarFallback className="bg-gradient-to-br from-orange-400 to-amber-500 text-white font-semibold">
-              {client.name?.[0]?.toUpperCase() ||
-                client.email[0]?.toUpperCase()}
+              {client.name?.[0]?.toUpperCase() || client.email[0]?.toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium text-gray-900 truncate">
-                {client.name || client.email.split("@")[0]}
+                {client.name || client.email.split('@')[0]}
               </p>
               {isNewClient() && (
                 <Badge variant="success" className="shrink-0 text-xs">
@@ -97,10 +96,7 @@ export function ClientCardWithListino({
           {/* Wallet */}
           <div className="text-center min-w-[80px]">
             <p className="text-xs text-gray-400 mb-0.5">Wallet</p>
-            <Badge
-              variant={isLowBalance ? "error" : "secondary"}
-              className="font-mono text-sm"
-            >
+            <Badge variant={isLowBalance ? 'error' : 'secondary'} className="font-mono text-sm">
               {isLowBalance && <AlertTriangle className="w-3 h-3 mr-1" />}
               {formatCurrency(client.wallet_balance)}
             </Badge>
@@ -109,17 +105,13 @@ export function ClientCardWithListino({
           {/* Spedizioni */}
           <div className="text-center min-w-[70px]">
             <p className="text-xs text-gray-400 mb-0.5">Spedizioni</p>
-            <p className="font-semibold text-gray-900">
-              {client.shipments_count}
-            </p>
+            <p className="font-semibold text-gray-900">{client.shipments_count}</p>
           </div>
 
           {/* Speso */}
           <div className="text-center min-w-[80px]">
             <p className="text-xs text-gray-400 mb-0.5">Fatturato</p>
-            <p className="font-medium text-gray-700">
-              {formatCurrency(client.total_spent)}
-            </p>
+            <p className="font-medium text-gray-700">{formatCurrency(client.total_spent)}</p>
           </div>
         </div>
 
@@ -150,9 +142,7 @@ export function ClientCardWithListino({
               title="Assegna un listino"
             >
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span className="text-xs font-medium text-amber-800">
-                Nessun listino
-              </span>
+              <span className="text-xs font-medium text-amber-800">Nessun listino</span>
             </div>
           )}
         </div>
@@ -208,11 +198,7 @@ export function ClientCardWithListino({
       <div className="md:hidden mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm">
         <div>
           <span className="text-gray-400">Wallet: </span>
-          <span
-            className={
-              isLowBalance ? "text-red-600 font-medium" : "text-gray-700"
-            }
-          >
+          <span className={isLowBalance ? 'text-red-600 font-medium' : 'text-gray-700'}>
             {formatCurrency(client.wallet_balance)}
           </span>
         </div>
@@ -222,9 +208,7 @@ export function ClientCardWithListino({
         </div>
         <div>
           <span className="text-gray-400">Fatturato: </span>
-          <span className="text-gray-700">
-            {formatCurrency(client.total_spent)}
-          </span>
+          <span className="text-gray-700">{formatCurrency(client.total_spent)}</span>
         </div>
       </div>
     </div>

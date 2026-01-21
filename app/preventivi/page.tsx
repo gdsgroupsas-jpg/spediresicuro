@@ -1,5 +1,5 @@
-import Header from '@/components/header'
-import Footer from '@/components/footer'
+import Header from '@/components/header';
+import Footer from '@/components/footer';
 
 export default function PreventiviPage() {
   return (
@@ -13,7 +13,8 @@ export default function PreventiviPage() {
           </p>
           <div className="bg-white rounded-xl shadow-lg p-8">
             <p className="text-gray-700 mb-4">
-              Per calcolare un preventivo, accedi al dashboard e usa la funzione &quot;Nuovo Preventivo&quot;.
+              Per calcolare un preventivo, accedi al dashboard e usa la funzione &quot;Nuovo
+              Preventivo&quot;.
             </p>
             <a
               href="/preventivo"
@@ -26,6 +27,5 @@ export default function PreventiviPage() {
       </main>
       <Footer />
     </>
-  )
+  );
 }
-

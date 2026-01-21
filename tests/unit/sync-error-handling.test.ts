@@ -11,11 +11,11 @@
  * Riferimento: actions/spedisci-online-rates.ts
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
 // Tipi per i test
 interface SyncError {
-  type: "api_error" | "database_error" | "validation_error" | "empty_rates";
+  type: 'api_error' | 'database_error' | 'validation_error' | 'empty_rates';
   message: string;
   carrierCode?: string;
   recoverable: boolean;
@@ -29,7 +29,7 @@ interface SyncResult {
   priceListsCreated: number;
 }
 
-describe("Sync Error Handling", () => {
+describe('Sync Error Handling', () => {
   // Helper: simula sync con gestione errori
   function simulateSyncWithErrors(
     carriers: string[],
@@ -70,14 +70,14 @@ describe("Sync Error Handling", () => {
     };
   }
 
-  describe("Gestione Errori API", () => {
-    it("dovrebbe continuare sync anche se un corriere fallisce", () => {
-      const carriers = ["gls", "brt", "poste"];
+  describe('Gestione Errori API', () => {
+    it('dovrebbe continuare sync anche se un corriere fallisce', () => {
+      const carriers = ['gls', 'brt', 'poste'];
       const errors: Record<string, SyncError> = {
         brt: {
-          type: "api_error",
-          message: "API timeout",
-          carrierCode: "brt",
+          type: 'api_error',
+          message: 'API timeout',
+          carrierCode: 'brt',
           recoverable: false,
         },
       };
@@ -85,19 +85,19 @@ describe("Sync Error Handling", () => {
       const result = simulateSyncWithErrors(carriers, errors);
 
       expect(result.success).toBe(true);
-      expect(result.carriersProcessed).toContain("gls");
-      expect(result.carriersProcessed).toContain("poste");
-      expect(result.carriersFailed).toContain("brt");
+      expect(result.carriersProcessed).toContain('gls');
+      expect(result.carriersProcessed).toContain('poste');
+      expect(result.carriersFailed).toContain('brt');
       expect(result.priceListsCreated).toBeGreaterThan(0);
     });
 
-    it("dovrebbe gestire errori recuperabili con fallback", () => {
-      const carriers = ["gls", "brt"];
+    it('dovrebbe gestire errori recuperabili con fallback', () => {
+      const carriers = ['gls', 'brt'];
       const errors: Record<string, SyncError> = {
         gls: {
-          type: "api_error",
-          message: "Rate limit exceeded",
-          carrierCode: "gls",
+          type: 'api_error',
+          message: 'Rate limit exceeded',
+          carrierCode: 'gls',
           recoverable: true, // Recuperabile con retry
         },
       };
@@ -106,28 +106,28 @@ describe("Sync Error Handling", () => {
 
       // Anche con errore recuperabile, sync continua
       expect(result.success).toBe(true);
-      expect(result.carriersProcessed).toContain("brt");
+      expect(result.carriersProcessed).toContain('brt');
     });
 
-    it("dovrebbe fallire solo se TUTTI i corrieri falliscono", () => {
-      const carriers = ["gls", "brt", "poste"];
+    it('dovrebbe fallire solo se TUTTI i corrieri falliscono', () => {
+      const carriers = ['gls', 'brt', 'poste'];
       const errors: Record<string, SyncError> = {
         gls: {
-          type: "api_error",
-          message: "API error",
-          carrierCode: "gls",
+          type: 'api_error',
+          message: 'API error',
+          carrierCode: 'gls',
           recoverable: false,
         },
         brt: {
-          type: "api_error",
-          message: "API error",
-          carrierCode: "brt",
+          type: 'api_error',
+          message: 'API error',
+          carrierCode: 'brt',
           recoverable: false,
         },
         poste: {
-          type: "api_error",
-          message: "API error",
-          carrierCode: "poste",
+          type: 'api_error',
+          message: 'API error',
+          carrierCode: 'poste',
           recoverable: false,
         },
       };
@@ -141,14 +141,14 @@ describe("Sync Error Handling", () => {
     });
   });
 
-  describe("Gestione Carrier Senza Rates", () => {
-    it("dovrebbe gestire carrier con rates vuoti", () => {
-      const carriers = ["gls", "brt"];
+  describe('Gestione Carrier Senza Rates', () => {
+    it('dovrebbe gestire carrier con rates vuoti', () => {
+      const carriers = ['gls', 'brt'];
       const errors: Record<string, SyncError> = {
         brt: {
-          type: "empty_rates",
-          message: "Nessun rate disponibile per questo corriere",
-          carrierCode: "brt",
+          type: 'empty_rates',
+          message: 'Nessun rate disponibile per questo corriere',
+          carrierCode: 'brt',
           recoverable: false,
         },
       };
@@ -156,65 +156,65 @@ describe("Sync Error Handling", () => {
       const result = simulateSyncWithErrors(carriers, errors);
 
       expect(result.success).toBe(true);
-      expect(result.carriersProcessed).toContain("gls");
-      expect(result.carriersFailed).toContain("brt");
+      expect(result.carriersProcessed).toContain('gls');
+      expect(result.carriersFailed).toContain('brt');
     });
 
-    it("dovrebbe loggare warning per carrier senza rates", () => {
+    it('dovrebbe loggare warning per carrier senza rates', () => {
       const error: SyncError = {
-        type: "empty_rates",
-        message: "Nessun rate disponibile",
-        carrierCode: "brt",
+        type: 'empty_rates',
+        message: 'Nessun rate disponibile',
+        carrierCode: 'brt',
         recoverable: false,
       };
 
       // Sistema dovrebbe loggare warning ma non crashare
-      expect(error.type).toBe("empty_rates");
+      expect(error.type).toBe('empty_rates');
       expect(error.recoverable).toBe(false);
     });
   });
 
-  describe("Gestione Errori Database", () => {
-    it("dovrebbe gestire errori database gracefully", () => {
+  describe('Gestione Errori Database', () => {
+    it('dovrebbe gestire errori database gracefully', () => {
       const error: SyncError = {
-        type: "database_error",
-        message: "Connection timeout",
+        type: 'database_error',
+        message: 'Connection timeout',
         recoverable: true, // Database error può essere recuperabile con retry
       };
 
       // Sistema dovrebbe loggare errore e permettere retry
-      expect(error.type).toBe("database_error");
+      expect(error.type).toBe('database_error');
       expect(error.recoverable).toBe(true);
     });
 
-    it("dovrebbe gestire constraint violations", () => {
+    it('dovrebbe gestire constraint violations', () => {
       const error: SyncError = {
-        type: "database_error",
-        message: "Unique constraint violation",
+        type: 'database_error',
+        message: 'Unique constraint violation',
         recoverable: false, // Constraint violation non è recuperabile
       };
 
-      expect(error.type).toBe("database_error");
+      expect(error.type).toBe('database_error');
       expect(error.recoverable).toBe(false);
     });
   });
 
-  describe("Validazione Input", () => {
-    it("dovrebbe validare mode sync valido", () => {
-      const validModes = ["fast", "balanced", "matrix"];
-      const invalidMode = "invalid-mode";
+  describe('Validazione Input', () => {
+    it('dovrebbe validare mode sync valido', () => {
+      const validModes = ['fast', 'balanced', 'matrix'];
+      const invalidMode = 'invalid-mode';
 
       function validateMode(mode: string): boolean {
         return validModes.includes(mode);
       }
 
-      expect(validateMode("fast")).toBe(true);
-      expect(validateMode("balanced")).toBe(true);
-      expect(validateMode("matrix")).toBe(true);
+      expect(validateMode('fast')).toBe(true);
+      expect(validateMode('balanced')).toBe(true);
+      expect(validateMode('matrix')).toBe(true);
       expect(validateMode(invalidMode)).toBe(false);
     });
 
-    it("dovrebbe validare configId formato UUID", () => {
+    it('dovrebbe validare configId formato UUID', () => {
       const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -222,30 +222,28 @@ describe("Sync Error Handling", () => {
         return uuidRegex.test(configId);
       }
 
-      expect(
-        validateConfigId("550e8400-e29b-41d4-a716-446655440000")
-      ).toBe(true);
-      expect(validateConfigId("not-a-uuid")).toBe(false);
-      expect(validateConfigId("")).toBe(false);
+      expect(validateConfigId('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
+      expect(validateConfigId('not-a-uuid')).toBe(false);
+      expect(validateConfigId('')).toBe(false);
     });
   });
 
-  describe("Retry Logic", () => {
-    it("dovrebbe permettere retry per errori recuperabili", () => {
+  describe('Retry Logic', () => {
+    it('dovrebbe permettere retry per errori recuperabili', () => {
       const errors: SyncError[] = [
         {
-          type: "api_error",
-          message: "Rate limit exceeded",
+          type: 'api_error',
+          message: 'Rate limit exceeded',
           recoverable: true,
         },
         {
-          type: "database_error",
-          message: "Connection timeout",
+          type: 'database_error',
+          message: 'Connection timeout',
           recoverable: true,
         },
         {
-          type: "validation_error",
-          message: "Invalid input",
+          type: 'validation_error',
+          message: 'Invalid input',
           recoverable: false,
         },
       ];
@@ -257,20 +255,17 @@ describe("Sync Error Handling", () => {
       expect(nonRetryableErrors.length).toBe(1);
     });
 
-    it("dovrebbe limitare numero retry", () => {
+    it('dovrebbe limitare numero retry', () => {
       const maxRetries = 3;
       let retryCount = 0;
 
-      function shouldRetry(
-        error: SyncError,
-        currentRetry: number
-      ): boolean {
+      function shouldRetry(error: SyncError, currentRetry: number): boolean {
         return error.recoverable && currentRetry < maxRetries;
       }
 
       const error: SyncError = {
-        type: "api_error",
-        message: "Temporary error",
+        type: 'api_error',
+        message: 'Temporary error',
         recoverable: true,
       };
 
@@ -281,12 +276,12 @@ describe("Sync Error Handling", () => {
     });
   });
 
-  describe("Error Logging", () => {
-    it("dovrebbe loggare errori senza esporre dati sensibili", () => {
+  describe('Error Logging', () => {
+    it('dovrebbe loggare errori senza esporre dati sensibili', () => {
       const error: SyncError = {
-        type: "api_error",
-        message: "API authentication failed",
-        carrierCode: "gls",
+        type: 'api_error',
+        message: 'API authentication failed',
+        carrierCode: 'gls',
         recoverable: false,
       };
 
@@ -298,13 +293,10 @@ describe("Sync Error Handling", () => {
         // NON include: api_key, api_secret, credentials
       };
 
-      expect(safeLog.type).toBe("api_error");
-      expect(safeLog.carrierCode).toBe("gls");
-      expect(safeLog).not.toHaveProperty("api_key");
-      expect(safeLog).not.toHaveProperty("api_secret");
+      expect(safeLog.type).toBe('api_error');
+      expect(safeLog.carrierCode).toBe('gls');
+      expect(safeLog).not.toHaveProperty('api_key');
+      expect(safeLog).not.toHaveProperty('api_secret');
     });
   });
 });
-
-
-

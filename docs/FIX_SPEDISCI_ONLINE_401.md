@@ -7,6 +7,7 @@
 **Causa**: Il codice provava multiple strategie di autenticazione (Bearer, Token, X-API-KEY) in sequenza, ma l'OpenAPI spec di Spedisci.Online richiede **SOLO Bearer token**.
 
 **Evidenza**:
+
 - Documentazione OpenAPI: `Authorization: Bearer {api_key}`
 - Codice precedente: provava 3 strategie diverse
 - Questo può causare confusione se la prima strategia fallisce e prova le altre
@@ -20,6 +21,7 @@
 #### 1. Rimossa strategie fallback multiple (Lines 344-469)
 
 **PRIMA**:
+
 ```typescript
 // Provava 3 strategie diverse
 const authStrategies = [
@@ -30,12 +32,13 @@ const authStrategies = [
 ```
 
 **DOPO**:
+
 ```typescript
 // Usa SOLO Bearer token (come richiesto da OpenAPI spec)
 const headers: Record<string, string> = {
   'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  'Authorization': `Bearer ${this.API_KEY}`,
+  Accept: 'application/json',
+  Authorization: `Bearer ${this.API_KEY}`,
 };
 ```
 
@@ -48,6 +51,7 @@ const headers: Record<string, string> = {
 #### 3. Validazione baseUrl (Lines 156-175)
 
 **Aggiunto**:
+
 - Validazione che baseUrl contenga `spedisci.online`
 - Validazione che baseUrl contenga `/api/v2`
 - Log per distinguere demo vs production
@@ -60,11 +64,13 @@ const headers: Record<string, string> = {
 ### `lib/adapters/couriers/spedisci-online.ts`
 
 **Lines 156-175**: Aggiunta validazione baseUrl
+
 - Verifica formato baseUrl
 - Log demo vs production
 - Warning se formato errato
 
 **Lines 344-469**: Sostituito metodo `createShipmentJSON()`
+
 - Rimossa logica fallback multiple strategie
 - Usa SOLO Bearer token
 - Migliorato logging diagnostico
@@ -77,6 +83,7 @@ const headers: Record<string, string> = {
 ### Test 1: Verifica Base URL
 
 **In produzione, verifica log**:
+
 ```
 🔧 [SPEDISCI.ONLINE] Base URL configurato: {
   baseUrl: "https://...",
@@ -86,6 +93,7 @@ const headers: Record<string, string> = {
 ```
 
 **Se `isDemo: true` ma dovrebbe essere production**:
+
 - Verifica configurazione in `/dashboard/admin/configurations`
 - Base URL dovrebbe essere: `https://{tuodominio}.spedisci.online/api/v2/`
 
@@ -96,6 +104,7 @@ const headers: Record<string, string> = {
 3. **Verifica log Vercel**:
 
 **Successo atteso**:
+
 ```
 📡 [SPEDISCI.ONLINE] API call: {
   method: "POST",
@@ -113,6 +122,7 @@ const headers: Record<string, string> = {
 ```
 
 **Errore 401 (se ancora presente)**:
+
 ```
 ❌ [SPEDISCI.ONLINE] API error: {
   status: 401,
@@ -124,7 +134,7 @@ const headers: Record<string, string> = {
 
 ```sql
 -- Verifica configurazione Spedisci.Online
-SELECT 
+SELECT
   name,
   provider_id,
   base_url,
@@ -138,6 +148,7 @@ ORDER BY is_default DESC, created_at DESC;
 ```
 
 **Verifica**:
+
 - ✅ `base_url` contiene `spedisci.online`
 - ✅ `base_url` contiene `/api/v2`
 - ✅ `base_url` corretto (demo vs production)

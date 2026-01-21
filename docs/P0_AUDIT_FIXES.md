@@ -9,6 +9,7 @@
 ## 1. SuperAdmin Wallet Bypass Kill-Switch + Alerting ✅ IMPLEMENTED
 
 ### Problema Originale
+
 SuperAdmin poteva bypassare il wallet check senza controlli, logging limitato, e nessun kill-switch.
 
 ### Soluzione Implementata
@@ -16,17 +17,20 @@ SuperAdmin poteva bypassare il wallet check senza controlli, logging limitato, e
 #### 1.1 Kill-Switch Environment Variable
 
 **Env Var**: `ALLOW_SUPERADMIN_WALLET_BYPASS`
+
 - **Default**: `undefined` (bypass DISABILITATO)
 - **Produzione**: `false` (bypass DISABILITATO)
 - **Testing/Emergenza**: `true` (bypass ABILITATO)
 
 **Comportamento**:
+
 - Se `undefined` o `false` → SuperAdmin paga come utenti normali
 - Se `true` → Bypass consentito MA ogni uso loggato come CRITICAL security event
 
 #### 1.2 Security Event Logging
 
 Ogni bypass viene tracciato in `audit_logs` con:
+
 - `action`: `'superadmin_wallet_bypass'`
 - `severity`: `'CRITICAL'`
 - `actor_id`: SuperAdmin che esegue bypass
@@ -42,6 +46,7 @@ Ogni bypass viene tracciato in `audit_logs` con:
 #### 1.3 Alerting Setup (TODO)
 
 **Query per monitoring system** (Grafana/Datadog/custom):
+
 ```sql
 SELECT
   created_at,
@@ -58,6 +63,7 @@ ORDER BY created_at DESC;
 ```
 
 **Alert rule**:
+
 - Trigger: ANY `superadmin_wallet_bypass` event
 - Severity: CRITICAL
 - Notification: Slack #security + Email team lead
@@ -80,6 +86,7 @@ ORDER BY created_at DESC;
 #### 1.5 Testing
 
 **Test manuale**:
+
 ```bash
 # Test 1: Bypass disabilitato (default)
 # Env: ALLOW_SUPERADMIN_WALLET_BYPASS non configurato
@@ -95,6 +102,7 @@ ORDER BY created_at DESC;
 ```
 
 **Smoke test** (da creare):
+
 ```typescript
 // scripts/smoke-test-superadmin-bypass-killswitch.ts
 // 1. Test bypass disabled
@@ -107,6 +115,7 @@ ORDER BY created_at DESC;
 ## 2. Idempotency Wallet Standalone (TODO)
 
 ### Problema
+
 `decrement_wallet_balance()` è atomico ma NON idempotent standalone.
 Se chiamato direttamente (fuori da shipment flow) → no protezione doppio addebito.
 
@@ -171,7 +180,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 3. GDPR OCR Compliance (TODO)
 
 ### Problema
+
 OCR processa PII (immagini con indirizzi) senza:
+
 - Consent esplicito
 - Data retention policy
 - DPA con provider (Google/Anthropic)
@@ -181,10 +192,12 @@ OCR processa PII (immagini con indirizzi) senza:
 #### 3.1 Consent Flow
 
 UI modifiche:
+
 - `components/ocr/ocr-upload.tsx`: Checkbox consent obbligatorio
 - Testo: "Accetto che l'immagine caricata sia processata da servizi AI esterni (Google Vision/Anthropic Claude) per l'estrazione dati. L'immagine sarà eliminata automaticamente dopo 7 giorni."
 
 DB migration:
+
 ```sql
 -- User preferences table
 ALTER TABLE users
@@ -204,6 +217,7 @@ CREATE TABLE ocr_uploads (
 #### 3.2 Data Retention Policy
 
 CRON job cleanup:
+
 ```typescript
 // app/api/cron/ocr-cleanup/route.ts
 // DELETE FROM ocr_uploads WHERE created_at < NOW() - INTERVAL '7 days'
@@ -213,11 +227,13 @@ CRON job cleanup:
 #### 3.3 Kill-Switch
 
 Env var: `ENABLE_OCR_VISION=true` (default: `true`)
+
 - Se `false` → OCR Vision disabilitato, fallback solo Tesseract local
 
 #### 3.4 DPA Documentation
 
 File: `docs/GDPR_DPA_PROCESSORS.md`
+
 - Google Cloud Vision DPA reference
 - Anthropic Claude DPA reference
 - Privacy Policy update con disclosure
@@ -229,7 +245,9 @@ File: `docs/GDPR_DPA_PROCESSORS.md`
 ## 4. Compensation Queue Observability (TODO)
 
 ### Problema
+
 Compensation queue implementata ma:
+
 - Zero metriche
 - No dashboard
 - No alerting
@@ -240,12 +258,14 @@ Compensation queue implementata ma:
 #### 4.1 Dashboard Metriche
 
 Grafana dashboard (o custom):
+
 - Pending records (status='pending')
 - Expired records (status='expired')
 - Average resolution time
 - Failure rate per action type
 
 Query:
+
 ```sql
 -- Pending > 24h (ALERT)
 SELECT COUNT(*)
@@ -265,12 +285,14 @@ GROUP BY action;
 #### 4.2 Alerting
 
 Alert rules:
+
 - `pending > 24h` AND `count > 0` → Slack #eng-alerts
 - `pending > 7d` AND `count > 0` → Email + PagerDuty
 
 #### 4.3 Dead-Letter Queue
 
 Migration:
+
 ```sql
 ALTER TABLE compensation_queue
 ADD COLUMN retry_count INTEGER DEFAULT 0,
@@ -293,6 +315,7 @@ CREATE TABLE compensation_queue_dlq (
 ### Environment Variables
 
 **Produzione**:
+
 ```env
 # P0.1: SuperAdmin bypass (DISABILITATO in prod)
 ALLOW_SUPERADMIN_WALLET_BYPASS=false
@@ -302,6 +325,7 @@ ENABLE_OCR_VISION=true
 ```
 
 **Staging**:
+
 ```env
 # Testing bypass scenarios
 ALLOW_SUPERADMIN_WALLET_BYPASS=true

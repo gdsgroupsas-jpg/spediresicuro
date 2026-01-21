@@ -12,14 +12,17 @@
 ### ✅ P0-1: SQL Injection in `listPriceListsAction()`
 
 **File modificati**:
+
 - `actions/price-lists.ts` (linee 455-462)
 - `supabase/migrations/071_fix_p0_security_vulnerabilities.sql`
 
 **Cosa è stato fixato**:
+
 - ❌ **PRIMA**: Template literal `${user.id}` in `.or()` query → SQL injection risk
 - ✅ **DOPO**: RPC function `get_user_price_lists()` con parametri typed
 
 **Codice**:
+
 ```typescript
 // ❌ VULNERABILE
 query = query.or(`
@@ -27,7 +30,7 @@ query = query.or(`
 `);
 
 // ✅ SICURO
-const { data, error } = await supabaseAdmin.rpc("get_user_price_lists", {
+const { data, error } = await supabaseAdmin.rpc('get_user_price_lists', {
   p_user_id: user.id, // Parametro typed, no injection
   p_courier_id: filters?.courierId || null,
   p_status: filters?.status || null,
@@ -40,14 +43,17 @@ const { data, error } = await supabaseAdmin.rpc("get_user_price_lists", {
 ### ✅ P0-2: Authorization Bypass in `getPriceListByIdAction()`
 
 **File modificati**:
+
 - `actions/price-lists.ts` (linee 342-412)
 - `supabase/migrations/071_fix_p0_security_vulnerabilities.sql`
 
 **Cosa è stato fixato**:
+
 - ❌ **PRIMA**: Nessun check ownership → qualsiasi user poteva leggere qualsiasi listino
 - ✅ **DOPO**: Check authorization via `can_access_price_list()` + audit logging
 
 **Codice**:
+
 ```typescript
 // ❌ VULNERABILE
 const priceList = await getPriceListById(id);
@@ -73,9 +79,11 @@ if (!canAccess) {
 ### ✅ P0-3: Path Traversal in Upload Route
 
 **File modificati**:
+
 - `app/api/price-lists/upload/route.ts` (linee 15-16, 75-144)
 
 **Cosa è stato fixato**:
+
 - ❌ **PRIMA**: Sanitization base, timestamp predicibile, no path validation
 - ✅ **DOPO**:
   - `path.basename()` per eliminare directory components
@@ -84,6 +92,7 @@ if (!canAccess) {
   - Atomic write con flag `wx` (fail se file esiste)
 
 **Codice**:
+
 ```typescript
 // ❌ VULNERABILE
 const tempFileName = `${Date.now()}-${sanitizedFileName}`;
@@ -91,18 +100,18 @@ const tempFilePath = join(uploadsDir, tempFileName);
 await writeFile(tempFilePath, buffer); // NO validation
 
 // ✅ SICURO
-const randomId = crypto.randomBytes(16).toString("hex");
+const randomId = crypto.randomBytes(16).toString('hex');
 const tempFileName = `${randomId}-${path.basename(safeFileName)}`;
 const tempFilePath = path.join(uploadsDir, tempFileName);
 
 // Verifica path traversal
 const resolvedPath = path.resolve(tempFilePath);
 if (!resolvedPath.startsWith(path.resolve(uploadsDir))) {
-  return { error: "Path traversal detected" };
+  return { error: 'Path traversal detected' };
 }
 
 // Write atomico
-await writeFile(tempFilePath, buffer, { flag: "wx" });
+await writeFile(tempFilePath, buffer, { flag: 'wx' });
 ```
 
 ---
@@ -110,9 +119,11 @@ await writeFile(tempFilePath, buffer, { flag: "wx" });
 ### ✅ P0-4: CSV Injection
 
 **File modificati**:
+
 - `app/api/price-lists/upload/route.ts` (linee 196-256)
 
 **Cosa è stato fixato**:
+
 - ❌ **PRIMA**: Nessuna sanitizzazione celle CSV → formulas executable in Excel
 - ✅ **DOPO**: Funzione `sanitizeCSVCell()` che:
   - Detecta caratteri pericolosi: `= + - @ | % \t \r`
@@ -120,27 +131,29 @@ await writeFile(tempFilePath, buffer, { flag: "wx" });
   - Rimuove tab e carriage return interni
 
 **Codice**:
+
 ```typescript
 // ❌ VULNERABILE
-const values = lines[i].split(",").map((v) => v.trim());
+const values = lines[i].split(',').map((v) => v.trim());
 row[header] = values[index]; // NO sanitization!
 
 // ✅ SICURO
 function sanitizeCSVCell(value: string): string {
   const trimmed = value.trim();
-  const dangerousChars = ["=", "+", "-", "@", "|", "%", "\t", "\r"];
+  const dangerousChars = ['=', '+', '-', '@', '|', '%', '\t', '\r'];
 
-  if (dangerousChars.some(char => trimmed.startsWith(char))) {
+  if (dangerousChars.some((char) => trimmed.startsWith(char))) {
     return `'${trimmed}`; // Prefix con apostrofo
   }
 
-  return trimmed.replace(/[\r\t]/g, " ");
+  return trimmed.replace(/[\r\t]/g, ' ');
 }
 
 row[header] = sanitizeCSVCell(values[index]);
 ```
 
 **Test cases protetti**:
+
 - `=1+1` → `'=1+1`
 - `@SUM(A1:A10)` → `'@SUM(A1:A10)`
 - `|nc -e /bin/sh` → `'|nc -e /bin/sh`
@@ -151,6 +164,7 @@ row[header] = sanitizeCSVCell(values[index]);
 ## 🎁 BONUS FEATURES AGGIUNTI
 
 ### 1. Security Audit Log Table
+
 ```sql
 CREATE TABLE security_audit_log (
   id UUID PRIMARY KEY,
@@ -168,6 +182,7 @@ CREATE TABLE security_audit_log (
 **Uso**: Traccia automaticamente tentativi di accesso non autorizzato
 
 ### 2. Performance Indexes
+
 ```sql
 CREATE INDEX idx_price_lists_created_by_list_type
   ON price_lists(created_by, list_type);
@@ -178,6 +193,7 @@ CREATE INDEX idx_pla_user_list_active
 ```
 
 ### 3. Helper Functions
+
 - `log_unauthorized_access()`: Log security events
 - `can_access_price_list()`: Authorization check riutilizzabile
 - `get_user_price_lists()`: Query sicura per listing
@@ -187,11 +203,13 @@ CREATE INDEX idx_pla_user_list_active
 ## 🧪 TESTING
 
 ### Test eseguiti:
+
 ✅ Migration SQL applicata con successo (Supabase)
 ✅ TypeScript compila senza errori
 ✅ NO regressioni (funzionalità esistenti intatte)
 
 ### Test da eseguire manualmente:
+
 ```bash
 # 1. Test CSV injection
 # - Upload CSV con celle tipo: =1+1, @SUM(), |cmd
@@ -215,22 +233,26 @@ CREATE INDEX idx_pla_user_list_active
 ## 📊 IMPACT ANALYSIS
 
 ### Security Improvements
+
 - **SQL Injection**: ❌ → ✅ (100% fixed, parametri typed)
 - **Authorization**: ❌ → ✅ (100% fixed, check su TUTTE le operations)
 - **Path Traversal**: ❌ → ✅ (100% fixed, path validation + atomic write)
 - **CSV Injection**: ❌ → ✅ (100% fixed, sanitizzazione universale)
 
 ### Performance Impact
+
 - ✅ **Neutral**: RPC functions usano stessi indici di prima
 - ✅ **Bonus**: Nuovi indici ottimizzano query comuni
 - ✅ **Single query**: `can_access_price_list()` è più veloce di check separati
 
 ### Code Maintainability
+
 - ✅ **Migliore**: Logic centralizzata in RPC functions
 - ✅ **Riusabile**: `can_access_price_list()` usabile in altre operations
 - ✅ **Testabile**: Funzioni SQL isolate e testabili
 
 ### Breaking Changes
+
 - ❌ **NESSUNO**: Retrocompatibilità 100%
 - ✅ Funzioni esistenti continuano a funzionare
 - ✅ RPC functions sono addizionali, non sostitutive
@@ -240,18 +262,22 @@ CREATE INDEX idx_pla_user_list_active
 ## 🚀 DEPLOYMENT CHECKLIST
 
 ### Pre-Deployment
+
 - [x] Migration SQL eseguita su Supabase Production ✅
 - [x] TypeScript compila senza errori ✅
 - [x] Code review completato ✅
 
 ### Post-Deployment
+
 - [ ] Monitora logs per `[SECURITY]` warnings
 - [ ] Verifica `security_audit_log` table per unauthorized attempts
 - [ ] Run E2E tests: `npm test tests/unit/price-lists-phase3-supplier.test.ts`
 - [ ] Verifica metriche errori 400/500 (dovrebbero essere stabili)
 
 ### Rollback Plan
+
 Se ci sono problemi:
+
 1. **Revert TypeScript changes**: `git revert <commit>`
 2. **Migration SQL NON serve rollback** (aggiunge solo funzioni, non modifica esistenti)
 3. **Applicazioni continuano a funzionare** con vecchie query
@@ -260,20 +286,21 @@ Se ci sono problemi:
 
 ## 📈 SCORE IMPROVEMENT
 
-| Categoria | Prima | Dopo | Delta |
-|-----------|-------|------|-------|
-| **Architettura** | 8/10 | 9/10 | +1 |
-| **API Security** | 6.5/10 | 10/10 | **+3.5** |
-| **Authorization** | 9/10 | 10/10 | +1 |
-| **Data Integrity** | 8.5/10 | 9/10 | +0.5 |
-| **Audit Trail** | 7/10 | 9/10 | +2 |
-| **OVERALL** | **7.5/10** | **9.5/10** | **+2** 🎉 |
+| Categoria          | Prima      | Dopo       | Delta     |
+| ------------------ | ---------- | ---------- | --------- |
+| **Architettura**   | 8/10       | 9/10       | +1        |
+| **API Security**   | 6.5/10     | 10/10      | **+3.5**  |
+| **Authorization**  | 9/10       | 10/10      | +1        |
+| **Data Integrity** | 8.5/10     | 9/10       | +0.5      |
+| **Audit Trail**    | 7/10       | 9/10       | +2        |
+| **OVERALL**        | **7.5/10** | **9.5/10** | **+2** 🎉 |
 
 ---
 
 ## 🎯 NEXT STEPS (Per arrivare a 10/10)
 
 ### P1 (Important but not critical)
+
 1. **Idempotency su clone/assign operations** (+0.2 punti)
    - Aggiungi header `X-Idempotency-Key` alle Server Actions
    - Implementa idempotency lock pattern (già esistente per shipments)
@@ -287,6 +314,7 @@ Se ci sono problemi:
    - Aggiungi integration tests per RPC functions
 
 ### P2 (Nice to have)
+
 - Structured alerts su security events (Sentry/DataDog)
 - Rate limiting su upload endpoint
 - Content-type validation via magic bytes (file-type library)

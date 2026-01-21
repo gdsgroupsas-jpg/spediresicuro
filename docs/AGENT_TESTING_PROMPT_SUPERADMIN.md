@@ -56,13 +56,11 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 **Steps:**
 
 1. **Navigazione:**
-
    - [ ] Vai su `/dashboard/super-admin/financial`
    - [ ] Verifica che la pagina carichi senza errori
    - [ ] Controlla console browser: **NESSUN errore JavaScript**
 
 2. **Stats Cards:**
-
    - [ ] Verifica che le 8 card statistiche siano visibili:
      - Spedizioni Totali
      - Ricavi Totali
@@ -76,7 +74,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
    - [ ] Se i valori sono 0, è OK (potrebbe non esserci ancora dati)
 
 3. **Period Selector:**
-
    - [ ] Clicca sul dropdown "Period Selector"
    - [ ] Verifica che ci siano 5 opzioni:
      - Ultimi 7 giorni
@@ -88,7 +85,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
    - [ ] Controlla che non ci siano errori in console
 
 4. **Export CSV:**
-
    - [ ] Clicca sul pulsante "Export CSV"
    - [ ] Verifica che si scarichi un file CSV
    - [ ] Apri il CSV e verifica che abbia colonne corrette:
@@ -123,7 +119,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 **Steps:**
 
 1. **Tab Riconciliazione:**
-
    - [ ] Clicca sul tab "Riconciliazione"
    - [ ] Verifica che la tabella sia visibile
    - [ ] Se ci sono dati, verifica colonne:
@@ -131,7 +126,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
    - [ ] Se non ci sono dati, verifica messaggio "Nessun dato disponibile"
 
 2. **Filtri (se presenti):**
-
    - [ ] Verifica che i filtri funzionino (se presenti)
    - [ ] Testa filtro per stato (pending, matched, discrepancy)
 
@@ -154,7 +148,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 **Steps:**
 
 1. **Tab Alert:**
-
    - [ ] Clicca sul tab "Alert"
    - [ ] Verifica che la tabella sia visibile
    - [ ] Se ci sono alert, verifica colonne:
@@ -182,7 +175,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 **Steps:**
 
 1. **Menu Navigazione:**
-
    - [ ] Verifica che nel menu laterale ci sia la sezione "Finanza Piattaforma"
    - [ ] Verifica che ci siano 2 voci:
      - Financial Dashboard
@@ -214,13 +206,11 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 **Steps:**
 
 1. **Preparazione:**
-
    - [ ] Vai su `/dashboard/spedizioni`
    - [ ] Clicca su "Nuova Spedizione" o "Crea Spedizione"
    - [ ] Prepara dati di test (usa indirizzi reali ma destinatario di test)
 
 2. **Creazione Spedizione:**
-
    - [ ] Compila il form di creazione spedizione:
      - Mittente: usa dati validi
      - Destinatario: usa dati validi (puoi usare indirizzo di test)
@@ -231,7 +221,6 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
    - [ ] **NOTA:** Annota il tracking number o ID spedizione per cancellarla dopo
 
 3. **Verifica Financial Tracking:**
-
    - [ ] Vai su `/dashboard/super-admin/financial`
    - [ ] Verifica che la nuova spedizione appaia nei dati:
      - Controlla "Spedizioni Totali" (dovrebbe aumentare di 1)
@@ -273,12 +262,10 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 **Steps:**
 
 1. **Apri Supabase SQL Editor:**
-
    - [ ] Vai su Supabase Dashboard → SQL Editor
    - [ ] **IMPORTANTE:** Assicurati di essere loggato come utente normale (NON service_role)
 
 2. **Test Permission Denied (dovrebbe FALLIRE):**
-
    - [ ] Esegui questa query (dovrebbe dare errore "permission denied"):
 
    ```sql
@@ -302,6 +289,7 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 
 3. **Verifica Permessi (Query Read-Only):**
    - [ ] Esegui questa query per verificare i permessi:
+
    ```sql
    SELECT
      routine_name,
@@ -316,6 +304,7 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
      )
      AND grantee = 'PUBLIC';
    ```
+
    - [ ] **ATTESO:** 0 righe (nessun permesso PUBLIC)
    - [ ] **SE CI SONO RIGHE:** ⚠️ **VULNERABILITÀ!** Segnala immediatamente
 

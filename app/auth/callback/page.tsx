@@ -1,6 +1,6 @@
 /**
  * Callback Supabase Auth - Auto-login dopo Conferma Email
- * 
+ *
  * Gestisce il redirect dopo click link conferma email.
  * Imposta sessione Supabase, sincronizza con NextAuth, pulisce URL e reindirizza a dashboard.
  */
@@ -23,14 +23,14 @@ export default function AuthCallbackPage() {
       try {
         // Leggi hash dall'URL (Supabase passa token qui)
         const hash = window.location.hash;
-        
+
         console.log('🔐 [AUTH CALLBACK] Hash ricevuto:', hash ? 'presente' : 'assente');
-        
+
         // Verifica se contiene token Supabase
         const hasAccessToken = hash.includes('access_token=');
         const hasRefreshToken = hash.includes('refresh_token=');
         const isSignup = hash.includes('type=signup') || hash.includes('type=recovery');
-        
+
         if (!hasAccessToken && !hasRefreshToken && !isSignup) {
           console.error('❌ [AUTH CALLBACK] Nessun token rilevato nel hash, redirect a /login');
           // ⚠️ P0: Fail-safe - redirect a /login (NON "/") se hash non contiene token
@@ -45,7 +45,7 @@ export default function AuthCallbackPage() {
         const hashParams = new URLSearchParams(hash.substring(1)); // Rimuovi #
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        
+
         if (!accessToken || !refreshToken) {
           throw new Error('Token mancanti nel hash');
         }
@@ -53,11 +53,14 @@ export default function AuthCallbackPage() {
         console.log('✅ [AUTH CALLBACK] Token estratti dal hash');
 
         // Imposta sessione Supabase
-        const { data: { session: supabaseSession }, error: setError } = await supabase.auth.setSession({
+        const {
+          data: { session: supabaseSession },
+          error: setError,
+        } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
-        
+
         if (setError || !supabaseSession?.user) {
           console.error('❌ [AUTH CALLBACK] Errore impostazione sessione Supabase:', setError);
           throw setError || new Error('Sessione non disponibile');
@@ -72,16 +75,12 @@ export default function AuthCallbackPage() {
         setMessage('Email confermata! Accesso in corso...');
 
         // ⚠️ CRITICO: Pulisci URL PRIMA di fare login NextAuth
-        window.history.replaceState(
-          null,
-          '',
-          window.location.pathname + window.location.search
-        );
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
         console.log('✅ [AUTH CALLBACK] URL pulito');
 
         // ⚠️ CRITICO: Ottieni token temporaneo per auto-login NextAuth
         console.log('🔄 [AUTH CALLBACK] Richiesta token temporaneo per auto-login...');
-        
+
         const response = await fetch('/api/auth/supabase-callback', {
           method: 'POST',
           headers: {
@@ -101,7 +100,7 @@ export default function AuthCallbackPage() {
         }
 
         const { success, tempToken, redirectTo } = await response.json();
-        
+
         if (!success || !tempToken) {
           throw new Error('Token temporaneo non disponibile');
         }
@@ -140,12 +139,11 @@ export default function AuthCallbackPage() {
         console.log('🔄 [AUTH CALLBACK] Redirect a:', finalRedirect, '(server-authoritative)');
         router.refresh();
         router.push(finalRedirect);
-
       } catch (error: any) {
         console.error('❌ [AUTH CALLBACK] Errore:', error);
         setStatus('error');
         setMessage('Errore durante conferma email. Riprova il login.');
-        
+
         // Redirect a login dopo 2 secondi
         setTimeout(() => {
           router.replace('/login?error=callback_failed');
@@ -182,4 +180,3 @@ export default function AuthCallbackPage() {
     </div>
   );
 }
-

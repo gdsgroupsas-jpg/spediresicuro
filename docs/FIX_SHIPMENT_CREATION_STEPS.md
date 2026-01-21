@@ -3,6 +3,7 @@
 ## 🎯 Obiettivo
 
 Risolvere il problema di creazione spedizione in produzione verificando:
+
 1. Variabili ambiente Vercel
 2. Schema database Supabase
 3. RLS policies
@@ -58,6 +59,7 @@ npm install --save-dev supabase
 ```
 
 Oppure:
+
 ```powershell
 # Con Scoop (Windows)
 scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
@@ -75,6 +77,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 ```
 
 **Dove trovare PROJECT_REF**:
+
 - Supabase Dashboard → Settings → General → Reference ID
 
 ### 2.3 Verifica Schema
@@ -92,7 +95,7 @@ SELECT column_name, data_type, is_nullable
 FROM information_schema.columns
 WHERE table_name = 'shipments'
 AND column_name IN (
-  'id', 'tracking_number', 'status', 
+  'id', 'tracking_number', 'status',
   'sender_name', 'recipient_name', 'weight',
   'created_at', 'updated_at'
 )
@@ -286,6 +289,7 @@ Cerca nei log:
 ## ✅ Dopo Fix Completato
 
 1. **Rimuovi endpoint test** (opzionale):
+
    ```bash
    rm app/api/test-supabase/route.ts
    ```

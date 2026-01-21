@@ -62,33 +62,39 @@ git diff master..claude-clea-f3f14e -- path/to/file.ts
 Basandomi sul codice attuale, ecco le aree che Claude potrebbe aver modificato:
 
 ### 1. **Sistema di Autenticazione**
+
 - File: `lib/auth-config.ts`
 - File: `app/login/page.tsx`
 - Possibili modifiche: miglioramenti al flusso di login, gestione sessioni
 
 ### 2. **Gestione Dati Cliente**
+
 - File: `app/api/user/dati-cliente/route.ts`
 - File: `app/dashboard/dati-cliente/page.tsx`
 - Possibili modifiche: validazioni, campi obbligatori, UX
 
 ### 3. **Dashboard e Navigazione**
+
 - File: `app/dashboard/page.tsx`
 - File: `components/dashboard-sidebar.tsx`
 - File: `lib/config/navigationConfig.ts`
 - Possibili modifiche: layout, navigazione, componenti UI
 
 ### 4. **Integrazione AI (Anne Assistant)**
+
 - File: `app/api/ai/agent-chat/route.ts`
 - File: `app/api/anne/chat/route.ts`
 - File: `components/anne/`
 - Possibili modifiche: miglioramenti all'integrazione Claude AI, prompt, tools
 
 ### 5. **Automation Service**
+
 - File: `automation-service/src/agent.ts`
 - File: `automation-service/src/index.ts`
 - Possibili modifiche: refactoring, correzioni bug, miglioramenti performance
 
 ### 6. **Database e Supabase**
+
 - File: `lib/database.ts`
 - File: `supabase/migrations/`
 - Possibili modifiche: schema, query, ottimizzazioni
@@ -174,5 +180,3 @@ git diff master..claude-clea-f3f14e > modifiche-claude.diff
 ---
 
 **Stato Analisi:** ⏳ In attesa di accesso al repository Git o informazioni dettagliate
-
-

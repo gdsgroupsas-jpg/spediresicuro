@@ -7,33 +7,33 @@
 ```sql
 CREATE TABLE IF NOT EXISTS public.courier_configs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
+
   -- Identificazione
   name TEXT NOT NULL, -- Es: "Account Standard", "Account VIP", "Account Dropshipping"
   provider_id TEXT NOT NULL, -- Es: 'spedisci_online', 'gls', 'brt', etc.
-  
+
   -- Credenziali API
   api_key TEXT NOT NULL, -- Chiave API segreta (crittografare in produzione)
   api_secret TEXT, -- Secret opzionale (se richiesto dal provider)
   base_url TEXT NOT NULL, -- Es: 'https://ecommerceitalia.spedisci.online/api/v2'
-  
+
   -- Configurazione Contratti
   contract_mapping JSONB DEFAULT '{}', -- Mappa dinamica servizi/contratti
   -- Esempio: { "poste": "CODE123", "gls": "CODE456", "brt": "CODE789" }
-  
+
   -- Stato e Priorità
   is_active BOOLEAN DEFAULT true,
   is_default BOOLEAN DEFAULT false, -- Se true, usata come fallback per utenti senza assegnazione
-  
+
   -- Metadata
   description TEXT, -- Descrizione opzionale della configurazione
   notes TEXT, -- Note interne per admin
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by TEXT, -- Email dell'admin che ha creato la configurazione
-  
+
   -- Vincoli
   CONSTRAINT valid_contract_mapping CHECK (jsonb_typeof(contract_mapping) = 'object')
 );
@@ -48,8 +48,8 @@ CREATE INDEX IF NOT EXISTS idx_courier_configs_default ON public.courier_configs
 CREATE INDEX IF NOT EXISTS idx_courier_configs_provider_active ON public.courier_configs(provider_id, is_active);
 
 -- Unique index parziale: solo una config default per provider
-CREATE UNIQUE INDEX IF NOT EXISTS idx_courier_configs_unique_default 
-  ON public.courier_configs(provider_id) 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_courier_configs_unique_default
+  ON public.courier_configs(provider_id)
   WHERE is_default = true;
 ```
 
@@ -73,7 +73,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     cc.id,
     cc.name,
     cc.provider_id,
@@ -92,7 +92,7 @@ BEGIN
       -- Caso 2: Configurazione default (solo se utente non ha assegnazione)
       (cc.is_default = true AND (SELECT assigned_config_id FROM public.users WHERE id = p_user_id) IS NULL)
     )
-  ORDER BY 
+  ORDER BY
     -- Priorità: prima assigned, poi default
     CASE WHEN cc.id = (SELECT assigned_config_id FROM public.users WHERE id = p_user_id) THEN 0 ELSE 1 END
   LIMIT 1;
@@ -123,7 +123,7 @@ npm run ts-node scripts/check-poste-config.ts
 **Query SQL Manuale (da eseguire in Supabase SQL Editor):**
 
 ```sql
-SELECT 
+SELECT
   id,
   name,
   provider_id,
@@ -144,6 +144,7 @@ ORDER BY created_at DESC;
 **Output Atteso:**
 
 Lo script verificherà:
+
 - ✅ Numero di configurazioni Poste trovate
 - ✅ Dettagli di ogni configurazione (ID, nome, base_url, stato)
 - ✅ Presenza di api_key e api_secret (criptati)
@@ -164,6 +165,7 @@ npx tsx scripts/test-decrypt.ts
 ```
 
 **Requisiti:**
+
 - ✅ `ENCRYPTION_KEY` deve essere presente in `.env.local`
 - ✅ Deve essere la stessa chiave usata per criptare le credenziali
 - ✅ Deve esserci almeno una configurazione Poste attiva nel database
@@ -229,4 +231,3 @@ Dopo aver verificato il database:
 2. ✅ Se decriptazione fallisce: Verifica `ENCRYPTION_KEY` o ricrea configurazione
 3. ✅ Se configurazione non attiva: Attiva tramite UI o query SQL
 4. ✅ Se CDC mancante: Aggiungi nel `contract_mapping` tramite wizard
-

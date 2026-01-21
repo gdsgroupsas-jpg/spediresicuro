@@ -1,11 +1,11 @@
 /**
  * Value Stats Service - P4 Task 1
- * 
+ *
  * Calcola statistiche di valore per l'utente:
  * - Minuti risparmiati (tempo manuale vs tempo con Anne)
  * - Errori evitati (fallback/retry)
  * - Confidence media
- * 
+ *
  * ⚠️ SICUREZZA:
  * - RLS enforcement: usa requireSafeAuth()
  * - NO PII: solo aggregazioni, mai dati raw
@@ -17,10 +17,7 @@ import { supabase } from '@/lib/db/client';
 const MANUAL_PREVENTIVE_TIME_MINUTES = parseFloat(
   process.env.MANUAL_PREVENTIVE_TIME_MINUTES || '5'
 );
-const MIN_REQUESTS_FOR_STATS = parseInt(
-  process.env.MIN_REQUESTS_FOR_STATS || '3',
-  10
-);
+const MIN_REQUESTS_FOR_STATS = parseInt(process.env.MIN_REQUESTS_FOR_STATS || '3', 10);
 
 export interface ValueStats {
   totalRequests: number;
@@ -32,7 +29,7 @@ export interface ValueStats {
 
 /**
  * Calcola statistiche di valore per un utente
- * 
+ *
  * @export - Esportato per test e route
  */
 export async function calculateValueStats(userId: string): Promise<ValueStats> {
@@ -78,7 +75,7 @@ export async function calculateValueStats(userId: string): Promise<ValueStats> {
   // Stima: tempo manuale = 5 min * numero richieste
   // Tempo con Anne = somma duration_ms da telemetria (se disponibile) o stima
   const manualTimeMinutes = totalRequests * MANUAL_PREVENTIVE_TIME_MINUTES;
-  
+
   // Per ora, stima conservativa: Anne risparmia 60% del tempo manuale
   // TODO: Usare duration_ms reale da telemetria quando disponibile
   const estimatedAnneTimeMinutes = manualTimeMinutes * 0.4;
@@ -94,12 +91,12 @@ export async function calculateValueStats(userId: string): Promise<ValueStats> {
   for (const session of sessions || []) {
     try {
       const state = session.state as Record<string, unknown>;
-      
+
       // Errori evitati: se ci sono validationErrors, significa che Anne li ha rilevati
       if (state?.validationErrors && Array.isArray(state.validationErrors)) {
         errorsAvoided += state.validationErrors.length;
       }
-      
+
       // Confidence score
       if (typeof state?.confidenceScore === 'number' && state.confidenceScore > 0) {
         totalConfidence += state.confidenceScore;
@@ -112,9 +109,8 @@ export async function calculateValueStats(userId: string): Promise<ValueStats> {
   }
 
   // 4. Calcola confidence media
-  const averageConfidence = confidenceCount > 0
-    ? Math.round((totalConfidence / confidenceCount) * 10) / 10
-    : 0;
+  const averageConfidence =
+    confidenceCount > 0 ? Math.round((totalConfidence / confidenceCount) * 10) / 10 : 0;
 
   return {
     totalRequests,
@@ -124,4 +120,3 @@ export async function calculateValueStats(userId: string): Promise<ValueStats> {
     hasEnoughData: true,
   };
 }
-

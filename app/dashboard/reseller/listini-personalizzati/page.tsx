@@ -1,6 +1,6 @@
 /**
  * Dashboard Reseller: Gestione Listini Personalizzati
- * 
+ *
  * Interfaccia per Reseller per gestire listini personalizzati per sub-users
  */
 
@@ -9,11 +9,30 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { FileText, Plus, Search, Users, Eye, Edit, Trash2, Calendar, Copy, FileSpreadsheet, Play, Pause } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Search,
+  Users,
+  Eye,
+  Edit,
+  Trash2,
+  Calendar,
+  Copy,
+  FileSpreadsheet,
+  Play,
+  Pause,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import DashboardNav from '@/components/dashboard-nav';
 import { CustomPriceListForm } from '@/components/listini/custom-price-list-form';
 import { CreateCustomerPriceListDialog } from '@/components/listini/create-customer-price-list-dialog';
@@ -63,7 +82,7 @@ export default function ResellerListiniPersonalizzatiPage() {
         if (response.ok) {
           const data = await response.json();
           const userData = data.user || data;
-          
+
           if (!userData.is_reseller) {
             router.push('/dashboard?error=unauthorized');
             return;
@@ -72,11 +91,13 @@ export default function ResellerListiniPersonalizzatiPage() {
           // Carica sub-users
           const subUsersResult = await getSubUsers();
           if (subUsersResult.success && subUsersResult.subUsers) {
-            setSubUsers(subUsersResult.subUsers.map(u => ({
-              id: u.id,
-              email: u.email,
-              name: u.name || undefined,
-            })));
+            setSubUsers(
+              subUsersResult.subUsers.map((u) => ({
+                id: u.id,
+                email: u.email,
+                name: u.name || undefined,
+              }))
+            );
           }
 
           // Carica listini personalizzati
@@ -96,10 +117,10 @@ export default function ResellerListiniPersonalizzatiPage() {
       setIsLoading(true);
       // Carica solo listini personalizzati (list_type = 'custom')
       const result = await listPriceListsAction();
-      
+
       if (result.success && result.priceLists) {
         // Filtra solo listini personalizzati
-        const customLists = result.priceLists.filter(pl => pl.list_type === 'custom');
+        const customLists = result.priceLists.filter((pl) => pl.list_type === 'custom');
         setPriceLists(customLists);
       } else {
         toast.error(result.error || 'Errore caricamento listini');
@@ -114,7 +135,9 @@ export default function ResellerListiniPersonalizzatiPage() {
 
   const handleCreate = () => {
     if (subUsers.length === 0) {
-      toast.error('Non hai sub-users. Crea prima dei clienti per assegnare listini personalizzati.');
+      toast.error(
+        'Non hai sub-users. Crea prima dei clienti per assegnare listini personalizzati.'
+      );
       return;
     }
     setEditingPriceList(null);
@@ -136,7 +159,7 @@ export default function ResellerListiniPersonalizzatiPage() {
 
     try {
       const result = await deletePriceListAction(priceListToDelete);
-      
+
       if (result.success) {
         toast.success('Listino eliminato con successo');
         setShowDeleteDialog(false);
@@ -201,8 +224,8 @@ export default function ResellerListiniPersonalizzatiPage() {
   // Ottieni nome utente assegnato
   const getUserName = (userId?: string) => {
     if (!userId) return '-';
-    const user = subUsers.find(u => u.id === userId);
-    return user ? (user.name || user.email) : userId.substring(0, 8) + '...';
+    const user = subUsers.find((u) => u.id === userId);
+    return user ? user.name || user.email : userId.substring(0, 8) + '...';
   };
 
   return (
@@ -229,7 +252,11 @@ export default function ResellerListiniPersonalizzatiPage() {
               <Copy className="w-4 h-4" />
               Clona da Fornitore
             </Button>
-            <Button onClick={handleCreate} className="flex items-center gap-2" disabled={subUsers.length === 0}>
+            <Button
+              onClick={handleCreate}
+              className="flex items-center gap-2"
+              disabled={subUsers.length === 0}
+            >
               <Plus className="w-4 h-4" />
               Crea Vuoto
             </Button>
@@ -265,10 +292,7 @@ export default function ResellerListiniPersonalizzatiPage() {
               </div>
             </div>
             <div className="w-full md:w-48">
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-              >
+              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
                 <option value="all">Tutti gli status</option>
                 <option value="draft">Bozza</option>
                 <option value="active">Attivo</option>
@@ -276,10 +300,7 @@ export default function ResellerListiniPersonalizzatiPage() {
               </Select>
             </div>
             <div className="w-full md:w-48">
-              <Select
-                value={userFilter}
-                onChange={(e) => setUserFilter(e.target.value)}
-              >
+              <Select value={userFilter} onChange={(e) => setUserFilter(e.target.value)}>
                 <option value="all">Tutti gli utenti</option>
                 {subUsers.map((user) => (
                   <option key={user.id} value={user.id}>
@@ -303,8 +324,12 @@ export default function ResellerListiniPersonalizzatiPage() {
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Nessun listino personalizzato trovato</h3>
-              <p className="text-gray-500 mt-1">Crea il tuo primo listino personalizzato per un cliente.</p>
+              <h3 className="text-lg font-medium text-gray-900">
+                Nessun listino personalizzato trovato
+              </h3>
+              <p className="text-gray-500 mt-1">
+                Crea il tuo primo listino personalizzato per un cliente.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -322,33 +347,38 @@ export default function ResellerListiniPersonalizzatiPage() {
                 <tbody className="divide-y divide-gray-100">
                   {filteredPriceLists.map((priceList) => (
                     <tr key={priceList.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        {priceList.name}
-                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900">{priceList.name}</td>
                       <td className="px-6 py-4 text-gray-600">
                         {getUserName(priceList.assigned_to_user_id)}
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {priceList.version}
-                      </td>
+                      <td className="px-6 py-4 text-gray-600">{priceList.version}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          priceList.status === 'active' ? 'bg-green-50 text-green-700' :
-                          priceList.status === 'draft' ? 'bg-gray-100 text-gray-700' :
-                          'bg-gray-100 text-gray-500'
-                        }`}>
-                          {priceList.status === 'active' ? 'Attivo' :
-                           priceList.status === 'draft' ? 'Bozza' : 'Archiviato'}
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            priceList.status === 'active'
+                              ? 'bg-green-50 text-green-700'
+                              : priceList.status === 'draft'
+                                ? 'bg-gray-100 text-gray-700'
+                                : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {priceList.status === 'active'
+                            ? 'Attivo'
+                            : priceList.status === 'draft'
+                              ? 'Bozza'
+                              : 'Archiviato'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-gray-600">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          {priceList.created_at ? new Intl.DateTimeFormat('it-IT', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          }).format(new Date(priceList.created_at)) : '-'}
+                          {priceList.created_at
+                            ? new Intl.DateTimeFormat('it-IT', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              }).format(new Date(priceList.created_at))
+                            : '-'}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -365,7 +395,7 @@ export default function ResellerListiniPersonalizzatiPage() {
                               <FileSpreadsheet className="w-4 h-4" />
                             </Button>
                           )}
-                          
+
                           {/* Attiva - solo per draft */}
                           {priceList.status === 'draft' && (
                             <Button
@@ -383,7 +413,7 @@ export default function ResellerListiniPersonalizzatiPage() {
                               )}
                             </Button>
                           )}
-                          
+
                           {/* Dettagli */}
                           <Button
                             variant="ghost"
@@ -394,7 +424,7 @@ export default function ResellerListiniPersonalizzatiPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          
+
                           {/* Modifica */}
                           <Button
                             variant="ghost"
@@ -405,7 +435,7 @@ export default function ResellerListiniPersonalizzatiPage() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          
+
                           {/* Elimina */}
                           <Button
                             variant="ghost"
@@ -441,12 +471,15 @@ export default function ResellerListiniPersonalizzatiPage() {
 
         {/* Dialog Modifica Listino (esistente) */}
         {editingPriceList && (
-          <Dialog open={showCreateDialog} onOpenChange={(open) => {
-            if (!open) {
-              setShowCreateDialog(false);
-              setEditingPriceList(null);
-            }
-          }}>
+          <Dialog
+            open={showCreateDialog}
+            onOpenChange={(open) => {
+              if (!open) {
+                setShowCreateDialog(false);
+                setEditingPriceList(null);
+              }
+            }}
+          >
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Modifica Listino Personalizzato</DialogTitle>
@@ -511,4 +544,3 @@ export default function ResellerListiniPersonalizzatiPage() {
     </div>
   );
 }
-

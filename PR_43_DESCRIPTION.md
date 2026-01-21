@@ -22,6 +22,7 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 - ✅ **Geographical zone matching** improvements
 
 **Business Value**:
+
 - Resellers can now create and manage their own pricing strategies
 - Full control over margins and pricing rules
 - Complete audit trail for compliance and debugging
@@ -33,11 +34,13 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 
 ### 1️⃣ Database Migrations
 
-**Files**: 
+**Files**:
+
 - `supabase/migrations/101_reseller_clone_supplier_price_lists.sql`
 - `supabase/migrations/102_price_lists_audit_trail.sql`
 
 **Changes**:
+
 - PostgreSQL function `reseller_clone_supplier_price_list` with margin support
 - Enterprise audit trail system with `log_price_list_event` function
 - RLS policies for security
@@ -47,11 +50,13 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 ### 2️⃣ Server Actions
 
 **Files**:
+
 - `actions/reseller-price-lists.ts` (NEW)
 - `actions/price-list-entries.ts` (UPDATED)
 - `actions/price-lists.ts` (UPDATED)
 
 **Changes**:
+
 - Clone supplier price list with margin configuration
 - CSV import with validation and preview
 - CRUD operations for price list entries
@@ -60,10 +65,12 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 ### 3️⃣ Pricing Logic Improvements
 
 **Files**:
+
 - `lib/db/price-lists-advanced.ts`
 - `lib/pricing/calculator.ts`
 
 **Changes**:
+
 - `calculateBestPriceForReseller`: Selects most economical active list when multiple exist
 - `calculateWithDefaultMargin`: Distinguishes supplier cost vs final price for manually modified lists
 - `calculatePriceFromList`: Enhanced geographical matching (zone, province, region)
@@ -74,6 +81,7 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 **File**: `app/api/quotes/db/route.ts`
 
 **Changes**:
+
 - Enhanced courier name mapping with partial matching
 - Deduplication by `displayName` (keeps most economical rate)
 - Detailed logging for duplicate detection
@@ -82,11 +90,13 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 ### 5️⃣ UI Components
 
 **Files**:
+
 - `components/listini/clone-supplier-price-list-dialog.tsx` (NEW)
 - `components/listini/import-price-list-entries-dialog.tsx` (NEW)
 - `components/shipments/intelligent-quote-comparator.tsx` (UPDATED)
 
 **Changes**:
+
 - Clone dialog with margin configuration (percent/fixed/none)
 - CSV import dialog with preview and validation
 - Enhanced quote comparator with `configId` support
@@ -94,11 +104,13 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 ### 6️⃣ Dashboard Pages
 
 **Files**:
+
 - `app/dashboard/reseller/listini-personalizzati/page.tsx`
 - `app/dashboard/listini/[id]/page.tsx`
 - `app/dashboard/spedizioni/nuova/page.tsx`
 
 **Changes**:
+
 - Matrix-style preview/editing interface (consistent with supplier price list UI)
 - Full CRUD operations (add, edit, delete rows)
 - Dynamic routing section (only if multiple carriers available)
@@ -120,6 +132,7 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 ## 🧪 TESTING
 
 ### Tested Scenarios:
+
 - ✅ Clone supplier price list with different margin types
 - ✅ Create empty price list and import CSV
 - ✅ Manual editing of price list entries (add, edit, delete)
@@ -129,6 +142,7 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 - ✅ Geographical zone matching accuracy
 
 ### Test Account:
+
 - Email: `testspediresicuro+postaexpress@gmail.com`
 - All features tested and verified
 
@@ -137,12 +151,14 @@ This PR implements a **complete enterprise-grade system** for resellers to manag
 ## 📝 DOCUMENTATION
 
 **New Documentation**:
+
 - `docs/LOGICA_PREVENTIVATORE_LISTINI_PERSONALIZZATI.md` - Complete logic documentation
 - `docs/ANALISI_STRUTTURA_LISTINI_FORNITORE.md` - Supplier price list structure analysis
 - `docs/ANALISI_VINCOLO_UNICITA_CARRIER_CODE.md` - Uniqueness constraint analysis
 - `docs/INVESTIGAZIONE_DUPLICATI_CORRIERI.md` - Duplicate courier investigation
 
 **SQL Scripts**:
+
 - Test scripts for reseller clone function
 - Investigation scripts for duplicate couriers
 - Verification scripts for carrier code uniqueness

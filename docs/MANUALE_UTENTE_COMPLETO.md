@@ -103,7 +103,6 @@ Il menu laterale è organizzato in **sezioni**:
 **Cosa vedi:**
 
 - **Statistiche in tempo reale:**
-
   - Spedizioni totali
   - Spedizioni oggi/settimana/mese
   - Fatturato totale e mensile
@@ -111,7 +110,6 @@ Il menu laterale è organizzato in **sezioni**:
   - Spedizioni in transito/consegnate
 
 - **Attività recente:**
-
   - Ultime spedizioni create
   - Ultimi preventivi calcolati
 
@@ -137,7 +135,6 @@ Il menu laterale è organizzato in **sezioni**:
 
 1. **Clicca su "Nuova Spedizione"** nel menu o nella dashboard
 2. **Compila il form:**
-
    - **Mittente:** i tuoi dati (precompilati se già salvati)
    - **Destinatario:** dati del destinatario
    - **Peso:** peso del pacco (obbligatorio)
@@ -147,7 +144,6 @@ Il menu laterale è organizzato in **sezioni**:
    - **Opzioni:** Contrassegno, Assicurazione (se disponibili)
 
 3. **Vedi il preventivo:**
-
    - Il sistema calcola automaticamente il costo
    - Vedi il prezzo prima di confermare
 
@@ -176,17 +172,14 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Visualizza spedizioni:**
-
    - Vedi tutte le spedizioni in una tabella
    - Clicca su una spedizione per i dettagli
 
 2. **Filtra:**
-
    - Usa i filtri in alto per trovare spedizioni specifiche
    - Esempio: "Spedizioni di oggi" o "Solo BRT"
 
 3. **Azioni rapide:**
-
    - **Stampa etichetta** - Stampa l'etichetta spedizione
    - **Traccia** - Vedi lo stato di consegna
    - **Cancella** - Elimina una spedizione (se permesso)
@@ -209,11 +202,9 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi il saldo:**
-
    - In alto vedi quanto hai disponibile
 
 2. **Ricarica:**
-
    - Clicca "Ricarica Wallet"
    - Inserisci l'importo
    - Scegli metodo di pagamento
@@ -238,7 +229,6 @@ Il menu laterale è organizzato in **sezioni**:
 
 - **Lista utenti** completa della piattaforma
 - **Statistiche globali:**
-
   - Totale utenti
   - Totale spedizioni
   - Fatturato totale
@@ -251,13 +241,11 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Gestisci utenti:**
-
    - Vedi tutti gli utenti in una tabella
    - Filtra per ruolo, email, stato
    - Clicca su un utente per vedere i dettagli
 
 2. **Azioni utente:**
-
    - **Crea nuovo utente** - Pulsante in alto
    - **Modifica utente** - Clicca sull'utente
    - **Ricarica wallet** - Dalla pagina dettaglio utente
@@ -277,7 +265,6 @@ Il menu laterale è organizzato in **sezioni**:
 #### **Tab "Overview" (predefinito):**
 
 1. **8 Card Statistiche:**
-
    - **Spedizioni Totali** - Quante spedizioni totali
    - **Ricavi Totali** - Quanto hai incassato
    - **Costi Provider** - Quanto hai pagato ai corrieri
@@ -288,7 +275,6 @@ Il menu laterale è organizzato in **sezioni**:
    - **Ultimi 30 Giorni** - Spedizioni recenti
 
 2. **Period Selector:**
-
    - Dropdown in alto a destra
    - Scegli il periodo da visualizzare:
      - Ultimi 7 giorni
@@ -298,12 +284,10 @@ Il menu laterale è organizzato in **sezioni**:
      - Tutto il periodo
 
 3. **P&L Mensile:**
-
    - Grafico che mostra profitti/perdite per mese
    - Se non ci sono dati, vedi "Nessun dato disponibile"
 
 4. **Alert Margini:**
-
    - Se ci sono problemi, vedi alert rossi/gialli
    - Se tutto ok, vedi checkmark verde "Nessun alert attivo"
 
@@ -314,18 +298,15 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi le statistiche:**
-
    - Le card mostrano i dati in tempo reale
    - Se vedi "0", significa che non ci sono ancora dati
 
 2. **Cambia periodo:**
-
    - Clicca sul dropdown "Period Selector"
    - Scegli un periodo diverso
    - I dati si aggiornano automaticamente
 
 3. **Esporta dati:**
-
    - Clicca "Export CSV"
    - Si scarica un file Excel con tutti i dati
    - Utile per analisi in Excel o contabilità
@@ -341,7 +322,6 @@ Il menu laterale è organizzato in **sezioni**:
 **Cosa vedi:**
 
 1. **Grafico "Margini per Corriere":**
-
    - Mostra quale corriere genera più profitto
    - Barre colorate per ogni corriere
    - Se non ci sono dati, vedi "Nessun dato disponibile"
@@ -354,7 +334,6 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Analizza performance corrieri:**
-
    - Vedi quale corriere è più redditizio
    - Usa queste info per negoziare contratti migliori
 
@@ -379,12 +358,10 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi spedizioni da verificare:**
-
    - Le spedizioni con stato "pending" devono essere verificate
    - Confronta "Billed" (quanto hai addebitato) con "Costo" (quanto hai pagato)
 
 2. **Riconcilia:**
-
    - Clicca su "Riconcilia" per una spedizione
    - Scegli lo stato:
      - **Matched** - Se tutto corrisponde
@@ -418,12 +395,10 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Monitora problemi:**
-
    - Gli alert ti avvisano di problemi finanziari
    - Esempio: "5 spedizioni con margine negativo"
 
 2. **Investiga:**
-
    - Clicca su un alert per vedere i dettagli
    - Vai alla spedizione specifica per capire il problema
 
@@ -443,12 +418,10 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi listini esistenti:**
-
    - Tabella con tutti i listini master
    - Vedi: Nome, Corriere, Stato, Data creazione
 
 2. **Crea nuovo listino:**
-
    - Clicca "Crea Listino Master"
    - Compila i dati:
      - Nome (es. "GLS Standard 2025")
@@ -478,7 +451,6 @@ Il menu laterale è organizzato in **sezioni**:
 **Cosa vedi:**
 
 1. **4 Card Statistiche:**
-
    - **Totale Clienti** - Quanti clienti hai
    - **Saldo Totale Wallet** - Quanto hanno in totale nei wallet
    - **Con Listino Assegnato** - Quanti hanno un listino
@@ -495,25 +467,21 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi tutti i clienti:**
-
    - La lista mostra tutti i tuoi clienti
    - Puoi cercare per nome/email usando la barra di ricerca
 
 2. **Filtra:**
-
    - **Tutti** - Vedi tutti i clienti
    - **Con listino** - Solo clienti con listino assegnato
    - **Senza listino** - Solo clienti senza listino
 
 3. **Ordina:**
-
    - Per nome
    - Per wallet (saldo)
    - Per spedizioni
    - Per data creazione
 
 4. **Azioni rapide (menu 3 puntini):**
-
    - **Assegna Listino** - Assegna un listino a questo cliente
    - **Ricarica Wallet** - Aggiungi credito al wallet
    - **Vedi Spedizioni** - Vai alle spedizioni del cliente
@@ -542,12 +510,10 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi listini esistenti:**
-
    - Tabella con i tuoi listini fornitore
    - Vedi: Nome, Corriere, Stato
 
 2. **Crea nuovo listino:**
-
    - Clicca "Crea Listino Fornitore"
    - Scegli il corriere
    - Carica il file Excel con i prezzi (se disponibile)
@@ -577,12 +543,10 @@ Il menu laterale è organizzato in **sezioni**:
 **Come usarla:**
 
 1. **Vedi listini esistenti:**
-
    - Tabella con i tuoi listini personalizzati
    - Vedi: Nome, Corriere, Margine, Stato
 
 2. **Crea nuovo listino:**
-
    - Clicca "Crea Listino Personalizzato"
    - Scegli:
      - Nome (es. "Listino Premium Cliente X")

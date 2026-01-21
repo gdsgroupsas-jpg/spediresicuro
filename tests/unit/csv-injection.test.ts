@@ -18,7 +18,7 @@ function sanitizeCSVCell(value: string): string {
   const trimmed = value.trim();
   const dangerousChars = ['=', '+', '-', '@', '|', '%', '\t', '\r'];
 
-  if (dangerousChars.some(char => trimmed.startsWith(char))) {
+  if (dangerousChars.some((char) => trimmed.startsWith(char))) {
     return `'${trimmed}`;
   }
 
@@ -141,7 +141,7 @@ describe('CSV Parsing Integration', () => {
       'name,value,formula',
       'Alice,100,=1+1',
       'Bob,200,@SUM(A1:A10)',
-      'Charlie,300,Normal text'
+      'Charlie,300,Normal text',
     ].join('\n');
 
     await writeFile(testFilePath, maliciousCSV, 'utf-8');

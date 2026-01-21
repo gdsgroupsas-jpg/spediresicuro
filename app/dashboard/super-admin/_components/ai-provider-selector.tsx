@@ -8,10 +8,10 @@
 import { useState, useEffect } from 'react';
 import { Bot, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  getAIProviderSetting, 
-  updateAIProviderSetting, 
-  getAvailableAIProviders 
+import {
+  getAIProviderSetting,
+  updateAIProviderSetting,
+  getAvailableAIProviders,
 } from '@/actions/ai-settings';
 import { toast } from 'sonner';
 
@@ -95,9 +95,7 @@ export function AIProviderSelector() {
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Provider AI per Anne
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">Provider AI per Anne</h2>
             <p className="text-sm text-gray-500 mt-1">
               Seleziona quale provider AI utilizzare per Anne
             </p>
@@ -116,9 +114,10 @@ export function AIProviderSelector() {
                 key={provider.id}
                 className={`
                   relative border-2 rounded-xl p-4 transition-all cursor-pointer
-                  ${isSelected 
-                    ? 'border-purple-500 bg-purple-50' 
-                    : 'border-gray-200 hover:border-gray-300'
+                  ${
+                    isSelected
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300'
                   }
                   ${!hasApiKey ? 'opacity-60' : ''}
                 `}
@@ -127,16 +126,10 @@ export function AIProviderSelector() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-gray-900">
-                        {provider.name}
-                      </h3>
-                      {isSelected && (
-                        <CheckCircle2 className="w-5 h-5 text-purple-600" />
-                      )}
+                      <h3 className="font-semibold text-gray-900">{provider.name}</h3>
+                      {isSelected && <CheckCircle2 className="w-5 h-5 text-purple-600" />}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {provider.description}
-                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{provider.description}</p>
                     <div className="mt-2 flex items-center gap-4">
                       <span className="text-xs text-gray-500">
                         Modello: <span className="font-mono">{provider.model}</span>
@@ -169,14 +162,13 @@ export function AIProviderSelector() {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            <strong>Nota:</strong> Il cambio di provider richiede che le variabili d&apos;ambiente 
-            (<code className="bg-blue-100 px-1 rounded">ANTHROPIC_API_KEY</code> o{' '}
-            <code className="bg-blue-100 px-1 rounded">DEEPSEEK_API_KEY</code>) 
-            siano configurate correttamente su Vercel.
+            <strong>Nota:</strong> Il cambio di provider richiede che le variabili d&apos;ambiente (
+            <code className="bg-blue-100 px-1 rounded">ANTHROPIC_API_KEY</code> o{' '}
+            <code className="bg-blue-100 px-1 rounded">DEEPSEEK_API_KEY</code>) siano configurate
+            correttamente su Vercel.
           </p>
         </div>
       </div>
     </div>
   );
 }
-

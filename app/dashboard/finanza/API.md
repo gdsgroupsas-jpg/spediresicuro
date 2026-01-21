@@ -23,11 +23,13 @@ Fetches fiscal data for the authenticated user with role-based filtering.
 **Location**: `/app/actions/fiscal.ts`
 
 **Type Signature**:
+
 ```typescript
-function getMyFiscalData(): Promise<FiscalContext>
+function getMyFiscalData(): Promise<FiscalContext>;
 ```
 
 **Returns**:
+
 ```typescript
 {
   userId: string;
@@ -46,10 +48,12 @@ function getMyFiscalData(): Promise<FiscalContext>
 ```
 
 **Throws**:
+
 - `Error` - If user is not authenticated
 - `FiscalDataError` - If database query fails
 
 **Example**:
+
 ```typescript
 import { getMyFiscalData } from '@/app/actions/fiscal';
 
@@ -68,6 +72,7 @@ SWR hook for fiscal data with automatic caching and revalidation.
 **Location**: `/app/dashboard/finanza/_hooks/useFiscalData.ts`
 
 **Type Signature**:
+
 ```typescript
 function useFiscalData(options?: UseFiscalDataOptions): {
   data: FiscalContext | undefined;
@@ -76,19 +81,21 @@ function useFiscalData(options?: UseFiscalDataOptions): {
   isValidating: boolean;
   mutate: () => Promise<FiscalContext>;
   refresh: () => Promise<FiscalContext>;
-}
+};
 ```
 
 **Options**:
+
 ```typescript
 interface UseFiscalDataOptions {
-  refreshInterval?: number;      // Default: 30000 (30s)
-  revalidateOnFocus?: boolean;   // Default: true
+  refreshInterval?: number; // Default: 30000 (30s)
+  revalidateOnFocus?: boolean; // Default: true
   revalidateOnReconnect?: boolean; // Default: true
 }
 ```
 
 **Example**:
+
 ```typescript
 import { useFiscalData } from './_hooks/useFiscalData';
 
@@ -114,6 +121,7 @@ function MyComponent() {
 Hook for live updates (polling every 10 seconds).
 
 **Example**:
+
 ```typescript
 const { data, isValidating } = useLiveFiscalData();
 // isValidating = true when fetching in background
@@ -124,6 +132,7 @@ const { data, isValidating } = useLiveFiscalData();
 Hook with manual refresh only (no auto-revalidation).
 
 **Example**:
+
 ```typescript
 const { data, refresh } = useStaticFiscalData();
 // Only updates when calling refresh() manually
@@ -140,6 +149,7 @@ Real-time revenue vs costs visualization using Recharts.
 **Location**: `/app/dashboard/finanza/_components/revenue-chart.tsx`
 
 **Props**:
+
 ```typescript
 interface RevenueChartProps {
   fiscalContext?: FiscalContext;
@@ -148,14 +158,13 @@ interface RevenueChartProps {
 ```
 
 **Example**:
+
 ```tsx
-<RevenueChart
-  fiscalContext={data}
-  isLoading={isLoading}
-/>
+<RevenueChart fiscalContext={data} isLoading={isLoading} />
 ```
 
 **Features**:
+
 - Responsive bar chart
 - 7-day breakdown (Mon-Sun)
 - Revenue, costs, and margin visualization
@@ -169,6 +178,7 @@ interface RevenueChartProps {
 PDF/Excel export dialog with professional formatting.
 
 **Props**:
+
 ```typescript
 interface ExportDialogProps {
   isOpen: boolean;
@@ -178,17 +188,15 @@ interface ExportDialogProps {
 ```
 
 **Example**:
+
 ```tsx
 const [isOpen, setIsOpen] = useState(false);
 
-<ExportDialog
-  isOpen={isOpen}
-  onClose={() => setIsOpen(false)}
-  fiscalContext={data}
-/>
+<ExportDialog isOpen={isOpen} onClose={() => setIsOpen(false)} fiscalContext={data} />;
 ```
 
 **Export Formats**:
+
 - **PDF**: Professional report with summary, COD, and deadlines
 - **Excel**: Multi-sheet workbook with metrics and analysis
 
@@ -199,6 +207,7 @@ const [isOpen, setIsOpen] = useState(false);
 Stripe payment integration for fiscal deadlines.
 
 **Props**:
+
 ```typescript
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -208,6 +217,7 @@ interface PaymentDialogProps {
 ```
 
 **Example**:
+
 ```tsx
 <PaymentDialog
   isOpen={isOpen}
@@ -217,6 +227,7 @@ interface PaymentDialogProps {
 ```
 
 **Features**:
+
 - Amount input validation
 - Simulated Stripe payment flow
 - Success animation
@@ -229,6 +240,7 @@ interface PaymentDialogProps {
 Interactive AI assistant powered by Fiscal Brain.
 
 **Props**:
+
 ```typescript
 interface AIChatDialogProps {
   isOpen: boolean;
@@ -238,15 +250,13 @@ interface AIChatDialogProps {
 ```
 
 **Example**:
+
 ```tsx
-<AIChatDialog
-  isOpen={isChatOpen}
-  onClose={() => setIsChatOpen(false)}
-  fiscalContext={data}
-/>
+<AIChatDialog isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} fiscalContext={data} />
 ```
 
 **Features**:
+
 - Real-time fiscal Q&A
 - Knowledge base integration
 - Message history
@@ -259,6 +269,7 @@ interface AIChatDialogProps {
 Error boundary for graceful error handling.
 
 **Props**:
+
 ```typescript
 interface Props {
   children: ReactNode;
@@ -267,6 +278,7 @@ interface Props {
 ```
 
 **Example**:
+
 ```tsx
 <FiscalErrorBoundary>
   <FinanceControlRoom />
@@ -280,12 +292,14 @@ interface Props {
 Pre-built skeleton components for loading states.
 
 **Available Skeletons**:
+
 - `<KPICardSkeleton />` - KPI card placeholder
 - `<ChartSkeleton />` - Chart placeholder
 - `<FiscalHealthSkeleton />` - Health check placeholder
 - `<PageSkeleton />` - Full page placeholder
 
 **Example**:
+
 ```tsx
 import { PageSkeleton } from './_components/loading-skeleton';
 
@@ -305,11 +319,13 @@ Export fiscal data to PDF file.
 **Location**: `/app/dashboard/finanza/_utils/export-utils.ts`
 
 **Type Signature**:
+
 ```typescript
-function exportToPDF(fiscalContext: FiscalContext): Promise<void>
+function exportToPDF(fiscalContext: FiscalContext): Promise<void>;
 ```
 
 **Features**:
+
 - Professional layout with header/footer
 - Summary table
 - COD section
@@ -317,6 +333,7 @@ function exportToPDF(fiscalContext: FiscalContext): Promise<void>
 - Automatic file download
 
 **Example**:
+
 ```typescript
 import { exportToPDF } from './_utils/export-utils';
 
@@ -331,16 +348,19 @@ await exportToPDF(fiscalContext);
 Export fiscal data to Excel workbook.
 
 **Type Signature**:
+
 ```typescript
-function exportToExcel(fiscalContext: FiscalContext): Promise<void>
+function exportToExcel(fiscalContext: FiscalContext): Promise<void>;
 ```
 
 **Sheets**:
+
 1. **Riepilogo** - Summary and metrics
 2. **Scadenze** - Fiscal deadlines
 3. **Metriche** - Detailed metrics for analysis
 
 **Example**:
+
 ```typescript
 import { exportToExcel } from './_utils/export-utils';
 
@@ -357,15 +377,17 @@ Query the fiscal knowledge base for expert advice.
 **Location**: `/lib/knowledge/fiscal_brain.ts`
 
 **Type Signature**:
+
 ```typescript
-function consultFiscalBrain(contextText: string): string
+function consultFiscalBrain(contextText: string): string;
 ```
 
 **Example**:
+
 ```typescript
 import { consultFiscalBrain } from '@/lib/knowledge/fiscal_brain';
 
-const query = "Ho spedizioni triangolari UE con IVA";
+const query = 'Ho spedizioni triangolari UE con IVA';
 const advice = consultFiscalBrain(query);
 // Returns relevant scenarios from knowledge base
 ```
@@ -450,16 +472,18 @@ export interface FiscalScenario {
 Query shipments with role-based filtering.
 
 **Type Signature**:
+
 ```typescript
 function getShipmentsByPeriod(
   userId: string,
   role: UserRole,
   startDate: string,
   endDate: string
-): Promise<Shipment[]>
+): Promise<Shipment[]>;
 ```
 
 **Role Filtering**:
+
 - **user**: Only own shipments
 - **admin**: Own shipments (same as user by default)
 - **reseller**: Own + sub-users' shipments
@@ -472,11 +496,9 @@ function getShipmentsByPeriod(
 Get pending cash-on-delivery shipments.
 
 **Type Signature**:
+
 ```typescript
-function getPendingCOD(
-  userId: string,
-  role: UserRole
-): Promise<CODShipment[]>
+function getPendingCOD(userId: string, role: UserRole): Promise<CODShipment[]>;
 ```
 
 ---
@@ -486,11 +508,13 @@ function getPendingCOD(
 Get Italian fiscal calendar for current year.
 
 **Type Signature**:
+
 ```typescript
-function getFiscalDeadlines(): FiscalDeadline[]
+function getFiscalDeadlines(): FiscalDeadline[];
 ```
 
 **Returns**: Array of fiscal deadlines including:
+
 - F24 monthly payments (16th of each month)
 - LIPE quarterly declarations
 - Annual VAT declaration
@@ -503,11 +527,9 @@ function getFiscalDeadlines(): FiscalDeadline[]
 Build complete fiscal context for AI.
 
 **Type Signature**:
+
 ```typescript
-function getFiscalContext(
-  userId: string,
-  role: UserRole
-): Promise<FiscalContext>
+function getFiscalContext(userId: string, role: UserRole): Promise<FiscalContext>;
 ```
 
 **Default Period**: Last 30 days (rolling)
@@ -548,8 +570,8 @@ try {
     toast.error('Database error', {
       action: {
         label: 'Retry',
-        onClick: () => refresh()
-      }
+        onClick: () => refresh(),
+      },
     });
   } else {
     // Generic error
@@ -578,16 +600,19 @@ try {
 ### Best Practices
 
 1. **Use `useFiscalData()` for automatic updates**
+
    ```typescript
    const { data } = useFiscalData(); // Auto-refresh every 30s
    ```
 
 2. **Use `useStaticFiscalData()` for static views**
+
    ```typescript
    const { data, refresh } = useStaticFiscalData(); // Manual only
    ```
 
 3. **Optimize re-renders with React.memo**
+
    ```typescript
    const MemoizedChart = React.memo(RevenueChart);
    ```
@@ -623,6 +648,7 @@ describe('getFiscalContext', () => {
 ## Changelog
 
 ### Version 2.0.0 (2026-01-14)
+
 - ✅ Added SWR data fetching with caching
 - ✅ Added Recharts visualization
 - ✅ Added PDF/Excel export
@@ -633,6 +659,7 @@ describe('getFiscalContext', () => {
 - ✅ Full TypeScript type safety
 
 ### Version 1.0.0 (2026-01-14)
+
 - Initial release with basic functionality
 
 ---

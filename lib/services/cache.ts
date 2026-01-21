@@ -1,9 +1,9 @@
 /**
  * Agent Cache Service
- * 
+ *
  * Cache in-memory per risultati RAG e pricing calculations.
  * Riduce query duplicate e migliora performance.
- * 
+ *
  * P3 Task 6: Performance Optimization - Query & Caching
  */
 
@@ -190,4 +190,3 @@ export class AgentCache {
  * Istanza singleton del cache service (riutilizzabile).
  */
 export const agentCache = new AgentCache();
-

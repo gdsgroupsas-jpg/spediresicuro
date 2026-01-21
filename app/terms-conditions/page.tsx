@@ -1,6 +1,6 @@
 /**
  * Termini e Condizioni - Condizioni di Utilizzo del Servizio
- * 
+ *
  * Pagina statica con termini di utilizzo.
  * Il contenuto è placeholder e deve essere sostituito con testi legali reali.
  */
@@ -30,12 +30,8 @@ export default function TermsConditionsPage() {
           <div className="flex items-center gap-3">
             <FileText className="w-8 h-8 text-blue-600" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Termini e Condizioni
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Condizioni di utilizzo del servizio
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900">Termini e Condizioni</h1>
+              <p className="text-sm text-gray-600 mt-1">Condizioni di utilizzo del servizio</p>
             </div>
           </div>
         </div>
@@ -51,9 +47,9 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                L&apos;accesso e l&apos;utilizzo del servizio SpedireSicuro.it implica l&apos;accettazione 
-                di questi Termini e Condizioni. Se non accetti questi termini, non utilizzare 
-                il servizio.
+                L&apos;accesso e l&apos;utilizzo del servizio SpedireSicuro.it implica
+                l&apos;accettazione di questi Termini e Condizioni. Se non accetti questi termini,
+                non utilizzare il servizio.
               </p>
             </div>
           </section>
@@ -64,9 +60,7 @@ export default function TermsConditionsPage() {
               2. Descrizione del Servizio
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
-              <p>
-                SpedireSicuro.it è una piattaforma che consente di:
-              </p>
+              <p>SpedireSicuro.it è una piattaforma che consente di:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>Richiedere preventivi per spedizioni</li>
                 <li>Creare e gestire spedizioni</li>
@@ -84,19 +78,14 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700 space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  3.1 Creazione Account
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">3.1 Creazione Account</h3>
                 <p>
-                  Per utilizzare il servizio, devi creare un account fornendo informazioni 
-                  accurate e aggiornate. Sei responsabile della sicurezza del tuo account 
-                  e della password.
+                  Per utilizzare il servizio, devi creare un account fornendo informazioni accurate
+                  e aggiornate. Sei responsabile della sicurezza del tuo account e della password.
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  3.2 Obblighi Utente
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">3.2 Obblighi Utente</h3>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Fornire informazioni veritiere e accurate</li>
                   <li>Mantenere aggiornati i dati del profilo</li>
@@ -110,22 +99,16 @@ export default function TermsConditionsPage() {
 
           {/* Sezione 4: Utilizzo del Servizio */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              4. Utilizzo del Servizio
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Utilizzo del Servizio</h2>
             <div className="prose prose-sm max-w-none text-gray-700 space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  4.1 Utilizzi Consentiti
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">4.1 Utilizzi Consentiti</h3>
                 <p>
                   Puoi utilizzare il servizio per scopi legittimi e in conformità a questi termini.
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  4.2 Utilizzi Vietati
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">4.2 Utilizzi Vietati</h3>
                 <p>È vietato:</p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Utilizzare il servizio per attività illegali</li>
@@ -141,38 +124,29 @@ export default function TermsConditionsPage() {
 
           {/* Sezione 5: Prezzi e Pagamenti */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              5. Prezzi e Pagamenti
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Prezzi e Pagamenti</h2>
             <div className="prose prose-sm max-w-none text-gray-700 space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  5.1 Prezzi
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">5.1 Prezzi</h3>
                 <p>
-                  I prezzi delle spedizioni sono calcolati in base a peso, dimensioni, 
-                  destinazione e servizio selezionato. I prezzi possono variare e sono 
-                  indicati prima della conferma dell&apos;ordine.
+                  I prezzi delle spedizioni sono calcolati in base a peso, dimensioni, destinazione
+                  e servizio selezionato. I prezzi possono variare e sono indicati prima della
+                  conferma dell&apos;ordine.
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  5.2 Pagamenti
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">5.2 Pagamenti</h3>
                 <p>
-                  I pagamenti vengono elaborati tramite provider di pagamento sicuri. 
-                  Accettiamo [metodi di pagamento da specificare]. Il pagamento è dovuto 
-                  al momento della conferma della spedizione.
+                  I pagamenti vengono elaborati tramite provider di pagamento sicuri. Accettiamo
+                  [metodi di pagamento da specificare]. Il pagamento è dovuto al momento della
+                  conferma della spedizione.
                 </p>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  5.3 Rimborsi
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">5.3 Rimborsi</h3>
                 <p>
-                  Le politiche di rimborso sono regolate dalle condizioni del corriere 
-                  selezionato e dalle nostre politiche interne. Contattaci per richieste 
-                  di rimborso.
+                  Le politiche di rimborso sono regolate dalle condizioni del corriere selezionato e
+                  dalle nostre politiche interne. Contattaci per richieste di rimborso.
                 </p>
               </div>
             </div>
@@ -185,8 +159,8 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                SpedireSicuro.it agisce come intermediario tra te e i corrieri. 
-                Non siamo responsabili per:
+                SpedireSicuro.it agisce come intermediario tra te e i corrieri. Non siamo
+                responsabili per:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>Ritardi, perdite o danni alle spedizioni (responsabilità del corriere)</li>
@@ -195,7 +169,7 @@ export default function TermsConditionsPage() {
                 <li>Danni indiretti o consequenziali</li>
               </ul>
               <p className="mt-4">
-                La responsabilità massima è limitata all&apos;importo pagato per il servizio 
+                La responsabilità massima è limitata all&apos;importo pagato per il servizio
                 specifico.
               </p>
             </div>
@@ -208,23 +182,21 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                Tutti i contenuti del servizio (logo, design, software, testi) sono 
-                di proprietà di SpedireSicuro.it o dei rispettivi proprietari. 
-                È vietata la riproduzione senza autorizzazione.
+                Tutti i contenuti del servizio (logo, design, software, testi) sono di proprietà di
+                SpedireSicuro.it o dei rispettivi proprietari. È vietata la riproduzione senza
+                autorizzazione.
               </p>
             </div>
           </section>
 
           {/* Sezione 8: Modifiche Servizio */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              8. Modifiche al Servizio
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Modifiche al Servizio</h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                Ci riserviamo il diritto di modificare, sospendere o interrompere 
-                il servizio in qualsiasi momento, con o senza preavviso. Non siamo 
-                responsabili per eventuali danni derivanti da modifiche o interruzioni.
+                Ci riserviamo il diritto di modificare, sospendere o interrompere il servizio in
+                qualsiasi momento, con o senza preavviso. Non siamo responsabili per eventuali danni
+                derivanti da modifiche o interruzioni.
               </p>
             </div>
           </section>
@@ -236,12 +208,12 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                Possiamo sospendere o chiudere il tuo account in caso di violazione 
-                di questi termini. Puoi cancellare il tuo account in qualsiasi momento 
-                dalla sezione{' '}
+                Possiamo sospendere o chiudere il tuo account in caso di violazione di questi
+                termini. Puoi cancellare il tuo account in qualsiasi momento dalla sezione{' '}
                 <Link href="/dashboard/profile/privacy" className="text-blue-600 hover:underline">
                   Privacy & Dati Personali
-                </Link>.
+                </Link>
+                .
               </p>
             </div>
           </section>
@@ -253,22 +225,20 @@ export default function TermsConditionsPage() {
             </h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                Questi termini sono governati dalla legge italiana. Per qualsiasi 
-                controversia, è competente il foro di [CITTÀ DA SPECIFICARE].
+                Questi termini sono governati dalla legge italiana. Per qualsiasi controversia, è
+                competente il foro di [CITTÀ DA SPECIFICARE].
               </p>
             </div>
           </section>
 
           {/* Sezione 11: Modifiche Termini */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              11. Modifiche ai Termini
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Modifiche ai Termini</h2>
             <div className="prose prose-sm max-w-none text-gray-700">
               <p>
-                Ci riserviamo il diritto di modificare questi termini in qualsiasi momento. 
-                Le modifiche saranno pubblicate su questa pagina. L&apos;utilizzo continuato 
-                del servizio dopo le modifiche implica l&apos;accettazione dei nuovi termini.
+                Ci riserviamo il diritto di modificare questi termini in qualsiasi momento. Le
+                modifiche saranno pubblicate su questa pagina. L&apos;utilizzo continuato del
+                servizio dopo le modifiche implica l&apos;accettazione dei nuovi termini.
               </p>
               <p className="mt-4">
                 <strong>Ultimo aggiornamento:</strong> [DATA]
@@ -278,16 +248,16 @@ export default function TermsConditionsPage() {
 
           {/* Sezione 12: Contatti */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              12. Contatti
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Contatti</h2>
             <div className="prose prose-sm max-w-none text-gray-700">
-              <p>
-                Per domande sui termini e condizioni:
-              </p>
+              <p>Per domande sui termini e condizioni:</p>
               <ul className="list-none space-y-2 ml-4">
-                <li><strong>Email:</strong> support@spediresicuro.it</li>
-                <li><strong>Indirizzo:</strong> [DA COMPILARE]</li>
+                <li>
+                  <strong>Email:</strong> support@spediresicuro.it
+                </li>
+                <li>
+                  <strong>Indirizzo:</strong> [DA COMPILARE]
+                </li>
               </ul>
             </div>
           </section>
@@ -296,4 +266,3 @@ export default function TermsConditionsPage() {
     </div>
   );
 }
-

@@ -18,22 +18,24 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     // Safety checks per browser APIs
     if (typeof window === 'undefined') return;
-    
+
     // Controlla se l'utente ha già rifiutato il prompt
     const wasDismissed = localStorage.getItem(PWA_INSTALL_PROMPT_DISMISSED_KEY) === 'true';
-    
+
     // Ascolta l'evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const event = e as BeforeInstallPromptEvent;
       setDeferredPrompt(event);
-      
+
       // Mostra il prompt solo se:
       // 1. L'app non è già installata
       // 2. L'utente non ha già rifiutato il prompt
-      if (window.matchMedia && 
-          !window.matchMedia('(display-mode: standalone)').matches && 
-          !wasDismissed) {
+      if (
+        window.matchMedia &&
+        !window.matchMedia('(display-mode: standalone)').matches &&
+        !wasDismissed
+      ) {
         setShowPrompt(true);
       }
     };
@@ -66,7 +68,7 @@ export function PWAInstallPrompt() {
     try {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      
+
       if (outcome === 'accepted') {
         console.log('App installazione accettata');
         setInstalled(true);
@@ -105,7 +107,7 @@ export function PWAInstallPrompt() {
             <p className="text-sm text-orange-100">Accedi ovunque - Web, Android, iOS</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={handleInstall}

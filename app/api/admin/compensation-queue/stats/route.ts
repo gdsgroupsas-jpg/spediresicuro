@@ -77,9 +77,9 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     const pendingByAge = {
-      critical_over_7_days: 0,      // SLA breach
-      warning_24h_to_7d: 0,          // Warning zone
-      ok_under_24h: 0,               // Healthy
+      critical_over_7_days: 0, // SLA breach
+      warning_24h_to_7d: 0, // Warning zone
+      ok_under_24h: 0, // Healthy
       oldest_pending_hours: 0,
       total_pending_amount: 0,
     };
@@ -119,13 +119,15 @@ export async function GET(request: NextRequest) {
       resolutionTimes.push(resolutionHours);
     });
 
-    const avgResolutionHours = resolutionTimes.length > 0
-      ? resolutionTimes.reduce((sum, t) => sum + t, 0) / resolutionTimes.length
-      : 0;
+    const avgResolutionHours =
+      resolutionTimes.length > 0
+        ? resolutionTimes.reduce((sum, t) => sum + t, 0) / resolutionTimes.length
+        : 0;
 
-    const medianResolutionHours = resolutionTimes.length > 0
-      ? resolutionTimes.sort((a, b) => a - b)[Math.floor(resolutionTimes.length / 2)]
-      : 0;
+    const medianResolutionHours =
+      resolutionTimes.length > 0
+        ? resolutionTimes.sort((a, b) => a - b)[Math.floor(resolutionTimes.length / 2)]
+        : 0;
 
     // 4. By action type
     const { data: byAction } = await supabaseAdmin
@@ -204,8 +206,11 @@ export async function GET(request: NextRequest) {
       },
       recent_activity: recentActivity,
       alerts,
-      health_status: alerts.some(a => a.severity === 'CRITICAL') ? 'CRITICAL' :
-                     alerts.length > 0 ? 'WARNING' : 'HEALTHY',
+      health_status: alerts.some((a) => a.severity === 'CRITICAL')
+        ? 'CRITICAL'
+        : alerts.length > 0
+          ? 'WARNING'
+          : 'HEALTHY',
     });
   } catch (error: any) {
     console.error('❌ [COMPENSATION_STATS] Error:', error);

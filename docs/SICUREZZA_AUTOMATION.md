@@ -44,6 +44,7 @@ USING (
 ```
 
 **Cosa significa:**
+
 - ✅ Solo admin/superadmin possono vedere configurazioni
 - ✅ Utenti normali **NON** possono vedere API keys
 - ✅ RLS funziona anche se qualcuno accede al database
@@ -53,11 +54,13 @@ USING (
 Le password di automation sono salvate in `courier_configs.automation_settings`:
 
 **Protezione:**
+
 - ✅ Solo admin possono vedere/modificare
 - ✅ RLS policies attive
 - ✅ Non esposte al client (solo server-side)
 
 **⚠️ RACCOMANDAZIONE FUTURA:**
+
 - Considera crittografia campo `automation_settings` (futuro miglioramento)
 - Per ora, RLS è sufficiente (solo admin possono accedere)
 
@@ -66,6 +69,7 @@ Le password di automation sono salvate in `courier_configs.automation_settings`:
 I cookie di sessione sono salvati in `courier_configs.session_data`:
 
 **Protezione:**
+
 - ✅ Solo admin possono vedere
 - ✅ RLS policies attive
 - ✅ Scadono automaticamente dopo 24h
@@ -79,34 +83,40 @@ I cookie di sessione sono salvati in `courier_configs.session_data`:
 Esegui questi script **IN ORDINE** su Supabase SQL Editor:
 
 #### **1. Migration 010 - Courier Configs System** (Se non già fatto)
+
 ```sql
 -- File: supabase/migrations/010_courier_configs_system.sql
 -- Crea tabella courier_configs per gestire configurazioni dinamiche
 ```
 
 **Come eseguire:**
+
 1. Vai su Supabase Dashboard → SQL Editor
 2. Copia e incolla contenuto di `supabase/migrations/010_courier_configs_system.sql`
 3. Clicca "Run"
 
 #### **2. Migration 015 - Estensione Session Data** (NUOVO)
+
 ```sql
 -- File: supabase/migrations/015_extend_courier_configs_session_data.sql
 -- Aggiunge campi per automation: session_data, automation_settings, etc.
 ```
 
 **Come eseguire:**
+
 1. Vai su Supabase Dashboard → SQL Editor
 2. Copia e incolla contenuto di `supabase/migrations/015_extend_courier_configs_session_data.sql`
 3. Clicca "Run"
 
 #### **3. Migration 016 - Automation Locks** (NUOVO)
+
 ```sql
 -- File: supabase/migrations/016_automation_locks.sql
 -- Crea sistema di lock per prevenire conflitti
 ```
 
 **Come eseguire:**
+
 1. Vai su Supabase Dashboard → SQL Editor
 2. Copia e incolla contenuto di `supabase/migrations/016_automation_locks.sql`
 3. Clicca "Run"
@@ -117,8 +127,8 @@ Dopo aver eseguito tutte le migration, verifica:
 
 ```sql
 -- Verifica tabella courier_configs
-SELECT column_name, data_type 
-FROM information_schema.columns 
+SELECT column_name, data_type
+FROM information_schema.columns
 WHERE table_name = 'courier_configs'
 ORDER BY ordinal_position;
 
@@ -133,8 +143,8 @@ SELECT COUNT(*) FROM automation_locks;
 -- Dovrebbe essere 0 (tabella vuota, ok)
 
 -- Verifica funzioni
-SELECT routine_name 
-FROM information_schema.routines 
+SELECT routine_name
+FROM information_schema.routines
 WHERE routine_schema = 'public'
 AND routine_name LIKE '%automation%' OR routine_name LIKE '%lock%';
 
@@ -175,6 +185,7 @@ git push origin master --force
 ```
 
 **⚠️ ATTENZIONE:**
+
 - `git reset --hard` **cancella** tutte le modifiche non committate
 - `--force` push sovrascrive la storia Git
 - Usa solo se sei sicuro!
@@ -188,7 +199,7 @@ git push origin master --force
 DROP TABLE IF EXISTS automation_locks CASCADE;
 
 -- 2. Rimuovi colonne aggiunte a courier_configs (se necessario)
-ALTER TABLE courier_configs 
+ALTER TABLE courier_configs
 DROP COLUMN IF EXISTS session_data,
 DROP COLUMN IF EXISTS automation_settings,
 DROP COLUMN IF EXISTS last_automation_sync,
@@ -203,6 +214,7 @@ DROP FUNCTION IF EXISTS cleanup_expired_locks CASCADE;
 ```
 
 **⚠️ ATTENZIONE:**
+
 - Questo **cancella** tutti i dati di automation
 - Fai backup prima se hai dati importanti!
 
@@ -216,9 +228,10 @@ DROP FUNCTION IF EXISTS cleanup_expired_locks CASCADE;
    - L'agent non farà più sync
 
 2. **Database:**
+
    ```sql
    -- Disabilita automation per tutte le config
-   UPDATE courier_configs 
+   UPDATE courier_configs
    SET automation_enabled = false;
    ```
 
@@ -274,4 +287,3 @@ DROP FUNCTION IF EXISTS cleanup_expired_locks CASCADE;
 
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0
-

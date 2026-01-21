@@ -5,17 +5,21 @@ const nextConfig = {
   // Configurazione per performance ottimali
   reactStrictMode: true,
   swcMinify: true,
-  
+
   // Ottimizzazioni per Vercel
   compress: true,
-  
+
   // ⚠️ OTTIMIZZAZIONE: Prefetch più aggressivo per navigazione veloce
   experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+    ],
     // M2: Enable instrumentation hook for Sentry
     instrumentationHook: true,
   },
-  
+
   // ⚡ BUILD OPTIMIZATION: Esclude dipendenze pesanti dal bundle client via webpack
   // Queste librerie sono usate solo server-side e non devono essere incluse nel bundle client
   webpack: (config, { isServer }) => {
@@ -23,16 +27,16 @@ const nextConfig = {
       // Escludi pacchetti pesanti dal bundle client (solo server-side)
       config.resolve.alias = {
         ...config.resolve.alias,
-        'puppeteer': false,              // Browser automation (solo server-side)
-        'tesseract.js': false,           // OCR (solo server-side, client usa dynamic import)
-        '@google-cloud/vision': false,   // Google Vision API (solo server-side)
-        'imap': false,                   // Email client (solo server-side)
-        'cheerio': false                 // HTML parsing (solo server-side)
+        puppeteer: false, // Browser automation (solo server-side)
+        'tesseract.js': false, // OCR (solo server-side, client usa dynamic import)
+        '@google-cloud/vision': false, // Google Vision API (solo server-side)
+        imap: false, // Email client (solo server-side)
+        cheerio: false, // HTML parsing (solo server-side)
       };
     }
     return config;
   },
-  
+
   // Configurazione immagini (se necessario in futuro)
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -46,31 +50,31 @@ const nextConfig = {
         headers: [
           {
             key: 'X-DNS-Prefetch-Control',
-            value: 'on'
+            value: 'on',
           },
           {
             key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload'
+            value: 'max-age=63072000; includeSubDomains; preload',
           },
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            value: 'SAMEORIGIN',
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff'
+            value: 'nosniff',
           },
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block'
+            value: '1; mode=block',
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
+            value: 'origin-when-cross-origin',
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
+            value: 'camera=(), microphone=(), geolocation=()',
           },
           {
             key: 'Content-Security-Policy',
@@ -90,16 +94,16 @@ const nextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'self'",
-              "upgrade-insecure-requests",
+              'upgrade-insecure-requests',
               // CSP Reporting: invia violazioni a /api/csp-report
-              "report-uri /api/csp-report"
-            ].join('; ')
-          }
+              'report-uri /api/csp-report',
+            ].join('; '),
+          },
         ],
       },
-    ]
+    ];
   },
-}
+};
 
 // Sentry configuration
 module.exports = withSentryConfig(nextConfig, {
@@ -123,5 +127,4 @@ module.exports = withSentryConfig(nextConfig, {
 
   // Disable telemetry
   disableLogger: true,
-})
-
+});

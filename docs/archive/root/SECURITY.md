@@ -57,13 +57,10 @@ FOR SELECT USING (
 
 ```typescript
 // ❌ DANGEROUS - No tenant filter
-const { data } = await supabase.from("shipments").select("*");
+const { data } = await supabase.from('shipments').select('*');
 
 // ✅ SAFE - Explicit tenant binding
-const { data } = await supabase
-  .from("shipments")
-  .select("*")
-  .eq("user_id", context.target.id); // Acting Context aware
+const { data } = await supabase.from('shipments').select('*').eq('user_id', context.target.id); // Acting Context aware
 ```
 
 ---
@@ -135,32 +132,32 @@ const { data } = await supabase
 
 ```typescript
 // Shipments
-CREATE_SHIPMENT, UPDATE_SHIPMENT, DELETE_SHIPMENT, CANCEL_SHIPMENT;
-DOWNLOAD_LABEL, TRACK_SHIPMENT, SHIPMENT_ADJUSTMENT;
+(CREATE_SHIPMENT, UPDATE_SHIPMENT, DELETE_SHIPMENT, CANCEL_SHIPMENT);
+(DOWNLOAD_LABEL, TRACK_SHIPMENT, SHIPMENT_ADJUSTMENT);
 
 // Wallet
-WALLET_RECHARGE, WALLET_DEBIT, WALLET_CREDIT, WALLET_REFUND;
-VIEW_WALLET_BALANCE, VIEW_WALLET_TRANSACTIONS;
+(WALLET_RECHARGE, WALLET_DEBIT, WALLET_CREDIT, WALLET_REFUND);
+(VIEW_WALLET_BALANCE, VIEW_WALLET_TRANSACTIONS);
 
 // Impersonation
-IMPERSONATION_STARTED, IMPERSONATION_ENDED;
-IMPERSONATION_DENIED, IMPERSONATION_EXPIRED;
-IMPERSONATION_INVALID_COOKIE, IMPERSONATION_TARGET_NOT_FOUND;
+(IMPERSONATION_STARTED, IMPERSONATION_ENDED);
+(IMPERSONATION_DENIED, IMPERSONATION_EXPIRED);
+(IMPERSONATION_INVALID_COOKIE, IMPERSONATION_TARGET_NOT_FOUND);
 
 // Users
-USER_LOGIN, USER_LOGOUT, USER_CREATED, USER_UPDATED;
-USER_ROLE_CHANGED, USER_PASSWORD_CHANGED;
+(USER_LOGIN, USER_LOGOUT, USER_CREATED, USER_UPDATED);
+(USER_ROLE_CHANGED, USER_PASSWORD_CHANGED);
 
 // Courier Configs
-COURIER_CONFIG_CREATED, COURIER_CONFIG_UPDATED;
-COURIER_CREDENTIAL_VIEWED, COURIER_CREDENTIAL_DECRYPTED;
+(COURIER_CONFIG_CREATED, COURIER_CONFIG_UPDATED);
+(COURIER_CREDENTIAL_VIEWED, COURIER_CREDENTIAL_DECRYPTED);
 ```
 
 ### Usage Pattern
 
 ```typescript
-import { writeAuditLog } from "@/lib/security/audit-log";
-import { AUDIT_ACTIONS } from "@/lib/security/audit-actions";
+import { writeAuditLog } from '@/lib/security/audit-log';
+import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 // In Server Action or API Route
 const context = await requireSafeAuth();
@@ -168,13 +165,13 @@ const context = await requireSafeAuth();
 await writeAuditLog({
   context,
   action: AUDIT_ACTIONS.CREATE_SHIPMENT,
-  resourceType: "shipment",
+  resourceType: 'shipment',
   resourceId: shipment.id,
   metadata: {
-    carrier: "GLS",
+    carrier: 'GLS',
     cost: 8.5,
-    reason: "Bulk import", // Optional
-    requestId: headers.get("x-request-id"), // Optional
+    reason: 'Bulk import', // Optional
+    requestId: headers.get('x-request-id'), // Optional
   },
 });
 ```

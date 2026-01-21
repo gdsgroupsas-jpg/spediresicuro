@@ -11,11 +11,13 @@ Hai cancellato tutti gli utenti in Supabase e devi ricrearli.
 Apri un terminale e esegui:
 
 **Locale:**
+
 ```bash
 curl -X POST http://localhost:3000/api/test/create-admin-user
 ```
 
 **Vercel (Produzione):**
+
 ```bash
 curl -X POST https://spediresicuro.vercel.app/api/test/create-admin-user
 ```
@@ -24,13 +26,17 @@ curl -X POST https://spediresicuro.vercel.app/api/test/create-admin-user
 
 1. **Apri il browser**
 2. **Vai su:**
+
    ```
    http://localhost:3000/api/test/create-admin-user
    ```
+
    (locale) oppure
+
    ```
    https://spediresicuro.vercel.app/api/test/create-admin-user
    ```
+
    (Vercel)
 
 3. **Vedrai** un JSON con le informazioni degli utenti esistenti
@@ -49,6 +55,7 @@ curl -X POST https://spediresicuro.vercel.app/api/test/create-admin-user
 5. **Invia la richiesta**
 
 Dovresti ricevere una risposta tipo:
+
 ```json
 {
   "success": true,
@@ -131,12 +138,14 @@ Dopo aver creato gli utenti:
 ## 📋 Utenti da Creare
 
 ### Utente Admin
+
 - **Email:** `admin@spediresicuro.it`
 - **Password:** `admin123`
 - **Nome:** `Admin`
 - **Ruolo:** `admin`
 
 ### Utente Demo
+
 - **Email:** `demo@spediresicuro.it`
 - **Password:** `demo123`
 - **Nome:** `Demo User`
@@ -149,6 +158,7 @@ Dopo aver creato gli utenti:
 ### Problema: Endpoint API non risponde
 
 **Soluzione:**
+
 1. Verifica che il server sia avviato (`npm run dev`)
 2. Verifica che l'URL sia corretto
 3. Controlla la console del browser per errori
@@ -156,6 +166,7 @@ Dopo aver creato gli utenti:
 ### Problema: Errore creazione utente
 
 **Soluzione:**
+
 1. Verifica che Supabase sia configurato correttamente
 2. Verifica che la tabella `users` esista
 3. Crea gli utenti manualmente in Supabase Dashboard
@@ -163,4 +174,3 @@ Dopo aver creato gli utenti:
 ---
 
 **Nota**: L'endpoint API crea automaticamente entrambi gli utenti (admin e demo) in una sola chiamata!
-

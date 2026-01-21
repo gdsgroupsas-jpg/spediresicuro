@@ -33,7 +33,7 @@ export default function PhotoViewer({
   photos,
   initialIndex = 0,
   isOpen,
-  onClose
+  onClose,
 }: PhotoViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
@@ -351,9 +351,7 @@ export default function PhotoViewer({
                   key={index}
                   onClick={() => setCurrentIndex(index)}
                   className={`h-2 rounded-full transition-all ${
-                    index === currentIndex
-                      ? 'w-8 bg-white'
-                      : 'w-2 bg-white/40 hover:bg-white/60'
+                    index === currentIndex ? 'w-8 bg-white' : 'w-2 bg-white/40 hover:bg-white/60'
                   }`}
                   aria-label={`Vai alla foto ${index + 1}`}
                 />
@@ -371,7 +369,8 @@ export default function PhotoViewer({
         >
           <div className="bg-black/60 backdrop-blur-sm rounded-2xl px-6 py-3">
             <p className="text-white text-sm text-center">
-              👆 Doppio tap per zoom<br />
+              👆 Doppio tap per zoom
+              <br />
               👈👉 Swipe per navigare
             </p>
           </div>

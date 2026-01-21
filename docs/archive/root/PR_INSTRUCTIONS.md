@@ -1,4 +1,5 @@
 # 🔴 PULL REQUEST - CRITICAL FIX
+
 ## Fix Metadata Overwrite Bug (Price List Collisions)
 
 ---
@@ -29,7 +30,7 @@ https://github.com/gdsgroupsas-jpg/spediresicuro/compare/master...claude/audit-l
 
 Copia/incolla tutto il blocco qui sotto nel campo "Description":
 
-```markdown
+````markdown
 ## 🚨 CRITICAL BUG FIX
 
 **Priority**: 🔴 P0 - CRITICAL
@@ -52,6 +53,7 @@ This PR fixes a **critical production bug** where price lists from different Spe
 **Root Cause**: Metadata update used `REPLACE` instead of `MERGE`, losing `carrier_code` during re-sync.
 
 **Timeline**:
+
 - 🐛 **Introduced**: Commit `b3bcde2` (04/01/2026 22:29)
 - 🔧 **Partial fix**: Commit `27b688f` (04/01/2026 23:21) - incomplete
 - ✅ **Complete fix**: This PR (05/01/2026)
@@ -65,13 +67,16 @@ This PR fixes a **critical production bug** where price lists from different Spe
 **File**: `actions/spedisci-online-rates.ts` (lines 656-719)
 
 **Problem**:
+
 ```typescript
 // BEFORE (BUG)
 .update({ metadata: { courier_config_id: configId } })
 // ❌ Overwrites entire object, loses carrier_code
 ```
+````
 
 **Solution**:
+
 ```typescript
 // AFTER (FIXED)
 const existingMetadata = await getExisting(priceListId);
@@ -93,10 +98,12 @@ const mergedMetadata = {
 **File**: `actions/spedisci-online-rates.ts` (lines 559-603)
 
 **Problems**:
+
 - `.limit(20)` insufficient for users with many price lists
 - Fragile name-based fallback matching
 
 **Solutions**:
+
 - Increased limit to `100` (covers >99% use cases)
 - STRICT matching: `metadata.carrier_code` takes priority
 - Name fallback only for legacy price lists (pre-fix)
@@ -113,14 +120,13 @@ const mergedMetadata = {
 **Problem**: `carrierCode` from API not validated (potential injection)
 
 **Solution**:
+
 ```typescript
 // Sanitize to alphanumeric + underscore/dash only
-const sanitized = carrierCode
-  .toLowerCase()
-  .replace(/[^a-z0-9_-]/g, '');
+const sanitized = carrierCode.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
 if (sanitized !== carrierCode.toLowerCase()) {
-  console.warn("Invalid carrierCode, skip for security");
+  console.warn('Invalid carrierCode, skip for security');
   continue; // Skip suspicious rates
 }
 ```
@@ -131,14 +137,14 @@ if (sanitized !== carrierCode.toLowerCase()) {
 
 ## 🔒 SECURITY AUDIT
 
-| Aspect | Status | Details |
-|--------|--------|---------|
-| ✅ Authentication | SECURE | NextAuth session check enforced |
-| ✅ Authorization | SECURE | Only admin/reseller/BYOC allowed |
+| Aspect             | Status | Details                                  |
+| ------------------ | ------ | ---------------------------------------- |
+| ✅ Authentication  | SECURE | NextAuth session check enforced          |
+| ✅ Authorization   | SECURE | Only admin/reseller/BYOC allowed         |
 | ✅ Owner Isolation | SECURE | All queries filter `created_by: user.id` |
-| ✅ SQL Injection | SECURE | Supabase prepared statements used |
-| ✅ JSONB Injection | SECURE | CarrierCode validated & sanitized |
-| ✅ Access Control | SECURE | RLS policies active on all tables |
+| ✅ SQL Injection   | SECURE | Supabase prepared statements used        |
+| ✅ JSONB Injection | SECURE | CarrierCode validated & sanitized        |
+| ✅ Access Control  | SECURE | RLS policies active on all tables        |
 
 **Verdict**: ✅ **No vulnerabilities introduced. Security improved.**
 
@@ -154,11 +160,13 @@ Net change:     +60 lines
 ```
 
 **Modified Files**:
+
 - `actions/spedisci-online-rates.ts` (sync logic + security)
 
 **Breaking Changes**: ❌ NONE
 
 **Backward Compatibility**: ✅ FULL
+
 - Supports legacy price lists without `carrier_code` in metadata
 - Falls back to `source_metadata` if `metadata` unavailable
 - No API signature changes
@@ -299,24 +307,28 @@ ORDER BY created_at DESC;
 ## ✅ FINAL CHECKLIST
 
 ### Code Quality
+
 - [x] Follows project coding conventions
 - [x] Comments added for complex logic
 - [x] No sensitive data in logs
 - [x] Error handling implemented
 
 ### Security
+
 - [x] Authentication/Authorization verified
 - [x] SQL/JSONB injection prevented
 - [x] Owner isolation maintained
 - [x] No credentials exposed
 
 ### Compatibility
+
 - [x] Backward compatible
 - [x] No breaking changes
 - [x] Database migrations not required
 - [x] API signatures unchanged
 
 ### Documentation
+
 - [x] Code comments updated
 - [x] Commit message detailed
 - [x] PR description complete
@@ -336,6 +348,7 @@ Please review and approve to proceed with merge.
 **Base**: `master`
 **Author**: Claude (AI Assistant)
 **Date**: 2026-01-05
+
 ```
 
 ---
@@ -378,3 +391,4 @@ Dopo aver creato la PR, aggiungi questi labels:
 **File generato**: `PR_INSTRUCTIONS.md`
 **Pronto per**: Creazione immediata Pull Request
 **Tempo stimato**: 5-10 minuti
+```

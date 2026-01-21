@@ -1,6 +1,6 @@
 /**
  * Unit Tests: ocr-worker.ts
- * 
+ *
  * Test REALI della logica del worker in isolamento.
  * Coverage:
  * - processOcrCore: merge shipmentDraft, missingFields, extractedFieldsCount
@@ -90,7 +90,7 @@ describe('processOcrCore - Core logic', () => {
       // Dati esistenti preservati
       expect(result.updatedDraft.recipient?.postalCode).toBe('20100');
       expect(result.updatedDraft.recipient?.city).toBe('Milano');
-      
+
       // Nuovi dati aggiunti
       expect(result.updatedDraft.recipient?.fullName).toBe('Mario Rossi');
       expect(result.updatedDraft.recipient?.addressLine1).toBe('Via Roma 123');
@@ -98,18 +98,16 @@ describe('processOcrCore - Core logic', () => {
       expect(result.updatedDraft.parcel?.weightKg).toBe(5);
     });
 
-  it('should create new draft when existingDraft is undefined', () => {
-    const result = processOcrCore(
-      'CAP: 20100\nCittà: Milano\nProvincia: MI\nPeso: 3 kg'
-    );
+    it('should create new draft when existingDraft is undefined', () => {
+      const result = processOcrCore('CAP: 20100\nCittà: Milano\nProvincia: MI\nPeso: 3 kg');
 
-    expect(result.updatedDraft.recipient?.postalCode).toBe('20100');
-    // Il parsing OCR potrebbe non estrarre "Città:" come pattern valido
-    // Verifica che almeno il CAP e la provincia siano estratti
-    expect(result.updatedDraft.recipient?.postalCode).toBeDefined();
-    expect(result.updatedDraft.recipient?.province).toBe('MI');
-    expect(result.updatedDraft.parcel?.weightKg).toBe(3);
-  });
+      expect(result.updatedDraft.recipient?.postalCode).toBe('20100');
+      // Il parsing OCR potrebbe non estrarre "Città:" come pattern valido
+      // Verifica che almeno il CAP e la provincia siano estratti
+      expect(result.updatedDraft.recipient?.postalCode).toBeDefined();
+      expect(result.updatedDraft.recipient?.province).toBe('MI');
+      expect(result.updatedDraft.parcel?.weightKg).toBe(3);
+    });
 
     it('should not overwrite existing data with empty OCR', () => {
       const existing: ShipmentDraft = createPartialDraft({
@@ -135,9 +133,7 @@ describe('processOcrCore - Core logic', () => {
 
   describe('missingFields calculation', () => {
     it('should return empty missingFields when all pricing data present', () => {
-      const result = processOcrCore(
-        'CAP: 20100\nCittà: Milano\nProvincia: MI\nPeso: 5 kg'
-      );
+      const result = processOcrCore('CAP: 20100\nCittà: Milano\nProvincia: MI\nPeso: 5 kg');
 
       expect(result.missingFields).toHaveLength(0);
     });
@@ -167,14 +163,12 @@ describe('processOcrCore - Core logic', () => {
   });
 
   describe('extractedFieldsCount', () => {
-  it('should count extracted fields correctly', () => {
-    const result = processOcrCore(
-      'CAP: 20100\nCittà: Milano\nProvincia: MI\nPeso: 5 kg'
-    );
+    it('should count extracted fields correctly', () => {
+      const result = processOcrCore('CAP: 20100\nCittà: Milano\nProvincia: MI\nPeso: 5 kg');
 
-    // Il parsing OCR potrebbe non estrarre tutti i campi (dipende dai pattern)
-    expect(result.extractedFieldsCount).toBeGreaterThanOrEqual(3);
-  });
+      // Il parsing OCR potrebbe non estrarre tutti i campi (dipende dai pattern)
+      expect(result.extractedFieldsCount).toBeGreaterThanOrEqual(3);
+    });
 
     it('should return 0 when no fields extracted', () => {
       const result = processOcrCore('ciao, come stai?');
@@ -283,7 +277,8 @@ describe('ocrWorker - Full worker logic', () => {
       const state = createMockAgentState({
         messages: [
           new HumanMessage({
-            content: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            content:
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
           }),
         ],
       });
@@ -390,23 +385,22 @@ describe('ocrWorker - Full worker logic', () => {
       expect(result.next_step).toBe('END');
     });
 
-  it('should handle errors and return error state', async () => {
-    // Simula errore creando uno stato con messaggio vuoto
-    const state = createMockAgentState({
-      messages: [
-        new HumanMessage({
-          content: '',
-        }),
-      ],
+    it('should handle errors and return error state', async () => {
+      // Simula errore creando uno stato con messaggio vuoto
+      const state = createMockAgentState({
+        messages: [
+          new HumanMessage({
+            content: '',
+          }),
+        ],
+      });
+
+      const result = await ocrWorker(state, spyLogger);
+
+      // Il worker potrebbe gestire l'errore restituendo idle invece di error
+      expect(result.processingStatus).toBeDefined();
+      expect(result.clarification_request).toBeDefined();
+      // validationErrors potrebbe non essere sempre definito
     });
-
-    const result = await ocrWorker(state, spyLogger);
-
-    // Il worker potrebbe gestire l'errore restituendo idle invece di error
-    expect(result.processingStatus).toBeDefined();
-    expect(result.clarification_request).toBeDefined();
-    // validationErrors potrebbe non essere sempre definito
-  });
   });
 });
-

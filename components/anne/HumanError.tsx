@@ -1,6 +1,6 @@
 /**
  * Human Error Component - P4 Task 3
- * 
+ *
  * Mostra errori tecnici tradotti in messaggi umani comprensibili.
  * Usa error-translator.ts per convertire errori tecnici in messaggi user-friendly.
  */
@@ -39,7 +39,7 @@ export function HumanError({ agentState, onResolved, onDismiss }: HumanErrorProp
 
     // Traduci errore tecnico in messaggio umano
     const translated = translateError(agentState);
-    
+
     if (translated) {
       setHumanMessage(translated);
       setIsVisible(true);
@@ -55,10 +55,10 @@ export function HumanError({ agentState, onResolved, onDismiss }: HumanErrorProp
     if (!agentState || !humanMessage) return;
 
     // Se non ci sono più errori, considera risolto
-    const hasErrors = 
+    const hasErrors =
       (agentState.validationErrors && agentState.validationErrors.length > 0) ||
       agentState.processingStatus === 'error' ||
-      (agentState.booking_result?.status === 'failed');
+      agentState.booking_result?.status === 'failed';
 
     if (!hasErrors && humanMessage) {
       // Errore risolto
@@ -97,9 +97,7 @@ export function HumanError({ agentState, onResolved, onDismiss }: HumanErrorProp
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium">{humanMessage.message}</p>
         {humanMessage.actionable && humanMessage.field && (
-          <p className="text-xs mt-1 opacity-75">
-            Campo: {humanMessage.field}
-          </p>
+          <p className="text-xs mt-1 opacity-75">Campo: {humanMessage.field}</p>
         )}
       </div>
       {onDismiss && (
@@ -117,4 +115,3 @@ export function HumanError({ agentState, onResolved, onDismiss }: HumanErrorProp
     </div>
   );
 }
-

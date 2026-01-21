@@ -65,7 +65,11 @@ CREATE TRIGGER trigger_update_geo_locations_updated_at
   EXECUTE FUNCTION update_geo_locations_updated_at();
 `;
 
-async function executeSQL(supabase: ReturnType<typeof createClient>, sql: string, description: string): Promise<boolean> {
+async function executeSQL(
+  supabase: ReturnType<typeof createClient>,
+  sql: string,
+  description: string
+): Promise<boolean> {
   try {
     // Supabase non permette DDL via client JS facilmente
     // Usiamo l'API REST direttamente
@@ -73,8 +77,8 @@ async function executeSQL(supabase: ReturnType<typeof createClient>, sql: string
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_SERVICE_KEY!,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        apikey: SUPABASE_SERVICE_KEY!,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
       },
       body: JSON.stringify({ sql }),
     });
@@ -94,7 +98,9 @@ async function executeSQL(supabase: ReturnType<typeof createClient>, sql: string
       }
     }
   } catch (error) {
-    console.warn(`⚠️  ${description}: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    console.warn(
+      `⚠️  ${description}: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
+    );
     return false;
   }
 }
@@ -114,13 +120,15 @@ async function main() {
   try {
     // 1. Verifica estensione pg_trgm
     console.log('📋 1. Verifica estensione pg_trgm...\n');
-    console.log('   ⚠️  Nota: Le estensioni devono essere create manualmente in Supabase SQL Editor\n');
+    console.log(
+      '   ⚠️  Nota: Le estensioni devono essere create manualmente in Supabase SQL Editor\n'
+    );
     console.log('   Esegui questo SQL se necessario:\n');
     console.log('   CREATE EXTENSION IF NOT EXISTS pg_trgm;\n');
 
     // 2. Verifica struttura base
     console.log('📋 2. Verifica struttura tabella...\n');
-    
+
     const { data: testData, error: testError } = await supabase
       .from('geo_locations')
       .select('id, name, province, region, caps, search_vector, created_at, updated_at')
@@ -135,7 +143,7 @@ async function main() {
 
     // 3. Test search_vector
     console.log('📋 3. Verifica search_vector...\n');
-    
+
     const { data: searchTest, error: searchError } = await supabase
       .from('geo_locations')
       .select('name, search_vector')
@@ -149,13 +157,15 @@ async function main() {
 
     // 4. Istruzioni per indici e trigger
     console.log('📋 4. Indici e Trigger...\n');
-    console.log('   ⚠️  IMPORTANTE: Indici e trigger devono essere creati manualmente in Supabase SQL Editor\n');
+    console.log(
+      '   ⚠️  IMPORTANTE: Indici e trigger devono essere creati manualmente in Supabase SQL Editor\n'
+    );
     console.log('   Vai su: https://supabase.com/dashboard/project/pxwmposcsvsusjxdjues/sql/new\n');
     console.log('   Copia e incolla questo SQL:\n');
     console.log('─'.repeat(60));
     console.log('\n-- Estensione (se non già presente)');
     console.log('CREATE EXTENSION IF NOT EXISTS pg_trgm;\n');
-    
+
     INDEXES_SQL.forEach((idx) => {
       console.log(`-- ${idx.description}`);
       console.log(idx.sql);
@@ -169,13 +179,13 @@ async function main() {
 
     // 5. Test performance
     console.log('📋 5. Test performance...\n');
-    
+
     const startTime = Date.now();
     const { data: perfTest, error: perfError } = await supabase
       .from('geo_locations')
       .select('name, province')
       .limit(100);
-    
+
     const duration = Date.now() - startTime;
 
     if (perfError) {
@@ -199,7 +209,6 @@ async function main() {
     console.log('   1. Crea indici e trigger (SQL sopra)');
     console.log('   2. Esegui: npm run seed:geo');
     console.log('   3. Verifica: npm run verify:supabase\n');
-
   } catch (error) {
     console.error('\n❌ ERRORE CRITICO:', error);
     if (error instanceof Error) {
@@ -211,4 +220,3 @@ async function main() {
 }
 
 main();
-

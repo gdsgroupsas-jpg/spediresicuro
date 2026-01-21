@@ -1,6 +1,6 @@
 /**
  * Script di test per verificare i formati dei servizi accessori di Spedisci.Online
- * 
+ *
  * Esegui con: npx ts-node --project tsconfig.scripts.json scripts/test-accessory-services.ts
  */
 
@@ -28,12 +28,14 @@ const SERVICE_FORMATS = [
 
 async function testServiceFormat(apiKey: string, serviceName: string) {
   const payload = {
-    packages: [{
-      length: 30,
-      width: 20,
-      height: 15,
-      weight: 1,
-    }],
+    packages: [
+      {
+        length: 30,
+        width: 20,
+        height: 15,
+        weight: 1,
+      },
+    ],
     shipFrom: {
       name: 'Test Mittente',
       company: 'Test Company',
@@ -68,9 +70,9 @@ async function testServiceFormat(apiKey: string, serviceName: string) {
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify(payload),
     });
@@ -112,12 +114,14 @@ async function testServiceFormat(apiKey: string, serviceName: string) {
 
 async function testWithoutService(apiKey: string) {
   const payload = {
-    packages: [{
-      length: 30,
-      width: 20,
-      height: 15,
-      weight: 1,
-    }],
+    packages: [
+      {
+        length: 30,
+        width: 20,
+        height: 15,
+        weight: 1,
+      },
+    ],
     shipFrom: {
       name: 'Test Mittente',
       company: 'Test Company',
@@ -152,9 +156,9 @@ async function testWithoutService(apiKey: string) {
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify(payload),
     });
@@ -181,7 +185,7 @@ async function main() {
   // Leggi API key dalle env (deve essere decriptata)
   // Per il test, usa una API key valida
   const apiKey = process.env.SPEDISCI_ONLINE_TEST_API_KEY;
-  
+
   if (!apiKey) {
     console.error('❌ SPEDISCI_ONLINE_TEST_API_KEY non trovata in .env.local');
     console.log('Aggiungi SPEDISCI_ONLINE_TEST_API_KEY=<tua_api_key> a .env.local');
@@ -194,26 +198,28 @@ async function main() {
   // Prima test senza servizi (baseline)
   console.log('1. Test SENZA servizi accessori (baseline)...');
   const baseline = await testWithoutService(apiKey);
-  console.log(`   Baseline: services_price=${baseline.services_price}, total=${baseline.total_price}\n`);
+  console.log(
+    `   Baseline: services_price=${baseline.services_price}, total=${baseline.total_price}\n`
+  );
 
   // Poi test con ogni formato di servizio
   console.log('2. Test con diversi formati di "Exchange"...\n');
-  
+
   for (const format of SERVICE_FORMATS) {
     const result = await testServiceFormat(apiKey, format);
-    
+
     if (result.success) {
       const priceChanged = baseline.services_price !== result.services_price;
       console.log(
         `   ${priceChanged ? '✅' : '⚪'} "${format}": services_price=${result.services_price}, total=${result.total_price}` +
-        (priceChanged ? ' ← PREZZO CAMBIATO!' : '')
+          (priceChanged ? ' ← PREZZO CAMBIATO!' : '')
       );
     } else {
       console.log(`   ❌ "${format}": ${result.error}`);
     }
-    
+
     // Pausa per non sovraccaricare l'API
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   console.log('\n=========================================');

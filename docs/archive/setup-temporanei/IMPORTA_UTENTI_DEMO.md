@@ -22,6 +22,7 @@ Importare gli utenti demo nella tabella `users` appena creata.
 ### Passo 3: Verifica
 
 Dovresti vedere:
+
 - ✅ Lista degli utenti creati
 - ✅ Messaggio di conferma
 - ✅ Nessun errore
@@ -104,6 +105,7 @@ Lo script SQL `scripts/inserisci-utenti-demo-con-rls.sql` usa la Service Role ch
 Se preferisci usare l'import CSV:
 
 1. **Disabilita temporaneamente RLS:**
+
    ```sql
    ALTER TABLE users DISABLE ROW LEVEL SECURITY;
    ```
@@ -111,6 +113,7 @@ Se preferisci usare l'import CSV:
 2. **Importa gli utenti** (CSV o manualmente)
 
 3. **Riabilita RLS:**
+
    ```sql
    ALTER TABLE users ENABLE ROW LEVEL SECURITY;
    ```
@@ -151,4 +154,3 @@ Prima di considerare il problema risolto:
 ---
 
 **Nota**: Lo script SQL (Metodo 1) è il metodo più semplice e sicuro, soprattutto se hai RLS abilitato!
-

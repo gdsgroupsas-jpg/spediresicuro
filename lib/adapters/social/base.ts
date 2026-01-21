@@ -61,18 +61,12 @@ export abstract class SocialAdapter {
   /**
    * Ottieni performance campagne
    */
-  abstract getCampaignPerformance(
-    dateFrom: Date,
-    dateTo: Date
-  ): Promise<CampaignPerformance[]>;
+  abstract getCampaignPerformance(dateFrom: Date, dateTo: Date): Promise<CampaignPerformance[]>;
 
   /**
    * Calcola trend score (0-100)
    */
-  abstract calculateTrendScore(
-    category: string,
-    zone?: string
-  ): Promise<number>;
+  abstract calculateTrendScore(category: string, zone?: string): Promise<number>;
 }
 
 /**
@@ -87,11 +81,7 @@ export class MockSocialAdapter extends SocialAdapter {
     return true;
   }
 
-  async getTrendMetrics(
-    dateFrom: Date,
-    dateTo: Date,
-    filters?: any
-  ): Promise<TrendMetric[]> {
+  async getTrendMetrics(dateFrom: Date, dateTo: Date, filters?: any): Promise<TrendMetric[]> {
     return [
       {
         platform: this.platform,
@@ -105,10 +95,7 @@ export class MockSocialAdapter extends SocialAdapter {
     ];
   }
 
-  async getCampaignPerformance(
-    dateFrom: Date,
-    dateTo: Date
-  ): Promise<CampaignPerformance[]> {
+  async getCampaignPerformance(dateFrom: Date, dateTo: Date): Promise<CampaignPerformance[]> {
     return [];
   }
 

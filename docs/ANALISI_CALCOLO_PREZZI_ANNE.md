@@ -49,9 +49,9 @@ executeTool('calculate_price', args)
 export async function calculateOptimalPrice(request: PricingRequest) {
   // 1. Recupera corrieri dal DATABASE
   const { data: couriers } = await supabaseAdmin
-    .from("couriers")
-    .select("id, name, code")
-    .eq("status", "active");
+    .from('couriers')
+    .select('id, name, code')
+    .eq('status', 'active');
 
   // 2. Per ogni corriere, calcola prezzo
   for (const courier of couriers) {
@@ -94,11 +94,11 @@ export async function calculatePrice(
 export async function getActivePriceList(courierId: string) {
   // QUERY DATABASE: cerca listino attivo per corriere
   const { data, error } = await supabase
-    .from("price_lists")
-    .select("*, entries:price_list_entries(*)") // ← Include entries
-    .eq("courier_id", courierId) // ← Match per courier_id
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
+    .from('price_lists')
+    .select('*, entries:price_list_entries(*)') // ← Include entries
+    .eq('courier_id', courierId) // ← Match per courier_id
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
     .limit(1)
     .single();
 
@@ -126,7 +126,6 @@ export async function getActivePriceList(courierId: string) {
 **Algoritmo**:
 
 1. Cerca entry che matcha:
-
    - ✅ **Peso**: `weight >= entry.weight_from && weight <= entry.weight_to`
    - ✅ **Servizio**: `entry.service_type === serviceType`
    - ✅ **ZIP** (opzionale): Se `entry.zip_code_from` e `entry.zip_code_to` esistono, verifica range
@@ -165,7 +164,6 @@ const finalPrice = priceResult.totalCost + margin;
 **Evidenza**:
 
 1. `calculatePriceFromList` in `lib/pricing/calculator.ts` usa SOLO:
-
    - `entry.cash_on_delivery_surcharge` (da `price_list_entries`)
    - `entry.insurance_rate_percent` (da `price_list_entries`)
 
@@ -219,7 +217,6 @@ const finalPrice = priceResult.totalCost + margin;
 2. **Anne chiama tool**: `calculate_price({ weight: 26, destinationZip: "00100", destinationProvince: "RM" })`
 
 3. **Sistema**:
-
    - Recupera tutti i corrieri attivi dal DB
    - Per ogni corriere (incluso PDB se presente):
      - Cerca listino fornitore: `price_lists WHERE courier_id = <pdb_id> AND list_type = 'supplier' AND status = 'active'`
@@ -230,7 +227,6 @@ const finalPrice = priceResult.totalCost + margin;
        - Servizio: `service_type = 'standard'`
 
 4. **Calcolo**:
-
    - `basePrice = entry.base_price` (es. €15.50)
    - `fuelSurcharge = basePrice * (fuel_surcharge_percent / 100)` (es. €0.50)
    - `totalCost = basePrice + fuelSurcharge` (es. €16.00)
@@ -246,19 +242,16 @@ const finalPrice = priceResult.totalCost + margin;
 #### ❌ **NON Integrato**:
 
 1. **Assicurazione personalizzata**:
-
    - Config salvata in `supplier_price_list_config.insurance_config`
    - Ma calcolo usa solo `entry.insurance_rate_percent`
    - **Dovrebbe**: Controllare `insurance_config.max_value`, `fixed_price`, `percent`
 
 2. **Contrassegni personalizzati**:
-
    - Config salvata in `supplier_price_list_config.cod_config` (array di scaglioni)
    - Ma calcolo usa solo `entry.cash_on_delivery_surcharge` (fisso)
    - **Dovrebbe**: Cercare scaglione corretto in `cod_config` basato su importo COD
 
 3. **Servizi Accessori**:
-
    - Config salvata in `supplier_price_list_config.accessory_services_config`
    - Ma calcolo NON li considera
    - **Dovrebbe**: Aggiungere prezzo servizi accessori se richiesti
@@ -313,22 +306,18 @@ const finalPrice = priceResult.totalCost + margin;
 #### Opzioni Attualmente Supportate:
 
 1. **Contrassegno (COD)**:
-
    - ✅ Supportato (usa `entry.cash_on_delivery_surcharge`)
    - ⚠️ Ma NON usa configurazione manuale (`cod_config`)
 
 2. **Assicurazione**:
-
    - ✅ Supportato (usa `entry.insurance_rate_percent`)
    - ⚠️ Ma NON usa configurazione manuale (`insurance_config`)
 
 3. **Servizi Accessori**:
-
    - ❌ **NON supportato** nel calcolo
    - ⚠️ Config salvata ma non applicata
 
 4. **Ritiro**:
-
    - ❌ **NON supportato** nel calcolo
    - ⚠️ Config salvata ma non applicata
 

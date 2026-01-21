@@ -42,14 +42,3 @@ export type OnLocationSelect = (location: {
   cap: string | null; // CAP selezionato (null se multipli)
   caps: string[]; // Tutti i CAP disponibili
 }) => void;
-
-
-
-
-
-
-
-
-
-
-

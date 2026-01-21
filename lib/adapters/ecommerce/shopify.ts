@@ -4,7 +4,15 @@
  * Integrazione con Shopify via REST API e GraphQL
  */
 
-import { EcommerceAdapter, type EcommerceCredentials, type Order, type OrderFilters, type TrackingInfo, type Product, type WebhookEvent } from './base';
+import {
+  EcommerceAdapter,
+  type EcommerceCredentials,
+  type Order,
+  type OrderFilters,
+  type TrackingInfo,
+  type Product,
+  type WebhookEvent,
+} from './base';
 
 export class ShopifyAdapter extends EcommerceAdapter {
   private apiVersion = '2024-01';
@@ -84,7 +92,9 @@ export class ShopifyAdapter extends EcommerceAdapter {
   async pushTrackingInfo(orderId: string, tracking: TrackingInfo): Promise<void> {
     try {
       // Ottieni fulfillment order
-      const fulfillmentResponse = await this.makeRequest(`/orders/${orderId}/fulfillment_orders.json`);
+      const fulfillmentResponse = await this.makeRequest(
+        `/orders/${orderId}/fulfillment_orders.json`
+      );
       const fulfillmentData = await fulfillmentResponse.json();
 
       if (fulfillmentData.fulfillment_orders.length === 0) {

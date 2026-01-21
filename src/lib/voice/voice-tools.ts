@@ -84,7 +84,10 @@ export const voiceFunctionDeclarations: GeminiFunctionDeclaration[] = [
     parameters: {
       type: 'object',
       properties: {
-        status: { type: 'string', description: 'Stato spedizione (pending, in_transit, delivered, etc.)' },
+        status: {
+          type: 'string',
+          description: 'Stato spedizione (pending, in_transit, delivered, etc.)',
+        },
         limit: { type: 'number' },
       },
     },
@@ -214,11 +217,15 @@ export async function executeVoiceTool(
         const shipments: any[] = listJson.data || [];
 
         const found =
-          shipments.find((s) => s.tracking === args.trackingNumber || s.tracking_number === args.trackingNumber) ||
+          shipments.find(
+            (s) => s.tracking === args.trackingNumber || s.tracking_number === args.trackingNumber
+          ) ||
           shipments.find(
             (s) =>
               args.recipientName &&
-              (s.destinatario?.nome || s.recipient_name || '').toLowerCase().includes(args.recipientName.toLowerCase())
+              (s.destinatario?.nome || s.recipient_name || '')
+                .toLowerCase()
+                .includes(args.recipientName.toLowerCase())
           );
 
         if (!found) {
@@ -244,7 +251,11 @@ export async function executeVoiceTool(
         const filtered = args.status
           ? shipments.filter((s) => (s.status || '').toLowerCase() === args.status.toLowerCase())
           : shipments;
-        return { success: true, data: filtered.slice(0, args.limit || 20), message: 'Elenco spedizioni' };
+        return {
+          success: true,
+          data: filtered.slice(0, args.limit || 20),
+          message: 'Elenco spedizioni',
+        };
       }
 
       case 'calculatePrice': {
@@ -259,7 +270,8 @@ export async function executeVoiceTool(
         const perKg = 2;
         const expressMultiplier = args.service === 'express' ? 1.5 : 1;
         const cod = Number(args.cashOnDelivery || 0) > 0 ? 3 : 0;
-        const insurance = Number(args.declaredValue || 0) > 0 ? Number(args.declaredValue) * 0.02 : 0;
+        const insurance =
+          Number(args.declaredValue || 0) > 0 ? Number(args.declaredValue) * 0.02 : 0;
         const estimate = (base + weight * perKg) * expressMultiplier + cod + insurance;
 
         return {
@@ -297,7 +309,9 @@ export async function executeVoiceTool(
 
       case 'getStatistics': {
         if (ctx.api?.dashboard?.getStatistics?.query) {
-          const data = await ctx.api.dashboard.getStatistics.query({ period: args.period || 'all' });
+          const data = await ctx.api.dashboard.getStatistics.query({
+            period: args.period || 'all',
+          });
           return { success: true, data, message: 'Statistiche recuperate' };
         }
 
@@ -309,7 +323,8 @@ export async function executeVoiceTool(
         const stats = {
           total: shipments.length,
           delivered: shipments.filter((s) => s.status === 'delivered').length,
-          in_transit: shipments.filter((s) => s.status === 'in_transit' || s.status === 'shipped').length,
+          in_transit: shipments.filter((s) => s.status === 'in_transit' || s.status === 'shipped')
+            .length,
           pending: shipments.filter((s) => s.status === 'pending' || s.status === 'draft').length,
           today: shipments.filter((s) => {
             if (!s.created_at) return false;

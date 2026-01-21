@@ -1,6 +1,6 @@
 /**
  * Unit Tests: Auto-Proceed Logic (P4 Task 2)
- * 
+ *
  * Test per la logica auto-proceed nel supervisor.
  * Verifica che auto-proceed funzioni SOLO per operazioni sicure (pricing),
  * MAI per booking/wallet/LDV/giacenze.
@@ -218,7 +218,7 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
   });
 
   describe('Auto-Proceed MAI per Booking (operazione finanziaria)', () => {
-    it('NON dovrebbe attivare auto-proceed anche con confidence alta se c\'è booking confirmation', async () => {
+    it("NON dovrebbe attivare auto-proceed anche con confidence alta se c'è booking confirmation", async () => {
       const { containsBookingConfirmation } = await import('@/lib/agent/workers/booking');
       vi.mocked(containsBookingConfirmation).mockReturnValue(true);
 
@@ -261,14 +261,13 @@ describe('Auto-Proceed Logic (P4 Task 2)', () => {
       // Questo test verifica che la logica auto-proceed sia applicata
       // SOLO quando next_step sarebbe 'END' con pricing_options,
       // MAI quando next_step sarebbe 'booking_worker'
-      
+
       const threshold = autoProceedConfig.AUTO_PROCEED_CONFIDENCE_THRESHOLD;
       expect(threshold).toBeGreaterThanOrEqual(85);
-      
+
       const suggestThreshold = autoProceedConfig.SUGGEST_PROCEED_CONFIDENCE_THRESHOLD;
       expect(suggestThreshold).toBeLessThan(threshold);
       expect(suggestThreshold).toBeGreaterThanOrEqual(70);
     });
   });
 });
-

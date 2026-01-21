@@ -8,18 +8,18 @@
  * 4. Identifica problemi di sovrapposizione (stesso corriere su più account)
  */
 
-import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
-import { resolve } from "path";
+import { createClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
+import { resolve } from 'path';
 
-config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: resolve(process.cwd(), '.env.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-const TEST_EMAIL = "testspediresicuro+postaexpress@gmail.com";
+const TEST_EMAIL = 'testspediresicuro+postaexpress@gmail.com';
 
 interface ContractInfo {
   configId: string;
@@ -30,36 +30,36 @@ interface ContractInfo {
 }
 
 async function main() {
-  console.log("═".repeat(70));
-  console.log("🔍 ANALISI MULTI-ACCOUNT / MULTI-CONTRATTO");
-  console.log("═".repeat(70));
+  console.log('═'.repeat(70));
+  console.log('🔍 ANALISI MULTI-ACCOUNT / MULTI-CONTRATTO');
+  console.log('═'.repeat(70));
 
   // 1. Trova l'utente
   const { data: user } = await supabase
-    .from("users")
-    .select("id, email, is_reseller")
-    .eq("email", TEST_EMAIL)
+    .from('users')
+    .select('id, email, is_reseller')
+    .eq('email', TEST_EMAIL)
     .single();
 
   if (!user) {
-    console.log("❌ Utente non trovato");
+    console.log('❌ Utente non trovato');
     return;
   }
 
   console.log(`\n👤 UTENTE: ${user.email}`);
   console.log(`   ID: ${user.id}`);
-  console.log(`   Reseller: ${user.is_reseller ? "✅ SÌ" : "❌ NO"}`);
+  console.log(`   Reseller: ${user.is_reseller ? '✅ SÌ' : '❌ NO'}`);
 
   // 2. Trova TUTTE le configurazioni Spedisci.Online
   const { data: configs } = await supabase
-    .from("courier_configs")
-    .select("*")
-    .eq("owner_user_id", user.id)
-    .eq("provider_id", "spedisci_online");
+    .from('courier_configs')
+    .select('*')
+    .eq('owner_user_id', user.id)
+    .eq('provider_id', 'spedisci_online');
 
-  console.log(`\n${"═".repeat(70)}`);
+  console.log(`\n${'═'.repeat(70)}`);
   console.log(`📡 CONFIGURAZIONI SPEDISCI.ONLINE: ${configs?.length || 0}`);
-  console.log("═".repeat(70));
+  console.log('═'.repeat(70));
 
   const allContracts: ContractInfo[] = [];
   const carriersByConfig: Map<string, string[]> = new Map();
@@ -67,7 +67,7 @@ async function main() {
   for (const cfg of configs || []) {
     console.log(`\n┌─ 📦 CONFIG: ${cfg.name}`);
     console.log(`│  ID: ${cfg.id}`);
-    console.log(`│  Attivo: ${cfg.is_active ? "✅" : "❌"}`);
+    console.log(`│  Attivo: ${cfg.is_active ? '✅' : '❌'}`);
 
     // Decripta le credenziali se necessario
     let creds = cfg.credentials || {};
@@ -83,7 +83,7 @@ async function main() {
     for (const contractCode of contracts) {
       const carrierName = contractMapping[contractCode];
       // Estrai il carrierCode dal contractCode (prima parte prima del -)
-      const carrierCode = contractCode.split("-")[0].toLowerCase();
+      const carrierCode = contractCode.split('-')[0].toLowerCase();
 
       console.log(`│     ├─ ${contractCode}`);
       console.log(`│     │     Corriere: ${carrierName} (${carrierCode})`);
@@ -106,9 +106,9 @@ async function main() {
   }
 
   // 3. Analisi sovrapposizioni
-  console.log(`\n${"═".repeat(70)}`);
-  console.log("🔄 ANALISI SOVRAPPOSIZIONI (stesso corriere su più account)");
-  console.log("═".repeat(70));
+  console.log(`\n${'═'.repeat(70)}`);
+  console.log('🔄 ANALISI SOVRAPPOSIZIONI (stesso corriere su più account)');
+  console.log('═'.repeat(70));
 
   // Raggruppa per carrierCode
   const carrierToConfigs: Map<string, ContractInfo[]> = new Map();
@@ -130,34 +130,27 @@ async function main() {
         } configurazioni:`
       );
       for (const contract of contracts) {
-        console.log(
-          `   - Config: ${contract.configName} (${contract.configId.substring(
-            0,
-            8
-          )})`
-        );
+        console.log(`   - Config: ${contract.configName} (${contract.configId.substring(0, 8)})`);
         console.log(`     Contratto: ${contract.contractCode}`);
       }
     }
   }
 
   if (!hasOverlaps) {
-    console.log(
-      "\n✅ Nessuna sovrapposizione: ogni corriere è in una sola configurazione"
-    );
+    console.log('\n✅ Nessuna sovrapposizione: ogni corriere è in una sola configurazione');
   }
 
   // 4. Trova TUTTI i listini dell'utente
-  console.log(`\n${"═".repeat(70)}`);
-  console.log("📋 LISTINI SINCRONIZZATI NEL DATABASE");
-  console.log("═".repeat(70));
+  console.log(`\n${'═'.repeat(70)}`);
+  console.log('📋 LISTINI SINCRONIZZATI NEL DATABASE');
+  console.log('═'.repeat(70));
 
   const { data: lists } = await supabase
-    .from("price_lists")
-    .select("id, name, metadata, source_metadata, created_at, updated_at")
-    .eq("created_by", user.id)
-    .eq("list_type", "supplier")
-    .order("created_at", { ascending: false });
+    .from('price_lists')
+    .select('id, name, metadata, source_metadata, created_at, updated_at')
+    .eq('created_by', user.id)
+    .eq('list_type', 'supplier')
+    .order('created_at', { ascending: false });
 
   console.log(`\nTotale listini: ${lists?.length || 0}`);
 
@@ -186,7 +179,7 @@ async function main() {
 
     for (const list of cfgLists) {
       console.log(`│  ├─ ${list.name}`);
-      console.log(`│  │     carrier_code: ${list.meta.carrier_code || "N/A"}`);
+      console.log(`│  │     carrier_code: ${list.meta.carrier_code || 'N/A'}`);
     }
 
     // Controlla se mancano listini per qualche corriere
@@ -194,30 +187,26 @@ async function main() {
     const actualCarriers = cfgLists
       .map((l: any) => l.meta.carrier_code?.toLowerCase())
       .filter(Boolean);
-    const missingCarriers = expectedCarriers.filter(
-      (c) => !actualCarriers.includes(c)
-    );
+    const missingCarriers = expectedCarriers.filter((c) => !actualCarriers.includes(c));
 
     if (missingCarriers.length > 0) {
-      console.log(`│  ⚠️  CORRIERI MANCANTI: ${missingCarriers.join(", ")}`);
+      console.log(`│  ⚠️  CORRIERI MANCANTI: ${missingCarriers.join(', ')}`);
     }
 
     console.log(`└─────────────────────────────────────────────`);
   }
 
   if (orphanLists.length > 0) {
-    console.log(
-      `\n⚠️  LISTINI ORFANI (senza courier_config_id): ${orphanLists.length}`
-    );
+    console.log(`\n⚠️  LISTINI ORFANI (senza courier_config_id): ${orphanLists.length}`);
     for (const list of orphanLists) {
       console.log(`   - ${list.name}`);
     }
   }
 
   // 5. Riepilogo finale
-  console.log(`\n${"═".repeat(70)}`);
-  console.log("📊 RIEPILOGO");
-  console.log("═".repeat(70));
+  console.log(`\n${'═'.repeat(70)}`);
+  console.log('📊 RIEPILOGO');
+  console.log('═'.repeat(70));
   console.log(`   Configurazioni Spedisci.Online: ${configs?.length || 0}`);
   console.log(`   Totale contratti corriere: ${allContracts.length}`);
   console.log(`   Corrieri unici: ${carrierToConfigs.size}`);
@@ -231,25 +220,19 @@ async function main() {
     allContracts.map((c) => `${c.configId}:${c.carrierCode}`)
   ).size;
 
-  console.log(
-    `\n   📌 Listini attesi (1 per corriere per config): ${expectedByCarrierPerConfig}`
-  );
+  console.log(`\n   📌 Listini attesi (1 per corriere per config): ${expectedByCarrierPerConfig}`);
   console.log(`   📌 Listini effettivi: ${lists?.length || 0}`);
 
   if ((lists?.length || 0) < expectedByCarrierPerConfig) {
     console.log(
-      `\n   ⚠️  ATTENZIONE: Mancano ${
-        expectedByCarrierPerConfig - (lists?.length || 0)
-      } listini!`
+      `\n   ⚠️  ATTENZIONE: Mancano ${expectedByCarrierPerConfig - (lists?.length || 0)} listini!`
     );
     console.log(`   💡 Esegui la sincronizzazione per ogni configurazione.`);
   } else if ((lists?.length || 0) === expectedByCarrierPerConfig) {
-    console.log(
-      `\n   ✅ COPERTURA COMPLETA: tutti i corrieri hanno il loro listino`
-    );
+    console.log(`\n   ✅ COPERTURA COMPLETA: tutti i corrieri hanno il loro listino`);
   }
 
-  console.log("\n" + "═".repeat(70));
+  console.log('\n' + '═'.repeat(70));
 }
 
 main().catch(console.error);

@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Wallet,
   TrendingUp,
@@ -19,105 +19,103 @@ import {
   Filter,
   Download,
   AlertCircle,
-} from 'lucide-react'
-import { toast } from 'sonner'
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-import PageHeader from '@/components/page-header'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { RechargeWalletDialog } from '@/components/wallet/recharge-wallet-dialog'
-import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
+import PageHeader from '@/components/page-header';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { RechargeWalletDialog } from '@/components/wallet/recharge-wallet-dialog';
+import { formatCurrency, formatDateTime, cn } from '@/lib/utils';
 
 interface WalletTransaction {
-  id: string
-  amount: number
-  type: string
-  description: string
-  created_at: string
-  created_by?: string
-  balance_after?: number
+  id: string;
+  amount: number;
+  type: string;
+  description: string;
+  created_at: string;
+  created_by?: string;
+  balance_after?: number;
 }
 
 interface WalletStats {
-  currentBalance: number
-  totalCredits: number
-  totalDebits: number
-  transactionsCount: number
-  lastRecharge?: string
-  averageTransaction: number
+  currentBalance: number;
+  totalCredits: number;
+  totalDebits: number;
+  transactionsCount: number;
+  lastRecharge?: string;
+  averageTransaction: number;
 }
 
 export default function WalletPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [walletBalance, setWalletBalance] = useState(0)
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([])
-  const [stats, setStats] = useState<WalletStats | null>(null)
-  const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all')
-  const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [stats, setStats] = useState<WalletStats | null>(null);
+  const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
+  const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false);
 
   // Verifica autenticazione
   useEffect(() => {
-    if (status === 'loading') return
+    if (status === 'loading') return;
 
     if (status === 'unauthenticated' || !session) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
 
-    loadWalletData()
-  }, [session, status, router])
+    loadWalletData();
+  }, [session, status, router]);
 
   async function loadWalletData() {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
       // Carica info utente con wallet balance
-      const userResponse = await fetch('/api/user/info')
+      const userResponse = await fetch('/api/user/info');
       if (userResponse.ok) {
-        const userData = await userResponse.json()
-        const user = userData.user || userData
-        setWalletBalance(user.wallet_balance || 0)
+        const userData = await userResponse.json();
+        const user = userData.user || userData;
+        setWalletBalance(user.wallet_balance || 0);
       }
 
       // Carica transazioni reali dal database
-      let loadedTransactions: WalletTransaction[] = []
-      const transactionsResponse = await fetch('/api/wallet/transactions')
+      let loadedTransactions: WalletTransaction[] = [];
+      const transactionsResponse = await fetch('/api/wallet/transactions');
       if (transactionsResponse.ok) {
-        const transactionsData = await transactionsResponse.json()
+        const transactionsData = await transactionsResponse.json();
         if (transactionsData.success && transactionsData.transactions) {
           // Le transazioni arrivano in ordine decrescente (più recenti prima)
           // Calcola balance_after partendo dal saldo attuale e andando indietro
-          let runningBalance = walletBalance
+          let runningBalance = walletBalance;
           loadedTransactions = transactionsData.transactions.map((tx: WalletTransaction) => {
             // Sottrai l'importo per ottenere il saldo prima di questa transazione
-            runningBalance -= tx.amount
+            runningBalance -= tx.amount;
             return {
               ...tx,
               balance_after: runningBalance + tx.amount, // Saldo dopo questa transazione
-            }
-          })
+            };
+          });
         }
       }
 
-      setTransactions(loadedTransactions)
+      setTransactions(loadedTransactions);
 
       // Calcola statistiche dalle transazioni caricate
       const totalCredits = loadedTransactions
         .filter((t) => t.amount > 0)
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + t.amount, 0);
 
       const totalDebits = Math.abs(
-        loadedTransactions
-          .filter((t) => t.amount < 0)
-          .reduce((sum, t) => sum + t.amount, 0)
-      )
+        loadedTransactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)
+      );
 
       const lastRecharge = loadedTransactions
         .filter((t) => t.amount > 0)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
       setStats({
         currentBalance: walletBalance,
@@ -125,24 +123,27 @@ export default function WalletPage() {
         totalDebits,
         transactionsCount: loadedTransactions.length,
         lastRecharge: lastRecharge?.created_at,
-        averageTransaction: loadedTransactions.length > 0
-          ? Math.abs(loadedTransactions.reduce((sum, t) => sum + t.amount, 0) / loadedTransactions.length)
-          : 0,
-      })
+        averageTransaction:
+          loadedTransactions.length > 0
+            ? Math.abs(
+                loadedTransactions.reduce((sum, t) => sum + t.amount, 0) / loadedTransactions.length
+              )
+            : 0,
+      });
     } catch (error) {
-      console.error('Errore caricamento wallet:', error)
-      toast.error('Errore durante il caricamento del wallet')
+      console.error('Errore caricamento wallet:', error);
+      toast.error('Errore durante il caricamento del wallet');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   const filteredTransactions = transactions.filter((t) => {
-    if (filterType === 'all') return true
-    if (filterType === 'credit') return t.amount > 0
-    if (filterType === 'debit') return t.amount < 0
-    return true
-  })
+    if (filterType === 'all') return true;
+    if (filterType === 'credit') return t.amount > 0;
+    if (filterType === 'debit') return t.amount < 0;
+    return true;
+  });
 
   const getTransactionIcon = (amount: number) => {
     return amount > 0 ? (
@@ -153,8 +154,8 @@ export default function WalletPage() {
       <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
         <ArrowDownRight className="w-5 h-5 text-red-600" />
       </div>
-    )
-  }
+    );
+  };
 
   const getTransactionTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
@@ -167,48 +168,51 @@ export default function WalletPage() {
       feature: { label: 'Feature', color: 'bg-orange-100 text-orange-700' },
       refund: { label: 'Rimborso', color: 'bg-teal-100 text-teal-700' },
       reseller_recharge: { label: 'Ricarica Reseller', color: 'bg-indigo-100 text-indigo-700' },
-    }
-    return types[type] || { label: type, color: 'bg-gray-100 text-gray-700' }
-  }
+    };
+    return types[type] || { label: type, color: 'bg-gray-100 text-gray-700' };
+  };
 
   const handleExportTransactions = () => {
     try {
       // Prepara dati CSV
-      const headers = ['Data', 'Tipo', 'Descrizione', 'Importo', 'Saldo Dopo']
-      const rows = filteredTransactions.map(tx => {
-        const typeInfo = getTransactionTypeLabel(tx.type)
+      const headers = ['Data', 'Tipo', 'Descrizione', 'Importo', 'Saldo Dopo'];
+      const rows = filteredTransactions.map((tx) => {
+        const typeInfo = getTransactionTypeLabel(tx.type);
         return [
           formatDateTime(tx.created_at),
           typeInfo.label,
           tx.description,
           formatCurrency(tx.amount),
-          tx.balance_after !== undefined ? formatCurrency(tx.balance_after) : '-'
-        ]
-      })
+          tx.balance_after !== undefined ? formatCurrency(tx.balance_after) : '-',
+        ];
+      });
 
       // Crea CSV
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-      ].join('\n')
+        ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+      ].join('\n');
 
       // Download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      const url = URL.createObjectURL(blob)
-      link.setAttribute('href', url)
-      link.setAttribute('download', `wallet-transazioni-${new Date().toISOString().split('T')[0]}.csv`)
-      link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `wallet-transazioni-${new Date().toISOString().split('T')[0]}.csv`
+      );
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      toast.success('Transazioni esportate con successo!')
+      toast.success('Transazioni esportate con successo!');
     } catch (error) {
-      console.error('Errore export:', error)
-      toast.error('Errore durante l\'export delle transazioni')
+      console.error('Errore export:', error);
+      toast.error("Errore durante l'export delle transazioni");
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -218,7 +222,7 @@ export default function WalletPage() {
           <p className="text-gray-600">Caricamento wallet...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -228,15 +232,15 @@ export default function WalletPage() {
         subtitle="Gestisci il tuo credito e monitora le transazioni"
         actions={
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="gap-2 border-2 border-gray-300 hover:border-gray-400"
               onClick={handleExportTransactions}
             >
               <Download className="w-4 h-4" />
               Esporta
             </Button>
-            <Button 
+            <Button
               onClick={() => setRechargeDialogOpen(true)}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 gap-2"
             >
@@ -299,9 +303,7 @@ export default function WalletPage() {
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                     <p className="text-white/70 text-xs mb-1">Transazioni</p>
-                    <p className="text-white text-xl font-bold">
-                      {stats.transactionsCount}
-                    </p>
+                    <p className="text-white text-xl font-bold">{stats.transactionsCount}</p>
                   </div>
                 </div>
               )}
@@ -370,9 +372,7 @@ export default function WalletPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Storico Transazioni</h2>
-                <p className="text-sm text-gray-500">
-                  Tutte le movimentazioni del tuo wallet
-                </p>
+                <p className="text-sm text-gray-500">Tutte le movimentazioni del tuo wallet</p>
               </div>
 
               {/* Filters */}
@@ -410,14 +410,12 @@ export default function WalletPage() {
               <div className="text-center py-12">
                 <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 mb-2">Nessuna transazione trovata</p>
-                <p className="text-sm text-gray-400">
-                  Le tue transazioni appariranno qui
-                </p>
+                <p className="text-sm text-gray-400">Le tue transazioni appariranno qui</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredTransactions.map((transaction) => {
-                  const typeInfo = getTransactionTypeLabel(transaction.type)
+                  const typeInfo = getTransactionTypeLabel(transaction.type);
                   return (
                     <div
                       key={transaction.id}
@@ -457,7 +455,7 @@ export default function WalletPage() {
                         )}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -474,7 +472,9 @@ export default function WalletPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">Come funziona il Wallet?</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Il tuo wallet è il credito prepagato per utilizzare tutti i servizi della piattaforma. Ogni spedizione, feature o servizio scala automaticamente dal saldo disponibile.
+                  Il tuo wallet è il credito prepagato per utilizzare tutti i servizi della
+                  piattaforma. Ogni spedizione, feature o servizio scala automaticamente dal saldo
+                  disponibile.
                 </p>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>✅ Ricariche illimitate senza commissioni</li>
@@ -493,10 +493,10 @@ export default function WalletPage() {
         isOpen={rechargeDialogOpen}
         onClose={() => setRechargeDialogOpen(false)}
         onSuccess={() => {
-          loadWalletData() // Ricarica i dati dopo la ricarica
+          loadWalletData(); // Ricarica i dati dopo la ricarica
         }}
         currentBalance={walletBalance}
       />
     </div>
-  )
+  );
 }

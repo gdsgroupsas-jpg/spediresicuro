@@ -7,6 +7,7 @@ Dopo il login con Google, l'utente viene reindirizzato alla pagina di login inve
 ## 🔧 Modifiche Applicate
 
 Ho aggiunto:
+
 1. ✅ **Logging dettagliato** nel layout del dashboard per vedere se la sessione viene trovata
 2. ✅ **Logging dettagliato** nel callback JWT per vedere se il token viene creato correttamente
 3. ✅ **Logging dettagliato** nel callback session per vedere se la sessione viene creata correttamente
@@ -59,6 +60,7 @@ Dovresti vedere questi messaggi in ordine:
 **Causa:** La sessione non viene creata correttamente dopo il callback OAuth.
 
 **Possibili Soluzioni:**
+
 1. Verifica che `NEXTAUTH_SECRET` sia configurato correttamente su Vercel
 2. Verifica che i cookie vengano salvati correttamente (controlla le impostazioni del browser)
 3. Verifica che l'URL di callback in Google Console sia corretto
@@ -72,6 +74,7 @@ Dovresti vedere questi messaggi in ordine:
 Se questo messaggio **NON appare**, significa che il token non viene creato.
 
 **Possibili Soluzioni:**
+
 1. Verifica che il callback `signIn` ritorni `true`
 2. Verifica che non ci siano errori nella creazione dell'utente nel database
 
@@ -89,6 +92,7 @@ Se vedi questo messaggio, significa che NextAuth stava per reindirizzare a `/log
 Se il messaggio `🔐 [NEXTAUTH] session callback chiamato` **NON appare**, significa che la sessione non viene creata.
 
 **Possibili Soluzioni:**
+
 1. Verifica che `NEXTAUTH_SECRET` sia configurato correttamente
 2. Verifica che i cookie vengano salvati correttamente
 
@@ -148,4 +152,3 @@ Prima di considerare il problema risolto, verifica:
 ---
 
 **Ultimo aggiornamento:** Questa guida è stata creata per risolvere il problema di redirect a login dopo OAuth.
-

@@ -1,14 +1,14 @@
 /**
  * Platform Fee Service
- * 
+ *
  * Gestione fee di piattaforma dinamiche per utente.
- * 
+ *
  * ARCHITETTURA:
  * - DB: tabella `users` con colonne `platform_fee_override`, `platform_fee_notes`
  * - DB: tabella `platform_fee_history` per audit trail
  * - SQL: funzione `get_platform_fee(user_id)` per recupero fee
  * - RLS: solo SUPERADMIN può vedere history
- * 
+ *
  * RIFERIMENTI:
  * - Migration: supabase/migrations/050_dynamic_platform_fees.sql
  * - MIGRATION_MEMORY.md sezione FASE 2.7
@@ -21,7 +21,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 // ============================================
 
 /** Fee di default applicata se non c'è override per l'utente */
-export const DEFAULT_PLATFORM_FEE = 0.50;
+export const DEFAULT_PLATFORM_FEE = 0.5;
 
 // ============================================
 // TIPI
@@ -108,16 +108,19 @@ export async function getPlatformFee(userId: string): Promise<PlatformFeeResult>
   let usedCascading = false;
 
   // Prova prima la funzione cascading
-  const { data: cascadingFee, error: cascadingError } = await supabaseAdmin
-    .rpc('get_platform_fee_cascading', { p_user_id: userId });
+  const { data: cascadingFee, error: cascadingError } = await supabaseAdmin.rpc(
+    'get_platform_fee_cascading',
+    { p_user_id: userId }
+  );
 
   if (!cascadingError && cascadingFee !== null) {
     feeFromRpc = cascadingFee;
     usedCascading = true;
   } else {
     // Fallback alla vecchia funzione
-    const { data: oldFee, error: oldError } = await supabaseAdmin
-      .rpc('get_platform_fee', { p_user_id: userId });
+    const { data: oldFee, error: oldError } = await supabaseAdmin.rpc('get_platform_fee', {
+      p_user_id: userId,
+    });
 
     if (oldError) {
       if (oldError.message?.includes('not found')) {
@@ -132,7 +135,9 @@ export async function getPlatformFee(userId: string): Promise<PlatformFeeResult>
   // Recupera dettagli utente per determinare source
   const { data: userData, error: userError } = await supabaseAdmin
     .from('users')
-    .select('platform_fee_override, platform_fee_notes, parent_imposed_fee, parent_id, fee_applied_by_parent_id')
+    .select(
+      'platform_fee_override, platform_fee_notes, parent_imposed_fee, parent_id, fee_applied_by_parent_id'
+    )
     .eq('id', userId)
     .single();
 
@@ -169,8 +174,9 @@ export async function getPlatformFee(userId: string): Promise<PlatformFeeResult>
     source = 'parent_cascaded';
 
     // Prova a ottenere dettagli dalla funzione get_platform_fee_details
-    const { data: detailsData } = await supabaseAdmin
-      .rpc('get_platform_fee_details', { p_user_id: userId });
+    const { data: detailsData } = await supabaseAdmin.rpc('get_platform_fee_details', {
+      p_user_id: userId,
+    });
 
     if (detailsData && detailsData.length > 0) {
       const detail = detailsData[0];
@@ -197,7 +203,7 @@ export async function getPlatformFee(userId: string): Promise<PlatformFeeResult>
  * Recupera la platform fee in modo "fail-safe".
  * Se errore, ritorna default senza lanciare eccezione.
  * Usare per calcoli pricing dove non si vuole bloccare il flusso.
- * 
+ *
  * @param userId - UUID dell'utente
  * @returns Fee effettiva (default se errore)
  */
@@ -213,10 +219,10 @@ export async function getPlatformFeeSafe(userId: string): Promise<number> {
 
 /**
  * Aggiorna la platform fee per un utente.
- * 
+ *
  * IMPORTANTE: Solo SUPERADMIN può chiamare questa funzione.
  * La verifica del ruolo avviene lato DB tramite la funzione SQL.
- * 
+ *
  * @param input - Dati per l'aggiornamento
  * @param adminUserId - ID del SUPERADMIN che esegue l'operazione
  * @returns Risultato operazione
@@ -245,9 +251,7 @@ export async function updatePlatformFee(
     throw new Error('Error verifying admin privileges');
   }
 
-  const isSuperAdmin = 
-    adminData.account_type === 'superadmin' || 
-    adminData.role === 'admin';
+  const isSuperAdmin = adminData.account_type === 'superadmin' || adminData.role === 'admin';
 
   if (!isSuperAdmin) {
     throw new Error('Only SUPERADMIN can update platform fees');
@@ -277,16 +281,14 @@ export async function updatePlatformFee(
   }
 
   // Inserisci record audit manualmente (controllo su changed_by)
-  const newFeeValue = newFee ?? 0.50; // Valore effettivo da loggare
-  const { error: auditError } = await supabaseAdmin
-    .from('platform_fee_history')
-    .insert({
-      user_id: targetUserId,
-      old_fee: previousFee,
-      new_fee: newFeeValue,
-      notes: notes || null,
-      changed_by: adminUserId, // ✅ ID admin che ha fatto la modifica
-    });
+  const newFeeValue = newFee ?? 0.5; // Valore effettivo da loggare
+  const { error: auditError } = await supabaseAdmin.from('platform_fee_history').insert({
+    user_id: targetUserId,
+    old_fee: previousFee,
+    new_fee: newFeeValue,
+    notes: notes || null,
+    changed_by: adminUserId, // ✅ ID admin che ha fatto la modifica
+  });
 
   if (auditError) {
     // Log errore audit ma non bloccare l'operazione
@@ -304,9 +306,10 @@ export async function updatePlatformFee(
 
   return {
     success: true,
-    message: newFee === null 
-      ? 'Platform fee reset to default' 
-      : `Platform fee updated to €${newFee.toFixed(2)}`,
+    message:
+      newFee === null
+        ? 'Platform fee reset to default'
+        : `Platform fee updated to €${newFee.toFixed(2)}`,
     previousFee,
     newFee: newFee ?? DEFAULT_PLATFORM_FEE,
   };
@@ -314,9 +317,9 @@ export async function updatePlatformFee(
 
 /**
  * Recupera lo storico delle modifiche fee per un utente.
- * 
+ *
  * IMPORTANTE: Solo SUPERADMIN può vedere la history (RLS attivo).
- * 
+ *
  * @param userId - UUID dell'utente target
  * @param limit - Numero massimo di record (default 50)
  * @returns Array di entry history, ordinate per data DESC
@@ -327,7 +330,8 @@ export async function getPlatformFeeHistory(
 ): Promise<PlatformFeeHistoryEntry[]> {
   const { data, error } = await supabaseAdmin
     .from('platform_fee_history')
-    .select(`
+    .select(
+      `
       id,
       user_id,
       old_fee,
@@ -336,7 +340,8 @@ export async function getPlatformFeeHistory(
       changed_by,
       changed_at,
       changer:users!platform_fee_history_changed_by_fkey(name, email)
-    `)
+    `
+    )
     .eq('user_id', userId)
     .order('changed_at', { ascending: false })
     .limit(limit);
@@ -350,10 +355,8 @@ export async function getPlatformFeeHistory(
   // Nota: Supabase restituisce le relazioni come array anche se è 1:1
   return (data || []).map((row) => {
     // Gestisci il caso array (Supabase) vs oggetto singolo
-    const changer = Array.isArray(row.changer) 
-      ? row.changer[0] 
-      : row.changer;
-    
+    const changer = Array.isArray(row.changer) ? row.changer[0] : row.changer;
+
     return {
       id: row.id as string,
       userId: row.user_id as string,
@@ -371,19 +374,19 @@ export async function getPlatformFeeHistory(
 /**
  * Lista utenti con fee personalizzate.
  * Utile per dashboard admin.
- * 
+ *
  * @param limit - Numero massimo di record
  * @returns Array di utenti con fee custom
  */
-export async function listUsersWithCustomFees(
-  limit: number = 100
-): Promise<Array<{
-  userId: string;
-  name: string;
-  email: string;
-  customFee: number;
-  notes: string | null;
-}>> {
+export async function listUsersWithCustomFees(limit: number = 100): Promise<
+  Array<{
+    userId: string;
+    name: string;
+    email: string;
+    customFee: number;
+    notes: string | null;
+  }>
+> {
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('id, name, email, platform_fee_override, platform_fee_notes')
@@ -472,11 +475,10 @@ export async function setParentImposedFee(
   }
 
   // 2. Verifica che childUserId sia un sub-user del parent
-  const { data: isSubUser, error: subUserError } = await supabaseAdmin
-    .rpc('is_sub_user_of', {
-      p_sub_user_id: childUserId,
-      p_admin_id: parentUserId,
-    });
+  const { data: isSubUser, error: subUserError } = await supabaseAdmin.rpc('is_sub_user_of', {
+    p_sub_user_id: childUserId,
+    p_admin_id: parentUserId,
+  });
 
   if (subUserError) {
     console.error('[PlatformFee] Sub-user check error:', subUserError);
@@ -484,9 +486,7 @@ export async function setParentImposedFee(
   }
 
   // SUPERADMIN può impostare fee a chiunque
-  const isSuperAdmin =
-    parentData.account_type === 'superadmin' ||
-    parentData.role === 'SUPERADMIN';
+  const isSuperAdmin = parentData.account_type === 'superadmin' || parentData.role === 'SUPERADMIN';
 
   if (!isSubUser && !isSuperAdmin) {
     throw new Error('Target user is not a sub-user of your organization');
@@ -521,16 +521,14 @@ export async function setParentImposedFee(
   }
 
   // 5. Registra in audit log
-  const { error: auditError } = await supabaseAdmin
-    .from('parent_fee_history')
-    .insert({
-      parent_id: parentUserId,
-      child_id: childUserId,
-      old_parent_fee: previousFee,
-      new_parent_fee: fee,
-      notes: notes || null,
-      changed_by: parentUserId,
-    });
+  const { error: auditError } = await supabaseAdmin.from('parent_fee_history').insert({
+    parent_id: parentUserId,
+    child_id: childUserId,
+    old_parent_fee: previousFee,
+    new_parent_fee: fee,
+    notes: notes || null,
+    changed_by: parentUserId,
+  });
 
   if (auditError) {
     // Log errore audit ma non bloccare l'operazione
@@ -547,9 +545,10 @@ export async function setParentImposedFee(
 
   return {
     success: true,
-    message: fee === null
-      ? 'Parent imposed fee removed - sub-user will inherit parent fee'
-      : `Parent imposed fee set to €${fee.toFixed(2)}`,
+    message:
+      fee === null
+        ? 'Parent imposed fee removed - sub-user will inherit parent fee'
+        : `Parent imposed fee set to €${fee.toFixed(2)}`,
     previousFee,
     newFee: fee,
   };
@@ -611,4 +610,3 @@ export async function getSubUsersWithFees(parentUserId: string): Promise<
 
   return result;
 }
-

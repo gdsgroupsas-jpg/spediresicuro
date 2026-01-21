@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react';
 import {
   Users,
   ArrowUpDown,
@@ -11,209 +11,213 @@ import {
   Copy,
   Check,
   UserCog,
-} from 'lucide-react'
-import { toast } from 'sonner'
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Select } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { SearchInputDebounced } from '@/components/shared/search-input-debounced'
-import { EmptyState } from '@/components/shared/empty-state'
-import { DataTableSkeleton } from '@/components/shared/data-table-skeleton'
-import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog'
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SearchInputDebounced } from '@/components/shared/search-input-debounced';
+import { EmptyState } from '@/components/shared/empty-state';
+import { DataTableSkeleton } from '@/components/shared/data-table-skeleton';
+import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 
-import { ManageWalletDialog } from './manage-wallet-dialog'
-import { BulkActionsBar } from './bulk-actions-bar'
+import { ManageWalletDialog } from './manage-wallet-dialog';
+import { BulkActionsBar } from './bulk-actions-bar';
 
-import { useAllUsers, useToggleResellerStatus, useUpdateResellerRole, useInvalidateAllUsers } from '@/lib/queries/use-all-users'
-import { formatCurrency, formatDate, formatUuid, cn } from '@/lib/utils'
-import { useCopyToClipboard } from '@/lib/hooks'
-import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema'
+import {
+  useAllUsers,
+  useToggleResellerStatus,
+  useUpdateResellerRole,
+  useInvalidateAllUsers,
+} from '@/lib/queries/use-all-users';
+import { formatCurrency, formatDate, formatUuid, cn } from '@/lib/utils';
+import { useCopyToClipboard } from '@/lib/hooks';
+import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema';
 
 interface User {
-  id: string
-  email: string
-  name: string
-  account_type: string
-  is_reseller: boolean
-  reseller_role: string | null
-  wallet_balance: number
-  created_at: string
+  id: string;
+  email: string;
+  name: string;
+  account_type: string;
+  is_reseller: boolean;
+  reseller_role: string | null;
+  wallet_balance: number;
+  created_at: string;
 }
 
-type SortField = 'name' | 'wallet_balance' | 'created_at' | 'account_type'
-type SortOrder = 'asc' | 'desc'
+type SortField = 'name' | 'wallet_balance' | 'created_at' | 'account_type';
+type SortOrder = 'asc' | 'desc';
 
-const ITEMS_PER_PAGE = 50
+const ITEMS_PER_PAGE = 50;
 
 export function UsersTable() {
-  const { data: users = [], isLoading, error } = useAllUsers()
-  const toggleResellerMutation = useToggleResellerStatus()
-  const updateResellerRoleMutation = useUpdateResellerRole()
-  const invalidate = useInvalidateAllUsers()
-  const { copy, isCopied } = useCopyToClipboard()
+  const { data: users = [], isLoading, error } = useAllUsers();
+  const toggleResellerMutation = useToggleResellerStatus();
+  const updateResellerRoleMutation = useUpdateResellerRole();
+  const invalidate = useInvalidateAllUsers();
+  const { copy, isCopied } = useCopyToClipboard();
 
   // Filtri e ordinamento
-  const [search, setSearch] = useState('')
-  const [accountTypeFilter, setAccountTypeFilter] = useState<'all' | 'admin' | 'reseller' | 'user'>('all')
-  const [resellerStatusFilter, setResellerStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [sortField, setSortField] = useState<SortField>('created_at')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState('');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<'all' | 'admin' | 'reseller' | 'user'>(
+    'all'
+  );
+  const [resellerStatusFilter, setResellerStatusFilter] = useState<'all' | 'active' | 'inactive'>(
+    'all'
+  );
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Selezione multipla
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Dialogs
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [walletDialogOpen, setWalletDialogOpen] = useState(false)
-  const [confirmToggle, setConfirmToggle] = useState<{ user: User; enabled: boolean } | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [walletDialogOpen, setWalletDialogOpen] = useState(false);
+  const [confirmToggle, setConfirmToggle] = useState<{ user: User; enabled: boolean } | null>(null);
 
   // Filtra utenti
   const filteredUsers = useMemo(() => {
-    let result = [...users]
+    let result = [...users];
 
     // Ricerca
     if (search) {
-      const searchLower = search.toLowerCase()
+      const searchLower = search.toLowerCase();
       result = result.filter(
         (u) =>
           u.name?.toLowerCase().includes(searchLower) ||
           u.email.toLowerCase().includes(searchLower) ||
           u.id.toLowerCase().includes(searchLower)
-      )
+      );
     }
 
     // Filtro account type
     if (accountTypeFilter !== 'all') {
-      result = result.filter((u) => u.account_type === accountTypeFilter)
+      result = result.filter((u) => u.account_type === accountTypeFilter);
     }
 
     // Filtro reseller status
     if (resellerStatusFilter === 'active') {
-      result = result.filter((u) => u.is_reseller === true)
+      result = result.filter((u) => u.is_reseller === true);
     } else if (resellerStatusFilter === 'inactive') {
-      result = result.filter((u) => u.is_reseller !== true)
+      result = result.filter((u) => u.is_reseller !== true);
     }
 
     // Ordinamento
     result.sort((a, b) => {
-      let comparison = 0
+      let comparison = 0;
       switch (sortField) {
         case 'name':
-          comparison = (a.name || '').localeCompare(b.name || '')
-          break
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
         case 'wallet_balance':
-          comparison = (a.wallet_balance || 0) - (b.wallet_balance || 0)
-          break
+          comparison = (a.wallet_balance || 0) - (b.wallet_balance || 0);
+          break;
         case 'created_at':
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          break
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
         case 'account_type':
-          comparison = (a.account_type || '').localeCompare(b.account_type || '')
-          break
+          comparison = (a.account_type || '').localeCompare(b.account_type || '');
+          break;
       }
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
-    return result
-  }, [users, search, accountTypeFilter, resellerStatusFilter, sortField, sortOrder])
+    return result;
+  }, [users, search, accountTypeFilter, resellerStatusFilter, sortField, sortOrder]);
 
   // Paginazione
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredUsers.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredUsers, currentPage])
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredUsers, currentPage]);
 
   // Handlers
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field)
-      setSortOrder('asc')
+      setSortField(field);
+      setSortOrder('asc');
     }
-  }
+  };
 
   const handleSearch = useCallback((value: string) => {
-    setSearch(value)
-    setCurrentPage(1)
-  }, [])
+    setSearch(value);
+    setCurrentPage(1);
+  }, []);
 
   const handleToggleSelect = (userId: string) => {
     setSelectedIds((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(userId)) {
-        next.delete(userId)
+        next.delete(userId);
       } else {
-        next.add(userId)
+        next.add(userId);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   const handleSelectAll = () => {
     if (selectedIds.size === paginatedUsers.length) {
-      setSelectedIds(new Set())
+      setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(paginatedUsers.map((u) => u.id)))
+      setSelectedIds(new Set(paginatedUsers.map((u) => u.id)));
     }
-  }
+  };
 
   const handleResellerToggle = (user: User, enabled: boolean) => {
-    setConfirmToggle({ user, enabled })
-  }
+    setConfirmToggle({ user, enabled });
+  };
 
   const confirmResellerToggle = async () => {
-    if (!confirmToggle) return
+    if (!confirmToggle) return;
 
     try {
       await toggleResellerMutation.mutateAsync({
         userId: confirmToggle.user.id,
         enabled: confirmToggle.enabled,
-      })
+      });
       toast.success(
         confirmToggle.enabled
           ? `${confirmToggle.user.name} è ora un Reseller`
           : `${confirmToggle.user.name} non è più un Reseller`
-      )
+      );
     } catch (error: any) {
-      toast.error(error.message || 'Errore nel cambio status')
+      toast.error(error.message || 'Errore nel cambio status');
     }
-    setConfirmToggle(null)
-  }
+    setConfirmToggle(null);
+  };
 
   const handleManageWallet = (user: User) => {
-    setSelectedUser(user)
-    setWalletDialogOpen(true)
-  }
+    setSelectedUser(user);
+    setWalletDialogOpen(true);
+  };
 
   const handleCopyId = (id: string) => {
-    copy(id, 'ID copiato')
-  }
+    copy(id, 'ID copiato');
+  };
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-30" />
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-30" />;
     return sortOrder === 'asc' ? (
       <ArrowUp className="h-4 w-4 ml-1 text-[#FF9500]" />
     ) : (
       <ArrowDown className="h-4 w-4 ml-1 text-[#FF9500]" />
-    )
-  }
+    );
+  };
 
   const getAccountTypeBadge = (type: string, isReseller?: boolean) => {
     // Import dinamico per evitare problemi SSR
     const { RoleBadge } = require('@/lib/utils/role-badges');
-    return (
-      <RoleBadge
-        accountType={type}
-        isReseller={isReseller}
-      />
-    );
-  }
+    return <RoleBadge accountType={type} isReseller={isReseller} />;
+  };
 
   if (error) {
     return (
@@ -223,7 +227,7 @@ export function UsersTable() {
           Riprova
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -239,8 +243,8 @@ export function UsersTable() {
         <Select
           value={accountTypeFilter}
           onChange={(e) => {
-            setAccountTypeFilter(e.target.value as typeof accountTypeFilter)
-            setCurrentPage(1)
+            setAccountTypeFilter(e.target.value as typeof accountTypeFilter);
+            setCurrentPage(1);
           }}
           className="w-full sm:w-36"
         >
@@ -252,8 +256,8 @@ export function UsersTable() {
         <Select
           value={resellerStatusFilter}
           onChange={(e) => {
-            setResellerStatusFilter(e.target.value as typeof resellerStatusFilter)
-            setCurrentPage(1)
+            setResellerStatusFilter(e.target.value as typeof resellerStatusFilter);
+            setCurrentPage(1);
           }}
           className="w-full sm:w-40"
         >
@@ -275,9 +279,9 @@ export function UsersTable() {
             <Button
               variant="outline"
               onClick={() => {
-                setSearch('')
-                setAccountTypeFilter('all')
-                setResellerStatusFilter('all')
+                setSearch('');
+                setAccountTypeFilter('all');
+                setResellerStatusFilter('all');
               }}
             >
               Resetta filtri
@@ -293,7 +297,9 @@ export function UsersTable() {
                   <th className="px-4 py-3 text-left w-12">
                     <input
                       type="checkbox"
-                      checked={selectedIds.size === paginatedUsers.length && paginatedUsers.length > 0}
+                      checked={
+                        selectedIds.size === paginatedUsers.length && paginatedUsers.length > 0
+                      }
                       onChange={handleSelectAll}
                       className="rounded border-gray-300"
                     />
@@ -392,20 +398,23 @@ export function UsersTable() {
                         <Select
                           value={user.reseller_role || 'user'}
                           onChange={async (e) => {
-                            const newRole = e.target.value as 'admin' | 'user'
+                            const newRole = e.target.value as 'admin' | 'user';
                             try {
                               await updateResellerRoleMutation.mutateAsync({
                                 userId: user.id,
                                 role: newRole,
-                              })
+                              });
                               toast.success(
                                 `${user.name} è ora ${newRole === 'admin' ? 'Admin Reseller' : 'User Reseller'}`
-                              )
+                              );
                             } catch (error: any) {
-                              toast.error(error.message || 'Errore nell\'aggiornamento del ruolo')
+                              toast.error(error.message || "Errore nell'aggiornamento del ruolo");
                             }
                           }}
-                          disabled={updateResellerRoleMutation.isPending || user.account_type === 'superadmin'}
+                          disabled={
+                            updateResellerRoleMutation.isPending ||
+                            user.account_type === 'superadmin'
+                          }
                           className="w-32 text-sm"
                         >
                           <option value="user">User</option>
@@ -416,17 +425,14 @@ export function UsersTable() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <button
-                        onClick={() => handleManageWallet(user)}
-                        className="inline-block"
-                      >
+                      <button onClick={() => handleManageWallet(user)} className="inline-block">
                         <Badge
                           variant={
                             (user.wallet_balance || 0) < WALLET_THRESHOLDS.LOW
                               ? 'error'
                               : (user.wallet_balance || 0) >= WALLET_THRESHOLDS.HIGH
-                              ? 'success'
-                              : 'secondary'
+                                ? 'success'
+                                : 'secondary'
                           }
                           className="font-mono cursor-pointer hover:opacity-80"
                         >
@@ -494,8 +500,8 @@ export function UsersTable() {
           selectedUsers={filteredUsers.filter((u) => selectedIds.has(u.id))}
           onClearSelection={() => setSelectedIds(new Set())}
           onSuccess={() => {
-            invalidate()
-            setSelectedIds(new Set())
+            invalidate();
+            setSelectedIds(new Set());
           }}
         />
       )}
@@ -505,8 +511,8 @@ export function UsersTable() {
         user={selectedUser}
         isOpen={walletDialogOpen}
         onClose={() => {
-          setWalletDialogOpen(false)
-          setSelectedUser(null)
+          setWalletDialogOpen(false);
+          setSelectedUser(null);
         }}
         onSuccess={() => invalidate()}
       />
@@ -527,5 +533,5 @@ export function UsersTable() {
         isLoading={toggleResellerMutation.isPending}
       />
     </div>
-  )
+  );
 }

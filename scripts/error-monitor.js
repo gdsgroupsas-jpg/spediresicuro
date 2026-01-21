@@ -1,6 +1,6 @@
 /**
  * Error Monitor Script
- * 
+ *
  * Monitora errori durante build/dev e crea ERROR_LOG.md
  * Utilizzo: node scripts/error-monitor.js [dev|build]
  */
@@ -17,12 +17,12 @@ const npmCommand = command === 'build' ? 'build' : 'dev';
 function writeLog(entry) {
   const timestamp = new Date().toISOString();
   const logEntry = `## ${timestamp}\n\n${entry}\n\n---\n\n`;
-  
+
   let existingContent = '';
   if (fs.existsSync(LOG_FILE)) {
     existingContent = fs.readFileSync(LOG_FILE, 'utf-8');
   }
-  
+
   const newContent = `# Error Log - SpedireSicuro\n\n> Ultimo aggiornamento: ${timestamp}\n\n---\n\n${logEntry}${existingContent}`;
   fs.writeFileSync(LOG_FILE, newContent, 'utf-8');
   console.log(`\n📝 Errore salvato in ${LOG_FILE}\n`);
@@ -41,7 +41,7 @@ npm.stdout.on('data', (data) => {
   const text = data.toString();
   output += text;
   process.stdout.write(text);
-  
+
   // Cattura errori comuni
   if (text.includes('error') || text.includes('Error') || text.includes('Failed')) {
     writeLog(`### Errore Rilevato\n\n\`\`\`\n${text}\n\`\`\``);
@@ -52,7 +52,7 @@ npm.stderr.on('data', (data) => {
   const text = data.toString();
   errorOutput += text;
   process.stderr.write(text);
-  
+
   // Cattura errori stderr
   if (text.includes('error') || text.includes('Error') || text.includes('Failed')) {
     writeLog(`### Errore Stderr\n\n\`\`\`\n${text}\n\`\`\``);
@@ -70,14 +70,3 @@ npm.on('close', (code) => {
   }
   process.exit(code);
 });
-
-
-
-
-
-
-
-
-
-
-

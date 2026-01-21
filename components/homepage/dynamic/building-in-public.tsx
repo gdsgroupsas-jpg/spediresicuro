@@ -22,7 +22,7 @@ import {
   TrendingUp,
   Sparkles,
   Quote,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -36,8 +36,8 @@ const roadmapItems = [
       'Wallet System (atomic operations)',
       'Multi-tenant RLS',
       'Acting Context (impersonation)',
-      'Courier Adapters (GLS, BRT, Poste)'
-    ]
+      'Courier Adapters (GLS, BRT, Poste)',
+    ],
   },
   {
     phase: 'FASE 3',
@@ -48,8 +48,8 @@ const roadmapItems = [
       'Validazione pricing + unit economics',
       'Primi 10-20 founding customers',
       'Feedback loop + iterations',
-      'Completamento: Fine Settimana'
-    ]
+      'Completamento: Fine Settimana',
+    ],
   },
   {
     phase: 'FASE 4',
@@ -60,9 +60,9 @@ const roadmapItems = [
       'APM monitoring (Sentry)',
       'API documentation (OpenAPI)',
       'Primi 100 clienti paganti',
-      'Stima: 2-3 mesi'
-    ]
-  }
+      'Stima: 2-3 mesi',
+    ],
+  },
 ];
 
 const betaMetrics = [
@@ -70,26 +70,26 @@ const betaMetrics = [
     icon: Users,
     label: 'Beta Tester',
     value: 'In corso',
-    description: 'PostaPrivata + early adopters'
+    description: 'PostaPrivata + early adopters',
   },
   {
     icon: Target,
     label: 'OCR Tests',
     value: 'Diverse',
-    description: '90% confidence validation'
+    description: '90% confidence validation',
   },
   {
     icon: TrendingUp,
     label: 'Time-Saving',
     value: '94%',
-    description: '3 min → 10 sec reale'
+    description: '3 min → 10 sec reale',
   },
   {
     icon: Rocket,
     label: 'Go-Live',
     value: 'Q1 2026',
-    description: 'Production readiness'
-  }
+    description: 'Production readiness',
+  },
 ];
 
 export default function BuildingInPublic() {
@@ -167,13 +167,15 @@ export default function BuildingInPublic() {
 
                   <div className="flex gap-4">
                     {/* Status icon */}
-                    <div className={`flex-shrink-0 w-6 h-6 mt-1 rounded-full flex items-center justify-center ${
-                      phase.status === 'completed'
-                        ? 'bg-emerald-100'
-                        : phase.status === 'in_progress'
-                        ? 'bg-amber-100'
-                        : 'bg-gray-100'
-                    }`}>
+                    <div
+                      className={`flex-shrink-0 w-6 h-6 mt-1 rounded-full flex items-center justify-center ${
+                        phase.status === 'completed'
+                          ? 'bg-emerald-100'
+                          : phase.status === 'in_progress'
+                            ? 'bg-amber-100'
+                            : 'bg-gray-100'
+                      }`}
+                    >
                       {phase.status === 'completed' ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       ) : phase.status === 'in_progress' ? (
@@ -186,13 +188,15 @@ export default function BuildingInPublic() {
                     {/* Content */}
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          phase.status === 'completed'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : phase.status === 'in_progress'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            phase.status === 'completed'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : phase.status === 'in_progress'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
                           {phase.phase}
                         </span>
                         <h4 className="font-semibold text-gray-900">{phase.title}</h4>
@@ -268,8 +272,8 @@ export default function BuildingInPublic() {
                 </div>
 
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  &quot;Elimino 3 minuti per ogni spedizione al banco. Prima scrivevo a mano i dati dal
-                  cliente, ora faccio screenshot del documento e Anne compila tutto.
+                  &quot;Elimino 3 minuti per ogni spedizione al banco. Prima scrivevo a mano i dati
+                  dal cliente, ora faccio screenshot del documento e Anne compila tutto.
                   <span className="font-semibold text-violet-700"> Zero errori di battitura.</span>
                   &quot;
                 </p>
@@ -297,12 +301,10 @@ export default function BuildingInPublic() {
           className="text-center"
         >
           <div className="inline-block p-8 rounded-3xl bg-gradient-to-r from-amber-500 to-orange-500 shadow-2xl">
-            <h3 className="text-2xl font-bold text-white mb-3">
-              Diventa Founding Customer
-            </h3>
+            <h3 className="text-2xl font-bold text-white mb-3">Diventa Founding Customer</h3>
             <p className="text-amber-50 mb-6 max-w-lg">
-              Primi 100 clienti: listino bloccato €79/mese (poi €149).
-              Accesso prioritario, feedback diretto, roadmap condivisa.
+              Primi 100 clienti: listino bloccato €79/mese (poi €149). Accesso prioritario, feedback
+              diretto, roadmap condivisa.
             </p>
             <Link
               href="/preventivo"

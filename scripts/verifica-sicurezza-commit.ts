@@ -1,6 +1,6 @@
 /**
  * Script di Verifica Sicurezza - Controlla Dati Sensibili
- * 
+ *
  * Verifica se ci sono dati sensibili esposti nei file tracciati da Git
  * che potrebbero essere committati per errore.
  */
@@ -26,9 +26,15 @@ const patternSensibili = [
   // Chiavi lunghe che sembrano reali (non placeholder)
   { pattern: /[A-Za-z0-9]{50,}/g, nome: 'Chiave lunga (possibile secret)' },
   // Password in chiaro
-  { pattern: /password\s*=\s*['"](?!your-|xxxxx|placeholder|TODO)[^'"]{8,}['"]/gi, nome: 'Password in chiaro' },
+  {
+    pattern: /password\s*=\s*['"](?!your-|xxxxx|placeholder|TODO)[^'"]{8,}['"]/gi,
+    nome: 'Password in chiaro',
+  },
   // API keys comuni
-  { pattern: /(api[_-]?key|apikey)\s*=\s*['"](?!your-|xxxxx|placeholder|TODO)[^'"]{20,}['"]/gi, nome: 'API Key' },
+  {
+    pattern: /(api[_-]?key|apikey)\s*=\s*['"](?!your-|xxxxx|placeholder|TODO)[^'"]{20,}['"]/gi,
+    nome: 'API Key',
+  },
 ];
 
 // File da escludere (sono file di esempio o documentazione)
@@ -45,7 +51,18 @@ const fileEsclusi = [
 ];
 
 // Estensioni da controllare
-const estensioniControllate = ['.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt', '.ps1', '.bat', '.sh'];
+const estensioniControllate = [
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.json',
+  '.md',
+  '.txt',
+  '.ps1',
+  '.bat',
+  '.sh',
+];
 
 let problemiTrovati: Array<{ file: string; tipo: string; riga?: number }> = [];
 
@@ -55,14 +72,14 @@ try {
   // Ottieni lista file tracciati da Git
   const gitFiles = execSync('git ls-files', { encoding: 'utf-8' })
     .split('\n')
-    .filter(line => line.trim() !== '');
+    .filter((line) => line.trim() !== '');
 
   console.log(`   Trovati ${gitFiles.length} file tracciati\n`);
 
   // Filtra file da controllare
-  const fileDaControllare = gitFiles.filter(file => {
+  const fileDaControllare = gitFiles.filter((file) => {
     // Escludi file nella lista esclusi
-    if (fileEsclusi.some(escluso => file.includes(escluso))) {
+    if (fileEsclusi.some((escluso) => file.includes(escluso))) {
       return false;
     }
 
@@ -89,17 +106,19 @@ try {
       // Controlla ogni pattern
       for (const { pattern, nome } of patternSensibili) {
         const matches = content.match(pattern);
-        
+
         if (matches) {
           // Verifica se non sono placeholder
-          const matchValidi = matches.filter(match => {
+          const matchValidi = matches.filter((match) => {
             const lower = match.toLowerCase();
-            return !lower.includes('your-') &&
-                   !lower.includes('xxxxx') &&
-                   !lower.includes('placeholder') &&
-                   !lower.includes('example') &&
-                   !lower.includes('todo') &&
-                   match.length > 10; // Ignora match troppo corti
+            return (
+              !lower.includes('your-') &&
+              !lower.includes('xxxxx') &&
+              !lower.includes('placeholder') &&
+              !lower.includes('example') &&
+              !lower.includes('todo') &&
+              match.length > 10
+            ); // Ignora match troppo corti
           });
 
           if (matchValidi.length > 0) {
@@ -163,12 +182,8 @@ try {
   const gitignorePath = path.join(process.cwd(), '.gitignore');
   if (fs.existsSync(gitignorePath)) {
     const gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8');
-    
-    const protezioniNecessarie = [
-      '.env*.local',
-      '.env',
-      'automation-service/.env',
-    ];
+
+    const protezioniNecessarie = ['.env*.local', '.env', 'automation-service/.env'];
 
     let tutteProtezioni = true;
     for (const protezione of protezioniNecessarie) {
@@ -193,9 +208,7 @@ try {
   console.log('\n✅ Verifica completata\n');
 
   process.exit(problemiTrovati.length > 0 ? 1 : 0);
-
 } catch (error) {
   console.error('❌ Errore durante la verifica:', error);
   process.exit(1);
 }
-

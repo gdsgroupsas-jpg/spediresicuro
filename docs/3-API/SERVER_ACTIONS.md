@@ -1,34 +1,39 @@
 # Server Actions - Complete Catalog
 
 ## Overview
+
 Catalogo completo di tutte le Server Actions disponibili in SpedireSicuro. Le Server Actions sono funzioni TypeScript esportate da `actions/**/*.ts` che possono essere chiamate direttamente da componenti React.
 
 ## Target Audience
+
 - [x] Developers
 - [ ] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Next.js 14+ App Router
 - React Server Components
 - Conoscenza base di TypeScript
 
 ## Quick Reference
-| Categoria | File | Actions |
-|-----------|------|---------|
-| Wallet | `actions/wallet.ts` | Ricarica, transazioni |
-| Price Lists | `actions/price-lists.ts` | CRUD listini, assegnazioni |
-| Reseller | `actions/admin-reseller.ts` | Gestione sub-users |
-| Super Admin | `actions/super-admin.ts` | Operazioni superadmin |
-| Configurations | `actions/configurations.ts` | Config corrieri |
-| Platform Costs | `actions/platform-costs.ts` | P&L, financial tracking |
+
+| Categoria      | File                        | Actions                    |
+| -------------- | --------------------------- | -------------------------- |
+| Wallet         | `actions/wallet.ts`         | Ricarica, transazioni      |
+| Price Lists    | `actions/price-lists.ts`    | CRUD listini, assegnazioni |
+| Reseller       | `actions/admin-reseller.ts` | Gestione sub-users         |
+| Super Admin    | `actions/super-admin.ts`    | Operazioni superadmin      |
+| Configurations | `actions/configurations.ts` | Config corrieri            |
+| Platform Costs | `actions/platform-costs.ts` | P&L, financial tracking    |
 
 ---
 
 ## What are Server Actions?
 
 Server Actions sono funzioni TypeScript che:
+
 - Eseguono **sul server** (Node.js)
 - Hanno accesso diretto a database (Supabase)
 - Supportano **type-safety** end-to-end
@@ -36,14 +41,15 @@ Server Actions sono funzioni TypeScript che:
 - Supportano **Acting Context** (impersonation)
 
 **Esempio:**
+
 ```typescript
 // actions/wallet.ts
-'use server'
+'use server';
 
 export async function rechargeMyWallet(amount: number) {
   const context = await requireSafeAuth();
   // ... logica server-side
-  return { success: true, newBalance: 150.00 };
+  return { success: true, newBalance: 150.0 };
 }
 
 // Component
@@ -70,10 +76,12 @@ Ricarica wallet dell'utente corrente.
 **File:** `actions/wallet.ts`
 
 **Parameters:**
+
 - `amount: number` - Importo da aggiungere (deve essere > 0)
 - `reason?: string` - Motivo ricarica (default: "Ricarica wallet utente")
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -85,6 +93,7 @@ Ricarica wallet dell'utente corrente.
 ```
 
 **Authorization:**
+
 - Utente normale: crea richiesta ricarica
 - Admin/SuperAdmin: ricarica diretta
 
@@ -99,6 +108,7 @@ Ottiene storico transazioni wallet.
 **File:** `actions/wallet.ts`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -124,6 +134,7 @@ Crea nuovo listino prezzi.
 **File:** `actions/price-lists.ts`
 
 **Parameters:**
+
 ```typescript
 {
   name: string;
@@ -134,6 +145,7 @@ Crea nuovo listino prezzi.
 ```
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -151,10 +163,12 @@ Clona listino esistente.
 **File:** `actions/price-lists.ts`
 
 **Parameters:**
+
 - `sourceId: string` - ID listino da clonare
 - `newName: string` - Nome nuovo listino
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -174,10 +188,12 @@ Assegna listino a utente (via `price_list_assignments`).
 **File:** `actions/price-lists.ts`
 
 **Parameters:**
+
 - `priceListId: string`
 - `userId: string`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -203,6 +219,7 @@ Lista listini disponibili.
 **File:** `actions/price-lists.ts`
 
 **Parameters:**
+
 ```typescript
 {
   courier?: string;
@@ -213,6 +230,7 @@ Lista listini disponibili.
 ```
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -231,6 +249,7 @@ Ottiene listino applicabile per corriere/utente.
 **File:** `actions/price-lists.ts`
 
 **Logic:**
+
 1. Cerca listino personalizzato utente
 2. Fallback a listino master
 3. Fallback a default
@@ -244,6 +263,7 @@ Calcola preventivo da listini database.
 **File:** `actions/price-lists.ts`
 
 **Parameters:**
+
 ```typescript
 {
   weight: number;
@@ -257,6 +277,7 @@ Calcola preventivo da listini database.
 ```
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -280,6 +301,7 @@ Crea sub-user per reseller.
 **File:** `actions/admin-reseller.ts`
 
 **Parameters:**
+
 ```typescript
 {
   email: string;
@@ -291,6 +313,7 @@ Crea sub-user per reseller.
 ```
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -312,6 +335,7 @@ Ottiene lista sub-users del reseller corrente.
 **File:** `actions/admin-reseller.ts`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -335,6 +359,7 @@ Statistiche sub-users (conteggio, tier, ecc.).
 **File:** `actions/admin-reseller.ts`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -357,6 +382,7 @@ Gestisce wallet sub-user (solo reseller).
 **File:** `actions/admin-reseller.ts`
 
 **Parameters:**
+
 - `userId: string` - ID sub-user
 - `amount: number` - Importo (positivo = credit, negativo = debit)
 - `reason: string` - Motivo operazione
@@ -382,6 +408,7 @@ Gestisce wallet utente (solo superadmin).
 **File:** `actions/super-admin.ts`
 
 **Parameters:**
+
 - `userId: string`
 - `amount: number` - Importo (positivo = credit, negativo = debit)
 - `reason: string`
@@ -396,6 +423,7 @@ Attiva feature per utente.
 **File:** `actions/super-admin.ts`
 
 **Parameters:**
+
 - `userId: string`
 - `featureCode: string` - Codice feature (es. "ai_ocr")
 - `isFree?: boolean` - Se true, attiva senza scalare credito
@@ -411,9 +439,11 @@ Ottiene tutti gli utenti (solo superadmin).
 **File:** `actions/super-admin.ts`
 
 **Parameters:**
+
 - `limit?: number` - Numero risultati (default: 100)
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -438,6 +468,7 @@ Crea nuovo reseller completo.
 **File:** `actions/super-admin.ts`
 
 **Parameters:**
+
 ```typescript
 {
   email: string;
@@ -459,6 +490,7 @@ Salva configurazione corriere.
 **File:** `actions/configurations.ts`
 
 **Parameters:**
+
 ```typescript
 {
   provider: 'spediscionline' | 'poste' | 'gls';
@@ -478,6 +510,7 @@ Lista configurazioni corriere disponibili.
 **File:** `actions/configurations.ts`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -505,9 +538,11 @@ Ottiene P&L giornaliero.
 **File:** `actions/platform-costs.ts`
 
 **Parameters:**
+
 - `days?: number` - Numero giorni (default: 30)
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -540,6 +575,7 @@ Ottiene alert margini negativi.
 **File:** `actions/platform-costs.ts`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -599,6 +635,7 @@ Esporta tutti i dati utente (GDPR).
 **File:** `actions/privacy.ts`
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -623,6 +660,7 @@ Richiede cancellazione account (GDPR).
 **File:** `actions/privacy.ts`
 
 **Parameters:**
+
 - `confirmation: string` - Deve essere "DELETE" per confermare
 
 ---
@@ -666,7 +704,7 @@ export async function myAction() {
   const context = await requireSafeAuth();
   const targetId = context.target.id; // Chi paga/riceve
   const actorId = context.actor.id; // Chi ha cliccato
-  
+
   // ... logica
 }
 ```
@@ -686,9 +724,9 @@ export async function myAction() {
     return { success: true, data: result };
   } catch (error: any) {
     console.error('Error:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Operazione fallita' 
+    return {
+      success: false,
+      error: error.message || 'Operazione fallita',
     };
   }
 }
@@ -729,12 +767,12 @@ export async function myAction(input: unknown) {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

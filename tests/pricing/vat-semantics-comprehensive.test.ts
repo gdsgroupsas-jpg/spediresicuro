@@ -13,92 +13,92 @@ import {
   isValidVATMode,
   normalizePrice,
   type VATMode,
-} from "@/lib/pricing/vat-utils";
-import { describe, expect, it } from "vitest";
+} from '@/lib/pricing/vat-utils';
+import { describe, expect, it } from 'vitest';
 
-describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
-  describe("1. Normalizzazione Prezzi", () => {
-    it("normalizza da excluded a included con IVA 22%", () => {
-      const result = normalizePrice(100, "excluded", "included", 22);
+describe('VAT Semantics - Comprehensive Tests (ADR-001)', () => {
+  describe('1. Normalizzazione Prezzi', () => {
+    it('normalizza da excluded a included con IVA 22%', () => {
+      const result = normalizePrice(100, 'excluded', 'included', 22);
       expect(result).toBeCloseTo(122, 2);
     });
 
-    it("normalizza da included a excluded con IVA 22%", () => {
-      const result = normalizePrice(122, "included", "excluded", 22);
+    it('normalizza da included a excluded con IVA 22%', () => {
+      const result = normalizePrice(122, 'included', 'excluded', 22);
       expect(result).toBeCloseTo(100, 2);
     });
 
-    it("normalizza con IVA 10%", () => {
-      const result = normalizePrice(100, "excluded", "included", 10);
+    it('normalizza con IVA 10%', () => {
+      const result = normalizePrice(100, 'excluded', 'included', 10);
       expect(result).toBeCloseTo(110, 2);
     });
 
-    it("normalizza con IVA 4%", () => {
-      const result = normalizePrice(100, "excluded", "included", 4);
+    it('normalizza con IVA 4%', () => {
+      const result = normalizePrice(100, 'excluded', 'included', 4);
       expect(result).toBeCloseTo(104, 2);
     });
 
-    it("restituisce stesso prezzo se modalità identiche", () => {
-      expect(normalizePrice(100, "excluded", "excluded", 22)).toBe(100);
-      expect(normalizePrice(122, "included", "included", 22)).toBe(122);
+    it('restituisce stesso prezzo se modalità identiche', () => {
+      expect(normalizePrice(100, 'excluded', 'excluded', 22)).toBe(100);
+      expect(normalizePrice(122, 'included', 'included', 22)).toBe(122);
     });
 
-    it("gestisce null come excluded (backward compatibility)", () => {
-      const result1 = normalizePrice(100, null, "included", 22);
+    it('gestisce null come excluded (backward compatibility)', () => {
+      const result1 = normalizePrice(100, null, 'included', 22);
       expect(result1).toBeCloseTo(122, 2);
 
-      const result2 = normalizePrice(122, "included", null, 22);
+      const result2 = normalizePrice(122, 'included', null, 22);
       expect(result2).toBeCloseTo(100, 2);
 
       const result3 = normalizePrice(100, null, null, 22);
       expect(result3).toBe(100);
     });
 
-    it("gestisce precisione floating point correttamente", () => {
-      const result = normalizePrice(100.50, "excluded", "included", 22);
+    it('gestisce precisione floating point correttamente', () => {
+      const result = normalizePrice(100.5, 'excluded', 'included', 22);
       expect(result).toBeCloseTo(122.61, 2);
     });
   });
 
-  describe("2. Calcolo IVA", () => {
-    it("calcola IVA su prezzo escluso (22%)", () => {
+  describe('2. Calcolo IVA', () => {
+    it('calcola IVA su prezzo escluso (22%)', () => {
       const result = calculateVATAmount(100, 22);
       expect(result).toBeCloseTo(22, 2);
     });
 
-    it("calcola IVA su prezzo escluso (10%)", () => {
+    it('calcola IVA su prezzo escluso (10%)', () => {
       const result = calculateVATAmount(100, 10);
       expect(result).toBeCloseTo(10, 2);
     });
 
-    it("calcola prezzo con IVA (22%)", () => {
+    it('calcola prezzo con IVA (22%)', () => {
       const result = calculatePriceWithVAT(100, 22);
       expect(result).toBeCloseTo(122, 2);
     });
 
-    it("calcola prezzo con IVA (10%)", () => {
+    it('calcola prezzo con IVA (10%)', () => {
       const result = calculatePriceWithVAT(100, 10);
       expect(result).toBeCloseTo(110, 2);
     });
 
-    it("estrae prezzo escluso da prezzo incluso (22%)", () => {
+    it('estrae prezzo escluso da prezzo incluso (22%)', () => {
       const result = extractPriceExclVAT(122, 22);
       expect(result).toBeCloseTo(100, 2);
     });
 
-    it("estrae prezzo escluso da prezzo incluso (10%)", () => {
+    it('estrae prezzo escluso da prezzo incluso (10%)', () => {
       const result = extractPriceExclVAT(110, 10);
       expect(result).toBeCloseTo(100, 2);
     });
   });
 
-  describe("3. Validazione VAT Mode", () => {
+  describe('3. Validazione VAT Mode', () => {
     it("valida vat_mode 'included'", () => {
-      expect(isValidVATMode("included")).toBe(true);
+      expect(isValidVATMode('included')).toBe(true);
     });
 
     it("valida vat_mode 'excluded'", () => {
-      expect(isValidVATMode("excluded")).toBe(true);
+      expect(isValidVATMode('excluded')).toBe(true);
     });
 
     it("valida vat_mode null (ma restituisce false perché isValidVATMode verifica solo 'included'/'excluded')", () => {
@@ -107,35 +107,35 @@ describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
       expect(isValidVATMode(null as any)).toBe(false);
     });
 
-    it("invalida vat_mode undefined", () => {
+    it('invalida vat_mode undefined', () => {
       expect(isValidVATMode(undefined as any)).toBe(false);
     });
 
-    it("invalida vat_mode stringa non valida", () => {
-      expect(isValidVATMode("invalid" as any)).toBe(false);
+    it('invalida vat_mode stringa non valida', () => {
+      expect(isValidVATMode('invalid' as any)).toBe(false);
     });
   });
 
-  describe("4. Fallback VAT Mode", () => {
+  describe('4. Fallback VAT Mode', () => {
     it("restituisce 'excluded' per null (backward compatibility)", () => {
-      expect(getVATModeWithFallback(null)).toBe("excluded");
+      expect(getVATModeWithFallback(null)).toBe('excluded');
     });
 
     it("restituisce 'excluded' per undefined (backward compatibility)", () => {
-      expect(getVATModeWithFallback(undefined as any)).toBe("excluded");
+      expect(getVATModeWithFallback(undefined as any)).toBe('excluded');
     });
 
     it("restituisce 'included' se specificato", () => {
-      expect(getVATModeWithFallback("included")).toBe("included");
+      expect(getVATModeWithFallback('included')).toBe('included');
     });
 
     it("restituisce 'excluded' se specificato", () => {
-      expect(getVATModeWithFallback("excluded")).toBe("excluded");
+      expect(getVATModeWithFallback('excluded')).toBe('excluded');
     });
   });
 
-  describe("5. Scenari Real-World", () => {
-    it("scenario: Listino IVA esclusa, margine 20%, risultato IVA esclusa", () => {
+  describe('5. Scenari Real-World', () => {
+    it('scenario: Listino IVA esclusa, margine 20%, risultato IVA esclusa', () => {
       const basePrice = 100; // IVA esclusa
       const margin = 20; // 20%
       const finalPriceExclVAT = basePrice + (basePrice * margin) / 100; // 120€
@@ -147,7 +147,7 @@ describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
       expect(finalPriceWithVAT).toBeCloseTo(146.4, 2);
     });
 
-    it("scenario: Listino IVA inclusa, margine 20%, risultato IVA inclusa", () => {
+    it('scenario: Listino IVA inclusa, margine 20%, risultato IVA inclusa', () => {
       const basePriceInclVAT = 122; // IVA inclusa (100€ + 22€)
       const basePriceExclVAT = extractPriceExclVAT(basePriceInclVAT, 22); // 100€
       const margin = 20; // 20% su base IVA esclusa
@@ -161,7 +161,7 @@ describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
       expect(finalPriceWithVAT).toBeCloseTo(146.4, 2);
     });
 
-    it("scenario: Confronto prezzi con vat_mode diversi", () => {
+    it('scenario: Confronto prezzi con vat_mode diversi', () => {
       const price1 = 100; // IVA esclusa
       const price2 = 122; // IVA inclusa
 
@@ -172,10 +172,10 @@ describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
       expect(price1ExclVAT).toBeCloseTo(price2ExclVAT, 2); // Prezzi equivalenti
     });
 
-    it("scenario: Surcharges seguono vat_mode del listino", () => {
+    it('scenario: Surcharges seguono vat_mode del listino', () => {
       // Listino IVA inclusa
       const basePriceInclVAT = 122; // 100€ + 22% IVA
-      const surchargesInclVAT = 12.20; // 10€ + 22% IVA
+      const surchargesInclVAT = 12.2; // 10€ + 22% IVA
       const totalInclVAT = basePriceInclVAT + surchargesInclVAT; // 134.20€
 
       // Normalizza a IVA esclusa per calcoli interni
@@ -189,33 +189,33 @@ describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
     });
   });
 
-  describe("6. Edge Cases", () => {
-    it("gestisce prezzo zero", () => {
-      expect(normalizePrice(0, "excluded", "included", 22)).toBe(0);
-      expect(normalizePrice(0, "included", "excluded", 22)).toBe(0);
+  describe('6. Edge Cases', () => {
+    it('gestisce prezzo zero', () => {
+      expect(normalizePrice(0, 'excluded', 'included', 22)).toBe(0);
+      expect(normalizePrice(0, 'included', 'excluded', 22)).toBe(0);
       expect(calculateVATAmount(0, 22)).toBe(0);
       expect(calculatePriceWithVAT(0, 22)).toBe(0);
     });
 
-    it("gestisce IVA rate zero", () => {
-      expect(normalizePrice(100, "excluded", "included", 0)).toBe(100);
+    it('gestisce IVA rate zero', () => {
+      expect(normalizePrice(100, 'excluded', 'included', 0)).toBe(100);
       expect(calculateVATAmount(100, 0)).toBe(0);
       expect(calculatePriceWithVAT(100, 0)).toBe(100);
     });
 
-    it("gestisce prezzi molto piccoli", () => {
-      const result = normalizePrice(0.01, "excluded", "included", 22);
+    it('gestisce prezzi molto piccoli', () => {
+      const result = normalizePrice(0.01, 'excluded', 'included', 22);
       expect(result).toBeCloseTo(0.0122, 4);
     });
 
-    it("gestisce prezzi molto grandi", () => {
-      const result = normalizePrice(1000000, "excluded", "included", 22);
+    it('gestisce prezzi molto grandi', () => {
+      const result = normalizePrice(1000000, 'excluded', 'included', 22);
       expect(result).toBeCloseTo(1220000, 2);
     });
   });
 
-  describe("7. Invarianti (ADR-001)", () => {
-    it("Invariant #1: Margine sempre su base IVA esclusa", () => {
+  describe('7. Invarianti (ADR-001)', () => {
+    it('Invariant #1: Margine sempre su base IVA esclusa', () => {
       // Base price IVA inclusa: 122€ (100€ + 22%)
       const basePriceInclVAT = 122;
       const basePriceExclVAT = extractPriceExclVAT(basePriceInclVAT, 22); // 100€
@@ -227,15 +227,15 @@ describe("VAT Semantics - Comprehensive Tests (ADR-001)", () => {
       expect(finalPriceExclVAT).toBe(120);
     });
 
-    it("Invariant #2: Normalizzazione bidirezionale", () => {
+    it('Invariant #2: Normalizzazione bidirezionale', () => {
       const originalPrice = 100;
-      const normalized = normalizePrice(originalPrice, "excluded", "included", 22);
-      const backToOriginal = normalizePrice(normalized, "included", "excluded", 22);
+      const normalized = normalizePrice(originalPrice, 'excluded', 'included', 22);
+      const backToOriginal = normalizePrice(normalized, 'included', 'excluded', 22);
 
       expect(backToOriginal).toBeCloseTo(originalPrice, 2);
     });
 
-    it("Invariant #3: Confronto prezzi solo dopo normalizzazione", () => {
+    it('Invariant #3: Confronto prezzi solo dopo normalizzazione', () => {
       const price1 = 100; // IVA esclusa
       const price2 = 122; // IVA inclusa
 

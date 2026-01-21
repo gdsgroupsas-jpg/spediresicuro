@@ -1,9 +1,17 @@
-'use client'
+'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAllUsers, toggleResellerStatus, manageWallet, updateResellerRole } from '@/actions/super-admin'
-import type { UserFilters } from '@/lib/validations/user-schema'
-import type { WalletOperationInput, BulkWalletOperationInput } from '@/lib/validations/wallet-schema'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getAllUsers,
+  toggleResellerStatus,
+  manageWallet,
+  updateResellerRole,
+} from '@/actions/super-admin';
+import type { UserFilters } from '@/lib/validations/user-schema';
+import type {
+  WalletOperationInput,
+  BulkWalletOperationInput,
+} from '@/lib/validations/wallet-schema';
 
 /**
  * Hook per ottenere tutti gli utenti (Super Admin)
@@ -12,173 +20,173 @@ export function useAllUsers(filters?: Partial<UserFilters>) {
   return useQuery({
     queryKey: ['all-users', filters],
     queryFn: async () => {
-      const result = await getAllUsers(filters?.limit || 100)
+      const result = await getAllUsers(filters?.limit || 100);
       if (!result.success) {
-        throw new Error(result.error || 'Errore nel caricamento degli utenti')
+        throw new Error(result.error || 'Errore nel caricamento degli utenti');
       }
-      return result.users || []
+      return result.users || [];
     },
     staleTime: 30_000,
     refetchOnWindowFocus: true,
-  })
+  });
 }
 
 /**
  * Hook per toggle status reseller
  */
 export function useToggleResellerStatus() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ userId, enabled }: { userId: string; enabled: boolean }) => {
-      const result = await toggleResellerStatus(userId, enabled)
+      const result = await toggleResellerStatus(userId, enabled);
       if (!result.success) {
-        throw new Error(result.error || 'Errore nel cambio status reseller')
+        throw new Error(result.error || 'Errore nel cambio status reseller');
       }
-      return result
+      return result;
     },
     onMutate: async ({ userId, enabled }) => {
-      await queryClient.cancelQueries({ queryKey: ['all-users'] })
-      const previousUsers = queryClient.getQueryData(['all-users'])
+      await queryClient.cancelQueries({ queryKey: ['all-users'] });
+      const previousUsers = queryClient.getQueryData(['all-users']);
 
       queryClient.setQueryData(['all-users'], (old: any[] | undefined) => {
-        if (!old) return old
+        if (!old) return old;
         return old.map((user: any) =>
-          user.id === userId ? { ...user, is_reseller: enabled, reseller_role: enabled ? 'admin' : null } : user
-        )
-      })
+          user.id === userId
+            ? { ...user, is_reseller: enabled, reseller_role: enabled ? 'admin' : null }
+            : user
+        );
+      });
 
-      return { previousUsers }
+      return { previousUsers };
     },
     onError: (err, variables, context) => {
       if (context?.previousUsers) {
-        queryClient.setQueryData(['all-users'], context.previousUsers)
+        queryClient.setQueryData(['all-users'], context.previousUsers);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-users'] })
+      queryClient.invalidateQueries({ queryKey: ['all-users'] });
     },
-  })
+  });
 }
 
 /**
  * Hook per gestire wallet utente
  */
 export function useManageWallet() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ userId, amount, reason }: WalletOperationInput) => {
-      const result = await manageWallet(userId, amount, reason)
+      const result = await manageWallet(userId, amount, reason);
       if (!result.success) {
-        throw new Error(result.error || 'Errore nella gestione wallet')
+        throw new Error(result.error || 'Errore nella gestione wallet');
       }
-      return result
+      return result;
     },
     onMutate: async ({ userId, amount }) => {
-      await queryClient.cancelQueries({ queryKey: ['all-users'] })
-      const previousUsers = queryClient.getQueryData(['all-users'])
+      await queryClient.cancelQueries({ queryKey: ['all-users'] });
+      const previousUsers = queryClient.getQueryData(['all-users']);
 
       // ⚠️ OPTIMISTIC UPDATE: Client-side cache ONLY
       // This does NOT update database directly
       // Real update happens via increment_wallet_balance() RPC on server
       // This is just for immediate UI feedback
       queryClient.setQueryData(['all-users'], (old: any[] | undefined) => {
-        if (!old) return old
+        if (!old) return old;
         return old.map((user: any) =>
           user.id === userId
             ? { ...user, wallet_balance: (user.wallet_balance || 0) + amount }
             : user
-        )
-      })
+        );
+      });
 
-      return { previousUsers }
+      return { previousUsers };
     },
     onError: (err, variables, context) => {
       if (context?.previousUsers) {
-        queryClient.setQueryData(['all-users'], context.previousUsers)
+        queryClient.setQueryData(['all-users'], context.previousUsers);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-users'] })
-      queryClient.invalidateQueries({ queryKey: ['sub-users'] })
-      queryClient.invalidateQueries({ queryKey: ['sub-users-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['all-users'] });
+      queryClient.invalidateQueries({ queryKey: ['sub-users'] });
+      queryClient.invalidateQueries({ queryKey: ['sub-users-stats'] });
     },
-  })
+  });
 }
 
 /**
  * Hook per operazioni wallet massive
  */
 export function useBulkWalletOperation() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ userIds, amount, reason }: BulkWalletOperationInput) => {
       const results = await Promise.allSettled(
         userIds.map((userId) => manageWallet(userId, amount, reason))
-      )
+      );
 
-      const successful = results.filter(
-        (r) => r.status === 'fulfilled' && r.value.success
-      ).length
-      const failed = userIds.length - successful
+      const successful = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
+      const failed = userIds.length - successful;
 
-      return { successful, failed, total: userIds.length }
+      return { successful, failed, total: userIds.length };
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-users'] })
-      queryClient.invalidateQueries({ queryKey: ['sub-users'] })
-      queryClient.invalidateQueries({ queryKey: ['sub-users-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['all-users'] });
+      queryClient.invalidateQueries({ queryKey: ['sub-users'] });
+      queryClient.invalidateQueries({ queryKey: ['sub-users-stats'] });
     },
-  })
+  });
 }
 
 /**
  * Hook per aggiornare ruolo reseller
  */
 export function useUpdateResellerRole() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'user' }) => {
-      const result = await updateResellerRole(userId, role)
+      const result = await updateResellerRole(userId, role);
       if (!result.success) {
-        throw new Error(result.error || 'Errore nell\'aggiornamento del ruolo reseller')
+        throw new Error(result.error || "Errore nell'aggiornamento del ruolo reseller");
       }
-      return result
+      return result;
     },
     onMutate: async ({ userId, role }) => {
-      await queryClient.cancelQueries({ queryKey: ['all-users'] })
-      const previousUsers = queryClient.getQueryData(['all-users'])
+      await queryClient.cancelQueries({ queryKey: ['all-users'] });
+      const previousUsers = queryClient.getQueryData(['all-users']);
 
       queryClient.setQueryData(['all-users'], (old: any[] | undefined) => {
-        if (!old) return old
+        if (!old) return old;
         return old.map((user: any) =>
           user.id === userId ? { ...user, reseller_role: role } : user
-        )
-      })
+        );
+      });
 
-      return { previousUsers }
+      return { previousUsers };
     },
     onError: (err, variables, context) => {
       if (context?.previousUsers) {
-        queryClient.setQueryData(['all-users'], context.previousUsers)
+        queryClient.setQueryData(['all-users'], context.previousUsers);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-users'] })
+      queryClient.invalidateQueries({ queryKey: ['all-users'] });
     },
-  })
+  });
 }
 
 /**
  * Hook per invalidare la cache degli utenti
  */
 export function useInvalidateAllUsers() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return () => {
-    queryClient.invalidateQueries({ queryKey: ['all-users'] })
-  }
+    queryClient.invalidateQueries({ queryKey: ['all-users'] });
+  };
 }

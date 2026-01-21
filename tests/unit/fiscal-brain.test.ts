@@ -22,12 +22,8 @@ describe('Fiscal Brain Knowledge Base', () => {
         expect(scenario).toHaveProperty('risk_level');
 
         expect(typeof scenario.id).toBe('string');
-        expect(['VAT', 'CUSTOMS', 'STRATEGY', 'COMPLIANCE']).toContain(
-          scenario.category
-        );
-        expect(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).toContain(
-          scenario.risk_level
-        );
+        expect(['VAT', 'CUSTOMS', 'STRATEGY', 'COMPLIANCE']).toContain(scenario.category);
+        expect(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).toContain(scenario.risk_level);
       });
     });
 
@@ -37,25 +33,19 @@ describe('Fiscal Brain Knowledge Base', () => {
     });
 
     it('includes CUSTOMS scenarios', () => {
-      const customsScenarios = FISCAL_BRAIN.filter(
-        (s) => s.category === 'CUSTOMS'
-      );
+      const customsScenarios = FISCAL_BRAIN.filter((s) => s.category === 'CUSTOMS');
       expect(customsScenarios.length).toBeGreaterThan(0);
     });
 
     it('includes STRATEGY scenarios', () => {
-      const strategyScenarios = FISCAL_BRAIN.filter(
-        (s) => s.category === 'STRATEGY'
-      );
+      const strategyScenarios = FISCAL_BRAIN.filter((s) => s.category === 'STRATEGY');
       expect(strategyScenarios.length).toBeGreaterThan(0);
     });
   });
 
   describe('Specific Scenarios', () => {
     it('includes VAT triangulation scenario', () => {
-      const scenario = FISCAL_BRAIN.find(
-        (s) => s.id === 'VAT_TRIANGULATION_EU'
-      );
+      const scenario = FISCAL_BRAIN.find((s) => s.id === 'VAT_TRIANGULATION_EU');
       expect(scenario).toBeDefined();
       expect(scenario?.category).toBe('VAT');
       expect(scenario?.risk_level).toBe('HIGH');
@@ -76,9 +66,7 @@ describe('Fiscal Brain Knowledge Base', () => {
     });
 
     it('includes VOEC scenario for UK/Norway', () => {
-      const scenario = FISCAL_BRAIN.find(
-        (s) => s.id === 'CUSTOMS_VOEC_UK_NORWAY'
-      );
+      const scenario = FISCAL_BRAIN.find((s) => s.id === 'CUSTOMS_VOEC_UK_NORWAY');
       expect(scenario).toBeDefined();
       expect(scenario?.risk_level).toBe('CRITICAL');
       expect(scenario?.trigger_condition).toContain('UK');
@@ -86,9 +74,7 @@ describe('Fiscal Brain Knowledge Base', () => {
     });
 
     it('includes regime forfettario monitoring', () => {
-      const scenario = FISCAL_BRAIN.find(
-        (s) => s.id === 'REGIME_FORFETTARIO_MONITOR'
-      );
+      const scenario = FISCAL_BRAIN.find((s) => s.id === 'REGIME_FORFETTARIO_MONITOR');
       expect(scenario).toBeDefined();
       expect(scenario?.category).toBe('STRATEGY');
       expect(scenario?.trigger_condition).toContain('85.000€');
@@ -109,9 +95,7 @@ describe('Fiscal Brain Knowledge Base', () => {
     });
 
     it('finds relevant scenarios for VAT keywords', () => {
-      const result = consultFiscalBrain(
-        'Ho spedizioni triangolari UE con IVA'
-      );
+      const result = consultFiscalBrain('Ho spedizioni triangolari UE con IVA');
       expect(result).toContain('MEMORIA ESPERTA RILEVATA');
       expect(result).toContain('triangolare');
     });
@@ -122,17 +106,13 @@ describe('Fiscal Brain Knowledge Base', () => {
     });
 
     it('finds relevant scenarios for COD keywords', () => {
-      const result = consultFiscalBrain(
-        'Ho molti contrassegni COD da gestire'
-      );
+      const result = consultFiscalBrain('Ho molti contrassegni COD da gestire');
       expect(result).toContain('MEMORIA ESPERTA RILEVATA');
       expect(result).toContain('COD');
     });
 
     it('finds regime forfettario scenario', () => {
-      const result = consultFiscalBrain(
-        'Il mio fatturato si sta avvicinando a 85.000 euro'
-      );
+      const result = consultFiscalBrain('Il mio fatturato si sta avvicinando a 85.000 euro');
       expect(result).toContain('MEMORIA ESPERTA RILEVATA');
       expect(result).toContain('forfettario');
     });
@@ -183,24 +163,18 @@ describe('Fiscal Brain Knowledge Base', () => {
     it('has scenarios for all risk levels', () => {
       const riskLevels = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
       riskLevels.forEach((level) => {
-        const scenariosWithLevel = FISCAL_BRAIN.filter(
-          (s) => s.risk_level === level
-        );
+        const scenariosWithLevel = FISCAL_BRAIN.filter((s) => s.risk_level === level);
         expect(scenariosWithLevel.length).toBeGreaterThan(0);
       });
     });
 
     it('marks VOEC as CRITICAL', () => {
-      const voecScenario = FISCAL_BRAIN.find(
-        (s) => s.id === 'CUSTOMS_VOEC_UK_NORWAY'
-      );
+      const voecScenario = FISCAL_BRAIN.find((s) => s.id === 'CUSTOMS_VOEC_UK_NORWAY');
       expect(voecScenario?.risk_level).toBe('CRITICAL');
     });
 
     it('marks VAT triangulation as HIGH risk', () => {
-      const triangulationScenario = FISCAL_BRAIN.find(
-        (s) => s.id === 'VAT_TRIANGULATION_EU'
-      );
+      const triangulationScenario = FISCAL_BRAIN.find((s) => s.id === 'VAT_TRIANGULATION_EU');
       expect(triangulationScenario?.risk_level).toBe('HIGH');
     });
   });
@@ -209,9 +183,7 @@ describe('Fiscal Brain Knowledge Base', () => {
     it('has scenarios for all categories', () => {
       const categories = ['VAT', 'CUSTOMS', 'STRATEGY', 'COMPLIANCE'];
       categories.forEach((category) => {
-        const scenariosWithCategory = FISCAL_BRAIN.filter(
-          (s) => s.category === category
-        );
+        const scenariosWithCategory = FISCAL_BRAIN.filter((s) => s.category === category);
         // Note: COMPLIANCE might not have scenarios yet
         if (category !== 'COMPLIANCE') {
           expect(scenariosWithCategory.length).toBeGreaterThan(0);

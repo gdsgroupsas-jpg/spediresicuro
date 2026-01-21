@@ -23,7 +23,7 @@ if (packageJson.devDependencies && packageJson.devDependencies['@playwright/test
 const playwrightPath = path.join(__dirname, '..', 'node_modules', '@playwright', 'test');
 if (fs.existsSync(playwrightPath)) {
   console.log('✅ @playwright/test trovato in node_modules');
-  
+
   // Verifica package.json del modulo
   const playwrightPackageJson = path.join(playwrightPath, 'package.json');
   if (fs.existsSync(playwrightPackageJson)) {
@@ -57,4 +57,3 @@ if (fs.existsSync(testPath)) {
 console.log('\n✅ Tutte le verifiche superate!');
 console.log('\nPer eseguire i test:');
 console.log('  npm run test:e2e');
-

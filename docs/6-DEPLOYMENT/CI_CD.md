@@ -1,15 +1,18 @@
 # CI/CD Pipelines
 
 ## Overview
+
 Documentazione completa delle pipeline CI/CD di SpedireSicuro, incluse GitHub Actions workflows e processi di automazione.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Conoscenza GitHub Actions
 - Accesso a repository GitHub
 - Familiarità con CI/CD concepts
@@ -21,10 +24,12 @@ Documentazione completa delle pipeline CI/CD di SpedireSicuro, incluse GitHub Ac
 ### 1. CI Gate (`ci.yml`)
 
 **Trigger:**
+
 - Pull Request su `master`
 - Push su `master`
 
 **Jobs:**
+
 ```yaml
 jobs:
   ci:
@@ -39,11 +44,13 @@ jobs:
 ```
 
 **Purpose:**
+
 - Verifica che il codice compili
 - Esegue test automatici
 - Blocca merge se test falliscono
 
 **Environment Variables (CI):**
+
 ```yaml
 ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'test-key' }}
 GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || 'test-key' }}
@@ -58,10 +65,12 @@ SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'test-key' }
 ### 2. E2E Tests (`e2e-tests.yml`)
 
 **Trigger:**
+
 - Push su `master`
 - Pull Request su `master`
 
 **Jobs:**
+
 ```yaml
 jobs:
   test:
@@ -80,11 +89,13 @@ jobs:
 ```
 
 **Purpose:**
+
 - Esegue test end-to-end con Playwright
 - Verifica funzionalità complete
 - Genera report e video su failure
 
 **Artifacts:**
+
 - `playwright-report/` - Test report (30 days retention)
 - `test-results/` - Test videos (7 days retention, solo su failure)
 
@@ -93,10 +104,12 @@ jobs:
 ### 3. Deploy Automation (`deploy.yml`)
 
 **Trigger:**
+
 - Push su `master` (solo `automation-service/**`)
 - Manual dispatch
 
 **Jobs:**
+
 ```yaml
 jobs:
   notify:
@@ -105,6 +118,7 @@ jobs:
 ```
 
 **Purpose:**
+
 - Notifica deployment automation-service su Railway
 - Railway fa auto-deploy da GitHub, questo workflow è solo per notifiche
 
@@ -115,10 +129,12 @@ jobs:
 ### 4. Release Guard (`release-guard.yml`)
 
 **Trigger:**
+
 - Push su `master`
 - Tag creation
 
 **Purpose:**
+
 - Verifica che release siano corrette
 - Blocca release se criteri non soddisfatti
 
@@ -161,27 +177,33 @@ jobs:
 ## Test Strategy in CI
 
 ### Unit Tests
+
 ```bash
 npm run test:unit
 ```
+
 - **Framework:** Vitest
 - **Location:** `tests/unit/`
 - **Purpose:** Test logica business isolata
 - **Speed:** Fast (< 30s)
 
 ### Integration Tests
+
 ```bash
 npm run test:integration
 ```
+
 - **Framework:** Vitest
 - **Location:** `tests/integration/`
 - **Purpose:** Test integrazione componenti
 - **Speed:** Medium (< 2min)
 
 ### E2E Tests
+
 ```bash
 npm run test:e2e
 ```
+
 - **Framework:** Playwright
 - **Location:** `tests/e2e/`
 - **Purpose:** Test flussi utente completi
@@ -196,6 +218,7 @@ npm run test:e2e
 ### Secrets (GitHub Secrets)
 
 **Required:**
+
 - `ANTHROPIC_API_KEY` - AI features
 - `GOOGLE_API_KEY` - Gemini AI
 - `NEXTAUTH_SECRET` - Auth (test)
@@ -203,12 +226,14 @@ npm run test:e2e
 - `SUPABASE_SERVICE_ROLE_KEY` - Database (test)
 
 **Optional:**
+
 - `PLAYWRIGHT_TEST_BASE_URL` - E2E test URL
 - `PLAYWRIGHT_TEST_MODE` - E2E test mode
 
 ### Test Environment
 
 **CI Environment:**
+
 - `CI: true` - Flag CI environment
 - `NODE_ENV: test` - Test mode
 - Mock external APIs quando possibile
@@ -220,12 +245,14 @@ npm run test:e2e
 ### CI Build
 
 **Steps:**
+
 1. Install dependencies: `npm ci`
 2. Run tests: `npm run test:unit`, `npm run test:integration`
 3. Type check: `npm run type-check`
 4. Build: `npm run build`
 
 **Failure Handling:**
+
 - Se qualsiasi step fallisce → CI fails
 - PR non può essere merged se CI fails
 - Build logs disponibili in GitHub Actions
@@ -239,6 +266,7 @@ npm run test:e2e
 **Trigger:** Push su `master`
 
 **Process:**
+
 1. Vercel webhook da GitHub
 2. Clone repository
 3. Build (`npm run build`)
@@ -253,6 +281,7 @@ npm run test:e2e
 **Trigger:** Push su `master` (solo `automation-service/**`)
 
 **Process:**
+
 1. Railway webhook da GitHub
 2. Build Docker image (`automation-service/Dockerfile`)
 3. Deploy container
@@ -266,12 +295,14 @@ npm run test:e2e
 ### CI Failure
 
 **Actions:**
+
 1. Developer riceve notification
 2. Check GitHub Actions logs
 3. Fix issues localmente
 4. Push fix → CI ri-esegue automaticamente
 
 **Blocking:**
+
 - PR non può essere merged se CI fails
 - Master branch protetto (richiede CI pass)
 
@@ -280,12 +311,14 @@ npm run test:e2e
 ### Deployment Failure
 
 **Vercel:**
+
 1. Check Vercel Dashboard → Deployments
 2. Review build logs
 3. Fix issues
 4. Redeploy (automatico su push)
 
 **Railway:**
+
 1. Check Railway Dashboard → Deployments
 2. Review build logs
 3. Fix issues
@@ -298,6 +331,7 @@ npm run test:e2e
 ### 1. Fast CI
 
 **Optimizations:**
+
 - Cache dependencies (`cache: 'npm'`)
 - Parallel test execution
 - Skip unnecessary steps
@@ -307,6 +341,7 @@ npm run test:e2e
 ### 2. Reliable Tests
 
 **Requirements:**
+
 - Tests devono essere deterministici
 - No flaky tests
 - Proper cleanup after tests
@@ -316,6 +351,7 @@ npm run test:e2e
 ### 3. Security
 
 **Secrets:**
+
 - Never commit secrets
 - Use GitHub Secrets
 - Rotate secrets regularly
@@ -333,12 +369,12 @@ npm run test:e2e
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

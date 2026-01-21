@@ -1,6 +1,6 @@
 /**
  * E2E Test: Invoice Generation
- * 
+ *
  * Testa la generazione e download fatture:
  * - Generazione fattura per spedizione
  * - Download PDF
@@ -38,8 +38,8 @@ test.describe('Invoice Generation', () => {
       id: 'shipment-invoice-test',
       tracking_number: 'TEST123456',
       user_id: 'test-user-invoice',
-      final_price: 25.50,
-      total_cost: 25.50,
+      final_price: 25.5,
+      total_cost: 25.5,
       status: 'consegnata',
     };
 
@@ -95,8 +95,10 @@ test.describe('Invoice Generation', () => {
 
     // Cerca spedizione e button "Genera Fattura"
     // (Questo dipende dall'UI implementata)
-    const generateButton = page.locator('button:has-text("Fattura"), button:has-text("Genera")').first();
-    
+    const generateButton = page
+      .locator('button:has-text("Fattura"), button:has-text("Genera")')
+      .first();
+
     // Se il button esiste, testalo
     if (await generateButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await generateButton.click();
@@ -149,13 +151,15 @@ test.describe('Invoice Generation', () => {
     await page.waitForTimeout(2000);
 
     // Cerca button download
-    const downloadButton = page.locator('a[href*="/api/invoices"], button:has-text("Download")').first();
-    
+    const downloadButton = page
+      .locator('a[href*="/api/invoices"], button:has-text("Download")')
+      .first();
+
     if (await downloadButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       // Intercetta download
       const downloadPromise = page.waitForEvent('download', { timeout: 5000 });
       await downloadButton.click();
-      
+
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toContain('fattura');
       expect(download.suggestedFilename()).toContain('.pdf');
@@ -167,8 +171,3 @@ test.describe('Invoice Generation', () => {
     }
   });
 });
-
-
-
-
-

@@ -1,6 +1,6 @@
 /**
  * Test Automatico API Poste Italiane
- * 
+ *
  * Verifica:
  * 1. Configurazione nel database
  * 2. Autenticazione OAuth
@@ -19,7 +19,7 @@ function loadEnvFile() {
   const envPath = path.join(process.cwd(), '.env.local');
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
-    envContent.split('\n').forEach(line => {
+    envContent.split('\n').forEach((line) => {
       const trimmedLine = line.trim();
       if (trimmedLine && !trimmedLine.startsWith('#')) {
         const [key, ...valueParts] = trimmedLine.split('=');
@@ -39,7 +39,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const encryptionKey = process.env.ENCRYPTION_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Variabili d\'ambiente mancanti!');
+  console.error("❌ Variabili d'ambiente mancanti!");
   console.error('Richiesto: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
@@ -70,7 +70,7 @@ function logResult(step: string, success: boolean, message: string, details?: an
 
 async function testPosteAPI() {
   console.log('🧪 Test Automatico API Poste Italiane\n');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('');
 
   // STEP 1: Verifica configurazione nel database
@@ -94,7 +94,7 @@ async function testPosteAPI() {
       base_url: config.base_url,
       has_api_key: !!config.api_key,
       has_api_secret: !!config.api_secret,
-      has_cdc: !!(config.contract_mapping as any)?.cdc
+      has_cdc: !!(config.contract_mapping as any)?.cdc,
     });
 
     // STEP 2: Decripta credenziali
@@ -128,9 +128,10 @@ async function testPosteAPI() {
     }
 
     // Estrai CDC
-    const contractMapping = typeof config.contract_mapping === 'string'
-      ? JSON.parse(config.contract_mapping)
-      : config.contract_mapping;
+    const contractMapping =
+      typeof config.contract_mapping === 'string'
+        ? JSON.parse(config.contract_mapping)
+        : config.contract_mapping;
     cdc = contractMapping?.cdc || 'CDC-DEFAULT';
     logResult('CDC', true, `CDC: ${cdc}`);
 
@@ -140,13 +141,13 @@ async function testPosteAPI() {
       client_id: clientId,
       client_secret: clientSecret,
       base_url: config.base_url,
-      cost_center_code: cdc
+      cost_center_code: cdc,
     };
 
     const adapter = new PosteAdapter(credentials);
     logResult('Adapter', true, 'Adapter Poste creato', {
       base_url: config.base_url,
-      cdc: cdc
+      cdc: cdc,
     });
 
     // STEP 4: Test autenticazione
@@ -162,7 +163,7 @@ async function testPosteAPI() {
     } catch (error: any) {
       logResult('Autenticazione', false, 'Errore autenticazione', {
         message: error.message,
-        response: error.response?.data || error.response?.status
+        response: error.response?.data || error.response?.status,
       });
       return;
     }
@@ -170,20 +171,20 @@ async function testPosteAPI() {
     // STEP 5: Test creazione spedizione (opzionale - solo se richiesto)
     console.log('\n📦 STEP 5: Test creazione spedizione (SIMULATO)...');
     console.log('   ⚠️  Salto creazione reale per evitare spedizioni di test');
-    console.log('   ✅ Se l\'autenticazione funziona, la creazione dovrebbe funzionare');
-    
+    console.log("   ✅ Se l'autenticazione funziona, la creazione dovrebbe funzionare");
+
     logResult('Creazione Spedizione', true, 'Test simulato - autenticazione OK');
 
     // Riepilogo finale
     console.log('\n' + '='.repeat(60));
     console.log('📊 RIEPILOGO TEST');
     console.log('='.repeat(60));
-    
-    const successCount = results.filter(r => r.success).length;
+
+    const successCount = results.filter((r) => r.success).length;
     const totalCount = results.length;
     const allSuccess = successCount === totalCount;
 
-    results.forEach(result => {
+    results.forEach((result) => {
       const icon = result.success ? '✅' : '❌';
       console.log(`${icon} ${result.step}`);
     });
@@ -191,7 +192,7 @@ async function testPosteAPI() {
     console.log('\n' + '='.repeat(60));
     if (allSuccess) {
       console.log('✅ TUTTI I TEST SUPERATI!');
-      console.log('   L\'integrazione Poste Italiane è configurata correttamente.');
+      console.log("   L'integrazione Poste Italiane è configurata correttamente.");
       console.log('   Puoi procedere con la creazione di spedizioni reali.');
     } else {
       console.log('❌ ALCUNI TEST FALLITI');
@@ -199,7 +200,6 @@ async function testPosteAPI() {
       console.log('   Controlla i dettagli sopra per risolvere i problemi.');
     }
     console.log('='.repeat(60));
-
   } catch (error: any) {
     console.error('\n❌ Errore fatale durante il test:', error);
     console.error('   Stack:', error.stack);
@@ -215,4 +215,3 @@ testPosteAPI()
     console.error('\n❌ Errore fatale:', error);
     process.exit(1);
   });
-
