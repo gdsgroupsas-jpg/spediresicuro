@@ -1,193 +1,805 @@
-# Changelog
+# 1.0.0 (2026-01-21)
 
-Tutte le modifiche significative al progetto SpedireSicuro sono documentate in questo file.
+### Bug Fixes
 
-Il formato è basato su [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+- add \_courierConfigId to PriceCalculationResult type ([dbe45e2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dbe45e2b11093a6044c169286a4ca4752033864a))
+- add missing closing brace for if(!courierConfig) block and remove invalid personalError reference ([b644401](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b6444015ba67aa7716aeddeef353d04750f1d4ad))
+- Add missing Select import in listini detail page ([6418d14](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6418d14ec451863e3d052e99e9218359e3239ff7))
+- add null check for data.metadata in duplicate price list validation ([22a21e9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/22a21e939ba5b36f72c9a63b026d176d8bb8b37a))
+- add optional chaining for options in retry matching logic ([a49602e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a49602eb11b991e6b90762565210eb63c4096d09))
+- add optional chaining for options.configId in spedisci-online-rates ([0c2255e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0c2255e3a6d28bf7d92748c1e1e1cd8c970d90a8))
+- add type assertion in test-real-sync.ts for build compatibility ([180f621](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/180f621eaf13f3bc3b8921efa432ca5b3087f6db))
+- add UserRole type import in tools.ts ([5a3b837](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5a3b837ff56110a9224fd14ac2d830b476923ec4))
+- add version field and correct entries schema in sync script ([35449d5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/35449d53e26e75f8547730b8822a9146c4565d78))
+- **admin-dashboard:** Exclude orphaned shipments from production counts ([8dcbfc6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8dcbfc69543baacddc67ac57b1ead3fe93b80e28))
+- **admin-ui:** enforce explicit approved amount in payload ([f0bc9ba](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f0bc9bab6c6fe2a53d4277daa980fda912c3f7f4))
+- **admin:** cleanup test configs and separate client configs in UI ([b78e1cc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b78e1cc1a30c775010e56ba5f1e09f2f400b1558))
+- **admin:** include metadata in overview api and add debug logs ([88ac7fe](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/88ac7fed3954f41fd545a0e0e5777ee207dda6d6))
+- **admin:** resolve missing metadata column by using auth.users ([5dc5791](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5dc57916f436a1789a4a397b2b3540738ad04d0c))
+- **admin:** restore implementation of admin actions in new file ([e43d562](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e43d562e0ba9c463f321362e5a759cf34a7f6bf0))
+- **admin:** use correct supabase client and improve error logs ([fd7de78](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fd7de788c1331628a5a5acf5ea89b873ba10a5f5))
+- **agent:** aggiungere 'debug_worker' al tipo next_step in AgentState ([75d9bff](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/75d9bff5cb9d1c17fea6bfc45d93b89353833768))
+- **agent:** aggiungere gestione mentor_response in supervisor-router - Supervisor-router ora gestisce risposte mentor_worker - Mentor response viene restituita come clarificationRequest - Ref: Task 4 completamento ([5580112](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/55801125d669422d2812d45962e27749e75450f7))
+- **agent:** correct auth import path ([4b9fa22](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4b9fa227e9765eeab003cf9b03071a9f9e20e17c))
+- **agent:** correggere intent detection per mentor vs explain worker ([9dec3ee](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9dec3ee1226389f88ccc6b748204f7771417c7fd))
+- **agent:** correggere tipo userRole per buildContext - userRole ora convertito correttamente a 'admin' | 'user' - Reseller e superadmin mappati a 'admin' - Fix errore TypeScript in build Vercel ([a9cebd0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a9cebd0737c69162b06766d48ce76c1de1149bbd))
+- **agent:** import auth correctly from auth-config ([2ff2f20](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2ff2f20caed6d59eb24e329629a724391b835e82))
+- aggiorna puppeteer a v24.15.0 e ottimizza per Vercel serverless ([7952786](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7952786ad2da43bd8b871888eb81b4b4497d2775))
+- aggiorna requisito password da 6 a 8 caratteri ([73947bf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/73947bf3c0a1ca8b50b034bcab92f3813297a549))
+- aggiunge account_type alla risposta API user/info ([281bf20](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/281bf20bce99bf46668e8ebba8d52e981c771ba7))
+- aggiunge API user/info, pagina posta, unifica client Supabase per evitare istanze multiple ([768f027](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/768f027c81c76229a75eccc82c0698971173367c))
+- Aggiunge campo order_reference e rimuove vincolo NOT NULL - Aggiunto order_reference come campo nullable nello schema shipments - Rimosso vincolo NOT NULL se esiste già - Aggiunto mapping order_reference in mapSpedizioneToSupabase - Risolve errore: null value in column order_reference violates not-null constraint ([7ee7a60](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7ee7a609556aa23795a237e44ae66429910fbfce))
+- Aggiunge colonna last_login_at se mancante nella view god_view_users - Verifica esistenza colonna prima di usarla nella view - Crea colonna last_login_at se non esiste - Corregge filtro is_active nella query LEFT JOIN - Risolve errore column last_login_at does not exist ([078477a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/078477ad50dbef485a2af168bd3c35ce60a9c7d5))
+- Aggiunge created_by_user_email al payload Supabase - Campo mancante in mapSpedizioneToSupabase causava spedizioni non visibili - Risolve problema query getSpedizioni che non trova spedizioni salvate ([a90620f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a90620f6a15debd06dcb6e4e85d4278b3bc38399))
+- aggiunge CSP policy con unsafe-eval per compatibilità jsPDF/Tesseract/xlsx + documentazione ([c028912](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c028912569e4e1d577b32e1c6d22242a4faede84))
+- Aggiunge DROP TRIGGER IF EXISTS per tutti i trigger - Previene errore trigger already exists - Rende lo script idempotente e ri-eseguibile - Aggiunge DROP per trigger_update_killer_features_updated_at, trigger_update_user_features_updated_at, trigger_log_role_change ([5296376](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/529637605aefa95ad3152f8578c67ee5ec2c317c))
+- aggiunge fallback a quote da listino se API non configurata ([936d69f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/936d69f71189841c1d01216998e4465c7316281b))
+- aggiunge lib dom al tsconfig per Puppeteer (document, window) ([5f68107](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5f68107f3c7efcabb190352451e0e50eef9d36f8))
+- Aggiunge validazione e logging per ID in DELETE handler - Valida formato ID prima di procedere - Aggiunge logging dettagliato per troubleshooting - Migliora messaggi di errore ([ca3681c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ca3681c30da7267a6e27095571c1cf1ef06a0b54))
+- aggiungi fallback ENV in getBookingCredentials per test e retrocompatibilitÃ  ([21de04d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/21de04dd76f041f6f536bdd8c9da87cce6950431))
+- Aggiungi funzioni approveTopUpRequest e altre operazioni bonifici ([aab51b1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/aab51b1c53a6264a4da2618a2e15ca1053f27851))
+- aggiungi logging dettagliato e salvataggio metadati Poste nel database ([97bd013](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/97bd01393e7213eac16fcb85028ba7709f043f58))
+- aggiungi salvataggio metadati Poste nel database dopo creazione LDV ([f6069e6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f6069e6e3b5999bd68635a7cc5009bda86677c0e))
+- aggiungi tipo esplicito per parametro map cookies ([72922da](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/72922dae3ab77baa83b0cfc16cfa4a4eb0a138a5))
+- aggiungi UNIQUE constraint per upsert savePersonalConfiguration ([1f901a3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1f901a3738c8afc39fbec1c335f6a729e719b473))
+- Aggiunta correzione tipo colonne cash_on_delivery e insurance da NUMERIC a BOOLEAN ([59506ba](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/59506ba58bc2dee27b2c131e931a0af3b3a6a908))
+- Aggiunta pulizia payload per convertire false in null per campi numerici ([4ab650a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4ab650a0afb7388ed20dc80903bf70e8a692c303))
+- Aggiunta serializzazione JSON finale per forzare conversione tipi corretti prima di INSERT ([bf767cf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bf767cfa77176ae74ea60a3f5772331a8ce69da5))
+- aggiunte proprietà mancanti a interfaccia Spedizione per risolvere errore TypeScript build ([8cbd8d6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8cbd8d6adb2e280b368e5b0365646c5516933174))
+- Aggiunti tutti i campi mittente e destinatario mancanti nello script SQL ([4fa2eb8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4fa2eb891b55243f5de6b7e48afc079b913b5aaf))
+- Aggiunto audit logging per eliminazione credenziali ([ab3ecf3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ab3ecf375bcedc6d0a30f48f2e1bab5639b9b265))
+- Aggiunto await mancante in spediresicuro-master/app/api/auth/register/route.ts ([e680e90](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e680e90a23bb2f6963e3f50092c9e814879db229))
+- Aggiunto await mancante in spediresicuro-master/lib/auth-config.ts per verifyUserCredentials, findUserByEmail e createUser ([95ee50f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/95ee50f358fdc7960c7bf62ba73dcdd7ff356e65))
+- Aggiunto campo 'notes' mancante nello script SQL migrations ([7dd050a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7dd050aa28e489f038e6a638280127eba88320a5))
+- Aggiunto campo userMessage a AgentState per P4 auto-proceed ([754a87a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/754a87aa00be5167724d841453f6ecaea482bc3e))
+- aggiunto dialog configurazione a pagina reseller + test E2E completi ([5b19691](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5b19691a1453c9818bef08e637c2574bd7da00e6))
+- aggiunto fallback cancellazione per tracking number quando shipment_id_external mancante ([e51cd6e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e51cd6e4cfcad0cec40c8c865d24bd4b23a7dc56))
+- Aggiunto logging dettagliato e fallback garantito per utenti demo ([c458af9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c458af9c99ada746e9b6eafd0d5f2faf7bd76060))
+- Aggiunto metadata e shipmentId a SpedisciOnlineResponse interface ([b2003a5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b2003a5e2cd4cbbf4166d6cca3540c25f0a1a510))
+- Aggiunto packages_count e doppio controllo per rimuovere false da campi numerici ([c3e65d0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c3e65d06dd28a48d3e3c4c291fe371e5842c6133))
+- Aggiunto shipmentId a ShippingLabel interface per supporto cancellazione Spedisci.Online ([c43785d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c43785d257bc40dc168525131437472398ef474f))
+- aggiunto stato showConfigDialog mancante in listini detail page ([8fad61a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8fad61aecd913bacfb4356f625f9ca7dc5fa2d03))
+- Aggiunto tipo esplicito ai parametri word in some() per risolvere errore TypeScript ([1bf062e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1bf062eb26fb1c5ceaa93051aae9bd9ba31f86a4))
+- Aggiunto tipo esplicito al parametro w in filter per risolvere errore TypeScript ([4fd5a38](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4fd5a3807df8131b485e0999f39b2e1a898ba2d7))
+- Aggiunto WITH (security_invoker = true) esplicito alla view shipments_active ([de532f6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/de532f6b6b4ba9e617faecd38958a70e70cc97ab))
+- alert user if LDV object is completely missing (system error) ([cf1a3e1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cf1a3e1425d8563bea17bda761015fc00f021345))
+- allinea creazione reseller a Supabase Auth (login immediato) ([7e120e1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7e120e10f9051ded82cc178544ddfdaf2cfd2520))
+- Allineamento mapping Supabase con schema - campi completi ([012da43](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/012da43bcaa545d5034ee851eb955e91bfaa3ed0))
+- anne_search_shipments status tipo TEXT invece di ENUM per compatibilità ([c5f34db](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c5f34db00efce3ba45992ed4f52a779fceff370d))
+- API per risolvere utenti duplicati da promote-superadmin ([7b8bad2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7b8bad27413ea81a98ad91156f7c91850cb30465))
+- API per sistemare permessi admin senza duplicati ([8fc3942](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8fc3942315e4ea76129b15c9935fe30794ba810e))
+- **api/admin:** Cancellazione utente enterprise-grade con transaction SQL atomica ([292a1b1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/292a1b15935e012c1840bfa47e4aaad92a22ec5f))
+- **api:** mapping 'citta' senza accento per compatibilità ([77fa53c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/77fa53c79be948f4dd4cdd0c1955742ad1a86a57))
+- **api:** risolvi errore scope TypeScript in route spedizioni ([d696e68](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d696e680dadaf14132a00c03d6066376b16d2c6f))
+- audit system and remove false production claims ([514eb24](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/514eb2441a85d7b231719384c7e4cff3a49cdeaa))
+- **audit:** Security Hardening (P0 Fixes) ([baa1eea](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/baa1eeabd374bc4bf2666c2c967fd00d35b19eda))
+- **auth:** add reseller_role to NextAuth session for RBAC ([62f2d11](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/62f2d119c6583c8380e04149b0fe6be02f27130c))
+- **auth:** Allow E2E test bypass in production env (CI/Playwright) ([2791c2c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2791c2cb1510cf943ba3966d029422d47b099f1b))
+- **auth:** migrazione NextAuth e compatibilitÃ  migrazione 105 colonne fiscali ([d66dbc9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d66dbc9c4178c8d479c72255d56af27c70f3ade3))
+- Auto-sync check, service_role caller ID, UI toggle automation, fallback intelligente contractCode ([7d57fc5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7d57fc54e18a5242c57d8bb7e8c74ad0f460104f))
+- **autocomplete:** autocomplete cittÃ  non si riapre dopo selezione ([72b899d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/72b899d32a90858e0dc5d87e56ca086c6d5d111e))
+- **build:** Add legacy logAuditEvent wrapper for backward compatibility ([f2de9cb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f2de9cb9e41e762eff4a602fca06f746c82d7325))
+- **build:** Add missing module files for Vercel build ([05a40a3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/05a40a3bd5bc92a74baa7c3758d4af31bc1d325a))
+- **build:** Align carrier property visibility in SpedisciOnlineClient ([db8a4df](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/db8a4df0000a36568b18a92bb48a65f126774437))
+- **build:** avoid supabaseAdmin shadowing in spedisci-online action ([79a3f3f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/79a3f3fe4b9d0ce4cf1fcce17539721b227b546f))
+- **build:** escapato apostrofo in ai-provider-selector per ESLint ([9a9183c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9a9183cb6df6fe36908023240e89a79a2bee4416))
+- **build:** Normalize recipient.email with fail-safe fallback ([06e627e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/06e627e11548ba8cf47a0f40d36099cc3d56f272))
+- **build:** remove legacy redis dependency causing build error ([bb90adb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bb90adb0b69d91c88f5809e68e74483378e403c6))
+- **build:** resolve merge conflict markers in page.tsx and topups-admin.ts ([f665431](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f665431e6a669db4d93f6565628e01554f1674b6))
+- **build:** resolve ts error on possibly undefined assignment ([9c85761](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9c85761854259c003b031a8ad6561d61ee50788d))
+- **build:** Resolve userId potential null access in orchestrator log ([b915578](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b9155784100ff9e320ae31d8c4af39fd98f9deb4))
+- **build:** Rimosso import logStructured non esportato - usato console.error per telemetria ([a85c162](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a85c1625dd1b9a38395cf4c42ebae4a7d494e485))
+- **build:** Riscritti file con encoding UTF8 corretto - risolti errori TypeScript e test suite ([1ba4ae2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1ba4ae21396edfccc20cb7979bf98a51a8a2d7dd))
+- **build:** Riscritti file route.ts e error-translator.test.ts - risolti problemi encoding/TypeScript ([b174aa7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b174aa725614f0d4b107e6bceb7d21c29d6947d7))
+- **build:** Riscritto error-translator.ts senza blocco duplicato - risolto errore TypeScript ([54952e9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/54952e9830b684b94ae90056eeb69955fa7ec41e))
+- **build:** Riscritto route.ts smart-suggestions - risolto errore TypeScript 'File is not a module' ([4a637c1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4a637c1e65bb118eef92aa0ea10ca628fc04bc07))
+- **build:** Riscritto smart-suggestions.ts con encoding UTF8 corretto - risolto errore TypeScript e semplificato rate limiting ([3eab53d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3eab53d9f0539f965c1a50b148693ce017b174ee))
+- **build:** Riscritto value-stats/route.ts con encoding UTF8 corretto - risolto errore TypeScript ([f2307fa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f2307fa6423d86e204f40e3013b16388d9571472))
+- **build:** risolto errore TypeScript - searchCity usato prima della dichiarazione ([d23f723](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d23f72394b94defbb91ab6ddd30a6b6da2c105a9))
+- **build:** usa supabaseAdmin da lib/db/client invece di crearlo direttamente ([625e07d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/625e07d26da3f1cea6b6c5fa6084021316c6deee))
+- **calculator:** Migliorato matching entry per fasce di peso e logging ([4465abd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4465abdeb00b4748f7c2329166cfc831a681eac9))
+- cast analysis as any per aggiungere proprietà comparison ([e208ef1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e208ef116766c98774d0d98d330c1e95d832f93a))
+- cast context as any per risolvere errore TypeScript buildSystemPrompt ([cb43208](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cb432082a451c3d4f4da0aa9b0f6fe331475e1d0))
+- cast userId as string per risolvere errore TypeScript ([8292708](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8292708573380cced2029c98d1cd42daff74306f))
+- chiusura funzione POST, sintassi route.ts, allineamento build e test ([4b6cc25](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4b6cc258e57435a6865b7d549a3149cb71bbf328))
+- **ci:** aggiungi env variables Supabase ai test di integrazione ([fda4fc6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fda4fc62dea3feb3b16925cd98e0f7d0c6477723))
+- **ci:** aggiungi env variables Supabase allo step Build ([582e861](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/582e861d48c9d8b11d28fd367a741d1a96f22283))
+- **ci:** correct E2E workflow order and add PLAYWRIGHT_TEST_MODE env ([7218721](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/72187217b6a765536eb44eddd680cf5d4de9ba75))
+- **ci:** Correzione errori TypeScript nei test P4 ([25824de](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/25824deecab6db2c90b727becd1545f6b72768a5))
+- **ci:** Inject Supabase secrets into E2E workflow to prevent 503 errors ([017143b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/017143bece11bb577448b7ef22b322cf3a9afb13))
+- **ci:** use GitHub Secrets in CI without dotenv interference ([d7832ba](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d7832bae93324b3f9e11ace2e6fc6d72e580c5c8))
+- convert redis.set result to boolean for listLockAcquired ([5cac52c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5cac52cfb49cab6e92f3c8a058d4939cd6b67d91))
+- correct COD amount detection in spedisci-online adapter ([94faff2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/94faff2bd727e90a59338c33f550956d48aa8c52))
+- correct destinatarioTelefono validation when COD is active ([5124910](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/512491069d770958999eb807a38d7b073e6e197b))
+- correct indentation after download format selector removal ([26722a5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/26722a52f5e54f2197cc08dd9eabd509c76206d2))
+- corregge caricamento configurazioni in automation page usando server action ([df5a86c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/df5a86cc2be120805c9a0c44b9591881f5529dfc))
+- Corregge errore SQL constraint UNIQUE con WHERE ([05fbe11](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/05fbe11def998be4cbe07a30c76d69b093a244be))
+- corregge impaginazione tabella automation e verifica admin con account_type/role ([679d629](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/679d6296c7c6a3610991e3aa48d7e0a07dbc4d2b))
+- Corregge import supabase-admin in route DELETE - Usa @/lib/supabase invece di @/lib/supabase-admin - Risolve errore build Module not found ([33e27db](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/33e27dbac4f6e17af40c0f307eb8ae815a390eac))
+- corregge indentazione e struttura JSX in automation page ([526b018](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/526b01892a10a9761a6662674b24f87266492813))
+- Corregge logica platform fee - USER gratis, BUSINESS pagano ([0accafd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0accafd45d816d5caaf2355660ff88cc326fe602))
+- corregge percorso Dockerfile in railway config ([94cede0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/94cede06471b943547df21777a406d7b4b239d53))
+- corregge percorso Dockerfile per Root Directory ([6cd9e13](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6cd9e131e934455e3cb061f2b1683da280c66718))
+- Corregge sintassi query OR in getSpedizioni - Usa sintassi PostgREST corretta per filtro OR - Include spedizioni con user_id null ma created_by_user_email corrispondente ([d440457](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d440457592b739ec08dd8bb95dcebcfd655d320f))
+- Corregge sintassi RAISE NOTICE nello script SQL - Avvolge RAISE NOTICE in blocco DO supabase/migrations/006_roles_and_permissions.sql per sintassi corretta ([d78ac2e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d78ac2e0f2c8d728851813c3f172e557b5615fd4))
+- corregge struttura JSX tabella automation - rimuove tag duplicati e corregge indentazione ([3ae0048](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3ae0048b48361db0c13f4469e4e51c790ee99484))
+- correggi bug registrazione adapter e salvataggio metadati Poste ([098c5b1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/098c5b17f491bd11600899bef7b3b3255bf54228))
+- correggi commento cron schedule per evitare errore TypeScript ([dd156ec](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dd156ec259bec7233588c2642bb1732cb627b097))
+- correggi errore linting apostrofo e warning useEffect ([df43f58](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/df43f5856b1530a982bf294f59c931a549a97a2a))
+- Correggi errore TypeScript - Array.from NodeListOf per .find() su cells ([5e88787](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5e88787b251a06f336f6c3de54da1d59aca88085))
+- correggi errore TypeScript per proprietÃ  ldv su spedizione ([37496d7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/37496d79363e97392a4f7efd85ee2ca1573b9fef))
+- Correggi import path approveTopUpRequest da wallet a topups-admin ([1edf25a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1edf25aa26760d6628e3ca74587ccc0bcf521f10))
+- correggi proprietà User da account_type a role - TypeScript ([aad760b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/aad760b440fb3c52aae6e06de8e9cba6bd2356f5))
+- correggi seconda istanza account_type in POST request ([fc2a64c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fc2a64c60fe7d8886874e70e250b66f0588bd79c))
+- corretta importazione fulfillment orchestrator - Sostituito createFulfillmentOrchestrator con getFulfillmentOrchestrator - Endpoint decide non ancora implementato, restituisce 501 ([881e64f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/881e64fb1dad547b1b6339d4e77bb50f5fee2436))
+- corretta lettura ldvResult dalla risposta API con logging dettagliato ([1bb1753](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1bb1753e026553fa60c5fd3e68499208571f080e))
+- corretta numerazione versioni (0.1-0.3 attuali, 1.0 al GTM) ([01e5768](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/01e57687f1ce2914113f7ad2d344755a6732a9e0))
+- corretta struttura try-catch in route.ts ([f653a16](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f653a16067ae54fb406030584fbe965b836874f9))
+- Corrette date documentazione da Gennaio a Dicembre 2025 ([dc2de1a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dc2de1a0e19affa8e207df9a5393cdb23b5b2c08))
+- Corrette virgolette non escapate in courier-api-config.tsx ([1027d83](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1027d839a5a7a3c62a1f5c539fc535ee39d98267))
+- corretti errori ESLint in supplier-price-list-config-dialog (virgolette, dipendenze useEffect, metadata) ([5826241](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5826241259b181ab01cc29266603afddb3e6b0d0))
+- corretti errori ESLint per build Vercel - Fix apostrofo non escapato in dati-cliente page - Fix dipendenze mancanti in useMemo spedizioni page - Sostituito img con Image di next/image in ocr-upload - Rimosso aria-expanded non supportato da input textbox ([14a5734](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/14a5734ac3b2f87e171edfe027360179a477046d))
+- Corretti errori ESLint per caratteri non escapati nelle pagine ([7d38eed](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7d38eedcc0495c6494de84dbefa907190e611b1a))
+- Corretti errori linting apostrofi e virgolette non escapate ([e81c47e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e81c47ead6b70157a2c35ea1d3b3790a3fc8c76c))
+- corretti errori sintassi build - punto e virgola mancanti e struttura Tabs ([2b7e246](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2b7e246e39a411ae1c737424fb259bc581c65276))
+- corretti errori TypeScript finali per build - Fix tipo status integrazione (active as const) - Fix attributi aria-expanded (string invece di boolean) - Build pronto per Vercel ([8cf85cf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8cf85cf4cb554d8780755d9cf41108e894c85bdf))
+- corretti errori TypeScript per build Vercel - Fix import getServerSession (usato auth() invece) - Fix Supabase client cookies (semplificato per Server Actions) - Tutti gli errori TypeScript risolti ([17256fd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/17256fd95e685829a5923b02a0feafa36ace8078))
+- corretti tutti gli import getServerSession rimanenti - Sostituito getServerSession con auth() in tutti i file API - Fix aria attributes in async-location-combobox - Tutti gli errori TypeScript risolti per build Vercel ([efecfa9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/efecfa99f678f066afbc833e123d109a55479257))
+- Corretti ultimi 2 errori linting apostrofi ([6e7cea1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6e7cea16e2584d91229e57ddf30056d3ea2876b5))
+- Corretto anche weight, length, width, height per gestire valori false ([79483eb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/79483ebe2b46e1bec34b00b5e294fb402170d8d3))
+- corretto apostrofo non escapato in PosteWizard (errore build Vercel) ([9378a02](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9378a022309bac7859042d2ea064764d58991a92))
+- Corretto bug approvazione bonifici - gestione campo importo vuoto ([9952a82](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9952a82c73a3049067d86558bcf07b4c5e1c6aef))
+- Corretto campo content -> notes in returns.ts ([0cac90f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0cac90fbf3cd6187301b8d3f63be6a702351ea7c))
+- Corretto decodeFromStream per usare streamRef.current invece di undefined ([fdf2b7b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fdf2b7bc5b844c598528e7a7fbd784217ed91d02))
+- Corretto errore build Vercel - apostrofo non escapato ([87980c6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/87980c6f73b57f405a274f2dfa46ae703699db71))
+- Corretto errore conversione tipo - rimuove DEFAULT prima di cambiare tipo colonna ([0a9d319](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0a9d319f1a9989ba74d738bc777c1caf7dcb4f98))
+- Corretto errore sintassi dashboard-sidebar + fix userRole per PilotModal ([f67aea9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f67aea94adc3a9ede4fa52627d3f814ce8d808b2))
+- Corretto errore sintassi else duplicato in configurations.ts ([a5220f6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a5220f66e1ac4605cc97cca9d68bd00808f67dc6))
+- Corretto errore sintassi in findContractCode - mancava chiusura blocco if ([fa7b4e7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fa7b4e78fb94202066d85df58e599eee65d20794))
+- corretto errore sintassi SmartInput e migliorata validazione form ([7ba6d64](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7ba6d64d89fa649f4d2716824ebb3f2e09fe9992))
+- Corretto errore TypeScript - body.corriere non esiste, usa formData.corriere ([c5a3a2b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c5a3a2ba59d4570b04ff984151634fc17d191e9e))
+- Corretto errore TypeScript in savePersonalConfiguration ([d7f049d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d7f049d39e2d6fc470d6dae4abfe2bec8380bc11))
+- Corretto import funzioni approve/reject/delete in bonifici page ([e3eb0d9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e3eb0d90b3a477e137ca339510ac8f470fb11cbc))
+- Corretto mapping valori numerici - gestione corretta di false/undefined/null ([1c90731](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1c907310c9708bc0cb135152a448016faa7e9403))
+- Corretto metodo decodeFromVideoStream -> decodeFromStream in scanner components ([ab87bcc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ab87bcc462115796efc290eccea29ee2215eae6b))
+- Corretto nome AI da Annie a Anne in tutti i componenti ([5d3d680](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5d3d6804cd6b415e2b248c39ef656daece25321f))
+- Corretto nome proprietà configs invece di configurations ([f3a1db1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f3a1db1a11c370c49571b2c07395da23e3a91f99))
+- Corretto ordine chiamate Supabase in privacy.ts ([4910efd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4910efd414344fb56b4c88acbd0bd1f5b40f86be))
+- Corretto parsing contratti Spedisci.online e aggiunto logging dettagliato ([d1dec09](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d1dec095dc11250b4b007ff6854a085cb619a8c0))
+- corretto riferimento metadata in supplier-price-list-config (usa source_metadata) ([b5cc7a2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b5cc7a22eac79f6cf5bc77b0ad3037e58a156e2c))
+- corretto test OCR Vision per retry policy ([aeb0e80](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/aeb0e80e24c02c147eeda0e691d1641810d1c7f9))
+- Corretto tipo parametro saveConfiguration (CourierConfigInput invece di FormData) ([e037dd9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e037dd98073422d32adb5594faa9e4edbc588661))
+- Corretto tipo React.Touch in PhotoViewer per build TypeScript ([7d41806](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7d41806f6f4f06016f36a5a5f08af6a757408bdb))
+- correzione autenticazione API Poste Italiane - scope corretto e commenti mappatura ([8fb5858](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8fb5858bf452df741f0e989df2d9434f3ec07e51))
+- correzione errore build e miglioramenti validazione wizard Spedisci.Online ([a57b8f5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a57b8f5347229ba8dea31f6f592c0e5b68d8dec2))
+- correzione errore TypeScript in validate-spedisci-online (baseUrl non definito nel catch) ([8b5abd2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8b5abd271ba802867d812f412c4b0563757acd56))
+- correzione TypeScript cleanBaseUrl possibly undefined + security: rimosse API key hardcoded da clean-git-history.ps1 ([56e4195](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/56e4195884062f52f7085931c036f7b14951aa35))
+- correzione TypeScript in diagnose-user-api-configs.ts (apiKey/apiSecret possibly null) ([551f5fb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/551f5fb9382d40a3fe20ae6b2de6535ced928dec))
+- correzione TypeScript in test-api-key-direct.ts (API_KEY possibly undefined) ([eec950f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/eec950fb94440055ba52131077b4cea9b50a30e3))
+- correzione TypeScript in test-both-domains.ts (API_KEY possibly undefined) ([0f3706f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0f3706f94a6607d811b50fa8d70ad87f8fdfeabe))
+- Correzione TypeScript session role + audit log types + fix visibilit├á + multi-dominio ([b5f6961](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b5f696152c59976b51677abb5b2bf49bd7aaf579))
+- Correzione TypeScript session role + tutti i fix completati ([30a7a8d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/30a7a8d1a15d11fd09078cd0c0238851a6802b08))
+- Crea ENUM user_role se non esiste nello script SQL - Verifica esistenza ENUM prima di aggiungere valori - Crea ENUM completo se non esiste - Aggiunge valori mancanti se ENUM esiste parzialmente - Risolve errore type user_role does not exist ([a3a7bc0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a3a7bc05720cb7436e1c4d0c394171be81532b5c))
+- Create pagine mancanti per prevenire errori 404 - Aggiunte pagine: preventivi, come-funziona, prezzi, contatti ([2144e03](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2144e03cb74216cc6e704700a2ef415d790eeb36))
+- DashboardNav title must be string not JSX element ([332b73f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/332b73f4dc464feeae9d811cc4e753f5c70320e0))
+- DashboardNav title string in listini page ([836ffa1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/836ffa194d4c29c17cec17170e868c551c1da1c1))
+- **database:** mapSpedizioneToSupabase accetta campi flat sender*\*/recipient*\* ([aa9add6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/aa9add63b89ec2a4961eb678fd60ed370a546ce0))
+- **db:** add missing couriers table migration ([0ddfabf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0ddfabf63fb0245a3d33de90843075e6e95628ba))
+- **db:** correct RLS policy to use users table instead of user_profiles ([9ab7ac4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9ab7ac4a103d0297d9c2bacff5726d3c2742e48a))
+- **db:** corregge sintassi CONSTRAINT UNIQUE in migrazione 081 ([40b6ff5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/40b6ff5db711601f131eadbfc6b31b98f99211bf))
+- **db:** remove invalid reseller enum value from migration ([b12fe6b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b12fe6bf2885eabf8428777b8523dd582101c513))
+- definisci spedizione come any per permettere proprietÃ  dinamiche ([e37eda3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e37eda3c76e835e4a01d5d0651b1c2cd59fed062))
+- DELETE handler - improve tracking number logging and validation logic ([c02dc5f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c02dc5f8c8e57e3ca3d1e23d7eea7529d22f8e6c))
+- DELETE handler tracking number handling - better logging and edge case handling ([6324f3a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6324f3a1ba24dd5de3f9b90db7dfcf92a777f174))
+- **deps:** add missing exceljs dependency for export features ([31f9710](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/31f97100a0077de09fd8d5dcdb2b26660771a989))
+- distingue contratti diversi con stesso displayName ([8a3c70f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8a3c70f8cf6691f37450eef3d0337fcb0823f27a))
+- **docs:** correct API documentation endpoints to match implementation ([b9cb6f1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b9cb6f1503e41dbd1d4a61c5e3f7d673c0b31d57))
+- download LDV originale dal corriere invece di generata ([e0a287f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e0a287f7a5998fd31b86b5a780b8fa30e28c602c))
+- DROP anne_search_shipments prima di ricrearla con tipo TEXT ([d9ed6d0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d9ed6d0766d69740954554500830589f8a14bcc0))
+- **e2e:** add x-test-mode:playwright bypass in middleware for CI ([74479b3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/74479b3d0b7c2192c492002d6cc39bbbe4abad36))
+- **e2e:** aggiunge variabili Supabase al workflow E2E per risolvere errori WebSocket ([12ec48b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/12ec48bc793f961d57825713a02e35e690efa9a5))
+- **e2e:** correct button text selectors for Stripe and reseller tests ([99821d7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/99821d7abc6fe9ab13db3436c26798b1c91ecfa3))
+- **e2e:** correggere fallback tracking number per download etichetta - Aggiunto fallback shipment.tracking prima di shipment.id nel codice - Fix in app/api/spedizioni/[id]/ldv/route.ts (2 punti + ExportService) - Spostato mock API LDV nel test specifico per evitare conflitti - Test e2e ora mocka correttamente l'API LDV con filename tracking number - Fix problema: codice usava shipment.id (UUID) quando tracking_number mancava - Ref: e2e/shipment-detail.spec.ts:240 ([4f8e98e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4f8e98ed12bd322aaecd33ed7b76d8f91811dc09))
+- **e2e:** correggere filename download etichetta per test e2e - Aggiunto prefisso 'etichetta-' o 'ldv-' a tutti i filename download - Fix in app/api/spedizioni/[id]/ldv/route.ts (2 punti) - Fix in lib/adapters/export/index.ts (3 formati) - Fix in app/dashboard/spedizioni/nuova/page.tsx - Test e2e ora passa: filename contiene 'etichetta' o 'ldv' come richiesto - Ref: e2e/shipment-detail.spec.ts:295 ([b62800e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b62800e92913087990d836461d853c80e5b0efc7))
+- **e2e:** make tests skip gracefully when auth mock fails in CI ([7233a6b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7233a6bb049a09f289dcc41c05ef81c7f98cef6e))
+- **e2e:** Skip sync-price-lists tests when reseller setup unavailable ([aa92db0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/aa92db060c8ec8916f18b6cf0cdb6192d7b9dc1d))
+- Elimina view shipments_active prima di cambiare tipo colonne cash_on_delivery e insurance ([823d851](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/823d851c7cb72dfe50df855ac900c636f96555f6))
+- ensure correct Spedisci.Online API key is used - add demo token guard, normalize provider_id matching, add production-safe logs with SHA256 fingerprint ([8e099da](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8e099daf534c509995599b0696d1b79fec2a03ca))
+- Escapato apostrofo in messaggio modale cancellazione utente ([7d88b70](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7d88b70bdbc8e675a24355f8d3e63674fa5813a3))
+- escape apostrophe in PosteWizard.tsx to fix build ([2e77a94](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2e77a94e389c02979bdc6b662db8dfd428734c39))
+- escape entità HTML in JSX per ESLint - Vercel build ([d6a66fb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d6a66fbcdfa68dc780580d4e66e661373c291769))
+- escape special characters in JSX to fix build errors ([4c07324](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4c07324270be4f038da472b5584ff5b484453c19))
+- escape virgolette doppie per linting ([d4dc2cf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d4dc2cfdfd74587f707231c6ef8a5fa7c84183eb))
+- esclude automation-service dal build Next.js ([43e3a5f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/43e3a5fe73aae5cef53f1f9b12f52ab131c8475f))
+- **eslint:** Progressive enforcement - P0 error, legacy warn ([784d9a3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/784d9a353190720bb7a7ea5a55fd0eaa7d3e04fb))
+- Esporta getSupabaseUserIdFromEmail per uso in route DELETE - Aggiunge export alla funzione getSupabaseUserIdFromEmail - Risolve errore TypeScript Property does not exist ([c6e75d3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c6e75d3ddec3a02731fba9ca9a89eb3737b48b0a))
+- estrai campi nested indirizzo PRIMA di rimuovere oggetti nel normalizer ([21af0eb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/21af0eb01559a6de3faaa262c24c77e88348fed9))
+- export missing function syncPriceListsFromSpedisciOnlineMatrix -> syncPriceListsFromSpedisciOnline ([80e2b0e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/80e2b0efbe3b54fc8949eaf1374eabaeedced53e))
+- export PDF - use courier_name field and handle missing cash_on_delivery_amount ([731d3f4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/731d3f41532d5f3df3e47400c7505803f355ae07))
+- **factory:** decrypt API key before using it - CRITICAL ([301be70](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/301be70f813858d3543cc7a24a3a79ea903fe95f))
+- **factory:** prioritize owner_user_id in fallback courier config query ([5d69089](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5d690896d8aaffe8e4a51e6cc53c46f4d7c2afea))
+- Fix menu sidebar + aggiunto AI OCR Scanner + uniformata grafica ([852cbdf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/852cbdf9a158503fbc043672bc9d8a838e325a61))
+- force aggressive alert for API errors on frontend ([9c6b3b9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9c6b3b99f8e47799504705932e83beda3f118455))
+- forza account_type corretto per reseller in savePersonalConfiguration ([b281740](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b2817408f2c59db52954cc1e966a6db87fc6c4cb))
+- **frontend:** open real carrier label if available, fallback to internal ticket ([0fd57fa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0fd57fa937c7fbeb0a84a8097e1b7f281b1f3fb6))
+- Garantisce che utenti demo esistano sempre per accesso dimostrativo ([e7918a4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e7918a4a64d67ff896f176bf6dad668be8dc22a5))
+- **gdpr:** hash userId in logs ([c21a94b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c21a94b2f5ec1cb820934a1d2ccdfc56963696b7))
+- Gestione errori EROFS per file system read-only su Vercel ([253da23](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/253da23259fce7442093593ae7b51c2a5be6a6b4))
+- gestione robusta credenziali cifrate con key rotation support ([9673720](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/967372020fd9d613f8b7979c9b419b0ed4123469))
+- gestisci null per expires_at anche nel secondo caso ([a2caadf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a2caadfdf3f2414fd4845ba9a0f668367e3b5e01))
+- gestisci null per expires_at in TypeScript ([50d0260](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/50d0260b5ef56f7c9041e9f366ca5c73550360ee))
+- guardrail pre-INSERT + logging dettagliato per province/CAP ([71d56e0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/71d56e0d8d2fb857d3bde06282270c148aec479b))
+- handle nullable fetch error in supplier config ([ad702d3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ad702d3d9b69efaaf14b0fa3d09579a005d2ec38))
+- Implementato metodo ChatGPT per conversione NUMERIC->BOOLEAN con gestione errori DEFAULT ([195c578](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/195c57873bcb23e7a6e523ea63c0b6c337043b6d))
+- Import CourierServiceType in fulfillment-orchestrator ([5b12599](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5b12599c5b7afe5801aaf20e7cf56efbcce96bf4))
+- installa tutte dipendenze per build TypeScript, poi rimuovi dev ([8a4ffd8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8a4ffd82a52212ef2b542e531f38c145f25adf6e))
+- label_pdf base64 download + recipient_name fallback ([0814c38](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0814c38c58c23355e8b2c3bdcc15c11987e33133))
+- **lint:** escape apostrophe in sync-spedisci-online-dialog ([0badf5e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0badf5ed9ef86f5a241ee5a8f27a14f419fd8310))
+- **listini:** add catch block for carrier processing errors ([e37d3e8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e37d3e83166153c02e8f742ada7a1701b8838069))
+- **listini:** add check for empty carrierRates and improve error handling ([527c1cc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/527c1ccc591633fbbb5bc01df9a8648266fcebcb))
+- **listini:** add error handling for entries creation + better logging ([a7f7765](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a7f776563e963057376f582de5bb066743f96f24))
+- **listini:** add fallback for missing probe_weight to prevent sync failure ([8b44291](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8b442919838afe9104528a376a1ed2e3eb7a1e11))
+- **listini:** add try-catch per ogni corriere per evitare interruzione sync ([77294d7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/77294d7b8f9a63425b22bf2bf95fea3ad695a65e))
+- **listini:** auto-release expired/stale locks before sync ([2dbcc5c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2dbcc5cf2a37217aa9c126edeec34c55f4c69845))
+- **listini:** CRITICAL - resolve metadata overwrite causing price list collisions for multi-account resellers ([9f38d0f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9f38d0f6bdfb7d94dfa501f662a634fca81b19a3))
+- **listini:** distinguish price lists by configId to support multiple contracts per courier ([b3bcde2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b3bcde27555002303e66ccfe34e240e9d61a6162))
+- **listini:** fast sync mode to avoid Vercel timeout ([86e0f1c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/86e0f1cab996f15fec8755ee8138a012afadcf2a))
+- **listini:** filter existing price list by BOTH configId AND carrierCode to prevent wrong matches ([27b688f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/27b688f69ef0ec4bf6f3f4b96b812c918719e87c))
+- **listini:** handle missing metadata column in price_lists (PGRST204) ([feb9530](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/feb9530bccf27ada2d51d37b6f7598a59e0a7904))
+- **listini:** improve lock cleanup with direct delete + reduce old threshold to 2min ([3495197](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/34951971149e82d16e6f1b780c96e5411aac9950))
+- **listini:** reduce balanced mode to 4 zones to avoid Vercel timeout ([1c3da1f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1c3da1f9b15b0e576364125ba7b1028b781c11bc))
+- **listini:** reduce lock TTL to 5 minutes for price list sync ([be3756b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/be3756be1e3c96ced43627ca114a341da3d71858))
+- **listini:** remove dangerous courier_id fallback preventing multi-contract sync ([4784b5e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4784b5ea20c6e6f4ff2894bd3c560abe4629f56a))
+- **listini:** remove duplicate entries before saving to prevent conflicts ([e724560](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e7245602b46337dae65895638453e73553b21efb))
+- **listini:** remove idempotency lock for price list sync (not critical) ([f7893b9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f7893b983fa4b5023fb204f56a43d4372c8a0fc7))
+- **listini:** remove metadata from createPriceList to avoid PGRST204 ([8a99789](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8a997892e20180a7d480724b1d4cda88c5edefd4))
+- **listini:** remove remaining lock cleanup code ([0219ec8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0219ec83c16686704bc0143dbc4f1c9e3ce195fa))
+- **listini:** remove test requirement for sync + improve debug script ([80138f0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/80138f068891cb5cad710f19e8ea2448d5cf96a1))
+- **listini:** use config name in price list name format CARRIER_CONFIGNAME ([4f35468](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4f35468a240a40e65de9033ba0cac979d847a155))
+- **listini:** use correct probed weights for entry creation ([7620de1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7620de137969f81d28fc4187713354aabaa56379))
+- make Poste Wizard accessible even with existing config ([e225584](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e2255848e66240bb2e8cf07baa6b857052f91b6d))
+- **manuale:** Correggi TypeScript error per componente code markdown ([4c66ca0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4c66ca0f22de580648f4d5e203df01ad34f5a815))
+- map COD to codValue for spedisci_online ([c847c61](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c847c610e7ae9a39fc9cb79bc9f117a89d6a4c6f))
+- mappa campi nested indirizzo PRIMA di normalizeShipmentPayload ([80e6443](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/80e6443462594a4fd86d03945d9df57941d6c554))
+- mapping esplicito provincia e CAP nel form nuova spedizione ([f2438d4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f2438d45ac4ad1eb1d1bc628d88a7a2edb4cf346))
+- mapping frontend API payload con logging dettagliato - rimuove undefined da payload ([8ac6a26](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8ac6a26bb78d5d8a85c60ee5c90946d4a44deffb))
+- Migliora gestione errori e logging per cancellazione spedizioni - Aggiunge logging dettagliato per troubleshooting - Migliora gestione errori con messaggi più chiari - Usa Promise.all per eliminazioni parallele - Aggiunge encodeURIComponent per ID nella query string ([0464e2a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0464e2a873bdd867ee418be46b7212327c478457))
+- Migliora query getSpedizioni per gestire user_id null - Aggiunto filtro OR per includere spedizioni con user_id null ma created_by_user_email corrispondente - Aggiunto logging dettagliato per troubleshooting - Risolve problema spedizioni non visibili nella lista ([45d9edd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/45d9edde43d4558027db925ffa588ce76ef5bccb))
+- migliora ricerca credenziali per reseller con config assegnate ([fa56999](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fa56999f2ce874f313a5afc25217707565aa0257))
+- Miglioramenti wizard Spedisci.online e gestione configurazioni ([409d810](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/409d810ee546584e15837ff136a10a6e87a02a06))
+- migliorata gestione errore AADSTS700016 - prioritÃ  errore principale su 404 ([f7a284c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f7a284c878a6e5a6ed2d86ebc61736e54cdc2150))
+- migliorata gestione errori Anne su mobile - timeout e parsing JSON robusto ([0834ee6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0834ee6aaa274bee501dde74d66528abc1cd1cd7))
+- migliorata gestione errori autenticazione Poste con messaggi user-friendly ([fdbe594](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fdbe5946b3d274af1742af405e6ed8f974791e80))
+- Migliorata gestione errori quando Supabase non configurato - Messaggio chiaro se Supabase manca in produzione - Evita tentativo salvataggio JSON su Vercel read-only - Spiega che serve configurare Supabase ([3145cd6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3145cd633ffa980639e5a81809045bbd55463c31))
+- Migliorata gestione errori registrazione - Rileva errori Supabase constraint unique - Messaggi errore più chiari e dettagliati - Gestione errori database read-only ([364ee21](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/364ee21ad888a5f51acdd0269010a426607c39bb))
+- Migliorata ricerca contratto Poste - associa automaticamente Poste Italiane a postedeliverybusiness ([4edb3af](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4edb3afb0930b08feac2eb9c9d7372e64a305866))
+- Migliorati messaggi errore e ricerca contratti Spedisci.online ([d98ba3b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d98ba3b2b5d1d02ba50a31c53ebb8d77fd362e0b))
+- Migliorato contrasto testo + Voice Control + Manuale Utente ([02a14b8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/02a14b8f47bf9bd5f0cbe710f2a5ac42f1b60acb))
+- Migliorato diagnostica errore Configuration login Google ([1d05591](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1d055919e9e3e525d738722e98e12547d4530708))
+- migliorato logging e messaggi errore autenticazione Poste per AADSTS700016 ([cefd29c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cefd29c851082021cf785f48979efd0715748ff0))
+- Migliorato logging e messaggi errore registrazione - Messaggio più chiaro quando email già registrata - Logging dettagliato per debug errori 500 ([3a97316](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3a97316a12a6757ba26b1938d8777e7f93ad4c48))
+- Migliorato logging errore OAuth e corretto favicon mancante - Usa favicon.svg invece di file PNG mancanti - Migliorato logging per vedere dettagli errore OAuth ([6c25ed3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6c25ed3f20697e6e938a0fe646e27d1ac666ec10))
+- Migra handler DELETE spedizioni a Supabase - Rimuove uso di readDatabase/writeDatabase - Implementa soft delete con Supabase - Aggiunge logging dettagliato per troubleshooting ([6f667ff](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6f667ffec9d2a5cf8efd69f7013cb4a2812125d6))
+- Migration 018 - Gestione corretta tabelle couriers e users mancanti ([206aabe](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/206aabe77a52f85d5d1ecab29b0454dc96862f73))
+- Migration 097 - Supporto p_caller_id per assign_price_list con service_role ([4d9153b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4d9153b1bb70152c4e44944b10d48bbefea385a1))
+- Migrazione completa a Supabase - rimossi tutti i fallback JSON ([a528ee6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a528ee6ab494e47914d2163c3f16697f02cbc622))
+- normalize service_type in CSV import entries ([5f4f04a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5f4f04a13e879409aa9ef46c2898bcb851d07d83))
+- normalizzazione payload spedizioni context-aware ([184f770](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/184f7708cc9470696932c104aaaa403e3967d98c))
+- null -> undefined for TypeScript type compatibility ([a915c84](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a915c8406d36e0e95eda89cc85c8452e54b7519f))
+- OCR Vision error state - set processingStatus to 'error' when Vision fails ([07ea5ee](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/07ea5ee9879c5312b94fe477bf8cec2f684cd716))
+- **onboarding:** redirect deterministico - rimossi bypass localStorage, delay e fail-closed ([dc715f2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dc715f23f79468c29084e70dbf09a10dc24f283b))
+- optional chaining per fetchError.message ([1763f0e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1763f0e2accce95896051bf2f65559d5777c0e16))
+- **P0-1:** robust refresh dopo creazione spedizione - cache bypass + guard anti-loop ([a4d8068](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a4d8068f2fa8eeb09bdd5a550447dbd39eb65fab))
+- **P0.1:** SuperAdmin wallet bypass kill-switch + alerting ([e85b085](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e85b0857e78c53d22fcab3f26339411f2157e86a))
+- **P0.2:** Wallet idempotency standalone - UNIQUE constraint + refactor ([2d60470](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2d604700e824cbf78c9bf568cf1f849bfafd4bb4))
+- **P0.3:** GDPR OCR Vision compliance - consent + retention + kill-switch ([04be9a1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/04be9a150f95d3734e0a3dbbb8caf0cc3101dbc9))
+- **P0.4:** Compensation Queue observability - dashboard + alerting + dead-letter ([3e72634](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3e7263499ec25581184a53cc53842a872ceac05b))
+- **P0:** add client-side onboarding gate as fail-safe backup ([98f6ffa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/98f6ffa8380bd5ab2ab8803c983f4d6309a3386a))
+- **P0:** checklist template email - aggiunti 6 controlli P0 per evitare loop e falsi positivi ([a4f4036](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a4f40360fda58c99c74f822d7a2d79d55df07a2c))
+- **P0:** client usa redirectTo server-authoritative invece di hardcoded /dashboard ([ce35ae8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ce35ae8265a56a48caa2f2a8194fb7020c66b081))
+- **P0:** Corregge autenticazione webhook Stripe per fatturazione automatica ([593481b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/593481ba4ef556a4d19ab9eb8aa70d1fef221266))
+- **P0:** Corregge platform fee per SUPERADMIN + tooltip breakdown prezzo ([4bc8df5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4bc8df566299bb30f704a2efb6e3f12aa041e66f))
+- **P0:** eliminate 307 self-redirect loop on /dashboard/dati-cliente ([ec9c359](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ec9c359ae1c107453f052f10845b4d5e4ae631c0))
+- **P0:** enforce client-side guard on EVERY navigation (not just first) ([7bed0db](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7bed0dbcd7fb3a60412cfe5398bf4c26f098bde7))
+- **P0:** fail-safe redirect a /login invece di / in /auth/callback ([6ff5060](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6ff50600a0f8a03b579f300178a7ab66b60a9c67))
+- **P0:** forza dominio canonico per emailRedirectTo anche in preview - evita redirect a root ([49c328a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/49c328adad2c1ebe336be4b17f50eb9737920523))
+- **P0:** gate server-authoritative onboarding + UI input visibility ([eb720b9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/eb720b93c2a7f21a8fed72912ea7a3c1bd4ddee7))
+- **P0:** input visibility dark mode - testo bianco, placeholder WCAG, selezione, autofill ([1ae9a07](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1ae9a0758e09ff71392e8adec480c71262da3bf6))
+- **P0:** prevent self-redirect loop on dati-cliente by passing x-pathname via request headers ([60a6ece](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/60a6ece39e0de3b485a849bbbd3fae13a0cfdb6c))
+- **P0:** query config multi-tenant per reseller/BYOC ([27b194b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/27b194b3c6f06e5466a95628703cb42a09f9fbfd))
+- **P0:** redirect home - window.location.href + gestione / nel callback NextAuth ([da3e54d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/da3e54d98879aa1b1ae9c4fbda256ccdc76259c5))
+- **P0:** redirect onboarding e UI input invisibili - Missione C ([c312e8c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c312e8cdf51e7fd15031b9b92c50dc687c8ea5bd))
+- **P0:** redirect onboarding fail-safe - default a /dashboard/dati-cliente per evitare flash ([6e81f31](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6e81f31f508c4cc1a08ddda07e66dfca8681b768))
+- **P0:** remove client-side redirects and fix blank screen styles on dati-cliente ([d45982c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d45982cebbeb76ffc0a848b70965bb43c3790953))
+- **P0:** remove client-side unauthenticated redirect in dati-cliente to prevent loop with login ([ccac94b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ccac94b776d366888793674a90889a63ab730db2))
+- **P0:** rimuove delay callback + fallback onboarding + CSS globale definitivo ([5529fda](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5529fda9e013d72ab4e830577c33d336743930cb))
+- **P0:** rimuove delay login + fix CSS input visibility onboarding ([7f5150e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7f5150eef5a6feb8c91dbb763f13cf40e0b67d33))
+- **P0:** stop client-side redirect loop on /dashboard/dati-cliente ([42e4bcc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/42e4bcc3c92bfd13eac2fa56b59f4705046404a9))
+- **P3:** Correzione tipi checkpointer - implementa BaseCheckpointSaver correttamente ([d4b78fa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d4b78faaa1b2ad33d854589f5f963035dcf7f6db))
+- **phase3:** correzione bug boundary tier e gestione utente non esistente ([6afef62](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6afef62428d287a2096e984de7b2428ff89a29e8))
+- **phase3:** ripristina correzione bug boundary 100 sub-users ([967de10](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/967de10148c211ea2cf9b7318dd364bffe587ba5))
+- **platform-costs:** add try-catch to verifySuperAdmin for error handling ([7b45dc4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7b45dc4ebf59766d629e5593dac9b194f4a92f72))
+- **platform-fee:** Aggiunta platform fee al prezzo finale salvato in final_price ([8991fb4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8991fb47e2cbe84fd94558ec8497f3d2470f2413))
+- **platform-fee:** risolto foreign key constraint in audit history ([569bce2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/569bce2ae8ba78470760dfccf285677dc97c4377))
+- **poste:** align payload with spec (ITA1, json, address splitter) ([0bdd5d3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0bdd5d3d8b98e025a40caaaff3fc22b8ba8b3d1d))
+- **poste:** correggi errori TypeScript per proprietÃ  ldv e metadata ([a72179b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a72179b4b3226a7cdefa1f261810236a7df31ce4))
+- **poste:** refactor auth token logic with sanitization and logging ([749b858](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/749b85896f3d4c55dd00ef68c326c5f6ea189b73))
+- **poste:** remove syntax error (duplicate payload declaration) ([033db22](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/033db22de5100708ff214c4499e6c533b6eca1a1))
+- **poste:** revert payload key to 'data' per manual v1.9 ([ca67d06](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ca67d06eadc9b0788ccc6fcc3a97350a701328fc))
+- **preventivatore:** include dimensions in requestKey to prevent stale rates ([b025bad](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b025bad7a8b4a6dc2a112046e7005e679a789399))
+- Prevenzione data loss - gestione errori salvataggio spedizione ([46fe957](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/46fe9579b15241657a94522ec925095163e2323b))
+- previene loop infinito in IntelligentQuoteComparator con flag di controllo ([4440ded](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4440ded082aa3f8c66df4c633a674a0097e15b0b))
+- **price-alignment:** Prezzo listino personalizzato ora salvato correttamente in final_price ([ad560ac](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ad560ac13733384828a024c13c117106bcb8b54a))
+- **price-lists:** extract courier names from contract_mapping VALUES not KEYS ([4001e03](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4001e03a769eb6ea4209e6f81270be242c898092))
+- **price-lists:** remove duplicate error checks and add auto-sync ([ae630a2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ae630a2270bb647d2ea2c2a2d8abd38c7480a702))
+- **price-lists:** remove non-existent created_by_user_id column reference ([0d93785](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0d937859ba9b0d103bde426c173bf595cfabc120))
+- PrioritÃ  listini CUSTOM su SUPPLIER nel preventivatore intelligente ([d6a4806](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d6a4806b011c51bbacb1ef113a758cd7b33d0ebb))
+- prompt notifiche e installazione PWA mostrati solo una volta ([17ad87d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/17ad87d71e75461264cf58b4412d3fa505a7a136))
+- Pulizia payload migliorata - gestione completa valori non numerici per TUTTI i campi numerici ([cc4dbdc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cc4dbdc2c26b1525f6ce22cafc354bf238075b38))
+- PWA mobile crash + safety checks browser APIs + export default pilot-modal ([4f03ee5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4f03ee56b7a14193e930fee39372fc54c06db336))
+- Railway dockerfilePath must include automation-service folder ([4735493](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/47354939861331d916a2c89c9c0da08c73386cbe))
+- RBAC configurazioni Spedisci.Online per reseller ([d82274f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d82274f4f127a7b3fce0704caf9913414d6d1684))
+- Re-add railway.toml config for automation-service deployment ([25a6834](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/25a683409e2b1b5e1527d7180cd47384d86585c7))
+- recharts tooltip formatter type error ([32be35a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/32be35acb618f7a51aded455548f1bff02b98545))
+- Remove asChild prop and use router.push instead ([22c7624](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/22c76249204c8830ac5457c8fe09e107a929c9a4))
+- remove backup folder causing duplicate typescript definitions in CI ([e677d3f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e677d3f4d3e8120cf2227614f9e89be3c435a186))
+- remove city from destination object (not in type) ([6828d35](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6828d356658de211396b46a509a00db6b8ffca21))
+- remove incomplete query statement in margin update ([bf2ee3a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bf2ee3acc38c02d13c0c988fa7679a517a4bc9b6))
+- remove second city from destination object ([82129ba](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/82129ba8870cfda8df29470267f4827c235293c4))
+- rename cancelShipment -> cancelShipmentOnPlatform to avoid base class conflict ([43bc3d3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/43bc3d3102f36617c285c842ac14152dd26ab39c))
+- reseller possono salvare config personale senza permessi admin ([ccc70a9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ccc70a915d5b5b3d2ab849344a4731bdaa588bc2))
+- **reseller:** reseller creati con account_type='reseller' invece di 'user' ([78b6044](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/78b6044312135fdbc32058576b0374aca6e24d89))
+- resolve 3 critical bugs in reseller price lists ([1ab3835](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1ab3835e38928dee7adbddd1ecb9d94dfb39c25c))
+- resolve all lint and build errors for green build ([8e1e11f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8e1e11fcbc282751538dcaf8602ac4a2c5c27cce))
+- resolve column mismatch between POST and GET endpoints for recipient/sender data ([ca60582](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ca60582811a976a31d084ed98c3cbf2846f7156b))
+- resolve ESLint errors - use lowercase select element and escape apostrophe ([cc90f5f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cc90f5fa791a8f4a67ffffe62ea7db55c1b7ec1f))
+- resolve production shipment creation failures ([07d94b9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/07d94b918c9f83a1b872945b96783ea57e9e53be))
+- resolve type error in diagnose-db-error script for build ([c96fe70](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c96fe70c52305a573531955641e12b5faabb0718))
+- resolve TypeScript errors - add metadata to PriceList, fix Badge variant, add configId to schema, remove onConfigure prop ([067182b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/067182b6d843d46ce15599e66b33c49c5c4646ba))
+- resolve vercel build errors (imports, types, quotes) ([b4cc13d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b4cc13dc0efb89f8243c47a8c925ade6035bd73d))
+- restore correct try-catch structure in shipments/create/route.ts ([5a78010](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5a78010c9fab6623e2d61dc905b46c9996580419))
+- restore missing closing brace in JSX comment ([4a524ba](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4a524ba44f5f1b0323933ed688be83ec5ad00764))
+- restore missing imports in spedisci-online-matrix.ts to resolve build errors ([169e117](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/169e1172d1bcc67505e6d8784b172b792daaba75))
+- return correct data from margin update action ([14bc068](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/14bc068178821e02990501c608342b0399e6a515))
+- **revert:** ripristinare filename solo tracking number (senza prefissi) - REVERT regressione: filename ora usa solo tracking number (es. GLSTEST123456.pdf) - Fix in app/api/spedizioni/[id]/ldv/route.ts (2 punti) - Fix in lib/adapters/export/index.ts (3 formati) - Fix in app/dashboard/spedizioni/nuova/page.tsx - AGGIORNATO test e2e: ora verifica solo tracking number nel filename - Test e2e: expect(filename).toMatch(/^[A-Z0-9]+\.pdf$/i) - Ref: docs/SPEDIZIONI_CANCELLATE.md - Fix regressione introdotta in commit b62800e ([c9fed2e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c9fed2eb9a777a66efed427eeb2936c8f3d4dee7))
+- rimossa chiave API da documentazione per sicurezza ([974423d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/974423dbbcadbc60a43f87273d4b360209bc52c8))
+- rimossa colonna 'provider' non esistente dalla query DELETE spedizioni ([989ef38](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/989ef38a847d116bc1170696d255a8f12e5587f4))
+- Rimossa dichiarazione duplicata userRole in dashboard-nav ([ab63f70](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ab63f706cc4e158fbb0760efbc588bfca8dc7188))
+- rimossi file errati dal commit ([912514a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/912514a5fed208ba5dac5ff43bc67c541069fb71))
+- Rimossi import non utilizzati Edit e MoreVertical ([f80c255](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f80c255c010bf3565959a307504e5f77f1245e3e))
+- Rimossi riferimenti specifici AI (Gemini/LangGraph) - versione generica ([8c29c5a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8c29c5a5d02b954bf95e853b10d66150ee01fe92))
+- rimossi segreti OAuth dai file di documentazione ([66f440d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/66f440d23b0964380b3c0da5b5b28ceda5c9bcc6))
+- rimossi segreti OAuth reali da CONFIGURAZIONE_NUOVO_CLIENT_OAUTH.md ([bf717bd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bf717bd9fc306fe79ef7ffb5fefa167698ebd37b))
+- rimossi segreti OAuth reali da RIEPILOGO_29-11.md ([610f270](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/610f270f2ce0ba4393274b79835d30e37b9adf10))
+- Rimosso campo notes duplicato in returns.ts ([483141c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/483141cbd46a6305e253f5312032756615a89a2b))
+- Rimosso completamente codice duplicato da topups-admin.ts ([d7c8fc0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d7c8fc0e955137d35f98ab85f8c770664c056ef8))
+- rimosso riferimento a provider nel log di cancellazione ([8dc2401](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8dc2401f8e8a89262f150500ac7109d94cbfdc36))
+- Rimosso SECURITY DEFINER da funzione soft_delete_shipment e view shipments_active ([febd557](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/febd5576c0ef1aa2c3955f1a31ba0e3a4c147e0d))
+- rimozione chiamate API e matching esatto contract_code ([845227c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/845227c9c7ef8b476a2b5c3720049f018bb8bbc6))
+- Rimozione codice duplicato in app/manuale/page.tsx ([74bf867](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/74bf867cd98d6147e65d4e109918d5044999f874))
+- rimuove email_verified da createReseller (PGRST204) ([6eda8d8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6eda8d8310ec201ec36da539b341fa69c63f261a))
+- Rimuove policy RLS da view god_view_users - Le policy RLS non possono essere applicate alle view in PostgreSQL - L'accesso sarà controllato a livello applicativo - Risolve errore god_view_users is not a table ([fce6b0d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fce6b0dd035badb25bf0e6aa328804c9793fd199))
+- rimuove requestQuote da dipendenze useEffect ([6bdf537](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6bdf53787628a885f2c560a39888417a1c54847f))
+- Rimuove vincolo UNIQUE da order_reference e genera valore unico - Rimuove constraint e indice UNIQUE da order_reference nello script SQL - Genera order_reference unico usando tracking_number come fallback - Risolve errore duplicate key value violates unique constraint ([99c99d9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/99c99d9a0286c7e2adc6394f5782fa85bbdd1d72))
+- rimuovi check error fuori scope in upsert supplier config ([c280190](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c280190d67fb16cbe9df1f521621587887762bd4))
+- rimuovi cron schedule da vercel.json per compatibilità plan Hobby ([63b219a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/63b219a681b54e34632573fe05314fa208d0dc01))
+- rimuovi deduplica errata API key che causava mancanza contratti ([4df8e50](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4df8e507aace0666ca97e38e93cb8adf53abc3bc))
+- Rimuovi import calculateOptimalQuote non esistente ([65a5b6d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/65a5b6dd4bdd4a38b79fb4df36eec3b711368198))
+- rimuovi is_default da chiamata savePersonalConfiguration ([9e9e994](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9e9e99456240b9d04a782e9a3e145a63baae2543))
+- rimuovi riferimento savedSpedizione per risolvere errore TypeScript build ([d918f10](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d918f100c2a3d17691c9ea3c2ec7792ab59750af))
+- Ripristinato accesso a tutte le sezioni della dashboard ([1b2d18f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1b2d18f53d78639885de0ffbbe9301440a71b6af))
+- riscritto adapter Poste secondo manuale v1.9 - payload, endpoint, formati corretti ([61b55d1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/61b55d1fcd3f81a2f2898b075d7744f0bfbd9b73))
+- Risolti errori build Next.js - route dinamiche e manuale utente ([48de8c2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/48de8c2a7ecbac07fb77546266dd4aad7fc8d043))
+- risolti errori di build e compilazione TypeScript ([51d7628](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/51d76285d687b61b52006e88f03e5b7841d70d31))
+- risolti problemi minori implementazione Gemini ([6d6f710](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6d6f710379d16a4be2378a16d3e1162cb32bcf98))
+- risolti problemi Spedisci.Online - doppio slash e fallback API v1 ([e09869b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e09869ba44687c3ed08b5b8fb07e04c4f47b22e6))
+- risolti tutti errori TypeScript per build Vercel - DEPLOYMENT READY ([5787ce9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5787ce9f4b1f2134e2b01026d3e91628f3f174a0))
+- risolto Bug 2 - router.refresh() prima di router.push() ([62150f6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/62150f69f27318f2ee9ef954ad790dd183cb4e7a))
+- Risolto bug state mismatch input importo bonifici ([16d52a7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/16d52a70cdbe977fcf83c5fef2bd18095e69412e))
+- risolto conflitto in package-lock.json che causava errore build Vercel ([63d5d0d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/63d5d0d224270ad3ad24c24baf4b214ee17f22f3))
+- risolto download LDV fallito per mancanza autenticazione ([8ce195a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8ce195a047919b5730ca21f1db36b2073515049d))
+- Risolto errore 500 in /api/spedizioni - correzioni mapping Supabase ([2d53fe1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2d53fe11dc95b9b4ff5a83f0788753bd37ef359f))
+- Risolto merge conflict in topups-admin.ts ([bd37e7b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bd37e7be0784f91f26e0d29006f9fe944208c1e3))
+- risolto problema cancellazione spedizioni su aggregatore Spedisco.Online ([1a288f0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1a288f08c8df1b5fefa9773d94c187d70e6ffbaa))
+- Risolto problema login admin in produzione - Creazione automatica utenti demo in Supabase - Funzioni database ora async e supportano Supabase - Inizializzazione automatica utenti demo al primo login - Endpoint API per creare utenti admin manualmente ([8779ba0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8779ba0a3534a6e86f800dc7cb8b63a019239905))
+- Risolto problema login remoto e aggiunto toggle password - Usa window.location.href invece di router.push per forzare refresh completo dopo login - Aggiunto toggle per mostrare/nascondere password nei campi password e conferma password - Migliorata gestione redirect dopo OAuth login - Fix await mancante su updateUser ([22db956](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/22db9569373aa31351cf8ab4e8697d4a68264844))
+- risolto problema permessi admin mancanti per account reseller ([3e81422](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3e8142276e3ef83209a07bc3c227f821e67a0f0c))
+- Risolto TypeScript error in audio-utils ([1918cc9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1918cc9c2ba3ab3ad0be0ed625fa6fb14d9fcb68))
+- Risolto TypeScript error in gemini-live ([165bf1e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/165bf1e973b06d72872d9d778ce635a075d03976))
+- risolve bug contratti corrieri non disponibili + documentazione enterprise ([8dc5b9d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8dc5b9dea244732e5c65f75c4cd3d3a6ac56ac71))
+- Risolvi errori build TypeScript per branch Anne ([bf534c3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bf534c3319d6c012f5d3112b0e90f2c917b162e1))
+- risolvi errori TypeScript build - rimuovi riferimento EmailNotConfirmedError ([9275bfb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9275bfb0182dcb2e4426ee430b10714a7a7acc5a))
+- salva label_url nel metadata anche senza metadata dall'orchestrator ([2ceaba5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2ceaba5176df52b7fd16b440559d98efdf599ecf))
+- **scripts:** add type assertions to fix build error ([d13bcad](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d13bcad1e828fa39374296c9e12598130d73d642))
+- **scripts:** fix type error in test-sync-real.ts ([ba0d65e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ba0d65e48883697e93b31ecbfb3c6ed2332cbf91))
+- **scripts:** use decryptCredential instead of non-existent decrypt ([ed1e8b5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ed1e8b50ad5deb7764a7b9bcfff430c3cbbc68b6))
+- **SEC-1:** remove all API key exposure from logs ([29a43b8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/29a43b8c7468d4b4a0e1fa29d87e7f088fd5f0a6))
+- **security:** aggiunta validazione runtime userId per insert diretti ([a9ca50e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a9ca50e758b838647d8df11f2a769ae202fc8bc6))
+- **security:** enforce fail-closed encryption in production ([8fd4c71](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8fd4c7182fa0982c19fba0439ea84baec1faa3ea))
+- **security:** ensure views are security invoker and enable rls on fee history ([e41827a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e41827ab2c757bcdf924438933830eef05da484b))
+- **security:** fail-closed middleware on error ([72a908b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/72a908b14b351d069d5c1531e874b86bb00fc271))
+- **security:** P0 encryption fail-closed + rimozione fallback email ownership ([457995c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/457995c7565002221b522d22175c99eb12828ab3))
+- **security:** propagate AuthContext across orchestrator and reliability routes ([17551a7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/17551a7653bea261e8d45a64ccb5d2d8d734b266))
+- **security:** Remove deployment verification files with secrets ([44444b5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/44444b53236a2e4ec522f3b999a799aac8da8ca7))
+- **security:** remove leaked supabase token fallback [skip ci] ([4cbc2db](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4cbc2db6c99331d939634eb03d85ff0a644e85ab))
+- **security:** risolti rischi HIGH - AuthContext esplicito e hardening RLS ([08cdd40](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/08cdd40771de94ed9259df62ffe711e64309165e))
+- **security:** validate courier config access + lock listini sync ([043a613](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/043a613197623dab502758ef6aebc560b1d13f29))
+- Select onChange invece di onValueChange in create-customer-price-list-dialog ([f4de4b1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f4de4b1b93f634fc23d88f8d3c8ec1373c1e669a))
+- servizi accessori Spedisci.Online + validazione corriere + multi-config ([6d82ab0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6d82ab08d06d0b507c3903a0d59f0e8418ead4e2)), closes [#40](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/40)
+- Set dockerContext to automation-service folder for Railway build ([e38a286](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e38a286f31cbfeacb8323ec157c3ef1a7884ce23))
+- Sistema chiamata API Spedisci.Online + criptazione opzionale + fix vari ([351ccfb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/351ccfb43ca1a064fc32456585a329f2d71d3eb5))
+- **spedisci-online:** auto-add contract if filled but not added to list ([6218d0c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6218d0c41af7d7052906572618e9c3f0c40f7f47))
+- Spedisci.Online 401 - add trim after decrypt, implement auth strategy fallback, remove hard prefix guard ([74a238d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/74a238d9046d2b01cb43f495833928cf5020ac76))
+- Spedisci.Online 401 - use only Bearer token per OpenAPI spec ([e4a5164](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e4a5164e0888d551729558c66c2da971e98b4b8b))
+- Spedisci.Online API key mismatch - enforce default config priority, add hard fail guard for invalid tokens, normalize provider_id ([6d36013](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6d36013abb60ccf923528f3941a203b2e669774c))
+- **spedizioni:** FIX CRITICO - shipment_id_external ora salvato per TUTTI i corrieri (incluso Poste Italiane) ([5757c90](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5757c90953ea9613afb6ac5d6c18d6377a52e7e0))
+- sposta tailwindcss in dependencies per Vercel build ([1a76229](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1a76229048532865b85bbb9b7bd563d353613dc6))
+- **stripe:** lazy initialization to prevent build-time errors ([fd8974a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fd8974a15a83ad60b3b6ca11d27a511bc1416324))
+- syntax error parentesi graffe duplicate ([861a6d6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/861a6d64f9f459811c3ff772059030438f2d81d0))
+- **telegram-queue:** Critical fix - Handle Upstash auto-deserialization ([#74](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/74)) ([9cb9150](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9cb9150891f9b9df274d69e5a4b59b13252698a7)), closes [#63](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/63) [#64](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/64)
+- **telegram-queue:** Fix cron schedule syntax in comment ([5ecc7fd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5ecc7fd6c91ddadc934b25c32a8a0f8ace3ee88d))
+- **telegram-queue:** Fix Redis connection errors with Upstash SDK ([#72](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/72)) ([d8576e6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d8576e6999ee2dd96f0107f761dfa42e2c52fe07)), closes [#63](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/63) [#64](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/64)
+- **telegram-queue:** Handle undefined priority in score calculation ([fe227a0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fe227a095a06b2349a8f5967c3d8724f721f67d3))
+- **telegram-queue:** Handle undefined priority in score calculation ([#69](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/69)) ([8a0a510](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8a0a5103de2a2d1261918f35e769e81eb43cbee4))
+- **telegram-queue:** Handle Upstash Redis auto-deserialization in dequeue ([2099387](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2099387629c1ad3aed6f800a34f628ad86fec757))
+- **telegram-queue:** Switch from ioredis to @upstash/redis for REST API compatibility ([ac1bff6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ac1bff6252950b43b231e2180509ed1affb0ae46))
+- **telegram:** Add 5s timeout to database health check ([be80bc7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/be80bc7e9f61db4d0466343135e5d6742de68303))
+- **telegram:** Add 5s timeout to database health check ([#63](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/63)) ([096d913](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/096d913f638dcb6346907cc3fe3afb9da6bbcd73))
+- **telegram:** Add 5s timeout to database health check ([#63](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/63)) ([61faeed](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/61faeed66422a0594d27810c357ac4ec11cb0b91))
+- **telegram:** Create Supabase client directly in webhook ([e3cfcb3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e3cfcb33871b4834b5da0f284aab4eabed3abcb2))
+- **telegram:** Create Supabase client directly to fix webhook ([#65](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/65)) ([4e6ba80](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4e6ba807e7504a2d3f532fb6cd6d44523a165a58))
+- **telegram:** Create Supabase client directly to fix webhook ([#65](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/65)) ([2562cdd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2562cddb74d5d1271875a6e861da339b0a1809d1))
+- **telegram:** Ensure chat_id is always string for API payload ([99925a4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/99925a4a2c8291aaea63fcd2f55625b50792d948))
+- **telegram:** Fix /health command to check database directly ([98cbeed](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/98cbeed55596fe12c9b230337861b96450a5a287))
+- **telegram:** Fix message queueing with async/await ([#73](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/73)) ([62d8814](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/62d881476c6f620362225b918c49676a33144ca3)), closes [#63](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/63) [#64](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/64)
+- **telegram:** Fix webhook response mechanism - CRITICAL ([#67](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/67)) ([4aad84a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4aad84a8486699886b2b052f5855766dda4d7b0d))
+- **telegram:** Fix webhook response mechanism - CRITICAL ([#67](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/67)) ([6b8ec45](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6b8ec4528d2aecbb351c1e8119b4828e3b423e4e))
+- **telegram:** Fix webhook response mechanism for bot commands ([4a79dd1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4a79dd1b61b9e1d46cfaca0ff4b315c66c67d4c2))
+- **telegram:** Make enqueueMessage async to prevent Vercel serverless truncation ([5067dad](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5067dad0a46fe893acea5247cc94489379a9e6db))
+- **telegram:** Simplify /health command ([#66](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/66)) ([db1d479](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/db1d479acc88489e84ad03c2add67e34e1de4618))
+- **telegram:** Simplify /health command ([#66](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/66)) ([b0c4917](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b0c4917d62085e5cdf8e838ec0a9bc7346ce092a))
+- **telegram:** Use static import for supabaseAdmin ([dc4763c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dc4763c2f4d7bd9bee4463edb6a454160d80fbbf))
+- **telegram:** Use static import for supabaseAdmin ([#64](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/64)) ([653bbc8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/653bbc815508c3e30276309fac1040edeb4772b8))
+- **telegram:** Use static import for supabaseAdmin ([#64](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/64)) ([002efbc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/002efbc75d4cacb03861ef9d54cc70a10c513604))
+- **telegram:** Use www subdomain for webhook URL ([7f01754](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7f017545fdf5db8e11179f08065ced5166ae96c6))
+- **telegram:** Use www subdomain for webhook URL ([#55](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/55)) ([c909f39](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c909f39a9d8742a243f415f113658d9a8865b6e3))
+- **test:** add missing userId/userEmail to AgentState in integration test ([6e8ae25](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6e8ae25dad20e8f96222adef1d53b08aa9a5e92e))
+- **test:** aggiungi cleanup automatico spedizioni create in test script ([6be4e01](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6be4e01a6f748fc1fdf7d6f3b889c637063a098a))
+- **test:** Aggiustato test E2E download etichetta - accetta UUID o tracking number ([19afee8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/19afee8c035ceeb19dca8b09505099e43b1d16d5))
+- **test:** correggere errori TypeScript in mentor-worker.test.ts - Aggiunto cast 'as any' per input pricingGraph.invoke() (compatibilitÃ  LangGraph) - Aggiunto cast 'as unknown as AgentState' per output (type safety) - Aggiunti type guards per proprietÃ  opzionali (mentor_response) - Fix errori: Index signature missing, Property does not exist - Type-check ora passa completamente (0 errori) ([3cbf4f3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3cbf4f35eced596a2a1bee675db8c5660136632a))
+- **test:** Load .env.local in wallet concurrency test ([6246f25](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6246f25a8da4c5e45e068583885da217cb9bf8e7))
+- **test:** Mock cache service in mentor-worker test per isolamento ([a4dcf1b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a4dcf1bdea0a6034ff23b044be423f81676cbd63))
+- Testo form più visibile e scuro ([f1101d4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f1101d4d27e84996d1d9ffa5e49127d68d61e17a))
+- **test:** relax margin kpi regex match for resilience ([b06e18f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b06e18f4883a97fcbc6a8e9ae2b53fbb4d4b6441))
+- **test:** replace invalid 'test-user-id' with Nil UUID and stabilize E2E auth ([268bb76](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/268bb766873736fbb79ff928cc04aae95f11da92))
+- **test:** Resolve TypeScript errors in unit tests ([a0b0bd3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a0b0bd3a35399feff379d3576483dc47c3a0c2c0))
+- **tests:** add provider-adapter mock for legacy path integration tests ([32765a9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/32765a9ee451098e8ef3d53c0021b752922464f2))
+- **tests:** aggiornare SupervisorDecision type e test mentor-worker ([9fe5c62](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9fe5c6291ca3f8356d4cec4b405f04c4daa6d1e4))
+- **tests:** Correct invoice webhook auth test assertion ([3efe340](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3efe340bdf848164de8223c01d4acb4cf4b96cb0))
+- **tests:** Corregge test invoice-webhook e invoice-xml ([36e2f24](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/36e2f246e9fbb862df3b85c4b23cafc6e2d2b957))
+- **tests:** Corretto ordine controlli in translateError - booking_result ha priorita su confidenceScore ([dfbc1bf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dfbc1bf2b13bc637c7f38e6399200e497859dfd2))
+- **tests:** improve next-auth mock for vitest ([7cbce15](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7cbce156cb0a77bc7388d82622581d97b4c1dc2b))
+- **tests:** resolve fiscal control and data unit test failures ([003d38a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/003d38afe7bda042fe728fcaf5f21d4a506de2a6))
+- **tests:** resolve platform costs integration test setup failures ([3bdf7a8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3bdf7a8eb50d972bc934d5e2238daf74e63da2ca))
+- **tests:** resolve recursive mock pattern in price-lists-phase3-supplier tests ([f6f6a40](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f6f6a400f706664a87b32d92df097548e5eda28d))
+- **tests:** resolve RLS policy mock leakage and api-routes assertions ([1c248d7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1c248d79577f2fb67dcc1e69a7496965a9d09cd2))
+- **tests:** Riscritto error-translator.ts con encoding UTF8 corretto - risolti export mancanti ([9f37dfa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9f37dfa464032001cfdda5ebbac0f67c66ff2f42))
+- **tests:** risolti crash test unitari e fix margine default comparatore ([7e2085b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7e2085b1791f217269175090335a7ea99232f336))
+- **tests:** Skip invoice-recharges integration test ([4ea7077](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4ea70778f1c147ed202bab332dfd73ce02452837))
+- **tests:** Skip RLS policy tests if setup fails (missing env vars) ([7cee60d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7cee60df46ca4eea007be0d5b62ec3200af31767))
+- Type serviceType as CourierServiceType in calculateQuote ([99f71e0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/99f71e0e17df08b3aa31ca90a6790b61a1faf6d1))
+- TypeScript error in compensation-queue stats endpoint ([6fc71ac](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6fc71ac71153085bca12c575784c4aa3b68d9823))
+- TypeScript error in fix-duplicate-users API ([bce927a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bce927a94c6832905ce5ed3f2cf9d65b39806e72))
+- TypeScript error in OCR consent route (all 3 methods) ([ba05a4b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ba05a4b52c622af295e7016db7388af5ff159041))
+- TypeScript error in OCR extract route ([afc676c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/afc676caa8740e1e047a52ea2f8279947cf18524))
+- TypeScript errors - handle Supabase users array in platform-costs and reconciliation-service ([7981c71](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7981c71b29079f2118b4bf601e355ca85635888e))
+- TypeScript errors in pricing calculator - null check and optional delivery days ([face286](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/face2861c08558b13df53a64e78dd61d09f3929e))
+- TypeScript narrowing per mediaStream ([e3d981c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e3d981cc8afdf3d4d48f8d8f806e8a594e231b46))
+- TypeScript nullability audioContext e mediaStream ([79bf527](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/79bf527c9268c81d56ae9ee91f806b07c5b358c1))
+- TypeScript type cast for label_pdf base64 conversion ([53dc964](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/53dc96491e4b3001b1063b2d5f9e049ade9f1f8d))
+- **UI:** contrasto input onboarding - bg-gray-800 + !text-white ([d747f5b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d747f5b660279c8cbdc95b1915f3403441664c86))
+- **ui:** enable city auto-population and enforce +39 phone format ([73f38d5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/73f38d58fd2b07cc6f91dbec51f32ab2e724c3b1))
+- **ui:** passa is_reseller a getAccountTypeBadge per visualizzazione corretta ([241798f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/241798f231b581261bebb8b5f1e944e7cb34f80c))
+- **ui:** refresh dashboard state after toggling AI features ([a4a31e1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a4a31e1f86e97809648a0ab4ebd86ed1db0a2209))
+- **ui:** remove duplicated render block in AgentUpload causing build error ([9aea43d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9aea43d3a41eac80d97d160b42aa82e44ce497e3))
+- **ui:** risolti hydration errors dashboard finanza ([c20e8e3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c20e8e39b79c2af63a381b8dde7d522bca596188))
+- **ui:** update imports for topups-admin refactor ([3f2e563](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3f2e563736e42b35ad0f551fd585151e30c4e447))
+- **ui:** update local state with fresh auth metadata after toggle ([11c331c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/11c331c24d305deb5a84efc4e28fa2ec305a68a8))
+- Unifica pulsanti AI in un solo Anne + ottimizza visualizzazione foto mobile ([86d16b8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/86d16b8bc8e00a084e3057b9a270ffcce5210a1c))
+- update fiscal brain scenarios and keyword matching for tests ([7cbe2be](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7cbe2be17e14f0d846e454300a4fc3774f1a8d03))
+- update test assertion to expect END instead of request_clarification ([22de161](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/22de1612357f511adb534e8521e68553cfcefaa6))
+- update test scripts to use production test account ([da1bb5f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/da1bb5f095c5a0ce3e3e8d22fd762be11df13e74))
+- update test to use END instead of deprecated request_clarification ([feb14b4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/feb14b4b0e551851811451862fd46fd1dcf59100))
+- usa npm install invece di npm ci (manca package-lock.json) ([324023b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/324023b3369a8e9d2194fa0f4a245f8cd77cc4d9))
+- usa percorso assoluto Dockerfile dalla root repository ([b8b8ca8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b8b8ca85717189e0ba53731ca743f4a853c701f1))
+- Usa RPC get_platform_stats() per escludere test e cancellate dalla Financial Dashboard ([1941638](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1941638d77add41bf4f6bf7423502f04fce7c23b))
+- usa source_metadata anche in upsert supplier config ([91aa23f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/91aa23f23ea4f96bd94a179eb6901fc92e49da1f))
+- Usato metodo colonna temporanea per conversione NUMERIC->BOOLEAN più sicuro ([dde85af](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/dde85af70286d0d628f0acbc482c03b3152f6433))
+- use OpenAPI /shipping/create endpoint and payload format ([25e2089](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/25e2089e67965edf01e7a0a57cb939cb1fb3c397))
+- use toast.warning instead of toast.warn ([905de5b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/905de5bd13679b59ac076348f88de335e775d60f))
+- validazione obbligatoria provincia e CAP + blocco submit ([3ad84ae](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3ad84ae4267653c72eb58b0c7599ecab8498c2c4))
+- **vat-custom:** Corretto uso totalCostOriginal per listini personalizzati con IVA inclusa ([455cf46](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/455cf46d445de91a4a532ed8f2849e598d8e81e1))
+- **vat-semantics:** Aggiunti campi VAT al mapping database e interfaccia Spedizione (ADR-001) ([64ecef2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/64ecef205a00fda11f7c7904bb1ce39530e1dc71))
+- **vat-supplier-price:** Corretto display costo fornitore con IVA inclusa ([9d764aa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9d764aaf650751d1a317a0e59974d62dbb6e9c54))
+- **vat-supplier:** Corretto calcolo prezzo per listini fornitore con IVA inclusa ([894cf8f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/894cf8f0084951ab5f996d57655dad985c4bb740))
+- **vat:** Corretto errore sintassi SQL in migration 111 (RAISE NOTICE fuori da blocco DO) ([cdfcd90](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cdfcd90acd4634c58cc930eba26ca814c8310896))
+- **vat:** Normalizzazione VAT corretta per isManuallyModified (surcharges sempre IVA esclusa) ([317a849](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/317a849e381b6282882d14b7df8feefc7aa158ab))
+- **vat:** Surcharges seguono vat_mode del listino (non sempre IVA esclusa) ([3d0375f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3d0375f0c20fc960f74349f972218e3cc08b66df))
+- **vitest:** migrate to ESM config to eliminate CJS deprecation warning ([a0c67bf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a0c67bfa6d01a0b92c00659fcfdbce0fee294d22))
+- **wallet:** add UPDATE policy for top_up_requests + enhanced logging ([e18fec1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e18fec143e8b1499661585b0c640bd509ad0e68a))
+- **wallet:** correct approveTopUpRequest atomic update fallback and diagnostics ([9ee1f8a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9ee1f8a5739d8f97bdf62af5ecac3b3bf66d9d5a))
+- **wallet:** improve UPDATE policy for service role + enhanced error logging ([948978f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/948978f78459ccdc281ffea26db960aac0e198ab))
+- **wallet:** P0 security fixes - race condition, status column, TTL ([cd9cf63](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cd9cf637e7208eb62ec154c00db69c0701c5e350))
+- **wallet:** Remove legacy trigger - ELIMINATES DOUBLE CREDIT ([0359432](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/035943231597dfdc2cb48c19715941af84e90394)), closes [#5](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/5)
+- **wallet:** syntax error & cleanup logs for prod ([29a4333](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/29a43339ea22db6c533f51ffa5fc5144bfb1f84b))
+- **wizard:** add missing CDC state and input field ([7367242](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/736724238cd8565477066b313969c9d77c0ec361))
+- **wizard:** remove redundant closing div ([6229c8d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6229c8dccbc820b9fef256596dfcc4609007ffc7))
 
-## Versioning Strategy
+### Features
 
-Questo progetto segue [Semantic Versioning 2.0.0](https://semver.org/):
+- **a11y:** add keyboard navigation to sidebar ([50c1ed2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/50c1ed2035395aa351d76900ff769da39e1b3fa0))
+- **actions:** add server actions for reseller price list management ([29e85d9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/29e85d975450329e9559bfbfcac1f49ce4a60f78))
+- add cash on delivery (COD) support for spedisci_online ([86ff7e9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/86ff7e9223c53f665e613a0070435594502965af))
+- add CourierAPIConfig to Integrations page for Poste support ([26c7039](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/26c7039c926dc91594109d6d3fb93ec7c26393df))
+- add geo_locations table schema with RLS configuration for Italian cities autocomplete ([c1a7785](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c1a7785a4701aec99b14cdfd2a5c9782fa64ae2d))
+- add PR creation script and instructions (top agency) ([08f39f8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/08f39f82b4eb92490ab368a68ec8e1bafbf5e124))
+- Add Reseller creation + Wallet page + Reorganized navigation ([5bfd7b7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5bfd7b7ae94a8bef0025efd65b75f5df195fae46))
+- Add secure test script for Telegram queue (reads from .env.local) ([03a72aa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/03a72aa7f1038eb54d947f9c01ef371c5a592de3))
+- add seed-geo.ts script for Italian cities database seeding ([9c4d9c1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9c4d9c13c5f3f4ec1c546576ba0ffd8a70d434f7))
+- add seed:geo npm script for database seeding ([9fe793c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9fe793c458ff05cc6cc464b3ebf4ccbd0c7535ee))
+- add support for Poste Cost Center Code (CDC) ([2c95b29](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2c95b29dde3c1f12f3261b130d5ecaef81712cbb))
+- **admin-ui:** SuperAdmin platform fee management ([5cba51a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5cba51ad70fa5ef569d574b44c51627418a92831))
+- **agent:** aggiungere AUDIT_ACTIONS per AI Agent operations ([b7e9d1b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b7e9d1be1c40bcf138ea23fb3729f255817acbce))
+- **agent:** creare tabella agent_sessions per persistenza conversazioni - Tabella con id, user_id, session_id, conversation_history (JSONB), metadata - RLS policy: utente vede solo le proprie sessioni - Index su user_id, session_id, updated_at per query veloci - Trigger auto-update per updated_at - Task 1 completato: base per conversazioni multi-turn - Ref: PROMPT_IMPLEMENTAZIONE_AI_AGENT.md Task 1 ([c85741a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c85741abc1d54955d8e96e8a920dfbe613e6ef67))
+- **agent:** estendere AgentState con agent_context e mentor_response - Aggiunto agent_context con session_id, conversation_history, user_role, acting_context - Aggiunto mentor_response per risposte Q&A tecnico con sources e confidence - Importati UserRole e ActingContext per type safety - Task 3 completato: base per conversazioni multi-turn e mentor worker - Ref: PROMPT_IMPLEMENTAZIONE_AI_AGENT.md Task 3 ([aee3b15](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/aee3b15e453690da44fa1c24117a5209bdb155d7))
+- **agent:** implement logistics brain with Gemini 2.0 Flash multimodal extraction ([03f27ae](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/03f27ae0d5d5974460c878396603d71b722c74fe))
+- **agent:** implementare mentor_worker per Q&A tecnico - Worker con RAG su documentazione (MONEY_FLOWS, ARCHITECTURE, DB_SCHEMA, SECURITY) - Intent detection: domande tipo Come funziona, Spiega, PerchÃ© - Routing in pricing-graph: mentor_worker -> END - Risposta con sources (file paths) e confidence - Task 4 completato: core feature per supporto tecnico - Ref: PROMPT_IMPLEMENTAZIONE_AI_AGENT.md Task 4 ([ae8d65e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ae8d65ef6f90d1cb97607727a953172ec5c130b5))
+- **agent:** implementare P2 Task 2 - debug_worker per analisi errori e troubleshooting ([0480b0e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0480b0e6969cdc517e960e92de31813476c1993c))
+- **agent:** implementare P2 Task 3 - explain_worker per spiegare business flows ([e66781a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e66781af1c4046851ec6d3f5899d2f8db38c0af1))
+- **agent:** implementare P2 Task 5 - compensation_queue processor per cleanup orphan records ([3f5dad2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3f5dad299d769194c6bb96b3fc178d8284fd75b1))
+- **agent:** iniettare ActingContext in AgentState - supervisorRouter ora riceve ActingContext come parametro - ActingContext iniettato in agent_context di AgentState - Route /api/ai/agent-chat usa getSafeAuth() per ActingContext - Tutti i worker possono accedere a ActingContext tramite AgentState - Task 2 completato: prerequisito per worker che richiedono autenticazione - Ref: PROMPT_IMPLEMENTAZIONE_AI_AGENT.md Task 2 ([7bbcc47](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7bbcc47f648cf7b989d4a7aa1e6535558eeb3ea9))
+- **agent:** unificare API endpoints per AI Agent - AnneAssistant ora usa /api/ai/agent-chat (endpoint unificato) - /api/anne/chat deprecato: ora chiama supervisorRouter() - Mantenuta compatibilitÃ  con context esistente - Task 5 completato: integrazione finale - Ref: PROMPT_IMPLEMENTAZIONE_AI_AGENT.md Task 5 ([b3402b7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b3402b7f50c9003fb9464928008aed89ac6001ae))
+- aggiunge eliminazione configurazioni con conferma speciale per importanti + elimina tutte ([8d7a487](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8d7a487c43c5385cbdd072ffabe1c9cd3f0894b5))
+- aggiunge endpoint API real-time per quote con cache Redis ([f12cc90](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f12cc907fc0b21680a549539a73889afeec80c86))
+- aggiunge servizio automation per Railway con Dockerfile e configurazione ([45586fb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/45586fb2b7c13ba6c3cd6218a665e69d7fa333d0))
+- Aggiunge sistema ruoli/permessi e riepilogo progetto - Script SQL completo per ruoli (admin, user, agent, manager, merchant, support, viewer) - Sistema killer features con permessi per utente/ruolo - Funzioni helper SQL per gestione ruoli/features - View god_view_users per dashboard admin - Documento riepilogo completo per prossimo agente Cursor ([f07ba3a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f07ba3a4494fe74a375111fd0b12c14fc6717e36))
+- Aggiungi sezione Supporto con Manuale Utente al navigationConfig ([b0c1bbf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b0c1bbf8c105d54012171d449911086465e4f8a0))
+- aggiunta diagnostica, rate limiting e refactoring SOA ([3d33700](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3d337004811151eedfcfa495efa60d9b54d75ebd))
+- aggiunta esportazione CSV multiplo formato spedisci.online - Funzione generateMultipleShipmentsCSV per esportazione batch - Pulsante CSV Spedisci.Online nella lista spedizioni - Supporto importazione manuale su spedisci.online - Mantiene compatibilità con export singolo esistente ([fa4cbfa](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fa4cbfac6c3ab6cad42bbc786ae31a43f80eb683))
+- Aggiunta sezione API Corrieri in integrazioni con form creazione LDV ([07348dc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/07348dc6a96b51c048e52a5e04beafa4c2f8331e))
+- aggiunta utenza test reseller e fix login mobile ([a8524c1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a8524c10e597dd16704e7ba1496150b6430596e6))
+- Aggiunto endpoint test per verificare configurazione database - Verifica se Supabase è configurato - Verifica se tabella users esiste - Mostra dettagli configurazione ([04dcd18](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/04dcd18670ce4839b066d9549fdd310fefe82770))
+- Aggiunto link Admin Dashboard nella navigazione - Link Admin visibile solo agli utenti admin - Aggiunto in navigazione desktop e mobile - Aggiunto card Admin nella dashboard principale - Verifica ruolo utente tramite API /api/user/settings ([290fa5f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/290fa5f93459e0440e2214e6427ff65e7b682e38))
+- aggiunto link guida registrazione Poste nel wizard ([3eec857](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3eec857e12ccbd328956823144f4cf6b1f97a55c))
+- Aggiunto menu navigazione e redirect per bonifici admin ([baa8540](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/baa85409196d774c8d4ce68e85bc4c628306720e))
+- aggiunto supporto Google Gemini come provider AI per Anne ([0771439](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/07714398db9c66f75fe705ff18b6983932fcf25e))
+- Aggiunto supporto mobile per Listini Fornitore ([30be941](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/30be94179b03e19d1639fb4b5f9ffc913ab93322))
+- aggiunto test automatico API Poste Italiane e diagnostica database ([62addab](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/62addabaca408d31e4ae82adaa6ff021645291da))
+- Aggiunto wallet_balance al contesto di Anne per risposte sul wallet ([9dc82f0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9dc82f098c67491c57c41e0ecb9af2be667cb34e))
+- Aggiunto wizard configurazione Spedisci.online per utenti ([c176c98](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c176c98a64a4613ecd7d1abcc2db0482e3454640))
+- AI Provider Selection - Supporto Multi-Provider (Anthropic/DeepSeek) ([78f2beb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/78f2bebd863f93ee98c351726e38c0e6266ffbd6))
+- **ai:** add price list management capabilities to Anne agent ([7ce7c41](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7ce7c4147b33f09fcfe87874f643258c169d6ae6))
+- **ai:** implementazione iniziale UI chat e API mock sicura con contesto utente ([2c42c5c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2c42c5c4f1b21e32e5ef9eb484ebd82e7ed04896))
+- **ai:** implementazione Super Segretaria AI - sync automatico spedizioni e analisi con Claude Haiku ([26af1d8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/26af1d839348b9b4cd12e5eef66bee6c50c1fbb5))
+- **anne-v2:** phase 1 complete - pricing graph, router safe, and single source of truth calculator ([b04a5ed](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b04a5ed29c37c7097db01cc663fd95d114f2cf10))
+- **anne-v2:** sprint 2.3 address worker for address normalization ([7c0145e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7c0145e42f31ef05a3323eef7b34dc76dfe96aca))
+- **anne-v2:** step 2.2 supervisor hardening with telemetry ([9bfc1cb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9bfc1cbb2b649be8773c5807741a24966cbf6831))
+- **anne-v2:** supervisor router as single entry point ([e3d20fb](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e3d20fbd33c26550ddc0dc967ad8aee7678a8b75))
+- **api:** add GET /api/couriers/available endpoint ([70214e3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/70214e31016c5270097416f6d6f80dad050f2198))
+- **api:** aggiorna api-responses con logging strutturato ([cdeede1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cdeede1a54b52db4c08e81eac8122d854b999c1d))
+- **api:** aggiungi logging strutturato a route spedizioni ([7824d1d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7824d1d5848c5aba35ab7332b3b7a195871c9b5b))
+- **api:** improve quote deduplication and routing logic ([018f2c9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/018f2c92c96894348ecd0c9ba7b4eb783da78620))
+- architettura fulfillment orchestrator production-ready - Implementato Fulfillment Orchestrator per routing intelligente LDV - Ristrutturato Spedisci.Online Adapter con priorità JSON > CSV > Fallback - Rimossa logica CSV da route HTTP (separazione responsabilità) - Aggiunto routing automatico: Direct > Broker > Fallback - Migliorata gestione errori e resilienza - Documentazione completa architettura ([3dc0593](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3dc05931c1c990db9671ffab66dfd117a17106dd))
+- auto-login post conferma email - URL pulito e feedback chiaro ([060f49d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/060f49d4618e29cbe0833f237c6560cfc50268c8))
+- **automation:** completa refactoring privacy, rate-limit e correlation-id ([a3a9259](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a3a92592422fd1c6b2e18d10703ac59a95594175))
+- **backend:** aggiunge getAllClientsForUser() e aggiorna getSubUsers() ([14e57b3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/14e57b3e1a4ed52357c2b224ae2c07e2a8459189))
+- Badge ruolo utente visibile + Fix promozione superadmin ([0884cb7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0884cb7ebbc7598857df4738e7e3a021ba212e5c))
+- Booking Worker (Sprint 2.6) + P0 Address test coverage resolved ([69e0dd4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/69e0dd4c65086f7104418e7eabf197d16ec4150c))
+- callback Supabase Auth - pulizia URL dopo conferma email ([30b5991](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/30b5991974dddbc7c5ce609a05e35d2c0b7c78c3))
+- client-side chunking for price list sync to avoid vercel timeouts ([e3ae572](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e3ae572dd1298a3145e6e71223cad8c66cb7a8ae))
+- Completata Fase 3 - UI Listini Fornitore per Reseller e BYOC ([159c325](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/159c32527a13646686e857ce689e9ea83fa5ab47))
+- completata gestione spedizioni con filtri, ricerca e export CSV ([7204280](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/72042804c5197c896726558208dac5b59e9c168e))
+- complete multi-account price list management ([206629e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/206629e3b6e3f2c2f9ef0805a279119476fba4fa))
+- complete multi-account support with database constraint fix and security verification ([b2ccb28](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b2ccb2850b9a132a8e563ab2166a4bdd0f0b4602))
+- **configurations:** add contract management actions + improved delete logic ([59c641b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/59c641b29c75a091ea8e20ba558d0d0c8e4459bf))
+- Configurazione API Corrieri con copia-incolla credenziali ([be8b158](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/be8b1583477a47a7f6d5ad532dd3a6086807995e))
+- configurazione listini fornitore con recupero automatico carrier_code ([71ccb4f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/71ccb4f51a0c047d6180df2c731d1f2d693b7733))
+- Dashboard admin completamente interattiva - API per cancellare utenti (admin only) - API per cancellare spedizioni come admin - API per gestire killer features utenti - Tabelle con colonna Azioni (gestisci features, cancella) - Modali per conferme cancellazione - Modale gestione features con toggle attiva/disattiva - Controllo completo su utenti e spedizioni ([83fb1b3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/83fb1b3deec86b8d90463ba100315665c71a101f))
+- Dashboard redesign con Anne Assistant e navigazione dinamica ([a8d2cf1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a8d2cf1cd1b0cc5449f52e34bece22b84121f17e))
+- **dashboard:** aggiunta pagina visualizzazione log admin con json viewer ([28fd86e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/28fd86e6a2ff6522245a74de9d9208f73a1d33b5))
+- **database:** Add enterprise-grade delete_user_complete() function ([8dc7027](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8dc7027bdace38f69ab47758831a8f336c460e3f))
+- **db:** add FIX_CREATE_PRICE_LIST_ENTRIES migration ([5595525](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/559552536902b80bbed9e92d6bf0ec6b613f1211))
+- **db:** add migrations for reseller personalized price lists ([c0b17a6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c0b17a6c6d5bbb20768a5d1aee2abcb50783c163))
+- **db:** aggiorna RLS policy users per usare tenant_id ([95abb2a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/95abb2ade57ec6202feaca569a661da4a2bb173b))
+- **db:** aggiunge campo tenant_id a users per isolamento multi-tenant ([65fccf0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/65fccf05c707d6f84c60f624a7bc68086ea0283e))
+- **db:** aggiunge funzione get_user_tenant() con fallback ([fc6d122](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fc6d12260c6bcce39a9af795619e2baa46aaecb1))
+- **db:** aggiunge funzione has_capability() per controlli granulari ([49a25d7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/49a25d7e2b32f0aa75dec3df86e6d9d9e0476ba6))
+- **db:** aggiungi 'reseller' all'enum account_type ([8f6aa0f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8f6aa0fb74760c11f919b92f7e986064c4501dfe))
+- **db:** crea tabella account_capabilities per permessi granulari ([6b4f0c5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6b4f0c5b663763d1718977219a88908a4db91413))
+- **db:** popola capability da role/account_type esistenti ([6a5e99f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6a5e99fe55abf6e5e6194462edaca33c924e137a))
+- **db:** popola tenant_id da parent_id/user_id esistenti ([18cea6b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/18cea6bdb8b821b0833bbe7e1209c9ed3ef51698))
+- **docs:** Aggiungi pagina Manuale Utente pubblica e navigazione ([1d8c9c6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1d8c9c6ea2e3b155c560756913f6ba6a997636d0))
+- enable direct adapter registration in orchestrator for Poste/SDA ([a5c87ea](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a5c87ea839d58763e3625f0141632b80e4fa77b0))
+- endpoint diagnostics per system monitoring ([6db193a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6db193a4c453597d1ca3a73de9b4fa92f4c91c1b))
+- enhance fiscal control page to enterprise-grade 10/10 ([d3f3d5d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d3f3d5de624ad77ae502cc38bba9da8a1ec3ca2b)), closes [#46](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/46)
+- expose API errors to frontend when falling back to ticket ([649b848](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/649b848aef1719287863be27ab9fef3328537e3d))
+- Fase 1 - Database & Types per Listini Fornitore ([1b2e10a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1b2e10ae30cd3b7a354d62c2c502501f8777ea15))
+- Fase 2 - Backend Logic per Listini Fornitore ([1cef534](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1cef53473c6c0966fa234fce4b770e66eedf751c))
+- Fase 4 - Operativita completa Gestione Clienti + Fix contrasti UI ([ad9cdf6](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ad9cdf604231b2ecce7f196645a8681ee94558bb))
+- Ferrari Logistics Platform - Database, Adapters, OCR, Fulfillment Orchestrator ([befc850](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/befc850f8a7d890705d09c08716db33d73bd271f))
+- financial tracking sprint 1 (squash merge + security audit fixes) ([589b0b0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/589b0b0d28a3f2479b23a42cbeb87734441e0175))
+- Fix visibilit├á testo + interfaccia multi-dominio + codice contratto + log debug ([9e3e008](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9e3e008a2ed0d6749819aea164e855dd544e1daa))
+- Fix visibilit├á testo + multi-dominio + codice contratto + fix TypeScript audit log ([33f9fa5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/33f9fa5dc943af4cce4c3636da7dbb159db643cd))
+- frontend alert for API errors + debug logs ([f3db5df](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f3db5dfdf489edb602049245cc8d8c82dcaab55d))
+- **frontend:** aggiunge vista gerarchica clienti per superadmin ([70930cc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/70930ccff3c651fe05c9090c74e5908116c8f009))
+- gestione reseller_role dal Super Admin Panel ([d99ea85](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d99ea85e7b6ae643babeb374908188b3695cd0cc))
+- Homepage dinamica con animazioni Framer Motion ([f29b69d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f29b69d2d90a30cf91ec7de42d535c0d86034cd4))
+- implement high-fidelity matrix view with smart grouping and deletion fix ([ee25dc9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ee25dc9c9b147b644778ad8e6e9e2a1f855cb845)), closes [hi#fidelity](https://github.com/hi/issues/fidelity)
+- implement multi-account support for Spedisci.Online & internal fixes ([7531763](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7531763200d0cdf810eab3b1d53040837c59f752))
+- implement Poste Italiane API integration with OAuth2 and Wizard ([cf5f3c9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cf5f3c9a03d290e739324236f58315038396b685))
+- implementa enterprise-grade features per quote real-time ([4a732ac](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4a732ac68b6b7e11bb0a9c9d9495465014299c3c))
+- implementa PWA completa - offline, notifiche push e installazione app ([857f4e1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/857f4e18a5f1ed8cd6e0648b5b80736ec4198665))
+- implementato sistema completo import/tracking ordini CSV/XLS ([f9f6d40](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f9f6d40af1c79f4f6c47286318eb9288d4dab953))
+- implementazione sistema autenticazione NextAuth con protezione dashboard ([334ada5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/334ada542b0ecfeb665f7a22086d2c4011c413e4))
+- integra automation in integrazioni, aggiunge form diretto, gestione config in tabella user ([db06c89](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/db06c89b1ce94cd6d344eca5290480cfebbe1c0f))
+- integra componente enterprise CourierQuoteCard nella UI ([f1b211d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f1b211df7ee95a15df1bb63df8e5eff1666dcc29))
+- integrate Poste Italiane API with OAuth2 and configuration Wizard ([a80cf32](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a80cf328dbbbc53043b7b76cd674500db6bcb9d4))
+- Integration Hub - extend courier_configs for BYOC/Reseller ([39c280d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/39c280d52f2752f1bb0f0ab1a0685f63944f8672))
+- integrazione cancellazione spedizione su Spedisci.Online ([14044e9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/14044e927b98ba8f9538fc121f9f31d2daf9ac2a))
+- integrazione funzionalità Claude - OCR Upload, Filtri avanzati, Export multiplo ([b896f49](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b896f4939a6dff5db27b8ae305103d88e254782c))
+- Integrazione manuale utente in-app (protetto dopo login) ([e891323](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e891323d6d6eb3980b08b87edfcf31a17ca0390f))
+- integrazione spedisci.online, sicurezza headers e miglioramenti UI - Integrazione automatica spedisci.online per creazione LDV - Headers sicurezza implementati (XSS, clickjacking, etc.) - Adapter spedisci.online con fallback CSV locale - Server Actions per gestione credenziali - Documentazione completa integrazione e sicurezza - Fix sicurezza database.json rimosso da tracking ([ad4929c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ad4929cdd30163288bbde551f1bd1511f56a0031))
+- introduce reseller_admin role per gestione configurazioni ([9e76c4b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9e76c4b0db4312c8671528e0630759fb6fbc8cd9))
+- Invoice recharges + M1 Monitoring (Sentry/Slack/Health) ([#50](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/50)) ([59365c1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/59365c1a6b2e0b50b2c40876382233c089b1e87d))
+- Landing page ONESTA + WOW - rivoluzione transparenza Building in Public ([f85c38b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f85c38bbce8ca51d0d34170ef297a40c7cc1fc75))
+- **lib:** aggiunge helper getUserTenant() con fallback ([8b80262](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8b8026266637b234f1ef855038eede55b5c8d4b1))
+- **lib:** aggiunge helper hasCapability() con fallback a role ([ecc2bad](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ecc2bad1ecdf3cd9f090c2734380102f0ecfc94d))
+- **listini:** add balanced sync mode with more zones and weights for complete price matrix ([3119ebf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3119ebfdf414a2b717da46c072def7aa54de5cee))
+- **listini:** add entries count column to supplier price list table ([03edba3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/03edba34134153ed67e4457f03c459d8dccb68ce))
+- **listini:** add Spedisci.Online price list sync functionality ([448b7d0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/448b7d05369534b3882f076f5906173512143a10))
+- **listini:** advanced supplier price lists refactor & preventivo (post-PR41) ([03f2b96](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/03f2b9684fb16364a62a0be5c96582b9ff6d01a7))
+- **logging:** aggiungi sistema logging strutturato con requestId e userId ([72acc06](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/72acc06a36e7c8fc75ff3b851153e9e244e40bd2))
+- **M2:** APM & Log Aggregation - Distributed Tracing ([#51](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/51)) ([5425e5d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5425e5d400290480d0c3b66e29e0db4a36225fb9))
+- **M3:** Uptime & Health Monitoring - UptimeRobot Integration ([#52](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/52)) ([3f3a701](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3f3a7015ae2b41162ce4534c3bf70fb0e1271779))
+- **M4:** Business Dashboards & Metrics ([#53](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/53)) ([1d72932](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1d729328d45dc77f17de2c467e45e9e00e92bdd7))
+- **M5:** Telegram Bot Notifications ([8d82684](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8d8268493936e141b33003cfffc5789219386a3e))
+- **M5:** Telegram Bot Notifications ([#54](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/54)) ([cc71e17](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/cc71e17fa7023275d13a202984fb93726684e31b))
+- **middleware:** aggiungi whitelist completa PUBLIC_ROUTES ([7c6cc7e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7c6cc7e6102cd735a33b70f017596740a3fa0fa6))
+- **middleware:** integra requestId e logging strutturato ([69de142](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/69de142cb9f85587ef0ceb4a4284a58f4357fd89))
+- Migliora configurazione build + export dynamic API routes ([e4c7cbf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e4c7cbf695abedfab089f66117ee1d539c3801bb))
+- migliora visibilità input e placeholder in italiano per automation ([b60e557](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b60e557922f01db40d4ac64b8265a02e8a6deddc))
+- Migliorata UI bonifici admin + aggiunta cancellazione ([3d29072](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3d29072b71631fcf52d355c76c9aa8fb8a52130e))
+- migliorato messaggio successo con tracking number e UX ([04c2f6a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/04c2f6aecf420b7ec39c700803947853174e8845))
+- **migrations:** aggiungi migrations finanziarie 107-109 per escludere test e deleted shipments ([87cbe0e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/87cbe0ec77e9994e0a1646932a3c2a3738db9760))
+- multi-account support, security hardening, and updated docs ([6270531](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6270531a05b799d231f8507d7053e5536982bf60))
+- **navigation:** rendere sezione Finanza accessibile a tutti gli utenti ([57c060a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/57c060a113780b3adbb49fd744def6eacdccc7c2))
+- OCR worker wrapper with single-decision routing (Sprint 2.4) ([52196ce](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/52196ceb5195a82a7ef631008a8bf87d1765586c))
+- **ocr:** add OCR Vision unit tests and Sprint 2.5 integration ([fc3aeca](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fc3aeca2fdbc312cc72c3b5459f603c83fbfd8c2))
+- **ocr:** AI Import toggle persistence + docs sanitized for OAuth placeholders ([b8de518](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/b8de5186ecb22001552d036f5ed73f5da2156b45))
+- **ocr:** implement Vision fallback policy with retry ([0a2db96](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0a2db96f1e360e5d8b9272b79b7ead7f28b2bade))
+- **ocr:** Sprint 2.5 OCR Immagini completato ([ba9bd71](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ba9bd711f5ba9ef7552b3b8d1b8c4266d2235921))
+- ordine menu definitivo - Dashboard > Logistica > AI & Automazione > Anne AI Assistant ([144a371](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/144a37114b0c7fcee9b86bc1b4946292eece6b2d))
+- **P0:** add quality gates and testing infrastructure ([d4ba31c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d4ba31c3b8034130d03e0491a6954ed25b585742))
+- **P0:** CI gate + structured telemetry for Anne V2 pricing graph ([4690967](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4690967b2f731d004c9f0a1794b648fa03238811))
+- **P0:** Sistema fee a cascata per gerarchia utenti (RESELLER → USER) ([1add15d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1add15d94e34ff57998cf92af3c257873c42e585))
+- **P3:** AI Agent Architecture - Checkpointer, Wallet Integration, Tool Registry, Type Safety, Performance ([2f997de](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2f997de791e61cb7681a35fe62a6e37b316bc526))
+- **P4:** Implementato Business Value & User Experience - Task 1-4 completati ([33a2ad3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/33a2ad3f4b4f5c6809fd732fcd3af6ed61de0763))
+- **P4:** Implementazione completa Business Value & User Experience ([43faac9](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/43faac9b7d765104f5595a99e0918f4b90b0f9d4))
+- Pagina UI per fix permessi admin ([5e8eb8f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5e8eb8f931eea7f1e7d907c55fd544a3b5310035))
+- persistenza LDV, tracking e metadata dopo orchestrator success ([3964549](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/39645492e226919673f5201ff289c8d7d92d789f))
+- **phase3:** backend tier helpers con test completi ([172dc2f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/172dc2ff68959776b3f4108460d4aa21b3bf8b76))
+- **phase3:** database migrations per reseller_tier system ([a6a7bac](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a6a7bac876bc6dd12b6a23fdfe0553b90f8eda92))
+- **phase3:** frontend tier badge e integrazione UI ([7644b0c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7644b0c2c33e85c220ac4396a62b6f362ab93ddd))
+- **platform-fee:** Dynamic Platform Fees - Sprint 2.7 ([417524f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/417524fc10948f231d02ffbb77766e196811d687))
+- **platform-fee:** feedback migliorato per salvataggio fee ([27d38f8](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/27d38f8e4b95791f85abf0a6012cce8becb35c2d))
+- **poste:** aggiorna implementazione API Poste Delivery Business secondo specifiche tecniche ([0754daf](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0754daf1b345120c561dab94513e96e60ec71421))
+- preventivatore intelligente enterprise-grade ([77a6f1d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/77a6f1d0871b29c26a6509f9ffb43d86648a088d))
+- **preventivatore:** workflow servizi accessori post-selezione corriere ([088063d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/088063d63b0ecdbed4e6e68eb877c65b28824ed3))
+- Prevenzione doppio click, messaggio conferma LDV e sblocco credenziali demo ([8d35eff](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8d35eff5c42952702bef1e1406631c7db952c8b9))
+- **pricing:** improve price calculation with geographical matching ([a51227c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a51227c3b1edcec9933caa868487930ee98d631e))
+- **pricing:** Reseller Pricing Governance + Manual Configs for Custom Lists ([#49](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/49)) ([f4a6522](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f4a652288537ae742b573bd208c302b7c8933d6a))
+- prova multipli endpoint autenticazione Poste con retry automatico ([8f762b2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/8f762b216c16d008fe3de181c8b51e7be78f81ce))
+- **rate-limit:** implement distributed rate limiting with Redis INCR+EXPIRE ([3aef273](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/3aef273258b8cef2717142c557336d09a0230f32))
+- **rate-limit:** improved distributed rate limiting with fail-safe fallback ([ca5b7b7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ca5b7b707f201e2fe23251cb51903932204b871c))
+- **rate-limit:** replace in-memory with distributed rate limiting (Upstash Redis) ([9faa31d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9faa31d9243c2c6eacaec49c06bceb30f8d4d0aa))
+- Redesign dashboard navigation for better UX ([a96273c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a96273c59da7b7db205efa3d1332c9556f4c01b9))
+- refactor email confirmation - usa auth.signUp() invece di admin.createUser() ([5a6846d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5a6846dffd241ed61450cdcdbe9e5949738384d5))
+- Reseller pricing comparison, sync improvements, and UI enhancements ([46e61c1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/46e61c18ed45cee4429ee1dd80c08687a0eb141a))
+- **reseller:** add price list detail page with entries table ([2372318](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2372318a15eb064624300ff8366c84a3fabbe5dc))
+- **reseller:** implement team structure with role hierarchy ([40cc649](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/40cc649d4ba654b0975aa39a615e35ba169b96b6))
+- **scripts:** add multi-account diagnostic scripts and fix formatting ([7c0a75f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/7c0a75f80d183e4aa75f0532dd49907ebfef4772))
+- **security:** add RLS policies for courier_configs reseller isolation ([48d5a76](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/48d5a7623aa543d538f75c6f20e7eac1a0dfdb61))
+- **security:** Complete wallet hardening + idempotency crash-safe + observability ([84bf0d7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/84bf0d78c7309af4894f6d464978e2a52126d178))
+- **security:** Missione A - middleware fail-closed + RBAC completo ([bf2b660](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/bf2b66099b35a1c6a497e71b948f6e9e99ea2109))
+- **security:** P0 Acting Context migration - Impersonation support for critical operations ([06bce3f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/06bce3fb38044e89580f6d2cc8989cf39496c0dc))
+- **security:** P0 audit migrations + security_events table ([752dea5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/752dea5aea03c775deee0afafe3a5bb16ba337b8))
+- Sistema autenticazione OAuth completo con Google, GitHub e Facebook ([4c270a2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4c270a276ed546fa5d6e3732422d764dc57fd3f9))
+- sistema automation Spedisci.Online completo con crittografia password e lock system ([c6eed14](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c6eed143643a8371f7a1524bfbf79b6c419d270f))
+- Sistema codice contratto Spedisci.Online + log debug dettagliati ([48a3372](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/48a337201c1198a8cc66a77a10852bc10a383455))
+- Sistema codice contratto Spedisci.Online + log debug dettagliati ([d21612f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d21612f347e7f642596db529c45081127b8620c6))
+- Sistema completo creazione batch spedizioni da Excel/CSV con AI ([2a9f61d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2a9f61ddf27e975f596bc8cd331f091c7a84bccd))
+- Sistema completo gestione bonifici admin + hardening wallet ([5f566c0](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5f566c003ef77f2fba480b4f8b744cd1e28d2f83))
+- Sistema configurazioni corrieri DB-only (no fallback env) + GDPR compliance completo ([9dd520b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9dd520b0c2f9aa98acacb566d71cbada8fc394a4))
+- sistema diagnostica e refactoring automation-service ([16b71cd](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/16b71cd0869f49c927e169e335000362c69a353d))
+- Sistema fatturazione ricariche e fatturazione elettronica (FatturaPA) ([6ea62d3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/6ea62d335cd0145c290d9f6f4b4b8e745a1f21c8))
+- Sistema Listini Avanzato + Dashboard Super Admin + Reseller Team completo ([a0b505c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a0b505c9013d247344858c6e5fca4e426df9470e))
+- Sistema Reseller completo + Script automatici Git + Auth wallet ([fbb632d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fbb632d8152158e50305c27ef7d537d91c5c7cc3))
+- Sistema ruoli e permessi con killer features - Script Supabase corretto (DDL non supportato via API) - API per verificare e gestire features - Dashboard admin con god view e killer features - Componente UI per mostrare features attive utente - Hook React useFeatures per gestire permessi - 10 killer features predefinite (OCR, Import, API, Analytics, etc.) - Permessi configurati per ruoli: admin, user, manager, merchant, agent, support, viewer ([441018b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/441018bc7432abe7d1d3b4f7bf9b92be39187eb2))
+- Sistema sicurezza completo per credenziali API ([f93cb92](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f93cb92c26c31f758d2e81259159f02561fd6378))
+- Sistema spedizioni cancellate + Fix cancellazione Spedisci.Online + Fix nome file PDF ([d1e792b](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/d1e792bf4a477cbefaabe3b8912310726610b476))
+- Sistema toggle features piattaforma per superadmin - Aggiunta tabella platform_features per gestire attivazione/disattivazione globale - Pagina superadmin /dashboard/admin/features per gestire tutte le features - API endpoints per verificare e modificare features - Helper e hook React per uso lato client/server - Link rapido nella dashboard admin ([c934d01](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c934d0163b87c3234b24144278bd57ba41a87ab8))
+- Sistema Voice Control completo con Gemini Live API ([2e75151](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2e75151769b8c61b20411537390156d9ae6cd82b))
+- Sistema Wallet completo con ricariche e transazioni reali ([2a07fcc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/2a07fccafcc7c378a2c0bcb2aafd8f80929968ce))
+- Stripe integration + Invoice system + Security hardening ([ed484a1](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/ed484a17b7f8e44870aca9f04ff83721db8e6c87))
+- **superadmin:** master price lists and multi-tenant assignments (P0) ([79f0aa3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/79f0aa3129cb2630390805c009231e0c1e7c40f9))
+- **sync:** add 'Sync All Accounts' button for multi-account sync ([4e1eddc](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/4e1eddcc7b5f3bf24c1b458fa942e2c753b59d11))
+- **telegram:** Complete Telegram Queue System - Production Ready ([#68](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/68)) ([98c78a4](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/98c78a4fce5f027306faa03b306c989f2b70d15c))
+- **telegram:** Complete Telegram Queue System - Production Ready ([#68](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/68)) ([c5665c2](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c5665c28c1a94d2ec74e984b247939d54bf3d973))
+- **telegram:** Implement centralized message queue with Redis ([1305628](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/13056282d4bfa774bedd1c739e14eba0f24bf0b6))
+- **ui:** add AI capabilities toggle in admin dashboard ([9df1a86](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9df1a86938cd4d1351438e3b9ef61f5565e5896d))
+- **ui:** add components for reseller price list management ([110667c](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/110667cccfcd1c10c6b30418884a0eedb4a97c7b))
+- **ui:** colori distintivi per ogni ruolo utente ([e25922f](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e25922f8aa4fb63bb2b89ac7c9f813347c9131aa))
+- **ui:** dynamic courier selection based on user's contract_mapping ([e1867f5](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e1867f5d0db4f166fb8844647ca6b112cea588c0))
+- **ui:** Enterprise Feedback UX per form spedizioni ([0b80468](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0b80468efd984be8bd254f6fd22c2abab0565503))
+- **ui:** enterprise-grade price list management UI ([103b408](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/103b408e724af9acf4eb6a4c1a9a644ab42df994))
+- **ui:** overwrite OCR component with new Premium AgentUpload ([2192709](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/21927094c61e9e0e465423ffc72d8cbc407503d5))
+- **ui:** upgrade frontend with premium Agent Brain integration and animations ([17dc38a](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/17dc38ae155d67d283a4a53cff2faf2a1a2b4439))
+- upgrade fiscal control page to 10/10 enterprise-grade (v2.0) 🚀 ([330d7ef](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/330d7efc47d9e5eefdeef6852bca3bdd05aec63f)), closes [#46](https://github.com/gdsgroupsas-jpg/spediresicuro/issues/46)
+- **user:** add is_reseller and reseller_role to user data ([c0d6816](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/c0d68168b9643d9c7f57b11a11c0ad3dde958db8))
+- **vat-semantics:** Aggiunti campi VAT nei form creazione/modifica listini (ADR-001) ([0819652](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/0819652188b8310ca00def683c2004ce6acbdf06))
+- **vat-semantics:** FASE 8 - Testing completo enterprise-grade (ADR-001) ([9efbe30](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9efbe30d1ed47844069665e2354a6131757c3300))
+- **vat:** FASE 4 - Update Quote API response with VAT fields (ADR-001) ([9f1a654](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/9f1a654c9d654a7e4dbebe8d0ba79791f5013792))
+- **vat:** FASE 5 - UI updates con feature flag (comparator + dashboard) - ADR-001 ([377a4d3](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/377a4d33ddc2bb8a282a552179c04c0f3fffd80f))
+- **vat:** FASE 6 - Shipment creation - persistenza VAT context (ADR-001) ([5f20643](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/5f206430e27452da92ca47e4a874eb6a10e38902))
+- **vat:** FASE 7 - Data migration legacy → explicit (conservativa) - ADR-001 ([adf9390](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/adf939099b259413bbe13dab052803cb05af767a))
+- **vat:** Implement VAT semantics in price lists (ADR-001) - Phase 0-3 ([e98d21d](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/e98d21d1f950b8fa8f1f6675f74d0b824b7b9bfd))
+- **wallet:** add SQL function to approve top_up_requests (RLS bypass) ([a9b5b12](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/a9b5b12c47c72024847237f24d00c8b6cf9d8a4a))
+- **wallet:** Implement atomic operations - CRITICAL FIX ([f5b13a7](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/f5b13a7106199a4f1b590f209e4ad79898ee986b))
+- **wallet:** Implement smart retry for lock contention - Add withConcurrencyRetry wrapper (lib/wallet/retry.ts) - Retry on 55P03/P0001 lock errors with exponential backoff (50ms, 150ms, 300ms) - Hardened lock detection: supports 55P03, P0001 with specific messages - Applied to add_wallet_credit and decrement_wallet_balance operations - Add stress test script (scripts/test-wallet-concurrency.ts) - All 10 concurrent operations succeed (verified) RESILIENCE: 5/5 stars - Zero user-visible lock contention errors ([1bca978](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/1bca978b986e47c470b8c1e8cd84d413dbce9d9e))
+- **wallet:** implement smart top-up AI & fix approval rpc fallback ([fd7532e](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/fd7532e50b4bd6986d748c69a50accc42348c723))
 
-- **Major (X)**: Breaking changes, major architectural shifts
-- **Minor (Y)**: New features, backward compatible
-- **Patch (Z)**: Bug fixes, security patches
+### Performance Improvements
 
-## Release Process
+- **nav:** add SSOT mobile nav, localStorage persistence, and performance optimization ([99b1009](https://github.com/gdsgroupsas-jpg/spediresicuro/commit/99b1009ed611a453d8e4adc8ead1918089107471))
 
-1. Tutte le modifiche significative vanno in `[Unreleased]`
-2. Al deploy in produzione, spostare il contenuto in nuova sezione `[X.Y.Z]`
-3. Aggiungere data alla release
-4. Creare nuova sezione vuota `[Unreleased]`
+### BREAKING CHANGES
 
----
+- **P0.2:** (minimale):
 
-## [Unreleased]
+* Return type changed: BOOLEAN → JSONB
+* Check result.success invece di TRUE/FALSE
+* Backward compat: idempotency_key opzionale
 
-Ultimo aggiornamento: 2026-01-18
+Testing:
 
-### Added
-- **Health Readiness/Liveness** - Nuovi endpoint `/api/health/ready` e `/api/health/live` per probe uptime/dep readiness
-- **VAT Semantics in Price Lists (ADR-001)** - Implementazione semantica IVA esplicita nei listini prezzi (FASE 0-8 completata)
-  - Colonne `vat_mode` e `vat_rate` aggiunte a `price_lists` e `shipments` (migration 110)
-  - Supporto prezzi con IVA inclusa o esclusa
-  - Utility functions per normalizzazione e calcolo IVA (`lib/pricing/vat-utils.ts`)
-  - Calcolo margine sempre su base IVA esclusa (Invariant #1)
-  - Fix critico: gestione corretta margine 0 quando master e custom hanno `vat_mode` diversi
-  - Fix critico: Surcharges seguono `vat_mode` del listino (non sempre IVA esclusa)
-  - Backward compatibility completa (NULL = 'excluded')
-  - Quote API: campi VAT opzionali aggiunti (FASE 4)
-  - UI: Badge VAT con feature flag `NEXT_PUBLIC_SHOW_VAT_SEMANTICS` (FASE 5)
-  - Shipment creation: persistenza VAT context (FASE 6)
-  - Data migration: legacy → explicit (migration 111, conservativa) (FASE 7)
-  - Test suite enterprise-grade: 62 unit test + integration + regression (FASE 8)
-  - Manual testing checklist completa
-  - Documentazione: ADR-001, Implementation Plan, Migration Memory aggiornato
-  - **Fix post-implementazione (16/01/2025):**
-    - Fix display costo fornitore: aggiunto `supplierPriceOriginal` per mostrare prezzo master nella modalità VAT corretta
-    - Fix matching entry matrice: migliorata selezione entry più specifica per fasce di peso sovrapposte
-    - Logging dettagliato per debug matching entry e prezzi fornitore
+- TODO: Smoke test idempotency wallet standalone
+- TODO: Test doppio addebito con same key → idempotent replay
 
-### Added
-- **AI Capabilities Toggle** - Toggle per abilitare/disabilitare capabilities AI di Anne nella dashboard admin
-  - Componente `AiFeaturesCard` nella pagina admin
-  - Toggle specifico per "Gestione Listini" (price list management)
-  - Actions `updateUserAiFeatures` per aggiornare metadata utente
-  - Refresh automatico stato locale dopo toggle
-  - Commits: 9df1a86, 11c331c, a4a31e1, 5dc5791, fd7de78, 88ac7fe
+Ref: AUDIT_RESPONSE.md punto P0.2
 
-- **Anne Price List Management** - Abilitazione dell'agente Anne alla gestione dei listini prezzi
-  - Strumenti AI: `search_master_price_lists`, `clone_price_list`, `assign_price_list`
-  - Worker: `price-list-manager` per gestione intenti complessi
-  - Sicurezza RBAC: Superadmin accesso completo, Reseller accesso negato di default
-  - Graph integration: nodo `price_list_worker` in pricing-graph.ts
-  - Documentazione: `docs/ANNE_PRICE_LIST_CAPABILITIES.md`
+- **rate-limit:** Rate limiting now uses Upstash Redis when configured
 
-- **Reseller Personalized Price Lists** - Sistema enterprise-grade per reseller con listini personalizzati
-  - Clone supplier price lists con custom margins (percent o fixed)
-  - Creazione listini vuoti con import CSV
-  - Operazioni CRUD complete per price list entries
-  - UI matrix-style per preview e editing manuale
-  - Enterprise audit trail con logging completo
-  - Integrazione con preventivatore intelligente
-  - Miglioramenti matching geografico zone/provincia/regione
+Changes:
 
-### Fixed
-- **Admin Overview KPI** - KPI admin server-side via RPC con filtri no-limit e esclusione cancellate/test (salva include testspediresicuro+)
-- **Admin Overview Data Quality** - Lista spedizioni ora esclude soft-delete/cancellate; detection test include tracking con `TEST`; query utenti con fallback colonne opzionali
-- **Metadata Column Missing** - Risolto problema colonna metadata mancante usando `auth.users` invece di `users` (5dc5791)
-- **Supabase Client** - Usa client Supabase corretto e migliora log errori (fd7de78)
-- **Local State Update** - Aggiorna stato locale con metadata freschi dopo toggle (11c331c)
-- **Dashboard Refresh** - Refresh automatico dashboard dopo toggle AI features (a4a31e1)
-- **TypeScript Build Error** - Risolto errore TS su assegnazione potenzialmente undefined (9c85761)
-- **Service Accessori Format** - Formato corretto: array numeri `[200001]` invece di stringhe
-- **Validazione Corriere Obbligatorio** - Pulsante "Genera Spedizione" disabilitato senza selezione corriere
-- **Multi-Configurazione Spedisci.Online** - Rimosso deduplicazione errata che filtrava config valide
-- **Creazione Spedizione Refresh** - Reset cache quote comparator + ricaricamento corrieri dopo reset
-- **Refresh Lista Spedizioni** - Ottimizzato con timestamp invece di `cache: 'no-store'`
+- Add lib/rate-limit.ts with distributed rate limiter
+- Remove in-memory rateLimitMap from agent-chat route
+- Use @upstash/redis + @upstash/ratelimit packages
+- Graceful fallback to in-memory if Redis not configured
+- Key format: userHash:route (SEC-1 compliant, no PII)
+- Window and limit configurable via env vars
 
-### Security
-- 🔒 Metadata access limitato a service role solo
-- 🔒 Audit logging per tutte le operazioni toggle AI
-- 🔒 Rimozione endpoint di test esposti in produzione (redis, supabase, spedisci-online)
-- 🔒 Bloccato PLAYWRIGHT_TEST_MODE bypass in produzione
+ENV VARS (optional - fallback to in-memory if not set):
 
-### Documentation
-- Aggiornato `MIGRATION_MEMORY.md` con Anne price list capabilities
-- Documentazione completa per reseller personalized price lists (PR#43)
-- Documentazione AI features toggle workflow
+- UPSTASH_REDIS_REST_URL
+- UPSTASH_REDIS_REST_TOKEN
+- RATE_LIMIT_MAX (default: 20)
+- RATE_LIMIT_WINDOW_SECONDS (default: 60)
 
----
+Test updates:
 
-## [0.3.1] - 2026-01-02
+- Mock rate limiter for deterministic 429 tests
+- No dependency on real time or module reset for rate limit
 
-### Added
-- **Anne Price List Management** - Abilitazione dell'agente Anne alla gestione dei listini prezzi
-  - Strumenti AI: `search_master_price_lists`, `clone_price_list`, `assign_price_list`
-  - Worker: `price-list-manager` per gestione intenti complessi
-  - Sicurezza RBAC: Superadmin accesso completo, Reseller accesso negato di default
-  - Graph integration: nodo `price_list_worker` in pricing-graph.ts
-  - Documentazione: `docs/ANNE_PRICE_LIST_CAPABILITIES.md`
-
-### Changed
-- **MIGRATION_MEMORY.md** - Aggiornato con Anne price list capabilities
-
----
-
-## [0.3.0] - 2025-12-27
-
-### Added
-- **Dynamic Platform Fees** - Fee configurabili per utente
-  - DB migration 050: colonna `platform_fee_override`, tabella `platform_fee_history`
-  - Service layer `lib/services/pricing/platform-fee.ts`
-  - Worker integration: BookingWorker applica fee dinamica
-  - SuperAdmin UI: `CurrentFeeDisplay`, `UpdateFeeDialog`, `FeeHistoryTable`
-
-- **Fase 2.8: SuperAdmin UI** - Gestione platform fee via UI
-
-### Fixed
-- **Platform Fee Audit** - Fix foreign key constraint in audit history
-
----
-
-## [0.2.0] - 2025-12-20
-
-### Added
-- **OCR Immagini** - Integrazione Gemini Vision per OCR da immagini
-  - Vision support con max 1 retry per errori transient
-  - Fallback: clarification request immediata
-  - 10 immagini test processate, 90% confidence
-  - Test integration: 13 test passati
-
-- **Booking Worker** - Prenotazione spedizioni con preflight checks
-  - Pre-flight check: verifica recipient/parcel/pricing_option
-  - Conferma esplicita utente via pattern matching
-  - Test integration: 30 test passati
-
----
-
-## [0.1.0] - 2025-12-01
-
-### Added
-- **LangGraph Supervisor Architecture** - Orchestrazione AI Anne con LangGraph
-  - Supervisor Router come entry point unico
-  - Workers: OCR, Address, Pricing, Booking
-  - Telemetria strutturata
-  - Rate limiting distribuito (Upstash Redis)
-
-- **Address Worker** - Normalizzazione indirizzi italiani
-  - Estrazione CAP, provincia, città
-  - Schema Zod per validazione
-  - Test: 107 test passati
-
-- **OCR Worker** - Estrazione dati da testo
-  - Parsing deterministico con regex
-  - Output `ShipmentDraft` con missing fields
-  - Test: 25 test passati
-
-- **Pricing Worker** - Calcolo preventivi multi-corriere
-  - Single source of truth: `lib/pricing/calculator.ts`
-  - Contract tests: 18 test passati
-
-### Changed
-- **MIGRATION_MEMORY.md** - Creato come Single Source of Truth per migrazione Anne
-
----
-
-## Note per Sviluppatori
-
-### Vulnerabilità Note (Non Fixabili senza Breaking Changes)
-- `xlsx` - Prototype Pollution (no fix disponibile, considerare migrazione)
-- `jspdf/dompurify` - Richiede major upgrade
-- `vercel CLI` - Solo dev dependency
-- `glob` - Richiede eslint-config-next 16.x
-
-### Prossimi Passi Prioritari
-1. Valutare migrazione da `xlsx` a `exceljs`
-2. Implementare CSP reporting endpoint
-3. Configurare WAF (Cloudflare/Vercel)
-
----
-
-**Vedi anche:**
-- [MIGRATION_MEMORY.md](MIGRATION_MEMORY.md) - Architettura AI Anne dettagliata
-- [docs/README.md](docs/README.md) - Indice documentazione completo
+Build: OK
+Unit tests: 58/58
+Integration tests: 17/17
