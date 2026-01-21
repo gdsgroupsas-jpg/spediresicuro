@@ -182,22 +182,27 @@ Sentry.init({ tracesSampleRate: 0.1 });
 **Effort:** 8 ore
 **Impact:** Onboarding veloce, architettura chiara
 
-### 8. **Automated Changelog** (-0.3 punti)
+### 8. **Automated Changelog** ✅ COMPLETATO (2026-01-21)
 
-**Cosa manca:**
+**Implementato:**
 
-- Changelog generato automaticamente
-- Release notes automation
-- Version tagging automatico
+- ✅ `standard-version` già installato
+- ✅ `.versionrc.json` configurato con conventional-changelog
+- ✅ Scripts in package.json: `release`, `release:minor`, `release:major`, `release:patch`
+- ✅ CHANGELOG.md generato automaticamente (806 righe, tutti i commit)
+- ✅ Tag v1.0.0 creato
+- ✅ `conventional-changelog-cli` aggiunto per generazione storico
 
-**Implementazione:**
+**Come usare:**
 
 ```bash
-npm install -D standard-version
-npm run release  # Auto-genera CHANGELOG.md
+npm run release        # Auto-bump + CHANGELOG + tag
+npm run release:minor  # Force minor version bump
+npm run release:major  # Force major version bump
+git push --follow-tags # Push con tags
 ```
 
-**Effort:** 2 ore
+**Effort:** Completato
 **Impact:** Release process professionale
 
 ### 9. **Client Status Dashboard** (-0.5 punti)
