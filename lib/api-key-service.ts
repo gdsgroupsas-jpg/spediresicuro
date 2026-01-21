@@ -25,7 +25,7 @@
  * @module lib/api-key-service
  */
 
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual as cryptoTimingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { FeatureFlags } from './feature-flags';
 
@@ -393,37 +393,32 @@ function hashApiKey(key: string): string {
 }
 
 /**
- * Timing-safe string comparison
+ * Timing-safe string comparison using Node.js crypto module
  *
- * Prevents timing attacks by comparing all characters
- * even if early mismatch is found.
+ * SECURITY FIX: Previous implementation was CRITICALLY FLAWED.
+ * The old code did `b = a` when lengths differed, causing
+ * comparison of `a` with itself → always returning true.
  *
- * Standard === comparison is NOT timing-safe:
- * - "abc" === "xyz" returns immediately (fast)
- * - "abc" === "abd" takes slightly longer
- * → Attacker can use timing to guess characters
+ * This implementation uses crypto.timingSafeEqual which:
+ * - Takes constant time regardless of where strings differ
+ * - Prevents timing attacks
+ * - Is the industry standard for secure comparisons
  *
- * This function takes constant time regardless of differences.
- *
- * @param a - First string
- * @param b - Second string
+ * @param a - First string (expected hash)
+ * @param b - Second string (provided hash)
  * @returns true if strings are equal, false otherwise
  */
 function timingSafeEqual(a: string, b: string): boolean {
-  // Different lengths = not equal (but still compare all chars)
+  // CRITICAL: Different lengths MUST return false
+  // This is NOT a timing leak because:
+  // 1. SHA-256 hashes are always 64 chars
+  // 2. Length check is O(1) and reveals no character info
   if (a.length !== b.length) {
-    // Don't return early - continue to prevent timing leak
-    b = a; // Make same length for constant-time comparison
+    return false;
   }
 
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    // XOR operation - 0 if same, non-zero if different
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-
-  // result = 0 only if all characters match
-  return result === 0;
+  // Use Node.js crypto.timingSafeEqual for constant-time comparison
+  return cryptoTimingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
 }
 
 /**
