@@ -1,7 +1,7 @@
 -- =====================================================
 -- API Key Authentication System
 -- =====================================================
--- Version: 1.0.0
+-- Version: 1.0.1 (Fixed IMMUTABLE function error)
 -- Date: 2026-01-21
 -- Purpose: Enable API key authentication for external integrations
 --
@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS public.api_keys (
   -- Primary Key
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  -- Foreign Key to user
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Foreign Key to user (using public.users table)
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
 
   -- Security Fields
   key_prefix TEXT NOT NULL UNIQUE,
@@ -109,10 +109,10 @@ CREATE INDEX idx_api_keys_active
   ON public.api_keys(user_id, expires_at)
   WHERE revoked_at IS NULL;
 
--- Find stale keys (unused for >90 days)
-CREATE INDEX idx_api_keys_stale
+-- Find stale keys by last_used_at (without NOW() in predicate)
+CREATE INDEX idx_api_keys_last_used
   ON public.api_keys(last_used_at)
-  WHERE revoked_at IS NULL AND last_used_at < NOW() - INTERVAL '90 days';
+  WHERE revoked_at IS NULL;
 
 -- =====================================================
 -- ROW LEVEL SECURITY: api_keys
@@ -195,10 +195,9 @@ CREATE INDEX idx_audit_log_api_key_id
 CREATE INDEX idx_audit_log_timestamp
   ON public.api_audit_log(timestamp DESC);
 
--- Rate limiting query (count requests in time window)
-CREATE INDEX idx_audit_log_rate_limit
-  ON public.api_audit_log(api_key_id, timestamp)
-  WHERE timestamp > NOW() - INTERVAL '1 hour';
+-- Rate limiting query - simple index on timestamp
+CREATE INDEX idx_audit_log_api_key_timestamp
+  ON public.api_audit_log(api_key_id, timestamp DESC);
 
 -- Error monitoring (find failing keys)
 CREATE INDEX idx_audit_log_errors

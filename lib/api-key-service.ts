@@ -106,6 +106,7 @@ export async function generateApiKey(
   const randomString = randomBytes(24)
     .toString('base64')
     .replace(/[+/=]/g, '') // Remove special chars
+    .toLowerCase() // Convert to lowercase to match DB constraint
     .substring(0, 32); // Exactly 32 chars
 
   const key = `sk_live_${randomString}`;
