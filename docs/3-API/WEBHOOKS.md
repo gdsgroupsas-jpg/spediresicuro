@@ -1,23 +1,27 @@
 # Webhooks - External Integrations
 
 ## Overview
+
 Documentazione completa dei webhook gestiti da SpedireSicuro per integrazioni esterne (Stripe, corrieri, ecc.).
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Conoscenza webhook HTTP
 - Accesso a configurazione Stripe (per webhook secret)
 - Conoscenza event-driven architecture
 
 ## Quick Reference
-| Provider | Endpoint | Eventi | Documentazione |
-|----------|----------|--------|----------------|
-| Stripe | `/api/stripe/webhook` | Payment events | [Stripe Webhooks](#stripe-webhooks) |
+
+| Provider | Endpoint              | Eventi         | Documentazione                      |
+| -------- | --------------------- | -------------- | ----------------------------------- |
+| Stripe   | `/api/stripe/webhook` | Payment events | [Stripe Webhooks](#stripe-webhooks) |
 
 ---
 
@@ -30,21 +34,20 @@ Documentazione completa dei webhook gestiti da SpedireSicuro per integrazioni es
 ### Security
 
 **Verifica Firma:**
+
 - Header richiesto: `stripe-signature`
 - Secret: `STRIPE_WEBHOOK_SECRET` (env var)
 - Verifica automatica tramite `stripe.webhooks.constructEvent()`
 
 **Esempio:**
+
 ```typescript
 const signature = request.headers.get('stripe-signature');
-event = stripe.webhooks.constructEvent(
-  body,
-  signature,
-  process.env.STRIPE_WEBHOOK_SECRET
-);
+event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
 ```
 
 **Error Response (400):**
+
 ```json
 {
   "error": "Invalid signature"
@@ -60,6 +63,7 @@ event = stripe.webhooks.constructEvent(
 Triggered quando un checkout Stripe viene completato.
 
 **Payload:**
+
 ```typescript
 {
   id: string; // session ID
@@ -69,11 +73,12 @@ Triggered quando un checkout Stripe viene completato.
     userId: string; // ID utente SpedireSicuro
     amount: string; // Importo in centesimi
     transactionId: string; // ID transazione interno
-  };
+  }
 }
 ```
 
 **Actions:**
+
 1. Verifica transazione in `payment_transactions` (idempotency)
 2. Se non già processata:
    - Aggiorna `payment_transactions.status = 'completed'`
@@ -82,6 +87,7 @@ Triggered quando un checkout Stripe viene completato.
    - Audit log: `WALLET_TOPUP_STRIPE`
 
 **Idempotency:**
+
 - Verifica `payment_transactions.status` prima di accreditare
 - Previene doppi accrediti
 
@@ -94,6 +100,7 @@ Triggered quando un checkout Stripe viene completato.
 Triggered quando un pagamento viene confermato.
 
 **Payload:**
+
 ```typescript
 {
   id: string; // payment intent ID
@@ -102,11 +109,12 @@ Triggered quando un pagamento viene confermato.
   metadata: {
     userId: string;
     transactionId: string;
-  };
+  }
 }
 ```
 
 **Actions:**
+
 1. Verifica transazione esistente
 2. Se non già processata, stessa logica di `checkout.session.completed`
 
@@ -117,21 +125,23 @@ Triggered quando un pagamento viene confermato.
 Triggered quando un pagamento fallisce.
 
 **Payload:**
+
 ```typescript
 {
   id: string;
   last_payment_error: {
     message: string;
     code: string;
-  };
+  }
   metadata: {
     userId: string;
     transactionId: string;
-  };
+  }
 }
 ```
 
 **Actions:**
+
 1. Aggiorna `payment_transactions.status = 'failed'`
 2. Log errore per debugging
 3. **NON** accredita wallet
@@ -173,6 +183,7 @@ Triggered quando un pagamento fallisce.
 ### Error Handling
 
 **Invalid Signature (400):**
+
 ```json
 {
   "error": "Invalid signature"
@@ -180,6 +191,7 @@ Triggered quando un pagamento fallisce.
 ```
 
 **Missing Secret (500):**
+
 ```json
 {
   "error": "Webhook secret not configured"
@@ -187,6 +199,7 @@ Triggered quando un pagamento fallisce.
 ```
 
 **Processing Error (500):**
+
 - Log errore completo
 - Response 500 a Stripe (Stripe ritenterà automaticamente)
 
@@ -195,6 +208,7 @@ Triggered quando un pagamento fallisce.
 ### Testing
 
 **Stripe CLI:**
+
 ```bash
 # Forward webhook events to local
 stripe listen --forward-to localhost:3000/api/stripe/webhook
@@ -204,6 +218,7 @@ stripe trigger checkout.session.completed
 ```
 
 **Test Locale:**
+
 1. Configura `STRIPE_WEBHOOK_SECRET` in `.env.local`
 2. Usa Stripe CLI per forward eventi
 3. Verifica log e database
@@ -215,11 +230,13 @@ stripe trigger checkout.session.completed
 ### Planned Integrations
 
 **Spedisci.Online:**
+
 - Tracking updates
 - Label generation status
 - Delivery confirmations
 
 **Poste Italiane:**
+
 - Tracking events
 - Delivery notifications
 
@@ -232,6 +249,7 @@ stripe trigger checkout.session.completed
 ### 1. Idempotency
 
 **Sempre verificare se evento già processato:**
+
 ```typescript
 const { data: existing } = await supabaseAdmin
   .from('payment_transactions')
@@ -249,18 +267,12 @@ if (existing?.status === 'completed') {
 ### 2. Signature Verification
 
 **Sempre verificare firma webhook:**
+
 ```typescript
 try {
-  event = stripe.webhooks.constructEvent(
-    body,
-    signature,
-    process.env.STRIPE_WEBHOOK_SECRET
-  );
+  event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
 } catch (err) {
-  return NextResponse.json(
-    { error: 'Invalid signature' },
-    { status: 400 }
-  );
+  return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
 }
 ```
 
@@ -269,6 +281,7 @@ try {
 ### 3. Error Handling
 
 **Ritorna 200 per eventi processati, 500 per errori:**
+
 ```typescript
 try {
   await processWebhook(event);
@@ -287,6 +300,7 @@ try {
 ### 4. Audit Logging
 
 **Logga tutti gli eventi webhook:**
+
 ```typescript
 await writeAuditLog({
   action: 'WEBHOOK_RECEIVED',
@@ -313,12 +327,12 @@ await writeAuditLog({
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

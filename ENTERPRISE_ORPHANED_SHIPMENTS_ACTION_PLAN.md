@@ -3,12 +3,14 @@
 ## Status RISOLTO ✅
 
 ### Situazione PRIMA del Fix
+
 - ❌ **39 spedizioni orfane** (user_id non esiste)
 - ❌ **~€550 di fatturato fantasma** conteggiato come "produzione"
 - ❌ **Mancava la funzione critica** `delete_user_complete()` nel database
 - ❌ **Data integrity compromessa** per ~1 mese
 
 ### Situazione DOPO il Fix
+
 - ✅ **0 spedizioni orfane** (filtrate e conteggiate come test)
 - ✅ **€550 corretti** da production revenue
 - ✅ **Funzione delete_user_complete()** implementata e deployata
@@ -22,6 +24,7 @@
 ## 🎯 Cosa È Accaduto
 
 ### Timeline dei Problemi
+
 1. **Utenti cancellati** senza procedure atomiche
 2. **Spedizioni rimaste "orfane"** (user_id non più valido)
 3. **Dashboard API non faceva join** con users table
@@ -29,6 +32,7 @@
 5. **Fatturato inflato** nei KPI
 
 ### Root Cause
+
 ```
 CANCELLAZIONE UTENTE (WITHOUT delete_user_complete())
     ↓
@@ -50,7 +54,9 @@ Shipments non-matchable → default "production"
 ## ✅ Soluzioni Implementate
 
 ### 1. **Nuova Migration: `106_delete_user_complete.sql`**
+
 Funzione ENTERPRISE-GRADE che:
+
 - ✅ **Soft-deletes** tutte le spedizioni (mark `deleted=true`)
 - ✅ **Elimina** features e profili utente
 - ✅ **Hard-deletes** l'utente
@@ -59,15 +65,19 @@ Funzione ENTERPRISE-GRADE che:
 - ✅ **SECURITY DEFINER**: solo admin può eseguire
 
 ### 2. **Funzione Diagnostica: `diagnose_orphaned_shipments()`**
+
 ```sql
 SELECT * FROM diagnose_orphaned_shipments();
 ```
+
 Ritorna:
+
 - Numero shipments orfane
 - Impatto finanziario totale
 - Impatto media per shipment
 
 ### 3. **Funzione Cleanup: `cleanup_orphaned_shipments()`**
+
 ```sql
 SELECT * FROM cleanup_orphaned_shipments(
   p_admin_id := YOUR_ADMIN_UUID,
@@ -75,16 +85,19 @@ SELECT * FROM cleanup_orphaned_shipments(
   p_reason := 'orphan_cleanup'::TEXT
 );
 ```
+
 - Soft-delete tutte le spedizioni orfane
 - Log in audit_logs
 - Return statistiche
 
 ### 4. **Fix API Overview** (già deployato)
+
 Aggiunto controllo per escludere shipments orfane:
+
 ```typescript
 const filterOrphanedShipments = (shipments, userMap) => {
-  return shipments.filter(s => {
-    if (!s.user_id) return false;  // ← Scarta orfane
+  return shipments.filter((s) => {
+    if (!s.user_id) return false; // ← Scarta orfane
     if (!userMap.has(s.user_id)) return false; // ← Verifica FK
     return true;
   });
@@ -92,9 +105,11 @@ const filterOrphanedShipments = (shipments, userMap) => {
 ```
 
 ### 5. **Fix Test Detection** (già deployato)
+
 `isTestShipment()` adesso riconosce spedizioni orfane come TEST:
+
 ```typescript
-if (!user) return true;  // ← Utente non trovato = TEST
+if (!user) return true; // ← Utente non trovato = TEST
 ```
 
 ---
@@ -104,6 +119,7 @@ if (!user) return true;  // ← Utente non trovato = TEST
 ### ✅ COMPLETED (Already on feature/m5-clean)
 
 #### ✅ Commit 1: Fix API Overview (8dcbfc6)
+
 ```
 - Added filterOrphanedShipments() to exclude invalid user_id
 - Updated isTestShipment() to mark orphans as TEST
@@ -111,6 +127,7 @@ if (!user) return true;  // ← Utente non trovato = TEST
 ```
 
 #### ✅ Commit 2: Add Delete Function (8dc7027)
+
 ```
 - Created supabase/migrations/106_delete_user_complete.sql
 - Implemented delete_user_complete() RPC with atomic transactions
@@ -122,6 +139,7 @@ if (!user) return true;  // ← Utente non trovato = TEST
 ### 🚀 NEXT STEPS: Merge to Master & Deploy
 
 #### 1️⃣ **Switch to Master & Merge**
+
 ```bash
 git checkout master
 git pull origin master
@@ -130,6 +148,7 @@ git push origin master
 ```
 
 #### 2️⃣ **Deploy to Production**
+
 ```bash
 # Run database migration
 supabase db push
@@ -144,6 +163,7 @@ psql -c "\df+ delete_user_complete"
 ```
 
 #### 3️⃣ **Verify Deployment**
+
 ```bash
 # Check dashboard admin page loads correctly
 curl -s https://yourapp.com/dashboard/admin | grep -i "spedizioni"
@@ -153,6 +173,7 @@ curl -s https://yourapp.com/dashboard/admin | grep -i "spedizioni"
 ```
 
 #### 4️⃣ **Monitor Logs**
+
 ```bash
 # Watch for any errors related to shipment/user operations
 tail -f logs/app.log | grep -i "shipment\|orphan"
@@ -166,6 +187,7 @@ tail -f logs/app.log | grep -i "shipment\|orphan"
 ## 🛡️ PREVENZIONE FUTURA
 
 ### 1. **Sempre Usare `delete_user_complete()` RPC**
+
 ```typescript
 // ✅ CORRETTO
 const { error } = await supabaseAdmin.rpc('delete_user_complete', {
@@ -177,14 +199,13 @@ const { error } = await supabaseAdmin.rpc('delete_user_complete', {
 });
 
 // ❌ SBAGLIATO (quello che stava succedendo)
-const { error } = await supabaseAdmin
-  .from('users')
-  .delete()
-  .eq('id', userId);
+const { error } = await supabaseAdmin.from('users').delete().eq('id', userId);
 ```
 
 ### 2. **Aggiungere Validazione Pre-Delete**
+
 Nella API `/api/admin/users/[id]`:
+
 ```typescript
 // Verifica che tutte le FK siano gestite
 const { data: shipments } = await supabaseAdmin
@@ -199,6 +220,7 @@ if (shipments && shipments.length > 0) {
 ```
 
 ### 3. **Monitoring Periodico**
+
 ```sql
 -- Da eseguire settimanalmente
 CREATE OR REPLACE FUNCTION check_orphaned_shipments_alert()
@@ -231,11 +253,11 @@ $$;
 ```
 
 ### 4. **Dashboard Alert**
+
 Aggiungere a `/dashboard/admin`:
+
 ```typescript
-const { data: orphanedAlert } = await supabaseAdmin.rpc(
-  'check_orphaned_shipments_alert'
-);
+const { data: orphanedAlert } = await supabaseAdmin.rpc('check_orphaned_shipments_alert');
 
 if (orphanedAlert?.action_required) {
   // Mostra BADGE ROSSO all'admin
@@ -248,6 +270,7 @@ if (orphanedAlert?.action_required) {
 ## 📊 Financial Impact Assessment
 
 ### BEFORE FIX (Inflated Metrics)
+
 ```
 Total Shipments (Production): 40
 Total Revenue (Production): €550.20
@@ -255,6 +278,7 @@ Daily Revenue Avg: €34.39
 ```
 
 ### AFTER FIX (Accurate Metrics)
+
 ```
 Total Shipments (Production): 1
 Total Revenue (Production): €14.30
@@ -262,6 +286,7 @@ Daily Revenue Avg: €0.35
 ```
 
 ### Impact
+
 - **39 "ghost" shipments** removed
 - **€535.90 phantom revenue** corrected
 - **KPI accuracy restored** for GTM phase
@@ -275,6 +300,7 @@ Daily Revenue Avg: €0.35
 **Decision: Soft-delete instead of hard-delete for shipments**
 
 Rationale:
+
 1. ✅ **Audit Trail**: Preserves complete history
 2. ✅ **Compliance**: Can prove every €€€ moved
 3. ✅ **Analytics**: Historical data available
@@ -297,12 +323,14 @@ CHECK (
 ## 🎓 Lessons Learned
 
 ### What Went Wrong
+
 1. ❌ Missing atomic deletion function
 2. ❌ No validation in user deletion API
 3. ❌ Orphan detection only client-side
 4. ❌ No periodic health checks
 
 ### Enterprise-Grade Approach
+
 1. ✅ **Database-level enforcement** (RPC SECURITY DEFINER)
 2. ✅ **Atomic transactions** (all-or-nothing)
 3. ✅ **Audit trail everywhere** (metadata in logs)
@@ -326,6 +354,7 @@ CHECK (
 **Risk Level**: LOW (pure database safety improvement)
 **Rollback**: Not needed (backward compatible)
 **Testing Required**:
+
 - [ ] Run migration on staging
 - [ ] Execute `diagnose_orphaned_shipments()`
 - [ ] Run `cleanup_orphaned_shipments()` with test data
@@ -334,6 +363,6 @@ CHECK (
 
 ---
 
-*Last Updated: 2026-01-19*
-*Critical Issue: Orphaned shipments inflation*
-*Solution: Enterprise-grade atomic deletion + diagnostics*
+_Last Updated: 2026-01-19_
+_Critical Issue: Orphaned shipments inflation_
+_Solution: Enterprise-grade atomic deletion + diagnostics_

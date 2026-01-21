@@ -9,13 +9,17 @@ Verificare che gli utenti demo esistano in Supabase e crearli se mancano.
 ### Passo 1: Verifica Utenti Esistenti
 
 1. **Apri il browser** e vai su:
+
    ```
    http://localhost:3000/api/test/create-admin-user
    ```
+
    (se sei in locale) oppure
+
    ```
    https://spediresicuro.vercel.app/api/test/create-admin-user
    ```
+
    (se sei su Vercel)
 
 2. **Dovresti vedere** un JSON con queste informazioni:
@@ -40,10 +44,13 @@ Se vedi `"existingUser": null`, significa che gli utenti non esistono. Per crear
 
 1. **Apri un terminale** o usa **Postman/Thunder Client**
 2. **Fai una richiesta POST** a:
+
    ```
    POST http://localhost:3000/api/test/create-admin-user
    ```
+
    oppure
+
    ```
    POST https://spediresicuro.vercel.app/api/test/create-admin-user
    ```
@@ -119,10 +126,11 @@ Se gli utenti non esistono, puoi crearli manualmente:
 3. Clicca **Save**
 
 Ripeti per l'utente demo con:
-   - `email`: `demo@spediresicuro.it`
-   - `password`: `demo123`
-   - `name`: `Demo User`
-   - `role`: `user`
+
+- `email`: `demo@spediresicuro.it`
+- `password`: `demo123`
+- `name`: `Demo User`
+- `role`: `user`
 
 ---
 
@@ -137,6 +145,7 @@ Se hai Node.js installato e vuoi usare lo script:
    ```
 
 Lo script ti dirà:
+
 - ✅ Se Supabase è configurato
 - ✅ Se la connessione funziona
 - ✅ Quali utenti esistono
@@ -151,6 +160,7 @@ Lo script ti dirà:
 **Causa:** Le variabili d'ambiente Supabase non sono configurate.
 
 **Soluzione:**
+
 1. Verifica che nel file `env.local` ci siano:
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
@@ -164,6 +174,7 @@ Lo script ti dirà:
 **Causa:** La tabella `users` non è stata creata in Supabase.
 
 **Soluzione:**
+
 1. Vai su Supabase Dashboard → **SQL Editor**
 2. Esegui questo SQL per creare la tabella:
    ```sql
@@ -186,6 +197,7 @@ Lo script ti dirà:
 **Causa:** La Service Role Key non può scrivere nella tabella.
 
 **Soluzione:**
+
 1. Verifica che la variabile `SUPABASE_SERVICE_ROLE_KEY` sia configurata correttamente
 2. La Service Role Key bypassa Row Level Security, quindi dovrebbe funzionare
 3. Se non funziona, verifica che la chiave sia corretta in Supabase Dashboard → Settings → API
@@ -195,6 +207,7 @@ Lo script ti dirà:
 **Causa:** Potrebbe esserci un problema con la ricerca o con i dati.
 
 **Soluzione:**
+
 1. Verifica manualmente in Supabase Dashboard se l'utente esiste
 2. Se esiste ma ha dati diversi, aggiornalo manualmente
 3. Se non esiste, prova a crearlo manualmente o con l'endpoint API
@@ -227,4 +240,3 @@ Prima di considerare il problema risolto:
 ---
 
 **Ultimo aggiornamento:** Guida per verificare e creare utenti demo in Supabase.
-

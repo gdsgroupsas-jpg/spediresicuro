@@ -22,51 +22,57 @@ import {
   ArrowRight,
   Brain,
   Target,
-  Clock
+  Clock,
 } from 'lucide-react';
 
 const chatMessages = [
   {
     role: 'user',
-    content: 'Devo spedire un pacco da 5kg a Milano, quanto costa?'
+    content: 'Devo spedire un pacco da 5kg a Milano, quanto costa?',
   },
   {
     role: 'assistant',
-    content: 'Ho confrontato 6 corrieri per te. La migliore opzione e BRT Express a 7.90. Vuoi che prepari l\'etichetta?',
-    features: ['Confronto prezzi', 'Suggerimento ottimale']
+    content:
+      "Ho confrontato 6 corrieri per te. La migliore opzione e BRT Express a 7.90. Vuoi che prepari l'etichetta?",
+    features: ['Confronto prezzi', 'Suggerimento ottimale'],
   },
   {
     role: 'user',
-    content: 'Si, il destinatario e Mario Rossi, Via Roma 123, 20121 Milano'
+    content: 'Si, il destinatario e Mario Rossi, Via Roma 123, 20121 Milano',
   },
   {
     role: 'assistant',
-    content: 'Indirizzo validato. Etichetta pronta! Peso: 5kg, Corriere: BRT, Prezzo: 7.90. Stampa quando vuoi.',
-    features: ['Validazione indirizzo', 'Etichetta automatica']
-  }
+    content:
+      'Indirizzo validato. Etichetta pronta! Peso: 5kg, Corriere: BRT, Prezzo: 7.90. Stampa quando vuoi.',
+    features: ['Validazione indirizzo', 'Etichetta automatica'],
+  },
 ];
 
 const aiFeatures = [
   {
     icon: Brain,
     title: 'AI Vision OCR',
-    description: '90% confidence reale. Legge screenshot WhatsApp, foto pacchi, documenti PDF, vocali trascritti.'
+    description:
+      '90% confidence reale. Legge screenshot WhatsApp, foto pacchi, documenti PDF, vocali trascritti.',
   },
   {
     icon: Target,
     title: 'AI Supervisor',
-    description: '6 worker specializzati: OCR, Address, Pricing, Booking, Mentor, Debug. Orchestrazione intelligente.'
+    description:
+      '6 worker specializzati: OCR, Address, Pricing, Booking, Mentor, Debug. Orchestrazione intelligente.',
   },
   {
     icon: Clock,
     title: '10 Secondi End-to-End',
-    description: 'Upload screenshot → validazione indirizzo → pricing → etichetta. 94% time-saving reale (3 min → 10s).'
+    description:
+      'Upload screenshot → validazione indirizzo → pricing → etichetta. 94% time-saving reale (3 min → 10s).',
   },
   {
     icon: TrendingUp,
     title: 'Production Beta',
-    description: 'In test su spedizioni reali. Fine settimana: end-to-end completo. Building in public.'
-  }
+    description:
+      'In test su spedizioni reali. Fine settimana: end-to-end completo. Building in public.',
+  },
 ];
 
 export default function AnneShowcase() {
@@ -79,7 +85,7 @@ export default function AnneShowcase() {
     if (!isInView) return;
 
     const interval = setInterval(() => {
-      setVisibleMessages(prev => {
+      setVisibleMessages((prev) => {
         if (prev >= chatMessages.length) {
           clearInterval(interval);
           return prev;
@@ -137,8 +143,9 @@ export default function AnneShowcase() {
           </h2>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Non un chatbot. Un <span className="font-semibold text-gray-900">AI Supervisor</span> con 6 worker specializzati.
-            Multimodal AI (text + vision) con orchestrazione avanzata. <span className="font-semibold text-violet-600">90% OCR confidence</span> reale.
+            Non un chatbot. Un <span className="font-semibold text-gray-900">AI Supervisor</span>{' '}
+            con 6 worker specializzati. Multimodal AI (text + vision) con orchestrazione avanzata.{' '}
+            <span className="font-semibold text-violet-600">90% OCR confidence</span> reale.
           </p>
         </motion.div>
 
@@ -187,11 +194,13 @@ export default function AnneShowcase() {
                         className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div className={`max-w-[85%] ${message.role === 'user' ? 'order-1' : ''}`}>
-                          <div className={`px-4 py-3 rounded-2xl ${
-                            message.role === 'user'
-                              ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-tr-none'
-                              : 'bg-white border border-gray-200 text-gray-900 rounded-tl-none shadow-sm'
-                          }`}>
+                          <div
+                            className={`px-4 py-3 rounded-2xl ${
+                              message.role === 'user'
+                                ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-tr-none'
+                                : 'bg-white border border-gray-200 text-gray-900 rounded-tl-none shadow-sm'
+                            }`}
+                          >
                             <p className="text-sm leading-relaxed">{message.content}</p>
                           </div>
 
@@ -225,7 +234,7 @@ export default function AnneShowcase() {
                         <Bot className="w-4 h-4 text-violet-600" />
                       </div>
                       <div className="flex gap-1 px-4 py-3 bg-gray-100 rounded-2xl">
-                        {[0, 1, 2].map(i => (
+                        {[0, 1, 2].map((i) => (
                           <motion.div
                             key={i}
                             animate={{ y: [0, -5, 0] }}
@@ -257,7 +266,9 @@ export default function AnneShowcase() {
                       <ArrowRight className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 text-center mt-2">Demo visualizzazione - registrati per chattare con Anne</p>
+                  <p className="text-xs text-gray-400 text-center mt-2">
+                    Demo visualizzazione - registrati per chattare con Anne
+                  </p>
                 </div>
               </div>
             </div>
@@ -271,14 +282,16 @@ export default function AnneShowcase() {
             className="space-y-8"
           >
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Architettura AI-First Reale
-              </h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Architettura AI-First Reale</h3>
               <p className="text-gray-600 leading-relaxed">
-                <span className="font-semibold text-violet-600">Multimodal AI</span> avanzata (text + vision).{' '}
-                <span className="font-semibold text-violet-600">Orchestrazione intelligente</span> con supervisor pattern.{' '}
-                6 worker specializzati che collaborano. Validazione indirizzi IT (CAP, comuni, frazioni).{' '}
-                <span className="font-semibold text-gray-900">In beta testing su spedizioni reali.</span>
+                <span className="font-semibold text-violet-600">Multimodal AI</span> avanzata (text
+                + vision).{' '}
+                <span className="font-semibold text-violet-600">Orchestrazione intelligente</span>{' '}
+                con supervisor pattern. 6 worker specializzati che collaborano. Validazione
+                indirizzi IT (CAP, comuni, frazioni).{' '}
+                <span className="font-semibold text-gray-900">
+                  In beta testing su spedizioni reali.
+                </span>
               </p>
             </div>
 

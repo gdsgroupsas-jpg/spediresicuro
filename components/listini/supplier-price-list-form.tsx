@@ -4,23 +4,20 @@
  * Componente riutilizzabile per gestire listini fornitore (Reseller/BYOC)
  */
 
-"use client";
+'use client';
 
-import type { CourierConfig } from "@/actions/configurations";
-import { listConfigurations } from "@/actions/configurations";
-import {
-  createSupplierPriceListAction,
-  updatePriceListAction,
-} from "@/actions/price-lists";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import type { PriceList, PriceListStatus } from "@/types/listini";
-import { Loader2, Package } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import type { CourierConfig } from '@/actions/configurations';
+import { listConfigurations } from '@/actions/configurations';
+import { createSupplierPriceListAction, updatePriceListAction } from '@/actions/price-lists';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import type { PriceList, PriceListStatus } from '@/types/listini';
+import { Loader2, Package } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface SupplierPriceListFormProps {
   priceList?: PriceList; // Se presente, modalità modifica
@@ -38,28 +35,25 @@ export function SupplierPriceListForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [configurations, setConfigurations] = useState<CourierConfig[]>([]);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
-  const [availableContractCodes, setAvailableContractCodes] = useState<
-    string[]
-  >([]);
-  const [selectedCourierCode, setSelectedCourierCode] = useState<string>("");
+  const [availableContractCodes, setAvailableContractCodes] = useState<string[]>([]);
+  const [selectedCourierCode, setSelectedCourierCode] = useState<string>('');
 
   // Estrai metadata dal listino esistente (se in modifica)
-  const existingMetadata =
-    priceList?.metadata || priceList?.source_metadata || {};
-  const existingConfigId = (existingMetadata as any)?.courier_config_id || "";
-  const existingCarrierCode = (existingMetadata as any)?.carrier_code || "";
-  const existingContractCode = (existingMetadata as any)?.contract_code || "";
+  const existingMetadata = priceList?.metadata || priceList?.source_metadata || {};
+  const existingConfigId = (existingMetadata as any)?.courier_config_id || '';
+  const existingCarrierCode = (existingMetadata as any)?.carrier_code || '';
+  const existingContractCode = (existingMetadata as any)?.contract_code || '';
 
   const [formData, setFormData] = useState({
-    name: priceList?.name || "",
-    version: priceList?.version || "1.0.0",
-    status: (priceList?.status || "draft") as PriceListStatus,
-    courier_id: priceList?.courier_id || "",
+    name: priceList?.name || '',
+    version: priceList?.version || '1.0.0',
+    status: (priceList?.status || 'draft') as PriceListStatus,
+    courier_id: priceList?.courier_id || '',
     courier_config_id: existingConfigId,
     carrier_code: existingCarrierCode,
     contract_code: existingContractCode,
-    description: priceList?.description || "",
-    notes: priceList?.notes || "",
+    description: priceList?.description || '',
+    notes: priceList?.notes || '',
     // ✨ NUOVO: VAT Semantics (ADR-001) - Opzionali, default per retrocompatibilità
     vat_mode: priceList?.vat_mode || null,
     vat_rate: priceList?.vat_rate || 22.0,
@@ -72,14 +66,13 @@ export function SupplierPriceListForm({
       if (result.success && result.configs) {
         // Filtra solo Spedisci.Online attive
         const spedisciConfigs = result.configs.filter(
-          (c) => c.provider_id === "spedisci_online" && c.is_active
+          (c) => c.provider_id === 'spedisci_online' && c.is_active
         );
         setConfigurations(spedisciConfigs);
 
         // Auto-select prima configurazione se disponibile
         if (spedisciConfigs.length > 0 && !formData.courier_config_id) {
-          const defaultConfig =
-            spedisciConfigs.find((c) => c.is_default) || spedisciConfigs[0];
+          const defaultConfig = spedisciConfigs.find((c) => c.is_default) || spedisciConfigs[0];
           setFormData((prev) => ({
             ...prev,
             courier_config_id: defaultConfig.id,
@@ -87,8 +80,8 @@ export function SupplierPriceListForm({
         }
       }
     } catch (error) {
-      console.error("Errore caricamento configurazioni:", error);
-      toast.error("Errore caricamento configurazioni");
+      console.error('Errore caricamento configurazioni:', error);
+      toast.error('Errore caricamento configurazioni');
     } finally {
       setIsLoadingConfigs(false);
     }
@@ -106,9 +99,7 @@ export function SupplierPriceListForm({
   // Carica contract codes quando cambia configurazione
   useEffect(() => {
     if (formData.courier_config_id) {
-      const config = configurations.find(
-        (c) => c.id === formData.courier_config_id
-      );
+      const config = configurations.find((c) => c.id === formData.courier_config_id);
       if (config && config.contract_mapping) {
         const contractCodes = Object.keys(config.contract_mapping);
         setAvailableContractCodes(contractCodes);
@@ -130,7 +121,7 @@ export function SupplierPriceListForm({
   // ✨ SCHEMA CORRETTO:
   // - carrier_code = solo prefisso (es. "gls") → nome base del corriere
   // - contract_code = codice completo (es. "gls-GLS-5000") → identificatore contratto univoco
-  // 
+  //
   // Nel contract_mapping:
   // - CHIAVI = contract_code completo (es. "gls-GLS-5000") → identificatore UNIVOCO
   // - VALORI = courierName (es. "Gls") → nome corriere interno
@@ -139,8 +130,8 @@ export function SupplierPriceListForm({
       // ✅ Il "contract_code" selezionato nel dropdown è il codice completo (es. "gls-GLS-5000")
       // Lo salviamo come contract_code
       // Estrai solo il prefisso per carrier_code (es. "gls")
-      const carrierCodePrefisso = formData.contract_code.split("-")[0].toLowerCase();
-      
+      const carrierCodePrefisso = formData.contract_code.split('-')[0].toLowerCase();
+
       // Aggiorna solo se diverso dal valore corrente (previene loop infiniti)
       if (carrierCodePrefisso && carrierCodePrefisso !== formData.carrier_code) {
         setFormData((prev) => ({ ...prev, carrier_code: carrierCodePrefisso }));
@@ -151,21 +142,15 @@ export function SupplierPriceListForm({
 
   // Fallback: Auto-fill carrier_code quando cambia corriere (se contract_code non disponibile)
   useEffect(() => {
-    if (
-      formData.courier_id &&
-      availableCouriers.length > 0 &&
-      !formData.carrier_code
-    ) {
-      const courier = availableCouriers.find(
-        (c) => c.courierId === formData.courier_id
-      );
+    if (formData.courier_id && availableCouriers.length > 0 && !formData.carrier_code) {
+      const courier = availableCouriers.find((c) => c.courierId === formData.courier_id);
       if (courier) {
         // Estrai carrier_code dal nome corriere (es. "GLS" -> "gls", "Poste Italiane" -> "postedeliverybusiness")
         const carrierCode = courier.courierName
           .toLowerCase()
-          .replace(/\s+/g, "")
-          .replace("posteitaliane", "postedeliverybusiness")
-          .replace("poste", "postedeliverybusiness");
+          .replace(/\s+/g, '')
+          .replace('posteitaliane', 'postedeliverybusiness')
+          .replace('poste', 'postedeliverybusiness');
         setSelectedCourierCode(carrierCode);
         setFormData((prev) => ({ ...prev, carrier_code: carrierCode }));
       }
@@ -191,33 +176,33 @@ export function SupplierPriceListForm({
         });
 
         if (result.success) {
-          toast.success("Listino aggiornato con successo");
+          toast.success('Listino aggiornato con successo');
           onSuccess();
         } else {
-          toast.error(result.error || "Errore aggiornamento listino");
+          toast.error(result.error || 'Errore aggiornamento listino');
         }
       } else {
         // Creazione
         if (!formData.courier_id) {
-          toast.error("Seleziona un corriere");
+          toast.error('Seleziona un corriere');
           setIsSubmitting(false);
           return;
         }
 
         if (!formData.courier_config_id) {
-          toast.error("Seleziona una configurazione API");
+          toast.error('Seleziona una configurazione API');
           setIsSubmitting(false);
           return;
         }
 
         if (!formData.contract_code) {
-          toast.error("Seleziona un contract code");
+          toast.error('Seleziona un contract code');
           setIsSubmitting(false);
           return;
         }
 
         if (!formData.carrier_code) {
-          toast.error("Carrier code mancante");
+          toast.error('Carrier code mancante');
           setIsSubmitting(false);
           return;
         }
@@ -225,10 +210,10 @@ export function SupplierPriceListForm({
         // ✅ SCHEMA CORRETTO:
         // - carrier_code = solo prefisso (es. "gls") → nome base del corriere
         // - contract_code = codice completo (es. "gls-GLS-5000") → identificatore contratto univoco
-        // 
+        //
         // formData.contract_code contiene il codice completo selezionato (es. "gls-GLS-5000")
         // formData.carrier_code contiene il prefisso (es. "gls")
-        
+
         console.log('📦 [FORM] Salvataggio listino fornitore:');
         console.log('   - carrier_code (prefisso):', formData.carrier_code);
         console.log('   - contract_code (completo):', formData.contract_code);
@@ -256,15 +241,15 @@ export function SupplierPriceListForm({
         });
 
         if (result.success) {
-          toast.success("Listino creato con successo");
+          toast.success('Listino creato con successo');
           onSuccess();
         } else {
-          toast.error(result.error || "Errore creazione listino");
+          toast.error(result.error || 'Errore creazione listino');
         }
       }
     } catch (error: any) {
-      console.error("Errore submit form:", error);
-      toast.error("Errore imprevisto. Riprova più tardi.");
+      console.error('Errore submit form:', error);
+      toast.error('Errore imprevisto. Riprova più tardi.');
     } finally {
       setIsSubmitting(false);
     }
@@ -296,7 +281,7 @@ export function SupplierPriceListForm({
               setFormData({
                 ...formData,
                 courier_config_id: e.target.value,
-                contract_code: "",
+                contract_code: '',
               })
             }
             required
@@ -304,11 +289,11 @@ export function SupplierPriceListForm({
             className="mt-1"
           >
             <option value="">
-              {isLoadingConfigs ? "Caricamento..." : "Seleziona configurazione"}
+              {isLoadingConfigs ? 'Caricamento...' : 'Seleziona configurazione'}
             </option>
             {configurations.map((config) => (
               <option key={config.id} value={config.id}>
-                {config.name} {config.is_default ? "(Default)" : ""}
+                {config.name} {config.is_default ? '(Default)' : ''}
               </option>
             ))}
           </Select>
@@ -325,19 +310,14 @@ export function SupplierPriceListForm({
           <Select
             id="contract_code"
             value={formData.contract_code}
-            onChange={(e) =>
-              setFormData({ ...formData, contract_code: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, contract_code: e.target.value })}
             required
             className="mt-1"
           >
             <option value="">Seleziona contract code</option>
             {availableContractCodes.map((contractCode) => {
-              const config = configurations.find(
-                (c) => c.id === formData.courier_config_id
-              );
-              const courierName =
-                config?.contract_mapping?.[contractCode] || contractCode;
+              const config = configurations.find((c) => c.id === formData.courier_config_id);
+              const courierName = config?.contract_mapping?.[contractCode] || contractCode;
               return (
                 <option key={contractCode} value={contractCode}>
                   {contractCode} ({courierName})
@@ -358,9 +338,7 @@ export function SupplierPriceListForm({
           <Input
             id="carrier_code"
             value={formData.carrier_code}
-            onChange={(e) =>
-              setFormData({ ...formData, carrier_code: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, carrier_code: e.target.value })}
             placeholder="Es: gls, postedeliverybusiness"
             required
             className="mt-1"
@@ -378,9 +356,7 @@ export function SupplierPriceListForm({
           <Select
             id="courier_id"
             value={formData.courier_id}
-            onChange={(e) =>
-              setFormData({ ...formData, courier_id: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, courier_id: e.target.value })}
             required
             className="mt-1"
           >
@@ -400,9 +376,7 @@ export function SupplierPriceListForm({
         <Input
           id="version"
           value={formData.version}
-          onChange={(e) =>
-            setFormData({ ...formData, version: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, version: e.target.value })}
           placeholder="Es: 1.0.0"
           required
           className="mt-1"
@@ -436,9 +410,7 @@ export function SupplierPriceListForm({
         <Textarea
           id="description"
           value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="Descrizione opzionale del listino"
           rows={3}
           className="mt-1"
@@ -461,17 +433,20 @@ export function SupplierPriceListForm({
       {/* ✨ NUOVO: VAT Semantics (ADR-001) */}
       <div className="pt-4 border-t space-y-4">
         <div className="text-sm font-medium text-gray-700">Impostazioni IVA</div>
-        
+
         {/* VAT Mode */}
         <div>
           <Label htmlFor="vat_mode">Modalità IVA</Label>
           <Select
             id="vat_mode"
             value={formData.vat_mode || ''}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              vat_mode: e.target.value === '' ? null : (e.target.value as 'included' | 'excluded')
-            })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vat_mode:
+                  e.target.value === '' ? null : (e.target.value as 'included' | 'excluded'),
+              })
+            }
             className="mt-1"
           >
             <option value="">IVA Esclusa (default)</option>
@@ -493,10 +468,12 @@ export function SupplierPriceListForm({
             max="100"
             step="0.01"
             value={formData.vat_rate}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              vat_rate: parseFloat(e.target.value) || 22.0 
-            })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vat_rate: parseFloat(e.target.value) || 22.0,
+              })
+            }
             placeholder="22.00"
             className="mt-1"
           />
@@ -508,24 +485,19 @@ export function SupplierPriceListForm({
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Annulla
         </Button>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {priceList ? "Aggiornamento..." : "Creazione..."}
+              {priceList ? 'Aggiornamento...' : 'Creazione...'}
             </>
           ) : (
             <>
               <Package className="w-4 h-4 mr-2" />
-              {priceList ? "Aggiorna Listino" : "Crea Listino"}
+              {priceList ? 'Aggiorna Listino' : 'Crea Listino'}
             </>
           )}
         </Button>

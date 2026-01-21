@@ -1,119 +1,119 @@
-'use client'
+'use client';
 
 /**
  * Dashboard SuperAdmin: Verifica Costi
- * 
+ *
  * Mostra tutte le differenze rilevate tra prezzi DB (listino master) e API reali
  * Permette di sincronizzare listini quando necessario
  */
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Shield, AlertTriangle, CheckCircle, RefreshCw, Download } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import DashboardNav from '@/components/dashboard-nav'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Shield, AlertTriangle, CheckCircle, RefreshCw, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import DashboardNav from '@/components/dashboard-nav';
+import { toast } from 'sonner';
 
 interface CostValidation {
-  id: string
-  shipment_id: string
-  tracking_number: string
-  db_price: number
-  api_price: number
-  price_difference: number
-  price_difference_percent: number
-  requires_attention: boolean
-  courier_code: string
-  contract_code: string
-  weight: number
-  destination_zip: string
-  destination_province: string
-  listino_synced: boolean
-  created_at: string
+  id: string;
+  shipment_id: string;
+  tracking_number: string;
+  db_price: number;
+  api_price: number;
+  price_difference: number;
+  price_difference_percent: number;
+  requires_attention: boolean;
+  courier_code: string;
+  contract_code: string;
+  weight: number;
+  destination_zip: string;
+  destination_province: string;
+  listino_synced: boolean;
+  created_at: string;
 }
 
 export default function VerificaCostiPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isAuthorized, setIsAuthorized] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [validations, setValidations] = useState<CostValidation[]>([])
-  const [isSyncing, setIsSyncing] = useState<string | null>(null)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [validations, setValidations] = useState<CostValidation[]>([]);
+  const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
   // Verifica permessi superadmin
   useEffect(() => {
-    if (status === 'loading') return
+    if (status === 'loading') return;
 
     if (status === 'unauthenticated' || !session) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
 
     async function checkSuperAdmin() {
       try {
-        const response = await fetch('/api/user/info')
+        const response = await fetch('/api/user/info');
         if (response.ok) {
-          const data = await response.json()
-          const userData = data.user || data
-          const accountType = userData.account_type || userData.accountType
+          const data = await response.json();
+          const userData = data.user || data;
+          const accountType = userData.account_type || userData.accountType;
 
           if (accountType === 'superadmin') {
-            setIsAuthorized(true)
+            setIsAuthorized(true);
           } else {
-            router.push('/dashboard?error=unauthorized')
-            return
+            router.push('/dashboard?error=unauthorized');
+            return;
           }
         } else {
-          router.push('/dashboard?error=unauthorized')
-          return
+          router.push('/dashboard?error=unauthorized');
+          return;
         }
       } catch (error) {
-        console.error('Errore verifica superadmin:', error)
-        router.push('/dashboard?error=unauthorized')
-        return
+        console.error('Errore verifica superadmin:', error);
+        router.push('/dashboard?error=unauthorized');
+        return;
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    checkSuperAdmin()
-  }, [session, status, router])
+    checkSuperAdmin();
+  }, [session, status, router]);
 
   // Carica validazioni
   useEffect(() => {
     if (isAuthorized) {
-      loadValidations()
+      loadValidations();
     }
-  }, [isAuthorized])
+  }, [isAuthorized]);
 
   async function loadValidations() {
     try {
-      const response = await fetch('/api/super-admin/cost-validations')
+      const response = await fetch('/api/super-admin/cost-validations');
       if (response.ok) {
-        const data = await response.json()
-        setValidations(data.validations || [])
+        const data = await response.json();
+        setValidations(data.validations || []);
       } else {
-        toast.error('Errore caricamento validazioni')
+        toast.error('Errore caricamento validazioni');
       }
     } catch (error: any) {
-      console.error('Errore caricamento validazioni:', error)
-      toast.error('Errore caricamento validazioni')
+      console.error('Errore caricamento validazioni:', error);
+      toast.error('Errore caricamento validazioni');
     }
   }
 
   async function syncPriceList(validationId: string, priceListId: string) {
     try {
-      setIsSyncing(validationId)
+      setIsSyncing(validationId);
       const response = await fetch('/api/super-admin/sync-price-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priceListId }),
-      })
+      });
 
       if (response.ok) {
-        toast.success('Listino sincronizzato con successo')
+        toast.success('Listino sincronizzato con successo');
         // Aggiorna validazione
         setValidations((prev) =>
           prev.map((v) =>
@@ -121,16 +121,16 @@ export default function VerificaCostiPage() {
               ? { ...v, listino_synced: true, synced_at: new Date().toISOString() }
               : v
           )
-        )
+        );
       } else {
-        const error = await response.json()
-        toast.error(error.error || 'Errore sincronizzazione')
+        const error = await response.json();
+        toast.error(error.error || 'Errore sincronizzazione');
       }
     } catch (error: any) {
-      console.error('Errore sync:', error)
-      toast.error('Errore sincronizzazione')
+      console.error('Errore sync:', error);
+      toast.error('Errore sincronizzazione');
     } finally {
-      setIsSyncing(null)
+      setIsSyncing(null);
     }
   }
 
@@ -142,15 +142,15 @@ export default function VerificaCostiPage() {
           <p className="text-gray-600">Caricamento...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isAuthorized) {
-    return null
+    return null;
   }
 
-  const requiresAttention = validations.filter((v) => v.requires_attention)
-  const synced = validations.filter((v) => v.listino_synced)
+  const requiresAttention = validations.filter((v) => v.requires_attention);
+  const synced = validations.filter((v) => v.listino_synced);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10">
@@ -161,9 +161,7 @@ export default function VerificaCostiPage() {
             <Shield className="w-8 h-8 text-orange-600" />
             <h1 className="text-3xl font-bold text-gray-900">Verifica Costi</h1>
           </div>
-          <p className="text-gray-600">
-            Confronto tra prezzi DB (listino master) e API reali
-          </p>
+          <p className="text-gray-600">Confronto tra prezzi DB (listino master) e API reali</p>
         </div>
 
         {/* Statistiche */}
@@ -298,7 +296,7 @@ export default function VerificaCostiPage() {
                             variant="outline"
                             onClick={() => {
                               // TODO: Implementare sync listino
-                              toast.info('Funzionalità in sviluppo')
+                              toast.info('Funzionalità in sviluppo');
                             }}
                             disabled={isSyncing === validation.id}
                           >
@@ -322,5 +320,5 @@ export default function VerificaCostiPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

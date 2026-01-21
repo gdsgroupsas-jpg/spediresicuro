@@ -11,6 +11,7 @@ This document tracks all database migrations applied to the SpedireSicuro databa
 ## Migration Principles
 
 ### Rules
+
 1. **Idempotent:** Always use `IF NOT EXISTS`, `IF EXISTS`, `DO $$ BEGIN ... END $$`
 2. **Backward Compatible:** Don't drop columns immediately (deprecate first, drop later)
 3. **Small Commits:** One logical change per migration
@@ -18,13 +19,16 @@ This document tracks all database migrations applied to the SpedireSicuro databa
 5. **Rollback Plan:** Include rollback instructions in comments or separate file
 
 ### Naming Convention
+
 ```
 NNN_description.sql
 ```
+
 - `NNN`: Sequential number (001, 002, ..., 035)
 - `description`: Kebab-case description of change
 
 ### Migration Template
+
 ```sql
 -- ============================================
 -- MIGRATION: NNN_description.sql
@@ -34,7 +38,7 @@ NNN_description.sql
 -- ============================================
 
 -- Check if change needed
-DO $$ 
+DO $$
 BEGIN
   IF NOT EXISTS (...) THEN
     -- Apply change
@@ -59,9 +63,11 @@ END $$;
 ### Phase 1: Core Schema (001-010)
 
 #### 001_complete_schema.sql
+
 **Date:** Initial setup  
 **Description:** Complete schema for logistics platform  
 **Changes:**
+
 - Created core tables: `users`, `couriers`, `shipments`, `price_lists`
 - Created ENUMs: `user_role`, `shipment_status`, `courier_service_type`
 - Added indexes for performance
@@ -72,9 +78,11 @@ END $$;
 ---
 
 #### 002_anne_setup.sql
+
 **Date:** Q1 2025  
 **Description:** Setup for Anne, AI Executive Business Partner  
 **Changes:**
+
 - Created `audit_logs` table for AI interaction logging
 - Added AI conversation tracking
 
@@ -83,9 +91,11 @@ END $$;
 ---
 
 #### 003_fix_security_issues.sql
+
 **Date:** Q1 2025  
 **Description:** Security fixes from Security Advisor audit  
 **Changes:**
+
 - Enhanced RLS policies on `users` table
 - Fixed permission leaks
 - Added security constraints
@@ -95,9 +105,11 @@ END $$;
 ---
 
 #### 006_roles_and_permissions.sql
+
 **Date:** Q1 2025  
 **Description:** Role-based access control system  
 **Changes:**
+
 - Created `killer_features`, `user_features`, `role_permissions` tables
 - Implemented feature flag system
 - Added admin action logging
@@ -107,9 +119,11 @@ END $$;
 ---
 
 #### 009_create_superadmin.sql
+
 **Date:** Q1 2025  
 **Description:** Create initial SuperAdmin user  
 **Changes:**
+
 - Inserted first SuperAdmin account
 - Set up admin permissions
 
@@ -118,9 +132,11 @@ END $$;
 ---
 
 #### 009_gdpr_privacy_policies.sql
+
 **Date:** Q1 2025  
 **Description:** GDPR compliance features  
 **Changes:**
+
 - Added privacy consent tracking
 - Data export capabilities
 - Anonymization support
@@ -130,9 +146,11 @@ END $$;
 ---
 
 #### 010_courier_configs_system.sql
+
 **Date:** Q2 2025  
 **Description:** Courier API credentials management  
 **Changes:**
+
 - Created `courier_configs` table
 - Encrypted password storage
 - Session data support
@@ -144,9 +162,11 @@ END $$;
 ### Phase 2: Automation & Monitoring (011-018)
 
 #### 013_audit_logs_unified_schema.sql
+
 **Date:** Q2 2025  
 **Description:** Unified audit logging schema  
 **Changes:**
+
 - Reconciled multiple audit_logs implementations
 - Standardized audit metadata format
 - Added indexes for performance
@@ -156,9 +176,11 @@ END $$;
 ---
 
 #### 016_automation_locks.sql
+
 **Date:** Q2 2025  
 **Description:** Prevent automation race conditions  
 **Changes:**
+
 - Created `automation_locks` table
 - Prevents concurrent automation runs
 - Auto-expiring locks
@@ -168,9 +190,11 @@ END $$;
 ---
 
 #### 017_encrypt_automation_passwords.sql
+
 **Date:** Q2 2025  
 **Description:** Encrypt stored automation passwords  
 **Changes:**
+
 - Migrated plaintext passwords to encrypted
 - Uses `ENCRYPTION_KEY` environment variable
 
@@ -179,9 +203,11 @@ END $$;
 ---
 
 #### 018_FINAL_UNIFIED_ANNE_COMPLETE.sql
+
 **Date:** Q2 2025  
 **Description:** Complete Anne AI integration  
 **Changes:**
+
 - Finalized AI conversation schema
 - Added multimodal input support
 - LangGraph state tracking
@@ -193,9 +219,11 @@ END $$;
 ### Phase 3: Financial System (019-030)
 
 #### 019_reseller_system_and_wallet.sql
+
 **Date:** Q3 2025  
 **Description:** Reseller hierarchy and wallet system  
 **Changes:**
+
 - Added `wallet_balance` to `users`
 - Created `wallet_transactions` table
 - Reseller parent-child relationships
@@ -204,15 +232,18 @@ END $$;
 **Breaking Changes:** None (additive)
 
 **Critical:**
+
 - `wallet_balance` has CHECK constraint (>= 0)
 - Trigger auto-updates balance on transaction insert
 
 ---
 
 #### 020_advanced_price_lists_system.sql
+
 **Date:** Q3 2025  
 **Description:** Advanced pricing for resellers  
 **Changes:**
+
 - Created advanced price list tables
 - Per-reseller pricing
 - Zone-based pricing
@@ -222,9 +253,11 @@ END $$;
 ---
 
 #### 025_add_invoices_system.sql
+
 **Date:** Q4 2025  
 **Description:** Invoice and revenue tracking  
 **Changes:**
+
 - Created `invoices` and `invoice_items` tables
 - Invoice generation support
 - Payment tracking
@@ -234,9 +267,11 @@ END $$;
 ---
 
 #### 026_add_leads_system.sql
+
 **Date:** Q4 2025  
 **Description:** CRM lead management  
 **Changes:**
+
 - Created `leads` table
 - Lead status workflow
 - Conversion tracking to users
@@ -246,9 +281,11 @@ END $$;
 ---
 
 #### 027_wallet_topups.sql
+
 **Date:** December 2025  
 **Description:** Bank transfer top-up requests  
 **Changes:**
+
 - Created `top_up_requests` table
 - Manual approval workflow
 - File upload support
@@ -258,27 +295,33 @@ END $$;
 ---
 
 #### 028_wallet_security_fixes.sql
+
 **Date:** December 2025  
 **Description:** Wallet security hardening  
 **Changes:**
+
 - Added €10,000 limit to `add_wallet_credit()` function
 - Added `file_hash` column for duplicate detection
 - Added `approved_by`, `approved_at`, `approved_amount` tracking
 
 **Breaking Changes:**
+
 - `add_wallet_credit()` now rejects amounts > €10,000
 - Requires splitting large top-ups
 
 **Critical:**
+
 - Prevents fraud via large single transactions
 - File hash prevents duplicate receipt uploads
 
 ---
 
 #### 029_add_topup_update_policy.sql
+
 **Date:** December 2025  
 **Description:** RLS policy for top-up admin updates  
 **Changes:**
+
 - Added UPDATE policy for admins on `top_up_requests`
 
 **Breaking Changes:** None
@@ -286,9 +329,11 @@ END $$;
 ---
 
 #### 030_add_topup_approve_function.sql
+
 **Date:** December 2025  
 **Description:** Dedicated function for approving top-ups  
 **Changes:**
+
 - Created `approve_top_up_request()` RPC function
 - Atomic approval workflow
 - Status validation
@@ -300,9 +345,11 @@ END $$;
 ### Phase 4: Security & Compliance (031-035)
 
 #### 033_fix_shipments_rls_security.sql
+
 **Date:** December 2025  
 **Description:** Enhanced shipment RLS policies  
 **Changes:**
+
 - Fixed RLS policy leaks
 - Ensured tenant isolation
 - Admin override support
@@ -312,9 +359,11 @@ END $$;
 ---
 
 #### 034_remediate_orphan_shipments.sql
+
 **Date:** December 2025  
 **Description:** Cleanup orphan shipments (no valid user)  
 **Changes:**
+
 - Identified orphan shipments
 - Created cleanup script
 - Added compensation queue entries
@@ -324,24 +373,29 @@ END $$;
 ---
 
 #### 035_prevent_orphan_shipments.sql
+
 **Date:** December 2025  
 **Description:** Prevent future orphan shipments  
 **Changes:**
+
 - Added RLS policy to reject shipments with deleted users
 - Added CHECK constraint on user_id foreign key
 
 **Breaking Changes:** None
 
 **Critical:**
+
 - Prevents data integrity issues
 - Shipment creation fails if user doesn't exist
 
 ---
 
 #### 20251221201850_audit_actor_schema.sql
+
 **Date:** December 21, 2025  
 **Description:** Acting Context audit schema  
 **Changes:**
+
 - Added `actor_id`, `target_id` columns to `audit_logs`
 - Added `impersonation_active` flag
 - Created `log_acting_context_audit()` RPC function
@@ -350,6 +404,7 @@ END $$;
 **Breaking Changes:** None (backward compatible)
 
 **Critical:**
+
 - Enables impersonation tracking
 - All new audit logs use acting context
 
@@ -358,6 +413,7 @@ END $$;
 ## Migration Statistics
 
 ### By Category
+
 - **Core Schema:** 10 migrations
 - **Security:** 8 migrations
 - **Financial:** 12 migrations
@@ -367,7 +423,9 @@ END $$;
 - **Other:** 6 migrations
 
 ### Breaking Changes Summary
+
 Only 2 migrations introduced breaking changes:
+
 1. **010_courier_configs_system.sql** - Deprecated env-var auth (soft break)
 2. **028_wallet_security_fixes.sql** - Added €10k limit (hard break for large top-ups)
 
@@ -378,6 +436,7 @@ All other migrations are **backward compatible**.
 ## Pending Migrations (Backlog)
 
 ### Planned Q1 2026
+
 - [ ] Add payment_transactions full implementation (XPay integration)
 - [ ] Add invoice auto-generation trigger
 - [ ] Add wallet transaction reconciliation job
@@ -385,6 +444,7 @@ All other migrations are **backward compatible**.
 - [ ] Add cascade delete rules review
 
 ### Future Considerations
+
 - Database sharding for multi-region support
 - Read replicas for analytics
 - Partitioning for large tables (audit_logs, wallet_transactions)
@@ -394,6 +454,7 @@ All other migrations are **backward compatible**.
 ## Rollback Procedures
 
 ### General Rollback
+
 ```sql
 -- Most migrations are additive, so rollback = drop added objects
 
@@ -412,6 +473,7 @@ DROP FUNCTION IF EXISTS new_function(arg_types);
 ### Critical Rollbacks
 
 #### Rollback 028 (Wallet Security Fixes)
+
 ```sql
 -- Remove limit from function (restore old version)
 CREATE OR REPLACE FUNCTION add_wallet_credit(
@@ -428,7 +490,7 @@ BEGIN
   INSERT INTO wallet_transactions (user_id, amount, type, description, created_by)
   VALUES (p_user_id, p_amount, 'deposit', p_description, p_created_by)
   RETURNING id INTO v_transaction_id;
-  
+
   RETURN v_transaction_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -438,6 +500,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 #### Rollback 035 (Prevent Orphan Shipments)
+
 ```sql
 -- Drop RLS policy
 DROP POLICY IF EXISTS "prevent_orphan_shipments" ON shipments;
@@ -463,6 +526,7 @@ Before applying migration to production:
 ## Tools
 
 ### Apply Migration
+
 ```bash
 # Local testing
 npx supabase db reset  # Applies all migrations from scratch
@@ -476,28 +540,30 @@ npx supabase db push
 ```
 
 ### Verify Migration Applied
+
 ```sql
 -- Check migration history (if using Supabase migrations table)
-SELECT * FROM supabase_migrations.schema_migrations 
-ORDER BY version DESC 
+SELECT * FROM supabase_migrations.schema_migrations
+ORDER BY version DESC
 LIMIT 10;
 
 -- Verify specific table exists
 SELECT EXISTS (
-  SELECT 1 FROM pg_tables 
+  SELECT 1 FROM pg_tables
   WHERE schemaname = 'public' AND tablename = 'your_table'
 );
 
 -- Verify specific column exists
 SELECT EXISTS (
-  SELECT 1 FROM information_schema.columns 
-  WHERE table_schema = 'public' 
-    AND table_name = 'your_table' 
+  SELECT 1 FROM information_schema.columns
+  WHERE table_schema = 'public'
+    AND table_name = 'your_table'
     AND column_name = 'your_column'
 );
 ```
 
 ### Generate New Migration
+
 ```bash
 npx supabase migration new your_migration_name
 ```

@@ -1,6 +1,6 @@
 /**
  * Spedisci.Online Automation Agent
- * 
+ *
  * Versione standalone per Railway service
  * Copiato e adattato da lib/automation/spedisci-online-agent.ts
  */
@@ -46,8 +46,8 @@ function getSupabaseAdmin() {
     return createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
     });
   } catch (error) {
     console.error('Errore inizializzazione Supabase client:', error);
@@ -81,11 +81,11 @@ const KEY_LENGTH = 32;
 
 function getEncryptionKey(): Buffer {
   const envKey = process.env.ENCRYPTION_KEY;
-  
+
   if (!envKey) {
     throw new Error('ENCRYPTION_KEY non configurata');
   }
-  
+
   if (envKey.length === 64) {
     return Buffer.from(envKey, 'hex');
   } else {
@@ -105,26 +105,26 @@ function decryptCredential(encryptedData: string): string {
   try {
     const key = getEncryptionKey();
     const parts = encryptedData.split(':');
-    
+
     if (parts.length !== 4) {
       throw new Error('Formato dati criptati non valido');
     }
-    
+
     const [ivBase64, saltBase64, tagBase64, encryptedBase64] = parts;
-    
+
     const iv = Buffer.from(ivBase64, 'base64');
     const salt = Buffer.from(saltBase64, 'base64');
     const tag = Buffer.from(tagBase64, 'base64');
     const encrypted = Buffer.from(encryptedBase64, 'base64');
-    
+
     const derivedKey = crypto.scryptSync(key, salt, KEY_LENGTH);
-    
+
     const decipher = crypto.createDecipheriv(ALGORITHM, derivedKey, iv);
     decipher.setAuthTag(tag);
-    
+
     let decrypted = decipher.update(encrypted);
     decrypted = Buffer.concat([decrypted, decipher.final()]);
-    
+
     return decrypted.toString('utf8');
   } catch (error) {
     console.error('Errore decriptazione credenziale:', error);
@@ -208,7 +208,11 @@ class SOA {
    * Gestisce navigazione, inserimento credenziali, submit e 2FA (max 2 tentativi)
    * Timeout globale di 60 secondi per l'intero processo
    */
-  private async performLogin(page: any, settings: AutomationSettings, baseUrl: string): Promise<void> {
+  private async performLogin(
+    page: any,
+    settings: AutomationSettings,
+    baseUrl: string
+  ): Promise<void> {
     // Timeout globale di 60 secondi per l'intero processo di login
     return Promise.race([
       this._performLoginInternal(page, settings, baseUrl),
@@ -216,10 +220,14 @@ class SOA {
         setTimeout(() => {
           reject(new Error('LOGIN_TIMEOUT'));
         }, 60000); // 60 secondi
-      })
+      }),
     ]).catch((error: any) => {
       // Standardizza error handling
-      if (error.message === 'LOGIN_TIMEOUT' || error.message === '2FA_FAILED' || error.message === 'LOGIN_FAILED') {
+      if (
+        error.message === 'LOGIN_TIMEOUT' ||
+        error.message === '2FA_FAILED' ||
+        error.message === 'LOGIN_FAILED'
+      ) {
         throw error; // Rilancia errori già standardizzati
       }
       // Per altri errori, rilancia come LOGIN_FAILED
@@ -231,7 +239,11 @@ class SOA {
   /**
    * Logica interna di login (senza timeout wrapper)
    */
-  private async _performLoginInternal(page: any, settings: AutomationSettings, baseUrl: string): Promise<void> {
+  private async _performLoginInternal(
+    page: any,
+    settings: AutomationSettings,
+    baseUrl: string
+  ): Promise<void> {
     try {
       // Naviga alla pagina di login
       await page.goto(`${baseUrl}/login`, {
@@ -247,8 +259,10 @@ class SOA {
 
       // Gestione 2FA (max 2 tentativi con wait tra tentativi)
       let needs2FA = await page.evaluate(() => {
-        return document.body.textContent?.includes('codice') || 
-               document.querySelector('input[name="code"]') !== null;
+        return (
+          document.body.textContent?.includes('codice') ||
+          document.querySelector('input[name="code"]') !== null
+        );
       });
 
       if (needs2FA) {
@@ -258,12 +272,12 @@ class SOA {
 
         while (needs2FA && attempts < maxAttempts) {
           attempts++;
-          
+
           // Wait di 2 secondi tra un tentativo e l'altro (tranne il primo)
           if (attempts > 1) {
             await page.waitForTimeout(2000);
           }
-          
+
           if (settings.two_factor_method === 'email') {
             code2FA = await this.read2FACode();
             if (!code2FA) {
@@ -283,18 +297,20 @@ class SOA {
           if (codeInput) {
             await codeInput.type(code2FA);
           }
-          
+
           const submitButton = await page.$('button[type="submit"]');
           if (submitButton) {
             await submitButton.click();
           }
-          
+
           await page.waitForTimeout(2000);
 
           // Verifica se ancora serve 2FA
           needs2FA = await page.evaluate(() => {
-            return document.body.textContent?.includes('codice') || 
-                   document.querySelector('input[name="code"]') !== null;
+            return (
+              document.body.textContent?.includes('codice') ||
+              document.querySelector('input[name="code"]') !== null
+            );
           });
         }
 
@@ -312,10 +328,13 @@ class SOA {
       if (!loginSuccess) {
         throw new Error('LOGIN_FAILED');
       }
-
     } catch (error: any) {
       // Rilancia errori già standardizzati
-      if (error.message === 'LOGIN_TIMEOUT' || error.message === '2FA_FAILED' || error.message === 'LOGIN_FAILED') {
+      if (
+        error.message === 'LOGIN_TIMEOUT' ||
+        error.message === '2FA_FAILED' ||
+        error.message === 'LOGIN_FAILED'
+      ) {
         throw error;
       }
       // Per altri errori, rilancia come LOGIN_FAILED
@@ -324,7 +343,10 @@ class SOA {
     }
   }
 
-  async extractSessionData(configId?: string, forceRefresh: boolean = false): Promise<ExtractionResult> {
+  async extractSessionData(
+    configId?: string,
+    forceRefresh: boolean = false
+  ): Promise<ExtractionResult> {
     if (!puppeteer) {
       return {
         success: false,
@@ -435,7 +457,6 @@ class SOA {
         contracts: contracts,
         message: 'Session data estratta con successo',
       };
-
     } catch (error: any) {
       console.error('❌ [AGENT] Errore estrazione:', error);
       return {
@@ -446,7 +467,7 @@ class SOA {
       if (lockId && configId) {
         await this.releaseLock(configId, lockId);
       }
-      
+
       if (browser) {
         await browser.close();
       }
@@ -633,7 +654,8 @@ class SOA {
       const pageData = await page.evaluate(() => {
         return {
           client_id: (document.querySelector('[data-client-id]') as HTMLElement)?.dataset.clientId,
-          vector_contract_id: (document.querySelector('[data-vector-contract-id]') as HTMLElement)?.dataset.vectorContractId,
+          vector_contract_id: (document.querySelector('[data-vector-contract-id]') as HTMLElement)
+            ?.dataset.vectorContractId,
         };
       });
 
@@ -675,7 +697,9 @@ class SOA {
     // Retry logic con exponential backoff
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🔄 [SYNC SHIPMENTS] Tentativo ${attempt}/${maxRetries} per config ${configId.substring(0, 8)}...`);
+        console.log(
+          `🔄 [SYNC SHIPMENTS] Tentativo ${attempt}/${maxRetries} per config ${configId.substring(0, 8)}...`
+        );
 
         // Recupera configurazione
         const client = getSupabaseClient();
@@ -716,11 +740,13 @@ class SOA {
         }
 
         const settings: AutomationSettings = { ...rawSettings };
-        
+
         // Decripta password se necessario
         if (config.automation_encrypted) {
           if (settings.spedisci_online_password) {
-            settings.spedisci_online_password = decryptCredential(settings.spedisci_online_password);
+            settings.spedisci_online_password = decryptCredential(
+              settings.spedisci_online_password
+            );
           }
         }
 
@@ -739,7 +765,7 @@ class SOA {
         });
 
         const page = await browser.newPage();
-        
+
         // Set timeout per operazioni
         page.setDefaultTimeout(30000);
         page.setDefaultNavigationTimeout(30000);
@@ -756,29 +782,32 @@ class SOA {
         });
 
         // Attendi che la tabella sia caricata
-        await page.waitForSelector('table, .table, [data-shipments], tbody', { timeout: 10000 }).catch(() => {
-          console.warn('⚠️ Tabella spedizioni non trovata, provo selettori alternativi...');
-        });
+        await page
+          .waitForSelector('table, .table, [data-shipments], tbody', { timeout: 10000 })
+          .catch(() => {
+            console.warn('⚠️ Tabella spedizioni non trovata, provo selettori alternativi...');
+          });
 
         // Estrai dati spedizioni dalla tabella HTML
         const shipmentsData = await page.evaluate(() => {
           const shipments: ShipmentData[] = [];
-          
+
           // Prova diversi selettori per la tabella
-          const table = document.querySelector('table') || 
-                       document.querySelector('.table') ||
-                       document.querySelector('[data-shipments]') ||
-                       document.querySelector('tbody')?.closest('table');
+          const table =
+            document.querySelector('table') ||
+            document.querySelector('.table') ||
+            document.querySelector('[data-shipments]') ||
+            document.querySelector('tbody')?.closest('table');
 
           if (!table) {
             return shipments;
           }
 
           const rows = table.querySelectorAll('tbody tr, tr:not(thead tr)');
-          
+
           rows.forEach((row, index) => {
             if (index >= 50) return; // Limite 50 spedizioni
-            
+
             try {
               const cellsNodeList = row.querySelectorAll('td');
               if (cellsNodeList.length < 3) return;
@@ -787,50 +816,61 @@ class SOA {
               const cells = Array.from(cellsNodeList);
 
               // Estrai tracking number (prima colonna o colonna con link)
-              const trackingCell = cells[0] || cells.find((cell: HTMLTableCellElement) => 
-                cell.textContent?.match(/[A-Z0-9]{8,}/) || 
-                cell.querySelector('a')
-              );
+              const trackingCell =
+                cells[0] ||
+                cells.find(
+                  (cell: HTMLTableCellElement) =>
+                    cell.textContent?.match(/[A-Z0-9]{8,}/) || cell.querySelector('a')
+                );
               const trackingLink = trackingCell?.querySelector('a');
-              const trackingText = trackingLink?.textContent?.trim() || 
-                                  trackingCell?.textContent?.trim() || '';
+              const trackingText =
+                trackingLink?.textContent?.trim() || trackingCell?.textContent?.trim() || '';
               const trackingNumber = trackingText.match(/[A-Z0-9]{8,}/)?.[0];
 
               if (!trackingNumber) return;
 
               // Estrai status (cerca badge, span con classe status, o seconda colonna)
-              const statusCell = cells[1] || cells.find((cell: HTMLTableCellElement) => 
-                cell.textContent?.match(/in transito|consegnato|giacenza|in lavorazione|errore/i) ||
-                cell.querySelector('.badge, .status, [class*="status"]')
-              );
+              const statusCell =
+                cells[1] ||
+                cells.find(
+                  (cell: HTMLTableCellElement) =>
+                    cell.textContent?.match(
+                      /in transito|consegnato|giacenza|in lavorazione|errore/i
+                    ) || cell.querySelector('.badge, .status, [class*="status"]')
+                );
               const statusText = statusCell?.textContent?.trim() || 'unknown';
-              const status = statusText.toLowerCase()
+              const status = statusText
+                .toLowerCase()
                 .replace(/[^a-z0-9]/g, '_')
                 .substring(0, 50);
 
               // Estrai destinatario (terza colonna o colonna con nome)
-              const recipientCell = cells[2] || cells.find((cell: HTMLTableCellElement) => 
-                cell.textContent?.match(/[A-Z][a-z]+ [A-Z][a-z]+/) ||
-                cell.textContent?.length > 10
-              );
+              const recipientCell =
+                cells[2] ||
+                cells.find(
+                  (cell: HTMLTableCellElement) =>
+                    cell.textContent?.match(/[A-Z][a-z]+ [A-Z][a-z]+/) ||
+                    cell.textContent?.length > 10
+                );
               const recipientText = recipientCell?.textContent?.trim() || '';
               const recipientMatch = recipientText.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/);
               const recipientName = recipientMatch?.[0] || recipientText.substring(0, 100);
 
               // Estrai prezzo (cerca colonna con € o numero decimale)
-              const priceCell = cells.find((cell: HTMLTableCellElement) => 
-                cell.textContent?.includes('€') || 
-                cell.textContent?.match(/\d+[,.]\d{2}/)
+              const priceCell = cells.find(
+                (cell: HTMLTableCellElement) =>
+                  cell.textContent?.includes('€') || cell.textContent?.match(/\d+[,.]\d{2}/)
               );
-              const priceText = priceCell?.textContent?.replace(/[^\d,.]/g, '').replace(',', '.') || '';
+              const priceText =
+                priceCell?.textContent?.replace(/[^\d,.]/g, '').replace(',', '.') || '';
               const price = priceText ? parseFloat(priceText) : undefined;
 
               // Estrai data (cerca formato data)
-              const dateCell = cells.find((cell: HTMLTableCellElement) => 
+              const dateCell = cells.find((cell: HTMLTableCellElement) =>
                 cell.textContent?.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)
               );
               const dateText = dateCell?.textContent?.trim() || '';
-              
+
               shipments.push({
                 tracking_number: trackingNumber,
                 status: status,
@@ -877,8 +917,11 @@ class SOA {
               .eq('tracking_number', shipment.tracking_number)
               .maybeSingle();
 
-            if (searchError && searchError.code !== 'PGRST116') { // PGRST116 = not found (ok)
-              errors.push(`Errore ricerca spedizione ${shipment.tracking_number}: ${searchError.message}`);
+            if (searchError && searchError.code !== 'PGRST116') {
+              // PGRST116 = not found (ok)
+              errors.push(
+                `Errore ricerca spedizione ${shipment.tracking_number}: ${searchError.message}`
+              );
               continue;
             }
 
@@ -902,23 +945,25 @@ class SOA {
                 .eq('id', existing.id);
 
               if (updateError) {
-                errors.push(`Errore update spedizione ${shipment.tracking_number}: ${updateError.message}`);
+                errors.push(
+                  `Errore update spedizione ${shipment.tracking_number}: ${updateError.message}`
+                );
               } else {
                 shipmentsUpdated++;
                 shipmentsSynced++;
               }
             } else {
               // Insert nuovo
-              const { error: insertError } = await client
-                .from('shipments')
-                .insert({
-                  tracking_number: shipment.tracking_number,
-                  ...updateData,
-                  created_at: shipment.updated_at,
-                });
+              const { error: insertError } = await client.from('shipments').insert({
+                tracking_number: shipment.tracking_number,
+                ...updateData,
+                created_at: shipment.updated_at,
+              });
 
               if (insertError) {
-                errors.push(`Errore insert spedizione ${shipment.tracking_number}: ${insertError.message}`);
+                errors.push(
+                  `Errore insert spedizione ${shipment.tracking_number}: ${insertError.message}`
+                );
               } else {
                 shipmentsCreated++;
                 shipmentsSynced++;
@@ -941,7 +986,6 @@ class SOA {
           errors: errors.length > 0 ? errors : [],
           message: `Sincronizzate ${shipmentsSynced} spedizioni (${shipmentsCreated} nuove, ${shipmentsUpdated} aggiornate)`,
         };
-
       } catch (error: any) {
         console.error(`❌ [SYNC SHIPMENTS] Errore tentativo ${attempt}:`, error);
         errors.push(`Tentativo ${attempt}: ${error.message}`);
@@ -959,7 +1003,7 @@ class SOA {
         if (attempt < maxRetries) {
           const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 secondi
           console.log(`⏳ [SYNC SHIPMENTS] Attesa ${waitTime}ms prima di riprovare...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
         }
       }
     }
@@ -980,7 +1024,10 @@ class SOA {
 // FUNZIONI HELPER ESPORTATE
 // ============================================
 
-export async function syncCourierConfig(configId: string, forceRefresh: boolean = false): Promise<ExtractionResult> {
+export async function syncCourierConfig(
+  configId: string,
+  forceRefresh: boolean = false
+): Promise<ExtractionResult> {
   try {
     const client = getSupabaseClient();
     if (!client) {
@@ -1012,13 +1059,13 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
     }
 
     const settings: AutomationSettings = { ...rawSettings };
-    
+
     // Decripta password se criptate
     if (config.automation_encrypted) {
       if (settings.spedisci_online_password) {
         settings.spedisci_online_password = decryptCredential(settings.spedisci_online_password);
       }
-      
+
       if (settings.imap_password) {
         settings.imap_password = decryptCredential(settings.imap_password);
       }
@@ -1141,7 +1188,7 @@ export async function syncShipmentsFromPortal(configId: string): Promise<SyncRes
     }
 
     const settings: AutomationSettings = { ...rawSettings };
-    
+
     // Decripta password se necessario
     if (config.automation_encrypted) {
       if (settings.spedisci_online_password) {
@@ -1163,4 +1210,3 @@ export async function syncShipmentsFromPortal(configId: string): Promise<SyncRes
     };
   }
 }
-

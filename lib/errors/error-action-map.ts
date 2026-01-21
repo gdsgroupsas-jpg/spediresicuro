@@ -10,7 +10,7 @@
  * - Supportive tone (non-technical language)
  */
 
-import type { ErrorAction } from '@/components/feedback'
+import type { ErrorAction } from '@/components/feedback';
 
 /**
  * Tipo codice errore noto
@@ -28,16 +28,16 @@ export type KnownErrorCode =
   | 'UNAUTHORIZED'
   | 'RATE_LIMIT'
   | 'SERVER_ERROR'
-  | 'GENERIC_ERROR'
+  | 'GENERIC_ERROR';
 
 /**
  * Configurazione azioni per codice errore
  */
 export interface ErrorActionConfig {
   /** Azioni recovery disponibili */
-  actions: ErrorAction[]
+  actions: ErrorAction[];
   /** Se retry è disponibile */
-  canRetry: boolean
+  canRetry: boolean;
 }
 
 /**
@@ -402,19 +402,19 @@ export const errorActionMap: Record<KnownErrorCode, ErrorActionConfig> = {
     ],
     canRetry: true,
   },
-}
+};
 
 /**
  * Ottieni azioni per un codice errore
  */
 export function getActionsForError(code: string): ErrorActionConfig {
-  const knownCode = code as KnownErrorCode
-  return errorActionMap[knownCode] || errorActionMap.GENERIC_ERROR
+  const knownCode = code as KnownErrorCode;
+  return errorActionMap[knownCode] || errorActionMap.GENERIC_ERROR;
 }
 
 /**
  * Verifica se un codice è noto
  */
 export function isKnownErrorCode(code: string): code is KnownErrorCode {
-  return code in errorActionMap
+  return code in errorActionMap;
 }

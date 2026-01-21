@@ -1,7 +1,9 @@
 # 🔍 Investigazione: Duplicati Corrieri nel Preventivatore
 
 ## Problema Segnalato
+
 Nel preventivatore compaiono **due corrieri con etichetta "Default"**:
+
 - **Postedeliverybusiness** (Default) - €6.20
 - **Poste Italiane** (Default) - €6.20
 
@@ -16,6 +18,7 @@ Entrambi hanno lo stesso costo fornitore e la stessa etichetta "Default".
 **Funzione:** `getAvailableCouriersForUser(userId)` in `lib/db/price-lists.ts`
 
 **Logica:**
+
 1. Recupera configurazioni con 3 priorità:
    - **Priorità 1:** Configurazioni personali (`owner_user_id = userId`)
    - **Priorità 2:** Configurazione assegnata (`assigned_config_id`)
@@ -28,24 +31,28 @@ Entrambi hanno lo stesso costo fornitore e la stessa etichetta "Default".
 ### 2. Come viene determinato il `contractCode`
 
 **In `getAvailableCouriersForUser`:**
+
 - `contractCode` viene preso direttamente dalla chiave del `contract_mapping`
 - Se non esiste, rimane `undefined`
 
 **In `/api/quotes/db/route.ts` (riga 201-203):**
+
 ```typescript
-contractCode: courier.contractCode || `${courier.courierName.toLowerCase()}-default`
+contractCode: courier.contractCode || `${courier.courierName.toLowerCase()}-default`;
 ```
+
 - Se `contractCode` è vuoto/null, viene generato come `{courierName}-default`
 
 ### 3. Come viene mostrato "Default" nell'UI
 
 **In `intelligent-quote-comparator.tsx` (riga 1573-1580):**
+
 ```typescript
 const formatContractCode = (code: string) => {
-  if (!code) return "Standard";
+  if (!code) return 'Standard';
   return code
-    .replace(/^(gls|postedeliverybusiness|brt|sda|ups|dhl)-/i, "")
-    .replace(/-/g, " ")
+    .replace(/^(gls|postedeliverybusiness|brt|sda|ups|dhl)-/i, '')
+    .replace(/-/g, ' ')
     .replace(/\b\w/g, (l) => l.toUpperCase())
     .substring(0, 25);
 };
@@ -61,10 +68,12 @@ const formatContractCode = (code: string) => {
 ### **Ipotesi 1: Due configurazioni diverse con stesso corriere**
 
 **Scenario:**
+
 - Configurazione **personale** del reseller: `PosteDeliveryBusiness` con `contractCode = "postedeliverybusiness-default"`
 - Configurazione **default globale**: `PosteDeliveryBusiness` con `contractCode = ""` o diverso
 
 **Risultato:**
+
 - Due entry nella Map perché chiavi diverse: `PosteDeliveryBusiness::postedeliverybusiness-default::provider1` vs `PosteDeliveryBusiness::::provider2`
 - Entrambe vengono mostrate nel preventivatore
 - Entrambe vengono formattate come "Default" nell'UI
@@ -72,21 +81,25 @@ const formatContractCode = (code: string) => {
 ### **Ipotesi 2: Due provider diversi con stesso corriere**
 
 **Scenario:**
+
 - Provider A: `PosteDeliveryBusiness` con `contractCode = "default"`
 - Provider B: `PosteDeliveryBusiness` con `contractCode = "default"`
 
 **Risultato:**
+
 - Due entry nella Map perché `providerId` diversi
 - Entrambe vengono mostrate
 
 ### **Ipotesi 3: Mapping duplicato nel contract_mapping**
 
 **Scenario:**
+
 - Una configurazione ha due entry nel `contract_mapping`:
   - `"postedeliverybusiness-default": "PosteDeliveryBusiness"`
   - `"": "PosteDeliveryBusiness"` (chiave vuota)
 
 **Risultato:**
+
 - Due entry nella Map
 - Entrambe vengono mostrate
 
@@ -97,6 +110,7 @@ const formatContractCode = (code: string) => {
 **File:** `scripts/investigate-duplicate-couriers.sql`
 
 **Cosa fa:**
+
 1. Mostra info utente reseller
 2. Lista configurazioni personali
 3. Lista configurazione assegnata
@@ -106,6 +120,7 @@ const formatContractCode = (code: string) => {
 7. Identifica duplicati potenziali
 
 **Uso:**
+
 ```bash
 # Sostituisci l'email del reseller nello script
 psql -h localhost -U postgres -d spediresicuro -f scripts/investigate-duplicate-couriers.sql
@@ -125,12 +140,15 @@ psql -h localhost -U postgres -d spediresicuro -f scripts/investigate-duplicate-
 ## 💡 Possibili Soluzioni
 
 ### **Soluzione 1: Deduplicazione per displayName**
+
 Se due corrieri hanno lo stesso `displayName` ma `contractCode` diversi, mostrare solo uno (quello con priorità più alta).
 
 ### **Soluzione 2: Filtro per listino personalizzato attivo**
+
 Se il reseller ha un listino personalizzato attivo per un corriere specifico, mostrare solo quel corriere (già implementato, ma potrebbe non funzionare se ci sono duplicati).
 
 ### **Soluzione 3: Unificazione contractCode**
+
 Se due configurazioni hanno lo stesso corriere ma `contractCode` diversi (o vuoti), unificare usando quello della configurazione con priorità più alta.
 
 ---

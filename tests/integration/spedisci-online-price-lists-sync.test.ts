@@ -1,6 +1,6 @@
 /**
  * Test Integrazione: Sincronizzazione Listini Prezzi da Spedisci.Online
- * 
+ *
  * Test END-TO-END con chiamate API reali:
  * 1. Test endpoint /shipping/rates
  * 2. Sincronizzazione listini nel database
@@ -81,14 +81,16 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
 
     if (testUser) {
       testUserId = testUser.id;
-      console.log(`✅ Utente di test trovato: ${testUser.email} (${testUser.account_type || 'reseller'})`);
+      console.log(
+        `✅ Utente di test trovato: ${testUser.email} (${testUser.account_type || 'reseller'})`
+      );
     } else {
       console.warn('⚠️ Nessun utente reseller/admin trovato per i test');
     }
   });
 
   describe('Test API /shipping/rates', () => {
-    it('dovrebbe chiamare l\'endpoint /shipping/rates e ottenere rates', async () => {
+    it("dovrebbe chiamare l'endpoint /shipping/rates e ottenere rates", async () => {
       if (!hasCredentials || !testCredentials) {
         console.log('⏭️ Test saltato: credenziali non configurate');
         return;
@@ -145,19 +147,21 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
       expect(result.success).toBe(true);
       expect(result.rates).toBeDefined();
       expect(Array.isArray(result.rates)).toBe(true);
-      
+
       if (result.rates && result.rates.length > 0) {
         const firstRate = result.rates[0];
         expect(firstRate).toHaveProperty('carrierCode');
         expect(firstRate).toHaveProperty('contractCode');
         expect(firstRate).toHaveProperty('total_price');
         expect(firstRate).toHaveProperty('weight_price');
-        
+
         console.log(`✅ Test API completato: ${result.rates.length} rates ottenuti`);
-        console.log(`   Corrieri trovati: ${[...new Set(result.rates.map((r: any) => r.carrierCode))].join(', ')}`);
+        console.log(
+          `   Corrieri trovati: ${[...new Set(result.rates.map((r: any) => r.carrierCode))].join(', ')}`
+        );
         console.log(`   Tempo di risposta: ${responseTime}ms`);
       } else {
-        console.warn('⚠️ Nessun rate ottenuto dall\'API');
+        console.warn("⚠️ Nessun rate ottenuto dall'API");
       }
     }, 30000); // Timeout 30 secondi per chiamata API
 
@@ -216,7 +220,7 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
       // Dovrebbe gestire l'errore senza crashare
       expect(result).toHaveProperty('success');
       expect(result).toHaveProperty('error');
-      
+
       if (!result.success) {
         console.log(`✅ Gestione errore corretta: ${result.error}`);
       }
@@ -303,9 +307,7 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
       }
 
       // Recupera corrieri esistenti
-      const { data: couriers } = await supabaseAdmin
-        .from('couriers')
-        .select('id, code, name');
+      const { data: couriers } = await supabaseAdmin.from('couriers').select('id, code, name');
 
       let priceListsCreated = 0;
       let entriesAdded = 0;
@@ -359,7 +361,8 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
           );
 
           const contractCodeLower = rate.contractCode.toLowerCase();
-          let serviceType: 'standard' | 'express' | 'economy' | 'same_day' | 'next_day' = 'standard';
+          let serviceType: 'standard' | 'express' | 'economy' | 'same_day' | 'next_day' =
+            'standard';
           if (contractCodeLower.includes('express') || contractCodeLower.includes('rapid')) {
             serviceType = 'express';
           } else if (contractCodeLower.includes('economy')) {
@@ -408,9 +411,11 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
           .eq('price_list_id', firstPriceList.id);
 
         console.log(`   Entries nel listino "${firstPriceList.name}": ${entries?.length || 0}`);
-        
+
         if (entries && entries.length > 0) {
-          console.log(`   ✅ Prima entry: base_price=${entries[0].base_price}, service_type=${entries[0].service_type}`);
+          console.log(
+            `   ✅ Prima entry: base_price=${entries[0].base_price}, service_type=${entries[0].service_type}`
+          );
         }
       }
     }, 60000); // Timeout 60 secondi per sincronizzazione completa
@@ -443,46 +448,48 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
         .select('*')
         .eq('price_list_id', priceList.id);
 
-        if (error) {
-          console.error('❌ Errore recupero entries:', error);
-          return;
-        }
+      if (error) {
+        console.error('❌ Errore recupero entries:', error);
+        return;
+      }
 
-        expect(entries).toBeDefined();
-        expect(Array.isArray(entries)).toBe(true);
+      expect(entries).toBeDefined();
+      expect(Array.isArray(entries)).toBe(true);
 
-        if (entries && entries.length > 0) {
-          const entry = entries[0];
-          
-          // Verifica campi obbligatori
-          expect(entry).toHaveProperty('id');
-          expect(entry).toHaveProperty('price_list_id');
-          expect(entry).toHaveProperty('weight_from');
-          expect(entry).toHaveProperty('weight_to');
-          expect(entry).toHaveProperty('base_price');
-          expect(entry).toHaveProperty('service_type');
+      if (entries && entries.length > 0) {
+        const entry = entries[0];
 
-          // Verifica tipi
-          expect(typeof entry.base_price).toBe('number');
-          expect(typeof entry.weight_from).toBe('number');
-          expect(typeof entry.weight_to).toBe('number');
-          expect(['standard', 'express', 'economy', 'same_day', 'next_day']).toContain(entry.service_type);
+        // Verifica campi obbligatori
+        expect(entry).toHaveProperty('id');
+        expect(entry).toHaveProperty('price_list_id');
+        expect(entry).toHaveProperty('weight_from');
+        expect(entry).toHaveProperty('weight_to');
+        expect(entry).toHaveProperty('base_price');
+        expect(entry).toHaveProperty('service_type');
 
-          // Verifica valori validi
-          expect(entry.base_price).toBeGreaterThanOrEqual(0);
-          expect(entry.weight_from).toBeGreaterThanOrEqual(0);
-          expect(entry.weight_to).toBeGreaterThan(entry.weight_from);
+        // Verifica tipi
+        expect(typeof entry.base_price).toBe('number');
+        expect(typeof entry.weight_from).toBe('number');
+        expect(typeof entry.weight_to).toBe('number');
+        expect(['standard', 'express', 'economy', 'same_day', 'next_day']).toContain(
+          entry.service_type
+        );
 
-          console.log(`✅ Entry validata:`);
-          console.log(`   ID: ${entry.id}`);
-          console.log(`   Base Price: €${entry.base_price}`);
-          console.log(`   Service Type: ${entry.service_type}`);
-          console.log(`   Weight Range: ${entry.weight_from} - ${entry.weight_to} kg`);
-          console.log(`   Fuel Surcharge: ${entry.fuel_surcharge_percent || 0}%`);
-          console.log(`   COD Surcharge: €${entry.cash_on_delivery_surcharge || 0}`);
-        } else {
-          console.warn('⚠️ Nessuna entry trovata nel listino');
-        }
+        // Verifica valori validi
+        expect(entry.base_price).toBeGreaterThanOrEqual(0);
+        expect(entry.weight_from).toBeGreaterThanOrEqual(0);
+        expect(entry.weight_to).toBeGreaterThan(entry.weight_from);
+
+        console.log(`✅ Entry validata:`);
+        console.log(`   ID: ${entry.id}`);
+        console.log(`   Base Price: €${entry.base_price}`);
+        console.log(`   Service Type: ${entry.service_type}`);
+        console.log(`   Weight Range: ${entry.weight_from} - ${entry.weight_to} kg`);
+        console.log(`   Fuel Surcharge: ${entry.fuel_surcharge_percent || 0}%`);
+        console.log(`   COD Surcharge: €${entry.cash_on_delivery_surcharge || 0}`);
+      } else {
+        console.warn('⚠️ Nessuna entry trovata nel listino');
+      }
     }, 60000);
   });
 
@@ -526,13 +533,15 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
 
         if (entries && entries.length > 0) {
           console.log(`✅ Listino "${priceList.name}": ${entries.length} entries valide`);
-          
+
           // Verifica ogni entry
           entries.forEach((entry: any) => {
             expect(entry.base_price).toBeGreaterThanOrEqual(0);
             expect(entry.weight_from).toBeGreaterThanOrEqual(0);
             expect(entry.weight_to).toBeGreaterThan(entry.weight_from);
-            expect(['standard', 'express', 'economy', 'same_day', 'next_day']).toContain(entry.service_type);
+            expect(['standard', 'express', 'economy', 'same_day', 'next_day']).toContain(
+              entry.service_type
+            );
           });
         }
       }
@@ -541,4 +550,3 @@ describe('Spedisci.Online Price Lists Sync - API Reali', () => {
     });
   });
 });
-

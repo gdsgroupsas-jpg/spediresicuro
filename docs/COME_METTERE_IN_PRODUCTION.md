@@ -7,6 +7,7 @@
 **Deploy Vercel:** Preview (non production)
 
 **Perché è in Preview?**
+
 - Vercel crea automaticamente un **preview deployment** per ogni branch/PR
 - Il preview serve per testare le modifiche prima di metterle in production
 - La production è collegata solo al branch `master`
@@ -20,13 +21,14 @@
 **Passi:**
 
 1. **Verifica che tutto sia pronto:**
+
    ```bash
    # Assicurati di essere sul branch corretto
    git checkout fix/reseller-roles-and-fee-improvements
-   
+
    # Verifica che non ci siano modifiche non committate
    git status
-   
+
    # Verifica che il build funzioni
    npm run build
    ```
@@ -82,17 +84,19 @@ git push origin master
 La PR include la migration `080_add_reseller_to_account_type_enum.sql` che aggiunge `'reseller'` all'enum `account_type`.
 
 **Verifica:**
+
 1. Vai su Supabase Dashboard → SQL Editor
 2. Esegui la migration se non è già stata eseguita:
    ```sql
    -- Verifica se 'reseller' esiste già
-   SELECT enumlabel 
-   FROM pg_enum 
+   SELECT enumlabel
+   FROM pg_enum
    WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'account_type')
    AND enumlabel = 'reseller';
    ```
 
 **Se non esiste:**
+
 - Esegui la migration `supabase/migrations/080_add_reseller_to_account_type_enum.sql`
 - Oppure eseguila manualmente prima del deploy
 
@@ -174,6 +178,7 @@ git push origin master
 ## 🎯 Conclusione
 
 **Per mettere in production:**
+
 1. Merge PR #33 su `master` (via GitHub o locale)
 2. Vercel fa deploy automatico
 3. Verifica che tutto funzioni

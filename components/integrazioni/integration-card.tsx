@@ -1,46 +1,41 @@
-'use client'
+'use client';
 
 /**
  * Integration Card Component
- * 
+ *
  * Card per visualizzare e gestire le integrazioni e-commerce
  */
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Settings,
-  ExternalLink
-} from 'lucide-react'
-import IntegrationDialog from './integration-dialog'
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { CheckCircle2, XCircle, Settings, ExternalLink } from 'lucide-react';
+import IntegrationDialog from './integration-dialog';
 
 interface Platform {
-  id: string
-  name: string
-  icon: any
-  description: string
-  color: string
-  credentials: Record<string, string>
+  id: string;
+  name: string;
+  icon: any;
+  description: string;
+  color: string;
+  credentials: Record<string, string>;
 }
 
 interface IntegrationCardProps {
-  platform: Platform
-  status: 'connected' | 'disconnected'
-  onConnect: () => void
+  platform: Platform;
+  status: 'connected' | 'disconnected';
+  onConnect: () => void;
 }
 
 export default function IntegrationCard({ platform, status, onConnect }: IntegrationCardProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const Icon = platform.icon
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const Icon = platform.icon;
 
   return (
     <>
       <motion.div
         className="glass-strong rounded-xl p-6 border border-[#FACC15]/20 card-lift cursor-pointer"
         onClick={() => setIsDialogOpen(true)}
-        whileHover={{ 
+        whileHover={{
           scale: 1.02,
           borderColor: 'rgba(250, 204, 21, 0.5)',
         }}
@@ -51,7 +46,7 @@ export default function IntegrationCard({ platform, status, onConnect }: Integra
           <div className={`p-3 rounded-lg bg-gradient-to-br ${platform.color} shadow-lg`}>
             <Icon className="w-6 h-6 text-white" />
           </div>
-          
+
           {status === 'connected' ? (
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-500/20 border border-green-500/30">
               <CheckCircle2 className="w-4 h-4 text-green-400 animate-pulse" />
@@ -89,6 +84,5 @@ export default function IntegrationCard({ platform, status, onConnect }: Integra
         status={status}
       />
     </>
-  )
+  );
 }
-

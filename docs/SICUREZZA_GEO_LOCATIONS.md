@@ -13,12 +13,14 @@ Le due tabelle sono **completamente separate** e `shipments` ha già RLS policie
 ### Tabella `geo_locations` (DATI PUBBLICI)
 
 Contiene **SOLO** dati geografici pubblici:
+
 - `name` - Nome comune (es. "Roma", "Milano")
 - `province` - Codice provincia (es. "RM", "MI")
 - `region` - Nome regione (es. "Lazio", "Lombardia")
 - `caps` - Array di CAP (es. ["00100", "00118"])
 
 **NON contiene:**
+
 - ❌ Dati di spedizioni
 - ❌ Informazioni personali
 - ❌ Dati sensibili
@@ -28,6 +30,7 @@ Contiene **SOLO** dati geografici pubblici:
 ### Tabella `shipments` (DATI PRIVATI)
 
 Contiene **tutti i dati delle spedizioni**:
+
 - Dati mittente/destinatario
 - Tracking numbers
 - Prezzi
@@ -47,6 +50,7 @@ Contiene **tutti i dati delle spedizioni**:
 - Le due tabelle sono **completamente indipendenti**
 
 Esempio:
+
 ```sql
 -- shipments.recipient_city è solo una stringa
 recipient_city TEXT  -- Es. "Roma"
@@ -69,6 +73,7 @@ CREATE POLICY "Users can view own shipments"
 ```
 
 Questo significa:
+
 - ✅ Ogni utente vede **SOLO** le proprie spedizioni
 - ✅ Gli admin vedono tutte le spedizioni (se hanno policy admin)
 - ✅ Utenti non autenticati **NON vedono NESSUNA spedizione**
@@ -82,7 +87,7 @@ L'API `/api/geo/search` fa una query **SOLO** su `geo_locations`:
 ```typescript
 // app/api/geo/search/route.ts
 const { data } = await supabase
-  .from('geo_locations')  // ← SOLO questa tabella!
+  .from('geo_locations') // ← SOLO questa tabella!
   .select('name, province, region, caps')
   .textSearch('search_vector', searchTerms)
   .limit(20);
@@ -100,10 +105,10 @@ Esegui su Supabase SQL Editor:
 
 ```sql
 -- Verifica RLS su shipments
-SELECT 
-  tablename, 
-  rowsecurity 
-FROM pg_tables 
+SELECT
+  tablename,
+  rowsecurity
+FROM pg_tables
 WHERE tablename = 'shipments';
 ```
 
@@ -113,16 +118,17 @@ Deve restituire: `rowsecurity = true`
 
 ```sql
 -- Lista tutte le policy su shipments
-SELECT 
+SELECT
   policyname,
   cmd,  -- SELECT, INSERT, UPDATE, DELETE
   qual,  -- Condizione USING
   with_check  -- Condizione WITH CHECK
-FROM pg_policies 
+FROM pg_policies
 WHERE tablename = 'shipments';
 ```
 
 Dovresti vedere policy come:
+
 - `"Users can view own shipments"` - SELECT con `auth.uid() = user_id`
 - `"Users can insert own shipments"` - INSERT con `auth.uid() = user_id`
 - `"Admins can view all shipments"` - SELECT per admin
@@ -148,9 +154,9 @@ SELECT * FROM shipments;
 ALTER TABLE geo_locations ENABLE ROW LEVEL SECURITY;
 
 -- Crea policy per lettura pubblica
-CREATE POLICY "geo_locations_select_public" 
-  ON geo_locations 
-  FOR SELECT 
+CREATE POLICY "geo_locations_select_public"
+  ON geo_locations
+  FOR SELECT
   USING (true);  -- Tutti possono leggere
 ```
 
@@ -168,10 +174,10 @@ SELECT policyname FROM pg_policies WHERE tablename = 'shipments';
 
 ## 📋 RIEPILOGO
 
-| Tabella | Contenuto | RLS | Accesso |
-|---------|-----------|-----|---------|
-| `geo_locations` | Dati pubblici (città, CAP) | ✅ Abilitato | 🌍 Pubblico (tutti possono leggere) |
-| `shipments` | Dati privati (spedizioni) | ✅ Abilitato | 🔒 Privato (solo utente proprietario) |
+| Tabella         | Contenuto                  | RLS          | Accesso                               |
+| --------------- | -------------------------- | ------------ | ------------------------------------- |
+| `geo_locations` | Dati pubblici (città, CAP) | ✅ Abilitato | 🌍 Pubblico (tutti possono leggere)   |
+| `shipments`     | Dati privati (spedizioni)  | ✅ Abilitato | 🔒 Privato (solo utente proprietario) |
 
 **Le due tabelle sono separate e indipendenti!**
 
@@ -182,16 +188,19 @@ SELECT policyname FROM pg_policies WHERE tablename = 'shipments';
 Se per qualche motivo vedi che le spedizioni sono accessibili pubblicamente:
 
 1. **Verifica immediatamente le RLS policies:**
+
    ```sql
    SELECT * FROM pg_policies WHERE tablename = 'shipments';
    ```
 
 2. **Verifica che RLS sia abilitato:**
+
    ```sql
    SELECT rowsecurity FROM pg_tables WHERE tablename = 'shipments';
    ```
 
 3. **Se RLS non è abilitato, abilitalo:**
+
    ```sql
    ALTER TABLE shipments ENABLE ROW LEVEL SECURITY;
    ```
@@ -210,9 +219,9 @@ Se per qualche motivo vedi che le spedizioni sono accessibili pubblicamente:
 **Puoi rendere `geo_locations` pubblica senza problemi!**
 
 Le spedizioni rimangono protette perché:
+
 - ✅ Sono in una tabella separata
 - ✅ Hanno RLS abilitato
 - ✅ Hanno policy che limitano l'accesso solo al proprietario
 
 **È come rendere pubblica una lista di città: non espone i dati delle spedizioni!**
-

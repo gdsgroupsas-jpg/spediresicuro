@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
 import {
   assignPriceListToUserAction as assignPriceListAction,
   listPriceListsAction,
-} from "@/actions/price-lists";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from '@/actions/price-lists';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import type { PriceList } from "@/types/listini";
-import { AlertTriangle, Check, FileText, Loader2, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+} from '@/components/ui/dialog';
+import type { PriceList } from '@/types/listini';
+import { AlertTriangle, Check, FileText, Loader2, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface AssignListinoDialogProps {
   open: boolean;
@@ -56,14 +56,13 @@ export function AssignListinoDialog({
           // Filtra solo listini attivi che possono essere assegnati
           const assignableLists = result.priceLists.filter(
             (pl) =>
-              pl.status === "active" &&
-              (pl.list_type === "custom" || pl.list_type === "supplier")
+              pl.status === 'active' && (pl.list_type === 'custom' || pl.list_type === 'supplier')
           );
           setPriceLists(assignableLists);
         }
       } catch (error) {
-        console.error("Errore caricamento listini:", error);
-        toast.error("Errore nel caricamento dei listini");
+        console.error('Errore caricamento listini:', error);
+        toast.error('Errore nel caricamento dei listini');
       } finally {
         setIsLoading(false);
       }
@@ -80,14 +79,14 @@ export function AssignListinoDialog({
       const result = await assignPriceListAction(clientId, selectedListinoId);
 
       if (result.success) {
-        toast.success("Listino assegnato con successo");
+        toast.success('Listino assegnato con successo');
         onSuccess();
         onOpenChange(false);
       } else {
         toast.error(result.error || "Errore nell'assegnazione del listino");
       }
     } catch (error) {
-      console.error("Errore assegnazione listino:", error);
+      console.error('Errore assegnazione listino:', error);
       toast.error("Errore nell'assegnazione del listino");
     } finally {
       setIsAssigning(false);
@@ -103,8 +102,8 @@ export function AssignListinoDialog({
             Assegna Listino a {clientName}
           </DialogTitle>
           <DialogDescription>
-            Seleziona un listino esistente da assegnare al cliente o creane uno
-            nuovo personalizzato.
+            Seleziona un listino esistente da assegnare al cliente o creane uno nuovo
+            personalizzato.
           </DialogDescription>
         </DialogHeader>
 
@@ -117,13 +116,8 @@ export function AssignListinoDialog({
           ) : priceLists.length === 0 ? (
             <div className="text-center py-8">
               <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-              <p className="text-gray-600 mb-4">
-                Non hai listini disponibili da assegnare.
-              </p>
-              <Button
-                onClick={onCreateNew}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
+              <p className="text-gray-600 mb-4">Non hai listini disponibili da assegnare.</p>
+              <Button onClick={onCreateNew} className="bg-orange-600 hover:bg-orange-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Crea Listino Personalizzato
               </Button>
@@ -136,21 +130,15 @@ export function AssignListinoDialog({
                   onClick={() => setSelectedListinoId(listino.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition-all ${
                     selectedListinoId === listino.id
-                      ? "border-orange-500 bg-orange-50 ring-1 ring-orange-500"
-                      : "border-gray-200 hover:border-orange-300 hover:bg-gray-50"
-                  } ${
-                    currentListinoId === listino.id
-                      ? "bg-green-50 border-green-200"
-                      : ""
-                  }`}
+                      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500'
+                      : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                  } ${currentListinoId === listino.id ? 'bg-green-50 border-green-200' : ''}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          selectedListinoId === listino.id
-                            ? "bg-orange-500"
-                            : "bg-gray-100"
+                          selectedListinoId === listino.id ? 'bg-orange-500' : 'bg-gray-100'
                         }`}
                       >
                         {selectedListinoId === listino.id ? (
@@ -158,21 +146,15 @@ export function AssignListinoDialog({
                         ) : (
                           <FileText
                             className={`w-4 h-4 ${
-                              currentListinoId === listino.id
-                                ? "text-green-600"
-                                : "text-gray-400"
+                              currentListinoId === listino.id ? 'text-green-600' : 'text-gray-400'
                             }`}
                           />
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
-                          {listino.name}
-                        </p>
+                        <p className="font-medium text-gray-900">{listino.name}</p>
                         <p className="text-xs text-gray-500">
-                          {listino.list_type === "custom"
-                            ? "Personalizzato"
-                            : "Fornitore"}
+                          {listino.list_type === 'custom' ? 'Personalizzato' : 'Fornitore'}
                           {listino.default_margin_percent !== undefined &&
                             ` • +${listino.default_margin_percent}% margine`}
                         </p>
@@ -185,9 +167,7 @@ export function AssignListinoDialog({
                         </Badge>
                       )}
                       <Badge
-                        variant={
-                          listino.status === "active" ? "secondary" : "outline"
-                        }
+                        variant={listino.status === 'active' ? 'secondary' : 'outline'}
                         className="text-xs"
                       >
                         v{listino.version}
@@ -217,9 +197,7 @@ export function AssignListinoDialog({
               <Button
                 onClick={handleAssign}
                 disabled={
-                  !selectedListinoId ||
-                  selectedListinoId === currentListinoId ||
-                  isAssigning
+                  !selectedListinoId || selectedListinoId === currentListinoId || isAssigning
                 }
                 className="bg-orange-600 hover:bg-orange-700"
               >
@@ -229,7 +207,7 @@ export function AssignListinoDialog({
                     Assegnazione...
                   </>
                 ) : (
-                  "Assegna Listino"
+                  'Assegna Listino'
                 )}
               </Button>
             </div>

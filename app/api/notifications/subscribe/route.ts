@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // 1. Verifica autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 2. Leggi subscription dal body
     const { subscription } = await request.json();
@@ -25,18 +25,19 @@ export async function POST(request: NextRequest) {
     if (configCheck) return configCheck;
 
     // 3. Salva la subscription nel database
-    const { data, error } = await supabaseAdmin
-      .from('push_subscriptions')
-      .upsert({
-        user_email: session.user.email,
+    const { data, error } = await supabaseAdmin.from('push_subscriptions').upsert(
+      {
+        user_email: context!.actor.email,
         endpoint: subscription.endpoint,
         auth: subscription.keys?.auth,
         p256dh: subscription.keys?.p256dh,
         user_agent: request.headers.get('user-agent'),
         subscribed_at: new Date().toISOString(),
-      }, {
+      },
+      {
         onConflict: 'endpoint',
-      });
+      }
+    );
 
     if (error) {
       return handleApiError(error, 'POST /api/notifications/subscribe - save subscription');
@@ -84,7 +85,7 @@ async function sendPushNotification(
     // );
 
     // await webpush.sendNotification(subscription, JSON.stringify(message));
-    
+
     console.log('Push notification sent (mock):', message);
   } catch (error) {
     console.error('Errore invio push notification:', error);

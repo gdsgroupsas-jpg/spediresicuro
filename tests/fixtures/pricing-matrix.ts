@@ -1,6 +1,6 @@
 /**
  * Test Matrix: Pricing Intent Detection
- * 
+ *
  * Matrice di casi test per pricing intent detection
  * Usata per test parametrizzati
  */
@@ -191,10 +191,3 @@ export const PRICING_TEST_MATRIX: PricingTestCase[] = [
     description: 'Invalid JSON string -> legacy path',
   },
 ];
-
-
-
-
-
-
-

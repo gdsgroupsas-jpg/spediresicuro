@@ -1,12 +1,12 @@
 /**
  * Crea utente di test dedicato per smoke test
- * 
+ *
  * Crea un utente "smoke-test@..." con ruolo standard (user)
  * Nessun privilegio extra, solo per validare policy "authenticated"
- * 
+ *
  * Utilizzo:
  *   npm run create:smoke-test-user
- * 
+ *
  * ⚠️ IMPORTANTE: Non stampa password in chiaro nei log
  */
 
@@ -41,16 +41,16 @@ async function main() {
   // Genera hash password per tabella users (bcrypt)
   const hashedPassword = await bcrypt.hash(SMOKE_TEST_PASSWORD, 10);
   console.log('🔐 Hash password generato');
-  
+
   // Crea/aggiorna utente in auth.users (Supabase Auth) usando Admin API
   console.log('🔐 Creazione/aggiornamento utente in Supabase Auth...');
-  
+
   // Prima cerca se esiste già
   const { data: existingAuthUsers } = await supabase.auth.admin.listUsers();
-  const existingAuthUser = existingAuthUsers?.users?.find(u => u.email === SMOKE_TEST_EMAIL);
-  
+  const existingAuthUser = existingAuthUsers?.users?.find((u) => u.email === SMOKE_TEST_EMAIL);
+
   let authUserId: string | null = null;
-  
+
   if (existingAuthUser) {
     // Aggiorna password esistente
     console.log('⚠️  Utente esiste già in auth.users, aggiornamento password...');
@@ -58,12 +58,12 @@ async function main() {
       existingAuthUser.id,
       { password: SMOKE_TEST_PASSWORD }
     );
-    
+
     if (updateError) {
       console.error('❌ Errore aggiornamento password in auth.users:', updateError.message);
       process.exit(1);
     }
-    
+
     authUserId = updatedUser?.user?.id || existingAuthUser.id;
     console.log(`✅ Password aggiornata in auth.users: ${authUserId}`);
   } else {
@@ -78,7 +78,7 @@ async function main() {
       console.error('❌ Errore creazione utente in auth.users:', authError.message);
       process.exit(1);
     }
-    
+
     authUserId = authUser?.user?.id || null;
     if (authUserId) {
       console.log(`✅ Utente creato in auth.users: ${authUserId}`);
@@ -94,7 +94,7 @@ async function main() {
 
   if (existingUser && !checkError) {
     console.log(`⚠️  Utente ${SMOKE_TEST_EMAIL} esiste già. Aggiornamento...`);
-    
+
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -108,19 +108,19 @@ async function main() {
       .eq('email', SMOKE_TEST_EMAIL)
       .select('id, email, name, role')
       .single();
-    
+
     if (error) {
       console.error('❌ Errore aggiornamento utente:', error.message);
       process.exit(1);
     }
-    
+
     console.log('✅ Utente aggiornato con successo!');
     console.log(`   ID: ${data?.id}`);
     console.log(`   Email: ${data?.email}`);
     console.log(`   Ruolo: ${data?.role}`);
   } else {
     console.log('➕ Creazione nuovo utente smoke test...');
-    
+
     const { data, error } = await supabase
       .from('users')
       .insert([
@@ -135,18 +135,18 @@ async function main() {
       ])
       .select('id, email, name, role')
       .single();
-    
+
     if (error) {
       console.error('❌ Errore creazione utente:', error.message);
       process.exit(1);
     }
-    
+
     console.log('✅ Utente creato con successo!');
     console.log(`   ID: ${data?.id}`);
     console.log(`   Email: ${data?.email}`);
     console.log(`   Ruolo: ${data?.role}`);
   }
-  
+
   console.log('');
   console.log('='.repeat(60));
   console.log('\n📋 Credenziali utente smoke test:');
@@ -160,8 +160,7 @@ async function main() {
   console.log('✅ Utente pronto per smoke test!\n');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('\n❌ Errore fatale:', err);
   process.exit(1);
 });
-

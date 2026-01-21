@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS users (
 ### Passo 2: Verifica Campi Obbligatori
 
 Assicurati che esistano questi campi:
+
 - ✅ `id` (UUID, PRIMARY KEY, auto-generato)
 - ✅ `email` (TEXT, UNIQUE, NOT NULL)
 - ✅ `password` (TEXT, nullable)
@@ -100,7 +101,7 @@ Se mancano campi o hanno il tipo sbagliato, esegui questo SQL in **Supabase Dash
 
 ```sql
 -- Aggiungi campi mancanti (se non esistono)
-ALTER TABLE users 
+ALTER TABLE users
   ADD COLUMN IF NOT EXISTS id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ADD COLUMN IF NOT EXISTS email TEXT UNIQUE NOT NULL,
   ADD COLUMN IF NOT EXISTS password TEXT,
@@ -147,6 +148,7 @@ CREATE INDEX idx_users_role ON users(role);
 **Causa:** La tabella non ha il campo `id` o ha un tipo diverso.
 
 **Soluzione:**
+
 ```sql
 -- Se la tabella esiste ma manca id
 ALTER TABLE users ADD COLUMN id UUID PRIMARY KEY DEFAULT gen_random_uuid();
@@ -160,6 +162,7 @@ ALTER TABLE users ALTER COLUMN id TYPE UUID USING id::uuid;
 **Causa:** Il campo `role` non esiste.
 
 **Soluzione:**
+
 ```sql
 ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
 ```
@@ -204,4 +207,3 @@ Prima di considerare il problema risolto:
 ---
 
 **Nota**: Se usi ENUM invece di TEXT, devi prima creare i tipi ENUM e poi modificare la tabella. Lo schema semplice con TEXT è più flessibile e più facile da gestire.
-

@@ -2,24 +2,24 @@
 
 /**
  * Server Actions per Privacy e Compliance GDPR
- * 
+ *
  * Gestisce:
  * - Export dati utente (Diritto alla Portabilità - Art. 20 GDPR)
  * - Cancellazione account con anonimizzazione (Diritto all'Oblio - Art. 17 GDPR)
  */
 
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 /**
  * Export dati utente in formato JSON
- * 
+ *
  * Recupera e restituisce tutti i dati dell'utente:
  * - Profilo utente
  * - Storico spedizioni
  * - Preventivi
  * - Configurazioni
- * 
+ *
  * @returns JSON string con tutti i dati dell'utente
  */
 export async function exportUserData(): Promise<{
@@ -30,15 +30,15 @@ export async function exportUserData(): Promise<{
 }> {
   try {
     // Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return {
         success: false,
         error: 'Utente non autenticato',
       };
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email;
 
     console.log('📦 [PRIVACY] Export dati per:', userEmail);
 
@@ -141,22 +141,22 @@ export async function exportUserData(): Promise<{
     console.error('❌ [PRIVACY] Errore export dati:', error);
     return {
       success: false,
-      error: error.message || 'Errore durante l\'export dei dati',
+      error: error.message || "Errore durante l'export dei dati",
     };
   }
 }
 
 /**
  * Cancellazione account con anonimizzazione dati
- * 
+ *
  * ⚠️ CRITICO: Non possiamo fare DELETE brutale delle spedizioni per motivi fiscali/legali.
  * Le spedizioni devono restare per tracciabilità, ma vengono anonimizzate.
- * 
+ *
  * Logica:
  * 1. Anonimizza profilo utente (email = deleted_[uuid]@void.com, name = 'Utente Eliminato')
  * 2. Anonimizza campi PII nelle spedizioni (mantiene dati non personali per statistiche)
  * 3. Logout immediato
- * 
+ *
  * @param confirmation - Testo di conferma obbligatorio
  * @returns Risultato operazione
  */
@@ -167,8 +167,8 @@ export async function requestAccountDeletion(confirmation: string): Promise<{
 }> {
   try {
     // Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return {
         success: false,
         error: 'Utente non autenticato',
@@ -183,7 +183,7 @@ export async function requestAccountDeletion(confirmation: string): Promise<{
       };
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email;
 
     console.log('🗑️ [PRIVACY] Richiesta cancellazione account per:', userEmail);
 
@@ -232,7 +232,7 @@ export async function requestAccountDeletion(confirmation: string): Promise<{
       console.error('❌ [PRIVACY] Errore anonimizzazione utente:', updateUserError);
       return {
         success: false,
-        error: 'Errore durante l\'anonimizzazione del profilo',
+        error: "Errore durante l'anonimizzazione del profilo",
       };
     }
 
@@ -302,8 +302,7 @@ export async function requestAccountDeletion(confirmation: string): Promise<{
     console.error('❌ [PRIVACY] Errore cancellazione account:', error);
     return {
       success: false,
-      error: error.message || 'Errore durante la cancellazione dell\'account',
+      error: error.message || "Errore durante la cancellazione dell'account",
     };
   }
 }
-

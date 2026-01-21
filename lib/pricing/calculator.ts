@@ -1,6 +1,6 @@
 /**
  * Pricing Calculator - Pure Function
- * 
+ *
  * Single Source of Truth per la logica di calcolo prezzi.
  * Funzione pura senza dipendenze da DB, rete o API esterne.
  */
@@ -39,36 +39,50 @@ export interface PriceCalculationResult {
  * Helper: Mappa provincia/regione a zona geografica (stesso mapping di price-lists-advanced.ts)
  */
 function getZoneFromDestination(province?: string, region?: string): string | null {
-  if (!province && !region) return null
+  if (!province && !region) return null;
 
   const provinceToZone: Record<string, string> = {
-    'CA': 'IT-SARDEGNA', 'NU': 'IT-SARDEGNA', 'OR': 'IT-SARDEGNA', 'SS': 'IT-SARDEGNA',
-    'RC': 'IT-CALABRIA', 'CZ': 'IT-CALABRIA', 'CS': 'IT-CALABRIA', 'KR': 'IT-CALABRIA', 'VV': 'IT-CALABRIA',
-    'PA': 'IT-SICILIA', 'CT': 'IT-SICILIA', 'ME': 'IT-SICILIA', 'AG': 'IT-SICILIA', 'CL': 'IT-SICILIA',
-    'EN': 'IT-SICILIA', 'RG': 'IT-SICILIA', 'SR': 'IT-SICILIA', 'TP': 'IT-SICILIA',
-    'SO': 'IT-LIVIGNO',
-  }
+    CA: 'IT-SARDEGNA',
+    NU: 'IT-SARDEGNA',
+    OR: 'IT-SARDEGNA',
+    SS: 'IT-SARDEGNA',
+    RC: 'IT-CALABRIA',
+    CZ: 'IT-CALABRIA',
+    CS: 'IT-CALABRIA',
+    KR: 'IT-CALABRIA',
+    VV: 'IT-CALABRIA',
+    PA: 'IT-SICILIA',
+    CT: 'IT-SICILIA',
+    ME: 'IT-SICILIA',
+    AG: 'IT-SICILIA',
+    CL: 'IT-SICILIA',
+    EN: 'IT-SICILIA',
+    RG: 'IT-SICILIA',
+    SR: 'IT-SICILIA',
+    TP: 'IT-SICILIA',
+    SO: 'IT-LIVIGNO',
+  };
 
   const regionToZone: Record<string, string> = {
-    'Sardegna': 'IT-SARDEGNA',
-    'Calabria': 'IT-CALABRIA',
-    'Sicilia': 'IT-SICILIA',
-  }
+    Sardegna: 'IT-SARDEGNA',
+    Calabria: 'IT-CALABRIA',
+    Sicilia: 'IT-SICILIA',
+  };
 
   if (province && provinceToZone[province]) {
-    return provinceToZone[province]
+    return provinceToZone[province];
   }
 
   if (region && regionToZone[region]) {
-    return regionToZone[region]
+    return regionToZone[region];
   }
 
-  return 'IT-ITALIA' // Default
+  return 'IT-ITALIA'; // Default
 }
 
 /**
  * Calcola il prezzo da una price list (funzione pura).
- * 
+ *
  * @param priceList - Listino prezzi completo con entries
  * @param weight - Peso della spedizione in kg
  * @param destinationZip - CAP destinazione (5 cifre)
@@ -96,7 +110,7 @@ export function calculatePriceFromList(
 
   // ✨ FIX: Trova tutte le entry che matchano, poi seleziona la più specifica
   // (preferisce fasce di peso più strette e entry con più criteri specifici)
-  const matchingEntries = (priceList.entries as PriceListEntry[]).filter(e => {
+  const matchingEntries = (priceList.entries as PriceListEntry[]).filter((e) => {
     // Match peso
     const weightMatch = weight >= e.weight_from && weight <= e.weight_to;
     if (!weightMatch) return false;
@@ -135,47 +149,56 @@ export function calculatePriceFromList(
 
   // ✨ FIX: Seleziona l'entry più specifica (fasce di peso più strette hanno priorità)
   // Ordina per: 1) Larghezza fascia peso (più stretta = migliore), 2) Priorità criteri specifici
-  const entry = matchingEntries.length > 0
-    ? matchingEntries.sort((a, b) => {
-        // 1. Preferisci fasce di peso più strette (weight_to - weight_from più piccolo)
-        const rangeA = a.weight_to - a.weight_from;
-        const rangeB = b.weight_to - b.weight_from;
-        if (rangeA !== rangeB) {
-          return rangeA - rangeB; // Fasce più strette prima
-        }
-        
-        // 2. Se fasce uguali, preferisci entry con più criteri specifici
-        const specificityA = [
-          a.zip_code_from && a.zip_code_to,
-          a.zone_code,
-          a.province_code,
-        ].filter(Boolean).length;
-        const specificityB = [
-          b.zip_code_from && b.zip_code_to,
-          b.zone_code,
-          b.province_code,
-        ].filter(Boolean).length;
-        
-        return specificityB - specificityA; // Più specifiche prima
-      })[0]
-    : null;
+  const entry =
+    matchingEntries.length > 0
+      ? matchingEntries.sort((a, b) => {
+          // 1. Preferisci fasce di peso più strette (weight_to - weight_from più piccolo)
+          const rangeA = a.weight_to - a.weight_from;
+          const rangeB = b.weight_to - b.weight_from;
+          if (rangeA !== rangeB) {
+            return rangeA - rangeB; // Fasce più strette prima
+          }
+
+          // 2. Se fasce uguali, preferisci entry con più criteri specifici
+          const specificityA = [
+            a.zip_code_from && a.zip_code_to,
+            a.zone_code,
+            a.province_code,
+          ].filter(Boolean).length;
+          const specificityB = [
+            b.zip_code_from && b.zip_code_to,
+            b.zone_code,
+            b.province_code,
+          ].filter(Boolean).length;
+
+          return specificityB - specificityA; // Più specifiche prima
+        })[0]
+      : null;
 
   // 🔍 LOGGING: Verifica entry selezionata (solo se multiple match)
   if (matchingEntries.length > 1) {
-    console.log(`🔍 [CALCULATOR] Trovate ${matchingEntries.length} entry che matchano per listino "${priceList.name}" (peso: ${weight}kg, zona: ${destinationZone || 'N/A'}, service: ${serviceType}):`);
+    console.log(
+      `🔍 [CALCULATOR] Trovate ${matchingEntries.length} entry che matchano per listino "${priceList.name}" (peso: ${weight}kg, zona: ${destinationZone || 'N/A'}, service: ${serviceType}):`
+    );
     matchingEntries.forEach((e, idx) => {
       const isSelected = e === entry;
-      console.log(`   ${idx + 1}. Fascia ${e.weight_from}-${e.weight_to}kg, prezzo: €${e.base_price}, ${isSelected ? '✅ SELEZIONATA' : ''}`);
+      console.log(
+        `   ${idx + 1}. Fascia ${e.weight_from}-${e.weight_to}kg, prezzo: €${e.base_price}, ${isSelected ? '✅ SELEZIONATA' : ''}`
+      );
     });
   }
 
   if (!entry) {
-    console.log(`⚠️ [CALCULATOR] Nessuna entry trovata per listino "${priceList.name}" (peso: ${weight}kg, zona: ${destinationZone || 'N/A'}, service: ${serviceType})`);
+    console.log(
+      `⚠️ [CALCULATOR] Nessuna entry trovata per listino "${priceList.name}" (peso: ${weight}kg, zona: ${destinationZone || 'N/A'}, service: ${serviceType})`
+    );
     return null;
   }
 
   // 🔍 LOGGING: Entry selezionata (sempre, per debug)
-  console.log(`✅ [CALCULATOR] Entry selezionata per listino "${priceList.name}": fascia ${entry.weight_from}-${entry.weight_to}kg, prezzo: €${entry.base_price}`);
+  console.log(
+    `✅ [CALCULATOR] Entry selezionata per listino "${priceList.name}": fascia ${entry.weight_from}-${entry.weight_to}kg, prezzo: €${entry.base_price}`
+  );
 
   // Calcola prezzo
   let basePrice = parseFloat(entry.base_price as any);
@@ -221,7 +244,8 @@ export function calculatePriceFromList(
     if (customInsuranceFee > 0) {
       // Rimuovi assicurazione standard già applicata
       if (entry.insurance_rate_percent) {
-        surcharges -= options.declaredValue * (parseFloat(entry.insurance_rate_percent as any) / 100);
+        surcharges -=
+          options.declaredValue * (parseFloat(entry.insurance_rate_percent as any) / 100);
       }
       // Applica custom
       surcharges += customInsuranceFee;
@@ -230,9 +254,7 @@ export function calculatePriceFromList(
 
   // ✨ NUOVO: Contrassegno custom da config (sovrascrive standard se presente)
   if (options?.cashOnDelivery && options?.codConfig && options?.declaredValue) {
-    const applicableCOD = options.codConfig.find(
-      row => options.declaredValue! <= row.max_value
-    );
+    const applicableCOD = options.codConfig.find((row) => options.declaredValue! <= row.max_value);
 
     if (applicableCOD) {
       let customCODFee = applicableCOD.fixed_price || 0;
@@ -254,7 +276,7 @@ export function calculatePriceFromList(
 
   // ✨ NUOVO: Servizi accessori custom
   if (options?.accessoryServices && options.accessoryServices.length > 0) {
-    options.accessoryServices.forEach(svc => {
+    options.accessoryServices.forEach((svc) => {
       if (svc.price) {
         surcharges += svc.price;
       }
@@ -279,4 +301,3 @@ export function calculatePriceFromList(
     },
   };
 }
-

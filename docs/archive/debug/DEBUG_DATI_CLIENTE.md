@@ -27,10 +27,11 @@ Il salvataggio dei dati cliente non funziona. Ecco come capire esattamente cosa 
 **Causa:** Il campo `dati_cliente` non esiste nella tabella `users`.
 
 **Soluzione:**
+
 1. Vai su **Supabase Dashboard** → **SQL Editor**
 2. Esegui questo SQL:
    ```sql
-   ALTER TABLE users 
+   ALTER TABLE users
      ADD COLUMN IF NOT EXISTS dati_cliente JSONB;
    ```
 3. Fai un nuovo deploy
@@ -40,12 +41,13 @@ Il salvataggio dei dati cliente non funziona. Ecco come capire esattamente cosa 
 **Causa:** L'ID utente è TEXT ma la tabella si aspetta UUID.
 
 **Soluzione:**
+
 1. Verifica che l'ID utente sia un UUID valido
 2. Se la tabella usa UUID ma gli utenti hanno ID TEXT, devi convertire:
    ```sql
    -- Verifica tipo campo id
-   SELECT column_name, data_type 
-   FROM information_schema.columns 
+   SELECT column_name, data_type
+   FROM information_schema.columns
    WHERE table_name = 'users' AND column_name = 'id';
    ```
 
@@ -54,6 +56,7 @@ Il salvataggio dei dati cliente non funziona. Ecco come capire esattamente cosa 
 **Causa:** La Service Role Key non ha i permessi.
 
 **Soluzione:**
+
 1. Verifica che `SUPABASE_SERVICE_ROLE_KEY` sia configurata su Vercel
 2. Verifica che la chiave sia corretta in Supabase Dashboard → Settings → API
 
@@ -62,6 +65,7 @@ Il salvataggio dei dati cliente non funziona. Ecco come capire esattamente cosa 
 **Causa:** La tabella `users` non esiste.
 
 **Soluzione:**
+
 1. Crea la tabella con lo script SQL in `scripts/verifica-schema-users.sql`
 2. Oppure usa la migration in `supabase/migrations/001_complete_schema.sql`
 
@@ -70,6 +74,7 @@ Il salvataggio dei dati cliente non funziona. Ecco come capire esattamente cosa 
 **Causa:** Il codice sta ancora cercando di scrivere nel JSON invece di Supabase.
 
 **Soluzione:**
+
 1. Verifica che Supabase sia configurato (variabili ambiente su Vercel)
 2. Verifica che `isSupabaseConfigured()` ritorni `true`
 3. Controlla i log per vedere se il codice sta usando Supabase
@@ -79,6 +84,7 @@ Il salvataggio dei dati cliente non funziona. Ecco come capire esattamente cosa 
 ### 1. Verifica Variabili Supabase su Vercel
 
 Vai su **Vercel Dashboard** → **Settings** → **Environment Variables** e verifica:
+
 - ✅ `NEXT_PUBLIC_SUPABASE_URL`
 - ✅ `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - ✅ `SUPABASE_SERVICE_ROLE_KEY`
@@ -89,7 +95,7 @@ Esegui questo SQL in Supabase:
 
 ```sql
 -- Verifica struttura tabella
-SELECT 
+SELECT
   column_name,
   data_type,
   is_nullable
@@ -99,6 +105,7 @@ ORDER BY ordinal_position;
 ```
 
 Deve includere:
+
 - ✅ `id` (UUID o TEXT)
 - ✅ `dati_cliente` (JSONB)
 - ✅ `default_sender` (JSONB)
@@ -110,8 +117,8 @@ Esegui questo SQL per vedere se l'utente esiste:
 
 ```sql
 -- Cerca utente per email
-SELECT id, email, name, role 
-FROM users 
+SELECT id, email, name, role
+FROM users
 WHERE email = 'admin@spediresicuro.it';
 ```
 
@@ -137,15 +144,3 @@ Prima di chiedere aiuto, verifica:
 ---
 
 **Nota**: Dopo aver fatto le modifiche, fai sempre un nuovo deploy su Vercel per applicare le modifiche!
-
-
-
-
-
-
-
-
-
-
-
-

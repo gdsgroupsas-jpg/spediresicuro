@@ -1,6 +1,6 @@
 /**
  * Server Action: Sincronizzazione Incrementale Entries Listino
- * 
+ *
  * ✨ FASE 4: Sincronizza solo zone mancanti con atomic commit per zona
  * - Trova zone mancanti nel listino
  * - Sincronizza solo quelle zone
@@ -9,19 +9,19 @@
  * - Report zones processed/failed
  */
 
-"use server";
+'use server';
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
-import { testSpedisciOnlineRates } from "./spedisci-online-rates";
-import { PRICING_MATRIX, getZonesForMode, getWeightsForMode } from "@/lib/constants/pricing-matrix";
-import { getSpedisciOnlineCredentials } from "@/lib/actions/spedisci-online";
-import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
+import { testSpedisciOnlineRates } from './spedisci-online-rates';
+import { PRICING_MATRIX, getZonesForMode, getWeightsForMode } from '@/lib/constants/pricing-matrix';
+import { getSpedisciOnlineCredentials } from '@/lib/actions/spedisci-online';
+import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
 
 interface SyncIncrementalEntriesOptions {
   priceListId: string;
   targetZones?: string[]; // Zone specifiche da sincronizzare (se non fornite, trova automaticamente quelle mancanti)
-  mode?: "fast" | "balanced" | "matrix";
+  mode?: 'fast' | 'balanced' | 'matrix';
   configId?: string; // Configurazione API da usare
 }
 
@@ -45,8 +45,8 @@ export async function syncIncrementalPriceListEntries(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return {
         success: false,
         zonesProcessed: 0,
@@ -54,15 +54,15 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Non autenticato",
+        error: 'Non autenticato',
       };
     }
 
     // Recupera utente
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
@@ -73,15 +73,14 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Utente non trovato",
+        error: 'Utente non trovato',
       };
     }
 
     // Verifica permessi
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isAdmin && !isReseller && !isBYOC) {
       return {
@@ -91,15 +90,15 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Solo admin, reseller e BYOC possono sincronizzare listini",
+        error: 'Solo admin, reseller e BYOC possono sincronizzare listini',
       };
     }
 
     // Recupera listino
     const { data: priceList, error: listError } = await supabaseAdmin
-      .from("price_lists")
-      .select("id, name, metadata, source_metadata, courier_id")
-      .eq("id", options.priceListId)
+      .from('price_lists')
+      .select('id, name, metadata, source_metadata, courier_id')
+      .eq('id', options.priceListId)
       .single();
 
     if (listError || !priceList) {
@@ -110,7 +109,7 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Listino non trovato",
+        error: 'Listino non trovato',
       };
     }
 
@@ -128,7 +127,7 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Listino non ha metadata completi (configId, carrierCode, contractCode)",
+        error: 'Listino non ha metadata completi (configId, carrierCode, contractCode)',
       };
     }
 
@@ -142,7 +141,7 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Credenziali API non configurate",
+        error: 'Credenziali API non configurate',
       };
     }
 
@@ -150,7 +149,7 @@ export async function syncIncrementalPriceListEntries(
     const adapter = new SpedisciOnlineAdapter({
       api_key: credentials.api_key,
       api_secret: credentials.api_secret,
-      base_url: credentials.base_url || "https://api.spedisci.online/api/v2",
+      base_url: credentials.base_url || 'https://api.spedisci.online/api/v2',
       contract_mapping: credentials.contract_mapping || {},
     });
 
@@ -159,21 +158,19 @@ export async function syncIncrementalPriceListEntries(
 
     if (options.targetZones && options.targetZones.length > 0) {
       // Zone specifiche richieste
-      zonesToSync = PRICING_MATRIX.ZONES.filter((z) =>
-        options.targetZones!.includes(z.code)
-      );
+      zonesToSync = PRICING_MATRIX.ZONES.filter((z) => options.targetZones!.includes(z.code));
     } else {
       // Trova zone mancanti
       const { data: existingEntries } = await supabaseAdmin
-        .from("price_list_entries")
-        .select("zone_code")
-        .eq("price_list_id", options.priceListId);
+        .from('price_list_entries')
+        .select('zone_code')
+        .eq('price_list_id', options.priceListId);
 
       const existingZones = new Set(
         (existingEntries || []).map((e) => e.zone_code).filter((z) => z)
       );
 
-      const mode = options.mode || "balanced";
+      const mode = options.mode || 'balanced';
       const allZones = getZonesForMode(mode);
       zonesToSync = allZones.filter((z) => !existingZones.has(z.code));
     }
@@ -186,12 +183,12 @@ export async function syncIncrementalPriceListEntries(
         zonesFailed: 0,
         totalEntriesAdded: 0,
         results: [],
-        error: "Nessuna zona da sincronizzare",
+        error: 'Nessuna zona da sincronizzare',
       };
     }
 
     // Pesi da testare
-    const mode = options.mode || "balanced";
+    const mode = options.mode || 'balanced';
     const weightsToProbe = getWeightsForMode(mode);
 
     // Sincronizza ogni zona atomicamente
@@ -216,10 +213,10 @@ export async function syncIncrementalPriceListEntries(
         // Prova ogni peso per questa zona
         for (const weight of weightsToProbe) {
           const testAddress = zone.sampleAddress || {
-            city: "Milano",
-            state: "MI",
-            postalCode: "20100",
-            country: "IT",
+            city: 'Milano',
+            state: 'MI',
+            postalCode: '20100',
+            country: 'IT',
           };
 
           try {
@@ -233,23 +230,23 @@ export async function syncIncrementalPriceListEntries(
                 },
               ],
               shipFrom: {
-                name: "Mittente Test",
-                company: "Azienda Test",
-                street1: "Via Roma 1",
-                city: "Roma",
-                state: "RM",
-                postalCode: "00100",
-                country: "IT",
-                email: "test@example.com",
+                name: 'Mittente Test',
+                company: 'Azienda Test',
+                street1: 'Via Roma 1',
+                city: 'Roma',
+                state: 'RM',
+                postalCode: '00100',
+                country: 'IT',
+                email: 'test@example.com',
               },
               shipTo: {
-                name: "Destinatario Test",
-                street1: "Via Test 1",
+                name: 'Destinatario Test',
+                street1: 'Via Test 1',
                 city: testAddress.city,
                 state: testAddress.state,
                 postalCode: testAddress.postalCode,
                 country: testAddress.country,
-                email: "test@example.com",
+                email: 'test@example.com',
               },
               notes: `Incremental sync: ${zone.code}`,
               insuranceValue: 0,
@@ -284,7 +281,7 @@ export async function syncIncrementalPriceListEntries(
                   weight_from: weightFrom,
                   weight_to: weight,
                   base_price: basePrice,
-                  service_type: "standard",
+                  service_type: 'standard',
                   fuel_surcharge_percent: fuelSurcharge,
                   cash_on_delivery_surcharge: 0,
                   insurance_rate_percent: 0,
@@ -294,10 +291,7 @@ export async function syncIncrementalPriceListEntries(
               }
             }
           } catch (rateError: any) {
-            console.error(
-              `Errore rate per zona ${zone.code}, peso ${weight}:`,
-              rateError
-            );
+            console.error(`Errore rate per zona ${zone.code}, peso ${weight}:`, rateError);
             // Continua con il prossimo peso
           }
         }
@@ -305,16 +299,13 @@ export async function syncIncrementalPriceListEntries(
         // ✨ ATOMIC COMMIT: Inserisci tutte le entries di questa zona in una volta
         if (zoneEntries.length > 0) {
           const { error: insertError } = await supabaseAdmin
-            .from("price_list_entries")
+            .from('price_list_entries')
             .insert(zoneEntries);
 
           if (insertError) {
             // ✨ AUTOMATIC ROLLBACK: Se errore, tutte le entries di questa zona vengono rifiutate
             zoneResult.error = insertError.message;
-            console.error(
-              `Errore inserimento entries per zona ${zone.code}:`,
-              insertError
-            );
+            console.error(`Errore inserimento entries per zona ${zone.code}:`, insertError);
           } else {
             zoneResult.success = true;
             zoneResult.entriesAdded = zoneEntries.length;
@@ -324,7 +315,7 @@ export async function syncIncrementalPriceListEntries(
           zoneResult.error = "Nessuna entry ottenuta dall'API per questa zona";
         }
       } catch (error: any) {
-        zoneResult.error = error.message || "Errore sconosciuto";
+        zoneResult.error = error.message || 'Errore sconosciuto';
         console.error(`Errore sincronizzazione zona ${zone.code}:`, error);
       }
 
@@ -343,7 +334,7 @@ export async function syncIncrementalPriceListEntries(
       results,
     };
   } catch (error: any) {
-    console.error("Errore syncIncrementalPriceListEntries:", error);
+    console.error('Errore syncIncrementalPriceListEntries:', error);
     return {
       success: false,
       zonesProcessed: 0,
@@ -351,40 +342,38 @@ export async function syncIncrementalPriceListEntries(
       zonesFailed: 0,
       totalEntriesAdded: 0,
       results: [],
-      error: error.message || "Errore sconosciuto",
+      error: error.message || 'Errore sconosciuto',
     };
   }
 }
 
 /**
  * Recupera le zone esistenti per un listino
- * 
+ *
  * ⚠️ SERVER ACTION: Sostituisce query diretta a Supabase dal client
  * per evitare errori 401 (supabase client non autenticato)
- * 
+ *
  * @param priceListId - ID del listino
  * @returns Set di zone_code esistenti
  */
-export async function getExistingZonesForPriceListAction(
-  priceListId: string
-): Promise<{
+export async function getExistingZonesForPriceListAction(priceListId: string): Promise<{
   success: boolean;
   zones?: string[];
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: existingEntries, error } = await supabaseAdmin
-      .from("price_list_entries")
-      .select("zone_code")
-      .eq("price_list_id", priceListId);
+      .from('price_list_entries')
+      .select('zone_code')
+      .eq('price_list_id', priceListId);
 
     if (error) {
-      console.error("Errore recupero zone esistenti:", error);
+      console.error('Errore recupero zone esistenti:', error);
       return { success: false, error: error.message };
     }
 
@@ -394,7 +383,7 @@ export async function getExistingZonesForPriceListAction(
 
     return { success: true, zones };
   } catch (error: any) {
-    console.error("Errore getExistingZonesForPriceListAction:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore getExistingZonesForPriceListAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }

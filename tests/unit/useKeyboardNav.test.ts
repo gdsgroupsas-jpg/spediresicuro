@@ -613,9 +613,7 @@ describe('useKeyboardNav Hook', () => {
 
   describe('Feature enable/disable', () => {
     it('should NOT handle keyboard events when disabled', () => {
-      const { result } = renderHook(() =>
-        useKeyboardNav(mockItems, { enabled: false })
-      );
+      const { result } = renderHook(() => useKeyboardNav(mockItems, { enabled: false }));
 
       const navElement = document.createElement('div');
       navElement.setAttribute('data-keyboard-nav', 'true');
@@ -681,14 +679,8 @@ describe('useKeyboardNav Hook', () => {
       unmount();
 
       // Should have called removeEventListener for both keydown and mousemove
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'keydown',
-        expect.any(Function)
-      );
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'mousemove',
-        expect.any(Function)
-      );
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
     });
   });
 

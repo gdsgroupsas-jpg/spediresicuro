@@ -6,9 +6,9 @@
  * SuperAdmin può attivare protezioni per-reseller
  */
 
-import { supabaseAdmin } from "@/lib/db/client";
-import type { ResellerPricingPolicy } from "@/types/listini";
-import { createLogger, hashValue } from "@/lib/logger";
+import { supabaseAdmin } from '@/lib/db/client';
+import type { ResellerPricingPolicy } from '@/types/listini';
+import { createLogger, hashValue } from '@/lib/logger';
 
 const logger = createLogger();
 
@@ -29,15 +29,15 @@ export async function getResellerPricingPolicy(
 ): Promise<ResellerPricingPolicy | null> {
   try {
     const { data, error } = await supabaseAdmin
-      .from("reseller_pricing_policies")
-      .select("*")
-      .eq("reseller_id", resellerId)
-      .is("revoked_at", null)
+      .from('reseller_pricing_policies')
+      .select('*')
+      .eq('reseller_id', resellerId)
+      .is('revoked_at', null)
       .single();
 
     if (error) {
       // PGRST116 = No rows returned (nessuna policy = libertà assoluta)
-      if (error.code === "PGRST116") {
+      if (error.code === 'PGRST116') {
         return null;
       }
       throw error;
@@ -45,11 +45,9 @@ export async function getResellerPricingPolicy(
 
     return data as ResellerPricingPolicy;
   } catch (error) {
-    logger.error(
-      "Error fetching reseller pricing policy",
-      error,
-      { resellerId: hashValue(resellerId) }
-    );
+    logger.error('Error fetching reseller pricing policy', error, {
+      resellerId: hashValue(resellerId),
+    });
     // Fail-safe: se errore DB, nessuna restrizione (libertà assoluta)
     return null;
   }
@@ -139,30 +137,24 @@ export async function upsertResellerPricingPolicy(params: {
   createdBy: string;
   notes?: string;
 }): Promise<ResellerPricingPolicy> {
-  const {
-    resellerId,
-    enforceLimit,
-    minMarkupPercent,
-    createdBy,
-    notes,
-  } = params;
+  const { resellerId, enforceLimit, minMarkupPercent, createdBy, notes } = params;
 
   // Validazione parametri
   if (minMarkupPercent < 0 || minMarkupPercent > 100) {
-    throw new Error("min_markup_percent must be between 0 and 100");
+    throw new Error('min_markup_percent must be between 0 and 100');
   }
 
   try {
     // Revoca policy precedente se esiste (soft delete per audit trail)
     await supabaseAdmin
-      .from("reseller_pricing_policies")
+      .from('reseller_pricing_policies')
       .update({ revoked_at: new Date().toISOString() })
-      .eq("reseller_id", resellerId)
-      .is("revoked_at", null);
+      .eq('reseller_id', resellerId)
+      .is('revoked_at', null);
 
     // Inserisci nuova policy
     const { data, error } = await supabaseAdmin
-      .from("reseller_pricing_policies")
+      .from('reseller_pricing_policies')
       .insert({
         reseller_id: resellerId,
         enforce_limits: enforceLimit,
@@ -175,22 +167,17 @@ export async function upsertResellerPricingPolicy(params: {
 
     if (error) throw error;
 
-    logger.info(
-      `Policy ${enforceLimit ? "ACTIVATED" : "DISABLED"} for reseller`,
-      {
-        resellerId: hashValue(resellerId),
-        enforceLimit,
-        minMarkupPercent,
-      }
-    );
+    logger.info(`Policy ${enforceLimit ? 'ACTIVATED' : 'DISABLED'} for reseller`, {
+      resellerId: hashValue(resellerId),
+      enforceLimit,
+      minMarkupPercent,
+    });
 
     return data as ResellerPricingPolicy;
   } catch (error) {
-    logger.error(
-      "Error upserting reseller pricing policy",
-      error,
-      { resellerId: hashValue(resellerId) }
-    );
+    logger.error('Error upserting reseller pricing policy', error, {
+      resellerId: hashValue(resellerId),
+    });
     throw error;
   }
 }
@@ -214,13 +201,13 @@ export async function revokeResellerPricingPolicy(
 ): Promise<boolean> {
   try {
     const { data, error } = await supabaseAdmin
-      .from("reseller_pricing_policies")
+      .from('reseller_pricing_policies')
       .update({
         revoked_at: new Date().toISOString(),
         // Note: created_by non cambia, revokedBy potrebbe essere salvato in notes
       })
-      .eq("reseller_id", resellerId)
-      .is("revoked_at", null)
+      .eq('reseller_id', resellerId)
+      .is('revoked_at', null)
       .select();
 
     if (error) throw error;
@@ -228,22 +215,17 @@ export async function revokeResellerPricingPolicy(
     const revoked = data && data.length > 0;
 
     if (revoked) {
-      logger.info(
-        "Policy REVOKED for reseller",
-        {
-          resellerId: hashValue(resellerId),
-          revokedBy: hashValue(revokedBy),
-        }
-      );
+      logger.info('Policy REVOKED for reseller', {
+        resellerId: hashValue(resellerId),
+        revokedBy: hashValue(revokedBy),
+      });
     }
 
     return revoked;
   } catch (error) {
-    logger.error(
-      "Error revoking reseller pricing policy",
-      error,
-      { resellerId: hashValue(resellerId) }
-    );
+    logger.error('Error revoking reseller pricing policy', error, {
+      resellerId: hashValue(resellerId),
+    });
     throw error;
   }
 }

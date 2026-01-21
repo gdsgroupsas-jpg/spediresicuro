@@ -1,28 +1,25 @@
 /**
  * API Endpoint: Test Carrier Credentials
- * 
+ *
  * Testa le credenziali di una configurazione corriere.
  * Aggiorna status e test_result nella tabella courier_configs.
- * 
+ *
  * POST /api/integrations/test-credentials
  * Body: { config_id: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { testCarrierCredentials } from '@/lib/integrations/carrier-configs-compat';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+
+    if (!context?.actor?.email) {
+      return NextResponse.json({ success: false, error: 'Non autenticato' }, { status: 401 });
     }
 
     // 2. Leggi config_id dal body
@@ -30,10 +27,7 @@ export async function POST(request: NextRequest) {
     const { config_id } = body;
 
     if (!config_id) {
-      return NextResponse.json(
-        { success: false, error: 'config_id mancante' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'config_id mancante' }, { status: 400 });
     }
 
     // 3. Verifica permessi: admin o owner della config
@@ -54,15 +48,19 @@ export async function POST(request: NextRequest) {
     const user = await supabaseAdmin
       .from('users')
       .select('id, role, email')
-      .eq('email', session.user.email)
+      .eq('email', context.actor.email)
       .single();
 
     const isAdmin = user?.data?.role === 'admin';
-    const isOwner = config.owner_user_id === user?.data?.id || config.created_by === session.user.email;
+    const isOwner =
+      config.owner_user_id === user?.data?.id || config.created_by === context.actor.email;
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(
-        { success: false, error: 'Accesso negato. Solo admin o owner possono testare credenziali.' },
+        {
+          success: false,
+          error: 'Accesso negato. Solo admin o owner possono testare credenziali.',
+        },
         { status: 403 }
       );
     }
@@ -75,9 +73,7 @@ export async function POST(request: NextRequest) {
       success: result.success,
       error: result.error,
       response_time_ms: result.response_time_ms,
-      message: result.success 
-        ? 'Credenziali valide' 
-        : `Errore: ${result.error}`,
+      message: result.success ? 'Credenziali valide' : `Errore: ${result.error}`,
     });
   } catch (error: any) {
     console.error('❌ [API] Errore test credentials:', error);

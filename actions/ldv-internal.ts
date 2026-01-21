@@ -2,7 +2,7 @@
 
 /**
  * Server Actions per Generazione LDV Interna
- * 
+ *
  * Genera LDV (Lettera di Vettura) internamente senza chiamare API corriere.
  * Utile quando:
  * - L'utente preferisce generare LDV localmente
@@ -10,14 +10,14 @@
  * - Si vuole evitare costi API
  */
 
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { generateShipmentPDF, generateShipmentCSV } from '@/lib/generate-shipment-document';
 import type { Shipment } from '@/types/shipments';
 
 /**
  * Genera LDV interna (PDF) per una spedizione
- * 
+ *
  * @param shipmentId - ID spedizione
  * @param format - Formato output ('pdf' | 'csv')
  * @returns Buffer del file generato
@@ -33,8 +33,8 @@ export async function generateInternalLDV(
 }> {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return {
         success: false,
         error: 'Non autenticato',
@@ -59,7 +59,7 @@ export async function generateInternalLDV(
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, role')
-      .eq('email', session.user.email)
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
@@ -150,4 +150,3 @@ export async function generateInternalLDV(
     };
   }
 }
-

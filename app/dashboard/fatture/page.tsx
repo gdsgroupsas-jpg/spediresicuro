@@ -54,7 +54,7 @@ export default function FatturePage() {
       cancelled: 'bg-gray-100 text-gray-500 line-through',
       refunded: 'bg-purple-50 text-purple-700',
     };
-    
+
     const labels = {
       draft: 'Bozza',
       issued: 'Emessa',
@@ -68,7 +68,9 @@ export default function FatturePage() {
     const label = labels[status as keyof typeof styles] || status;
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${style}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${style}`}
+      >
         {label}
       </span>
     );
@@ -94,8 +96,8 @@ export default function FatturePage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">Storico Documenti</h2>
-            {/* Possibile search bar qui */}
+          <h2 className="text-sm font-semibold text-gray-700">Storico Documenti</h2>
+          {/* Possibile search bar qui */}
         </div>
 
         {isLoading ? (
@@ -140,36 +142,39 @@ export default function FatturePage() {
                         {formatDate(invoice.invoice_date || invoice.created_at)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {formatDate(invoice.due_date)}
-                    </td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(invoice.due_date)}</td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
                       {formatCurrency(invoice.total)}
                     </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(invoice.status)}
-                    </td>
+                    <td className="px-6 py-4">{getStatusBadge(invoice.status)}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                         {/* Link dettaglio futuro */}
-                         <Link href={`/dashboard/fatture/${invoice.id}`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Dettagli">
-                            <ArrowUpRight className="w-4 h-4" />
-                         </Link>
-                         {/* Download Button */}
-                         {invoice.pdf_url || invoice.status === 'issued' ? (
-                           <a
-                             href={`/api/invoices/${invoice.id}/pdf`}
-                             download
-                             className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                             title="Scarica PDF"
-                           >
-                             <Download className="w-4 h-4" />
-                           </a>
-                         ) : (
-                           <span className="p-2 text-gray-300 cursor-not-allowed" title="PDF non disponibile">
-                             <Download className="w-4 h-4" />
-                           </span>
-                         )}
+                        {/* Link dettaglio futuro */}
+                        <Link
+                          href={`/dashboard/fatture/${invoice.id}`}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Dettagli"
+                        >
+                          <ArrowUpRight className="w-4 h-4" />
+                        </Link>
+                        {/* Download Button */}
+                        {invoice.pdf_url || invoice.status === 'issued' ? (
+                          <a
+                            href={`/api/invoices/${invoice.id}/pdf`}
+                            download
+                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Scarica PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <span
+                            className="p-2 text-gray-300 cursor-not-allowed"
+                            title="PDF non disponibile"
+                          >
+                            <Download className="w-4 h-4" />
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -46,17 +46,20 @@ export async function analyzeBankReceipt(
       {
         inlineData: {
           data: base64Data,
-          mimeType: mimeType
-        }
-      }
+          mimeType: mimeType,
+        },
+      },
     ]);
 
     const response = await result.response;
     const text = response.text();
-    
+
     // Pulisci eventuale markdown
-    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    
+    const cleanedText = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
     console.log('Gemini Analysis Raw:', cleanedText);
 
     try {
@@ -65,13 +68,12 @@ export async function analyzeBankReceipt(
         amount: typeof data.amount === 'number' ? data.amount : null,
         cro: data.cro || null,
         date: data.date || null,
-        confidence: typeof data.confidence === 'number' ? data.confidence : 0.5
+        confidence: typeof data.confidence === 'number' ? data.confidence : 0.5,
       };
     } catch (parseError) {
       console.error('Errore parsing JSON Gemini:', parseError);
       return { amount: null, cro: null, date: null, confidence: 0 };
     }
-
   } catch (error) {
     console.error('Errore durante analisi Gemini Vision:', error);
     return { amount: null, cro: null, date: null, confidence: 0 };

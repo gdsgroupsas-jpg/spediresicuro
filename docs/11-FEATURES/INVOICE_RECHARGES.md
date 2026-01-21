@@ -3,6 +3,7 @@
 ## Overview
 
 Sistema completo per fatturazione ricariche wallet con supporto:
+
 - **Fatturazione automatica** per ricariche Stripe
 - **Fatturazione manuale** per bonifici (dopo approvazione)
 - **Fatturazione periodica** (mensile/trimestrale/riepilogativa)
@@ -18,12 +19,12 @@ Sistema completo per fatturazione ricariche wallet con supporto:
 
 ## Quick Reference
 
-| Sezione | Link |
-|---------|------|
-| Generazione XML | [XML Generator](#xml-generator) |
+| Sezione                | Link                                  |
+| ---------------------- | ------------------------------------- |
+| Generazione XML        | [XML Generator](#xml-generator)       |
 | Fatturazione Ricariche | [Recharge Billing](#recharge-billing) |
-| API Actions | [Server Actions](#server-actions) |
-| Database Schema | [Database](#database-schema) |
+| API Actions            | [Server Actions](#server-actions)     |
+| Database Schema        | [Database](#database-schema)          |
 
 ---
 
@@ -44,7 +45,11 @@ Genera XML conformi al formato **FatturaPA 1.2.1** (standard italiano fatturazio
 #### Funzioni Principali
 
 ```typescript
-import { generateInvoiceXML, validateFatturaPAData, FatturaPAData } from '@/lib/invoices/xml-generator';
+import {
+  generateInvoiceXML,
+  validateFatturaPAData,
+  FatturaPAData,
+} from '@/lib/invoices/xml-generator';
 
 // Valida dati prima di generare
 const errors = validateFatturaPAData(data);
@@ -59,6 +64,7 @@ const xmlBuffer = await generateInvoiceXML(data);
 #### Validazione
 
 La funzione `validateFatturaPAData()` verifica:
+
 - ✅ P.IVA mittente (min 11 caratteri)
 - ✅ Codice Fiscale mittente (16 caratteri)
 - ✅ Dati destinatario (P.IVA o C.F.)
@@ -87,6 +93,7 @@ Sistema flessibile per fatturare ricariche wallet con tre modalità:
 **Quando:** Dopo webhook Stripe `checkout.session.completed`
 
 **Come funziona:**
+
 1. Utente completa pagamento Stripe
 2. Webhook accredita wallet
 3. Sistema verifica regola automatica attiva
@@ -94,6 +101,7 @@ Sistema flessibile per fatturare ricariche wallet con tre modalità:
 5. Emette fattura (draft → issued)
 
 **Configurazione:**
+
 ```typescript
 await configureInvoiceGenerationRuleAction({
   userId: 'user-id',
@@ -108,12 +116,14 @@ await configureInvoiceGenerationRuleAction({
 **Quando:** Dopo approvazione bonifico da admin
 
 **Come funziona:**
+
 1. Admin approva bonifico
 2. Admin seleziona ricariche da fatturare
 3. Genera fattura manualmente
 4. Emette fattura
 
 **Esempio:**
+
 ```typescript
 const result = await generateInvoiceFromRechargesAction({
   userId: 'user-id',
@@ -128,11 +138,13 @@ const result = await generateInvoiceFromRechargesAction({
 **Quando:** Mensile/Trimestrale/Annuale (configurabile)
 
 **Come funziona:**
+
 1. Sistema aggrega ricariche nel periodo
 2. Genera fattura riepilogativa
 3. Include tutte le ricariche non ancora fatturate
 
 **Configurazione:**
+
 ```typescript
 await configureInvoiceGenerationRuleAction({
   userId: 'user-id',
@@ -143,6 +155,7 @@ await configureInvoiceGenerationRuleAction({
 ```
 
 **Generazione:**
+
 ```typescript
 const result = await generatePeriodicInvoiceAction({
   userId: 'user-id',
@@ -161,6 +174,7 @@ const result = await generatePeriodicInvoiceAction({
 Genera fattura da ricariche wallet.
 
 **Parametri:**
+
 - `userId`: ID utente
 - `transactionIds`: Array ID transazioni wallet
 - `invoiceType`: Tipo fattura (`recharge` | `periodic` | `manual`)
@@ -169,6 +183,7 @@ Genera fattura da ricariche wallet.
 - `generateXML`: Se true, genera anche XML FatturaPA
 
 **Ritorna:**
+
 ```typescript
 {
   success: boolean;
@@ -184,6 +199,7 @@ Genera fattura automatica per ricarica Stripe.
 **Chiamata da:** Webhook Stripe `checkout.session.completed`
 
 **Parametri:**
+
 - `transactionId`: ID transazione wallet della ricarica
 
 ### `generatePeriodicInvoiceAction`
@@ -191,6 +207,7 @@ Genera fattura automatica per ricarica Stripe.
 Genera fattura periodica aggregando ricariche nel periodo.
 
 **Parametri:**
+
 - `userId`: ID utente
 - `periodStart`: Data inizio periodo (ISO)
 - `periodEnd`: Data fine periodo (ISO)
@@ -201,6 +218,7 @@ Genera fattura periodica aggregando ricariche nel periodo.
 Configura regola generazione fatture per utente.
 
 **Parametri:**
+
 - `userId`: ID utente
 - `generationType`: Tipo generazione (`automatic` | `manual` | `periodic`)
 - `periodFrequency`: Frequenza (solo per `periodic`)
@@ -214,9 +232,11 @@ Configura regola generazione fatture per utente.
 Lista ricariche non ancora fatturate per utente.
 
 **Parametri:**
+
 - `userId`: ID utente
 
 **Ritorna:**
+
 ```typescript
 {
   success: boolean;
@@ -238,6 +258,7 @@ Lista ricariche non ancora fatturate per utente.
 ### Tabella `invoices` (Estesa)
 
 **Nuove colonne:**
+
 - `xml_url` (TEXT): URL XML FatturaPA su Storage
 - `invoice_type` (TEXT): Tipo fattura (`shipment` | `recharge` | `periodic` | `manual`)
 - `period_start` (DATE): Data inizio periodo (per fatture periodiche)
@@ -248,6 +269,7 @@ Lista ricariche non ancora fatturate per utente.
 Collegamento N:N tra ricariche wallet e fatture.
 
 **Colonne:**
+
 - `id` (UUID): Primary key
 - `invoice_id` (UUID): Riferimento fattura
 - `wallet_transaction_id` (UUID): Riferimento transazione wallet
@@ -255,6 +277,7 @@ Collegamento N:N tra ricariche wallet e fatture.
 - `created_at` (TIMESTAMPTZ): Timestamp creazione
 
 **Vincoli:**
+
 - `UNIQUE(wallet_transaction_id)`: Una ricarica può essere inclusa solo in una fattura
 
 ### Tabella `invoice_generation_rules`
@@ -262,6 +285,7 @@ Collegamento N:N tra ricariche wallet e fatture.
 Regole per generazione automatica/manuale/periodica fatture.
 
 **Colonne:**
+
 - `id` (UUID): Primary key
 - `user_id` (UUID): Utente
 - `generation_type` (TEXT): Tipo generazione (`automatic` | `manual` | `periodic`)
@@ -273,6 +297,7 @@ Regole per generazione automatica/manuale/periodica fatture.
 - `is_active` (BOOLEAN): Regola attiva
 
 **Vincoli:**
+
 - `UNIQUE(user_id, generation_type) WHERE is_active = true`: Un utente può avere una sola regola attiva per tipo
 
 ### Funzione SQL `generate_invoice_from_recharges`
@@ -280,6 +305,7 @@ Regole per generazione automatica/manuale/periodica fatture.
 Genera fattura da ricariche wallet.
 
 **Parametri:**
+
 - `p_user_id` (UUID): ID utente
 - `p_transaction_ids` (UUID[]): Array ID transazioni
 - `p_invoice_type` (TEXT): Tipo fattura
@@ -290,6 +316,7 @@ Genera fattura da ricariche wallet.
 **Ritorna:** UUID fattura creata
 
 **Sicurezza:**
+
 - ✅ Verifica che tutte le transazioni siano ricariche positive
 - ✅ Verifica che le ricariche non siano già fatturate
 - ✅ Calcola totali (imponibile, IVA 22%, totale)
@@ -307,10 +334,12 @@ Scarica XML FatturaPA per una fattura emessa.
 **Autenticazione:** Richiesta
 
 **Permessi:**
+
 - Utente: Solo proprie fatture
 - Admin: Tutte le fatture
 
 **Response:**
+
 - `200 OK`: XML file
 - `401 Unauthorized`: Non autenticato
 - `403 Forbidden`: Non autorizzato
@@ -318,6 +347,7 @@ Scarica XML FatturaPA per una fattura emessa.
 - `400 Bad Request`: Fattura non emessa
 
 **Headers:**
+
 - `Content-Type: application/xml`
 - `Content-Disposition: attachment; filename="YYYY-XXXX.xml"`
 
@@ -407,6 +437,7 @@ Scarica XML FatturaPA per una fattura emessa.
 **File:** `tests/unit/invoice-xml-generator.test.ts`
 
 Testa:
+
 - ✅ Generazione XML valido
 - ✅ Validazione dati
 - ✅ Escape caratteri speciali
@@ -418,6 +449,7 @@ Testa:
 **File:** `tests/integration/invoice-recharges.integration.test.ts`
 
 Testa:
+
 - ✅ Generazione fattura da ricariche
 - ✅ Collegamento ricariche → fatture
 - ✅ Prevenzione doppia fatturazione
@@ -450,7 +482,7 @@ const recharges = await listUninvoicedRechargesAction('user-123');
 // Genera fattura
 const result = await generateInvoiceFromRechargesAction({
   userId: 'user-123',
-  transactionIds: recharges.recharges?.map(r => r.id) || [],
+  transactionIds: recharges.recharges?.map((r) => r.id) || [],
   invoiceType: 'manual',
   generateXML: true,
 });
@@ -488,6 +520,7 @@ const result = await generatePeriodicInvoiceAction({
 **File:** `supabase/migrations/110_invoice_xml_and_recharge_billing.sql`
 
 **Cosa fa:**
+
 1. Estende `invoices` con `xml_url`, `invoice_type`, `period_start`, `period_end`
 2. Crea `invoice_recharge_links` per collegamento ricariche → fatture
 3. Crea `invoice_generation_rules` per regole generazione
@@ -495,6 +528,7 @@ const result = await generatePeriodicInvoiceAction({
 5. Configura RLS policies
 
 **Sicurezza:**
+
 - ✅ RLS abilitato su tutte le nuove tabelle
 - ✅ Validazione input in funzione SQL
 - ✅ Unicità ricariche (una ricarica = una fattura)
@@ -530,11 +564,13 @@ const result = await generatePeriodicInvoiceAction({
 **Problema:** Fattura creata ma `xml_url` è NULL
 
 **Possibili cause:**
+
 1. Dati incompleti (P.IVA, C.F., SDI)
 2. Validazione fallita
 3. Errore upload Storage
 
 **Soluzione:**
+
 - Verifica dati utente completi
 - Chiama `generateXMLForInvoice()` manualmente
 - Controlla logs per errori specifici
@@ -546,6 +582,7 @@ const result = await generatePeriodicInvoiceAction({
 **Causa:** La ricarica è già collegata a una fattura
 
 **Soluzione:**
+
 - Verifica `invoice_recharge_links` per vedere quale fattura
 - Se errore, elimina link e rigenera fattura
 
@@ -554,10 +591,12 @@ const result = await generatePeriodicInvoiceAction({
 **Problema:** Ricarica Stripe completata ma nessuna fattura
 
 **Possibili cause:**
+
 1. Nessuna regola automatica attiva per l'utente
 2. Errore nella generazione (check logs)
 
 **Soluzione:**
+
 - Verifica `invoice_generation_rules` per l'utente
 - Configura regola automatica se mancante
 - Genera fattura manualmente se necessario

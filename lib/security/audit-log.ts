@@ -1,14 +1,14 @@
 /**
  * Audit Log - Logger Unificato per Acting Context
- * 
+ *
  * CRITICAL: Questo è il logger UNICO per tutte le operazioni audit.
  * Supporta Acting Context (impersonation) e traccia actor + target.
- * 
+ *
  * USAGE:
  * ```typescript
  * import { writeAuditLog } from '@/lib/security/audit-log';
  * import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
- * 
+ *
  * await writeAuditLog({
  *   context,  // ActingContext da requireSafeAuth()
  *   action: AUDIT_ACTIONS.CREATE_SHIPMENT,
@@ -17,7 +17,7 @@
  *   metadata: { carrier, cost }
  * });
  * ```
- * 
+ *
  * ARCHITECTURAL RULES:
  * 1. Sempre passare ActingContext (da getSafeAuth/requireSafeAuth)
  * 2. Usa azioni canoniche da AUDIT_ACTIONS (no stringhe custom)
@@ -38,22 +38,22 @@ export interface AuditLogPayload {
    * Obbligatorio per tracciare actor + target
    */
   context: ActingContext;
-  
+
   /**
    * Azione canonica (da AUDIT_ACTIONS)
    */
   action: AuditAction | string;
-  
+
   /**
    * Tipo risorsa (da AUDIT_RESOURCE_TYPES)
    */
   resourceType: AuditResourceType | string;
-  
+
   /**
    * ID risorsa (es. shipment.id, user.id)
    */
   resourceId: string;
-  
+
   /**
    * Metadata custom (estende AuditMetadataStandard)
    */
@@ -62,25 +62,25 @@ export interface AuditLogPayload {
 
 /**
  * Write Audit Log - Logger Unificato
- * 
+ *
  * Scrive un log audit con Acting Context completo:
  * - actor_id: chi ESEGUE l'azione (SuperAdmin se impersonation)
  * - target_id: per CHI viene eseguita (cliente)
  * - impersonation_active: flag se impersonation attiva
  * - audit_metadata: metadata standard + custom
- * 
+ *
  * @param payload - AuditLogPayload completo
  * @returns Promise<void> (non blocca mai, fail-open)
  */
 export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
   try {
     const { context, action, resourceType, resourceId, metadata = {} } = payload;
-    
+
     // 1. Estrai actor + target da context
     const actorId = context.actor.id;
     const targetId = context.target.id;
     const impersonationActive = context.isImpersonating;
-    
+
     // 2. Prepara metadata standard
     const auditMetadata: AuditMetadataStandard = {
       ...metadata,
@@ -90,29 +90,29 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       reason: context.metadata?.reason || metadata.reason,
       requestId: context.metadata?.requestId || metadata.requestId,
     };
-    
+
     // 3. Prepara payload per insert
     const logEntry = {
       action,
       resource_type: resourceType,
       resource_id: resourceId,
-      
+
       // Actor/Target (impersonation-aware)
       actor_id: actorId,
       target_id: targetId,
       impersonation_active: impersonationActive,
-      
+
       // Legacy compatibility (user_id = target_id per backward compat)
       user_id: targetId,
       user_email: context.target.email,
-      
+
       // Metadata
       audit_metadata: auditMetadata,
-      
+
       // Timestamp
       created_at: new Date().toISOString(),
     };
-    
+
     // 4. Usa SQL function se disponibile (fallback a insert)
     try {
       const { error: rpcError } = await supabaseAdmin.rpc('log_acting_context_audit', {
@@ -124,35 +124,31 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
         p_impersonation_active: impersonationActive,
         p_audit_metadata: auditMetadata,
       });
-      
+
       if (rpcError) {
         // Fallback: insert diretto
         console.warn('⚠️ [AUDIT] RPC fallback to direct insert:', rpcError.message);
-        const { error: insertError } = await supabaseAdmin
-          .from('audit_logs')
-          .insert([logEntry]);
-        
+        const { error: insertError } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+
         if (insertError) {
           throw insertError;
         }
       }
     } catch (rpcError) {
       // RPC non disponibile: fallback a insert
-      const { error: insertError } = await supabaseAdmin
-        .from('audit_logs')
-        .insert([logEntry]);
-      
+      const { error: insertError } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+
       if (insertError) {
         throw insertError;
       }
     }
-    
+
     // 5. Success log (console)
     console.log('✅ [AUDIT]', {
       action,
       actor: `${context.actor.email} (${actorId.substring(0, 8)}...)`,
-      target: impersonationActive 
-        ? `${context.target.email} (${targetId.substring(0, 8)}...)` 
+      target: impersonationActive
+        ? `${context.target.email} (${targetId.substring(0, 8)}...)`
         : 'self',
       resource: `${resourceType}:${resourceId.substring(0, 8)}...`,
       impersonating: impersonationActive,
@@ -166,7 +162,7 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
 
 /**
  * Helper: Write audit log per wallet operations
- * 
+ *
  * Shortcut per operazioni wallet (common case)
  */
 export async function writeWalletAuditLog(
@@ -191,7 +187,7 @@ export async function writeWalletAuditLog(
 
 /**
  * Helper: Write audit log per shipment operations
- * 
+ *
  * Shortcut per operazioni shipment (common case)
  */
 export async function writeShipmentAuditLog(
@@ -211,17 +207,17 @@ export async function writeShipmentAuditLog(
 
 /**
  * LEGACY COMPAT: logAuditEvent
- * 
+ *
  * ⚠️ DEPRECATED: Use writeAuditLog() instead for Acting Context support.
- * 
+ *
  * Questo wrapper è mantenuto per backward compatibility con codice legacy
  * che non è stato ancora migrato a requireSafeAuth() + writeAuditLog().
- * 
+ *
  * MIGRATION PATH:
  * 1. Migrare caller a requireSafeAuth()
  * 2. Sostituire logAuditEvent() con writeAuditLog()
  * 3. Rimuovere questo wrapper quando tutti i caller sono migrati
- * 
+ *
  * @param action - Azione audit (es: 'credential_updated')
  * @param resourceType - Tipo risorsa (es: 'courier_config')
  * @param resourceId - ID risorsa
@@ -236,7 +232,7 @@ export async function logAuditEvent(
   try {
     // Tenta di ottenere context corrente (se disponibile)
     let context: ActingContext | null = null;
-    
+
     try {
       const { getSafeAuth } = await import('@/lib/safe-auth');
       context = await getSafeAuth();
@@ -244,7 +240,7 @@ export async function logAuditEvent(
       // getSafeAuth non disponibile o fallito (es: no session)
       console.warn('⚠️ [AUDIT LEGACY] getSafeAuth not available, using system context');
     }
-    
+
     // Se abbiamo context, usa writeAuditLog (preferred)
     if (context) {
       await writeAuditLog({
@@ -256,41 +252,39 @@ export async function logAuditEvent(
       });
       return;
     }
-    
+
     // Fallback: insert diretto DB senza context (sistema/background job)
     const logEntry = {
       action,
       resource_type: resourceType,
       resource_id: resourceId,
-      
+
       // No actor/target (operazione di sistema)
       actor_id: null,
       target_id: null,
       impersonation_active: false,
-      
+
       // Legacy compatibility
       user_id: null,
       user_email: 'system',
-      
+
       // Metadata
       audit_metadata: {
         ...metadata,
         legacy_caller: true,
         migration_needed: true,
       },
-      
+
       // Timestamp
       created_at: new Date().toISOString(),
     };
-    
-    const { error: insertError } = await supabaseAdmin
-      .from('audit_logs')
-      .insert([logEntry]);
-    
+
+    const { error: insertError } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+
     if (insertError) {
       throw insertError;
     }
-    
+
     console.log('✅ [AUDIT LEGACY]', {
       action,
       resource: `${resourceType}:${resourceId.substring(0, 8)}...`,
@@ -299,6 +293,9 @@ export async function logAuditEvent(
   } catch (error: any) {
     // FAIL-OPEN: non bloccare operazione se log fallisce
     console.error('❌ [AUDIT LEGACY] Logging failed (fail-open):', error.message);
-    console.log('📋 [AUDIT LEGACY] (fallback console)', JSON.stringify({ action, resourceType, resourceId, metadata }, null, 2));
+    console.log(
+      '📋 [AUDIT LEGACY] (fallback console)',
+      JSON.stringify({ action, resourceType, resourceId, metadata }, null, 2)
+    );
   }
 }

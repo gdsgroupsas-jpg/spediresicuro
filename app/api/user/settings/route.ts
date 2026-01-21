@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
     // Autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // Trova utente in Supabase
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
       return ApiErrors.NOT_FOUND('Utente');
@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
     // Autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // Parse body
     const body = await request.json();
@@ -62,8 +62,15 @@ export async function PUT(request: NextRequest) {
 
     // Validazione mittente predefinito
     if (defaultSender) {
-      if (!defaultSender.nome || !defaultSender.indirizzo || !defaultSender.citta || !defaultSender.cap) {
-        return ApiErrors.BAD_REQUEST('Dati mittente incompleti. Campi obbligatori: nome, indirizzo, città, CAP');
+      if (
+        !defaultSender.nome ||
+        !defaultSender.indirizzo ||
+        !defaultSender.citta ||
+        !defaultSender.cap
+      ) {
+        return ApiErrors.BAD_REQUEST(
+          'Dati mittente incompleti. Campi obbligatori: nome, indirizzo, città, CAP'
+        );
       }
 
       // Valida CAP italiano (5 cifre)
@@ -73,12 +80,14 @@ export async function PUT(request: NextRequest) {
 
       // Valida provincia (2 lettere)
       if (defaultSender.provincia && !/^[A-Z]{2}$/.test(defaultSender.provincia)) {
-        return ApiErrors.VALIDATION_ERROR('Provincia non valida. Deve essere 2 lettere (es: MI, RM)');
+        return ApiErrors.VALIDATION_ERROR(
+          'Provincia non valida. Deve essere 2 lettere (es: MI, RM)'
+        );
       }
     }
 
     // Trova utente in Supabase
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
       return ApiErrors.NOT_FOUND('Utente');

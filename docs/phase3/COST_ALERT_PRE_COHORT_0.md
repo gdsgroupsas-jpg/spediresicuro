@@ -38,6 +38,7 @@
 ### Gemini Vision: Come si Misura
 
 **Chiamata API:**
+
 - **File:** `lib/agent/orchestrator/nodes.ts:97`
 - **Metodo:** `llm.invoke([geminiMessage])` con `HumanMessage` contenente:
   - Text prompt (estrazione dati)
@@ -45,6 +46,7 @@
 - **Modello:** `gemini-2.0-flash-001` (configurato in `lib/config.ts:40`)
 
 **Costo per Immagine:**
+
 - **Input:** Immagine base64 (dimensioni variabili)
 - **Output:** JSON con dati estratti (circa 500-1000 tokens)
 - **Pricing (PRELIMINARE - da verificare in Google Cloud Console):**
@@ -53,18 +55,21 @@
   - **Stima conservativa:** €0.001-0.002 per immagine (da verificare)
 
 **Retry Policy:**
+
 - Max 1 retry per errori transienti (`lib/agent/workers/vision-fallback.ts:42`)
 - **Impatto:** Potenzialmente 2x costo se retry necessario
 
 ### LLM: Come si Misura
 
 **Chiamate LLM:**
+
 - **File:** `lib/agent/orchestrator/nodes.ts:141-213`
 - **Uso:** Post-processing dati OCR (legacy/fallback)
 - **Modello:** `gemini-2.0-flash-001`
 - **Frequenza:** Solo se Vision fallisce o dati parziali
 
 **Costo per Chiamata:**
+
 - **Input:** ~500-1000 tokens (dati estratti + prompt cleanup)
 - **Output:** ~200-500 tokens (dati normalizzati)
 - **Stima conservativa:** €0.0005-0.001 per chiamata (da verificare)
@@ -82,39 +87,43 @@
 ### Dove Vedere Costo per Immagine
 
 **1. Google Cloud Console (Billing)**
+
 - **URL:** https://console.cloud.google.com/billing
 - **Path:** Billing → Reports → Filter by "Gemini API" o "Generative AI"
 - **Metrica:** Costo per chiamata API
 - **Granularità:** Per singola chiamata (se abilitato detailed billing)
 
 **2. Google Cloud Console (Usage)**
+
 - **URL:** https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/usage
 - **Metrica:** Numero chiamate, tokens input/output
 - **Granularità:** Giornaliera/settimanale
 
 **3. Log Telemetria (Indiretto)**
+
 - **File:** `lib/telemetry/logger.ts`
 - **Evento:** `supervisorRouterComplete` con `ocr_source: 'image'`
 - **Limite:** Non include costo diretto, solo conteggio immagini processate
 - **Query esempio:**
   ```sql
   -- Conteggio immagini processate (da log telemetria)
-  SELECT COUNT(*) 
-  FROM logs 
-  WHERE event = 'supervisorRouterComplete' 
+  SELECT COUNT(*)
+  FROM logs
+  WHERE event = 'supervisorRouterComplete'
     AND ocr_source = 'image'
     AND created_at >= CURRENT_DATE;
   ```
 
 **4. Database (Indiretto)**
+
 - **Tabella:** `shipments`
 - **Campo:** `created_via_ocr BOOLEAN` (indica se spedizione creata via OCR)
 - **Query esempio:**
   ```sql
   -- Conteggio spedizioni create via OCR
-  SELECT COUNT(*) 
-  FROM shipments 
-  WHERE created_via_ocr = true 
+  SELECT COUNT(*)
+  FROM shipments
+  WHERE created_via_ocr = true
     AND created_at >= CURRENT_DATE;
   ```
 
@@ -123,21 +132,24 @@
 ### Dove Vedere Costo Giornaliero / Settimanale
 
 **1. Google Cloud Console (Billing Dashboard)**
+
 - **URL:** https://console.cloud.google.com/billing
 - **Path:** Billing → Reports → Filter by service "Generative AI" → Group by "Day"
 - **Metrica:** Costo totale giornaliero per Gemini API
 - **Aggregazione:** Automatica per giorno/settimana
 
 **2. Google Cloud Console (Cost Breakdown)**
+
 - **URL:** https://console.cloud.google.com/billing
 - **Path:** Billing → Cost breakdown → Filter by "Gemini" o "Generative AI"
 - **Metrica:** Costo aggregato per periodo
 - **Granularità:** Giornaliera, settimanale, mensile
 
 **3. Query SQL (Stima Basata su Conteggio)**
+
 ```sql
 -- Stima costo giornaliero OCR (basata su conteggio immagini)
-SELECT 
+SELECT
   DATE(created_at) as date,
   COUNT(*) as images_processed,
   COUNT(*) * 0.002 as estimated_cost_eur  -- Stima: €0.002 per immagine
@@ -153,11 +165,13 @@ ORDER BY date DESC;
 ### Query o Link Dashboard
 
 **Dashboard Google Cloud Console:**
+
 - **Billing Dashboard:** https://console.cloud.google.com/billing
 - **API Usage:** https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/usage
 - **Cost Breakdown:** https://console.cloud.google.com/billing/cost-breakdown
 
 **Query Supabase (Stima):**
+
 ```sql
 -- Conteggio immagini processate oggi
 SELECT COUNT(*) as images_today
@@ -184,26 +198,31 @@ Devono essere **aggiornate con dati reali** dopo i primi giorni di Cohort 0.
 ### Costo Giornaliero OCR: **€5.00** (PRELIMINARE)
 
 **Motivazione:**
+
 - Stima: 10-20 immagini/giorno in Cohort 0 (utenti interni)
 - Costo per immagine: €0.002 (stima conservativa)
 - Buffer 2x: €5.00/giorno = ~2500 immagini/giorno (molto conservativo)
 
 **Aggiornamento:**
+
 - Dopo 3 giorni di Cohort 0: ricalcolare basandosi su dati reali
 - Dopo 1 settimana: aggiornare soglia definitiva
 
 ### Costo Settimanale OCR: **€30.00** (PRELIMINARE)
 
 **Motivazione:**
+
 - 6 giorni lavorativi × €5.00/giorno = €30.00
 - Buffer aggiuntivo per weekend/variazioni
 
 **Aggiornamento:**
+
 - Dopo 1 settimana di Cohort 0: ricalcolare basandosi su dati reali
 
 ### Soglia Critica (Kill Switch): **€10.00/giorno** (PRELIMINARE)
 
 **Motivazione:**
+
 - 2x la soglia giornaliera normale
 - Se raggiunta → attivare Kill Switch immediatamente
 
@@ -216,6 +235,7 @@ Devono essere **aggiornate con dati reali** dopo i primi giorni di Cohort 0.
 **✅ IMPLEMENTATO:** Alert automatici configurati in Google Cloud Console.
 
 **Configurazione:**
+
 - **Budget Target:** €10.00 (mensile)
 - **Account Fatturazione:** SpedireSicuro
 - **Progetto:** spedire-sicuro-geocoding
@@ -243,6 +263,7 @@ Devono essere **aggiornate con dati reali** dopo i primi giorni di Cohort 0.
 Sarà aumentato a production-ready quando necessario. Per ora è appropriato per testing interno.
 
 **Alert Critico (Kill Switch):**
+
 - Costo giornaliero > €10.00 (soglia critica documentata)
 - **Azione:** Attivare Kill Switch immediatamente
 
@@ -269,7 +290,7 @@ Sarà aumentato a production-ready quando necessario. Per ora è appropriato per
 4. **Query Supabase (Stima):**
    ```sql
    -- Stima costo oggi (basata su conteggio)
-   SELECT 
+   SELECT
      COUNT(*) as images_today,
      COUNT(*) * 0.002 as estimated_cost_eur
    FROM shipments
@@ -278,6 +299,7 @@ Sarà aumentato a production-ready quando necessario. Per ora è appropriato per
    ```
 
 **Frequenza Check:**
+
 - **Alert Automatici:** Email inviata automaticamente quando soglia raggiunta
 - **Check Manuale:** 1 volta al giorno per verifica (opzionale, ma raccomandato)
 
@@ -346,6 +368,7 @@ Sarà aumentato a production-ready quando necessario. Per ora è appropriato per
 **Procedura Kill Switch:**
 
 1. **Imposta Flag:**
+
    ```bash
    # In Vercel Environment Variables
    ENABLE_OCR_IMAGES=false
@@ -484,6 +507,7 @@ Sarà aumentato a production-ready quando necessario. Per ora è appropriato per
 ### Verifica Pricing Gemini (TODO)
 
 **Prima di Cohort 0, verificare:**
+
 - Pricing reale Gemini 2.0 Flash Vision in Google Cloud Console
 - Costo per 1K input tokens
 - Costo per 1K output tokens
@@ -494,6 +518,7 @@ Sarà aumentato a production-ready quando necessario. Per ora è appropriato per
 ### Query Utili
 
 **Conteggio Immagini Processate Oggi:**
+
 ```sql
 SELECT COUNT(*) as images_today
 FROM shipments
@@ -502,8 +527,9 @@ WHERE created_via_ocr = true
 ```
 
 **Stima Costo Settimanale:**
+
 ```sql
-SELECT 
+SELECT
   DATE(created_at) as date,
   COUNT(*) as images,
   COUNT(*) * 0.002 as estimated_cost_eur
@@ -515,9 +541,10 @@ ORDER BY date DESC;
 ```
 
 **Costo Medio per Immagine (Stima):**
+
 ```sql
 -- Calcola costo medio basandosi su totale settimanale
-SELECT 
+SELECT
   COUNT(*) as total_images,
   COUNT(*) * 0.002 as total_estimated_cost,
   (COUNT(*) * 0.002) / NULLIF(COUNT(*), 0) as avg_cost_per_image
@@ -539,6 +566,7 @@ WHERE created_via_ocr = true
 **COST ALERT & BUDGET GUARD IMPLEMENTATO** ✅
 
 Il sistema è **protetto economicamente**:
+
 - ✅ Fonti di costo identificate
 - ✅ Osservabilità documentata
 - ✅ Soglie preliminari conservative
@@ -547,4 +575,3 @@ Il sistema è **protetto economicamente**:
 - ✅ Budget conservativo appropriato per pre-Cohort 0 (sarà aumentato in produzione)
 
 **Cohort 0 può procedere** con alert automatici attivi e budget conservativo per testing interno.
-

@@ -11,23 +11,19 @@
 
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import DashboardSidebar from '@/components/dashboard-sidebar';
 import DashboardMobileNav from '@/components/dashboard-mobile-nav';
 import DashboardLayoutClient from '@/components/dashboard-layout-client';
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Verifica autenticazione
   // ⚠️ SECURITY: Test mode bypass SOLO in sviluppo, MAI in produzione
   const isProductionEnv = process.env.NODE_ENV === 'production';
   let isTestMode = false;
   let testHeaderValue = null;
-  
+
   // SECURITY: In produzione, NESSUN bypass è permesso
   if (!isProductionEnv) {
     try {
@@ -43,10 +39,11 @@ export default async function DashboardLayout({
       console.log('🧪 [DASHBOARD LAYOUT] headers() non disponibile, uso solo env var:', isTestMode);
     }
   }
-  
+
   let session = null;
   if (!isTestMode) {
-    session = await auth();
+    const context = await getSafeAuth();
+    session = context ? { user: context.actor } : null;
   } else {
     // In test mode, crea una sessione mock
     session = {
@@ -88,9 +85,7 @@ export default async function DashboardLayout({
       {/* Main Content Area */}
       <div className="lg:pl-64 flex flex-col min-h-screen">
         {/* Content */}
-        <main className="flex-1 pb-20 lg:pb-0">
-          {children}
-        </main>
+        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
       </div>
 
       {/* Mobile Navigation - Mobile Only */}
@@ -98,4 +93,3 @@ export default async function DashboardLayout({
     </DashboardLayoutClient>
   );
 }
-

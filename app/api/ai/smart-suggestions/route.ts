@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Non autenticato' }, { status: 401 });
     }
     console.error('âŒ [Smart Suggestions] Errore:', errorMessage);
-    return NextResponse.json({ success: false, error: 'Errore generazione suggerimento' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Errore generazione suggerimento' },
+      { status: 500 }
+    );
   }
 }

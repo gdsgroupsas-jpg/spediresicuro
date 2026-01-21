@@ -107,7 +107,11 @@ export function VoiceControlPanel({
               disabled={isConnecting || isActive}
               className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4"
             >
-              {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+              {isConnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
               {isConnecting ? 'Connessione...' : 'Avvia microfono'}
             </Button>
             <Button
@@ -164,7 +168,9 @@ export function VoiceControlPanel({
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Azioni rapide</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+                Azioni rapide
+              </p>
               <h3 className="text-lg font-bold text-gray-900">Esegui tool senza parlare</h3>
             </div>
             <Zap className="w-5 h-5 text-amber-500" />
@@ -246,9 +252,9 @@ export function VoiceControlPanel({
             <p className="text-xs uppercase tracking-wide font-semibold">Suggerimento</p>
           </div>
           <p className="mt-2 text-sm leading-relaxed">
-            Posiziona questo pannello nella dashboard operativa e lascia che gli operatori gestiscano spedizioni,
-            resi e ticket senza usare mouse e tastiera. Abilita cuffie con cancellazione rumore per il miglior
-            riconoscimento.
+            Posiziona questo pannello nella dashboard operativa e lascia che gli operatori
+            gestiscano spedizioni, resi e ticket senza usare mouse e tastiera. Abilita cuffie con
+            cancellazione rumore per il miglior riconoscimento.
           </p>
         </div>
       </div>
@@ -272,7 +278,9 @@ function QuickActionCard({
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-900">{label}</p>
-        <span className="text-[11px] font-semibold text-blue-600 group-hover:text-blue-700">Esegui</span>
+        <span className="text-[11px] font-semibold text-blue-600 group-hover:text-blue-700">
+          Esegui
+        </span>
       </div>
       <p className="text-xs text-gray-600 mt-1">{helper}</p>
     </button>

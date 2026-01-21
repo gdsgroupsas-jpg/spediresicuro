@@ -125,6 +125,7 @@ npm run dev
 ### 3. Controlla Errori
 
 Se un provider non funziona:
+
 - Verifica che le variabili ambiente siano corrette
 - Controlla i callback URL nei provider
 - Verifica che il server sia riavviato dopo aver aggiunto le variabili
@@ -143,6 +144,7 @@ Se un provider non funziona:
 ### Produzione
 
 Per produzione, configura:
+
 - Variabili ambiente su Vercel/piattaforma hosting
 - Callback URL con il dominio di produzione
 - HTTPS obbligatorio per OAuth
@@ -178,4 +180,3 @@ Per produzione, configura:
 ---
 
 **Ultimo aggiornamento:** Sistema OAuth completo con Google, GitHub e Facebook ✅
-

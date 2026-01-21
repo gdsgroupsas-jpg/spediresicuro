@@ -92,7 +92,9 @@ export function generateShipmentCSV(spedizione: SpedizioneData): string {
   const colli = formatValue(spedizione.colli || 1);
   const contrassegno = formatValue(spedizione.contrassegno || '');
   const rif_mittente = escapeCSV(spedizione.rif_mittente || spedizione.mittente.nome || '');
-  const rif_destinatario = escapeCSV(spedizione.rif_destinatario || spedizione.destinatario.nome || '');
+  const rif_destinatario = escapeCSV(
+    spedizione.rif_destinatario || spedizione.destinatario.nome || ''
+  );
   const note = escapeCSV(spedizione.note || '');
   const telefono = spedizione.destinatario.telefono || '';
   const email_destinatario = spedizione.destinatario.email || '';
@@ -101,28 +103,30 @@ export function generateShipmentCSV(spedizione: SpedizioneData): string {
   const totale_ordine = formatValue(spedizione.totale_ordine || spedizione.prezzoFinale || '');
 
   // Header CSV secondo formato spedisci.online (tutto minuscolo)
-  const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
-  
+  const header =
+    'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
+
   // Riga dati
-  const row = [
-    destinatario,
-    indirizzo,
-    cap,
-    localita,
-    provincia,
-    country,
-    peso,
-    colli,
-    contrassegno,
-    rif_mittente,
-    rif_destinatario,
-    note,
-    telefono,
-    email_destinatario,
-    contenuto,
-    order_id,
-    totale_ordine,
-  ].join(';') + ';'; // Aggiungi punto e virgola finale
+  const row =
+    [
+      destinatario,
+      indirizzo,
+      cap,
+      localita,
+      provincia,
+      country,
+      peso,
+      colli,
+      contrassegno,
+      rif_mittente,
+      rif_destinatario,
+      note,
+      telefono,
+      email_destinatario,
+      contenuto,
+      order_id,
+      totale_ordine,
+    ].join(';') + ';'; // Aggiungi punto e virgola finale
 
   // Restituisci header + riga dati
   return header + '\n' + row;
@@ -133,7 +137,7 @@ export function generateShipmentCSV(spedizione: SpedizioneData): string {
  * Formato ESATTO spedisci.online per importazione batch
  * Separatore: VIRGOLA (,)
  * Indirizzo sempre tra virgolette se contiene virgole
- * 
+ *
  * @param spedizioni Array di spedizioni da esportare
  * @returns Stringa CSV con header + tutte le righe
  */
@@ -163,7 +167,7 @@ export function generateMultipleShipmentsCSV(spedizioni: SpedizioneData[]): stri
   const escapeCSV = (value: string, alwaysQuote: boolean = false): string => {
     if (!value) return '';
     const trimmed = value.trim();
-    
+
     // Se contiene virgole, virgolette o newline, metti sempre tra virgolette
     if (alwaysQuote || trimmed.includes(',') || trimmed.includes('"') || trimmed.includes('\n')) {
       return `"${trimmed.replace(/"/g, '""')}"`;
@@ -172,17 +176,18 @@ export function generateMultipleShipmentsCSV(spedizioni: SpedizioneData[]): stri
   };
 
   // Header CSV ESATTO come richiesto (separatore VIRGOLA)
-  const header = 'destinatario,indirizzo,cap,localita,provincia,country,peso,colli,contrassegno,rif_mittente,rif_destinatario,note,telefono,email_destinatario,contenuto,order_id,totale_ordine';
-  
+  const header =
+    'destinatario,indirizzo,cap,localita,provincia,country,peso,colli,contrassegno,rif_mittente,rif_destinatario,note,telefono,email_destinatario,contenuto,order_id,totale_ordine';
+
   // Genera CSV per ogni spedizione
-  const rows = spedizioni.map(spedizione => {
+  const rows = spedizioni.map((spedizione) => {
     // Estrai e normalizza tutti i campi
     const destinatario = escapeCSV(spedizione.destinatario.nome || '');
-    
+
     // Indirizzo: sempre tra virgolette se contiene virgole o spazi (es. "Via Roma, n 20")
     const indirizzoRaw = spedizione.destinatario.indirizzo || '';
     const indirizzo = escapeCSV(indirizzoRaw, true); // alwaysQuote = true per indirizzo
-    
+
     const cap = (spedizione.destinatario.cap || '').trim();
     const localita = escapeCSV(spedizione.destinatario.citta || '');
     const provincia = (spedizione.destinatario.provincia || '').toUpperCase().trim().slice(0, 2);
@@ -190,27 +195,36 @@ export function generateMultipleShipmentsCSV(spedizioni: SpedizioneData[]): stri
     const peso = formatValue(spedizione.peso || 0);
     const colli = formatValue(spedizione.colli || 1);
     const contrassegno = formatValue(spedizione.contrassegno || '');
-    
+
     // Rif mittente: default "MITTENTE" se non specificato
-    const rif_mittente = escapeCSV(spedizione.rif_mittente || spedizione.mittente.nome || 'MITTENTE');
-    
+    const rif_mittente = escapeCSV(
+      spedizione.rif_mittente || spedizione.mittente.nome || 'MITTENTE'
+    );
+
     // Rif destinatario: default nome destinatario
-    const rif_destinatario = escapeCSV(spedizione.rif_destinatario || spedizione.destinatario.nome || '');
-    
+    const rif_destinatario = escapeCSV(
+      spedizione.rif_destinatario || spedizione.destinatario.nome || ''
+    );
+
     const note = escapeCSV(spedizione.note || '');
-    
+
     // Telefono: rimuovi spazi e caratteri speciali, mantieni solo numeri
     const telefonoRaw = spedizione.destinatario.telefono || '';
-    const telefono = telefonoRaw.replace(/[\s\-()]/g, '').replace(/^\+39/, '').trim();
-    
+    const telefono = telefonoRaw
+      .replace(/[\s\-()]/g, '')
+      .replace(/^\+39/, '')
+      .trim();
+
     const email_destinatario = (spedizione.destinatario.email || '').trim();
     const contenuto = escapeCSV(spedizione.contenuto || '');
-    
+
     // Order ID: tracking o order_id se presente
     const order_id = escapeCSV(spedizione.order_id || spedizione.tracking || '');
-    
+
     // Totale ordine: contrassegno o prezzo finale
-    const totale_ordine = formatValue(spedizione.totale_ordine || spedizione.contrassegno || spedizione.prezzoFinale || '');
+    const totale_ordine = formatValue(
+      spedizione.totale_ordine || spedizione.contrassegno || spedizione.prezzoFinale || ''
+    );
 
     // Costruisci riga CSV con VIRGOLA come separatore (NO virgola finale)
     return [
@@ -246,15 +260,15 @@ export function downloadMultipleCSV(content: string, filename: string) {
   const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+
   link.setAttribute('href', url);
   link.setAttribute('download', filename);
   link.style.visibility = 'hidden';
-  
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 }
 
@@ -267,15 +281,15 @@ export function downloadCSV(content: string, filename: string) {
   const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+
   link.setAttribute('href', url);
   link.setAttribute('download', filename);
   link.style.visibility = 'hidden';
-  
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 }
 
@@ -287,21 +301,21 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
   let yPos = margin;
-  
+
   // Header con logo/colori
   doc.setFillColor(255, 215, 0); // #FFD700
   doc.rect(0, 0, pageWidth, 40, 'F');
-  
+
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
   doc.text('SPEDIRESICURO.IT', pageWidth / 2, 20, { align: 'center' });
-  
+
   doc.setFontSize(14);
   doc.text('TICKET DI SPEDIZIONE', pageWidth / 2, 30, { align: 'center' });
-  
+
   yPos = 50;
-  
+
   // Tracking Number
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -312,26 +326,30 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
   doc.setTextColor(255, 149, 0); // #FF9500
   doc.text(spedizione.tracking, margin, yPos);
   yPos += 12;
-  
+
   // Linea separatrice
   doc.setDrawColor(200, 200, 200);
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 10;
-  
+
   // Mittente
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
   doc.text('MITTENTE', margin, yPos);
   yPos += 8;
-  
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`${spedizione.mittente.nome}`, margin, yPos);
   yPos += 5;
   doc.text(`${spedizione.mittente.indirizzo}`, margin, yPos);
   yPos += 5;
-  doc.text(`${spedizione.mittente.cap} ${spedizione.mittente.citta} (${spedizione.mittente.provincia})`, margin, yPos);
+  doc.text(
+    `${spedizione.mittente.cap} ${spedizione.mittente.citta} (${spedizione.mittente.provincia})`,
+    margin,
+    yPos
+  );
   yPos += 5;
   doc.text(`Tel: ${spedizione.mittente.telefono}`, margin, yPos);
   if (spedizione.mittente.email) {
@@ -339,20 +357,24 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
     doc.text(`Email: ${spedizione.mittente.email}`, margin, yPos);
   }
   yPos += 10;
-  
+
   // Destinatario
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('DESTINATARIO', margin, yPos);
   yPos += 8;
-  
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`${spedizione.destinatario.nome}`, margin, yPos);
   yPos += 5;
   doc.text(`${spedizione.destinatario.indirizzo}`, margin, yPos);
   yPos += 5;
-  doc.text(`${spedizione.destinatario.cap} ${spedizione.destinatario.citta} (${spedizione.destinatario.provincia})`, margin, yPos);
+  doc.text(
+    `${spedizione.destinatario.cap} ${spedizione.destinatario.citta} (${spedizione.destinatario.provincia})`,
+    margin,
+    yPos
+  );
   yPos += 5;
   doc.text(`Tel: ${spedizione.destinatario.telefono}`, margin, yPos);
   if (spedizione.destinatario.email) {
@@ -360,22 +382,26 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
     doc.text(`Email: ${spedizione.destinatario.email}`, margin, yPos);
   }
   yPos += 10;
-  
+
   // Linea separatrice
   doc.line(margin, yPos, pageWidth - margin, yPos);
   yPos += 10;
-  
+
   // Dettagli spedizione
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('DETTAGLI SPEDIZIONE', margin, yPos);
   yPos += 8;
-  
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Peso: ${spedizione.peso} kg`, margin, yPos);
   yPos += 5;
-  doc.text(`Dimensioni: ${spedizione.dimensioni.lunghezza}x${spedizione.dimensioni.larghezza}x${spedizione.dimensioni.altezza} cm`, margin, yPos);
+  doc.text(
+    `Dimensioni: ${spedizione.dimensioni.lunghezza}x${spedizione.dimensioni.larghezza}x${spedizione.dimensioni.altezza} cm`,
+    margin,
+    yPos
+  );
   yPos += 5;
   doc.text(`Tipo: ${spedizione.tipoSpedizione}`, margin, yPos);
   yPos += 5;
@@ -383,14 +409,14 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
   yPos += 5;
   doc.text(`Status: ${spedizione.status}`, margin, yPos);
   yPos += 10;
-  
+
   // Prezzo
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 149, 0); // #FF9500
   doc.text(`Prezzo: € ${spedizione.prezzoFinale.toFixed(2)}`, margin, yPos);
   yPos += 10;
-  
+
   // Note (se presenti)
   if (spedizione.note) {
     yPos += 5;
@@ -402,7 +428,7 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
     const splitNote = doc.splitTextToSize(spedizione.note, pageWidth - 2 * margin);
     doc.text(splitNote, margin, yPos);
   }
-  
+
   // Footer
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(8);
@@ -413,7 +439,7 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
     pageHeight - 10,
     { align: 'center' }
   );
-  
+
   return doc;
 }
 
@@ -423,4 +449,3 @@ export function generateShipmentPDF(spedizione: SpedizioneData): jsPDF {
 export function downloadPDF(doc: jsPDF, filename: string) {
   doc.save(filename);
 }
-

@@ -4,7 +4,15 @@
  * Integrazione con WooCommerce via REST API
  */
 
-import { EcommerceAdapter, type EcommerceCredentials, type Order, type OrderFilters, type TrackingInfo, type Product, type WebhookEvent } from './base';
+import {
+  EcommerceAdapter,
+  type EcommerceCredentials,
+  type Order,
+  type OrderFilters,
+  type TrackingInfo,
+  type Product,
+  type WebhookEvent,
+} from './base';
 
 export class WooCommerceAdapter extends EcommerceAdapter {
   private baseUrl: string;
@@ -142,11 +150,7 @@ export class WooCommerceAdapter extends EcommerceAdapter {
   }
 
   async setupWebhooks(callbackUrl: string): Promise<void> {
-    const topics = [
-      'order.created',
-      'order.updated',
-      'order.deleted',
-    ];
+    const topics = ['order.created', 'order.updated', 'order.deleted'];
 
     for (const topic of topics) {
       try {
@@ -189,7 +193,7 @@ export class WooCommerceAdapter extends EcommerceAdapter {
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      'Authorization': `Basic ${authString}`,
+      Authorization: `Basic ${authString}`,
       ...options.headers,
     };
 
@@ -225,7 +229,10 @@ export class WooCommerceAdapter extends EcommerceAdapter {
         quantity: item.quantity,
         price: parseFloat(item.price),
       })),
-      subtotal: parseFloat(order.total || '0') - parseFloat(order.total_tax || '0') - parseFloat(order.shipping_total || '0'),
+      subtotal:
+        parseFloat(order.total || '0') -
+        parseFloat(order.total_tax || '0') -
+        parseFloat(order.shipping_total || '0'),
       shipping_cost: parseFloat(order.shipping_total || '0'),
       tax: parseFloat(order.total_tax || '0'),
       total: parseFloat(order.total || '0'),

@@ -1,5 +1,9 @@
 ﻿import { describe, it, expect } from 'vitest';
-import { translateError, translateSpecificError, type AgentError } from '@/lib/agent/error-translator';
+import {
+  translateError,
+  translateSpecificError,
+  type AgentError,
+} from '@/lib/agent/error-translator';
 import { AgentState } from '@/lib/agent/orchestrator/state';
 import { HumanMessage } from '@langchain/core/messages';
 

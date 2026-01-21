@@ -1,6 +1,6 @@
 /**
  * Admin Dashboard - Gestione Configurazioni Corrieri
- * 
+ *
  * Interfaccia CRUD completa per gestire configurazioni API corrieri.
  * Solo gli admin possono accedere a questa pagina.
  */
@@ -41,7 +41,11 @@ import { toggleAutomation } from '@/actions/automation';
 
 // Provider disponibili
 const AVAILABLE_PROVIDERS = [
-  { id: 'spedisci_online', name: 'Spedisci.Online', baseUrl: 'https://ecommerceitalia.spedisci.online/api/v2' },
+  {
+    id: 'spedisci_online',
+    name: 'Spedisci.Online',
+    baseUrl: 'https://ecommerceitalia.spedisci.online/api/v2',
+  },
   { id: 'gls', name: 'GLS', baseUrl: 'https://api.gls.it' },
   { id: 'brt', name: 'BRT', baseUrl: 'https://api.brt.it' },
   { id: 'poste', name: 'Poste Italiane', baseUrl: 'https://api.poste.it' },
@@ -54,7 +58,7 @@ export default function ConfigurationsPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [configs, setConfigs] = useState<CourierConfig[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Stati per modale creazione/modifica
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -164,7 +168,7 @@ export default function ConfigurationsPage() {
       description: config.description || '',
       notes: config.notes || '',
     });
-    
+
     // Converti contract_mapping in array per il form
     const entries = Object.entries(config.contract_mapping || {}).map(([key, value]) => ({
       key,
@@ -189,7 +193,7 @@ export default function ConfigurationsPage() {
         body: JSON.stringify({ config_id: configId }),
       });
       const result = await response.json();
-      
+
       if (result.success) {
         alert('✅ Credenziali valide');
         await loadConfigurations(); // Refresh per aggiornare status
@@ -207,7 +211,7 @@ export default function ConfigurationsPage() {
   async function handleToggleAutoSync(configId: string, currentStatus: boolean) {
     try {
       const result = await toggleAutomation(configId, !currentStatus);
-      
+
       if (result.success) {
         await loadConfigurations(); // Refresh per aggiornare stato
       } else {
@@ -244,7 +248,11 @@ export default function ConfigurationsPage() {
       if (result.success) {
         setShowConfigModal(false);
         await loadConfigurations();
-        alert(selectedConfig ? 'Configurazione aggiornata con successo' : 'Configurazione creata con successo');
+        alert(
+          selectedConfig
+            ? 'Configurazione aggiornata con successo'
+            : 'Configurazione creata con successo'
+        );
       } else {
         alert(`Errore: ${result.error || 'Errore sconosciuto'}`);
       }
@@ -259,7 +267,7 @@ export default function ConfigurationsPage() {
   // Verifica se configurazione è importante (richiede conferma speciale)
   function isImportantConfig(config: CourierConfig): { isImportant: boolean; reasons: string[] } {
     const reasons: string[] = [];
-    
+
     if (config.is_default) {
       reasons.push('Configurazione DEFAULT');
     }
@@ -267,8 +275,8 @@ export default function ConfigurationsPage() {
       reasons.push('Configurazione ATTIVA');
     }
     // Verifica se ha automation abilitata
-    const hasAutomation = (config as any).automation_enabled || 
-                          (config as any).automation_settings?.enabled;
+    const hasAutomation =
+      (config as any).automation_enabled || (config as any).automation_settings?.enabled;
     if (hasAutomation) {
       reasons.push('Automation ABILITATA');
     }
@@ -276,7 +284,7 @@ export default function ConfigurationsPage() {
     if ((config as any).session_data) {
       reasons.push('Ha SESSION DATA salvata');
     }
-    
+
     return {
       isImportant: reasons.length > 0,
       reasons,
@@ -322,7 +330,7 @@ export default function ConfigurationsPage() {
     try {
       let deleted = 0;
       let errors = 0;
-      
+
       for (const config of configs) {
         const result = await deleteConfiguration(config.id);
         if (result.success) {
@@ -336,7 +344,7 @@ export default function ConfigurationsPage() {
       setShowDeleteAllModal(false);
       setDeleteAllConfirm('');
       await loadConfigurations();
-      
+
       alert(`Eliminazione completata: ${deleted} eliminate, ${errors} errori`);
     } catch (error: any) {
       console.error('Errore eliminazione multipla:', error);
@@ -395,7 +403,9 @@ export default function ConfigurationsPage() {
           <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Accesso Negato</h2>
-            <p className="text-gray-600">{error || 'Solo gli admin possono accedere a questa pagina'}</p>
+            <p className="text-gray-600">
+              {error || 'Solo gli admin possono accedere a questa pagina'}
+            </p>
           </div>
         </div>
       </>
@@ -445,8 +455,8 @@ export default function ConfigurationsPage() {
                   Sistema Multi-Tenant API Corrieri
                 </h3>
                 <p className="text-sm text-blue-800 leading-relaxed">
-                  Gestisci configurazioni API corrieri in modo dinamico. Ogni configurazione può essere 
-                  assegnata a utenti specifici o impostata come default per un provider. 
+                  Gestisci configurazioni API corrieri in modo dinamico. Ogni configurazione può
+                  essere assegnata a utenti specifici o impostata come default per un provider.
                   Questo sistema sostituisce le variabili d&apos;ambiente statiche.
                 </p>
               </div>
@@ -503,36 +513,49 @@ export default function ConfigurationsPage() {
                         )}
                         {/* ✨ NUOVO: Badge Auto-Sync */}
                         {(config as any).automation_enabled !== undefined && (
-                          <span className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 ${
-                            (config as any).automation_enabled
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {(config as any).automation_enabled ? '🔄 Auto-Sync ON' : '⏸️ Auto-Sync OFF'}
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 ${
+                              (config as any).automation_enabled
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {(config as any).automation_enabled
+                              ? '🔄 Auto-Sync ON'
+                              : '⏸️ Auto-Sync OFF'}
                           </span>
                         )}
                         {/* Integration Hub: Status Badge */}
                         {(config as any).status && (config as any).status !== 'active' && (
-                          <span className={`px-2 py-1 text-xs font-medium rounded ${
-                            (config as any).status === 'error' ? 'bg-red-100 text-red-800' :
-                            (config as any).status === 'testing' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {(config as any).status === 'error' ? '⚠️ Errore' :
-                             (config as any).status === 'testing' ? '🧪 Test' :
-                             '⏸️ Inattiva'}
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded ${
+                              (config as any).status === 'error'
+                                ? 'bg-red-100 text-red-800'
+                                : (config as any).status === 'testing'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {(config as any).status === 'error'
+                              ? '⚠️ Errore'
+                              : (config as any).status === 'testing'
+                                ? '🧪 Test'
+                                : '⏸️ Inattiva'}
                           </span>
                         )}
                         {/* Integration Hub: Account Type Badge */}
-                        {(config as any).account_type && (config as any).account_type !== 'admin' && (
-                          <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
-                            {(config as any).account_type === 'byoc' ? '🔑 BYOC' : '🏢 Reseller'}
-                          </span>
-                        )}
+                        {(config as any).account_type &&
+                          (config as any).account_type !== 'admin' && (
+                            <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                              {(config as any).account_type === 'byoc' ? '🔑 BYOC' : '🏢 Reseller'}
+                            </span>
+                          )}
                       </div>
                       <div className="space-y-1 text-sm text-gray-600">
                         <p>
-                          <strong>Provider:</strong> {AVAILABLE_PROVIDERS.find((p) => p.id === config.provider_id)?.name || config.provider_id}
+                          <strong>Provider:</strong>{' '}
+                          {AVAILABLE_PROVIDERS.find((p) => p.id === config.provider_id)?.name ||
+                            config.provider_id}
                         </p>
                         <p>
                           <strong>Base URL:</strong> {config.base_url}
@@ -543,10 +566,16 @@ export default function ConfigurationsPage() {
                             {showApiKey[config.id] ? config.api_key : '•'.repeat(20)}
                           </span>
                           <button
-                            onClick={() => setShowApiKey({ ...showApiKey, [config.id]: !showApiKey[config.id] })}
+                            onClick={() =>
+                              setShowApiKey({ ...showApiKey, [config.id]: !showApiKey[config.id] })
+                            }
                             className="ml-2 text-blue-600 hover:text-blue-700"
                           >
-                            {showApiKey[config.id] ? <EyeOff className="w-4 h-4 inline" /> : <Eye className="w-4 h-4 inline" />}
+                            {showApiKey[config.id] ? (
+                              <EyeOff className="w-4 h-4 inline" />
+                            ) : (
+                              <Eye className="w-4 h-4 inline" />
+                            )}
                           </button>
                         </p>
                         {config.description && (
@@ -572,13 +601,19 @@ export default function ConfigurationsPage() {
                       {/* ✨ NUOVO: Toggle Auto-Sync */}
                       {(config as any).automation_enabled !== undefined && (
                         <button
-                          onClick={() => handleToggleAutoSync(config.id, (config as any).automation_enabled)}
+                          onClick={() =>
+                            handleToggleAutoSync(config.id, (config as any).automation_enabled)
+                          }
                           className={`px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1 ${
                             (config as any).automation_enabled
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
-                          title={(config as any).automation_enabled ? 'Disattiva Auto-Sync' : 'Attiva Auto-Sync'}
+                          title={
+                            (config as any).automation_enabled
+                              ? 'Disattiva Auto-Sync'
+                              : 'Attiva Auto-Sync'
+                          }
                         >
                           {(config as any).automation_enabled ? '🔄 ON' : '⏸️ OFF'}
                         </button>
@@ -647,9 +682,7 @@ export default function ConfigurationsPage() {
 
               {/* Provider */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Provider *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
                 <select
                   value={formData.provider_id}
                   onChange={(e) => handleProviderChange(e.target.value)}
@@ -665,9 +698,7 @@ export default function ConfigurationsPage() {
 
               {/* API Key */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API Key *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">API Key *</label>
                 <input
                   type="text"
                   value={formData.api_key}
@@ -693,9 +724,7 @@ export default function ConfigurationsPage() {
 
               {/* Base URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Base URL *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Base URL *</label>
                 <input
                   type="text"
                   value={formData.base_url}
@@ -817,79 +846,83 @@ export default function ConfigurationsPage() {
       )}
 
       {/* Modale Eliminazione */}
-      {showDeleteModal && selectedConfig && (() => {
-        const important = isImportantConfig(selectedConfig);
-        return (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">Elimina Configurazione</h2>
-              </div>
-              <div className="px-6 py-4">
-                <p className="text-gray-700 mb-4">
-                  Sei sicuro di voler eliminare la configurazione <strong>{selectedConfig.name}</strong>?
-                </p>
-                
-                {important.isImportant && (
-                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-semibold text-red-900 mb-2">
-                          ⚠️ CONFIGURAZIONE IMPORTANTE
-                        </p>
-                        <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
-                          {important.reasons.map((reason, idx) => (
-                            <li key={idx}>{reason}</li>
-                          ))}
-                        </ul>
-                        <p className="text-xs text-red-700 mt-2 font-semibold">
-                          Questa configurazione è critica per il sistema!
-                        </p>
+      {showDeleteModal &&
+        selectedConfig &&
+        (() => {
+          const important = isImportantConfig(selectedConfig);
+          return (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-bold text-gray-900">Elimina Configurazione</h2>
+                </div>
+                <div className="px-6 py-4">
+                  <p className="text-gray-700 mb-4">
+                    Sei sicuro di voler eliminare la configurazione{' '}
+                    <strong>{selectedConfig.name}</strong>?
+                  </p>
+
+                  {important.isImportant && (
+                    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-semibold text-red-900 mb-2">
+                            ⚠️ CONFIGURAZIONE IMPORTANTE
+                          </p>
+                          <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
+                            {important.reasons.map((reason, idx) => (
+                              <li key={idx}>{reason}</li>
+                            ))}
+                          </ul>
+                          <p className="text-xs text-red-700 mt-2 font-semibold">
+                            Questa configurazione è critica per il sistema!
+                          </p>
+                        </div>
                       </div>
                     </div>
+                  )}
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-amber-800">
+                      ⚠️ Questa azione è irreversibile. Verifica che la configurazione non sia
+                      assegnata ad alcun utente.
+                    </p>
                   </div>
-                )}
-                
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-amber-800">
-                    ⚠️ Questa azione è irreversibile. Verifica che la configurazione non sia assegnata ad alcun utente.
-                  </p>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2.5 text-gray-900 font-medium bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                      important.isImportant
+                        ? 'bg-red-700 text-white hover:bg-red-800'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                    }`}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Eliminazione...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        {important.isImportant ? 'Elimina (Conferma Speciale)' : 'Elimina'}
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2.5 text-gray-900 font-medium bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-                    important.isImportant
-                      ? 'bg-red-700 text-white hover:bg-red-800'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Eliminazione...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4" />
-                      {important.isImportant ? 'Elimina (Conferma Speciale)' : 'Elimina'}
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Modale Elimina Tutte */}
       {showDeleteAllModal && (
@@ -901,7 +934,8 @@ export default function ConfigurationsPage() {
             <div className="px-6 py-4">
               <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
                 <p className="font-semibold text-red-900 mb-2">
-                  ⚠️ ATTENZIONE: Questa azione eliminerà <strong>{configs.length}</strong> configurazioni!
+                  ⚠️ ATTENZIONE: Questa azione eliminerà <strong>{configs.length}</strong>{' '}
+                  configurazioni!
                 </p>
                 <p className="text-sm text-red-800 mb-2">
                   Questa operazione è <strong>IRREVERSIBILE</strong> e potrebbe:
@@ -913,10 +947,11 @@ export default function ConfigurationsPage() {
                   <li>Bloccare l&apos;accesso ai corrieri</li>
                 </ul>
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Digita <strong className="text-red-600">&quot;ELIMINA TUTTE&quot;</strong> per confermare:
+                  Digita <strong className="text-red-600">&quot;ELIMINA TUTTE&quot;</strong> per
+                  confermare:
                 </label>
                 <input
                   type="text"
@@ -961,4 +996,3 @@ export default function ConfigurationsPage() {
     </>
   );
 }
-

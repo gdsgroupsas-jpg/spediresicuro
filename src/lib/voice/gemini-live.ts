@@ -66,8 +66,8 @@ export class GeminiLiveClient {
   }
 
   /**
-  * Start microphone capture and open Gemini Live transport.
-  */
+   * Start microphone capture and open Gemini Live transport.
+   */
   async connect() {
     if (typeof window === 'undefined') {
       throw new Error('Gemini Live client must be used in the browser');
@@ -158,7 +158,7 @@ export class GeminiLiveClient {
     // Local references for TypeScript type narrowing
     const mediaStream = this.mediaStream;
     const audioContext = this.audioContext;
-    
+
     const source = audioContext.createMediaStreamSource(mediaStream);
     const gain = audioContext.createGain();
     // Avoid feedback loop: mute the monitoring chain
@@ -272,7 +272,9 @@ export class GeminiLiveClient {
       }
     } catch (error: any) {
       this.callbacks.onError?.(
-        error instanceof Error ? error : new Error(error?.message || 'Gemini message handling error')
+        error instanceof Error
+          ? error
+          : new Error(error?.message || 'Gemini message handling error')
       );
     }
   }

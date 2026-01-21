@@ -83,7 +83,7 @@ export default function () {
     tags: { endpoint: 'pricing_quote' },
   };
 
-  const response = http.post(`${BASE_URL}/api/pricing/quote`, payload, params);
+  const response = http.post(`${BASE_URL}/api/quotes/realtime`, payload, params);
 
   // Check response
   const success = check(response, {

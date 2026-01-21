@@ -54,11 +54,8 @@
 #### `/api/test/auth-bypass`
 
 ```typescript
-if (process.env.NODE_ENV === "production") {
-  return NextResponse.json(
-    { error: "Not available in production" },
-    { status: 403 }
-  );
+if (process.env.NODE_ENV === 'production') {
+  return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
 }
 ```
 
@@ -98,8 +95,8 @@ if (process.env.NODE_ENV === "production") {
 
 ```typescript
 if (
-  (testHeader === "playwright" || isPlaywrightMode) &&
-  process.env.NODE_ENV !== "production" // ← Blocca produzione
+  (testHeader === 'playwright' || isPlaywrightMode) &&
+  process.env.NODE_ENV !== 'production' // ← Blocca produzione
 ) {
   // Bypass attivo
 }

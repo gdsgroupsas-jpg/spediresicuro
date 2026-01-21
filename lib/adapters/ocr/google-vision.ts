@@ -18,10 +18,15 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
     if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
       let credentials;
       try {
-        if (process.env.GOOGLE_CLOUD_CREDENTIALS && process.env.GOOGLE_CLOUD_CREDENTIALS.startsWith('{')) {
+        if (
+          process.env.GOOGLE_CLOUD_CREDENTIALS &&
+          process.env.GOOGLE_CLOUD_CREDENTIALS.startsWith('{')
+        ) {
           credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
         }
-      } catch(e) { /* ignore */ }
+      } catch (e) {
+        /* ignore */
+      }
 
       this.client = new ImageAnnotatorClient(credentials ? { credentials } : {});
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -43,9 +48,8 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
 
     try {
       // Converti in Buffer se string
-      const imageBuffer = typeof imageData === 'string' 
-        ? Buffer.from(imageData, 'base64') 
-        : imageData;
+      const imageBuffer =
+        typeof imageData === 'string' ? Buffer.from(imageData, 'base64') : imageData;
 
       // Esegui OCR con Google Vision
       const [result] = await this.client.textDetection({
@@ -56,13 +60,13 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
       });
 
       const detections = result.textAnnotations || [];
-      
+
       if (detections.length === 0) {
         return {
           success: false,
           confidence: 0,
           extractedData: {},
-          error: 'Nessun testo rilevato nell\'immagine',
+          error: "Nessun testo rilevato nell'immagine",
         };
       }
 
@@ -97,7 +101,10 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
    * Parse indirizzo italiano da testo OCR
    */
   private parseItalianAddress(text: string): Record<string, string> {
-    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     const result: Record<string, string> = {
       recipient_name: '',
@@ -152,7 +159,10 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
       }
 
       // Indirizzo (cerca via, corso, piazza, ecc.)
-      if (!result.recipient_address && /^(via|corso|piazza|viale|largo|strada|vicolo)/i.test(line)) {
+      if (
+        !result.recipient_address &&
+        /^(via|corso|piazza|viale|largo|strada|vicolo)/i.test(line)
+      ) {
         result.recipient_address = line;
       }
     }
@@ -176,8 +186,13 @@ export class GoogleVisionOCRAdapter extends OCRAdapter {
    * Calcola confidence score
    */
   private calculateConfidence(data: Record<string, string>): number {
-    const requiredFields = ['recipient_name', 'recipient_address', 'recipient_city', 'recipient_zip'];
-    
+    const requiredFields = [
+      'recipient_name',
+      'recipient_address',
+      'recipient_city',
+      'recipient_zip',
+    ];
+
     let score = 0;
     let maxScore = 0;
 

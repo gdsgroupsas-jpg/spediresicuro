@@ -1,34 +1,34 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import { cn } from '@/lib/utils'
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 interface TabsContextValue {
-  value: string
-  onValueChange: (value: string) => void
+  value: string;
+  onValueChange: (value: string) => void;
 }
 
-const TabsContext = React.createContext<TabsContextValue | null>(null)
+const TabsContext = React.createContext<TabsContextValue | null>(null);
 
 const useTabs = () => {
-  const context = React.useContext(TabsContext)
+  const context = React.useContext(TabsContext);
   if (!context) {
-    throw new Error('useTabs must be used within a Tabs')
+    throw new Error('useTabs must be used within a Tabs');
   }
-  return context
-}
+  return context;
+};
 
 interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
-  defaultValue?: string
-  value?: string
-  onValueChange?: (value: string) => void
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
 const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
   ({ className, defaultValue, value: controlledValue, onValueChange, children, ...props }, ref) => {
-    const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue || '')
-    const value = controlledValue ?? uncontrolledValue
-    const handleValueChange = onValueChange ?? setUncontrolledValue
+    const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue || '');
+    const value = controlledValue ?? uncontrolledValue;
+    const handleValueChange = onValueChange ?? setUncontrolledValue;
 
     return (
       <TabsContext.Provider value={{ value, onValueChange: handleValueChange }}>
@@ -36,10 +36,10 @@ const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
           {children}
         </div>
       </TabsContext.Provider>
-    )
+    );
   }
-)
-Tabs.displayName = 'Tabs'
+);
+Tabs.displayName = 'Tabs';
 
 const TabsList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -53,17 +53,17 @@ const TabsList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
       {...props}
     />
   )
-)
-TabsList.displayName = 'TabsList'
+);
+TabsList.displayName = 'TabsList';
 
 interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  value: string
+  value: string;
 }
 
 const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
   ({ className, value, children, ...props }, ref) => {
-    const { value: currentValue, onValueChange } = useTabs()
-    const isSelected = currentValue === value
+    const { value: currentValue, onValueChange } = useTabs();
+    const isSelected = currentValue === value;
 
     return (
       <button
@@ -76,29 +76,27 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
           'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-white transition-all',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2',
           'disabled:pointer-events-none disabled:opacity-50',
-          isSelected
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-900',
+          isSelected ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900',
           className
         )}
         {...props}
       >
         {children}
       </button>
-    )
+    );
   }
-)
-TabsTrigger.displayName = 'TabsTrigger'
+);
+TabsTrigger.displayName = 'TabsTrigger';
 
 interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: string
+  value: string;
 }
 
 const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
   ({ className, value, children, ...props }, ref) => {
-    const { value: currentValue } = useTabs()
+    const { value: currentValue } = useTabs();
 
-    if (currentValue !== value) return null
+    if (currentValue !== value) return null;
 
     return (
       <div
@@ -109,9 +107,9 @@ const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
       >
         {children}
       </div>
-    )
+    );
   }
-)
-TabsContent.displayName = 'TabsContent'
+);
+TabsContent.displayName = 'TabsContent';
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent };

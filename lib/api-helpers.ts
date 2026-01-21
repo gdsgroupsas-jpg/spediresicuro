@@ -1,6 +1,6 @@
 /**
  * API Helpers
- * 
+ *
  * Utility per estrarre requestId e userId dalle richieste API
  * e creare logger strutturato
  */
@@ -11,7 +11,7 @@ import { createLogger, generateRequestId } from './logger';
 
 /**
  * Estrae requestId da header o genera nuovo
- * 
+ *
  * @param request - NextRequest
  * @returns RequestId
  */
@@ -21,7 +21,7 @@ export function getRequestId(request: NextRequest): string {
 
 /**
  * Estrae userId da sessione
- * 
+ *
  * @returns userId o undefined
  */
 export async function getUserId(): Promise<string | undefined> {
@@ -35,16 +35,13 @@ export async function getUserId(): Promise<string | undefined> {
 
 /**
  * Crea logger strutturato per API route
- * 
+ *
  * @param request - NextRequest
  * @param userId - ID utente (opzionale, se già disponibile)
  * @returns Logger con requestId e userId
  */
-export async function createApiLogger(
-  request: NextRequest,
-  userId?: string
-) {
+export async function createApiLogger(request: NextRequest, userId?: string) {
   const requestId = getRequestId(request);
-  const finalUserId = userId || await getUserId();
+  const finalUserId = userId || (await getUserId());
   return createLogger(requestId, finalUserId);
 }

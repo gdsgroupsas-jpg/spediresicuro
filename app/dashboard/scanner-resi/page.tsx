@@ -1,6 +1,6 @@
 /**
  * Pagina: Scanner Resi
- * 
+ *
  * Pagina dedicata per la scansione LDV dei resi
  */
 
@@ -42,10 +42,7 @@ export default function ScannerResiPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNav
-        title="Scanner Resi"
-        subtitle="Scansiona il codice LDV del reso"
-      />
+      <DashboardNav title="Scanner Resi" subtitle="Scansiona il codice LDV del reso" />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!showScanner ? (
@@ -61,10 +58,7 @@ export default function ScannerResiPage() {
             </button>
           </div>
         ) : (
-          <ReturnScanner
-            onClose={handleClose}
-            onSuccess={handleSuccess}
-          />
+          <ReturnScanner onClose={handleClose} onSuccess={handleSuccess} />
         )}
       </div>
     </div>

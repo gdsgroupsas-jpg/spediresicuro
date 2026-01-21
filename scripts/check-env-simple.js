@@ -30,14 +30,14 @@ const lines = envContent.split('\n');
 
 // Variabili da verificare
 const variabili = {
-  'NEXT_PUBLIC_SUPABASE_URL': 'Supabase URL (per autocomplete città)',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY': 'Supabase Anon Key (per autocomplete città)',
-  'SUPABASE_SERVICE_ROLE_KEY': 'Supabase Service Role Key (opzionale)',
-  'NEXTAUTH_URL': 'NextAuth URL (per autenticazione)',
-  'NEXTAUTH_SECRET': 'NextAuth Secret (per autenticazione)',
-  'GOOGLE_CLIENT_ID': 'Google Client ID (per login Google)',
-  'GOOGLE_CLIENT_SECRET': 'Google Client Secret (per login Google)',
-  'NEXT_PUBLIC_APP_URL': 'App URL',
+  NEXT_PUBLIC_SUPABASE_URL: 'Supabase URL (per autocomplete città)',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: 'Supabase Anon Key (per autocomplete città)',
+  SUPABASE_SERVICE_ROLE_KEY: 'Supabase Service Role Key (opzionale)',
+  NEXTAUTH_URL: 'NextAuth URL (per autenticazione)',
+  NEXTAUTH_SECRET: 'NextAuth Secret (per autenticazione)',
+  GOOGLE_CLIENT_ID: 'Google Client ID (per login Google)',
+  GOOGLE_CLIENT_SECRET: 'Google Client Secret (per login Google)',
+  NEXT_PUBLIC_APP_URL: 'App URL',
 };
 
 console.log('📋 Verifica Variabili:\n');
@@ -52,7 +52,7 @@ const configurate = [];
 for (const [varName, descrizione] of Object.entries(variabili)) {
   const regex = new RegExp(`^${varName}=(.+)$`, 'm');
   const match = envContent.match(regex);
-  
+
   if (!match) {
     // Variabile non trovata
     if (varName.includes('SERVICE_ROLE')) {
@@ -65,14 +65,16 @@ for (const [varName, descrizione] of Object.entries(variabili)) {
     }
   } else {
     const valore = match[1].trim();
-    
+
     // Verifica se è un placeholder
-    if (valore === '' || 
-        valore.includes('your-') || 
-        valore.includes('xxxxx') || 
-        valore.includes('placeholder') ||
-        valore.includes('TODO') ||
-        valore === 'your-secret-key-here-change-in-production') {
+    if (
+      valore === '' ||
+      valore.includes('your-') ||
+      valore.includes('xxxxx') ||
+      valore.includes('placeholder') ||
+      valore.includes('TODO') ||
+      valore === 'your-secret-key-here-change-in-production'
+    ) {
       console.log(`⚠️  ${varName}: Valore placeholder (non valido)`);
       placeholder.push(varName);
       if (!varName.includes('SERVICE_ROLE')) {
@@ -82,9 +84,10 @@ for (const [varName, descrizione] of Object.entries(variabili)) {
       }
     } else {
       // Valore valido
-      const masked = valore.length > 20 
-        ? `${valore.substring(0, 8)}...${valore.substring(valore.length - 8)}`
-        : '*'.repeat(Math.min(valore.length, 12));
+      const masked =
+        valore.length > 20
+          ? `${valore.substring(0, 8)}...${valore.substring(valore.length - 8)}`
+          : '*'.repeat(Math.min(valore.length, 12));
       console.log(`✅ ${varName}: Configurato (${valore.length} caratteri)`);
       configurate.push(varName);
       ok++;
@@ -104,30 +107,30 @@ if (errori === 0 && warning === 0) {
 } else {
   if (errori > 0) {
     console.log(`❌ ${errori} variabile/i OBBLIGATORIA/E mancante/i o non valida/e\n`);
-    
+
     if (mancanti.length > 0) {
       console.log('Variabili MANCANTI:');
-      mancanti.forEach(v => console.log(`   - ${v}`));
+      mancanti.forEach((v) => console.log(`   - ${v}`));
       console.log('');
     }
-    
+
     if (placeholder.length > 0) {
       console.log('Variabili con PLACEHOLDER (da sostituire):');
-      placeholder.forEach(v => console.log(`   - ${v}`));
+      placeholder.forEach((v) => console.log(`   - ${v}`));
       console.log('');
     }
   }
-  
+
   if (warning > 0) {
     console.log(`⚠️  ${warning} variabile/i opzionale/i non configurate\n`);
   }
-  
+
   console.log('💡 PROSSIMI PASSI:');
   console.log('   1. Apri .env.local');
   console.log('   2. Sostituisci i valori placeholder con valori reali');
   console.log('   3. Aggiungi le variabili mancanti');
   console.log('   4. Riavvia il server: npm run dev\n');
-  
+
   console.log('📚 Guide disponibili:');
   console.log('   - GUIDA_RAPIDA_FIX_LOCALE.md');
   console.log('   - FIX_CONFIGURAZIONE_LOCALE.md\n');
@@ -137,4 +140,3 @@ console.log('='.repeat(50));
 console.log('\n✅ Verifica completata\n');
 
 process.exit(errori > 0 ? 1 : 0);
-

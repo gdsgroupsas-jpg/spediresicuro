@@ -1,8 +1,8 @@
 /**
  * API Route: Export CSV per Spedisci.online
- * 
+ *
  * Endpoint: GET /api/export/spediscionline
- * 
+ *
  * Genera un file CSV nel formato esatto richiesto da spedisci.online:
  * - Separatore: punto e virgola (;)
  * - Decimali: punto (.)
@@ -12,9 +12,9 @@
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { getSpedizioni } from '@/lib/database';
-import { createAuthContextFromSession } from '@/lib/auth-context';
+import type { AuthContext } from '@/lib/auth-context';
 
 // Disabilita cache statica per garantire dati sempre aggiornati
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,10 @@ async function getSupabaseUserIdFromEmail(email: string): Promise<string | null>
       return profile.supabase_user_id;
     }
 
-    const { data: { users }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    const {
+      data: { users },
+      error: authError,
+    } = await supabaseAdmin.auth.admin.listUsers();
     if (!authError && users) {
       const supabaseUser = users.find((u: any) => u.email === email);
       if (supabaseUser) {
@@ -71,32 +74,36 @@ function formatNumber(value: number | null | undefined): string {
 export async function GET() {
   try {
     // Autenticazione: solo utenti autenticati possono esportare
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     let spedizioni: any[] = [];
+
+    // Converti ActingContext in AuthContext
+    const authContext: AuthContext = {
+      type: 'user',
+      userId: context.target.id,
+      userEmail: context.target.email || undefined,
+      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+    };
 
     // ⚠️ IMPORTANTE: Se Supabase non è configurato, usa JSON locale
     if (!isSupabaseConfigured()) {
       console.log('📁 [JSON] Supabase non configurato, uso database JSON locale per export');
       // Usa getSpedizioni che gestisce automaticamente il fallback
-      const authContext = await createAuthContextFromSession(session);
       const tutteSpedizioni = await getSpedizioni(authContext);
       // Filtra solo quelle con status 'pending' o 'in_preparazione'
-      spedizioni = tutteSpedizioni.filter((s: any) => 
-        (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
+      spedizioni = tutteSpedizioni.filter(
+        (s: any) => (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
       );
       console.log(`📁 [JSON] Esportate ${spedizioni.length} spedizioni dal database JSON`);
     } else {
       console.log('🔄 [SUPABASE] Tentativo export da Supabase...');
       // Usa Supabase se configurato
-      const userId = await getSupabaseUserIdFromEmail(session.user.email);
-      
+      const userId = await getSupabaseUserIdFromEmail(context.actor.email);
+
       // 1. Preleva SOLO le spedizioni non ancora esportate (status = 'pending')
       // ⚠️ IMPORTANTE: Filtra per user_id per multi-tenancy
       let query = supabaseAdmin
@@ -111,7 +118,9 @@ export async function GET() {
       } else {
         // Se non trovato user_id, usa fallback: filtra per email nel campo notes
         // (per compatibilità con vecchi dati senza user_id)
-        console.warn(`⚠️ Nessun user_id trovato per ${session.user.email}, esporto tutte le spedizioni pending`);
+        console.warn(
+          `⚠️ Nessun user_id trovato per ${context.actor.email}, esporto tutte le spedizioni pending`
+        );
       }
 
       const { data, error } = await query;
@@ -120,10 +129,9 @@ export async function GET() {
         console.error('❌ [SUPABASE] Errore query:', error.message);
         console.log('📁 [FALLBACK] Uso database JSON locale');
         // Fallback a JSON se errore Supabase
-        const authContext = await createAuthContextFromSession(session);
         const tutteSpedizioni = await getSpedizioni(authContext);
-        spedizioni = tutteSpedizioni.filter((s: any) => 
-          (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
+        spedizioni = tutteSpedizioni.filter(
+          (s: any) => (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
         );
         console.log(`📁 [JSON] Esportate ${spedizioni.length} spedizioni dal database JSON`);
       } else {
@@ -133,10 +141,7 @@ export async function GET() {
     }
 
     if (!spedizioni || spedizioni.length === 0) {
-      return NextResponse.json(
-        { message: 'Nessuna spedizione da esportare' },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: 'Nessuna spedizione da esportare' }, { status: 404 });
     }
 
     // 2. Definizione Header CSV (Formato Spedisci.online)
@@ -151,7 +156,7 @@ export async function GET() {
       'email',
       'peso',
       'colli',
-      'contrassegno'
+      'contrassegno',
     ].join(';');
 
     // 3. Mapping dei dati al formato CSV spedisci.online
@@ -164,9 +169,7 @@ export async function GET() {
       const indirizzo = cleanString(
         s.recipient_address || s.destinatario?.indirizzo || s.destinatarioIndirizzo || ''
       );
-      const cap = cleanString(
-        s.recipient_zip || s.destinatario?.cap || s.destinatarioCap || ''
-      );
+      const cap = cleanString(s.recipient_zip || s.destinatario?.cap || s.destinatarioCap || '');
       const citta = cleanString(
         s.recipient_city || s.destinatario?.citta || s.destinatarioCitta || ''
       );
@@ -179,16 +182,19 @@ export async function GET() {
       const email = cleanString(
         s.recipient_email || s.destinatario?.email || s.destinatarioEmail || ''
       );
-      
+
       // Dati pacco
       const peso = formatNumber(s.weight || s.peso || 0);
       // ⚠️ NUOVO: packages_count (colli) - gestisce entrambi i formati
       const colli = s.packages_count || s.colli || 1;
-      
+
       // Contrassegno: gestisce entrambi i formati
-      const contrassegno = (s.cash_on_delivery && s.cash_on_delivery_amount)
-        ? formatNumber(s.cash_on_delivery_amount)
-        : (s.contrassegno ? formatNumber(s.contrassegno) : '0');
+      const contrassegno =
+        s.cash_on_delivery && s.cash_on_delivery_amount
+          ? formatNumber(s.cash_on_delivery_amount)
+          : s.contrassegno
+            ? formatNumber(s.contrassegno)
+            : '0';
 
       // Costruisci riga CSV
       return [
@@ -201,7 +207,7 @@ export async function GET() {
         email,
         peso,
         colli,
-        contrassegno
+        contrassegno,
       ].join(';');
     });
 
@@ -230,12 +236,11 @@ export async function GET() {
   } catch (error: any) {
     console.error('❌ Errore Export CSV:', error);
     return NextResponse.json(
-      { 
-        error: 'Errore durante l\'export',
-        message: error.message || 'Errore sconosciuto'
+      {
+        error: "Errore durante l'export",
+        message: error.message || 'Errore sconosciuto',
       },
       { status: 500 }
     );
   }
 }
-

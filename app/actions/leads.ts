@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
  */
 export async function getLeads(limit = 100) {
   const supabase = createServerActionClient();
-  
+
   const { data, error } = await supabase
     .from('leads')
     .select('*, assignee:users!leads_assigned_to_fkey(name, email)')
@@ -25,12 +25,8 @@ export async function getLeads(limit = 100) {
  */
 export async function getLeadById(id: string) {
   const supabase = createServerActionClient();
-  
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', id)
-    .single();
+
+  const { data, error } = await supabase.from('leads').select('*').eq('id', id).single();
 
   if (error) throw new Error(error.message);
   return data as Lead;
@@ -41,15 +37,11 @@ export async function getLeadById(id: string) {
  */
 export async function createLead(data: CreateLeadDTO) {
   const supabase = createServerActionClient();
-  
-  const { data: lead, error } = await supabase
-    .from('leads')
-    .insert(data)
-    .select()
-    .single();
+
+  const { data: lead, error } = await supabase.from('leads').insert(data).select().single();
 
   if (error) throw new Error(error.message);
-  
+
   revalidatePath('/dashboard/admin/leads');
   return lead as Lead;
 }
@@ -59,7 +51,7 @@ export async function createLead(data: CreateLeadDTO) {
  */
 export async function updateLead(id: string, data: UpdateLeadDTO) {
   const supabase = createServerActionClient();
-  
+
   const { data: lead, error } = await supabase
     .from('leads')
     .update(data)
@@ -68,7 +60,7 @@ export async function updateLead(id: string, data: UpdateLeadDTO) {
     .single();
 
   if (error) throw new Error(error.message);
-  
+
   revalidatePath('/dashboard/admin/leads');
   return lead as Lead;
 }
@@ -78,11 +70,8 @@ export async function updateLead(id: string, data: UpdateLeadDTO) {
  */
 export async function deleteLead(id: string) {
   const supabase = createServerActionClient();
-  
-  const { error } = await supabase
-    .from('leads')
-    .delete()
-    .eq('id', id);
+
+  const { error } = await supabase.from('leads').delete().eq('id', id);
 
   if (error) throw new Error(error.message);
   revalidatePath('/dashboard/admin/leads');
@@ -92,7 +81,7 @@ export async function deleteLead(id: string) {
  * Assign lead to agent
  */
 export async function assignLead(id: string, agentId: string) {
-    return updateLead(id, { assigned_to: agentId });
+  return updateLead(id, { assigned_to: agentId });
 }
 
 /**
@@ -100,7 +89,7 @@ export async function assignLead(id: string, agentId: string) {
  * In futuro potrebbe creare record in users e invitare via email
  */
 export async function convertLeadToUser(id: string) {
-    // TODO: Implementare logica conversione reale
-    // Per ora settiamo stato a WON
-    return updateLead(id, { status: 'won' });
+  // TODO: Implementare logica conversione reale
+  // Per ora settiamo stato a WON
+  return updateLead(id, { status: 'won' });
 }

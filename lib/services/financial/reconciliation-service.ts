@@ -8,13 +8,9 @@
  * @since Sprint 3 - Refactoring
  */
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from '@supabase/supabase-js';
 
-export type ReconciliationStatus =
-  | "pending"
-  | "matched"
-  | "discrepancy"
-  | "resolved";
+export type ReconciliationStatus = 'pending' | 'matched' | 'discrepancy' | 'resolved';
 
 export interface ReconciliationItem {
   id: string;
@@ -58,27 +54,24 @@ export class ReconciliationService {
   async getStats(): Promise<ReconciliationStats> {
     const [pending, matched, discrepancy, resolved] = await Promise.all([
       this.supabase
-        .from("platform_provider_costs")
-        .select("billed_amount", { count: "exact" })
-        .eq("reconciliation_status", "pending"),
+        .from('platform_provider_costs')
+        .select('billed_amount', { count: 'exact' })
+        .eq('reconciliation_status', 'pending'),
       this.supabase
-        .from("platform_provider_costs")
-        .select("*", { count: "exact", head: true })
-        .eq("reconciliation_status", "matched"),
+        .from('platform_provider_costs')
+        .select('*', { count: 'exact', head: true })
+        .eq('reconciliation_status', 'matched'),
       this.supabase
-        .from("platform_provider_costs")
-        .select("billed_amount", { count: "exact" })
-        .eq("reconciliation_status", "discrepancy"),
+        .from('platform_provider_costs')
+        .select('billed_amount', { count: 'exact' })
+        .eq('reconciliation_status', 'discrepancy'),
       this.supabase
-        .from("platform_provider_costs")
-        .select("*", { count: "exact", head: true })
-        .eq("reconciliation_status", "resolved"),
+        .from('platform_provider_costs')
+        .select('*', { count: 'exact', head: true })
+        .eq('reconciliation_status', 'resolved'),
     ]);
 
-    const pendingValue = (pending.data || []).reduce(
-      (sum, r) => sum + (r.billed_amount || 0),
-      0
-    );
+    const pendingValue = (pending.data || []).reduce((sum, r) => sum + (r.billed_amount || 0), 0);
     const discrepancyValue = (discrepancy.data || []).reduce(
       (sum, r) => sum + (r.billed_amount || 0),
       0
@@ -102,20 +95,20 @@ export class ReconciliationService {
       page?: number;
       pageSize?: number;
       courierFilter?: string;
-      sortBy?: "created_at" | "billed_amount" | "margin";
-      sortOrder?: "asc" | "desc";
+      sortBy?: 'created_at' | 'billed_amount' | 'margin';
+      sortOrder?: 'asc' | 'desc';
     } = {}
   ): Promise<{ items: ReconciliationItem[]; total: number }> {
     const {
       page = 1,
       pageSize = 50,
       courierFilter,
-      sortBy = "created_at",
-      sortOrder = "asc",
+      sortBy = 'created_at',
+      sortOrder = 'asc',
     } = options;
 
     let query = this.supabase
-      .from("platform_provider_costs")
+      .from('platform_provider_costs')
       .select(
         `
         id,
@@ -129,17 +122,17 @@ export class ReconciliationService {
         reconciliation_status,
         created_at
       `,
-        { count: "exact" }
+        { count: 'exact' }
       )
-      .in("reconciliation_status", ["pending", "discrepancy"]);
+      .in('reconciliation_status', ['pending', 'discrepancy']);
 
     if (courierFilter) {
-      query = query.eq("courier_code", courierFilter);
+      query = query.eq('courier_code', courierFilter);
     }
 
     const { data, count, error } = await query
-      .order(sortBy === "margin" ? "platform_margin" : sortBy, {
-        ascending: sortOrder === "asc",
+      .order(sortBy === 'margin' ? 'platform_margin' : sortBy, {
+        ascending: sortOrder === 'asc',
       })
       .range((page - 1) * pageSize, page * pageSize - 1);
 
@@ -158,8 +151,7 @@ export class ReconciliationService {
       status: row.reconciliation_status,
       createdAt: new Date(row.created_at),
       ageDays: Math.floor(
-        (now.getTime() - new Date(row.created_at).getTime()) /
-          (1000 * 60 * 60 * 24)
+        (now.getTime() - new Date(row.created_at).getTime()) / (1000 * 60 * 60 * 24)
       ),
     }));
 
@@ -176,31 +168,31 @@ export class ReconciliationService {
     notes?: string
   ): Promise<void> {
     const { error } = await this.supabase
-      .from("platform_provider_costs")
+      .from('platform_provider_costs')
       .update({
         reconciliation_status: status,
         reconciliation_notes: notes,
         reconciled_at: new Date().toISOString(),
         reconciled_by: userId,
       })
-      .eq("id", id);
+      .eq('id', id);
 
     if (error) throw error;
 
     // Log audit
     // FIX: 'matched' e 'resolved' sono entrambi stati di completamento riuscito
     const eventType =
-      status === "matched" || status === "resolved"
-        ? "reconciliation_completed"
-        : "reconciliation_discrepancy";
+      status === 'matched' || status === 'resolved'
+        ? 'reconciliation_completed'
+        : 'reconciliation_discrepancy';
 
     // Best effort - ignora errori
     try {
-      await this.supabase.rpc("log_financial_event", {
+      await this.supabase.rpc('log_financial_event', {
         p_event_type: eventType,
         p_platform_cost_id: id,
         p_message: notes || `Status changed to ${status}`,
-        p_severity: status === "discrepancy" ? "warning" : "info",
+        p_severity: status === 'discrepancy' ? 'warning' : 'info',
         p_actor_id: userId,
       });
     } catch {
@@ -228,11 +220,11 @@ export class ReconciliationService {
 
     // Trova candidati per auto-riconciliazione
     const { data: candidates, error } = await this.supabase
-      .from("platform_provider_costs")
-      .select("id, platform_margin")
-      .eq("reconciliation_status", "pending")
-      .gte("platform_margin", 0) // Margine positivo
-      .lt("created_at", cutoffDate.toISOString())
+      .from('platform_provider_costs')
+      .select('id, platform_margin')
+      .eq('reconciliation_status', 'pending')
+      .gte('platform_margin', 0) // Margine positivo
+      .lt('created_at', cutoffDate.toISOString())
       .limit(500);
 
     if (error) {
@@ -245,9 +237,9 @@ export class ReconciliationService {
       try {
         await this.updateStatus(
           candidate.id,
-          "matched",
+          'matched',
           userId,
-          "Auto-riconciliato: margine positivo"
+          'Auto-riconciliato: margine positivo'
         );
         result.matched++;
       } catch (err: any) {
@@ -264,16 +256,16 @@ export class ReconciliationService {
    */
   async flagNegativeMargins(userId: string): Promise<number> {
     const { data, error } = await this.supabase
-      .from("platform_provider_costs")
+      .from('platform_provider_costs')
       .update({
-        reconciliation_status: "discrepancy",
-        reconciliation_notes: "Auto-flaggato: margine negativo",
+        reconciliation_status: 'discrepancy',
+        reconciliation_notes: 'Auto-flaggato: margine negativo',
         reconciled_at: new Date().toISOString(),
         reconciled_by: userId,
       })
-      .eq("reconciliation_status", "pending")
-      .lt("platform_margin", 0)
-      .select("id");
+      .eq('reconciliation_status', 'pending')
+      .lt('platform_margin', 0)
+      .select('id');
 
     if (error) throw error;
 
@@ -284,8 +276,6 @@ export class ReconciliationService {
 /**
  * Factory function
  */
-export function createReconciliationService(
-  supabase: SupabaseClient
-): ReconciliationService {
+export function createReconciliationService(supabase: SupabaseClient): ReconciliationService {
   return new ReconciliationService(supabase);
 }

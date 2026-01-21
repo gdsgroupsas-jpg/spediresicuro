@@ -7,6 +7,7 @@
 **SÌ, assolutamente!**
 
 Tutti gli utenti (inclusi reseller) possono creare spedizioni direttamente tramite:
+
 - **Pagina UI**: `/dashboard/spedizioni/nuova`
 - **API**: `/api/shipments/create`
 
@@ -19,6 +20,7 @@ Tutti gli utenti (inclusi reseller) possono creare spedizioni direttamente trami
 **SÌ, design identico**, ma con logica di calcolo prezzo diversa.
 
 #### Design UI:
+
 - ✅ **Stessa pagina** (`/dashboard/spedizioni/nuova`)
 - ✅ **Stesso form** (mittente, destinatario, peso, corriere)
 - ✅ **Stessa interfaccia** (bottoni, validazione, preview)
@@ -26,6 +28,7 @@ Tutti gli utenti (inclusi reseller) possono creare spedizioni direttamente trami
 #### Differenza: Calcolo Prezzo
 
 **Per Reseller con Listini Personalizzati:**
+
 ```
 Reseller clicka "GLS"
   ↓
@@ -41,6 +44,7 @@ Mostra prezzo finale + badge "API Reseller" o "API Master"
 ```
 
 **Per Utente Normale con Listini:**
+
 ```
 Utente clicka "GLS"
   ↓
@@ -60,24 +64,28 @@ Mostra prezzo finale
 **Sistema cerca listino in ordine di priorità:**
 
 #### Priorità 1: Listino Assegnato Direttamente
+
 ```
 Cerca: price_lists WHERE assigned_to_user_id = userId
 Se trova → Usa questo
 ```
 
 #### Priorità 2: Listino Assegnato tramite Assignment
+
 ```
 Cerca: price_list_assignments WHERE user_id = userId
 Se trova → Usa listino assegnato
 ```
 
 #### Priorità 3: Listino Globale (Admin)
+
 ```
 Cerca: price_lists WHERE is_global = true
 Se trova → Usa questo
 ```
 
 #### Priorità 4: Listino di Default
+
 ```
 Cerca: price_lists WHERE priority = 'default'
 Se trova → Usa questo
@@ -86,6 +94,7 @@ Se trova → Usa questo
 #### ⚠️ Se NON trova NESSUN listino:
 
 **Cosa succede:**
+
 1. **Per PREVENTIVI (quote):**
    - `calculatePriceWithRules()` ritorna `null`
    - UI mostra errore: "Impossibile calcolare preventivo. Verifica listino configurato."
@@ -112,7 +121,8 @@ Sistema addebita €8.50 al wallet reseller
 Nessun margine applicato (perché non c'è listino)
 ```
 
-**⚠️ IMPORTANTE:** 
+**⚠️ IMPORTANTE:**
+
 - Se non c'è listino, il reseller paga il **costo reale del corriere**
 - **Nessun margine** viene applicato
 - Il reseller **non guadagna** su quella spedizione
@@ -121,12 +131,12 @@ Nessun margine applicato (perché non c'è listino)
 
 ## 📊 Tabella Riepilogativa
 
-| **Scenario** | **Design UI** | **Calcolo Prezzo** | **Margine** |
-|-------------|---------------|-------------------|-------------|
-| **Reseller CON listini personali** | ✅ Identico | `calculateBestPriceForReseller()` (confronta Reseller vs Master) | ✅ Applicato da listino |
-| **Reseller SENZA listini** | ✅ Identico | Costo reale API corriere | ❌ Nessun margine |
-| **Utente normale CON listini** | ✅ Identico | `calculatePriceWithRules()` (usa listino assegnato) | ✅ Applicato da listino |
-| **Utente normale SENZA listini** | ✅ Identico | Costo reale API corriere | ❌ Nessun margine |
+| **Scenario**                       | **Design UI** | **Calcolo Prezzo**                                               | **Margine**             |
+| ---------------------------------- | ------------- | ---------------------------------------------------------------- | ----------------------- |
+| **Reseller CON listini personali** | ✅ Identico   | `calculateBestPriceForReseller()` (confronta Reseller vs Master) | ✅ Applicato da listino |
+| **Reseller SENZA listini**         | ✅ Identico   | Costo reale API corriere                                         | ❌ Nessun margine       |
+| **Utente normale CON listini**     | ✅ Identico   | `calculatePriceWithRules()` (usa listino assegnato)              | ✅ Applicato da listino |
+| **Utente normale SENZA listini**   | ✅ Identico   | Costo reale API corriere                                         | ❌ Nessun margine       |
 
 ---
 
@@ -135,6 +145,7 @@ Nessun margine applicato (perché non c'è listino)
 ### Funzione: `calculateBestPriceForReseller`
 
 **Cosa fa:**
+
 1. Verifica se utente è reseller
 2. Calcola prezzo con listino fornitore reseller (API Reseller)
 3. Calcola prezzo con listino personalizzato assegnato (API Master)
@@ -142,15 +153,16 @@ Nessun margine applicato (perché non c'è listino)
 5. Ritorna prezzo + informazioni su quale API è stata usata
 
 **Esempio Output:**
+
 ```json
 {
   "bestPrice": {
     "finalPrice": 12.75,
-    "basePrice": 8.50,
+    "basePrice": 8.5,
     "margin": 4.25
   },
-  "apiSource": "master",  // o "reseller" o "default"
-  "resellerPrice": { "finalPrice": 13.00 },
+  "apiSource": "master", // o "reseller" o "default"
+  "resellerPrice": { "finalPrice": 13.0 },
   "masterPrice": { "finalPrice": 12.75 },
   "priceDifference": 0.25
 }
@@ -159,11 +171,13 @@ Nessun margine applicato (perché non c'è listino)
 ### Funzione: `getApplicablePriceList`
 
 **Cosa fa:**
+
 1. Cerca listino in ordine di priorità (4 livelli)
 2. Ritorna primo listino trovato
 3. Se non trova nulla → ritorna `null`
 
 **Priorità:**
+
 1. `assigned_to_user_id` (assegnato direttamente)
 2. `price_list_assignments` (assegnato tramite tabella)
 3. `is_global = true` (listino globale admin)
@@ -175,7 +189,7 @@ Nessun margine applicato (perché non c'è listino)
 
 ### Risposte Finali:
 
-1. **Reseller può spedire direttamente?** 
+1. **Reseller può spedire direttamente?**
    - ✅ **SÌ**, esattamente come utente normale
 
 2. **Vede stesso design con listini personali?**
@@ -193,10 +207,12 @@ Nessun margine applicato (perché non c'è listino)
 ## 🎯 Raccomandazione
 
 **Per Reseller:**
+
 - ✅ **Sempre assegnare listini personali** per applicare margini
 - ✅ **Configurare listini fornitore** (API Reseller) per confronto automatico
 - ⚠️ **Senza listini**, il reseller paga costo reale senza margine
 
 **Per Sistema:**
+
 - ✅ Design unificato → Ottimo (stessa UX per tutti)
 - ⚠️ Gestione "senza listini" → Potrebbe essere migliorata (mostrare warning invece di errore)

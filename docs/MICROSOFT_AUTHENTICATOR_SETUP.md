@@ -10,6 +10,7 @@
 Microsoft Authenticator è un'app per smartphone che genera codici OTP (One-Time Password) a 6 cifre per la verifica in due passaggi.
 
 **Differenza con Email 2FA:**
+
 - ❌ **Email 2FA**: L'agent legge codice da email automaticamente
 - ✅ **Microsoft Authenticator**: Devi inserire codice manualmente quando richiesto
 
@@ -31,6 +32,7 @@ Microsoft Authenticator è un'app per smartphone che genera codici OTP (One-Time
 ### **2. Come Funziona**
 
 **Sync Manuale:**
+
 1. Clicca **"Sync"** sulla configurazione
 2. L'agent si collega a Spedisci.Online
 3. Quando richiede 2FA, appare un **modal** per inserire OTP
@@ -40,6 +42,7 @@ Microsoft Authenticator è un'app per smartphone che genera codici OTP (One-Time
 7. L'agent completa il login e fa sync
 
 **Sync Automatico (Cron):**
+
 - ⚠️ **NON funziona** con Microsoft Authenticator
 - ⚠️ Per sync automatico, devi usare Email 2FA
 - ⚠️ Con Microsoft Authenticator, solo sync manuale
@@ -75,6 +78,7 @@ Microsoft Authenticator è un'app per smartphone che genera codici OTP (One-Time
 ### **Sync Automatico NON Funziona**
 
 Con Microsoft Authenticator:
+
 - ❌ Sync automatico (cron) **NON funziona**
 - ✅ Solo sync **manuale** funziona
 - ✅ Devi essere presente per inserire OTP
@@ -110,6 +114,7 @@ Con Microsoft Authenticator:
 ### **Opzione 2: Cambia a Email 2FA (Se Possibile)**
 
 Se Spedisci.Online supporta 2FA via email:
+
 1. Cambia metodo 2FA su Spedisci.Online a email
 2. Configura automation con Email 2FA
 3. Sync automatico funzionerà
@@ -123,6 +128,7 @@ Se Spedisci.Online supporta 2FA via email:
 **Causa:** Codice scaduto o errato
 
 **Soluzione:**
+
 1. Verifica che codice sia di 6 cifre
 2. Inserisci codice più recente (cambia ogni 30 secondi)
 3. Verifica che account su Authenticator sia corretto
@@ -132,6 +138,7 @@ Se Spedisci.Online supporta 2FA via email:
 **Causa:** Microsoft Authenticator richiede input manuale
 
 **Soluzione:**
+
 - ✅ Normale, sync automatico NON funziona con Microsoft Authenticator
 - ✅ Usa sync manuale quando necessario
 - ✅ Oppure cambia a Email 2FA se possibile
@@ -141,6 +148,7 @@ Se Spedisci.Online supporta 2FA via email:
 **Causa:** Errore durante sync
 
 **Soluzione:**
+
 1. Controlla logs per errori
 2. Verifica che credenziali siano corrette
 3. Prova sync di nuovo
@@ -165,4 +173,3 @@ Se Spedisci.Online supporta 2FA via email:
 
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0
-

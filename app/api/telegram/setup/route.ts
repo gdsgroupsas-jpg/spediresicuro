@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import {
   setWebhook,
@@ -28,13 +28,13 @@ const ALLOWED_ROLES = ['admin', 'superadmin', 'SUPERADMIN'];
  */
 async function verifyAdmin(): Promise<{ authorized: boolean; error?: string }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { authorized: false, error: 'No session' };
     }
 
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context.actor.email);
     if (!user) {
       return { authorized: false, error: 'User not found' };
     }
@@ -109,20 +109,14 @@ export async function POST(request: NextRequest) {
 
     // Validate URL
     if (!webhookUrl.startsWith('https://')) {
-      return NextResponse.json(
-        { error: 'Webhook URL must use HTTPS' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Webhook URL must use HTTPS' }, { status: 400 });
     }
 
     // Set webhook
     const result = await setWebhook(webhookUrl);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to set webhook' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: result.error || 'Failed to set webhook' }, { status: 500 });
     }
 
     // Send test message
@@ -138,10 +132,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[TELEGRAM_SETUP] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to configure webhook' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to configure webhook' }, { status: 500 });
   }
 }
 

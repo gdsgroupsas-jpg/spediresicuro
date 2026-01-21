@@ -1,11 +1,11 @@
 ﻿/**
  * API Route: Value Stats - P4 Task 1
- * 
+ *
  * Calcola statistiche di valore per l'utente:
  * - Minuti risparmiati (tempo manuale vs tempo con Anne)
  * - Errori evitati (fallback/retry)
  * - Confidence media
- * 
+ *
  * ⚠️ SICUREZZA:
  * - RLS enforcement: usa requireSafeAuth()
  * - NO PII: solo aggregazioni, mai dati raw
@@ -17,7 +17,7 @@ import { calculateValueStats } from '@/lib/services/value-stats';
 
 /**
  * GET /api/ai/value-stats
- * 
+ *
  * Restituisce statistiche di valore per l'utente corrente
  */
 export async function GET(request: NextRequest) {
@@ -39,10 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Se non autenticato, ritorna 401
     if (errorMessage.includes('UNAUTHORIZED')) {
-      return NextResponse.json(
-        { success: false, error: 'Non autenticato' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Non autenticato' }, { status: 401 });
     }
 
     return NextResponse.json(

@@ -1,6 +1,6 @@
 /**
  * API Route: Gestione Killer Features (Admin)
- * 
+ *
  * GET: Lista tutte le killer features disponibili
  * POST: Attiva/disattiva feature per un utente
  */
@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
     const { targetUserEmail, featureCode, activate, expiresAt, activationType } = body;
 
     if (!targetUserEmail || !featureCode || typeof activate !== 'boolean') {
-      return ApiErrors.BAD_REQUEST('Parametri mancanti: targetUserEmail, featureCode, activate sono obbligatori');
+      return ApiErrors.BAD_REQUEST(
+        'Parametri mancanti: targetUserEmail, featureCode, activate sono obbligatori'
+      );
     }
 
     // 3. Chiama funzione Supabase per toggle feature
@@ -93,15 +95,13 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Crea nuova user_feature
-        const { error: insertError } = await supabaseAdmin
-          .from('user_features')
-          .insert({
-            user_email: targetUserEmail,
-            feature_id: feature.id,
-            is_active: activate,
-            expires_at: expiresAt || null,
-            activation_type: activationType || 'admin_grant',
-          });
+        const { error: insertError } = await supabaseAdmin.from('user_features').insert({
+          user_email: targetUserEmail,
+          feature_id: feature.id,
+          is_active: activate,
+          expires_at: expiresAt || null,
+          activation_type: activationType || 'admin_grant',
+        });
 
         if (insertError) {
           return ApiErrors.BAD_REQUEST(insertError.message);
@@ -119,4 +119,3 @@ export async function POST(request: NextRequest) {
     return handleApiError(error, 'POST /api/admin/features');
   }
 }
-

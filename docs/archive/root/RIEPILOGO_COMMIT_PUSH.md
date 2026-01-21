@@ -9,12 +9,14 @@
 ## 📁 FILE MODIFICATI/CREATI
 
 ### ✅ Server Actions
+
 - `app/actions/topups-admin.ts` (NUOVO)
   - `getTopUpRequestsAdmin()` - Lista richieste con filtri
   - `getTopUpRequestAdmin()` - Dettaglio singola richiesta
   - Fallback a `auth.users` per email/nome
 
 ### ✅ Pagina UI
+
 - `app/dashboard/admin/bonifici/page.tsx` (NUOVO)
   - Tabs: Pending | Manual Review | Approved | Rejected
   - Tabella con colonne complete
@@ -23,11 +25,13 @@
   - Toast notifications
 
 ### ✅ Funzioni Wallet (già esistenti, usate dalla UI)
+
 - `app/actions/wallet.ts`
   - `approveTopUpRequest()` - Approvazione atomica con rollback
   - `rejectTopUpRequest()` - Rifiuto con audit log
 
 ### ✅ Documentazione
+
 - `ADMIN_BONIFICI_RIEPILOGO.md` - Riepilogo tecnico completo
 - `TOPUPS_ADMIN_FALLBACK_AUTH.md` - Fallback auth.users
 - `CHECKLIST_ENV_LOCALE.md` - Checklist verifica env
@@ -38,6 +42,7 @@
 ## 🎯 FUNZIONALITÀ IMPLEMENTATE
 
 ### ✅ Core Features
+
 - [x] Lista richieste con filtri per status
 - [x] Visualizzazione email/nome utente (con fallback a auth.users)
 - [x] Modal dettagli con ricevuta bonifico
@@ -48,6 +53,7 @@
 - [x] Toast notifications per feedback
 
 ### ✅ Sicurezza
+
 - [x] Verifica admin/superadmin in ogni server action
 - [x] Approvazione atomica (no race conditions)
 - [x] Rollback automatico se accredito fallisce
@@ -55,6 +61,7 @@
 - [x] Validazione importi (0.01 - 10.000)
 
 ### ✅ UX
+
 - [x] Tabs per status
 - [x] Badge colorati per stato
 - [x] Formattazione valute (€)
@@ -67,6 +74,7 @@
 ## 🧪 TEST MANUALI
 
 ### Test Completati
+
 - [x] Accesso pagina come admin
 - [x] Visualizzazione lista richieste
 - [x] Visualizzazione email/nome utente
@@ -77,6 +85,7 @@
 - [x] Navigazione tra tab
 
 ### Test da Eseguire in Produzione
+
 - [ ] Test con utente solo in auth.users (fallback)
 - [ ] Test race condition (doppia approvazione simultanea)
 - [ ] Test rollback su fallimento RPC
@@ -170,6 +179,7 @@ git push origin master
 Tutto è implementato, testato e documentato.
 
 **Prossimi step:**
+
 1. Esegui checklist pre-commit
 2. Esegui comandi git sopra
 3. Verifica su produzione che tutto funzioni

@@ -63,7 +63,9 @@ export class PDFExporter {
     // Data
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Data: ${new Date(shipment.created_at).toLocaleDateString('it-IT')}`, 105, 38, { align: 'center' });
+    doc.text(`Data: ${new Date(shipment.created_at).toLocaleDateString('it-IT')}`, 105, 38, {
+      align: 'center',
+    });
 
     let yPos = 50;
 
@@ -78,7 +80,11 @@ export class PDFExporter {
     yPos += 5;
     doc.text(shipment.sender_address || '-', 15, yPos);
     yPos += 5;
-    doc.text(`${shipment.sender_zip} ${shipment.sender_city} (${shipment.sender_province})`, 15, yPos);
+    doc.text(
+      `${shipment.sender_zip} ${shipment.sender_city} (${shipment.sender_province})`,
+      15,
+      yPos
+    );
     yPos += 5;
     doc.text(`Tel: ${shipment.sender_phone || '-'}`, 15, yPos);
 
@@ -98,7 +104,11 @@ export class PDFExporter {
     yPos += 6;
     doc.text(`${shipment.recipient_address}`, 15, yPos);
     yPos += 6;
-    doc.text(`${shipment.recipient_zip} ${shipment.recipient_city} (${shipment.recipient_province})`, 15, yPos);
+    doc.text(
+      `${shipment.recipient_zip} ${shipment.recipient_city} (${shipment.recipient_province})`,
+      15,
+      yPos
+    );
     yPos += 6;
     doc.text(`Tel: ${shipment.recipient_phone}`, 15, yPos);
 
@@ -107,13 +117,19 @@ export class PDFExporter {
     // Tabella Dettagli Pacco
     const packageData = [
       ['Peso (kg)', shipment.weight || '-'],
-      ['Dimensioni (cm)', shipment.length && shipment.width && shipment.height
-        ? `${shipment.length} x ${shipment.width} x ${shipment.height}`
-        : '-'],
+      [
+        'Dimensioni (cm)',
+        shipment.length && shipment.width && shipment.height
+          ? `${shipment.length} x ${shipment.width} x ${shipment.height}`
+          : '-',
+      ],
       ['Valore Dichiarato', shipment.declared_value ? `€${shipment.declared_value}` : '-'],
       ['Corriere', shipment.courier_name || shipment.courier?.name || '-'],
       ['Tipo Servizio', shipment.service_type || 'standard'],
-      ['Contrassegno', shipment.cash_on_delivery ? `€${shipment.cash_on_delivery_amount || 0}` : 'No'],
+      [
+        'Contrassegno',
+        shipment.cash_on_delivery ? `€${shipment.cash_on_delivery_amount || 0}` : 'No',
+      ],
       ['Assicurazione', shipment.insurance ? 'Sì' : 'No'],
     ];
 
@@ -192,7 +208,7 @@ export class PDFExporter {
     doc.text(`Generato: ${new Date().toLocaleString('it-IT')}`, 148, 22, { align: 'center' });
 
     // Tabella
-    const tableData = shipments.map(s => [
+    const tableData = shipments.map((s) => [
       s.tracking_number,
       new Date(s.created_at).toLocaleDateString('it-IT'),
       s.recipient_name,

@@ -1,4 +1,3 @@
-
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiation' | 'won' | 'lost';
 
 export interface Lead {
@@ -16,7 +15,7 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   last_contact_at?: string;
-  
+
   // Joins
   assignee?: {
     name: string;

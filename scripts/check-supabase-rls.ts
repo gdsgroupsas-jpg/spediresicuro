@@ -1,6 +1,6 @@
 /**
  * Script per verificare RLS policies su shipments
- * 
+ *
  * Usa query SQL dirette per verificare le policies
  */
 

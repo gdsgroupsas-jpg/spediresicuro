@@ -25,4 +25,3 @@ fs.writeFileSync(sqlPath, sqlContent);
 
 console.log('✅ Script SQL aggiornato con hash valido!');
 console.log('   File:', sqlPath);
-

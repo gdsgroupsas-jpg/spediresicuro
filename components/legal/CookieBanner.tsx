@@ -1,11 +1,11 @@
 /**
  * Cookie Consent Banner - GDPR Compliant
- * 
+ *
  * Banner per gestione consenso cookie granulare:
  * - Necessari (sempre attivi)
  * - Analitici (opzionali)
  * - Marketing (opzionali)
- * 
+ *
  * Salva le preferenze in localStorage e blocca script di tracciamento
  * se il consenso non è stato dato.
  */
@@ -41,7 +41,7 @@ export default function CookieBanner() {
     if (typeof window === 'undefined') return;
 
     const savedConsent = localStorage.getItem(CONSENT_STORAGE_KEY);
-    
+
     if (savedConsent) {
       try {
         const parsed = JSON.parse(savedConsent) as CookieConsent;
@@ -90,9 +90,7 @@ export default function CookieBanner() {
     }
 
     // Evento personalizzato per altri script
-    window.dispatchEvent(
-      new CustomEvent('cookieConsentUpdated', { detail: prefs })
-    );
+    window.dispatchEvent(new CustomEvent('cookieConsentUpdated', { detail: prefs }));
   };
 
   // Salva consenso e applica preferenze
@@ -155,7 +153,7 @@ export default function CookieBanner() {
                       Utilizziamo i cookie per migliorare la tua esperienza
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      Utilizziamo cookie necessari per il funzionamento del sito e cookie opzionali 
+                      Utilizziamo cookie necessari per il funzionamento del sito e cookie opzionali
                       per analisi e marketing. Puoi gestire le tue preferenze in qualsiasi momento.{' '}
                       <a
                         href="/cookie-policy"
@@ -203,9 +201,7 @@ export default function CookieBanner() {
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                Gestione Preferenze Cookie
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">Gestione Preferenze Cookie</h2>
               <button
                 onClick={() => setShowSettings(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -218,8 +214,8 @@ export default function CookieBanner() {
             {/* Contenuto */}
             <div className="px-6 py-6 space-y-6">
               <p className="text-sm text-gray-600">
-                Seleziona i tipi di cookie che desideri accettare. I cookie necessari 
-                sono sempre attivi per garantire il funzionamento del sito.
+                Seleziona i tipi di cookie che desideri accettare. I cookie necessari sono sempre
+                attivi per garantire il funzionamento del sito.
               </p>
 
               {/* Cookie Necessari */}
@@ -227,16 +223,14 @@ export default function CookieBanner() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-base font-semibold text-gray-900">
-                        Cookie Necessari
-                      </h3>
+                      <h3 className="text-base font-semibold text-gray-900">Cookie Necessari</h3>
                       <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
                         Sempre attivi
                       </span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Questi cookie sono essenziali per il funzionamento del sito web. 
-                      Non possono essere disattivati e vengono sempre utilizzati.
+                      Questi cookie sono essenziali per il funzionamento del sito web. Non possono
+                      essere disattivati e vengono sempre utilizzati.
                     </p>
                   </div>
                   <div className="flex items-center">
@@ -251,24 +245,18 @@ export default function CookieBanner() {
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">
-                      Cookie Analitici
-                    </h3>
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Cookie Analitici</h3>
                     <p className="text-sm text-gray-600 mb-2">
-                      Questi cookie ci aiutano a capire come i visitatori interagiscono 
-                      con il sito, fornendoci informazioni su aree visitate, tempo di permanenza, ecc.
+                      Questi cookie ci aiutano a capire come i visitatori interagiscono con il sito,
+                      fornendoci informazioni su aree visitate, tempo di permanenza, ecc.
                     </p>
-                    <p className="text-xs text-gray-500">
-                      Esempi: Google Analytics
-                    </p>
+                    <p className="text-xs text-gray-500">Esempi: Google Analytics</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={consent.analytics}
-                      onChange={(e) =>
-                        setConsent({ ...consent, analytics: e.target.checked })
-                      }
+                      onChange={(e) => setConsent({ ...consent, analytics: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -280,24 +268,18 @@ export default function CookieBanner() {
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">
-                      Cookie Marketing
-                    </h3>
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Cookie Marketing</h3>
                     <p className="text-sm text-gray-600 mb-2">
-                      Questi cookie vengono utilizzati per mostrarti annunci pubblicitari 
-                      rilevanti e tracciare l&apos;efficacia delle campagne pubblicitarie.
+                      Questi cookie vengono utilizzati per mostrarti annunci pubblicitari rilevanti
+                      e tracciare l&apos;efficacia delle campagne pubblicitarie.
                     </p>
-                    <p className="text-xs text-gray-500">
-                      Esempi: Facebook Pixel, Google Ads
-                    </p>
+                    <p className="text-xs text-gray-500">Esempi: Facebook Pixel, Google Ads</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={consent.marketing}
-                      onChange={(e) =>
-                        setConsent({ ...consent, marketing: e.target.checked })
-                      }
+                      onChange={(e) => setConsent({ ...consent, marketing: e.target.checked })}
                       className="sr-only peer"
                     />
                     <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -335,4 +317,3 @@ declare global {
     fbq?: (...args: any[]) => void;
   }
 }
-

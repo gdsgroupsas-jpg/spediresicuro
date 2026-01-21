@@ -1,121 +1,132 @@
-'use client'
+'use client';
 
 /**
  * Componente Scanner Resi
- * 
+ *
  * Scanner per registrazione resi tramite fotocamera/barcode
  * Basato su ScannerLDV.tsx ma adattato per resi
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library'
-import { X, Camera, MapPin, CheckCircle2, AlertCircle, Loader2, Package, ArrowLeftRight } from 'lucide-react'
-import { processReturnScan } from '@/actions/returns'
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import {
+  X,
+  Camera,
+  MapPin,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Package,
+  ArrowLeftRight,
+} from 'lucide-react';
+import { processReturnScan } from '@/actions/returns';
 
 interface ReturnScannerProps {
-  onClose: () => void
-  onSuccess?: (returnShipment: any, originalShipment: any) => void
+  onClose: () => void;
+  onSuccess?: (returnShipment: any, originalShipment: any) => void;
 }
 
 interface GPSLocation {
-  lat: number
-  lng: number
-  error?: string
+  lat: number;
+  lng: number;
+  error?: string;
 }
 
 export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps) {
-  const [isScanning, setIsScanning] = useState(false)
-  const [scanResult, setScanResult] = useState<string | null>(null)
-  const [gpsLocation, setGpsLocation] = useState<GPSLocation | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<string | null>(null);
+  const [gpsLocation, setGpsLocation] = useState<GPSLocation | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Input manuale
-  const [originalTracking, setOriginalTracking] = useState('')
-  const [returnReason, setReturnReason] = useState('')
-  const [showManualInput, setShowManualInput] = useState(false)
+  const [originalTracking, setOriginalTracking] = useState('');
+  const [returnReason, setReturnReason] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
-  const isScanningRef = useRef<boolean>(false)
-  const handleScanResultRef = useRef<((ldvNumber: string) => Promise<void>) | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const isScanningRef = useRef<boolean>(false);
+  const handleScanResultRef = useRef<((ldvNumber: string) => Promise<void>) | null>(null);
 
   // Inizializza scanner e richiedi geolocalizzazione
   useEffect(() => {
-    initializeScanner()
-    requestGeolocation()
+    initializeScanner();
+    requestGeolocation();
 
     return () => {
-      stopScanning()
+      stopScanning();
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (codeReaderRef.current && isScanningRef.current) {
-        codeReaderRef.current.reset()
-        isScanningRef.current = false
+        codeReaderRef.current.reset();
+        isScanningRef.current = false;
       }
-    }
-  }, [])
+    };
+  }, []);
 
   /**
    * Richiedi geolocalizzazione GPS
    */
   const requestGeolocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setError('Geolocalizzazione non supportata dal browser')
-      return
+      setError('Geolocalizzazione non supportata dal browser');
+      return;
     }
 
     const options = {
       enableHighAccuracy: true,
       timeout: 10000,
       maximumAge: 0,
-    }
+    };
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setGpsLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        })
-        setError(null)
+        });
+        setError(null);
       },
       (err) => {
-        console.warn('Errore geolocalizzazione:', err)
+        console.warn('Errore geolocalizzazione:', err);
         setGpsLocation({
           lat: 0,
           lng: 0,
           error: `Geolocalizzazione non disponibile: ${err.message}`,
-        })
+        });
       },
       options
-    )
-  }, [])
+    );
+  }, []);
 
   /**
    * Inizializza scanner ZXing
    */
   const initializeScanner = useCallback(() => {
     try {
-      codeReaderRef.current = new BrowserMultiFormatReader()
+      codeReaderRef.current = new BrowserMultiFormatReader();
     } catch (err: any) {
-      console.error('Errore inizializzazione scanner:', err)
-      setError('Errore inizializzazione scanner. Assicurati di permettere l\'accesso alla fotocamera.')
+      console.error('Errore inizializzazione scanner:', err);
+      setError(
+        "Errore inizializzazione scanner. Assicurati di permettere l'accesso alla fotocamera."
+      );
     }
-  }, [])
+  }, []);
 
   /**
    * Avvia scansione fotocamera
    */
   const startScanning = useCallback(async () => {
-    if (!codeReaderRef.current || !videoRef.current) return
+    if (!codeReaderRef.current || !videoRef.current) return;
 
     try {
-      setIsScanning(true)
-      setError(null)
-      setShowManualInput(false)
+      setIsScanning(true);
+      setError(null);
+      setShowManualInput(false);
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -123,32 +134,39 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
-      })
+      });
 
-      streamRef.current = stream
-      videoRef.current.srcObject = stream
-      await videoRef.current.play()
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
 
-      isScanningRef.current = true
-      scanContinuously()
+      isScanningRef.current = true;
+      scanContinuously();
     } catch (err: any) {
-      console.error('Errore accesso fotocamera:', err)
-      setIsScanning(false)
+      console.error('Errore accesso fotocamera:', err);
+      setIsScanning(false);
       if (err.name === 'NotAllowedError') {
-        setError('Accesso alla fotocamera negato. Consenti l\'accesso e riprova.')
+        setError("Accesso alla fotocamera negato. Consenti l'accesso e riprova.");
       } else if (err.name === 'NotFoundError') {
-        setError('Nessuna fotocamera trovata sul dispositivo.')
+        setError('Nessuna fotocamera trovata sul dispositivo.');
       } else {
-        setError(`Errore accesso fotocamera: ${err.message}`)
+        setError(`Errore accesso fotocamera: ${err.message}`);
       }
     }
-  }, [])
+  }, []);
 
   /**
    * Scansione continua del video stream
    */
   const scanContinuously = useCallback(async () => {
-    if (!codeReaderRef.current || !videoRef.current || !streamRef.current || isProcessing || successMessage) return
+    if (
+      !codeReaderRef.current ||
+      !videoRef.current ||
+      !streamRef.current ||
+      isProcessing ||
+      successMessage
+    )
+      return;
 
     try {
       await codeReaderRef.current.decodeFromStream(
@@ -156,122 +174,123 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
         videoRef.current,
         (result, err) => {
           if (result && handleScanResultRef.current) {
-            const text = result.getText()
-            handleScanResultRef.current(text)
+            const text = result.getText();
+            handleScanResultRef.current(text);
           } else if (err && !(err instanceof NotFoundException)) {
-            console.debug('Nessun codice trovato:', err)
+            console.debug('Nessun codice trovato:', err);
           }
         }
-      )
+      );
     } catch (err: any) {
       if (!(err instanceof NotFoundException)) {
-        console.error('Errore scansione:', err)
+        console.error('Errore scansione:', err);
       }
     }
-  }, [isProcessing, successMessage])
+  }, [isProcessing, successMessage]);
 
   /**
    * Gestisce risultato scansione
    */
-  const handleScanResult = useCallback(async (ldvNumber: string) => {
-    handleScanResultRef.current = handleScanResult
+  const handleScanResult = useCallback(
+    async (ldvNumber: string) => {
+      handleScanResultRef.current = handleScanResult;
 
-    if (isProcessing || successMessage) return
+      if (isProcessing || successMessage) return;
 
-    // Stop scanning temporaneo
-    if (codeReaderRef.current && isScanningRef.current) {
-      codeReaderRef.current.reset()
-      isScanningRef.current = false
-    }
+      // Stop scanning temporaneo
+      if (codeReaderRef.current && isScanningRef.current) {
+        codeReaderRef.current.reset();
+        isScanningRef.current = false;
+      }
 
-    setScanResult(ldvNumber)
+      setScanResult(ldvNumber);
 
-    // Mostra form per inserire tracking originale e motivo
-    setShowManualInput(true)
-    setError(null)
-  }, [isProcessing, successMessage])
+      // Mostra form per inserire tracking originale e motivo
+      setShowManualInput(true);
+      setError(null);
+    },
+    [isProcessing, successMessage]
+  );
 
   /**
    * Processa reso con dati completi
    */
   const handleProcessReturn = useCallback(async () => {
     if (!scanResult || !originalTracking.trim() || !returnReason.trim()) {
-      setError('Compila tutti i campi obbligatori')
-      return
+      setError('Compila tutti i campi obbligatori');
+      return;
     }
 
-    setIsProcessing(true)
-    setError(null)
+    setIsProcessing(true);
+    setError(null);
 
     try {
-      const gpsString = gpsLocation
-        ? `${gpsLocation.lat},${gpsLocation.lng}`
-        : null
+      const gpsString = gpsLocation ? `${gpsLocation.lat},${gpsLocation.lng}` : null;
 
       const result = await processReturnScan(
         scanResult,
         originalTracking.trim(),
         returnReason.trim(),
         gpsString
-      )
+      );
 
       if (result.success && result.returnShipment) {
         setSuccessMessage(
           `✅ Reso registrato!\nLDV Reso: ${scanResult}\nTracking Reso: ${result.returnShipment.tracking_number || 'N/A'}`
-        )
+        );
 
         if (onSuccess) {
-          onSuccess(result.returnShipment, result.originalShipment)
+          onSuccess(result.returnShipment, result.originalShipment);
         }
 
         setTimeout(() => {
-          onClose()
-        }, 3000)
+          onClose();
+        }, 3000);
       } else {
-        setError(result.error || 'Errore durante la registrazione del reso')
-        setIsProcessing(false)
+        setError(result.error || 'Errore durante la registrazione del reso');
+        setIsProcessing(false);
       }
     } catch (err: any) {
-      console.error('Errore conferma reso:', err)
-      setError(err.message || 'Errore sconosciuto')
-      setIsProcessing(false)
+      console.error('Errore conferma reso:', err);
+      setError(err.message || 'Errore sconosciuto');
+      setIsProcessing(false);
     }
-  }, [scanResult, originalTracking, returnReason, gpsLocation, onSuccess, onClose])
+  }, [scanResult, originalTracking, returnReason, gpsLocation, onSuccess, onClose]);
 
   /**
    * Stop scanning
    */
   const stopScanning = useCallback(() => {
-    setIsScanning(false)
-    isScanningRef.current = false
+    setIsScanning(false);
+    isScanningRef.current = false;
     if (codeReaderRef.current) {
-      codeReaderRef.current.reset()
+      codeReaderRef.current.reset();
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
     if (videoRef.current) {
-      videoRef.current.srcObject = null
+      videoRef.current.srcObject = null;
     }
-  }, [])
+  }, []);
 
   /**
    * Riavvia scansione
    */
   const restartScanning = useCallback(() => {
-    stopScanning()
-    setError(null)
-    setScanResult(null)
-    setSuccessMessage(null)
-    setOriginalTracking('')
-    setReturnReason('')
-    setShowManualInput(false)
-    setIsProcessing(false)
+    stopScanning();
+    setError(null);
+    setScanResult(null);
+    setSuccessMessage(null);
+    setOriginalTracking('');
+    setReturnReason('');
+    setShowManualInput(false);
+    setIsProcessing(false);
     setTimeout(() => {
-      startScanning()
-    }, 500)
-  }, [stopScanning, startScanning])
+      startScanning();
+    }, 500);
+  }, [stopScanning, startScanning]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
@@ -288,8 +307,8 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
           </div>
           <button
             onClick={() => {
-              stopScanning()
-              onClose()
+              stopScanning();
+              onClose();
             }}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
@@ -328,12 +347,7 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
                 </div>
               )}
 
-              <video
-                ref={videoRef}
-                className="w-full h-full object-contain"
-                playsInline
-                muted
-              />
+              <video ref={videoRef} className="w-full h-full object-contain" playsInline muted />
 
               {/* Overlay zona scansione */}
               {isScanning && (
@@ -354,9 +368,7 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                   <div className="bg-white rounded-xl p-6 text-center">
                     <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-                    <p className="text-gray-900 font-semibold">
-                      Elaborazione reso...
-                    </p>
+                    <p className="text-gray-900 font-semibold">Elaborazione reso...</p>
                   </div>
                 </div>
               )}
@@ -431,7 +443,9 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
               <div className="flex gap-3">
                 <button
                   onClick={handleProcessReturn}
-                  disabled={isProcessing || !scanResult || !originalTracking.trim() || !returnReason.trim()}
+                  disabled={
+                    isProcessing || !scanResult || !originalTracking.trim() || !returnReason.trim()
+                  }
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isProcessing ? (
@@ -464,8 +478,12 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
             <div className="flex items-center gap-4">
               {/* GPS Status */}
               <div className="flex items-center gap-2">
-                <MapPin className={`w-4 h-4 ${gpsLocation && !gpsLocation.error ? 'text-green-600' : 'text-gray-400'}`} />
-                <span className={gpsLocation && !gpsLocation.error ? 'text-green-600' : 'text-gray-500'}>
+                <MapPin
+                  className={`w-4 h-4 ${gpsLocation && !gpsLocation.error ? 'text-green-600' : 'text-gray-400'}`}
+                />
+                <span
+                  className={gpsLocation && !gpsLocation.error ? 'text-green-600' : 'text-gray-500'}
+                >
                   {gpsLocation && !gpsLocation.error
                     ? `GPS: ${gpsLocation.lat.toFixed(4)}, ${gpsLocation.lng.toFixed(4)}`
                     : 'GPS non disponibile'}
@@ -493,6 +511,5 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
         </div>
       </div>
     </div>
-  )
+  );
 }
-

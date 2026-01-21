@@ -5,6 +5,7 @@
 ### ❌ Problema 1: Server non parte
 
 **Sintomi:**
+
 - `npm run dev` non funziona
 - Errori di compilazione TypeScript
 - Porta 3000 già in uso
@@ -30,6 +31,7 @@ npm run dev
 ### ❌ Problema 2: Login non funziona
 
 **Sintomi:**
+
 - Errore "Credenziali non valide"
 - Redirect a `/login` dopo il login
 - Sessione non riconosciuta
@@ -78,6 +80,7 @@ npm run dev
 ### ❌ Problema 3: Redirect a dati-cliente dopo login
 
 **Sintomi:**
+
 - Dopo il login, vieni reindirizzato a `/dashboard/dati-cliente`
 - Anche per l'utente test
 
@@ -95,6 +98,7 @@ Assicurati che l'email sia esattamente `test@spediresicuro.it` (minuscolo):
 #### 3.2 Verifica Modifiche al Codice
 
 Le modifiche che abbiamo fatto dovrebbero:
+
 - ✅ Saltare la validazione per `test@spediresicuro.it`
 - ✅ Non reindirizzare a dati-cliente per `test@spediresicuro.it`
 
@@ -124,6 +128,7 @@ Poi fai logout e login di nuovo.
 ### ❌ Problema 4: Errori TypeScript/Compilazione
 
 **Sintomi:**
+
 - Errori durante `npm run dev`
 - File non trovati
 - Errori di tipo
@@ -145,6 +150,7 @@ npm run dev
 ### ❌ Problema 5: Database Supabase non raggiungibile
 
 **Sintomi:**
+
 - Errori "Supabase non configurato"
 - Errori di connessione
 - Timeout
@@ -152,6 +158,7 @@ npm run dev
 **Soluzioni:**
 
 1. **Verifica variabili d'ambiente:**
+
    ```bash
    # In .env.local
    NEXT_PUBLIC_SUPABASE_URL=https://tuo-progetto.supabase.co
@@ -261,9 +268,8 @@ Prima di dire che non funziona, verifica:
 ---
 
 **Se il problema persiste, descrivi:**
+
 - Cosa stai facendo esattamente
 - Quale errore vedi (screenshot o testo)
 - Cosa vedi nella console del browser
 - Cosa vedi nella console del server
-
-

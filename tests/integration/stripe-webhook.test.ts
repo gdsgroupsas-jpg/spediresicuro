@@ -1,6 +1,6 @@
 /**
  * Integration Tests: Stripe Webhook
- * 
+ *
  * Test per webhook handling, idempotency, wallet credit
  */
 
@@ -61,14 +61,14 @@ describe('Stripe Webhook - Integration Tests', () => {
   it('verifica struttura webhook endpoint', async () => {
     // Verifica che il file esista e sia importabile
     const webhookModule = await import('@/app/api/stripe/webhook/route');
-    
+
     expect(webhookModule).toHaveProperty('POST');
     expect(typeof webhookModule.POST).toBe('function');
   });
 
   it('gestisce correttamente firma webhook mancante', async () => {
     const { POST } = await import('@/app/api/stripe/webhook/route');
-    
+
     const request = new NextRequest('http://localhost/api/stripe/webhook', {
       method: 'POST',
       body: JSON.stringify({ type: 'checkout.session.completed' }),
@@ -84,8 +84,3 @@ describe('Stripe Webhook - Integration Tests', () => {
   // Nota: Test completi richiedono mock più complessi di Stripe
   // Per ora verifichiamo che la struttura sia corretta
 });
-
-
-
-
-

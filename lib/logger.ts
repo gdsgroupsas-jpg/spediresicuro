@@ -16,8 +16,8 @@ import * as Sentry from '@sentry/nextjs';
 export interface LogContext {
   requestId?: string;
   userId?: string;
-  traceId?: string;      // M2: Sentry trace ID for correlation
-  spanId?: string;       // M2: Sentry span ID for correlation
+  traceId?: string; // M2: Sentry trace ID for correlation
+  spanId?: string; // M2: Sentry span ID for correlation
   [key: string]: any;
 }
 

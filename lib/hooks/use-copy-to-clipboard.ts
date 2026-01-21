@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import { toast } from 'sonner'
+import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 
 /**
  * Hook per copiare testo negli appunti con feedback
@@ -14,22 +14,25 @@ import { toast } from 'sonner'
  * </button>
  */
 export function useCopyToClipboard(resetDelay: number = 2000) {
-  const [isCopied, setIsCopied] = useState(false)
+  const [isCopied, setIsCopied] = useState(false);
 
-  const copy = useCallback(async (text: string, successMessage?: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setIsCopied(true)
-      toast.success(successMessage || 'Copiato negli appunti')
+  const copy = useCallback(
+    async (text: string, successMessage?: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setIsCopied(true);
+        toast.success(successMessage || 'Copiato negli appunti');
 
-      setTimeout(() => setIsCopied(false), resetDelay)
-      return true
-    } catch (error) {
-      console.error('Errore copia negli appunti:', error)
-      toast.error('Errore durante la copia')
-      return false
-    }
-  }, [resetDelay])
+        setTimeout(() => setIsCopied(false), resetDelay);
+        return true;
+      } catch (error) {
+        console.error('Errore copia negli appunti:', error);
+        toast.error('Errore durante la copia');
+        return false;
+      }
+    },
+    [resetDelay]
+  );
 
-  return { copy, isCopied }
+  return { copy, isCopied };
 }

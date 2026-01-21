@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { updateUserAiFeatures } from "@/actions/super-admin";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Bot } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { updateUserAiFeatures } from '@/actions/super-admin';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Bot } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface AiFeaturesCardProps {
   userId: string;
@@ -20,13 +20,11 @@ export function AiFeaturesCard({
   userName,
   onToggleComplete,
 }: AiFeaturesCardProps) {
-  const [canManagePriceLists, setCanManagePriceLists] = useState(
-    initialCanManagePriceLists
-  );
+  const [canManagePriceLists, setCanManagePriceLists] = useState(initialCanManagePriceLists);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    console.log("AiFeaturesCard v2 loaded - Check for this log");
+    console.log('AiFeaturesCard v2 loaded - Check for this log');
   }, []);
 
   const handleToggle = async (checked: boolean) => {
@@ -44,17 +42,15 @@ export function AiFeaturesCard({
       }
 
       toast.success(
-        checked
-          ? `Feature attivata per ${userName}`
-          : `Feature disattivata per ${userName}`
+        checked ? `Feature attivata per ${userName}` : `Feature disattivata per ${userName}`
       );
 
       if (onToggleComplete) {
         onToggleComplete();
       }
     } catch (error: any) {
-      console.error("Error toggling AI feature:", error);
-      toast.error(error.message || "Errore sconosciuto");
+      console.error('Error toggling AI feature:', error);
+      toast.error(error.message || 'Errore sconosciuto');
       // Rollback
       setCanManagePriceLists(!checked);
     } finally {

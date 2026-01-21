@@ -10,15 +10,15 @@
  * - Extra
  */
 
-"use server";
+'use server';
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
-import { getPriceListById } from "@/lib/db/price-lists";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
+import { getPriceListById } from '@/lib/db/price-lists';
 import type {
   SupplierPriceListConfig,
   UpsertSupplierPriceListConfigInput,
-} from "@/types/supplier-price-list-config";
+} from '@/types/supplier-price-list-config';
 
 /**
  * Recupera configurazione per un listino fornitore
@@ -29,47 +29,46 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Verifica che il listino esista e appartenga all'utente
     const priceList = await getPriceListById(priceListId);
     if (!priceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isOwner = priceList.created_by === user.id;
 
     if (!isAdmin && !isOwner) {
       return {
         success: false,
-        error: "Non hai i permessi per visualizzare questa configurazione",
+        error: 'Non hai i permessi per visualizzare questa configurazione',
       };
     }
 
     // Recupera configurazione
     const { data: config, error } = await supabaseAdmin
-      .from("supplier_price_list_config")
-      .select("*")
-      .eq("price_list_id", priceListId)
+      .from('supplier_price_list_config')
+      .select('*')
+      .eq('price_list_id', priceListId)
       .maybeSingle();
 
     if (error) {
-      console.error("Errore recupero configurazione:", error);
+      console.error('Errore recupero configurazione:', error);
       return { success: false, error: error.message };
     }
 
@@ -77,14 +76,14 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
     if (!config) {
       // Estrai carrier_code e contract_code dai metadata del listino
       const metadata = priceList.source_metadata || {};
-      const carrierCode = metadata.carrier_code || "";
-      const contractCode = metadata.contract_code || "";
+      const carrierCode = metadata.carrier_code || '';
+      const contractCode = metadata.contract_code || '';
       const courierConfigId = metadata.courier_config_id || null;
 
       return {
         success: true,
         config: {
-          id: "",
+          id: '',
           price_list_id: priceListId,
           carrier_code: carrierCode,
           contract_code: contractCode || undefined,
@@ -93,7 +92,7 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
             max_value: 0,
             fixed_price: 0,
             percent: 0,
-            percent_on: "totale",
+            percent_on: 'totale',
           },
           cod_config: [],
           accessory_services_config: [],
@@ -111,8 +110,8 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
 
     return { success: true, config: config as SupplierPriceListConfig };
   } catch (error: any) {
-    console.error("Errore recupero configurazione:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero configurazione:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -127,39 +126,37 @@ export async function upsertSupplierPriceListConfig(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Verifica permessi
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isAdmin && !isReseller && !isBYOC) {
       return {
         success: false,
-        error:
-          "Solo admin, reseller e BYOC possono configurare listini fornitore",
+        error: 'Solo admin, reseller e BYOC possono configurare listini fornitore',
       };
     }
 
     // Verifica che il listino esista e appartenga all'utente
     const priceList = await getPriceListById(input.price_list_id);
     if (!priceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
     const isOwner = priceList.created_by === user.id;
@@ -167,14 +164,14 @@ export async function upsertSupplierPriceListConfig(
     if (!isAdmin && !isOwner) {
       return {
         success: false,
-        error: "Non hai i permessi per modificare questa configurazione",
+        error: 'Non hai i permessi per modificare questa configurazione',
       };
     }
 
     // ✨ NUOVO: Supporto configurazioni manuali per listini custom
     // Governance gestita tramite reseller_pricing_policies (opt-in)
-    const listType = priceList.list_type || "unknown";
-    if (!["supplier", "custom"].includes(listType)) {
+    const listType = priceList.list_type || 'unknown';
+    if (!['supplier', 'custom'].includes(listType)) {
       return {
         success: false,
         error: `Configurazioni manuali non supportate per list_type='${listType}'`,
@@ -188,10 +185,7 @@ export async function upsertSupplierPriceListConfig(
     // 4. Estrazione dal nome del listino (pattern: "carriercode_..." o "carriercode - ...")
     const metadata = priceList.source_metadata || {};
     let carrierCode =
-      input.carrier_code ||
-      metadata.carrier_code ||
-      (priceList.courier as any)?.code ||
-      "";
+      input.carrier_code || metadata.carrier_code || (priceList.courier as any)?.code || '';
 
     // Se ancora vuoto, prova a estrarlo dal nome del listino
     if (!carrierCode && priceList.name) {
@@ -208,9 +202,9 @@ export async function upsertSupplierPriceListConfig(
     // Se ancora vuoto, prova a recuperarlo dal courier_id se presente
     if (!carrierCode && priceList.courier_id) {
       const { data: courier } = await supabaseAdmin
-        .from("couriers")
-        .select("code")
-        .eq("id", priceList.courier_id)
+        .from('couriers')
+        .select('code')
+        .eq('id', priceList.courier_id)
         .single();
 
       if (courier?.code) {
@@ -218,17 +212,15 @@ export async function upsertSupplierPriceListConfig(
       }
     }
 
-    const contractCode =
-      input.contract_code || metadata.contract_code || undefined;
+    const contractCode = input.contract_code || metadata.contract_code || undefined;
 
-    const courierConfigId =
-      input.courier_config_id || metadata.courier_config_id || undefined;
+    const courierConfigId = input.courier_config_id || metadata.courier_config_id || undefined;
 
     if (!carrierCode) {
       return {
         success: false,
         error:
-          "carrier_code è obbligatorio. Impossibile determinarlo automaticamente dal listino. Inseriscilo manualmente nei metadata del listino o associa un corriere.",
+          'carrier_code è obbligatorio. Impossibile determinarlo automaticamente dal listino. Inseriscilo manualmente nei metadata del listino o associa un corriere.',
       };
     }
 
@@ -247,7 +239,7 @@ export async function upsertSupplierPriceListConfig(
         max_value: input.insurance_config.max_value ?? 0,
         fixed_price: input.insurance_config.fixed_price ?? 0,
         percent: input.insurance_config.percent ?? 0,
-        percent_on: input.insurance_config.percent_on || "totale",
+        percent_on: input.insurance_config.percent_on || 'totale',
       };
     }
 
@@ -280,35 +272,34 @@ export async function upsertSupplierPriceListConfig(
 
     // Upsert diretto (RLS gestisce i permessi)
     const { data: existingConfig } = await supabaseAdmin
-      .from("supplier_price_list_config")
-      .select("id")
-      .eq("price_list_id", input.price_list_id)
+      .from('supplier_price_list_config')
+      .select('id')
+      .eq('price_list_id', input.price_list_id)
       .maybeSingle();
 
     if (existingConfig) {
       // Update
       const { data: updatedConfig, error } = await supabaseAdmin
-        .from("supplier_price_list_config")
+        .from('supplier_price_list_config')
         .update({
           carrier_code: configData.carrier_code,
           contract_code: configData.contract_code || null,
           courier_config_id: configData.courier_config_id || null,
           insurance_config: configData.insurance_config || undefined,
           cod_config: configData.cod_config || undefined,
-          accessory_services_config:
-            configData.accessory_services_config || undefined,
+          accessory_services_config: configData.accessory_services_config || undefined,
           storage_config: configData.storage_config || undefined,
           pickup_config: configData.pickup_config || undefined,
           extra_config: configData.extra_config || undefined,
           notes: configData.notes || null,
           updated_by: user.id,
         })
-        .eq("id", existingConfig.id)
+        .eq('id', existingConfig.id)
         .select()
         .single();
 
       if (error) {
-        console.error("Errore update configurazione:", error);
+        console.error('Errore update configurazione:', error);
         return { success: false, error: error.message };
       }
 
@@ -319,7 +310,7 @@ export async function upsertSupplierPriceListConfig(
     } else {
       // Insert
       const { data: newConfig, error } = await supabaseAdmin
-        .from("supplier_price_list_config")
+        .from('supplier_price_list_config')
         .insert({
           price_list_id: configData.price_list_id,
           carrier_code: configData.carrier_code,
@@ -342,7 +333,7 @@ export async function upsertSupplierPriceListConfig(
         .single();
 
       if (error) {
-        console.error("Errore insert configurazione:", error);
+        console.error('Errore insert configurazione:', error);
         return { success: false, error: error.message };
       }
 
@@ -354,15 +345,15 @@ export async function upsertSupplierPriceListConfig(
 
     // Recupera configurazione aggiornata
     const { data: updatedConfig, error: fetchError } = await supabaseAdmin
-      .from("supplier_price_list_config")
-      .select("*")
-      .eq("price_list_id", input.price_list_id)
+      .from('supplier_price_list_config')
+      .select('*')
+      .eq('price_list_id', input.price_list_id)
       .single();
 
     if (fetchError) {
       return {
         success: false,
-        error: fetchError?.message || "Errore recupero configurazione",
+        error: fetchError?.message || 'Errore recupero configurazione',
       };
     }
 
@@ -371,67 +362,64 @@ export async function upsertSupplierPriceListConfig(
       config: updatedConfig as SupplierPriceListConfig,
     };
   } catch (error: any) {
-    console.error("Errore upsert configurazione:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore upsert configurazione:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
 /**
  * Elimina configurazione per un listino fornitore
  */
-export async function deleteSupplierPriceListConfig(
-  priceListId: string
-): Promise<{
+export async function deleteSupplierPriceListConfig(priceListId: string): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Verifica che il listino esista e appartenga all'utente
     const priceList = await getPriceListById(priceListId);
     if (!priceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isOwner = priceList.created_by === user.id;
 
     if (!isAdmin && !isOwner) {
       return {
         success: false,
-        error: "Non hai i permessi per eliminare questa configurazione",
+        error: 'Non hai i permessi per eliminare questa configurazione',
       };
     }
 
     const { error } = await supabaseAdmin
-      .from("supplier_price_list_config")
+      .from('supplier_price_list_config')
       .delete()
-      .eq("price_list_id", priceListId);
+      .eq('price_list_id', priceListId);
 
     if (error) {
-      console.error("Errore eliminazione configurazione:", error);
+      console.error('Errore eliminazione configurazione:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error("Errore eliminazione configurazione:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore eliminazione configurazione:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -444,42 +432,41 @@ export async function listSupplierPriceListConfigs(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
 
     // Se non è admin, recupera solo i price_list_id dell'utente
     let priceListIds: string[] = [];
     if (!isAdmin) {
       const { data: userPriceLists } = await supabaseAdmin
-        .from("price_lists")
-        .select("id")
-        .eq("created_by", user.id);
+        .from('price_lists')
+        .select('id')
+        .eq('created_by', user.id);
       priceListIds = userPriceLists?.map((pl) => pl.id) || [];
     }
 
     let query = supabaseAdmin
-      .from("supplier_price_list_config")
-      .select("*")
-      .order("updated_at", { ascending: false });
+      .from('supplier_price_list_config')
+      .select('*')
+      .order('updated_at', { ascending: false });
 
     // Se non è admin, filtra per listini dell'utente
     if (!isAdmin && priceListIds.length > 0) {
-      query = query.in("price_list_id", priceListIds);
+      query = query.in('price_list_id', priceListIds);
     } else if (!isAdmin) {
       // Se l'utente non ha listini, restituisci array vuoto
       return { success: true, configs: [] };
@@ -488,7 +475,7 @@ export async function listSupplierPriceListConfigs(): Promise<{
     const { data: configs, error } = await query;
 
     if (error) {
-      console.error("Errore lista configurazioni:", error);
+      console.error('Errore lista configurazioni:', error);
       return { success: false, error: error.message };
     }
 
@@ -497,7 +484,7 @@ export async function listSupplierPriceListConfigs(): Promise<{
       configs: (configs || []) as SupplierPriceListConfig[],
     };
   } catch (error: any) {
-    console.error("Errore lista configurazioni:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore lista configurazioni:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }

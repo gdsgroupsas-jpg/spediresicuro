@@ -21,13 +21,13 @@ Questo documento descrive l'architettura dell'AI Orchestrator (Anne) basata su L
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
+| Sezione               | Pagina                                 | Link                                   |
+| --------------------- | -------------------------------------- | -------------------------------------- |
 | Architecture Overview | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Architecture](#architecture-overview) |
-| Supervisor Pattern | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Supervisor](#supervisor-pattern) |
-| Workers | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Workers](#workers) |
-| State Management | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [State](#state-management) |
-| Safety Invariants | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Safety](#safety-invariants) |
+| Supervisor Pattern    | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Supervisor](#supervisor-pattern)      |
+| Workers               | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Workers](#workers)                    |
+| State Management      | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [State](#state-management)             |
+| Safety Invariants     | docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md | [Safety](#safety-invariants)           |
 
 ## Content
 
@@ -108,18 +108,22 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 #### 4. Workers Specializzati
 
 **Address Worker** (`lib/agent/workers/address.ts`)
+
 - Normalizza indirizzi italiani (CAP, provincia, città)
 - Usa regex e validazione CAP
 
 **Pricing Worker** (`lib/agent/workers/pricing.ts`)
+
 - Calcola preventivi multi-corriere
 - Integra con sistema listini
 
 **OCR Worker** (`lib/agent/workers/ocr.ts`)
+
 - Estrae dati da testo OCR
 - Immagini: placeholder (TODO Sprint 2.5)
 
 **Booking Worker** (`lib/agent/workers/booking.ts`)
+
 - Prenota spedizioni (preflight + adapter)
 - Verifica credito wallet prima di booking
 
@@ -141,7 +145,13 @@ interface AgentState {
   };
   pricing_options?: PricingOption[];
   booking_result?: BookingResult;
-  next_step: 'ocr_worker' | 'address_worker' | 'pricing_worker' | 'booking_worker' | 'legacy' | 'END';
+  next_step:
+    | 'ocr_worker'
+    | 'address_worker'
+    | 'pricing_worker'
+    | 'booking_worker'
+    | 'legacy'
+    | 'END';
   clarification_request?: string;
   messages: Message[];
   // ... altri campi
@@ -161,6 +171,7 @@ interface AgentState {
 **Pattern:** "procedi", "conferma", "ok prenota", "sì procedi"
 
 **Verifica:**
+
 ```bash
 grep -r "containsBookingConfirmation\|booking_worker" lib/agent/orchestrator/supervisor.ts
 ```
@@ -170,6 +181,7 @@ grep -r "containsBookingConfirmation\|booking_worker" lib/agent/orchestrator/sup
 **Regola:** Booking worker esegue `preflightCheck()` prima di chiamare adapter
 
 **Verifica:**
+
 - recipient completo
 - parcel completo
 - pricing_option
@@ -178,6 +190,7 @@ grep -r "containsBookingConfirmation\|booking_worker" lib/agent/orchestrator/sup
 **Se fallisce:** ritorna `PREFLIGHT_FAILED`, no adapter call
 
 **Verifica:**
+
 ```bash
 grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 ```
@@ -189,6 +202,7 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 **Altri componenti non decidono routing autonomamente**
 
 **Verifica:**
+
 ```bash
 grep -r "next_step.*=" lib/agent/orchestrator/ lib/agent/workers/ | grep -v "supervisor.ts"
 ```
@@ -198,6 +212,7 @@ grep -r "next_step.*=" lib/agent/orchestrator/ lib/agent/workers/ | grep -v "sup
 **Regola:** Mai loggare dati sensibili
 
 **Non loggare:**
+
 - `addressLine1`
 - `postalCode`
 - `fullName`
@@ -205,11 +220,13 @@ grep -r "next_step.*=" lib/agent/orchestrator/ lib/agent/workers/ | grep -v "sup
 - Testo OCR raw
 
 **Loggare solo:**
+
 - `trace_id`
 - `user_id_hash`
 - Conteggi
 
 **Verifica:**
+
 ```bash
 grep -r "logger\.\(log\|info\|warn\|error\)" lib/agent/ | grep -i "addressLine\|postalCode\|fullName\|phone"
 ```
@@ -275,13 +292,13 @@ import { supervisorRouter } from '@/lib/agent/orchestrator/supervisor-router';
 
 export async function POST(request: Request) {
   const { message, sessionId } = await request.json();
-  
+
   const result = await supervisorRouter({
     message,
     sessionId,
-    userId: context.target.id
+    userId: context.target.id,
   });
-  
+
   return Response.json(result);
 }
 ```
@@ -295,8 +312,8 @@ export async function customWorker(state: AgentState): Promise<Partial<AgentStat
   return {
     shipmentDraft: {
       ...state.shipmentDraft,
-      customField: 'value'
-    }
+      customField: 'value',
+    },
   };
 }
 
@@ -312,12 +329,12 @@ graph.addConditionalEdges('supervisor', (state) => {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Loop infinito | Verifica MAX_ITERATIONS e che `next_step` sia sempre impostato |
-| Booking senza conferma | Verifica `containsBookingConfirmation()` prima di routing |
-| Stato perso | Verifica che checkpointer sia configurato correttamente |
-| PII nei log | Verifica pattern di logging, usa solo hash/conteggi |
+| Issue                  | Soluzione                                                      |
+| ---------------------- | -------------------------------------------------------------- |
+| Loop infinito          | Verifica MAX_ITERATIONS e che `next_step` sia sempre impostato |
+| Booking senza conferma | Verifica `containsBookingConfirmation()` prima di routing      |
+| Stato perso            | Verifica che checkpointer sia configurato correttamente        |
+| PII nei log            | Verifica pattern di logging, usa solo hash/conteggi            |
 
 ---
 
@@ -333,11 +350,12 @@ graph.addConditionalEdges('supervisor', (state) => {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Team_

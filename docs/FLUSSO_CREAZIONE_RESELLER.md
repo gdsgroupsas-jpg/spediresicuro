@@ -24,6 +24,7 @@ Questo documento descrive il flusso completo per la creazione di un nuovo resell
   - **Note Interne** (opzionale)
 
 - **Validazione lato client** con Zod schema:
+
   ```typescript
   {
     email: string (email valida)
@@ -59,6 +60,7 @@ Questo documento descrive il flusso completo per la creazione di un nuovo resell
    - Se esiste → errore
 
 4. **Creazione Utente in Supabase Auth**
+
    ```typescript
    supabaseAdmin.auth.admin.createUser({
      email: emailLower,
@@ -68,15 +70,17 @@ Questo documento descrive il flusso completo per la creazione di un nuovo resell
      app_metadata: {
        role: 'user',
        account_type: 'user',
-       provider: 'credentials'
-     }
-   })
+       provider: 'credentials',
+     },
+   });
    ```
+
    - Crea identità in `auth.users`
    - Password gestita da Supabase Auth (hash automatico)
    - Email confermata automaticamente
 
 5. **Creazione Record in `public.users`**
+
    ```typescript
    {
      id: authUserId, // ⚠️ CRITICO: Usa ID di auth come ID
@@ -98,6 +102,7 @@ Questo documento descrive il flusso completo per la creazione di un nuovo resell
    - Mantiene consistenza tra i due sistemi
 
 7. **Creazione Transazione Wallet** (se credito > 0)
+
    ```typescript
    {
      user_id: userId,
@@ -157,6 +162,7 @@ L'utente creato avrà:
 - ✅ **Email Confermata**: Sì (login immediato)
 
 **Permessi disponibili:**
+
 - Gestire sub-utenti (clienti)
 - Gestire wallet sub-utenti
 - Configurare integrazioni (solo proprie)
@@ -164,6 +170,7 @@ L'utente creato avrà:
 - Vedere statistiche team
 
 **Limitazioni:**
+
 - Non può vedere tutte le spedizioni della piattaforma
 - Non può gestire utenti al di fuori del suo team
 - Non può accedere a funzionalità admin/superadmin

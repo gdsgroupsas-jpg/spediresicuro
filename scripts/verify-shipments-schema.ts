@@ -1,6 +1,6 @@
 /**
  * Script di verifica schema shipments e RLS policies
- * 
+ *
  * Verifica:
  * 1. Schema tabella shipments (colonne obbligatorie)
  * 2. RLS policies (INSERT, SELECT, UPDATE)
@@ -73,7 +73,7 @@ async function verifySchema(): Promise<VerificationResult> {
         SELECT column_name, data_type, is_nullable
         FROM information_schema.columns
         WHERE table_name = 'shipments'
-        AND column_name IN (${requiredColumns.map(c => `'${c}'`).join(', ')})
+        AND column_name IN (${requiredColumns.map((c) => `'${c}'`).join(', ')})
         ORDER BY column_name;
       `,
     });
@@ -81,7 +81,9 @@ async function verifySchema(): Promise<VerificationResult> {
     // Alternativa: verifica con query diretta
     const { data: testQuery, error: testError } = await supabaseAdmin
       .from('shipments')
-      .select('id, tracking_number, status, sender_name, recipient_name, weight, created_at, updated_at')
+      .select(
+        'id, tracking_number, status, sender_name, recipient_name, weight, created_at, updated_at'
+      )
       .limit(0);
 
     if (testError && !testError.message.includes('0 rows')) {
@@ -169,10 +171,7 @@ async function verifySchema(): Promise<VerificationResult> {
 
     // Elimina il record di test
     if (insertData?.id) {
-      await supabaseAdmin
-        .from('shipments')
-        .delete()
-        .eq('id', insertData.id);
+      await supabaseAdmin.from('shipments').delete().eq('id', insertData.id);
       console.log('✅ Test INSERT riuscito (record creato e eliminato)\n');
     }
 
@@ -221,7 +220,7 @@ async function verifySchema(): Promise<VerificationResult> {
 // Esegui verifica
 async function main() {
   console.log('🚀 Verifica Schema Shipments e RLS Policies\n');
-  console.log('=' .repeat(60) + '\n');
+  console.log('='.repeat(60) + '\n');
 
   const result = await verifySchema();
 

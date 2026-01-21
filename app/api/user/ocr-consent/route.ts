@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     // ============================================
     // METADATA COLLECTION (for audit)
     // ============================================
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ipAddress =
+      request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     // ============================================

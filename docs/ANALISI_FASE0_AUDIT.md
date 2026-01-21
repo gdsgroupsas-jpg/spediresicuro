@@ -9,30 +9,30 @@
 
 ### 1.1 Actions (`actions/`)
 
-| File | Funzione | Query | Uso |
-|------|----------|-------|-----|
-| `admin-reseller.ts` | `getSubUsers()` | `.eq('parent_id', resellerCheck.userId)` | Recupera sub-users di un reseller |
-| `admin-reseller.ts` | `getSubUsersStats()` | `.eq('parent_id', resellerCheck.userId)` | Statistiche sub-users |
-| `admin-reseller.ts` | `createSubUser()` | `parent_id: resellerCheck.userId` | Crea sub-user collegato |
-| `admin-reseller.ts` | `rechargeSubUserWallet()` | Verifica `subUser.parent_id !== resellerCheck.userId` | Controllo sicurezza |
-| `admin-reseller.ts` | `getSubUserShipments()` | `.eq('parent_id', resellerCheck.userId)` | Spedizioni sub-users |
+| File                | Funzione                  | Query                                                 | Uso                               |
+| ------------------- | ------------------------- | ----------------------------------------------------- | --------------------------------- |
+| `admin-reseller.ts` | `getSubUsers()`           | `.eq('parent_id', resellerCheck.userId)`              | Recupera sub-users di un reseller |
+| `admin-reseller.ts` | `getSubUsersStats()`      | `.eq('parent_id', resellerCheck.userId)`              | Statistiche sub-users             |
+| `admin-reseller.ts` | `createSubUser()`         | `parent_id: resellerCheck.userId`                     | Crea sub-user collegato           |
+| `admin-reseller.ts` | `rechargeSubUserWallet()` | Verifica `subUser.parent_id !== resellerCheck.userId` | Controllo sicurezza               |
+| `admin-reseller.ts` | `getSubUserShipments()`   | `.eq('parent_id', resellerCheck.userId)`              | Spedizioni sub-users              |
 
 ### 1.2 Lib Helpers (`lib/`)
 
-| File | Funzione | Query | Uso |
-|------|----------|-------|-----|
+| File              | Funzione            | Query                        | Uso                          |
+| ----------------- | ------------------- | ---------------------------- | ---------------------------- |
 | `user-helpers.ts` | `getUserChildren()` | `.eq('parent_id', parentId)` | Helper generico per children |
 
 ### 1.3 API Routes (`app/api/`)
 
-| File | Route | Query | Uso |
-|------|-------|-------|-----|
-| `spedizioni/cancellate/route.ts` | GET | `.eq('parent_id', userId)` | Spedizioni cancellate sub-users |
+| File                             | Route | Query                      | Uso                             |
+| -------------------------------- | ----- | -------------------------- | ------------------------------- |
+| `spedizioni/cancellate/route.ts` | GET   | `.eq('parent_id', userId)` | Spedizioni cancellate sub-users |
 
 ### 1.4 Database Functions (Supabase)
 
-| Function | File Migration | Logica |
-|----------|----------------|--------|
+| Function           | File Migration                       | Logica                                 |
+| ------------------ | ------------------------------------ | -------------------------------------- |
 | `is_sub_user_of()` | `019_reseller_system_and_wallet.sql` | Verifica ricorsiva gerarchia parent_id |
 
 **Totale punti critici `parent_id`: 8+**
@@ -43,13 +43,14 @@
 
 ### 2.1 Users Table
 
-| Policy | File | Logica |
-|--------|------|--------|
+| Policy                  | File                                 | Logica                                                       |
+| ----------------------- | ------------------------------------ | ------------------------------------------------------------ |
 | `users_select_reseller` | `019_reseller_system_and_wallet.sql` | Reseller vede Sub-Users via `is_sub_user_of(id, auth.uid())` |
 
 ### 2.2 Altre Tabelle
 
 Le RLS policies per altre tabelle (shipments, price_lists, ecc.) usano principalmente:
+
 - `account_type` checks
 - `is_reseller` checks
 - `role` checks
@@ -62,11 +63,11 @@ Le RLS policies per altre tabelle (shipments, price_lists, ecc.) usano principal
 
 ### 3.1 Pattern Comuni
 
-| Pattern | File Esempio | Uso |
-|---------|--------------|-----|
-| `role === 'admin'` | `app/api/admin/overview/route.ts` | Controllo admin |
-| `role === 'superadmin'` | `app/api/shipments/create/route.ts` | Controllo superadmin |
-| `role IN ('admin', 'superadmin')` | `supabase/migrations/001_complete_schema.sql` | RLS policies |
+| Pattern                           | File Esempio                                  | Uso                  |
+| --------------------------------- | --------------------------------------------- | -------------------- |
+| `role === 'admin'`                | `app/api/admin/overview/route.ts`             | Controllo admin      |
+| `role === 'superadmin'`           | `app/api/shipments/create/route.ts`           | Controllo superadmin |
+| `role IN ('admin', 'superadmin')` | `supabase/migrations/001_complete_schema.sql` | RLS policies         |
 
 **Totale controlli `role`: 20+**
 
@@ -76,13 +77,13 @@ Le RLS policies per altre tabelle (shipments, price_lists, ecc.) usano principal
 
 ### 4.1 Pattern Comuni
 
-| Pattern | File Esempio | Uso |
-|---------|--------------|-----|
-| `account_type === 'superadmin'` | `actions/wallet.ts` | Controllo superadmin |
-| `account_type === 'admin'` | `actions/price-lists.ts` | Controllo admin |
-| `account_type === 'byoc'` | `actions/spedisci-online-rates.ts` | Controllo BYOC |
-| `account_type === 'reseller'` | `supabase/migrations/080_add_reseller_to_account_type_enum.sql` | Controllo reseller |
-| `account_type IN ('admin', 'superadmin')` | `actions/supplier-price-list-config.ts` | Controllo admin/superadmin |
+| Pattern                                   | File Esempio                                                    | Uso                        |
+| ----------------------------------------- | --------------------------------------------------------------- | -------------------------- |
+| `account_type === 'superadmin'`           | `actions/wallet.ts`                                             | Controllo superadmin       |
+| `account_type === 'admin'`                | `actions/price-lists.ts`                                        | Controllo admin            |
+| `account_type === 'byoc'`                 | `actions/spedisci-online-rates.ts`                              | Controllo BYOC             |
+| `account_type === 'reseller'`             | `supabase/migrations/080_add_reseller_to_account_type_enum.sql` | Controllo reseller         |
+| `account_type IN ('admin', 'superadmin')` | `actions/supplier-price-list-config.ts`                         | Controllo admin/superadmin |
 
 **Totale controlli `account_type`: 50+**
 
@@ -92,10 +93,10 @@ Le RLS policies per altre tabelle (shipments, price_lists, ecc.) usano principal
 
 ### 5.1 Pattern Comuni
 
-| Pattern | File Esempio | Uso |
-|---------|--------------|-----|
-| `is_reseller === true` | `actions/admin-reseller.ts` | Verifica reseller |
-| `is_reseller = true` (SQL) | `supabase/migrations/019_reseller_system_and_wallet.sql` | RLS policies |
+| Pattern                    | File Esempio                                             | Uso               |
+| -------------------------- | -------------------------------------------------------- | ----------------- |
+| `is_reseller === true`     | `actions/admin-reseller.ts`                              | Verifica reseller |
+| `is_reseller = true` (SQL) | `supabase/migrations/019_reseller_system_and_wallet.sql` | RLS policies      |
 
 **Totale controlli `is_reseller`: 15+**
 
@@ -197,12 +198,12 @@ CREATE INDEX idx_users_parent ON users(parent_id);  -- ✅ Già presente!
 
 ## 9. Rischi Identificati
 
-| Rischio | Probabilità | Impatto | Mitigazione |
-|---------|-------------|---------|-------------|
-| Query esistenti non funzionano | Bassa | Alto | Fallback sempre attivo |
-| RLS policies bloccano accesso | Media | Alto | Test completo, fallback |
-| Performance degradata | Bassa | Medio | Indici su `tenant_id` |
-| Migrazione dati fallita | Bassa | Alto | Backup, test staging |
+| Rischio                        | Probabilità | Impatto | Mitigazione             |
+| ------------------------------ | ----------- | ------- | ----------------------- |
+| Query esistenti non funzionano | Bassa       | Alto    | Fallback sempre attivo  |
+| RLS policies bloccano accesso  | Media       | Alto    | Test completo, fallback |
+| Performance degradata          | Bassa       | Medio   | Indici su `tenant_id`   |
+| Migrazione dati fallita        | Bassa       | Alto    | Backup, test staging    |
 
 ---
 

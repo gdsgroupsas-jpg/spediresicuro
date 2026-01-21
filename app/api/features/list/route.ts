@@ -1,11 +1,11 @@
 /**
  * API Route: Lista tutte le features attive per l'utente corrente
- * 
+ *
  * GET /api/features/list
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
 // Forza rendering dinamico (usa headers())
@@ -14,13 +14,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+
+    if (!context || !context.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     // 2. Ottieni features attive usando la funzione Supabase
@@ -36,7 +33,7 @@ export async function GET(request: NextRequest) {
       const { data: user } = await supabaseAdmin
         .from('users')
         .select('role')
-        .eq('email', session.user.email)
+        .eq('email', context.actor.email)
         .single();
 
       const userRole = user?.role || 'user';
@@ -50,7 +47,7 @@ export async function GET(request: NextRequest) {
           .order('display_order', { ascending: true });
 
         return NextResponse.json({
-          features: (allFeatures || []).map(f => ({
+          features: (allFeatures || []).map((f) => ({
             feature_code: f.code,
             feature_name: f.name,
             category: f.category,
@@ -69,7 +66,7 @@ export async function GET(request: NextRequest) {
         .eq('role', userRole)
         .eq('has_access', true);
 
-      const roleFeatureCodes = (roleFeatures || []).map(f => f.feature_code);
+      const roleFeatureCodes = (roleFeatures || []).map((f) => f.feature_code);
 
       // 4. Ottieni features gratuite
       const { data: freeFeatures } = await supabaseAdmin
@@ -78,19 +75,19 @@ export async function GET(request: NextRequest) {
         .eq('is_available', true)
         .eq('is_free', true);
 
-      const freeFeatureCodes = (freeFeatures || []).map(f => f.code);
+      const freeFeatureCodes = (freeFeatures || []).map((f) => f.code);
 
       // 5. Ottieni features attivate esplicitamente per l'utente
       const { data: userFeatures } = await supabaseAdmin
         .from('user_features')
         .select('feature_id, is_active, expires_at, activation_type')
-        .eq('user_email', session.user.email)
+        .eq('user_email', context.actor.email)
         .eq('is_active', true);
 
       // Ottieni i codici delle features attivate
       const activeUserFeatureIds = (userFeatures || [])
-        .filter(uf => !uf.expires_at || new Date(uf.expires_at) > new Date())
-        .map(uf => uf.feature_id);
+        .filter((uf) => !uf.expires_at || new Date(uf.expires_at) > new Date())
+        .map((uf) => uf.feature_id);
 
       const userFeatureCodes: string[] = [];
       if (activeUserFeatureIds.length > 0) {
@@ -99,7 +96,7 @@ export async function GET(request: NextRequest) {
           .select('code')
           .in('id', activeUserFeatureIds);
 
-        userFeatureCodes.push(...(userFeatureDetails || []).map(f => f.code));
+        userFeatureCodes.push(...(userFeatureDetails || []).map((f) => f.code));
       }
 
       // 6. Combina tutte le feature codes
@@ -123,15 +120,15 @@ export async function GET(request: NextRequest) {
           .select('id, code')
           .in('id', activeUserFeatureIds);
 
-        (featureMapping || []).forEach(f => {
+        (featureMapping || []).forEach((f) => {
           featureIdToCode[f.id] = f.code;
         });
       }
 
       // 9. Aggiungi info di attivazione
-      const featuresWithActivation = (features || []).map(feature => {
+      const featuresWithActivation = (features || []).map((feature) => {
         // Trova user feature corrispondente
-        const userFeature = userFeatures?.find(uf => {
+        const userFeature = userFeatures?.find((uf) => {
           const code = featureIdToCode[uf.feature_id];
           return code === feature.code;
         });
@@ -141,7 +138,9 @@ export async function GET(request: NextRequest) {
           feature_name: feature.name,
           category: feature.category,
           is_free: feature.is_free,
-          activation_type: userFeature?.activation_type || (roleFeatureCodes.includes(feature.code) ? 'role' : 'free'),
+          activation_type:
+            userFeature?.activation_type ||
+            (roleFeatureCodes.includes(feature.code) ? 'role' : 'free'),
           expires_at: userFeature?.expires_at || null,
         };
       });
@@ -152,10 +151,7 @@ export async function GET(request: NextRequest) {
       });
     } catch (error: any) {
       console.error('Errore recupero features:', error);
-      return NextResponse.json(
-        { features: [], error: error.message },
-        { status: 200 }
-      );
+      return NextResponse.json({ features: [], error: error.message }, { status: 200 });
     }
   } catch (error: any) {
     console.error('Errore API features/list:', error);
@@ -165,4 +161,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Dashboard Unificata Clienti per Reseller
@@ -14,47 +14,40 @@
  * - Creazione clienti
  */
 
-import {
-  FileText,
-  Filter,
-  RefreshCw,
-  Search,
-  ShieldAlert,
-  Users,
-} from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Toaster, toast } from "sonner";
+import { FileText, Filter, RefreshCw, Search, ShieldAlert, Users } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Toaster, toast } from 'sonner';
 
-import DashboardNav from "@/components/dashboard-nav";
-import { QueryProvider } from "@/components/providers/query-provider";
-import { DataTableSkeleton } from "@/components/shared/data-table-skeleton";
-import { EmptyState } from "@/components/shared/empty-state";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import DashboardNav from '@/components/dashboard-nav';
+import { QueryProvider } from '@/components/providers/query-provider';
+import { DataTableSkeleton } from '@/components/shared/data-table-skeleton';
+import { EmptyState } from '@/components/shared/empty-state';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
-import { AssignListinoDialog } from "./_components/assign-listino-dialog";
+import { AssignListinoDialog } from './_components/assign-listino-dialog';
 import {
   ClientCardWithListino,
   type ClientWithListino,
-} from "./_components/client-card-with-listino";
-import { ClientStatsCards } from "./_components/client-stats-cards";
+} from './_components/client-card-with-listino';
+import { ClientStatsCards } from './_components/client-stats-cards';
 
-import { CreateUserDialog } from "@/app/dashboard/reseller-team/_components/create-user-dialog";
-import { WalletRechargeDialog } from "@/app/dashboard/reseller-team/_components/wallet-recharge-dialog";
+import { CreateUserDialog } from '@/app/dashboard/reseller-team/_components/create-user-dialog';
+import { WalletRechargeDialog } from '@/app/dashboard/reseller-team/_components/wallet-recharge-dialog';
 
 import {
   getResellerClientsStats,
   getResellerClientsWithListino,
   type ClientsStatsResult,
-} from "@/actions/reseller-clients";
+} from '@/actions/reseller-clients';
 
-type SortField = "name" | "wallet_balance" | "shipments_count" | "created_at";
-type SortOrder = "asc" | "desc";
-type ListinoFilter = "all" | "with" | "without";
+type SortField = 'name' | 'wallet_balance' | 'shipments_count' | 'created_at';
+type SortOrder = 'asc' | 'desc';
+type ListinoFilter = 'all' | 'with' | 'without';
 
 function ResellerClientiContent() {
   const router = useRouter();
@@ -66,16 +59,17 @@ function ResellerClientiContent() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filter state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [listinoFilter, setListinoFilter] = useState<ListinoFilter>("all");
-  const [sortField, setSortField] = useState<SortField>("created_at");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [listinoFilter, setListinoFilter] = useState<ListinoFilter>('all');
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   // Dialog state
   const [selectedClientForListino, setSelectedClientForListino] =
     useState<ClientWithListino | null>(null);
-  const [selectedClientForWallet, setSelectedClientForWallet] =
-    useState<ClientWithListino | null>(null);
+  const [selectedClientForWallet, setSelectedClientForWallet] = useState<ClientWithListino | null>(
+    null
+  );
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showWalletDialog, setShowWalletDialog] = useState(false);
 
@@ -94,8 +88,8 @@ function ResellerClientiContent() {
         setStats(statsResult.stats);
       }
     } catch (error) {
-      console.error("Errore caricamento dati:", error);
-      toast.error("Errore nel caricamento dei dati");
+      console.error('Errore caricamento dati:', error);
+      toast.error('Errore nel caricamento dei dati');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -127,9 +121,9 @@ function ResellerClientiContent() {
     }
 
     // Listino filter
-    if (listinoFilter === "with") {
+    if (listinoFilter === 'with') {
       result = result.filter((c) => c.assigned_listino !== null);
-    } else if (listinoFilter === "without") {
+    } else if (listinoFilter === 'without') {
       result = result.filter((c) => c.assigned_listino === null);
     }
 
@@ -137,21 +131,20 @@ function ResellerClientiContent() {
     result.sort((a, b) => {
       let comparison = 0;
       switch (sortField) {
-        case "name":
+        case 'name':
           comparison = a.name.localeCompare(b.name);
           break;
-        case "wallet_balance":
+        case 'wallet_balance':
           comparison = a.wallet_balance - b.wallet_balance;
           break;
-        case "shipments_count":
+        case 'shipments_count':
           comparison = a.shipments_count - b.shipments_count;
           break;
-        case "created_at":
-          comparison =
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'created_at':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
       }
-      return sortOrder === "asc" ? comparison : -comparison;
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return result;
@@ -168,9 +161,7 @@ function ResellerClientiContent() {
 
   const handleCreateListino = (clientId: string) => {
     // Naviga alla pagina di creazione listino personalizzato con client preselezionato
-    router.push(
-      `/dashboard/reseller/listini-personalizzati?clientId=${clientId}`
-    );
+    router.push(`/dashboard/reseller/listini-personalizzati?clientId=${clientId}`);
   };
 
   const handleManageWallet = (clientId: string) => {
@@ -192,7 +183,7 @@ function ResellerClientiContent() {
 
   const handleUserCreated = () => {
     loadData();
-    toast.success("Cliente creato con successo");
+    toast.success('Cliente creato con successo');
   };
 
   const handleListinoAssigned = () => {
@@ -205,7 +196,7 @@ function ResellerClientiContent() {
     setShowWalletDialog(false);
     setSelectedClientForWallet(null);
     loadData();
-    toast.success("Wallet aggiornato con successo");
+    toast.success('Wallet aggiornato con successo');
   };
 
   return (
@@ -214,23 +205,11 @@ function ResellerClientiContent() {
         <DashboardNav
           title="I Miei Clienti"
           subtitle="Gestisci clienti, listini e wallet in un'unica dashboard"
-          breadcrumbs={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Clienti" },
-          ]}
+          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Clienti' }]}
           actions={
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 mr-2 ${
-                    isRefreshing ? "animate-spin" : ""
-                  }`}
-                />
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Aggiorna
               </Button>
               <CreateUserDialog onSuccess={handleUserCreated} />
@@ -258,9 +237,7 @@ function ResellerClientiContent() {
             {/* Listino Filter */}
             <Select
               value={listinoFilter}
-              onChange={(e) =>
-                setListinoFilter(e.target.value as ListinoFilter)
-              }
+              onChange={(e) => setListinoFilter(e.target.value as ListinoFilter)}
               className="w-full md:w-48"
             >
               <option value="all">Tutti i clienti</option>
@@ -272,7 +249,7 @@ function ResellerClientiContent() {
             <Select
               value={`${sortField}-${sortOrder}`}
               onChange={(e) => {
-                const [field, order] = e.target.value.split("-");
+                const [field, order] = e.target.value.split('-');
                 setSortField(field as SortField);
                 setSortOrder(order as SortOrder);
               }}
@@ -289,7 +266,7 @@ function ResellerClientiContent() {
           </div>
 
           {/* Active filters summary */}
-          {(searchQuery || listinoFilter !== "all") && (
+          {(searchQuery || listinoFilter !== 'all') && (
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
               <Filter className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-500">Filtri attivi:</span>
@@ -298,17 +275,17 @@ function ResellerClientiContent() {
                   Ricerca: &quot;{searchQuery}&quot;
                 </Badge>
               )}
-              {listinoFilter !== "all" && (
+              {listinoFilter !== 'all' && (
                 <Badge variant="secondary" className="text-xs">
-                  {listinoFilter === "with" ? "Con listino" : "Senza listino"}
+                  {listinoFilter === 'with' ? 'Con listino' : 'Senza listino'}
                 </Badge>
               )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setSearchQuery("");
-                  setListinoFilter("all");
+                  setSearchQuery('');
+                  setListinoFilter('all');
                 }}
                 className="text-xs text-gray-500 hover:text-gray-700 h-6"
               >
@@ -341,8 +318,8 @@ function ResellerClientiContent() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setSearchQuery("");
-                      setListinoFilter("all");
+                      setSearchQuery('');
+                      setListinoFilter('all');
                     }}
                   >
                     Resetta filtri
@@ -355,24 +332,20 @@ function ResellerClientiContent() {
               {/* Results count */}
               <div className="flex items-center justify-between px-1">
                 <p className="text-sm text-gray-500">
-                  {filteredClients.length}{" "}
-                  {filteredClients.length === 1 ? "cliente" : "clienti"}
-                  {filteredClients.length !== clients.length &&
-                    ` su ${clients.length} totali`}
+                  {filteredClients.length} {filteredClients.length === 1 ? 'cliente' : 'clienti'}
+                  {filteredClients.length !== clients.length && ` su ${clients.length} totali`}
                 </p>
-                {stats &&
-                  stats.clientsWithoutListino > 0 &&
-                  listinoFilter === "all" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setListinoFilter("without")}
-                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                    >
-                      <FileText className="w-4 h-4 mr-1" />
-                      {stats.clientsWithoutListino} senza listino
-                    </Button>
-                  )}
+                {stats && stats.clientsWithoutListino > 0 && listinoFilter === 'all' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setListinoFilter('without')}
+                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                  >
+                    <FileText className="w-4 h-4 mr-1" />
+                    {stats.clientsWithoutListino} senza listino
+                  </Button>
+                )}
               </div>
 
               {/* Cards */}
@@ -434,13 +407,9 @@ function AccessDenied() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="h-8 w-8 text-red-600" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Accesso Negato
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Questa sezione è riservata ai Reseller.
-        </p>
-        <Button onClick={() => router.push("/dashboard")} variant="outline">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h1>
+        <p className="text-gray-600 mb-6">Questa sezione è riservata ai Reseller.</p>
+        <Button onClick={() => router.push('/dashboard')} variant="outline">
           Torna alla Dashboard
         </Button>
       </div>
@@ -456,15 +425,15 @@ export default function ResellerClientiPage() {
 
   useEffect(() => {
     async function checkResellerStatus() {
-      if (status === "loading") return;
+      if (status === 'loading') return;
 
       if (!session?.user?.email) {
-        router.push("/auth/signin");
+        router.push('/auth/signin');
         return;
       }
 
       try {
-        const response = await fetch("/api/user/info");
+        const response = await fetch('/api/user/info');
         if (response.ok) {
           const data = await response.json();
           const userData = data.user || data;
@@ -472,8 +441,8 @@ export default function ResellerClientiPage() {
 
           // Reseller, admin o superadmin possono accedere
           const hasAccess =
-            accountType === "superadmin" ||
-            accountType === "admin" ||
+            accountType === 'superadmin' ||
+            accountType === 'admin' ||
             userData.is_reseller === true;
 
           setIsReseller(hasAccess);
@@ -481,7 +450,7 @@ export default function ResellerClientiPage() {
           setIsReseller(false);
         }
       } catch (error) {
-        console.error("Errore verifica ruolo:", error);
+        console.error('Errore verifica ruolo:', error);
         setIsReseller(false);
       } finally {
         setIsLoading(false);
@@ -491,7 +460,7 @@ export default function ResellerClientiPage() {
     checkResellerStatus();
   }, [session, status, router]);
 
-  if (status === "loading" || isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10 flex items-center justify-center">
         <div className="text-center">

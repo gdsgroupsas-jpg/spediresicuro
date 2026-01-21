@@ -1,6 +1,6 @@
 /**
  * Contract Tests: Pricing Engine
- * 
+ *
  * Test deterministici per calculateOptimalPrice senza dipendenze esterne (DB, rete, LLM).
  * Mock solo delle dipendenze esterne (supabase, calculatePrice) per testare la logica reale.
  */
@@ -26,7 +26,7 @@ import { calculatePrice } from '@/lib/db/price-lists';
 describe('Pricing Engine - Contract Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Default mock: corrieri attivi
     vi.mocked(supabaseAdmin.from).mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -79,7 +79,7 @@ describe('Pricing Engine - Contract Tests', () => {
       const results = await calculateOptimalPrice(request);
 
       // Verifica: nessun NaN
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(Number.isNaN(result.basePrice)).toBe(false);
         expect(Number.isNaN(result.surcharges)).toBe(false);
         expect(Number.isNaN(result.totalCost)).toBe(false);
@@ -89,12 +89,12 @@ describe('Pricing Engine - Contract Tests', () => {
 
       // Verifica: finalPrice > 0 quando dati completi
       expect(results.length).toBeGreaterThan(0);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.finalPrice).toBeGreaterThan(0);
       });
 
       // Verifica: schema opzioni coerente
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toHaveProperty('courier');
         expect(result).toHaveProperty('serviceType');
         expect(result).toHaveProperty('finalPrice');
@@ -211,15 +211,14 @@ describe('Pricing Engine - Contract Tests', () => {
     });
 
     it('should handle serviceType express', async () => {
-      vi.mocked(calculatePrice)
-        .mockResolvedValueOnce({
-          basePrice: 15.0,
-          surcharges: 0,
-          totalCost: 15.0,
-          details: {
-            estimatedDeliveryDays: { min: 1, max: 2 },
-          },
-        });
+      vi.mocked(calculatePrice).mockResolvedValueOnce({
+        basePrice: 15.0,
+        surcharges: 0,
+        totalCost: 15.0,
+        details: {
+          estimatedDeliveryDays: { min: 1, max: 2 },
+        },
+      });
 
       const request: PricingRequest = {
         weight: 2,
@@ -236,15 +235,14 @@ describe('Pricing Engine - Contract Tests', () => {
     });
 
     it('should handle serviceType economy', async () => {
-      vi.mocked(calculatePrice)
-        .mockResolvedValueOnce({
-          basePrice: 7.0,
-          surcharges: 0,
-          totalCost: 7.0,
-          details: {
-            estimatedDeliveryDays: { min: 5, max: 7 },
-          },
-        });
+      vi.mocked(calculatePrice).mockResolvedValueOnce({
+        basePrice: 7.0,
+        surcharges: 0,
+        totalCost: 7.0,
+        details: {
+          estimatedDeliveryDays: { min: 5, max: 7 },
+        },
+      });
 
       const request: PricingRequest = {
         weight: 2,
@@ -394,7 +392,7 @@ describe('Pricing Engine - Contract Tests', () => {
 
       // Dovrebbe avere risultati per gli altri 2 corrieri
       expect(results.length).toBe(2);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.finalPrice).toBeGreaterThan(0);
         expect(Number.isNaN(result.finalPrice)).toBe(false);
       });
@@ -451,7 +449,9 @@ describe('Pricing Engine - Contract Tests', () => {
       expect(typeof result.estimatedDeliveryDays.min).toBe('number');
       expect(typeof result.estimatedDeliveryDays.max).toBe('number');
       expect(result.estimatedDeliveryDays.min).toBeGreaterThanOrEqual(0);
-      expect(result.estimatedDeliveryDays.max).toBeGreaterThanOrEqual(result.estimatedDeliveryDays.min);
+      expect(result.estimatedDeliveryDays.max).toBeGreaterThanOrEqual(
+        result.estimatedDeliveryDays.min
+      );
 
       // Verifica recommendation enum
       expect(['best_price', 'best_speed', 'best_reliability']).toContain(result.recommendation);
@@ -577,4 +577,3 @@ describe('Pricing Engine - Contract Tests', () => {
     });
   });
 });
-

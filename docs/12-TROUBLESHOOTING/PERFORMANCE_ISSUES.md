@@ -1,15 +1,18 @@
 # Performance Issues - Troubleshooting
 
 ## Overview
+
 Guida completa per identificare e risolvere problemi di performance in SpedireSicuro.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Conoscenza Web Vitals
 - Familiarità con browser DevTools
 - Accesso a Vercel Analytics
@@ -21,6 +24,7 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
 ### Slow Page Load
 
 **Problema:**
+
 - First Contentful Paint (FCP) > 3 secondi
 - Largest Contentful Paint (LCP) > 2.5 secondi
 - Time to Interactive (TTI) > 5 secondi
@@ -28,16 +32,18 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
 **Soluzione:**
 
 1. **Verifica bundle size:**
+
    ```bash
    npm run build
    # Controlla output per bundle size
    ```
 
 2. **Ottimizza immagini:**
+
    ```typescript
    // Usa next/image invece di <img>
    import Image from 'next/image';
-   
+
    <Image
      src="/image.jpg"
      width={500}
@@ -47,6 +53,7 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
    ```
 
 3. **Code splitting:**
+
    ```typescript
    // Lazy load componenti pesanti
    const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
@@ -64,21 +71,24 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
 ### Slow API Response
 
 **Problema:**
+
 - API response time > 2 secondi
 - Timeout errors
 
 **Soluzione:**
 
 1. **Identifica API lente:**
+
    ```bash
    # Vercel Dashboard → Functions → Performance
    # Identifica endpoint con response time alto
    ```
 
 2. **Ottimizza query database:**
+
    ```sql
    -- Verifica query lente
-   SELECT 
+   SELECT
      query,
      mean_time,
      calls
@@ -88,8 +98,9 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
    ```
 
 3. **Aggiungi indici:**
+
    ```sql
-   CREATE INDEX idx_shipments_user_created 
+   CREATE INDEX idx_shipments_user_created
    ON shipments(user_id, created_at DESC);
    ```
 
@@ -110,14 +121,16 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
 ### Slow Queries
 
 **Problema:**
+
 - Query execution time > 1 secondo
 - Database timeout
 
 **Soluzione:**
 
 1. **Identifica query lente:**
+
    ```sql
-   SELECT 
+   SELECT
      query,
      calls,
      total_time,
@@ -129,6 +142,7 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
    ```
 
 2. **Usa EXPLAIN ANALYZE:**
+
    ```sql
    EXPLAIN ANALYZE
    SELECT * FROM shipments
@@ -148,14 +162,16 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
 ### Missing Indexes
 
 **Problema:**
+
 - Sequential scan su tabelle grandi
 - Query lente su foreign keys
 
 **Soluzione:**
 
 1. **Identifica tabelle senza indici:**
+
    ```sql
-   SELECT 
+   SELECT
      t.tablename,
      COUNT(i.indexname) AS index_count
    FROM pg_tables t
@@ -166,18 +182,19 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
    ```
 
 2. **Aggiungi indici critici:**
+
    ```sql
    -- Foreign keys (sempre indicizzare)
    CREATE INDEX idx_shipments_user_id ON shipments(user_id);
-   CREATE INDEX idx_wallet_transactions_user_id 
+   CREATE INDEX idx_wallet_transactions_user_id
    ON wallet_transactions(user_id);
-   
+
    -- Timestamps (per ordering)
-   CREATE INDEX idx_shipments_created_at 
+   CREATE INDEX idx_shipments_created_at
    ON shipments(created_at DESC);
-   
+
    -- Composite (per query comuni)
-   CREATE INDEX idx_shipments_user_created 
+   CREATE INDEX idx_shipments_user_created
    ON shipments(user_id, created_at DESC);
    ```
 
@@ -188,6 +205,7 @@ Guida completa per identificare e risolvere problemi di performance in SpedireSi
 ### Connection Pool Exhausted
 
 **Problema:**
+
 ```
 PGRST301 - Connection pool exhausted
 ```
@@ -221,15 +239,17 @@ PGRST301 - Connection pool exhausted
 ### Stale Data
 
 **Problema:**
+
 - Dati non aggiornati
 - Cache non invalidata
 
 **Soluzione:**
 
 1. **React Query cache invalidation:**
+
    ```typescript
    const queryClient = useQueryClient();
-   
+
    // Invalida cache dopo mutation
    await createShipment(data);
    queryClient.invalidateQueries(['shipments']);
@@ -252,22 +272,25 @@ PGRST301 - Connection pool exhausted
 ### Large Bundle Size
 
 **Problema:**
+
 - Bundle size > 500KB
 - Slow initial load
 
 **Soluzione:**
 
 1. **Analizza bundle:**
+
    ```bash
    npm run build
    # Controlla output per bundle analysis
    ```
 
 2. **Code splitting:**
+
    ```typescript
    // Lazy load route
    const Dashboard = dynamic(() => import('./Dashboard'));
-   
+
    // Lazy load component
    const Chart = dynamic(() => import('./Chart'));
    ```
@@ -284,15 +307,17 @@ PGRST301 - Connection pool exhausted
 ### Large Images
 
 **Problema:**
+
 - Immagini non ottimizzate
 - Slow image load
 
 **Soluzione:**
 
 1. **Usa next/image:**
+
    ```typescript
    import Image from 'next/image';
-   
+
    <Image
      src="/image.jpg"
      width={500}
@@ -314,6 +339,7 @@ PGRST301 - Connection pool exhausted
 ### Rate Limit Exceeded
 
 **Problema:**
+
 ```
 429 Too Many Requests
 ```
@@ -342,11 +368,13 @@ PGRST301 - Connection pool exhausted
 ### Web Vitals
 
 **Metrics:**
+
 - **LCP (Largest Contentful Paint):** < 2.5s
 - **FID (First Input Delay):** < 100ms
 - **CLS (Cumulative Layout Shift):** < 0.1
 
 **Monitoring:**
+
 - Vercel Analytics → Web Vitals
 - Real User Monitoring (RUM)
 
@@ -355,11 +383,13 @@ PGRST301 - Connection pool exhausted
 ### API Performance
 
 **Metrics:**
+
 - Response time (p50, p95, p99)
 - Throughput (requests/second)
 - Error rate
 
 **Monitoring:**
+
 - Vercel Dashboard → Functions
 - Custom logging
 
@@ -371,7 +401,7 @@ PGRST301 - Connection pool exhausted
 
 - ✅ Indici su foreign keys
 - ✅ Indici su colonne usate in WHERE/ORDER BY
-- ✅ Evita SELECT *
+- ✅ Evita SELECT \*
 - ✅ Usa LIMIT per query grandi
 
 ### 2. API
@@ -400,12 +430,12 @@ PGRST301 - Connection pool exhausted
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

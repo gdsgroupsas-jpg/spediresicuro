@@ -1,6 +1,6 @@
 /**
  * Form per inserimento manuale entries listino fornitore
- * 
+ *
  * ✨ FASE 2: Permette inserimento manuale di una o più entries
  * Supporta inserimento singolo o batch (multiple entries)
  */
@@ -99,12 +99,12 @@ export function ManualPriceListEntriesForm({
   const updateEntry = (index: number, field: keyof EntryFormData, value: any) => {
     const updated = [...entries];
     updated[index] = { ...updated[index], [field]: value };
-    
+
     // Auto-aggiorna weight_from basato su weight_to precedente
     if (field === 'weight_to' && index > 0) {
       updated[index].weight_from = updated[index - 1].weight_to;
     }
-    
+
     setEntries(updated);
   };
 
@@ -200,14 +200,9 @@ export function ManualPriceListEntriesForm({
       {/* Lista entries */}
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
         {entries.map((entry, index) => (
-          <div
-            key={index}
-            className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-          >
+          <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium text-sm text-gray-700">
-                Entry {index + 1}
-              </h4>
+              <h4 className="font-medium text-sm text-gray-700">Entry {index + 1}</h4>
               {entries.length > 1 && (
                 <Button
                   type="button"
@@ -267,9 +262,7 @@ export function ManualPriceListEntriesForm({
                   step="0.01"
                   min={entry.weight_from + 0.01}
                   value={entry.weight_to}
-                  onChange={(e) =>
-                    updateEntry(index, 'weight_to', parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => updateEntry(index, 'weight_to', parseFloat(e.target.value) || 0)}
                   required
                   className="mt-1"
                 />
@@ -299,7 +292,11 @@ export function ManualPriceListEntriesForm({
                   id={`service_type-${index}`}
                   value={entry.service_type}
                   onChange={(e) =>
-                    updateEntry(index, 'service_type', e.target.value as EntryFormData['service_type'])
+                    updateEntry(
+                      index,
+                      'service_type',
+                      e.target.value as EntryFormData['service_type']
+                    )
                   }
                   className="mt-1"
                 >
@@ -313,9 +310,7 @@ export function ManualPriceListEntriesForm({
 
               {/* Fuel surcharge */}
               <div>
-                <Label htmlFor={`fuel_surcharge-${index}`}>
-                  Supplemento carburante (%)
-                </Label>
+                <Label htmlFor={`fuel_surcharge-${index}`}>Supplemento carburante (%)</Label>
                 <Input
                   id={`fuel_surcharge-${index}`}
                   type="number"
@@ -323,11 +318,7 @@ export function ManualPriceListEntriesForm({
                   min="0"
                   value={entry.fuel_surcharge_percent}
                   onChange={(e) =>
-                    updateEntry(
-                      index,
-                      'fuel_surcharge_percent',
-                      parseFloat(e.target.value) || 0
-                    )
+                    updateEntry(index, 'fuel_surcharge_percent', parseFloat(e.target.value) || 0)
                   }
                   className="mt-1"
                 />
@@ -335,9 +326,7 @@ export function ManualPriceListEntriesForm({
 
               {/* COD surcharge */}
               <div>
-                <Label htmlFor={`cod_surcharge-${index}`}>
-                  Supplemento contrassegno (€)
-                </Label>
+                <Label htmlFor={`cod_surcharge-${index}`}>Supplemento contrassegno (€)</Label>
                 <Input
                   id={`cod_surcharge-${index}`}
                   type="number"
@@ -357,9 +346,7 @@ export function ManualPriceListEntriesForm({
 
               {/* Insurance rate */}
               <div>
-                <Label htmlFor={`insurance-${index}`}>
-                  Tasso assicurazione (%)
-                </Label>
+                <Label htmlFor={`insurance-${index}`}>Tasso assicurazione (%)</Label>
                 <Input
                   id={`insurance-${index}`}
                   type="number"
@@ -367,11 +354,7 @@ export function ManualPriceListEntriesForm({
                   min="0"
                   value={entry.insurance_rate_percent}
                   onChange={(e) =>
-                    updateEntry(
-                      index,
-                      'insurance_rate_percent',
-                      parseFloat(e.target.value) || 0
-                    )
+                    updateEntry(index, 'insurance_rate_percent', parseFloat(e.target.value) || 0)
                   }
                   className="mt-1"
                 />
@@ -379,9 +362,7 @@ export function ManualPriceListEntriesForm({
 
               {/* Island surcharge */}
               <div>
-                <Label htmlFor={`island_surcharge-${index}`}>
-                  Supplemento isole (€)
-                </Label>
+                <Label htmlFor={`island_surcharge-${index}`}>Supplemento isole (€)</Label>
                 <Input
                   id={`island_surcharge-${index}`}
                   type="number"
@@ -397,9 +378,7 @@ export function ManualPriceListEntriesForm({
 
               {/* ZTL surcharge */}
               <div>
-                <Label htmlFor={`ztl_surcharge-${index}`}>
-                  Supplemento ZTL (€)
-                </Label>
+                <Label htmlFor={`ztl_surcharge-${index}`}>Supplemento ZTL (€)</Label>
                 <Input
                   id={`ztl_surcharge-${index}`}
                   type="number"
@@ -415,9 +394,7 @@ export function ManualPriceListEntriesForm({
 
               {/* Giorni consegna min */}
               <div>
-                <Label htmlFor={`delivery_days_min-${index}`}>
-                  Giorni consegna (min)
-                </Label>
+                <Label htmlFor={`delivery_days_min-${index}`}>Giorni consegna (min)</Label>
                 <Input
                   id={`delivery_days_min-${index}`}
                   type="number"
@@ -436,9 +413,7 @@ export function ManualPriceListEntriesForm({
 
               {/* Giorni consegna max */}
               <div>
-                <Label htmlFor={`delivery_days_max-${index}`}>
-                  Giorni consegna (max)
-                </Label>
+                <Label htmlFor={`delivery_days_max-${index}`}>Giorni consegna (max)</Label>
                 <Input
                   id={`delivery_days_max-${index}`}
                   type="number"

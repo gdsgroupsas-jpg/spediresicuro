@@ -71,12 +71,14 @@ Questo documento definisce le regole di sicurezza per l'**Acting Context** (Impe
 Vedi `GREP_GATE_REPORT.md` per lista completa di file con bypass `auth()`.
 
 **Top Priority (P1):**
+
 - `app/api/couriers/route.ts`
 - `app/api/user/route.ts`
 - `actions/couriers.ts`
 - `actions/user.ts`
 
 **Lower Priority (P2/P3):**
+
 - Altri API routes non-critici
 - Componenti UI (client-side OK, ma server components devono migrare)
 
@@ -105,7 +107,7 @@ grep -r "requireSafeAuth" app/api/shipments/ actions/wallet.ts
 ❌ `import { auth } from '@/lib/auth-config'` in `app/api/**` o `actions/**`  
 ❌ `const session = await auth()` in API routes/actions  
 ❌ `session.user.id` o `session.user.email` come chiave wallet/shipment  
-❌ `headers().get('x-sec-impersonate-target')` in business logic  
+❌ `headers().get('x-sec-impersonate-target')` in business logic
 
 ### Pattern corretti (ALLOWED)
 
@@ -113,7 +115,7 @@ grep -r "requireSafeAuth" app/api/shipments/ actions/wallet.ts
 ✅ `const context = await requireSafeAuth()`  
 ✅ `context.target.id` per operazioni wallet/shipment  
 ✅ `context.actor.id` per audit log  
-✅ `writeAuditLog({ context, action, ... })` per logging  
+✅ `writeAuditLog({ context, action, ... })` per logging
 
 ---
 
@@ -166,18 +168,21 @@ grep -r "IMPERSONATION_COOKIE_SECRET.*=" --include="*.ts" --include="*.tsx" .
 ### Azioni Canoniche (da `AUDIT_ACTIONS`)
 
 **Shipments:**
+
 - `create_shipment`
 - `update_shipment`
 - `cancel_shipment`
 - `shipment_adjustment` (conguaglio peso)
 
 **Wallet:**
+
 - `wallet_recharge`
 - `wallet_debit`
 - `wallet_credit`
 - `wallet_adjustment`
 
 **Impersonation:**
+
 - `impersonation_started`
 - `impersonation_ended`
 - `impersonation_denied`
@@ -208,11 +213,11 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
 
 await writeAuditLog({
-  context,  // ActingContext da requireSafeAuth()
+  context, // ActingContext da requireSafeAuth()
   action: AUDIT_ACTIONS.CREATE_SHIPMENT,
   resourceType: AUDIT_RESOURCE_TYPES.SHIPMENT,
   resourceId: shipment.id,
-  metadata: { carrier, cost }
+  metadata: { carrier, cost },
 });
 ```
 
@@ -307,4 +312,3 @@ Prima di mergeare PR che toccano autenticazione/wallet/shipment:
 ---
 
 **REMEMBER:** Acting Context è una feature P0 per sicurezza finanziaria. Ogni bypass può causare addebiti errati e perdita di fiducia. Fail-closed sempre.
-

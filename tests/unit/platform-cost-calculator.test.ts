@@ -1,12 +1,12 @@
 /**
  * Unit Tests: platform-cost-calculator.ts
- * 
+ *
  * Test della logica di calcolo api_source e provider_cost.
  * Coverage:
  * - determineApiSource: master_list_id, is_global, assegnazioni, BYOC, default
  * - calculateProviderCost: fallback chain (master_list → historical → estimate)
  * - calculateMargin: utility function
- * 
+ *
  * @since Sprint 1 - Financial Tracking
  */
 
@@ -26,16 +26,18 @@ interface MockQueryResult {
   error: any;
 }
 
-const createMockSupabase = (config: {
-  priceListResult?: MockQueryResult;
-  assignmentsResult?: MockQueryResult;
-  userResult?: MockQueryResult;
-  creatorResult?: MockQueryResult;
-  masterListsResult?: MockQueryResult;
-  entriesResult?: MockQueryResult;
-  historicalCostsResult?: MockQueryResult;
-  priceListRulesResult?: MockQueryResult;
-} = {}) => {
+const createMockSupabase = (
+  config: {
+    priceListResult?: MockQueryResult;
+    assignmentsResult?: MockQueryResult;
+    userResult?: MockQueryResult;
+    creatorResult?: MockQueryResult;
+    masterListsResult?: MockQueryResult;
+    entriesResult?: MockQueryResult;
+    historicalCostsResult?: MockQueryResult;
+    priceListRulesResult?: MockQueryResult;
+  } = {}
+) => {
   // Chain per query complesse
   const createChain = (result: MockQueryResult) => {
     const chain: any = {
@@ -283,7 +285,7 @@ describe('platform-cost-calculator', () => {
 
     it('should handle missing priceListId by checking assignments', async () => {
       const mockSupabase = createMockSupabase();
-      
+
       mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         const chain: any = {
           select: vi.fn().mockReturnThis(),
@@ -293,17 +295,20 @@ describe('platform-cost-calculator', () => {
         };
 
         if (table === 'price_list_assignments') {
-          chain.then = (resolve: any) => resolve({
-            data: [{
-              price_list_id: 'assigned-pl',
-              price_lists: {
-                id: 'assigned-pl',
-                master_list_id: 'master-123',
-                is_global: false,
-              },
-            }],
-            error: null,
-          });
+          chain.then = (resolve: any) =>
+            resolve({
+              data: [
+                {
+                  price_list_id: 'assigned-pl',
+                  price_lists: {
+                    id: 'assigned-pl',
+                    master_list_id: 'master-123',
+                    is_global: false,
+                  },
+                },
+              ],
+              error: null,
+            });
         } else {
           chain.single = vi.fn().mockResolvedValue({ data: null, error: null });
         }
@@ -323,7 +328,7 @@ describe('platform-cost-calculator', () => {
   describe('calculateProviderCost', () => {
     it('should return cost from master list when available', async () => {
       const mockSupabase = createMockSupabase();
-      
+
       mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         const chain: any = {
           select: vi.fn().mockReturnThis(),
@@ -338,10 +343,11 @@ describe('platform-cost-calculator', () => {
         };
 
         if (table === 'price_list_entries') {
-          chain.then = (resolve: any) => resolve({
-            data: [{ base_price: 7.50, fuel_surcharge_percent: 10 }],
-            error: null,
-          });
+          chain.then = (resolve: any) =>
+            resolve({
+              data: [{ base_price: 7.5, fuel_surcharge_percent: 10 }],
+              error: null,
+            });
         } else {
           chain.then = (resolve: any) => resolve({ data: [], error: null });
           chain.single = vi.fn().mockResolvedValue({ data: null, error: null });
@@ -363,7 +369,7 @@ describe('platform-cost-calculator', () => {
 
     it('should fallback to historical average when master list not found', async () => {
       const mockSupabase = createMockSupabase();
-      
+
       mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         const chain: any = {
           select: vi.fn().mockReturnThis(),
@@ -404,7 +410,7 @@ describe('platform-cost-calculator', () => {
 
     it('should fallback to estimate when no historical data', async () => {
       const mockSupabase = createMockSupabase();
-      
+
       mockSupabase.from = vi.fn().mockImplementation(() => {
         const chain: any = {
           select: vi.fn().mockReturnThis(),
@@ -436,7 +442,7 @@ describe('platform-cost-calculator', () => {
 
     it('should not use historical if less than 10 records', async () => {
       const mockSupabase = createMockSupabase();
-      
+
       mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         const chain: any = {
           select: vi.fn().mockReturnThis(),
@@ -474,7 +480,7 @@ describe('platform-cost-calculator', () => {
 
     it('should search master list by courier name if not provided directly', async () => {
       const mockSupabase = createMockSupabase();
-      
+
       let searchedTable = '';
       mockSupabase.from = vi.fn().mockImplementation((table: string) => {
         searchedTable = table;
@@ -491,15 +497,17 @@ describe('platform-cost-calculator', () => {
         };
 
         if (table === 'price_lists') {
-          chain.then = (resolve: any) => resolve({
-            data: [{ id: 'found-master', name: 'Listino BRT Standard' }],
-            error: null,
-          });
+          chain.then = (resolve: any) =>
+            resolve({
+              data: [{ id: 'found-master', name: 'Listino BRT Standard' }],
+              error: null,
+            });
         } else if (table === 'price_list_entries') {
-          chain.then = (resolve: any) => resolve({
-            data: [{ base_price: 6.00, fuel_surcharge_percent: null }],
-            error: null,
-          });
+          chain.then = (resolve: any) =>
+            resolve({
+              data: [{ base_price: 6.0, fuel_surcharge_percent: null }],
+              error: null,
+            });
         } else {
           chain.then = (resolve: any) => resolve({ data: [], error: null });
           chain.single = vi.fn().mockResolvedValue({ data: null, error: null });
@@ -515,42 +523,42 @@ describe('platform-cost-calculator', () => {
       });
 
       expect(result.source).toBe('master_list');
-      expect(result.cost).toBe(6.00);
+      expect(result.cost).toBe(6.0);
     });
   });
 
   describe('calculateMargin', () => {
     it('should calculate positive margin correctly', () => {
-      const result = calculateMargin(15.00, 10.00);
-      
-      expect(result.margin).toBe(5.00);
-      expect(result.marginPercent).toBe(50.00);
+      const result = calculateMargin(15.0, 10.0);
+
+      expect(result.margin).toBe(5.0);
+      expect(result.marginPercent).toBe(50.0);
     });
 
     it('should calculate negative margin correctly', () => {
-      const result = calculateMargin(8.00, 12.00);
-      
-      expect(result.margin).toBe(-4.00);
+      const result = calculateMargin(8.0, 12.0);
+
+      expect(result.margin).toBe(-4.0);
       expect(result.marginPercent).toBe(-33.33);
     });
 
     it('should handle zero provider cost', () => {
-      const result = calculateMargin(10.00, 0);
-      
-      expect(result.margin).toBe(10.00);
+      const result = calculateMargin(10.0, 0);
+
+      expect(result.margin).toBe(10.0);
       expect(result.marginPercent).toBe(100);
     });
 
     it('should handle zero billed amount', () => {
       const result = calculateMargin(0, 0);
-      
+
       expect(result.margin).toBe(0);
       expect(result.marginPercent).toBe(0);
     });
 
     it('should round margin percent to 2 decimals', () => {
-      const result = calculateMargin(13.00, 9.00);
-      
+      const result = calculateMargin(13.0, 9.0);
+
       // (13-9)/9 * 100 = 44.444...
       expect(result.marginPercent).toBe(44.44);
     });

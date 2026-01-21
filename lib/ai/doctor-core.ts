@@ -10,13 +10,13 @@ if (!process.env.ANTHROPIC_API_KEY) {
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 // Default to Haiku for speed/cost, can be overridden
-const DEFAULT_MODEL = 'claude-3-haiku-20240307'; 
+const DEFAULT_MODEL = 'claude-3-haiku-20240307';
 
 let anthropicClient: Anthropic | null = null;
 
 export function getAnthropicClient(): Anthropic {
   if (anthropicClient) return anthropicClient;
-  
+
   if (!ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY not found in environment variables');
   }
@@ -24,7 +24,7 @@ export function getAnthropicClient(): Anthropic {
   anthropicClient = new Anthropic({
     apiKey: ANTHROPIC_API_KEY,
   });
-  
+
   return anthropicClient;
 }
 
@@ -37,7 +37,8 @@ export function extractFileFromError(output: string): string | null {
   // - Absolute: /path/to/file.ts or C:\path\to\file.ts
   // - Relative: scripts/file.ts or ./file.ts
   // - With line numbers: file.ts:10:5
-  const pathRegex = /(?:[a-zA-Z]:[\\/])?(?:[\w\-\.]+[\\/])*[\w\-\.]+\.(?:tsx|jsx|ts|js)(?::\d+(?::\d+)?)?/g;
+  const pathRegex =
+    /(?:[a-zA-Z]:[\\/])?(?:[\w\-\.]+[\\/])*[\w\-\.]+\.(?:tsx|jsx|ts|js)(?::\d+(?::\d+)?)?/g;
   const matches = output.match(pathRegex);
 
   if (!matches) return null;
@@ -47,14 +48,14 @@ export function extractFileFromError(output: string): string | null {
   for (const match of matches) {
     // Determine if it has line numbers (ending with :digit or :digit:digit)
     // We can't just split by ':' because of Windows drive letters (C:\)
-    
+
     let cleanPath = match;
     // Remove :line:col or :line at the end
     cleanPath = cleanPath.replace(/:\d+(?::\d+)?$/, '');
-    
+
     const filePath = cleanPath;
     const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
-    
+
     // Ignore node_modules
     if (absolutePath.includes('node_modules')) continue;
 
@@ -69,7 +70,11 @@ export function extractFileFromError(output: string): string | null {
 /**
  * Generates a fix for a given error and file content using Claude.
  */
-export async function generateFix(errorOutput: string, filePath: string, fileContent: string): Promise<string | null> {
+export async function generateFix(
+  errorOutput: string,
+  filePath: string,
+  fileContent: string
+): Promise<string | null> {
   const client = getAnthropicClient();
   const filename = path.basename(filePath);
 
@@ -102,13 +107,13 @@ export async function generateFix(errorOutput: string, filePath: string, fileCon
           4. Return ONLY the full corrected content of the file. 
           5. Do not include markdown code block markers (like \`\`\`typescript). 
           6. Do not include explanations. 
-          7. Just the raw code.`
-        }
-      ]
+          7. Just the raw code.`,
+        },
+      ],
     });
 
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-    
+
     // Clean up any markdown block if the model disobeyed
     const cleanCode = responseText
       .replace(/^```[a-z]*\n/, '')
@@ -116,7 +121,6 @@ export async function generateFix(errorOutput: string, filePath: string, fileCon
       .trim();
 
     return cleanCode;
-
   } catch (error) {
     console.error('❌ [DOCTOR] AI Request Failed:', error);
     return null;

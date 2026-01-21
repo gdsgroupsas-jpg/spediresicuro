@@ -1,11 +1,11 @@
 /**
  * AuthContext: Contesto di autenticazione esplicito e sicuro
- * 
+ *
  * Elimina la logica "email null => admin" e introduce un contesto esplicito:
  * - user: utente autenticato con userId
  * - service_role: operazione admin/service role verificata
  * - anonymous: non autenticato (bloccato)
- * 
+ *
  * ⚠️ SICUREZZA: Nessun percorso può chiamare getSpedizioni/addSpedizione senza contesto valido
  */
 
@@ -28,7 +28,7 @@ export interface AuthContext {
 
 /**
  * Crea AuthContext da sessione NextAuth
- * 
+ *
  * @param session Sessione NextAuth (opzionale, se null usa auth())
  * @returns AuthContext (user o anonymous)
  */
@@ -47,7 +47,10 @@ export async function createAuthContextFromSession(session?: any): Promise<AuthC
 
   // Verifica ruolo admin
   const userRole = (session.user as any).role || 'user';
-  const isAdmin = userRole === 'admin' || (session.user as any).account_type === 'admin' || (session.user as any).account_type === 'superadmin';
+  const isAdmin =
+    userRole === 'admin' ||
+    (session.user as any).account_type === 'admin' ||
+    (session.user as any).account_type === 'superadmin';
 
   // Ottieni userId Supabase
   let supabaseUserId: string | null = null;
@@ -60,7 +63,10 @@ export async function createAuthContextFromSession(session?: any): Promise<AuthC
   // Se non abbiamo userId, NON possiamo permettere operazioni
   // Questo è un hard fail per sicurezza
   if (!supabaseUserId) {
-    console.error('❌ [AUTH CONTEXT] Impossibile ottenere userId Supabase per:', session.user.email);
+    console.error(
+      '❌ [AUTH CONTEXT] Impossibile ottenere userId Supabase per:',
+      session.user.email
+    );
     // Ritorna anonymous invece di user senza userId
     return {
       type: 'anonymous',
@@ -77,19 +83,20 @@ export async function createAuthContextFromSession(session?: any): Promise<AuthC
 
 /**
  * Crea AuthContext per operazioni service_role
- * 
+ *
  * ⚠️ USARE SOLO per operazioni amministrative verificate
  * Richiede verifica esplicita che si stia usando service_role
- * 
+ *
  * @param adminId ID admin che esegue l'operazione (opzionale)
  * @param reason Motivo operazione service_role (opzionale)
  * @returns AuthContext service_role
  */
 export function createServiceRoleContext(adminId?: string, reason?: string): AuthContext {
   // ⚠️ SICUREZZA: Verifica che stiamo usando service_role key
-  const isServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY && 
-                        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
-  
+  const isServiceRole =
+    !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
+
   if (!isServiceRole) {
     throw new Error('Service role context richiede SUPABASE_SERVICE_ROLE_KEY configurata');
   }
@@ -105,7 +112,7 @@ export function createServiceRoleContext(adminId?: string, reason?: string): Aut
 
 /**
  * Verifica se AuthContext permette operazioni
- * 
+ *
  * @param context AuthContext da verificare
  * @returns true se autorizzato, false altrimenti
  */
@@ -115,7 +122,7 @@ export function isAuthorized(context: AuthContext): boolean {
 
 /**
  * Verifica se AuthContext è service_role
- * 
+ *
  * @param context AuthContext da verificare
  * @returns true se service_role, false altrimenti
  */
@@ -125,7 +132,7 @@ export function isServiceRole(context: AuthContext): boolean {
 
 /**
  * Verifica se AuthContext è user (non anonymous)
- * 
+ *
  * @param context AuthContext da verificare
  * @returns true se user, false altrimenti
  */
@@ -135,7 +142,7 @@ export function isUser(context: AuthContext): boolean {
 
 /**
  * Log audit per operazioni service_role
- * 
+ *
  * @param context AuthContext
  * @param operation Nome operazione
  * @param details Dettagli aggiuntivi

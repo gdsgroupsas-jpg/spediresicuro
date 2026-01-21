@@ -1,26 +1,30 @@
 # Deployment Overview
 
 ## Overview
+
 Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piattaforme utilizzate (Vercel, Railway) e i processi CI/CD.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Account Vercel
 - Account Railway (per automation-service)
 - Accesso a GitHub repository
 - Conoscenza base di CI/CD
 
 ## Quick Reference
-| Piattaforma | Servizio | Branch | Auto-Deploy |
-|-------------|----------|--------|-------------|
-| Vercel | Next.js App | `master` | ✅ Sì |
-| Railway | Automation Service | `master` | ✅ Sì |
-| GitHub Actions | CI/CD | `master`, PR | ✅ Sì |
+
+| Piattaforma    | Servizio           | Branch       | Auto-Deploy |
+| -------------- | ------------------ | ------------ | ----------- |
+| Vercel         | Next.js App        | `master`     | ✅ Sì       |
+| Railway        | Automation Service | `master`     | ✅ Sì       |
+| GitHub Actions | CI/CD              | `master`, PR | ✅ Sì       |
 
 ---
 
@@ -44,6 +48,7 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 ```
 
 ### 1. Vercel (Next.js App)
+
 - **Servizio:** Applicazione Next.js principale
 - **Branch:** `master`
 - **Auto-Deploy:** ✅ Ogni push su `master` → deploy automatico
@@ -51,12 +56,14 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 - **Preview:** Ogni PR → preview deployment automatico
 
 ### 2. Railway (Automation Service)
+
 - **Servizio:** `automation-service/` (sincronizzazione listini)
 - **Branch:** `master`
 - **Auto-Deploy:** ✅ Ogni push su `master` → deploy automatico
 - **Dockerfile:** `automation-service/Dockerfile`
 
 ### 3. GitHub Actions (CI/CD)
+
 - **Workflows:**
   - `ci.yml` - CI gate (tests, type-check, build)
   - `e2e-tests.yml` - E2E tests con Playwright
@@ -98,6 +105,7 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 ## Environment Variables
 
 ### Critical (P0)
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -106,6 +114,7 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 - `ENCRYPTION_KEY`
 
 ### Important (P1)
+
 - `GOOGLE_API_KEY` (AI features)
 - `XPAY_BO_API_KEY` (Payments)
 - OAuth credentials (Google, GitHub)
@@ -117,6 +126,7 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 ## Deployment Checklist
 
 ### Pre-Deploy
+
 - [ ] Run all tests: `npm test`
 - [ ] Type check: `npm run type-check`
 - [ ] Lint: `npm run lint`
@@ -126,6 +136,7 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 - [ ] Database backup recent (< 24h)
 
 ### Post-Deploy
+
 - [ ] Check `/api/health` endpoint
 - [ ] Login test user
 - [ ] Create test shipment (draft)
@@ -140,11 +151,13 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 ## Rollback Procedure
 
 ### Vercel Rollback
+
 1. Go to Vercel Dashboard → Deployments
 2. Find previous working deployment
 3. Click "..." → "Promote to Production"
 
 ### Database Migrations
+
 - Check if migration has rollback script
 - If yes: Run rollback migration
 - If no: Manual intervention required
@@ -162,12 +175,12 @@ Panoramica completa del sistema di deployment di SpedireSicuro, incluse le piatt
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

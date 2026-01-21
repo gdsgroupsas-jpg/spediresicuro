@@ -5,6 +5,7 @@
 Sistema Multi-Tenant per gestire configurazioni API corrieri dinamicamente dal database, sostituendo la dipendenza da variabili d'ambiente statiche.
 
 **Caratteristiche:**
+
 - ✅ Configurazioni API gestite dal Superadmin nella dashboard
 - ✅ Assegnazione configurazioni specifiche per utente
 - ✅ Fallback automatico a configurazione default per provider
@@ -18,6 +19,7 @@ Sistema Multi-Tenant per gestire configurazioni API corrieri dinamicamente dal d
 ### 1. Database Schema
 
 **Tabella `courier_configs`:**
+
 - `id` (UUID) - Primary Key
 - `name` (TEXT) - Nome configurazione (es: "Account Standard")
 - `provider_id` (TEXT) - ID provider (es: 'spedisci_online')
@@ -29,6 +31,7 @@ Sistema Multi-Tenant per gestire configurazioni API corrieri dinamicamente dal d
 - `is_default` (BOOLEAN) - Configurazione default per provider
 
 **Tabella `users`:**
+
 - `assigned_config_id` (UUID) - Configurazione assegnata specificamente
 
 ### 2. Factory Pattern
@@ -36,6 +39,7 @@ Sistema Multi-Tenant per gestire configurazioni API corrieri dinamicamente dal d
 **File:** `lib/couriers/factory.ts`
 
 La factory recupera la configurazione per un utente seguendo questa priorità:
+
 1. Configurazione assegnata specificamente (`assigned_config_id`)
 2. Configurazione default per il provider (`is_default = true`)
 3. Fallback a variabili d'ambiente (retrocompatibilità)
@@ -68,8 +72,8 @@ Il sistema è integrato in `lib/actions/spedisci-online.ts` nel metodo `createSh
 Attualmente l'assegnazione avviene tramite SQL o API. In futuro sarà disponibile nella dashboard admin.
 
 ```sql
-UPDATE users 
-SET assigned_config_id = 'uuid-configurazione' 
+UPDATE users
+SET assigned_config_id = 'uuid-configurazione'
 WHERE email = 'utente@example.com';
 ```
 
@@ -86,6 +90,7 @@ WHERE email = 'utente@example.com';
    - Le variabili d'ambiente (fallback)
 
 **Il flusso rimane invariato:**
+
 - Scelta corriere → Chiamata API → LDV generata
 
 #### Generazione LDV Interna (Nuovo Metodo)
@@ -110,12 +115,14 @@ if (result.success) {
 ```
 
 **Vantaggi LDV Interna:**
+
 - ✅ Nessuna chiamata API (più veloce)
 - ✅ Nessun costo API
 - ✅ Funziona offline
 - ✅ Formato PDF professionale
 
 **Quando usare:**
+
 - Quando non hai bisogno di tracking number reale dal corriere
 - Per test o sviluppo
 - Quando le API corriere non sono disponibili
@@ -167,8 +174,8 @@ const result = await createShipmentWithOrchestrator(shipmentData, 'spedisci_onli
 
 ```sql
 -- Assegna configurazione VIP a utente specifico
-UPDATE users 
-SET assigned_config_id = 'uuid-config-vip' 
+UPDATE users
+SET assigned_config_id = 'uuid-config-vip'
 WHERE email = 'vip@example.com';
 ```
 
@@ -200,6 +207,7 @@ const result = await generateInternalLDV(shipmentId, 'csv');
 ### Problema: "Configurazione non trovata"
 
 **Soluzione:**
+
 1. Verifica che esista una configurazione default per il provider
 2. Controlla che `is_active = true`
 3. Verifica che `is_default = true` per almeno una config del provider
@@ -207,6 +215,7 @@ const result = await generateInternalLDV(shipmentId, 'csv');
 ### Problema: "Provider non disponibile"
 
 **Soluzione:**
+
 1. Verifica che il provider sia supportato nella factory
 2. Controlla che le credenziali siano valide
 3. Usa fallback a variabili d'ambiente
@@ -214,6 +223,7 @@ const result = await generateInternalLDV(shipmentId, 'csv');
 ### Problema: LDV interna non genera
 
 **Soluzione:**
+
 1. Verifica che la spedizione esista
 2. Controlla che l'utente abbia accesso alla spedizione
 3. Verifica che i dati spedizione siano completi
@@ -242,4 +252,3 @@ const result = await generateInternalLDV(shipmentId, 'csv');
 
 **Ultimo aggiornamento:** [DATA]
 **Versione:** 1.0
-

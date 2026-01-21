@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Dashboard Super Admin: Gestione Listini Master
@@ -17,9 +17,9 @@ import {
   listMasterPriceListsAction,
   listUsersForAssignmentAction,
   revokePriceListAssignmentAction,
-} from "@/actions/price-lists";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from '@/actions/price-lists';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -27,12 +27,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import type { PriceList, PriceListAssignment } from "@/types/listini";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import type { PriceList, PriceListAssignment } from '@/types/listini';
 import {
   AlertCircle,
   CheckCircle,
@@ -46,11 +46,11 @@ import {
   UserPlus,
   Users,
   XCircle,
-} from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 // Extended PriceList with derived counts
 interface MasterPriceList extends PriceList {
@@ -76,54 +76,53 @@ export default function ListiniMasterPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [masterLists, setMasterLists] = useState<MasterPriceList[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<AssignmentUser[]>([]);
 
   // Dialog states
   const [showCloneDialog, setShowCloneDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showAssignmentsDialog, setShowAssignmentsDialog] = useState(false);
-  const [selectedPriceList, setSelectedPriceList] =
-    useState<MasterPriceList | null>(null);
+  const [selectedPriceList, setSelectedPriceList] = useState<MasterPriceList | null>(null);
   const [assignments, setAssignments] = useState<PriceListAssignment[]>([]);
 
   // Form states
-  const [cloneName, setCloneName] = useState("");
-  const [cloneTargetUser, setCloneTargetUser] = useState("");
-  const [assignUserId, setAssignUserId] = useState("");
-  const [assignNotes, setAssignNotes] = useState("");
+  const [cloneName, setCloneName] = useState('');
+  const [cloneTargetUser, setCloneTargetUser] = useState('');
+  const [assignUserId, setAssignUserId] = useState('');
+  const [assignNotes, setAssignNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Verify superadmin access
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === 'loading') return;
 
-    if (status === "unauthenticated" || !session) {
-      router.push("/login");
+    if (status === 'unauthenticated' || !session) {
+      router.push('/login');
       return;
     }
 
     async function checkSuperAdmin() {
       try {
-        const response = await fetch("/api/user/info");
+        const response = await fetch('/api/user/info');
         if (response.ok) {
           const data = await response.json();
           const userData = data.user || data;
           const accountType = userData.account_type || userData.accountType;
 
-          if (accountType === "superadmin") {
+          if (accountType === 'superadmin') {
             setIsAuthorized(true);
           } else {
-            router.push("/dashboard?error=unauthorized");
+            router.push('/dashboard?error=unauthorized');
             return;
           }
         } else {
-          router.push("/dashboard?error=unauthorized");
+          router.push('/dashboard?error=unauthorized');
           return;
         }
       } catch (error) {
-        console.error("Errore verifica superadmin:", error);
-        router.push("/dashboard?error=unauthorized");
+        console.error('Errore verifica superadmin:', error);
+        router.push('/dashboard?error=unauthorized');
         return;
       } finally {
         setIsLoading(false);
@@ -144,14 +143,14 @@ export default function ListiniMasterPage() {
       if (listsResult.success) {
         setMasterLists(listsResult.priceLists || []);
       } else {
-        toast.error("Errore caricamento listini: " + listsResult.error);
+        toast.error('Errore caricamento listini: ' + listsResult.error);
       }
 
       if (usersResult.success) {
         setUsers(usersResult.users || []);
       }
     } catch (error: any) {
-      toast.error("Errore caricamento dati: " + error.message);
+      toast.error('Errore caricamento dati: ' + error.message);
     }
   }, []);
 
@@ -164,7 +163,7 @@ export default function ListiniMasterPage() {
   // Clone price list
   const handleClone = async () => {
     if (!selectedPriceList || !cloneName.trim()) {
-      toast.error("Inserisci un nome per il listino clonato");
+      toast.error('Inserisci un nome per il listino clonato');
       return;
     }
 
@@ -177,18 +176,16 @@ export default function ListiniMasterPage() {
       });
 
       if (result.success) {
-        toast.success(
-          `Listino "${cloneName}" creato con successo da "${selectedPriceList.name}"`
-        );
+        toast.success(`Listino "${cloneName}" creato con successo da "${selectedPriceList.name}"`);
         setShowCloneDialog(false);
-        setCloneName("");
-        setCloneTargetUser("");
+        setCloneName('');
+        setCloneTargetUser('');
         loadData();
       } else {
-        toast.error("Errore clonazione: " + result.error);
+        toast.error('Errore clonazione: ' + result.error);
       }
     } catch (error: any) {
-      toast.error("Errore: " + error.message);
+      toast.error('Errore: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -197,7 +194,7 @@ export default function ListiniMasterPage() {
   // Assign price list
   const handleAssign = async () => {
     if (!selectedPriceList || !assignUserId) {
-      toast.error("Seleziona un utente");
+      toast.error('Seleziona un utente');
       return;
     }
 
@@ -211,18 +208,16 @@ export default function ListiniMasterPage() {
 
       if (result.success) {
         const user = users.find((u) => u.id === assignUserId);
-        toast.success(
-          `Listino assegnato a ${user?.name || user?.email || assignUserId}`
-        );
+        toast.success(`Listino assegnato a ${user?.name || user?.email || assignUserId}`);
         setShowAssignDialog(false);
-        setAssignUserId("");
-        setAssignNotes("");
+        setAssignUserId('');
+        setAssignNotes('');
         loadData();
       } else {
-        toast.error("Errore assegnazione: " + result.error);
+        toast.error('Errore assegnazione: ' + result.error);
       }
     } catch (error: any) {
-      toast.error("Errore: " + error.message);
+      toast.error('Errore: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -237,30 +232,30 @@ export default function ListiniMasterPage() {
         setAssignments(result.assignments || []);
         setShowAssignmentsDialog(true);
       } else {
-        toast.error("Errore caricamento assegnazioni: " + result.error);
+        toast.error('Errore caricamento assegnazioni: ' + result.error);
       }
     } catch (error: any) {
-      toast.error("Errore: " + error.message);
+      toast.error('Errore: ' + error.message);
     }
   };
 
   // Revoke assignment
   const handleRevoke = async (assignmentId: string) => {
-    if (!confirm("Sei sicuro di voler revocare questa assegnazione?")) return;
+    if (!confirm('Sei sicuro di voler revocare questa assegnazione?')) return;
 
     try {
       const result = await revokePriceListAssignmentAction(assignmentId);
       if (result.success) {
-        toast.success("Assegnazione revocata");
+        toast.success('Assegnazione revocata');
         if (selectedPriceList) {
           loadAssignments(selectedPriceList);
         }
         loadData();
       } else {
-        toast.error("Errore revoca: " + result.error);
+        toast.error('Errore revoca: ' + result.error);
       }
     } catch (error: any) {
-      toast.error("Errore: " + error.message);
+      toast.error('Errore: ' + error.message);
     }
   };
 
@@ -289,12 +284,8 @@ export default function ListiniMasterPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Accesso Negato
-          </h1>
-          <p className="text-gray-600">
-            Solo i superadmin possono accedere a questa sezione.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h1>
+          <p className="text-gray-600">Solo i superadmin possono accedere a questa sezione.</p>
         </div>
       </div>
     );
@@ -311,9 +302,7 @@ export default function ListiniMasterPage() {
                 <GitBranch className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Gestione Listini Master
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900">Gestione Listini Master</h1>
                 <p className="text-sm text-gray-500">
                   Clona, assegna e gestisci i listini template
                 </p>
@@ -375,9 +364,7 @@ export default function ListiniMasterPage() {
                   <tr>
                     <td colSpan={7} className="text-center py-8">
                       <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">
-                        Nessun listino master trovato
-                      </p>
+                      <p className="text-gray-500">Nessun listino master trovato</p>
                     </td>
                   </tr>
                 ) : (
@@ -385,12 +372,8 @@ export default function ListiniMasterPage() {
                     <tr key={list.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-medium text-gray-900">
-                            {list.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            v{list.version}
-                          </p>
+                          <p className="font-medium text-gray-900">{list.name}</p>
+                          <p className="text-xs text-gray-500">v{list.version}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -401,18 +384,18 @@ export default function ListiniMasterPage() {
                       <td className="px-6 py-4">
                         <Badge
                           variant={
-                            list.list_type === "global"
-                              ? "default"
-                              : list.list_type === "supplier"
-                              ? "secondary"
-                              : "outline"
+                            list.list_type === 'global'
+                              ? 'default'
+                              : list.list_type === 'supplier'
+                                ? 'secondary'
+                                : 'outline'
                           }
                         >
-                          {list.list_type || "default"}
+                          {list.list_type || 'default'}
                         </Badge>
                       </td>
                       <td className="px-6 py-4">
-                        {list.status === "active" ? (
+                        {list.status === 'active' ? (
                           <Badge
                             variant="outline"
                             className="text-green-600 border-green-200 bg-green-50"
@@ -427,9 +410,7 @@ export default function ListiniMasterPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <Badge variant="secondary">
-                          {list.derived_count || 0}
-                        </Badge>
+                        <Badge variant="secondary">{list.derived_count || 0}</Badge>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <Badge
@@ -489,8 +470,8 @@ export default function ListiniMasterPage() {
             <DialogHeader>
               <DialogTitle>Clona Listino Master</DialogTitle>
               <DialogDescription>
-                Crea una copia del listino &quot;{selectedPriceList?.name}&quot;
-                con tracciabilità completa.
+                Crea una copia del listino &quot;{selectedPriceList?.name}&quot; con tracciabilità
+                completa.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -504,9 +485,7 @@ export default function ListiniMasterPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cloneTarget">
-                  Assegna a utente (opzionale)
-                </Label>
+                <Label htmlFor="cloneTarget">Assegna a utente (opzionale)</Label>
                 <Select
                   value={cloneTargetUser}
                   onChange={(e) => setCloneTargetUser(e.target.value)}
@@ -549,22 +528,18 @@ export default function ListiniMasterPage() {
             <DialogHeader>
               <DialogTitle>Assegna Listino</DialogTitle>
               <DialogDescription>
-                Assegna &quot;{selectedPriceList?.name}&quot; a un reseller o
-                BYOC.
+                Assegna &quot;{selectedPriceList?.name}&quot; a un reseller o BYOC.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="assignUser">Seleziona utente</Label>
-                <Select
-                  value={assignUserId}
-                  onChange={(e) => setAssignUserId(e.target.value)}
-                >
+                <Select value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}>
                   <option value="">Seleziona utente...</option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.name || user.email} (
-                      {user.is_reseller ? "Reseller" : user.account_type})
+                      {user.name || user.email} ({user.is_reseller ? 'Reseller' : user.account_type}
+                      )
                     </option>
                   ))}
                 </Select>
@@ -601,16 +576,11 @@ export default function ListiniMasterPage() {
         </Dialog>
 
         {/* Assignments Dialog */}
-        <Dialog
-          open={showAssignmentsDialog}
-          onOpenChange={setShowAssignmentsDialog}
-        >
+        <Dialog open={showAssignmentsDialog} onOpenChange={setShowAssignmentsDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Assegnazioni: {selectedPriceList?.name}</DialogTitle>
-              <DialogDescription>
-                Utenti a cui è assegnato questo listino
-              </DialogDescription>
+              <DialogDescription>Utenti a cui è assegnato questo listino</DialogDescription>
             </DialogHeader>
             <div className="py-4">
               {assignments.length === 0 ? (
@@ -646,36 +616,25 @@ export default function ListiniMasterPage() {
                           <td className="px-4 py-3">
                             <div>
                               <p className="font-medium text-sm">
-                                {assignment.user?.name ||
-                                  assignment.user?.email}
+                                {assignment.user?.name || assignment.user?.email}
                               </p>
-                              <p className="text-xs text-gray-500">
-                                {assignment.user?.email}
-                              </p>
+                              <p className="text-xs text-gray-500">{assignment.user?.email}</p>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            {assignment.assigner?.email || "Sistema"}
+                            {assignment.assigner?.email || 'Sistema'}
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            {new Date(
-                              assignment.assigned_at
-                            ).toLocaleDateString("it-IT")}
+                            {new Date(assignment.assigned_at).toLocaleDateString('it-IT')}
                           </td>
                           <td className="px-4 py-3">
                             {assignment.revoked_at ? (
-                              <Badge
-                                variant="outline"
-                                className="text-red-600 border-red-200"
-                              >
+                              <Badge variant="outline" className="text-red-600 border-red-200">
                                 <XCircle className="w-3 h-3 mr-1" />
                                 Revocata
                               </Badge>
                             ) : (
-                              <Badge
-                                variant="outline"
-                                className="text-green-600 border-green-200"
-                              >
+                              <Badge variant="outline" className="text-green-600 border-green-200">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Attiva
                               </Badge>
@@ -702,10 +661,7 @@ export default function ListiniMasterPage() {
               )}
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowAssignmentsDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowAssignmentsDialog(false)}>
                 Chiudi
               </Button>
               <Button

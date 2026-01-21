@@ -91,6 +91,7 @@ Questo documento contiene la checklist per il testing manuale della semantica IV
 - [ ] Verificare che il prezzo finale sia corretto
 
 **Esempio:**
+
 - Base price (IVA inclusa): 122€ (100€ + 22% IVA)
 - Base price (IVA esclusa): 100€
 - Margine (20% su base esclusa): 20€
@@ -108,6 +109,7 @@ Questo documento contiene la checklist per il testing manuale della semantica IV
 - [ ] Verificare che il prezzo finale sia corretto
 
 **Esempio:**
+
 - Base price (IVA esclusa): 100€
 - Margine (20% su base esclusa): 20€
 - Prezzo finale (IVA esclusa): 120€
@@ -273,7 +275,7 @@ Questo documento contiene la checklist per il testing manuale della semantica IV
 
 ---
 
-**Data Test:** _______________  
-**Tester:** _______________  
+**Data Test:** **\*\***\_\_\_**\*\***  
+**Tester:** **\*\***\_\_\_**\*\***  
 **Risultato:** ☐ PASS ☐ FAIL  
-**Note:** _______________
+**Note:** **\*\***\_\_\_**\*\***

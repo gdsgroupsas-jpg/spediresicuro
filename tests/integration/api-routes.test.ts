@@ -17,19 +17,19 @@
  * Uso: Testa logica backend che E2E testa indirettamente
  */
 
-import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock auth
-vi.mock("@/lib/safe-auth", () => ({
+vi.mock('@/lib/safe-auth', () => ({
   requireSafeAuth: vi.fn(),
 }));
 
-import { requireSafeAuth } from "@/lib/safe-auth";
+import { requireSafeAuth } from '@/lib/safe-auth';
 
-describe("API Routes - Sostituti E2E", () => {
-  const mockUserId = "test-user-123";
-  const mockUserEmail = "test@example.com";
+describe('API Routes - Sostituti E2E', () => {
+  const mockUserId = 'test-user-123';
+  const mockUserEmail = 'test@example.com';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,33 +39,33 @@ describe("API Routes - Sostituti E2E", () => {
       actor: {
         id: mockUserId,
         email: mockUserEmail,
-        account_type: "user",
+        account_type: 'user',
       },
       target: {
         id: mockUserId,
         email: mockUserEmail,
-        account_type: "user",
+        account_type: 'user',
       },
       isImpersonating: false,
     });
   });
 
-  describe("POST /api/shipments/create", () => {
-    it("dovrebbe creare spedizione con dati validi", async () => {
+  describe('POST /api/shipments/create', () => {
+    it('dovrebbe creare spedizione con dati validi', async () => {
       const body = {
         recipient: {
-          name: "Mario Rossi",
-          addressLine1: "Via Roma 123",
-          city: "Milano",
-          province: "MI",
-          postalCode: "20100",
-          country: "IT",
-          phone: "+39 333 1234567",
+          name: 'Mario Rossi',
+          addressLine1: 'Via Roma 123',
+          city: 'Milano',
+          province: 'MI',
+          postalCode: '20100',
+          country: 'IT',
+          phone: '+39 333 1234567',
         },
         sender: {
-          name: "Luigi Verdi",
-          company: "Azienda SRL",
-          phone: "+39 06 1234567",
+          name: 'Luigi Verdi',
+          company: 'Azienda SRL',
+          phone: '+39 06 1234567',
         },
         packages: [
           {
@@ -75,24 +75,21 @@ describe("API Routes - Sostituti E2E", () => {
             heightCm: 15,
           },
         ],
-        carrier: "GLS",
-        provider: "spediscionline",
+        carrier: 'GLS',
+        provider: 'spediscionline',
       };
 
-      const request = new NextRequest(
-        "http://localhost:3000/api/shipments/create",
-        {
-          method: "POST",
-          body: JSON.stringify(body),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const request = new NextRequest('http://localhost:3000/api/shipments/create', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       // Mock supabaseAdmin per evitare errori database
-      vi.mock("@/lib/db/client", async () => {
-        const actual = await vi.importActual("@/lib/db/client");
+      vi.mock('@/lib/db/client', async () => {
+        const actual = await vi.importActual('@/lib/db/client');
         return {
           ...actual,
           supabaseAdmin: {
@@ -109,14 +106,14 @@ describe("API Routes - Sostituti E2E", () => {
               })),
               insert: vi.fn(() =>
                 Promise.resolve({
-                  data: [{ id: "shipment-123" }],
+                  data: [{ id: 'shipment-123' }],
                   error: null,
                 })
               ),
             })),
             rpc: vi.fn(() =>
               Promise.resolve({
-                data: [{ acquired: true, status: "in_progress" }],
+                data: [{ acquired: true, status: 'in_progress' }],
                 error: null,
               })
             ),
@@ -126,16 +123,16 @@ describe("API Routes - Sostituti E2E", () => {
 
       // Nota: Questo test richiede mock più complessi per il wallet
       // Per ora testiamo la validazione input
-      expect(body.recipient.name).toBe("Mario Rossi");
+      expect(body.recipient.name).toBe('Mario Rossi');
       expect(body.packages[0].weightKg).toBe(2.5);
-      expect(body.carrier).toBe("GLS");
+      expect(body.carrier).toBe('GLS');
     });
 
-    it("dovrebbe validare input obbligatori", () => {
+    it('dovrebbe validare input obbligatori', () => {
       const invalidBodies = [
         {}, // Vuoto
         { recipient: {} }, // Recipient vuoto
-        { recipient: { name: "Mario" } }, // Recipient incompleto
+        { recipient: { name: 'Mario' } }, // Recipient incompleto
         { packages: [] }, // Nessun pacco
       ];
 
@@ -153,11 +150,11 @@ describe("API Routes - Sostituti E2E", () => {
     });
   });
 
-  describe("GET /api/configurations/list-for-booking", () => {
-    it("dovrebbe restituire configurazioni attive", async () => {
+  describe('GET /api/configurations/list-for-booking', () => {
+    it('dovrebbe restituire configurazioni attive', async () => {
       // Mock supabaseAdmin
-      vi.mock("@/lib/db/client", async () => {
-        const actual = await vi.importActual("@/lib/db/client");
+      vi.mock('@/lib/db/client', async () => {
+        const actual = await vi.importActual('@/lib/db/client');
         return {
           ...actual,
           supabaseAdmin: {
@@ -168,12 +165,12 @@ describe("API Routes - Sostituti E2E", () => {
                     Promise.resolve({
                       data: [
                         {
-                          id: "config-1",
-                          name: "Config GLS",
+                          id: 'config-1',
+                          name: 'Config GLS',
                           is_default: true,
-                          status: "active",
+                          status: 'active',
                           automation_settings: {
-                            enabled_carriers: ["gls", "brt"],
+                            enabled_carriers: ['gls', 'brt'],
                           },
                         },
                       ],
@@ -187,35 +184,33 @@ describe("API Routes - Sostituti E2E", () => {
         };
       });
 
-      const request = new NextRequest(
-        "http://localhost:3000/api/configurations/list-for-booking"
-      );
+      const request = new NextRequest('http://localhost:3000/api/configurations/list-for-booking');
 
       // Test logica: configurazioni devono essere attive
       const mockConfigs = [
         {
-          id: "config-1",
-          status: "active",
-          automation_settings: { enabled_carriers: ["gls"] },
+          id: 'config-1',
+          status: 'active',
+          automation_settings: { enabled_carriers: ['gls'] },
         },
         {
-          id: "config-2",
-          status: "inactive", // Non attiva
+          id: 'config-2',
+          status: 'inactive', // Non attiva
         },
       ];
 
-      const activeConfigs = mockConfigs.filter((c) => c.status === "active");
+      const activeConfigs = mockConfigs.filter((c) => c.status === 'active');
       expect(activeConfigs.length).toBe(1);
-      expect(activeConfigs[0].id).toBe("config-1");
+      expect(activeConfigs[0].id).toBe('config-1');
     });
   });
 
-  describe("POST /api/configurations/update-courier-settings", () => {
-    it("dovrebbe validare input", () => {
+  describe('POST /api/configurations/update-courier-settings', () => {
+    it('dovrebbe validare input', () => {
       const invalidInputs = [
-        { configId: null, enabledCouriers: ["gls"] }, // configId mancante
-        { configId: "config-123", enabledCouriers: [] }, // Array vuoto
-        { configId: "config-123", enabledCouriers: null }, // Non array
+        { configId: null, enabledCouriers: ['gls'] }, // configId mancante
+        { configId: 'config-123', enabledCouriers: [] }, // Array vuoto
+        { configId: 'config-123', enabledCouriers: null }, // Non array
       ];
 
       invalidInputs.forEach((input) => {
@@ -228,32 +223,30 @@ describe("API Routes - Sostituti E2E", () => {
       });
     });
 
-    it("dovrebbe sanitizzare corrier codes", () => {
-      const rawCouriers = ["GLS", "BRT", "INVALID@CHAR", "  spaces  "];
+    it('dovrebbe sanitizzare corrier codes', () => {
+      const rawCouriers = ['GLS', 'BRT', 'INVALID@CHAR', '  spaces  '];
 
       const sanitized = rawCouriers
-        .filter((c): c is string => typeof c === "string")
-        .map((c) => c.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
+        .filter((c): c is string => typeof c === 'string')
+        .map((c) => c.toLowerCase().replace(/[^a-z0-9_-]/g, ''))
         .filter((c) => c.length > 0);
 
-      expect(sanitized).toEqual(["gls", "brt", "invalidchar", "spaces"]);
+      expect(sanitized).toEqual(['gls', 'brt', 'invalidchar', 'spaces']);
     });
   });
 
-  describe("POST /api/invoices/generate", () => {
-    it("dovrebbe validare shipmentId", () => {
+  describe('POST /api/invoices/generate', () => {
+    it('dovrebbe validare shipmentId', () => {
       const invalidInputs = [
         {}, // shipmentId mancante
         { shipmentId: null },
-        { shipmentId: "" },
+        { shipmentId: '' },
         // { shipmentId: "not-a-uuid" }, // Rimosso: la validazione base length > 0 non cattura questo
       ];
 
       invalidInputs.forEach((input) => {
         const isValid =
-          input.shipmentId &&
-          typeof input.shipmentId === "string" &&
-          input.shipmentId.length > 0;
+          input.shipmentId && typeof input.shipmentId === 'string' && input.shipmentId.length > 0;
 
         expect(!!isValid).toBe(false);
       });
@@ -261,17 +254,17 @@ describe("API Routes - Sostituti E2E", () => {
   });
 });
 
-describe("API Routes - Validazione Input", () => {
+describe('API Routes - Validazione Input', () => {
   /**
    * Test che sostituiscono E2E per validazione form
    * E2E testa: "Form non accetta input invalido"
    * Questo test: "API rifiuta input invalido"
    */
 
-  describe("Validazione Spedizione", () => {
-    it("dovrebbe richiedere recipient completo", () => {
+  describe('Validazione Spedizione', () => {
+    it('dovrebbe richiedere recipient completo', () => {
       const incompleteRecipient = {
-        name: "Mario",
+        name: 'Mario',
         // Manca: city, postalCode, province
       };
 
@@ -284,9 +277,9 @@ describe("API Routes - Validazione Input", () => {
       expect(!!isValid).toBe(false);
     });
 
-    it("dovrebbe richiedere almeno un pacco", () => {
+    it('dovrebbe richiedere almeno un pacco', () => {
       const shipmentWithoutPackages = {
-        recipient: { name: "Mario", city: "Milano" },
+        recipient: { name: 'Mario', city: 'Milano' },
         packages: [],
       };
 
@@ -294,9 +287,9 @@ describe("API Routes - Validazione Input", () => {
       // Dovrebbe fallire validazione
     });
 
-    it("dovrebbe validare formato CAP", () => {
-      const validCAPs = ["20100", "00100", "09100"];
-      const invalidCAPs = ["123", "ABCDE", "20100-123"];
+    it('dovrebbe validare formato CAP', () => {
+      const validCAPs = ['20100', '00100', '09100'];
+      const invalidCAPs = ['123', 'ABCDE', '20100-123'];
 
       const capRegex = /^\d{5}$/;
 
@@ -311,10 +304,10 @@ describe("API Routes - Validazione Input", () => {
   });
 });
 
-describe("API Routes - Autenticazione", () => {
-  it("dovrebbe richiedere autenticazione", async () => {
+describe('API Routes - Autenticazione', () => {
+  it('dovrebbe richiedere autenticazione', async () => {
     // Mock auth che fallisce
-    (requireSafeAuth as any).mockRejectedValue(new Error("Non autenticato"));
+    (requireSafeAuth as any).mockRejectedValue(new Error('Non autenticato'));
 
     // API dovrebbe restituire 401
     const requiresAuth = true; // Tutte le API routes richiedono auth
@@ -322,22 +315,17 @@ describe("API Routes - Autenticazione", () => {
     expect(requiresAuth).toBe(true);
   });
 
-  it("dovrebbe validare ownership per operazioni sensibili", () => {
+  it('dovrebbe validare ownership per operazioni sensibili', () => {
     // Simula validazione ownership
-    function canAccessConfig(
-      configOwnerId: string,
-      userId: string,
-      isAdmin: boolean
-    ): boolean {
+    function canAccessConfig(configOwnerId: string, userId: string, isAdmin: boolean): boolean {
       if (isAdmin) return true;
       return configOwnerId === userId;
     }
 
-    const configOwnerId = "user-123";
-    const attackerId = "user-456";
+    const configOwnerId = 'user-123';
+    const attackerId = 'user-456';
 
     expect(canAccessConfig(configOwnerId, attackerId, false)).toBe(false);
     expect(canAccessConfig(configOwnerId, configOwnerId, false)).toBe(true);
   });
 });
-

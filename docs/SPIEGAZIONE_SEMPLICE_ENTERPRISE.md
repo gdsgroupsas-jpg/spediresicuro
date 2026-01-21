@@ -13,11 +13,13 @@
 **Le chiamate API per i PREVENTIVI (quote/rates) sono GRATUITE.**
 
 ✅ **Cosa NON costa:**
+
 - Chiamare `/shipping/rates` per ottenere un preventivo
 - Vedere quanto costa una spedizione prima di crearla
 - Testare i contratti disponibili
 
 ❌ **Cosa COSTA invece:**
+
 - Creare una spedizione reale (`/shipping/create`)
 - Generare un'etichetta (LDV)
 - Questo costa perché crea una spedizione vera
@@ -25,6 +27,7 @@
 ### Dove sono i costi?
 
 I costi sono quando:
+
 1. **Creazione spedizione reale** → Il corriere addebita il costo della spedizione
 2. **Quota API** → Alcuni provider limitano chiamate API (es. 1000/mese), ma Spedisci.Online generalmente non addebita per rates
 
@@ -52,6 +55,7 @@ I costi sono quando:
 ### Esempio Pratico (come funziona nella vita reale):
 
 **SENZA Cache (come è ora):**
+
 ```
 Utente: "Quanto costa GLS per 2kg a Napoli?"
 Sistema: [Chiama API Spedisci.Online] → Aspetta 2 secondi → "€8.50"
@@ -59,9 +63,11 @@ Sistema: [Chiama API Spedisci.Online] → Aspetta 2 secondi → "€8.50"
 Utente: [Click di nuovo su GLS]
 Sistema: [Chiama API di nuovo] → Aspetta altri 2 secondi → "€8.50"
 ```
+
 **Problema:** Ogni volta chiama l'API, anche se la risposta è identica!
 
 **CON Cache Redis:**
+
 ```
 Utente: "Quanto costa GLS per 2kg a Napoli?"
 Sistema: [Chiama API] → Aspetta 2 secondi → "€8.50"
@@ -70,6 +76,7 @@ Sistema: [Chiama API] → Aspetta 2 secondi → "€8.50"
 Utente: [Click di nuovo su GLS]
 Sistema: [Controlla Redis] → "Ah, ce l'ho già!" → Risponde in 0.1 secondi → "€8.50"
 ```
+
 **Vantaggio:** Risposta istantanea, senza chiamare API!
 
 ### Cosa fa Redis:
@@ -104,11 +111,13 @@ CON Cache:
 ### Cosa Intendevo (e cosa NON intendevo):
 
 **❌ NON intendo:**
+
 - Inventare LDV false se API fallisce
 - Creare spedizioni fake
 - Mostrare prezzi inventati
 
 **✅ Intendo invece:**
+
 - Se API fallisce → Mostra errore chiaro
 - Ma se API è lenta → Mostra prezzo stimato (da listino cached) con badge "Stimato"
 - L'utente sa che è stimato, non reale
@@ -116,10 +125,11 @@ CON Cache:
 ### Esempio Pratico:
 
 **Scenario 1: API Corriere NON Disponibile**
+
 ```
 Utente clicka "GLS"
 Sistema: [Chiama API] → Errore "API non disponibile"
-UI Mostra: 
+UI Mostra:
 ┌─────────────────────────────────┐
 │ ⚠️ GLS Temporaneamente          │
 │    Non Disponibile              │
@@ -130,9 +140,11 @@ UI Mostra:
 │ [Riprova]                        │
 └─────────────────────────────────┘
 ```
+
 **✅ Errore chiaro, nessuna LDV inventata**
 
 **Scenario 2: API Lenta (ma disponibile)**
+
 ```
 Utente clicka "GLS"
 Sistema: [Chiama API] → Sta caricando (2 secondi...)
@@ -152,16 +164,19 @@ Dopo 2 secondi:
 │ [Badge: "Aggiornato da API"]     │
 └─────────────────────────────────┘
 ```
+
 **✅ Mostra stima mentre carica, poi aggiorna con reale**
 
 ### Conclusione:
 
 **Per PREVENTIVI (quote):**
+
 - Se API fallisce → Errore chiaro "API non disponibile"
 - Se API è lenta → Mostra stima con badge "Stimato"
 - **MAI inventare LDV o spedizioni fake**
 
 **Per CREAZIONE SPEDIZIONE:**
+
 - Se API fallisce → Errore, nessuna spedizione creata
 - Fallback CSV solo per upload manuale (non spedizione reale)
 
@@ -197,6 +212,7 @@ UI Mostra:
 ```
 
 **Messaggio Semplice per Utente:**
+
 - "API corriere non disponibile" → Troppo tecnico
 - "Servizio temporaneamente non disponibile" → Meglio
 - "Riprova tra qualche minuto o scegli altro corriere" → Perfetto
@@ -210,36 +226,43 @@ UI Mostra:
 ### 7. Request Queuing (Coda Richieste)
 
 **❌ NON Esiste per Quote**
+
 - Se 100 utenti clickano simultaneamente → 100 chiamate API
 - Manca: coda che limita a 3 richieste simultanee per utente
 
 **✅ Esiste per Altro**
+
 - Rate limiting esiste (`lib/security/rate-limit.ts`)
 - Ma non viene usato per quote API
 
 ### 8. Debounce (Evita Click Multipli)
 
 **❌ NON Esiste per Quote**
+
 - Utente può clickare 10 volte → 10 chiamate API
 - Manca: debounce 500ms (aspetta prima di chiamare)
 
 **✅ Esiste Parzialmente**
+
 - Alcuni componenti hanno debounce
 - Ma non nella pagina selezione corriere
 
 ### 9. Test Coverage
 
 **❌ NON Esiste per Quote**
+
 - Nessun test per: click → API → calcolo → display
 - Manca: test E2E per flusso completo
 
 **✅ Esiste per Altro**
+
 - Test per wallet, shipments
 - Ma non per quote real-time
 
 ### 10. UX Enterprise (Loading, Retry, Skeleton)
 
 **✅ Parzialmente Esiste:**
+
 - Loading spinner esiste (`Loader2` component)
 - Skeleton loader esiste (`DataTableSkeleton`)
 - **❌ Manca:**
@@ -248,6 +271,7 @@ UI Mostra:
   - Ottimistic updates (mostra stima mentre carica)
 
 **Esempio Cosa Manca:**
+
 ```
 Ora:
 ┌──────────────┐
@@ -290,12 +314,14 @@ Dovrebbe Essere:
 ## 🎯 Conclusione Semplice
 
 **Stato Attuale:**
+
 - ✅ Funziona, ma non è ottimizzato
 - ❌ Ogni click fa chiamata API (lento, costoso)
 - ❌ Nessun fallback intelligente
 - ❌ UX base, non enterprise
 
 **Per Enterprise-Grade Serve:**
+
 1. Cache (velocità)
 2. Debounce (evita sprechi)
 3. Queue (limita chiamate)

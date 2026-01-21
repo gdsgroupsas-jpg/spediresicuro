@@ -9,22 +9,26 @@
 ## Flag & Scope
 
 ### Flag Identificato
+
 - **Nome:** `ENABLE_OCR_IMAGES`
 - **Tipo:** Boolean (environment variable)
 - **Default:** `false` (opt-in)
 - **Formato:** `ENABLE_OCR_IMAGES=true` o `ENABLE_OCR_IMAGES=false`
 
 ### Dove viene letto
+
 - **File:** `lib/config.ts:99`
 - **Riga:** `ENABLE_OCR_IMAGES: process.env.ENABLE_OCR_IMAGES === 'true'`
 - **Config object:** `ocrConfig.ENABLE_OCR_IMAGES`
 
 ### Dove viene usato
+
 - **File principale:** `lib/agent/workers/ocr.ts:534`
 - **Check:** `if (!ocrConfig.ENABLE_OCR_IMAGES) { ... }`
 - **Effetto quando OFF:** Ritorna immediatamente con `clarification_request` senza eseguire Vision
 
 ### Effetto atteso quando OFF
+
 1. **Comportamento:** Immagine rilevata → OCR Worker ritorna `clarification_request`
 2. **Messaggio utente:** "Ho ricevuto un'immagine, ma l'estrazione automatica non è ancora attiva. Puoi incollare il testo dello screenshot?"
 3. **Stato:** `next_step: 'END'`, `processingStatus: 'idle'`
@@ -38,18 +42,21 @@
 ### A. Preparazione
 
 #### 1. Identificazione Variabili Env
+
 ```bash
 # Verifica flag
 grep -RIn "ENABLE_OCR_IMAGES" lib/ app/ || true
 ```
 
 **Risultato:**
+
 - `lib/config.ts:99` - Definizione flag
 - `lib/agent/workers/ocr.ts:534` - Uso flag
 - `tests/integration/ocr-vision.test.ts:70` - Test flag disabled
 - `PHASE_3_EXECUTION_CHECKLIST.md:21` - Documentazione
 
 #### 2. Fixture Immagine
+
 - **Directory:** `tests/fixtures/ocr-images/`
 - **File usato:** `WhatsApp Image 2025-12-08 at 13.57.30.jpeg`
 - **Formato:** Base64 (convertito in test)
@@ -57,19 +64,21 @@ grep -RIn "ENABLE_OCR_IMAGES" lib/ app/ || true
 ### B. Test Kill Switch OFF
 
 #### Procedura
+
 1. **Setup:** Mock `ocrConfig.ENABLE_OCR_IMAGES = false`
 2. **Input:** Immagine base64 (fixture WhatsApp)
 3. **Esecuzione:** `ocrWorker(state, logger)`
 4. **Verifica:** Output contiene `clarification_request`, `next_step: 'END'`
 
 #### Test Eseguito
+
 **File:** `tests/integration/ocr-vision.test.ts:70`
 
 ```typescript
 it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
   // Override config
   vi.doMock('@/lib/config', async (importOriginal) => {
-    const original = await importOriginal() as any;
+    const original = (await importOriginal()) as any;
     return {
       ...original,
       ocrConfig: {
@@ -78,10 +87,10 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
       },
     };
   });
-  
+
   vi.resetModules();
   const { ocrWorker: ocrWorkerDisabled } = await import('@/lib/agent/workers/ocr');
-  
+
   const state = createMockAgentState(MINIMAL_IMAGE_BASE64);
   const result = await ocrWorkerDisabled(state, nullLogger);
 
@@ -94,6 +103,7 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
 **Risultato:** ✅ **PASS**
 
 #### Verifica Comportamento
+
 - ✅ Nessun errore 500
 - ✅ Comportamento deterministico: `clarification_request` + `END`
 - ✅ Nessuna chiamata a `executeVisionWithRetry()`
@@ -102,15 +112,18 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
 ### C. Test Kill Switch ON
 
 #### Procedura
+
 1. **Setup:** `ocrConfig.ENABLE_OCR_IMAGES = true` (default per test)
 2. **Input:** Immagine base64 (fixture WhatsApp)
 3. **Esecuzione:** `ocrWorker(state, logger)`
 4. **Verifica:** Vision viene eseguito, dati estratti
 
 #### Test Eseguito
+
 **File:** `tests/integration/ocr-vision.integration.test.ts`
 
 **Risultato esecuzione:**
+
 ```
 ✓ tests/integration/ocr-vision.integration.test.ts (13 tests) 22593ms
   ✓ [MEDIUM] WhatsApp Image 2025-12-08 at 13.57.30.jpeg: Screenshot WhatsApp 1  2364ms
@@ -123,6 +136,7 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
 **Risultato:** ✅ **PASS**
 
 #### Verifica Comportamento
+
 - ✅ Vision viene eseguito (`executeVisionWithRetry()` chiamato)
 - ✅ Dati estratti correttamente
 - ✅ Log: `📸 [OCR Worker] Immagine rilevata - avvio estrazione Vision con retry policy`
@@ -131,17 +145,20 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
 ### D. Regression Guard
 
 #### Test E2E
+
 **Comando:** `npm run test:e2e`
 
 **Nota:** Test E2E non eseguiti in questo dry-run (richiedono ambiente completo).  
 **Raccomandazione:** Eseguire prima di deploy produzione.
 
 #### Test Unitari OCR
+
 **Comando:** `npm run test:ocr:integration`
 
 **Risultato:** ✅ **PASS** (13 tests passed)
 
 #### Test Smoke
+
 **Comando:** `npm run test:smoke:golden`
 
 **Nota:** Non eseguito in questo dry-run.  
@@ -154,6 +171,7 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
 ### Test OFF: **PASS** ✅
 
 **Evidenze:**
+
 - ✅ Test unitario passa: `tests/integration/ocr-vision.test.ts:70`
 - ✅ Comportamento deterministico: `clarification_request` + `END`
 - ✅ Nessun crash: `processingStatus: 'idle'`
@@ -161,6 +179,7 @@ it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
 - ✅ Log appropriato: messaggio di disabilitazione
 
 **Codice verificato:**
+
 ```typescript:lib/agent/workers/ocr.ts:534-541
 if (!ocrConfig.ENABLE_OCR_IMAGES) {
   logger.log('📸 [OCR Worker] Immagine rilevata - OCR immagini disabilitato (ENABLE_OCR_IMAGES=false)');
@@ -175,12 +194,14 @@ if (!ocrConfig.ENABLE_OCR_IMAGES) {
 ### Test ON: **PASS** ✅
 
 **Evidenze:**
+
 - ✅ Test integration passano: 13/13 tests passed
 - ✅ Vision viene eseguito correttamente
 - ✅ Dati estratti da immagini WhatsApp
 - ✅ Routing corretto a `address_worker` quando dati completi
 
 **Codice verificato:**
+
 ```typescript:lib/agent/workers/ocr.ts:543-551
 // Sprint 2.5 Phase 2: Estrazione immagine via Gemini Vision con retry policy
 logger.log('📸 [OCR Worker] Immagine rilevata - avvio estrazione Vision con retry policy');
@@ -205,11 +226,13 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ### Log/Telemetria Rilevante (senza PII)
 
 #### Kill Switch OFF
+
 ```
 📸 [OCR Worker] Immagine rilevata - OCR immagini disabilitato (ENABLE_OCR_IMAGES=false)
 ```
 
 **Output test:**
+
 ```typescript
 {
   clarification_request: "Ho ricevuto un'immagine, ma l'estrazione automatica non è ancora attiva. Puoi incollare il testo dello screenshot?",
@@ -219,6 +242,7 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ```
 
 #### Kill Switch ON
+
 ```
 📸 [OCR Worker] Immagine rilevata - avvio estrazione Vision con retry policy
 🔄 [Vision] Tentativo 1/2
@@ -227,6 +251,7 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ```
 
 **Output test:**
+
 ```typescript
 {
   shipmentDraft: { recipient: { ... }, parcel: { ... } },
@@ -252,6 +277,7 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ### Screenshot/Output Test
 
 **Test Integration Output:**
+
 ```
 ✓ tests/integration/ocr-vision.integration.test.ts (13 tests) 22593ms
   ✓ [MEDIUM] WhatsApp Image 2025-12-08 at 13.57.30.jpeg: Screenshot WhatsApp 1  2364ms
@@ -292,6 +318,7 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ### Follow-up (se necessario)
 
 **Se ESITO = FAIL (non applicabile):**
+
 - N/A
 
 **Raccomandazioni per Cohort 0:**
@@ -317,6 +344,7 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ### Verifica PII nei Log
 
 **Check rapido eseguito:**
+
 - ✅ Log kill switch OFF: solo messaggio di disabilitazione, no base64
 - ✅ Log kill switch ON: solo conteggi, no dati estratti
 - ✅ Nessun leak PII identificato
@@ -326,6 +354,7 @@ const visionResult: VisionResult = await executeVisionWithRetry(
 ### Procedura Ripetibile
 
 **Per testare in locale:**
+
 ```bash
 # 1. Imposta flag OFF
 export ENABLE_OCR_IMAGES=false
@@ -337,6 +366,7 @@ npm run test:ocr:integration
 ```
 
 **Per testare in staging/prod:**
+
 ```bash
 # 1. Imposta variabile ambiente
 ENABLE_OCR_IMAGES=false
@@ -357,16 +387,10 @@ POST /api/agent/process-shipment
 **DRY-RUN COMPLETATO CON ESITO POSITIVO**
 
 Il Kill Switch OCR immagini funziona correttamente:
+
 - ✅ Flag OFF: fallback deterministico a clarification, nessun crash
 - ✅ Flag ON: Vision funziona correttamente, dati estratti
 - ✅ Test coverage adeguata
 - ⚠️ Raccomandazione: testare in staging prima di Cohort 0
 
 **Cohort 0 può procedere** ✅
-
-
-
-
-
-
-

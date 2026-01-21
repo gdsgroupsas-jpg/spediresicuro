@@ -1,15 +1,18 @@
 # API Issues - Troubleshooting
 
 ## Overview
+
 Guida completa per risolvere problemi comuni delle API REST e Server Actions in SpedireSicuro.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Conoscenza HTTP status codes
 - Familiarità con Next.js API routes
 - Accesso a Vercel logs
@@ -21,6 +24,7 @@ Guida completa per risolvere problemi comuni delle API REST e Server Actions in 
 ### 401 Unauthorized
 
 **Problema:**
+
 ```
 401 Unauthorized
 Error: Non autenticato
@@ -29,16 +33,14 @@ Error: Non autenticato
 **Soluzione:**
 
 1. **Verifica sessione NextAuth:**
+
    ```typescript
    // Server-side
    import { auth } from '@/lib/auth-config';
    const session = await auth();
-   
+
    if (!session) {
-     return NextResponse.json(
-       { error: 'Non autenticato' },
-       { status: 401 }
-     );
+     return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
    }
    ```
 
@@ -48,6 +50,7 @@ Error: Non autenticato
    - Verifica cookie non scaduto
 
 3. **Verifica NEXTAUTH_SECRET:**
+
    ```bash
    # .env.local
    NEXTAUTH_SECRET=[random-32-char-string]
@@ -67,6 +70,7 @@ Error: Non autenticato
 ### 403 Forbidden
 
 **Problema:**
+
 ```
 403 Forbidden
 Error: Accesso negato
@@ -75,15 +79,13 @@ Error: Accesso negato
 **Soluzione:**
 
 1. **Verifica permessi utente:**
+
    ```typescript
    const context = await requireSafeAuth();
    const isAdmin = isSuperAdmin(context);
-   
+
    if (!isAdmin) {
-     return NextResponse.json(
-       { error: 'Accesso negato' },
-       { status: 403 }
-     );
+     return NextResponse.json({ error: 'Accesso negato' }, { status: 403 });
    }
    ```
 
@@ -93,10 +95,7 @@ Error: Accesso negato
 
 3. **Verifica capabilities:**
    ```typescript
-   const hasCap = await hasCapability(
-     userId,
-     'can_manage_price_lists'
-   );
+   const hasCap = await hasCapability(userId, 'can_manage_price_lists');
    ```
 
 **Vedi:** [Authorization](../8-SECURITY/AUTHORIZATION.md)
@@ -108,6 +107,7 @@ Error: Accesso negato
 ### 500 Internal Server Error
 
 **Problema:**
+
 ```
 500 Internal Server Error
 Error: Errore interno del server
@@ -126,15 +126,17 @@ Error: Errore interno del server
 3. **Errori comuni:**
 
    **a) Colonna database mancante:**
+
    ```bash
    # Esegui migration mancante
    npx supabase migration up
    ```
 
    **b) Funzione SQL non definita:**
+
    ```sql
    -- Verifica funzione esiste
-   SELECT routine_name 
+   SELECT routine_name
    FROM information_schema.routines
    WHERE routine_name = 'function_name';
    ```
@@ -144,10 +146,11 @@ Error: Errore interno del server
    - Usa `supabaseAdmin` per operazioni server-side
 
 4. **Debug locale:**
+
    ```bash
    # Avvia server con debug
    npm run dev
-   
+
    # Controlla console per errori
    ```
 
@@ -156,6 +159,7 @@ Error: Errore interno del server
 ### Database Connection Error
 
 **Problema:**
+
 ```
 Error: Database connection failed
 Error: PGRST301 - Connection pool exhausted
@@ -164,6 +168,7 @@ Error: PGRST301 - Connection pool exhausted
 **Soluzione:**
 
 1. **Verifica env vars:**
+
    ```bash
    NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
    SUPABASE_SERVICE_ROLE_KEY=[service-role-key]
@@ -186,6 +191,7 @@ Error: PGRST301 - Connection pool exhausted
 ### 400 Bad Request
 
 **Problema:**
+
 ```
 400 Bad Request
 Error: Peso obbligatorio e deve essere > 0
@@ -194,14 +200,15 @@ Error: Peso obbligatorio e deve essere > 0
 **Soluzione:**
 
 1. **Verifica validazione input:**
+
    ```typescript
    import { z } from 'zod';
-   
+
    const schema = z.object({
      weight: z.number().positive(),
      zip: z.string().min(1),
    });
-   
+
    const validated = schema.parse(body);
    ```
 
@@ -220,6 +227,7 @@ Error: Peso obbligatorio e deve essere > 0
 ### 422 Unprocessable Entity
 
 **Problema:**
+
 ```
 422 Unprocessable Entity
 Error: Errore di validazione
@@ -228,15 +236,16 @@ Error: Errore di validazione
 **Soluzione:**
 
 1. **Verifica Zod validation:**
+
    ```typescript
    try {
      const validated = schema.parse(body);
    } catch (error) {
      if (error instanceof z.ZodError) {
        return NextResponse.json(
-         { 
+         {
            error: 'Validazione fallita',
-           details: error.errors 
+           details: error.errors,
          },
          { status: 422 }
        );
@@ -255,6 +264,7 @@ Error: Errore di validazione
 ### 429 Too Many Requests
 
 **Problema:**
+
 ```
 429 Too Many Requests
 Error: Troppe richieste. Limite: 20/minuto
@@ -284,6 +294,7 @@ Error: Troppe richieste. Limite: 20/minuto
 ### 409 Conflict - Duplicate Request
 
 **Problema:**
+
 ```
 409 Conflict
 Error: Richiesta duplicata. Spedizione già creata.
@@ -312,6 +323,7 @@ Error: Richiesta duplicata. Spedizione già creata.
 ### 402 Payment Required - Insufficient Credit
 
 **Problema:**
+
 ```
 402 Payment Required
 Error: Credito insufficiente. Saldo attuale: €10.00, richiesto: €15.00
@@ -324,6 +336,7 @@ Error: Credito insufficiente. Saldo attuale: €10.00, richiesto: €15.00
    - Oppure admin può ricaricare
 
 2. **Verifica saldo:**
+
    ```typescript
    const { data: user } = await supabaseAdmin
      .from('users')
@@ -348,6 +361,7 @@ Error: Credito insufficiente. Saldo attuale: €10.00, richiesto: €15.00
 ### CORS Error
 
 **Problema:**
+
 ```
 Access to fetch at '...' from origin '...' has been blocked by CORS policy
 ```
@@ -370,6 +384,7 @@ Access to fetch at '...' from origin '...' has been blocked by CORS policy
 ### Request Timeout
 
 **Problema:**
+
 ```
 504 Gateway Timeout
 Request timeout after 10s
@@ -378,6 +393,7 @@ Request timeout after 10s
 **Soluzione:**
 
 1. **Verifica timeout configurazione:**
+
    ```json
    // vercel.json
    {
@@ -401,6 +417,7 @@ Request timeout after 10s
 ### Webhook Signature Invalid
 
 **Problema:**
+
 ```
 400 Bad Request
 Error: Invalid signature
@@ -409,6 +426,7 @@ Error: Invalid signature
 **Soluzione:**
 
 1. **Verifica STRIPE_WEBHOOK_SECRET:**
+
    ```bash
    # .env.local
    STRIPE_WEBHOOK_SECRET=[webhook-secret]
@@ -418,10 +436,7 @@ Error: Invalid signature
    ```typescript
    const signature = request.headers.get('stripe-signature');
    if (!signature) {
-     return NextResponse.json(
-       { error: 'Missing signature' },
-       { status: 400 }
-     );
+     return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
    }
    ```
 
@@ -440,12 +455,12 @@ Error: Invalid signature
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

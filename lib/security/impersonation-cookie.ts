@@ -1,8 +1,8 @@
 /**
  * Impersonation Cookie - Secure Implementation
- * 
+ *
  * CRITICAL SECURITY: Cookie firmato/criptato per impersonation SuperAdmin→Tenant
- * 
+ *
  * SCHEMA PAYLOAD:
  * {
  *   targetId: UUID,
@@ -13,7 +13,7 @@
  *   nonce: random string (anti-replay),
  *   version: 1
  * }
- * 
+ *
  * SECURITY PROPERTIES:
  * - Encrypted payload (AES-256-GCM via lib/security/encryption.ts)
  * - HMAC signature (SHA-256)
@@ -33,13 +33,13 @@ const PAYLOAD_VERSION = 1;
  * Payload cookie impersonation
  */
 export interface ImpersonationPayload {
-  targetId: string;      // UUID utente target (cliente)
-  actorId: string;       // UUID utente actor (SuperAdmin/Reseller)
-  issuedAt: number;      // Timestamp Unix (ms)
-  expiresAt: number;     // Timestamp Unix (ms)
-  reason: string;        // Motivo impersonation (es: "support ticket #123")
-  nonce: string;         // Random string anti-replay
-  version: number;       // Schema version (per future evolution)
+  targetId: string; // UUID utente target (cliente)
+  actorId: string; // UUID utente actor (SuperAdmin/Reseller)
+  issuedAt: number; // Timestamp Unix (ms)
+  expiresAt: number; // Timestamp Unix (ms)
+  reason: string; // Motivo impersonation (es: "support ticket #123")
+  nonce: string; // Random string anti-replay
+  version: number; // Schema version (per future evolution)
 }
 
 /**
@@ -48,18 +48,24 @@ export interface ImpersonationPayload {
 export interface DecodeResult {
   success: boolean;
   payload?: ImpersonationPayload;
-  error?: 'MISSING' | 'INVALID_FORMAT' | 'DECRYPT_FAILED' | 'INVALID_SIGNATURE' | 'EXPIRED' | 'INVALID_SCHEMA';
+  error?:
+    | 'MISSING'
+    | 'INVALID_FORMAT'
+    | 'DECRYPT_FAILED'
+    | 'INVALID_SIGNATURE'
+    | 'EXPIRED'
+    | 'INVALID_SCHEMA';
   errorMessage?: string;
 }
 
 /**
  * Ottiene secret per HMAC signature (da env)
- * 
+ *
  * ⚠️ CRITICAL: Questo secret DEVE essere configurato in produzione
  */
 function getSignatureSecret(): string {
   const secret = process.env.IMPERSONATION_COOKIE_SECRET;
-  
+
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('IMPERSONATION_COOKIE_SECRET not configured in production');
@@ -68,7 +74,7 @@ function getSignatureSecret(): string {
     console.warn('⚠️ IMPERSONATION_COOKIE_SECRET not configured, using dev fallback');
     return 'dev-secret-change-in-production-impersonation';
   }
-  
+
   return secret;
 }
 
@@ -95,17 +101,14 @@ function signPayload(payloadJson: string): string {
 function verifySignature(payloadJson: string, signature: string): boolean {
   const expected = signPayload(payloadJson);
   // Timing-safe comparison
-  return crypto.timingSafeEqual(
-    Buffer.from(signature, 'hex'),
-    Buffer.from(expected, 'hex')
-  );
+  return crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'));
 }
 
 /**
  * Crea cookie impersonation sicuro
- * 
+ *
  * FORMATO: <encrypted_payload>.<signature>
- * 
+ *
  * @param actorId - UUID utente che impersona (SuperAdmin/Reseller)
  * @param targetId - UUID utente target (cliente)
  * @param reason - Motivo impersonation (obbligatorio per audit)
@@ -120,21 +123,21 @@ export function createImpersonationCookie(
 ): string {
   // Validate inputs
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  
+
   if (!uuidRegex.test(actorId)) {
     throw new Error('Invalid actorId format (must be UUID)');
   }
-  
+
   if (!uuidRegex.test(targetId)) {
     throw new Error('Invalid targetId format (must be UUID)');
   }
-  
+
   if (!reason || reason.trim().length === 0) {
     throw new Error('Reason is required for impersonation');
   }
-  
+
   const now = Date.now();
-  
+
   // Costruisci payload
   const payload: ImpersonationPayload = {
     targetId,
@@ -145,34 +148,34 @@ export function createImpersonationCookie(
     nonce: generateNonce(),
     version: PAYLOAD_VERSION,
   };
-  
+
   // Serializza payload
   const payloadJson = JSON.stringify(payload);
-  
+
   // Cripta payload (AES-256-GCM via lib/security/encryption.ts)
   const encryptedPayload = encryptCredential(payloadJson);
-  
+
   // Firma payload (HMAC-SHA256)
   const signature = signPayload(payloadJson);
-  
+
   // Formato finale: <encrypted>.<signature>
   const cookieValue = `${encryptedPayload}.${signature}`;
-  
+
   console.log('✅ [IMPERSONATION] Cookie created:', {
     actorId: actorId.substring(0, 8) + '...',
     targetId: targetId.substring(0, 8) + '...',
     reason: reason.substring(0, 30),
     expiresAt: new Date(payload.expiresAt).toISOString(),
   });
-  
+
   return cookieValue;
 }
 
 /**
  * Decodifica e verifica cookie impersonation
- * 
+ *
  * CRITICAL: Fail-closed su qualsiasi errore
- * 
+ *
  * @param cookieValue - Cookie value da decodificare
  * @returns DecodeResult con payload o errore
  */
@@ -185,7 +188,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Impersonation cookie not present',
     };
   }
-  
+
   // 2. Check formato: <encrypted>.<signature>
   const parts = cookieValue.split('.');
   if (parts.length !== 2) {
@@ -196,9 +199,9 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Cookie format invalid',
     };
   }
-  
+
   const [encryptedPayload, signature] = parts;
-  
+
   // 3. Decripta payload
   let payloadJson: string;
   try {
@@ -211,7 +214,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Cookie decryption failed (tampered or key rotation)',
     };
   }
-  
+
   // 4. Verifica signature (HMAC)
   let isSignatureValid = false;
   try {
@@ -224,7 +227,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Signature verification failed',
     };
   }
-  
+
   if (!isSignatureValid) {
     console.warn('❌ [IMPERSONATION] Invalid signature (cookie tampered)');
     return {
@@ -233,7 +236,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Cookie signature invalid (tampered)',
     };
   }
-  
+
   // 5. Parse payload JSON
   let payload: ImpersonationPayload;
   try {
@@ -246,7 +249,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Payload JSON invalid',
     };
   }
-  
+
   // 6. Validate schema
   if (
     !payload.targetId ||
@@ -264,10 +267,10 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Payload schema invalid (missing fields)',
     };
   }
-  
+
   // 7. Validate UUIDs format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  
+
   if (!uuidRegex.test(payload.targetId) || !uuidRegex.test(payload.actorId)) {
     console.warn('❌ [IMPERSONATION] Invalid UUID format:', {
       targetId: payload.targetId,
@@ -279,7 +282,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'Invalid UUID format in payload',
     };
   }
-  
+
   // 8. Check TTL (expired?)
   const now = Date.now();
   if (now > payload.expiresAt) {
@@ -295,9 +298,10 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: `Cookie expired ${expiredAgo}s ago`,
     };
   }
-  
+
   // 9. Sanity check: issuedAt non può essere nel futuro
-  if (payload.issuedAt > now + 60000) { // tolleranza 1 minuto
+  if (payload.issuedAt > now + 60000) {
+    // tolleranza 1 minuto
     console.warn('❌ [IMPERSONATION] issuedAt in the future (clock skew?):', {
       issuedAt: new Date(payload.issuedAt).toISOString(),
       now: new Date(now).toISOString(),
@@ -308,7 +312,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
       errorMessage: 'issuedAt in the future (clock skew)',
     };
   }
-  
+
   // ✅ SUCCESS: Cookie valido
   console.log('✅ [IMPERSONATION] Cookie verified successfully:', {
     actorId: payload.actorId.substring(0, 8) + '...',
@@ -316,7 +320,7 @@ export function verifyImpersonationCookie(cookieValue: string | undefined): Deco
     reason: payload.reason.substring(0, 30),
     expiresIn: Math.floor((payload.expiresAt - now) / 1000) + 's',
   });
-  
+
   return {
     success: true,
     payload,
@@ -343,4 +347,3 @@ export function createImpersonationCookieWithDefaults(
 ): string {
   return createImpersonationCookie(actorId, targetId, reason, DEFAULT_TTL_MS);
 }
-
