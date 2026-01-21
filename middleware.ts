@@ -19,14 +19,14 @@
  * - Static assets (_next, favicon, images)
  */
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { logApiKeyUsage, validateApiKey } from '@/lib/api-key-service';
 import { auth } from '@/lib/auth-config';
-import { generateRequestId, createLogger } from '@/lib/logger';
 import { trackMiddlewareError } from '@/lib/error-tracker';
-import * as Sentry from '@sentry/nextjs'; // M2: APM tracing
 import { FeatureFlags } from '@/lib/feature-flags';
-import { validateApiKey, logApiKeyUsage } from '@/lib/api-key-service';
+import { createLogger, generateRequestId } from '@/lib/logger';
+import * as Sentry from '@sentry/nextjs'; // M2: APM tracing
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * ⚠️ E2E TEST BYPASS (Solo CI/Development Environment)
@@ -171,6 +171,14 @@ export default async function middleware(request: NextRequest) {
         // Initialize request headers early for API key auth
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set('x-request-id', requestId);
+
+        // 🛡️ SECURITY: SANITIZE HEADERS
+        // Remove trusted headers from incoming request to prevent spoofing
+        requestHeaders.delete('x-user-id');
+        requestHeaders.delete('x-api-key-id');
+        requestHeaders.delete('x-api-key-scopes');
+        requestHeaders.delete('x-auth-method');
+        requestHeaders.delete('x-api-key-user-id'); // Legacy name if used
 
         // M2: Aggiungi user context allo span
         if (userId) {
