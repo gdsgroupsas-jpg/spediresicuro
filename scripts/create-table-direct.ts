@@ -51,14 +51,17 @@ async function main() {
       return;
     }
 
-    console.log('⚠️  Tabella non trovata. Devi eseguire lo schema SQL manualmente in Supabase SQL Editor.\n');
+    console.log(
+      '⚠️  Tabella non trovata. Devi eseguire lo schema SQL manualmente in Supabase SQL Editor.\n'
+    );
     console.log('📋 Istruzioni:');
-    console.log('   1. Vai su: https://supabase.com/dashboard/project/pxwmposcsvsusjxdjues/sql/new');
+    console.log(
+      '   1. Vai su: https://supabase.com/dashboard/project/pxwmposcsvsusjxdjues/sql/new'
+    );
     console.log('   2. Apri il file: supabase/schema.sql');
     console.log('   3. Copia tutto il contenuto');
     console.log('   4. Incolla nel SQL Editor');
     console.log('   5. Premi Ctrl+Enter per eseguire\n');
-
   } catch (error) {
     console.error('❌ Errore:', error);
     process.exit(1);
@@ -66,14 +69,3 @@ async function main() {
 }
 
 main();
-
-
-
-
-
-
-
-
-
-
-

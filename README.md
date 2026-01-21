@@ -177,6 +177,7 @@ Il valore non è solo "vendere la spedizione", ma fornire l'infrastruttura per g
 
 - **Row Level Security (RLS)**: Isolamento multi-tenant a livello database
 - **Acting Context**: SuperAdmin può agire per conto utenti (completamente auditato)
+- **API Key Authentication**: Sistema di autenticazione per integrazioni esterne con hashing SHA-256 e audit completo
 - **GDPR Compliance**: Export dati e anonimizzazione supportati
 - **Audit Logging**: Tutte le operazioni sensibili tracciate
 - **Encryption**: Credenziali corrieri criptate at rest
@@ -643,9 +644,74 @@ ENCRYPTION_KEY=your_encryption_key_32_chars
 GOOGLE_API_KEY=your_gemini_api_key
 GOOGLE_CLIENT_ID=your_google_oauth_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_secret
+
+# API Key Authentication (v1.1.0+)
+API_KEY_SALT=your_random_salt_32_chars
+API_KEY_DEFAULT_RATE_LIMIT=1000
+API_KEY_DEFAULT_EXPIRY_DAYS=365
+ENABLE_API_KEY_AUTH=true
 ```
 
 Vedi [`.env.example`](.env.example) per lista completa.
+
+---
+
+### API Key Authentication Setup
+
+**Feature:** Server-to-server authentication for external integrations (v1.1.0+)
+
+#### Quick Start
+
+1. **Set Environment Variables:**
+
+   ```bash
+   # Generate secure salt
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+
+   # Add to .env.local
+   API_KEY_SALT=<generated-salt>
+   ENABLE_API_KEY_AUTH=true
+   ```
+
+2. **Apply Database Migration:**
+
+   ```bash
+   # Using Supabase CLI
+   npx supabase db push
+
+   # Or apply manually:
+   # - supabase/migrations/20260121000000_api_key_authentication.sql
+   # - supabase/migrations/20260121000002_fix_api_keys_foreign_key.sql
+   ```
+
+3. **Create API Key (via UI):**
+   - Login to dashboard
+   - Go to Settings > API Keys (when UI is ready)
+   - Click "Create New API Key"
+   - Save the key securely (shown only once)
+
+4. **Test API Key:**
+   ```bash
+   curl -X POST https://your-domain.com/api/quotes/realtime \
+     -H "Authorization: Bearer sk_live_XXXXXXXX..." \
+     -H "Content-Type: application/json" \
+     -d '{"sender": {...}, "recipient": {...}, "parcel": {...}}'
+   ```
+
+#### Security Features
+
+- **Hashed Storage:** Keys are hashed with SHA-256 + salt (never stored in plaintext)
+- **Header Sanitization:** Middleware prevents header spoofing attacks
+- **Rate Limiting:** Per-key configurable rate limits (default: 1000 req/hour)
+- **Audit Logging:** All API key usage logged to `api_audit_log` table
+- **Row Level Security:** Users can only access their own keys
+- **Auto-Expiry:** Keys can be configured to expire after N days
+
+#### Documentation
+
+- **[docs/E2E_TESTING_REPORT.md](docs/E2E_TESTING_REPORT.md)** - Complete E2E testing report with security verification
+- **[docs/PRODUCTION_DEPLOY_CHECKLIST.md](docs/PRODUCTION_DEPLOY_CHECKLIST.md)** - Production deployment guide
+- **[docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)** - API endpoints and authentication
 
 ---
 

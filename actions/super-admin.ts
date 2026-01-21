@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * Server Actions per Gestione Super Admin
@@ -10,8 +10,8 @@
  * - Visualizzare tutti gli utenti
  */
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/supabase';
 
 /**
  * Verifica se l'utente corrente è Super Admin
@@ -22,28 +22,28 @@ async function isCurrentUserSuperAdmin(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { isSuperAdmin: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { isSuperAdmin: false, error: 'Non autenticato' };
     }
 
     const { data: user, error } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (error || !user) {
-      return { isSuperAdmin: false, error: "Admin user record not found" };
+      return { isSuperAdmin: false, error: 'Admin user record not found' };
     }
 
     return {
-      isSuperAdmin: user.account_type === "superadmin",
+      isSuperAdmin: user.account_type === 'superadmin',
       userId: user.id,
     };
   } catch (error: any) {
-    console.error("Errore verifica Super Admin:", error);
+    console.error('Errore verifica Super Admin:', error);
     return { isSuperAdmin: false, error: error.message };
   }
 }
@@ -69,48 +69,47 @@ export async function toggleResellerStatus(
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono modificare lo status Reseller.",
+        error: 'Solo i Super Admin possono modificare lo status Reseller.',
       };
     }
 
     // 2. Verifica che l'utente target esista
     const { data: targetUser, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("id, email, name, is_reseller, account_type")
-      .eq("id", userId)
+      .from('users')
+      .select('id, email, name, is_reseller, account_type')
+      .eq('id', userId)
       .single();
 
     if (userError || !targetUser) {
       return {
         success: false,
-        error: "Utente non trovato.",
+        error: 'Utente non trovato.',
       };
     }
 
     // 3. Non permettere di declassare un Super Admin
-    if (targetUser.account_type === "superadmin" && !isReseller) {
+    if (targetUser.account_type === 'superadmin' && !isReseller) {
       return {
         success: false,
-        error: "Non puoi declassare un Super Admin.",
+        error: 'Non puoi declassare un Super Admin.',
       };
     }
 
     // 4. Aggiorna is_reseller e reseller_role
     const { error: updateError } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .update({
         is_reseller: isReseller,
-        reseller_role: isReseller ? "admin" : null, // ⚠️ FIX: Setta reseller_role quando promuovi a reseller
+        reseller_role: isReseller ? 'admin' : null, // ⚠️ FIX: Setta reseller_role quando promuovi a reseller
         updated_at: new Date().toISOString(),
       })
-      .eq("id", userId);
+      .eq('id', userId);
 
     if (updateError) {
-      console.error("Errore aggiornamento Reseller status:", updateError);
+      console.error('Errore aggiornamento Reseller status:', updateError);
       return {
         success: false,
-        error:
-          updateError.message || "Errore durante l'aggiornamento dello status.",
+        error: updateError.message || "Errore durante l'aggiornamento dello status.",
       };
     }
 
@@ -121,10 +120,10 @@ export async function toggleResellerStatus(
         : `${targetUser.name} non è più un Reseller.`,
     };
   } catch (error: any) {
-    console.error("Errore in toggleResellerStatus:", error);
+    console.error('Errore in toggleResellerStatus:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }
@@ -140,7 +139,7 @@ export async function toggleResellerStatus(
 export async function manageWallet(
   userId: string,
   amount: number,
-  reason: string = "Gestione manuale credito"
+  reason: string = 'Gestione manuale credito'
 ): Promise<{
   success: boolean;
   message?: string;
@@ -154,7 +153,7 @@ export async function manageWallet(
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono gestire il wallet.",
+        error: 'Solo i Super Admin possono gestire il wallet.',
       };
     }
 
@@ -168,15 +167,15 @@ export async function manageWallet(
 
     // 3. Verifica che l'utente target esista
     const { data: targetUser, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("id, email, name, wallet_balance")
-      .eq("id", userId)
+      .from('users')
+      .select('id, email, name, wallet_balance')
+      .eq('id', userId)
       .single();
 
     if (userError || !targetUser) {
       return {
         success: false,
-        error: "Utente non trovato.",
+        error: 'Utente non trovato.',
       };
     }
 
@@ -191,55 +190,45 @@ export async function manageWallet(
     }
 
     // 5. Determina tipo transazione
-    const transactionType = amount > 0 ? "admin_gift" : "admin_deduction";
+    const transactionType = amount > 0 ? 'admin_gift' : 'admin_deduction';
 
     // 6. Crea transazione wallet (usa funzione SQL se disponibile, altrimenti insert diretto)
     let transactionId: string;
 
     if (amount > 0) {
       // Aggiungi credito usando funzione SQL
-      const { data: txData, error: txError } = await supabaseAdmin.rpc(
-        "add_wallet_credit",
-        {
-          p_user_id: userId,
-          p_amount: amount,
-          p_description: reason,
-          p_created_by: superAdminCheck.userId,
-        }
-      );
+      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
+        p_user_id: userId,
+        p_amount: amount,
+        p_description: reason,
+        p_created_by: superAdminCheck.userId,
+      });
 
       if (txError) {
         // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
-        console.error("Errore RPC add_wallet_credit:", txError);
+        console.error('Errore RPC add_wallet_credit:', txError);
         return {
           success: false,
-          error:
-            txError.message ||
-            "Errore durante la ricarica del wallet. Riprova più tardi.",
+          error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
         };
       } else {
         transactionId = txData;
       }
     } else {
       // Rimuovi credito (usa funzione SQL se disponibile)
-      const { data: txData, error: txError } = await supabaseAdmin.rpc(
-        "deduct_wallet_credit",
-        {
-          p_user_id: userId,
-          p_amount: Math.abs(amount),
-          p_type: transactionType,
-          p_description: reason,
-        }
-      );
+      const { data: txData, error: txError } = await supabaseAdmin.rpc('deduct_wallet_credit', {
+        p_user_id: userId,
+        p_amount: Math.abs(amount),
+        p_type: transactionType,
+        p_description: reason,
+      });
 
       if (txError) {
         // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
-        console.error("Errore RPC deduct_wallet_credit:", txError);
+        console.error('Errore RPC deduct_wallet_credit:', txError);
         return {
           success: false,
-          error:
-            txError.message ||
-            "Errore durante la rimozione del credito. Riprova più tardi.",
+          error: txError.message || 'Errore durante la rimozione del credito. Riprova più tardi.',
         };
       } else {
         transactionId = txData;
@@ -248,12 +237,12 @@ export async function manageWallet(
 
     // 7. Audit log
     try {
-      const session = await auth();
-      await supabaseAdmin.from("audit_logs").insert({
-        action: amount > 0 ? "wallet_credit_added" : "wallet_credit_removed",
-        resource_type: "wallet",
+      const context = await getSafeAuth();
+      await supabaseAdmin.from('audit_logs').insert({
+        action: amount > 0 ? 'wallet_credit_added' : 'wallet_credit_removed',
+        resource_type: 'wallet',
         resource_id: userId,
-        user_email: session?.user?.email || "unknown",
+        user_email: context?.actor?.email || 'unknown',
         user_id: superAdminCheck.userId,
         metadata: {
           amount: Math.abs(amount),
@@ -264,14 +253,14 @@ export async function manageWallet(
         },
       });
     } catch (auditError) {
-      console.warn("Errore audit log:", auditError);
+      console.warn('Errore audit log:', auditError);
     }
 
     // 8. Ottieni nuovo balance
     const { data: updatedUser } = await supabaseAdmin
-      .from("users")
-      .select("wallet_balance")
-      .eq("id", userId)
+      .from('users')
+      .select('wallet_balance')
+      .eq('id', userId)
       .single();
 
     return {
@@ -284,10 +273,10 @@ export async function manageWallet(
       newBalance: updatedUser?.wallet_balance || 0,
     };
   } catch (error: any) {
-    console.error("Errore in manageWallet:", error);
+    console.error('Errore in manageWallet:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }
@@ -315,35 +304,35 @@ export async function grantFeature(
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono attivare feature.",
+        error: 'Solo i Super Admin possono attivare feature.',
       };
     }
 
     // 2. Verifica che l'utente target esista
     const { data: targetUser, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("id, email, name, wallet_balance")
-      .eq("id", userId)
+      .from('users')
+      .select('id, email, name, wallet_balance')
+      .eq('id', userId)
       .single();
 
     if (userError || !targetUser) {
       return {
         success: false,
-        error: "Utente non trovato.",
+        error: 'Utente non trovato.',
       };
     }
 
     // 3. Verifica che la feature esista
     const { data: feature, error: featureError } = await supabaseAdmin
-      .from("killer_features")
-      .select("code, name, is_free, price_monthly_cents")
-      .eq("code", featureCode)
+      .from('killer_features')
+      .select('code, name, is_free, price_monthly_cents')
+      .eq('code', featureCode)
       .single();
 
     if (featureError || !feature) {
       return {
         success: false,
-        error: "Feature non trovata.",
+        error: 'Feature non trovata.',
       };
     }
 
@@ -369,37 +358,33 @@ export async function grantFeature(
       if (!deductResult.success) {
         return {
           success: false,
-          error: deductResult.error || "Errore durante la scala del credito.",
+          error: deductResult.error || 'Errore durante la scala del credito.',
         };
       }
     }
 
     // 5. Attiva feature (usa funzione SQL esistente o insert diretto)
     // Assumiamo che esista una tabella user_features o similar
-    const { error: activateError } = await supabaseAdmin
-      .from("user_features")
-      .upsert(
-        {
-          user_id: userId,
-          feature_code: featureCode,
-          is_active: true,
-          is_free: isFree || feature.is_free,
-          activated_by: superAdminCheck.userId,
-          activated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,feature_code",
-        }
-      );
+    const { error: activateError } = await supabaseAdmin.from('user_features').upsert(
+      {
+        user_id: userId,
+        feature_code: featureCode,
+        is_active: true,
+        is_free: isFree || feature.is_free,
+        activated_by: superAdminCheck.userId,
+        activated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'user_id,feature_code',
+      }
+    );
 
     if (activateError) {
-      console.error("Errore attivazione feature:", activateError);
+      console.error('Errore attivazione feature:', activateError);
       // Potrebbe non esistere la tabella user_features, quindi proviamo con rpc se disponibile
       return {
         success: false,
-        error:
-          activateError.message ||
-          "Errore durante l'attivazione della feature.",
+        error: activateError.message || "Errore durante l'attivazione della feature.",
       };
     }
 
@@ -413,10 +398,10 @@ export async function grantFeature(
             }`,
     };
   } catch (error: any) {
-    console.error("Errore in grantFeature:", error);
+    console.error('Errore in grantFeature:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }
@@ -447,24 +432,24 @@ export async function getAllUsers(limit: number = 100): Promise<{
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono visualizzare tutti gli utenti.",
+        error: 'Solo i Super Admin possono visualizzare tutti gli utenti.',
       };
     }
 
     // 2. Ottieni utenti
     const { data: users, error } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .select(
-        "id, email, name, account_type, is_reseller, reseller_role, wallet_balance, created_at"
+        'id, email, name, account_type, is_reseller, reseller_role, wallet_balance, created_at'
       )
-      .order("created_at", { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error("Errore recupero utenti:", error);
+      console.error('Errore recupero utenti:', error);
       return {
         success: false,
-        error: error.message || "Errore durante il recupero degli utenti.",
+        error: error.message || 'Errore durante il recupero degli utenti.',
       };
     }
 
@@ -473,10 +458,10 @@ export async function getAllUsers(limit: number = 100): Promise<{
       users: users || [],
     };
   } catch (error: any) {
-    console.error("Errore in getAllUsers:", error);
+    console.error('Errore in getAllUsers:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }
@@ -505,7 +490,7 @@ export async function createReseller(data: {
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono creare reseller.",
+        error: 'Solo i Super Admin possono creare reseller.',
       };
     }
 
@@ -513,7 +498,7 @@ export async function createReseller(data: {
     if (!data.email || !data.name || !data.password) {
       return {
         success: false,
-        error: "Email, nome e password sono obbligatori.",
+        error: 'Email, nome e password sono obbligatori.',
       };
     }
 
@@ -522,7 +507,7 @@ export async function createReseller(data: {
     if (!emailRegex.test(data.email)) {
       return {
         success: false,
-        error: "Email non valida.",
+        error: 'Email non valida.',
       };
     }
 
@@ -530,7 +515,7 @@ export async function createReseller(data: {
     if (data.password.length < 8) {
       return {
         success: false,
-        error: "La password deve essere di almeno 8 caratteri.",
+        error: 'La password deve essere di almeno 8 caratteri.',
       };
     }
 
@@ -539,15 +524,15 @@ export async function createReseller(data: {
 
     // Verifica in public.users
     const { data: existingUser } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", emailLower)
+      .from('users')
+      .select('id')
+      .eq('email', emailLower)
       .single();
 
     if (existingUser) {
       return {
         success: false,
-        error: "Questa email è già registrata.",
+        error: 'Questa email è già registrata.',
       };
     }
 
@@ -557,10 +542,10 @@ export async function createReseller(data: {
       error: listError,
     } = await supabaseAdmin.auth.admin.listUsers();
     if (listError) {
-      console.error("Errore verifica utenti auth:", listError);
+      console.error('Errore verifica utenti auth:', listError);
       return {
         success: false,
-        error: "Errore durante la verifica utente esistente.",
+        error: 'Errore durante la verifica utente esistente.',
       };
     }
 
@@ -570,7 +555,7 @@ export async function createReseller(data: {
     if (existingAuthUser) {
       return {
         success: false,
-        error: "Questa email è già registrata in Supabase Auth.",
+        error: 'Questa email è già registrata in Supabase Auth.',
       };
     }
 
@@ -578,111 +563,92 @@ export async function createReseller(data: {
     // ⚠️ STRATEGIA: Auth identity + public profile
     // - Crea in auth.users con email_confirm: true (login immediato senza email)
     // - Usa ID di auth come ID anche in public.users (single source of truth)
-    console.log("🔐 [CREATE RESELLER] Creazione utente in Supabase Auth...");
+    console.log('🔐 [CREATE RESELLER] Creazione utente in Supabase Auth...');
 
-    const { data: authUserData, error: authError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: emailLower,
-        password: data.password, // Password in plain text (Supabase la hasha automaticamente)
-        email_confirm: true, // Conferma email automaticamente (reseller creati da admin sono verificati)
-        user_metadata: {
-          name: data.name.trim(),
-        },
-        app_metadata: {
-          role: "user",
-          account_type: "user",
-          provider: "credentials",
-        },
-      });
+    const { data: authUserData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: emailLower,
+      password: data.password, // Password in plain text (Supabase la hasha automaticamente)
+      email_confirm: true, // Conferma email automaticamente (reseller creati da admin sono verificati)
+      user_metadata: {
+        name: data.name.trim(),
+      },
+      app_metadata: {
+        role: 'user',
+        account_type: 'user',
+        provider: 'credentials',
+      },
+    });
 
     if (authError || !authUserData?.user) {
-      console.error(
-        "❌ [CREATE RESELLER] Errore creazione utente in auth.users:",
-        authError
-      );
+      console.error('❌ [CREATE RESELLER] Errore creazione utente in auth.users:', authError);
       return {
         success: false,
-        error:
-          authError?.message ||
-          "Errore durante la creazione dell'utente in Supabase Auth.",
+        error: authError?.message || "Errore durante la creazione dell'utente in Supabase Auth.",
       };
     }
 
     const authUserId = authUserData.user.id;
-    console.log(
-      "✅ [CREATE RESELLER] Utente creato in auth.users:",
-      authUserId
-    );
+    console.log('✅ [CREATE RESELLER] Utente creato in auth.users:', authUserId);
 
     // 5. Crea record in public.users usando ID di auth (single source of truth)
     // ⚠️ NOTA: Non usiamo più password hash manuale - gestita da Supabase Auth
     // ⚠️ NOTA: email_verified rimosso - campo non esiste nello schema public.users.
     // La verifica email è gestita da Supabase Auth tramite email_confirmed_at in auth.users.
-    console.log("💾 [CREATE RESELLER] Creazione record in public.users...");
+    console.log('💾 [CREATE RESELLER] Creazione record in public.users...');
 
     const { data: newUser, error: createError } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .insert([
         {
           id: authUserId, // ⚠️ CRITICO: Usa ID di auth come ID anche in public.users
           email: emailLower,
           name: data.name.trim(),
           password: null, // Password gestita da Supabase Auth (non più hash manuale)
-          account_type: "reseller", // ⚠️ FIX: Reseller creati da superadmin hanno account_type='reseller'
+          account_type: 'reseller', // ⚠️ FIX: Reseller creati da superadmin hanno account_type='reseller'
           is_reseller: true, // Flag reseller attivo
-          reseller_role: "admin", // ⚠️ FIX: Reseller creati da superadmin sono automaticamente admin
+          reseller_role: 'admin', // ⚠️ FIX: Reseller creati da superadmin sono automaticamente admin
           wallet_balance: data.initialCredit || 0,
-          provider: "credentials",
+          provider: 'credentials',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
       ])
-      .select("id")
+      .select('id')
       .single();
 
     if (createError) {
-      console.error(
-        "❌ [CREATE RESELLER] Errore creazione record in public.users:",
-        createError
-      );
+      console.error('❌ [CREATE RESELLER] Errore creazione record in public.users:', createError);
 
       // ⚠️ ROLLBACK: Se public.users fallisce, elimina utente da auth.users
-      console.log(
-        "🔄 [CREATE RESELLER] Rollback: eliminazione utente da auth.users..."
-      );
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(
-        authUserId
-      );
+      console.log('🔄 [CREATE RESELLER] Rollback: eliminazione utente da auth.users...');
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
       if (deleteError) {
         console.error(
-          "❌ [CREATE RESELLER] Errore rollback (eliminazione auth.users):",
+          '❌ [CREATE RESELLER] Errore rollback (eliminazione auth.users):',
           deleteError
         );
         // Log errore ma non bloccare - cleanup manuale necessario
       } else {
-        console.log(
-          "✅ [CREATE RESELLER] Rollback completato: utente eliminato da auth.users"
-        );
+        console.log('✅ [CREATE RESELLER] Rollback completato: utente eliminato da auth.users');
       }
 
       return {
         success: false,
-        error:
-          createError.message || "Errore durante la creazione del reseller.",
+        error: createError.message || 'Errore durante la creazione del reseller.',
       };
     }
 
     const userId = newUser.id;
-    console.log("✅ [CREATE RESELLER] Record creato in public.users:", userId);
+    console.log('✅ [CREATE RESELLER] Record creato in public.users:', userId);
 
     // 6. Se c'è credito iniziale, crea transazione wallet
     if (data.initialCredit && data.initialCredit > 0) {
-      await supabaseAdmin.from("wallet_transactions").insert([
+      await supabaseAdmin.from('wallet_transactions').insert([
         {
           user_id: userId,
           amount: data.initialCredit,
-          type: "admin_gift",
-          description: "Credito iniziale alla creazione account reseller",
+          type: 'admin_gift',
+          description: 'Credito iniziale alla creazione account reseller',
           created_by: superAdminCheck.userId,
         },
       ]);
@@ -691,10 +657,7 @@ export async function createReseller(data: {
     // 7. Se ci sono note, salvale (opzionale, se esiste una tabella notes)
     if (data.notes) {
       // Potremmo salvare le note in una tabella separata o nel campo note dell'utente
-      await supabaseAdmin
-        .from("users")
-        .update({ notes: data.notes })
-        .eq("id", userId);
+      await supabaseAdmin.from('users').update({ notes: data.notes }).eq('id', userId);
     }
 
     return {
@@ -703,10 +666,10 @@ export async function createReseller(data: {
       userId: userId,
     };
   } catch (error: any) {
-    console.error("Errore in createReseller:", error);
+    console.error('Errore in createReseller:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }
@@ -723,7 +686,7 @@ export async function createReseller(data: {
  */
 export async function updateResellerRole(
   userId: string,
-  role: "admin" | "user"
+  role: 'admin' | 'user'
 ): Promise<{
   success: boolean;
   message?: string;
@@ -735,12 +698,12 @@ export async function updateResellerRole(
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono cambiare i ruoli reseller.",
+        error: 'Solo i Super Admin possono cambiare i ruoli reseller.',
       };
     }
 
     // 2. Valida ruolo
-    if (role !== "admin" && role !== "user") {
+    if (role !== 'admin' && role !== 'user') {
       return {
         success: false,
         error: 'Ruolo non valido. Deve essere "admin" o "user".',
@@ -749,15 +712,15 @@ export async function updateResellerRole(
 
     // 3. Verifica che l'utente target esista e sia reseller
     const { data: targetUser, error: fetchError } = await supabaseAdmin
-      .from("users")
-      .select("id, email, name, is_reseller, reseller_role")
-      .eq("id", userId)
+      .from('users')
+      .select('id, email, name, is_reseller, reseller_role')
+      .eq('id', userId)
       .single();
 
     if (fetchError || !targetUser) {
       return {
         success: false,
-        error: "Utente non trovato.",
+        error: 'Utente non trovato.',
       };
     }
 
@@ -765,37 +728,34 @@ export async function updateResellerRole(
       return {
         success: false,
         error:
-          "Solo gli utenti reseller possono avere un ruolo reseller. Attiva prima lo status reseller.",
+          'Solo gli utenti reseller possono avere un ruolo reseller. Attiva prima lo status reseller.',
       };
     }
 
     // 4. Aggiorna ruolo
     const { error: updateError } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .update({ reseller_role: role })
-      .eq("id", userId);
+      .eq('id', userId);
 
     if (updateError) {
-      console.error("Errore aggiornamento reseller_role:", updateError);
+      console.error('Errore aggiornamento reseller_role:', updateError);
       return {
         success: false,
-        error:
-          updateError.message || "Errore durante l'aggiornamento del ruolo.",
+        error: updateError.message || "Errore durante l'aggiornamento del ruolo.",
       };
     }
 
-    console.log(
-      `✅ [updateResellerRole] Ruolo aggiornato: ${targetUser.email} -> ${role}`
-    );
+    console.log(`✅ [updateResellerRole] Ruolo aggiornato: ${targetUser.email} -> ${role}`);
 
     // 5. Audit log
     try {
-      const session = await auth();
-      await supabaseAdmin.from("audit_logs").insert({
-        action: "reseller_role_updated",
-        resource_type: "user",
+      const context = await getSafeAuth();
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'reseller_role_updated',
+        resource_type: 'user',
         resource_id: userId,
-        user_email: session?.user?.email || "unknown",
+        user_email: context?.actor?.email || 'unknown',
         user_id: superAdminCheck.userId,
         metadata: {
           target_user_email: targetUser.email,
@@ -805,20 +765,20 @@ export async function updateResellerRole(
         },
       });
     } catch (auditError) {
-      console.warn("Errore audit log:", auditError);
+      console.warn('Errore audit log:', auditError);
     }
 
     return {
       success: true,
       message: `Ruolo reseller aggiornato: ${targetUser.name} è ora "${
-        role === "admin" ? "Admin Reseller" : "User Reseller"
+        role === 'admin' ? 'Admin Reseller' : 'User Reseller'
       }".`,
     };
   } catch (error: any) {
-    console.error("Errore in updateResellerRole:", error);
+    console.error('Errore in updateResellerRole:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }
@@ -846,20 +806,17 @@ export async function updateUserAiFeatures(
     if (!superAdminCheck.isSuperAdmin) {
       return {
         success: false,
-        error: "Solo i Super Admin possono gestire le feature AI.",
+        error: 'Solo i Super Admin possono gestire le feature AI.',
       };
     }
 
     // 2. Verifica che l'utente esista in Auth (per i metadata)
-    const { data: authUser, error: authError } =
-      await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
 
     if (authError || !authUser?.user) {
       return {
         success: false,
-        error: `Utente Auth non trovato (ID: ${userId}). Err: ${
-          authError?.message || "N/A"
-        }`,
+        error: `Utente Auth non trovato (ID: ${userId}). Err: ${authError?.message || 'N/A'}`,
       };
     }
 
@@ -871,29 +828,26 @@ export async function updateUserAiFeatures(
     };
 
     // 4. Aggiorna utente in Supabase Auth
-    const { error: updateError } =
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: newMeta,
-      });
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      user_metadata: newMeta,
+    });
 
     if (updateError) {
-      console.error("Errore aggiornamento feature AI (Auth):", updateError);
+      console.error('Errore aggiornamento feature AI (Auth):', updateError);
       return {
         success: false,
-        error:
-          updateError.message ||
-          "Errore durante l'aggiornamento delle feature AI su Auth.",
+        error: updateError.message || "Errore durante l'aggiornamento delle feature AI su Auth.",
       };
     }
 
     // 5. Audit log
     try {
-      const session = await auth();
-      await supabaseAdmin.from("audit_logs").insert({
-        action: "ai_features_updated",
-        resource_type: "user",
+      const context = await getSafeAuth();
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'ai_features_updated',
+        resource_type: 'user',
         resource_id: userId,
-        user_email: session?.user?.email || "unknown",
+        user_email: context?.actor?.email || 'unknown',
         user_id: superAdminCheck.userId,
         metadata: {
           features: features,
@@ -901,18 +855,18 @@ export async function updateUserAiFeatures(
         },
       });
     } catch (auditError) {
-      console.warn("Errore audit log:", auditError);
+      console.warn('Errore audit log:', auditError);
     }
 
     return {
       success: true,
-      message: "Feature AI aggiornate con successo.",
+      message: 'Feature AI aggiornate con successo.',
     };
   } catch (error: any) {
-    console.error("Errore in updateUserAiFeatures:", error);
+    console.error('Errore in updateUserAiFeatures:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto.",
+      error: error.message || 'Errore sconosciuto.',
     };
   }
 }

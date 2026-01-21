@@ -1,6 +1,6 @@
 /**
  * Costanti dell'applicazione
- * 
+ *
  * Qui puoi definire tutti i valori fissi usati nell'applicazione:
  * - Configurazioni
  * - Messaggi
@@ -17,7 +17,7 @@ export const MARGINI = {
 // Messaggi di errore
 export const ERROR_MESSAGES = {
   CAMPO_OBBLIGATORIO: 'Questo campo è obbligatorio',
-  EMAIL_NON_VALIDA: 'Inserisci un\'email valida',
+  EMAIL_NON_VALIDA: "Inserisci un'email valida",
   TELEFONO_NON_VALIDO: 'Inserisci un numero di telefono valido',
   PREZZO_NON_VALIDO: 'Il prezzo deve essere un numero positivo',
 } as const;
@@ -34,4 +34,3 @@ export const API_ENDPOINTS = {
   PREVENTIVI: '/api/preventivi',
   SPEDIZIONI: '/api/spedizioni',
 } as const;
-

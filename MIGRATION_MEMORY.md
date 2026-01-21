@@ -608,7 +608,6 @@ grep -r "SmartSuggestions\|getSmartSuggestion" components/anne/AnneAssistant.tsx
 ## 🚀 NEXT STEPS
 
 1. **P4 Post-Launch (Opzionali)**
-
    - A/B testing per soglie auto-proceed (85% vs 80% vs 90%)
    - Metriche reali: minuti risparmiati da telemetria (non stima)
    - Feedback utenti: survey per valutare messaggi errori
@@ -617,7 +616,6 @@ grep -r "SmartSuggestions\|getSmartSuggestion" components/anne/AnneAssistant.tsx
 2. **Ottimizzazioni Future (Opzionali)**
 
 3. **P4 Post-Launch (Opzionali)**
-
    - A/B testing per soglie auto-proceed (85% vs 80% vs 90%)
    - Metriche reali: minuti risparmiati da telemetria (non stima)
    - Feedback utenti: survey per valutare messaggi errori
@@ -661,13 +659,11 @@ grep -r "SmartSuggestions\|getSmartSuggestion" components/anne/AnneAssistant.tsx
 ### Dipendenze Esterne
 
 - **LangGraph typing constraints:** Alcuni cast `as any` necessari per nomi nodi (vedi `lib/agent/orchestrator/pricing-graph.ts:269-272`)
-
   - Verifica: `grep -r "as any" lib/agent/orchestrator/pricing-graph.ts`
   - Motivo: LangGraph non ha tipi perfetti per string literal types dei nomi nodi
   - Status: Documentato con commenti, da rimuovere quando LangGraph migliorerà i tipi
 
 - **Google Gemini API:** Dipendenza esterna per LLM. Fallback a logica base se `GOOGLE_API_KEY` mancante.
-
   - Verifica: `grep -r "GOOGLE_API_KEY" lib/agent/orchestrator/supervisor.ts`
   - Comportamento: Se API key mancante, usa estrazione regex invece di LLM
 
@@ -678,7 +674,6 @@ grep -r "SmartSuggestions\|getSmartSuggestion" components/anne/AnneAssistant.tsx
 ### Limiti Runtime
 
 - **MAX_ITERATIONS:** Limite hardcoded a 2 iterazioni per pricing graph (configurabile in `lib/config.ts`)
-
   - Verifica: `grep -r "MAX_ITERATIONS" lib/config.ts`
   - Comportamento: Se superato, grafo termina con `END` e log warning
 
@@ -778,6 +773,7 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 **Problema:** La dashboard admin calcolava KPI da query limitate e includeva spedizioni cancellate/test.
 
 **Soluzione:**
+
 - Nuova RPC `get_admin_overview_stats(include_test)` per KPI no-limit.
 - Esclude `deleted`/`cancelled` sempre; filtra test per pattern e tracking, con eccezione `testspediresicuro+`.
 - API `/api/admin/overview` ora usa RPC con fallback in-memory.
@@ -785,20 +781,21 @@ grep -A5 "preflightCheck" lib/agent/workers/booking.ts
 - Query utenti resiliente: fallback se colonne opzionali mancanti.
 
 **Migrations:**
+
 - `supabase/migrations/110_admin_overview_stats_function.sql`
 - `supabase/migrations/111_admin_overview_stats_function_fix.sql`
-
 
 ### ? Health Probes - Readiness/Liveness (18 Gennaio 2026)
 
 **Feature:** Endpoint dedicati per readiness/liveness monitoring.
+
 - `/api/health/ready` verifica DB Supabase.
 - `/api/health/live` conferma istanza viva.
 
 **File:**
+
 - `app/api/health/ready/route.ts`
 - `app/api/health/live/route.ts`
-
 
 ### ✅ AI Provider Selection - Supporto Multi-Provider (Gennaio 2026)
 
@@ -1243,20 +1240,17 @@ curl http://localhost:3000/api/cron/auto-reconciliation
 **File Modificati:**
 
 - `components/shipments/intelligent-quote-comparator.tsx`:
-
   - Nuovi state: `selectedCourierKey`, `selectedAccessoryService`, `showAccessoryDropdown`
   - Panel accessori con dropdown filtrato per corriere
   - Calcolo prezzo finale in tempo reale
   - Callback `onContractSelected(courierName, contractCode, accessoryService)`
 
 - `app/dashboard/spedizioni/nuova/page.tsx`:
-
   - Rimossa sezione "Servizi Accessori" dal form principale
   - Aggiornato `onContractSelected` per gestire `accessoryService`
   - Semplificata prop `services` passata al comparatore
 
 - `lib/adapters/couriers/spedisci-online.ts`:
-
   - Rimosso `accessoriServices` dal payload `/shipping/rates`
   - Servizi accessori applicati solo in fase `/shipping/create`
 
@@ -1270,19 +1264,13 @@ curl http://localhost:3000/api/cron/auto-reconciliation
 ```typescript
 // types/supplier-price-list-config.ts
 COMMON_ACCESSORY_SERVICES = {
-  gls: [
-    "Exchange",
-    "Document Return",
-    "Saturday Service",
-    "Express12",
-    "Preavviso Telefonico",
-  ],
-  poste: ["Assicurazione", "Contrassegno", "Consegna Sabato"],
+  gls: ['Exchange', 'Document Return', 'Saturday Service', 'Express12', 'Preavviso Telefonico'],
+  poste: ['Assicurazione', 'Contrassegno', 'Consegna Sabato'],
   // ...
 };
 ACCESSORY_SERVICE_COSTS = {
   Exchange: 3.5,
-  "Document Return": 2.5,
+  'Document Return': 2.5,
   // ...
 };
 ```
@@ -1371,13 +1359,11 @@ grep -r "onContractSelected" app/dashboard/spedizioni/nuova/page.tsx
 **Cosa serve:**
 
 1. **PosteAdapter**: Implementare metodo `getRates()` o `calculateQuote()`
-
    - Verificare manuale API Poste per endpoint preventivi
    - Capire se accetta `contractCode` nella richiesta o restituisce tutti i rates
    - Integrare in `/api/quotes/realtime` con routing provider-aware
 
 2. **GLSAdapter**: Implementare adapter completo (attualmente TODO)
-
    - Creare `lib/adapters/couriers/gls.ts`
    - Implementare `getRates()` o `calculateQuote()`
    - Verificare documentazione API GLS per formato richiesta/risposta
@@ -1521,32 +1507,26 @@ grep -r "onContractSelected" app/dashboard/spedizioni/nuova/page.tsx
 **Fix Applicati:**
 
 1. **Fix Metadata Column (5dc5791):**
-
    - Problema: Query cercavano `metadata` in `users` invece di `auth.users`
    - Soluzione: Usa `auth.users` per fetch metadata
 
 2. **Fix Supabase Client (fd7de78):**
-
    - Problema: Client Supabase errato per azioni admin
    - Soluzione: Usa `createClient()` con service role
 
 3. **Fix Local State Update (11c331c):**
-
    - Problema: UI non si aggiornava dopo toggle
    - Soluzione: Refresh stato locale con metadata freschi da auth
 
 4. **Fix Dashboard Refresh (a4a31e1):**
-
    - Problema: Dashboard non mostrava stato aggiornato
    - Soluzione: Aggiunge refresh automatico dopo toggle completo
 
 5. **Fix TypeScript Build (9c85761):**
-
    - Problema: Errore TS su assegnazione potenzialmente undefined
    - Soluzione: Risolto casting e type guards
 
 6. **Debug Logs (5ee75f3 + 88ac7fe):**
-
    - Problema: Debug cache issue
    - Soluzione: Aggiunti log versione, rimossi nel commit finale
 
@@ -1657,6 +1637,7 @@ ENABLE_OCR_IMAGES=true                # Abilita OCR immagini
 ### Obiettivo
 
 Implementare semantica IVA esplicita nei listini prezzi per supportare:
+
 - Prezzi con IVA inclusa o esclusa
 - Calcolo margine sempre su base IVA esclusa (Invariant #1)
 - Normalizzazione corretta tra listini master e custom con vat_mode diversi
@@ -1665,10 +1646,12 @@ Implementare semantica IVA esplicita nei listini prezzi per supportare:
 ### Fasi Completate
 
 #### ✅ FASE 0: Preparazione
+
 - **0.1:** Script SQL audit baseline (`scripts/audit-vat-baseline.sql`)
 - **0.2:** Test suite VAT utils (`tests/pricing/vat-utils.test.ts` - 25 test)
 
 #### ✅ FASE 1: Schema & Types
+
 - **1.1:** Migration database (`supabase/migrations/110_add_vat_semantics_to_price_lists.sql`)
   - Colonne `vat_mode` (TEXT, CHECK 'included'/'excluded', NULL) e `vat_rate` (DECIMAL, DEFAULT 22.00)
   - Aggiunte a `price_lists` e `shipments`
@@ -1680,6 +1663,7 @@ Implementare semantica IVA esplicita nei listini prezzi per supportare:
   - `PriceCalculationResult`: `vatMode?`, `vatRate?`, `vatAmount?`, `totalPriceWithVAT?`
 
 #### ✅ FASE 2: Utility Functions
+
 - **File:** `lib/pricing/vat-utils.ts`
 - Funzioni pure:
   - `normalizePrice()`: conversione excluded ↔ included
@@ -1690,6 +1674,7 @@ Implementare semantica IVA esplicita nei listini prezzi per supportare:
 - **Test:** 25 test unitari, tutti passati
 
 #### ✅ FASE 3: Pricing Engine Update
+
 - **File:** `lib/db/price-lists-advanced.ts`
 - **Modifiche critiche:**
   1. Recupero `vat_mode` e `vat_rate` del master list quando presente

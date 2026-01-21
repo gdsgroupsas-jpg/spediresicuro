@@ -1,5 +1,5 @@
-import Link from 'next/link'
-import { LogoWhite } from '@/components/logo'
+import Link from 'next/link';
+import { LogoWhite } from '@/components/logo';
 
 export default function Footer() {
   return (
@@ -9,14 +9,11 @@ export default function Footer() {
           {/* Logo e Descrizione */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="inline-block mb-4">
-              <LogoWhite
-                width={300}
-                height={100}
-                className="h-10 w-auto"
-              />
+              <LogoWhite width={300} height={100} className="h-10 w-auto" />
             </Link>
             <p className="text-gray-400 mb-4 max-w-md">
-              SpedireSicuro.it - La piattaforma di spedizioni intelligente che usa AI per trasformare screenshot WhatsApp in spedizioni pronte. Zero form, zero stress.
+              SpedireSicuro.it - La piattaforma di spedizioni intelligente che usa AI per
+              trasformare screenshot WhatsApp in spedizioni pronte. Zero form, zero stress.
             </p>
             <div className="flex items-center gap-2 text-sm">
               <svg className="w-5 h-5 text-[#00B8D4]" fill="currentColor" viewBox="0 0 20 20">
@@ -82,6 +79,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
-

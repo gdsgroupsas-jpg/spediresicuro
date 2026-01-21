@@ -46,10 +46,10 @@ export default function DoctorDashboardPage() {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
       });
-      
+
       const res = await fetch(`/api/admin/doctor/events?${params}`);
       const data = await res.json();
-      
+
       if (res.ok) {
         setEvents(data.events || []);
         setPagination(data.pagination || pagination);
@@ -86,7 +86,7 @@ export default function DoctorDashboardPage() {
       low: 'bg-blue-100 text-blue-700',
       info: 'bg-gray-100 text-gray-700',
     };
-    
+
     const labels = {
       critical: 'Critico',
       high: 'Alto',
@@ -96,7 +96,9 @@ export default function DoctorDashboardPage() {
     };
 
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[severity as keyof typeof styles] || styles.info}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[severity as keyof typeof styles] || styles.info}`}
+      >
         {labels[severity as keyof typeof labels] || severity}
       </span>
     );
@@ -111,9 +113,7 @@ export default function DoctorDashboardPage() {
             <AlertTriangle className="w-8 h-8 text-red-600" />
             Doctor Service Dashboard
           </h1>
-          <p className="text-gray-500 mt-1">
-            Monitoraggio eventi diagnostici e auto-remediation
-          </p>
+          <p className="text-gray-500 mt-1">Monitoraggio eventi diagnostici e auto-remediation</p>
         </div>
         <button
           onClick={fetchEvents}
@@ -129,9 +129,7 @@ export default function DoctorDashboardPage() {
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo Evento
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Evento</label>
             <select
               value={filters.type}
               onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -147,9 +145,7 @@ export default function DoctorDashboardPage() {
           </div>
 
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Severità
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Severità</label>
             <select
               value={filters.severity}
               onChange={(e) => setFilters({ ...filters, severity: e.target.value })}
@@ -165,9 +161,7 @@ export default function DoctorDashboardPage() {
           </div>
 
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Periodo
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Periodo</label>
             <select
               value={filters.dateRange}
               onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
@@ -222,8 +216,10 @@ export default function DoctorDashboardPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-600">
-                      {typeof event.context === 'object' 
-                        ? event.context.message || event.context.error || JSON.stringify(event.context).substring(0, 100)
+                      {typeof event.context === 'object'
+                        ? event.context.message ||
+                          event.context.error ||
+                          JSON.stringify(event.context).substring(0, 100)
                         : String(event.context).substring(0, 100)}
                     </td>
                     <td className="px-6 py-4">
@@ -271,8 +267,3 @@ export default function DoctorDashboardPage() {
     </div>
   );
 }
-
-
-
-
-

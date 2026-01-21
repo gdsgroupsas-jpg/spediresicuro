@@ -334,7 +334,7 @@ const progress = useMemo(() => {
 - Loading/error states automatici
 
 ```typescript
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 // Fetch data
 const {
@@ -342,9 +342,9 @@ const {
   isLoading,
   error,
 } = useQuery({
-  queryKey: ["shipments"],
+  queryKey: ['shipments'],
   queryFn: async () => {
-    const response = await fetch("/api/shipments");
+    const response = await fetch('/api/shipments');
     return response.json();
   },
 });
@@ -352,14 +352,14 @@ const {
 // Mutate data
 const createShipment = useMutation({
   mutationFn: async (data) => {
-    const response = await fetch("/api/shipments", {
-      method: "POST",
+    const response = await fetch('/api/shipments', {
+      method: 'POST',
       body: JSON.stringify(data),
     });
     return response.json();
   },
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["shipments"] });
+    queryClient.invalidateQueries({ queryKey: ['shipments'] });
   },
 });
 ```
@@ -393,20 +393,20 @@ export function useMyContext() {
 // tailwind.config.js
 module.exports = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
         brand: {
-          "yellow-start": "#FFD700",
-          "yellow-end": "#FF9500",
-          cyan: "#00B8D4",
+          'yellow-start': '#FFD700',
+          'yellow-end': '#FF9500',
+          cyan: '#00B8D4',
         },
-        primary: "#FF9500",
-        secondary: "#00B8D4",
+        primary: '#FF9500',
+        secondary: '#00B8D4',
       },
     },
   },
@@ -418,8 +418,8 @@ module.exports = {
 
 ```typescript
 // lib/utils.ts
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

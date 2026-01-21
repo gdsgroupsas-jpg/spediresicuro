@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 /**
  * Feature flag per Enterprise Feedback UX
@@ -17,20 +17,20 @@ import { useSession } from 'next-auth/react'
  * 3. Default fallback
  */
 
-const FEATURE_FLAG_KEY = 'enterprise_feedback_ux_enabled'
-const LOCAL_STORAGE_KEY = 'spediresicuro_enterprise_feedback_ux'
+const FEATURE_FLAG_KEY = 'enterprise_feedback_ux_enabled';
+const LOCAL_STORAGE_KEY = 'spediresicuro_enterprise_feedback_ux';
 
 interface UseEnterpriseFeedbackUXReturn {
   /** Se la feature è abilitata */
-  isEnabled: boolean
+  isEnabled: boolean;
   /** Se stiamo caricando lo stato */
-  isLoading: boolean
+  isLoading: boolean;
   /** Override manuale (per testing/debug) */
-  setOverride: (enabled: boolean | null) => void
+  setOverride: (enabled: boolean | null) => void;
   /** Rimuovi override */
-  clearOverride: () => void
+  clearOverride: () => void;
   /** Verifica se c'è un override attivo */
-  hasOverride: boolean
+  hasOverride: boolean;
 }
 
 /**
@@ -53,77 +53,77 @@ interface UseEnterpriseFeedbackUXReturn {
  * ```
  */
 export function useEnterpriseFeedbackUX(): UseEnterpriseFeedbackUXReturn {
-  const { data: session } = useSession()
-  const [isEnabled, setIsEnabled] = useState(true) // Default: enabled
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasOverride, setHasOverride] = useState(false)
+  const { data: session } = useSession();
+  const [isEnabled, setIsEnabled] = useState(true); // Default: enabled
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasOverride, setHasOverride] = useState(false);
 
   useEffect(() => {
     async function checkFeatureFlag() {
       try {
         // 1. Check localStorage override first (for testing)
         if (typeof window !== 'undefined') {
-          const localOverride = localStorage.getItem(LOCAL_STORAGE_KEY)
+          const localOverride = localStorage.getItem(LOCAL_STORAGE_KEY);
           if (localOverride !== null) {
-            setIsEnabled(localOverride === 'true')
-            setHasOverride(true)
-            setIsLoading(false)
-            return
+            setIsEnabled(localOverride === 'true');
+            setHasOverride(true);
+            setIsLoading(false);
+            return;
           }
         }
 
         // 2. Check user feature flag via API (if logged in)
         if (session?.user?.email) {
           try {
-            const response = await fetch(`/api/features/check?feature=${FEATURE_FLAG_KEY}`)
+            const response = await fetch(`/api/features/check?feature=${FEATURE_FLAG_KEY}`);
             if (response.ok) {
-              const data = await response.json()
+              const data = await response.json();
               // Se l'API restituisce un valore esplicito, usalo
               if (typeof data.hasAccess === 'boolean') {
-                setIsEnabled(data.hasAccess)
-                setIsLoading(false)
-                return
+                setIsEnabled(data.hasAccess);
+                setIsLoading(false);
+                return;
               }
             }
           } catch (err) {
             // Se l'API fallisce, usa il default
-            console.warn('Feature flag API check failed, using default', err)
+            console.warn('Feature flag API check failed, using default', err);
           }
         }
 
         // 3. Default: enabled (nuova implementazione attiva)
         // NOTA: Cambia a `false` per rollout graduale
-        setIsEnabled(true)
-        setIsLoading(false)
+        setIsEnabled(true);
+        setIsLoading(false);
       } catch (error) {
-        console.error('Error checking enterprise feedback UX feature flag:', error)
-        setIsEnabled(true) // Default on error
-        setIsLoading(false)
+        console.error('Error checking enterprise feedback UX feature flag:', error);
+        setIsEnabled(true); // Default on error
+        setIsLoading(false);
       }
     }
 
-    checkFeatureFlag()
-  }, [session])
+    checkFeatureFlag();
+  }, [session]);
 
   // Override manuale (per testing)
   const setOverride = (enabled: boolean | null) => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined') return;
 
     if (enabled === null) {
-      localStorage.removeItem(LOCAL_STORAGE_KEY)
-      setHasOverride(false)
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      setHasOverride(false);
       // Ri-triggera il check
-      setIsLoading(true)
+      setIsLoading(true);
     } else {
-      localStorage.setItem(LOCAL_STORAGE_KEY, String(enabled))
-      setIsEnabled(enabled)
-      setHasOverride(true)
+      localStorage.setItem(LOCAL_STORAGE_KEY, String(enabled));
+      setIsEnabled(enabled);
+      setHasOverride(true);
     }
-  }
+  };
 
   const clearOverride = () => {
-    setOverride(null)
-  }
+    setOverride(null);
+  };
 
   return {
     isEnabled,
@@ -131,7 +131,7 @@ export function useEnterpriseFeedbackUX(): UseEnterpriseFeedbackUXReturn {
     setOverride,
     clearOverride,
     hasOverride,
-  }
+  };
 }
 
-export default useEnterpriseFeedbackUX
+export default useEnterpriseFeedbackUX;

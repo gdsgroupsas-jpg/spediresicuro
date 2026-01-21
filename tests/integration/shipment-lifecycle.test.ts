@@ -1,15 +1,15 @@
 /**
  * Integration Tests: Shipment Lifecycle (Create + Cancel)
- * 
+ *
  * ⚠️ IMPORTANT: These tests create REAL shipments on external APIs.
  * They are SKIPPED by default unless RUN_SHIPMENT_LIFECYCLE_TESTS=true
- * 
+ *
  * Test cases:
  * 1. Create shipment on Spedisci.Online → Verify PDF → Cancel
  * 2. Create shipment on Poste Italiane → Verify PDF → Cancel (when implemented)
  * 3. Create shipment on GLS → Verify PDF → Cancel (when implemented)
  * 4. Create shipment on BRT → Verify PDF → Cancel (when implemented)
- * 
+ *
  * Run manually with:
  *   RUN_SHIPMENT_LIFECYCLE_TESTS=true npm run test:integration -- tests/integration/shipment-lifecycle.test.ts
  */
@@ -56,16 +56,17 @@ describe.skipIf(!SHOULD_RUN)('Shipment Lifecycle: Spedisci.Online', () => {
   beforeAll(async () => {
     // Verifica che le credenziali siano configurate
     const apiKey = process.env.SPEDISCI_ONLINE_API_KEY;
-    const baseUrl = process.env.SPEDISCI_ONLINE_BASE_URL || 'https://infinity.spedisci.online/api/v2/';
-    const contractMapping = process.env.SPEDISCI_ONLINE_CONTRACT_MAPPING 
+    const baseUrl =
+      process.env.SPEDISCI_ONLINE_BASE_URL || 'https://infinity.spedisci.online/api/v2/';
+    const contractMapping = process.env.SPEDISCI_ONLINE_CONTRACT_MAPPING
       ? JSON.parse(process.env.SPEDISCI_ONLINE_CONTRACT_MAPPING)
       : {
           // Default per test - usa il contratto corretto con tripli trattini
-          'postedeliverybusiness-SDA---Express---H24+': 'PosteDeliveryBusiness'
+          'postedeliverybusiness-SDA---Express---H24+': 'PosteDeliveryBusiness',
         };
 
     if (!apiKey) {
-      throw new Error('SPEDISCI_ONLINE_API_KEY non configurata. Imposta la variabile d\'ambiente.');
+      throw new Error("SPEDISCI_ONLINE_API_KEY non configurata. Imposta la variabile d'ambiente.");
     }
 
     adapter = new SpedisciOnlineAdapter({
@@ -79,12 +80,12 @@ describe.skipIf(!SHOULD_RUN)('Shipment Lifecycle: Spedisci.Online', () => {
     // ⚠️ CLEANUP AUTOMATICO: Cancella la spedizione se è stata creata
     if (createdShipmentId || createdTrackingNumber) {
       console.log('🧹 [CLEANUP] Cancellazione spedizione di test...');
-      
+
       try {
         // Prova prima con shipmentId (più affidabile)
         const idToCancel = createdShipmentId || createdTrackingNumber!;
         const result = await adapter.cancelShipmentOnPlatform(idToCancel);
-        
+
         if (result.success) {
           console.log('✅ [CLEANUP] Spedizione cancellata:', result.message);
         } else {
@@ -114,7 +115,8 @@ describe.skipIf(!SHOULD_RUN)('Shipment Lifecycle: Spedisci.Online', () => {
 
     // Salva per cleanup (in caso di fallimento prima della cancellazione)
     createdTrackingNumber = result.tracking_number;
-    createdShipmentId = result.shipmentId || result.metadata?.shipmentId || result.metadata?.increment_id;
+    createdShipmentId =
+      result.shipmentId || result.metadata?.shipmentId || result.metadata?.increment_id;
 
     console.log('✅ [TEST] Spedizione creata:', {
       tracking: createdTrackingNumber,

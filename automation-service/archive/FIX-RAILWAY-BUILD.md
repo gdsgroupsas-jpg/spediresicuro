@@ -1,6 +1,7 @@
 # 🔧 FIX BUILD RAILWAY - ERRORE TYPESCRIPT
 
 ## ❌ ERRORE
+
 ```
 error TS2339: Property 'find' does not exist on type 'NodeListOf<HTMLTableCellElement>'
 ```
@@ -10,6 +11,7 @@ error TS2339: Property 'find' does not exist on type 'NodeListOf<HTMLTableCellEl
 **File:** `automation-service/src/agent.ts` (righe 705-709)
 
 **Prima (ERRATO):**
+
 ```typescript
 const cells = row.querySelectorAll('td');
 if (cells.length < 3) return;
@@ -18,6 +20,7 @@ const trackingCell = cells[0] || cells.find(cell => ...); // ❌ ERRORE
 ```
 
 **Dopo (CORRETTO):**
+
 ```typescript
 const cellsNodeList = row.querySelectorAll('td');
 if (cellsNodeList.length < 3) return;
@@ -38,11 +41,13 @@ const trackingCell = cells[0] || cells.find((cell: HTMLTableCellElement) => ...)
 ## 🚀 DEPLOY
 
 ### Commit creato:
+
 ```
 fix: Risolti errori TypeScript NodeListOf in agent.ts per Railway build
 ```
 
 ### Push eseguito:
+
 - ✅ File committato
 - ✅ Push su `origin/master`
 - ✅ GitHub aggiornato
@@ -60,18 +65,23 @@ fix: Risolti errori TypeScript NodeListOf in agent.ts per Railway build
 ## 🔍 VERIFICA
 
 ### 1. GitHub
+
 Vai su: https://github.com/gdsgroupsas-jpg/spediresicuro/blob/master/automation-service/src/agent.ts
+
 - Cerca "Array.from(cellsNodeList)" (riga 709)
 - Dovresti vedere la correzione
 
 ### 2. Build Locale
+
 ```bash
 cd automation-service
 npm run build
 ```
+
 - Dovrebbe completare senza errori
 
 ### 3. Railway
+
 - Controlla i log del nuovo deploy
 - Dovrebbe vedere "Build successful"
 

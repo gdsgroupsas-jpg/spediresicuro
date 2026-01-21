@@ -24,6 +24,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-ABC123XYZ789...
 ```
 
 **⚠️ IMPORTANTE:**
+
 - ✅ NO spazi prima o dopo il `=`
 - ✅ NO virgolette attorno al valore
 - ✅ NO `#` all'inizio (non commentata)
@@ -52,6 +53,7 @@ Quando invii un messaggio ad Anne, guarda la console del server. Dovresti vedere
 ```
 
 Se vedi:
+
 ```
 ❌ [Anne] ANTHROPIC_API_KEY NON TROVATA!
 ```
@@ -69,6 +71,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-ABC123XYZ789...
 ```
 
 **NON così:**
+
 ```env
 # ANTHROPIC_API_KEY=sk-ant-...  ❌ (commentata)
 ANTHROPIC_API_KEY = sk-ant-...  ❌ (spazi attorno al =)

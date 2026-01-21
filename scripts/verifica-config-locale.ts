@@ -1,6 +1,6 @@
 /**
  * Script di Verifica Configurazione Locale
- * 
+ *
  * Verifica che tutte le variabili ambiente necessarie siano configurate
  * per lo sviluppo locale.
  */
@@ -40,7 +40,7 @@ const variabiliObbligatorie: Record<string, ConfigVar> = {
     esempio: 'eyJhbGc...',
     opzionale: true,
   },
-  
+
   // NextAuth
   NEXTAUTH_URL: {
     nome: 'NextAuth URL',
@@ -52,7 +52,7 @@ const variabiliObbligatorie: Record<string, ConfigVar> = {
     descrizione: 'Chiave segreta per NextAuth (genera con: openssl rand -base64 32)',
     esempio: 'chiave-segreta-32-caratteri',
   },
-  
+
   // OAuth Google
   GOOGLE_CLIENT_ID: {
     nome: 'Google Client ID',
@@ -66,7 +66,7 @@ const variabiliObbligatorie: Record<string, ConfigVar> = {
     esempio: 'GOCSPX-xxxxx',
     opzionale: true,
   },
-  
+
   // OAuth GitHub
   GITHUB_CLIENT_ID: {
     nome: 'GitHub Client ID',
@@ -80,7 +80,7 @@ const variabiliObbligatorie: Record<string, ConfigVar> = {
     esempio: 'xxxxx',
     opzionale: true,
   },
-  
+
   // App
   NEXT_PUBLIC_APP_URL: {
     nome: 'App URL',
@@ -98,11 +98,14 @@ console.log('📋 Verifica Variabili Ambiente:\n');
 for (const [key, info] of Object.entries(variabiliObbligatorie)) {
   const valore = process.env[key];
   const presente = !!valore;
-  const valido = presente && valore !== '' && !valore.includes('your-') && !valore.includes('xxxxx');
-  
+  const valido =
+    presente && valore !== '' && !valore.includes('your-') && !valore.includes('xxxxx');
+
   if (!presente || !valido) {
     if (info.opzionale) {
-      console.log(`⚠️  ${info.nome} (OPZIONALE): ${presente ? '⚠️ Valore non valido' : '⚠️ Non configurato'}`);
+      console.log(
+        `⚠️  ${info.nome} (OPZIONALE): ${presente ? '⚠️ Valore non valido' : '⚠️ Non configurato'}`
+      );
       warning++;
     } else {
       console.log(`❌ ${info.nome}: ${presente ? '❌ Valore non valido' : '❌ NON CONFIGURATO'}`);
@@ -113,9 +116,10 @@ for (const [key, info] of Object.entries(variabiliObbligatorie)) {
     console.log(`   Aggiungi in .env.local: ${key}=${info.esempio}\n`);
   } else {
     // Mostra solo i primi e ultimi caratteri per sicurezza
-    const valoreMasked = valore.length > 20 
-      ? `${valore.substring(0, 10)}...${valore.substring(valore.length - 10)}`
-      : valore;
+    const valoreMasked =
+      valore.length > 20
+        ? `${valore.substring(0, 10)}...${valore.substring(valore.length - 10)}`
+        : valore;
     console.log(`✅ ${info.nome}: ${valoreMasked}\n`);
   }
 }
@@ -185,18 +189,17 @@ if (errori === 0 && warning === 0) {
 } else {
   if (errori > 0) {
     console.log(`❌ ${errori} errore/i critico/i trovato/i`);
-    console.log('   ⚠️  L\'applicazione NON funzionerà correttamente senza queste variabili!\n');
+    console.log("   ⚠️  L'applicazione NON funzionerà correttamente senza queste variabili!\n");
   }
   if (warning > 0) {
     console.log(`⚠️  ${warning} avviso/i (funzionalità opzionali non configurate)\n`);
   }
-  
+
   console.log('📝 PROSSIMI PASSI:');
   console.log('1. Apri il file .env.local nella root del progetto');
   console.log('2. Aggiungi le variabili mancanti (vedi esempi sopra)');
   console.log('3. Riavvia il server di sviluppo: npm run dev');
   console.log('\n💡 Guida completa: vedi env.example.txt o DOCUMENTAZIONE_OAUTH_COMPLETA.md\n');
-  
+
   process.exit(errori > 0 ? 1 : 0);
 }
-

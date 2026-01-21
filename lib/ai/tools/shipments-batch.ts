@@ -1,6 +1,6 @@
 /**
  * Anne AI Tool: Batch Shipments Creation
- * 
+ *
  * Permette ad Anne di:
  * - Analizzare file Excel/CSV con lista spedizioni
  * - Calcolare preventivi per tutti i corrieri
@@ -22,7 +22,7 @@ interface ShipmentRow {
   sender_province?: string;
   sender_phone?: string;
   sender_email?: string;
-  
+
   // Destinatario
   recipient_name: string;
   recipient_company?: string;
@@ -32,7 +32,7 @@ interface ShipmentRow {
   recipient_province?: string;
   recipient_phone?: string;
   recipient_email?: string;
-  
+
   // Spedizione
   packages: number;
   weight: number;
@@ -41,7 +41,7 @@ interface ShipmentRow {
   height?: number;
   value?: number;
   notes?: string;
-  
+
   // Preferenze
   preferred_courier?: string;
   service_type?: 'standard' | 'express';
@@ -90,23 +90,23 @@ export function parseShipmentsData(csvData: string): ShipmentRow[] {
 
   // Detect delimiter (comma or tab)
   const delimiter = lines[0].includes('\t') ? '\t' : ',';
-  
+
   // Parse header
-  const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
-  
+  const headers = lines[0].split(delimiter).map((h) => h.trim().toLowerCase());
+
   // Parse rows
   const shipments: ShipmentRow[] = [];
-  
+
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    
-    const values = line.split(delimiter).map(v => v.trim());
+
+    const values = line.split(delimiter).map((v) => v.trim());
     const row: any = {};
-    
+
     headers.forEach((header, index) => {
       const value = values[index] || '';
-      
+
       // Map common column names to ShipmentRow fields
       switch (header) {
         // Destinatario (obbligatori)
@@ -151,7 +151,7 @@ export function parseShipmentsData(csvData: string): ShipmentRow[] {
         case 'recipient_company':
           row.recipient_company = value;
           break;
-          
+
         // Mittente (opzionali)
         case 'mittente_nome':
         case 'sender_name':
@@ -169,7 +169,7 @@ export function parseShipmentsData(csvData: string): ShipmentRow[] {
         case 'sender_zip':
           row.sender_zip = value;
           break;
-          
+
         // Spedizione
         case 'colli':
         case 'packages':
@@ -210,13 +210,13 @@ export function parseShipmentsData(csvData: string): ShipmentRow[] {
           break;
       }
     });
-    
+
     // Validate required fields
     if (row.recipient_name && row.recipient_address && row.recipient_city && row.recipient_zip) {
       shipments.push(row as ShipmentRow);
     }
   }
-  
+
   return shipments;
 }
 
@@ -228,54 +228,55 @@ export async function calculateQuotesComparison(
   userId: string
 ): Promise<QuoteComparison[]> {
   const quotes: QuoteComparison[] = [];
-  
+
   // Simula chiamate a tutti i corrieri disponibili
   // TODO: Implementare chiamate reali API corrieri
-  
+
   const couriers = [
-    { name: 'GLS', basePrice: 8.50, deliveryDays: 2, express: 12.00 },
-    { name: 'BRT', basePrice: 7.80, deliveryDays: 3, express: 11.50 },
-    { name: 'SDA', basePrice: 9.20, deliveryDays: 2, express: 13.00 },
-    { name: 'Poste', basePrice: 6.50, deliveryDays: 4, express: 10.00 },
-    { name: 'TNT', basePrice: 10.50, deliveryDays: 1, express: 15.00 },
+    { name: 'GLS', basePrice: 8.5, deliveryDays: 2, express: 12.0 },
+    { name: 'BRT', basePrice: 7.8, deliveryDays: 3, express: 11.5 },
+    { name: 'SDA', basePrice: 9.2, deliveryDays: 2, express: 13.0 },
+    { name: 'Poste', basePrice: 6.5, deliveryDays: 4, express: 10.0 },
+    { name: 'TNT', basePrice: 10.5, deliveryDays: 1, express: 15.0 },
   ];
-  
+
   // Calcola peso volumetrico
   const weight = shipment.weight || 1;
-  const volumetricWeight = shipment.length && shipment.width && shipment.height
-    ? (shipment.length * shipment.width * shipment.height) / 5000
-    : weight;
-  
+  const volumetricWeight =
+    shipment.length && shipment.width && shipment.height
+      ? (shipment.length * shipment.width * shipment.height) / 5000
+      : weight;
+
   const effectiveWeight = Math.max(weight, volumetricWeight);
-  
+
   // Carica listini personalizzati utente
   const { data: userPriceLists } = await supabaseAdmin
     .from('price_rules_advanced')
     .select('*')
     .eq('user_id', userId)
     .eq('is_active', true);
-  
+
   for (const courier of couriers) {
     const serviceType = shipment.service_type || 'standard';
     const basePrice = serviceType === 'express' ? courier.express : courier.basePrice;
-    
+
     // Applica listino personalizzato se esiste
     let finalPrice = basePrice * effectiveWeight;
-    
+
     if (userPriceLists && userPriceLists.length > 0) {
       for (const priceList of userPriceLists) {
         if (priceList.courier_name?.toLowerCase() === courier.name.toLowerCase()) {
           // Applica sconto o markup
           if (priceList.discount_percent) {
-            finalPrice *= (1 - priceList.discount_percent / 100);
+            finalPrice *= 1 - priceList.discount_percent / 100;
           }
           if (priceList.markup_percent) {
-            finalPrice *= (1 + priceList.markup_percent / 100);
+            finalPrice *= 1 + priceList.markup_percent / 100;
           }
         }
       }
     }
-    
+
     quotes.push({
       courier: courier.name,
       service: serviceType,
@@ -284,26 +285,26 @@ export async function calculateQuotesComparison(
       isRecommended: false,
     });
   }
-  
+
   // Ordina per prezzo
   quotes.sort((a, b) => a.price - b.price);
-  
+
   // Marca il più economico come raccomandato
   if (quotes.length > 0) {
     quotes[0].isRecommended = true;
     quotes[0].reason = 'Prezzo più conveniente';
   }
-  
+
   // Se express richiesto, raccomanda il più veloce tra quelli economici
   if (shipment.service_type === 'express') {
-    const fastestExpressIndex = quotes.findIndex(q => q.deliveryDays === 1);
+    const fastestExpressIndex = quotes.findIndex((q) => q.deliveryDays === 1);
     if (fastestExpressIndex !== -1) {
-      quotes.forEach(q => q.isRecommended = false);
+      quotes.forEach((q) => (q.isRecommended = false));
       quotes[fastestExpressIndex].isRecommended = true;
       quotes[fastestExpressIndex].reason = 'Più veloce (express)';
     }
   }
-  
+
   return quotes;
 }
 
@@ -317,7 +318,7 @@ export async function createBatchShipments(
 ): Promise<BatchShipmentResult> {
   // ⚠️ SICUREZZA: Valida userId prima di inserire
   assertValidUserId(userId);
-  
+
   const result: BatchShipmentResult = {
     success: true,
     totalShipments: shipments.length,
@@ -331,19 +332,19 @@ export async function createBatchShipments(
       averageSavings: 0,
     },
   };
-  
+
   for (let i = 0; i < shipments.length; i++) {
     const shipment = shipments[i];
-    
+
     try {
       // Calcola quote
       const quotes = await calculateQuotesComparison(shipment, userId);
-      const recommended = quotes.find(q => q.isRecommended) || quotes[0];
-      
+      const recommended = quotes.find((q) => q.isRecommended) || quotes[0];
+
       if (!recommended) {
         throw new Error('Nessun preventivo disponibile');
       }
-      
+
       // Usa mittente di default o quello specificato
       const sender = {
         name: shipment.sender_name || defaultSender?.name || 'Mittente',
@@ -355,13 +356,13 @@ export async function createBatchShipments(
         phone: shipment.sender_phone || defaultSender?.phone,
         email: shipment.sender_email || defaultSender?.email,
       };
-      
+
       // Crea spedizione
       const { data: newShipment, error } = await supabaseAdmin
         .from('shipments')
         .insert({
           user_id: userId,
-          
+
           // Mittente
           sender_name: sender.name,
           sender_company: sender.company,
@@ -371,7 +372,7 @@ export async function createBatchShipments(
           sender_province: sender.province,
           sender_phone: sender.phone,
           sender_email: sender.email,
-          
+
           // Destinatario
           recipient_name: shipment.recipient_name,
           recipient_company: shipment.recipient_company,
@@ -381,7 +382,7 @@ export async function createBatchShipments(
           recipient_province: shipment.recipient_province,
           recipient_phone: shipment.recipient_phone,
           recipient_email: shipment.recipient_email,
-          
+
           // Dettagli spedizione
           packages: shipment.packages || 1,
           weight: shipment.weight || 1,
@@ -390,40 +391,40 @@ export async function createBatchShipments(
           height: shipment.height,
           declared_value: shipment.value,
           notes: shipment.notes,
-          
+
           // Corriere e prezzo
           courier: recommended.courier,
           service_type: recommended.service,
           quoted_price: recommended.price,
-          
+
           // Status
           status: 'pending',
           payment_status: 'pending',
-          
+
           // Metadata
           created_via: 'anne_batch',
           created_at: new Date().toISOString(),
         })
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       // Calcola risparmio (differenza tra prezzo più alto e quello scelto)
-      const maxPrice = Math.max(...quotes.map(q => q.price));
+      const maxPrice = Math.max(...quotes.map((q) => q.price));
       const savings = maxPrice - recommended.price;
-      
+
       result.created++;
       result.totalCost += recommended.price;
       result.totalSavings += savings;
-      
+
       // Aggiorna summary per corriere
       if (!result.summary.byCourer[recommended.courier]) {
         result.summary.byCourer[recommended.courier] = { count: 0, totalCost: 0 };
       }
       result.summary.byCourer[recommended.courier].count++;
       result.summary.byCourer[recommended.courier].totalCost += recommended.price;
-      
+
       result.shipments.push({
         row: i + 1,
         recipient: shipment.recipient_name,
@@ -433,7 +434,6 @@ export async function createBatchShipments(
         courier: recommended.courier,
         price: recommended.price,
       });
-      
     } catch (error: any) {
       result.failed++;
       result.shipments.push({
@@ -444,12 +444,11 @@ export async function createBatchShipments(
       });
     }
   }
-  
-  result.summary.averageSavings = result.created > 0 
-    ? Math.round((result.totalSavings / result.created) * 100) / 100 
-    : 0;
-  
+
+  result.summary.averageSavings =
+    result.created > 0 ? Math.round((result.totalSavings / result.created) * 100) / 100 : 0;
+
   result.success = result.failed === 0;
-  
+
   return result;
 }

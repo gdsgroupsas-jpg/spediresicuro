@@ -38,6 +38,7 @@ NEXTAUTH_URL=http://localhost:3000
 ```
 
 **❌ SBAGLIATO se è:**
+
 ```env
 NEXTAUTH_URL=https://spediresicuro.vercel.app
 ```
@@ -64,6 +65,7 @@ Ho generato una nuova chiave segreta per te:
 ```
 
 Questa chiave è:
+
 - ✅ 44 caratteri (più sicura di 32)
 - ✅ Generata con crittografia sicura
 - ✅ Pronta per essere usata su Vercel
@@ -129,4 +131,3 @@ Dopo aver fatto le modifiche:
 ---
 
 **Nota**: Se hai modificato `NEXTAUTH_URL` in locale con quello di Vercel, correggilo subito! In locale deve essere sempre `http://localhost:3000`.
-

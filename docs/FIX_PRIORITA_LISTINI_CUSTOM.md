@@ -40,26 +40,20 @@ const bestResult = priceResults[0]; // Sceglie sempre il più economico
 
 ```typescript
 // ✨ FIX: Priorità ai listini CUSTOM rispetto ai SUPPLIER
-const customLists = priceResults.filter((r) => r.list.list_type === "custom");
-const supplierLists = priceResults.filter(
-  (r) => r.list.list_type === "supplier"
-);
+const customLists = priceResults.filter((r) => r.list.list_type === 'custom');
+const supplierLists = priceResults.filter((r) => r.list.list_type === 'supplier');
 
 let bestResult;
 if (customLists.length > 0) {
   // Se ci sono listini CUSTOM, scegli il più economico tra quelli CUSTOM
   customLists.sort((a, b) => a.price.finalPrice - b.price.finalPrice);
   bestResult = customLists[0];
-  console.log(
-    `✅ [RESELLER] Priorità a listini CUSTOM: scelto "${bestResult.list.name}"`
-  );
+  console.log(`✅ [RESELLER] Priorità a listini CUSTOM: scelto "${bestResult.list.name}"`);
 } else {
   // Se non ci sono listini CUSTOM, usa il più economico tra i SUPPLIER
   supplierLists.sort((a, b) => a.price.finalPrice - b.price.finalPrice);
   bestResult = supplierLists[0];
-  console.log(
-    `⚠️ [RESELLER] Nessun listino CUSTOM disponibile, usato SUPPLIER`
-  );
+  console.log(`⚠️ [RESELLER] Nessun listino CUSTOM disponibile, usato SUPPLIER`);
 }
 ```
 

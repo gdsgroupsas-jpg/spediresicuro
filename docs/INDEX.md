@@ -54,6 +54,7 @@
 
 | File                                                           | Purpose                           |
 | -------------------------------------------------------------- | --------------------------------- |
+| [E2E_TESTING_REPORT.md](./E2E_TESTING_REPORT.md)               | API Key Auth E2E testing report   |
 | [LOAD_TESTING.md](./LOAD_TESTING.md)                           | Load testing guide (NOT executed) |
 | [TEST_TYPES_EXPLAINED.md](./TEST_TYPES_EXPLAINED.md)           | Testing strategy                  |
 | [TEST_IMPORTANCE_EXPLAINED.md](./TEST_IMPORTANCE_EXPLAINED.md) | Why testing matters               |
@@ -65,6 +66,7 @@
 
 | File                                                                 | Purpose                 |
 | -------------------------------------------------------------------- | ----------------------- |
+| [E2E_TESTING_REPORT.md](./E2E_TESTING_REPORT.md)                     | API Key Auth security   |
 | [SECURITY_GATE_ACTING_CONTEXT.md](./SECURITY_GATE_ACTING_CONTEXT.md) | Acting Context pattern  |
 | [SUPABASE_SECURITY_GUIDE.md](./SUPABASE_SECURITY_GUIDE.md)           | Database security       |
 | [CSP_SECURITY_POLICY.md](./CSP_SECURITY_POLICY.md)                   | Content Security Policy |
@@ -88,12 +90,13 @@
 
 ## 🚀 Deployment & Operations
 
-| File                                                                     | Purpose               |
-| ------------------------------------------------------------------------ | --------------------- |
-| [STATUS_PAGE_SETUP.md](./STATUS_PAGE_SETUP.md)                           | Status page setup     |
-| [OPS_RUNBOOK.md](./OPS_RUNBOOK.md)                                       | Operations runbook    |
-| [COME_METTERE_IN_PRODUCTION.md](./COME_METTERE_IN_PRODUCTION.md)         | Production deployment |
-| [POST_DEPLOY_SECURITY_CHECKLIST.md](./POST_DEPLOY_SECURITY_CHECKLIST.md) | Post-deploy checks    |
+| File                                                                     | Purpose                       |
+| ------------------------------------------------------------------------ | ----------------------------- |
+| [PRODUCTION_DEPLOY_CHECKLIST.md](./PRODUCTION_DEPLOY_CHECKLIST.md)       | API Key Auth deployment guide |
+| [STATUS_PAGE_SETUP.md](./STATUS_PAGE_SETUP.md)                           | Status page setup             |
+| [OPS_RUNBOOK.md](./OPS_RUNBOOK.md)                                       | Operations runbook            |
+| [COME_METTERE_IN_PRODUCTION.md](./COME_METTERE_IN_PRODUCTION.md)         | Production deployment         |
+| [POST_DEPLOY_SECURITY_CHECKLIST.md](./POST_DEPLOY_SECURITY_CHECKLIST.md) | Post-deploy checks            |
 
 ---
 

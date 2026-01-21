@@ -4,14 +4,14 @@
 
 ### ✅ Cosa Esiste Già (Base Solida)
 
-| **Feature** | **Stato** | **Implementazione** |
-|-------------|-----------|-------------------|
-| Rate Limiting | ✅ Esiste | `lib/security/rate-limit.ts` (Redis-based) |
-| Retry Logic | ✅ Esiste | `lib/wallet/retry.ts`, `lib/agent/workers/vision-fallback.ts` |
-| Error Classification | ✅ Esiste | Classificazione transient/permanent errors |
-| Observability | ✅ Parziale | Log strutturati JSON, ma non completo |
-| Idempotency | ✅ Esiste | Per wallet/shipments, non per quotes |
-| Multi-Tenancy | ✅ Esiste | RLS, owner_user_id, assigned_config_id |
+| **Feature**          | **Stato**   | **Implementazione**                                           |
+| -------------------- | ----------- | ------------------------------------------------------------- |
+| Rate Limiting        | ✅ Esiste   | `lib/security/rate-limit.ts` (Redis-based)                    |
+| Retry Logic          | ✅ Esiste   | `lib/wallet/retry.ts`, `lib/agent/workers/vision-fallback.ts` |
+| Error Classification | ✅ Esiste   | Classificazione transient/permanent errors                    |
+| Observability        | ✅ Parziale | Log strutturati JSON, ma non completo                         |
+| Idempotency          | ✅ Esiste   | Per wallet/shipments, non per quotes                          |
+| Multi-Tenancy        | ✅ Esiste   | RLS, owner_user_id, assigned_config_id                        |
 
 ---
 
@@ -20,17 +20,17 @@
 ### 1. 🔄 Caching e Performance
 
 #### Gap Critici:
+
 - ❌ **Nessun caching delle chiamate API quote**
   - Ogni click fa chiamata API → costi elevati, latenza
   - Stesso peso/destinazione richiamato più volte
-  
 - ❌ **Nessun debounce per click multipli**
   - Utente può clickare 10 volte → 10 chiamate API simultanee
-  
 - ❌ **Nessun batch loading**
   - Carica tutti i corrieri in parallelo invece di sequenziale
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ CACHING STRATEGY                                        │
@@ -62,27 +62,29 @@
 ### 2. 🛡️ Error Handling e Fallback
 
 #### Gap Critici:
+
 - ❌ **Nessun fallback chain per PREVENTIVI**
   - Se API fallisce → errore puro, nessun fallback intelligente
-  
 - ❌ **Nessun timeout handling**
   - Chiamata API può bloccarsi indefinitamente
-  
 - ❌ **Nessun circuit breaker**
   - Se corriere API è down, continua a chiamare → waste
 
 #### ⚠️ IMPORTANTE: Fallback Solo per PREVENTIVI, NON per Spedizioni
 
 **Per PREVENTIVI (Quote):**
+
 - ✅ Se API fallisce → Errore chiaro "API non disponibile"
 - ✅ Se API lenta → Mostra stima da listino cached con badge "Stimato"
 - ❌ **MAI inventare LDV o spedizioni fake**
 
 **Per CREAZIONE SPEDIZIONE:**
+
 - ✅ Se API fallisce → Errore, nessuna spedizione creata
 - ✅ Fallback CSV solo per upload manuale (non spedizione reale)
 
 #### Soluzione Enterprise (Solo per Quote):
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ FALLBACK CHAIN PER PREVENTIVI (Priorità)                │
@@ -131,16 +133,16 @@
 ### 3. ⚡ Performance e Scalabilità
 
 #### Gap Critici:
+
 - ❌ **Nessun request queuing**
   - 100 utenti clickano simultaneamente → 100 chiamate API
-  
 - ❌ **Nessun rate limiting per quote API**
   - Utente può fare 1000 richieste/minuto
-  
 - ❌ **Nessun connection pooling**
   - Ogni chiamata apre nuova connessione
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ REQUEST QUEUE                                            │
@@ -168,16 +170,16 @@
 ### 4. 📊 Monitoring e Observability
 
 #### Gap Critici:
+
 - ❌ **Nessun tracking metriche quote**
   - Non sai quante chiamate API, success rate, latenza
-  
 - ❌ **Nessun alerting**
   - Se API fallisce 50% → nessun alert
-  
 - ❌ **Nessun dashboard monitoring**
   - Non vedi stato salute sistema quote
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ METRICHE DA TRACCIARE                                    │
@@ -211,16 +213,16 @@
 ### 5. 🔒 Sicurezza e Validazione
 
 #### Gap Critici:
+
 - ❌ **Nessuna validazione input robusta**
   - Utente può inviare peso negativo, CAP invalido
-  
 - ❌ **Nessun sanitization**
   - Input non sanitizzato → possibili injection
-  
 - ❌ **Nessun rate limiting per utente**
   - Utente può abusare API quote
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ VALIDAZIONE INPUT                                        │
@@ -246,16 +248,16 @@
 ### 6. 🧪 Testabilità e Qualità
 
 #### Gap Critici:
+
 - ❌ **Nessun test E2E per flusso quote**
   - Non testato: click → API → calcolo → display
-  
 - ❌ **Nessun mock per API corrieri**
   - Test dipendono da API reali → instabili
-  
 - ❌ **Nessun test performance**
   - Non sai se sistema regge 100 utenti simultanei
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ TEST COVERAGE                                            │
@@ -289,16 +291,16 @@
 ### 7. 📱 UX Enterprise
 
 #### Gap Critici:
+
 - ❌ **Nessun feedback loading granulare**
   - Utente non sa se sta caricando o errore
-  
 - ❌ **Nessun retry manuale**
   - Se fallisce → utente deve ricaricare pagina
-  
 - ❌ **Nessun ottimistic update**
   - UI non mostra stima mentre carica
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ UX ENTERPRISE                                            │
@@ -332,16 +334,16 @@
 ### 8. 🔐 Compliance e Audit
 
 #### Gap Critici:
+
 - ❌ **Nessun audit log per quote**
   - Non tracci chi ha richiesto quale prezzo
-  
 - ❌ **Nessun GDPR compliance**
   - Quote contengono dati personali (CAP, indirizzo)
-  
 - ❌ **Nessun data retention policy**
   - Quote salvati indefinitamente
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ AUDIT E COMPLIANCE                                       │
@@ -371,16 +373,16 @@
 ### 9. 🌐 Multi-Region e Disaster Recovery
 
 #### Gap Critici:
+
 - ❌ **Nessun failover regionale**
   - Se Vercel EU down → tutto down
-  
 - ❌ **Nessun backup strategy**
   - Se Redis down → nessun cache fallback
-  
 - ❌ **Nessun health check**
   - Non sai se sistema quote è operativo
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ DISASTER RECOVERY                                        │
@@ -409,16 +411,16 @@
 ### 10. 📈 Analytics e Business Intelligence
 
 #### Gap Critici:
+
 - ❌ **Nessun tracking conversion**
   - Non sai quanti quote → spedizioni
-  
 - ❌ **Nessun A/B testing**
   - Non puoi testare UI diverse
-  
 - ❌ **Nessun reporting**
   - Non vedi trend prezzi, margini
 
 #### Soluzione Enterprise:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ANALYTICS                                                │
@@ -448,6 +450,7 @@
 ## 📋 Checklist Enterprise-Grade
 
 ### 🔴 Critici (Must Have)
+
 - [ ] **Caching Redis** per quote (TTL 30s-5min)
 - [ ] **Fallback chain** (API → Cache → Listino → Stima)
 - [ ] **Circuit breaker** per API corrieri
@@ -459,6 +462,7 @@
 - [ ] **Audit logging** per compliance
 
 ### 🟡 Importanti (Should Have)
+
 - [ ] **Request queuing** per limitare chiamate simultanee
 - [ ] **Debounce** per click multipli
 - [ ] **Health checks** per quote system
@@ -468,6 +472,7 @@
 - [ ] **Analytics** (conversion funnel, business metrics)
 
 ### 🟢 Nice to Have (Could Have)
+
 - [ ] **A/B testing** framework
 - [ ] **Multi-region failover**
 - [ ] **GDPR compliance** completo
@@ -479,24 +484,28 @@
 ## 🎯 Priorità Implementazione
 
 ### Fase 1: Foundation (Sprint 1)
+
 1. Caching Redis
 2. Fallback chain base
 3. Rate limiting
 4. Error handling base
 
 ### Fase 2: Reliability (Sprint 2)
+
 5. Circuit breaker
 6. Timeout handling
 7. Retry logic
 8. Monitoring base
 
 ### Fase 3: Quality (Sprint 3)
+
 9. Test coverage
 10. Validazione completa
 11. UX migliorata
 12. Audit logging
 
 ### Fase 4: Scale (Sprint 4)
+
 13. Request queuing
 14. Performance optimization
 15. Analytics
@@ -506,14 +515,14 @@
 
 ## 📊 Metriche di Successo Enterprise
 
-| **Metrica** | **Target** | **Misurazione** |
-|-------------|-----------|-----------------|
-| **Quote API Latency (p95)** | < 2 secondi | Monitoring |
-| **Cache Hit Rate** | > 60% | Redis metrics |
-| **Success Rate** | > 95% | Error tracking |
-| **Fallback Usage** | < 10% | Analytics |
-| **Circuit Breaker Open** | < 1% tempo | Monitoring |
-| **User Satisfaction** | > 4/5 | Survey |
+| **Metrica**                 | **Target**  | **Misurazione** |
+| --------------------------- | ----------- | --------------- |
+| **Quote API Latency (p95)** | < 2 secondi | Monitoring      |
+| **Cache Hit Rate**          | > 60%       | Redis metrics   |
+| **Success Rate**            | > 95%       | Error tracking  |
+| **Fallback Usage**          | < 10%       | Analytics       |
+| **Circuit Breaker Open**    | < 1% tempo  | Monitoring      |
+| **User Satisfaction**       | > 4/5       | Survey          |
 
 ---
 
@@ -522,6 +531,7 @@
 **Stato Attuale:** ⚠️ **Non Enterprise-Grade**
 
 **Gap Principali:**
+
 1. ❌ Nessun caching → costi elevati, latenza
 2. ❌ Nessun fallback → errore puro se API down
 3. ❌ Nessun monitoring → non sai stato sistema
@@ -529,6 +539,7 @@
 5. ❌ Nessun test → qualità non garantita
 
 **Percorso Enterprise:**
+
 - **Fase 1-2**: Foundation + Reliability (2-3 settimane)
 - **Fase 3-4**: Quality + Scale (2-3 settimane)
 - **Totale**: 4-6 settimane per enterprise-grade completo

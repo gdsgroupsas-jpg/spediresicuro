@@ -2,11 +2,7 @@
   "extends": "next/core-web-vitals",
   "overrides": [
     {
-      "files": [
-        "app/api/shipments/**/*.ts",
-        "app/api/shipments/**/*.tsx",
-        "actions/wallet.ts"
-      ],
+      "files": ["app/api/shipments/**/*.ts", "app/api/shipments/**/*.tsx", "actions/wallet.ts"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -30,12 +26,7 @@
       }
     },
     {
-      "files": [
-        "app/api/**/*.ts",
-        "app/api/**/*.tsx",
-        "actions/**/*.ts",
-        "actions/**/*.tsx"
-      ],
+      "files": ["app/api/**/*.ts", "app/api/**/*.tsx", "actions/**/*.ts", "actions/**/*.tsx"],
       "excludedFiles": [
         "app/api/shipments/**/*.ts",
         "app/api/shipments/**/*.tsx",
@@ -65,4 +56,3 @@
     }
   ]
 }
-

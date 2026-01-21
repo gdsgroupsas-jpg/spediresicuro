@@ -25,10 +25,7 @@ export default function CTADynamic() {
   const isInView = useInView(sectionRef, { once: true, amount: 0.3 });
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative py-32 overflow-hidden"
-    >
+    <section ref={sectionRef} className="relative py-32 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700" />
 
@@ -71,7 +68,9 @@ export default function CTADynamic() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-8"
         >
           <Sparkles className="w-4 h-4 text-amber-300" />
-          <span className="text-sm font-medium text-white">🚀 Beta Testing - Primi 100 Founding Customers</span>
+          <span className="text-sm font-medium text-white">
+            🚀 Beta Testing - Primi 100 Founding Customers
+          </span>
         </motion.div>
 
         {/* Headline */}
@@ -134,10 +133,7 @@ export default function CTADynamic() {
           {benefits.map((benefit, index) => {
             const Icon = benefit.icon;
             return (
-              <div
-                key={index}
-                className="flex items-center gap-2 text-white/80"
-              >
+              <div key={index} className="flex items-center gap-2 text-white/80">
                 <Icon className="w-5 h-5 text-emerald-300" />
                 <span className="text-sm font-medium">{benefit.text}</span>
               </div>
@@ -167,7 +163,8 @@ export default function CTADynamic() {
             {/* Tech Stack */}
             <div className="flex items-center gap-3">
               <span className="text-white/80 text-sm">
-                Powered by <span className="font-semibold text-white">AI Vision + Orchestration</span>
+                Powered by{' '}
+                <span className="font-semibold text-white">AI Vision + Orchestration</span>
               </span>
             </div>
 

@@ -1,61 +1,61 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Shield, Store, DollarSign, FileText, TrendingUp, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Shield, Store, DollarSign, FileText, TrendingUp, AlertTriangle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button'
-import { QueryProvider } from '@/components/providers/query-provider'
-import { UsersTable } from './_components/users-table'
-import { CreateResellerDialog } from './_components/create-reseller-dialog'
-import { AIProviderSelector } from './_components/ai-provider-selector'
+import { Button } from '@/components/ui/button';
+import { QueryProvider } from '@/components/providers/query-provider';
+import { UsersTable } from './_components/users-table';
+import { CreateResellerDialog } from './_components/create-reseller-dialog';
+import { AIProviderSelector } from './_components/ai-provider-selector';
 
 export default function SuperAdminDashboard() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isAuthorized, setIsAuthorized] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [showCreateReseller, setShowCreateReseller] = useState(false)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCreateReseller, setShowCreateReseller] = useState(false);
 
   // Verifica permessi superadmin
   useEffect(() => {
-    if (status === 'loading') return
+    if (status === 'loading') return;
 
     if (status === 'unauthenticated' || !session) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
 
     async function checkSuperAdmin() {
       try {
-        const response = await fetch('/api/user/info')
+        const response = await fetch('/api/user/info');
         if (response.ok) {
-          const data = await response.json()
-          const userData = data.user || data
-          const accountType = userData.account_type || userData.accountType
+          const data = await response.json();
+          const userData = data.user || data;
+          const accountType = userData.account_type || userData.accountType;
 
           if (accountType === 'superadmin') {
-            setIsAuthorized(true)
+            setIsAuthorized(true);
           } else {
-            router.push('/dashboard?error=unauthorized')
-            return
+            router.push('/dashboard?error=unauthorized');
+            return;
           }
         } else {
-          router.push('/dashboard?error=unauthorized')
-          return
+          router.push('/dashboard?error=unauthorized');
+          return;
         }
       } catch (error) {
-        console.error('Errore verifica superadmin:', error)
-        router.push('/dashboard?error=unauthorized')
-        return
+        console.error('Errore verifica superadmin:', error);
+        router.push('/dashboard?error=unauthorized');
+        return;
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    checkSuperAdmin()
-  }, [session, status, router])
+    checkSuperAdmin();
+  }, [session, status, router]);
 
   if (isLoading) {
     return (
@@ -65,7 +65,7 @@ export default function SuperAdminDashboard() {
           <p className="mt-4 text-gray-600">Verifica permessi...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isAuthorized) {
@@ -77,7 +77,7 @@ export default function SuperAdminDashboard() {
           <p className="text-gray-600">Solo i superadmin possono accedere a questa sezione.</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -91,12 +91,8 @@ export default function SuperAdminDashboard() {
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Super Admin Panel
-                </h1>
-                <p className="text-sm text-gray-500">
-                  Gestione completa utenti e sistema
-                </p>
+                <h1 className="text-2xl font-bold text-gray-900">Super Admin Panel</h1>
+                <p className="text-sm text-gray-500">Gestione completa utenti e sistema</p>
               </div>
             </div>
           </div>
@@ -161,9 +157,7 @@ export default function SuperAdminDashboard() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Gestione Utenti
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Gestione Utenti</h2>
                   <p className="text-sm text-gray-500 mt-1">
                     Visualizza, modifica e gestisci tutti gli utenti della piattaforma
                   </p>
@@ -189,12 +183,11 @@ export default function SuperAdminDashboard() {
             onClose={() => setShowCreateReseller(false)}
             onSuccess={() => {
               // Refresh della tabella utenti
-              window.location.reload()
+              window.location.reload();
             }}
           />
         </main>
       </div>
     </QueryProvider>
-  )
+  );
 }
-

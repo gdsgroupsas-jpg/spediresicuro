@@ -1,30 +1,30 @@
 /**
  * API Route: Anne - Executive Business Partner
- * 
+ *
  * Endpoint POST per la chat con Anne.
  * Integra Claude 3.5 Sonnet con tools e context building avanzato.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth as getLegacySafeAuth } from '@/lib/safe-auth';
 import { buildContext } from '@/lib/ai/context-builder';
 import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from '@/lib/ai/prompts';
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
 import { getCachedContext, setCachedContext, getContextCacheKey } from '@/lib/ai/cache';
 import { supabaseAdmin } from '@/lib/db/client';
-import { 
-  generateTraceId, 
-  logFallbackToLegacy 
-} from '@/lib/telemetry/logger';
+import { generateTraceId, logFallbackToLegacy } from '@/lib/telemetry/logger';
 import { rateLimit } from '@/lib/security/rate-limit';
-import { supervisorRouter, formatPricingResponse } from '@/lib/agent/orchestrator/supervisor-router';
+import {
+  supervisorRouter,
+  formatPricingResponse,
+} from '@/lib/agent/orchestrator/supervisor-router';
 import { getSafeAuth } from '@/lib/safe-auth';
-import { 
-  createAIClient, 
-  getConfiguredAIProvider, 
+import {
+  createAIClient,
+  getConfiguredAIProvider,
   getAPIKeyForProvider,
   type AIMessage,
-  type AITool 
+  type AITool,
 } from '@/lib/ai/provider-adapter';
 
 // ⚠️ IMPORTANTE: In Next.js, le variabili d'ambiente vengono caricate al runtime
@@ -37,7 +37,7 @@ import {
  * Converte tools Anne in formato standard per adapter
  */
 function formatToolsForAdapter(): AITool[] {
-  return ANNE_TOOLS.map(tool => ({
+  return ANNE_TOOLS.map((tool) => ({
     name: tool.name,
     description: tool.description,
     input_schema: tool.parameters,
@@ -49,15 +49,15 @@ export async function POST(request: NextRequest) {
   const traceId = generateTraceId(); // Genera trace_id per telemetria
   let session: any = null;
   let anthropicApiKey: string | undefined = undefined;
-  
+
   try {
     // ⚠️ AI AGENT: Usa getSafeAuth() per ActingContext (supporta impersonation)
     const actingContext = await getSafeAuth();
     if (!actingContext) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Non autenticato' 
+        {
+          success: false,
+          error: 'Non autenticato',
         },
         { status: 401 }
       );
@@ -68,33 +68,39 @@ export async function POST(request: NextRequest) {
     const userEmail = actingContext.target.email || '';
     // Converti UserRole a 'admin' | 'user' per buildContext
     const targetRole = actingContext.target.role || 'user';
-    const userRole: 'admin' | 'user' = (targetRole === 'admin' || targetRole === 'superadmin' || targetRole === 'reseller') ? 'admin' : 'user';
+    const userRole: 'admin' | 'user' =
+      targetRole === 'admin' || targetRole === 'superadmin' || targetRole === 'reseller'
+        ? 'admin'
+        : 'user';
     const userName = actingContext.target.name || userEmail || 'Utente';
     const isAdmin = userRole === 'admin';
 
     // Verifica che userId sia definito
     if (!userId) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'ID utente non trovato nel contesto',
         },
         { status: 401 }
       );
     }
-    
+
     // Mantieni session per compatibilità con codice legacy
-    session = await auth();
+    const legacyContext = await getLegacySafeAuth();
+    session = legacyContext ? { user: legacyContext.actor } : null;
 
     // Rate limiting distribuito (Upstash Redis con fallback in-memory)
     const rateLimitResult = await rateLimit('agent-chat', userId as string);
     if (!rateLimitResult.allowed) {
       // Log structured event (no PII)
-      console.log(`[TELEMETRY] {"event":"rateLimited","trace_id":"${traceId}","route":"agent-chat","source":"${rateLimitResult.source}"}`);
-      
+      console.log(
+        `[TELEMETRY] {"event":"rateLimited","trace_id":"${traceId}","route":"agent-chat","source":"${rateLimitResult.source}"}`
+      );
+
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Troppe richieste. Attendi un minuto prima di riprovare.',
           retryAfter: 60,
         },
@@ -109,14 +115,14 @@ export async function POST(request: NextRequest) {
     } catch (parseError) {
       console.error('❌ [Anne] Errore parsing body richiesta:', parseError);
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Richiesta non valida: body JSON non valido'
+        {
+          success: false,
+          error: 'Richiesta non valida: body JSON non valido',
         },
         { status: 400 }
       );
     }
-    
+
     const userMessage = body.message || '';
     const messages = body.messages || []; // Storia conversazione
     const isVoiceInput = userMessage.startsWith('[VOX]');
@@ -132,11 +138,11 @@ export async function POST(request: NextRequest) {
       traceId,
       actingContext, // ⚠️ NUOVO: ActingContext iniettato
     });
-    
+
     // Se il supervisor ha una risposta pronta (END con pricing o clarification)
     if (supervisorResult.decision === 'END') {
       let responseMessage = '';
-      
+
       if (supervisorResult.pricingOptions && supervisorResult.pricingOptions.length > 0) {
         // Formatta risposta pricing
         responseMessage = formatPricingResponse(supervisorResult.pricingOptions);
@@ -145,9 +151,10 @@ export async function POST(request: NextRequest) {
         responseMessage = supervisorResult.clarificationRequest;
       } else {
         // Fallback
-        responseMessage = 'Mi dispiace, non sono riuscita a elaborare la richiesta. Come posso aiutarti?';
+        responseMessage =
+          'Mi dispiace, non sono riuscita a elaborare la richiesta. Come posso aiutarti?';
       }
-      
+
       // P2: Aggiungi telemetria per admin/superadmin
       const responseMetadata: any = {
         trace_id: traceId,
@@ -178,7 +185,7 @@ export async function POST(request: NextRequest) {
         metadata: responseMetadata,
       });
     }
-    
+
     // Se decision === 'legacy' o 'pricing_worker' senza risultato -> continua con legacy handler
     // (Il supervisor ha già loggato il fallback)
     // ===== FINE SUPERVISOR ROUTER =====
@@ -188,7 +195,7 @@ export async function POST(request: NextRequest) {
     try {
       const contextCacheKey = getContextCacheKey(userId, userRole);
       context = getCachedContext(contextCacheKey);
-      
+
       if (!context) {
         try {
           context = await buildContext(userId, userRole, userName);
@@ -200,13 +207,13 @@ export async function POST(request: NextRequest) {
           console.error('⚠️ [Anne] Errore buildContext:', buildError);
           console.error('   Stack:', buildError?.stack);
           // Usa contesto minimo
-          context = { 
-            user: { 
-              userId, 
-              userRole, 
+          context = {
+            user: {
+              userId,
+              userRole,
               userName,
-              recentShipments: []
-            } 
+              recentShipments: [],
+            },
           };
         }
       }
@@ -214,26 +221,26 @@ export async function POST(request: NextRequest) {
       console.error('⚠️ [Anne] Errore costruzione contesto (continuo comunque):', contextError);
       console.error('   Stack:', contextError?.stack);
       // Continua anche se il contesto fallisce
-      context = { 
-        user: { 
-          userId, 
-          userRole, 
+      context = {
+        user: {
+          userId,
+          userRole,
           userName,
-          recentShipments: []
-        } 
+          recentShipments: [],
+        },
       };
     }
-    
+
     // ⚠️ Verifica che context sia valido
     if (!context || !context.user) {
       console.warn('⚠️ [Anne] Context non valido, uso default');
-      context = { 
-        user: { 
-          userId, 
-          userRole, 
+      context = {
+        user: {
+          userId,
+          userRole,
           userName,
-          recentShipments: []
-        } 
+          recentShipments: [],
+        },
       };
     }
 
@@ -245,25 +252,26 @@ export async function POST(request: NextRequest) {
         systemPrompt = getVoicePrompt();
       } else {
         // ⚠️ Assicura che context abbia almeno la struttura minima
-        const safeContext = context && context.user 
-          ? context 
-          : { 
-              user: { 
-                userId, 
-                userRole, 
-                userName,
-                recentShipments: []
-              } 
-            };
+        const safeContext =
+          context && context.user
+            ? context
+            : {
+                user: {
+                  userId,
+                  userRole,
+                  userName,
+                  recentShipments: [],
+                },
+              };
         systemPrompt = buildSystemPrompt(safeContext as any, isAdmin);
       }
     } catch (promptError: any) {
       console.error('❌ [Anne] Errore costruzione system prompt:', promptError);
       // Usa prompt di base come fallback
       systemPrompt = isAdmin ? getAdminPrompt() : getBasePrompt();
-    }    // Prepara messaggi per Claude
+    } // Prepara messaggi per Claude
     const claudeMessages: any[] = [];
-    
+
     // Aggiungi storia conversazione (ultimi 10 messaggi per limitare token)
     const recentMessages = messages.slice(-10);
     for (const msg of recentMessages) {
@@ -279,7 +287,7 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    
+
     // Aggiungi messaggio corrente
     claudeMessages.push({
       role: 'user',
@@ -295,7 +303,7 @@ export async function POST(request: NextRequest) {
     // ⚠️ Ottieni provider AI configurato dal database
     const { provider: aiProvider, model: aiModel } = await getConfiguredAIProvider();
     const apiKey = getAPIKeyForProvider(aiProvider);
-    
+
     // Usa AI se disponibile
     let aiResponse = '';
     let toolCalls: any[] = [];
@@ -306,24 +314,24 @@ export async function POST(request: NextRequest) {
       try {
         // ⚠️ SEC-1: NO log di API key - solo info non sensibili
         console.log(`🤖 [Anne] Chiamata ${aiProvider.toUpperCase()} API in corso...`);
-        
+
         // Crea client AI usando adapter
         aiClient = await createAIClient(aiProvider, apiKey, aiModel);
-        
+
         // ⚠️ Verifica che systemPrompt e claudeMessages siano validi
         if (!systemPrompt || systemPrompt.trim().length === 0) {
           throw new Error('System prompt vuoto o non valido');
         }
         if (!claudeMessages || claudeMessages.length === 0) {
-          throw new Error('Nessun messaggio da inviare all\'AI');
+          throw new Error("Nessun messaggio da inviare all'AI");
         }
-        
+
         // Converte messaggi in formato adapter
-        const adapterMessages: AIMessage[] = claudeMessages.map(msg => ({
+        const adapterMessages: AIMessage[] = claudeMessages.map((msg) => ({
           role: msg.role as 'user' | 'assistant',
           content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
         }));
-        
+
         // Chiama AI con adapter
         const response = await aiClient.chat({
           model: aiModel,
@@ -332,12 +340,12 @@ export async function POST(request: NextRequest) {
           messages: adapterMessages,
           tools: formatToolsForAdapter(),
         });
-        
+
         // ⚠️ Verifica che response sia valida
         if (!response || !response.content) {
           throw new Error('Risposta AI non valida: content mancante');
         }
-        
+
         console.log(`✅ [Anne] Risposta ${aiProvider.toUpperCase()} ricevuta`);
 
         // Estrae contenuto e tool calls dalla risposta
@@ -353,7 +361,7 @@ export async function POST(request: NextRequest) {
         // Esegui tool calls se presenti
         if (toolCalls.length > 0) {
           const toolResults: any[] = [];
-          
+
           for (const toolCall of toolCalls) {
             try {
               // ⚠️ Verifica che toolCall sia valido
@@ -374,7 +382,7 @@ export async function POST(request: NextRequest) {
                 userId,
                 userRole
               );
-              
+
               // ⚠️ Verifica che result sia valido
               if (!result) {
                 console.error('❌ [Anne] Result tool è undefined per:', toolCall.name);
@@ -384,12 +392,13 @@ export async function POST(request: NextRequest) {
                 });
                 continue;
               }
-              
+
               toolResults.push({
                 tool_use_id: toolCall.id,
-                content: result.success && result.result
-                  ? JSON.stringify(result.result)
-                  : `Errore: ${result.error || 'Errore sconosciuto'}`,
+                content:
+                  result.success && result.result
+                    ? JSON.stringify(result.result)
+                    : `Errore: ${result.error || 'Errore sconosciuto'}`,
               });
             } catch (toolError: any) {
               console.error('❌ [Anne] Errore esecuzione tool:', {
@@ -415,7 +424,7 @@ export async function POST(request: NextRequest) {
               },
               {
                 role: 'user',
-                content: `Risultati tools:\n${toolResults.map(r => r.content).join('\n\n')}`,
+                content: `Risultati tools:\n${toolResults.map((r) => r.content).join('\n\n')}`,
               },
             ];
 
@@ -446,7 +455,7 @@ export async function POST(request: NextRequest) {
           error: undefined,
           name: 'APIError',
         };
-        
+
         // ⚠️ Usa una funzione helper sicura per estrarre proprietà
         const safeGetProp = (obj: any, prop: string, defaultVal: any = undefined): any => {
           try {
@@ -462,15 +471,19 @@ export async function POST(request: NextRequest) {
           }
           return defaultVal;
         };
-        
+
         // Estrai proprietà in modo sicuro
         errorDetails.message = safeGetProp(aiError, 'message', `Errore API ${aiProvider}`);
-        errorDetails.status = safeGetProp(aiError, 'status', safeGetProp(aiError, 'statusCode', undefined));
+        errorDetails.status = safeGetProp(
+          aiError,
+          'status',
+          safeGetProp(aiError, 'statusCode', undefined)
+        );
         errorDetails.statusCode = errorDetails.status;
         errorDetails.type = safeGetProp(aiError, 'type', 'api_error');
         errorDetails.name = safeGetProp(aiError, 'name', 'APIError');
         errorDetails.error = errorDetails.message;
-        
+
         // Log sicuro
         // ⚠️ SEC-1: NO log di API key - solo info non sensibili
         console.error(`❌ [Anne] Errore ${aiProvider.toUpperCase()} API:`, {
@@ -478,22 +491,23 @@ export async function POST(request: NextRequest) {
           status: errorDetails.status,
           type: errorDetails.type,
         });
-        
+
         // ⚠️ Messaggio di errore più specifico in base al tipo di errore
         let errorMessage = '';
         const statusCode = errorDetails.statusCode || errorDetails.status;
-        
+
         if (statusCode === 401) {
           errorMessage = `🔑 Errore autenticazione API: verifica che ${apiKeyEnv} sia corretta`;
         } else if (statusCode === 429) {
-          errorMessage = '⏱️ Troppe richieste: hai raggiunto il limite di rate. Riprova tra qualche minuto.';
+          errorMessage =
+            '⏱️ Troppe richieste: hai raggiunto il limite di rate. Riprova tra qualche minuto.';
         } else if (statusCode === 400) {
           errorMessage = '⚠️ Richiesta non valida: verifica il formato dei messaggi.';
         } else {
           const safeMessage = errorDetails.message || 'Errore sconosciuto';
           errorMessage = `⚠️ Errore tecnico: ${safeMessage}. Verifica i log del server per dettagli.`;
         }
-        
+
         // Fallback a risposta mock con messaggio di errore più utile
         isMock = true;
         const userName = (session?.user?.name || 'utente').split(' ')[0];
@@ -503,14 +517,16 @@ export async function POST(request: NextRequest) {
       // Fallback mock se AI non configurato
       const userName = (session?.user?.name || 'utente').split(' ')[0];
       const apiKeyEnv = aiProvider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'DEEPSEEK_API_KEY';
-      
+
       // ⚠️ SEC-1: NO log di API key info
-      console.warn(`⚠️ [Anne] ${aiProvider.toUpperCase()} non disponibile - verificare configurazione`);
-      
+      console.warn(
+        `⚠️ [Anne] ${aiProvider.toUpperCase()} non disponibile - verificare configurazione`
+      );
+
       isMock = true;
       if (!userMessage.trim()) {
-        const roleMessage = isAdmin 
-          ? '\n\nMonitoro business, finanza e sistemi. Posso analizzare margini, diagnosticare errori tecnici e proporre strategie di ottimizzazione.' 
+        const roleMessage = isAdmin
+          ? '\n\nMonitoro business, finanza e sistemi. Posso analizzare margini, diagnosticare errori tecnici e proporre strategie di ottimizzazione.'
           : '\n\nSono qui per aiutarti con le tue spedizioni, calcolare costi ottimali e risolvere problemi operativi.';
         aiResponse = `Ciao ${userName}! 👋 Sono Anne, il tuo Executive Business Partner.${roleMessage}\n\n💡 Per attivare l'AI avanzata, configura ${apiKeyEnv} e riavvia il server.\n\nCome posso aiutarti oggi?`;
       } else {
@@ -548,7 +564,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Telemetria: log fallback legacy (supervisor ha già loggato)
-    
+
     // P2: Aggiungi telemetria per admin/superadmin (se disponibile da supervisor)
     const legacyMetadata: any = {
       trace_id: traceId, // Trace ID per telemetria
@@ -571,17 +587,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Restituisci risposta JSON (NO PII nei metadata)
-    return NextResponse.json({
-      success: true,
-      message: aiResponse,
-      metadata: legacyMetadata,
-    }, {
-      // ⚠️ Assicura che la risposta sia sempre JSON valido
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
+    return NextResponse.json(
+      {
+        success: true,
+        message: aiResponse,
+        metadata: legacyMetadata,
       },
-    });
-
+      {
+        // ⚠️ Assicura che la risposta sia sempre JSON valido
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      }
+    );
   } catch (error: any) {
     // ⚠️ LOGGING DETTAGLIATO per debug locale
     console.error('❌ [Anne] Errore Generale:', {
@@ -591,26 +609,33 @@ export async function POST(request: NextRequest) {
       cause: error?.cause,
     });
     // ⚠️ SEC-1: NO log di API key info o userId (PII)
-    console.error('❌ [Anne] Context: hasSession:', !!session, 'userRole:', (session?.user as any)?.role);
-    
+    console.error(
+      '❌ [Anne] Context: hasSession:',
+      !!session,
+      'userRole:',
+      (session?.user as any)?.role
+    );
+
     // ⚠️ In sviluppo, mostra dettagli completi dell'errore
-    const errorDetails = process.env.NODE_ENV === 'development' 
-      ? {
-          message: error?.message,
-          name: error?.name,
-          stack: error?.stack?.split('\n').slice(0, 5).join('\n'), // Prime 5 righe dello stack
-        }
-      : undefined;
-    
+    const errorDetails =
+      process.env.NODE_ENV === 'development'
+        ? {
+            message: error?.message,
+            name: error?.name,
+            stack: error?.stack?.split('\n').slice(0, 5).join('\n'), // Prime 5 righe dello stack
+          }
+        : undefined;
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Errore interno del server',
         details: errorDetails,
         // ⚠️ In sviluppo, aggiungi suggerimenti
-        hint: process.env.NODE_ENV === 'development' 
-          ? 'Controlla i log del server per dettagli completi. Verifica che le variabili d\'ambiente API siano corrette e che il server sia stato riavviato.'
-          : undefined
+        hint:
+          process.env.NODE_ENV === 'development'
+            ? "Controlla i log del server per dettagli completi. Verifica che le variabili d'ambiente API siano corrette e che il server sia stato riavviato."
+            : undefined,
       },
       { status: 500 }
     );

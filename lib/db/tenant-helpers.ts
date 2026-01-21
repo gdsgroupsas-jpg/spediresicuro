@@ -9,16 +9,16 @@ import { supabaseAdmin } from '@/lib/db/client';
 
 /**
  * Recupera tenant_id di un utente con fallback automatico
- * 
+ *
  * Fallback strategy:
  * 1. Se tenant_id è popolato → usa tenant_id
  * 2. Se tenant_id è NULL e parent_id esiste → usa parent_id
  * 3. Altrimenti → usa user_id (self-tenant)
- * 
+ *
  * @param userId - ID utente
  * @param fallbackUser - Dati utente per fallback (opzionale, evita query extra)
  * @returns tenant_id o fallback (parent_id o user_id)
- * 
+ *
  * @example
  * const tenantId = await getUserTenant(userId);
  * // Query utenti dello stesso tenant
@@ -38,21 +38,20 @@ export async function getUserTenant(
       if (fallbackUser.tenant_id) {
         return fallbackUser.tenant_id;
       }
-      
+
       // 2. Fallback: usa parent_id se esiste
       if (fallbackUser.parent_id) {
         return fallbackUser.parent_id;
       }
-      
+
       // 3. Fallback: usa user_id (self-tenant)
       return userId;
     }
 
     // Altrimenti, usa funzione database
-    const { data: tenantId, error } = await supabaseAdmin
-      .rpc('get_user_tenant', {
-        p_user_id: userId,
-      });
+    const { data: tenantId, error } = await supabaseAdmin.rpc('get_user_tenant', {
+      p_user_id: userId,
+    });
 
     if (error) {
       console.warn(`⚠️ [TENANT] Errore get_user_tenant:`, error);
@@ -70,9 +69,9 @@ export async function getUserTenant(
 
 /**
  * Recupera tenant_id di un utente (versione con query utente automatica)
- * 
+ *
  * Utile quando non hai già i dati utente in memoria
- * 
+ *
  * @param userId - ID utente
  * @returns tenant_id o fallback
  */
@@ -104,15 +103,12 @@ export async function getUserTenantWithQuery(userId: string): Promise<string> {
 
 /**
  * Verifica se due utenti appartengono allo stesso tenant
- * 
+ *
  * @param userId1 - ID primo utente
  * @param userId2 - ID secondo utente
  * @returns true se stesso tenant, false altrimenti
  */
-export async function isSameTenant(
-  userId1: string,
-  userId2: string
-): Promise<boolean> {
+export async function isSameTenant(userId1: string, userId2: string): Promise<boolean> {
   try {
     const tenant1 = await getUserTenant(userId1);
     const tenant2 = await getUserTenant(userId2);
@@ -125,7 +121,7 @@ export async function isSameTenant(
 
 /**
  * Recupera tutti gli utenti di un tenant
- * 
+ *
  * @param tenantId - ID tenant
  * @returns Array di ID utenti del tenant
  */

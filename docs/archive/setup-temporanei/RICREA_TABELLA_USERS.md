@@ -26,6 +26,7 @@ Cancellare la tabella `users` esistente e ricrearla da zero con lo schema corret
 ### Passo 3: Verifica che Funzioni
 
 Dopo aver eseguito lo script, dovresti vedere:
+
 - ✅ Messaggio di conferma nella console
 - ✅ Lista di tutti i campi creati
 - ✅ Nessun errore
@@ -54,6 +55,7 @@ Dopo aver ricreato la tabella, devi ricreare gli utenti demo:
 #### Opzione B: Usa l'Endpoint API (dopo deploy)
 
 Dopo aver fatto un nuovo deploy, puoi usare:
+
 ```
 POST https://spediresicuro.vercel.app/api/test/create-admin-user
 ```
@@ -63,6 +65,7 @@ POST https://spediresicuro.vercel.app/api/test/create-admin-user
 Lo script crea una tabella con questi campi:
 
 ### Campi Base
+
 - `id` - UUID (auto-generato)
 - `email` - TEXT (UNIQUE, NOT NULL)
 - `password` - TEXT (nullable)
@@ -70,16 +73,19 @@ Lo script crea una tabella con questi campi:
 - `role` - TEXT (default: 'user')
 
 ### Campi OAuth
+
 - `provider` - TEXT (default: 'credentials')
 - `provider_id` - TEXT (nullable)
 - `image` - TEXT (nullable)
 
 ### Campi JSONB (per dati complessi)
+
 - `dati_cliente` - JSONB (per dati cliente completi)
 - `default_sender` - JSONB (per mittente predefinito)
 - `integrazioni` - JSONB (per integrazioni e-commerce)
 
 ### Timestamps
+
 - `created_at` - TIMESTAMPTZ (auto-generato)
 - `updated_at` - TIMESTAMPTZ (auto-aggiornato)
 
@@ -126,13 +132,3 @@ Dopo aver ricreato la tabella e gli utenti:
 ---
 
 **Nota**: Dopo aver ricreato la tabella, fai un nuovo deploy su Vercel per applicare tutte le modifiche al codice!
-
-
-
-
-
-
-
-
-
-

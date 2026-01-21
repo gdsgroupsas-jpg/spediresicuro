@@ -9,11 +9,13 @@
 ### Windows (PowerShell)
 
 1. **Installa Railway CLI:**
+
    ```powershell
    npm install -g @railway/cli
    ```
 
 2. **Login Railway:**
+
    ```powershell
    railway login
    ```
@@ -25,6 +27,7 @@
    ```
 
 Lo script fa tutto automaticamente:
+
 - ✅ Verifica Railway CLI
 - ✅ Legge variabili da `.env.local`
 - ✅ Crea/seleziona progetto
@@ -36,11 +39,13 @@ Lo script fa tutto automaticamente:
 ### Mac/Linux (Bash)
 
 1. **Installa Railway CLI:**
+
    ```bash
    npm install -g @railway/cli
    ```
 
 2. **Login Railway:**
+
    ```bash
    railway login
    ```
@@ -107,6 +112,7 @@ Il file `railway.toml` è già presente in `automation-service/`.
 **Come usarlo:**
 
 1. **Link progetto:**
+
    ```bash
    railway link
    ```
@@ -124,11 +130,11 @@ Railway leggerà automaticamente `railway.toml` e configurerà tutto.
 
 ## 📊 CONFRONTO
 
-| Metodo | Tempo | Difficoltà | Automazione |
-|--------|-------|------------|-------------|
-| **Script Automatico** | 5 min | ⭐ Facile | 90% |
-| **Config as Code** | 3 min | ⭐⭐ Medio | 80% |
-| **Manuale** | 10 min | ⭐⭐⭐ Difficile | 0% |
+| Metodo                | Tempo  | Difficoltà       | Automazione |
+| --------------------- | ------ | ---------------- | ----------- |
+| **Script Automatico** | 5 min  | ⭐ Facile        | 90%         |
+| **Config as Code**    | 3 min  | ⭐⭐ Medio       | 80%         |
+| **Manuale**           | 10 min | ⭐⭐⭐ Difficile | 0%          |
 
 ---
 
@@ -149,6 +155,7 @@ Dopo aver eseguito lo script:
 ### Errore: "Railway CLI non trovato"
 
 **Soluzione:**
+
 ```bash
 npm install -g @railway/cli
 ```
@@ -156,6 +163,7 @@ npm install -g @railway/cli
 ### Errore: "Non loggato in Railway"
 
 **Soluzione:**
+
 ```bash
 railway login
 ```
@@ -163,12 +171,14 @@ railway login
 ### Errore: "Variabili d'ambiente mancanti"
 
 **Soluzione:**
+
 - Verifica che `.env.local` esista nella root del progetto
 - Oppure inserisci manualmente quando richiesto
 
 ### Root Directory non funziona
 
 **Soluzione:**
+
 - Configura manualmente su Railway Dashboard
 - Settings → Root Directory → `automation-service`
 
@@ -188,4 +198,3 @@ Dopo lo script + 2 minuti manuali:
 ---
 
 **Usa lo script automatico per risparmiare tempo!** 🚀
-

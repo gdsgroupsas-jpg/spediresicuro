@@ -27,6 +27,7 @@ Il test `e2e/happy-path.spec.ts` copre:
 ## 🔧 Modifiche Applicate
 
 ### 1. Componente Anne Assistant
+
 **File:** `components/anne/AnneAssistant.tsx`
 
 - ✅ Spostato da `bottom-6 right-6` a `top-6 right-6` (non interferisce con i form)
@@ -35,6 +36,7 @@ Il test `e2e/happy-path.spec.ts` copre:
 - ✅ Disabilitato completamente durante i test Playwright
 
 ### 2. Test E2E
+
 **File:** `e2e/happy-path.spec.ts`
 
 - ✅ Chiusura robusta di tutti i popup all'inizio
@@ -45,6 +47,7 @@ Il test `e2e/happy-path.spec.ts` copre:
 - ✅ Fix strict mode violation nel selettore messaggio successo
 
 ### 3. Bypass Autenticazione
+
 **File:** `app/dashboard/layout.tsx`
 
 - ✅ Bypass tramite header `x-test-mode: playwright`
@@ -90,6 +93,7 @@ Se il test fallisce:
 ## 🎉 Prossimi Step
 
 Il test è pronto per:
+
 - ✅ Integrazione CI/CD
 - ✅ Esecuzione automatica su ogni commit
 - ✅ Estensione con altri scenari (errori, validazioni, ecc.)

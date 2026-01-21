@@ -69,12 +69,21 @@ export function useVoiceControl(options: UseVoiceControlOptions = {}) {
       await clientRef.current.connect();
       setIsActive(true);
     } catch (error: any) {
-      options.onError?.(error instanceof Error ? error : new Error(error?.message || 'Voice session error'));
+      options.onError?.(
+        error instanceof Error ? error : new Error(error?.message || 'Voice session error')
+      );
       setIsActive(false);
     } finally {
       setIsConnecting(false);
     }
-  }, [executeTool, options.apiKey, options.debug, options.endpoint, options.model, options.onError]);
+  }, [
+    executeTool,
+    options.apiKey,
+    options.debug,
+    options.endpoint,
+    options.model,
+    options.onError,
+  ]);
 
   const stopSession = useCallback(() => {
     clientRef.current?.disconnect();

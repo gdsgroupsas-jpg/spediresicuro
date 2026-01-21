@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react';
 
 /**
  * Hook per debounce di un valore
@@ -17,17 +17,17 @@ import { useEffect, useState } from 'react'
  * // debouncedSearch si aggiorna solo 300ms dopo l'ultimo cambiamento
  */
 export function useDebounce<T>(value: T, delay: number = 300): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
+      setDebouncedValue(value);
+    }, delay);
 
     return () => {
-      clearTimeout(timer)
-    }
-  }, [value, delay])
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
 
-  return debouncedValue
+  return debouncedValue;
 }

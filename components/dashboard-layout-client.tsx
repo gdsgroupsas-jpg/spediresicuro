@@ -87,10 +87,8 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
       if (session?.user?.email) {
         // ⚠️ OTTIMIZZAZIONE: Controlla cache prima di fare fetch
         const cacheKey = `userInfo_${session.user.email}`;
-        const cachedData = typeof window !== 'undefined' 
-          ? sessionStorage.getItem(cacheKey)
-          : null;
-        
+        const cachedData = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null;
+
         if (cachedData) {
           try {
             const userData = JSON.parse(cachedData);
@@ -98,8 +96,8 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
             setUserRole(userData.role || null);
             // Aggiorna in background senza bloccare
             fetch('/api/user/info')
-              .then(res => res.ok ? res.json() : null)
-              .then(data => {
+              .then((res) => (res.ok ? res.json() : null))
+              .then((data) => {
                 if (data) {
                   const freshData = data.user || data;
                   setAccountType(freshData.account_type || null);
@@ -115,10 +113,10 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
             // Cache invalida, continua con fetch
           }
         }
-        
+
         try {
           const response = await fetch('/api/user/info', {
-            next: { revalidate: 30 }
+            next: { revalidate: 30 },
           });
           if (response.ok) {
             const data = await response.json();
@@ -151,11 +149,10 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
   }, []);
 
   const effectiveUserRole = (accountType || userRole || 'user') as 'user' | 'admin' | 'superadmin';
-  
+
   // Per PilotModal, converti superadmin in admin
-  const pilotUserRole: 'admin' | 'user' = 
-    effectiveUserRole === 'superadmin' ? 'admin' : 
-    (effectiveUserRole === 'admin' ? 'admin' : 'user');
+  const pilotUserRole: 'admin' | 'user' =
+    effectiveUserRole === 'superadmin' ? 'admin' : effectiveUserRole === 'admin' ? 'admin' : 'user';
 
   return (
     <AnneProvider>

@@ -39,7 +39,7 @@ import {
   Bot,
   Sparkles,
   Crown,
-  Users
+  Users,
 } from 'lucide-react';
 import { PilotModal } from '@/components/ai/pilot/pilot-modal';
 
@@ -105,43 +105,50 @@ export default function DashboardNav({
   }, [session]);
 
   // Genera breadcrumbs automatici se non forniti
-  const autoBreadcrumbs: BreadcrumbItem[] = breadcrumbs || (() => {
-    const paths = pathname.split('/').filter(Boolean);
-    const items: BreadcrumbItem[] = [{ label: 'Dashboard', href: '/dashboard' }];
+  const autoBreadcrumbs: BreadcrumbItem[] =
+    breadcrumbs ||
+    (() => {
+      const paths = pathname.split('/').filter(Boolean);
+      const items: BreadcrumbItem[] = [{ label: 'Dashboard', href: '/dashboard' }];
 
-    if (paths.length > 1) {
-      if (paths[1] === 'spedizioni') {
-        items.push({ label: 'Spedizioni', href: '/dashboard/spedizioni' });
-        if (paths[2] === 'nuova') {
-          items.push({ label: 'Nuova Spedizione', href: '/dashboard/spedizioni/nuova' });
-        } else if (paths[2] === 'cancellate') {
-          items.push({ label: 'Spedizioni Cancellate', href: '/dashboard/spedizioni/cancellate' });
+      if (paths.length > 1) {
+        if (paths[1] === 'spedizioni') {
+          items.push({ label: 'Spedizioni', href: '/dashboard/spedizioni' });
+          if (paths[2] === 'nuova') {
+            items.push({ label: 'Nuova Spedizione', href: '/dashboard/spedizioni/nuova' });
+          } else if (paths[2] === 'cancellate') {
+            items.push({
+              label: 'Spedizioni Cancellate',
+              href: '/dashboard/spedizioni/cancellate',
+            });
+          }
+        } else if (paths[1] === 'listini') {
+          items.push({ label: 'Listini', href: '/dashboard/listini' });
+          if (paths[2]) {
+            items.push({ label: 'Dettaglio Listino', href: `/dashboard/listini/${paths[2]}` });
+          }
+        } else if (paths[1] === 'admin') {
+          items.push({ label: 'Admin', href: '/dashboard/admin' });
+        } else if (paths[1] === 'super-admin') {
+          items.push({ label: 'Super Admin', href: '/dashboard/super-admin' });
+        } else if (paths[1] === 'team') {
+          items.push({ label: 'Team', href: '/dashboard/team' });
         }
-      } else if (paths[1] === 'listini') {
-        items.push({ label: 'Listini', href: '/dashboard/listini' });
-        if (paths[2]) {
-          items.push({ label: 'Dettaglio Listino', href: `/dashboard/listini/${paths[2]}` });
-        }
-      } else if (paths[1] === 'admin') {
-        items.push({ label: 'Admin', href: '/dashboard/admin' });
-      } else if (paths[1] === 'super-admin') {
-        items.push({ label: 'Super Admin', href: '/dashboard/super-admin' });
-      } else if (paths[1] === 'team') {
-        items.push({ label: 'Team', href: '/dashboard/team' });
       }
-    }
 
-    return items;
-  })();
+      return items;
+    })();
 
   return (
     <div className="mb-8 overflow-x-hidden">
       {/* Sticky Navigation Bar con Glassmorphism */}
-      <div className={`sticky top-0 z-40 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/80'
-          : 'bg-white/90 backdrop-blur-sm border-b border-gray-100'
-      }`}>
+      <div
+        className={`sticky top-0 z-40 transition-all duration-300 ${
+          isScrolled
+            ? 'bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200/80'
+            : 'bg-white/90 backdrop-blur-sm border-b border-gray-100'
+        }`}
+      >
         <div className="max-w-full px-4 py-2.5">
           {/* Breadcrumbs compatti */}
           <nav className="flex items-center gap-2 text-xs mb-3">
@@ -164,7 +171,9 @@ export default function DashboardNav({
                     {item.label}
                   </Link>
                 ) : (
-                  <span className={`font-semibold ${index === autoBreadcrumbs.length - 1 ? 'text-[#FF9500]' : 'text-gray-600'}`}>
+                  <span
+                    className={`font-semibold ${index === autoBreadcrumbs.length - 1 ? 'text-[#FF9500]' : 'text-gray-600'}`}
+                  >
                     {item.label}
                   </span>
                 )}
@@ -221,8 +230,14 @@ export default function DashboardNav({
 
       {/* Modal Dati Cliente */}
       {showDatiClienteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowDatiClienteModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowDatiClienteModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header Modal */}
             <div className="sticky top-0 bg-gradient-to-r from-[#FFD700] via-[#FFB800] to-[#FF9500] p-6 rounded-t-2xl flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
@@ -270,12 +285,16 @@ export default function DashboardNav({
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Codice Fiscale</p>
-                        <p className="font-semibold text-gray-900">{datiCliente.codiceFiscale || '—'}</p>
+                        <p className="font-semibold text-gray-900">
+                          {datiCliente.codiceFiscale || '—'}
+                        </p>
                       </div>
                       {datiCliente.dataNascita && (
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Data di Nascita</p>
-                          <p className="font-semibold text-gray-900">{new Date(datiCliente.dataNascita).toLocaleDateString('it-IT')}</p>
+                          <p className="font-semibold text-gray-900">
+                            {new Date(datiCliente.dataNascita).toLocaleDateString('it-IT')}
+                          </p>
                         </div>
                       )}
                       {datiCliente.luogoNascita && (
@@ -287,7 +306,9 @@ export default function DashboardNav({
                       {datiCliente.sesso && (
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Sesso</p>
-                          <p className="font-semibold text-gray-900">{datiCliente.sesso === 'M' ? 'Maschio' : 'Femmina'}</p>
+                          <p className="font-semibold text-gray-900">
+                            {datiCliente.sesso === 'M' ? 'Maschio' : 'Femmina'}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -326,7 +347,9 @@ export default function DashboardNav({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-600 mb-1">Indirizzo</p>
-                        <p className="font-semibold text-gray-900">{datiCliente.indirizzo || '—'}</p>
+                        <p className="font-semibold text-gray-900">
+                          {datiCliente.indirizzo || '—'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Città</p>
@@ -334,7 +357,9 @@ export default function DashboardNav({
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Provincia</p>
-                        <p className="font-semibold text-gray-900">{datiCliente.provincia || '—'}</p>
+                        <p className="font-semibold text-gray-900">
+                          {datiCliente.provincia || '—'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 mb-1">CAP</p>
@@ -342,46 +367,53 @@ export default function DashboardNav({
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 mb-1">Nazione</p>
-                        <p className="font-semibold text-gray-900">{datiCliente.nazione || 'Italia'}</p>
+                        <p className="font-semibold text-gray-900">
+                          {datiCliente.nazione || 'Italia'}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Dati Azienda (se presente) */}
-                  {datiCliente.tipoCliente === 'azienda' && (datiCliente.ragioneSociale || datiCliente.partitaIva) && (
-                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Building2 className="w-5 h-5 text-amber-600" />
-                        <h3 className="text-lg font-bold text-gray-900">Dati Azienda</h3>
+                  {datiCliente.tipoCliente === 'azienda' &&
+                    (datiCliente.ragioneSociale || datiCliente.partitaIva) && (
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Building2 className="w-5 h-5 text-amber-600" />
+                          <h3 className="text-lg font-bold text-gray-900">Dati Azienda</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {datiCliente.ragioneSociale && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm text-gray-600 mb-1">Ragione Sociale</p>
+                              <p className="font-semibold text-gray-900">
+                                {datiCliente.ragioneSociale}
+                              </p>
+                            </div>
+                          )}
+                          {datiCliente.partitaIva && (
+                            <div>
+                              <p className="text-sm text-gray-600 mb-1">Partita IVA</p>
+                              <p className="font-semibold text-gray-900">
+                                {datiCliente.partitaIva}
+                              </p>
+                            </div>
+                          )}
+                          {datiCliente.codiceSDI && (
+                            <div>
+                              <p className="text-sm text-gray-600 mb-1">Codice SDI</p>
+                              <p className="font-semibold text-gray-900">{datiCliente.codiceSDI}</p>
+                            </div>
+                          )}
+                          {datiCliente.pec && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm text-gray-600 mb-1">PEC</p>
+                              <p className="font-semibold text-gray-900">{datiCliente.pec}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {datiCliente.ragioneSociale && (
-                          <div className="md:col-span-2">
-                            <p className="text-sm text-gray-600 mb-1">Ragione Sociale</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.ragioneSociale}</p>
-                          </div>
-                        )}
-                        {datiCliente.partitaIva && (
-                          <div>
-                            <p className="text-sm text-gray-600 mb-1">Partita IVA</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.partitaIva}</p>
-                          </div>
-                        )}
-                        {datiCliente.codiceSDI && (
-                          <div>
-                            <p className="text-sm text-gray-600 mb-1">Codice SDI</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.codiceSDI}</p>
-                          </div>
-                        )}
-                        {datiCliente.pec && (
-                          <div className="md:col-span-2">
-                            <p className="text-sm text-gray-600 mb-1">PEC</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.pec}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Dati Bancari (se presenti) */}
                   {(datiCliente.iban || datiCliente.banca) && (
@@ -406,7 +438,9 @@ export default function DashboardNav({
                         {datiCliente.nomeIntestatario && (
                           <div className="md:col-span-2">
                             <p className="text-sm text-gray-600 mb-1">Intestatario</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.nomeIntestatario}</p>
+                            <p className="font-semibold text-gray-900">
+                              {datiCliente.nomeIntestatario}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -424,33 +458,49 @@ export default function DashboardNav({
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Tipo Documento</p>
                           <p className="font-semibold text-gray-900">
-                            {datiCliente.documentoIdentita.tipo === 'carta_identita' ? 'Carta d\'Identità' :
-                             datiCliente.documentoIdentita.tipo === 'patente' ? 'Patente' :
-                             datiCliente.documentoIdentita.tipo === 'passaporto' ? 'Passaporto' : '—'}
+                            {datiCliente.documentoIdentita.tipo === 'carta_identita'
+                              ? "Carta d'Identità"
+                              : datiCliente.documentoIdentita.tipo === 'patente'
+                                ? 'Patente'
+                                : datiCliente.documentoIdentita.tipo === 'passaporto'
+                                  ? 'Passaporto'
+                                  : '—'}
                           </p>
                         </div>
                         {datiCliente.documentoIdentita.numero && (
                           <div>
                             <p className="text-sm text-gray-600 mb-1">Numero</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.documentoIdentita.numero}</p>
+                            <p className="font-semibold text-gray-900">
+                              {datiCliente.documentoIdentita.numero}
+                            </p>
                           </div>
                         )}
                         {datiCliente.documentoIdentita.rilasciatoDa && (
                           <div>
                             <p className="text-sm text-gray-600 mb-1">Rilasciato da</p>
-                            <p className="font-semibold text-gray-900">{datiCliente.documentoIdentita.rilasciatoDa}</p>
+                            <p className="font-semibold text-gray-900">
+                              {datiCliente.documentoIdentita.rilasciatoDa}
+                            </p>
                           </div>
                         )}
                         {datiCliente.documentoIdentita.dataRilascio && (
                           <div>
                             <p className="text-sm text-gray-600 mb-1">Data Rilascio</p>
-                            <p className="font-semibold text-gray-900">{new Date(datiCliente.documentoIdentita.dataRilascio).toLocaleDateString('it-IT')}</p>
+                            <p className="font-semibold text-gray-900">
+                              {new Date(
+                                datiCliente.documentoIdentita.dataRilascio
+                              ).toLocaleDateString('it-IT')}
+                            </p>
                           </div>
                         )}
                         {datiCliente.documentoIdentita.dataScadenza && (
                           <div>
                             <p className="text-sm text-gray-600 mb-1">Data Scadenza</p>
-                            <p className="font-semibold text-gray-900">{new Date(datiCliente.documentoIdentita.dataScadenza).toLocaleDateString('it-IT')}</p>
+                            <p className="font-semibold text-gray-900">
+                              {new Date(
+                                datiCliente.documentoIdentita.dataScadenza
+                              ).toLocaleDateString('it-IT')}
+                            </p>
                           </div>
                         )}
                       </div>

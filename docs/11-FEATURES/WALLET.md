@@ -20,14 +20,14 @@ Questo documento descrive il sistema wallet prepagato di SpedireSicuro, che perm
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Wallet Overview | docs/11-FEATURES/WALLET.md | [Overview](#overview) |
-| Ricarica Wallet | docs/11-FEATURES/WALLET.md | [Ricarica](#ricarica-wallet) |
-| Addebito Spedizioni | docs/11-FEATURES/WALLET.md | [Addebito](#addebito-spedizioni) |
-| Transazioni | docs/11-FEATURES/WALLET.md | [Transazioni](#transazioni-wallet) |
+| Sezione              | Pagina                          | Link                                                   |
+| -------------------- | ------------------------------- | ------------------------------------------------------ |
+| Wallet Overview      | docs/11-FEATURES/WALLET.md      | [Overview](#overview)                                  |
+| Ricarica Wallet      | docs/11-FEATURES/WALLET.md      | [Ricarica](#ricarica-wallet)                           |
+| Addebito Spedizioni  | docs/11-FEATURES/WALLET.md      | [Addebito](#addebito-spedizioni)                       |
+| Transazioni          | docs/11-FEATURES/WALLET.md      | [Transazioni](#transazioni-wallet)                     |
 | Architettura Tecnica | docs/2-ARCHITECTURE/DATABASE.md | [Database Architecture](../2-ARCHITECTURE/DATABASE.md) |
-| Money Flows | docs/MONEY_FLOWS.md | [Money Flows](../MONEY_FLOWS.md) |
+| Money Flows          | docs/MONEY_FLOWS.md             | [Money Flows](../MONEY_FLOWS.md)                       |
 
 ## Content
 
@@ -35,17 +35,20 @@ Questo documento descrive il sistema wallet prepagato di SpedireSicuro, che perm
 
 **Cos'è il Wallet:**
 Il wallet è un sistema di credito prepagato che permette agli utenti di:
+
 - Ricaricare credito tramite bonifico bancario (con approvazione admin)
 - Pagare spedizioni automaticamente al momento della creazione
 - Visualizzare storico transazioni completo
 - Monitorare saldo corrente in tempo reale
 
 **Principio Fondamentale: "No Credit, No Label"**
+
 - Nessuna etichetta viene generata senza credito disponibile nel wallet
 - Eccezione: SuperAdmin può bypassare (per testing/emergenze)
 - Modello BYOC: Wallet NON toccato (cliente paga direttamente corriere)
 
 **Modelli Operativi:**
+
 - **Broker/Arbitraggio (B2B Core):** Wallet obbligatorio, cliente usa nostri contratti
 - **SaaS/BYOC:** Wallet NON utilizzato per spedizioni (solo fee SaaS)
 - **Web Reseller (B2C):** Wallet "Web Channel" (non personale)
@@ -85,14 +88,11 @@ Il wallet è un sistema di credito prepagato che permette agli utenti di:
 
 ```typescript
 // actions/wallet.ts
-export async function rechargeMyWallet(
-  amount: number,
-  reason: string = 'Ricarica wallet utente'
-) {
+export async function rechargeMyWallet(amount: number, reason: string = 'Ricarica wallet utente') {
   const context = await requireSafeAuth();
   const targetId = context.target.id; // Who receives credit
-  const actorId = context.actor.id;    // Who clicked (admin se impersonating)
-  
+  const actorId = context.actor.id; // Who clicked (admin se impersonating)
+
   // Se admin: ricarica diretta
   if (isSuperAdmin(context)) {
     const { data: txId, error } = await supabaseAdmin.rpc('add_wallet_credit', {
@@ -101,13 +101,13 @@ export async function rechargeMyWallet(
       p_description: reason,
       p_created_by: actorId,
     });
-    
+
     // Audit log
     await writeWalletAuditLog(context, 'WALLET_RECHARGE', amount, txId);
-    
+
     return { success: true, transactionId: txId };
   }
-  
+
   // Utente normale: crea richiesta (TODO: implementare approvazione)
   // ...
 }
@@ -129,17 +129,20 @@ const { data: user } = await supabaseAdmin
   .eq('id', context.target.id) // Who pays (target in impersonation)
   .single();
 
-const estimatedCost = 8.50; // TODO: Real quote from courier API
+const estimatedCost = 8.5; // TODO: Real quote from courier API
 const isSuperadmin = user.role === 'SUPERADMIN';
 
 // 2. Verifica credito sufficiente (SuperAdmin bypassa)
 if (!isSuperadmin && user.wallet_balance < estimatedCost) {
-  return Response.json({
-    error: 'INSUFFICIENT_CREDIT',
-    required: estimatedCost,
-    available: user.wallet_balance,
-    message: `Credito insufficiente. Disponibile: €${user.wallet_balance.toFixed(2)}`
-  }, { status: 402 });
+  return Response.json(
+    {
+      error: 'INSUFFICIENT_CREDIT',
+      required: estimatedCost,
+      available: user.wallet_balance,
+      message: `Credito insufficiente. Disponibile: €${user.wallet_balance.toFixed(2)}`,
+    },
+    { status: 402 }
+  );
 }
 ```
 
@@ -155,9 +158,9 @@ if (!isSuperadmin) {
   // 1. Decrementa wallet (ATOMICO - lock pessimistico)
   const { error: walletError } = await supabaseAdmin.rpc('decrement_wallet_balance', {
     p_user_id: context.target.id,
-    p_amount: finalCost
+    p_amount: finalCost,
   });
-  
+
   // ❌ VIETATO: Fallback manuale con .update()
   // ✅ CORRETTO: Se fallisce, ritorna errore e compensa
   if (walletError) {
@@ -165,13 +168,13 @@ if (!isSuperadmin) {
     // Se corriere già chiamato, eseguire refund o enqueue in compensation_queue
     throw new Error(`Wallet debit failed: ${walletError.message}`);
   }
-  
+
   // 2. Registra transazione (audit trail)
   await supabaseAdmin.from('wallet_transactions').insert({
     user_id: context.target.id,
     amount: -finalCost,
     type: 'SHIPMENT_CHARGE',
-    description: `Spedizione ${courierResponse.trackingNumber}`
+    description: `Spedizione ${courierResponse.trackingNumber}`,
   });
 }
 ```
@@ -217,14 +220,14 @@ CREATE TABLE wallet_transactions (
 export async function getMyWalletTransactions() {
   const context = await requireSafeAuth();
   const targetId = context.target.id; // Wallet owner
-  
+
   const { data: transactions, error } = await supabaseAdmin
     .from('wallet_transactions')
     .select('*')
     .eq('user_id', targetId) // Target ID (wallet owner)
     .order('created_at', { ascending: false })
     .limit(100);
-  
+
   return { success: true, transactions: transactions || [] };
 }
 ```
@@ -279,10 +282,12 @@ HAVING u.wallet_balance != SUM(wt.amount);
 **⚠️ IMPORTANTE:** Il wallet supporta impersonation tramite Acting Context.
 
 **Pattern:**
+
 - `context.target.id` → Chi paga (cliente, anche se impersonating)
 - `context.actor.id` → Chi esegue (SuperAdmin se impersonating)
 
 **Esempio:**
+
 ```typescript
 const context = await requireSafeAuth();
 
@@ -303,18 +308,22 @@ const { data: txId } = await supabaseAdmin.rpc('add_wallet_credit', {
 ### Anti-Fraud Mechanisms
 
 #### 1. Top-Up Limits
+
 - **Hard Limit:** €10,000 per transaction (enforced in DB function)
 - **Saldo Massimo:** €100,000 (enforced in `increment_wallet_balance()`)
 
 #### 2. Duplicate File Detection
+
 - **Meccanismo:** SHA256 hash del file caricato
 - **Check:** Verifica hash esistente prima di approvare
 
 #### 3. Manual Admin Approval
+
 - **Perché:** Previene attacchi automatizzati
 - **SLA:** Admin rivede entro 24h
 
 #### 4. Negative Balance Prevention
+
 - **Meccanismo:** CHECK constraint su `users.wallet_balance >= 0`
 - **Conseguenza:** Se debit andrebbe negativo, transazione fallisce
 
@@ -341,7 +350,7 @@ try {
       user_id: context.target.id,
       shipment_id_external: courierResponse.shipmentId,
       action: 'DELETE',
-      status: 'PENDING'
+      status: 'PENDING',
     });
   }
 }
@@ -359,7 +368,7 @@ try {
 // Server Action
 import { rechargeMyWallet } from '@/actions/wallet';
 
-const result = await rechargeMyWallet(100.00, 'Ricarica manuale admin');
+const result = await rechargeMyWallet(100.0, 'Ricarica manuale admin');
 
 if (result.success) {
   console.log(`Ricarica completata: €${result.newBalance}`);
@@ -374,23 +383,26 @@ import { requireSafeAuth } from '@/lib/safe-auth';
 
 export async function POST(request: Request) {
   const context = await requireSafeAuth();
-  
+
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('wallet_balance')
     .eq('id', context.target.id)
     .single();
-  
-  const estimatedCost = 8.50;
-  
+
+  const estimatedCost = 8.5;
+
   if (user.wallet_balance < estimatedCost) {
-    return Response.json({
-      error: 'INSUFFICIENT_CREDIT',
-      available: user.wallet_balance,
-      required: estimatedCost
-    }, { status: 402 });
+    return Response.json(
+      {
+        error: 'INSUFFICIENT_CREDIT',
+        available: user.wallet_balance,
+        required: estimatedCost,
+      },
+      { status: 402 }
+    );
   }
-  
+
   // Procedi con creazione spedizione
 }
 ```
@@ -403,7 +415,7 @@ import { getMyWalletTransactions } from '@/actions/wallet';
 
 const { transactions } = await getMyWalletTransactions();
 
-transactions.forEach(tx => {
+transactions.forEach((tx) => {
   console.log(`${tx.type}: €${tx.amount} - ${tx.description}`);
 });
 ```
@@ -412,14 +424,14 @@ transactions.forEach(tx => {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Saldo negativo dopo addebito | Verifica che `decrement_wallet_balance()` sia chiamato prima di creare spedizione |
-| Doppio accredito | Verifica che trigger legacy sia rimosso (migration 041), usa solo funzioni atomiche |
-| Transazione mancante | Verifica che INSERT in `wallet_transactions` sia eseguito dopo RPC |
-| Race condition | Usa sempre funzioni atomiche (`decrement_wallet_balance`, `increment_wallet_balance`) |
-| Impersonation non funziona | Verifica che `context.target.id` sia usato (non `context.actor.id`) |
-| Reconciliation fallisce | Esegui query reconciliation, verifica transazioni mancanti |
+| Issue                        | Soluzione                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| Saldo negativo dopo addebito | Verifica che `decrement_wallet_balance()` sia chiamato prima di creare spedizione     |
+| Doppio accredito             | Verifica che trigger legacy sia rimosso (migration 041), usa solo funzioni atomiche   |
+| Transazione mancante         | Verifica che INSERT in `wallet_transactions` sia eseguito dopo RPC                    |
+| Race condition               | Usa sempre funzioni atomiche (`decrement_wallet_balance`, `increment_wallet_balance`) |
+| Impersonation non funziona   | Verifica che `context.target.id` sia usato (non `context.actor.id`)                   |
+| Reconciliation fallisce      | Esegui query reconciliation, verifica transazioni mancanti                            |
 
 ---
 
@@ -435,11 +447,12 @@ transactions.forEach(tx => {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version - Wallet system completo, Acting Context, Anti-fraud | AI Agent |
+| Date       | Version | Changes                                                              | Author   |
+| ---------- | ------- | -------------------------------------------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version - Wallet system completo, Acting Context, Anti-fraud | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

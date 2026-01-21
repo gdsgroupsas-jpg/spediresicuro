@@ -1,13 +1,13 @@
 /**
  * Security Audit Script
- * 
+ *
  * Verifica automatica della sicurezza:
  * 1. Black-box API tests (401 senza auth)
  * 2. Database audit (shipments orfani, RLS policy)
- * 
+ *
  * Utilizzo:
  *   npm run audit:security
- * 
+ *
  * Exit code: 0 se tutti i check PASS, 1 se qualsiasi FAIL
  */
 
@@ -45,7 +45,7 @@ async function testApiAuth(): Promise<void> {
     const response1 = await fetch(`${PROD_URL}/api/spedizioni`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
 
@@ -84,15 +84,12 @@ async function testApiAuth(): Promise<void> {
 
   // Test 1.2: /api/corrieri/reliability
   try {
-    const response2 = await fetch(
-      `${PROD_URL}/api/corrieri/reliability?citta=Roma&provincia=RM`,
-      {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response2 = await fetch(`${PROD_URL}/api/corrieri/reliability?citta=Roma&provincia=RM`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
 
     if (response2.status === 401) {
       const body = await response2.json();
@@ -173,7 +170,11 @@ async function testDatabaseAudit(): Promise<void> {
     // Test 2.1: Shipments orfani (user_id null senza created_by_user_email)
     // Verifica shipments senza user_id E senza created_by_user_email (completamente orfane)
     console.log('  Checking orphan shipments...');
-    const { data: orphanData, count: orphanCount, error: orphanError } = await supabase
+    const {
+      data: orphanData,
+      count: orphanCount,
+      error: orphanError,
+    } = await supabase
       .from('shipments')
       .select('id, created_at, tracking_number, user_id, created_by_user_email')
       .is('user_id', null)
@@ -196,26 +197,31 @@ async function testDatabaseAudit(): Promise<void> {
           status: 'PASS',
           details: { count: 0 },
         });
-        console.log(`  ✅ Orphan shipments (user_id=null AND created_by_user_email=null): 0 (PASS)`);
+        console.log(
+          `  ✅ Orphan shipments (user_id=null AND created_by_user_email=null): 0 (PASS)`
+        );
       } else {
         results.push({
           check: 'ORPHAN_SHIPMENTS',
           status: 'FAIL',
           message: `Found ${count} completely orphan shipments (no user_id, no email)`,
-          details: { 
+          details: {
             count,
-            orphans: orphanData?.slice(0, 20).map((s: any) => ({
-              id: s.id,
-              created_at: s.created_at,
-              tracking_number: s.tracking_number || 'N/A',
-            })) || [],
+            orphans:
+              orphanData?.slice(0, 20).map((s: any) => ({
+                id: s.id,
+                created_at: s.created_at,
+                tracking_number: s.tracking_number || 'N/A',
+              })) || [],
           },
         });
         console.log(`  ❌ Orphan shipments: ${count} (FAIL)`);
         if (orphanData && orphanData.length > 0) {
           console.log(`  📋 Sample orphan records (max 20):`);
           orphanData.slice(0, 20).forEach((s: any, idx: number) => {
-            console.log(`    ${idx + 1}. ID: ${s.id.substring(0, 8)}... | Created: ${s.created_at || 'N/A'} | Tracking: ${s.tracking_number || 'N/A'}`);
+            console.log(
+              `    ${idx + 1}. ID: ${s.id.substring(0, 8)}... | Created: ${s.created_at || 'N/A'} | Tracking: ${s.tracking_number || 'N/A'}`
+            );
           });
           if (count > 20) {
             console.log(`    ... and ${count - 20} more`);
@@ -228,13 +234,16 @@ async function testDatabaseAudit(): Promise<void> {
     // Nota: pg_policies non è accessibile direttamente via PostgREST
     // Usiamo una funzione SQL custom se disponibile, altrimenti test indiretto
     console.log('  Checking RLS policies...');
-    
+
     let policiesWithNull: any[] = [];
-    
+
     // Prova a usare una funzione SQL custom se esiste
     try {
-      const { data: policyData, error: policyError } = await supabase.rpc('get_shipments_policies', {});
-      
+      const { data: policyData, error: policyError } = await supabase.rpc(
+        'get_shipments_policies',
+        {}
+      );
+
       if (!policyError && policyData) {
         policiesWithNull = (policyData as any[]).filter((p: any) => {
           const qual = (p.qual || '').toUpperCase();
@@ -244,7 +253,7 @@ async function testDatabaseAudit(): Promise<void> {
     } catch (rpcError) {
       // RPC non disponibile, usa test indiretto
     }
-    
+
     // Test indiretto: verifica che non ci siano shipments con user_id null
     // che non abbiano almeno created_by_user_email (indicatore di inserimento legacy/problematico)
     // Nota: Non possiamo accedere direttamente a pg_policies, quindi usiamo test indiretto
@@ -254,7 +263,7 @@ async function testDatabaseAudit(): Promise<void> {
       .is('user_id', null)
       .is('created_by_user_email', null)
       .limit(10);
-    
+
     if (!nullError && nullShipments && nullShipments.length > 0) {
       // Se troviamo shipments con user_id null E created_by_user_email null,
       // potrebbe indicare un problema RLS o inserimenti non controllati
@@ -341,7 +350,9 @@ async function main() {
       if (orphanResult.details?.orphans && orphanResult.details.orphans.length > 0) {
         console.log(`  📋 Orphan records:`);
         orphanResult.details.orphans.forEach((orphan: any, idx: number) => {
-          console.log(`    ${idx + 1}. ID: ${orphan.id?.substring(0, 8)}... | Created: ${orphan.created_at || 'N/A'} | Tracking: ${orphan.tracking_number || 'N/A'}`);
+          console.log(
+            `    ${idx + 1}. ID: ${orphan.id?.substring(0, 8)}... | Created: ${orphan.created_at || 'N/A'} | Tracking: ${orphan.tracking_number || 'N/A'}`
+          );
         });
       }
     }
@@ -351,10 +362,11 @@ async function main() {
 
   // RLS Policy
   if (rlsResult) {
-    const policyNames = rlsResult.details?.policies
-      ?.map((p: any) => p.policyname)
-      .join(', ') || 'N/A';
-    console.log(`RLS_NULL_POLICY: ${rlsResult.status}${rlsResult.status === 'FAIL' ? ` (policies: ${policyNames})` : ''}`);
+    const policyNames =
+      rlsResult.details?.policies?.map((p: any) => p.policyname).join(', ') || 'N/A';
+    console.log(
+      `RLS_NULL_POLICY: ${rlsResult.status}${rlsResult.status === 'FAIL' ? ` (policies: ${policyNames})` : ''}`
+    );
     if (rlsResult.status === 'FAIL' && rlsResult.message) {
       console.log(`  - ${rlsResult.message}`);
     }
@@ -381,4 +393,3 @@ main().catch((error) => {
   console.error('❌ Fatal error:', error);
   process.exit(1);
 });
-

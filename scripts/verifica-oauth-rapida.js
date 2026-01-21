@@ -1,6 +1,6 @@
 /**
  * Script Rapido per Verificare Configurazione OAuth
- * 
+ *
  * Esegui con: node scripts/verifica-oauth-rapida.js
  */
 
@@ -64,17 +64,17 @@ const variabili = {
 const righe = envContent.split('\n');
 righe.forEach((riga, index) => {
   const rigaPulita = riga.trim();
-  
+
   // Salta righe vuote
   if (!rigaPulita) return;
-  
+
   // Verifica ogni variabile
-  Object.keys(variabili).forEach(varName => {
+  Object.keys(variabili).forEach((varName) => {
     // Cerca la variabile (con o senza #)
     if (rigaPulita.includes(varName + '=') || rigaPulita.includes(varName + ' =')) {
       const commentata = rigaPulita.startsWith('#');
       const match = rigaPulita.match(new RegExp(`${varName}\\s*=\\s*(.+)`));
-      
+
       if (match) {
         variabili[varName].trovata = true;
         variabili[varName].commentata = commentata;
@@ -102,12 +102,13 @@ Object.entries(variabili).forEach(([nome, info]) => {
     warning++;
   } else {
     const valore = info.valore || '';
-    const valido = valore && 
-                   !valore.includes('your-') && 
-                   !valore.includes('xxxxx') && 
-                   !valore.includes('placeholder') &&
-                   valore.length > 5;
-    
+    const valido =
+      valore &&
+      !valore.includes('your-') &&
+      !valore.includes('xxxxx') &&
+      !valore.includes('placeholder') &&
+      valore.length > 5;
+
     if (!valido) {
       console.log(`⚠️  ${nome}: VALORE NON VALIDO`);
       console.log(`   Riga ${info.riga}: Sostituisci il placeholder con un valore reale`);
@@ -115,9 +116,10 @@ Object.entries(variabili).forEach(([nome, info]) => {
       warning++;
     } else {
       // Mostra solo i primi e ultimi caratteri per sicurezza
-      const masked = valore.length > 20 
-        ? `${valore.substring(0, 10)}...${valore.substring(valore.length - 5)}`
-        : '***';
+      const masked =
+        valore.length > 20
+          ? `${valore.substring(0, 10)}...${valore.substring(valore.length - 5)}`
+          : '***';
       console.log(`✅ ${nome}: Configurata (${masked})`);
     }
   }
@@ -176,7 +178,9 @@ if (!variabili.NEXTAUTH_URL.trovata || variabili.NEXTAUTH_URL.commentata) {
 
 if (!variabili.NEXTAUTH_SECRET.trovata || variabili.NEXTAUTH_SECRET.commentata) {
   console.log('❌ NEXTAUTH_SECRET non configurata');
-  console.log('   Genera con: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"');
+  console.log(
+    "   Genera con: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\""
+  );
   errori++;
 } else {
   const secret = variabili.NEXTAUTH_SECRET.valore || '';
@@ -209,7 +213,7 @@ if (errori === 0 && warning === 0) {
   if (warning > 0) {
     console.log(`⚠️  ${warning} avviso/i trovato/i\n`);
   }
-  
+
   console.log('📝 PROSSIMI PASSI:');
   console.log('1. Apri il file .env.local');
   console.log('2. Correggi gli errori indicati sopra');

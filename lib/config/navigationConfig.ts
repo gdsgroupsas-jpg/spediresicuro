@@ -653,10 +653,12 @@ export const navItemVariants = {
   },
   gradient: {
     active: 'bg-gradient-to-r from-orange-600 to-amber-600 text-white font-semibold shadow-lg',
-    inactive: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold hover:shadow-lg hover:scale-[1.02]',
+    inactive:
+      'bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold hover:shadow-lg hover:scale-[1.02]',
   },
   ai: {
     active: 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white font-semibold shadow-lg',
-    inactive: 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg hover:scale-[1.02]',
+    inactive:
+      'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold hover:shadow-lg hover:scale-[1.02]',
   },
 };

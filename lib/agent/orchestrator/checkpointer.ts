@@ -1,16 +1,23 @@
 /**
  * LangGraph Checkpointer - State Persistence
- * 
+ *
  * Implementa BaseCheckpointSaver per persistenza stato conversazioni multi-turn.
  * Salva AgentState completo in agent_sessions table usando AgentSessionService.
- * 
+ *
  * P3 Task 1: State Persistence per conversazioni lunghe
- * 
+ *
  * NOTE: Implementa BaseCheckpointSaver direttamente per compatibilità con LangGraph API.
  * Il checkpointer è opzionale - se non configurato, il graph funziona senza persistenza.
  */
 
-import { BaseCheckpointSaver, Checkpoint, CheckpointTuple, CheckpointListOptions, CheckpointMetadata, ChannelVersions } from '@langchain/langgraph-checkpoint';
+import {
+  BaseCheckpointSaver,
+  Checkpoint,
+  CheckpointTuple,
+  CheckpointListOptions,
+  CheckpointMetadata,
+  ChannelVersions,
+} from '@langchain/langgraph-checkpoint';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { agentSessionService } from '@/lib/services/agent-session';
 import { AgentState } from './state';
@@ -34,7 +41,7 @@ export class SupabaseCheckpointer extends BaseCheckpointSaver {
 
     // Recupera stato da service (usa cache se disponibile)
     const state = await agentSessionService.getSession(userId, threadId);
-    
+
     if (!state) {
       return undefined;
     }
@@ -70,7 +77,10 @@ export class SupabaseCheckpointer extends BaseCheckpointSaver {
   /**
    * Lista checkpoint per thread.
    */
-  async *list(config: RunnableConfig, options?: CheckpointListOptions): AsyncGenerator<CheckpointTuple> {
+  async *list(
+    config: RunnableConfig,
+    options?: CheckpointListOptions
+  ): AsyncGenerator<CheckpointTuple> {
     const threadId = config.configurable?.thread_id as string | undefined;
     const userId = config.configurable?.user_id as string | undefined;
 
@@ -137,4 +147,3 @@ export class SupabaseCheckpointer extends BaseCheckpointSaver {
 export function createCheckpointer(): SupabaseCheckpointer {
   return new SupabaseCheckpointer();
 }
-

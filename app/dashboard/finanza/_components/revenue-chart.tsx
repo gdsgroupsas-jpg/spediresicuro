@@ -70,16 +70,9 @@ export function RevenueChart({ fiscalContext, isLoading }: RevenueChartProps) {
   return (
     <div className="w-full h-[300px]" style={{ minWidth: 0, minHeight: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={chartData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
+        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-          <XAxis
-            dataKey="day"
-            stroke="#94a3b8"
-            tick={{ fill: '#94a3b8', fontSize: 12 }}
-          />
+          <XAxis dataKey="day" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <YAxis
             stroke="#94a3b8"
             tick={{ fill: '#94a3b8', fontSize: 12 }}
@@ -153,7 +146,7 @@ function generateDataFromContext(context: FiscalContext): ChartDataPoint[] {
     const isWeekend = index >= 5;
     // Pattern deterministico: 0.9, 1.1, 0.95, 1.05, 1.0, 0.7, 0.75
     const variancePattern = [0.9, 1.1, 0.95, 1.05, 1.0, 0.7, 0.75];
-    const variance = isWeekend ? 0.7 : (variancePattern[index] || 1.0);
+    const variance = isWeekend ? 0.7 : variancePattern[index] || 1.0;
 
     const revenue = avgRevenue * variance;
     const costs = avgCosts * variance;

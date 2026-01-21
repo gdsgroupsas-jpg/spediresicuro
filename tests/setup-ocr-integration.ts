@@ -1,14 +1,14 @@
 /**
  * Setup per Integration Test OCR Vision
- * 
+ *
  * Mocka:
  * - Supabase (non serve per test Vision)
  * - Database (non serve per test Vision)
- * 
+ *
  * NON mocka:
  * - LangChain / Gemini (test reali)
  * - extractData (test reali)
- * 
+ *
  * ⚠️ Richiede GOOGLE_API_KEY reale per eseguire i test
  */
 
@@ -36,8 +36,10 @@ if (!GOOGLE_API_KEY) {
 
 // ==================== MOCK ENV VARIABLES (solo Supabase) ====================
 // Previene errori da moduli che leggono Supabase env
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co';
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
+process.env.NEXT_PUBLIC_SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock-service-key';
 
 // ==================== MOCK SUPABASE ====================
@@ -96,4 +98,3 @@ beforeAll(() => {
 afterAll(() => {
   vi.restoreAllMocks();
 });
-

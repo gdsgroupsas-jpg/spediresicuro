@@ -11,14 +11,14 @@
  * - StateIndicator: Badge stato operazione (idle/loading/success/error)
  */
 
-export { SuccessModal } from './SuccessModal'
-export type { SuccessModalProps } from './SuccessModal'
+export { SuccessModal } from './SuccessModal';
+export type { SuccessModalProps } from './SuccessModal';
 
-export { ErrorDialog } from './ErrorDialog'
-export type { ErrorDialogProps, ErrorData, ErrorAction } from './ErrorDialog'
+export { ErrorDialog } from './ErrorDialog';
+export type { ErrorDialogProps, ErrorData, ErrorAction } from './ErrorDialog';
 
-export { OperationSkeleton } from './OperationSkeleton'
-export type { OperationSkeletonProps, SkeletonShape } from './OperationSkeleton'
+export { OperationSkeleton } from './OperationSkeleton';
+export type { OperationSkeletonProps, SkeletonShape } from './OperationSkeleton';
 
-export { StateIndicator } from './StateIndicator'
-export type { StateIndicatorProps, OperationState } from './StateIndicator'
+export { StateIndicator } from './StateIndicator';
+export type { StateIndicatorProps, OperationState } from './StateIndicator';

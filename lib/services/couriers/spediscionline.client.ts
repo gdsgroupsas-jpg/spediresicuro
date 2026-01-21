@@ -1,45 +1,50 @@
-import { BaseCourierClient, CourierCreateShipmentRequest, CourierCreateShipmentResponse, CourierDeleteShipmentRequest, CourierClientOptions } from './base-courier.interface'
+import {
+  BaseCourierClient,
+  CourierCreateShipmentRequest,
+  CourierCreateShipmentResponse,
+  CourierDeleteShipmentRequest,
+  CourierClientOptions,
+} from './base-courier.interface';
 
 // ⚠️ CRITICAL: Schema response REALE da OpenAPI
 interface SpedisciOnlineRawResponse {
-  shipmentId: number
-  trackingNumber: string
-  shipmentCost: string        // ⚠️ STRING "7.00", NON number
+  shipmentId: number;
+  trackingNumber: string;
+  shipmentCost: string; // ⚠️ STRING "7.00", NON number
   packages: Array<{
-    pack_number: number
-    reference: string | null
-  }>
-  labelData: string           // ⚠️ "labelData", NON "labelPdf"
-  labelZPL?: string
+    pack_number: number;
+    reference: string | null;
+  }>;
+  labelData: string; // ⚠️ "labelData", NON "labelPdf"
+  labelZPL?: string;
 }
 
 export class SpedisciOnlineClient extends BaseCourierClient {
-  protected carrier: string  // GLS, POSTE, BRT, UPS, etc (aligned with base class)
-  
+  protected carrier: string; // GLS, POSTE, BRT, UPS, etc (aligned with base class)
+
   constructor(config: {
-    apiKey: string
-    baseUrl: string
-    contractId?: string
-    carrier: string  // NUOVO: corriere specifico
+    apiKey: string;
+    baseUrl: string;
+    contractId?: string;
+    carrier: string; // NUOVO: corriere specifico
   }) {
-    super(config)
-    this.carrier = config.carrier
+    super(config);
+    this.carrier = config.carrier;
   }
-  
+
   async createShipping(
     request: CourierCreateShipmentRequest,
     options: CourierClientOptions = {}
   ): Promise<CourierCreateShipmentResponse> {
-    
-    const { timeout = 30000 } = options
+    const { timeout = 30000 } = options;
 
     // Prepara payload SpedisciOnline
     const payload = {
-      packages: request.packages.map(pkg => ({
+      packages: request.packages.map((pkg) => ({
         length: pkg.length,
         width: pkg.width,
         height: pkg.height,
-        weight: pkg.weight
+        weight: pkg.weight,
       })),
       shipFrom: {
         name: request.sender.name,
@@ -51,7 +56,7 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         postalCode: request.sender.postalCode,
         country: request.sender.country,
         phone: request.sender.phone || null,
-        email: request.sender.email
+        email: request.sender.email,
       },
       shipTo: {
         name: request.recipient.name,
@@ -63,50 +68,50 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         postalCode: request.recipient.postalCode,
         country: request.recipient.country,
         phone: request.recipient.phone || null,
-        email: request.recipient.email
+        email: request.recipient.email,
       },
-      carrier: this.carrier,  // Corriere dinamico (GLS, POSTE, BRT, UPS, etc)
-      contract: this.contractId || this.getDefaultContract(this.carrier),  // Contratto specifico
+      carrier: this.carrier, // Corriere dinamico (GLS, POSTE, BRT, UPS, etc)
+      contract: this.contractId || this.getDefaultContract(this.carrier), // Contratto specifico
       insuranceValue: request.insurance || 0,
       codValue: request.cod || 0,
       accessoriServices: [],
-      notes: request.notes || ''
-    }
+      notes: request.notes || '',
+    };
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(`${this.baseUrl}/shipping/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
-        signal: controller.signal
-      })
+        signal: controller.signal,
+      });
 
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
 
-      const data: SpedisciOnlineRawResponse = await response.json()
+      const data: SpedisciOnlineRawResponse = await response.json();
 
       if (!response.ok) {
-        const error = new Error((data as any).message || 'SpedisciOnline API error')
-        ;(error as any).statusCode = response.status
-        ;(error as any).data = data
-        throw error
+        const error = new Error((data as any).message || 'SpedisciOnline API error');
+        (error as any).statusCode = response.status;
+        (error as any).data = data;
+        throw error;
       }
 
       // ⚠️ CRITICAL: Validazione campi corretti
       if (!data.labelData || !data.trackingNumber) {
-        throw new Error('Invalid response: missing labelData or trackingNumber')
+        throw new Error('Invalid response: missing labelData or trackingNumber');
       }
 
       // ⚠️ CRITICAL: Parsing shipmentCost (string → number)
-      const parsedCost = parseFloat(data.shipmentCost)
+      const parsedCost = parseFloat(data.shipmentCost);
       if (isNaN(parsedCost) || parsedCost <= 0) {
-        throw new Error(`Invalid shipmentCost: ${data.shipmentCost}`)
+        throw new Error(`Invalid shipmentCost: ${data.shipmentCost}`);
       }
 
       // Normalizza a formato standard
@@ -114,23 +119,22 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         success: true,
         shipmentId: data.shipmentId.toString(),
         trackingNumber: data.trackingNumber,
-        cost: parsedCost,                    // ✅ Number parsato
-        labelData: data.labelData,           // ✅ Campo corretto
+        cost: parsedCost, // ✅ Number parsato
+        labelData: data.labelData, // ✅ Campo corretto
         labelZPL: data.labelZPL,
         carrier: 'spediscionline',
-        rawResponse: data
-      }
-
+        rawResponse: data,
+      };
     } catch (error: any) {
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
 
       if (error.name === 'AbortError') {
-        const timeoutError = new Error('SpedisciOnline API timeout')
-        ;(timeoutError as any).statusCode = 'TIMEOUT'
-        throw timeoutError
+        const timeoutError = new Error('SpedisciOnline API timeout');
+        (timeoutError as any).statusCode = 'TIMEOUT';
+        throw timeoutError;
       }
 
-      throw error
+      throw error;
     }
   }
 
@@ -140,41 +144,39 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          increment_id: parseInt(request.shipmentId)
-        })
-      })
+          increment_id: parseInt(request.shipmentId),
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error(`Delete failed: ${response.status}`)
+        throw new Error(`Delete failed: ${response.status}`);
       }
-
     } catch (error) {
-      console.error('Failed to delete shipment:', error)
-      throw error
+      console.error('Failed to delete shipment:', error);
+      throw error;
     }
   }
 
   async validateCredentials(): Promise<boolean> {
     // TODO: Implementa chiamata test
-    return true
+    return true;
   }
-  
+
   private getDefaultContract(carrier: string): string {
     // Fallback se contract_id non specificato
     const defaults: Record<string, string> = {
-      'GLS': 'GLSXS',
-      'POSTE': 'PDB_STANDARD',
-      'BRT': 'BRT_STANDARD',
-      'UPS': 'UPS_STANDARD',
-      'DHL': 'DHL_EXPRESS',
-      'SDA': 'SDA_STANDARD',
-      'TNT': 'TNT_STANDARD',
-      'FEDEX': 'FEDEX_EXPRESS'
-    }
-    return defaults[carrier.toUpperCase()] || 'STANDARD'
+      GLS: 'GLSXS',
+      POSTE: 'PDB_STANDARD',
+      BRT: 'BRT_STANDARD',
+      UPS: 'UPS_STANDARD',
+      DHL: 'DHL_EXPRESS',
+      SDA: 'SDA_STANDARD',
+      TNT: 'TNT_STANDARD',
+      FEDEX: 'FEDEX_EXPRESS',
+    };
+    return defaults[carrier.toUpperCase()] || 'STANDARD';
   }
 }
-

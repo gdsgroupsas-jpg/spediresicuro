@@ -11,13 +11,13 @@
 
 ## 🗺️ 1. Component UI → Data Mapping
 
-| Component | Reads From | Writes To | Fields Used | Changes Needed |
-|-----------|------------|-----------|-------------|----------------|
-| **CourierAPIConfig** | `courier_configs` | `courier_configs` | `provider_id`, `api_key`, `base_url`, `contract_mapping`, `is_active`, `is_default` | ✅ None |
-| **SpedisciOnlineConfig** | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `api_key`, `base_url`, `contract_mapping`, `description` | ✅ None |
-| **SpedisciOnlineConfigMulti** | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `name`, `base_url`, `api_key`, `contracts`, `is_active`, `is_default` | ✅ None |
-| **ConfigurationsPage** | `courier_configs` (all) | `courier_configs` | All fields + `assigned_config_id` | ⚠️ 3 micro-additions |
-| **AutomationPage** | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `automation_enabled`, `automation_settings`, `session_data`, `last_automation_sync` | ✅ None |
+| Component                     | Reads From                                                  | Writes To         | Fields Used                                                                         | Changes Needed       |
+| ----------------------------- | ----------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------- | -------------------- |
+| **CourierAPIConfig**          | `courier_configs`                                           | `courier_configs` | `provider_id`, `api_key`, `base_url`, `contract_mapping`, `is_active`, `is_default` | ✅ None              |
+| **SpedisciOnlineConfig**      | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `api_key`, `base_url`, `contract_mapping`, `description`                            | ✅ None              |
+| **SpedisciOnlineConfigMulti** | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `name`, `base_url`, `api_key`, `contracts`, `is_active`, `is_default`               | ✅ None              |
+| **ConfigurationsPage**        | `courier_configs` (all)                                     | `courier_configs` | All fields + `assigned_config_id`                                                   | ⚠️ 3 micro-additions |
+| **AutomationPage**            | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `automation_enabled`, `automation_settings`, `session_data`, `last_automation_sync` | ✅ None              |
 
 **Total UI Changes**: 1 file modificato (`ConfigurationsPage`), 3 micro-additions
 
@@ -28,6 +28,7 @@
 ### Extended `courier_configs` Schema
 
 **Existing Fields** (Migration 010):
+
 - `id`, `name`, `provider_id`
 - `api_key`, `api_secret`, `base_url`
 - `contract_mapping` (JSONB)
@@ -36,11 +37,13 @@
 - `created_at`, `updated_at`, `created_by`
 
 **Already Extended** (Migration 015):
+
 - `automation_enabled` (BOOLEAN)
 - `automation_settings` (JSONB)
 - `session_data` (JSONB)
 
 **New Fields** (Migration 032 - Integration Hub):
+
 - `status` (TEXT) - 'active', 'error', 'testing', 'inactive'
 - `last_tested_at` (TIMESTAMPTZ)
 - `test_result` (JSONB) - `{ success: boolean, error?: string, tested_at: string }`
@@ -60,6 +63,7 @@
 **File**: `supabase/migrations/032_integration_hub_schema.sql`
 
 **Steps**:
+
 1. ✅ Aggiungi colonne (tutte nullable/default)
 2. ✅ Aggiungi constraints
 3. ✅ Migra dati esistenti:
@@ -75,11 +79,13 @@
 **File**: `lib/integrations/carrier-configs-compat.ts` (NEW)
 
 **Functions**:
+
 - `listCarrierConfigs(filters?)` - Lista con filtri opzionali
 - `getCarrierConfigForUser(userId, providerId)` - Supporta BYOC/Reseller
 - `testCarrierCredentials(configId)` - Test credenziali
 
 **Backward Compatibility**:
+
 - Type alias: `CourierConfig = CarrierConfig`
 - Default values per nuovi campi
 - Vecchio codice continua a funzionare
@@ -89,6 +95,7 @@
 **File**: `actions/configurations.ts`
 
 **Changes**:
+
 - ✅ Aggiunti nuovi campi opzionali a `CourierConfigInput` e `CourierConfig`
 - ✅ `saveConfiguration()` supporta nuovi campi (opzionali)
 - ✅ `listConfigurations()` include nuovi campi (default se mancanti)
@@ -100,6 +107,7 @@
 **File**: `app/dashboard/admin/configurations/page.tsx`
 
 **Changes** (3 micro-additions):
+
 1. ✅ Status badge (after config name)
 2. ✅ Test button (in actions)
 3. ✅ Account type badge (after status badge)
@@ -147,7 +155,8 @@ if (!result.account_type) {
 
 **Code**: Aggiunto badge che mostra status se diverso da 'active'
 
-**Visual**: 
+**Visual**:
+
 - ⚠️ Errore (red) - se status='error'
 - 🧪 Test (yellow) - se status='testing'
 - ⏸️ Inattiva (gray) - se status='inactive'
@@ -167,6 +176,7 @@ if (!result.account_type) {
 **Code**: Aggiunto badge che mostra account type se diverso da 'admin'
 
 **Visual**:
+
 - 🔑 BYOC (purple) - se account_type='byoc'
 - 🏢 Reseller (purple) - se account_type='reseller'
 
@@ -179,6 +189,7 @@ if (!result.account_type) {
 ### Test 1: Reseller Multi-Account
 
 **Setup**:
+
 1. Crea 2 config Spedisci.Online con `account_type='reseller'`
 2. Assegna a 2 utenti (`users.assigned_config_id`)
 3. Crea spedizione utente 1 → usa config 1
@@ -189,6 +200,7 @@ if (!result.account_type) {
 ### Test 2: BYOC
 
 **Setup**:
+
 1. Utente non-admin crea config personale
 2. `account_type='byoc'`, `owner_user_id=user.id`
 3. Crea spedizione → usa config BYOC
@@ -198,6 +210,7 @@ if (!result.account_type) {
 ### Test 3: Multi-Account Same Provider
 
 **Setup**:
+
 1. Admin crea 3 config Spedisci.Online (tutte `is_active=true`)
 2. Una è `is_default=true`
 3. Utente senza `assigned_config_id` crea spedizione
@@ -207,11 +220,13 @@ if (!result.account_type) {
 ### Test 4: Credential Test
 
 **Setup**:
+
 1. Config con API key valida
 2. Click "Test" button
 3. Verifica status aggiornato
 
-**Expected**: 
+**Expected**:
+
 - ✅ Status: 'active' se test OK
 - ✅ Status: 'error' se 401/403
 - ✅ `test_result` salvato con dettagli
@@ -221,11 +236,13 @@ if (!result.account_type) {
 ### Test 5: Error 401 Handling
 
 **Setup**:
+
 1. Config con API key errata
 2. Crea spedizione
 3. Verifica gestione errore
 
-**Expected**: 
+**Expected**:
+
 - ✅ Errore 401 gestito gracefully
 - ✅ Messaggio chiaro
 - ✅ Status aggiornato a 'error'
@@ -236,6 +253,7 @@ if (!result.account_type) {
 ## 📝 Files Created/Modified
 
 ### New Files ✅
+
 1. `supabase/migrations/032_integration_hub_schema.sql` - Schema extension
 2. `lib/integrations/carrier-configs-compat.ts` - Compatibility layer
 3. `app/api/integrations/test-credentials/route.ts` - Test endpoint
@@ -245,10 +263,12 @@ if (!result.account_type) {
 7. `docs/INTEGRATION_HUB_COMPLETE.md` - This document
 
 ### Modified Files ✅
+
 1. `actions/configurations.ts` - Aggiunti nuovi campi (opzionali, backward compatible)
 2. `app/dashboard/admin/configurations/page.tsx` - UI changes (3 micro-additions)
 
 ### No Changes Required ✅
+
 - `components/integrazioni/courier-api-config.tsx`
 - `components/integrazioni/spedisci-online-config.tsx`
 - `components/integrazioni/spedisci-online-config-multi.tsx`

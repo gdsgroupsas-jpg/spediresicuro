@@ -1,6 +1,6 @@
 /**
  * E2E Test: Lista Spedizioni
- * 
+ *
  * Testa la visualizzazione e gestione della lista spedizioni:
  * - Visualizzazione lista
  * - Filtri per status
@@ -49,7 +49,7 @@ test.describe('Lista Spedizioni', () => {
           citta: 'Roma',
         },
         peso: 2.5,
-        prezzoFinale: 15.50,
+        prezzoFinale: 15.5,
         createdAt: new Date().toISOString(),
         corriere: 'GLS',
       },
@@ -66,7 +66,7 @@ test.describe('Lista Spedizioni', () => {
           citta: 'Firenze',
         },
         peso: 5.0,
-        prezzoFinale: 25.00,
+        prezzoFinale: 25.0,
         createdAt: new Date(Date.now() - 86400000).toISOString(),
         corriere: 'GLS',
       },
@@ -83,7 +83,7 @@ test.describe('Lista Spedizioni', () => {
           citta: 'Bologna',
         },
         peso: 1.5,
-        prezzoFinale: 12.00,
+        prezzoFinale: 12.0,
         createdAt: new Date(Date.now() - 172800000).toISOString(),
         corriere: 'GLS',
       },
@@ -99,14 +99,14 @@ test.describe('Lista Spedizioni', () => {
 
       // Applica filtro status
       if (statusFilter) {
-        filteredShipments = filteredShipments.filter(s => s.status === statusFilter);
+        filteredShipments = filteredShipments.filter((s) => s.status === statusFilter);
       }
 
       // Applica ricerca
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filteredShipments = filteredShipments.filter(
-          s =>
+          (s) =>
             s.tracking?.toLowerCase().includes(query) ||
             s.mittente.nome.toLowerCase().includes(query) ||
             s.destinatario.nome.toLowerCase().includes(query)
@@ -169,7 +169,7 @@ test.describe('Lista Spedizioni', () => {
 
     // Cerca il filtro per status (potrebbe essere un dropdown, button, o select)
     const statusFilter = page.getByRole('button', { name: /in preparazione|pending/i }).first();
-    
+
     if (await statusFilter.isVisible().catch(() => false)) {
       await statusFilter.click();
       await page.waitForTimeout(2000);
@@ -193,7 +193,7 @@ test.describe('Lista Spedizioni', () => {
 
     // Cerca il campo di ricerca
     const searchInput = page.getByPlaceholder(/Cerca|Search|Tracking/i).first();
-    
+
     if (await searchInput.isVisible().catch(() => false)) {
       await searchInput.fill('GLSTEST001');
       await page.waitForTimeout(2000);
@@ -225,7 +225,7 @@ test.describe('Lista Spedizioni', () => {
 
     // Verifica che ci siano informazioni base per ogni spedizione
     // (tracking, mittente, destinatario, status)
-    const hasTracking = await page.locator('text=/GLSTEST/i').count() > 0;
+    const hasTracking = (await page.locator('text=/GLSTEST/i').count()) > 0;
     expect(hasTracking).toBeTruthy();
   });
 });

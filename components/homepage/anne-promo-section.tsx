@@ -1,37 +1,53 @@
 /**
  * Anne Promo Section
- * 
+ *
  * Sezione pubblicitaria che presenta Anne e tutte le sue capacità
  */
 
 'use client';
 
-import { Sparkles, TrendingUp, Package, AlertCircle, Calculator, Search, BarChart3, Lightbulb, Zap, MessageSquare, ArrowRight } from 'lucide-react';
+import {
+  Sparkles,
+  TrendingUp,
+  Package,
+  AlertCircle,
+  Calculator,
+  Search,
+  BarChart3,
+  Lightbulb,
+  Zap,
+  MessageSquare,
+  ArrowRight,
+} from 'lucide-react';
 import Link from 'next/link';
 
 const capabilities = [
   {
     icon: Calculator,
     title: 'Calcolo Prezzi Intelligente',
-    description: 'Calcola automaticamente il prezzo ottimale per ogni spedizione, confrontando tutti i corrieri disponibili.',
+    description:
+      'Calcola automaticamente il prezzo ottimale per ogni spedizione, confrontando tutti i corrieri disponibili.',
     color: 'from-blue-500 to-cyan-500',
   },
   {
     icon: Package,
     title: 'Gestione Spedizioni',
-    description: 'Crea, traccia e gestisci tutte le tue spedizioni in modo semplice e veloce. Compila form automaticamente.',
+    description:
+      'Crea, traccia e gestisci tutte le tue spedizioni in modo semplice e veloce. Compila form automaticamente.',
     color: 'from-purple-500 to-pink-500',
   },
   {
     icon: Search,
     title: 'Tracking Avanzato',
-    description: 'Traccia qualsiasi spedizione in tempo reale. Ricevi aggiornamenti automatici sullo stato.',
+    description:
+      'Traccia qualsiasi spedizione in tempo reale. Ricevi aggiornamenti automatici sullo stato.',
     color: 'from-green-500 to-emerald-500',
   },
   {
     icon: BarChart3,
     title: 'Analisi Business',
-    description: 'Analizza margini, fatturato e performance. Confronta periodi e ottieni insights strategici.',
+    description:
+      'Analizza margini, fatturato e performance. Confronta periodi e ottieni insights strategici.',
     color: 'from-orange-500 to-red-500',
     adminOnly: true,
   },
@@ -45,7 +61,8 @@ const capabilities = [
   {
     icon: Lightbulb,
     title: 'Suggerimenti Intelligenti',
-    description: 'Ricevi consigli operativi per ottimizzare margini e migliorare l\'efficienza del tuo business.',
+    description:
+      "Ricevi consigli operativi per ottimizzare margini e migliorare l'efficienza del tuo business.",
     color: 'from-indigo-500 to-blue-500',
   },
 ];
@@ -57,7 +74,7 @@ export default function AnnePromoSection() {
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 pointer-events-none" />
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16">
@@ -65,7 +82,7 @@ export default function AnnePromoSection() {
             <Sparkles className="w-4 h-4 text-purple-600" />
             <span className="text-sm font-semibold text-purple-700">🤖 Nuova Funzionalità</span>
           </div>
-          
+
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="relative">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 via-purple-600 to-pink-600 flex items-center justify-center shadow-2xl">
@@ -83,10 +100,11 @@ export default function AnnePromoSection() {
               </p>
             </div>
           </div>
-          
+
           <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-            Anne è il tuo assistente AI intelligente che ti aiuta a gestire spedizioni, calcolare prezzi ottimali, 
-            analizzare il business e ottimizzare i margini. <strong>Parla con Anne come con un collega esperto.</strong>
+            Anne è il tuo assistente AI intelligente che ti aiuta a gestire spedizioni, calcolare
+            prezzi ottimali, analizzare il business e ottimizzare i margini.{' '}
+            <strong>Parla con Anne come con un collega esperto.</strong>
           </p>
         </div>
 
@@ -101,10 +119,12 @@ export default function AnnePromoSection() {
               >
                 <div className="flex items-start gap-4">
                   {/* Icon */}
-                  <div className={`flex-shrink-0 p-3 rounded-lg bg-gradient-to-r ${capability.color} shadow-lg group-hover:scale-110 transition-transform`}>
+                  <div
+                    className={`flex-shrink-0 p-3 rounded-lg bg-gradient-to-r ${capability.color} shadow-lg group-hover:scale-110 transition-transform`}
+                  >
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  
+
                   {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -137,7 +157,7 @@ export default function AnnePromoSection() {
             <span>Prova Anne Gratis</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
-          
+
           <Link
             href="/dashboard"
             className="px-8 py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-xl font-bold text-lg hover:border-purple-400 hover:text-purple-600 transition-all duration-300 flex items-center gap-3"
@@ -174,7 +194,7 @@ export default function AnnePromoSection() {
                 </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-amber-600" />
@@ -212,8 +232,9 @@ export default function AnnePromoSection() {
             </div>
             <div className="flex-1">
               <p className="text-gray-700 text-lg leading-relaxed italic mb-4">
-                &quot;Ciao! Sono Anne, il tuo Executive Business Partner. Posso aiutarti a calcolare prezzi ottimali,
-                gestire spedizioni, analizzare il business e molto altro. <strong>Parlami come con un collega esperto!</strong>&quot;
+                &quot;Ciao! Sono Anne, il tuo Executive Business Partner. Posso aiutarti a calcolare
+                prezzi ottimali, gestire spedizioni, analizzare il business e molto altro.{' '}
+                <strong>Parlami come con un collega esperto!</strong>&quot;
               </p>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Sparkles className="w-4 h-4 text-purple-500" />
@@ -226,4 +247,3 @@ export default function AnnePromoSection() {
     </section>
   );
 }
-

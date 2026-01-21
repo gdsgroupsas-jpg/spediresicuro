@@ -17,21 +17,25 @@ npx playwright install chromium
 ## 📝 Eseguire i Test
 
 ### Modalità Base (Headless)
+
 ```bash
 npm run test:e2e
 ```
 
 ### Modalità UI (Interattiva - Consigliata per Debug)
+
 ```bash
 npm run test:e2e:ui
 ```
 
 ### Modalità Headed (Vedi il Browser)
+
 ```bash
 npm run test:e2e:headed
 ```
 
 ### Modalità Debug (Step-by-step)
+
 ```bash
 npm run test:e2e:debug
 ```
@@ -39,7 +43,9 @@ npm run test:e2e:debug
 ## 🧪 Test Disponibili
 
 ### `happy-path.spec.ts`
+
 Test del flusso completo "Nuova Spedizione":
+
 - Login (se necessario)
 - Navigazione a `/dashboard/spedizioni/nuova`
 - Compilazione form mittente
@@ -54,6 +60,7 @@ Test del flusso completo "Nuova Spedizione":
 ### Variabili d'Ambiente
 
 Il test usa `PLAYWRIGHT_TEST_BASE_URL` per l'URL base dell'app:
+
 - Default: `http://localhost:3000`
 - In CI: configurare la variabile d'ambiente
 
@@ -63,6 +70,7 @@ Il test richiede un utente di test nel database per il login. Configura le crede
 
 **Opzione 1: Variabili d'ambiente (consigliato)**
 Crea un file `.env.test` o aggiungi al tuo `.env.local`:
+
 ```bash
 TEST_USER_EMAIL=test@example.com
 TEST_USER_PASSWORD=testpassword123
@@ -70,6 +78,7 @@ TEST_USER_PASSWORD=testpassword123
 
 **Opzione 2: Valori di default**
 Se non configuri le variabili, il test userà:
+
 - Email: `test@example.com`
 - Password: `testpassword123`
 
@@ -78,6 +87,7 @@ Se non configuri le variabili, il test userà:
 ### Mock API
 
 Tutte le chiamate API esterne sono **automaticamente mockate**:
+
 - ✅ `/api/geo/search` - Ricerca città (mockato)
 - ✅ `/api/spedizioni` - Creazione spedizione (mockato)
 - ✅ `/api/fulfillment/decide` - Decisione fulfillment (mockato)
@@ -90,6 +100,7 @@ Tutte le chiamate API esterne sono **automaticamente mockate**:
 ### Se un Test Fallisce
 
 1. **Esegui in modalità UI** per vedere cosa succede:
+
    ```bash
    npm run test:e2e:ui
    ```
@@ -108,13 +119,15 @@ Tutte le chiamate API esterne sono **automaticamente mockate**:
 ### Problemi Comuni
 
 #### Test fallisce su "Elemento non trovato"
+
 - **Causa**: Il selettore non trova l'elemento
-- **Soluzione**: 
+- **Soluzione**:
   1. Esegui in modalità UI per vedere lo stato della pagina
   2. Verifica che il componente sia renderizzato
   3. Aggiungi `data-testid` al componente se necessario
 
 #### Test fallisce su "Timeout"
+
 - **Causa**: L'elemento impiega troppo tempo ad apparire
 - **Soluzione**:
   1. Aumenta il timeout nel test (già configurato a 10-15 secondi)
@@ -122,6 +135,7 @@ Tutte le chiamate API esterne sono **automaticamente mockate**:
   3. Controlla che l'API mockata risponda correttamente
 
 #### Test fallisce su "Autenticazione"
+
 - **Causa**: La pagina richiede login
 - **Soluzione**:
   1. Implementa login via UI nel test
@@ -130,6 +144,7 @@ Tutte le chiamate API esterne sono **automaticamente mockate**:
 ## 📊 CI/CD
 
 I test sono configurati per eseguire in CI:
+
 - Headless mode automatico
 - Retry automatico (2 tentativi)
 - Screenshot/video su failure
@@ -140,6 +155,7 @@ I test sono configurati per eseguire in CI:
 Quando un test fallisce:
 
 1. **Esegui in UI mode**:
+
    ```bash
    npm run test:e2e:ui
    ```
@@ -159,15 +175,18 @@ Quando un test fallisce:
 ## 📝 Aggiungere Nuovi Test
 
 1. Crea un nuovo file in `e2e/`:
+
    ```typescript
    import { test, expect } from '@playwright/test';
-   
+
    test('Mio nuovo test', async ({ page }) => {
      // Mock API se necessario
      await page.route('**/api/endpoint', async (route) => {
-       await route.fulfill({ /* mock response */ });
+       await route.fulfill({
+         /* mock response */
+       });
      });
-     
+
      // Test logic
    });
    ```
@@ -183,4 +202,3 @@ Quando un test fallisce:
 - **Usare selettori robusti** - Preferire label, placeholder, role invece di classi CSS
 - **Timeout generosi** - Next.js può essere lento in sviluppo
 - **Retry in CI** - I test hanno 2 retry automatici in CI
-

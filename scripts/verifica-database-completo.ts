@@ -1,12 +1,12 @@
 /**
  * Script Completo di Verifica Database Supabase
- * 
+ *
  * Verifica completa della configurazione Supabase per SpedireSicuro:
  * - Variabili ambiente
  * - Connessione al database
  * - Tabelle necessarie (shipments, users, user_profiles)
  * - Test query per Annie AI
- * 
+ *
  * Utilizzo:
  *   npm run verify:db
  *   oppure
@@ -93,7 +93,8 @@ async function main() {
       step: 'Variabili ambiente - Anon Key',
       status: 'error',
       message: '❌ Anon Key è un placeholder',
-      details: 'Sostituisci il placeholder con la tua chiave reale da Supabase Dashboard → Settings → API',
+      details:
+        'Sostituisci il placeholder con la tua chiave reale da Supabase Dashboard → Settings → API',
     });
   } else if (SUPABASE_ANON_KEY.length < 100) {
     results.push({
@@ -117,14 +118,16 @@ async function main() {
       step: 'Variabili ambiente - Service Key',
       status: 'warning',
       message: '⚠️ SUPABASE_SERVICE_ROLE_KEY mancante',
-      details: 'Necessaria per operazioni admin e per Annie AI. Aggiungila in .env.local o su Vercel',
+      details:
+        'Necessaria per operazioni admin e per Annie AI. Aggiungila in .env.local o su Vercel',
     });
   } else if (SUPABASE_SERVICE_KEY.includes('placeholder')) {
     results.push({
       step: 'Variabili ambiente - Service Key',
       status: 'error',
       message: '❌ Service Key è un placeholder',
-      details: 'Sostituisci il placeholder con la tua chiave reale da Supabase Dashboard → Settings → API → Service Role',
+      details:
+        'Sostituisci il placeholder con la tua chiave reale da Supabase Dashboard → Settings → API → Service Role',
     });
   } else {
     envChecks.serviceKey.valid = true;
@@ -163,10 +166,7 @@ async function main() {
       });
 
       // Test connessione base (query semplice)
-      const { error: healthError } = await supabase
-        .from('shipments')
-        .select('id')
-        .limit(0);
+      const { error: healthError } = await supabase.from('shipments').select('id').limit(0);
 
       if (healthError) {
         if (healthError.code === '42P01') {
@@ -175,7 +175,8 @@ async function main() {
             step: 'Connessione',
             status: 'success',
             message: '✅ Connessione a Supabase riuscita',
-            details: 'La tabella shipments non esiste ancora (normale se non hai eseguito le migration)',
+            details:
+              'La tabella shipments non esiste ancora (normale se non hai eseguito le migration)',
           });
         } else if (healthError.code === 'PGRST116') {
           // Nessun risultato (tabella vuota o non accessibile)
@@ -262,7 +263,10 @@ async function main() {
           step: 'Tabella shipments',
           status: 'success',
           message: `✅ Tabella shipments esiste${shipmentCount > 0 ? ` con ${shipmentCount} spedizioni` : ' (vuota)'}`,
-          details: shipmentCount > 0 ? `Ultima spedizione: ${data?.[0]?.tracking_number || 'N/A'}` : undefined,
+          details:
+            shipmentCount > 0
+              ? `Ultima spedizione: ${data?.[0]?.tracking_number || 'N/A'}`
+              : undefined,
         });
       }
     } catch (error) {
@@ -381,7 +385,7 @@ async function main() {
         if (allData && allData.length > 0) {
           // Prendi un user_id reale dalla prima spedizione
           const realUserId = allData[0].user_id;
-          
+
           if (realUserId) {
             // Test con user_id reale
             const { data, error } = await supabase
@@ -424,7 +428,8 @@ async function main() {
             step: 'Test query Annie AI',
             status: 'success',
             message: '✅ Query Annie AI funzionante (tabella vuota ma struttura corretta)',
-            details: 'La struttura della query è corretta, Annie AI può funzionare quando ci saranno spedizioni',
+            details:
+              'La struttura della query è corretta, Annie AI può funzionare quando ci saranno spedizioni',
           });
         }
       }
@@ -490,14 +495,13 @@ async function main() {
 
 function printResults(results: CheckResult[]) {
   results.forEach((result) => {
-    const icon =
-      result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⚠️';
+    const icon = result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⚠️';
     const color =
       result.status === 'success'
         ? '\x1b[32m'
         : result.status === 'error'
-        ? '\x1b[31m'
-        : '\x1b[33m';
+          ? '\x1b[31m'
+          : '\x1b[33m';
     const reset = '\x1b[0m';
 
     console.log(`${icon} ${color}${result.step}${reset}`);
@@ -520,10 +524,3 @@ main().catch((error) => {
   }
   process.exit(1);
 });
-
-
-
-
-
-
-

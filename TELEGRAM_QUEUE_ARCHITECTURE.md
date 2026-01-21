@@ -3,6 +3,7 @@
 ## Overview
 
 Sistema di message queueing centralizzato per Telegram Bot API che garantisce:
+
 - ✅ Rate limiting automatico (120 msg/min)
 - ✅ Delay minimo tra messaggi (500ms)
 - ✅ Retry automatico per messaggi falliti
@@ -18,6 +19,7 @@ Sistema di message queueing centralizzato per Telegram Bot API che garantisce:
 Queue centralizzata basata su Redis (Upstash) che gestisce TUTTI i messaggi Telegram.
 
 **Funzioni principali:**
+
 - `enqueueMessage(chatId, text, options)` - Aggiunge messaggio alla queue
 - `dequeueMessage()` - Estrae messaggio dalla queue (rispetta rate limits)
 - `updateRateLimitCounters()` - Aggiorna contatori dopo invio
@@ -25,14 +27,16 @@ Queue centralizzata basata su Redis (Upstash) che gestisce TUTTI i messaggi Tele
 - `getQueueStats()` - Statistiche queue
 
 **Rate Limiting:**
+
 - Max 120 messaggi/minuto (globale)
 - Min 500ms tra messaggi consecutivi
 - Max 3 retry per messaggio fallito
 - 2s delay prima di retry
 
 **Storage:**
+
 - Redis Sorted Set (priority queue)
-- Score = timestamp - (priority * 1000000)
+- Score = timestamp - (priority \* 1000000)
 - Higher priority = lower score = processed first
 
 ### 2. Queue Worker (`app/api/cron/telegram-queue/route.ts`)
@@ -40,6 +44,7 @@ Queue centralizzata basata su Redis (Upstash) che gestisce TUTTI i messaggi Tele
 Background worker che processa la queue ogni minuto (Vercel Cron).
 
 **Processo:**
+
 1. Dequeue messaggio (se rate limits OK)
 2. Send via Telegram Bot API
 3. Update rate limit counters
@@ -47,14 +52,16 @@ Background worker che processa la queue ogni minuto (Vercel Cron).
 5. Repeat fino a 10 messaggi o queue vuota
 
 **Endpoints:**
+
 - `GET /api/cron/telegram-queue` - Triggered by Vercel Cron
 - `POST /api/cron/telegram-queue` - Manual trigger (testing)
 
 **Cron Schedule:**
+
 ```json
 {
   "path": "/api/cron/telegram-queue",
-  "schedule": "* * * * *"  // Every minute
+  "schedule": "* * * * *" // Every minute
 }
 ```
 
@@ -66,13 +73,14 @@ Funzioni per inviare messaggi - ORA SINCRONE.
 
 ```typescript
 // PRIMA (async diretta):
-await sendTelegramMessage(text, options)
+await sendTelegramMessage(text, options);
 
 // DOPO (sync + queue):
-sendTelegramMessage(text, options) // Returns immediately
+sendTelegramMessage(text, options); // Returns immediately
 ```
 
 **Funzioni refactored:**
+
 - `sendTelegramMessage()` - Sincrona, enqueue messaggio
 - `sendToAdmins()` - Sincrona, enqueue per ogni admin
 - `sendAlert()` - Sincrona, enqueue alert
@@ -175,7 +183,7 @@ import { sendTelegramMessage } from '@/lib/services/telegram-bot';
 // Synchronous - returns immediately
 const result = sendTelegramMessage('Hello World!', {
   chatId: '123456789',
-  parseMode: 'HTML'
+  parseMode: 'HTML',
 });
 
 console.log(result);
@@ -191,7 +199,7 @@ import { sendAlert } from '@/lib/services/telegram-bot';
 sendAlert('critical', 'Service Down', {
   Service: 'API',
   Uptime: '99.9%',
-  LastCheck: new Date().toISOString()
+  LastCheck: new Date().toISOString(),
 });
 ```
 
@@ -202,7 +210,7 @@ import { sendToAdmins } from '@/lib/services/telegram-bot';
 
 // Synchronous - enqueues for each admin
 const result = sendToAdmins('⚠️ Urgent: Please check logs', {
-  parseMode: 'HTML'
+  parseMode: 'HTML',
 });
 
 console.log(result);
@@ -257,6 +265,7 @@ console.log(stats);
 ### Why Queue?
 
 **BEFORE (Direct sending):**
+
 - ❌ Can hit rate limits
 - ❌ Messages lost if limit exceeded
 - ❌ Bot gets temporarily blocked
@@ -264,6 +273,7 @@ console.log(stats);
 - ❌ No priority support
 
 **AFTER (Queue system):**
+
 - ✅ Guaranteed rate limiting
 - ✅ All messages eventually delivered
 - ✅ Automatic retry on failure

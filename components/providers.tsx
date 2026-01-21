@@ -1,6 +1,6 @@
 /**
  * Providers Component
- * 
+ *
  * Wrapper per i provider necessari (NextAuth SessionProvider, Sonner Toaster)
  */
 
@@ -14,13 +14,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       {children}
-      <Toaster 
-        position="top-right"
-        richColors
-        closeButton
-        duration={5000}
-      />
+      <Toaster position="top-right" richColors closeButton duration={5000} />
     </SessionProvider>
   );
 }
-

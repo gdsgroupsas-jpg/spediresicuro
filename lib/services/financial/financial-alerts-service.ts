@@ -8,16 +8,12 @@
  * @since Sprint 3 - Monitoring & Alerting
  */
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from '@supabase/supabase-js';
 
-export type AlertSeverity = "info" | "warning" | "critical";
+export type AlertSeverity = 'info' | 'warning' | 'critical';
 
 export interface FinancialAlert {
-  type:
-    | "negative_margin"
-    | "high_discrepancy"
-    | "reconciliation_overdue"
-    | "cost_spike";
+  type: 'negative_margin' | 'high_discrepancy' | 'reconciliation_overdue' | 'cost_spike';
   severity: AlertSeverity;
   title: string;
   message: string;
@@ -68,7 +64,7 @@ export class FinancialAlertsService {
 
     try {
       const { data: negativeMargins } = await this.supabase
-        .from("platform_provider_costs")
+        .from('platform_provider_costs')
         .select(
           `
           id,
@@ -82,25 +78,22 @@ export class FinancialAlertsService {
           users!platform_provider_costs_billed_user_id_fkey(email)
         `
         )
-        .lt("platform_margin", this.config.thresholds.negativeMarginThreshold)
-        .eq("reconciliation_status", "pending")
-        .order("created_at", { ascending: false })
+        .lt('platform_margin', this.config.thresholds.negativeMarginThreshold)
+        .eq('reconciliation_status', 'pending')
+        .order('created_at', { ascending: false })
         .limit(50);
 
       if (negativeMargins && negativeMargins.length > 0) {
         // Raggruppa per severity
-        const critical = negativeMargins.filter(
-          (m) => (m.platform_margin || 0) < -50
-        );
+        const critical = negativeMargins.filter((m) => (m.platform_margin || 0) < -50);
         const warning = negativeMargins.filter(
-          (m) =>
-            (m.platform_margin || 0) >= -50 && (m.platform_margin || 0) < -10
+          (m) => (m.platform_margin || 0) >= -50 && (m.platform_margin || 0) < -10
         );
 
         if (critical.length > 0) {
           alerts.push({
-            type: "negative_margin",
-            severity: "critical",
+            type: 'negative_margin',
+            severity: 'critical',
             title: `🚨 ${critical.length} spedizioni con margine CRITICO`,
             message: `Rilevate ${
               critical.length
@@ -114,10 +107,7 @@ export class FinancialAlertsService {
                 margin: m.platform_margin,
                 courier: m.courier_code,
               })),
-              totalLoss: critical.reduce(
-                (s, m) => s + (m.platform_margin || 0),
-                0
-              ),
+              totalLoss: critical.reduce((s, m) => s + (m.platform_margin || 0), 0),
             },
             timestamp: new Date(),
           });
@@ -125,8 +115,8 @@ export class FinancialAlertsService {
 
         if (warning.length > 0) {
           alerts.push({
-            type: "negative_margin",
-            severity: "warning",
+            type: 'negative_margin',
+            severity: 'warning',
             title: `⚠️ ${warning.length} spedizioni con margine negativo`,
             message: `Rilevate ${warning.length} spedizioni con margine negativo. Verifica configurazione listini.`,
             data: {
@@ -142,10 +132,7 @@ export class FinancialAlertsService {
         }
       }
     } catch (error) {
-      console.error(
-        "[FINANCIAL_ALERTS] Error checking negative margins:",
-        error
-      );
+      console.error('[FINANCIAL_ALERTS] Error checking negative margins:', error);
     }
 
     return alerts;
@@ -159,22 +146,19 @@ export class FinancialAlertsService {
 
     try {
       const daysAgo = new Date();
-      daysAgo.setDate(
-        daysAgo.getDate() - this.config.thresholds.reconciliationOverdueDays
-      );
+      daysAgo.setDate(daysAgo.getDate() - this.config.thresholds.reconciliationOverdueDays);
 
       const { count } = await this.supabase
-        .from("platform_provider_costs")
-        .select("*", { count: "exact", head: true })
-        .eq("reconciliation_status", "pending")
-        .lt("created_at", daysAgo.toISOString());
+        .from('platform_provider_costs')
+        .select('*', { count: 'exact', head: true })
+        .eq('reconciliation_status', 'pending')
+        .lt('created_at', daysAgo.toISOString());
 
       if (count && count > 0) {
-        const severity: AlertSeverity =
-          count > 100 ? "critical" : count > 20 ? "warning" : "info";
+        const severity: AlertSeverity = count > 100 ? 'critical' : count > 20 ? 'warning' : 'info';
 
         alerts.push({
-          type: "reconciliation_overdue",
+          type: 'reconciliation_overdue',
           severity,
           title: `📋 ${count} spedizioni da riconciliare (>${this.config.thresholds.reconciliationOverdueDays}gg)`,
           message: `Ci sono ${count} spedizioni pending da più di ${this.config.thresholds.reconciliationOverdueDays} giorni. Verificare con corrieri.`,
@@ -186,10 +170,7 @@ export class FinancialAlertsService {
         });
       }
     } catch (error) {
-      console.error(
-        "[FINANCIAL_ALERTS] Error checking overdue reconciliation:",
-        error
-      );
+      console.error('[FINANCIAL_ALERTS] Error checking overdue reconciliation:', error);
     }
 
     return alerts;
@@ -217,11 +198,11 @@ export class FinancialAlertsService {
 
     try {
       const color =
-        alert.severity === "critical"
-          ? "#dc2626"
-          : alert.severity === "warning"
-          ? "#f59e0b"
-          : "#3b82f6";
+        alert.severity === 'critical'
+          ? '#dc2626'
+          : alert.severity === 'warning'
+            ? '#f59e0b'
+            : '#3b82f6';
 
       const payload = {
         attachments: [
@@ -230,28 +211,28 @@ export class FinancialAlertsService {
             title: alert.title,
             text: alert.message,
             fields: [
-              { title: "Tipo", value: alert.type, short: true },
+              { title: 'Tipo', value: alert.type, short: true },
               {
-                title: "Severity",
+                title: 'Severity',
                 value: alert.severity.toUpperCase(),
                 short: true,
               },
             ],
-            footer: "SpedireSicuro Financial Alerts",
+            footer: 'SpedireSicuro Financial Alerts',
             ts: Math.floor(alert.timestamp.getTime() / 1000),
           },
         ],
       };
 
       const response = await fetch(this.config.slackWebhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       return response.ok;
     } catch (error) {
-      console.error("[FINANCIAL_ALERTS] Failed to send Slack alert:", error);
+      console.error('[FINANCIAL_ALERTS] Failed to send Slack alert:', error);
       return false;
     }
   }
@@ -266,36 +247,30 @@ export class FinancialAlertsService {
 
     try {
       const emoji =
-        alert.severity === "critical"
-          ? "🚨"
-          : alert.severity === "warning"
-          ? "⚠️"
-          : "ℹ️";
+        alert.severity === 'critical' ? '🚨' : alert.severity === 'warning' ? '⚠️' : 'ℹ️';
 
-      const message = `${emoji} *${alert.title}*\n\n${
-        alert.message
-      }\n\n*Tipo:* ${
+      const message = `${emoji} *${alert.title}*\n\n${alert.message}\n\n*Tipo:* ${
         alert.type
       }\n*Severity:* ${alert.severity.toUpperCase()}\n*Timestamp:* ${alert.timestamp.toLocaleString(
-        "it-IT"
+        'it-IT'
       )}`;
 
       const url = `https://api.telegram.org/bot${this.config.telegramBotToken}/sendMessage`;
 
       const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: this.config.telegramChatId,
           text: message,
-          parse_mode: "Markdown",
+          parse_mode: 'Markdown',
         }),
       });
 
       const result = await response.json();
       return result.ok === true;
     } catch (error) {
-      console.error("[FINANCIAL_ALERTS] Failed to send Telegram alert:", error);
+      console.error('[FINANCIAL_ALERTS] Failed to send Telegram alert:', error);
       return false;
     }
   }
@@ -304,10 +279,7 @@ export class FinancialAlertsService {
    * Invia alert via Email (GRATUITO con Resend o SMTP)
    */
   async sendToEmail(alert: FinancialAlert): Promise<boolean> {
-    if (
-      !this.config.emailRecipients ||
-      this.config.emailRecipients.length === 0
-    ) {
+    if (!this.config.emailRecipients || this.config.emailRecipients.length === 0) {
       return false;
     }
 
@@ -315,17 +287,15 @@ export class FinancialAlertsService {
       // Usa Resend se disponibile, altrimenti fallback a SMTP
       const resendApiKey = process.env.RESEND_API_KEY;
       const emailFrom =
-        this.config.emailFrom ||
-        process.env.EMAIL_FROM ||
-        "alerts@spediresicuro.it";
+        this.config.emailFrom || process.env.EMAIL_FROM || 'alerts@spediresicuro.it';
 
       if (resendApiKey) {
         // Usa Resend API (gratuito fino a 100 email/giorno)
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             from: emailFrom,
@@ -334,11 +304,11 @@ export class FinancialAlertsService {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: ${
-                  alert.severity === "critical"
-                    ? "#dc2626"
-                    : alert.severity === "warning"
-                    ? "#f59e0b"
-                    : "#3b82f6"
+                  alert.severity === 'critical'
+                    ? '#dc2626'
+                    : alert.severity === 'warning'
+                      ? '#f59e0b'
+                      : '#3b82f6'
                 }">
                   ${alert.title}
                 </h2>
@@ -346,9 +316,7 @@ export class FinancialAlertsService {
                 <hr style="border: 1px solid #e5e7eb; margin: 20px 0;" />
                 <p><strong>Tipo:</strong> ${alert.type}</p>
                 <p><strong>Severity:</strong> ${alert.severity.toUpperCase()}</p>
-                <p><strong>Timestamp:</strong> ${alert.timestamp.toLocaleString(
-                  "it-IT"
-                )}</p>
+                <p><strong>Timestamp:</strong> ${alert.timestamp.toLocaleString('it-IT')}</p>
                 <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
                   SpedireSicuro Financial Alerts
                 </p>
@@ -361,13 +329,11 @@ export class FinancialAlertsService {
         return response.ok && result.id;
       } else {
         // Fallback: log per ora (puoi aggiungere SMTP se necessario)
-        console.log(
-          "[FINANCIAL_ALERTS] Email not sent - RESEND_API_KEY not configured"
-        );
+        console.log('[FINANCIAL_ALERTS] Email not sent - RESEND_API_KEY not configured');
         return false;
       }
     } catch (error) {
-      console.error("[FINANCIAL_ALERTS] Failed to send email alert:", error);
+      console.error('[FINANCIAL_ALERTS] Failed to send email alert:', error);
       return false;
     }
   }
@@ -394,8 +360,8 @@ export class FinancialAlertsService {
    */
   async logAlert(alert: FinancialAlert): Promise<void> {
     try {
-      await this.supabase.from("financial_audit_log").insert({
-        event_type: "margin_alert",
+      await this.supabase.from('financial_audit_log').insert({
+        event_type: 'margin_alert',
         amount: alert.data.totalLoss || 0,
         metadata: {
           alert_type: alert.type,
@@ -405,7 +371,7 @@ export class FinancialAlertsService {
         },
       });
     } catch (error) {
-      console.error("[FINANCIAL_ALERTS] Failed to log alert:", error);
+      console.error('[FINANCIAL_ALERTS] Failed to log alert:', error);
     }
   }
 }
@@ -414,9 +380,7 @@ export class FinancialAlertsService {
  * Factory function per creare il servizio con config da env
  * Supporta multipli canali: Slack (gratuito), Telegram Bot (gratuito), Email (Resend gratuito)
  */
-export function createFinancialAlertsService(
-  supabase: SupabaseClient
-): FinancialAlertsService {
+export function createFinancialAlertsService(supabase: SupabaseClient): FinancialAlertsService {
   return new FinancialAlertsService(supabase, {
     // Slack (GRATUITO - Piano Free)
     slackWebhookUrl: process.env.SLACK_FINANCIAL_ALERTS_WEBHOOK,
@@ -426,20 +390,16 @@ export function createFinancialAlertsService(
     telegramChatId: process.env.TELEGRAM_CHAT_ID,
 
     // Email (GRATUITO con Resend - 100 email/giorno)
-    emailRecipients: process.env.EMAIL_ALERT_RECIPIENTS?.split(",")
+    emailRecipients: process.env.EMAIL_ALERT_RECIPIENTS?.split(',')
       .map((e) => e.trim())
       .filter(Boolean),
     emailFrom: process.env.EMAIL_FROM,
 
     thresholds: {
-      negativeMarginThreshold:
-        Number(process.env.ALERT_NEGATIVE_MARGIN_THRESHOLD) || -10,
-      discrepancyPercentThreshold:
-        Number(process.env.ALERT_DISCREPANCY_THRESHOLD) || 20,
-      reconciliationOverdueDays:
-        Number(process.env.ALERT_RECONCILIATION_DAYS) || 7,
-      costSpikePercentThreshold:
-        Number(process.env.ALERT_COST_SPIKE_THRESHOLD) || 50,
+      negativeMarginThreshold: Number(process.env.ALERT_NEGATIVE_MARGIN_THRESHOLD) || -10,
+      discrepancyPercentThreshold: Number(process.env.ALERT_DISCREPANCY_THRESHOLD) || 20,
+      reconciliationOverdueDays: Number(process.env.ALERT_RECONCILIATION_DAYS) || 7,
+      costSpikePercentThreshold: Number(process.env.ALERT_COST_SPIKE_THRESHOLD) || 50,
     },
   });
 }

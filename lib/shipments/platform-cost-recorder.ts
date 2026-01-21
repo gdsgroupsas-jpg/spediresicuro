@@ -1,12 +1,12 @@
 /**
  * Platform Cost Recorder
- * 
+ *
  * Registra i costi reali che SpedireSicuro paga ai corrieri
  * quando un Reseller/BYOC usa i contratti piattaforma.
- * 
+ *
  * IMPORTANTE: Questo modulo NON deve mai bloccare la creazione della spedizione.
  * Se fallisce, logga l'errore e continua (graceful degradation).
- * 
+ *
  * @module lib/shipments/platform-cost-recorder
  * @since Sprint 1 - Financial Tracking
  */
@@ -38,11 +38,11 @@ export interface RecordPlatformCostResult {
 
 /**
  * Registra il costo piattaforma per una spedizione.
- * 
+ *
  * Chiamare SOLO per spedizioni con api_source = 'platform'.
  * Per gli altri tipi (reseller_own, byoc_own), non serve registrare
  * perché SpedireSicuro non paga nulla.
- * 
+ *
  * @param supabaseAdmin - Client Supabase con privilegi admin
  * @param params - Parametri per la registrazione
  * @returns Risultato dell'operazione
@@ -91,7 +91,9 @@ export async function recordPlatformCost(
       throw error;
     }
 
-    console.log(`[PLATFORM_COST] ✅ Recorded: shipment=${shipmentId}, margin=${billedAmount - providerCost}`);
+    console.log(
+      `[PLATFORM_COST] ✅ Recorded: shipment=${shipmentId}, margin=${billedAmount - providerCost}`
+    );
 
     return {
       success: true,
@@ -186,7 +188,7 @@ async function logPlatformCostFailure(
 
 /**
  * Aggiorna il campo api_source su una spedizione esistente.
- * 
+ *
  * @param supabaseAdmin - Client Supabase con privilegi admin
  * @param shipmentId - ID della spedizione
  * @param apiSource - Fonte API determinata
@@ -200,15 +202,12 @@ export async function updateShipmentApiSource(
 ): Promise<void> {
   try {
     const updateData: Record<string, any> = { api_source: apiSource };
-    
+
     if (priceListUsedId) {
       updateData.price_list_used_id = priceListUsedId;
     }
 
-    const { error } = await supabaseAdmin
-      .from('shipments')
-      .update(updateData)
-      .eq('id', shipmentId);
+    const { error } = await supabaseAdmin.from('shipments').update(updateData).eq('id', shipmentId);
 
     if (error) {
       console.error('[PLATFORM_COST] Failed to update shipment api_source:', error);

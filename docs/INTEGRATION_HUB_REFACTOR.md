@@ -4,20 +4,21 @@
 
 ### 1. UI Components → Data Mapping
 
-| Component | Path | Reads From | Writes To | Key Fields Used |
-|-----------|------|------------|-----------|-----------------|
-| **CourierAPIConfig** | `components/integrazioni/courier-api-config.tsx` | `courier_configs` (via `listConfigurations()`) | `courier_configs` (via `saveConfiguration()`) | `provider_id`, `api_key`, `base_url`, `contract_mapping`, `is_active`, `is_default` |
-| **SpedisciOnlineConfig** | `components/integrazioni/spedisci-online-config.tsx` | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `api_key`, `base_url`, `contract_mapping`, `description` (dominio) |
-| **SpedisciOnlineConfigMulti** | `components/integrazioni/spedisci-online-config-multi.tsx` | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `name`, `base_url`, `api_key`, `contracts`, `is_active`, `is_default` |
-| **ConfigurationsPage** | `app/dashboard/admin/configurations/page.tsx` | `courier_configs` (all) | `courier_configs` | All fields + `assigned_config_id` (users) |
-| **AutomationPage** | `app/dashboard/admin/automation/page.tsx` | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs` | `automation_enabled`, `automation_settings`, `session_data`, `last_automation_sync` |
-| **SpedisciOnlineWizard** | `components/integrazioni/SpedisciOnlineWizard.tsx` | `courier_configs` | `courier_configs` | `api_key`, `base_url`, `contract_mapping` |
+| Component                     | Path                                                       | Reads From                                                  | Writes To                                     | Key Fields Used                                                                     |
+| ----------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **CourierAPIConfig**          | `components/integrazioni/courier-api-config.tsx`           | `courier_configs` (via `listConfigurations()`)              | `courier_configs` (via `saveConfiguration()`) | `provider_id`, `api_key`, `base_url`, `contract_mapping`, `is_active`, `is_default` |
+| **SpedisciOnlineConfig**      | `components/integrazioni/spedisci-online-config.tsx`       | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs`                             | `api_key`, `base_url`, `contract_mapping`, `description` (dominio)                  |
+| **SpedisciOnlineConfigMulti** | `components/integrazioni/spedisci-online-config-multi.tsx` | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs`                             | `name`, `base_url`, `api_key`, `contracts`, `is_active`, `is_default`               |
+| **ConfigurationsPage**        | `app/dashboard/admin/configurations/page.tsx`              | `courier_configs` (all)                                     | `courier_configs`                             | All fields + `assigned_config_id` (users)                                           |
+| **AutomationPage**            | `app/dashboard/admin/automation/page.tsx`                  | `courier_configs` (filter: `provider_id='spedisci_online'`) | `courier_configs`                             | `automation_enabled`, `automation_settings`, `session_data`, `last_automation_sync` |
+| **SpedisciOnlineWizard**      | `components/integrazioni/SpedisciOnlineWizard.tsx`         | `courier_configs`                                           | `courier_configs`                             | `api_key`, `base_url`, `contract_mapping`                                           |
 
 ### 2. Current Schema: `courier_configs`
 
 **Table**: `public.courier_configs` (Migration 010)
 
 **Fields**:
+
 - `id` (UUID, PK)
 - `name` (TEXT) - Nome configurazione
 - `provider_id` (TEXT) - 'spedisci_online', 'gls', 'brt', 'poste'
@@ -34,6 +35,7 @@
 - `created_by` (TEXT) - Email admin/utente
 
 **Missing for Integration Hub**:
+
 - ❌ `status` (health check: 'active', 'error', 'testing')
 - ❌ `last_tested_at` (TIMESTAMPTZ)
 - ❌ `test_result` (JSONB) - `{ success: boolean, error?: string, tested_at: string }`
@@ -56,11 +58,11 @@ ALTER TABLE public.courier_configs
   ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active' CHECK (status IN ('active', 'error', 'testing', 'inactive')),
   ADD COLUMN IF NOT EXISTS last_tested_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS test_result JSONB DEFAULT '{}'::JSONB,
-  
+
   -- Multi-tenant e BYOC
   ADD COLUMN IF NOT EXISTS account_type TEXT DEFAULT 'admin' CHECK (account_type IN ('admin', 'byoc', 'reseller')),
   ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  
+
   -- Automation (già usato ma non in schema)
   ADD COLUMN IF NOT EXISTS automation_enabled BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS automation_settings JSONB DEFAULT '{}'::JSONB,
@@ -75,7 +77,8 @@ CREATE INDEX IF NOT EXISTS idx_carrier_configs_owner ON courier_configs(owner_us
 CREATE INDEX IF NOT EXISTS idx_carrier_configs_provider_status ON courier_configs(provider_id, status) WHERE is_active = true;
 ```
 
-**Note**: 
+**Note**:
+
 - `carrier_configs` = alias/rename di `courier_configs` (compatibilità)
 - Tutti i campi esistenti rimangono invariati
 - Nuovi campi sono opzionali (default/nullable)
@@ -104,15 +107,15 @@ ALTER TABLE public.courier_configs
 
 -- Step 2: Aggiungi constraints (dopo che le colonne esistono)
 ALTER TABLE public.courier_configs
-  ADD CONSTRAINT IF NOT EXISTS check_status 
+  ADD CONSTRAINT IF NOT EXISTS check_status
     CHECK (status IN ('active', 'error', 'testing', 'inactive')),
-  ADD CONSTRAINT IF NOT EXISTS check_account_type 
+  ADD CONSTRAINT IF NOT EXISTS check_account_type
     CHECK (account_type IN ('admin', 'byoc', 'reseller'));
 
 -- Step 3: Migra dati esistenti
 UPDATE public.courier_configs
-SET 
-  status = CASE 
+SET
+  status = CASE
     WHEN is_active = false THEN 'inactive'
     ELSE 'active'
   END,
@@ -121,8 +124,8 @@ SET
     ELSE 'admin'
   END,
   owner_user_id = (
-    SELECT id FROM users 
-    WHERE email = courier_configs.created_by 
+    SELECT id FROM users
+    WHERE email = courier_configs.created_by
     LIMIT 1
   )
 WHERE status IS NULL OR account_type IS NULL;
@@ -143,7 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_carrier_configs_provider_status ON courier_config
 ```typescript
 /**
  * Compatibility Layer: courier_configs → carrier_configs
- * 
+ *
  * Mantiene compatibilità con codice esistente durante migrazione
  */
 
@@ -168,7 +171,7 @@ export interface CarrierConfig {
   created_at: string;
   updated_at: string;
   created_by?: string;
-  
+
   // Nuovi campi (opzionali)
   status?: 'active' | 'error' | 'testing' | 'inactive';
   last_tested_at?: string;
@@ -191,10 +194,8 @@ export async function listCarrierConfigs(filters?: {
   status?: 'active' | 'error' | 'testing' | 'inactive';
   owner_user_id?: string;
 }): Promise<CarrierConfig[]> {
-  let query = supabaseAdmin
-    .from('courier_configs')
-    .select('*');
-  
+  let query = supabaseAdmin.from('courier_configs').select('*');
+
   if (filters?.provider_id) {
     query = query.eq('provider_id', filters.provider_id);
   }
@@ -207,9 +208,9 @@ export async function listCarrierConfigs(filters?: {
   if (filters?.owner_user_id) {
     query = query.eq('owner_user_id', filters.owner_user_id);
   }
-  
+
   const { data, error } = await query.order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return (data || []) as CarrierConfig[];
 }
@@ -222,6 +223,7 @@ export async function listCarrierConfigs(filters?: {
 **File**: `actions/configurations.ts`
 
 **Changes**:
+
 - Aggiungi campi opzionali a `CourierConfigInput` e `CourierConfig`
 - `saveConfiguration()` supporta nuovi campi (opzionali)
 - `listConfigurations()` include nuovi campi (default se mancanti)
@@ -237,19 +239,30 @@ export async function listCarrierConfigs(filters?: {
 **File**: `app/dashboard/admin/configurations/page.tsx`
 
 **Add** (after line ~400, in config list):
+
 ```tsx
-{/* Status Badge */}
-{config.status && config.status !== 'active' && (
-  <span className={`px-2 py-1 text-xs rounded ${
-    config.status === 'error' ? 'bg-red-100 text-red-800' :
-    config.status === 'testing' ? 'bg-yellow-100 text-yellow-800' :
-    'bg-gray-100 text-gray-800'
-  }`}>
-    {config.status === 'error' ? '⚠️ Errore' :
-     config.status === 'testing' ? '🧪 Test' :
-     '⏸️ Inattiva'}
-  </span>
-)}
+{
+  /* Status Badge */
+}
+{
+  config.status && config.status !== 'active' && (
+    <span
+      className={`px-2 py-1 text-xs rounded ${
+        config.status === 'error'
+          ? 'bg-red-100 text-red-800'
+          : config.status === 'testing'
+            ? 'bg-yellow-100 text-yellow-800'
+            : 'bg-gray-100 text-gray-800'
+      }`}
+    >
+      {config.status === 'error'
+        ? '⚠️ Errore'
+        : config.status === 'testing'
+          ? '🧪 Test'
+          : '⏸️ Inattiva'}
+    </span>
+  );
+}
 ```
 
 **Location**: Nella lista configurazioni, dopo nome/config
@@ -259,6 +272,7 @@ export async function listCarrierConfigs(filters?: {
 **File**: `app/dashboard/admin/configurations/page.tsx`
 
 **Add** (in config actions, after Edit button):
+
 ```tsx
 <button
   onClick={() => handleTestCredentials(config.id)}
@@ -270,6 +284,7 @@ export async function listCarrierConfigs(filters?: {
 ```
 
 **Function** (add to component):
+
 ```tsx
 async function handleTestCredentials(configId: string) {
   try {
@@ -279,7 +294,7 @@ async function handleTestCredentials(configId: string) {
       body: JSON.stringify({ config_id: configId }),
     });
     const result = await response.json();
-    
+
     if (result.success) {
       alert('✅ Credenziali valide');
       await loadConfigurations(); // Refresh per aggiornare status
@@ -297,13 +312,18 @@ async function handleTestCredentials(configId: string) {
 **File**: `app/dashboard/admin/configurations/page.tsx`
 
 **Add** (in config list, after status badge):
+
 ```tsx
-{/* Account Type Badge */}
-{config.account_type && config.account_type !== 'admin' && (
-  <span className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">
-    {config.account_type === 'byoc' ? '🔑 BYOC' : '🏢 Reseller'}
-  </span>
-)}
+{
+  /* Account Type Badge */
+}
+{
+  config.account_type && config.account_type !== 'admin' && (
+    <span className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">
+      {config.account_type === 'byoc' ? '🔑 BYOC' : '🏢 Reseller'}
+    </span>
+  );
+}
 ```
 
 **Total UI Changes**: 3 micro-additions (badges + button), zero layout changes
@@ -334,12 +354,14 @@ async function handleTestCredentials(configId: string) {
 ### Test 1: Reseller Multi-Account
 
 **Setup**:
+
 1. Crea 2 configurazioni Spedisci.Online con `account_type='reseller'`
 2. Assegna a 2 utenti diversi (`users.assigned_config_id`)
 3. Crea spedizione con utente 1 → deve usare config 1
 4. Crea spedizione con utente 2 → deve usare config 2
 
 **Expected**:
+
 - ✅ Utente 1 usa config 1
 - ✅ Utente 2 usa config 2
 - ✅ Nessun conflitto
@@ -347,11 +369,13 @@ async function handleTestCredentials(configId: string) {
 ### Test 2: BYOC (Bring Your Own Carrier)
 
 **Setup**:
+
 1. Utente non-admin crea configurazione personale
 2. `account_type='byoc'`, `owner_user_id=user.id`
 3. Crea spedizione → deve usare config BYOC
 
 **Expected**:
+
 - ✅ Config BYOC salvata con `owner_user_id`
 - ✅ Spedizione usa config BYOC
 - ✅ Altri utenti non vedono config BYOC
@@ -359,22 +383,26 @@ async function handleTestCredentials(configId: string) {
 ### Test 3: Multi-Account Same Provider
 
 **Setup**:
+
 1. Admin crea 3 config Spedisci.Online (tutte `is_active=true`)
 2. Una è `is_default=true`
 3. Utente senza `assigned_config_id` crea spedizione
 
 **Expected**:
+
 - ✅ Usa config default
 - ✅ Se default disattivata, fallback a prima attiva
 
 ### Test 4: Credential Test
 
 **Setup**:
+
 1. Config con API key valida
 2. Click "Test" button
 3. Verifica status aggiornato
 
 **Expected**:
+
 - ✅ Status: 'active' se test OK
 - ✅ Status: 'error' se 401/403
 - ✅ `test_result` salvato con dettagli
@@ -383,11 +411,13 @@ async function handleTestCredentials(configId: string) {
 ### Test 5: Error 401 Handling
 
 **Setup**:
+
 1. Config con API key errata
 2. Crea spedizione
 3. Verifica gestione errore
 
 **Expected**:
+
 - ✅ Errore 401 gestito gracefully
 - ✅ Messaggio chiaro: "Credenziali non valide. Testa in /dashboard/admin/configurations"
 - ✅ Status aggiornato a 'error'
@@ -397,16 +427,19 @@ async function handleTestCredentials(configId: string) {
 ## 📋 Migration Checklist
 
 ### Pre-Migration
+
 - [ ] Backup database
 - [ ] Verifica schema attuale `courier_configs`
 - [ ] Test migration in staging
 
 ### Migration
+
 - [ ] Esegui `032_integration_hub_schema.sql`
 - [ ] Verifica colonne aggiunte: `SELECT column_name FROM information_schema.columns WHERE table_name = 'courier_configs'`
 - [ ] Verifica dati migrati: `SELECT account_type, status, COUNT(*) FROM courier_configs GROUP BY account_type, status`
 
 ### Post-Migration
+
 - [ ] Deploy codice con compatibility layer
 - [ ] Test UI esistente (nessun breaking change)
 - [ ] Test nuove funzionalità (status badge, test button)
@@ -425,16 +458,19 @@ async function handleTestCredentials(configId: string) {
 ### Code Migration Path
 
 **Phase 1** (Now): Schema extension + compatibility layer
+
 - ✅ Schema esteso
 - ✅ Compatibility layer creato
 - ✅ Actions aggiornate (backward compatible)
 
 **Phase 2** (Future): Gradual adoption
+
 - Nuovo codice usa `listCarrierConfigs()` con filtri
 - Vecchio codice continua a usare `listConfigurations()`
 - Entrambi funzionano
 
 **Phase 3** (Future): Full migration
+
 - Tutto il codice usa nuovi nomi/types
 - Rimuovi compatibility layer (opzionale)
 
@@ -443,16 +479,19 @@ async function handleTestCredentials(configId: string) {
 ## 📝 Files to Create/Modify
 
 ### New Files
+
 1. `supabase/migrations/032_integration_hub_schema.sql` - Schema extension
 2. `lib/integrations/carrier-configs-compat.ts` - Compatibility layer
 3. `app/api/integrations/test-credentials/route.ts` - Test endpoint
 
 ### Modified Files
+
 1. `actions/configurations.ts` - Aggiungi nuovi campi (opzionali)
 2. `app/dashboard/admin/configurations/page.tsx` - UI changes (3 micro-additions)
 3. `lib/couriers/factory.ts` - Supporta nuovi filtri (opzionale)
 
 ### No Changes Required
+
 - ✅ `components/integrazioni/courier-api-config.tsx` - Continua a funzionare
 - ✅ `components/integrazioni/spedisci-online-config.tsx` - Continua a funzionare
 - ✅ `components/integrazioni/spedisci-online-config-multi.tsx` - Continua a funzionare

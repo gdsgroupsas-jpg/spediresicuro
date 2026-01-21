@@ -19,6 +19,7 @@
 **Algoritmo:** AES-256-GCM (stesso usato da banche e servizi critici)
 
 **Chiave di criptazione:**
+
 - Salvata in `ENCRYPTION_KEY` (variabile d'ambiente)
 - **NON** nel database
 - **NON** nel codice
@@ -42,6 +43,7 @@ USING (
 ```
 
 **Cosa significa:**
+
 - ✅ Utenti normali **NON** possono vedere nulla
 - ✅ Solo admin/superadmin possono vedere configurazioni
 - ✅ Anche se qualcuno accede al database, RLS blocca l'accesso
@@ -86,6 +88,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 3. **Riavvia deployment**
 
 **⚠️ IMPORTANTE:**
+
 - ✅ **NON** condividere questa chiave
 - ✅ **NON** committare nel repository
 - ✅ **NON** perdere questa chiave (altrimenti password irrecuperabili)
@@ -96,9 +99,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ```sql
 -- Verifica che RLS sia abilitato
-SELECT tablename, rowsecurity 
-FROM pg_tables 
-WHERE schemaname = 'public' 
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
 AND tablename = 'courier_configs';
 
 -- Dovrebbe essere: rowsecurity = true
@@ -116,8 +119,8 @@ ALTER TABLE courier_configs ENABLE ROW LEVEL SECURITY;
 
 ```sql
 -- Verifica chi è admin
-SELECT email, account_type 
-FROM users 
+SELECT email, account_type
+FROM users
 WHERE account_type IN ('admin', 'superadmin');
 
 -- Rimuovi admin non necessari
@@ -130,7 +133,7 @@ DELETE FROM users WHERE account_type = 'admin' AND email = 'email-sospetta@examp
 
 ```sql
 -- Ultimi accessi a configurazioni
-SELECT 
+SELECT
   action,
   user_email,
   resource_id,
@@ -149,11 +152,13 @@ LIMIT 50;
 ### **Scenario 1: Qualcuno Accede al Database**
 
 **Cosa vede:**
+
 - ❌ Password criptate (inutilizzabili senza ENCRYPTION_KEY)
 - ❌ RLS blocca accesso (se non è admin)
 - ✅ Solo dati non sensibili
 
 **Protezione:**
+
 - ✅ Password criptate con AES-256-GCM
 - ✅ RLS policies attive
 - ✅ ENCRYPTION_KEY non nel database
@@ -161,11 +166,13 @@ LIMIT 50;
 ### **Scenario 2: Qualcuno Accede al Codice Repository**
 
 **Cosa vede:**
+
 - ✅ Codice sorgente (pubblico)
 - ❌ **NON** vede password (sono nel database criptate)
 - ❌ **NON** vede ENCRYPTION_KEY (è in variabile d'ambiente)
 
 **Protezione:**
+
 - ✅ Password nel database (criptate)
 - ✅ ENCRYPTION_KEY in variabile d'ambiente (non nel codice)
 - ✅ Decriptazione solo server-side
@@ -173,11 +180,13 @@ LIMIT 50;
 ### **Scenario 3: Qualcuno Accede a Vercel Environment Variables**
 
 **Cosa può fare:**
+
 - ⚠️ Può vedere ENCRYPTION_KEY
 - ⚠️ Può decriptare password
 - ⚠️ **RISCHIO ALTO**
 
 **Protezione:**
+
 - ✅ Limita accesso a Vercel (solo tu)
 - ✅ Usa 2FA su Vercel
 - ✅ Monitora accessi Vercel
@@ -185,11 +194,13 @@ LIMIT 50;
 ### **Scenario 4: Qualcuno Accede al Tuo Account Admin**
 
 **Cosa può fare:**
+
 - ⚠️ Può vedere configurazioni (ma password sono criptate)
 - ⚠️ Può modificare configurazioni
 - ⚠️ **RISCHIO MEDIO**
 
 **Protezione:**
+
 - ✅ Password criptate (serve ENCRYPTION_KEY per usarle)
 - ✅ Audit logging (vedi chi ha fatto cosa)
 - ✅ Limita account admin
@@ -251,16 +262,19 @@ LIMIT 50;
 ## 📊 LIVELLI DI SICUREZZA
 
 ### **Livello 1: Base** (Attuale)
+
 - ✅ Password criptate nel database
 - ✅ RLS policies attive
 - ✅ Server-side only
 
 ### **Livello 2: Medio** (Consigliato)
+
 - ✅ + ENCRYPTION_KEY configurata
 - ✅ + Audit logging attivo
 - ✅ + 2FA su Vercel/Supabase
 
 ### **Livello 3: Alto** (Massima Sicurezza)
+
 - ✅ + Limita accesso admin
 - ✅ + Monitoraggio continuo
 - ✅ + Backup ENCRYPTION_KEY sicuro
@@ -293,6 +307,7 @@ LIMIT 50;
 ---
 
 **⚠️ IMPORTANTE:**
+
 - Le password sono **criptate** ma non **irrecuperabili**
 - Se perdi ENCRYPTION_KEY, devi re-inserire password manualmente
 - **NON** perdere ENCRYPTION_KEY!
@@ -302,4 +317,3 @@ LIMIT 50;
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0  
 **Status:** 🔴 CRITICO - Configura ENCRYPTION_KEY prima di usare!
-

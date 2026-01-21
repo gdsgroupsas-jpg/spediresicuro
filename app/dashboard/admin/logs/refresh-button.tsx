@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
 /**
  * Componente Client per il pulsante Aggiorna
- * 
+ *
  * Gestisce il refresh della pagina usando router.refresh()
  */
 
-import { useRouter } from 'next/navigation'
-import { RefreshCw } from 'lucide-react'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 export function RefreshButton() {
-  const router = useRouter()
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
-    setIsRefreshing(true)
-    router.refresh()
+    setIsRefreshing(true);
+    router.refresh();
     // Reset dello stato dopo un breve delay per permettere l'animazione
-    setTimeout(() => setIsRefreshing(false), 500)
-  }
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   return (
     <button
@@ -30,5 +30,5 @@ export function RefreshButton() {
       <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
       Aggiorna
     </button>
-  )
+  );
 }

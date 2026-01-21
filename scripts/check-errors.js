@@ -1,6 +1,6 @@
 /**
  * Check Errors Script
- * 
+ *
  * Verifica ERROR_LOG.md e mostra ultimi errori
  * Utilizzo: node scripts/check-errors.js
  */
@@ -16,7 +16,7 @@ if (!fs.existsSync(LOG_FILE)) {
 }
 
 const content = fs.readFileSync(LOG_FILE, 'utf-8');
-const errors = content.split('---').filter(entry => entry.trim().length > 0);
+const errors = content.split('---').filter((entry) => entry.trim().length > 0);
 
 if (errors.length <= 1) {
   console.log('✅ Nessun errore registrato nel log.');
@@ -28,14 +28,3 @@ console.log('='.repeat(60));
 console.log(content.substring(0, 2000)); // Prime 2000 caratteri
 console.log('='.repeat(60));
 console.log(`\n📄 Log completo: ${LOG_FILE}\n`);
-
-
-
-
-
-
-
-
-
-
-

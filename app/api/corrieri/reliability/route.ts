@@ -1,14 +1,14 @@
 /**
  * API Route: Reliability Score Corrieri
- * 
+ *
  * Calcola e restituisce il reliability score per i corrieri in una zona specifica
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeCorrieriPerformance, generateRoutingSuggestion } from '@/lib/corrieri-performance';
 import { Corriere } from '@/types/corrieri';
-import { auth } from '@/lib/auth-config';
-import { createAuthContextFromSession } from '@/lib/auth-context';
+import { getSafeAuth } from '@/lib/safe-auth';
+import type { AuthContext } from '@/lib/auth-context';
 
 // Forza rendering dinamico (usa nextUrl.searchParams)
 export const dynamic = 'force-dynamic';
@@ -16,15 +16,18 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const authContext = await createAuthContextFromSession(session);
+    // Converti ActingContext in AuthContext
+    const authContext: AuthContext = {
+      type: 'user',
+      userId: context.target.id,
+      userEmail: context.target.email || undefined,
+      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+    };
 
     const searchParams = request.nextUrl.searchParams;
     const citta = searchParams.get('citta');
@@ -65,15 +68,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const authContext = await createAuthContextFromSession(session);
+    // Converti ActingContext in AuthContext
+    const authContext: AuthContext = {
+      type: 'user',
+      userId: context.target.id,
+      userEmail: context.target.email || undefined,
+      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+    };
 
     const body = await request.json();
     const { citta, provincia, corriereScelto, prezzoCorriereScelto } = body;
@@ -114,4 +120,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

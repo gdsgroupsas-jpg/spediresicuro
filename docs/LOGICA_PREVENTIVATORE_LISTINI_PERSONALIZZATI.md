@@ -116,21 +116,15 @@
 // Calcola prezzo per ogni listino attivo (CUSTOM e SUPPLIER)
 const priceResults = [];
 for (const priceList of filtered) {
-  const calculatedPrice = await calculatePriceWithRules(
-    userId,
-    params,
-    priceList.id
-  );
+  const calculatedPrice = await calculatePriceWithRules(userId, params, priceList.id);
   if (calculatedPrice) {
     priceResults.push({ price: calculatedPrice, list: priceList, metadata });
   }
 }
 
 // ✨ FIX: Priorità ai listini CUSTOM rispetto ai SUPPLIER
-const customLists = priceResults.filter((r) => r.list.list_type === "custom");
-const supplierLists = priceResults.filter(
-  (r) => r.list.list_type === "supplier"
-);
+const customLists = priceResults.filter((r) => r.list.list_type === 'custom');
+const supplierLists = priceResults.filter((r) => r.list.list_type === 'supplier');
 
 let bestResult;
 if (customLists.length > 0) {
@@ -191,12 +185,7 @@ _configId: quoteResult._configId || quoteResult._courierConfigId;
 ```typescript
 // Estrae configId dal rate selezionato
 const selectedConfigId = bestRate?._configId;
-onContractSelected?.(
-  courierName,
-  contractCode,
-  accessoryService,
-  selectedConfigId
-);
+onContractSelected?.(courierName, contractCode, accessoryService, selectedConfigId);
 ```
 
 **File**: `app/dashboard/spedizioni/nuova/page.tsx`

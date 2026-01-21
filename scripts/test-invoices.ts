@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -32,7 +31,7 @@ async function testInvoicesSystem() {
       .insert({
         user_id: user.id,
         status: 'draft',
-        notes: 'Test fattura automatica'
+        notes: 'Test fattura automatica',
       })
       .select()
       .single();
@@ -43,21 +42,38 @@ async function testInvoicesSystem() {
     // 3. Aggiungi righe (Items) e verifica trigger calcolo totali
     console.log('➕ Aggiunta righe...');
     const items = [
-      { invoice_id: invoice.id, description: 'Spedizione Express', quantity: 1, unit_price: 10.00, tax_rate: 22.0 },
-      { invoice_id: invoice.id, description: 'Assicurazione', quantity: 1, unit_price: 5.00, tax_rate: 22.0 }
+      {
+        invoice_id: invoice.id,
+        description: 'Spedizione Express',
+        quantity: 1,
+        unit_price: 10.0,
+        tax_rate: 22.0,
+      },
+      {
+        invoice_id: invoice.id,
+        description: 'Assicurazione',
+        quantity: 1,
+        unit_price: 5.0,
+        tax_rate: 22.0,
+      },
     ];
 
     const { error: itemsError } = await supabase.from('invoice_items').insert(items);
     if (itemsError) throw itemsError;
 
     // 4. Verifica ricalcolo totali
-    const { data: updatedInvoice } = await supabase.from('invoices').select('*').eq('id', invoice.id).single();
+    const { data: updatedInvoice } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', invoice.id)
+      .single();
     console.log('💰 Verifica Totali Trigger:');
     console.log(`   - Subtotal: ${updatedInvoice.subtotal} (Atteso: 15.00)`);
     console.log(`   - Tax: ${updatedInvoice.tax_amount} (Atteso: 3.30)`);
     console.log(`   - Total: ${updatedInvoice.total} (Atteso: 18.30)`);
 
-    if (updatedInvoice.total !== 18.30) console.warn('⚠️ Totale non corrisponde perfettamente (possibile arrotondamento)');
+    if (updatedInvoice.total !== 18.3)
+      console.warn('⚠️ Totale non corrisponde perfettamente (possibile arrotondamento)');
     else console.log('✅ Totali corretti.');
 
     // 5. Emetti fattura (Draft -> Issued) e verifica numerazione
@@ -71,15 +87,15 @@ async function testInvoicesSystem() {
 
     if (issueError) throw issueError;
     console.log(`✅ Fattura emessa! Numero: ${issuedInvoice.invoice_number}`);
-    
+
     if (!issuedInvoice.invoice_number) throw new Error('❌ Numero fattura non generato!');
-    if (!issuedInvoice.invoice_number.startsWith('2025-')) console.warn('⚠️ Anno numero fattura diverso da 2025');
+    if (!issuedInvoice.invoice_number.startsWith('2025-'))
+      console.warn('⚠️ Anno numero fattura diverso da 2025');
 
     console.log('🎉 TEST SUPERATO: Il sistema di fatturazione funziona!');
 
     // Cleanup (opzionale, per non sporcare troppo)
     // await supabase.from('invoices').delete().eq('id', invoice.id);
-
   } catch (err: any) {
     console.error('❌ ERRORE TEST:', err.message);
     process.exit(1);

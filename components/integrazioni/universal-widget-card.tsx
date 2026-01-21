@@ -1,29 +1,23 @@
-'use client'
+'use client';
 
 /**
  * Universal Widget Card Component
- * 
+ *
  * Card speciale per il Universal Tracking Widget
  * con codice HTML/JS copiabile
  */
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { 
-  Copy, 
-  CheckCircle2, 
-  Code,
-  Zap,
-  ExternalLink
-} from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Copy, CheckCircle2, Code, Zap, ExternalLink } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 export default function UniversalWidgetCard() {
-  const { data: session } = useSession()
-  const [copied, setCopied] = useState(false)
+  const { data: session } = useSession();
+  const [copied, setCopied] = useState(false);
 
   // Genera widget code con user ID
-  const userId = session?.user?.email || 'YOUR_USER_ID'
+  const userId = session?.user?.email || 'YOUR_USER_ID';
   const widgetCode = `<script>
   (function() {
     var s = document.createElement('script');
@@ -33,17 +27,17 @@ export default function UniversalWidgetCard() {
     s.async = true;
     document.head.appendChild(s);
   })();
-</script>`
+</script>`;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(widgetCode)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(widgetCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Errore copia:', err)
+      console.error('Errore copia:', err);
     }
-  }
+  };
 
   return (
     <motion.div
@@ -53,7 +47,7 @@ export default function UniversalWidgetCard() {
     >
       {/* Glow Effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#FACC15]/10 via-transparent to-[#FACC15]/10 opacity-50" />
-      
+
       <div className="relative z-10">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
@@ -69,7 +63,8 @@ export default function UniversalWidgetCard() {
                 </span>
               </h2>
               <p className="text-sm text-gray-400">
-                Inserisci questo codice nel footer del tuo sito per abilitare il tracking e i preventivi istantanei
+                Inserisci questo codice nel footer del tuo sito per abilitare il tracking e i
+                preventivi istantanei
               </p>
             </div>
           </div>
@@ -101,9 +96,7 @@ export default function UniversalWidgetCard() {
           </div>
           <div className="relative">
             <pre className="p-4 bg-[#0f0f11] border border-[#FACC15]/20 rounded-lg overflow-x-auto">
-              <code className="text-xs text-gray-300 font-mono">
-                {widgetCode}
-              </code>
+              <code className="text-xs text-gray-300 font-mono">{widgetCode}</code>
             </pre>
           </div>
         </div>
@@ -116,7 +109,9 @@ export default function UniversalWidgetCard() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-100 mb-1">Tracking Automatico</h3>
-              <p className="text-xs text-gray-400">Rileva automaticamente gli ordini dal tuo store</p>
+              <p className="text-xs text-gray-400">
+                Rileva automaticamente gli ordini dal tuo store
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3 p-4 glass-subtle rounded-lg">
@@ -125,7 +120,9 @@ export default function UniversalWidgetCard() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-100 mb-1">Preventivi Istantanei</h3>
-              <p className="text-xs text-gray-400">Calcola preventivi in tempo reale nel checkout</p>
+              <p className="text-xs text-gray-400">
+                Calcola preventivi in tempo reale nel checkout
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3 p-4 glass-subtle rounded-lg">
@@ -140,6 +137,5 @@ export default function UniversalWidgetCard() {
         </div>
       </div>
     </motion.div>
-  )
+  );
 }
-

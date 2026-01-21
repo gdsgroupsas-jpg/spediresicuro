@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
 /**
  * Pagina Preventivo - World-Class Design
- * 
+ *
  * Conversion path ottimizzato con:
  * - Form dati spedizione
  * - Card corrieri con animazioni a cascata (framer-motion)
@@ -10,17 +10,17 @@
  * - Micro-interazioni e feedback visivo
  */
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Card, CardHeader, CardTitle, CardContent, FinancialDisplay } from '@/components/ui/card'
-import { Truck, Package, MapPin, Euro } from 'lucide-react'
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardHeader, CardTitle, CardContent, FinancialDisplay } from '@/components/ui/card';
+import { Truck, Package, MapPin, Euro } from 'lucide-react';
 
 // Dati mock per i corrieri (simulazione)
 const corrieriMock = [
   {
     id: 'dhl',
     nome: 'DHL Express',
-    prezzo: 24.90,
+    prezzo: 24.9,
     tempo: '24-48h',
     status: 'success' as const,
     icon: Truck,
@@ -28,7 +28,7 @@ const corrieriMock = [
   {
     id: 'bartolini',
     nome: 'Bartolini',
-    prezzo: 18.50,
+    prezzo: 18.5,
     tempo: '2-3 giorni',
     status: 'info' as const,
     icon: Package,
@@ -36,7 +36,7 @@ const corrieriMock = [
   {
     id: 'sda',
     nome: 'SDA Express',
-    prezzo: 22.00,
+    prezzo: 22.0,
     tempo: '1-2 giorni',
     status: 'warning' as const,
     icon: Truck,
@@ -44,12 +44,12 @@ const corrieriMock = [
   {
     id: 'poste',
     nome: 'Poste Italiane',
-    prezzo: 12.90,
+    prezzo: 12.9,
     tempo: '3-5 giorni',
     status: 'info' as const,
     icon: Package,
   },
-]
+];
 
 // Varianti animazione per container
 const containerVariants = {
@@ -61,17 +61,17 @@ const containerVariants = {
       delayChildren: 0.2,
     },
   },
-}
+};
 
 // Varianti animazione per card corriere
 const cardVariants = {
-  hidden: { 
-    opacity: 0, 
+  hidden: {
+    opacity: 0,
     y: 20,
     scale: 0.95,
   },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     scale: 1,
     transition: {
@@ -80,39 +80,39 @@ const cardVariants = {
       damping: 15,
     },
   },
-}
+};
 
 export default function PreventivoPage() {
-  const [peso, setPeso] = useState('')
-  const [cittaDestino, setCittaDestino] = useState('')
-  const [showResults, setShowResults] = useState(false)
-  const [isCalculating, setIsCalculating] = useState(false)
+  const [peso, setPeso] = useState('');
+  const [cittaDestino, setCittaDestino] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   // Funzione per calcolare il preventivo (simulazione con pricing realistico)
   const handleCalculate = () => {
-    if (!peso || !cittaDestino) return
+    if (!peso || !cittaDestino) return;
 
-    setIsCalculating(true)
+    setIsCalculating(true);
     // Simula un breve delay per feedback UX
     setTimeout(() => {
-      setShowResults(true)
-      setIsCalculating(false)
-    }, 800)
-  }
+      setShowResults(true);
+      setIsCalculating(false);
+    }, 800);
+  };
 
   // Calcola prezzi dinamici basati sul peso
   const getPriceForWeight = (basePrice: number) => {
-    const pesoNum = parseFloat(peso) || 1
-    if (pesoNum <= 1) return basePrice
-    if (pesoNum <= 5) return basePrice + (pesoNum - 1) * 2.5
-    if (pesoNum <= 10) return basePrice + 10 + (pesoNum - 5) * 2
-    return basePrice + 20 + (pesoNum - 10) * 1.5
-  }
+    const pesoNum = parseFloat(peso) || 1;
+    if (pesoNum <= 1) return basePrice;
+    if (pesoNum <= 5) return basePrice + (pesoNum - 1) * 2.5;
+    if (pesoNum <= 10) return basePrice + 10 + (pesoNum - 5) * 2;
+    return basePrice + 20 + (pesoNum - 10) * 1.5;
+  };
 
   return (
     <div className="min-h-screen bg-[#09090b] py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Noise texture overlay già applicato via globals.css */}
-      
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -146,9 +146,7 @@ export default function PreventivoPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Peso (kg)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Peso (kg)</label>
                   <input
                     type="number"
                     value={peso}
@@ -199,7 +197,7 @@ export default function PreventivoPage() {
           <motion.div
             variants={containerVariants}
             initial="hidden"
-            animate={showResults ? "visible" : "hidden"}
+            animate={showResults ? 'visible' : 'hidden'}
             className="lg:col-span-2 space-y-4"
           >
             {!showResults ? (
@@ -222,8 +220,8 @@ export default function PreventivoPage() {
                   </p>
                 </div>
                 {corrieriMock.map((corriere, index) => {
-                  const Icon = corriere.icon
-                  const calculatedPrice = getPriceForWeight(corriere.prezzo)
+                  const Icon = corriere.icon;
+                  const calculatedPrice = getPriceForWeight(corriere.prezzo);
                   return (
                     <motion.div
                       key={corriere.id}
@@ -254,14 +252,17 @@ export default function PreventivoPage() {
                               € {calculatedPrice.toFixed(2).replace('.', ',')}
                             </div>
                             <span className={`status-badge status-${corriere.status}`}>
-                              {corriere.status === 'success' ? 'Consigliato' :
-                               corriere.status === 'warning' ? 'Popolare' : 'Disponibile'}
+                              {corriere.status === 'success'
+                                ? 'Consigliato'
+                                : corriere.status === 'warning'
+                                  ? 'Popolare'
+                                  : 'Disponibile'}
                             </span>
                           </div>
                         </div>
                       </Card>
                     </motion.div>
-                  )
+                  );
                 })}
               </>
             )}
@@ -269,6 +270,5 @@ export default function PreventivoPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

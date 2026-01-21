@@ -14,6 +14,7 @@
 **Objective**: Enterprise-grade monitoring with distributed tracing
 
 **Components**:
+
 - ✅ Sentry Performance Monitoring (10% sampling, FREE tier)
 - ✅ Better Stack log aggregation (1GB/month, FREE tier)
 - ✅ Instrumentation hooks (Next.js 15+ requirement)
@@ -23,6 +24,7 @@
 - ✅ Trace context in logs (requestId → traceId → spanId)
 
 **Key Features**:
+
 - TraceId/SpanId propagation working correctly
 - Automatic spans for all DB queries
 - Automatic spans for external API calls
@@ -30,6 +32,7 @@
 - Zero breaking changes
 
 **Test Results** (Preview Environment):
+
 ```json
 {
   "traceId": "a3cf19435329fbccff7d601f3ea0b125",
@@ -43,6 +46,7 @@
 ```
 
 **Files Modified**:
+
 - `instrumentation.ts` (NEW - server/edge init)
 - `instrumentation-client.ts` (NEW - client init)
 - `lib/logger.ts` (added trace context)
@@ -62,18 +66,21 @@
 **Objective**: Remove obsolete migration files causing duplication conflicts
 
 **Problem Discovered**:
+
 - 121 migration files in repo
 - 20 duplicate numbers (21% duplication rate)
 - Production DB only uses 8 timestamp-based migrations
 - All sequential migrations (001-112) were NEVER applied to production
 
 **Solution Executed**:
+
 - Verified production DB state (8 migrations found)
 - Removed 125 obsolete sequential migration files
 - Kept only timestamp-based migrations (production-ready)
 - Zero breaking changes (removed only unused files)
 
 **Impact**:
+
 - **-125 files** removed
 - **-26,802 LOC** deleted
 - **0 duplications** remaining
@@ -81,17 +88,20 @@
 - **0 downtime**
 
 **Files Removed**:
+
 - All `001_*.sql` through `112_*.sql` (sequential, obsolete)
 - All `FIX_*.sql`, `CLEANUP_*.sql` (one-off scripts)
 - All non-timestamped migrations
 
 **Files Kept**:
+
 - 8 timestamp-based migrations (20251221*, 20251229*, etc.)
 - These are the ONLY migrations applied in production
 
 **Verification**: `scripts/verify-production-migrations.sql` executed successfully
 
 **Documentation**:
+
 - `MIGRATION_AUDIT_2026-01-18.md` (full audit report)
 - `HANDOVER_MIGRATION_FIX.md` (execution plan)
 - `QUICK_START_MIGRATION_FIX.md` (quick reference)
@@ -101,29 +111,33 @@
 ## 🔍 PRE-MERGE VERIFICATION
 
 ### **Build Status**
+
 - ✅ Local build: SUCCESS
 - ✅ Preview build: SUCCESS
 - ✅ No TypeScript errors
 - ✅ No ESLint errors
 
 ### **Testing Status**
+
 - ✅ M2 APM test endpoint: PASSING (traceId populated)
 - ✅ M2 Logging test endpoint: PASSING (logs with trace context)
 - ✅ Preview deployment: WORKING
 - ✅ Migration verification: PASSING (production has correct state)
 
 ### **Security Status**
+
 - ✅ No new security vulnerabilities introduced
 - ✅ PII sanitization in logs (GDPR compliant)
 - ✅ RLS policies unchanged
 - ✅ No exposed secrets
 
 ### **Cost Analysis**
-| Service | Usage | Free Tier | Monthly Cost |
-|---------|-------|-----------|--------------|
-| Sentry Transactions | ~3K/month (10% sampling) | 10K/month | €0 |
-| Better Stack Logs | ~500MB/month | 1GB/month | €0 |
-| **TOTAL** | | | **€0/month** |
+
+| Service             | Usage                    | Free Tier | Monthly Cost |
+| ------------------- | ------------------------ | --------- | ------------ |
+| Sentry Transactions | ~3K/month (10% sampling) | 10K/month | €0           |
+| Better Stack Logs   | ~500MB/month             | 1GB/month | €0           |
+| **TOTAL**           |                          |           | **€0/month** |
 
 ---
 
@@ -132,18 +146,21 @@
 ### **Production Changes**
 
 **Database**:
+
 - ✅ No schema changes
 - ✅ No data migrations
 - ✅ No new tables/columns
 - ✅ Zero downtime expected
 
 **Application**:
+
 - ✅ New monitoring active (Sentry + Better Stack)
 - ✅ Trace context in all logs
 - ✅ Automatic instrumentation for DB/API calls
 - ✅ Better observability for debugging
 
 **Infrastructure**:
+
 - ✅ No infrastructure changes
 - ✅ Same Vercel deployment
 - ✅ Same Supabase database
@@ -152,6 +169,7 @@
 ### **Rollback Plan**
 
 **If M2 APM causes issues**:
+
 ```bash
 # Revert to previous deployment
 vercel rollback
@@ -161,12 +179,14 @@ vercel rollback
 ```
 
 **If migration cleanup causes issues**:
+
 ```bash
 # Extremely unlikely (removed only unused files)
 # But if needed: git revert ee09a20
 ```
 
 **Risk Level**: 🟢 **LOW**
+
 - M2 changes are purely additive (monitoring)
 - Migration cleanup removed only unused files
 - Production state verified before cleanup
@@ -177,12 +197,15 @@ vercel rollback
 ## 🎯 POST-MERGE ACTIONS
 
 ### **Immediate (0-5 minutes)**
+
 1. Monitor Vercel deployment logs
 2. Verify production build SUCCESS
 3. Check Sentry for errors (should be normal traffic)
 
 ### **Short-term (5-30 minutes)**
+
 1. Test M2 APM endpoint in production:
+
    ```bash
    curl https://spediresicuro.it/api/test/m2-apm
    # Expected: traceId and spanId populated
@@ -197,6 +220,7 @@ vercel rollback
    - Expected: Logs with traceId/spanId fields
 
 ### **Long-term (1-24 hours)**
+
 1. Monitor error rate in Sentry (should be stable)
 2. Check performance metrics (should be unchanged)
 3. Verify no unexpected costs (Sentry/Better Stack free tiers)
@@ -218,6 +242,7 @@ c82599b - fix(cron): Change financial alerts to daily schedule (Hobby tier)
 ```
 
 **Total Changes**:
+
 - **27 files changed** (M2 implementation)
 - **125 files deleted** (migration cleanup)
 - **+4,327 / -26,802 LOC** (net: -22,475 LOC)
@@ -246,6 +271,7 @@ gh pr merge 51 --squash --delete-branch
 ```
 
 **Squash message** (auto-generated):
+
 ```
 feat(M2): APM & Log Aggregation + Migration Cleanup (#51)
 
@@ -273,6 +299,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ## 📞 CONTACTS
 
 **If issues arise**:
+
 1. Vercel Dashboard: https://vercel.com/gdsgroupsas-jpg/spediresicuro
 2. Sentry Dashboard: https://sentry.io/organizations/spediresicuro/
 3. Better Stack Dashboard: https://logs.betterstack.com

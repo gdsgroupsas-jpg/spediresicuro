@@ -1,21 +1,21 @@
 /**
  * Pagina: Team Management - Gestione Sotto-Admin
- * 
+ *
  * Permette agli admin di gestire i propri sotto-admin:
  * - Visualizza lista sotto-admin diretti
  * - Statistiche aggregate gerarchia
  * - Invita nuovi sotto-admin
- * 
+ *
  * ⚠️ SOLO PER ADMIN: Verifica permessi prima di mostrare
  */
 
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import Link from 'next/link'
-import DashboardNav from '@/components/dashboard-nav'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import DashboardNav from '@/components/dashboard-nav';
 import {
   Users,
   UserPlus,
@@ -31,160 +31,160 @@ import {
   Shield,
   Eye,
   Trash2,
-} from 'lucide-react'
-import { createSubAdmin, getDirectSubAdmins, getHierarchyStats } from '@/actions/admin'
+} from 'lucide-react';
+import { createSubAdmin, getDirectSubAdmins, getHierarchyStats } from '@/actions/admin';
 
 interface SubAdmin {
-  id: string
-  email: string
-  name: string
-  account_type: string
-  admin_level: number
-  created_at: string
+  id: string;
+  email: string;
+  name: string;
+  account_type: string;
+  admin_level: number;
+  created_at: string;
 }
 
 interface HierarchyStats {
-  totalSubAdmins: number
-  totalShipments: number
-  totalRevenue: number
-  subAdminsByLevel: Record<number, number>
+  totalSubAdmins: number;
+  totalShipments: number;
+  totalRevenue: number;
+  subAdminsByLevel: Record<number, number>;
 }
 
 export default function TeamManagementPage() {
-  const router = useRouter()
-  const { data: session, status } = useSession()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAuthorized, setIsAuthorized] = useState(false)
-  const [subAdmins, setSubAdmins] = useState<SubAdmin[]>([])
-  const [stats, setStats] = useState<HierarchyStats | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [subAdmins, setSubAdmins] = useState<SubAdmin[]>([]);
+  const [stats, setStats] = useState<HierarchyStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   // Stati per modale invito
-  const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteName, setInviteName] = useState('')
-  const [invitePassword, setInvitePassword] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [createSuccess, setCreateSuccess] = useState<string | null>(null)
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   // Carica dati
   useEffect(() => {
     async function loadTeamData() {
-      if (status === 'loading') return
+      if (status === 'loading') return;
 
       if (!session) {
-        router.push('/login')
-        return
+        router.push('/login');
+        return;
       }
 
       try {
-        setIsLoading(true)
+        setIsLoading(true);
 
         // Verifica che sia admin
-        const response = await fetch('/api/user/info')
+        const response = await fetch('/api/user/info');
         if (!response.ok) {
-          throw new Error('Errore verifica utente')
+          throw new Error('Errore verifica utente');
         }
 
-        const responseData = await response.json()
+        const responseData = await response.json();
         // API restituisce { success: true, user: { account_type, ... } }
-        const userData = responseData.user || responseData
-        
+        const userData = responseData.user || responseData;
+
         // Verifica account_type
         if (userData.account_type !== 'admin' && userData.account_type !== 'superadmin') {
-          setError('Accesso negato. Solo gli admin possono gestire il team.')
-          setIsAuthorized(false)
-          setIsLoading(false)
-          return
+          setError('Accesso negato. Solo gli admin possono gestire il team.');
+          setIsAuthorized(false);
+          setIsLoading(false);
+          return;
         }
 
-        setIsAuthorized(true)
+        setIsAuthorized(true);
 
         // Carica sotto-admin
-        await loadSubAdmins()
-        
+        await loadSubAdmins();
+
         // Carica statistiche
-        await loadStats()
+        await loadStats();
       } catch (err: any) {
-        console.error('Errore caricamento dati team:', err)
-        setError(err.message || 'Errore nel caricamento dei dati')
+        console.error('Errore caricamento dati team:', err);
+        setError(err.message || 'Errore nel caricamento dei dati');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    loadTeamData()
-  }, [session, status, router])
+    loadTeamData();
+  }, [session, status, router]);
 
   // Carica sotto-admin diretti
   async function loadSubAdmins() {
-    if (!session?.user?.email) return
+    if (!session?.user?.email) return;
 
     try {
-      const result = await getDirectSubAdmins(session.user.email)
-      
+      const result = await getDirectSubAdmins(session.user.email);
+
       if (result.success && result.subAdmins) {
-        setSubAdmins(result.subAdmins)
+        setSubAdmins(result.subAdmins);
       } else {
-        console.error('Errore caricamento sotto-admin:', result.error)
+        console.error('Errore caricamento sotto-admin:', result.error);
       }
     } catch (err: any) {
-      console.error('Errore caricamento sotto-admin:', err)
+      console.error('Errore caricamento sotto-admin:', err);
     }
   }
 
   // Carica statistiche
   async function loadStats() {
-    if (!session?.user?.email) return
+    if (!session?.user?.email) return;
 
     try {
-      const result = await getHierarchyStats(session.user.email)
-      
+      const result = await getHierarchyStats(session.user.email);
+
       if (result.success && result.stats) {
-        setStats(result.stats)
+        setStats(result.stats);
       }
     } catch (err: any) {
-      console.error('Errore caricamento statistiche:', err)
+      console.error('Errore caricamento statistiche:', err);
     }
   }
 
   // Gestisci invito nuovo sotto-admin
   async function handleInviteSubAdmin(e: React.FormEvent) {
-    e.preventDefault()
-    setIsCreating(true)
-    setCreateError(null)
-    setCreateSuccess(null)
+    e.preventDefault();
+    setIsCreating(true);
+    setCreateError(null);
+    setCreateSuccess(null);
 
     try {
       const result = await createSubAdmin(
         inviteEmail.trim(),
         inviteName.trim(),
         invitePassword.trim() || undefined
-      )
+      );
 
       if (result.success) {
-        setCreateSuccess(result.message || 'Sotto-admin creato con successo!')
-        setInviteEmail('')
-        setInviteName('')
-        setInvitePassword('')
-        
+        setCreateSuccess(result.message || 'Sotto-admin creato con successo!');
+        setInviteEmail('');
+        setInviteName('');
+        setInvitePassword('');
+
         // Ricarica lista
-        await loadSubAdmins()
-        await loadStats()
+        await loadSubAdmins();
+        await loadStats();
 
         // Chiudi modal dopo 2 secondi
         setTimeout(() => {
-          setShowInviteModal(false)
-          setCreateSuccess(null)
-        }, 2000)
+          setShowInviteModal(false);
+          setCreateSuccess(null);
+        }, 2000);
       } else {
-        setCreateError(result.error || 'Errore durante la creazione')
+        setCreateError(result.error || 'Errore durante la creazione');
       }
     } catch (err: any) {
-      setCreateError(err.message || 'Errore sconosciuto')
+      setCreateError(err.message || 'Errore sconosciuto');
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
   }
 
@@ -193,7 +193,7 @@ export default function TeamManagementPage() {
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency: 'EUR',
-    }).format(value)
+    }).format(value);
   }
 
   // Formatta data
@@ -204,7 +204,7 @@ export default function TeamManagementPage() {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })
+    });
   }
 
   if (status === 'loading' || isLoading) {
@@ -215,22 +215,20 @@ export default function TeamManagementPage() {
           <p className="text-gray-600">Caricamento team management...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isAuthorized || error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <DashboardNav
-            title="Team Management"
-            subtitle="Accesso negato"
-            showBackButton={true}
-          />
+          <DashboardNav title="Team Management" subtitle="Accesso negato" showBackButton={true} />
           <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-8 text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h2>
-            <p className="text-gray-600 mb-6">{error || 'Solo gli admin possono accedere a questa pagina.'}</p>
+            <p className="text-gray-600 mb-6">
+              {error || 'Solo gli admin possono accedere a questa pagina.'}
+            </p>
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -240,7 +238,7 @@ export default function TeamManagementPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -266,7 +264,9 @@ export default function TeamManagementPage() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalSubAdmins}</div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats.totalSubAdmins}
+                  </div>
                   <div className="text-sm text-gray-500">Nella tua gerarchia</div>
                 </div>
               </div>
@@ -280,7 +280,9 @@ export default function TeamManagementPage() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalShipments}</div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats.totalShipments}
+                  </div>
                   <div className="text-sm text-gray-500">Gerarchia completa</div>
                 </div>
               </div>
@@ -294,7 +296,9 @@ export default function TeamManagementPage() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <div className="text-3xl font-bold text-gray-900 mb-1">{formatCurrency(stats.totalRevenue)}</div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {formatCurrency(stats.totalRevenue)}
+                  </div>
                   <div className="text-sm text-gray-500">Gerarchia completa</div>
                 </div>
               </div>
@@ -337,7 +341,8 @@ export default function TeamManagementPage() {
               <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun Sotto-Admin</h3>
               <p className="text-gray-600 mb-6">
-                Non hai ancora creato sotto-admin. Clicca su &quot;Invita Nuovo Sub-Admin&quot; per iniziare.
+                Non hai ancora creato sotto-admin. Clicca su &quot;Invita Nuovo Sub-Admin&quot; per
+                iniziare.
               </p>
             </div>
           ) : (
@@ -397,8 +402,14 @@ export default function TeamManagementPage() {
 
         {/* Modal Invita Sub-Admin */}
         {showInviteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !isCreating && setShowInviteModal(false)}>
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => !isCreating && setShowInviteModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -407,7 +418,9 @@ export default function TeamManagementPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Invita Nuovo Sub-Admin</h3>
-                      <p className="text-sm text-gray-600">Crea un nuovo sotto-admin nella tua gerarchia</p>
+                      <p className="text-sm text-gray-600">
+                        Crea un nuovo sotto-admin nella tua gerarchia
+                      </p>
                     </div>
                   </div>
                   <button
@@ -521,6 +534,5 @@ export default function TeamManagementPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-

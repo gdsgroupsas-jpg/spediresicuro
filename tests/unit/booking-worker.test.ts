@@ -1,6 +1,6 @@
 /**
  * Unit Tests: booking-worker.ts
- * 
+ *
  * Test REALI della logica del worker in isolamento.
  * Coverage:
  * - preflightCheck: no conferma => non prenota
@@ -314,10 +314,13 @@ describe('bookingWorker - BookingResult mapping', () => {
   it('should handle adapter connection failure (retryable)', async () => {
     // Mock adapter che fallisce la connessione
     const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
-    vi.mocked(SpedisciOnlineAdapter).mockImplementation(() => ({
-      connect: vi.fn().mockResolvedValue(false),
-      createShipment: vi.fn(),
-    }) as any);
+    vi.mocked(SpedisciOnlineAdapter).mockImplementation(
+      () =>
+        ({
+          connect: vi.fn().mockResolvedValue(false),
+          createShipment: vi.fn(),
+        }) as any
+    );
 
     const state = createMockAgentState({
       shipmentDraft: createCompleteShipmentDraft(),
@@ -386,10 +389,13 @@ describe('bookingWorker - Fallback error handling', () => {
   it('should handle adapter errors gracefully', async () => {
     // Mock adapter che lancia errore
     const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
-    vi.mocked(SpedisciOnlineAdapter).mockImplementation(() => ({
-      connect: vi.fn().mockResolvedValue(true),
-      createShipment: vi.fn().mockRejectedValue(new Error('Adapter error')),
-    }) as any);
+    vi.mocked(SpedisciOnlineAdapter).mockImplementation(
+      () =>
+        ({
+          connect: vi.fn().mockResolvedValue(true),
+          createShipment: vi.fn().mockRejectedValue(new Error('Adapter error')),
+        }) as any
+    );
 
     const state = createMockAgentState({
       shipmentDraft: createCompleteShipmentDraft(),
@@ -463,4 +469,3 @@ describe('mapDraftToShipmentData', () => {
     expect(result.peso).toBe(1); // default
   });
 });
-

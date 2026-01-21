@@ -1,23 +1,20 @@
 'use server';
 
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { createServerActionClient } from '@/lib/supabase-server';
 import { getSupabaseUserIdFromEmail } from '@/lib/database';
 import { getFiscalContext } from '@/lib/agent/fiscal-data';
 
 export async function getMyFiscalData() {
-  // ⚠️ FIX REGRESSIONE: Usa NextAuth invece di Supabase Auth
-  const session = await auth();
-  
-  if (!session?.user?.email) {
+  // Usa getSafeAuth per supportare impersonation
+  const context = await getSafeAuth();
+
+  if (!context?.actor?.email) {
     throw new Error('Utente non autenticato');
   }
 
   // Ottieni userId Supabase dalla tabella users usando email NextAuth
-  const supabaseUserId = await getSupabaseUserIdFromEmail(
-    session.user.email,
-    session.user.id
-  );
+  const supabaseUserId = await getSupabaseUserIdFromEmail(context.actor.email, context.actor.id);
 
   if (!supabaseUserId) {
     throw new Error('Impossibile ottenere userId Supabase - verifica autenticazione');
@@ -31,8 +28,8 @@ export async function getMyFiscalData() {
     .eq('id', supabaseUserId)
     .single();
 
-  // Usa ruolo da database o fallback a sessione NextAuth
-  const role = userData?.role || (session.user as any).role || 'user';
+  // Usa ruolo da database o fallback a context
+  const role = userData?.role || context.actor.role || 'user';
 
   // Chiama la funzione di logica interna
   return await getFiscalContext(supabaseUserId, role);

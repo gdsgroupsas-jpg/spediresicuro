@@ -3,6 +3,7 @@
 ## 🎯 Problema
 
 Dopo il login con Google, vedi questo errore:
+
 ```
 ❌ [LOGIN] Errore OAuth rilevato: { error: "Configuration", description: null }
 ```
@@ -39,38 +40,41 @@ L'errore "Configuration" di NextAuth indica che **manca una configurazione obbli
      - **Environment:** Seleziona **Production** (e opzionalmente **Preview**)
 
 4. **Genera una Nuova Chiave Segreta**
-   
+
    **Metodo 1: Usa Node.js (CONSIGLIATO)**
-   
+
    Se hai Node.js installato, apri un terminale e esegui:
+
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
    ```
-   
+
    **Metodo 2: Usa PowerShell (Windows)**
-   
+
    Se sei su Windows, apri PowerShell e esegui:
+
    ```powershell
    -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | ForEach-Object {[char]$_})
    ```
-   
+
    Poi aggiungi caratteri speciali manualmente se necessario.
-   
+
    **Metodo 3: Generatore Online**
-   
+
    Vai su uno di questi siti e genera una chiave di almeno 32 caratteri:
    - https://www.random.org/strings/?num=1&len=64&digits=on&upperalpha=on&loweralpha=on&unique=on&format=html&rnd=new
    - https://1password.com/password-generator/ (genera una password lunga)
-   
+
    **Metodo 4: Usa questa chiave pre-generata (usa solo se gli altri metodi non funzionano)**
-   
+
    ```
    RYOyoxCYzF5IL4eChY0ESaMvCUYIUk9EBnEGFETpNeI=
    ```
-   
+
    ⚠️ **IMPORTANTE**: Questa è una chiave di esempio. In produzione, genera sempre una chiave unica!
-   
+
    **Esempio di chiave segreta valida (deve essere almeno 32 caratteri):**
+
    ```
    RYOyoxCYzF5IL4eChY0ESaMvCUYIUk9EBnEGFETpNeI=
    ```
@@ -173,6 +177,7 @@ openssl rand -base64 32
 ```
 
 Poi:
+
 1. Vai su Vercel → Settings → Environment Variables
 2. Modifica `NEXTAUTH_SECRET` con la nuova chiave
 3. Fai un nuovo deploy
@@ -188,4 +193,3 @@ Se dopo aver seguito tutti questi passaggi il problema persiste:
 ---
 
 **Ultimo aggiornamento:** Questa guida risolve l'errore "Configuration" di NextAuth causato da configurazione mancante.
-

@@ -10,45 +10,42 @@
  * - Requires SUPERADMIN role
  */
 
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 // eslint-disable-next-line
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
-import { updatePlatformFee } from "@/lib/services/pricing/platform-fee";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
+import { updatePlatformFee } from '@/lib/services/pricing/platform-fee';
 
 export async function POST(request: Request) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    if (!context?.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     // 2. Recupera user ID e verifica ruolo SUPERADMIN
     const { data: adminUser, error: adminError } = await supabaseAdmin
-      .from("users")
-      .select("id, role, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, role, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (adminError || !adminUser) {
-      console.error("[PlatformFee API] Admin lookup error:", adminError);
-      return NextResponse.json(
-        { error: "Utente non trovato" },
-        { status: 401 }
-      );
+      console.error('[PlatformFee API] Admin lookup error:', adminError);
+      return NextResponse.json({ error: 'Utente non trovato' }, { status: 401 });
     }
 
     // Verifica ruolo
     const isSuperAdmin =
-      adminUser.account_type === "superadmin" ||
-      adminUser.role === "admin" ||
-      adminUser.role === "SUPERADMIN";
+      adminUser.account_type === 'superadmin' ||
+      adminUser.role === 'admin' ||
+      adminUser.role === 'SUPERADMIN';
 
     if (!isSuperAdmin) {
       return NextResponse.json(
-        { error: "Accesso negato. Solo SUPERADMIN può modificare le fee." },
+        { error: 'Accesso negato. Solo SUPERADMIN può modificare le fee.' },
         { status: 403 }
       );
     }
@@ -57,24 +54,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { userId, newFee, notes } = body;
 
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json({ error: "userId richiesto" }, { status: 400 });
+    if (!userId || typeof userId !== 'string') {
+      return NextResponse.json({ error: 'userId richiesto' }, { status: 400 });
     }
 
     // Valida fee
     if (newFee !== null && newFee !== undefined) {
-      if (typeof newFee !== "number" || isNaN(newFee)) {
-        return NextResponse.json(
-          { error: "newFee deve essere un numero o null" },
-          { status: 400 }
-        );
+      if (typeof newFee !== 'number' || isNaN(newFee)) {
+        return NextResponse.json({ error: 'newFee deve essere un numero o null' }, { status: 400 });
       }
 
       if (newFee < 0) {
-        return NextResponse.json(
-          { error: "La fee non può essere negativa" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'La fee non può essere negativa' }, { status: 400 });
       }
     }
 
@@ -89,9 +80,9 @@ export async function POST(request: Request) {
     );
 
     // Log operazione (NO PII)
-    console.log("[PlatformFee API] Fee updated:", {
-      targetUserId: userId.substring(0, 8) + "...",
-      adminUserId: adminUser.id.substring(0, 8) + "...",
+    console.log('[PlatformFee API] Fee updated:', {
+      targetUserId: userId.substring(0, 8) + '...',
+      adminUserId: adminUser.id.substring(0, 8) + '...',
       newFee: result.newFee,
     });
 
@@ -102,9 +93,8 @@ export async function POST(request: Request) {
       newFee: result.newFee,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Errore sconosciuto";
-    console.error("[PlatformFee API] Error:", message);
+    const message = error instanceof Error ? error.message : 'Errore sconosciuto';
+    console.error('[PlatformFee API] Error:', message);
 
     return NextResponse.json({ error: message }, { status: 500 });
   }

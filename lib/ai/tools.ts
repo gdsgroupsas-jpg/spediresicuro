@@ -1,6 +1,6 @@
 /**
  * Tools per Anne
- * 
+ *
  * Funzioni che Anne può chiamare per eseguire azioni concrete:
  * - fill_shipment_form: Compila form spedizione
  * - calculate_price: Calcola prezzo spedizione
@@ -34,7 +34,8 @@ export interface ToolCall {
 export const ANNE_TOOLS: ToolDefinition[] = [
   {
     name: 'fill_shipment_form',
-    description: 'Compila automaticamente il form di creazione spedizione con i dati estratti dalla conversazione. Restituisce i dati strutturati pronti per l\'inserimento.',
+    description:
+      "Compila automaticamente il form di creazione spedizione con i dati estratti dalla conversazione. Restituisce i dati strutturati pronti per l'inserimento.",
     parameters: {
       type: 'object',
       properties: {
@@ -87,12 +88,20 @@ export const ANNE_TOOLS: ToolDefinition[] = [
           description: 'Note aggiuntive spedizione',
         },
       },
-      required: ['recipient_name', 'recipient_address', 'recipient_city', 'recipient_postal_code', 'recipient_province', 'weight'],
+      required: [
+        'recipient_name',
+        'recipient_address',
+        'recipient_city',
+        'recipient_postal_code',
+        'recipient_province',
+        'weight',
+      ],
     },
   },
   {
     name: 'calculate_price',
-    description: 'Calcola il prezzo ottimale per una spedizione. Restituisce i migliori corrieri disponibili con prezzi e tempi di consegna.',
+    description:
+      'Calcola il prezzo ottimale per una spedizione. Restituisce i migliori corrieri disponibili con prezzi e tempi di consegna.',
     parameters: {
       type: 'object',
       properties: {
@@ -127,7 +136,8 @@ export const ANNE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'track_shipment',
-    description: 'Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.',
+    description:
+      'Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.',
     parameters: {
       type: 'object',
       properties: {
@@ -141,7 +151,8 @@ export const ANNE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'analyze_business_health',
-    description: 'Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.',
+    description:
+      'Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.',
     parameters: {
       type: 'object',
       properties: {
@@ -179,17 +190,20 @@ export const ANNE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'create_batch_shipments',
-    description: 'Crea spedizioni multiple da file Excel/CSV. Analizza il file, calcola preventivi per tutti i corrieri, suggerisce il migliore per ogni spedizione e crea tutto in batch. COMPLETO end-to-end.',
+    description:
+      'Crea spedizioni multiple da file Excel/CSV. Analizza il file, calcola preventivi per tutti i corrieri, suggerisce il migliore per ogni spedizione e crea tutto in batch. COMPLETO end-to-end.',
     parameters: {
       type: 'object',
       properties: {
         csvData: {
           type: 'string',
-          description: 'Contenuto del file CSV/Excel (formato testo, righe separate da \\n, colonne separate da , o tab). Prima riga = intestazioni. Colonne supportate: nome, destinatario, indirizzo, città, cap, provincia, telefono, email, colli, peso, note, corriere (preferito)',
+          description:
+            'Contenuto del file CSV/Excel (formato testo, righe separate da \\n, colonne separate da , o tab). Prima riga = intestazioni. Colonne supportate: nome, destinatario, indirizzo, città, cap, provincia, telefono, email, colli, peso, note, corriere (preferito)',
         },
         defaultSender: {
           type: 'object',
-          description: 'Dati mittente di default da usare per tutte le spedizioni (se non specificato nel CSV)',
+          description:
+            'Dati mittente di default da usare per tutte le spedizioni (se non specificato nel CSV)',
           properties: {
             name: { type: 'string' },
             company: { type: 'string' },
@@ -203,7 +217,8 @@ export const ANNE_TOOLS: ToolDefinition[] = [
         },
         autoSelectBestCourier: {
           type: 'boolean',
-          description: 'Se true, Anne seleziona automaticamente il corriere più conveniente per ogni spedizione. Se false, usa quello indicato nel CSV o chiede conferma (default: true)',
+          description:
+            'Se true, Anne seleziona automaticamente il corriere più conveniente per ogni spedizione. Se false, usa quello indicato nel CSV o chiede conferma (default: true)',
         },
       },
       required: ['csvData'],
@@ -224,20 +239,30 @@ export async function executeTool(
       case 'fill_shipment_form': {
         // Valida dati
         const errors: string[] = [];
-        
+
         if (!toolCall.arguments.recipient_name) {
           errors.push('Nome destinatario obbligatorio');
         }
-        if (!toolCall.arguments.recipient_postal_code || !/^\d{5}$/.test(toolCall.arguments.recipient_postal_code)) {
+        if (
+          !toolCall.arguments.recipient_postal_code ||
+          !/^\d{5}$/.test(toolCall.arguments.recipient_postal_code)
+        ) {
           errors.push('CAP deve essere di 5 cifre');
         }
-        if (!toolCall.arguments.recipient_province || !/^[A-Z]{2}$/i.test(toolCall.arguments.recipient_province)) {
+        if (
+          !toolCall.arguments.recipient_province ||
+          !/^[A-Z]{2}$/i.test(toolCall.arguments.recipient_province)
+        ) {
           errors.push('Provincia deve essere di 2 lettere (es. "RM")');
         }
-        if (!toolCall.arguments.weight || toolCall.arguments.weight <= 0 || toolCall.arguments.weight > 200) {
+        if (
+          !toolCall.arguments.weight ||
+          toolCall.arguments.weight <= 0 ||
+          toolCall.arguments.weight > 200
+        ) {
           errors.push('Peso deve essere tra 0.1 e 200 kg');
         }
-        
+
         if (errors.length > 0) {
           return {
             success: false,
@@ -245,7 +270,7 @@ export async function executeTool(
             error: `Errori validazione: ${errors.join(', ')}`,
           };
         }
-        
+
         // Restituisci dati strutturati
         return {
           success: true,
@@ -268,7 +293,7 @@ export async function executeTool(
           },
         };
       }
-      
+
       case 'calculate_price': {
         const pricingRequest: PricingRequest = {
           weight: toolCall.arguments.weight,
@@ -278,9 +303,9 @@ export async function executeTool(
           cashOnDelivery: toolCall.arguments.cashOnDelivery,
           declaredValue: toolCall.arguments.declaredValue,
         };
-        
+
         const results = await calculateOptimalPrice(pricingRequest);
-        
+
         if (results.length === 0) {
           return {
             success: false,
@@ -288,7 +313,7 @@ export async function executeTool(
             error: 'Nessun corriere disponibile per questa destinazione',
           };
         }
-        
+
         return {
           success: true,
           result: {
@@ -298,16 +323,16 @@ export async function executeTool(
           },
         };
       }
-      
+
       case 'track_shipment': {
         const trackingNumber = toolCall.arguments.trackingNumber;
-        
+
         const { data: shipment, error } = await supabaseAdmin
           .from('shipments')
           .select('*, shipment_events(*)')
           .eq('tracking_number', trackingNumber)
           .single();
-        
+
         if (error || !shipment) {
           return {
             success: false,
@@ -315,7 +340,7 @@ export async function executeTool(
             error: 'Spedizione non trovata',
           };
         }
-        
+
         // Verifica che l'utente abbia accesso (se non admin, solo proprie spedizioni)
         if (userRole !== 'admin' && shipment.user_id !== userId) {
           return {
@@ -324,7 +349,7 @@ export async function executeTool(
             error: 'Non autorizzato a visualizzare questa spedizione',
           };
         }
-        
+
         return {
           success: true,
           result: {
@@ -338,7 +363,7 @@ export async function executeTool(
           },
         };
       }
-      
+
       case 'analyze_business_health': {
         if (userRole !== 'admin') {
           return {
@@ -347,13 +372,13 @@ export async function executeTool(
             error: 'Funzione disponibile solo per admin',
           };
         }
-        
+
         const period = toolCall.arguments.period || 'month';
         const compareWithPrevious = toolCall.arguments.compareWithPrevious || false;
-        
+
         const now = new Date();
         let periodStart: Date;
-        
+
         switch (period) {
           case 'today':
             periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -370,12 +395,12 @@ export async function executeTool(
           default:
             periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
         }
-        
+
         const { data: shipments, error } = await supabaseAdmin
           .from('shipments')
           .select('final_price, base_price, created_at, carrier')
           .gte('created_at', periodStart.toISOString());
-        
+
         if (error) {
           return {
             success: false,
@@ -383,12 +408,14 @@ export async function executeTool(
             error: `Errore recupero dati: ${error.message}`,
           };
         }
-        
-        const totalRevenue = shipments?.reduce((sum, s) => sum + (parseFloat(s.final_price) || 0), 0) || 0;
-        const totalCost = shipments?.reduce((sum, s) => sum + (parseFloat(s.base_price) || 0), 0) || 0;
+
+        const totalRevenue =
+          shipments?.reduce((sum, s) => sum + (parseFloat(s.final_price) || 0), 0) || 0;
+        const totalCost =
+          shipments?.reduce((sum, s) => sum + (parseFloat(s.base_price) || 0), 0) || 0;
         const totalMargin = totalRevenue - totalCost;
         const marginPercent = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
-        
+
         const analysis = {
           period,
           totalShipments: shipments?.length || 0,
@@ -396,39 +423,53 @@ export async function executeTool(
           totalCost: Math.round(totalCost * 100) / 100,
           totalMargin: Math.round(totalMargin * 100) / 100,
           marginPercent: Math.round(marginPercent * 100) / 100,
-          avgMarginPerShipment: shipments && shipments.length > 0 
-            ? Math.round((totalMargin / shipments.length) * 100) / 100 
-            : 0,
+          avgMarginPerShipment:
+            shipments && shipments.length > 0
+              ? Math.round((totalMargin / shipments.length) * 100) / 100
+              : 0,
         };
-        
+
         // Confronto con periodo precedente se richiesto
         if (compareWithPrevious && shipments) {
-          const previousPeriodStart = new Date(periodStart.getTime() - (now.getTime() - periodStart.getTime()));
+          const previousPeriodStart = new Date(
+            periodStart.getTime() - (now.getTime() - periodStart.getTime())
+          );
           const { data: previousShipments } = await supabaseAdmin
             .from('shipments')
             .select('final_price, base_price')
             .gte('created_at', previousPeriodStart.toISOString())
             .lt('created_at', periodStart.toISOString());
-          
+
           if (previousShipments) {
-            const prevRevenue = previousShipments.reduce((sum, s) => sum + (parseFloat(s.final_price) || 0), 0);
-            const prevMargin = prevRevenue - previousShipments.reduce((sum, s) => sum + (parseFloat(s.base_price) || 0), 0);
-            
+            const prevRevenue = previousShipments.reduce(
+              (sum, s) => sum + (parseFloat(s.final_price) || 0),
+              0
+            );
+            const prevMargin =
+              prevRevenue -
+              previousShipments.reduce((sum, s) => sum + (parseFloat(s.base_price) || 0), 0);
+
             (analysis as any).comparison = {
               revenueChange: Math.round((totalRevenue - prevRevenue) * 100) / 100,
-              revenueChangePercent: prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100 * 100) / 100 : 0,
+              revenueChangePercent:
+                prevRevenue > 0
+                  ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100 * 100) / 100
+                  : 0,
               marginChange: Math.round((totalMargin - prevMargin) * 100) / 100,
-              marginChangePercent: prevMargin > 0 ? Math.round(((totalMargin - prevMargin) / prevMargin) * 100 * 100) / 100 : 0,
+              marginChangePercent:
+                prevMargin > 0
+                  ? Math.round(((totalMargin - prevMargin) / prevMargin) * 100 * 100) / 100
+                  : 0,
             };
           }
         }
-        
+
         return {
           success: true,
           result: analysis,
         };
       }
-      
+
       case 'check_error_logs': {
         if (userRole !== 'admin') {
           return {
@@ -437,24 +478,24 @@ export async function executeTool(
             error: 'Funzione disponibile solo per admin',
           };
         }
-        
+
         const severity = toolCall.arguments.severity;
         const hours = toolCall.arguments.hours || 24;
         const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-        
+
         let query = supabaseAdmin
           .from('audit_logs')
           .select('*')
           .gte('created_at', since.toISOString())
           .order('created_at', { ascending: false })
           .limit(20);
-        
+
         if (severity) {
           query = query.eq('severity', severity);
         }
-        
+
         const { data: errors, error } = await query;
-        
+
         if (error) {
           return {
             success: false,
@@ -462,10 +503,10 @@ export async function executeTool(
             error: `Errore recupero log: ${error.message}`,
           };
         }
-        
+
         const criticalCount = errors?.filter((e: any) => e.severity === 'critical').length || 0;
         const errorCount = errors?.filter((e: any) => e.severity === 'error').length || 0;
-        
+
         return {
           success: true,
           result: {
@@ -473,41 +514,44 @@ export async function executeTool(
             critical: criticalCount,
             errors: errorCount,
             warnings: (errors?.length || 0) - criticalCount - errorCount,
-            logs: errors?.slice(0, 10).map((e: any) => ({
-              severity: e.severity,
-              message: e.message,
-              timestamp: e.created_at,
-              endpoint: e.endpoint,
-            })) || [],
+            logs:
+              errors?.slice(0, 10).map((e: any) => ({
+                severity: e.severity,
+                message: e.message,
+                timestamp: e.created_at,
+                endpoint: e.endpoint,
+              })) || [],
             health: criticalCount > 0 ? 'critical' : errorCount > 5 ? 'degraded' : 'healthy',
           },
         };
       }
-      
+
       case 'create_batch_shipments': {
-        const { parseShipmentsData, createBatchShipments } = await import('./tools/shipments-batch');
-        
+        const { parseShipmentsData, createBatchShipments } =
+          await import('./tools/shipments-batch');
+
         try {
           // Parse CSV data
           const shipmentsData = parseShipmentsData(toolCall.arguments.csvData);
-          
+
           if (shipmentsData.length === 0) {
             return {
               success: false,
               result: null,
-              error: 'Nessuna spedizione valida trovata nel file. Verifica che contenga le colonne obbligatorie: nome, indirizzo, città, cap, peso',
+              error:
+                'Nessuna spedizione valida trovata nel file. Verifica che contenga le colonne obbligatorie: nome, indirizzo, città, cap, peso',
             };
           }
-          
+
           console.log(`📦 [ANNE BATCH] Trovate ${shipmentsData.length} spedizioni da creare`);
-          
+
           // Crea spedizioni in batch
           const result = await createBatchShipments(
             shipmentsData,
             userId,
             toolCall.arguments.defaultSender
           );
-          
+
           return {
             success: true,
             result: {
@@ -533,7 +577,7 @@ export async function executeTool(
           };
         }
       }
-      
+
       default:
         return {
           success: false,
@@ -550,5 +594,3 @@ export async function executeTool(
     };
   }
 }
-
-

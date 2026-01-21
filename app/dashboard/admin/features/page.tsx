@@ -1,6 +1,6 @@
 /**
  * Admin Dashboard - Gestione Features Piattaforma
- * 
+ *
  * Permette al superadmin di attivare/disattivare tutte le features/moduli
  * della piattaforma da un pannello centralizzato.
  */
@@ -66,18 +66,18 @@ export default function PlatformFeaturesPage() {
         if (userResponse.ok) {
           const userResponseData = await userResponse.json();
           console.log('🔍 [FEATURES] Dati utente ricevuti:', userResponseData);
-          
+
           // API restituisce { success: true, user: { account_type, role, ... } }
           const userData = userResponseData.user || userResponseData;
           const accountType = userData.account_type || userData.accountType;
           const role = userData.role;
-          
+
           console.log('🔍 [FEATURES] Verifica autorizzazione:', {
             accountType,
             role,
             email: userData.email,
           });
-          
+
           // Permetti accesso se è superadmin O admin (role) O admin (account_type)
           // L'API backend permette accesso se role === 'admin', quindi allineiamo il frontend
           if (accountType === 'superadmin' || role === 'admin' || accountType === 'admin') {
@@ -87,12 +87,14 @@ export default function PlatformFeaturesPage() {
           } else {
             console.log('❌ [FEATURES] Accesso negato - ruolo non autorizzato');
             setIsAuthorized(false);
-            setError(`Accesso negato. Ruolo attuale: ${role || 'N/A'}, Account Type: ${accountType || 'N/A'}. Solo gli admin possono gestire le features.`);
+            setError(
+              `Accesso negato. Ruolo attuale: ${role || 'N/A'}, Account Type: ${accountType || 'N/A'}. Solo gli admin possono gestire le features.`
+            );
           }
         } else {
           const errorText = await userResponse.text();
           console.error('❌ [FEATURES] Errore API user/info:', errorText);
-          
+
           // Fallback: verifica tramite API admin/overview (se funziona, è admin)
           const response = await fetch('/api/admin/overview');
           if (response.ok) {
@@ -108,7 +110,9 @@ export default function PlatformFeaturesPage() {
       } catch (error) {
         console.error('❌ [FEATURES] Errore verifica autorizzazione:', error);
         setIsAuthorized(false);
-        setError(`Errore durante la verifica dei permessi: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+        setError(
+          `Errore durante la verifica dei permessi: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
+        );
       } finally {
         setIsLoading(false);
       }
@@ -183,13 +187,16 @@ export default function PlatformFeaturesPage() {
   }
 
   // Raggruppa features per categoria
-  const featuresByCategory = features.reduce((acc, feature) => {
-    if (!acc[feature.category]) {
-      acc[feature.category] = [];
-    }
-    acc[feature.category].push(feature);
-    return acc;
-  }, {} as Record<string, PlatformFeature[]>);
+  const featuresByCategory = features.reduce(
+    (acc, feature) => {
+      if (!acc[feature.category]) {
+        acc[feature.category] = [];
+      }
+      acc[feature.category].push(feature);
+      return acc;
+    },
+    {} as Record<string, PlatformFeature[]>
+  );
 
   // Ordina categorie
   const categories = Object.keys(featuresByCategory).sort();
@@ -211,10 +218,14 @@ export default function PlatformFeaturesPage() {
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Accesso Negato</h2>
-          <p className="text-gray-600 mb-4">{error || 'Solo gli admin possono accedere a questa pagina'}</p>
+          <p className="text-gray-600 mb-4">
+            {error || 'Solo gli admin possono accedere a questa pagina'}
+          </p>
           <div className="mt-4 p-4 bg-gray-50 rounded-lg text-left text-sm">
             <p className="font-semibold mb-2">Debug Info:</p>
-            <p className="text-gray-600">Apri la console del browser (F12) per vedere i dettagli dell&apos;errore.</p>
+            <p className="text-gray-600">
+              Apri la console del browser (F12) per vedere i dettagli dell&apos;errore.
+            </p>
             <p className="text-gray-600 mt-2">Cerca i log che iniziano con: 🔍 [FEATURES]</p>
           </div>
         </div>
@@ -277,10 +288,12 @@ export default function PlatformFeaturesPage() {
                 </p>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                   <li>
-                    <strong>Attiva/Disattiva:</strong> Se disattivata, la feature non funziona (anche se visibile)
+                    <strong>Attiva/Disattiva:</strong> Se disattivata, la feature non funziona
+                    (anche se visibile)
                   </li>
                   <li>
-                    <strong>Visibile/Nascosta:</strong> Se nascosta, la feature non appare nel menu (anche se attiva)
+                    <strong>Visibile/Nascosta:</strong> Se nascosta, la feature non appare nel menu
+                    (anche se attiva)
                   </li>
                 </ul>
               </div>
@@ -297,7 +310,10 @@ export default function PlatformFeaturesPage() {
           ) : (
             <div className="space-y-6">
               {categories.map((category) => (
-                <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div
+                  key={category}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                >
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
                     <h2 className="text-xl font-bold text-white capitalize">
                       {category === 'user' ? 'Features Utente' : category}
@@ -315,7 +331,9 @@ export default function PlatformFeaturesPage() {
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="text-lg font-semibold text-gray-900">{feature.name}</h3>
+                                  <h3 className="text-lg font-semibold text-gray-900">
+                                    {feature.name}
+                                  </h3>
                                   {feature.route_path && (
                                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                       {feature.route_path}
@@ -323,7 +341,9 @@ export default function PlatformFeaturesPage() {
                                   )}
                                 </div>
                                 {feature.description && (
-                                  <p className="text-sm text-gray-600 mb-2">{feature.description}</p>
+                                  <p className="text-sm text-gray-600 mb-2">
+                                    {feature.description}
+                                  </p>
                                 )}
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -429,9 +449,3 @@ export default function PlatformFeaturesPage() {
     </>
   );
 }
-
-
-
-
-
-

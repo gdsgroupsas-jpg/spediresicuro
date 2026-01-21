@@ -1,6 +1,6 @@
 /**
  * Pagina Dettaglio Listino
- * 
+ *
  * Visualizza e modifica listino completo con:
  * - Editor regole PriceRule
  * - Caricamento tariffe
@@ -8,11 +8,11 @@
  * - Audit trail
  */
 
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   ArrowLeft,
   Save,
@@ -29,82 +29,89 @@ import {
   Package,
   X,
   Copy,
-  Calendar
-} from 'lucide-react'
-import { toast } from 'sonner'
-import DashboardNav from '@/components/dashboard-nav'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Select } from '@/components/ui/select'
-import { getPriceListByIdAction, updatePriceListAction, getPriceListAuditEventsAction } from '@/actions/price-lists'
-import { upsertPriceListEntriesAction, deletePriceListEntryAction } from '@/actions/price-list-entries'
-import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog'
-import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix'
-import type { PriceList, PriceRule, PriceListEntry } from '@/types/listini'
+  Calendar,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import DashboardNav from '@/components/dashboard-nav';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import {
+  getPriceListByIdAction,
+  updatePriceListAction,
+  getPriceListAuditEventsAction,
+} from '@/actions/price-lists';
+import {
+  upsertPriceListEntriesAction,
+  deletePriceListEntryAction,
+} from '@/actions/price-list-entries';
+import { SupplierPriceListConfigDialog } from '@/components/listini/supplier-price-list-config-dialog';
+import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix';
+import type { PriceList, PriceRule, PriceListEntry } from '@/types/listini';
 
 export default function PriceListDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { data: session } = useSession()
-  const [priceList, setPriceList] = useState<PriceList | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [rules, setRules] = useState<PriceRule[]>([])
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSavingRules, setIsSavingRules] = useState(false)
-  const [showConfigDialog, setShowConfigDialog] = useState(false)
+  const params = useParams();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [priceList, setPriceList] = useState<PriceList | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [rules, setRules] = useState<PriceRule[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSavingRules, setIsSavingRules] = useState(false);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
 
   useEffect(() => {
     if (params.id) {
-      loadPriceList(params.id as string)
+      loadPriceList(params.id as string);
     }
-  }, [params.id])
+  }, [params.id]);
 
   async function loadPriceList(id: string) {
     try {
-      setIsLoading(true)
-      const result = await getPriceListByIdAction(id)
+      setIsLoading(true);
+      const result = await getPriceListByIdAction(id);
       if (result.success && result.priceList) {
-        const list = result.priceList as PriceList
-        setPriceList(list)
-        setRules((list.rules as PriceRule[]) || [])
+        const list = result.priceList as PriceList;
+        setPriceList(list);
+        setRules((list.rules as PriceRule[]) || []);
       } else {
-        toast.error(result.error || 'Listino non trovato')
-        router.push('/dashboard/listini')
+        toast.error(result.error || 'Listino non trovato');
+        router.push('/dashboard/listini');
       }
     } catch (error: any) {
-      toast.error('Errore caricamento listino')
-      console.error(error)
+      toast.error('Errore caricamento listino');
+      console.error(error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   async function saveRules() {
-    if (!priceList) return
+    if (!priceList) return;
 
     try {
-      setIsSavingRules(true)
+      setIsSavingRules(true);
       const result = await updatePriceListAction(priceList.id, {
-        rules: rules
-      })
+        rules: rules,
+      });
 
       if (result.success) {
-        toast.success('Regole salvate con successo')
-        setIsEditing(false)
+        toast.success('Regole salvate con successo');
+        setIsEditing(false);
         // Ricarica listino per avere dati aggiornati
-        await loadPriceList(priceList.id)
+        await loadPriceList(priceList.id);
       } else {
-        toast.error(result.error || 'Errore salvataggio regole')
+        toast.error(result.error || 'Errore salvataggio regole');
       }
     } catch (error: any) {
-      toast.error('Errore durante il salvataggio')
-      console.error(error)
+      toast.error('Errore durante il salvataggio');
+      console.error(error);
     } finally {
-      setIsSavingRules(false)
+      setIsSavingRules(false);
     }
   }
 
@@ -116,11 +123,11 @@ export default function PriceListDetailPage() {
           <p className="text-gray-600">Caricamento listino...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!priceList) {
-    return null
+    return null;
   }
 
   return (
@@ -156,20 +163,17 @@ export default function PriceListDetailPage() {
               )}
               {isEditing && (
                 <>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
-                      setIsEditing(false)
-                      setRules((priceList?.rules as PriceRule[]) || [])
+                      setIsEditing(false);
+                      setRules((priceList?.rules as PriceRule[]) || []);
                     }}
                     disabled={isSavingRules}
                   >
                     Annulla
                   </Button>
-                  <Button 
-                    onClick={saveRules}
-                    disabled={isSavingRules}
-                  >
+                  <Button onClick={saveRules} disabled={isSavingRules}>
                     <Save className="mr-2 h-4 w-4" />
                     {isSavingRules ? 'Salvataggio...' : 'Salva'}
                   </Button>
@@ -200,11 +204,7 @@ export default function PriceListDetailPage() {
           </TabsList>
 
           <TabsContent value="rules" className="mt-6">
-            <PriceRulesEditor
-              rules={rules}
-              onChange={setRules}
-              isEditing={isEditing}
-            />
+            <PriceRulesEditor rules={rules} onChange={setRules} isEditing={isEditing} />
           </TabsContent>
 
           <TabsContent value="upload" className="mt-6">
@@ -212,8 +212,8 @@ export default function PriceListDetailPage() {
           </TabsContent>
 
           <TabsContent value="preview" className="mt-6">
-            <PriceCalculatorPreview 
-              priceListId={priceList.id} 
+            <PriceCalculatorPreview
+              priceListId={priceList.id}
               isEditing={isEditing}
               onSaveComplete={() => {
                 if (priceList.id) {
@@ -246,18 +246,18 @@ export default function PriceListDetailPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // Componente Editor Regole
-function PriceRulesEditor({ 
-  rules, 
-  onChange, 
-  isEditing 
-}: { 
-  rules: PriceRule[]
-  onChange: (rules: PriceRule[]) => void
-  isEditing: boolean
+function PriceRulesEditor({
+  rules,
+  onChange,
+  isEditing,
+}: {
+  rules: PriceRule[];
+  onChange: (rules: PriceRule[]) => void;
+  isEditing: boolean;
 }) {
   const addRule = () => {
     const newRule: PriceRule = {
@@ -267,19 +267,19 @@ function PriceRulesEditor({
       margin_value: 10,
       priority: 0,
       is_active: true,
-    }
-    onChange([...rules, newRule])
-  }
+    };
+    onChange([...rules, newRule]);
+  };
 
   const updateRule = (index: number, updates: Partial<PriceRule>) => {
-    const updated = [...rules]
-    updated[index] = { ...updated[index], ...updates }
-    onChange(updated)
-  }
+    const updated = [...rules];
+    updated[index] = { ...updated[index], ...updates };
+    onChange(updated);
+  };
 
   const deleteRule = (index: number) => {
-    onChange(rules.filter((_, i) => i !== index))
-  }
+    onChange(rules.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -324,7 +324,9 @@ function PriceRulesEditor({
                         className="font-medium"
                       />
                     ) : (
-                      <h3 className="font-medium text-gray-900">{rule.name || `Regola ${index + 1}`}</h3>
+                      <h3 className="font-medium text-gray-900">
+                        {rule.name || `Regola ${index + 1}`}
+                      </h3>
                     )}
                     <Badge variant={rule.is_active ? 'success' : 'secondary'}>
                       {rule.is_active ? 'Attiva' : 'Disattiva'}
@@ -338,7 +340,11 @@ function PriceRulesEditor({
                         <Input
                           type="number"
                           value={rule.weight_from || ''}
-                          onChange={(e) => updateRule(index, { weight_from: parseFloat(e.target.value) || undefined })}
+                          onChange={(e) =>
+                            updateRule(index, {
+                              weight_from: parseFloat(e.target.value) || undefined,
+                            })
+                          }
                           placeholder="0"
                         />
                       </div>
@@ -347,7 +353,11 @@ function PriceRulesEditor({
                         <Input
                           type="number"
                           value={rule.weight_to || ''}
-                          onChange={(e) => updateRule(index, { weight_to: parseFloat(e.target.value) || undefined })}
+                          onChange={(e) =>
+                            updateRule(index, {
+                              weight_to: parseFloat(e.target.value) || undefined,
+                            })
+                          }
                           placeholder="∞"
                         />
                       </div>
@@ -356,7 +366,11 @@ function PriceRulesEditor({
                         <Input
                           type="number"
                           value={rule.margin_value || ''}
-                          onChange={(e) => updateRule(index, { margin_value: parseFloat(e.target.value) || undefined })}
+                          onChange={(e) =>
+                            updateRule(index, {
+                              margin_value: parseFloat(e.target.value) || undefined,
+                            })
+                          }
                           placeholder="10"
                         />
                       </div>
@@ -364,7 +378,11 @@ function PriceRulesEditor({
                         <Label className="text-xs">Tipo Margine</Label>
                         <Select
                           value={rule.margin_type}
-                          onChange={(e) => updateRule(index, { margin_type: e.target.value as 'percent' | 'fixed' | 'none' })}
+                          onChange={(e) =>
+                            updateRule(index, {
+                              margin_type: e.target.value as 'percent' | 'fixed' | 'none',
+                            })
+                          }
                         >
                           <option value="percent">Percentuale</option>
                           <option value="fixed">Fisso (€)</option>
@@ -390,40 +408,40 @@ function PriceRulesEditor({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // Componente Upload Tariffe
 function TariffUploader({ priceListId }: { priceListId: string }) {
-  const [isUploading, setIsUploading] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const handleUpload = async (file: File) => {
     try {
-      setIsUploading(true)
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('priceListId', priceListId)
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('priceListId', priceListId);
 
       const response = await fetch('/api/price-lists/upload', {
         method: 'POST',
         body: formData,
-      })
+      });
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
-        toast.success(`File processato: ${result.data.length} righe trovate`)
+        toast.success(`File processato: ${result.data.length} righe trovate`);
       } else {
-        toast.error(result.error || 'Errore upload file')
+        toast.error(result.error || 'Errore upload file');
       }
     } catch (error: any) {
-      toast.error('Errore imprevisto durante upload')
-      console.error(error)
+      toast.error('Errore imprevisto durante upload');
+      console.error(error);
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
-  }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -437,15 +455,15 @@ function TariffUploader({ priceListId }: { priceListId: string }) {
           dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
         }`}
         onDragOver={(e) => {
-          e.preventDefault()
-          setDragActive(true)
+          e.preventDefault();
+          setDragActive(true);
         }}
         onDragLeave={() => setDragActive(false)}
         onDrop={(e) => {
-          e.preventDefault()
-          setDragActive(false)
-          const file = e.dataTransfer.files[0]
-          if (file) handleUpload(file)
+          e.preventDefault();
+          setDragActive(false);
+          const file = e.dataTransfer.files[0];
+          if (file) handleUpload(file);
         }}
       >
         <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -458,8 +476,8 @@ function TariffUploader({ priceListId }: { priceListId: string }) {
               className="hidden"
               accept=".csv,.xlsx,.xls,.pdf,.jpg,.jpeg,.png"
               onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleUpload(file)
+                const file = e.target.files?.[0];
+                if (file) handleUpload(file);
               }}
             />
           </label>
@@ -475,15 +493,15 @@ function TariffUploader({ priceListId }: { priceListId: string }) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // Componente Preview Calcolatore - Mostra entries importate in formato MATRICE con EDITING
-function PriceCalculatorPreview({ 
-  priceListId, 
-  isEditing, 
-  onSaveComplete 
-}: { 
+function PriceCalculatorPreview({
+  priceListId,
+  isEditing,
+  onSaveComplete,
+}: {
   priceListId: string;
   isEditing: boolean;
   onSaveComplete: () => void;
@@ -492,7 +510,7 @@ function PriceCalculatorPreview({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   // Stato per editing matrice
   type MatrixRow = {
     id: string;
@@ -502,7 +520,7 @@ function PriceCalculatorPreview({
     fuelSurcharge: number;
     entryIds: Record<string, string | undefined>;
   };
-  
+
   const [editingMatrix, setEditingMatrix] = useState<MatrixRow[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -514,7 +532,7 @@ function PriceCalculatorPreview({
     try {
       setIsLoading(true);
       const result = await getPriceListByIdAction(priceListId);
-      
+
       if (result.success && result.priceList) {
         const priceList = result.priceList as PriceList & { entries?: PriceListEntry[] };
         const loadedEntries = priceList.entries || [];
@@ -541,9 +559,9 @@ function PriceCalculatorPreview({
         return (zoneA?.priority || 999) - (zoneB?.priority || 999);
       });
 
-    const uniqueWeights = Array.from(
-      new Set(entriesData.map((e) => e.weight_to))
-    ).sort((a, b) => a - b);
+    const uniqueWeights = Array.from(new Set(entriesData.map((e) => e.weight_to))).sort(
+      (a, b) => a - b
+    );
 
     const matrixRows: MatrixRow[] = [];
 
@@ -647,17 +665,13 @@ function PriceCalculatorPreview({
       });
 
     const lastWeight =
-      editingMatrix.length > 0
-        ? editingMatrix[editingMatrix.length - 1].weightTo
-        : 0;
+      editingMatrix.length > 0 ? editingMatrix[editingMatrix.length - 1].weightTo : 0;
 
     const newRow: MatrixRow = {
       id: `row-new-${Date.now()}`,
       weightFrom: lastWeight,
       weightTo: lastWeight + 1,
-      prices: Object.fromEntries(
-        sortedZones.map((z) => [z, -1])
-      ),
+      prices: Object.fromEntries(sortedZones.map((z) => [z, -1])),
       fuelSurcharge: 0,
       entryIds: {},
     };
@@ -668,7 +682,7 @@ function PriceCalculatorPreview({
 
   // Elimina riga
   function removeRow(rowId: string) {
-    if (!confirm("Sei sicuro di voler eliminare questa fascia di peso?")) {
+    if (!confirm('Sei sicuro di voler eliminare questa fascia di peso?')) {
       return;
     }
 
@@ -703,7 +717,7 @@ function PriceCalculatorPreview({
         weight_to: number;
         zone_code?: string;
         base_price: number;
-        service_type: "standard";
+        service_type: 'standard';
         fuel_surcharge_percent: number;
       }> = [];
 
@@ -718,7 +732,7 @@ function PriceCalculatorPreview({
               weight_to: row.weightTo,
               zone_code: zoneCode,
               base_price: price,
-              service_type: "standard",
+              service_type: 'standard',
               fuel_surcharge_percent: row.fuelSurcharge,
             });
           }
@@ -746,10 +760,7 @@ function PriceCalculatorPreview({
       }
 
       // Salva entries nuove/modificate
-      const result = await upsertPriceListEntriesAction(
-        priceListId,
-        entriesToSave
-      );
+      const result = await upsertPriceListEntriesAction(priceListId, entriesToSave);
 
       if (result.success) {
         const messages = [];
@@ -762,18 +773,16 @@ function PriceCalculatorPreview({
         if (deletedCount > 0) {
           messages.push(`${deletedCount} eliminate`);
         }
-        toast.success(
-          `Modifiche salvate: ${messages.join(", ")}`
-        );
+        toast.success(`Modifiche salvate: ${messages.join(', ')}`);
         setHasUnsavedChanges(false);
         await loadEntries();
         onSaveComplete();
       } else {
-        toast.error(result.error || "Errore salvataggio");
+        toast.error(result.error || 'Errore salvataggio');
       }
     } catch (error: any) {
-      console.error("Errore salvataggio batch:", error);
-      toast.error("Errore durante il salvataggio");
+      console.error('Errore salvataggio batch:', error);
+      toast.error('Errore durante il salvataggio');
     } finally {
       setIsSaving(false);
     }
@@ -782,7 +791,7 @@ function PriceCalculatorPreview({
   // Annulla modifiche e ricarica dati originali
   function cancelEditing() {
     if (hasUnsavedChanges) {
-      if (!confirm("Hai modifiche non salvate. Sei sicuro di voler annullare?")) {
+      if (!confirm('Hai modifiche non salvate. Sei sicuro di voler annullare?')) {
         return;
       }
     }
@@ -802,9 +811,9 @@ function PriceCalculatorPreview({
 
   // Formatta valuta
   function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("it-IT", {
-      style: "currency",
-      currency: "EUR",
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
     }).format(value);
   }
 
@@ -812,38 +821,38 @@ function PriceCalculatorPreview({
   function normalizeZoneCode(code: string | undefined | null): string | null {
     if (!code) return null;
 
-    const normalized = code.toLowerCase().replace(/[_\-\s]+/g, "_");
+    const normalized = code.toLowerCase().replace(/[_\-\s]+/g, '_');
 
     const legacyMap: Record<string, string> = {
-      it_std: "IT-ITALIA",
-      it_cal: "IT-CALABRIA",
-      it_sic: "IT-SICILIA",
-      it_sar: "IT-SARDEGNA",
-      it_ven: "IT-DISAGIATE",
-      it_liv: "IT-LIVIGNO",
-      it_iso: "IT-ISOLE-MINORI",
-      eu_z1: "EU-ZONA1",
-      eu_z2: "EU-ZONA2",
+      it_std: 'IT-ITALIA',
+      it_cal: 'IT-CALABRIA',
+      it_sic: 'IT-SICILIA',
+      it_sar: 'IT-SARDEGNA',
+      it_ven: 'IT-DISAGIATE',
+      it_liv: 'IT-LIVIGNO',
+      it_iso: 'IT-ISOLE-MINORI',
+      eu_z1: 'EU-ZONA1',
+      eu_z2: 'EU-ZONA2',
     };
 
     const nameMap: Record<string, string> = {
-      italia: "IT-ITALIA",
-      sardegna: "IT-SARDEGNA",
-      calabria: "IT-CALABRIA",
-      sicilia: "IT-SICILIA",
-      livigno: "IT-LIVIGNO",
-      campione: "IT-LIVIGNO",
-      livigno_campione: "IT-LIVIGNO",
-      isole_minori: "IT-ISOLE-MINORI",
-      isole: "IT-ISOLE-MINORI",
-      localita_disagiate: "IT-DISAGIATE",
-      disagiate: "IT-DISAGIATE",
-      europa1: "EU-ZONA1",
-      europa_1: "EU-ZONA1",
-      europa_zona_1: "EU-ZONA1",
-      europa2: "EU-ZONA2",
-      europa_2: "EU-ZONA2",
-      europa_zona_2: "EU-ZONA2",
+      italia: 'IT-ITALIA',
+      sardegna: 'IT-SARDEGNA',
+      calabria: 'IT-CALABRIA',
+      sicilia: 'IT-SICILIA',
+      livigno: 'IT-LIVIGNO',
+      campione: 'IT-LIVIGNO',
+      livigno_campione: 'IT-LIVIGNO',
+      isole_minori: 'IT-ISOLE-MINORI',
+      isole: 'IT-ISOLE-MINORI',
+      localita_disagiate: 'IT-DISAGIATE',
+      disagiate: 'IT-DISAGIATE',
+      europa1: 'EU-ZONA1',
+      europa_1: 'EU-ZONA1',
+      europa_zona_1: 'EU-ZONA1',
+      europa2: 'EU-ZONA2',
+      europa_2: 'EU-ZONA2',
+      europa_zona_2: 'EU-ZONA2',
     };
 
     if (legacyMap[normalized]) {
@@ -871,9 +880,9 @@ function PriceCalculatorPreview({
         return (zoneA?.priority || 999) - (zoneB?.priority || 999);
       });
 
-    const uniqueWeights = Array.from(
-      new Set(entries.map((e) => e.weight_to))
-    ).sort((a, b) => a - b);
+    const uniqueWeights = Array.from(new Set(entries.map((e) => e.weight_to))).sort(
+      (a, b) => a - b
+    );
 
     type MergedRow = {
       weightFrom: number;
@@ -887,13 +896,12 @@ function PriceCalculatorPreview({
     const getPricesForWeight = (w: number) => {
       const rowPrices: Record<string, number> = {};
       let fuelSurcharge = 0;
-      
+
       sortedZones.forEach((zoneCode) => {
         const entry = entries.find((e) => {
           const normalizedEntryZone = normalizeZoneCode(e.zone_code);
           return (
-            (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) &&
-            e.weight_to === w
+            (normalizedEntryZone === zoneCode || e.zone_code === zoneCode) && e.weight_to === w
           );
         });
         rowPrices[zoneCode] = entry ? entry.base_price : -1;
@@ -904,10 +912,7 @@ function PriceCalculatorPreview({
       return { prices: rowPrices, fuelSurcharge };
     };
 
-    const arePricesIdentical = (
-      p1: Record<string, number>,
-      p2: Record<string, number>
-    ) => {
+    const arePricesIdentical = (p1: Record<string, number>, p2: Record<string, number>) => {
       return sortedZones.every((z) => p1[z] === p2[z]);
     };
 
@@ -978,7 +983,7 @@ function PriceCalculatorPreview({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setRefreshKey(prev => prev + 1)}
+              onClick={() => setRefreshKey((prev) => prev + 1)}
               className="gap-2"
             >
               <RefreshCw className="h-4 w-4" />
@@ -995,7 +1000,7 @@ function PriceCalculatorPreview({
                 className="gap-2 bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4" />
-                {isSaving ? "Salvataggio..." : "Salva Tutto"}
+                {isSaving ? 'Salvataggio...' : 'Salva Tutto'}
               </Button>
               <Button
                 variant="outline"
@@ -1018,10 +1023,7 @@ function PriceCalculatorPreview({
                 Nuova Fascia
               </Button>
               {hasUnsavedChanges && (
-                <Badge
-                  variant="outline"
-                  className="bg-orange-50 text-orange-700"
-                >
+                <Badge variant="outline" className="bg-orange-50 text-orange-700">
                   Modifiche non salvate
                 </Badge>
               )}
@@ -1030,14 +1032,13 @@ function PriceCalculatorPreview({
         </div>
       </div>
 
-      {displayRows.length === 0 &&
-      entries.length === 0 &&
-      !isEditing ? (
+      {displayRows.length === 0 && entries.length === 0 && !isEditing ? (
         <div className="p-12 text-center">
           <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-600 mb-2">Nessuna tariffa nel listino</p>
           <p className="text-sm text-gray-500">
-            Usa la tab &quot;Carica Tariffe&quot; per importare tariffe da CSV o aggiungerle manualmente
+            Usa la tab &quot;Carica Tariffe&quot; per importare tariffe da CSV o aggiungerle
+            manualmente
           </p>
         </div>
       ) : (
@@ -1049,9 +1050,7 @@ function PriceCalculatorPreview({
                   Peso (KG)
                 </th>
                 {sortedZones.map((zoneCode) => {
-                  const zone = PRICING_MATRIX.ZONES.find(
-                    (z) => z.code === zoneCode
-                  );
+                  const zone = PRICING_MATRIX.ZONES.find((z) => z.code === zoneCode);
                   const zoneName = zone?.name || zoneCode;
                   return (
                     <th
@@ -1075,9 +1074,7 @@ function PriceCalculatorPreview({
             </thead>
             <tbody className="divide-y divide-gray-200">
               {displayRows.map((row, idx) => {
-                const rowId = isEditing
-                  ? (row as MatrixRow).id
-                  : `row-${idx}`;
+                const rowId = isEditing ? (row as MatrixRow).id : `row-${idx}`;
                 const rowData = isEditing
                   ? (row as MatrixRow)
                   : {
@@ -1099,8 +1096,7 @@ function PriceCalculatorPreview({
                             step="0.1"
                             value={rowData.weightTo}
                             onChange={(e) => {
-                              const newWeight =
-                                parseFloat(e.target.value) || 0;
+                              const newWeight = parseFloat(e.target.value) || 0;
                               updateMatrixWeight(rowId, newWeight);
                             }}
                             className="w-20 text-center"
@@ -1112,7 +1108,7 @@ function PriceCalculatorPreview({
                         <>
                           {rowData.weightFrom === 0
                             ? `Fino a ${rowData.weightTo}`
-                            : `${rowData.weightFrom} - ${rowData.weightTo}`}{" "}
+                            : `${rowData.weightFrom} - ${rowData.weightTo}`}{' '}
                           kg
                         </>
                       )}
@@ -1121,20 +1117,15 @@ function PriceCalculatorPreview({
                     {sortedZones.map((zoneCode) => {
                       const price = rowData.prices[zoneCode] ?? -1;
                       return (
-                        <td
-                          key={`${rowId}-${zoneCode}`}
-                          className="px-4 py-3 text-center"
-                        >
+                        <td key={`${rowId}-${zoneCode}`} className="px-4 py-3 text-center">
                           {isEditing ? (
                             <Input
                               type="number"
                               step="0.01"
-                              value={price >= 0 ? price : ""}
+                              value={price >= 0 ? price : ''}
                               onChange={(e) => {
                                 const value =
-                                  e.target.value === ""
-                                    ? -1
-                                    : parseFloat(e.target.value) || 0;
+                                  e.target.value === '' ? -1 : parseFloat(e.target.value) || 0;
                                 updateMatrixPrice(rowId, zoneCode, value);
                               }}
                               placeholder="-"
@@ -1147,14 +1138,10 @@ function PriceCalculatorPreview({
                                 <>
                                   <span
                                     className={`font-bold ${
-                                      price === 0
-                                        ? "text-gray-400"
-                                        : "text-gray-900"
+                                      price === 0 ? 'text-gray-400' : 'text-gray-900'
                                     }`}
                                   >
-                                    {price === 0
-                                      ? "0,00 €"
-                                      : formatCurrency(price)}
+                                    {price === 0 ? '0,00 €' : formatCurrency(price)}
                                   </span>
                                   {price === 0 && (
                                     <span className="text-[10px] text-orange-500 font-medium">
@@ -1186,9 +1173,7 @@ function PriceCalculatorPreview({
                         />
                       ) : (
                         <span className="font-semibold text-gray-900">
-                          {rowData.fuelSurcharge > 0
-                            ? `${rowData.fuelSurcharge}%`
-                            : "-"}
+                          {rowData.fuelSurcharge > 0 ? `${rowData.fuelSurcharge}%` : '-'}
                         </span>
                       )}
                     </td>
@@ -1311,7 +1296,7 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
 
   function exportToCSV() {
     const headers = ['Data', 'Evento', 'Attore', 'Messaggio', 'Dettagli'];
-    const rows = events.map(e => [
+    const rows = events.map((e) => [
       formatDate(e.created_at),
       e.event_type,
       e.actor_email || 'system',
@@ -1320,7 +1305,7 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
     ]);
 
     const csv = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -1353,21 +1338,11 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportToCSV}
-            className="gap-2"
-          >
+          <Button variant="outline" size="sm" onClick={exportToCSV} className="gap-2">
             <FileText className="h-4 w-4" />
             Export CSV
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadEvents}
-            className="gap-2"
-          >
+          <Button variant="outline" size="sm" onClick={loadEvents} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Aggiorna
           </Button>
@@ -1392,9 +1367,7 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
               </option>
             ))}
           </Select>
-          <div className="text-sm text-gray-500 ml-auto">
-            Totale: {totalCount} eventi
-          </div>
+          <div className="text-sm text-gray-500 ml-auto">Totale: {totalCount} eventi</div>
         </div>
       </div>
 
@@ -1413,12 +1386,14 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
             {events.map((event) => {
               const Icon = getEventIcon(event.event_type);
               const isIconComponent = typeof Icon !== 'string';
-              
+
               return (
                 <div key={event.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start gap-4">
                     {/* Icona evento */}
-                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getEventColor(event.event_type)}`}>
+                    <div
+                      className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getEventColor(event.event_type)}`}
+                    >
                       {isIconComponent ? (
                         <Icon className="h-5 w-5" />
                       ) : (
@@ -1430,7 +1405,8 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-gray-900">
-                          {eventTypes.find(t => t.value === event.event_type)?.label || event.event_type}
+                          {eventTypes.find((t) => t.value === event.event_type)?.label ||
+                            event.event_type}
                         </span>
                         {event.severity && event.severity !== 'info' && (
                           <Badge variant="outline" className="text-xs">
@@ -1465,7 +1441,7 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
                             <div className="mb-2">
                               <span className="font-medium text-red-600">Prima:</span>{' '}
                               <span className="text-gray-700">
-                                {typeof event.old_value === 'object' 
+                                {typeof event.old_value === 'object'
                                   ? JSON.stringify(event.old_value, null, 2)
                                   : String(event.old_value)}
                               </span>
@@ -1504,13 +1480,14 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
           {totalCount > pageSize && (
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
               <div className="text-sm text-gray-500">
-                Mostrando {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalCount)} di {totalCount}
+                Mostrando {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalCount)} di{' '}
+                {totalCount}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
                 >
                   Precedente
@@ -1518,7 +1495,7 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(p => p + 1)}
+                  onClick={() => setPage((p) => p + 1)}
                   disabled={(page + 1) * pageSize >= totalCount}
                 >
                   Successiva

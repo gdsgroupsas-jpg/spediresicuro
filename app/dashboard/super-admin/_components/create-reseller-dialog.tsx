@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { Loader2, Store, Mail, User, Key, Wallet, Sparkles } from 'lucide-react'
-import * as z from 'zod'
+import { useState, useTransition } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { Loader2, Store, Mail, User, Key, Wallet, Sparkles } from 'lucide-react';
+import * as z from 'zod';
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -15,14 +15,14 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 
-import { createReseller } from '@/actions/super-admin'
-import { formatCurrency } from '@/lib/utils'
+import { createReseller } from '@/actions/super-admin';
+import { formatCurrency } from '@/lib/utils';
 
 const createResellerSchema = z.object({
   email: z.string().email('Email non valida'),
@@ -30,21 +30,21 @@ const createResellerSchema = z.object({
   password: z.string().min(8, 'Password minimo 8 caratteri'),
   initialCredit: z.number().min(0, 'Credito non valido').max(10000, 'Credito massimo €10,000'),
   notes: z.string().optional(),
-})
+});
 
-type CreateResellerInput = z.infer<typeof createResellerSchema>
+type CreateResellerInput = z.infer<typeof createResellerSchema>;
 
 interface CreateResellerDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess?: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
-const QUICK_CREDITS = [0, 50, 100, 250, 500, 1000]
+const QUICK_CREDITS = [0, 50, 100, 250, 500, 1000];
 
 export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResellerDialogProps) {
-  const [isPending, startTransition] = useTransition()
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition();
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
 
   const {
     register,
@@ -62,21 +62,24 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
       initialCredit: 100,
       notes: '',
     },
-  })
+  });
 
-  const initialCredit = watch('initialCredit')
+  const initialCredit = watch('initialCredit');
 
   const handleGeneratePassword = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%'
-    const password = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-    setValue('password', password)
-    setGeneratedPassword(password)
-    toast.success('Password generata!')
-  }
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+    const password = Array.from(
+      { length: 12 },
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
+    setValue('password', password);
+    setGeneratedPassword(password);
+    toast.success('Password generata!');
+  };
 
   const handleQuickCredit = (amount: number) => {
-    setValue('initialCredit', amount)
-  }
+    setValue('initialCredit', amount);
+  };
 
   async function onSubmit(data: CreateResellerInput) {
     startTransition(async () => {
@@ -87,38 +90,40 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
           password: data.password,
           initialCredit: data.initialCredit,
           notes: data.notes,
-        })
+        });
 
         if (!result.success) {
-          toast.error(result.error || 'Errore nella creazione reseller')
-          return
+          toast.error(result.error || 'Errore nella creazione reseller');
+          return;
         }
 
         toast.success(
           <div>
             <p className="font-semibold">🎉 Reseller creato con successo!</p>
-            <p className="text-sm mt-1">Account attivato con {formatCurrency(data.initialCredit)} di credito</p>
+            <p className="text-sm mt-1">
+              Account attivato con {formatCurrency(data.initialCredit)} di credito
+            </p>
           </div>
-        )
+        );
 
-        reset()
-        setGeneratedPassword(null)
-        onClose()
-        onSuccess?.()
+        reset();
+        setGeneratedPassword(null);
+        onClose();
+        onSuccess?.();
       } catch (error) {
-        toast.error('Errore imprevisto. Riprova.')
-        console.error('Create reseller error:', error)
+        toast.error('Errore imprevisto. Riprova.');
+        console.error('Create reseller error:', error);
       }
-    })
+    });
   }
 
   const handleClose = () => {
     if (!isPending) {
-      reset()
-      setGeneratedPassword(null)
-      onClose()
+      reset();
+      setGeneratedPassword(null);
+      onClose();
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -157,9 +162,7 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
                   className="mt-1"
                   disabled={isPending}
                 />
-                {errors.name && (
-                  <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
-                )}
+                {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>}
               </div>
 
               <div>
@@ -314,12 +317,7 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isPending}
-            >
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
               Annulla
             </Button>
             <Button
@@ -343,5 +341,5 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

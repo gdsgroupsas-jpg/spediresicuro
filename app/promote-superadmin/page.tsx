@@ -1,50 +1,50 @@
 /**
  * Pagina: Auto-Promozione Superadmin
- * 
+ *
  * Permette agli utenti autorizzati di promuoversi a superadmin
  * senza accesso diretto al database Supabase
  */
 
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Loader2, Shield, CheckCircle2, AlertCircle, LogOut, ArrowRight } from 'lucide-react'
+import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Loader2, Shield, CheckCircle2, AlertCircle, LogOut, ArrowRight } from 'lucide-react';
 
 export default function PromoteSuperadminPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{
-    success: boolean
-    message: string
-    action?: string
-    nextSteps?: string[]
-  } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+    success: boolean;
+    message: string;
+    action?: string;
+    nextSteps?: string[];
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handlePromote() {
-    setIsLoading(true)
-    setError(null)
-    setResult(null)
+    setIsLoading(true);
+    setError(null);
+    setResult(null);
 
     try {
       const response = await fetch('/api/auth/promote-superadmin', {
         method: 'POST',
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Errore durante la promozione')
+        throw new Error(data.message || data.error || 'Errore durante la promozione');
       }
 
-      setResult(data)
+      setResult(data);
     } catch (err: any) {
-      setError(err.message || 'Errore durante la promozione')
+      setError(err.message || 'Errore durante la promozione');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -53,12 +53,12 @@ export default function PromoteSuperadminPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
-    )
+    );
   }
 
   if (!session) {
-    router.push('/login')
-    return null
+    router.push('/login');
+    return null;
   }
 
   return (
@@ -70,9 +70,7 @@ export default function PromoteSuperadminPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
               <Shield className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Promozione Superadmin
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Promozione Superadmin</h1>
             <p className="text-gray-600">
               Email corrente: <strong>{session.user?.email || 'Non disponibile'}</strong>
             </p>
@@ -82,7 +80,8 @@ export default function PromoteSuperadminPage() {
           {!result && !error && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800">
-                ℹ️ Questa funzione promuove automaticamente il tuo account a <strong>Superadmin</strong> 
+                ℹ️ Questa funzione promuove automaticamente il tuo account a{' '}
+                <strong>Superadmin</strong>
                 se la tua email è nella lista autorizzata.
               </p>
             </div>
@@ -140,7 +139,7 @@ export default function PromoteSuperadminPage() {
                 <button
                   onClick={() => {
                     // Logout completo e redirect
-                    window.location.href = '/api/auth/signout?callbackUrl=/login'
+                    window.location.href = '/api/auth/signout?callbackUrl=/login';
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg transition-colors shadow-lg"
                 >
@@ -150,7 +149,8 @@ export default function PromoteSuperadminPage() {
               </div>
               <div className="mt-4 bg-amber-50 border-2 border-amber-400 rounded-lg p-4">
                 <p className="text-sm text-amber-900 font-bold text-center">
-                  ⚠️ IMPORTANTE: Devi fare logout completo e login di nuovo per applicare i permessi superadmin!
+                  ⚠️ IMPORTANTE: Devi fare logout completo e login di nuovo per applicare i permessi
+                  superadmin!
                 </p>
               </div>
             </div>
@@ -179,9 +179,7 @@ export default function PromoteSuperadminPage() {
 
           {/* Email Autorizzate */}
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
-              📧 Email Autorizzate:
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">📧 Email Autorizzate:</h3>
             <ul className="space-y-1 text-sm text-gray-600">
               <li>• sigorn@hotmail.it</li>
               <li>• gdsgroupsas@gmail.com</li>
@@ -202,5 +200,5 @@ export default function PromoteSuperadminPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

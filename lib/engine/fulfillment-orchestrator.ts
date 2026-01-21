@@ -1,9 +1,9 @@
 /**
  * Fulfillment Orchestrator
- * 
+ *
  * Orchestratore intelligente per la creazione di LDV con routing automatico
  * tra adapter diretti (GLS, BRT, etc.) e broker (spedisci.online).
- * 
+ *
  * Strategia:
  * 1. Prova adapter diretto (massima velocità, margine massimo)
  * 2. Se non disponibile, usa broker (spedisci.online)
@@ -39,7 +39,7 @@ export interface FulfillmentConfig {
 
 /**
  * Fulfillment Orchestrator
- * 
+ *
  * Gestisce il routing intelligente per la creazione di LDV
  */
 export class FulfillmentOrchestrator {
@@ -71,46 +71,46 @@ export class FulfillmentOrchestrator {
 
   /**
    * Calcola preventivo usando sistema listini avanzato
-   * 
+   *
    * Recupera listino applicabile e calcola prezzo con regole PriceRule
    */
   async calculateQuote(
     userId: string,
     params: {
-      weight: number
-      volume?: number
+      weight: number;
+      volume?: number;
       destination: {
-        zip?: string
-        province?: string
-        region?: string
-        country?: string
-      }
-      courierId?: string
-      serviceType?: CourierServiceType
+        zip?: string;
+        province?: string;
+        region?: string;
+        country?: string;
+      };
+      courierId?: string;
+      serviceType?: CourierServiceType;
       options?: {
-        declaredValue?: number
-        cashOnDelivery?: boolean
-        insurance?: boolean
-      }
+        declaredValue?: number;
+        cashOnDelivery?: boolean;
+        insurance?: boolean;
+      };
     },
     priceListId?: string
   ): Promise<PriceCalculationResult | null> {
     try {
-      return await calculatePriceWithRules(userId, params, priceListId)
+      return await calculatePriceWithRules(userId, params, priceListId);
     } catch (error: any) {
-      console.error('Errore calcolo preventivo:', error)
-      return null
+      console.error('Errore calcolo preventivo:', error);
+      return null;
     }
   }
 
   /**
    * Crea spedizione con routing intelligente
-   * 
+   *
    * Algoritmo O(1) di Dominio:
    * 1. Se adapter diretto disponibile → usa diretto (massima velocità)
    * 2. Se non disponibile → usa broker (spedisci.online)
    * 3. Se fallisce → genera CSV fallback
-   * 
+   *
    * AGGIORNATO: Calcola anche prezzo usando sistema listini avanzato
    */
   async createShipment(
@@ -130,18 +130,20 @@ export class FulfillmentOrchestrator {
 
     if (this.config.preferDirect) {
       const directAdapter = this.directAdapters.get(normalizedCourier);
-      
+
       console.log(`🔍 [ORCHESTRATOR] Cerca adapter diretto con chiave: "${normalizedCourier}"`);
       console.log(`🔍 [ORCHESTRATOR] Chiavi disponibili:`, Array.from(this.directAdapters.keys()));
 
       if (directAdapter) {
-        console.log(`✅ [ORCHESTRATOR] Adapter diretto trovato per ${normalizedCourier}, creo spedizione...`);
+        console.log(
+          `✅ [ORCHESTRATOR] Adapter diretto trovato per ${normalizedCourier}, creo spedizione...`
+        );
         try {
           const result = await directAdapter.createShipment(shipmentData);
           console.log(`✅ [ORCHESTRATOR] Spedizione creata con successo:`, {
             tracking: result.tracking_number,
             has_label_url: !!result.label_url,
-            has_metadata: !!result.metadata
+            has_metadata: !!result.metadata,
           });
 
           return {
@@ -156,21 +158,24 @@ export class FulfillmentOrchestrator {
           };
         } catch (error: any) {
           console.error(`❌ [ORCHESTRATOR] Adapter diretto ${courierCode} fallito:`, error);
-          
+
           // ⚠️ SICUREZZA: 401/403 = Hard fail (no fallback CSV)
-          const isAuthError = error?.message?.includes('401') || 
-                             error?.message?.includes('403') ||
-                             error?.message?.includes('Authentication Failed') ||
-                             error?.message?.includes('Unauthorized');
-          
+          const isAuthError =
+            error?.message?.includes('401') ||
+            error?.message?.includes('403') ||
+            error?.message?.includes('Authentication Failed') ||
+            error?.message?.includes('Unauthorized');
+
           if (isAuthError) {
-            console.error('🔐 [SECURITY] Errore autenticazione adapter diretto - HARD FAIL (no fallback)');
+            console.error(
+              '🔐 [SECURITY] Errore autenticazione adapter diretto - HARD FAIL (no fallback)'
+            );
             throw new Error(
               `Errore autenticazione corriere ${courierCode}: ${error?.message || 'Credenziali invalide'}\n` +
-              `Verifica le credenziali API nella configurazione.`
+                `Verifica le credenziali API nella configurazione.`
             );
           }
-          
+
           directError = error instanceof Error ? error.message : 'Errore sconosciuto';
           // Continua con broker solo se non è errore auth
         }
@@ -189,7 +194,11 @@ export class FulfillmentOrchestrator {
 
     if (this.config.allowBroker && this.brokerAdapter) {
       console.log('✅ [ORCHESTRATOR] Broker adapter disponibile, uso Spedisci.Online');
-      console.log('✅ [ORCHESTRATOR] Broker path: Utente ha selezionato corriere "' + courierCode + '" → Orchestrator usa broker Spedisci.Online (stessa config DB)');
+      console.log(
+        '✅ [ORCHESTRATOR] Broker path: Utente ha selezionato corriere "' +
+          courierCode +
+          '" → Orchestrator usa broker Spedisci.Online (stessa config DB)'
+      );
       try {
         // Assicura che il corriere sia presente nei dati per il mapping del codice contratto
         const shipmentDataWithCourier = {
@@ -199,19 +208,30 @@ export class FulfillmentOrchestrator {
         };
 
         console.log('📦 [ORCHESTRATOR] Chiamo broker adapter con corriere:', courierCode);
-        console.log('📦 [ORCHESTRATOR] Broker adapter usa la STESSA configurazione DB caricata all\'avvio (configId/providerId/baseUrl visibili nei log precedenti)');
+        console.log(
+          "📦 [ORCHESTRATOR] Broker adapter usa la STESSA configurazione DB caricata all'avvio (configId/providerId/baseUrl visibili nei log precedenti)"
+        );
         const result = await this.brokerAdapter.createShipment(shipmentDataWithCourier);
 
         // ⚠️ CRITICO: Estrai shipmentId dal risultato dell'adapter (può essere nel metadata o direttamente)
-        const shipmentId = (result as any).shipmentId || result.metadata?.shipmentId || result.metadata?.increment_id;
-        
+        const shipmentId =
+          (result as any).shipmentId ||
+          result.metadata?.shipmentId ||
+          result.metadata?.increment_id;
+
         console.log('✅ [ORCHESTRATOR] Broker adapter ha restituito:', {
           has_tracking: !!result.tracking_number,
           has_label: !!result.label_pdf,
           has_metadata: !!result.metadata,
           metadata_keys: result.metadata ? Object.keys(result.metadata) : [],
           shipmentId_trovato: shipmentId || 'NON TROVATO',
-          shipmentId_source: (result as any).shipmentId ? 'direct' : result.metadata?.shipmentId ? 'metadata.shipmentId' : result.metadata?.increment_id ? 'metadata.increment_id' : 'NON TROVATO',
+          shipmentId_source: (result as any).shipmentId
+            ? 'direct'
+            : result.metadata?.shipmentId
+              ? 'metadata.shipmentId'
+              : result.metadata?.increment_id
+                ? 'metadata.increment_id'
+                : 'NON TROVATO',
         });
 
         return {
@@ -235,21 +255,22 @@ export class FulfillmentOrchestrator {
           message: error?.message,
           stack: error?.stack,
         });
-        
+
         // ⚠️ SICUREZZA: 401/403 = Hard fail (no fallback CSV)
-        const isAuthError = error?.message?.includes('401') || 
-                           error?.message?.includes('403') ||
-                           error?.message?.includes('Authentication Failed') ||
-                           error?.message?.includes('Unauthorized');
-        
+        const isAuthError =
+          error?.message?.includes('401') ||
+          error?.message?.includes('403') ||
+          error?.message?.includes('Authentication Failed') ||
+          error?.message?.includes('Unauthorized');
+
         if (isAuthError) {
           console.error('🔐 [SECURITY] Errore autenticazione provider - HARD FAIL (no fallback)');
           throw new Error(
             `Errore autenticazione Spedisci.Online: ${error?.message || 'Credenziali invalide'}\n` +
-            `Verifica le credenziali API nella configurazione.`
+              `Verifica le credenziali API nella configurazione.`
           );
         }
-        
+
         // Salva l'errore per passarlo al fallback (solo per errori non-auth)
         directError = error?.message || 'Errore durante la creazione tramite Spedisci.online';
         // Continua con fallback solo se non è errore auth
@@ -277,7 +298,9 @@ export class FulfillmentOrchestrator {
           carrier: courierCode,
           method: 'fallback',
           error: directError ? `Errore API: ${directError}` : 'Nessun adapter disponibile',
-          message: directError ? `Errore API: ${directError}` : 'CSV generato per upload manuale. Nessun adapter diretto o broker disponibile.',
+          message: directError
+            ? `Errore API: ${directError}`
+            : 'CSV generato per upload manuale. Nessun adapter diretto o broker disponibile.',
         };
       } catch (error) {
         return {
@@ -338,27 +361,29 @@ export class FulfillmentOrchestrator {
       return String(value);
     };
 
-    const header = 'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
+    const header =
+      'destinatario;indirizzo;cap;localita;provincia;country;peso;colli;contrassegno;rif_mittente;rif_destinatario;note;telefono;email_destinatario;contenuto;order_id;totale_ordine;';
 
-    const row = [
-      escapeCSV(recipientName),
-      escapeCSV(recipientAddress),
-      recipientZip,
-      escapeCSV(recipientCity),
-      recipientProvince.toUpperCase().slice(0, 2),
-      'IT',
-      formatValue(weight),
-      '1',
-      formatValue(cashOnDelivery ? cashOnDeliveryAmount : ''),
-      escapeCSV(''),
-      escapeCSV(recipientName),
-      escapeCSV(notes),
-      recipientPhone,
-      recipientEmail,
-      escapeCSV(''),
-      '',
-      formatValue(''),
-    ].join(';') + ';';
+    const row =
+      [
+        escapeCSV(recipientName),
+        escapeCSV(recipientAddress),
+        recipientZip,
+        escapeCSV(recipientCity),
+        recipientProvince.toUpperCase().slice(0, 2),
+        'IT',
+        formatValue(weight),
+        '1',
+        formatValue(cashOnDelivery ? cashOnDeliveryAmount : ''),
+        escapeCSV(''),
+        escapeCSV(recipientName),
+        escapeCSV(notes),
+        recipientPhone,
+        recipientEmail,
+        escapeCSV(''),
+        '',
+        formatValue(''),
+      ].join(';') + ';';
 
     return header + '\n' + row;
   }

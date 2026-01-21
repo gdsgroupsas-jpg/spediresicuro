@@ -9,18 +9,15 @@
  * - Neuromarketing UI principles
  */
 
-"use client";
+'use client';
 
-import AIRoutingAdvisor from "@/components/ai-routing-advisor";
-import DashboardNav from "@/components/dashboard-nav";
-import OCRUpload from "@/components/ocr/ocr-upload";
-import ContractComparison from "@/components/shipments/contract-comparison";
-import { IntelligentQuoteComparator } from "@/components/shipments/intelligent-quote-comparator";
-import AddressFields from "@/components/ui/address-fields";
-import {
-  downloadPDF,
-  generateShipmentPDF,
-} from "@/lib/generate-shipment-document";
+import AIRoutingAdvisor from '@/components/ai-routing-advisor';
+import DashboardNav from '@/components/dashboard-nav';
+import OCRUpload from '@/components/ocr/ocr-upload';
+import ContractComparison from '@/components/shipments/contract-comparison';
+import { IntelligentQuoteComparator } from '@/components/shipments/intelligent-quote-comparator';
+import AddressFields from '@/components/ui/address-fields';
+import { downloadPDF, generateShipmentPDF } from '@/lib/generate-shipment-document';
 import {
   AlertCircle,
   CheckCircle2,
@@ -32,14 +29,14 @@ import {
   Truck,
   User,
   X,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useCallback } from "react";
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 
 // Enterprise Feedback UX Components (Phase 3)
-import { SuccessModal, ErrorDialog } from "@/components/feedback";
-import { useEnterpriseFeedbackUX } from "@/hooks/useEnterpriseFeedbackUX";
-import { formatError } from "@/lib/errors";
+import { SuccessModal, ErrorDialog } from '@/components/feedback';
+import { useEnterpriseFeedbackUX } from '@/hooks/useEnterpriseFeedbackUX';
+import { formatError } from '@/lib/errors';
 
 interface FormData {
   // Mittente
@@ -79,7 +76,7 @@ function SmartInput({
   label,
   value,
   onChange,
-  type = "text",
+  type = 'text',
   required = false,
   placeholder,
   icon: Icon,
@@ -118,13 +115,13 @@ function SmartInput({
           required={required}
           placeholder={placeholder}
           className={`w-full px-4 ${
-            Icon ? "pl-10" : ""
+            Icon ? 'pl-10' : ''
           } pr-10 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
             showError
-              ? "border-red-500 ring-2 ring-red-200 focus:ring-red-500 focus:border-red-600 bg-red-50"
+              ? 'border-red-500 ring-2 ring-red-200 focus:ring-red-500 focus:border-red-600 bg-red-50'
               : showValid
-              ? "border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50"
-              : "border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400"
+                ? 'border-green-500 ring-2 ring-green-200 focus:ring-green-500 focus:border-green-600 bg-green-50'
+                : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
           } focus:outline-none placeholder:text-gray-500`}
         />
         {showValid && (
@@ -138,9 +135,7 @@ function SmartInput({
           </div>
         )}
       </div>
-      {showError && errorMessage && (
-        <p className="text-xs text-red-600">{errorMessage}</p>
-      )}
+      {showError && errorMessage && <p className="text-xs text-red-600">{errorMessage}</p>}
     </div>
   );
 }
@@ -150,7 +145,7 @@ function SmartCard({
   title,
   icon: Icon,
   children,
-  className = "",
+  className = '',
 }: {
   title: string;
   icon?: any;
@@ -215,9 +210,7 @@ function RouteVisualizer({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2 h-2 rounded-full bg-[#FFD700]"></div>
-            <span className="text-sm font-medium text-gray-900">
-              {from.city}
-            </span>
+            <span className="text-sm font-medium text-gray-900">{from.city}</span>
           </div>
           <p className="text-xs text-gray-500 ml-4">{from.province}</p>
         </div>
@@ -259,28 +252,28 @@ export default function NuovaSpedizionePage() {
   } | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
-    mittenteNome: "",
-    mittenteIndirizzo: "",
-    mittenteCitta: "",
-    mittenteProvincia: "",
-    mittenteCap: "",
-    mittenteTelefono: "",
-    mittenteEmail: "",
-    destinatarioNome: "",
-    destinatarioIndirizzo: "",
-    destinatarioCitta: "",
-    destinatarioProvincia: "",
-    destinatarioCap: "",
-    destinatarioTelefono: "",
-    destinatarioEmail: "",
-    peso: "",
-    lunghezza: "",
-    larghezza: "",
-    altezza: "",
-    tipoSpedizione: "standard",
-    corriere: "", // ⚠️ VUOTO - L'utente DEVE selezionare dal preventivatore
-    note: "",
-    contrassegnoAmount: "",
+    mittenteNome: '',
+    mittenteIndirizzo: '',
+    mittenteCitta: '',
+    mittenteProvincia: '',
+    mittenteCap: '',
+    mittenteTelefono: '',
+    mittenteEmail: '',
+    destinatarioNome: '',
+    destinatarioIndirizzo: '',
+    destinatarioCitta: '',
+    destinatarioProvincia: '',
+    destinatarioCap: '',
+    destinatarioTelefono: '',
+    destinatarioEmail: '',
+    peso: '',
+    lunghezza: '',
+    larghezza: '',
+    altezza: '',
+    tipoSpedizione: 'standard',
+    corriere: '', // ⚠️ VUOTO - L'utente DEVE selezionare dal preventivatore
+    note: '',
+    contrassegnoAmount: '',
     serviziAccessori: [],
   });
 
@@ -288,19 +281,15 @@ export default function NuovaSpedizionePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
-  const [sourceMode, setSourceMode] = useState<"manual" | "ai">("manual");
+  const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
 
   // ✨ NUOVO: Contratto selezionato (per reseller)
-  const [selectedContractId, setSelectedContractId] = useState<
-    string | undefined
-  >(undefined);
+  const [selectedContractId, setSelectedContractId] = useState<string | undefined>(undefined);
   const [selectedContractType, setSelectedContractType] = useState<
-    "reseller" | "master" | "default" | undefined
+    'reseller' | 'master' | 'default' | undefined
   >(undefined);
   // ✨ ENTERPRISE: ConfigId della configurazione API selezionata (per multi-config)
-  const [selectedConfigId, setSelectedConfigId] = useState<string | undefined>(
-    undefined
-  );
+  const [selectedConfigId, setSelectedConfigId] = useState<string | undefined>(undefined);
 
   // ✨ ENTERPRISE: Quote selezionato con prezzo esatto (per routing)
   const [selectedQuoteExactPrice, setSelectedQuoteExactPrice] = useState<{
@@ -310,7 +299,7 @@ export default function NuovaSpedizionePage() {
   } | null>(null);
   // ✨ NUOVO: VAT context dal quote selezionato (ADR-001)
   const [selectedVATContext, setSelectedVATContext] = useState<{
-    vat_mode?: "included" | "excluded" | null;
+    vat_mode?: 'included' | 'excluded' | null;
     vat_rate?: number;
   } | null>(null);
 
@@ -321,9 +310,7 @@ export default function NuovaSpedizionePage() {
   const [couriersLoading, setCouriersLoading] = useState(true);
 
   // ✨ ENTERPRISE: Quote ricevute per ogni corriere
-  const [courierQuotes, setCourierQuotes] = useState<Map<string, any>>(
-    new Map()
-  );
+  const [courierQuotes, setCourierQuotes] = useState<Map<string, any>>(new Map());
 
   // ✨ RIMOSSA: validQuotesFromComparator non più usato (sezione routing rimossa)
 
@@ -336,32 +323,28 @@ export default function NuovaSpedizionePage() {
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const queryMode = params.get("mode");
-      const aiFlag = params.get("ai");
+      const queryMode = params.get('mode');
+      const aiFlag = params.get('ai');
 
-      if (
-        (queryMode && queryMode.toLowerCase() === "ai") ||
-        aiFlag === "1" ||
-        aiFlag === "true"
-      ) {
-        setSourceMode("ai");
-        localStorage.setItem("sourceMode", "ai");
+      if ((queryMode && queryMode.toLowerCase() === 'ai') || aiFlag === '1' || aiFlag === 'true') {
+        setSourceMode('ai');
+        localStorage.setItem('sourceMode', 'ai');
         return;
       }
 
-      const saved = localStorage.getItem("sourceMode");
-      if (saved === "ai" || saved === "manual") {
-        setSourceMode(saved as "manual" | "ai");
+      const saved = localStorage.getItem('sourceMode');
+      if (saved === 'ai' || saved === 'manual') {
+        setSourceMode(saved as 'manual' | 'ai');
       }
     } catch (e) {
       // ignore storage or URL errors
     }
   }, []);
 
-  const handleSetSourceMode = (mode: "manual" | "ai") => {
+  const handleSetSourceMode = (mode: 'manual' | 'ai') => {
     setSourceMode(mode);
     try {
-      localStorage.setItem("sourceMode", mode);
+      localStorage.setItem('sourceMode', mode);
     } catch (e) {
       // no-op if storage fails
     }
@@ -372,15 +355,15 @@ export default function NuovaSpedizionePage() {
     async function loadAvailableCouriers() {
       try {
         setCouriersLoading(true);
-        console.log("🔄 [FORM] Caricamento corrieri disponibili...");
-        const response = await fetch("/api/couriers/available");
-        console.log("📥 [FORM] Risposta API corrieri:", {
+        console.log('🔄 [FORM] Caricamento corrieri disponibili...');
+        const response = await fetch('/api/couriers/available');
+        console.log('📥 [FORM] Risposta API corrieri:', {
           status: response.status,
           ok: response.ok,
         });
         if (response.ok) {
           const data = await response.json();
-          console.log("📋 [FORM] Corrieri ricevuti:", {
+          console.log('📋 [FORM] Corrieri ricevuti:', {
             total: data.total,
             couriers: data.couriers?.length || 0,
             details: data.couriers?.map((c: any) => ({
@@ -391,44 +374,33 @@ export default function NuovaSpedizionePage() {
           });
           if (data.couriers && data.couriers.length > 0) {
             setAvailableCouriers(data.couriers);
-            console.log(
-              `✅ [FORM] ${data.couriers.length} corrieri caricati e impostati`
-            );
+            console.log(`✅ [FORM] ${data.couriers.length} corrieri caricati e impostati`);
             // ⚠️ NON auto-selezionare! L'utente DEVE cliccare sul preventivatore
             // Se il corriere già selezionato non è più disponibile, resetta a vuoto
-            const displayNames = data.couriers.map(
-              (c: { displayName: string }) => c.displayName
-            );
+            const displayNames = data.couriers.map((c: { displayName: string }) => c.displayName);
             setFormData((prev) => ({
               ...prev,
-              corriere: displayNames.includes(prev.corriere)
-                ? prev.corriere
-                : "", // ⚠️ VUOTO invece di auto-select primo
+              corriere: displayNames.includes(prev.corriere) ? prev.corriere : '', // ⚠️ VUOTO invece di auto-select primo
             }));
           } else {
             // Fallback: nessun corriere configurato, mostra default
-            console.warn(
-              "⚠️ [FORM] Nessun corriere configurato per l'utente, usando default"
-            );
-            setAvailableCouriers([{ displayName: "GLS", courierName: "Gls" }]);
+            console.warn("⚠️ [FORM] Nessun corriere configurato per l'utente, usando default");
+            setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
           }
         } else {
           const errorText = await response.text();
-          console.error("❌ [FORM] Errore caricamento corrieri:", {
+          console.error('❌ [FORM] Errore caricamento corrieri:', {
             status: response.status,
             statusText: response.statusText,
             body: errorText,
           });
           // Fallback in caso di errore
-          setAvailableCouriers([{ displayName: "GLS", courierName: "Gls" }]);
+          setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
         }
       } catch (error) {
-        console.error(
-          "❌ [FORM] Errore caricamento corrieri disponibili:",
-          error
-        );
+        console.error('❌ [FORM] Errore caricamento corrieri disponibili:', error);
         // Fallback in caso di errore
-        setAvailableCouriers([{ displayName: "GLS", courierName: "Gls" }]);
+        setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
       } finally {
         setCouriersLoading(false);
       }
@@ -439,11 +411,7 @@ export default function NuovaSpedizionePage() {
   // ✨ ENTERPRISE: Reset prezzo esatto quando cambiano i dati critici (peso, destinazione)
   useEffect(() => {
     // Reset quando peso o destinazione cambiano o vengono rimossi
-    if (
-      !formData.peso ||
-      parseFloat(formData.peso) <= 0 ||
-      !formData.destinatarioCap
-    ) {
+    if (!formData.peso || parseFloat(formData.peso) <= 0 || !formData.destinatarioCap) {
       setSelectedQuoteExactPrice(null);
     }
   }, [formData.peso, formData.destinatarioCap]);
@@ -452,24 +420,24 @@ export default function NuovaSpedizionePage() {
   useEffect(() => {
     async function loadDefaultSender() {
       try {
-        const response = await fetch("/api/user/settings");
+        const response = await fetch('/api/user/settings');
         if (response.ok) {
           const data = await response.json();
           if (data.defaultSender) {
             setFormData((prev) => ({
               ...prev,
-              mittenteNome: data.defaultSender.nome || "",
-              mittenteIndirizzo: data.defaultSender.indirizzo || "",
-              mittenteCitta: data.defaultSender.citta || "",
-              mittenteProvincia: data.defaultSender.provincia || "",
-              mittenteCap: data.defaultSender.cap || "",
-              mittenteTelefono: data.defaultSender.telefono || "",
-              mittenteEmail: data.defaultSender.email || "",
+              mittenteNome: data.defaultSender.nome || '',
+              mittenteIndirizzo: data.defaultSender.indirizzo || '',
+              mittenteCitta: data.defaultSender.citta || '',
+              mittenteProvincia: data.defaultSender.provincia || '',
+              mittenteCap: data.defaultSender.cap || '',
+              mittenteTelefono: data.defaultSender.telefono || '',
+              mittenteEmail: data.defaultSender.email || '',
             }));
           }
         }
       } catch (error) {
-        console.error("Errore caricamento mittente predefinito:", error);
+        console.error('Errore caricamento mittente predefinito:', error);
         // Non bloccare, continua con form vuoto
       }
     }
@@ -481,8 +449,7 @@ export default function NuovaSpedizionePage() {
   const validation = useMemo(() => {
     // Contrassegno attivo se valore > 0
     const contrassegnoAttivo =
-      formData.contrassegnoAmount &&
-      parseFloat(formData.contrassegnoAmount) > 0;
+      formData.contrassegnoAmount && parseFloat(formData.contrassegnoAmount) > 0;
     return {
       mittenteNome: formData.mittenteNome.length >= 2,
       mittenteIndirizzo: formData.mittenteIndirizzo.length >= 5,
@@ -491,8 +458,7 @@ export default function NuovaSpedizionePage() {
       mittenteCap: formData.mittenteCap.length >= 5, // ⚠️ VALIDAZIONE CAP MITTENTE (OBBLIGATORIO)
       mittenteTelefono: /^[\d\s\+\-\(\)]{8,}$/.test(formData.mittenteTelefono),
       mittenteEmail:
-        !formData.mittenteEmail ||
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.mittenteEmail),
+        !formData.mittenteEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.mittenteEmail),
       destinatarioNome: formData.destinatarioNome.length >= 2,
       destinatarioIndirizzo: formData.destinatarioIndirizzo.length >= 5,
       destinatarioCitta: formData.destinatarioCitta.length >= 2,
@@ -507,8 +473,7 @@ export default function NuovaSpedizionePage() {
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.destinatarioEmail),
       peso: parseFloat(formData.peso) > 0,
       contrassegnoAmount:
-        !formData.contrassegnoAmount ||
-        parseFloat(formData.contrassegnoAmount) > 0,
+        !formData.contrassegnoAmount || parseFloat(formData.contrassegnoAmount) > 0,
     };
   }, [formData]);
 
@@ -538,69 +503,61 @@ export default function NuovaSpedizionePage() {
   const estimatedCost = useMemo(() => {
     const baseCost = 10; // Costo base
     const weightCost = parseFloat(formData.peso) * 2 || 0;
-    const distanceMultiplier =
-      formData.mittenteCitta && formData.destinatarioCitta ? 1.2 : 1;
+    const distanceMultiplier = formData.mittenteCitta && formData.destinatarioCitta ? 1.2 : 1;
     const typeMultiplier =
-      formData.tipoSpedizione === "express"
+      formData.tipoSpedizione === 'express'
         ? 1.5
-        : formData.tipoSpedizione === "assicurata"
-        ? 1.3
-        : 1;
+        : formData.tipoSpedizione === 'assicurata'
+          ? 1.3
+          : 1;
 
-    return Math.round(
-      (baseCost + weightCost) * distanceMultiplier * typeMultiplier
-    );
-  }, [
-    formData.peso,
-    formData.mittenteCitta,
-    formData.destinatarioCitta,
-    formData.tipoSpedizione,
-  ]);
+    return Math.round((baseCost + weightCost) * distanceMultiplier * typeMultiplier);
+  }, [formData.peso, formData.mittenteCitta, formData.destinatarioCitta, formData.tipoSpedizione]);
 
   // Handler per campi mittente
   const handleMittenteCittaChange = (city: string) => {
-    console.log("🔍 [HANDLER] handleMittenteCittaChange:", city);
+    console.log('🔍 [HANDLER] handleMittenteCittaChange:', city);
     setFormData((prev) => ({ ...prev, mittenteCitta: city }));
   };
   const handleMittenteProvinciaChange = (province: string) => {
-    console.log("🔍 [HANDLER] handleMittenteProvinciaChange:", province);
+    console.log('🔍 [HANDLER] handleMittenteProvinciaChange:', province);
     setFormData((prev) => ({ ...prev, mittenteProvincia: province }));
   };
   const handleMittenteCapChange = (cap: string) => {
-    console.log("🔍 [HANDLER] handleMittenteCapChange:", cap);
+    console.log('🔍 [HANDLER] handleMittenteCapChange:', cap);
     setFormData((prev) => ({ ...prev, mittenteCap: cap }));
   };
 
   // Handler per campi destinatario
   const handleDestinatarioCittaChange = (city: string) => {
-    console.log("🔍 [HANDLER] handleDestinatarioCittaChange:", city);
+    console.log('🔍 [HANDLER] handleDestinatarioCittaChange:', city);
     setFormData((prev) => ({ ...prev, destinatarioCitta: city }));
   };
   const handleDestinatarioProvinciaChange = (province: string) => {
-    console.log("🔍 [HANDLER] handleDestinatarioProvinciaChange:", province);
+    console.log('🔍 [HANDLER] handleDestinatarioProvinciaChange:', province);
     setFormData((prev) => ({ ...prev, destinatarioProvincia: province }));
   };
   const handleDestinatarioCapChange = (cap: string) => {
-    console.log("🔍 [HANDLER] handleDestinatarioCapChange:", cap);
+    console.log('🔍 [HANDLER] handleDestinatarioCapChange:', cap);
     setFormData((prev) => ({ ...prev, destinatarioCap: cap }));
   };
 
   // Helper per formattazione telefono italiana
   const formatPhoneNumber = (phone: string): string => {
-    if (!phone) return "";
+    if (!phone) return '';
     // Rimuovi spazi, lineette, parentesi
-    let clean = phone.replace(/[\s\-\(\)]/g, "");
+    let clean = phone.replace(/[\s\-\(\)]/g, '');
 
     // Se inizia con +39, ok
-    if (clean.startsWith("+39")) {
+    if (clean.startsWith('+39')) {
       return clean;
     }
     // Se inizia con 3, aggiungi +39
-    if (clean.startsWith("3")) {
+    if (clean.startsWith('3')) {
       return `+39${clean}`;
     }
     // Se inizia con 0039, sostituisci con +39
-    if (clean.startsWith("0039")) {
+    if (clean.startsWith('0039')) {
       return `+39${clean.substring(4)}`;
     }
 
@@ -614,21 +571,15 @@ export default function NuovaSpedizionePage() {
       const newData = {
         ...prev,
         destinatarioNome: data.recipient_name || prev.destinatarioNome,
-        destinatarioIndirizzo:
-          data.recipient_address || prev.destinatarioIndirizzo,
+        destinatarioIndirizzo: data.recipient_address || prev.destinatarioIndirizzo,
         destinatarioCitta: data.recipient_city || prev.destinatarioCitta,
-        destinatarioProvincia:
-          data.recipient_province || prev.destinatarioProvincia,
+        destinatarioProvincia: data.recipient_province || prev.destinatarioProvincia,
         destinatarioCap: data.recipient_zip || prev.destinatarioCap,
         destinatarioTelefono: data.recipient_phone
           ? formatPhoneNumber(data.recipient_phone)
           : prev.destinatarioTelefono,
         destinatarioEmail: data.recipient_email || prev.destinatarioEmail,
-        note: data.notes
-          ? prev.note
-            ? `${prev.note}\n${data.notes}`
-            : data.notes
-          : prev.note,
+        note: data.notes ? (prev.note ? `${prev.note}\n${data.notes}` : data.notes) : prev.note,
       };
 
       // 2. Gestione Contrassegno (COD)
@@ -639,7 +590,7 @@ export default function NuovaSpedizionePage() {
       return newData;
     });
 
-    console.log("Agent Data applied:", data);
+    console.log('Agent Data applied:', data);
   };
 
   // Handler errori OCR
@@ -653,7 +604,7 @@ export default function NuovaSpedizionePage() {
 
     // ⚠️ DOUBLE-SUBMIT PROTECTION: Blocca se già in corso
     if (isSubmitting) {
-      console.warn("⚠️ [FORM] Submit già in corso, ignoro click duplicato");
+      console.warn('⚠️ [FORM] Submit già in corso, ignoro click duplicato');
       return;
     }
 
@@ -663,38 +614,27 @@ export default function NuovaSpedizionePage() {
     // ⚠️ CRITICO: Verifica che sia stato selezionato un corriere dal preventivatore
     if (!formData.corriere || formData.corriere.length === 0) {
       validationErrors.push(
-        "Corriere non selezionato. Clicca su un corriere nella tabella preventivi."
+        'Corriere non selezionato. Clicca su un corriere nella tabella preventivi.'
       );
     }
 
     if (!formData.mittenteProvincia || formData.mittenteProvincia.length < 2) {
-      validationErrors.push(
-        "Provincia mittente mancante. Seleziona città dall'autocomplete."
-      );
+      validationErrors.push("Provincia mittente mancante. Seleziona città dall'autocomplete.");
     }
     if (!formData.mittenteCap || formData.mittenteCap.length < 5) {
-      validationErrors.push(
-        "CAP mittente mancante. Seleziona città dall'autocomplete."
-      );
+      validationErrors.push("CAP mittente mancante. Seleziona città dall'autocomplete.");
     }
-    if (
-      !formData.destinatarioProvincia ||
-      formData.destinatarioProvincia.length < 2
-    ) {
-      validationErrors.push(
-        "Provincia destinatario mancante. Seleziona città dall'autocomplete."
-      );
+    if (!formData.destinatarioProvincia || formData.destinatarioProvincia.length < 2) {
+      validationErrors.push("Provincia destinatario mancante. Seleziona città dall'autocomplete.");
     }
     if (!formData.destinatarioCap || formData.destinatarioCap.length < 5) {
-      validationErrors.push(
-        "CAP destinatario mancante. Seleziona città dall'autocomplete."
-      );
+      validationErrors.push("CAP destinatario mancante. Seleziona città dall'autocomplete.");
     }
 
     if (validationErrors.length > 0) {
-      setSubmitError(validationErrors.join(" "));
-      console.error("❌ [FORM] Validazione fallita:", validationErrors);
-      console.error("❌ [FORM] State corrente:", {
+      setSubmitError(validationErrors.join(' '));
+      console.error('❌ [FORM] Validazione fallita:', validationErrors);
+      console.error('❌ [FORM] State corrente:', {
         mittente: {
           citta: formData.mittenteCitta,
           provincia: formData.mittenteProvincia,
@@ -718,19 +658,17 @@ export default function NuovaSpedizionePage() {
       const extractProvinceAndCap = (
         formattedString: string
       ): { province: string; cap: string } => {
-        if (!formattedString) return { province: "", cap: "" };
+        if (!formattedString) return { province: '', cap: '' };
 
         // Pattern: "Città (Provincia) - CAP" o "Città (Provincia)"
-        const match = formattedString.match(
-          /\(([A-Z]{2})\)(?:\s*-\s*(\d{5}))?/
-        );
+        const match = formattedString.match(/\(([A-Z]{2})\)(?:\s*-\s*(\d{5}))?/);
         if (match) {
           return {
-            province: match[1] || "",
-            cap: match[2] || "",
+            province: match[1] || '',
+            cap: match[2] || '',
           };
         }
-        return { province: "", cap: "" };
+        return { province: '', cap: '' };
       };
 
       // ⚠️ MAPPING ESPLICITO: Assicura che provincia e CAP siano correttamente mappati
@@ -746,16 +684,13 @@ export default function NuovaSpedizionePage() {
         if (extracted.province) {
           mittenteProvincia = extracted.province;
           console.warn(
-            "⚠️ [FORM] Provincia mittente estratta da stringa formattata:",
+            '⚠️ [FORM] Provincia mittente estratta da stringa formattata:',
             extracted.province
           );
         }
         if (extracted.cap && !mittenteCap) {
           mittenteCap = extracted.cap;
-          console.warn(
-            "⚠️ [FORM] CAP mittente estratto da stringa formattata:",
-            extracted.cap
-          );
+          console.warn('⚠️ [FORM] CAP mittente estratto da stringa formattata:', extracted.cap);
         }
       }
 
@@ -765,21 +700,18 @@ export default function NuovaSpedizionePage() {
         if (extracted.province) {
           destinatarioProvincia = extracted.province;
           console.warn(
-            "⚠️ [FORM] Provincia destinatario estratta da stringa formattata:",
+            '⚠️ [FORM] Provincia destinatario estratta da stringa formattata:',
             extracted.province
           );
         }
         if (extracted.cap && !destinatarioCap) {
           destinatarioCap = extracted.cap;
-          console.warn(
-            "⚠️ [FORM] CAP destinatario estratto da stringa formattata:",
-            extracted.cap
-          );
+          console.warn('⚠️ [FORM] CAP destinatario estratto da stringa formattata:', extracted.cap);
         }
       }
 
       // ⚠️ LOG DEBUG COMPLETO: Verifica state PRIMA del mapping
-      console.log("🔍 [FORM] State formData COMPLETO:", {
+      console.log('🔍 [FORM] State formData COMPLETO:', {
         mittenteCitta: formData.mittenteCitta,
         mittenteProvincia: formData.mittenteProvincia,
         mittenteCap: formData.mittenteCap,
@@ -818,18 +750,16 @@ export default function NuovaSpedizionePage() {
           vat_rate: selectedVATContext.vat_rate,
         }),
         // ✨ FIX: Prezzo finale dal quote selezionato (prezzo listino personalizzato con margine)
-        ...(selectedQuoteExactPrice && selectedQuoteExactPrice.price > 0 && {
-          final_price: selectedQuoteExactPrice.price,
-        }),
+        ...(selectedQuoteExactPrice &&
+          selectedQuoteExactPrice.price > 0 && {
+            final_price: selectedQuoteExactPrice.price,
+          }),
       };
 
       // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
-      console.log(
-        "📋 [FORM] Payload COMPLETO spedizione (prima invio):",
-        payload
-      );
+      console.log('📋 [FORM] Payload COMPLETO spedizione (prima invio):', payload);
 
-      console.log("📋 [FORM] Payload indirizzo strutturato:", {
+      console.log('📋 [FORM] Payload indirizzo strutturato:', {
         mittente: {
           città: payload.mittenteCitta,
           provincia: payload.mittenteProvincia,
@@ -853,7 +783,7 @@ export default function NuovaSpedizionePage() {
       });
 
       // ✨ DEBUG: Log payload prima dell'invio
-      console.log("📤 [FORM] Invio richiesta creazione spedizione:", {
+      console.log('📤 [FORM] Invio richiesta creazione spedizione:', {
         payload_keys: Object.keys(payload),
         corriere: (payload as any).corriere || formData.corriere,
         peso: (payload as any).peso || formData.peso,
@@ -864,47 +794,37 @@ export default function NuovaSpedizionePage() {
         },
         destinatario: {
           nome: (payload as any).destinatarioNome || formData.destinatarioNome,
-          provincia:
-            (payload as any).destinatarioProvincia || destinatarioProvincia,
+          provincia: (payload as any).destinatarioProvincia || destinatarioProvincia,
           cap: (payload as any).destinatarioCap || destinatarioCap,
         },
       });
 
-      const response = await fetch("/api/spedizioni", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/spedizioni', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      console.log("📥 [FORM] Risposta API:", {
+      console.log('📥 [FORM] Risposta API:', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
       });
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Errore sconosciuto" }));
-        console.error("❌ [FORM] Errore API:", errorData);
-        throw new Error(
-          errorData.message ||
-            errorData.error ||
-            "Errore durante il salvataggio"
-        );
+        const errorData = await response.json().catch(() => ({ message: 'Errore sconosciuto' }));
+        console.error('❌ [FORM] Errore API:', errorData);
+        throw new Error(errorData.message || errorData.error || 'Errore durante il salvataggio');
       }
 
       const result = await response.json();
-      console.log("📦 [CLIENT] Risultato API spedizioni:", result);
-      console.log("📦 [CLIENT] LDV Result (da result.ldv):", result.ldv);
-      console.log(
-        "📦 [CLIENT] LDV Result (da result.data?.ldv):",
-        result.data?.ldv
-      );
-      console.log("📦 [CLIENT] Tracking:", result.data?.tracking);
-      console.log("📦 [CLIENT] Corriere:", result.data?.corriere);
-      console.log("📦 [CLIENT] Success:", result.success);
-      console.log("📦 [CLIENT] Message:", result.message);
+      console.log('📦 [CLIENT] Risultato API spedizioni:', result);
+      console.log('📦 [CLIENT] LDV Result (da result.ldv):', result.ldv);
+      console.log('📦 [CLIENT] LDV Result (da result.data?.ldv):', result.data?.ldv);
+      console.log('📦 [CLIENT] Tracking:', result.data?.tracking);
+      console.log('📦 [CLIENT] Corriere:', result.data?.corriere);
+      console.log('📦 [CLIENT] Success:', result.success);
+      console.log('📦 [CLIENT] Message:', result.message);
 
       // Legacy state (sempre settato per compatibilità)
       setSubmitSuccess(true);
@@ -913,11 +833,11 @@ export default function NuovaSpedizionePage() {
       // Enterprise Feedback: Mostra SuccessModal invece dell'inline message
       if (useEnterpriseFeedback) {
         setCreatedShipmentData({
-          tracking: result.data?.tracking || "",
+          tracking: result.data?.tracking || '',
           courier: formData.corriere,
           cost: selectedQuoteExactPrice?.price
             ? `€${selectedQuoteExactPrice.price.toFixed(2)}`
-            : "",
+            : '',
         });
         setShowSuccessModal(true);
       }
@@ -934,32 +854,27 @@ export default function NuovaSpedizionePage() {
         // Piccolo delay per assicurarsi che il download parta dopo il rendering
         setTimeout(() => {
           // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
-          console.log("📦 [FRONTEND] Risultato creazione spedizione:", result);
+          console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
 
           // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
           // L'API restituisce ldv al livello root, non dentro data
           const ldvResult = result.ldv || result.data?.ldv;
-          console.log("🔍 [CLIENT] Verifica LDV:", {
-            "result.ldv": result.ldv,
-            "result.data?.ldv": result.data?.ldv,
+          console.log('🔍 [CLIENT] Verifica LDV:', {
+            'result.ldv': result.ldv,
+            'result.data?.ldv': result.data?.ldv,
             ldvResult: ldvResult,
-            "ldvResult?.success": ldvResult?.success,
-            "ldvResult?.label_url": ldvResult?.label_url,
-            "ldvResult?.error": ldvResult?.error,
-            "ldvResult?.method": ldvResult?.method,
+            'ldvResult?.success': ldvResult?.success,
+            'ldvResult?.label_url': ldvResult?.label_url,
+            'ldvResult?.error': ldvResult?.error,
+            'ldvResult?.method': ldvResult?.method,
           });
 
           if (ldvResult && ldvResult.success && ldvResult.label_url) {
-            console.log(
-              "📄 Apertura etichetta originale:",
-              ldvResult.label_url
-            );
-            window.open(ldvResult.label_url, "_blank");
+            console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
+            window.open(ldvResult.label_url, '_blank');
           } else if (ldvResult && ldvResult.success && ldvResult.label_pdf) {
             // ⚠️ FIX: Gestisci label_pdf base64 (scarica come PDF)
-            console.log(
-              "📄 [CLIENT] label_pdf base64 ricevuto, scarico PDF..."
-            );
+            console.log('📄 [CLIENT] label_pdf base64 ricevuto, scarico PDF...');
             try {
               // Decodifica base64 e crea blob
               const base64Data = ldvResult.label_pdf;
@@ -968,18 +883,16 @@ export default function NuovaSpedizionePage() {
               for (let i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
               }
-              const blob = new Blob([bytes], { type: "application/pdf" });
+              const blob = new Blob([bytes], { type: 'application/pdf' });
               const blobUrl = URL.createObjectURL(blob);
 
               // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
               const trackingNumber =
-                ldvResult.tracking_number ||
-                spedizioneData.tracking ||
-                "spedizione";
+                ldvResult.tracking_number || spedizioneData.tracking || 'spedizione';
               const filename = `${trackingNumber}.pdf`;
 
               // Scarica il PDF
-              const link = document.createElement("a");
+              const link = document.createElement('a');
               link.href = blobUrl;
               link.download = filename;
               document.body.appendChild(link);
@@ -989,50 +902,45 @@ export default function NuovaSpedizionePage() {
               // Cleanup
               setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
-              console.log(
-                "✅ [CLIENT] PDF etichetta scaricato con successo:",
-                filename
-              );
+              console.log('✅ [CLIENT] PDF etichetta scaricato con successo:', filename);
             } catch (pdfError) {
-              console.error("❌ [CLIENT] Errore decodifica PDF:", pdfError);
+              console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
               // Fallback al ticket interno
               const pdfDoc = generateShipmentPDF(spedizioneWithDate);
-              const trackingNumber = spedizioneData.tracking || "spedizione";
+              const trackingNumber = spedizioneData.tracking || 'spedizione';
               const filename = `${trackingNumber}.pdf`;
               downloadPDF(pdfDoc, filename);
             }
           } else {
             // FALLBACK: Genera Ticket interno se non c'è etichetta reale
-            console.log("⚠️ Nessuna etichetta API, genero Ticket interno");
+            console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
 
             // LOGGING DETTAGLIATO (da remote)
-            console.log("   - ldvResult:", ldvResult);
-            console.log("   - ldvResult?.success:", ldvResult?.success);
-            console.log("   - ldvResult?.label_url:", ldvResult?.label_url);
-            console.log("   - ldvResult?.error:", ldvResult?.error);
-            console.log("   - ldvResult?.method:", ldvResult?.method);
+            console.log('   - ldvResult:', ldvResult);
+            console.log('   - ldvResult?.success:', ldvResult?.success);
+            console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
+            console.log('   - ldvResult?.error:', ldvResult?.error);
+            console.log('   - ldvResult?.method:', ldvResult?.method);
 
             // ⚠️ MOSTRA ERRORE ALL'UTENTE - MESSAGGIO MIGLIORATO
             // Se c'è un errore nell'oggetto LDV, mostralo con dettagli utili
             const errorMsg = result.ldv?.error || result.ldv?.message;
-            const method = result.ldv?.method || "sconosciuto";
+            const method = result.ldv?.method || 'sconosciuto';
 
             if (errorMsg) {
               // Messaggio più specifico in base al metodo usato
-              let title = "⚠️ Errore Creazione LDV";
+              let title = '⚠️ Errore Creazione LDV';
               let details = errorMsg;
 
-              if (method === "broker") {
-                title = "⚠️ Errore Spedisci.online";
+              if (method === 'broker') {
+                title = '⚠️ Errore Spedisci.online';
                 // Verifica se è un errore di contratto mancante
                 if (
-                  errorMsg.toLowerCase().includes("contratto") ||
-                  errorMsg.toLowerCase().includes("contract")
+                  errorMsg.toLowerCase().includes('contratto') ||
+                  errorMsg.toLowerCase().includes('contract')
                 ) {
                   const corriereName =
-                    formData.corriere ||
-                    spedizioneData?.corriere ||
-                    "questo corriere";
+                    formData.corriere || spedizioneData?.corriere || 'questo corriere';
                   details =
                     `Contratto non configurato per ${corriereName}.\n\n` +
                     `Configura il contratto nel wizard Spedisci.online:\n` +
@@ -1041,16 +949,16 @@ export default function NuovaSpedizionePage() {
                     `3. Aggiungi il contratto per ${corriereName}\n\n` +
                     `Errore tecnico: ${errorMsg}`;
                 } else if (
-                  errorMsg.toLowerCase().includes("401") ||
-                  errorMsg.toLowerCase().includes("unauthorized")
+                  errorMsg.toLowerCase().includes('401') ||
+                  errorMsg.toLowerCase().includes('unauthorized')
                 ) {
                   details =
                     `API Key non valida o scaduta.\n\n` +
                     `Verifica le credenziali nel wizard Spedisci.online.\n\n` +
                     `Errore tecnico: ${errorMsg}`;
                 } else if (
-                  errorMsg.toLowerCase().includes("404") ||
-                  errorMsg.toLowerCase().includes("not found")
+                  errorMsg.toLowerCase().includes('404') ||
+                  errorMsg.toLowerCase().includes('not found')
                 ) {
                   details =
                     `Endpoint non trovato.\n\n` +
@@ -1071,15 +979,15 @@ export default function NuovaSpedizionePage() {
               );
             } else if (!result.ldv) {
               // Caso raro: ldv null (errore server interno prima dell'orchestrator)
-              console.warn("Oggetto LDV mancante nella risposta");
+              console.warn('Oggetto LDV mancante nella risposta');
               alert(
-                "⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli."
+                '⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli.'
               );
             }
 
             const pdfDoc = generateShipmentPDF(spedizioneWithDate);
             // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
-            const trackingNumber = spedizioneData.tracking || "spedizione";
+            const trackingNumber = spedizioneData.tracking || 'spedizione';
             const filename = `${trackingNumber}.pdf`;
             downloadPDF(pdfDoc, filename);
           }
@@ -1088,9 +996,7 @@ export default function NuovaSpedizionePage() {
 
       // ⚠️ FIX: Reset form e mostra messaggio successo invece di redirect
       setSubmitSuccess(true);
-      setCreatedTracking(
-        spedizioneData?.tracking || spedizioneData?.ldv || null
-      );
+      setCreatedTracking(spedizioneData?.tracking || spedizioneData?.ldv || null);
 
       // Salva dati mittente predefiniti prima del reset
       const currentMittente = {
@@ -1108,23 +1014,23 @@ export default function NuovaSpedizionePage() {
         // Ricarica dati mittente predefiniti dall'API
         let defaultMittente = currentMittente; // Fallback ai dati attuali
         try {
-          const response = await fetch("/api/user/settings");
+          const response = await fetch('/api/user/settings');
           if (response.ok) {
             const data = await response.json();
             if (data.defaultSender) {
               defaultMittente = {
-                mittenteNome: data.defaultSender.nome || "",
-                mittenteIndirizzo: data.defaultSender.indirizzo || "",
-                mittenteCitta: data.defaultSender.citta || "",
-                mittenteProvincia: data.defaultSender.provincia || "",
-                mittenteCap: data.defaultSender.cap || "",
-                mittenteTelefono: data.defaultSender.telefono || "",
-                mittenteEmail: data.defaultSender.email || "",
+                mittenteNome: data.defaultSender.nome || '',
+                mittenteIndirizzo: data.defaultSender.indirizzo || '',
+                mittenteCitta: data.defaultSender.citta || '',
+                mittenteProvincia: data.defaultSender.provincia || '',
+                mittenteCap: data.defaultSender.cap || '',
+                mittenteTelefono: data.defaultSender.telefono || '',
+                mittenteEmail: data.defaultSender.email || '',
               };
             }
           }
         } catch (error) {
-          console.error("Errore caricamento mittente predefinito:", error);
+          console.error('Errore caricamento mittente predefinito:', error);
           // Usa i dati attuali come fallback
         }
 
@@ -1132,21 +1038,21 @@ export default function NuovaSpedizionePage() {
         setFormData({
           ...defaultMittente, // Mantieni dati mittente predefiniti
           // Reset solo destinatario e dettagli spedizione
-          destinatarioNome: "",
-          destinatarioIndirizzo: "",
-          destinatarioCitta: "",
-          destinatarioProvincia: "",
-          destinatarioCap: "",
-          destinatarioTelefono: "",
-          destinatarioEmail: "",
-          peso: "",
-          lunghezza: "",
-          larghezza: "",
-          altezza: "",
-          tipoSpedizione: "standard",
-          corriere: "", // ⚠️ VUOTO - L'utente DEVE selezionare dal preventivatore
-          note: "",
-          contrassegnoAmount: "",
+          destinatarioNome: '',
+          destinatarioIndirizzo: '',
+          destinatarioCitta: '',
+          destinatarioProvincia: '',
+          destinatarioCap: '',
+          destinatarioTelefono: '',
+          destinatarioEmail: '',
+          peso: '',
+          lunghezza: '',
+          larghezza: '',
+          altezza: '',
+          tipoSpedizione: 'standard',
+          corriere: '', // ⚠️ VUOTO - L'utente DEVE selezionare dal preventivatore
+          note: '',
+          contrassegnoAmount: '',
           serviziAccessori: [],
         });
 
@@ -1165,9 +1071,9 @@ export default function NuovaSpedizionePage() {
         // Questo assicura che se i corrieri sono cambiati (es. dopo configurazione),
         // vengono mostrati correttamente nella nuova spedizione
         try {
-          console.log("🔄 [FORM] Ricaricamento corrieri dopo reset form...");
-          const couriersResponse = await fetch("/api/couriers/available", {
-            cache: "no-store", // Forza fetch fresco
+          console.log('🔄 [FORM] Ricaricamento corrieri dopo reset form...');
+          const couriersResponse = await fetch('/api/couriers/available', {
+            cache: 'no-store', // Forza fetch fresco
           });
           if (couriersResponse.ok) {
             const couriersData = await couriersResponse.json();
@@ -1179,12 +1085,12 @@ export default function NuovaSpedizionePage() {
             }
           }
         } catch (error) {
-          console.error("❌ [FORM] Errore ricaricamento corrieri:", error);
+          console.error('❌ [FORM] Errore ricaricamento corrieri:', error);
           // Non bloccare, continua con corrieri esistenti
         }
 
         // Scrolla in alto per mostrare il form vuoto
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // Focus sul primo campo destinatario per inserimento rapido
         const destinatarioInput = document.querySelector(
@@ -1196,9 +1102,7 @@ export default function NuovaSpedizionePage() {
       }, 2000);
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Errore durante il salvataggio. Riprova.";
+        error instanceof Error ? error.message : 'Errore durante il salvataggio. Riprova.';
 
       // Legacy state (sempre settato per compatibilità)
       setSubmitError(errorMessage);
@@ -1219,9 +1123,9 @@ export default function NuovaSpedizionePage() {
 
   // Formatta prezzo
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("it-IT", {
-      style: "currency",
-      currency: "EUR",
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
     }).format(price);
   };
 
@@ -1243,34 +1147,30 @@ export default function NuovaSpedizionePage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    Completamento
-                  </span>
-                  <span className="text-sm font-bold text-[#FF9500]">
-                    {progress}%
-                  </span>
+                  <span className="text-sm font-medium text-gray-700">Completamento</span>
+                  <span className="text-sm font-bold text-[#FF9500]">{progress}%</span>
                 </div>
                 <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                   <button
                     type="button"
-                    onClick={() => handleSetSourceMode("manual")}
-                    aria-pressed={sourceMode === "manual"}
+                    onClick={() => handleSetSourceMode('manual')}
+                    aria-pressed={sourceMode === 'manual'}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                      sourceMode === "manual"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                      sourceMode === 'manual'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     Manuale
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSetSourceMode("ai")}
-                    aria-pressed={sourceMode === "ai"}
+                    onClick={() => handleSetSourceMode('ai')}
+                    aria-pressed={sourceMode === 'ai'}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                      sourceMode === "ai"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                      sourceMode === 'ai'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     <Sparkles className="w-4 h-4 inline mr-1" />
@@ -1282,18 +1182,14 @@ export default function NuovaSpedizionePage() {
             </div>
 
             {/* OCR Upload Card - Solo quando AI Import è attivo */}
-            {sourceMode === "ai" && (
+            {sourceMode === 'ai' && (
               <SmartCard title="Importa da Immagine (OCR)" icon={Sparkles}>
-                <OCRUpload
-                  onDataExtracted={handleOCRDataExtracted}
-                  onError={handleOCRError}
-                />
+                <OCRUpload onDataExtracted={handleOCRDataExtracted} onError={handleOCRError} />
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-900">
-                    <strong>💡 Suggerimento:</strong> Carica uno screenshot
-                    WhatsApp, foto documento o immagine con i dati del
-                    destinatario. Il sistema estrarrà automaticamente nome,
-                    indirizzo, CAP, città, telefono e email.
+                    <strong>💡 Suggerimento:</strong> Carica uno screenshot WhatsApp, foto documento
+                    o immagine con i dati del destinatario. Il sistema estrarrà automaticamente
+                    nome, indirizzo, CAP, città, telefono e email.
                   </p>
                 </div>
               </SmartCard>
@@ -1305,16 +1201,14 @@ export default function NuovaSpedizionePage() {
                 <SmartInput
                   label="Nome Completo"
                   value={formData.mittenteNome}
-                  onChange={(v) =>
-                    setFormData((prev) => ({ ...prev, mittenteNome: v }))
-                  }
+                  onChange={(v) => setFormData((prev) => ({ ...prev, mittenteNome: v }))}
                   required
                   placeholder="Mario Rossi"
                   icon={User}
                   isValid={validation.mittenteNome}
                   errorMessage={
                     formData.mittenteNome && !validation.mittenteNome
-                      ? "Nome troppo corto"
+                      ? 'Nome troppo corto'
                       : undefined
                   }
                 />
@@ -1322,16 +1216,14 @@ export default function NuovaSpedizionePage() {
                 <SmartInput
                   label="Indirizzo"
                   value={formData.mittenteIndirizzo}
-                  onChange={(v) =>
-                    setFormData((prev) => ({ ...prev, mittenteIndirizzo: v }))
-                  }
+                  onChange={(v) => setFormData((prev) => ({ ...prev, mittenteIndirizzo: v }))}
                   required
                   placeholder="Via Roma 123"
                   icon={MapPin}
                   isValid={validation.mittenteIndirizzo}
                   errorMessage={
                     formData.mittenteIndirizzo && !validation.mittenteIndirizzo
-                      ? "Indirizzo troppo corto"
+                      ? 'Indirizzo troppo corto'
                       : undefined
                   }
                 />
@@ -1366,7 +1258,7 @@ export default function NuovaSpedizionePage() {
                     isValid={validation.mittenteTelefono}
                     errorMessage={
                       formData.mittenteTelefono && !validation.mittenteTelefono
-                        ? "Telefono non valido"
+                        ? 'Telefono non valido'
                         : undefined
                     }
                   />
@@ -1374,15 +1266,13 @@ export default function NuovaSpedizionePage() {
                   <SmartInput
                     label="Email"
                     value={formData.mittenteEmail}
-                    onChange={(v) =>
-                      setFormData((prev) => ({ ...prev, mittenteEmail: v }))
-                    }
+                    onChange={(v) => setFormData((prev) => ({ ...prev, mittenteEmail: v }))}
                     type="email"
                     placeholder="email@esempio.it"
                     isValid={validation.mittenteEmail}
                     errorMessage={
                       formData.mittenteEmail && !validation.mittenteEmail
-                        ? "Email non valida"
+                        ? 'Email non valida'
                         : undefined
                     }
                   />
@@ -1396,16 +1286,14 @@ export default function NuovaSpedizionePage() {
                 <SmartInput
                   label="Nome Completo"
                   value={formData.destinatarioNome}
-                  onChange={(v) =>
-                    setFormData((prev) => ({ ...prev, destinatarioNome: v }))
-                  }
+                  onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioNome: v }))}
                   required
                   placeholder="Luigi Verdi"
                   icon={User}
                   isValid={validation.destinatarioNome}
                   errorMessage={
                     formData.destinatarioNome && !validation.destinatarioNome
-                      ? "Nome troppo corto"
+                      ? 'Nome troppo corto'
                       : undefined
                   }
                 />
@@ -1424,9 +1312,8 @@ export default function NuovaSpedizionePage() {
                   icon={MapPin}
                   isValid={validation.destinatarioIndirizzo}
                   errorMessage={
-                    formData.destinatarioIndirizzo &&
-                    !validation.destinatarioIndirizzo
-                      ? "Indirizzo troppo corto"
+                    formData.destinatarioIndirizzo && !validation.destinatarioIndirizzo
+                      ? 'Indirizzo troppo corto'
                       : undefined
                   }
                 />
@@ -1460,9 +1347,8 @@ export default function NuovaSpedizionePage() {
                     placeholder="+39 398 765 4321"
                     isValid={validation.destinatarioTelefono}
                     errorMessage={
-                      formData.destinatarioTelefono &&
-                      !validation.destinatarioTelefono
-                        ? "Telefono non valido"
+                      formData.destinatarioTelefono && !validation.destinatarioTelefono
+                        ? 'Telefono non valido'
                         : undefined
                     }
                   />
@@ -1470,16 +1356,13 @@ export default function NuovaSpedizionePage() {
                   <SmartInput
                     label="Email"
                     value={formData.destinatarioEmail}
-                    onChange={(v) =>
-                      setFormData((prev) => ({ ...prev, destinatarioEmail: v }))
-                    }
+                    onChange={(v) => setFormData((prev) => ({ ...prev, destinatarioEmail: v }))}
                     type="email"
                     placeholder="email@esempio.it"
                     isValid={validation.destinatarioEmail}
                     errorMessage={
-                      formData.destinatarioEmail &&
-                      !validation.destinatarioEmail
-                        ? "Email non valida"
+                      formData.destinatarioEmail && !validation.destinatarioEmail
+                        ? 'Email non valida'
                         : undefined
                     }
                   />
@@ -1511,10 +1394,10 @@ export default function NuovaSpedizionePage() {
                         placeholder="0.00"
                         className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
                           validation.peso
-                            ? "border-green-500 ring-2 ring-green-200 bg-green-50"
+                            ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
                             : formData.peso
-                            ? "border-red-500 ring-2 ring-red-200 bg-red-50"
-                            : "border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400"
+                              ? 'border-red-500 ring-2 ring-red-200 bg-red-50'
+                              : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
                         } focus:outline-none placeholder:text-gray-500`}
                       />
                       {validation.peso && (
@@ -1630,7 +1513,7 @@ export default function NuovaSpedizionePage() {
                 {/* Contrassegno (COD) - Campo numerico */}
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <label className="block text-xs font-semibold uppercase text-gray-500 tracking-wider mb-1.5">
-                    💰 Contrassegno (COD - €){" "}
+                    💰 Contrassegno (COD - €){' '}
                     <span className="text-gray-400 text-xs">(opzionale)</span>
                   </label>
                   <div className="relative">
@@ -1648,12 +1531,11 @@ export default function NuovaSpedizionePage() {
                       }}
                       placeholder="0.00"
                       className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
-                        formData.contrassegnoAmount &&
-                        parseFloat(formData.contrassegnoAmount) > 0
+                        formData.contrassegnoAmount && parseFloat(formData.contrassegnoAmount) > 0
                           ? validation.contrassegnoAmount
-                            ? "border-green-500 ring-2 ring-green-200 bg-green-50"
-                            : "border-red-500 ring-2 ring-red-200 bg-red-50"
-                          : "border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400"
+                            ? 'border-green-500 ring-2 ring-green-200 bg-green-50'
+                            : 'border-red-500 ring-2 ring-red-200 bg-red-50'
+                          : 'border-gray-300 focus:ring-2 focus:ring-[#FFD700] focus:border-[#FFD700] focus:shadow-md hover:border-gray-400'
                       } focus:outline-none placeholder:text-gray-500`}
                     />
                     {formData.contrassegnoAmount &&
@@ -1675,8 +1557,7 @@ export default function NuovaSpedizionePage() {
                     parseFloat(formData.contrassegnoAmount) > 0 &&
                     !formData.destinatarioTelefono && (
                       <p className="text-xs text-amber-600 mt-1">
-                        ⚠️ Il telefono destinatario è obbligatorio per il
-                        contrassegno
+                        ⚠️ Il telefono destinatario è obbligatorio per il contrassegno
                       </p>
                     )}
                 </div>
@@ -1706,12 +1587,12 @@ export default function NuovaSpedizionePage() {
                     </h4>
                     <RouteVisualizer
                       from={{
-                        city: formData.mittenteCitta || "—",
-                        province: formData.mittenteProvincia || "",
+                        city: formData.mittenteCitta || '—',
+                        province: formData.mittenteProvincia || '',
                       }}
                       to={{
-                        city: formData.destinatarioCitta || "—",
-                        province: formData.destinatarioProvincia || "",
+                        city: formData.destinatarioCitta || '—',
+                        province: formData.destinatarioProvincia || '',
                       }}
                     />
                   </div>
@@ -1724,7 +1605,7 @@ export default function NuovaSpedizionePage() {
                         <AIRoutingAdvisor
                           citta={formData.destinatarioCitta}
                           provincia={formData.destinatarioProvincia}
-                          corriereScelto={formData.corriere || "GLS"}
+                          corriereScelto={formData.corriere || 'GLS'}
                           prezzoCorriereScelto={estimatedCost}
                           onAcceptSuggestion={(corriere) => {
                             setFormData((prev) => ({ ...prev, corriere }));
@@ -1738,9 +1619,7 @@ export default function NuovaSpedizionePage() {
                     {couriersLoading ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                        <span className="ml-2 text-sm text-gray-500">
-                          Caricamento corrieri...
-                        </span>
+                        <span className="ml-2 text-sm text-gray-500">Caricamento corrieri...</span>
                       </div>
                     ) : availableCouriers.length > 0 ? (
                       <IntelligentQuoteComparator
@@ -1752,28 +1631,17 @@ export default function NuovaSpedizionePage() {
                         zip={formData.destinatarioCap}
                         province={formData.destinatarioProvincia}
                         city={formData.destinatarioCitta}
-                        services={
-                          formData.tipoSpedizione === "express"
-                            ? ["express"]
-                            : []
-                        }
+                        services={formData.tipoSpedizione === 'express' ? ['express'] : []}
                         insuranceValue={0}
                         codValue={
-                          formData.contrassegnoAmount &&
-                          parseFloat(formData.contrassegnoAmount) > 0
+                          formData.contrassegnoAmount && parseFloat(formData.contrassegnoAmount) > 0
                             ? parseFloat(formData.contrassegnoAmount)
                             : 0
                         }
                         dimensions={{
-                          length: formData.lunghezza
-                            ? parseFloat(formData.lunghezza)
-                            : undefined,
-                          width: formData.larghezza
-                            ? parseFloat(formData.larghezza)
-                            : undefined,
-                          height: formData.altezza
-                            ? parseFloat(formData.altezza)
-                            : undefined,
+                          length: formData.lunghezza ? parseFloat(formData.lunghezza) : undefined,
+                          width: formData.larghezza ? parseFloat(formData.larghezza) : undefined,
+                          height: formData.altezza ? parseFloat(formData.altezza) : undefined,
                         }}
                         onQuoteReceived={(courierName, contractCode, quote) => {
                           setCourierQuotes((prev) => {
@@ -1790,9 +1658,7 @@ export default function NuovaSpedizionePage() {
                             quote.rates.length > 0
                           ) {
                             const bestRate = quote.rates[0];
-                            const exactPrice = parseFloat(
-                              bestRate.total_price || "0"
-                            );
+                            const exactPrice = parseFloat(bestRate.total_price || '0');
                             // ✨ NUOVO: Aggiorna anche VAT context se quote selezionato (ADR-001)
                             setSelectedVATContext({
                               vat_mode: bestRate.vat_mode || null,
@@ -1819,21 +1685,16 @@ export default function NuovaSpedizionePage() {
                           accessoryService,
                           configId // ✨ ENTERPRISE: ConfigId della configurazione API
                         ) => {
-                          console.log(
-                            "✅ [FORM] Corriere confermato dal preventivatore:",
-                            {
-                              courierName,
-                              contractCode,
-                              accessoryService,
-                              configId, // ✨ Salva configId per usarlo nella creazione
-                            }
-                          );
+                          console.log('✅ [FORM] Corriere confermato dal preventivatore:', {
+                            courierName,
+                            contractCode,
+                            accessoryService,
+                            configId, // ✨ Salva configId per usarlo nella creazione
+                          });
                           setFormData((prev) => ({
                             ...prev,
                             corriere: courierName,
-                            serviziAccessori: accessoryService
-                              ? [accessoryService]
-                              : [],
+                            serviziAccessori: accessoryService ? [accessoryService] : [],
                           }));
                           // ✨ ENTERPRISE: Salva configId per usarlo nella creazione spedizione
                           setSelectedConfigId(configId);
@@ -1848,9 +1709,7 @@ export default function NuovaSpedizionePage() {
                             selectedQuote.rates.length > 0
                           ) {
                             const bestRate = selectedQuote.rates[0];
-                            const exactPrice = parseFloat(
-                              bestRate.total_price || "0"
-                            );
+                            const exactPrice = parseFloat(bestRate.total_price || '0');
                             setSelectedQuoteExactPrice({
                               courierName,
                               price: exactPrice,
@@ -1876,9 +1735,7 @@ export default function NuovaSpedizionePage() {
                       />
                     ) : (
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                        <p className="text-sm text-gray-600">
-                          Nessun corriere disponibile
-                        </p>
+                        <p className="text-sm text-gray-600">Nessun corriere disponibile</p>
                       </div>
                     )}
                   </div>
@@ -1894,7 +1751,7 @@ export default function NuovaSpedizionePage() {
                           zip: formData.destinatarioCap,
                           province: formData.destinatarioProvincia,
                           region: undefined,
-                          country: "IT",
+                          country: 'IT',
                         }}
                         serviceType={formData.tipoSpedizione}
                         options={{
@@ -1944,8 +1801,8 @@ export default function NuovaSpedizionePage() {
                       <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
                         <AlertCircle className="w-5 h-5 flex-shrink-0" />
                         <span>
-                          <strong>Seleziona un corriere</strong> dalla tabella
-                          preventivi per continuare
+                          <strong>Seleziona un corriere</strong> dalla tabella preventivi per
+                          continuare
                         </span>
                       </div>
                     )}
@@ -2000,23 +1857,18 @@ export default function NuovaSpedizionePage() {
                     <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
                       <div className="flex items-center gap-2 text-green-700 mb-2">
                         <CheckCircle2 className="w-5 h-5" />
-                        <span className="font-semibold">
-                          Spedizione creata con successo!
-                        </span>
+                        <span className="font-semibold">Spedizione creata con successo!</span>
                       </div>
                       {createdTracking && (
                         <div className="mt-2 p-3 bg-white rounded-lg border border-green-200">
-                          <div className="text-xs text-gray-600 mb-1">
-                            Tracking Number:
-                          </div>
+                          <div className="text-xs text-gray-600 mb-1">Tracking Number:</div>
                           <div className="text-lg font-mono font-bold text-green-700">
                             {createdTracking}
                           </div>
                         </div>
                       )}
                       <div className="mt-2 text-xs text-green-600">
-                        Il form verrà resettato tra poco per inserire una nuova
-                        spedizione...
+                        Il form verrà resettato tra poco per inserire una nuova spedizione...
                       </div>
                     </div>
                   )}
@@ -2034,7 +1886,7 @@ export default function NuovaSpedizionePage() {
           <SuccessModal
             open={showSuccessModal}
             onOpenChange={setShowSuccessModal}
-            trackingNumber={createdShipmentData?.tracking || createdTracking || ""}
+            trackingNumber={createdShipmentData?.tracking || createdTracking || ''}
             courier={createdShipmentData?.courier}
             cost={createdShipmentData?.cost}
             onPrintLabel={() => {
@@ -2046,7 +1898,7 @@ export default function NuovaSpedizionePage() {
               // Naviga a tracking page
               const tracking = createdShipmentData?.tracking || createdTracking;
               if (tracking) {
-                window.open(`/track/${tracking}`, "_blank");
+                window.open(`/track/${tracking}`, '_blank');
               }
               setShowSuccessModal(false);
             }}
@@ -2080,7 +1932,7 @@ export default function NuovaSpedizionePage() {
                 setSubmitError(null);
                 setFormattedError(null);
                 // Trigger nuovo submit
-                const form = document.querySelector("form");
+                const form = document.querySelector('form');
                 if (form) {
                   form.requestSubmit();
                 }
@@ -2092,27 +1944,27 @@ export default function NuovaSpedizionePage() {
                 } else {
                   // Azioni locali (es. focus su campo)
                   switch (action.id) {
-                    case "select_courier":
-                    case "change_courier":
+                    case 'select_courier':
+                    case 'change_courier':
                       // Scroll al preventivatore
                       document.querySelector('[class*="IntelligentQuote"]')?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
+                        behavior: 'smooth',
+                        block: 'center',
                       });
                       break;
-                    case "fix_address":
-                    case "fix_sender":
+                    case 'fix_address':
+                    case 'fix_sender':
                       // Scroll a mittente
                       document.querySelector('[class*="Mittente"]')?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
+                        behavior: 'smooth',
+                        block: 'center',
                       });
                       break;
-                    case "fix_recipient":
+                    case 'fix_recipient':
                       // Scroll a destinatario
                       document.querySelector('[class*="Destinatario"]')?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
+                        behavior: 'smooth',
+                        block: 'center',
                       });
                       break;
                   }

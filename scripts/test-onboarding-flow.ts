@@ -1,6 +1,6 @@
 /**
  * Test Flusso Onboarding - Verifica Reale
- * 
+ *
  * Simula flusso completo:
  * 1. Signup
  * 2. Email confirmation
@@ -80,14 +80,17 @@ async function testOnboardingFlow() {
 
     // 2. VERIFICA DATABASE - auth.users
     console.log('\n📊 STEP 2: VERIFICA DATABASE - auth.users');
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    
+    const {
+      data: { users },
+      error: listError,
+    } = await supabaseAdmin.auth.admin.listUsers();
+
     if (listError) {
       console.error('❌ Errore listUsers:', listError.message);
       return;
     }
 
-    const authUser = users?.find(u => u.email === testEmail);
+    const authUser = users?.find((u) => u.email === testEmail);
     if (authUser) {
       console.log('✅ Utente trovato in auth.users:');
       console.log('  - ID:', authUser.id);
@@ -118,7 +121,7 @@ async function testOnboardingFlow() {
       console.log('  - Role:', dbUser.role);
       console.log('  - Account Type:', dbUser.account_type);
       console.log('  - dati_cliente:', dbUser.dati_cliente ? 'PRESENTE' : 'NULL');
-      
+
       if (dbUser.dati_cliente) {
         console.log('  - dati_cliente.datiCompletati:', dbUser.dati_cliente.datiCompletati);
         console.log('  - dati_cliente.nome:', dbUser.dati_cliente.nome || 'NULL');
@@ -133,7 +136,7 @@ async function testOnboardingFlow() {
     // 4. SIMULAZIONE DECISIONE REDIRECT (come fa /api/auth/supabase-callback)
     console.log('\n🔄 STEP 4: SIMULAZIONE DECISIONE REDIRECT');
     console.log('(Come fa /api/auth/supabase-callback/route.ts)');
-    
+
     const { data: userData, error: userDataError } = await supabaseAdmin
       .from('users')
       .select('dati_cliente')
@@ -143,7 +146,10 @@ async function testOnboardingFlow() {
     console.log('  - Query error:', userDataError ? userDataError.message : 'NULL');
     console.log('  - userData:', userData ? 'PRESENTE' : 'NULL');
     console.log('  - userData?.dati_cliente:', userData?.dati_cliente ? 'PRESENTE' : 'NULL');
-    console.log('  - userData?.dati_cliente?.datiCompletati:', userData?.dati_cliente?.datiCompletati);
+    console.log(
+      '  - userData?.dati_cliente?.datiCompletati:',
+      userData?.dati_cliente?.datiCompletati
+    );
 
     let redirectTo = '/dashboard';
     if (userDataError || !userData?.dati_cliente || !userData.dati_cliente.datiCompletati) {
@@ -155,8 +161,12 @@ async function testOnboardingFlow() {
     console.log('\n  Condizione valutata:');
     console.log(`    userDataError: ${userDataError ? 'PRESENTE' : 'NULL'}`);
     console.log(`    !userData?.dati_cliente: ${!userData?.dati_cliente}`);
-    console.log(`    !userData.dati_cliente.datiCompletati: ${!userData?.dati_cliente ? 'N/A' : !userData.dati_cliente.datiCompletati}`);
-    console.log(`    Risultato: ${redirectTo === '/dashboard/dati-cliente' ? '→ /dashboard/dati-cliente ✅' : '→ /dashboard ❌'}`);
+    console.log(
+      `    !userData.dati_cliente.datiCompletati: ${!userData?.dati_cliente ? 'N/A' : !userData.dati_cliente.datiCompletati}`
+    );
+    console.log(
+      `    Risultato: ${redirectTo === '/dashboard/dati-cliente' ? '→ /dashboard/dati-cliente ✅' : '→ /dashboard ❌'}`
+    );
 
     // 5. VERIFICA UI (contrasto input)
     console.log('\n🎨 STEP 5: VERIFICA UI - Contrasto Input');
@@ -190,7 +200,6 @@ async function testOnboardingFlow() {
     console.log('  1. Aprire email di conferma');
     console.log('  2. Cliccare link conferma');
     console.log('  3. Osservare redirect effettivo nel browser');
-
   } catch (error: any) {
     console.error('❌ Errore durante test:', error.message);
     console.error(error.stack);
@@ -198,4 +207,3 @@ async function testOnboardingFlow() {
 }
 
 testOnboardingFlow();
-

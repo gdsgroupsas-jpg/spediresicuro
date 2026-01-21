@@ -13,19 +13,16 @@
 Installa queste estensioni in VS Code:
 
 1. **Vitest** (by Vitest)
-
    - ID: `vitest.explorer`
    - Per eseguire test unit/integration con Vitest
    - **Code Lens:** Mostra "Run | Debug" sopra ogni test
 
 2. **Playwright Test for VSCode** (by Microsoft)
-
    - ID: `ms-playwright.playwright`
    - Per eseguire test E2E con Playwright
    - **UI Mode:** Browser integrato per debug visivo
 
 3. **TypeScript and JavaScript Language Features** (built-in)
-
    - Già incluso in VS Code
 
 4. **ESLint** (consigliato)
@@ -115,7 +112,7 @@ Il modo più veloce per eseguire test:
 
 ```typescript
 // ↓ Run | Debug ← Clicca qui!
-test("calcola prezzo correttamente", () => {
+test('calcola prezzo correttamente', () => {
   expect(calculatePrice(100)).toBe(120);
 });
 ```

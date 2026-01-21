@@ -1,9 +1,9 @@
 /**
  * AgentTool Registry
- * 
+ *
  * Registry centralizzato per unificare tools sparsi.
  * Auto-discovery e validazione input/output con Zod.
- * 
+ *
  * P3 Task 4: Unificazione Tools
  */
 
@@ -80,19 +80,23 @@ export class AgentToolRegistry {
    */
   toLangChainTools(context: ToolExecutionContext): DynamicStructuredTool[] {
     return this.list()
-      .filter(tool => {
+      .filter((tool) => {
         // Filtra per ruolo se necessario
         if (tool.requiredRole) {
           if (tool.requiredRole === 'superadmin' && context.userRole !== 'superadmin') {
             return false;
           }
-          if (tool.requiredRole === 'admin' && context.userRole !== 'admin' && context.userRole !== 'superadmin') {
+          if (
+            tool.requiredRole === 'admin' &&
+            context.userRole !== 'admin' &&
+            context.userRole !== 'superadmin'
+          ) {
             return false;
           }
         }
         return true;
       })
-      .map(tool => {
+      .map((tool) => {
         return new DynamicStructuredTool({
           name: tool.name,
           description: tool.description,
@@ -111,4 +115,3 @@ export class AgentToolRegistry {
  * Registry globale (singleton).
  */
 export const toolRegistry = new AgentToolRegistry();
-

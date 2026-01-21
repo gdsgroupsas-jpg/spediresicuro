@@ -119,6 +119,7 @@ Dovresti vedere:
 **✅ Tutto OK?** Passa al passo 7.
 
 **❌ Errori?** Controlla:
+
 - Variabili ambiente corrette?
 - Schema SQL eseguito?
 - Progetto Supabase attivo?
@@ -134,6 +135,7 @@ npm run seed:geo
 ```
 
 **Cosa fa:**
+
 - Scarica ~8000 comuni da GitHub
 - Li inserisce nel database
 - Mostra progresso in tempo reale
@@ -141,6 +143,7 @@ npm run seed:geo
 **Tempo stimato:** 1-2 minuti
 
 **Output atteso:**
+
 ```
 🚀 Avvio seeding geo-locations...
 📥 Download dati comuni da GitHub...
@@ -200,6 +203,7 @@ Ora dovresti vedere:
 ### Errore: "Tabella geo_locations non trovata"
 
 **Soluzione:**
+
 1. Vai su SQL Editor in Supabase
 2. Esegui manualmente lo schema SQL
 3. Verifica che non ci siano errori
@@ -207,6 +211,7 @@ Ora dovresti vedere:
 ### Errore: "Variabili ambiente mancanti"
 
 **Soluzione:**
+
 1. Verifica che `.env.local` esista
 2. Controlla che i valori siano corretti (no spazi, no virgolette)
 3. Riavvia il server (`npm run dev`)
@@ -214,6 +219,7 @@ Ora dovresti vedere:
 ### Errore: "Errore connessione Supabase"
 
 **Soluzione:**
+
 1. Verifica che il progetto Supabase sia attivo
 2. Controlla che URL e chiavi siano corrette
 3. Prova a rigenerare le chiavi in Settings → API
@@ -221,6 +227,7 @@ Ora dovresti vedere:
 ### Nessun risultato nella ricerca
 
 **Soluzione:**
+
 1. Verifica che il database sia popolato: `npm run verify:supabase`
 2. Se vuoto, esegui: `npm run seed:geo`
 3. Controlla la console del browser per errori
@@ -228,6 +235,7 @@ Ora dovresti vedere:
 ### Errore durante seeding
 
 **Soluzione:**
+
 1. Verifica che `SUPABASE_SERVICE_ROLE_KEY` sia configurata
 2. Controlla che il progetto Supabase sia attivo
 3. Prova a eseguire lo script di nuovo
@@ -270,19 +278,9 @@ npm run dev
 Il sistema di autocompletamento geografico è ora completamente configurato e pronto all'uso!
 
 **Prossimi passi:**
+
 - Usa `AsyncLocationCombobox` in altri form
 - Personalizza lo stile se necessario
 - Aggiungi altre funzionalità
 
 **Domande?** Consulta `docs/GEO_AUTOCOMPLETE_SETUP.md` per dettagli tecnici.
-
-
-
-
-
-
-
-
-
-
-

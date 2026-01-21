@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -42,7 +41,7 @@ export default function AsyncLocationCombobox({
   placeholder = 'Cerca città, provincia o CAP...',
   className = '',
   defaultValue,
-  isValid
+  isValid,
 }: AsyncLocationComboboxProps) {
   // Formato semplificato: solo "Città (Provincia)" o "Città (Provincia) - CAP"
   const formatLocationText = (city: string, province: string, cap?: string | null) => {
@@ -53,7 +52,9 @@ export default function AsyncLocationCombobox({
   };
 
   const [inputValue, setInputValue] = useState(
-    defaultValue ? formatLocationText(defaultValue.city, defaultValue.province, defaultValue.cap) : ''
+    defaultValue
+      ? formatLocationText(defaultValue.city, defaultValue.province, defaultValue.cap)
+      : ''
   );
   const [results, setResults] = useState<GeoLocationOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +67,11 @@ export default function AsyncLocationCombobox({
   // Aggiorna inputValue quando defaultValue cambia (es. quando AI popola i campi)
   useEffect(() => {
     if (defaultValue) {
-      const newValue = formatLocationText(defaultValue.city, defaultValue.province, defaultValue.cap);
+      const newValue = formatLocationText(
+        defaultValue.city,
+        defaultValue.province,
+        defaultValue.cap
+      );
       if (inputValue !== newValue) {
         setInputValue(newValue);
       }
@@ -97,14 +102,15 @@ export default function AsyncLocationCombobox({
       }
 
       const data = await response.json();
-      
+
       if (data.error) {
         setError(data.error);
         setResults([]);
       } else {
         // Deduplicate results based on city and province
-        const uniqueResults = (data.results || []).filter((v: GeoLocationOption, i: number, a: GeoLocationOption[]) => 
-          a.findIndex(t => t.city === v.city && t.province === v.province) === i
+        const uniqueResults = (data.results || []).filter(
+          (v: GeoLocationOption, i: number, a: GeoLocationOption[]) =>
+            a.findIndex((t) => t.city === v.city && t.province === v.province) === i
         );
         setResults(uniqueResults);
       }
@@ -213,11 +219,11 @@ export default function AsyncLocationCombobox({
           <Command.Input
             value={inputValue}
             onValueChange={(val) => {
-               setInputValue(val);
-               setSelectedLocation(null);
-               setShowCapSelector(false);
-               // Open menu on typing, wait for debounce for search
-               if (val.length >= 2) setIsOpen(true);
+              setInputValue(val);
+              setSelectedLocation(null);
+              setShowCapSelector(false);
+              // Open menu on typing, wait for debounce for search
+              if (val.length >= 2) setIsOpen(true);
             }}
             placeholder={placeholder}
             className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white text-gray-900 font-medium ${
@@ -242,7 +248,7 @@ export default function AsyncLocationCombobox({
           )}
 
           {/* Reset button (solo se non loading e non valido o valido ma modificabile) */}
-          {(inputValue && !isLoading) && (
+          {inputValue && !isLoading && (
             <button
               type="button"
               onClick={handleReset}
@@ -260,9 +266,7 @@ export default function AsyncLocationCombobox({
             {error ? (
               <div className="p-4 text-red-600 text-sm">{error}</div>
             ) : results.length === 0 && !isLoading ? (
-              <div className="p-4 text-gray-500 text-sm text-center">
-                Nessun risultato trovato
-              </div>
+              <div className="p-4 text-gray-500 text-sm text-center">Nessun risultato trovato</div>
             ) : (
               <Command.List>
                 {results.map((location, index) => (
@@ -272,7 +276,7 @@ export default function AsyncLocationCombobox({
                     onSelect={() => handleSelectLocation(location)}
                     className="px-4 py-2 cursor-pointer hover:bg-gray-100 aria-selected:bg-gray-100 text-gray-900 font-medium"
                   >
-                   {location.displayText}
+                    {location.displayText}
                   </Command.Item>
                 ))}
               </Command.List>

@@ -34,6 +34,7 @@
 - [ ] Nuove assertions aggiunte a `SECURITY_ASSERTIONS.md` (se necessario)
 
 **Link Documentazione:**
+
 - [SECURITY_CONTEXT.md](../../SECURITY_CONTEXT.md)
 - [SECURITY_ASSERTIONS.md](../../SECURITY_ASSERTIONS.md)
 - [AUDIT_MODE_PROMPT.md](../../docs/security/AUDIT_MODE_PROMPT.md)
@@ -73,4 +74,4 @@
 
 ---
 
-**Note Aggiuntive:** _______________
+**Note Aggiuntive:** **\*\***\_\_\_**\*\***

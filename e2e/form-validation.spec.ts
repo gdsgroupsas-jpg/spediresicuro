@@ -1,13 +1,13 @@
 /**
  * E2E Test: Validazione Form Nuova Spedizione
- * 
+ *
  * Testa tutti gli scenari di validazione del form:
  * - Campi obbligatori mancanti
  * - Email non valida
  * - Telefono non valido
  * - Peso negativo o zero
  * - Città non selezionata
- * 
+ *
  * NOTA: Questi test richiedono che l'autenticazione mock funzioni.
  * In CI potrebbero essere saltati se l'ambiente non è configurato.
  */
@@ -48,7 +48,7 @@ test.describe('Validazione Form Nuova Spedizione', () => {
             id: 'test-user-id',
             email: 'test@example.com',
             name: 'Test User E2E',
-            wallet_balance: 100.00,
+            wallet_balance: 100.0,
           },
         }),
       });
@@ -126,14 +126,21 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     }
 
     // Compila nome mittente con meno di 2 caratteri
-    const nomeInput = page.getByText('Nome Completo', { exact: false }).first()
-      .locator('..').locator('input[type="text"]').first();
+    const nomeInput = page
+      .getByText('Nome Completo', { exact: false })
+      .first()
+      .locator('..')
+      .locator('input[type="text"]')
+      .first();
     await nomeInput.fill('A');
     await page.waitForTimeout(500);
 
     // Verifica che il campo mostri errore (se implementato)
     // Il form potrebbe non mostrare errore finché non si prova a submit
-    const hasError = await page.locator('text=/Nome troppo corto/i').isVisible().catch(() => false);
+    const hasError = await page
+      .locator('text=/Nome troppo corto/i')
+      .isVisible()
+      .catch(() => false);
     // Se il messaggio di errore è visibile, verifichiamolo
     if (hasError) {
       await expect(page.locator('text=/Nome troppo corto/i').first()).toBeVisible();
@@ -156,13 +163,20 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     }
 
     // Compila indirizzo con meno di 5 caratteri
-    const indirizzoInput = page.getByText('Indirizzo', { exact: false }).first()
-      .locator('..').locator('input[type="text"]').first();
+    const indirizzoInput = page
+      .getByText('Indirizzo', { exact: false })
+      .first()
+      .locator('..')
+      .locator('input[type="text"]')
+      .first();
     await indirizzoInput.fill('Via');
     await page.waitForTimeout(500);
 
     // Verifica che il campo mostri errore (se implementato)
-    const hasError = await page.locator('text=/Indirizzo troppo corto/i').isVisible().catch(() => false);
+    const hasError = await page
+      .locator('text=/Indirizzo troppo corto/i')
+      .isVisible()
+      .catch(() => false);
     if (hasError) {
       await expect(page.locator('text=/Indirizzo troppo corto/i').first()).toBeVisible();
     }
@@ -185,13 +199,16 @@ test.describe('Validazione Form Nuova Spedizione', () => {
 
     // Compila email non valida
     const emailInputs = page.locator('input[type="email"]');
-    if (await emailInputs.count() > 0) {
+    if ((await emailInputs.count()) > 0) {
       const mittenteEmail = emailInputs.first();
       await mittenteEmail.fill('email-non-valida');
       await page.waitForTimeout(500);
 
       // Verifica che il campo mostri errore
-      const hasError = await page.locator('text=/Email non valida/i').isVisible().catch(() => false);
+      const hasError = await page
+        .locator('text=/Email non valida/i')
+        .isVisible()
+        .catch(() => false);
       if (hasError) {
         await expect(page.locator('text=/Email non valida/i').first()).toBeVisible();
       }
@@ -215,13 +232,16 @@ test.describe('Validazione Form Nuova Spedizione', () => {
 
     // Compila telefono con meno di 8 caratteri
     const telefonoInputs = page.locator('input[type="tel"]');
-    if (await telefonoInputs.count() > 0) {
+    if ((await telefonoInputs.count()) > 0) {
       const mittenteTelefono = telefonoInputs.first();
       await mittenteTelefono.fill('123');
       await page.waitForTimeout(500);
 
       // Verifica che il campo mostri errore
-      const hasError = await page.locator('text=/Telefono non valido/i').isVisible().catch(() => false);
+      const hasError = await page
+        .locator('text=/Telefono non valido/i')
+        .isVisible()
+        .catch(() => false);
       if (hasError) {
         await expect(page.locator('text=/Telefono non valido/i').first()).toBeVisible();
       }
@@ -276,7 +296,7 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     const fillInputByLabel = async (labelText: string, value: string) => {
       const label = page.getByText(labelText, { exact: false }).first();
       const input = label.locator('..').locator('input').first();
-      if (await input.count() > 0) {
+      if ((await input.count()) > 0) {
         await input.fill(value);
         await page.waitForTimeout(200);
       }
@@ -290,26 +310,36 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     await page.route('**/api/geo/search*', async (route) => {
       const url = new URL(route.request().url());
       const query = url.searchParams.get('q') || '';
-      
-      let results: Array<{ city: string; province: string; cap: string; caps: string[]; displayText: string }> = [];
+
+      let results: Array<{
+        city: string;
+        province: string;
+        cap: string;
+        caps: string[];
+        displayText: string;
+      }> = [];
       if (query.toLowerCase().includes('milan')) {
-        results = [{
-          city: 'Milano',
-          province: 'MI',
-          cap: '20100',
-          caps: ['20100', '20121', '20122'],
-          displayText: 'Milano (MI) - 20100',
-        }];
+        results = [
+          {
+            city: 'Milano',
+            province: 'MI',
+            cap: '20100',
+            caps: ['20100', '20121', '20122'],
+            displayText: 'Milano (MI) - 20100',
+          },
+        ];
       } else if (query.toLowerCase().includes('rom')) {
-        results = [{
-          city: 'Roma',
-          province: 'RM',
-          cap: '00100',
-          caps: ['00100', '00118', '00119'],
-          displayText: 'Roma (RM) - 00100',
-        }];
+        results = [
+          {
+            city: 'Roma',
+            province: 'RM',
+            cap: '00100',
+            caps: ['00100', '00118', '00119'],
+            displayText: 'Roma (RM) - 00100',
+          },
+        ];
       }
-      
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -325,13 +355,13 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     const mittenteCityInput = page.getByPlaceholder('Cerca città...').first();
     await mittenteCityInput.fill('Milano');
     await page.waitForTimeout(2000);
-    
+
     // Clicca sul primo risultato
     const firstOption = page.locator('[role="option"]').first();
     if (await firstOption.isVisible().catch(() => false)) {
       await firstOption.click();
       await page.waitForTimeout(1000);
-      
+
       // Se appare popup CAP, seleziona il primo
       const capPopup = page.locator('text=/Seleziona CAP per/i');
       if (await capPopup.isVisible().catch(() => false)) {
@@ -348,28 +378,33 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     await page.waitForTimeout(500);
 
     const destinatarioLabels = page.getByText('Nome Completo', { exact: false });
-    if (await destinatarioLabels.count() >= 2) {
+    if ((await destinatarioLabels.count()) >= 2) {
       await destinatarioLabels.nth(1).locator('..').locator('input').first().fill('Luigi Verdi');
     }
 
     const destinatarioIndirizzoLabels = page.getByText('Indirizzo', { exact: false });
-    if (await destinatarioIndirizzoLabels.count() >= 2) {
-      await destinatarioIndirizzoLabels.nth(1).locator('..').locator('input').first().fill('Via Milano 456');
+    if ((await destinatarioIndirizzoLabels.count()) >= 2) {
+      await destinatarioIndirizzoLabels
+        .nth(1)
+        .locator('..')
+        .locator('input')
+        .first()
+        .fill('Via Milano 456');
     }
 
     // Città destinatario - seleziona dal dropdown
     const destinatarioCityInputs = page.getByPlaceholder('Cerca città...');
-    if (await destinatarioCityInputs.count() >= 2) {
+    if ((await destinatarioCityInputs.count()) >= 2) {
       const destinatarioCityInput = destinatarioCityInputs.nth(1);
       await destinatarioCityInput.fill('Roma');
       await page.waitForTimeout(2000);
-      
+
       // Clicca sul primo risultato
       const firstOptionDest = page.locator('[role="option"]').first();
       if (await firstOptionDest.isVisible().catch(() => false)) {
         await firstOptionDest.click();
         await page.waitForTimeout(1000);
-        
+
         // Se appare popup CAP, seleziona il primo
         const capPopupDest = page.locator('text=/Seleziona CAP per/i');
         if (await capPopupDest.isVisible().catch(() => false)) {
@@ -382,7 +417,7 @@ test.describe('Validazione Form Nuova Spedizione', () => {
 
     // Telefono destinatario
     const telefonoInputs = page.locator('input[type="tel"]');
-    if (await telefonoInputs.count() >= 2) {
+    if ((await telefonoInputs.count()) >= 2) {
       await telefonoInputs.nth(1).fill('+39 098 765 4321');
     }
 
@@ -398,14 +433,17 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     await page.waitForTimeout(1000);
     const corriereButton = page.getByRole('button', { name: /^GLS$/i }).first();
     await expect(corriereButton).toBeVisible({ timeout: 10000 });
-    
+
     // Verifica se è già selezionato
-    const isActive = await corriereButton.evaluate((el: any) => 
-      el.classList.contains('active') || 
-      el.getAttribute('aria-pressed') === 'true' ||
-      el.getAttribute('data-state') === 'active'
-    ).catch(() => false);
-    
+    const isActive = await corriereButton
+      .evaluate(
+        (el: any) =>
+          el.classList.contains('active') ||
+          el.getAttribute('aria-pressed') === 'true' ||
+          el.getAttribute('data-state') === 'active'
+      )
+      .catch(() => false);
+
     if (!isActive) {
       await corriereButton.click({ force: true });
       await page.waitForTimeout(1000);
@@ -415,18 +453,18 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     await page.waitForTimeout(2000);
     const progressIndicator = page.locator('text=/\\d+%/').first();
     const progressText = await progressIndicator.textContent();
-    
+
     // Se il progresso non è 100%, verifica quali campi mancano
     if (!progressText?.includes('100%')) {
       console.log(`⚠️ Progresso: ${progressText}, verifico campi...`);
-      
+
       // Verifica che tutte le città siano state selezionate correttamente
       const mittenteCityValue = await mittenteCityInput.inputValue();
       const destinatarioCityValue = await destinatarioCityInputs.nth(1).inputValue();
-      
+
       console.log(`Mittente città: "${mittenteCityValue}"`);
       console.log(`Destinatario città: "${destinatarioCityValue}"`);
-      
+
       // Se le città non contengono provincia/CAP, riprova selezione
       if (!mittenteCityValue.includes('MI') || !mittenteCityValue.includes('20100')) {
         console.log('⚠️ Città mittente non completa, riprovo...');
@@ -438,7 +476,7 @@ test.describe('Validazione Form Nuova Spedizione', () => {
           await page.waitForTimeout(1000);
         }
       }
-      
+
       if (!destinatarioCityValue.includes('RM') || !destinatarioCityValue.includes('00100')) {
         console.log('⚠️ Città destinatario non completa, riprovo...');
         await destinatarioCityInputs.nth(1).fill('Roma');
@@ -449,10 +487,10 @@ test.describe('Validazione Form Nuova Spedizione', () => {
           await page.waitForTimeout(1000);
         }
       }
-      
+
       await page.waitForTimeout(2000);
     }
-    
+
     // Verifica finale progresso
     const finalProgressText = await progressIndicator.textContent();
     // Accetta sia 89% che 100% come progresso valido (la città destinatario potrebbe non avere il CAP completo)

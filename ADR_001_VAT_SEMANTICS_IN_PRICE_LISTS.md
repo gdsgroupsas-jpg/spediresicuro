@@ -10,17 +10,20 @@
 ## Context
 
 The SpedireSicuro platform manages price lists from multiple sources:
+
 - **Supplier price lists**: Imported from external providers (e.g., Spedisci.Online)
 - **Custom price lists**: Created by resellers/BYOC users, often cloned from supplier lists
 - **Global price lists**: Template lists created by superadmins
 
 Currently, the system has **no explicit modeling of VAT semantics**. All prices are implicitly assumed to be VAT-excluded, but this assumption is:
+
 - Not documented
 - Not verifiable
 - Not enforceable
 - Potentially incorrect for supplier lists where VAT semantics are unknown
 
 This creates risks:
+
 1. **Fiscal misalignment**: Mixing VAT-included and VAT-excluded prices without conversion
 2. **Incorrect margin calculations**: Applying margin on VAT-included base prices
 3. **User confusion**: Prices displayed without VAT context
@@ -52,6 +55,7 @@ VAT semantics **MUST** be stored at the **list header level** (`price_lists` tab
 - Field: `vat_rate` (DECIMAL(5,2), default: 22.00, range: 0-100)
 
 **Rationale:**
+
 - Ensures uniform semantics across all entries in a list
 - Simplifies queries and filtering
 - Prevents inconsistencies
@@ -60,6 +64,7 @@ VAT semantics **MUST** be stored at the **list header level** (`price_lists` tab
 #### 1.3 Default for Legacy Data
 
 For existing price lists without `vat_mode`:
+
 - **Default:** `vat_mode = NULL` (treated as `'excluded'` in all calculations)
 - **Migration:** Legacy lists remain functional but should be explicitly set to `'excluded'` when updated
 
@@ -78,6 +83,7 @@ For existing price lists without `vat_mode`:
 #### 2.2 Storage Requirement
 
 Every `shipments.final_price` **MUST** be accompanied by:
+
 - `shipments.vat_mode` (matches the price list's `vat_mode` at creation time)
 - `shipments.vat_rate` (matches the price list's `vat_rate` at creation time)
 
@@ -86,6 +92,7 @@ Every `shipments.final_price` **MUST** be accompanied by:
 #### 2.3 Nature
 
 `final_price` is **both commercial and fiscal**:
+
 - **Commercial**: It is the price charged to the customer
 - **Fiscal**: It carries VAT context for tax compliance and reporting
 
@@ -98,6 +105,7 @@ Every `shipments.final_price` **MUST** be accompanied by:
 **Rule:** Margin calculations **MUST** always operate on VAT-excluded amounts.
 
 **Implementation Logic:**
+
 1. If `price_list.vat_mode = 'included'`:
    - Convert base price to VAT-excluded: `base_excl = base_incl / (1 + vat_rate/100)`
    - Apply margin on VAT-excluded base: `margin = base_excl * margin_percent / 100`
@@ -116,11 +124,13 @@ Every `shipments.final_price` **MUST** be accompanied by:
 **Rule:** Prices with different VAT modes **MUST NOT** be compared, sorted, or aggregated without explicit normalization to a common VAT mode.
 
 **Enforcement:**
+
 - Quote comparator **MUST** normalize all prices to the same VAT mode before comparison
 - Dashboard aggregations **MUST** normalize before summing
 - Financial reports **MUST** normalize before calculations
 
 **Normalization Function:**
+
 ```
 normalize_price(price, from_mode, to_mode, vat_rate):
   if from_mode == to_mode: return price
@@ -137,6 +147,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 **Rule:** Every price displayed in the UI **MUST** be accompanied by explicit VAT context.
 
 **Requirements:**
+
 - Price display **MUST** include one of:
   - Badge: "IVA esclusa" or "IVA incl."
   - Suffix: "+ IVA 22%" or "IVA incl."
@@ -144,6 +155,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 - **NEVER** display a price as plain "€X.XX" without VAT indication
 
 **Locations:**
+
 - Quote comparator
 - Shipment dashboard
 - Price list detail pages
@@ -155,11 +167,13 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 #### Invariant #4: Shipment Persistence Must Include VAT Context
 
 **Rule:** When creating a shipment, the system **MUST** persist:
+
 - `shipments.final_price` (the commercial price)
 - `shipments.vat_mode` (matching the price list's `vat_mode`)
 - `shipments.vat_rate` (matching the price list's `vat_rate`)
 
 **Rationale:** Historical shipments must retain fiscal context for:
+
 - Audit trails
 - Tax reporting
 - Dispute resolution
@@ -172,6 +186,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 #### 4.1 Price List → Pricing Engine
 
 **Flow:**
+
 1. Pricing engine reads `price_list.vat_mode` and `price_list.vat_rate`
 2. Retrieves base price from `price_list_entries.base_price`
 3. If `vat_mode = 'included'`, converts to VAT-excluded for calculations
@@ -185,6 +200,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
    - `vatAmount` (calculated if needed)
 
 **Files:**
+
 - `lib/db/price-lists-advanced.ts` (calculatePriceWithRules)
 - `lib/pricing/calculator.ts` (calculatePriceFromList)
 
@@ -193,6 +209,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 #### 4.2 Pricing Engine → Quote API
 
 **Flow:**
+
 1. Quote API receives `PriceCalculationResult` from pricing engine
 2. Maps to quote response format:
    - `total_price`: `finalPrice` (string)
@@ -202,6 +219,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
    - `total_price_with_vat`: calculated if `vat_mode = 'excluded'`
 
 **File:**
+
 - `app/api/quotes/db/route.ts`
 
 ---
@@ -209,6 +227,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 #### 4.3 Quote API → Comparator UI
 
 **Flow:**
+
 1. Comparator receives quote array with `vat_mode` and `vat_rate`
 2. **Normalizes all quotes to same VAT mode** (default: 'excluded') for comparison
 3. Displays normalized prices for sorting/ranking
@@ -217,6 +236,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
    - If `vat_mode = 'included'`: "€X.XX IVA incl."
 
 **File:**
+
 - `components/shipments/intelligent-quote-comparator.tsx`
 
 ---
@@ -224,6 +244,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 #### 4.4 Comparator UI → Shipment Creation
 
 **Flow:**
+
 1. User selects quote from comparator
 2. Selected quote includes: `total_price`, `vat_mode`, `vat_rate`
 3. Shipment creation API receives these values
@@ -233,6 +254,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
    - `vat_rate`: from quote
 
 **Files:**
+
 - `app/api/shipments/create/route.ts`
 - `lib/shipments/create-shipment-core.ts`
 
@@ -241,6 +263,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 #### 4.5 Shipment Persistence → Dashboard
 
 **Flow:**
+
 1. Dashboard reads `shipments.final_price`, `shipments.vat_mode`, `shipments.vat_rate`
 2. Displays price with VAT context:
    - If `vat_mode = 'excluded'`: "€X.XX + IVA 22%"
@@ -248,6 +271,7 @@ normalize_price(price, from_mode, to_mode, vat_rate):
 3. For aggregations, normalizes to common VAT mode before summing
 
 **Files:**
+
 - `app/dashboard/spedizioni/page.tsx`
 - `lib/database.ts` (mapSpedizioneFromSupabase)
 
@@ -261,7 +285,8 @@ The following are **intentionally NOT supported**:
 
 **Not Supported:** A single price list with some entries VAT-included and others VAT-excluded.
 
-**Rationale:** 
+**Rationale:**
+
 - Creates complexity in calculations
 - Increases risk of errors
 - Rarely needed in practice (suppliers provide uniform lists)
@@ -274,6 +299,7 @@ The following are **intentionally NOT supported**:
 **Not Supported:** Storing `vat_mode` at the `price_list_entries` level.
 
 **Rationale:**
+
 - Adds unnecessary complexity
 - Increases risk of inconsistencies
 - List-level semantics are sufficient and clearer
@@ -285,6 +311,7 @@ The following are **intentionally NOT supported**:
 **Not Supported:** Automatically determining VAT rate based on destination country, customer type, or other factors.
 
 **Rationale:**
+
 - VAT rate is a fiscal parameter that should be explicit
 - Different rates can be handled by creating separate price lists
 - Keeps the model simple and auditable
@@ -296,6 +323,7 @@ The following are **intentionally NOT supported**:
 **Not Supported:** Explicitly modeling VAT on platform fees separately from shipment prices.
 
 **Rationale:**
+
 - Platform fees are handled separately in the financial system
 - Shipment prices are the primary concern for this ADR
 - Platform fee VAT can be addressed in a separate ADR if needed

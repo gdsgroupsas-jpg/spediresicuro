@@ -29,10 +29,7 @@ export interface User {
  * const user = await getUserByEmail(session.user.email);
  * if (!user) return ApiErrors.NOT_FOUND('Utente');
  */
-export async function getUserByEmail(
-  email: string,
-  select: string = '*'
-): Promise<User | null> {
+export async function getUserByEmail(email: string, select: string = '*'): Promise<User | null> {
   try {
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -61,16 +58,9 @@ export async function getUserByEmail(
  * @example
  * const user = await getUserById(userId);
  */
-export async function getUserById(
-  id: string,
-  select: string = '*'
-): Promise<User | null> {
+export async function getUserById(id: string, select: string = '*'): Promise<User | null> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .select(select)
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabaseAdmin.from('users').select(select).eq('id', id).single();
 
     if (error || !data) {
       return null;
@@ -118,10 +108,7 @@ export async function userExists(email: string): Promise<boolean> {
  * @example
  * const children = await getUserChildren(adminId);
  */
-export async function getUserChildren(
-  parentId: string,
-  select: string = '*'
-): Promise<User[]> {
+export async function getUserChildren(parentId: string, select: string = '*'): Promise<User[]> {
   try {
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -150,10 +137,7 @@ export async function getUserChildren(
  * @example
  * const updated = await updateUser(userId, { name: 'Nuovo Nome' });
  */
-export async function updateUser(
-  id: string,
-  updates: Partial<User>
-): Promise<User | null> {
+export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
   try {
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -186,15 +170,9 @@ export async function updateUser(
  *   parent_id: adminId
  * });
  */
-export async function createUser(
-  userData: Partial<User>
-): Promise<User | null> {
+export async function createUser(userData: Partial<User>): Promise<User | null> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .insert(userData)
-      .select()
-      .single();
+    const { data, error } = await supabaseAdmin.from('users').insert(userData).select().single();
 
     if (error || !data) {
       console.error('Error creating user:', error);
@@ -219,10 +197,7 @@ export async function createUser(
  */
 export async function deleteUser(id: string): Promise<boolean> {
   try {
-    const { error } = await supabaseAdmin
-      .from('users')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabaseAdmin.from('users').delete().eq('id', id);
 
     return !error;
   } catch (error) {

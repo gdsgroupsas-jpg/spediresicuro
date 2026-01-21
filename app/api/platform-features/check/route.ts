@@ -1,6 +1,6 @@
 /**
  * API Route: Verifica se una platform feature è attiva
- * 
+ *
  * GET: Verifica se una feature è attiva (pubblica, per uso lato client)
  */
 
@@ -16,10 +16,7 @@ export async function GET(request: NextRequest) {
     const featureCode = searchParams.get('feature');
 
     if (!featureCode) {
-      return NextResponse.json(
-        { error: 'Parametro feature obbligatorio' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Parametro feature obbligatorio' }, { status: 400 });
     }
 
     const [enabled, visible] = await Promise.all([
@@ -41,9 +38,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-

@@ -1,6 +1,6 @@
 /**
  * Dashboard: Gestione Listini Prezzi
- * 
+ *
  * Interfaccia completa per gestire listini prezzi con:
  * - Visualizzazione listini esistenti
  * - Creazione/modifica listini
@@ -10,16 +10,16 @@
  * - Audit e reporting
  */
 
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { 
-  FileText, 
-  Plus, 
-  Upload, 
-  Search, 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  FileText,
+  Plus,
+  Upload,
+  Search,
   Filter,
   MoreVertical,
   Edit,
@@ -33,145 +33,151 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  RefreshCw
-} from 'lucide-react'
-import { toast } from 'sonner'
-import DashboardNav from '@/components/dashboard-nav'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { QueryProvider } from '@/components/providers/query-provider'
-import { listPriceListsAction, createPriceListAction } from '@/actions/price-lists'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { SyncSpedisciOnlineDialog } from '@/components/listini/sync-spedisci-online-dialog'
+  RefreshCw,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import DashboardNav from '@/components/dashboard-nav';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { QueryProvider } from '@/components/providers/query-provider';
+import { listPriceListsAction, createPriceListAction } from '@/actions/price-lists';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { SyncSpedisciOnlineDialog } from '@/components/listini/sync-spedisci-online-dialog';
 
 interface PriceList {
-  id: string
-  name: string
-  version: string
-  status: 'draft' | 'active' | 'archived'
-  priority: 'global' | 'partner' | 'client' | 'default'
-  is_global: boolean
-  courier?: { name: string; code: string }
-  usage_count?: number
-  last_used_at?: string
-  created_at: string
-  valid_from?: string
-  valid_until?: string
+  id: string;
+  name: string;
+  version: string;
+  status: 'draft' | 'active' | 'archived';
+  priority: 'global' | 'partner' | 'client' | 'default';
+  is_global: boolean;
+  courier?: { name: string; code: string };
+  usage_count?: number;
+  last_used_at?: string;
+  created_at: string;
+  valid_from?: string;
+  valid_until?: string;
 }
 
 export default function PriceListsPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [priceLists, setPriceLists] = useState<PriceList[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all')
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showSyncDialog, setShowSyncDialog] = useState(false)
-  const [accountType, setAccountType] = useState<string | null>(null)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [accountType, setAccountType] = useState<string | null>(null);
 
   // Verifica permessi superadmin/admin
   useEffect(() => {
-    if (status === 'loading') return
-    
+    if (status === 'loading') return;
+
     if (status === 'unauthenticated' || !session) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
 
     async function checkPermissions() {
       try {
-        const response = await fetch('/api/user/info')
+        const response = await fetch('/api/user/info');
         if (response.ok) {
-          const data = await response.json()
-          const userData = data.user || data
-          const userAccountType = userData.account_type || userData.accountType
-          setAccountType(userAccountType)
-          
+          const data = await response.json();
+          const userData = data.user || data;
+          const userAccountType = userData.account_type || userData.accountType;
+          setAccountType(userAccountType);
+
           // Superadmin e admin hanno sempre accesso
           if (userAccountType !== 'superadmin' && userAccountType !== 'admin') {
-            router.push('/dashboard?error=unauthorized')
-            return
+            router.push('/dashboard?error=unauthorized');
+            return;
           }
         }
       } catch (error) {
-        console.error('Errore verifica permessi:', error)
-        router.push('/dashboard?error=unauthorized')
+        console.error('Errore verifica permessi:', error);
+        router.push('/dashboard?error=unauthorized');
       }
     }
 
-    checkPermissions()
-  }, [session, status, router])
+    checkPermissions();
+  }, [session, status, router]);
 
   useEffect(() => {
     if (accountType === 'superadmin' || accountType === 'admin') {
-      loadPriceLists()
+      loadPriceLists();
     }
-  }, [statusFilter, accountType])
+  }, [statusFilter, accountType]);
 
   async function loadPriceLists() {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       const result = await listPriceListsAction({
         status: statusFilter !== 'all' ? statusFilter : undefined,
-      })
+      });
 
       if (result.success && result.priceLists) {
-        setPriceLists(result.priceLists as PriceList[])
+        setPriceLists(result.priceLists as PriceList[]);
       } else {
-        toast.error(result.error || 'Errore nel caricamento listini')
+        toast.error(result.error || 'Errore nel caricamento listini');
       }
     } catch (error: any) {
-      toast.error('Errore imprevisto')
-      console.error(error)
+      toast.error('Errore imprevisto');
+      console.error(error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
-  const filteredLists = priceLists.filter(list => {
+  const filteredLists = priceLists.filter((list) => {
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase();
       return (
         list.name.toLowerCase().includes(query) ||
         list.version.toLowerCase().includes(query) ||
         list.courier?.name?.toLowerCase().includes(query)
-      )
+      );
     }
-    return true
-  })
+    return true;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="success">Attivo</Badge>
+        return <Badge variant="success">Attivo</Badge>;
       case 'draft':
-        return <Badge variant="secondary">Bozza</Badge>
+        return <Badge variant="secondary">Bozza</Badge>;
       case 'archived':
-        return <Badge variant="error">Archiviato</Badge>
+        return <Badge variant="error">Archiviato</Badge>;
       default:
-        return <Badge>{status}</Badge>
+        return <Badge>{status}</Badge>;
     }
-  }
+  };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'global':
-        return <Badge variant="warning">Globale</Badge>
+        return <Badge variant="warning">Globale</Badge>;
       case 'partner':
-        return <Badge variant="default">Partner</Badge>
+        return <Badge variant="default">Partner</Badge>;
       case 'client':
-        return <Badge variant="secondary">Cliente</Badge>
+        return <Badge variant="secondary">Cliente</Badge>;
       default:
-        return <Badge variant="outline">Default</Badge>
+        return <Badge variant="outline">Default</Badge>;
     }
-  }
+  };
 
   return (
     <QueryProvider>
@@ -182,11 +188,7 @@ export default function PriceListsPage() {
             subtitle="Sistema avanzato di pricing con regole dinamiche - Crea, modifica e gestisci listini"
             actions={
               <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowSyncDialog(true)}
-                  variant="outline"
-                  className="gap-2"
-                >
+                <Button onClick={() => setShowSyncDialog(true)} variant="outline" className="gap-2">
                   <RefreshCw className="h-4 w-4" />
                   Sincronizza da Spedisci.Online
                 </Button>
@@ -213,7 +215,7 @@ export default function PriceListsPage() {
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
               </div>
               <div className="text-3xl font-bold text-gray-900">
-                {priceLists.filter(l => l.status === 'active').length}
+                {priceLists.filter((l) => l.status === 'active').length}
               </div>
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -231,7 +233,7 @@ export default function PriceListsPage() {
                 <Sparkles className="h-5 w-5 text-purple-500" />
               </div>
               <div className="text-3xl font-bold text-gray-900">
-                {priceLists.filter(l => l.is_global).length}
+                {priceLists.filter((l) => l.is_global).length}
               </div>
             </div>
           </div>
@@ -274,7 +276,9 @@ export default function PriceListsPage() {
               <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Nessun listino trovato</h3>
               <p className="text-gray-600 mb-6">
-                {searchQuery ? 'Prova a modificare i filtri di ricerca' : 'Crea il primo listino per iniziare'}
+                {searchQuery
+                  ? 'Prova a modificare i filtri di ricerca'
+                  : 'Crea il primo listino per iniziare'}
               </p>
               {!searchQuery && (
                 <Button onClick={() => setShowCreateDialog(true)}>
@@ -289,13 +293,27 @@ export default function PriceListsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Listino</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Corriere</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Stato</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Priorità</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Utilizzi</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Validità</th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Azioni</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Listino
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Corriere
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Stato
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Priorità
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Utilizzi
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                        Validità
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
+                        Azioni
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -330,14 +348,14 @@ export default function PriceListsPage() {
                           </div>
                           {list.valid_until && (
                             <div className="text-xs text-gray-500">
-              fino a {formatDate(list.valid_until)}
+                              fino a {formatDate(list.valid_until)}
                             </div>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => router.push(`/dashboard/listini/${list.id}`)}
                             >
@@ -371,57 +389,61 @@ export default function PriceListsPage() {
               isOpen={showCreateDialog}
               onClose={() => setShowCreateDialog(false)}
               onSuccess={() => {
-                setShowCreateDialog(false)
-                loadPriceLists()
+                setShowCreateDialog(false);
+                loadPriceLists();
               }}
             />
           )}
         </div>
       </div>
     </QueryProvider>
-  )
+  );
 }
 
 // Componente Dialog Creazione Listino Completo
-function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
+function CreatePriceListDialog({
+  isOpen,
+  onClose,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
 }) {
-  const [name, setName] = useState('')
-  const [version, setVersion] = useState('1.0.0')
-  const [status, setStatus] = useState<'draft' | 'active' | 'archived'>('draft')
-  const [priority, setPriority] = useState<'global' | 'partner' | 'client' | 'default'>('default')
-  const [courierId, setCourierId] = useState<string>('')
-  const [isGlobal, setIsGlobal] = useState(false)
-  const [description, setDescription] = useState('')
-  const [validFrom, setValidFrom] = useState('')
-  const [validUntil, setValidUntil] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [couriers, setCouriers] = useState<any[]>([])
+  const [name, setName] = useState('');
+  const [version, setVersion] = useState('1.0.0');
+  const [status, setStatus] = useState<'draft' | 'active' | 'archived'>('draft');
+  const [priority, setPriority] = useState<'global' | 'partner' | 'client' | 'default'>('default');
+  const [courierId, setCourierId] = useState<string>('');
+  const [isGlobal, setIsGlobal] = useState(false);
+  const [description, setDescription] = useState('');
+  const [validFrom, setValidFrom] = useState('');
+  const [validUntil, setValidUntil] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [couriers, setCouriers] = useState<any[]>([]);
 
   // Carica corrieri disponibili
   useEffect(() => {
     if (isOpen) {
-      loadCouriers()
+      loadCouriers();
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   async function loadCouriers() {
     try {
       // Prova API couriers, altrimenti usa lista hardcoded
       try {
-        const response = await fetch('/api/couriers')
+        const response = await fetch('/api/couriers');
         if (response.ok) {
-          const data = await response.json()
-          setCouriers(data.couriers || data || [])
-          return
+          const data = await response.json();
+          setCouriers(data.couriers || data || []);
+          return;
         }
       } catch (apiError) {
-        console.warn('API couriers non disponibile, uso lista default')
+        console.warn('API couriers non disponibile, uso lista default');
       }
-      
+
       // Fallback: lista corrieri comuni
       setCouriers([
         { id: 'bartolini', name: 'Bartolini', code: 'BRT' },
@@ -430,27 +452,27 @@ function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
         { id: 'sda', name: 'SDA', code: 'SDA' },
         { id: 'ups', name: 'UPS', code: 'UPS' },
         { id: 'fedex', name: 'FedEx', code: 'FEDEX' },
-      ])
+      ]);
     } catch (error) {
-      console.error('Errore caricamento corrieri:', error)
+      console.error('Errore caricamento corrieri:', error);
       // Fallback lista vuota
-      setCouriers([])
+      setCouriers([]);
     }
   }
 
   async function handleCreate() {
     if (!name.trim()) {
-      setError('Il nome del listino è obbligatorio')
-      return
+      setError('Il nome del listino è obbligatorio');
+      return;
     }
 
     if (!version.trim()) {
-      setError('La versione è obbligatoria')
-      return
+      setError('La versione è obbligatoria');
+      return;
     }
 
-    setIsCreating(true)
-    setError(null)
+    setIsCreating(true);
+    setError(null);
 
     try {
       const result = await createPriceListAction({
@@ -463,31 +485,31 @@ function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
         description: description.trim() || undefined,
         valid_from: validFrom || undefined,
         valid_until: validUntil || undefined,
-      })
+      });
 
       if (result.success) {
-        toast.success('Listino creato con successo!')
+        toast.success('Listino creato con successo!');
         // Reset form
-        setName('')
-        setVersion('1.0.0')
-        setStatus('draft')
-        setPriority('default')
-        setCourierId('')
-        setIsGlobal(false)
-        setDescription('')
-        setValidFrom('')
-        setValidUntil('')
-        onSuccess()
+        setName('');
+        setVersion('1.0.0');
+        setStatus('draft');
+        setPriority('default');
+        setCourierId('');
+        setIsGlobal(false);
+        setDescription('');
+        setValidFrom('');
+        setValidUntil('');
+        onSuccess();
       } else {
-        setError(result.error || 'Errore durante la creazione del listino')
-        toast.error(result.error || 'Errore durante la creazione del listino')
+        setError(result.error || 'Errore durante la creazione del listino');
+        toast.error(result.error || 'Errore durante la creazione del listino');
       }
     } catch (error: any) {
-      setError(error.message || 'Errore sconosciuto')
-      toast.error('Errore durante la creazione del listino')
-      console.error(error)
+      setError(error.message || 'Errore sconosciuto');
+      toast.error('Errore durante la creazione del listino');
+      console.error(error);
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
   }
 
@@ -551,7 +573,9 @@ function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
               <Select
                 id="priority"
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as 'global' | 'partner' | 'client' | 'default')}
+                onChange={(e) =>
+                  setPriority(e.target.value as 'global' | 'partner' | 'client' | 'default')
+                }
               >
                 <option value="default">Default</option>
                 <option value="client">Cliente</option>
@@ -564,11 +588,7 @@ function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
           {/* Corriere */}
           <div>
             <Label htmlFor="courier">Corriere (opzionale)</Label>
-            <Select
-              id="courier"
-              value={courierId}
-              onChange={(e) => setCourierId(e.target.value)}
-            >
+            <Select id="courier" value={courierId} onChange={(e) => setCourierId(e.target.value)}>
               <option value="">Nessuno (Multi-corriere)</option>
               {couriers.map((courier) => (
                 <option key={courier.id} value={courier.id}>
@@ -640,5 +660,5 @@ function CreatePriceListDialog({ isOpen, onClose, onSuccess }: {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

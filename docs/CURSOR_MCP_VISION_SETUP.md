@@ -3,6 +3,7 @@
 ## 📋 Panoramica
 
 Il **Vision MCP Server** di Z.AI abilita capacità di visione (GLM-4.6V) in Cursor, permettendo:
+
 - 📸 Analisi di immagini e screenshot
 - 🎥 Comprensione di video
 - 🔍 OCR di screenshot e documenti
@@ -55,6 +56,7 @@ node -v
 **Stato Attuale**: v20.18.1 (⚠️ **NON COMPATIBILE**)
 
 **Soluzione**: Aggiorna Node.js a v22.0.0 o superiore:
+
 1. Scarica da [nodejs.org](https://nodejs.org/) (versione LTS o Current)
 2. Installa la nuova versione
 3. Riavvia terminale e Cursor
@@ -118,19 +120,19 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 ### Esempio 1: Analisi Screenshot
 
 1. Salva un'immagine nel progetto (es: `screenshot.png`)
-2. In Cursor Chat, chiedi: *"Cosa descrive screenshot.png?"*
+2. In Cursor Chat, chiedi: _"Cosa descrive screenshot.png?"_
 3. Il Vision MCP Server analizzerà l'immagine automaticamente
 
 ### Esempio 2: OCR di Codice
 
 1. Fai uno screenshot di codice o terminale
 2. Salvalo come `code-screenshot.png`
-3. Chiedi: *"Estrai il testo da code-screenshot.png"*
+3. Chiedi: _"Estrai il testo da code-screenshot.png"_
 
 ### Esempio 3: Converti UI in Codice
 
 1. Salva uno screenshot di un'interfaccia UI
-2. Chiedi: *"Converti ui-screenshot.png in codice React"*
+2. Chiedi: _"Converti ui-screenshot.png in codice React"_
 
 ---
 
@@ -139,6 +141,7 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 ### ❌ "Connection Closed" o "MCP server connection closed"
 
 **Soluzioni:**
+
 1. Verifica Node.js >= v22.0.0: `node -v`
 2. Verifica npx: `npx -v`
 3. Controlla che `Z_AI_API_KEY` sia configurata correttamente
@@ -147,6 +150,7 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 ### ❌ "Invalid API Key"
 
 **Soluzioni:**
+
 1. Verifica che l'API Key sia completa e corretta
 2. Controlla che l'API Key sia attiva su Z.AI
 3. Verifica che `Z_AI_MODE=ZAI` sia impostato
@@ -155,6 +159,7 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 ### ❌ "Connection Timeout"
 
 **Soluzioni:**
+
 1. Verifica connessione internet
 2. Controlla firewall/antivirus
 3. Prova ad aumentare i timeout nelle impostazioni
@@ -162,6 +167,7 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 ### ❌ Tool non disponibili in Chat
 
 **Soluzioni:**
+
 1. Riavvia Cursor completamente
 2. Verifica che `.cursor/mcp.json` sia nella root del progetto
 3. Controlla i log di Cursor per errori MCP
@@ -172,6 +178,7 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 **⚠️ PROBLEMA ATTUALE**: Node.js v20.18.1 installato, ma serve >= v22.0.0
 
 **Soluzioni:**
+
 1. **Scarica Node.js v22+** da [nodejs.org](https://nodejs.org/)
    - Scegli "Current" (v22+) o "LTS" se disponibile
 2. **Installa** la nuova versione (sovrascriverà la vecchia)
@@ -185,17 +192,18 @@ Una volta riavviato, i seguenti tool dovrebbero essere disponibili in Cursor Cha
 
 Le quote MCP per i piani Z.AI:
 
-| Piano | Web Search/Reader | Vision Understanding |
-|-------|------------------|---------------------|
-| **Lite** | 100 totali | 5 ore max prompt pool |
-| **Pro** | 1,000 totali | 5 ore max prompt pool |
-| **Max** | 4,000 totali | 5 ore max prompt pool |
+| Piano    | Web Search/Reader | Vision Understanding  |
+| -------- | ----------------- | --------------------- |
+| **Lite** | 100 totali        | 5 ore max prompt pool |
+| **Pro**  | 1,000 totali      | 5 ore max prompt pool |
+| **Max**  | 4,000 totali      | 5 ore max prompt pool |
 
 ---
 
 ## 🔒 Sicurezza
 
-⚠️ **IMPORTANTE**: 
+⚠️ **IMPORTANTE**:
+
 - Il file `.cursor/mcp.json` contiene la tua API Key
 - **NON COMMITTARE** questo file nel repository
 - Aggiungi `.cursor/mcp.json` al `.gitignore` se non già presente
@@ -233,4 +241,4 @@ Controlla che `.cursor/mcp.json` sia ignorato:
 
 ---
 
-*Ultimo aggiornamento: 2025-01-27*
+_Ultimo aggiornamento: 2025-01-27_

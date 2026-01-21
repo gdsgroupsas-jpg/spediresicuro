@@ -17,6 +17,7 @@ Registrare la tua applicazione nel portale Poste Delivery Business per ottenere 
 ### 1.2 Verifica Permessi
 
 Assicurati di avere i permessi per:
+
 - ✅ Creare applicazioni API
 - ✅ Gestire credenziali OAuth
 - ✅ Accedere alle API Waybill Services
@@ -32,11 +33,13 @@ Assicurati di avere i permessi per:
 3. Compila il form con:
 
    **Nome Applicazione:**
+
    ```
    SpedireSicuro - Integrazione API
    ```
 
    **Descrizione:**
+
    ```
    Applicazione per integrazione spedizioni tramite API Poste Delivery Business
    ```
@@ -120,25 +123,31 @@ Puoi testare l'autenticazione direttamente dal portale se c'è una sezione "Test
 3. Inserisci i dati:
 
    **Client ID:**
+
    ```
    [Incolla il Client ID dal portale Poste]
    ```
 
    **Secret ID:**
+
    ```
    [Incolla il Secret ID dal portale Poste]
    ```
 
    **Base URL:**
+
    ```
    https://apiw.gp.posteitaliane.it/gp/internet
    ```
+
    (o l'URL fornito da Poste)
 
    **CDC (Codice Conto):**
+
    ```
    CDC-00038791
    ```
+
    (il tuo codice CDC)
 
 4. Clicca su **"Testa e Salva"**
@@ -146,11 +155,13 @@ Puoi testare l'autenticazione direttamente dal portale se c'è una sezione "Test
 ### 5.2 Verifica Test
 
 Se il test passa:
+
 - ✅ Le credenziali sono corrette
 - ✅ L'applicazione è registrata correttamente
 - ✅ Puoi iniziare a creare spedizioni
 
 Se il test fallisce:
+
 - ❌ Verifica che Client ID e Secret ID siano corretti
 - ❌ Controlla che l'applicazione sia attiva nel portale
 - ❌ Verifica che lo scope sia configurato correttamente
@@ -164,6 +175,7 @@ Se il test fallisce:
 **Causa:** Client ID non valido o applicazione non registrata nel tenant corretto.
 
 **Soluzione:**
+
 1. Verifica che il Client ID sia quello esatto dal portale
 2. Controlla che l'applicazione sia nel tenant "Poste Italiane S.p.A."
 3. Se hai più tenant, assicurati di usare quello corretto
@@ -173,6 +185,7 @@ Se il test fallisce:
 **Causa:** Secret ID errato o scaduto.
 
 **Soluzione:**
+
 1. Verifica di aver copiato correttamente il Secret ID
 2. Se hai rigenerato il Secret, usa quello nuovo
 3. Controlla che non ci siano spazi o caratteri nascosti
@@ -182,6 +195,7 @@ Se il test fallisce:
 **Causa:** Scope/Permessi API non configurati correttamente.
 
 **Soluzione:**
+
 1. Nel portale, verifica che l'applicazione abbia i permessi per "Waybill Services"
 2. Controlla che lo scope sia: `api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default`
 3. Se necessario, richiedi permessi aggiuntivi al supporto Poste
@@ -226,6 +240,7 @@ Prima di testare l'integrazione, verifica:
 ### Endpoint Autenticazione
 
 Il sistema prova automaticamente questi endpoint:
+
 1. `/user/sessions`
 2. `/oauth/token`
 3. `/auth/token`
@@ -233,6 +248,7 @@ Il sistema prova automaticamente questi endpoint:
 ### Scope OAuth2
 
 Lo scope utilizzato è:
+
 ```
 api://8f0f2c58-19a8-45ef-9f9e-8ccb0acc7657/.default
 ```
@@ -242,11 +258,13 @@ Questo è lo scope standard per Poste Delivery Business API.
 ### Base URL
 
 URL di produzione tipico:
+
 ```
 https://apiw.gp.posteitaliane.it/gp/internet
 ```
 
 URL di sviluppo/test (se disponibile):
+
 ```
 https://apid.gp.posteitaliane.it/dev/kindergarden
 ```
@@ -254,4 +272,3 @@ https://apid.gp.posteitaliane.it/dev/kindergarden
 ---
 
 **Ultimo aggiornamento:** 12 Dicembre 2025
-

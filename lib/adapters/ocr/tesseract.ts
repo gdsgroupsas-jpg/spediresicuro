@@ -27,7 +27,7 @@ export class TesseractAdapter extends OCRAdapter {
 
       // Import dinamico di Tesseract.js (solo lato client)
       const { createWorker } = await import('tesseract.js');
-      
+
       // Crea worker se non esiste
       if (!this.tesseractWorker) {
         this.tesseractWorker = await createWorker('ita+eng'); // Italiano + Inglese
@@ -43,7 +43,9 @@ export class TesseractAdapter extends OCRAdapter {
       }
 
       // Esegui OCR
-      const { data: { text, confidence } } = await this.tesseractWorker.recognize(imageBuffer);
+      const {
+        data: { text, confidence },
+      } = await this.tesseractWorker.recognize(imageBuffer);
 
       // Estrai dati dal testo usando pattern matching
       const extractedData = this.extractDataFromText(text);
@@ -56,7 +58,7 @@ export class TesseractAdapter extends OCRAdapter {
       };
     } catch (error: any) {
       console.error('[Tesseract OCR] Errore:', error);
-      
+
       // Fallback a mock se Tesseract non disponibile
       if (error.message?.includes('Cannot find module') || error.message?.includes('tesseract')) {
         console.warn('[Tesseract] Non installato, uso mock migliorato');
@@ -113,7 +115,8 @@ export class TesseractAdapter extends OCRAdapter {
     }
 
     // Pattern per indirizzo (via, corso, piazza, viale + numero)
-    const addressPattern = /(via|corso|piazza|viale|vicolo|piazzale|lungomare)[\s]+([a-z0-9\s,]+?)(?:\s+(\d+))?/i;
+    const addressPattern =
+      /(via|corso|piazza|viale|vicolo|piazzale|lungomare)[\s]+([a-z0-9\s,]+?)(?:\s+(\d+))?/i;
     const addressMatch = normalized.match(addressPattern);
     if (addressMatch) {
       const street = addressMatch[1] + ' ' + addressMatch[2].trim();

@@ -3,6 +3,7 @@
 > **Scopo:** Setup rapido per nuovi sviluppatori e onboarding in 5 minuti
 
 ## Indice
+
 - [Quick Start](#quick-start)
 - [Local Development](#local-development)
 - [Onboarding](#onboarding)
@@ -15,28 +16,33 @@
 Setup completo in 5 minuti:
 
 ### 1. Clone Repository
+
 ```bash
 git clone https://github.com/gdsgroupsas-jpg/spediresicuro.git
 cd spediresicuro
 ```
 
 ### 2. Installa Dipendenze
+
 ```bash
 npm install
 ```
 
 ### 3. Configura Environment
+
 ```bash
 cp .env.example .env.local
 # Modifica .env.local con le tue credenziali Supabase
 ```
 
 ### 4. Avvia Server
+
 ```bash
 npm run dev
 ```
 
 ### 5. Verifica Setup
+
 ```bash
 npm run setup:check
 ```
@@ -48,6 +54,7 @@ Apri http://localhost:3000 ✅
 ## Local Development
 
 ### Prerequisites
+
 - Node.js 18+
 - npm o yarn
 - Supabase account (cloud o local)
@@ -121,12 +128,12 @@ Vedi [FIRST_CONTRIBUTION.md](FIRST_CONTRIBUTION.md) per guida completa.
 
 ## Troubleshooting
 
-| Problema | Soluzione |
-|----------|-----------|
-| `npm install` fallisce | Pulisci `node_modules` e `package-lock.json`, riprova |
-| Server non parte | Verifica environment variables in `.env.local` |
-| Test falliscono | Verifica Supabase configurato, esegui `npm run setup:check` |
-| TypeScript errori | Esegui `npm run type-check` per vedere dettagli |
+| Problema               | Soluzione                                                   |
+| ---------------------- | ----------------------------------------------------------- |
+| `npm install` fallisce | Pulisci `node_modules` e `package-lock.json`, riprova       |
+| Server non parte       | Verifica environment variables in `.env.local`              |
+| Test falliscono        | Verifica Supabase configurato, esegui `npm run setup:check` |
+| TypeScript errori      | Esegui `npm run type-check` per vedere dettagli             |
 
 ---
 
@@ -138,5 +145,5 @@ Vedi [FIRST_CONTRIBUTION.md](FIRST_CONTRIBUTION.md) per guida completa.
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Maintainer: Dev Team_

@@ -1,19 +1,27 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import type { ReconciliationPending } from '@/actions/platform-costs'
+import { useState } from 'react';
+import { Clock, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { ReconciliationPending } from '@/actions/platform-costs';
 
 interface ReconciliationTableProps {
-  items: ReconciliationPending[]
-  isLoading: boolean
-  onUpdateStatus?: (id: string, status: 'matched' | 'discrepancy' | 'resolved', notes?: string) => Promise<void>
+  items: ReconciliationPending[];
+  isLoading: boolean;
+  onUpdateStatus?: (
+    id: string,
+    status: 'matched' | 'discrepancy' | 'resolved',
+    notes?: string
+  ) => Promise<void>;
 }
 
-export function ReconciliationTable({ items, isLoading, onUpdateStatus }: ReconciliationTableProps) {
-  const [updating, setUpdating] = useState<string | null>(null)
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+export function ReconciliationTable({
+  items,
+  isLoading,
+  onUpdateStatus,
+}: ReconciliationTableProps) {
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   if (isLoading) {
     return (
@@ -27,7 +35,7 @@ export function ReconciliationTable({ items, isLoading, onUpdateStatus }: Reconc
           ))}
         </div>
       </div>
-    )
+    );
   }
 
   if (items.length === 0) {
@@ -45,47 +53,47 @@ export function ReconciliationTable({ items, isLoading, onUpdateStatus }: Reconc
           <p className="text-sm text-gray-400 mt-1">Non ci sono spedizioni da verificare</p>
         </div>
       </div>
-    )
+    );
   }
 
   const handleUpdate = async (id: string, status: 'matched' | 'discrepancy' | 'resolved') => {
-    if (!onUpdateStatus) return
-    setUpdating(id)
+    if (!onUpdateStatus) return;
+    setUpdating(id);
     try {
-      await onUpdateStatus(id, status)
+      await onUpdateStatus(id, status);
     } finally {
-      setUpdating(null)
+      setUpdating(null);
     }
-  }
+  };
 
   const handleBulkMatch = async () => {
-    if (!onUpdateStatus || selectedItems.size === 0) return
-    
+    if (!onUpdateStatus || selectedItems.size === 0) return;
+
     for (const id of selectedItems) {
-      setUpdating(id)
-      await onUpdateStatus(id, 'matched')
+      setUpdating(id);
+      await onUpdateStatus(id, 'matched');
     }
-    setSelectedItems(new Set())
-    setUpdating(null)
-  }
+    setSelectedItems(new Set());
+    setUpdating(null);
+  };
 
   const toggleSelectAll = () => {
     if (selectedItems.size === items.length) {
-      setSelectedItems(new Set())
+      setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(items.map(item => item.id)))
+      setSelectedItems(new Set(items.map((item) => item.id)));
     }
-  }
+  };
 
   const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedItems)
+    const newSelected = new Set(selectedItems);
     if (newSelected.has(id)) {
-      newSelected.delete(id)
+      newSelected.delete(id);
     } else {
-      newSelected.add(id)
+      newSelected.add(id);
     }
-    setSelectedItems(newSelected)
-  }
+    setSelectedItems(newSelected);
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -157,8 +165,8 @@ export function ReconciliationTable({ items, isLoading, onUpdateStatus }: Reconc
           </thead>
           <tbody className="divide-y divide-gray-200">
             {items.map((item) => (
-              <tr 
-                key={item.id} 
+              <tr
+                key={item.id}
                 className={`hover:bg-gray-50 ${selectedItems.has(item.id) ? 'bg-blue-50' : ''}`}
               >
                 <td className="px-6 py-4">
@@ -174,7 +182,7 @@ export function ReconciliationTable({ items, isLoading, onUpdateStatus }: Reconc
                     <span className="font-mono text-sm text-gray-900">
                       {item.shipment_tracking_number}
                     </span>
-                    <a 
+                    <a
                       href={`/dashboard/super-admin/shipments/${item.shipment_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -195,43 +203,48 @@ export function ReconciliationTable({ items, isLoading, onUpdateStatus }: Reconc
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className="text-sm text-gray-900">
-                    €{item.billed_amount.toFixed(2)}
-                  </span>
+                  <span className="text-sm text-gray-900">€{item.billed_amount.toFixed(2)}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className="text-sm text-gray-900">
-                    €{item.provider_cost.toFixed(2)}
-                  </span>
+                  <span className="text-sm text-gray-900">€{item.provider_cost.toFixed(2)}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <span className={`text-sm font-semibold ${
-                    item.platform_margin < 0 ? 'text-red-600' : 'text-green-600'
-                  }`}>
+                  <span
+                    className={`text-sm font-semibold ${
+                      item.platform_margin < 0 ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
                     €{item.platform_margin.toFixed(2)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    item.age_days > 14 
-                      ? 'bg-red-100 text-red-700'
-                      : item.age_days > 7
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      item.age_days > 14
+                        ? 'bg-red-100 text-red-700'
+                        : item.age_days > 7
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
                     {item.age_days}gg
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    item.reconciliation_status === 'pending'
-                      ? 'bg-blue-100 text-blue-700'
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      item.reconciliation_status === 'pending'
+                        ? 'bg-blue-100 text-blue-700'
+                        : item.reconciliation_status === 'discrepancy'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {item.reconciliation_status === 'pending'
+                      ? 'Pendente'
                       : item.reconciliation_status === 'discrepancy'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-green-100 text-green-700'
-                  }`}>
-                    {item.reconciliation_status === 'pending' ? 'Pendente' :
-                     item.reconciliation_status === 'discrepancy' ? 'Discrepanza' : 'OK'}
+                        ? 'Discrepanza'
+                        : 'OK'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -264,5 +277,5 @@ export function ReconciliationTable({ items, isLoading, onUpdateStatus }: Reconc
         </table>
       </div>
     </div>
-  )
+  );
 }

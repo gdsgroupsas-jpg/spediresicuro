@@ -30,7 +30,9 @@ try {
   // Commit di Claude
   console.log('👤 Commit di Claude:');
   try {
-    const claudeCommits = execSync('git log --all --oneline --author="Claude" -10', { encoding: 'utf-8' });
+    const claudeCommits = execSync('git log --all --oneline --author="Claude" -10', {
+      encoding: 'utf-8',
+    });
     console.log(claudeCommits);
   } catch (e) {
     console.log('Nessun commit trovato con autore "Claude"');
@@ -51,18 +53,6 @@ try {
   console.log('📝 Ultimi 5 Commit:');
   const lastCommits = execSync('git log --oneline -5', { encoding: 'utf-8' });
   console.log(lastCommits);
-
 } catch (error) {
   console.error('Errore:', error.message);
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -1,15 +1,18 @@
 # 🚨 RISOLVI RAILWAY ORA - GUIDA URGENTE
 
 ## ❌ PROBLEMA
+
 Railway sta usando il commit **`6ff208d2`** che è **VECCHIO** e non ha la correzione TypeScript!
 
 ## ✅ SOLUZIONE IMMEDIATA
 
 ### Passo 1: Vai su Railway Dashboard
+
 1. Apri: https://railway.app/dashboard
 2. Seleziona il progetto **"spediresicuro"** (quello che vedi nello screenshot)
 
 ### Passo 2: Forza Redeploy con Ultimo Commit
+
 1. Clicca su **"Deployments"** o **"Deploys"** nel menu
 2. Trova il deploy fallito (quello con commit `6ff208d2`)
 3. Clicca sui **tre puntini (...)** accanto al deploy
@@ -17,6 +20,7 @@ Railway sta usando il commit **`6ff208d2`** che è **VECCHIO** e non ha la corre
 5. **IMPORTANTE**: Se c'è un'opzione "Use latest commit" o "Deploy from master", selezionala!
 
 ### Passo 3: Verifica Impostazioni Source
+
 1. Vai su **"Settings"** del progetto
 2. Clicca su **"Source"** o **"Repository"**
 3. Verifica che:
@@ -25,6 +29,7 @@ Railway sta usando il commit **`6ff208d2`** che è **VECCHIO** e non ha la corre
    - **Auto Deploy**: Deve essere **ATTIVO** ✅
 
 ### Passo 4: Se Non Funziona - Disconnetti e Riconnetti
+
 1. Vai su **Settings** → **Source**
 2. Clicca **"Disconnect"** o **"Remove"**
 3. Clicca **"Connect Repository"** o **"Add GitHub"**
@@ -36,6 +41,7 @@ Railway sta usando il commit **`6ff208d2`** che è **VECCHIO** e non ha la corre
 ## 🔍 VERIFICA CHE IL CODICE SIA CORRETTO
 
 Vai su GitHub e verifica:
+
 - https://github.com/gdsgroupsas-jpg/spediresicuro/blob/master/automation-service/src/agent.ts
 - Vai alla **riga 709**
 - Dovresti vedere: `const cells = Array.from(cellsNodeList);`

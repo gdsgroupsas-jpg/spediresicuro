@@ -1,6 +1,6 @@
 /**
  * Script di Setup OAuth
- * 
+ *
  * Guida interattiva per configurare Google e GitHub OAuth
  */
 
@@ -37,23 +37,23 @@ async function main() {
 
   console.log('📋 Configurazione OAuth Providers\n');
   console.log('Le credenziali OAuth sono OPCZIONALI.');
-  console.log('L\'app funziona anche senza OAuth (login email/password).\n');
+  console.log("L'app funziona anche senza OAuth (login email/password).\n");
 
   // Google OAuth
   console.log('🔵 Google OAuth');
   console.log('─'.repeat(50));
   const setupGoogle = await question('Vuoi configurare Google OAuth? (s/n): ');
-  
+
   if (setupGoogle.toLowerCase() === 's' || setupGoogle.toLowerCase() === 'si') {
     console.log('\n📝 Istruzioni:');
     console.log('1. Vai su: https://console.cloud.google.com/');
     console.log('2. Crea OAuth 2.0 Client ID (tipo Web application)');
     console.log('3. Callback URL: http://localhost:3001/api/auth/callback/google');
     console.log('4. Copia Client ID e Client Secret\n');
-    
+
     const googleClientId = await question('Inserisci GOOGLE_CLIENT_ID: ');
     const googleClientSecret = await question('Inserisci GOOGLE_CLIENT_SECRET: ');
-    
+
     if (googleClientId && googleClientSecret) {
       envContent = envContent.replace(
         /GOOGLE_CLIENT_ID=.*/g,
@@ -71,17 +71,17 @@ async function main() {
   console.log('🐙 GitHub OAuth');
   console.log('─'.repeat(50));
   const setupGitHub = await question('Vuoi configurare GitHub OAuth? (s/n): ');
-  
+
   if (setupGitHub.toLowerCase() === 's' || setupGitHub.toLowerCase() === 'si') {
     console.log('\n📝 Istruzioni:');
     console.log('1. Vai su: https://github.com/settings/developers');
     console.log('2. Crea nuova OAuth App');
     console.log('3. Callback URL: http://localhost:3001/api/auth/callback/github');
     console.log('4. Copia Client ID e Client Secret\n');
-    
+
     const githubClientId = await question('Inserisci GITHUB_CLIENT_ID: ');
     const githubClientSecret = await question('Inserisci GITHUB_CLIENT_SECRET: ');
-    
+
     if (githubClientId && githubClientSecret) {
       envContent = envContent.replace(
         /GITHUB_CLIENT_ID=.*/g,
@@ -110,16 +110,3 @@ main().catch((error) => {
   console.error('\n❌ Errore:', error.message);
   process.exit(1);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-

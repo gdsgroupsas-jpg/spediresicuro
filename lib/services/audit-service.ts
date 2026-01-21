@@ -50,13 +50,7 @@ export const AUDIT_ACTIONS = {
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 
 // Resource types for categorization
-export type ResourceType =
-  | 'shipment'
-  | 'user'
-  | 'wallet'
-  | 'topup'
-  | 'admin'
-  | 'system';
+export type ResourceType = 'shipment' | 'user' | 'wallet' | 'topup' | 'admin' | 'system';
 
 // Audit event interface
 export interface AuditEvent {
@@ -328,9 +322,7 @@ export async function auditUserLogin(
 ): Promise<void> {
   await logAuditEvent(
     {
-      action: success
-        ? AUDIT_ACTIONS.USER_LOGIN
-        : AUDIT_ACTIONS.USER_LOGIN_FAILED,
+      action: success ? AUDIT_ACTIONS.USER_LOGIN : AUDIT_ACTIONS.USER_LOGIN_FAILED,
       resource_type: 'user',
       resource_id: userId,
       actor_id: userId,
@@ -615,10 +607,7 @@ export async function getAuditLogsForResource(
 /**
  * Get audit logs for a specific user (as actor)
  */
-export async function getAuditLogsByActor(
-  actorId: string,
-  limit = 100
-): Promise<AuditLogRecord[]> {
+export async function getAuditLogsByActor(actorId: string, limit = 100): Promise<AuditLogRecord[]> {
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase

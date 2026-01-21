@@ -3,6 +3,7 @@
 ## 🎯 Problemi Risolti
 
 Questa guida risolve i seguenti problemi:
+
 1. ✅ **Login Google reindirizza a localhost:3000** invece dell'URL remoto
 2. ✅ **Login demo (admin@spediresicuro.it / admin123) non funziona** in remoto
 3. ✅ **Redirect OAuth non funzionano** correttamente su Vercel
@@ -39,6 +40,7 @@ Questa guida risolve i seguenti problemi:
 ### ✅ Verifica
 
 Dopo il deploy, verifica che funzioni:
+
 - Apri la console del browser (F12)
 - Cerca i log che iniziano con `🌐 [AUTH]` o `✅ [AUTH]`
 - Dovresti vedere l'URL corretto (non localhost)
@@ -158,6 +160,7 @@ SUPABASE_SERVICE_ROLE_KEY=la-tua-service-role-key
 ### 3. Verifica Redirect
 
 Dopo il login con Google, l'URL nel browser dovrebbe essere:
+
 - ✅ **Corretto:** `https://spediresicuro.vercel.app/dashboard`
 - ❌ **Sbagliato:** `http://localhost:3000/dashboard`
 
@@ -170,6 +173,7 @@ Dopo il login con Google, l'URL nel browser dovrebbe essere:
 **Causa:** L'URL di redirect in Google Console non corrisponde.
 
 **Soluzione:**
+
 - Vai su Google Console → Credentials → OAuth Client
 - Verifica che **Authorized redirect URIs** contenga:
   ```
@@ -182,6 +186,7 @@ Dopo il login con Google, l'URL nel browser dovrebbe essere:
 **Causa:** Gli utenti demo non esistono in Supabase o la password è sbagliata.
 
 **Soluzione:**
+
 - Verifica che gli utenti esistano nella tabella `users` in Supabase
 - Verifica che le password siano:
   - `admin@spediresicuro.it` → password: `admin123`
@@ -193,6 +198,7 @@ Dopo il login con Google, l'URL nel browser dovrebbe essere:
 **Causa:** `NEXTAUTH_URL` non è configurato correttamente su Vercel.
 
 **Soluzione:**
+
 - Vai su Vercel → Settings → Environment Variables
 - Verifica che `NEXTAUTH_URL` sia impostato su `https://spediresicuro.vercel.app`
 - **NON** deve essere `http://localhost:3000`
@@ -203,6 +209,7 @@ Dopo il login con Google, l'URL nel browser dovrebbe essere:
 **Causa:** La variabile `NEXTAUTH_SECRET` non è configurata su Vercel.
 
 **Soluzione:**
+
 - Genera una nuova chiave segreta:
   ```bash
   openssl rand -base64 32
@@ -240,4 +247,3 @@ Se dopo aver seguito questa guida il problema persiste:
 ---
 
 **Ultimo aggiornamento:** Questa guida è stata creata per risolvere i problemi di login remoto dopo le modifiche al codice.
-

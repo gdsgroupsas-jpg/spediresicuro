@@ -132,7 +132,8 @@ export async function GET() {
           '5. DEBUG: Debug log test (only in development)',
           '6. INFO: Slow operation completed',
         ],
-        verifyTraceCorrelation: 'Copy traceId → Search in Sentry Performance → Should link to this request',
+        verifyTraceCorrelation:
+          'Copy traceId → Search in Sentry Performance → Should link to this request',
       },
     });
   } catch (error: any) {

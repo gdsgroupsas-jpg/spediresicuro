@@ -27,7 +27,7 @@ export function useServiceWorker() {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
       return;
     }
-    
+
     if (!('serviceWorker' in navigator)) {
       console.warn('Service Workers non supportati');
       return;
@@ -210,7 +210,7 @@ export function useServiceWorker() {
 function showUpdateNotification() {
   const message = document.createElement('div');
   message.className = 'update-notification';
-  
+
   // ⚠️ SECURITY: Usa textContent invece di innerHTML per prevenire XSS
   // Creiamo elementi DOM programmaticamente
   message.style.cssText = `
@@ -225,11 +225,11 @@ function showUpdateNotification() {
     font-size: 14px;
     z-index: 9999;
   `;
-  
+
   const textDiv = document.createElement('div');
   textDiv.style.marginBottom = '8px';
   textDiv.textContent = '📦 Aggiornamento disponibile!';
-  
+
   const button = document.createElement('button');
   button.style.cssText = `
     background: white;
@@ -243,7 +243,7 @@ function showUpdateNotification() {
   `;
   button.textContent = 'Aggiorna';
   button.onclick = () => location.reload();
-  
+
   message.appendChild(textDiv);
   message.appendChild(button);
   document.body.appendChild(message);

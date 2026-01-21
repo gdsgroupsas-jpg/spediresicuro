@@ -7,37 +7,37 @@
  * - Margine > 0 (prezzi diversi)
  */
 
-import type { PriceList } from "@/types/listini";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { PriceList } from '@/types/listini';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Supabase
-vi.mock("@/lib/db/client", () => ({
+vi.mock('@/lib/db/client', () => ({
   supabaseAdmin: {
     from: vi.fn(),
   },
 }));
 
 // Mock calculatePriceFromList
-vi.mock("@/lib/pricing/calculator", () => ({
+vi.mock('@/lib/pricing/calculator', () => ({
   calculatePriceFromList: vi.fn(),
 }));
 
-import { supabaseAdmin } from "@/lib/db/client";
-import { calculatePriceWithRules } from "@/lib/db/price-lists-advanced";
-import { calculatePriceFromList } from "@/lib/pricing/calculator";
+import { supabaseAdmin } from '@/lib/db/client';
+import { calculatePriceWithRules } from '@/lib/db/price-lists-advanced';
+import { calculatePriceFromList } from '@/lib/pricing/calculator';
 
-describe("VAT Margin Zero Fix", () => {
-  const mockUserId = "test-user-id";
+describe('VAT Margin Zero Fix', () => {
+  const mockUserId = 'test-user-id';
   const mockParams = {
     weight: 1.0,
     destination: {
-      zip: "20100",
-      province: "MI",
-      region: "Lombardia",
-      country: "IT",
+      zip: '20100',
+      province: 'MI',
+      region: 'Lombardia',
+      country: 'IT',
     },
-    courierId: "test-courier",
-    serviceType: "standard" as const,
+    courierId: 'test-courier',
+    serviceType: 'standard' as const,
     options: {},
   };
 
@@ -45,55 +45,55 @@ describe("VAT Margin Zero Fix", () => {
     vi.clearAllMocks();
   });
 
-  describe("Scenario 1: Master excluded, Custom included (Margin 0)", () => {
-    it("should calculate margin = 0 when prices are equivalent", async () => {
+  describe('Scenario 1: Master excluded, Custom included (Margin 0)', () => {
+    it('should calculate margin = 0 when prices are equivalent', async () => {
       // Master: 100€ (excluded) = Custom: 122€ (included)
       const masterList: PriceList = {
-        id: "master-list-id",
-        name: "Master List",
-        version: "1.0",
-        status: "active",
-        priority: "global",
+        id: 'master-list-id',
+        name: 'Master List',
+        version: '1.0',
+        status: 'active',
+        priority: 'global',
         is_global: true,
-        list_type: "supplier",
-        vat_mode: "excluded", // Master ha IVA esclusa
+        list_type: 'supplier',
+        vat_mode: 'excluded', // Master ha IVA esclusa
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "master-list-id",
+            id: 'entry-1',
+            price_list_id: 'master-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 100,
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
       };
 
       const customList: PriceList = {
-        id: "custom-list-id",
-        name: "Custom List",
-        version: "1.0",
-        status: "active",
-        priority: "client",
+        id: 'custom-list-id',
+        name: 'Custom List',
+        version: '1.0',
+        status: 'active',
+        priority: 'client',
         is_global: false,
-        list_type: "custom",
-        master_list_id: "master-list-id", // Clonato da master
-        vat_mode: "included", // Custom ha IVA inclusa
+        list_type: 'custom',
+        master_list_id: 'master-list-id', // Clonato da master
+        vat_mode: 'included', // Custom ha IVA inclusa
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "custom-list-id",
+            id: 'entry-1',
+            price_list_id: 'custom-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 122, // 100€ + 22% IVA = 122€ (equivalente al master)
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
@@ -141,14 +141,10 @@ describe("VAT Margin Zero Fix", () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "custom-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
 
       expect(result).not.toBeNull();
-      expect(result?.vatMode).toBe("included");
+      expect(result?.vatMode).toBe('included');
       expect(result?.vatRate).toBe(22.0);
 
       // Nota: Quando isManuallyModified = false (prezzi equivalenti), viene applicato
@@ -163,55 +159,55 @@ describe("VAT Margin Zero Fix", () => {
     });
   });
 
-  describe("Scenario 2: Master included, Custom excluded (Margin 0)", () => {
-    it("should calculate margin = 0 when prices are equivalent", async () => {
+  describe('Scenario 2: Master included, Custom excluded (Margin 0)', () => {
+    it('should calculate margin = 0 when prices are equivalent', async () => {
       // Master: 122€ (included) = Custom: 100€ (excluded)
       const masterList: PriceList = {
-        id: "master-list-id",
-        name: "Master List",
-        version: "1.0",
-        status: "active",
-        priority: "global",
+        id: 'master-list-id',
+        name: 'Master List',
+        version: '1.0',
+        status: 'active',
+        priority: 'global',
         is_global: true,
-        list_type: "supplier",
-        vat_mode: "included", // Master ha IVA inclusa
+        list_type: 'supplier',
+        vat_mode: 'included', // Master ha IVA inclusa
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "master-list-id",
+            id: 'entry-1',
+            price_list_id: 'master-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 122, // 100€ + 22% IVA
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
       };
 
       const customList: PriceList = {
-        id: "custom-list-id",
-        name: "Custom List",
-        version: "1.0",
-        status: "active",
-        priority: "client",
+        id: 'custom-list-id',
+        name: 'Custom List',
+        version: '1.0',
+        status: 'active',
+        priority: 'client',
         is_global: false,
-        list_type: "custom",
-        master_list_id: "master-list-id",
-        vat_mode: "excluded", // Custom ha IVA esclusa
+        list_type: 'custom',
+        master_list_id: 'master-list-id',
+        vat_mode: 'excluded', // Custom ha IVA esclusa
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "custom-list-id",
+            id: 'entry-1',
+            price_list_id: 'custom-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 100, // Equivalente a 122€ con IVA inclusa
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
@@ -259,14 +255,10 @@ describe("VAT Margin Zero Fix", () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "custom-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
 
       expect(result).not.toBeNull();
-      expect(result?.vatMode).toBe("excluded");
+      expect(result?.vatMode).toBe('excluded');
       expect(result?.vatRate).toBe(22.0);
 
       // Nota: Quando isManuallyModified = false (prezzi equivalenti), viene applicato
@@ -281,55 +273,55 @@ describe("VAT Margin Zero Fix", () => {
     });
   });
 
-  describe("Scenario 3: Master excluded, Custom included (Margin > 0)", () => {
-    it("should calculate margin correctly when prices differ", async () => {
+  describe('Scenario 3: Master excluded, Custom included (Margin > 0)', () => {
+    it('should calculate margin correctly when prices differ', async () => {
       // Master: 100€ (excluded), Custom: 134.20€ (included) = 110€ excluded + 10€ margin
       const masterList: PriceList = {
-        id: "master-list-id",
-        name: "Master List",
-        version: "1.0",
-        status: "active",
-        priority: "global",
+        id: 'master-list-id',
+        name: 'Master List',
+        version: '1.0',
+        status: 'active',
+        priority: 'global',
         is_global: true,
-        list_type: "supplier",
-        vat_mode: "excluded",
+        list_type: 'supplier',
+        vat_mode: 'excluded',
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "master-list-id",
+            id: 'entry-1',
+            price_list_id: 'master-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 100,
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
       };
 
       const customList: PriceList = {
-        id: "custom-list-id",
-        name: "Custom List",
-        version: "1.0",
-        status: "active",
-        priority: "client",
+        id: 'custom-list-id',
+        name: 'Custom List',
+        version: '1.0',
+        status: 'active',
+        priority: 'client',
         is_global: false,
-        list_type: "custom",
-        master_list_id: "master-list-id",
-        vat_mode: "included",
+        list_type: 'custom',
+        master_list_id: 'master-list-id',
+        vat_mode: 'included',
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "custom-list-id",
+            id: 'entry-1',
+            price_list_id: 'custom-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 134.2, // 110€ + 22% IVA = 134.20€ (margine 10€)
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
@@ -377,11 +369,7 @@ describe("VAT Margin Zero Fix", () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "custom-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
 
       expect(result).not.toBeNull();
 
@@ -395,54 +383,54 @@ describe("VAT Margin Zero Fix", () => {
     });
   });
 
-  describe("Scenario 4: Same VAT mode (Backward Compatibility)", () => {
-    it("should work correctly when both have vat_mode = excluded", async () => {
+  describe('Scenario 4: Same VAT mode (Backward Compatibility)', () => {
+    it('should work correctly when both have vat_mode = excluded', async () => {
       const masterList: PriceList = {
-        id: "master-list-id",
-        name: "Master List",
-        version: "1.0",
-        status: "active",
-        priority: "global",
+        id: 'master-list-id',
+        name: 'Master List',
+        version: '1.0',
+        status: 'active',
+        priority: 'global',
         is_global: true,
-        list_type: "supplier",
-        vat_mode: "excluded",
+        list_type: 'supplier',
+        vat_mode: 'excluded',
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "master-list-id",
+            id: 'entry-1',
+            price_list_id: 'master-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 100,
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
       };
 
       const customList: PriceList = {
-        id: "custom-list-id",
-        name: "Custom List",
-        version: "1.0",
-        status: "active",
-        priority: "client",
+        id: 'custom-list-id',
+        name: 'Custom List',
+        version: '1.0',
+        status: 'active',
+        priority: 'client',
         is_global: false,
-        list_type: "custom",
-        master_list_id: "master-list-id",
-        vat_mode: "excluded", // Stesso vat_mode del master
+        list_type: 'custom',
+        master_list_id: 'master-list-id',
+        vat_mode: 'excluded', // Stesso vat_mode del master
         vat_rate: 22.0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         entries: [
           {
-            id: "entry-1",
-            price_list_id: "custom-list-id",
+            id: 'entry-1',
+            price_list_id: 'custom-list-id',
             weight_from: 0,
             weight_to: 5,
             base_price: 100, // Stesso prezzo del master
-            service_type: "standard",
+            service_type: 'standard',
             created_at: new Date().toISOString(),
           },
         ],
@@ -490,14 +478,10 @@ describe("VAT Margin Zero Fix", () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(
-        mockUserId,
-        mockParams,
-        "custom-list-id"
-      );
+      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
 
       expect(result).not.toBeNull();
-      expect(result?.vatMode).toBe("excluded");
+      expect(result?.vatMode).toBe('excluded');
 
       // Nota: Quando isManuallyModified = false (prezzi identici), viene applicato
       // margine default globale (20%) per garantire consistenza nel comparatore.

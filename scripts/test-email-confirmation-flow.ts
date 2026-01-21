@@ -1,10 +1,10 @@
 /**
  * Test Flusso Reale Email Confirmation
- * 
+ *
  * Crea utente via API /api/auth/register (flusso reale)
  * Verifica che confirmation_sent_at sia valorizzato
  * Verifica che email_confirmed_at sia NULL (non confermato)
- * 
+ *
  * ⚠️ Nessun workaround - usa flusso normale
  */
 
@@ -34,13 +34,16 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 function isSupabaseConfigured(): boolean {
-  const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
-                 process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
-  const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && 
-                     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder');
-  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY && 
-                        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
-  
+  const hasUrl =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
+  const hasAnonKey =
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder');
+  const hasServiceKey =
+    !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
+
   return hasUrl && hasAnonKey && hasServiceKey;
 }
 
@@ -58,19 +61,21 @@ async function testEmailConfirmationFlow() {
   // 1. Verifica configurazione Supabase
   if (!isSupabaseConfigured()) {
     console.error('❌ Supabase non configurato!');
-    console.error('   Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY');
+    console.error(
+      '   Configura NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY'
+    );
     process.exit(1);
   }
   console.log('✅ Supabase configurato\n');
 
   // 2. Chiama direttamente la logica di registrazione (flusso reale)
   console.log('📝 Chiamata diretta logica registrazione (flusso reale)...\n');
-  
+
   try {
     // Chiama direttamente la funzione POST della route (senza server HTTP)
     const { NextRequest } = await import('next/server');
     const registerRoute = await import('../app/api/auth/register/route');
-    
+
     // Crea request simulata
     const requestBody = {
       email: TEST_EMAIL,
@@ -78,11 +83,11 @@ async function testEmailConfirmationFlow() {
       name: TEST_NAME,
       accountType: 'user',
     };
-    
+
     console.log('📤 Invio richiesta registrazione...');
     console.log('📤 Body:', JSON.stringify({ ...requestBody, password: '***' }, null, 2));
     console.log('');
-    
+
     const request = new NextRequest('http://localhost:3000/api/auth/register', {
       method: 'POST',
       headers: {
@@ -93,7 +98,7 @@ async function testEmailConfirmationFlow() {
 
     const response = await registerRoute.POST(request);
     const responseData = await response.json();
-    
+
     console.log('📥 Risposta:', JSON.stringify(responseData, null, 2));
     console.log('');
 
@@ -116,21 +121,26 @@ async function testEmailConfirmationFlow() {
 
     // 3. Attendi per permettere a Supabase di processare e inviare email
     console.log('⏳ Attesa 5 secondi per permettere a Supabase di processare e inviare email...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 5000));
     console.log('');
 
     // 4. Verifica utente in Supabase Auth
     console.log('🔍 Verifica utente in Supabase Auth...\n');
-    
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    
+
+    const {
+      data: { users },
+      error: listError,
+    } = await supabaseAdmin.auth.admin.listUsers();
+
     if (listError) {
       console.error('❌ Errore recupero utenti:', listError.message);
       process.exit(1);
     }
 
-    const createdUser = users?.find((u: any) => u.email?.toLowerCase() === TEST_EMAIL.toLowerCase());
-    
+    const createdUser = users?.find(
+      (u: any) => u.email?.toLowerCase() === TEST_EMAIL.toLowerCase()
+    );
+
     if (!createdUser) {
       console.error('❌ Utente non trovato in Supabase Auth!');
       console.error('   Email cercata:', TEST_EMAIL);
@@ -140,20 +150,24 @@ async function testEmailConfirmationFlow() {
     console.log('✅ Utente trovato in Supabase Auth:');
     console.log(`   ID: ${createdUser.id}`);
     console.log(`   Email: ${createdUser.email}`);
-    console.log(`   Nome: ${createdUser.user_metadata?.name || createdUser.user_metadata?.full_name || 'N/A'}`);
+    console.log(
+      `   Nome: ${createdUser.user_metadata?.name || createdUser.user_metadata?.full_name || 'N/A'}`
+    );
     console.log(`   Provider: ${createdUser.app_metadata?.provider || 'N/A'}`);
     console.log(`   Creato: ${createdUser.created_at}`);
     console.log('');
 
     // 5. ⚠️ CRITICO: Verifica confirmation_sent_at
     console.log('🔍 Verifica confirmation_sent_at...\n');
-    
+
     if (!createdUser.confirmation_sent_at) {
       console.error('❌ confirmation_sent_at NON valorizzato!');
-      console.error('   Questo significa che Supabase NON ha inviato l\'email di conferma');
+      console.error("   Questo significa che Supabase NON ha inviato l'email di conferma");
       console.error('');
       console.error('🔧 AZIONE RICHIESTA: Configura Supabase Auth:');
-      console.error('   1. Vai su: https://supabase.com/dashboard/project/[PROJECT_ID]/auth/providers');
+      console.error(
+        '   1. Vai su: https://supabase.com/dashboard/project/[PROJECT_ID]/auth/providers'
+      );
       console.error('   2. Authentication > Settings:');
       console.error('      - ✅ "Enable email confirmations" = ON');
       console.error('      - ✅ "Site URL" = dominio produzione (https://...)');
@@ -179,12 +193,16 @@ async function testEmailConfirmationFlow() {
 
     // 6. ⚠️ CRITICO: Verifica email_confirmed_at è NULL
     console.log('🔍 Verifica email_confirmed_at (deve essere NULL)...\n');
-    
+
     if (createdUser.email_confirmed_at) {
       console.error('❌ email_confirmed_at NON è NULL!');
       console.error('   Timestamp:', createdUser.email_confirmed_at);
-      console.error('   Questo significa che l\'email è stata confermata automaticamente (NON dovrebbe succedere)');
-      console.error('   Verifica configurazione: email_confirm deve essere false nella creazione utente');
+      console.error(
+        "   Questo significa che l'email è stata confermata automaticamente (NON dovrebbe succedere)"
+      );
+      console.error(
+        '   Verifica configurazione: email_confirm deve essere false nella creazione utente'
+      );
       process.exit(1);
     }
 
@@ -193,10 +211,10 @@ async function testEmailConfirmationFlow() {
 
     // 7. Verifica metadata
     console.log('🔍 Verifica metadata utente...\n');
-    
+
     const expectedRole = 'user';
     const actualRole = createdUser.app_metadata?.role;
-    
+
     if (actualRole !== expectedRole) {
       console.warn('⚠️  Role non corrisponde:', {
         atteso: expectedRole,
@@ -208,7 +226,7 @@ async function testEmailConfirmationFlow() {
 
     const expectedAccountType = 'user';
     const actualAccountType = createdUser.app_metadata?.account_type;
-    
+
     if (actualAccountType !== expectedAccountType) {
       console.warn('⚠️  Account type non corrisponde:', {
         atteso: expectedAccountType,
@@ -243,7 +261,6 @@ async function testEmailConfirmationFlow() {
     // } else {
     //   console.log('✅ Utente test rimosso');
     // }
-
   } catch (error: any) {
     console.error('❌ Errore durante test:', error);
     console.error('Stack:', error.stack);
@@ -260,4 +277,3 @@ testEmailConfirmationFlow()
     console.error('❌ Errore fatale:', error);
     process.exit(1);
   });
-

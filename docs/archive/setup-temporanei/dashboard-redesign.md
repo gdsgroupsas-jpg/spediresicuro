@@ -11,12 +11,14 @@ Questo documento descrive il redesign completo della dashboard di SpedireSicuro.
 ## 🎯 Obiettivi Raggiunti
 
 ### ✅ Navigazione Modulare
+
 - Configurazione centralizzata in `lib/config/navigationConfig.ts`
 - Menu dinamici basati su ruolo utente (user, admin, superadmin)
 - Sezioni collapsibili per ridurre il clutter visivo
 - Supporto feature flags (reseller, team, ecc.)
 
 ### ✅ Anne - Assistente Virtuale
+
 - Fantasmino floating in basso a destra
 - Chat panel espandibile
 - Suggerimenti proattivi contestuali
@@ -24,6 +26,7 @@ Questo documento descrive il redesign completo della dashboard di SpedireSicuro.
 - Personalizzazione tramite localStorage
 
 ### ✅ UX Migliorata
+
 - Riduzione della densità informativa
 - Navigazione intuitiva con raggruppamenti logici
 - Animazioni smooth con Framer Motion
@@ -187,8 +190,8 @@ Anne è un assistente virtuale che appare come un fantasmino floating. Caratteri
 
 ```typescript
 interface AnnePreferences {
-  showSuggestions: boolean;      // Mostra suggerimenti contestuali
-  autoGreet: boolean;            // Saluto automatico
+  showSuggestions: boolean; // Mostra suggerimenti contestuali
+  autoGreet: boolean; // Saluto automatico
   notificationLevel: 'minimal' | 'normal' | 'proactive';
 }
 ```
@@ -210,13 +213,14 @@ const { trackAction } = useAnneTracking();
 
 trackAction('created-shipment', {
   courier: 'DHL',
-  cost: 15.50
+  cost: 15.5,
 });
 ```
 
 #### Suggerimenti Proattivi
 
 Anne analizza automaticamente:
+
 - Numero di interazioni utente
 - Pagina corrente
 - Ruolo utente
@@ -264,6 +268,7 @@ Response:
 #### Personalizzazione System Prompt
 
 Il system prompt di Anne è personalizzato in base a:
+
 - Ruolo utente (user, admin, superadmin)
 - Pagina corrente
 - Contesto conversazione
@@ -296,6 +301,7 @@ const navItemVariants = {
 ```
 
 Uso:
+
 ```typescript
 {
   id: 'ai-button',
@@ -366,6 +372,7 @@ PERSONALITÀ:
 ### Anne su Mobile
 
 Anne si adatta automaticamente:
+
 - Icona fantasmino: 64px → 56px
 - Chat panel: Max width 95vw
 - Input touch-friendly (min 44px tap target)
@@ -461,6 +468,7 @@ npm list framer-motion @anthropic-ai/sdk lucide-react react-markdown
 ```
 
 Se mancanti:
+
 ```bash
 npm install framer-motion @anthropic-ai/sdk lucide-react react-markdown
 ```
@@ -490,6 +498,7 @@ npm install framer-motion @anthropic-ai/sdk lucide-react react-markdown
 ### Tracking Anne
 
 Anne traccia automaticamente:
+
 - Numero interazioni utente
 - Suggerimenti visualizzati/dismissati
 - Pagine visitate
@@ -504,7 +513,7 @@ const tracking = JSON.parse(localStorage.getItem('anne-tracking') || '[]');
 
 // Analizza
 const totalInteractions = tracking.length;
-const pagesVisited = new Set(tracking.map(t => t.metadata?.page)).size;
+const pagesVisited = new Set(tracking.map((t) => t.metadata?.page)).size;
 ```
 
 ---
@@ -564,6 +573,7 @@ Per domande o problemi:
 3. Consulta il README principale del progetto
 
 **File di riferimento rapido:**
+
 - Config navigazione: `lib/config/navigationConfig.ts`
 - Anne Assistant: `components/anne/AnneAssistant.tsx`
 - API Anne: `app/api/anne/chat/route.ts`
@@ -571,5 +581,5 @@ Per domande o problemi:
 
 ---
 
-*Documentazione creata il 07/12/2025*
-*Versione Dashboard: 2.0*
+_Documentazione creata il 07/12/2025_
+_Versione Dashboard: 2.0_

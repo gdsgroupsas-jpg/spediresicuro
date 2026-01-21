@@ -21,9 +21,9 @@ import { createLogger, sanitizeMetadata } from '@/lib/logger';
  * Opzioni per instrumentedFetch
  */
 export interface InstrumentedFetchOptions extends RequestInit {
-  serviceName?: string;     // Nome servizio (stripe, ups, dhl, anthropic, etc.)
-  requestId?: string;       // Request ID per correlazione logs
-  logResponse?: boolean;    // Se loggare response body (default: false per privacy)
+  serviceName?: string; // Nome servizio (stripe, ups, dhl, anthropic, etc.)
+  requestId?: string; // Request ID per correlazione logs
+  logResponse?: boolean; // Se loggare response body (default: false per privacy)
   sensitiveHeaders?: string[]; // Headers da redact nei logs (oltre ai default)
 }
 
@@ -277,10 +277,7 @@ export function createInstrumentedFetch(serviceName: string, requestId?: string)
  *   headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` }
  * });
  */
-export async function stripeFetch(
-  url: string | URL,
-  options: RequestInit = {}
-): Promise<Response> {
+export async function stripeFetch(url: string | URL, options: RequestInit = {}): Promise<Response> {
   return instrumentedFetch(url, {
     ...options,
     serviceName: 'stripe',

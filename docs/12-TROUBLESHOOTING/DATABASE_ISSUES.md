@@ -1,15 +1,18 @@
 # Database Issues - Troubleshooting
 
 ## Overview
+
 Guida completa per risolvere problemi comuni del database Supabase/PostgreSQL in SpedireSicuro.
 
 ## Target Audience
+
 - [x] Developers
 - [x] DevOps
 - [ ] Business/PM
 - [x] AI Agents
 
 ## Prerequisites
+
 - Accesso a Supabase Dashboard
 - Conoscenza base SQL
 - Familiarità con PostgreSQL
@@ -21,6 +24,7 @@ Guida completa per risolvere problemi comuni del database Supabase/PostgreSQL in
 ### Connection Timeout
 
 **Problema:**
+
 ```
 Error: Database connection timeout
 Error: PGRST301 - Connection pool exhausted
@@ -29,17 +33,20 @@ Error: PGRST301 - Connection pool exhausted
 **Soluzione:**
 
 1. **Verifica stato Supabase:**
+
    ```bash
    npx supabase status
    ```
 
 2. **Se locale, riavvia:**
+
    ```bash
    npx supabase stop
    npx supabase start
    ```
 
 3. **Verifica environment variables:**
+
    ```bash
    # Verifica .env.local
    NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
@@ -57,11 +64,13 @@ Error: PGRST301 - Connection pool exhausted
 ### Connection Pool Exhausted
 
 **Problema:**
+
 ```
 PGRST301 - Connection pool exhausted
 ```
 
 **Cause:**
+
 - Troppe connessioni aperte simultaneamente
 - Query lente che tengono connessioni aperte
 - Connection leaks (connessioni non chiuse)
@@ -69,8 +78,9 @@ PGRST301 - Connection pool exhausted
 **Soluzione:**
 
 1. **Verifica query lente:**
+
    ```sql
-   SELECT 
+   SELECT
      query,
      calls,
      total_time,
@@ -96,6 +106,7 @@ PGRST301 - Connection pool exhausted
 ### Migration Already Exists
 
 **Problema:**
+
 ```
 ERROR: relation "table_name" already exists
 ```
@@ -103,6 +114,7 @@ ERROR: relation "table_name" already exists
 **Soluzione:**
 
 1. **Verifica migration già applicata:**
+
    ```sql
    SELECT * FROM supabase_migrations.schema_migrations
    ORDER BY version DESC;
@@ -121,6 +133,7 @@ ERROR: relation "table_name" already exists
 ### Migration Fails
 
 **Problema:**
+
 ```
 ERROR: syntax error at or near "..."
 ERROR: permission denied
@@ -145,6 +158,7 @@ ERROR: permission denied
 ### Missing Column After Migration
 
 **Problema:**
+
 ```
 Error: column "column_name" does not exist
 ```
@@ -152,16 +166,18 @@ Error: column "column_name" does not exist
 **Soluzione:**
 
 1. **Verifica migration applicata:**
+
    ```sql
-   SELECT column_name 
-   FROM information_schema.columns 
-   WHERE table_name = 'table_name' 
+   SELECT column_name
+   FROM information_schema.columns
+   WHERE table_name = 'table_name'
    AND column_name = 'column_name';
    ```
 
 2. **Se colonna mancante:**
+
    ```sql
-   ALTER TABLE table_name 
+   ALTER TABLE table_name
    ADD COLUMN IF NOT EXISTS column_name TYPE;
    ```
 
@@ -176,6 +192,7 @@ Error: column "column_name" does not exist
 ### RLS Policy Blocks Operation
 
 **Problema:**
+
 ```
 Error: new row violates row-level security policy
 Error: permission denied for table "table_name"
@@ -184,16 +201,18 @@ Error: permission denied for table "table_name"
 **Soluzione:**
 
 1. **Verifica RLS abilitato:**
+
    ```sql
-   SELECT tablename, rowsecurity 
-   FROM pg_tables 
-   WHERE schemaname = 'public' 
+   SELECT tablename, rowsecurity
+   FROM pg_tables
+   WHERE schemaname = 'public'
    AND tablename = 'table_name';
    ```
 
 2. **Verifica policy esistente:**
+
    ```sql
-   SELECT * FROM pg_policies 
+   SELECT * FROM pg_policies
    WHERE tablename = 'table_name';
    ```
 
@@ -212,6 +231,7 @@ Error: permission denied for table "table_name"
 ### RLS Policy Missing
 
 **Problema:**
+
 ```
 Users can see other users' data
 ```
@@ -219,13 +239,14 @@ Users can see other users' data
 **Soluzione:**
 
 1. **Crea policy mancante:**
+
    ```sql
    CREATE POLICY "tenant_isolation" ON table_name
    FOR SELECT USING (
      user_id = auth.uid()
      OR EXISTS (
        SELECT 1 FROM users
-       WHERE id = auth.uid() 
+       WHERE id = auth.uid()
        AND role IN ('admin', 'superadmin')
      )
    );
@@ -233,9 +254,9 @@ Users can see other users' data
 
 2. **Verifica tutte le tabelle:**
    ```sql
-   SELECT tablename 
-   FROM pg_tables 
-   WHERE schemaname = 'public' 
+   SELECT tablename
+   FROM pg_tables
+   WHERE schemaname = 'public'
    AND rowsecurity = false;
    ```
 
@@ -248,6 +269,7 @@ Users can see other users' data
 ### Slow Queries
 
 **Problema:**
+
 ```
 Query takes > 1 second
 Database timeout
@@ -256,8 +278,9 @@ Database timeout
 **Soluzione:**
 
 1. **Identifica query lente:**
+
    ```sql
-   SELECT 
+   SELECT
      query,
      calls,
      total_time,
@@ -269,9 +292,10 @@ Database timeout
    ```
 
 2. **Verifica indici:**
+
    ```sql
    -- Verifica indici su tabella
-   SELECT 
+   SELECT
      indexname,
      indexdef
    FROM pg_indexes
@@ -279,11 +303,12 @@ Database timeout
    ```
 
 3. **Aggiungi indici mancanti:**
+
    ```sql
-   CREATE INDEX IF NOT EXISTS idx_table_user_id 
+   CREATE INDEX IF NOT EXISTS idx_table_user_id
    ON table_name(user_id);
-   
-   CREATE INDEX IF NOT EXISTS idx_table_created_at 
+
+   CREATE INDEX IF NOT EXISTS idx_table_created_at
    ON table_name(created_at);
    ```
 
@@ -297,6 +322,7 @@ Database timeout
 ### Missing Indexes
 
 **Problema:**
+
 ```
 Sequential scan on large table
 ```
@@ -304,8 +330,9 @@ Sequential scan on large table
 **Soluzione:**
 
 1. **Identifica tabelle senza indici:**
+
    ```sql
-   SELECT 
+   SELECT
      t.tablename,
      COUNT(i.indexname) AS index_count
    FROM pg_tables t
@@ -316,15 +343,16 @@ Sequential scan on large table
    ```
 
 2. **Aggiungi indici critici:**
+
    ```sql
    -- Foreign keys
    CREATE INDEX idx_shipments_user_id ON shipments(user_id);
-   
+
    -- Timestamps (per ordering)
    CREATE INDEX idx_shipments_created_at ON shipments(created_at DESC);
-   
+
    -- Composite (per query comuni)
-   CREATE INDEX idx_shipments_user_created 
+   CREATE INDEX idx_shipments_user_created
    ON shipments(user_id, created_at DESC);
    ```
 
@@ -335,6 +363,7 @@ Sequential scan on large table
 ### Wallet Balance Inconsistency
 
 **Problema:**
+
 ```
 Wallet balance doesn't match transactions sum
 ```
@@ -342,8 +371,9 @@ Wallet balance doesn't match transactions sum
 **Soluzione:**
 
 1. **Verifica integrità:**
+
    ```sql
-   SELECT 
+   SELECT
      u.id,
      u.wallet_balance,
      COALESCE(SUM(wt.amount), 0) AS calculated_balance
@@ -365,6 +395,7 @@ Wallet balance doesn't match transactions sum
 ### Orphan Records
 
 **Problema:**
+
 ```
 Shipments without user_id
 Foreign key violations
@@ -373,12 +404,14 @@ Foreign key violations
 **Soluzione:**
 
 1. **Identifica orphan records:**
+
    ```sql
-   SELECT * FROM shipments 
+   SELECT * FROM shipments
    WHERE user_id IS NULL;
    ```
 
 2. **Fix orphan records:**
+
    ```sql
    -- Se possibile, associa a utente corretto
    UPDATE shipments s
@@ -400,6 +433,7 @@ Foreign key violations
 ### Function Not Found
 
 **Problema:**
+
 ```
 Error: function "function_name" does not exist
 ```
@@ -407,8 +441,9 @@ Error: function "function_name" does not exist
 **Soluzione:**
 
 1. **Verifica funzione esiste:**
+
    ```sql
-   SELECT 
+   SELECT
      routine_name,
      routine_type
    FROM information_schema.routines
@@ -423,7 +458,7 @@ Error: function "function_name" does not exist
 3. **Verifica permessi:**
    ```sql
    -- Verifica SECURITY DEFINER
-   SELECT 
+   SELECT
      proname,
      prosecdef
    FROM pg_proc
@@ -435,6 +470,7 @@ Error: function "function_name" does not exist
 ### RPC Function Error
 
 **Problema:**
+
 ```
 Error: column reference "id" is ambiguous
 Error: RPC function returns error
@@ -447,6 +483,7 @@ Error: RPC function returns error
    - Verifica tipi parametri corretti
 
 2. **Verifica column references:**
+
    ```sql
    -- Qualifica tutte le colonne con alias
    -- BEFORE: WHERE id = p_user_id
@@ -506,12 +543,12 @@ Error: RPC function returns error
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | Dev Team |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
 
 ---
 
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Dev Team*
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Dev Team_

@@ -60,7 +60,12 @@ function useCounter(end: number, duration: number = 2000) {
 }
 
 const stats = [
-  { value: 50000, suffix: '+', label: 'Spedizioni al mese', description: 'gestite dalla nostra piattaforma' },
+  {
+    value: 50000,
+    suffix: '+',
+    label: 'Spedizioni al mese',
+    description: 'gestite dalla nostra piattaforma',
+  },
   { value: 1247, suffix: '+', label: 'Aziende attive', description: 'che ci hanno scelto' },
   { value: 99, suffix: '%', label: 'Clienti soddisfatti', description: 'tornerebbero a usarci' },
   { value: 10, suffix: 's', label: 'Tempo medio', description: 'per creare una spedizione' },
@@ -72,46 +77,48 @@ const testimonials = [
     role: 'E-commerce Manager',
     company: 'FashionStore.it',
     image: null,
-    content: 'Da quando usiamo SpedireSicuro abbiamo ridotto del 80% il tempo dedicato alle spedizioni. L\'AI e incredibile!',
-    rating: 5
+    content:
+      "Da quando usiamo SpedireSicuro abbiamo ridotto del 80% il tempo dedicato alle spedizioni. L'AI e incredibile!",
+    rating: 5,
   },
   {
     name: 'Giulia Rossi',
     role: 'Proprietaria',
     company: 'Bottega Artigiana',
     image: null,
-    content: 'Finalmente posso concentrarmi sul mio lavoro invece di perdere ore a compilare etichette. Consigliatissimo!',
-    rating: 5
+    content:
+      'Finalmente posso concentrarmi sul mio lavoro invece di perdere ore a compilare etichette. Consigliatissimo!',
+    rating: 5,
   },
   {
     name: 'Alessandro Verdi',
     role: 'Operations Director',
     company: 'LogiTech Solutions',
     image: null,
-    content: 'La funzione OCR da screenshot WhatsApp ha rivoluzionato il nostro workflow. I clienti sono stupiti dalla velocita.',
-    rating: 5
+    content:
+      'La funzione OCR da screenshot WhatsApp ha rivoluzionato il nostro workflow. I clienti sono stupiti dalla velocita.',
+    rating: 5,
   },
   {
     name: 'Francesca Neri',
     role: 'CEO',
     company: 'Handmade Italia',
     image: null,
-    content: 'Il confronto prezzi automatico ci fa risparmiare centinaia di euro al mese. Un investimento che si ripaga da solo.',
-    rating: 5
-  }
+    content:
+      'Il confronto prezzi automatico ci fa risparmiare centinaia di euro al mese. Un investimento che si ripaga da solo.',
+    rating: 5,
+  },
 ];
 
-const carriers = [
-  'BRT', 'GLS', 'DHL', 'UPS', 'TNT', 'FedEx', 'Poste Italiane', 'SDA'
-];
+const carriers = ['BRT', 'GLS', 'DHL', 'UPS', 'TNT', 'FedEx', 'Poste Italiane', 'SDA'];
 
 // Componente separato per ogni stat - risolve il problema degli hooks dentro .map()
 function StatItem({
   stat,
   index,
-  isInView
+  isInView,
 }: {
-  stat: typeof stats[0];
+  stat: (typeof stats)[0];
   index: number;
   isInView: boolean;
 }) {
@@ -127,7 +134,8 @@ function StatItem({
     >
       <div className="text-5xl lg:text-6xl font-bold mb-2">
         <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent">
-          {count.toLocaleString()}{stat.suffix}
+          {count.toLocaleString()}
+          {stat.suffix}
         </span>
       </div>
       <div className="text-lg font-semibold text-white mb-1">{stat.label}</div>
@@ -144,16 +152,13 @@ export default function StatsDynamic() {
   // Auto-rotate testimonials
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTestimonial(prev => (prev + 1) % testimonials.length);
+      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative py-32 bg-[#09090b] overflow-hidden"
-    >
+    <section ref={sectionRef} className="relative py-32 bg-[#09090b] overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent" />
@@ -168,12 +173,7 @@ export default function StatsDynamic() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-24"
         >
           {stats.map((stat, index) => (
-            <StatItem
-              key={index}
-              stat={stat}
-              index={index}
-              isInView={isInView}
-            />
+            <StatItem key={index} stat={stat} index={index} isInView={isInView} />
           ))}
         </motion.div>
 
@@ -185,9 +185,7 @@ export default function StatsDynamic() {
           className="mb-24"
         >
           <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-white mb-4">
-              Cosa dicono i nostri clienti
-            </h3>
+            <h3 className="text-3xl font-bold text-white mb-4">Cosa dicono i nostri clienti</h3>
             <div className="flex justify-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-6 h-6 fill-amber-400 text-amber-400" />
@@ -218,7 +216,9 @@ export default function StatsDynamic() {
                         </div>
                         <div>
                           <div className="font-semibold text-white">{testimonial.name}</div>
-                          <div className="text-sm text-gray-400">{testimonial.role} @ {testimonial.company}</div>
+                          <div className="text-sm text-gray-400">
+                            {testimonial.role} @ {testimonial.company}
+                          </div>
                         </div>
                         <div className="ml-auto flex gap-0.5">
                           {[...Array(testimonial.rating)].map((_, i) => (
@@ -235,7 +235,11 @@ export default function StatsDynamic() {
             {/* Navigation */}
             <div className="flex justify-center gap-2 mt-8">
               <button
-                onClick={() => setCurrentTestimonial(prev => (prev - 1 + testimonials.length) % testimonials.length)}
+                onClick={() =>
+                  setCurrentTestimonial(
+                    (prev) => (prev - 1 + testimonials.length) % testimonials.length
+                  )
+                }
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
               >
                 <ChevronLeft className="w-5 h-5 text-white" />
@@ -254,7 +258,7 @@ export default function StatsDynamic() {
                 ))}
               </div>
               <button
-                onClick={() => setCurrentTestimonial(prev => (prev + 1) % testimonials.length)}
+                onClick={() => setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)}
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
               >
                 <ChevronRight className="w-5 h-5 text-white" />
@@ -278,10 +282,7 @@ export default function StatsDynamic() {
           <div className="relative overflow-hidden">
             <div className="flex animate-scroll-x">
               {[...carriers, ...carriers].map((carrier, index) => (
-                <div
-                  key={index}
-                  className="flex-shrink-0 mx-8 flex items-center justify-center"
-                >
+                <div key={index} className="flex-shrink-0 mx-8 flex items-center justify-center">
                   <div className="flex items-center gap-3 px-6 py-3 bg-white/5 rounded-xl border border-white/10">
                     <Truck className="w-5 h-5 text-amber-500" />
                     <span className="text-white/70 font-medium whitespace-nowrap">{carrier}</span>
@@ -296,8 +297,12 @@ export default function StatsDynamic() {
       {/* Custom Animation Styles */}
       <style jsx>{`
         @keyframes scroll-x {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
         }
         .animate-scroll-x {
           animation: scroll-x 20s linear infinite;
