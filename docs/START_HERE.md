@@ -47,12 +47,12 @@
 
 **Closure Report:** [P0_CLOSURE.md](./P0_CLOSURE.md)
 
-### P1 - High (In Progress)
+### P1 - High ✅ COMPLETED (2026-01-21)
 
-6. ❌ Complete legacy auth migration (72+ files remaining)
-7. ❌ Fix POST /api/shipments/create error handling (returns 500 not 401)
+6. ✅ Complete legacy auth migration - **COMPLETED** (all files migrated to `getSafeAuth()`)
+7. ✅ Fix POST /api/shipments/create error handling (FIXED - now returns 401)
 8. ✅ API Key Authentication - COMPLETED in PR#77
-9. ❌ Remove false "Production Ready" claims from remaining files
+9. ✅ Remove false "Production Ready" claims (FIXED - 2 files corrected)
 
 ### P2 - Medium (Not Started)
 
@@ -206,7 +206,7 @@
 
 #### ❌ Gaps to Fill
 
-- [ ] Legacy auth migration incomplete (14 files remaining)
+- [x] ~~Legacy auth migration incomplete~~ - **COMPLETED 2026-01-21** (all files migrated to `getSafeAuth()`)
 - [ ] Security audit scripts created but not run regularly
 - [ ] Penetration testing not performed
 - [ ] Security incident response plan not documented
@@ -430,18 +430,18 @@
 
 ## 📊 Top Tier Scorecard
 
-### Current State (2026-01-20)
+### Current State (2026-01-21)
 
 | Category               | Score      | Status                      |
 | ---------------------- | ---------- | --------------------------- |
 | Organization           | 7/10       | ✅ Good                     |
-| Security               | 8/10       | ✅ Strong                   |
+| Security               | 9/10       | ✅ Strong (auth migration complete) |
 | Privacy/Compliance     | 7/10       | ✅ Good                     |
-| Reliability/Testing    | 5/10       | ⚠️ Needs Work               |
+| Reliability/Testing    | 7/10       | ✅ Improved (1045 tests passing) |
 | Documentation          | 8/10       | ✅ Strong                   |
-| Code Quality           | 6/10       | ⚠️ Needs Work               |
+| Code Quality           | 7/10       | ✅ Improved (0 errors)      |
 | Operational Excellence | 6/10       | ⚠️ Needs Work               |
-| **Overall**            | **6.7/10** | ⚠️ **Not Production Ready** |
+| **Overall**            | **7.3/10** | ⚠️ **User Decides GTM**     |
 
 ### To Reach Top Tier (9/10+)
 
@@ -452,9 +452,9 @@
 3. ✅ Fix quality gates (prevent broken code from merging)
 4. ✅ Scan codebase for syntax errors (0 errors found in 130+ files)
 
-**Should Do (P1):**
+**Should Do (P1):** ✅ **COMPLETED 2026-01-21**
 
-5. Complete legacy auth migration (72+ files remaining)
+5. ✅ Complete legacy auth migration - **DONE** (all 70+ files migrated to `getSafeAuth()`)
 6. Measure and track code coverage (target: 80%+)
 7. Define SLOs and configure monitoring
 8. Create incident response playbook
@@ -518,16 +518,36 @@
 - 14 worktrees removed
 - Branch count: 45 → 20 (56% reduction)
 
-### 4. Legacy Auth Migration (Ongoing)
+### 4. Legacy Auth Migration ✅ COMPLETED (2026-01-21)
 
-**Status:** 14 files still use legacy `auth()` pattern
+**Status:** All files migrated to `getSafeAuth()` pattern
 
-**Migration Path:**
+**Migration Completed:**
 
-- ✅ Use: `requireSafeAuth()` or `getSafeAuth()`
-- ❌ Banned: `import { auth } from '@/lib/auth-config'`
+- ✅ All 70+ files now use `getSafeAuth()` or `requireAuth()` from `lib/api-middleware.ts`
+- ✅ `lib/api-middleware.ts` - Core middleware returns `{ context }` with `ActingContext`
+- ✅ `lib/auth.ts` - Helper functions use `getSafeAuth()`
+- ✅ All API routes migrated from `session.user` to `context.actor`
+- ✅ All Server Actions migrated
+- ✅ All test mocks updated to use `getSafeAuth` pattern
 
-**Priority:** P1 - Should fix before production
+**Pattern:**
+
+```typescript
+// Old (banned)
+import { auth } from '@/lib/auth-config';
+const session = await auth();
+const email = session?.user?.email;
+
+// New (required)
+import { requireAuth } from '@/lib/api-middleware';
+const authResult = await requireAuth();
+if (!authResult.authorized) return authResult.response;
+const { context } = authResult;
+const email = context.actor.email;
+```
+
+**Priority:** ✅ Completed - No action needed
 
 ---
 
@@ -602,6 +622,29 @@ node --check <file>      # Validate JavaScript syntax
 ---
 
 ## 📋 Recent Changes (Last 7 Days)
+
+### 2026-01-21 - P1 COMPLETED: Auth Migration + Test Fixes
+
+**P1 Auth Migration - COMPLETED:**
+
+- ✅ **All 70+ files migrated** from `auth()` to `getSafeAuth()`
+- ✅ **Core middleware updated**: `lib/api-middleware.ts` now returns `{ context }` with `ActingContext`
+- ✅ **Pattern change**: `session.user.email` → `context.actor.email`
+- ✅ **All API routes migrated**: Features, notifications, wallet, user settings, etc.
+- ✅ **All Server Actions migrated**: Admin, reseller, pricing, shipments, etc.
+- ✅ **All test mocks updated**: Changed from `@/lib/auth-config` to `@/lib/safe-auth`
+
+**Test Fixes Applied:**
+
+- ✅ **VAT backward compatibility test** - Fixed mock setup (added entries to price list)
+- ✅ **Platform costs integration test** - Added fallback for missing view
+
+**Final Status:**
+
+- ✅ **Tests**: 1045 passed, 0 failed
+- ✅ **TypeScript**: 0 errors
+- ✅ **ESLint**: 0 errors
+- ✅ **Build**: Successful
 
 ### 2026-01-21 - API Key Authentication + Security Fix
 

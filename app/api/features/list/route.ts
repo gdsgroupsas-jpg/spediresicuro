@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
 // Forza rendering dinamico (usa headers())
@@ -14,9 +14,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
+    const context = await getSafeAuth();
+
+    if (!context || !context.actor?.email) {
       return NextResponse.json(
         { error: 'Non autenticato' },
         { status: 401 }
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       const { data: user } = await supabaseAdmin
         .from('users')
         .select('role')
-        .eq('email', session.user.email)
+        .eq('email', context.actor.email)
         .single();
 
       const userRole = user?.role || 'user';
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       const { data: userFeatures } = await supabaseAdmin
         .from('user_features')
         .select('feature_id, is_active, expires_at, activation_type')
-        .eq('user_email', session.user.email)
+        .eq('user_email', context.actor.email)
         .eq('is_active', true);
 
       // Ottieni i codici delle features attivate

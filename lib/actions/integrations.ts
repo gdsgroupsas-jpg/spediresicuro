@@ -12,7 +12,7 @@
 import { z } from 'zod'
 import { createEcommerceAdapter } from '@/lib/adapters/ecommerce/base'
 import { createServerActionClient } from '@/lib/supabase-server'
-import { auth } from '@/lib/auth-config'
+import { getSafeAuth } from '@/lib/safe-auth'
 import { findUserByEmail } from '@/lib/database'
 
 /**
@@ -251,10 +251,10 @@ export async function testIntegration(provider: string, credentials: any) {
  */
 export async function saveIntegration(provider: string, credentials: any) {
   try {
-    // 1. Verifica autenticazione tramite NextAuth
-    const session = await auth()
-    
-    if (!session?.user?.email) {
+    // 1. Verifica autenticazione
+    const context = await getSafeAuth()
+
+    if (!context?.actor?.email) {
       throw new Error('Non autenticato')
     }
 
@@ -285,8 +285,8 @@ export async function saveIntegration(provider: string, credentials: any) {
     let useLocalFallback = false
 
     if (useSupabase) {
-      // Prova a mappare email NextAuth -> UUID Supabase
-      const mappingResult = await getSupabaseUserIdFromEmail(supabase, session.user.email)
+      // Prova a mappare email -> UUID Supabase
+      const mappingResult = await getSupabaseUserIdFromEmail(supabase, context.actor.email)
       
       if (mappingResult.userId) {
         // Utente trovato in Supabase (via profiles o auth)
@@ -303,7 +303,7 @@ export async function saveIntegration(provider: string, credentials: any) {
 
     // 7. Fallback al database JSON locale se necessario
     if (useLocalFallback) {
-      const localUser = await findUserByEmail(session.user.email)
+      const localUser = await findUserByEmail(context.actor.email)
       if (!localUser) {
         throw new Error('Utente non trovato')
       }
@@ -396,10 +396,10 @@ export async function getUserIntegrations() {
  */
 export async function getIntegrations() {
   try {
-    // 1. Verifica autenticazione tramite NextAuth
-    const session = await auth()
-    
-    if (!session?.user?.email) {
+    // 1. Verifica autenticazione
+    const context = await getSafeAuth()
+
+    if (!context?.actor?.email) {
       throw new Error('Non autenticato')
     }
 
@@ -417,7 +417,7 @@ export async function getIntegrations() {
       // Fallback: usa database locale se Supabase non è configurato
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       if (!supabaseUrl) {
-        const user = await findUserByEmail(session.user.email)
+        const user = await findUserByEmail(context.actor.email)
         if (!user) {
           return {
             success: true,
@@ -447,7 +447,7 @@ export async function getIntegrations() {
     if (error) {
       console.error('Errore Supabase select:', error)
       // Fallback al database locale in caso di errore
-      const user = await findUserByEmail(session.user.email)
+      const user = await findUserByEmail(context.actor.email)
       return {
         success: true,
         integrations: user?.integrazioni || [],
@@ -470,9 +470,9 @@ export async function getIntegrations() {
     console.error('Errore getIntegrations:', error)
     // Fallback al database locale in caso di errore
     try {
-      const session = await auth()
-      if (session?.user?.email) {
-        const user = await findUserByEmail(session.user.email)
+      const context = await getSafeAuth()
+      if (context?.actor?.email) {
+        const user = await findUserByEmail(context.actor.email)
         return {
           success: true,
           integrations: user?.integrazioni || [],

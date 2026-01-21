@@ -16,7 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { revokeApiKey } from '@/lib/api-key-service';
 import { FeatureFlags } from '@/lib/feature-flags';
 
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Require cookie auth (user must be logged in)
-  const session = await auth();
-  if (!session?.user?.id) {
+  const context = await getSafeAuth();
+  if (!context?.actor?.id) {
     return NextResponse.json(
       { error: 'Unauthorized', message: 'You must be logged in to revoke API keys' },
       { status: 401 }
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Revoke key (includes security check - user can only revoke own keys)
-    const success = await revokeApiKey(keyId, session.user.id);
+    const success = await revokeApiKey(keyId, context.actor.id);
 
     if (!success) {
       return NextResponse.json(

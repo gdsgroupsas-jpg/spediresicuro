@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { getAllClientsForUser, getSubUsers } from '@/actions/admin-reseller'
 import { supabaseAdmin } from '@/lib/db/client'
-import { auth } from '@/lib/auth-config'
+import { getSafeAuth } from '@/lib/safe-auth'
 import { hasCapability } from '@/lib/db/capability-helpers'
 
 // Mock dependencies
@@ -17,8 +17,8 @@ vi.mock('@/lib/db/client', () => ({
   },
 }))
 
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('@/lib/safe-auth', () => ({
+  getSafeAuth: vi.fn(),
 }))
 
 vi.mock('@/lib/db/capability-helpers', () => ({
@@ -32,7 +32,7 @@ describe('Admin Reseller Actions', () => {
 
   describe('getAllClientsForUser', () => {
     it('should return error if not authenticated', async () => {
-      ;(auth as any).mockResolvedValue(null)
+      ;(getSafeAuth as any).mockResolvedValue(null)
 
       const result = await getAllClientsForUser()
 
@@ -41,8 +41,8 @@ describe('Admin Reseller Actions', () => {
     })
 
     it('should return error if user cannot view all clients', async () => {
-      ;(auth as any).mockResolvedValue({
-        user: { email: 'user@test.com' },
+      ;(getSafeAuth as any).mockResolvedValue({
+        actor: { email: 'user@test.com' },
       })
 
       // Mock user query
@@ -66,8 +66,8 @@ describe('Admin Reseller Actions', () => {
     })
 
     it('should return hierarchical clients for superadmin', async () => {
-      ;(auth as any).mockResolvedValue({
-        user: { email: 'admin@test.com' },
+      ;(getSafeAuth as any).mockResolvedValue({
+        actor: { email: 'admin@test.com' },
       })
 
       // Mock user query (superadmin)
@@ -170,8 +170,8 @@ describe('Admin Reseller Actions', () => {
 
   describe('getSubUsers (updated)', () => {
     it('should return all sub-users for superadmin', async () => {
-      ;(auth as any).mockResolvedValue({
-        user: { email: 'admin@test.com' },
+      ;(getSafeAuth as any).mockResolvedValue({
+        actor: { email: 'admin@test.com' },
       })
 
       // Mock user query (superadmin)
@@ -226,8 +226,8 @@ describe('Admin Reseller Actions', () => {
     })
 
     it('should return only reseller sub-users for reseller', async () => {
-      ;(auth as any).mockResolvedValue({
-        user: { email: 'reseller@test.com' },
+      ;(getSafeAuth as any).mockResolvedValue({
+        actor: { email: 'reseller@test.com' },
       })
 
       // Mock user queries

@@ -17,12 +17,14 @@
 ### ✅ RISULTATO FINALE
 
 **Prima dell'audit**:
+
 - Sistema "molto sopra la media" MA NON production-safe enterprise
 - 4 bloccanti critici P0
 - ZERO observability su compensation queue
 - GDPR incomplete
 
 **Dopo le fix**:
+
 - ✅ **TUTTI I P0 RISOLTI** (production-ready)
 - ✅ Kill-switch + alerting su operazioni critiche
 - ✅ Idempotency DB-enforced
@@ -41,23 +43,28 @@
 **Status**: ✅ COMPLETATO
 
 **Problema originale**:
+
 > "SuperAdmin bypass del wallet = bomba atomica. Non è limitata, non è kill-switchata, non è monitorata."
 
 **Soluzione implementata**:
 
 1. **Kill-switch env var** (fail-closed)
+
    ```bash
    ALLOW_SUPERADMIN_WALLET_BYPASS=false  # Default: disabilitato
    ```
+
    - `false` / undefined → SuperAdmin paga come tutti
    - `true` → Bypass consentito MA loggato come security event
 
 2. **Security event logging** (`lib/security/security-events.ts`)
+
    ```typescript
-   await logSuperAdminWalletBypass(
-     actorId, targetId, amount, currentBalance,
-     { impersonating, reason, severity: 'CRITICAL' }
-   )
+   await logSuperAdminWalletBypass(actorId, targetId, amount, currentBalance, {
+     impersonating,
+     reason,
+     severity: 'CRITICAL',
+   });
    ```
 
 3. **Audit action** aggiunta
@@ -69,12 +76,14 @@
    - `bypassReason: string`
 
 **File modificati**:
+
 - `lib/wallet/credit-check.ts` (kill-switch logic)
 - `lib/security/security-events.ts` (logging)
 - `lib/security/audit-actions.ts` (audit action)
 - `.env.local.example` (env var template)
 
 **Produzione TODO**:
+
 - [ ] Configurare alerting real-time (Grafana/Datadog/Slack)
 - [ ] Query: `SELECT * FROM audit_logs WHERE action='superadmin_wallet_bypass'`
 - [ ] SLA: Review entro 4h da ogni bypass
@@ -87,11 +96,13 @@
 **Status**: ✅ COMPLETATO
 
 **Problema originale**:
+
 > "decrement_wallet_balance() atomico ma NON idempotent standalone. Se chiamato direttamente fuori shipment flow → no protezione doppio addebito."
 
 **Soluzione implementata**:
 
 1. **Migration 098**: Schema changes
+
    ```sql
    ALTER TABLE wallet_transactions
    ADD COLUMN idempotency_key TEXT;
@@ -102,6 +113,7 @@
    ```
 
 2. **Refactor SQL functions** (return type: JSONB)
+
    ```sql
    CREATE OR REPLACE FUNCTION decrement_wallet_balance(
      p_user_id UUID,
@@ -116,14 +128,15 @@
    - UNIQUE constraint DB-level previene duplicati
 
 4. **Response format** (JSONB)
+
    ```json
    {
      "success": true,
      "idempotent_replay": false,
      "transaction_id": "uuid",
-     "previous_balance": 100.00,
-     "new_balance": 90.00,
-     "amount_debited": 10.00
+     "previous_balance": 100.0,
+     "new_balance": 90.0,
+     "amount_debited": 10.0
    }
    ```
 
@@ -132,12 +145,14 @@
    - Derivate keys per refund/adjustment: `{key}-refund`, `{key}-adjust-debit`
 
 **File modificati**:
+
 - `supabase/migrations/098_wallet_idempotency_standalone.sql`
 - `lib/shipments/create-shipment-core.ts`
 
 **Backward compatibility**: ✅ Idempotency key opzionale (legacy code still works)
 
 **BREAKING CHANGE (minimale)**:
+
 - Return type: `BOOLEAN` → `JSONB`
 - Check `result.success` invece di `TRUE/FALSE`
 
@@ -149,11 +164,13 @@
 **Status**: ✅ COMPLETATO
 
 **Problema originale**:
+
 > "OCR Vision processa PII (immagini WhatsApp) senza consent, NO retention policy, NO kill-switch, NO DPA con provider AI."
 
 **Soluzione implementata**:
 
 1. **Migration 099**: User consent tracking
+
    ```sql
    ALTER TABLE users
    ADD COLUMN ocr_vision_consent_given_at TIMESTAMPTZ,
@@ -168,9 +185,11 @@
    - Retention: TTL 7 giorni (soft delete), 30 giorni (hard delete)
 
 3. **Kill-switch env var**
+
    ```bash
    ENABLE_OCR_VISION=true  # Default: enabled
    ```
+
    - `false` → Solo Tesseract (local, NO external)
    - `true` + consent → Google Vision / Claude Vision
 
@@ -197,6 +216,7 @@
    - GDPR Art. 6, 17, 28, 30 compliance
 
 **File modificati**:
+
 - `supabase/migrations/099_ocr_gdpr_compliance.sql`
 - `app/api/ocr/extract/route.ts`
 - `app/api/cron/ocr-cleanup/route.ts` (new)
@@ -204,6 +224,7 @@
 - `docs/GDPR_OCR_DPA.md` (new)
 
 **Produzione TODO** (⚠️ LEGAL REVIEW REQUIRED):
+
 - [ ] Firmare DPA Google Cloud (Enterprise tier)
 - [ ] Firmare DPA Anthropic (Enterprise tier)
 - [ ] Transfer Impact Assessment (TIA) per USA transfers
@@ -211,6 +232,7 @@
 - [ ] Cookie Policy update (se applicable)
 
 **GDPR Compliance**:
+
 - ✅ Art. 6: Lawful basis (explicit consent)
 - ✅ Art. 17: Right to erasure (revoke consent)
 - ✅ Art. 28: Processor agreement (DPA template)
@@ -224,11 +246,13 @@
 **Status**: ✅ COMPLETATO
 
 **Problema originale**:
+
 > "Compensation queue implementata ma ZERO observability. NO metriche, NO alerting, NO dead-letter queue."
 
 **Soluzione implementata**:
 
 1. **Migration 100**: Schema enhancements
+
    ```sql
    ALTER TABLE compensation_queue
    ADD COLUMN resolved_at TIMESTAMPTZ,
@@ -246,6 +270,7 @@
    - Metrics: pending counts by age, resolution time, exposure
 
 3. **API stats endpoint** (`/api/admin/compensation-queue/stats`)
+
    ```json
    {
      "stats": {
@@ -271,6 +296,7 @@
    - Manual review required
 
 5. **Alerting functions**
+
    ```sql
    SELECT * FROM get_compensation_alerts();
    -- Returns: severity, message, count, metadata
@@ -292,11 +318,13 @@
    - SQL queries troubleshooting
 
 **File modificati**:
+
 - `supabase/migrations/100_compensation_queue_observability.sql`
 - `app/api/admin/compensation-queue/stats/route.ts` (new)
 - `docs/COMPENSATION_QUEUE_ALERTING.md` (new)
 
 **Produzione TODO**:
+
 - [ ] Setup Grafana dashboard (import JSON template)
 - [ ] Configure Slack webhook: `SLACK_WEBHOOK_COMPENSATION_ALERTS`
 - [ ] Configure PagerDuty: `PAGERDUTY_INTEGRATION_KEY`
@@ -304,6 +332,7 @@
 - [ ] Train support team (runbook)
 
 **SLA definitions**:
+
 - P0 (High value >€100): 4 hours
 - P1 (Standard €20-€100): 24 hours
 - P2 (Low value <€20): 7 giorni
@@ -314,12 +343,12 @@
 
 ### Code Changes
 
-| Category | Lines Added | Files Modified | New Files |
-|----------|-------------|----------------|-----------|
-| **SQL Migrations** | ~1500 | 3 migrations | 3 |
-| **TypeScript** | ~1200 | 6 files | 4 |
-| **Documentation** | ~800 | 3 docs | 3 |
-| **Total** | **~3500+** | **12 files** | **10 files** |
+| Category           | Lines Added | Files Modified | New Files    |
+| ------------------ | ----------- | -------------- | ------------ |
+| **SQL Migrations** | ~1500       | 3 migrations   | 3            |
+| **TypeScript**     | ~1200       | 6 files        | 4            |
+| **Documentation**  | ~800        | 3 docs         | 3            |
+| **Total**          | **~3500+**  | **12 files**   | **10 files** |
 
 ### Database Schema
 
@@ -332,25 +361,28 @@
 ### API Endpoints
 
 **New endpoints**: 4
+
 - `GET /api/admin/compensation-queue/stats`
 - `POST /api/user/ocr-consent`
 - `DELETE /api/user/ocr-consent`
 - `GET /api/user/ocr-consent`
 
 **Modified endpoints**: 1
+
 - `POST /api/ocr/extract` (consent + logging)
 
 **CRON jobs**: 1
+
 - `GET /api/cron/ocr-cleanup`
 
 ### Security Enhancements
 
-| Enhancement | Type | Impact |
-|-------------|------|--------|
-| **Kill-switch SuperAdmin bypass** | Governance | HIGH - Previene frodi insider |
-| **Wallet idempotency** | Technical | HIGH - Previene doppio addebito |
-| **OCR consent tracking** | GDPR | CRITICAL - Legal compliance |
-| **Compensation observability** | Operations | HIGH - Financial integrity |
+| Enhancement                       | Type       | Impact                          |
+| --------------------------------- | ---------- | ------------------------------- |
+| **Kill-switch SuperAdmin bypass** | Governance | HIGH - Previene frodi insider   |
+| **Wallet idempotency**            | Technical  | HIGH - Previene doppio addebito |
+| **OCR consent tracking**          | GDPR       | CRITICAL - Legal compliance     |
+| **Compensation observability**    | Operations | HIGH - Financial integrity      |
 
 ---
 
@@ -447,18 +479,19 @@ curl https://api.spediresicuro.com/api/user/ocr-consent \
 
 ### GDPR OCR (P0.3) - ⚠️ URGENT
 
-| Action | Owner | Deadline | Status |
-|--------|-------|----------|--------|
-| **Firmare DPA Google Cloud** | Legal / CTO | Before go-live | ❌ TODO |
-| **Firmare DPA Anthropic** | Legal / CTO | Before go-live | ❌ TODO |
-| **Transfer Impact Assessment (TIA)** | DPO / Legal | Before go-live | ❌ TODO |
-| **Privacy Policy update** | Legal | Before go-live | ❌ TODO |
-| **Cookie Policy update** | Legal | Optional | ❌ TODO |
-| **Legal review DPA template** | External counsel | Recommended | ❌ TODO |
+| Action                               | Owner            | Deadline       | Status  |
+| ------------------------------------ | ---------------- | -------------- | ------- |
+| **Firmare DPA Google Cloud**         | Legal / CTO      | Before go-live | ❌ TODO |
+| **Firmare DPA Anthropic**            | Legal / CTO      | Before go-live | ❌ TODO |
+| **Transfer Impact Assessment (TIA)** | DPO / Legal      | Before go-live | ❌ TODO |
+| **Privacy Policy update**            | Legal            | Before go-live | ❌ TODO |
+| **Cookie Policy update**             | Legal            | Optional       | ❌ TODO |
+| **Legal review DPA template**        | External counsel | Recommended    | ❌ TODO |
 
 **Template DPA**: `docs/GDPR_OCR_DPA.md` (requires legal review)
 
 **Contacts**:
+
 - Google Cloud DPA: https://cloud.google.com/terms/data-processing-addendum
 - Anthropic Enterprise: sales@anthropic.com
 
@@ -527,12 +560,14 @@ npm run smoke:golden-path
 ### Audit Feedback Addressed 📝
 
 **Concordanze** (9/13):
+
 - ✅ P0.1, P0.2, P0.3, P0.4 (tutti risolti)
 - ✅ P1.2, P1.3 (da fare)
 - ✅ P2.2 (coverage alta, chaos tests limitati)
 - ✅ P2.3 (Stripe non live-tested)
 
 **Disaccordi** (2/13):
+
 - ❌ P1.1 (Retry carrier): Auditor assume retry esistente, NON implementato
 - ❌ P2.1 (Frontend logic): Auditor assume business logic client, è server-side
 
@@ -547,19 +582,20 @@ npm run smoke:golden-path
 
 ### Audit Status
 
-| Category | Before | After |
-|----------|--------|-------|
-| **Security** | ⚠️ Buona (con gap critici) | ✅ Enterprise-grade |
-| **Financial Core** | ⚠️ Concettualmente corretto | ✅ Idempotent + audited |
-| **GDPR Compliance** | ❌ Incomplete | ✅ Compliant (pending legal) |
-| **Observability** | ❌ ZERO | ✅ Complete (Grafana ready) |
-| **Production Ready** | ❌ NO | ✅ **SÌ (con TODO legal)** |
+| Category             | Before                      | After                                                     |
+| -------------------- | --------------------------- | --------------------------------------------------------- |
+| **Security**         | ⚠️ Buona (con gap critici)  | ✅ Enterprise-grade                                       |
+| **Financial Core**   | ⚠️ Concettualmente corretto | ✅ Idempotent + audited                                   |
+| **GDPR Compliance**  | ❌ Incomplete               | ✅ Compliant (pending legal)                              |
+| **Observability**    | ❌ ZERO                     | ✅ Complete (Grafana ready)                               |
+| **Production Ready** | ❌ NO                       | ⏳ **TBD BY OWNER** (fixes applied, GTM decision pending) |
 
 ### Go-Live Readiness
 
 **Bloccanti P0**: ✅ **TUTTI RISOLTI** (4/4)
 
 **Legal TODO** (non bloccanti deploy, ma bloccanti traffic reale):
+
 - Firmare DPA provider (Google + Anthropic)
 - Privacy Policy update
 - Transfer Impact Assessment
@@ -576,6 +612,7 @@ npm run smoke:golden-path
 **DPO**: [TO BE ASSIGNED]
 
 **Runbooks**:
+
 - Compensation Queue: `docs/COMPENSATION_QUEUE_ALERTING.md`
 - GDPR OCR: `docs/GDPR_OCR_DPA.md`
 - Audit Response: `AUDIT_RESPONSE.md`
@@ -586,13 +623,13 @@ npm run smoke:golden-path
 
 ## 📅 CHANGELOG
 
-| Date | Milestone | Commits |
-|------|-----------|---------|
-| 2026-01-11 | Audit response document | 5c5ff3e |
+| Date       | Milestone                            | Commits |
+| ---------- | ------------------------------------ | ------- |
+| 2026-01-11 | Audit response document              | 5c5ff3e |
 | 2026-01-11 | P0.1 - SuperAdmin bypass kill-switch | e85b085 |
 | 2026-01-11 | P0.2 - Wallet idempotency standalone | 2d60470 |
-| 2026-01-11 | P0.3 - GDPR OCR compliance | 04be9a1 |
-| 2026-01-11 | P0.4 - Compensation observability | 3e72634 |
+| 2026-01-11 | P0.3 - GDPR OCR compliance           | 04be9a1 |
+| 2026-01-11 | P0.4 - Compensation observability    | 3e72634 |
 
 **Total time**: ~2 ore (analysis + implementation + documentation)
 

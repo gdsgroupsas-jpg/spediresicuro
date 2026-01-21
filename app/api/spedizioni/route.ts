@@ -8,9 +8,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
-import { createAuthContextFromSession } from '@/lib/auth-context';
+import type { AuthContext } from '@/lib/auth-context';
 import { createApiLogger, getRequestId } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
 import { supabaseAdmin } from '@/lib/db/client';
@@ -138,11 +138,11 @@ export async function GET(request: NextRequest) {
   
   try {
     logger.info('GET /api/spedizioni - Richiesta lista spedizioni');
-    
-    // Autenticazione
-    session = await auth();
 
-    if (!session?.user?.email) {
+    // Autenticazione
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('GET /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -150,12 +150,19 @@ export async function GET(request: NextRequest) {
     // Gestisci query parameter per singola spedizione
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (id) {
       // Restituisci singola spedizione (filtrata per utente autenticato)
       let spedizioni: any[] = [];
       try {
-        const authContext = await createAuthContextFromSession(session);
+        // Converti ActingContext in AuthContext per getSpedizioni
+        // NOTA: Usa target per operazioni business (supporta impersonation)
+        const authContext: AuthContext = {
+          type: 'user',
+          userId: session.target.id,
+          userEmail: session.target.email || undefined,
+          isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+        };
         spedizioni = await getSpedizioni(authContext);
       } catch (error: any) {
         console.error('❌ [API] Errore getSpedizioni (singola):', error.message);
@@ -216,7 +223,13 @@ export async function GET(request: NextRequest) {
     // Ottieni spedizioni filtrate per utente autenticato (multi-tenancy)
     let spedizioni: any[] = [];
     try {
-      const authContext = await createAuthContextFromSession(session);
+      // Converti ActingContext in AuthContext per getSpedizioni
+      const authContext: AuthContext = {
+        type: 'user',
+        userId: session.target.id,
+        userEmail: session.target.email || undefined,
+        isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+      };
       spedizioni = await getSpedizioni(authContext);
     } catch (error: any) {
       console.error('❌ [API] Errore getSpedizioni:', error.message);
@@ -311,11 +324,11 @@ export async function POST(request: NextRequest) {
   
   try {
     logger.info('POST /api/spedizioni - Richiesta creazione spedizione');
-    
-    // Autenticazione
-    session = await auth();
 
-    if (!session?.user?.email) {
+    // Autenticazione
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('POST /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -437,14 +450,14 @@ export async function POST(request: NextRequest) {
       const { getPlatformFeeSafe } = await import('@/lib/services/pricing/platform-fee');
 
       // ✨ FIX P0: Verifica ruolo da MULTIPLE FONTI per evitare false negative
-      const sessionRole = (session.user as any)?.role?.toUpperCase?.() || '';
-      const sessionAccountType = (session.user as any)?.account_type?.toLowerCase?.() || '';
+      const sessionRole = (session.actor as any)?.role?.toUpperCase?.() || '';
+      const sessionAccountType = (session.actor as any)?.account_type?.toLowerCase?.() || '';
 
       // Query DB come backup (potrebbe fallire)
       const { data: userData } = await supabaseAdmin
         .from('users')
         .select('role, account_type')
-        .eq('email', session.user.email)
+        .eq('email', session.actor.email)
         .single();
 
       const dbRole = userData?.role?.toUpperCase?.() || '';
@@ -470,7 +483,7 @@ export async function POST(request: NextRequest) {
         ['superadmin', 'admin', 'reseller', 'byoc'].includes(dbAccountType);
 
       console.log('🔐 [API] Verifica ruolo per platform fee:', {
-        email: session.user.email,
+        email: session.actor.email,
         sessionRole,
         sessionAccountType,
         dbRole,
@@ -484,7 +497,7 @@ export async function POST(request: NextRequest) {
       // USER finali NON pagano MAI
       if (isBusinessRole && !isRegularUser) {
         const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
-        const userId = await getSupabaseUserIdFromEmail(session.user.email);
+        const userId = await getSupabaseUserIdFromEmail(session.actor.email);
         if (userId) {
           platformFee = await getPlatformFeeSafe(userId);
           prezzoFinale = prezzoFinale + platformFee;
@@ -565,8 +578,8 @@ export async function POST(request: NextRequest) {
       serviziAccessori: body.serviziAccessori || [],
       accessoriServices: body.serviziAccessori || [], // Alias per compatibilità adapter
       // Audit Trail - Tracciamento creazione
-      created_by_user_email: session.user.email,
-      created_by_user_name: session.user.name || session.user.email,
+      created_by_user_email: session.actor.email,
+      created_by_user_name: session.actor.name || session.actor.email,
       // Soft Delete
       deleted: false,
     };
@@ -587,16 +600,16 @@ export async function POST(request: NextRequest) {
 
     // ⚠️ NORMALIZZAZIONE PAYLOAD: Sanitizza e normalizza prima dell'INSERT
     // 1. Recupera ruolo utente per sanitizzazione
-    let userRole: string | undefined = (session.user as any).role;
-    let accountType: string | undefined = (session.user as any).account_type;
-    
+    let userRole: string | undefined = (session.actor as any).role;
+    let accountType: string | undefined = (session.actor as any).account_type;
+
     // Se non disponibile in session, recupera da database
     if (!accountType) {
       try {
         const { data: userData } = await supabaseAdmin
           .from('users')
           .select('role, account_type')
-          .eq('email', session.user.email)
+          .eq('email', session.actor.email)
           .single();
         
         if (userData) {
@@ -695,7 +708,13 @@ export async function POST(request: NextRequest) {
     // Salva nel database (SOLO Supabase)
     let createdShipment: any = null;
     try {
-      const authContext = await createAuthContextFromSession(session);
+      // Converti ActingContext in AuthContext per addSpedizione
+      const authContext: AuthContext = {
+        type: 'user',
+        userId: session.target.id,
+        userEmail: session.target.email || undefined,
+        isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+      };
       // Usa payload normalizzato invece di spedizione originale
       createdShipment = await addSpedizione(normalizedPayload, authContext);
       console.log('✅ [API] Spedizione creata con ID:', createdShipment.id);
@@ -1037,11 +1056,11 @@ export async function DELETE(request: NextRequest) {
   
   try {
     logger.info('DELETE /api/spedizioni - Richiesta eliminazione spedizione');
-    
-    // Autenticazione
-    session = await auth();
 
-    if (!session?.user?.email) {
+    // Autenticazione
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('DELETE /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -1072,7 +1091,7 @@ export async function DELETE(request: NextRequest) {
     let supabaseUserId: string | null = null;
     try {
       const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
-      supabaseUserId = await getSupabaseUserIdFromEmail(session.user.email);
+      supabaseUserId = await getSupabaseUserIdFromEmail(session.actor.email);
     } catch (error) {
       // Non critico se non trovato
       console.warn('⚠️ [SUPABASE] Impossibile ottenere user_id per soft delete:', error);
@@ -1132,7 +1151,7 @@ export async function DELETE(request: NextRequest) {
         const { data: currentUserData } = await supabaseAdmin
           .from('users')
           .select('id, email, is_reseller')
-          .eq('email', session.user.email)
+          .eq('email', session.actor.email)
           .single();
         
         const currentUserId = currentUserData?.id || supabaseUserId;
@@ -1153,7 +1172,7 @@ export async function DELETE(request: NextRequest) {
             } else if (userConfig && userConfig.length > 0) {
               configData = userConfig[0];
               console.log('✅ [API] Usando configurazione utente che cancella:', {
-                email: session.user.email,
+                email: session.actor.email,
                 provider_id: providerId,
                 owner_user_id: configData.owner_user_id ? 'presente' : 'null',
               });
@@ -1342,7 +1361,7 @@ export async function DELETE(request: NextRequest) {
         deleted: true,
         deleted_at: new Date().toISOString(),
         deleted_by_user_id: supabaseUserId,
-        deleted_by_user_email: session.user.email, // ⚠️ NUOVO: Traccia chi ha cancellato
+        deleted_by_user_email: session.actor.email, // ⚠️ NUOVO: Traccia chi ha cancellato
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

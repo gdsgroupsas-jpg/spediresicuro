@@ -6,23 +6,17 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
-import { auth } from '@/lib/auth-config';
-import { isSuperAdmin } from '@/lib/safe-auth';
+import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 
 /**
  * Verifica se l'utente corrente è Superadmin
  */
 async function verifySuperAdmin(): Promise<{ isSuperAdmin: boolean; error?: string }> {
   try {
-    const session = await auth();
-    
-    if (!session?.user?.email) {
-      return { isSuperAdmin: false, error: 'Non autenticato' };
-    }
+    const context = await getSafeAuth();
 
-    const context = await import('@/lib/safe-auth').then(m => m.getSafeAuth());
-    if (!context) {
-      return { isSuperAdmin: false, error: 'Contesto non disponibile' };
+    if (!context?.actor?.email) {
+      return { isSuperAdmin: false, error: 'Non autenticato' };
     }
 
     return { isSuperAdmin: isSuperAdmin(context) };
@@ -91,17 +85,17 @@ export async function updateAIProviderSetting(
     }
 
     // Ottieni email utente corrente
-    const session = await auth();
-    const updatedBy = session?.user?.email || 'unknown';
+    const context = await getSafeAuth();
+    const updatedBy = context?.actor?.email || 'unknown';
 
     // Determina model default se non specificato
-    const defaultModel = model || (
-      provider === 'deepseek' 
-        ? 'deepseek-chat' 
+    const defaultModel =
+      model ||
+      (provider === 'deepseek'
+        ? 'deepseek-chat'
         : provider === 'gemini'
-        ? 'gemini-2.0-flash-exp'
-        : 'claude-3-haiku-20240307'
-    );
+          ? 'gemini-2.0-flash-exp'
+          : 'claude-3-haiku-20240307');
 
     const settingValue = {
       provider,
@@ -176,4 +170,3 @@ export async function getAvailableAIProviders() {
     ],
   };
 }
-

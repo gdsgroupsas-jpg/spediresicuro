@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 // Forza rendering dinamico (usa headers())
@@ -15,16 +15,16 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
+    const context = await getSafeAuth();
+
+    if (!context || !context.actor?.email) {
       return NextResponse.json(
         { error: 'Non autenticato' },
         { status: 401 }
       );
     }
 
-    const email = session.user.email;
+    const email = context.actor.email;
 
     // 2. Recupera da Supabase
     const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       email,
-      sessionEmail: session.user.email,
+      sessionEmail: context.actor.email,
       supabase: {
         found: !!supabaseUser,
         account_type: supabaseUser?.account_type || null,

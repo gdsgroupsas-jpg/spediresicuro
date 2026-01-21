@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // 1. Verifica autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 2. Ottieni feature code dalla query
     const { searchParams } = new URL(request.url);
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     try {
       // 1. Ottieni ruolo utente
-      const user = await getUserByEmail(session.user.email, 'role');
+      const user = await getUserByEmail(context!.actor.email!, 'role');
 
       if (!user) {
         return NextResponse.json({
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       const { data: userFeature } = await supabaseAdmin
         .from('user_features')
         .select('is_active, expires_at')
-        .eq('user_email', session.user.email)
+        .eq('user_email', context!.actor.email)
         .eq('is_active', true)
         .single();
 

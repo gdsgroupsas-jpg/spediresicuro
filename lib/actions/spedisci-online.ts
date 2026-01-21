@@ -8,7 +8,7 @@
  */
 
 import { SpedisciOnlineAdapter } from "@/lib/adapters/couriers/spedisci-online";
-import { auth } from "@/lib/auth-config";
+import { getSafeAuth } from "@/lib/safe-auth";
 import { getShippingProvider } from "@/lib/couriers/factory";
 import { findUserByEmail } from "@/lib/database";
 import { supabaseAdmin } from "@/lib/db/client";
@@ -57,13 +57,13 @@ function sanitizeNameForLog(name: string | null | undefined): string {
  */
 export async function getSpedisciOnlineCredentials(configId?: string) {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { success: false, error: "Non autenticato" };
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email!;
     const { data: currentUser } = await supabaseAdmin
       .from("users")
       .select("id, account_type, assigned_config_id")
@@ -376,13 +376,13 @@ export async function getAllUserSpedisciOnlineConfigs(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { success: false, error: "Non autenticato" };
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email!;
     const { data: currentUser } = await supabaseAdmin
       .from("users")
       .select("id, account_type, assigned_config_id")
@@ -566,9 +566,9 @@ export async function createShipmentWithOrchestrator(
 
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       console.warn("⚠️ [ORCHESTRATOR] Non autenticato");
       return {
         success: false,
@@ -579,7 +579,7 @@ export async function createShipmentWithOrchestrator(
       };
     }
 
-    console.log("✅ [ORCHESTRATOR] Utente autenticato:", session.user.email);
+    console.log("✅ [ORCHESTRATOR] Utente autenticato:", context.actor.email);
 
     // 2. Ottieni user_id (prova prima in users, poi user_profiles, poi auth.users)
     let userId: string | null = null;
@@ -588,7 +588,7 @@ export async function createShipmentWithOrchestrator(
     const { data: userFromUsers } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", context.actor.email)
       .single();
 
     if (userFromUsers?.id) {
@@ -599,14 +599,14 @@ export async function createShipmentWithOrchestrator(
         const { getSupabaseUserIdFromEmail } = await import("@/lib/database");
         // FIX: Passa NextAuth user.id come fallback
         userId = await getSupabaseUserIdFromEmail(
-          session.user.email,
-          session.user.id
+          context.actor.email!,
+          context.actor.id
         );
       } catch (error) {
         console.warn("⚠️ Impossibile recuperare user_id:", error);
         // FALLBACK: Usa NextAuth ID se disponibile
-        if (session.user.id) {
-          userId = session.user.id;
+        if (context.actor.id) {
+          userId = context.actor.id;
           console.log(
             `ℹ️ [ORCHESTRATOR] Usando NextAuth user.id come fallback: ${(
               userId || ""
@@ -1002,9 +1002,9 @@ export async function saveSpedisciOnlineCredentials(credentials: {
   base_url?: string;
 }) {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { success: false, error: "Non autenticato" };
     }
 
@@ -1045,7 +1045,7 @@ export async function saveSpedisciOnlineCredentials(credentials: {
     const { findUserByEmail: findUser, updateUser } = await import(
       "@/lib/database"
     );
-    const user = await findUser(session.user.email);
+    const user = await findUser(context.actor.email!);
 
     if (user) {
       const integrations = user.integrazioni || [];

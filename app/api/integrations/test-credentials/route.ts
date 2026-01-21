@@ -9,16 +9,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { testCarrierCredentials } from '@/lib/integrations/carrier-configs-compat';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+
+    if (!context?.actor?.email) {
       return NextResponse.json(
         { success: false, error: 'Non autenticato' },
         { status: 401 }
@@ -54,11 +54,11 @@ export async function POST(request: NextRequest) {
     const user = await supabaseAdmin
       .from('users')
       .select('id, role, email')
-      .eq('email', session.user.email)
+      .eq('email', context.actor.email)
       .single();
 
     const isAdmin = user?.data?.role === 'admin';
-    const isOwner = config.owner_user_id === user?.data?.id || config.created_by === session.user.email;
+    const isOwner = config.owner_user_id === user?.data?.id || config.created_by === context.actor.email;
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(

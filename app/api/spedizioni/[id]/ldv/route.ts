@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 // TODO: Verifica path reale ExportService, se non esiste crea stub temporaneo o correggi import.
 import { ExportService } from '@/lib/adapters/export';
@@ -73,8 +73,8 @@ export async function GET(
     const format = (searchParams.get('format') || 'pdf') as 'pdf' | 'csv' | 'xlsx';
 
     // Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 

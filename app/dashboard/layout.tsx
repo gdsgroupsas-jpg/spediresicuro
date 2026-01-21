@@ -11,7 +11,7 @@
 
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import DashboardSidebar from '@/components/dashboard-sidebar';
 import DashboardMobileNav from '@/components/dashboard-mobile-nav';
@@ -46,7 +46,8 @@ export default async function DashboardLayout({
   
   let session = null;
   if (!isTestMode) {
-    session = await auth();
+    const context = await getSafeAuth();
+    session = context ? { user: context.actor } : null;
   } else {
     // In test mode, crea una sessione mock
     session = {

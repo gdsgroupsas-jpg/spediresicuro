@@ -13,16 +13,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+
+    if (!context?.actor?.email) {
       return NextResponse.json(
         { error: 'Non autenticato' },
         { status: 401 }
@@ -53,9 +53,9 @@ export async function GET(
     }
 
     // Verifica permessi
-    const isAdmin = (invoice.user as any)?.account_type === 'admin' || 
+    const isAdmin = (invoice.user as any)?.account_type === 'admin' ||
                     (invoice.user as any)?.account_type === 'superadmin';
-    const isOwner = invoice.user_id === session.user.id;
+    const isOwner = invoice.user_id === context.actor.id;
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(

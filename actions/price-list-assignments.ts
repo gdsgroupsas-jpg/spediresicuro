@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * Server Actions per Gestione Assegnazioni Listini Personalizzati
@@ -7,9 +7,9 @@
  * tramite la tabella price_list_assignments (relazione N:N).
  */
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
-import { findUserByEmail } from "@/lib/database";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
+import { findUserByEmail } from '@/lib/database';
 
 /**
  * Verifica permessi superadmin
@@ -20,36 +20,36 @@ async function verifySuperAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { isAuthorized: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { isAuthorized: false, error: 'Non autenticato' };
     }
 
     let user;
-    if (session.user.id === "test-user-id") {
-      user = { id: "test-user-id", account_type: "superadmin" };
+    if (context.actor.id === 'test-user-id') {
+      user = { id: 'test-user-id', account_type: 'superadmin' };
     } else {
-      user = await findUserByEmail(session.user.email);
+      user = await findUserByEmail(context.actor.email);
     }
 
     if (!user) {
-      return { isAuthorized: false, error: "Utente non trovato" };
+      return { isAuthorized: false, error: 'Utente non trovato' };
     }
 
-    if ((user as any).account_type !== "superadmin") {
+    if ((user as any).account_type !== 'superadmin') {
       return {
         isAuthorized: false,
-        error: "Solo i superadmin possono gestire le assegnazioni listini",
+        error: 'Solo i superadmin possono gestire le assegnazioni listini',
       };
     }
 
     return { isAuthorized: true, userId: (user as any).id };
   } catch (error: any) {
-    console.error("Errore verifica superadmin:", error);
+    console.error('Errore verifica superadmin:', error);
     return {
       isAuthorized: false,
-      error: error.message || "Errore verifica permessi",
+      error: error.message || 'Errore verifica permessi',
     };
   }
 }
@@ -84,28 +84,25 @@ export async function assignPriceListToUser(
     if (!priceListId || !userId) {
       return {
         success: false,
-        error: "Parametri mancanti: priceListId e userId sono obbligatori",
+        error: 'Parametri mancanti: priceListId e userId sono obbligatori',
       };
     }
 
     // 3. Chiama funzione RPC assign_price_list
-    const { data: assignmentId, error: rpcError } = await supabaseAdmin.rpc(
-      "assign_price_list",
-      {
-        p_price_list_id: priceListId,
-        p_user_id: userId,
-        p_notes: notes || null,
-      }
-    );
+    const { data: assignmentId, error: rpcError } = await supabaseAdmin.rpc('assign_price_list', {
+      p_price_list_id: priceListId,
+      p_user_id: userId,
+      p_notes: notes || null,
+    });
 
     if (rpcError) {
-      console.error("❌ Errore RPC assign_price_list:", rpcError);
+      console.error('❌ Errore RPC assign_price_list:', rpcError);
 
       // Gestisci errori comuni con messaggi user-friendly
-      if (rpcError.message.includes("già esistente")) {
+      if (rpcError.message.includes('già esistente')) {
         return {
           success: false,
-          error: "Questo listino è già assegnato a questo utente",
+          error: 'Questo listino è già assegnato a questo utente',
         };
       }
 
@@ -115,14 +112,16 @@ export async function assignPriceListToUser(
       };
     }
 
-    console.log(`✅ Listino ${priceListId} assegnato a utente ${userId} (assignment ID: ${assignmentId})`);
+    console.log(
+      `✅ Listino ${priceListId} assegnato a utente ${userId} (assignment ID: ${assignmentId})`
+    );
 
     return {
       success: true,
       assignmentId: assignmentId,
     };
   } catch (error: any) {
-    console.error("❌ Errore assignPriceListToUser:", error);
+    console.error('❌ Errore assignPriceListToUser:', error);
     return {
       success: false,
       error: error.message || "Errore sconosciuto durante l'assegnazione",
@@ -138,9 +137,7 @@ export async function assignPriceListToUser(
  * @param assignmentId - ID dell'assegnazione da revocare
  * @returns Risultato operazione
  */
-export async function revokePriceListAssignment(
-  assignmentId: string
-): Promise<{
+export async function revokePriceListAssignment(assignmentId: string): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -155,26 +152,23 @@ export async function revokePriceListAssignment(
     if (!assignmentId) {
       return {
         success: false,
-        error: "Parametro mancante: assignmentId è obbligatorio",
+        error: 'Parametro mancante: assignmentId è obbligatorio',
       };
     }
 
     // 3. Chiama funzione RPC revoke_price_list_assignment
-    const { data, error: rpcError } = await supabaseAdmin.rpc(
-      "revoke_price_list_assignment",
-      {
-        p_assignment_id: assignmentId,
-      }
-    );
+    const { data, error: rpcError } = await supabaseAdmin.rpc('revoke_price_list_assignment', {
+      p_assignment_id: assignmentId,
+    });
 
     if (rpcError) {
-      console.error("❌ Errore RPC revoke_price_list_assignment:", rpcError);
+      console.error('❌ Errore RPC revoke_price_list_assignment:', rpcError);
 
       // Gestisci errori comuni
-      if (rpcError.message.includes("non trovata") || rpcError.message.includes("già revocata")) {
+      if (rpcError.message.includes('non trovata') || rpcError.message.includes('già revocata')) {
         return {
           success: false,
-          error: "Assegnazione non trovata o già rimossa",
+          error: 'Assegnazione non trovata o già rimossa',
         };
       }
 
@@ -190,10 +184,10 @@ export async function revokePriceListAssignment(
       success: true,
     };
   } catch (error: any) {
-    console.error("❌ Errore revokePriceListAssignment:", error);
+    console.error('❌ Errore revokePriceListAssignment:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto durante la rimozione",
+      error: error.message || 'Errore sconosciuto durante la rimozione',
     };
   }
 }
@@ -206,9 +200,7 @@ export async function revokePriceListAssignment(
  * @param userId - ID dell'utente
  * @returns Lista assegnazioni con dettagli listino
  */
-export async function listUserPriceListAssignments(
-  userId: string
-): Promise<{
+export async function listUserPriceListAssignments(userId: string): Promise<{
   success: boolean;
   assignments?: any[];
   error?: string;
@@ -224,14 +216,15 @@ export async function listUserPriceListAssignments(
     if (!userId) {
       return {
         success: false,
-        error: "Parametro mancante: userId è obbligatorio",
+        error: 'Parametro mancante: userId è obbligatorio',
       };
     }
 
     // 3. Query assegnazioni con join su price_lists
     const { data, error: dbError } = await supabaseAdmin
-      .from("price_list_assignments")
-      .select(`
+      .from('price_list_assignments')
+      .select(
+        `
         id,
         price_list_id,
         user_id,
@@ -248,16 +241,17 @@ export async function listUserPriceListAssignments(
           default_margin_percent,
           default_margin_fixed
         )
-      `)
-      .eq("user_id", userId)
-      .is("revoked_at", null)
-      .order("assigned_at", { ascending: false });
+      `
+      )
+      .eq('user_id', userId)
+      .is('revoked_at', null)
+      .order('assigned_at', { ascending: false });
 
     if (dbError) {
-      console.error("❌ Errore caricamento assegnazioni:", dbError);
+      console.error('❌ Errore caricamento assegnazioni:', dbError);
       return {
         success: false,
-        error: dbError.message || "Errore durante il caricamento delle assegnazioni",
+        error: dbError.message || 'Errore durante il caricamento delle assegnazioni',
       };
     }
 
@@ -268,10 +262,10 @@ export async function listUserPriceListAssignments(
       assignments: data || [],
     };
   } catch (error: any) {
-    console.error("❌ Errore listUserPriceListAssignments:", error);
+    console.error('❌ Errore listUserPriceListAssignments:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto durante il caricamento",
+      error: error.message || 'Errore sconosciuto durante il caricamento',
     };
   }
 }
@@ -297,8 +291,9 @@ export async function listAssignablePriceLists(): Promise<{
 
     // 2. Query listini custom e supplier attivi
     const { data, error: dbError } = await supabaseAdmin
-      .from("price_lists")
-      .select(`
+      .from('price_lists')
+      .select(
+        `
         id,
         name,
         list_type,
@@ -308,16 +303,17 @@ export async function listAssignablePriceLists(): Promise<{
         default_margin_percent,
         default_margin_fixed,
         description
-      `)
-      .in("list_type", ["custom", "supplier"])
-      .eq("status", "active")
-      .order("name", { ascending: true });
+      `
+      )
+      .in('list_type', ['custom', 'supplier'])
+      .eq('status', 'active')
+      .order('name', { ascending: true });
 
     if (dbError) {
-      console.error("❌ Errore caricamento listini:", dbError);
+      console.error('❌ Errore caricamento listini:', dbError);
       return {
         success: false,
-        error: dbError.message || "Errore durante il caricamento dei listini",
+        error: dbError.message || 'Errore durante il caricamento dei listini',
       };
     }
 
@@ -328,10 +324,10 @@ export async function listAssignablePriceLists(): Promise<{
       priceLists: data || [],
     };
   } catch (error: any) {
-    console.error("❌ Errore listAssignablePriceLists:", error);
+    console.error('❌ Errore listAssignablePriceLists:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto durante il caricamento",
+      error: error.message || 'Errore sconosciuto durante il caricamento',
     };
   }
 }

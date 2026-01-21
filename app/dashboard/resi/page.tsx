@@ -5,17 +5,17 @@
  * Passa dati a Client Component per UI e realtime.
  */
 
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { getSpedizioni, getSupabaseUserIdFromEmail } from '@/lib/database';
-import { createAuthContextFromSession } from '@/lib/auth-context';
+import type { AuthContext } from '@/lib/auth-context';
 import DashboardNav from '@/components/dashboard-nav';
 import ResiUI, { ReturnShipment } from './_components/resi-ui';
 
 export default async function ResiPage() {
   // Autenticazione
-  const session = await auth();
-  
-  if (!session?.user?.email) {
+  const context = await getSafeAuth();
+
+  if (!context?.actor?.email) {
     // Redirect o errore (gestito dal layout)
     return (
       <div className="min-h-screen bg-gray-50">
@@ -34,11 +34,17 @@ export default async function ResiPage() {
   let userId: string | null = null;
 
   try {
-    const authContext = await createAuthContextFromSession(session);
-    
+    // Converti ActingContext in AuthContext per database operations
+    const authContext: AuthContext = {
+      type: 'user',
+      userId: context.target.id,
+      userEmail: context.target.email || undefined,
+      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+    };
+
     // Ottieni userId per realtime
-    if (authContext.type === 'user' && session.user.email) {
-      userId = await getSupabaseUserIdFromEmail(session.user.email);
+    if (authContext.type === 'user' && context.actor.email) {
+      userId = await getSupabaseUserIdFromEmail(context.actor.email);
     }
 
     // Fetch spedizioni con AuthContext (multi-tenancy garantito)

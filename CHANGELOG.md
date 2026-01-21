@@ -25,7 +25,43 @@ Questo progetto segue [Semantic Versioning 2.0.0](https://semver.org/):
 
 Ultimo aggiornamento: 2026-01-21
 
-### Added
+### Changed
+
+#### P1 Complete: Legacy Auth Migration (2026-01-21)
+
+**All 70+ files migrated from `auth()` to `getSafeAuth()` for impersonation support.**
+
+- **Core Middleware** (`lib/api-middleware.ts`)
+  - `requireAuth()` now returns `{ context: ActingContext }` instead of `{ session }`
+  - `requireAdminRole()` and `requireResellerRole()` updated similarly
+  - Pattern change: `session.user.email` → `context.actor.email`
+
+- **API Routes Migrated:**
+  - `app/api/features/check/route.ts`
+  - `app/api/notifications/subscribe/route.ts`
+  - `app/api/notifications/unsubscribe/route.ts`
+  - `app/api/wallet/transactions/route.ts`
+  - `app/api/user/info/route.ts`
+  - `app/api/user/settings/route.ts`
+  - `app/api/user/dati-cliente/route.ts`
+  - `app/api/couriers/available/route.ts`
+  - And 60+ more files...
+
+- **Server Actions Migrated:**
+  - `lib/actions/spedisci-online.ts` (4 auth calls)
+  - `actions/admin-reseller.ts`
+  - `actions/price-lists.ts`
+  - `actions/privacy.ts`
+  - And all other action files...
+
+- **Test Mocks Updated:**
+  - Changed from `vi.mock('@/lib/auth-config')` to `vi.mock('@/lib/safe-auth')`
+  - Mock return shape: `{ actor: { email, id, name, role }, target, isImpersonating }`
+
+### Fixed
+
+- **VAT backward compatibility test** - Added mock entries to price list for proper mock chain
+- **Platform costs integration test** - Added fallback query when `v_platform_margin_alerts` view missing
 
 ---
 

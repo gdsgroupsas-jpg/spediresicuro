@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import {
   getBusinessMetrics,
@@ -30,15 +30,15 @@ async function verifyAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    // Use NextAuth for authentication (same as middleware)
-    const session = await auth();
+    // Use getSafeAuth for authentication (supports impersonation)
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { authorized: false, error: 'No session found' };
     }
 
     // Get user from database to verify role
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context.actor.email);
 
     if (!user) {
       return { authorized: false, error: 'User not found' };

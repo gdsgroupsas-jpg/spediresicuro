@@ -7,16 +7,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { addSpedizione } from '@/lib/database';
-import { createAuthContextFromSession } from '@/lib/auth-context';
+import type { AuthContext } from '@/lib/auth-context';
 
 export async function POST(request: NextRequest) {
   try {
     // Autenticazione
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
@@ -112,8 +112,16 @@ export async function POST(request: NextRequest) {
       verified: false, // Non verificato di default
     };
 
+    // Converti ActingContext in AuthContext per addSpedizione
+    // NOTA: Usa target per operazioni business (supporta impersonation)
+    const authContext: AuthContext = {
+      type: 'user',
+      userId: context.target.id,
+      userEmail: context.target.email || undefined,
+      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+    };
+
     // Crea spedizione
-    const authContext = await createAuthContextFromSession(session);
     const nuovaSpedizione = await addSpedizione(spedizioneData, authContext);
 
     return NextResponse.json(

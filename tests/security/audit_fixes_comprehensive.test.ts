@@ -13,10 +13,21 @@ import { supabaseAdmin } from "@/lib/db/client";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { getCourierConfigForUser } from "@/lib/couriers/factory";
 
-// Mock auth()
-const mockSession = { user: { email: "", id: "" } };
-vi.mock("@/lib/auth-config", () => ({
-  auth: () => Promise.resolve(mockSession),
+// Mock getSafeAuth() - le funzioni testate usano getSafeAuth che chiama auth internamente
+// Usiamo valori dinamici che vengono impostati prima di ogni test
+let mockEmail = "";
+let mockUserId = "";
+vi.mock("@/lib/safe-auth", () => ({
+  getSafeAuth: () => {
+    if (!mockEmail || !mockUserId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve({
+      actor: { email: mockEmail, id: mockUserId, name: "Test User", role: "user" },
+      target: { email: mockEmail, id: mockUserId, name: "Test User", role: "user" },
+      isImpersonating: false,
+    });
+  },
 }));
 
 describe("Audit Fixes Comprehensive Tests", () => {
@@ -82,8 +93,9 @@ describe("Audit Fixes Comprehensive Tests", () => {
     if (errC) throw new Error(`Error creating test config: ${errC.message}`);
     testConfig = config;
 
-    // Setup mock session
-    mockSession.user = { email: testUser.email, id: testUser.id };
+    // Imposta mock auth con i dati del test user
+    mockEmail = testUser.email;
+    mockUserId = testUser.id;
 
     // Spy su console.log e console.warn per test P1-3
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -150,7 +162,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
 
       try {
         // Simula User B session
-        mockSession.user = { email: userB.email, id: userB.id };
+        mockEmail = userB.email;
+        mockUserId = userB.id;
 
         // Tenta di accedere a config di testUser
         const result = await getSpedisciOnlineCredentials(testConfig.id);
@@ -168,7 +181,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
 
     it("dovrebbe permettere accesso a propria config", async () => {
       // Usa testUser (owner della config)
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       const result = await getSpedisciOnlineCredentials(testConfig.id);
 
@@ -236,7 +250,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
 
   describe("P1-2: DB Lock per Race Condition", () => {
     it("dovrebbe prevenire sync simultanee con DB lock", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       // Simula due sync simultanee
       const sync1Promise = syncPriceListsFromSpedisciOnline({
@@ -318,7 +333,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
     });
 
     it("dovrebbe rilasciare lock dopo completamento", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       const lockKey = `sync_price_lists_${testUser.id}_gls`;
 
@@ -436,7 +452,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
     });
 
     it("dovrebbe verificare che il lock sia nel database", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       const lockKey = `sync_price_lists_${testUser.id}_gls`;
 
@@ -501,7 +518,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
 
   describe("P1-3: Sanitizzazione Log", () => {
     it("dovrebbe sanitizzare UUIDs nei log di factory", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       // Chiama funzione che logga
       await getCourierConfigForUser(
@@ -541,7 +559,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
     });
 
     it("dovrebbe sanitizzare nomi nei log di factory", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       // Chiama funzione che logga
       await getCourierConfigForUser(
@@ -568,7 +587,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
     });
 
     it("dovrebbe sanitizzare UUIDs nei log di spedisci-online", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       // Chiama funzione che logga
       await getSpedisciOnlineCredentials(testConfig.id);
@@ -598,7 +618,8 @@ describe("Audit Fixes Comprehensive Tests", () => {
     });
 
     it("dovrebbe usare hash parziale invece di UUID completo", async () => {
-      mockSession.user = { email: testUser.email, id: testUser.id };
+      mockEmail = testUser.email;
+      mockUserId = testUser.id;
 
       // Chiama funzione che logga
       await getSpedisciOnlineCredentials(testConfig.id);

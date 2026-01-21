@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // 1. Verifica autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 2. Leggi subscription dal body
     const { subscription } = await request.json();
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('push_subscriptions')
       .upsert({
-        user_email: session.user.email,
+        user_email: context!.actor.email,
         endpoint: subscription.endpoint,
         auth: subscription.keys?.auth,
         p256dh: subscription.keys?.p256dh,

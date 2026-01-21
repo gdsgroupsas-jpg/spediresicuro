@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getRequestId, createApiLogger } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
   
   try {
     logger.info('GET /api/spedizioni/cancellate - Richiesta spedizioni cancellate');
-    
+
     // Autenticazione
-    session = await auth();
-    
-    if (!session?.user?.email) {
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('GET /api/spedizioni/cancellate - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const { data: userData } = await supabaseAdmin
       .from('users')
       .select('id, email, is_reseller, role')
-      .eq('email', session.user.email)
+      .eq('email', session.actor.email)
       .single();
 
     const isReseller = userData?.is_reseller === true;
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const userId = userData?.id;
 
     console.log('📋 [CANCELLATE] Filtro per:', {
-      email: session.user.email,
+      email: session.actor.email,
       isReseller,
       isAdmin,
       userId: userId?.substring(0, 8) + '...',

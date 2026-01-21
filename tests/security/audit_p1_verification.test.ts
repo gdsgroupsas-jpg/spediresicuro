@@ -2,10 +2,20 @@ import { getSpedisciOnlineCredentials } from "@/lib/actions/spedisci-online";
 import { supabaseAdmin } from "@/lib/db/client";
 import { describe, expect, it, vi } from "vitest";
 
-// Mock auth()
-const mockSession = { user: { email: "", id: "" } };
-vi.mock("@/lib/auth-config", () => ({
-  auth: () => Promise.resolve(mockSession),
+// Mock getSafeAuth() - variabili mutabili per simulare utenti diversi durante i test
+let mockEmail = "";
+let mockUserId = "";
+vi.mock("@/lib/safe-auth", () => ({
+  getSafeAuth: () => {
+    if (!mockEmail || !mockUserId) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve({
+      actor: { email: mockEmail, id: mockUserId, name: "Test User", role: "user" },
+      target: { email: mockEmail, id: mockUserId, name: "Test User", role: "user" },
+      isImpersonating: false,
+    });
+  },
 }));
 
 describe("P1-1 Audit Verification: Ownership Bypass", () => {
@@ -126,8 +136,9 @@ describe("P1-1 Audit Verification: Ownership Bypass", () => {
 
       // --- EXECUTE TEST ---
 
-      // Simulate User B session
-      mockSession.user = { email: userB.email, id: userB.id };
+      // Simulate User B session (attacker)
+      mockEmail = userB.email;
+      mockUserId = userB.id;
 
       // Attempt to access User A's config using its ID
       console.log(

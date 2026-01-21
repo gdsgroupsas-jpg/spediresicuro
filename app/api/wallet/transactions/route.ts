@@ -16,10 +16,10 @@ export async function GET() {
     // Verifica autenticazione
     const authResult = await requireAuth()
     if (!authResult.authorized) return authResult.response
-    const { session } = authResult
+    const { context } = authResult
 
     // Ottieni ID utente
-    const user = await getUserByEmail(session.user.email, 'id')
+    const user = await getUserByEmail(context!.actor.email!, 'id')
 
     if (!user) {
       return ApiErrors.NOT_FOUND('Utente')

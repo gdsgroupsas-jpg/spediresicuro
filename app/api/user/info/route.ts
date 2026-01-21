@@ -18,10 +18,10 @@ export async function GET(request: NextRequest) {
     // 1. Verifica autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 2. Recupera informazioni utente
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
       return ApiErrors.NOT_FOUND("Utente");
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from("users")
         .select("account_type, role, is_reseller, reseller_role")
-        .eq("email", session.user.email)
+        .eq("email", context!.actor.email)
         .single();
 
       if (supabaseError) {
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
           "reseller_role:",
           resellerRole,
           "per email:",
-          session.user.email
+          context!.actor.email
         );
       }
     } catch (error) {

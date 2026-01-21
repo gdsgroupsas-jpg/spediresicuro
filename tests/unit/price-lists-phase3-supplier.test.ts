@@ -47,12 +47,12 @@ import {
 } from '@/actions/price-lists';
 import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
 
-// Mock auth per test
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+// Mock getSafeAuth per test (le Server Actions usano getSafeAuth, non auth diretto)
+vi.mock('@/lib/safe-auth', () => ({
+  getSafeAuth: vi.fn(),
 }));
 
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 
 describe('Fase 3: Listini Fornitore - Server Actions', () => {
   let resellerUserId: string;
@@ -205,8 +205,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         return;
       }
       // Mock auth per Reseller
-      (auth as any).mockResolvedValue({
-        user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      (getSafeAuth as any).mockResolvedValue({
+        actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
       const mockPriceListId = `test-pricelist-${Date.now()}`;
@@ -276,8 +276,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         return;
       }
       // Mock auth per BYOC
-      (auth as any).mockResolvedValue({
-        user: { email: `test-byoc-phase3-${Date.now()}@test.local` },
+      (getSafeAuth as any).mockResolvedValue({
+        actor: { email: `test-byoc-phase3-${Date.now()}@test.local` },
       });
 
       const mockPriceListId = `test-pricelist-byoc-${Date.now()}`;
@@ -338,8 +338,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
 
     it('Utente normale NON può creare listino fornitore', async () => {
       // Mock auth per utente normale
-      (auth as any).mockResolvedValue({
-        user: { email: `test-user-phase3-${Date.now()}@test.local` },
+      (getSafeAuth as any).mockResolvedValue({
+        actor: { email: `test-user-phase3-${Date.now()}@test.local` },
       });
 
       // Mock recupero utente normale
@@ -384,8 +384,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
       const mockPriceListId = `test-pricelist-list-${Date.now()}`;
 
       // Mock auth per Reseller
-      (auth as any).mockResolvedValue({
-        user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      (getSafeAuth as any).mockResolvedValue({
+        actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
       // Mock completo per users e price_lists
@@ -454,8 +454,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
       }
 
       // Mock auth per Reseller
-      (auth as any).mockResolvedValue({
-        user: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      (getSafeAuth as any).mockResolvedValue({
+        actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
       // Mock completo per users e price_lists - ritorna solo listini non globali del reseller

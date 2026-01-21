@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 
 /**
  * Endpoint per validare le credenziali Spedisci.online
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
   
   try {
     // 1. Verifica autenticazione (obbligatoria)
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return NextResponse.json(
         { success: false, error: 'Non autenticato' },
         { status: 401 }

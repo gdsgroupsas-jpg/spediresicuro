@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * Server Actions: Sincronizzazione Automatica Listini Prezzi
@@ -11,9 +11,9 @@
  * - Corrieri diretti (futuro)
  */
 
-import { syncPriceListsFromSpedisciOnline } from "@/actions/spedisci-online-rates";
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
+import { syncPriceListsFromSpedisciOnline } from '@/actions/spedisci-online-rates';
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
 
 /**
  * Sincronizza automaticamente i listini fornitore dopo configurazione API
@@ -32,44 +32,39 @@ export async function autoSyncPriceListsAfterConfig(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      console.log(
-        "⚠️ [AUTO-SYNC] Utente non autenticato, salto sincronizzazione"
-      );
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      console.log('⚠️ [AUTO-SYNC] Utente non autenticato, salto sincronizzazione');
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Verifica permessi: solo reseller, BYOC e superadmin
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      console.log("⚠️ [AUTO-SYNC] Utente non trovato, salto sincronizzazione");
-      return { success: false, error: "Utente non trovato" };
+      console.log('⚠️ [AUTO-SYNC] Utente non trovato, salto sincronizzazione');
+      return { success: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isAdmin && !isReseller && !isBYOC) {
-      console.log(
-        "⚠️ [AUTO-SYNC] Utente non autorizzato, salto sincronizzazione"
-      );
-      return { success: false, error: "Non autorizzato" };
+      console.log('⚠️ [AUTO-SYNC] Utente non autorizzato, salto sincronizzazione');
+      return { success: false, error: 'Non autorizzato' };
     }
 
     // ✨ FIX: Verifica se automation_enabled è attivo per questa configurazione
     if (configId) {
       const { data: config } = await supabaseAdmin
-        .from("courier_configs")
-        .select("automation_enabled")
-        .eq("id", configId)
+        .from('courier_configs')
+        .select('automation_enabled')
+        .eq('id', configId)
         .single();
 
       if (config && config.automation_enabled === false) {
@@ -87,11 +82,9 @@ export async function autoSyncPriceListsAfterConfig(
 
     // Sincronizza in base al provider
     switch (providerId) {
-      case "spedisci_online":
-      case "spedisci-online":
-        console.log(
-          "🔄 [AUTO-SYNC] Avvio sincronizzazione listini da Spedisci.Online..."
-        );
+      case 'spedisci_online':
+      case 'spedisci-online':
+        console.log('🔄 [AUTO-SYNC] Avvio sincronizzazione listini da Spedisci.Online...');
 
         // Recupera courier_id se configId è fornito (per sincronizzare solo quel corriere)
         let courierId: string | undefined;
@@ -104,18 +97,18 @@ export async function autoSyncPriceListsAfterConfig(
           courierId,
           overwriteExisting: true, // Matrix V2 prefers full overwrite to keep data clean
           // FAST per evitare timeout in produzione (Vercel free).
-          mode: "fast",
+          mode: 'fast',
         });
 
         if (syncResult.success) {
-          console.log("✅ [AUTO-SYNC] Sincronizzazione completata:", {
+          console.log('✅ [AUTO-SYNC] Sincronizzazione completata:', {
             created: syncResult.priceListsCreated,
             updated: syncResult.priceListsUpdated,
             entries: syncResult.entriesAdded,
           });
         } else {
           console.warn(
-            "⚠️ [AUTO-SYNC] Sincronizzazione fallita (non bloccante):",
+            '⚠️ [AUTO-SYNC] Sincronizzazione fallita (non bloccante):',
             syncResult.error
           );
         }
@@ -141,13 +134,10 @@ export async function autoSyncPriceListsAfterConfig(
     }
   } catch (error: any) {
     // ⚠️ IMPORTANTE: Non bloccare il wizard se la sincronizzazione fallisce
-    console.error(
-      "❌ [AUTO-SYNC] Errore sincronizzazione automatica (non bloccante):",
-      error
-    );
+    console.error('❌ [AUTO-SYNC] Errore sincronizzazione automatica (non bloccante):', error);
     return {
       success: false,
-      error: error.message || "Errore sincronizzazione automatica",
+      error: error.message || 'Errore sincronizzazione automatica',
     };
   }
 }

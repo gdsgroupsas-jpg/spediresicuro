@@ -42,7 +42,13 @@
       "Bash(node --check:*)",
       "Bash(done)",
       "Bash(node scripts/validate-syntax.js:*)",
-      "Bash(npx lint-staged --diff=\"HEAD\" --relative)"
+      "Bash(npx lint-staged --diff=\"HEAD\" --relative)",
+      "Bash(if [ -f .env.local ])",
+      "Bash(then cat .env.local)",
+      "Bash(else echo \"# .env.local non esiste\")",
+      "Bash(fi)",
+      "Bash(npx eslint:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

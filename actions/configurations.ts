@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 /**
  * Server Actions per Gestione Configurazioni Corrieri
@@ -7,15 +7,11 @@
  * Solo gli admin possono eseguire queste operazioni.
  */
 
-import { auth } from "@/lib/auth-config";
-import { findUserByEmail } from "@/lib/database";
-import { supabaseAdmin } from "@/lib/db/client";
-import { logAuditEvent } from "@/lib/security/audit-log";
-import {
-  decryptCredential,
-  encryptCredential,
-  isEncrypted,
-} from "@/lib/security/encryption";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { findUserByEmail } from '@/lib/database';
+import { supabaseAdmin } from '@/lib/db/client';
+import { logAuditEvent } from '@/lib/security/audit-log';
+import { decryptCredential, encryptCredential, isEncrypted } from '@/lib/security/encryption';
 
 // Tipi per le configurazioni
 export interface CourierConfigInput {
@@ -31,8 +27,8 @@ export interface CourierConfigInput {
   description?: string;
   notes?: string;
   // Integration Hub: nuovi campi (opzionali per backward compatibility)
-  status?: "active" | "error" | "testing" | "inactive";
-  account_type?: "admin" | "byoc" | "reseller";
+  status?: 'active' | 'error' | 'testing' | 'inactive';
+  account_type?: 'admin' | 'byoc' | 'reseller';
   owner_user_id?: string;
 }
 
@@ -52,7 +48,7 @@ export interface CourierConfig {
   updated_at: string;
   created_by?: string;
   // Integration Hub: nuovi campi (opzionali per backward compatibility)
-  status?: "active" | "error" | "testing" | "inactive";
+  status?: 'active' | 'error' | 'testing' | 'inactive';
   last_tested_at?: string;
   test_result?: {
     success: boolean;
@@ -60,7 +56,7 @@ export interface CourierConfig {
     tested_at: string;
     response_time_ms?: number;
   };
-  account_type?: "admin" | "byoc" | "reseller";
+  account_type?: 'admin' | 'byoc' | 'reseller';
   owner_user_id?: string;
   // Automation (già esistenti da migration 015)
   automation_enabled?: boolean;
@@ -78,33 +74,32 @@ async function verifyAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { isAdmin: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { isAdmin: false, error: 'Non autenticato' };
     }
 
     let user;
-    if (session.user.id === "test-user-id") {
-      user = { role: "admin" };
+    if (context.actor.id === 'test-user-id') {
+      user = { role: 'admin' };
     } else {
-      user = await findUserByEmail(session.user.email);
+      user = await findUserByEmail(context.actor.email);
     }
 
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== 'admin') {
       return {
         isAdmin: false,
-        error:
-          "Accesso negato. Solo gli admin possono gestire le configurazioni.",
+        error: 'Accesso negato. Solo gli admin possono gestire le configurazioni.',
       };
     }
 
     return { isAdmin: true };
   } catch (error: any) {
-    console.error("Errore verifica admin:", error);
+    console.error('Errore verifica admin:', error);
     return {
       isAdmin: false,
-      error: error.message || "Errore verifica permessi",
+      error: error.message || 'Errore verifica permessi',
     };
   }
 }
@@ -126,27 +121,27 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
   userId?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { canAccess: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { canAccess: false, error: 'Non autenticato' };
     }
 
     let user: any;
-    if (session.user.id === "test-user-id") {
+    if (context.actor.id === 'test-user-id') {
       user = {
-        id: "test-user-id",
-        account_type: "admin",
+        id: 'test-user-id',
+        account_type: 'admin',
         is_reseller: true,
-        reseller_role: "admin",
-        role: "admin",
+        reseller_role: 'admin',
+        role: 'admin',
       };
     } else {
-      user = await findUserByEmail(session.user.email);
+      user = await findUserByEmail(context.actor.email);
     }
 
     if (!user) {
-      return { canAccess: false, error: "Utente non trovato" };
+      return { canAccess: false, error: 'Utente non trovato' };
     }
 
     const userId = (user as any).id;
@@ -155,9 +150,9 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
     const resellerRole = (user as any).reseller_role;
 
     // 🔍 DEBUG LOG: Verifica permessi configurazione
-    console.log("🔍 [verifyConfigAccess] Verifica permessi:", {
+    console.log('🔍 [verifyConfigAccess] Verifica permessi:', {
       userId,
-      email: session.user.email,
+      email: context.actor.email,
       accountType,
       role: user.role,
       isReseller,
@@ -166,57 +161,48 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
     });
 
     // 1. Super Admin: sempre OK
-    if (accountType === "superadmin" || user.role === "admin") {
-      console.log("✅ [verifyConfigAccess] Accesso OK: Super Admin");
+    if (accountType === 'superadmin' || user.role === 'admin') {
+      console.log('✅ [verifyConfigAccess] Accesso OK: Super Admin');
       return { canAccess: true, userId };
     }
 
     // 2. Reseller Admin: solo se owner_user_id === session.user.id
-    if (isReseller && resellerRole === "admin") {
+    if (isReseller && resellerRole === 'admin') {
       if (!configOwnerUserId) {
-        console.log(
-          "❌ [verifyConfigAccess] Reseller Admin: config globale, accesso negato"
-        );
+        console.log('❌ [verifyConfigAccess] Reseller Admin: config globale, accesso negato');
         return {
           canAccess: false,
-          error:
-            "Accesso negato. I reseller admin possono gestire solo le proprie configurazioni.",
+          error: 'Accesso negato. I reseller admin possono gestire solo le proprie configurazioni.',
         };
       }
       if (configOwnerUserId !== userId) {
-        console.log(
-          "❌ [verifyConfigAccess] Reseller Admin: owner_user_id mismatch",
-          { configOwnerUserId, userId }
-        );
+        console.log('❌ [verifyConfigAccess] Reseller Admin: owner_user_id mismatch', {
+          configOwnerUserId,
+          userId,
+        });
         return {
           canAccess: false,
-          error: "Accesso negato. Puoi gestire solo le tue configurazioni.",
+          error: 'Accesso negato. Puoi gestire solo le tue configurazioni.',
         };
       }
-      console.log(
-        "✅ [verifyConfigAccess] Accesso OK: Reseller Admin, owner match"
-      );
+      console.log('✅ [verifyConfigAccess] Accesso OK: Reseller Admin, owner match');
       return { canAccess: true, userId };
     }
 
     // 3. Reseller User o altri: accesso negato
-    console.log(
-      "❌ [verifyConfigAccess] Accesso negato: né super_admin né reseller_admin",
-      {
-        isReseller,
-        resellerRole,
-      }
-    );
+    console.log('❌ [verifyConfigAccess] Accesso negato: né super_admin né reseller_admin', {
+      isReseller,
+      resellerRole,
+    });
     return {
       canAccess: false,
-      error:
-        "Accesso negato. Solo gli admin o reseller admin possono gestire le configurazioni.",
+      error: 'Accesso negato. Solo gli admin o reseller admin possono gestire le configurazioni.',
     };
   } catch (error: any) {
-    console.error("Errore verifica accesso configurazione:", error);
+    console.error('Errore verifica accesso configurazione:', error);
     return {
       canAccess: false,
-      error: error.message || "Errore verifica permessi",
+      error: error.message || 'Errore verifica permessi',
     };
   }
 }
@@ -239,30 +225,29 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
       return { success: false, error: authError };
     }
 
-    const session = await auth();
-    const adminEmail = session?.user?.email || "system";
+    const context = await getSafeAuth();
+    const adminEmail = context?.actor?.email || 'system';
 
     // 2. Validazione input
     if (!data.name || !data.provider_id || !data.api_key || !data.base_url) {
       return {
         success: false,
-        error:
-          "Campi obbligatori mancanti: name, provider_id, api_key, base_url",
+        error: 'Campi obbligatori mancanti: name, provider_id, api_key, base_url',
       };
     }
 
     // 3. Se è un update, verifica che la configurazione esista
     if (data.id) {
       const { data: existingConfig, error: fetchError } = await supabaseAdmin
-        .from("courier_configs")
-        .select("id")
-        .eq("id", data.id)
+        .from('courier_configs')
+        .select('id')
+        .eq('id', data.id)
         .single();
 
       if (fetchError || !existingConfig) {
         return {
           success: false,
-          error: "Configurazione non trovata",
+          error: 'Configurazione non trovata',
         };
       }
     }
@@ -270,10 +255,10 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
     // 4. Se is_default = true, rimuovi default da altre config dello stesso provider
     if (data.is_default) {
       await supabaseAdmin
-        .from("courier_configs")
+        .from('courier_configs')
         .update({ is_default: false })
-        .eq("provider_id", data.provider_id)
-        .neq("id", data.id || "00000000-0000-0000-0000-000000000000"); // Evita conflitto se è nuovo
+        .eq('provider_id', data.provider_id)
+        .neq('id', data.id || '00000000-0000-0000-0000-000000000000'); // Evita conflitto se è nuovo
     }
 
     // 5. Prepara dati per insert/update
@@ -281,9 +266,7 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
     const configData: any = {
       name: data.name,
       provider_id: data.provider_id,
-      api_key: isEncrypted(data.api_key)
-        ? data.api_key
-        : encryptCredential(data.api_key),
+      api_key: isEncrypted(data.api_key) ? data.api_key : encryptCredential(data.api_key),
       base_url: data.base_url,
       contract_mapping: data.contract_mapping || {},
       is_active: data.is_active ?? true,
@@ -309,14 +292,14 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
     if (data.id) {
       // Update
       const { data: updatedConfig, error: updateError } = await supabaseAdmin
-        .from("courier_configs")
+        .from('courier_configs')
         .update(configData)
-        .eq("id", data.id)
+        .eq('id', data.id)
         .select()
         .single();
 
       if (updateError) {
-        console.error("Errore update configurazione:", updateError);
+        console.error('Errore update configurazione:', updateError);
         return {
           success: false,
           error: updateError.message || "Errore durante l'aggiornamento",
@@ -326,7 +309,7 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
       result = updatedConfig;
 
       // Audit log: credenziale aggiornata
-      await logAuditEvent("credential_updated", "courier_config", data.id, {
+      await logAuditEvent('credential_updated', 'courier_config', data.id, {
         provider_id: data.provider_id,
         name: data.name,
       });
@@ -334,42 +317,39 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
       // Insert
       configData.created_by = adminEmail;
       const { data: newConfig, error: insertError } = await supabaseAdmin
-        .from("courier_configs")
+        .from('courier_configs')
         .insert(configData)
         .select()
         .single();
 
       if (insertError) {
-        console.error("Errore inserimento configurazione:", insertError);
+        console.error('Errore inserimento configurazione:', insertError);
         return {
           success: false,
-          error: insertError.message || "Errore durante la creazione",
+          error: insertError.message || 'Errore durante la creazione',
         };
       }
 
       result = newConfig;
 
       // Audit log: credenziale creata
-      await logAuditEvent("credential_created", "courier_config", result.id, {
+      await logAuditEvent('credential_created', 'courier_config', result.id, {
         provider_id: data.provider_id,
         name: data.name,
       });
     }
 
-    console.log(
-      `✅ Configurazione ${data.id ? "aggiornata" : "creata"}:`,
-      result.id
-    );
+    console.log(`✅ Configurazione ${data.id ? 'aggiornata' : 'creata'}:`, result.id);
 
     return {
       success: true,
       config: result as CourierConfig,
     };
   } catch (error: any) {
-    console.error("Errore saveConfiguration:", error);
+    console.error('Errore saveConfiguration:', error);
     return {
       success: false,
-      error: error.message || "Errore durante il salvataggio",
+      error: error.message || 'Errore durante il salvataggio',
     };
   }
 }
@@ -384,46 +364,45 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
  * @returns Risultato operazione
  */
 export async function savePersonalConfiguration(
-  data: Omit<CourierConfigInput, "is_default"> & { is_default?: never }
+  data: Omit<CourierConfigInput, 'is_default'> & { is_default?: never }
 ): Promise<{
   success: boolean;
   config?: CourierConfig;
   error?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // 2. Validazione input
     if (!data.name || !data.provider_id || !data.api_key || !data.base_url) {
       return {
         success: false,
-        error:
-          "Campi obbligatori mancanti: name, provider_id, api_key, base_url",
+        error: 'Campi obbligatori mancanti: name, provider_id, api_key, base_url',
       };
     }
 
     // 3. Trova o crea configurazione personale per questo utente
     // Recupera user_id, assigned_config_id e is_reseller direttamente da Supabase
     const { data: userData, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("id, assigned_config_id, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, assigned_config_id, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (userError || !userData) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // ⚠️ FIX CRITICO: Forza account_type corretto per reseller
     const isReseller = userData.is_reseller === true;
-    const accountType = isReseller ? "reseller" : "byoc";
+    const accountType = isReseller ? 'reseller' : 'byoc';
 
     console.log(
-      `📋 [savePersonalConfiguration] User: ${session.user.email}, is_reseller: ${isReseller}, account_type: ${accountType}`
+      `📋 [savePersonalConfiguration] User: ${context.actor.email}, is_reseller: ${isReseller}, account_type: ${accountType}`
     );
 
     // 4. Prepara dati per insert/update
@@ -431,9 +410,7 @@ export async function savePersonalConfiguration(
     const configData: any = {
       name: data.name,
       provider_id: data.provider_id,
-      api_key: isEncrypted(data.api_key)
-        ? data.api_key
-        : encryptCredential(data.api_key),
+      api_key: isEncrypted(data.api_key) ? data.api_key : encryptCredential(data.api_key),
       base_url: data.base_url,
       contract_mapping: data.contract_mapping || {},
       is_active: data.is_active ?? true,
@@ -457,16 +434,16 @@ export async function savePersonalConfiguration(
     // Se c'è un ID (update), aggiorniamo quello specifico.
     // Se non c'è ID, creiamo una NUOVA configurazione (anche se ne esiste già una per questo provider)
 
-    configData.created_by = session.user.email;
+    configData.created_by = context.actor.email;
     let result;
 
     if (data.id) {
       // Update esistente
       const { data: updated, error: updateError } = await supabaseAdmin
-        .from("courier_configs")
+        .from('courier_configs')
         .update(configData)
-        .eq("id", data.id)
-        .eq("owner_user_id", userData.id) // Sicurezza extra
+        .eq('id', data.id)
+        .eq('owner_user_id', userData.id) // Sicurezza extra
         .select()
         .single();
 
@@ -475,7 +452,7 @@ export async function savePersonalConfiguration(
     } else {
       // Insert Nuovo
       const { data: inserted, error: insertError } = await supabaseAdmin
-        .from("courier_configs")
+        .from('courier_configs')
         .insert(configData)
         .select()
         .single();
@@ -487,9 +464,9 @@ export async function savePersonalConfiguration(
     // Assegna automaticamente la configurazione all'utente (se non già assegnata o se è la prima)
     if (!userData.assigned_config_id) {
       await supabaseAdmin
-        .from("users")
+        .from('users')
         .update({ assigned_config_id: result.id })
-        .eq("id", userData.id);
+        .eq('id', userData.id);
     }
 
     console.log(`✅ Configurazione personale salvata (Multi-Account):`, {
@@ -504,11 +481,8 @@ export async function savePersonalConfiguration(
     });
 
     // 🔍 AUDIT: Log dettagliato contract_mapping (solo in development)
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `💾 [SAVE] Contract mapping dettaglio:`,
-        result.contract_mapping
-      );
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`💾 [SAVE] Contract mapping dettaglio:`, result.contract_mapping);
     }
 
     return {
@@ -516,10 +490,10 @@ export async function savePersonalConfiguration(
       config: result as CourierConfig,
     };
   } catch (error: any) {
-    console.error("Errore savePersonalConfiguration:", error);
+    console.error('Errore savePersonalConfiguration:', error);
     return {
       success: false,
-      error: error.message || "Errore durante il salvataggio",
+      error: error.message || 'Errore durante il salvataggio',
     };
   }
 }
@@ -538,31 +512,31 @@ export async function deletePersonalConfiguration(id: string): Promise<{
   message?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Verifica che la configurazione esista e appartenga all'utente
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("id, name, provider_id, created_by, is_default")
-      .eq("id", id)
+      .from('courier_configs')
+      .select('id, name, provider_id, created_by, is_default')
+      .eq('id', id)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
     // Verifica che la configurazione appartenga all'utente corrente
-    if (config.created_by !== session.user.email) {
+    if (config.created_by !== context.actor.email) {
       return {
         success: false,
-        error: "Non hai i permessi per eliminare questa configurazione",
+        error: 'Non hai i permessi per eliminare questa configurazione',
       };
     }
 
@@ -570,46 +544,39 @@ export async function deletePersonalConfiguration(id: string): Promise<{
     // Solo reseller_role = 'admin' può eliminare configurazioni default
     if (config.is_default) {
       const { data: userData } = await supabaseAdmin
-        .from("users")
-        .select("id, reseller_role, is_reseller")
-        .eq("email", session.user.email)
+        .from('users')
+        .select('id, reseller_role, is_reseller')
+        .eq('email', context.actor.email)
         .single();
 
       // Se è un membro team (non admin), blocca eliminazione config default
-      if (userData?.is_reseller && userData?.reseller_role !== "admin") {
+      if (userData?.is_reseller && userData?.reseller_role !== 'admin') {
         return {
           success: false,
-          error:
-            "Solo l'amministratore reseller può eliminare configurazioni default.",
+          error: "Solo l'amministratore reseller può eliminare configurazioni default.",
         };
       }
     }
 
     // Rimuovi assegnazione dall'utente se presente
     const { data: userData } = await supabaseAdmin
-      .from("users")
-      .select("id, assigned_config_id")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, assigned_config_id')
+      .eq('email', context.actor.email)
       .single();
 
     if (userData?.assigned_config_id === id) {
-      await supabaseAdmin
-        .from("users")
-        .update({ assigned_config_id: null })
-        .eq("id", userData.id);
+      await supabaseAdmin.from('users').update({ assigned_config_id: null }).eq('id', userData.id);
     }
 
     // Elimina configurazione
     const { error: deleteError } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .delete()
-      .eq("id", id);
+      .eq('id', id);
 
     if (deleteError) {
-      console.error(
-        "Errore eliminazione configurazione personale:",
-        deleteError
-      );
+      console.error('Errore eliminazione configurazione personale:', deleteError);
       return {
         success: false,
         error: deleteError.message || "Errore durante l'eliminazione",
@@ -620,10 +587,10 @@ export async function deletePersonalConfiguration(id: string): Promise<{
 
     return {
       success: true,
-      message: "Configurazione eliminata con successo",
+      message: 'Configurazione eliminata con successo',
     };
   } catch (error: any) {
-    console.error("Errore deletePersonalConfiguration:", error);
+    console.error('Errore deletePersonalConfiguration:', error);
     return {
       success: false,
       error: error.message || "Errore durante l'eliminazione",
@@ -647,15 +614,15 @@ export async function deleteConfiguration(id: string): Promise<{
   try {
     // 1. Verifica se la configurazione esiste e recupera owner_user_id
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("id, name, provider_id, owner_user_id")
-      .eq("id", id)
+      .from('courier_configs')
+      .select('id, name, provider_id, owner_user_id')
+      .eq('id', id)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
@@ -671,13 +638,13 @@ export async function deleteConfiguration(id: string): Promise<{
 
     // 3. Verifica se è in uso (assegnata ad utenti)
     const { data: usersUsingConfig, error: usersError } = await supabaseAdmin
-      .from("users")
-      .select("id, email")
-      .eq("assigned_config_id", id)
+      .from('users')
+      .select('id, email')
+      .eq('assigned_config_id', id)
       .limit(1);
 
     if (usersError) {
-      console.error("Errore verifica utenti:", usersError);
+      console.error('Errore verifica utenti:', usersError);
     }
 
     if (usersUsingConfig && usersUsingConfig.length > 0) {
@@ -691,31 +658,30 @@ export async function deleteConfiguration(id: string): Promise<{
     // 4. Se è default, verifica permessi e se è l'unica configurazione
     if (config.provider_id) {
       const { data: defaultCheck } = await supabaseAdmin
-        .from("courier_configs")
-        .select("is_default")
-        .eq("id", id)
+        .from('courier_configs')
+        .select('is_default')
+        .eq('id', id)
         .single();
 
       if (defaultCheck?.is_default) {
         // Verifica ruolo reseller: solo admin può eliminare config default
-        const session = await auth();
-        if (session?.user?.email) {
+        const context = await getSafeAuth();
+        if (context?.actor?.email) {
           const { data: currentUser } = await supabaseAdmin
-            .from("users")
-            .select("id, reseller_role, is_reseller, account_type")
-            .eq("email", session.user.email)
+            .from('users')
+            .select('id, reseller_role, is_reseller, account_type')
+            .eq('email', context.actor.email)
             .single();
 
           // Se è membro team reseller (non admin), blocca
           if (
             currentUser?.is_reseller &&
-            currentUser?.reseller_role !== "admin" &&
-            currentUser?.account_type !== "superadmin"
+            currentUser?.reseller_role !== 'admin' &&
+            currentUser?.account_type !== 'superadmin'
           ) {
             return {
               success: false,
-              error:
-                "Solo l'amministratore reseller può eliminare configurazioni default.",
+              error: "Solo l'amministratore reseller può eliminare configurazioni default.",
             };
           }
         }
@@ -723,38 +689,35 @@ export async function deleteConfiguration(id: string): Promise<{
         // Se ha owner_user_id, è una configurazione personale - permetti eliminazione per admin
         if (config.owner_user_id) {
           console.log(
-            "✅ Configurazione default personale eliminabile (owner_user_id presente, utente è admin)"
+            '✅ Configurazione default personale eliminabile (owner_user_id presente, utente è admin)'
           );
         } else {
           // Configurazione globale (senza owner) - blocca eliminazione se è l'unica
           const { count: globalConfigCount } = await supabaseAdmin
-            .from("courier_configs")
-            .select("id", { count: "exact", head: true })
-            .eq("provider_id", config.provider_id)
-            .is("owner_user_id", null);
+            .from('courier_configs')
+            .select('id', { count: 'exact', head: true })
+            .eq('provider_id', config.provider_id)
+            .is('owner_user_id', null);
 
           if (globalConfigCount && globalConfigCount <= 1) {
             return {
               success: false,
-              error:
-                "Impossibile eliminare l'unica configurazione globale default.",
+              error: "Impossibile eliminare l'unica configurazione globale default.",
             };
           }
-          console.log(
-            "✅ Configurazione default globale eliminabile: esistono altre config"
-          );
+          console.log('✅ Configurazione default globale eliminabile: esistono altre config');
         }
       }
     }
 
     // 5. Elimina configurazione
     const { error: deleteError } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .delete()
-      .eq("id", id);
+      .eq('id', id);
 
     if (deleteError) {
-      console.error("Errore eliminazione configurazione:", deleteError);
+      console.error('Errore eliminazione configurazione:', deleteError);
       return {
         success: false,
         error: deleteError.message || "Errore durante l'eliminazione",
@@ -764,17 +727,17 @@ export async function deleteConfiguration(id: string): Promise<{
     console.log(`✅ Configurazione eliminata:`, id);
 
     // Audit log: credenziale eliminata
-    await logAuditEvent("credential_deleted", "courier_config", id, {
+    await logAuditEvent('credential_deleted', 'courier_config', id, {
       provider_id: config.provider_id,
       name: config.name,
     });
 
     return {
       success: true,
-      message: "Configurazione eliminata con successo",
+      message: 'Configurazione eliminata con successo',
     };
   } catch (error: any) {
-    console.error("Errore deleteConfiguration:", error);
+    console.error('Errore deleteConfiguration:', error);
     return {
       success: false,
       error: error.message || "Errore durante l'eliminazione",
@@ -806,15 +769,15 @@ export async function removeSpedisciOnlineContract(
   try {
     // 1. Recupera configurazione
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .eq("id", configId)
+      .from('courier_configs')
+      .select('*')
+      .eq('id', configId)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
@@ -825,28 +788,28 @@ export async function removeSpedisciOnlineContract(
     if (!canAccess) {
       return {
         success: false,
-        error: accessError || "Accesso negato",
+        error: accessError || 'Accesso negato',
       };
     }
 
     // 3. Verifica che sia Spedisci.Online
-    if (config.provider_id !== "spedisci_online") {
+    if (config.provider_id !== 'spedisci_online') {
       return {
         success: false,
-        error: "Questa funzione è solo per configurazioni Spedisci.Online",
+        error: 'Questa funzione è solo per configurazioni Spedisci.Online',
       };
     }
 
     // 4. Recupera contract_mapping attuale
     let contractMapping: Record<string, string> = {};
     if (config.contract_mapping) {
-      if (typeof config.contract_mapping === "string") {
+      if (typeof config.contract_mapping === 'string') {
         try {
           contractMapping = JSON.parse(config.contract_mapping);
         } catch {
           return {
             success: false,
-            error: "Errore parsing contract_mapping",
+            error: 'Errore parsing contract_mapping',
           };
         }
       } else {
@@ -867,18 +830,18 @@ export async function removeSpedisciOnlineContract(
 
     // 6. Aggiorna database
     const { error: updateError } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .update({
         contract_mapping: contractMapping,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", configId);
+      .eq('id', configId);
 
     if (updateError) {
-      console.error("❌ Errore rimozione contratto:", updateError);
+      console.error('❌ Errore rimozione contratto:', updateError);
       return {
         success: false,
-        error: updateError.message || "Errore durante rimozione",
+        error: updateError.message || 'Errore durante rimozione',
       };
     }
 
@@ -887,10 +850,10 @@ export async function removeSpedisciOnlineContract(
       message: `Contratto "${contractCode}" rimosso con successo`,
     };
   } catch (error: any) {
-    console.error("❌ Errore removeSpedisciOnlineContract:", error);
+    console.error('❌ Errore removeSpedisciOnlineContract:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto",
+      error: error.message || 'Errore sconosciuto',
     };
   }
 }
@@ -914,15 +877,15 @@ export async function updateSpedisciOnlineContract(
   try {
     // 1. Recupera configurazione (per verificare owner_user_id)
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .eq("id", configId)
+      .from('courier_configs')
+      .select('*')
+      .eq('id', configId)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
@@ -933,28 +896,28 @@ export async function updateSpedisciOnlineContract(
     if (!canAccess) {
       return {
         success: false,
-        error: accessError || "Accesso negato",
+        error: accessError || 'Accesso negato',
       };
     }
 
     // 3. Verifica che sia Spedisci.Online
-    if (config.provider_id !== "spedisci_online") {
+    if (config.provider_id !== 'spedisci_online') {
       return {
         success: false,
-        error: "Questa funzione è solo per configurazioni Spedisci.Online",
+        error: 'Questa funzione è solo per configurazioni Spedisci.Online',
       };
     }
 
     // 4. Recupera contract_mapping attuale
     let contractMapping: Record<string, string> = {};
     if (config.contract_mapping) {
-      if (typeof config.contract_mapping === "string") {
+      if (typeof config.contract_mapping === 'string') {
         try {
           contractMapping = JSON.parse(config.contract_mapping);
         } catch {
           return {
             success: false,
-            error: "Errore parsing contract_mapping",
+            error: 'Errore parsing contract_mapping',
           };
         }
       } else {
@@ -967,31 +930,27 @@ export async function updateSpedisciOnlineContract(
       delete contractMapping[oldContractCode];
       console.log(`✅ Rimosso contratto vecchio: ${oldContractCode}`);
     } else {
-      console.warn(
-        `⚠️ Contratto vecchio non trovato nel mapping: ${oldContractCode}`
-      );
+      console.warn(`⚠️ Contratto vecchio non trovato nel mapping: ${oldContractCode}`);
     }
 
     // 6. Aggiungi nuovo contratto
     contractMapping[newContractCode] = courierName;
-    console.log(
-      `✅ Aggiunto nuovo contratto: ${newContractCode} -> ${courierName}`
-    );
+    console.log(`✅ Aggiunto nuovo contratto: ${newContractCode} -> ${courierName}`);
 
     // 7. Aggiorna database
     const { error: updateError } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .update({
         contract_mapping: contractMapping,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", configId);
+      .eq('id', configId);
 
     if (updateError) {
-      console.error("❌ Errore aggiornamento contratto:", updateError);
+      console.error('❌ Errore aggiornamento contratto:', updateError);
       return {
         success: false,
-        error: updateError.message || "Errore durante aggiornamento",
+        error: updateError.message || 'Errore durante aggiornamento',
       };
     }
 
@@ -1000,10 +959,10 @@ export async function updateSpedisciOnlineContract(
       message: `Contratto aggiornato: rimosso "${oldContractCode}", aggiunto "${newContractCode}"`,
     };
   } catch (error: any) {
-    console.error("❌ Errore updateSpedisciOnlineContract:", error);
+    console.error('❌ Errore updateSpedisciOnlineContract:', error);
     return {
       success: false,
-      error: error.message || "Errore sconosciuto",
+      error: error.message || 'Errore sconosciuto',
     };
   }
 }
@@ -1019,15 +978,15 @@ export async function updateConfigurationStatus(
   try {
     // 1. Verifica se la configurazione esiste e recupera owner_user_id
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("id, name, provider_id, owner_user_id")
-      .eq("id", id)
+      .from('courier_configs')
+      .select('id, name, provider_id, owner_user_id')
+      .eq('id', id)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
@@ -1041,15 +1000,15 @@ export async function updateConfigurationStatus(
 
     // 3. Aggiorna status
     const { error: updateError } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .update({
         is_active: isActive,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id);
+      .eq('id', id);
 
     if (updateError) {
-      console.error("Errore aggiornamento status configurazione:", updateError);
+      console.error('Errore aggiornamento status configurazione:', updateError);
       return {
         success: false,
         error: updateError.message || "Errore durante l'aggiornamento",
@@ -1063,10 +1022,10 @@ export async function updateConfigurationStatus(
       try {
         // Trova listini con metadata.courier_config_id === id
         const { data: priceLists } = await supabaseAdmin
-          .from("price_lists")
-          .select("id, name, metadata, source_metadata")
-          .eq("list_type", "supplier")
-          .in("status", ["active", "draft"]);
+          .from('price_lists')
+          .select('id, name, metadata, source_metadata')
+          .eq('list_type', 'supplier')
+          .in('status', ['active', 'draft']);
 
         if (priceLists && priceLists.length > 0) {
           // Filtra listini di questa configurazione
@@ -1079,18 +1038,18 @@ export async function updateConfigurationStatus(
             const listIds = listsToDisable.map((pl: any) => pl.id);
 
             const { error: disableError } = await supabaseAdmin
-              .from("price_lists")
+              .from('price_lists')
               .update({
-                status: "archived",
+                status: 'archived',
                 notes: `Listino archiviato automaticamente: configurazione "${
                   config.name
                 }" disattivata il ${new Date().toISOString()}`,
                 updated_at: new Date().toISOString(),
               })
-              .in("id", listIds);
+              .in('id', listIds);
 
             if (disableError) {
-              console.warn("Errore disabilitazione listini:", disableError);
+              console.warn('Errore disabilitazione listini:', disableError);
               // Non blocchiamo l'operazione principale
             } else {
               console.log(
@@ -1102,15 +1061,15 @@ export async function updateConfigurationStatus(
           }
         }
       } catch (listError: any) {
-        console.warn("Errore durante auto-disable listini:", listError.message);
+        console.warn('Errore durante auto-disable listini:', listError.message);
         // Non blocchiamo l'operazione principale
       }
     }
 
     // Audit log
     await logAuditEvent(
-      isActive ? "credential_activated" : "credential_deactivated",
-      "courier_config",
+      isActive ? 'credential_activated' : 'credential_deactivated',
+      'courier_config',
       id,
       {
         provider_id: config.provider_id,
@@ -1121,12 +1080,10 @@ export async function updateConfigurationStatus(
 
     return {
       success: true,
-      message: `Configurazione ${
-        isActive ? "attivata" : "disattivata"
-      } con successo`,
+      message: `Configurazione ${isActive ? 'attivata' : 'disattivata'} con successo`,
     };
   } catch (error: any) {
-    console.error("Errore updateConfigurationStatus:", error);
+    console.error('Errore updateConfigurationStatus:', error);
     return {
       success: false,
       error: error.message || "Errore durante l'aggiornamento",
@@ -1148,52 +1105,52 @@ export async function setPersonalConfigurationAsDefault(id: string): Promise<{
   message?: string;
 }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Verifica che la configurazione esista e appartenga all'utente
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("id, name, provider_id, created_by")
-      .eq("id", id)
+      .from('courier_configs')
+      .select('id, name, provider_id, created_by')
+      .eq('id', id)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
     // Verifica che la configurazione appartenga all'utente corrente
-    if (config.created_by !== session.user.email) {
+    if (config.created_by !== context.actor.email) {
       return {
         success: false,
-        error: "Non hai i permessi per modificare questa configurazione",
+        error: 'Non hai i permessi per modificare questa configurazione',
       };
     }
 
     // Rimuovi default da altre configurazioni dello stesso provider
     await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .update({ is_default: false })
-      .eq("provider_id", config.provider_id)
-      .neq("id", id);
+      .eq('provider_id', config.provider_id)
+      .neq('id', id);
 
     // Imposta questa configurazione come default
     const { error: updateError } = await supabaseAdmin
-      .from("courier_configs")
+      .from('courier_configs')
       .update({
         is_default: true,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id);
+      .eq('id', id);
 
     if (updateError) {
-      console.error("Errore impostazione default:", updateError);
+      console.error('Errore impostazione default:', updateError);
       return {
         success: false,
         error: updateError.message || "Errore durante l'aggiornamento",
@@ -1204,10 +1161,10 @@ export async function setPersonalConfigurationAsDefault(id: string): Promise<{
 
     return {
       success: true,
-      message: "Configurazione impostata come default con successo",
+      message: 'Configurazione impostata come default con successo',
     };
   } catch (error: any) {
-    console.error("Errore setPersonalConfigurationAsDefault:", error);
+    console.error('Errore setPersonalConfigurationAsDefault:', error);
     return {
       success: false,
       error: error.message || "Errore durante l'aggiornamento",
@@ -1239,68 +1196,65 @@ export async function assignConfigurationToUser(
 
     // 2. Verifica che l'utente esista
     const { data: user, error: userError } = await supabaseAdmin
-      .from("users")
-      .select("id, email")
-      .eq("id", userId)
+      .from('users')
+      .select('id, email')
+      .eq('id', userId)
       .single();
 
     if (userError || !user) {
       return {
         success: false,
-        error: "Utente non trovato",
+        error: 'Utente non trovato',
       };
     }
 
     // 3. Se configId è fornito, verifica che la configurazione esista e sia attiva
     if (configId) {
       const { data: config, error: configError } = await supabaseAdmin
-        .from("courier_configs")
-        .select("id, is_active")
-        .eq("id", configId)
+        .from('courier_configs')
+        .select('id, is_active')
+        .eq('id', configId)
         .single();
 
       if (configError || !config) {
         return {
           success: false,
-          error: "Configurazione non trovata",
+          error: 'Configurazione non trovata',
         };
       }
 
       if (!config.is_active) {
         return {
           success: false,
-          error: "Impossibile assegnare una configurazione inattiva",
+          error: 'Impossibile assegnare una configurazione inattiva',
         };
       }
     }
 
     // 4. Aggiorna utente
     const { error: updateError } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .update({ assigned_config_id: configId })
-      .eq("id", userId);
+      .eq('id', userId);
 
     if (updateError) {
-      console.error("Errore assegnazione configurazione:", updateError);
+      console.error('Errore assegnazione configurazione:', updateError);
       return {
         success: false,
         error: updateError.message || "Errore durante l'assegnazione",
       };
     }
 
-    console.log(
-      `✅ Configurazione ${configId ? "assegnata" : "rimossa"} per utente:`,
-      userId
-    );
+    console.log(`✅ Configurazione ${configId ? 'assegnata' : 'rimossa'} per utente:`, userId);
 
     return {
       success: true,
       message: configId
-        ? "Configurazione assegnata con successo"
-        : "Assegnazione rimossa con successo",
+        ? 'Configurazione assegnata con successo'
+        : 'Assegnazione rimossa con successo',
     };
   } catch (error: any) {
-    console.error("Errore assignConfigurationToUser:", error);
+    console.error('Errore assignConfigurationToUser:', error);
     return {
       success: false,
       error: error.message || "Errore durante l'assegnazione",
@@ -1321,23 +1275,23 @@ export async function listConfigurations(): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     let user: any;
-    if (session.user.id === "test-user-id") {
-      user = { role: "admin", is_reseller: true };
+    if (context.actor.id === 'test-user-id') {
+      user = { role: 'admin', is_reseller: true };
     } else {
-      user = await findUserByEmail(session.user.email);
+      user = await findUserByEmail(context.actor.email);
     }
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin = user.role === "admin";
+    const isAdmin = user.role === 'admin';
     const isReseller = (user as any).is_reseller === true;
 
     // 2. Costruisci query con filtro RBAC
@@ -1345,13 +1299,13 @@ export async function listConfigurations(): Promise<{
     // - Admin: vede tutte le configurazioni (globali + personali)
     // - Reseller: vede SOLO la propria configurazione personale (created_by = email)
     let query = supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from('courier_configs')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (!isAdmin) {
       // ⚠️ RBAC: Reseller e utenti normali vedono SOLO la propria configurazione
-      query = query.eq("created_by", session.user.email);
+      query = query.eq('created_by', context.actor.email);
     }
     // Admin vedono TUTTO (nessun filtro)
 
@@ -1359,10 +1313,10 @@ export async function listConfigurations(): Promise<{
     const { data: configs, error: fetchError } = await query;
 
     if (fetchError) {
-      console.error("Errore recupero configurazioni:", fetchError);
+      console.error('Errore recupero configurazioni:', fetchError);
       return {
         success: false,
-        error: fetchError.message || "Errore durante il recupero",
+        error: fetchError.message || 'Errore durante il recupero',
       };
     }
 
@@ -1373,15 +1327,12 @@ export async function listConfigurations(): Promise<{
 
       // Mascheramento aggressivo: mostra solo ultimi 4 caratteri se possibile
       if (config.api_key) {
-        masked.api_key =
-          config.api_key.length > 4
-            ? `...${config.api_key.slice(-4)}`
-            : "********";
+        masked.api_key = config.api_key.length > 4 ? `...${config.api_key.slice(-4)}` : '********';
       }
 
       // Secret sempre completamente oscurato
       if (config.api_secret) {
-        masked.api_secret = "********";
+        masked.api_secret = '********';
       }
 
       return masked;
@@ -1390,13 +1341,13 @@ export async function listConfigurations(): Promise<{
     return {
       success: true,
       configs: maskedConfigs,
-      currentUserEmail: session.user.email || undefined,
+      currentUserEmail: context.actor.email || undefined,
     };
   } catch (error: any) {
-    console.error("Errore listConfigurations:", error);
+    console.error('Errore listConfigurations:', error);
     return {
       success: false,
-      error: error.message || "Errore durante il recupero",
+      error: error.message || 'Errore durante il recupero',
     };
   }
 }
@@ -1421,15 +1372,15 @@ export async function getConfiguration(id: string): Promise<{
 
     // 2. Recupera configurazione
     const { data: config, error: fetchError } = await supabaseAdmin
-      .from("courier_configs")
-      .select("*")
-      .eq("id", id)
+      .from('courier_configs')
+      .select('*')
+      .eq('id', id)
       .single();
 
     if (fetchError || !config) {
       return {
         success: false,
-        error: "Configurazione non trovata",
+        error: 'Configurazione non trovata',
       };
     }
 
@@ -1443,21 +1394,21 @@ export async function getConfiguration(id: string): Promise<{
         decrypted.api_secret = decryptCredential(config.api_secret);
       }
     } catch (error) {
-      console.error("Errore decriptazione credenziali:", error);
+      console.error('Errore decriptazione credenziali:', error);
     }
 
     // Audit log: credenziale visualizzata
-    await logAuditEvent("credential_viewed", "courier_config", id);
+    await logAuditEvent('credential_viewed', 'courier_config', id);
 
     return {
       success: true,
       config: decrypted as CourierConfig,
     };
   } catch (error: any) {
-    console.error("Errore getConfiguration:", error);
+    console.error('Errore getConfiguration:', error);
     return {
       success: false,
-      error: error.message || "Errore durante il recupero",
+      error: error.message || 'Errore durante il recupero',
     };
   }
 }

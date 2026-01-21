@@ -52,6 +52,21 @@ describe("VAT Semantics - Backward Compatibility (ADR-001)", () => {
 
   describe("1. Legacy Price Lists (vat_mode = null)", () => {
     it("calcola prezzi identici a prima quando vat_mode = null", async () => {
+      // Mock entries for the price list - this is needed for calculatePriceFromList to be called
+      const mockEntries = [
+        {
+          id: "entry-1",
+          price_list_id: "legacy-list-id",
+          courier_id: "gls",
+          service_type: "standard",
+          weight_from: 0,
+          weight_to: 10,
+          zone_code: "IT-ITALIA",
+          base_price: 100.0,
+          fuel_surcharge: 10.0,
+        },
+      ];
+
       const legacyPriceList = {
         id: "legacy-list-id",
         name: "Legacy List",
@@ -60,30 +75,39 @@ describe("VAT Semantics - Backward Compatibility (ADR-001)", () => {
         vat_mode: null, // Legacy
         vat_rate: null, // Legacy
         metadata: {},
+        entries: mockEntries, // Include entries so calculatePriceFromList is called
       };
 
       // Mock: calculatePriceFromList restituisce prezzi come prima (assumendo IVA esclusa)
-      (calculatePriceFromList as any).mockResolvedValue({
+      // Use mockReturnValue (sync) instead of mockResolvedValue (async) since calculatePriceFromList is sync
+      (calculatePriceFromList as any).mockReturnValue({
         basePrice: 100.0,
         surcharges: 10.0,
         totalCost: 110.0,
       });
 
-      // Mock setup
+      // Mock setup - getPriceListById query
       (supabaseAdmin.from as any).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: legacyPriceList,
+          error: null,
         }),
       });
 
+      // Mock for supplier_price_list_config query (called in calculateWithDefaultMargin)
       (supabaseAdmin.from as any).mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
         order: vi.fn().mockResolvedValue({
           data: [],
+          error: null,
         }),
       });
 

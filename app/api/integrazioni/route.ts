@@ -6,21 +6,21 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth-config'
+import { getSafeAuth } from '@/lib/safe-auth'
 import { findUserByEmail, updateUser } from '@/lib/database'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
+    const context = await getSafeAuth()
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return NextResponse.json(
         { error: 'Non autenticato' },
         { status: 401 }
       )
     }
 
-    const user = await findUserByEmail(session.user.email)
+    const user = await findUserByEmail(context.actor.email)
 
     if (!user) {
       return NextResponse.json(
@@ -46,16 +46,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    const context = await getSafeAuth()
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return NextResponse.json(
         { error: 'Non autenticato' },
         { status: 401 }
       )
     }
 
-    const user = await findUserByEmail(session.user.email)
+    const user = await findUserByEmail(context.actor.email)
 
     if (!user) {
       return NextResponse.json(

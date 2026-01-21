@@ -956,6 +956,15 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Error:", error);
+
+    // Se è errore di autenticazione (da requireSafeAuth)
+    if (error.message?.includes("UNAUTHORIZED") || error.message?.includes("Authentication required")) {
+      return Response.json(
+        { error: "Non autenticato", message: "Autenticazione richiesta" },
+        { status: 401 }
+      );
+    }
+
     // Se è errore di validazione Zod
     if (error.name === "ZodError") {
       return Response.json(
@@ -963,6 +972,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
     return Response.json({ error: "Errore interno" }, { status: 500 });
   }
 }

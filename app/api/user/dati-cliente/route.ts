@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      session.user.id === "00000000-0000-0000-0000-000000000000" ||
-      session.user.id === "test-user-id"
+      context!.actor.id === "00000000-0000-0000-0000-000000000000" ||
+      context!.actor.id === "test-user-id"
     ) {
       return NextResponse.json({
         datiCliente: {
@@ -28,12 +28,12 @@ export async function GET(request: NextRequest) {
           nome: "Test",
           cognome: "User",
           codiceFiscale: "TEST12345678901",
-          email: session.user.email,
+          email: context!.actor.email,
         },
       });
     }
 
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
       return ApiErrors.NOT_FOUND("Utente");
@@ -49,13 +49,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let user: any = null; // Dichiarato fuori dal try per accesso nel catch
-  let session: any = null; // Dichiarato fuori dal try per accesso nel catch
+  let context: any = null; // Dichiarato fuori dal try per accesso nel catch
   try {
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    session = authResult.session;
+    context = authResult.context;
 
-    user = await findUserByEmail(session.user.email);
+    user = await findUserByEmail(context.actor.email);
 
     if (!user) {
       return ApiErrors.NOT_FOUND("Utente");
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Email dell'utente corrente
-    const userEmail = session.user.email?.toLowerCase() || "";
+    const userEmail = context.actor.email?.toLowerCase() || "";
 
     // Per l'utenza test@spediresicuro.it, i campi sono opzionali
     const isTestUser = userEmail === "test@spediresicuro.it";
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         ? "TEST12345678901"
         : "",
       telefono: telefono || (isTestUser ? "0000000000" : ""),
-      email: session.user.email,
+      email: context.actor.email,
       indirizzo: indirizzo || (isTestUser ? "Test Address" : ""),
       citta: citta || (isTestUser ? "Test City" : ""),
       provincia: provincia ? provincia.toUpperCase() : isTestUser ? "TE" : "",
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     // Aggiorna utente (ora è asincrono e usa Supabase)
     console.log("💾 [API DATI CLIENTE] Salvataggio dati cliente:", {
       userId: user.id,
-      email: session.user.email,
+      email: context.actor.email,
       datiCompletati: datiCliente.datiCompletati,
       hasDatiCliente: !!datiCliente,
     });
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
       code: error?.code,
       stack: error?.stack,
       userId: user?.id,
-      email: session?.user?.email,
+      email: context?.actor?.email,
     });
 
     // Messaggio errore più dettagliato per l'utente

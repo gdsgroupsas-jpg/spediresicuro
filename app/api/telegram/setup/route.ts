@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import {
   setWebhook,
@@ -28,13 +28,13 @@ const ALLOWED_ROLES = ['admin', 'superadmin', 'SUPERADMIN'];
  */
 async function verifyAdmin(): Promise<{ authorized: boolean; error?: string }> {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.email) {
+    if (!context?.actor?.email) {
       return { authorized: false, error: 'No session' };
     }
 
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context.actor.email);
     if (!user) {
       return { authorized: false, error: 'User not found' };
     }

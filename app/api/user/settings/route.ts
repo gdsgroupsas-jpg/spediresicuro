@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
     // Autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // Trova utente in Supabase
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
       return ApiErrors.NOT_FOUND('Utente');
@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
     // Autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // Parse body
     const body = await request.json();
@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Trova utente in Supabase
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
       return ApiErrors.NOT_FOUND('Utente');

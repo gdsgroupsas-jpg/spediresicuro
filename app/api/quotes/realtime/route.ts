@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    // Alias for compatibility
-    const session = { user: { email: user.email } };
+    // Create context-like structure for consistency with getSafeAuth pattern
+    const context = { actor: { email: user.email, id: user.id } };
     console.log(`[QUOTES API] Auth success via ${user.authMethod} (User: ${user.email})`);
 
     const body = await request.json();
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       // Nessuna configurazione API: prova fallback a listini
       console.log('⚠️ [QUOTES API] Nessuna configurazione API trovata, uso fallback listini');
       return await handleListinoFallback(
-        session.user.email,
+        context.actor.email,
         weight,
         zip,
         province,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         state: 'RM',
         postalCode: '00100',
         country: 'IT',
-        email: session.user.email || 'mittente@example.com',
+        email: context.actor.email || 'mittente@example.com',
       },
       shipTo: shipTo || {
         name: 'Destinatario',
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
     if (allRates.length === 0) {
       console.log('⚠️ [QUOTES API] Nessun rate da API, uso fallback listini');
       return await handleListinoFallback(
-        session.user.email,
+        context.actor.email,
         weight,
         zip,
         province,

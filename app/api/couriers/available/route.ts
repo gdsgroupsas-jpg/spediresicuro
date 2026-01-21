@@ -19,14 +19,14 @@
  * }
  */
 
-import { requireAuth } from "@/lib/api-middleware";
-import { handleApiError } from "@/lib/api-responses";
-import { supabaseAdmin } from "@/lib/db/client";
-import { getAvailableCouriersForUser } from "@/lib/db/price-lists";
-import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/api-middleware';
+import { handleApiError } from '@/lib/api-responses';
+import { supabaseAdmin } from '@/lib/db/client';
+import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
+import { NextRequest, NextResponse } from 'next/server';
 
 // ⚠️ IMPORTANTE: Questa route usa headers() per l'autenticazione, quindi deve essere dinamica
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 // ✨ RIMOSSO: Il mapping displayName ora è gestito in getAvailableCouriersForUser
 // Ogni carrier_code ha il suo displayName formattato (es. "GLS 5000")
@@ -44,18 +44,18 @@ export async function GET(request: NextRequest) {
     // Autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
-    const userId = session.user.id;
+    const userId = context!.actor.id;
 
     // Recupera info utente per verificare se è superadmin
     const { data: userData } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("id", userId)
+      .from('users')
+      .select('id, account_type')
+      .eq('id', userId)
       .single();
 
-    const isSuperadmin = userData?.account_type === "superadmin";
+    const isSuperadmin = userData?.account_type === 'superadmin';
 
     // Recupera corrieri disponibili dalla configurazione API
     let couriers = await getAvailableCouriersForUser(userId);
@@ -64,9 +64,7 @@ export async function GET(request: NextRequest) {
       `🔍 [COURIERS AVAILABLE] Corrieri dalla config API: ${couriers.length}, isSuperadmin: ${isSuperadmin}`
     );
     couriers.forEach((c, i) => {
-      console.log(
-        `   ${i + 1}. ${c.displayName} (carrierCode: ${c.carrierCode})`
-      );
+      console.log(`   ${i + 1}. ${c.displayName} (carrierCode: ${c.carrierCode})`);
     });
 
     // ✨ FILTRO CRITICO: Schema Reseller/Sub-Users
@@ -81,17 +79,17 @@ export async function GET(request: NextRequest) {
     if (isSuperadmin) {
       // Superadmin: vede tutti i listini attivi
       const { data } = await supabaseAdmin
-        .from("price_lists")
-        .select("id, metadata, source_metadata, name, list_type")
-        .in("list_type", ["custom", "supplier"])
-        .eq("status", "active");
+        .from('price_lists')
+        .select('id, metadata, source_metadata, name, list_type')
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active');
       activePriceLists = data || [];
     } else {
       // Verifica se è reseller
       const { data: userData } = await supabaseAdmin
-        .from("users")
-        .select("id, is_reseller")
-        .eq("id", userId)
+        .from('users')
+        .select('id, is_reseller')
+        .eq('id', userId)
         .single();
 
       const isReseller = userData?.is_reseller === true;
@@ -99,37 +97,35 @@ export async function GET(request: NextRequest) {
       if (isReseller) {
         // RESELLER: vede TUTTI i suoi listini personalizzati attivi
         const { data } = await supabaseAdmin
-          .from("price_lists")
-          .select("id, metadata, source_metadata, name, list_type")
-          .in("list_type", ["custom", "supplier"])
-          .eq("status", "active")
-          .eq("created_by", userId);
+          .from('price_lists')
+          .select('id, metadata, source_metadata, name, list_type')
+          .in('list_type', ['custom', 'supplier'])
+          .eq('status', 'active')
+          .eq('created_by', userId);
         activePriceLists = data || [];
       } else {
         // UTENTI NORMALI: vedono SOLO i listini assegnati
         const { data: assignments } = await supabaseAdmin
-          .from("price_list_assignments")
-          .select("price_list_id, price_lists(*)")
-          .eq("user_id", userId)
-          .is("revoked_at", null);
+          .from('price_list_assignments')
+          .select('price_list_id, price_lists(*)')
+          .eq('user_id', userId)
+          .is('revoked_at', null);
 
         if (assignments && assignments.length > 0) {
           const assignedListIds = assignments.map((a: any) => a.price_list_id);
           const { data } = await supabaseAdmin
-            .from("price_lists")
-            .select("id, metadata, source_metadata, name, list_type")
-            .in("id", assignedListIds)
-            .in("list_type", ["custom", "supplier"])
-            .eq("status", "active");
+            .from('price_lists')
+            .select('id, metadata, source_metadata, name, list_type')
+            .in('id', assignedListIds)
+            .in('list_type', ['custom', 'supplier'])
+            .eq('status', 'active');
           activePriceLists = data || [];
         }
       }
     }
 
     console.log(
-      `🔍 [COURIERS AVAILABLE] Listini attivi (custom+supplier): ${
-        activePriceLists?.length || 0
-      }`
+      `🔍 [COURIERS AVAILABLE] Listini attivi (custom+supplier): ${activePriceLists?.length || 0}`
     );
 
     if (activePriceLists && activePriceLists.length > 0) {
@@ -151,9 +147,7 @@ export async function GET(request: NextRequest) {
           console.log(
             `✅ [COURIERS AVAILABLE] Listino attivo (${pl.list_type}): "${
               pl.name
-            }" → contract_code: ${codeForMatching} (carrier_code: ${
-              carrierCode || "N/A"
-            })`
+            }" → contract_code: ${codeForMatching} (carrier_code: ${carrierCode || 'N/A'})`
           );
         } else {
           console.warn(
@@ -164,9 +158,9 @@ export async function GET(request: NextRequest) {
 
       if (activeContractCodes.size > 0) {
         console.log(
-          `🔍 [COURIERS AVAILABLE] Contract codes attivi: ${Array.from(
-            activeContractCodes
-          ).join(", ")}`
+          `🔍 [COURIERS AVAILABLE] Contract codes attivi: ${Array.from(activeContractCodes).join(
+            ', '
+          )}`
         );
 
         // ✨ FILTRO PER CONTRACT_CODE: Matching esatto tra contract_code dei listini e contract_code dei corrieri
@@ -180,7 +174,7 @@ export async function GET(request: NextRequest) {
           const courierContractCode = (
             courier.contractCode ||
             courier.carrierCode ||
-            ""
+            ''
           ).toLowerCase();
 
           if (!courierContractCode) {
@@ -206,7 +200,7 @@ export async function GET(request: NextRequest) {
             console.log(
               `❌ [COURIERS AVAILABLE] Nessun match contract_code: "${courierContractCode}" (corriere) non presente in listini attivi (${Array.from(
                 activeContractCodes
-              ).join(", ")})`
+              ).join(', ')})`
             );
           }
 
@@ -219,16 +213,12 @@ export async function GET(request: NextRequest) {
         );
       } else {
         // Nessun carrier_code nei listini → restituisci array vuoto
-        console.log(
-          `⚠️ [COURIERS AVAILABLE] Nessun carrier_code nei listini attivi`
-        );
+        console.log(`⚠️ [COURIERS AVAILABLE] Nessun carrier_code nei listini attivi`);
         couriers = [];
       }
     } else {
       // Nessun listino attivo → restituisci array vuoto
-      console.log(
-        `⚠️ [COURIERS AVAILABLE] Nessun listino attivo (custom o supplier)`
-      );
+      console.log(`⚠️ [COURIERS AVAILABLE] Nessun listino attivo (custom o supplier)`);
       couriers = [];
     }
 
@@ -245,6 +235,6 @@ export async function GET(request: NextRequest) {
       total: safeCouriers.length,
     });
   } catch (error: any) {
-    return handleApiError(error, "GET /api/couriers/available");
+    return handleApiError(error, 'GET /api/couriers/available');
   }
 }

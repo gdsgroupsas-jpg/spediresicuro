@@ -8,7 +8,7 @@
  * - Immagini (screenshot con OCR)
  */
 
-import { auth } from "@/lib/auth-config";
+import { getSafeAuth } from "@/lib/safe-auth";
 import { existsSync, mkdirSync } from "fs";
 import { unlink, writeFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
@@ -21,8 +21,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
     }
 

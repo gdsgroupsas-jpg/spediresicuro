@@ -16,7 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { generateApiKey } from '@/lib/api-key-service';
 import { FeatureFlags } from '@/lib/feature-flags';
 
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Require cookie auth (user must be logged in)
-  const session = await auth();
-  if (!session?.user?.id) {
+  const context = await getSafeAuth();
+  if (!context?.actor?.id) {
     return NextResponse.json(
       { error: 'Unauthorized', message: 'You must be logged in to create API keys' },
       { status: 401 }
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate API key
-    const { key, keyPrefix, id } = await generateApiKey(session.user.id, name, {
+    const { key, keyPrefix, id } = await generateApiKey(context.actor.id, name, {
       scopes: scopes || ['quotes:read'],
       expiresInDays: expiresInDays || FeatureFlags.API_KEY_DEFAULT_EXPIRY_DAYS,
     });

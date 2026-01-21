@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import {
   setParentImposedFee,
   getSubUsersWithFees,
@@ -23,16 +23,16 @@ import {
  */
 export async function GET() {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.id) {
+    if (!context?.actor?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const subUsers = await getSubUsersWithFees(session.user.id);
+    const subUsers = await getSubUsersWithFees(context.actor.id);
 
     return NextResponse.json({
       success: true,
@@ -61,9 +61,9 @@ export async function GET() {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
+    const context = await getSafeAuth();
 
-    if (!session?.user?.id) {
+    if (!context?.actor?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest) {
 
     const result = await setParentImposedFee(
       { childUserId, fee, notes },
-      session.user.id
+      context.actor.id
     );
 
     return NextResponse.json(result);

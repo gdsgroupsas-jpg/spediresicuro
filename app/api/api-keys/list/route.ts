@@ -16,7 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { listApiKeys } from '@/lib/api-key-service';
 import { FeatureFlags } from '@/lib/feature-flags';
 
@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Require cookie auth (user must be logged in)
-  const session = await auth();
-  if (!session?.user?.id) {
+  const context = await getSafeAuth();
+  if (!context?.actor?.id) {
     return NextResponse.json(
       { error: 'Unauthorized', message: 'You must be logged in to list API keys' },
       { status: 401 }
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Get all API keys for user
-    const keys = await listApiKeys(session.user.id);
+    const keys = await listApiKeys(context.actor.id);
 
     return NextResponse.json({
       success: true,

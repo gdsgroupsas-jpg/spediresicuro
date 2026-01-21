@@ -5,14 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { handleApiError } from '@/lib/api-responses';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('account_type')
-      .eq('email', session.user.email)
+      .eq('email', context.actor.email)
       .single();
 
     if (!user || user.account_type !== 'superadmin') {

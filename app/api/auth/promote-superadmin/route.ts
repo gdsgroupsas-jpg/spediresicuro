@@ -1,14 +1,14 @@
 /**
  * API Route: Auto-Promozione Superadmin
- * 
+ *
  * POST /api/auth/promote-superadmin
  * Promuove automaticamente email autorizzate a superadmin
- * 
+ *
  * ⚠️ SICUREZZA: Solo email hardcoded possono essere promosse
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 // ⚠️ LISTA SUPERADMIN AUTORIZZATI (hardcoded per sicurezza)
@@ -22,23 +22,20 @@ const AUTHORIZED_SUPERADMINS = [
 export async function POST(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const session = await auth();
-    
-    if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+    const context = await getSafeAuth();
+
+    if (!context || !context.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const userEmail = session.user.email;
+    const userEmail = context.actor.email;
 
     // 2. Verifica che l'email sia autorizzata
     if (!AUTHORIZED_SUPERADMINS.includes(userEmail)) {
       return NextResponse.json(
-        { 
+        {
           error: 'Non autorizzato',
-          message: 'La tua email non è nella lista dei superadmin autorizzati'
+          message: 'La tua email non è nella lista dei superadmin autorizzati',
         },
         { status: 403 }
       );
@@ -62,16 +59,16 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('❌ [AUTO-PROMOTE] Errore aggiornamento:', updateError);
-      
+
       // Se l'utente non esiste, crealo
       if (updateError.code === 'PGRST116') {
         console.log('➕ [AUTO-PROMOTE] Utente non esiste, creazione in corso...');
-        
+
         const { data: newUser, error: createError } = await supabaseAdmin
           .from('users')
           .insert({
             email: userEmail,
-            name: session.user.name || userEmail.split('@')[0],
+            name: context.actor.name || userEmail.split('@')[0],
             role: 'admin',
             account_type: 'superadmin',
             admin_level: 0,
@@ -89,7 +86,7 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ [AUTO-PROMOTE] Utente creato come superadmin:', newUser.email);
-        
+
         return NextResponse.json({
           success: true,
           message: 'Utente creato e promosso a superadmin',
@@ -101,7 +98,7 @@ export async function POST(request: NextRequest) {
           action: 'created',
         });
       }
-      
+
       throw updateError;
     }
 
@@ -141,11 +138,10 @@ export async function POST(request: NextRequest) {
         'Accesso a /dashboard/team sarà abilitato',
       ],
     });
-
   } catch (error: any) {
     console.error('❌ [AUTO-PROMOTE] Errore:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Errore durante la promozione',
         message: error instanceof Error ? error.message : 'Errore sconosciuto',
       },

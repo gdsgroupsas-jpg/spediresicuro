@@ -5,7 +5,7 @@
  * con i prezzi calcolati per permettere confronto e selezione manuale
  */
 
-import { auth } from "@/lib/auth-config";
+import { getSafeAuth } from "@/lib/safe-auth";
 import { supabaseAdmin } from "@/lib/db/client";
 import { calculateBestPriceForReseller } from "@/lib/db/price-lists-advanced";
 import type { CourierServiceType } from "@/types/shipments";
@@ -13,8 +13,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
     }
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, is_reseller, account_type")
-      .eq("email", session.user.email)
+      .eq("email", context.actor.email)
       .single();
 
     if (!user) {
