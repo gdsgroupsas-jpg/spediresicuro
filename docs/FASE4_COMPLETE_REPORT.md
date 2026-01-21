@@ -9,6 +9,7 @@
 ## 🎯 Obiettivo Raggiunto
 
 Creata sezione **"Gestione Clienti"** unificata che mostra:
+
 - **Superadmin/Admin:** Tutti i clienti in modo gerarchico (Reseller → Sub-Users, BYOC standalone)
 - **Reseller:** Solo i propri Sub-Users (comportamento originale mantenuto)
 
@@ -21,6 +22,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
 ### Backend (Commit: `14e57b3`)
 
 #### 1. Nuova Funzione `getAllClientsForUser()`
+
 - **File:** `actions/admin-reseller.ts`
 - **Funzionalità:**
   - Restituisce struttura gerarchica: Reseller con Sub-Users nested + BYOC standalone
@@ -29,6 +31,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Query ottimizzate con Promise.all per performance
 
 #### 2. Funzione `canViewAllClients()`
+
 - **File:** `actions/admin-reseller.ts`
 - **Funzionalità:**
   - Verifica se utente può vedere tutti i clienti
@@ -36,6 +39,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Fallback a `account_type`/`role` per retrocompatibilità
 
 #### 3. Aggiornamento `getSubUsers()`
+
 - **File:** `actions/admin-reseller.ts`
 - **Modifiche:**
   - Ora supporta superadmin (vede tutti i sub-users)
@@ -43,6 +47,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Non breaking: compatibilità totale con codice esistente
 
 #### 4. Test Backend
+
 - **File:** `tests/admin-reseller.test.ts`
 - **Risultati:** ✅ 5/5 test passati
   - Test autenticazione
@@ -56,6 +61,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
 ### Frontend (Commit: `70930cc`)
 
 #### 1. Hook React Query `useAllClients()`
+
 - **File:** `lib/queries/use-sub-users.ts`
 - **Funzionalità:**
   - Hook per fetch dati gerarchici
@@ -63,6 +69,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Auto-refetch on window focus
 
 #### 2. Componente `ClientsHierarchyView`
+
 - **File:** `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx`
 - **Funzionalità:**
   - Stats summary cards (Reseller, Sub-Users, BYOC, Wallet Totale)
@@ -72,6 +79,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Empty states per UX
 
 #### 3. Componente `ResellerCard`
+
 - **File:** `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx`
 - **Funzionalità:**
   - Card expandable/collapsible per ogni reseller
@@ -80,6 +88,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Avatar, badge, formattazione valuta/data
 
 #### 4. Componente `BYOCSection`
+
 - **File:** `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx`
 - **Funzionalità:**
   - Sezione dedicata per clienti BYOC
@@ -87,6 +96,7 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
   - Layout coerente con reseller cards
 
 #### 5. Aggiornamento Page `reseller-team`
+
 - **File:** `app/dashboard/reseller-team/page.tsx`
 - **Modifiche:**
   - Rileva se utente è superadmin (via `/api/user/info`)
@@ -99,27 +109,35 @@ Creata sezione **"Gestione Clienti"** unificata che mostra:
 ## ✅ Testing
 
 ### Test Backend
+
 ```bash
 npm test -- tests/admin-reseller.test.ts
 ```
+
 **Risultato:** ✅ 5/5 passati
 
 ### Test Regressione
+
 ```bash
 npm test -- tests/regression/parent-id-compatibility.test.ts
 ```
+
 **Risultato:** ✅ 3/3 passati
 
 ### Test Completo Suite
+
 ```bash
 npm test -- --run
 ```
+
 **Risultato:** ✅ 765/765 passati, 4 skipped
 
 ### Type Check
+
 ```bash
 npm run type-check
 ```
+
 **Risultato:** ✅ Nessun errore
 
 ---
@@ -155,15 +173,18 @@ npm run type-check
 ## 📝 File Modificati
 
 ### Backend
+
 - `actions/admin-reseller.ts` (+535 righe)
 - `tests/admin-reseller.test.ts` (nuovo, +250 righe)
 
 ### Frontend
+
 - `lib/queries/use-sub-users.ts` (+30 righe)
 - `app/dashboard/reseller-team/_components/clients-hierarchy-view.tsx` (nuovo, +370 righe)
 - `app/dashboard/reseller-team/page.tsx` (+50 righe)
 
 ### Documentazione
+
 - `docs/DEVELOPMENT_PLAN_FASE4.md` (nuovo, piano sviluppo)
 - `docs/FASE4_COMPLETE_REPORT.md` (questo file)
 
@@ -172,11 +193,13 @@ npm run type-check
 ## 🎉 Risultati
 
 ### Prima
+
 - ❌ Superadmin vedeva tutti gli utenti in modo "piatto"
 - ❌ Nessuna gerarchia Reseller → Sub-Users
 - ❌ BYOC non distinguibili
 
 ### Dopo
+
 - ✅ Superadmin vede struttura gerarchica completa
 - ✅ Reseller → Sub-Users nested e expandable
 - ✅ BYOC sezione dedicata

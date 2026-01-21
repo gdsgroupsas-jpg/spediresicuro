@@ -1,4 +1,3 @@
-
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -18,24 +17,28 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function runMigration() {
-  const migrationFile = path.resolve(__dirname, '../supabase/migrations/025_add_invoices_system.sql');
+  const migrationFile = path.resolve(
+    __dirname,
+    '../supabase/migrations/025_add_invoices_system.sql'
+  );
   console.log(`📂 Leggo migrazione: ${migrationFile}`);
-  
+
   try {
     const sql = fs.readFileSync(migrationFile, 'utf8');
-    
+
     console.log('🚀 Esecuzione Migration via RPC (exec_sql)...');
-    
+
     // Tenta esecuzione via RPC
     const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
-    
-    if (error) {
-       console.error('❌ Errore RPC exec_sql:', error.message);
-       console.log('⚠️  Se fallisce perché la funzione non esiste, esegui manualmente l\'SQL su Supabase Studio.');
-    } else {
-       console.log('✅ Migrazione eseguita con successo!');
-    }
 
+    if (error) {
+      console.error('❌ Errore RPC exec_sql:', error.message);
+      console.log(
+        "⚠️  Se fallisce perché la funzione non esiste, esegui manualmente l'SQL su Supabase Studio."
+      );
+    } else {
+      console.log('✅ Migrazione eseguita con successo!');
+    }
   } catch (err) {
     console.error('❌ Errore generale:', err.message);
   }

@@ -5,26 +5,26 @@
  * Restituisce informazioni dell'utente corrente autenticato incluso account_type
  */
 
-import { requireAuth } from "@/lib/api-middleware";
-import { ApiErrors, handleApiError } from "@/lib/api-responses";
-import { findUserByEmail } from "@/lib/database";
-import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/api-middleware';
+import { ApiErrors, handleApiError } from '@/lib/api-responses';
+import { findUserByEmail } from '@/lib/database';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Forza rendering dinamico (usa headers())
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
-    const { session } = authResult;
+    const { context } = authResult;
 
     // 2. Recupera informazioni utente
-    const user = await findUserByEmail(session.user.email);
+    const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
-      return ApiErrors.NOT_FOUND("Utente");
+      return ApiErrors.NOT_FOUND('Utente');
     }
 
     // 3. Recupera anche account_type e is_reseller da Supabase se disponibile
@@ -32,37 +32,33 @@ export async function GET(request: NextRequest) {
     let isReseller = false;
     let resellerRole = null;
     try {
-      const { supabaseAdmin } = await import("@/lib/db/client");
+      const { supabaseAdmin } = await import('@/lib/db/client');
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
-        .from("users")
-        .select("account_type, role, is_reseller, reseller_role")
-        .eq("email", session.user.email)
+        .from('users')
+        .select('account_type, role, is_reseller, reseller_role')
+        .eq('email', context!.actor.email)
         .single();
 
       if (supabaseError) {
-        console.warn(
-          "Errore recupero account_type da Supabase:",
-          supabaseError
-        );
+        console.warn('Errore recupero account_type da Supabase:', supabaseError);
       } else if (supabaseUser) {
-        accountType =
-          supabaseUser.account_type || supabaseUser.role || user.role;
+        accountType = supabaseUser.account_type || supabaseUser.role || user.role;
         isReseller = supabaseUser.is_reseller === true;
         resellerRole = supabaseUser.reseller_role;
         console.log(
-          "Account Type recuperato da Supabase:",
+          'Account Type recuperato da Supabase:',
           accountType,
-          "is_reseller:",
+          'is_reseller:',
           isReseller,
-          "reseller_role:",
+          'reseller_role:',
           resellerRole,
-          "per email:",
-          session.user.email
+          'per email:',
+          context!.actor.email
         );
       }
     } catch (error) {
       // Ignora errori, usa role come fallback
-      console.warn("Errore recupero account_type:", error);
+      console.warn('Errore recupero account_type:', error);
     }
 
     // 4. Prepara dati utente
@@ -105,6 +101,6 @@ export async function GET(request: NextRequest) {
       image: userData.image,
     });
   } catch (error: any) {
-    return handleApiError(error, "GET /api/user/info");
+    return handleApiError(error, 'GET /api/user/info');
   }
 }

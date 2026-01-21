@@ -1,16 +1,16 @@
 /**
  * API Route: Gestione Spedizioni
- * 
+ *
  * Endpoint: POST /api/spedizioni
- * 
+ *
  * Crea una nuova spedizione e la salva nel database locale (JSON).
  * In futuro verrà migrato a Supabase/PostgreSQL.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
-import { createAuthContextFromSession } from '@/lib/auth-context';
+import type { AuthContext } from '@/lib/auth-context';
 import { createApiLogger, getRequestId } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
 import { supabaseAdmin } from '@/lib/db/client';
@@ -18,7 +18,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 /**
  * Sanitizza payload spedizione in base al ruolo utente
  * Rimuove campi admin se l'utente non è superadmin
- * 
+ *
  * @param payload - Payload spedizione da sanitizzare
  * @param userRole - Ruolo utente (da session.user)
  * @param accountType - Account type utente (da database)
@@ -29,21 +29,22 @@ function sanitizeShipmentPayloadByRole(
   userRole: string | undefined,
   accountType: string | undefined
 ): any {
-  const isSuperAdmin = accountType === 'superadmin' || userRole === 'superadmin' || userRole === 'SUPERADMIN';
-  
+  const isSuperAdmin =
+    accountType === 'superadmin' || userRole === 'superadmin' || userRole === 'SUPERADMIN';
+
   // Se non è superadmin, rimuovi campi admin
   if (!isSuperAdmin) {
     const sanitized = { ...payload };
-    
+
     // Rimuovi campi admin
     delete sanitized.created_by_admin_id;
     delete sanitized.admin_operation_reason;
-    
+
     console.log('ℹ️ [SANITIZE] Campi admin rimossi (utente non superadmin)');
-    
+
     return sanitized;
   }
-  
+
   // Superadmin: mantieni tutti i campi (ma admin_operation_reason viene rimosso comunque in normalizzazione)
   return payload;
 }
@@ -53,31 +54,31 @@ function sanitizeShipmentPayloadByRole(
  * - Converte oggetti in string/uuid
  * - Serializza metadata (JSONB)
  * - Elimina chiavi con undefined
- * 
+ *
  * @param payload - Payload da normalizzare
  * @returns Payload normalizzato
  */
 function normalizeShipmentPayload(payload: any): any {
   const normalized: any = {};
-  
+
   // Lista campi UUID (da normalizzare a stringa)
   const uuidFields = ['courier_id', 'user_id'];
-  
+
   // Lista campi JSONB (da serializzare)
   const jsonbFields = ['metadata', 'poste_metadata'];
-  
+
   for (const [key, value] of Object.entries(payload)) {
     // 1. Rimuovi undefined/null
     if (value === undefined || value === null) {
       continue; // Salta undefined/null
     }
-    
+
     // 2. Rimuovi campi non validi (non esistono nello schema)
     if (key === 'admin_operation_reason') {
       console.warn(`⚠️ [NORMALIZE] Campo ${key} non esiste nello schema, rimosso`);
       continue; // Rimuovi sempre (non esiste nello schema)
     }
-    
+
     // 3. Normalizza UUID (stringa valida o null)
     if (uuidFields.includes(key)) {
       if (typeof value === 'string' && value.trim() !== '') {
@@ -88,7 +89,9 @@ function normalizeShipmentPayload(payload: any): any {
         if (uuidValue && typeof uuidValue === 'string') {
           normalized[key] = uuidValue.trim();
         } else {
-          console.warn(`⚠️ [NORMALIZE] Campo UUID ${key} è un oggetto non valido, convertito in null`);
+          console.warn(
+            `⚠️ [NORMALIZE] Campo UUID ${key} è un oggetto non valido, convertito in null`
+          );
           normalized[key] = null;
         }
       } else {
@@ -96,7 +99,7 @@ function normalizeShipmentPayload(payload: any): any {
       }
       continue;
     }
-    
+
     // 4. Normalizza JSONB (serializza oggetti)
     if (jsonbFields.includes(key)) {
       if (typeof value === 'object' && value !== null) {
@@ -113,18 +116,20 @@ function normalizeShipmentPayload(payload: any): any {
       }
       continue;
     }
-    
+
     // 5. Normalizza altri tipi (string, number, boolean)
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       // Oggetto non JSONB → rimuovi (causa "[OBJECT]" nel payload)
-      console.warn(`⚠️ [NORMALIZE] Campo ${key} è un oggetto non JSONB, rimosso per evitare "[OBJECT]"`);
+      console.warn(
+        `⚠️ [NORMALIZE] Campo ${key} è un oggetto non JSONB, rimosso per evitare "[OBJECT]"`
+      );
       continue; // Rimuovi oggetti non JSONB
     }
-    
+
     // 6. Mantieni valore normalizzato
     normalized[key] = value;
   }
-  
+
   return normalized;
 }
 
@@ -135,14 +140,14 @@ export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
   let session: any = null;
-  
+
   try {
     logger.info('GET /api/spedizioni - Richiesta lista spedizioni');
-    
-    // Autenticazione
-    session = await auth();
 
-    if (!session?.user?.email) {
+    // Autenticazione
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('GET /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -150,12 +155,19 @@ export async function GET(request: NextRequest) {
     // Gestisci query parameter per singola spedizione
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (id) {
       // Restituisci singola spedizione (filtrata per utente autenticato)
       let spedizioni: any[] = [];
       try {
-        const authContext = await createAuthContextFromSession(session);
+        // Converti ActingContext in AuthContext per getSpedizioni
+        // NOTA: Usa target per operazioni business (supporta impersonation)
+        const authContext: AuthContext = {
+          type: 'user',
+          userId: session.target.id,
+          userEmail: session.target.email || undefined,
+          isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+        };
         spedizioni = await getSpedizioni(authContext);
       } catch (error: any) {
         console.error('❌ [API] Errore getSpedizioni (singola):', error.message);
@@ -172,33 +184,73 @@ export async function GET(request: NextRequest) {
         throw error;
       }
       const spedizione = spedizioni.find((s: any) => s.id === id);
-      
+
       if (!spedizione || spedizione.deleted === true) {
         return NextResponse.json({ error: 'Spedizione non trovata' }, { status: 404 });
       }
-      
+
       // Normalizza struttura destinatario
       const spedizioneNormalizzata = {
         ...spedizione,
-        destinatario: spedizione.destinatario?.nome 
-          ? spedizione.destinatario 
+        destinatario: spedizione.destinatario?.nome
+          ? spedizione.destinatario
           : {
               // PRIORITÀ: recipient_* colonne Supabase (schema attuale)
               // FALLBACK: destinatarioNome, etc. (campi legacy)
-              nome: spedizione.recipient_name || spedizione.destinatarioNome || spedizione.destinatario?.nome || spedizione.nome || spedizione.nominativo || '',
-              indirizzo: spedizione.recipient_address || spedizione.destinatarioIndirizzo || spedizione.destinatario?.indirizzo || spedizione.indirizzo || '',
-              citta: spedizione.recipient_city || spedizione.destinatarioCitta || spedizione.destinatario?.citta || spedizione.citta || spedizione.localita || '',
-              provincia: spedizione.recipient_province || spedizione.destinatarioProvincia || spedizione.destinatario?.provincia || spedizione.provincia || '',
-              cap: spedizione.recipient_postal_code || spedizione.recipient_zip || spedizione.destinatarioCap || spedizione.destinatario?.cap || spedizione.cap || '',
-              telefono: spedizione.recipient_phone || spedizione.destinatarioTelefono || spedizione.destinatario?.telefono || spedizione.telefono || '',
-              email: spedizione.recipient_email || spedizione.destinatarioEmail || spedizione.destinatario?.email || spedizione.email_dest || spedizione.email || '',
+              nome:
+                spedizione.recipient_name ||
+                spedizione.destinatarioNome ||
+                spedizione.destinatario?.nome ||
+                spedizione.nome ||
+                spedizione.nominativo ||
+                '',
+              indirizzo:
+                spedizione.recipient_address ||
+                spedizione.destinatarioIndirizzo ||
+                spedizione.destinatario?.indirizzo ||
+                spedizione.indirizzo ||
+                '',
+              citta:
+                spedizione.recipient_city ||
+                spedizione.destinatarioCitta ||
+                spedizione.destinatario?.citta ||
+                spedizione.citta ||
+                spedizione.localita ||
+                '',
+              provincia:
+                spedizione.recipient_province ||
+                spedizione.destinatarioProvincia ||
+                spedizione.destinatario?.provincia ||
+                spedizione.provincia ||
+                '',
+              cap:
+                spedizione.recipient_postal_code ||
+                spedizione.recipient_zip ||
+                spedizione.destinatarioCap ||
+                spedizione.destinatario?.cap ||
+                spedizione.cap ||
+                '',
+              telefono:
+                spedizione.recipient_phone ||
+                spedizione.destinatarioTelefono ||
+                spedizione.destinatario?.telefono ||
+                spedizione.telefono ||
+                '',
+              email:
+                spedizione.recipient_email ||
+                spedizione.destinatarioEmail ||
+                spedizione.destinatario?.email ||
+                spedizione.email_dest ||
+                spedizione.email ||
+                '',
             },
         mittente: spedizione.mittente || {
           nome: spedizione.sender_name || spedizione.mittenteNome || 'Mittente Predefinito',
           indirizzo: spedizione.sender_address || spedizione.mittenteIndirizzo || '',
           citta: spedizione.sender_city || spedizione.mittenteCitta || '',
           provincia: spedizione.sender_province || spedizione.mittenteProvincia || '',
-          cap: spedizione.sender_postal_code || spedizione.sender_zip || spedizione.mittenteCap || '',
+          cap:
+            spedizione.sender_postal_code || spedizione.sender_zip || spedizione.mittenteCap || '',
           telefono: spedizione.sender_phone || spedizione.mittenteTelefono || '',
           email: spedizione.sender_email || spedizione.mittenteEmail || '',
         },
@@ -206,17 +258,26 @@ export async function GET(request: NextRequest) {
         // Per ordini creati dalla piattaforma, tracking è già presente
         tracking: spedizione.ldv || spedizione.tracking || '',
       };
-      
-      return NextResponse.json({
-        success: true,
-        data: spedizioneNormalizzata,
-      }, { status: 200 });
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: spedizioneNormalizzata,
+        },
+        { status: 200 }
+      );
     }
 
     // Ottieni spedizioni filtrate per utente autenticato (multi-tenancy)
     let spedizioni: any[] = [];
     try {
-      const authContext = await createAuthContextFromSession(session);
+      // Converti ActingContext in AuthContext per getSpedizioni
+      const authContext: AuthContext = {
+        type: 'user',
+        userId: session.target.id,
+        userEmail: session.target.email || undefined,
+        isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+      };
       spedizioni = await getSpedizioni(authContext);
     } catch (error: any) {
       console.error('❌ [API] Errore getSpedizioni:', error.message);
@@ -253,13 +314,52 @@ export async function GET(request: NextRequest) {
           destinatario: {
             // PRIORITÀ: recipient_* colonne Supabase (schema attuale)
             // FALLBACK: destinatarioNome, etc. (campi legacy)
-            nome: s.recipient_name || s.destinatarioNome || s.destinatario?.nome || s.nome || s.nominativo || '',
-            indirizzo: s.recipient_address || s.destinatarioIndirizzo || s.destinatario?.indirizzo || s.indirizzo || '',
-            citta: s.recipient_city || s.destinatarioCitta || s.destinatario?.citta || s.citta || s.localita || '',
-            provincia: s.recipient_province || s.destinatarioProvincia || s.destinatario?.provincia || s.provincia || '',
-            cap: s.recipient_postal_code || s.recipient_zip || s.destinatarioCap || s.destinatario?.cap || s.cap || '',
-            telefono: s.recipient_phone || s.destinatarioTelefono || s.destinatario?.telefono || s.telefono || '',
-            email: s.recipient_email || s.destinatarioEmail || s.destinatario?.email || s.email_dest || s.email || '',
+            nome:
+              s.recipient_name ||
+              s.destinatarioNome ||
+              s.destinatario?.nome ||
+              s.nome ||
+              s.nominativo ||
+              '',
+            indirizzo:
+              s.recipient_address ||
+              s.destinatarioIndirizzo ||
+              s.destinatario?.indirizzo ||
+              s.indirizzo ||
+              '',
+            citta:
+              s.recipient_city ||
+              s.destinatarioCitta ||
+              s.destinatario?.citta ||
+              s.citta ||
+              s.localita ||
+              '',
+            provincia:
+              s.recipient_province ||
+              s.destinatarioProvincia ||
+              s.destinatario?.provincia ||
+              s.provincia ||
+              '',
+            cap:
+              s.recipient_postal_code ||
+              s.recipient_zip ||
+              s.destinatarioCap ||
+              s.destinatario?.cap ||
+              s.cap ||
+              '',
+            telefono:
+              s.recipient_phone ||
+              s.destinatarioTelefono ||
+              s.destinatario?.telefono ||
+              s.telefono ||
+              '',
+            email:
+              s.recipient_email ||
+              s.destinatarioEmail ||
+              s.destinatario?.email ||
+              s.email_dest ||
+              s.email ||
+              '',
           },
           // Assicura anche struttura mittente
           mittente: s.mittente || {
@@ -285,7 +385,9 @@ export async function GET(request: NextRequest) {
     // Log per debug (rimuovere in produzione)
     console.log(`📦 Totale spedizioni nel DB: ${spedizioni.length}`);
     console.log(`✅ Spedizioni attive: ${spedizioniAttive.length}`);
-    console.log(`📥 Spedizioni importate: ${spedizioniNormalizzate.filter((s: any) => s.imported).length}`);
+    console.log(
+      `📥 Spedizioni importate: ${spedizioniNormalizzate.filter((s: any) => s.imported).length}`
+    );
 
     return NextResponse.json(
       {
@@ -308,14 +410,14 @@ export async function POST(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
   let session: any = null;
-  
+
   try {
     logger.info('POST /api/spedizioni - Richiesta creazione spedizione');
-    
-    // Autenticazione
-    session = await auth();
 
-    if (!session?.user?.email) {
+    // Autenticazione
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('POST /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -380,26 +482,25 @@ export async function POST(request: NextRequest) {
     const pesoPrice = peso * 2; // 2€ per kg
     const expressMultiplier = body.tipoSpedizione === 'express' ? 1.5 : 1;
     const prezzoBase = (basePrice + pesoPrice) * expressMultiplier;
-    
+
     // Costi aggiuntivi
-    const contrassegno = body.contrassegno && body.contrassegnoAmount 
-      ? parseFloat(body.contrassegnoAmount) || 0 
-      : 0;
+    const contrassegno =
+      body.contrassegno && body.contrassegnoAmount ? parseFloat(body.contrassegnoAmount) || 0 : 0;
     const assicurazione = parseFloat(body.assicurazione) || 0;
     const costoContrassegno = contrassegno > 0 ? 3 : 0; // Costo fisso per gestione contrassegno
-    const costoAssicurazione = assicurazione > 0 ? (assicurazione * 0.02) : 0; // 2% del valore assicurato
-    
+    const costoAssicurazione = assicurazione > 0 ? assicurazione * 0.02 : 0; // 2% del valore assicurato
+
     // Validazione: codValue >= 0 (codValue è il campo OpenAPI per contrassegno)
     if (contrassegno < 0) {
       return NextResponse.json(
         {
           error: 'Validazione fallita',
-          message: 'L\'importo del contrassegno (codValue) non può essere negativo',
+          message: "L'importo del contrassegno (codValue) non può essere negativo",
         },
         { status: 400 }
       );
     }
-    
+
     // Validazione: se contrassegno attivo, telefono destinatario obbligatorio
     if (contrassegno > 0 && !body.destinatarioTelefono) {
       return NextResponse.json(
@@ -410,7 +511,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // ✨ FIX: Usa final_price dal frontend se disponibile (prezzo listino personalizzato con margine)
     // Altrimenti calcola prezzo finale con margine default
     let prezzoFinale: number;
@@ -420,7 +521,10 @@ export async function POST(request: NextRequest) {
       prezzoFinale = body.final_price;
       // Calcola margine approssimativo per logging (prezzo finale - costo base)
       margine = prezzoFinale - prezzoBase - costoContrassegno - costoAssicurazione;
-      console.log('💰 [API] Usando final_price dal frontend (listino personalizzato):', prezzoFinale);
+      console.log(
+        '💰 [API] Usando final_price dal frontend (listino personalizzato):',
+        prezzoFinale
+      );
     } else {
       // Calcola prezzo finale con margine default (fallback)
       const marginePercentuale = 15;
@@ -437,14 +541,14 @@ export async function POST(request: NextRequest) {
       const { getPlatformFeeSafe } = await import('@/lib/services/pricing/platform-fee');
 
       // ✨ FIX P0: Verifica ruolo da MULTIPLE FONTI per evitare false negative
-      const sessionRole = (session.user as any)?.role?.toUpperCase?.() || '';
-      const sessionAccountType = (session.user as any)?.account_type?.toLowerCase?.() || '';
+      const sessionRole = (session.actor as any)?.role?.toUpperCase?.() || '';
+      const sessionAccountType = (session.actor as any)?.account_type?.toLowerCase?.() || '';
 
       // Query DB come backup (potrebbe fallire)
       const { data: userData } = await supabaseAdmin
         .from('users')
         .select('role, account_type')
-        .eq('email', session.user.email)
+        .eq('email', session.actor.email)
         .single();
 
       const dbRole = userData?.role?.toUpperCase?.() || '';
@@ -455,12 +559,11 @@ export async function POST(request: NextRequest) {
       const isRegularUser =
         sessionAccountType === 'user' ||
         dbAccountType === 'user' ||
-        (
-          // Se non ha account_type definito E non è un ruolo business
-          !sessionAccountType && !dbAccountType &&
+        // Se non ha account_type definito E non è un ruolo business
+        (!sessionAccountType &&
+          !dbAccountType &&
           !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(sessionRole) &&
-          !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(dbRole)
-        );
+          !['SUPERADMIN', 'ADMIN', 'RESELLER', 'BYOC'].includes(dbRole));
 
       // Ruoli BUSINESS che pagano fee (configurabile, può essere 0)
       const isBusinessRole =
@@ -470,21 +573,21 @@ export async function POST(request: NextRequest) {
         ['superadmin', 'admin', 'reseller', 'byoc'].includes(dbAccountType);
 
       console.log('🔐 [API] Verifica ruolo per platform fee:', {
-        email: session.user.email,
+        email: session.actor.email,
         sessionRole,
         sessionAccountType,
         dbRole,
         dbAccountType,
         isRegularUser,
         isBusinessRole,
-        platformFeeApplied: isBusinessRole && !isRegularUser
+        platformFeeApplied: isBusinessRole && !isRegularUser,
       });
 
       // Solo ruoli BUSINESS pagano platform fee (può essere 0 se configurata così)
       // USER finali NON pagano MAI
       if (isBusinessRole && !isRegularUser) {
         const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
-        const userId = await getSupabaseUserIdFromEmail(session.user.email);
+        const userId = await getSupabaseUserIdFromEmail(session.actor.email);
         if (userId) {
           platformFee = await getPlatformFeeSafe(userId);
           prezzoFinale = prezzoFinale + platformFee;
@@ -565,8 +668,8 @@ export async function POST(request: NextRequest) {
       serviziAccessori: body.serviziAccessori || [],
       accessoriServices: body.serviziAccessori || [], // Alias per compatibilità adapter
       // Audit Trail - Tracciamento creazione
-      created_by_user_email: session.user.email,
-      created_by_user_name: session.user.name || session.user.email,
+      created_by_user_email: session.actor.email,
+      created_by_user_name: session.actor.name || session.actor.email,
       // Soft Delete
       deleted: false,
     };
@@ -587,18 +690,18 @@ export async function POST(request: NextRequest) {
 
     // ⚠️ NORMALIZZAZIONE PAYLOAD: Sanitizza e normalizza prima dell'INSERT
     // 1. Recupera ruolo utente per sanitizzazione
-    let userRole: string | undefined = (session.user as any).role;
-    let accountType: string | undefined = (session.user as any).account_type;
-    
+    let userRole: string | undefined = (session.actor as any).role;
+    let accountType: string | undefined = (session.actor as any).account_type;
+
     // Se non disponibile in session, recupera da database
     if (!accountType) {
       try {
         const { data: userData } = await supabaseAdmin
           .from('users')
           .select('role, account_type')
-          .eq('email', session.user.email)
+          .eq('email', session.actor.email)
           .single();
-        
+
         if (userData) {
           userRole = userData.role || userRole;
           accountType = userData.account_type || accountType;
@@ -607,21 +710,33 @@ export async function POST(request: NextRequest) {
         console.warn('⚠️ [API] Errore recupero ruolo utente:', error);
       }
     }
-    
+
     // 2. Sanitizza payload in base al ruolo
     const sanitizedPayload = sanitizeShipmentPayloadByRole(spedizione, userRole, accountType);
-    
+
     // ⚠️ FIX CRITICO: Mappa campi nested PRIMA di normalizzare
     // Frontend invia: { mittente: { citta, provincia, cap }, destinatario: { ... } }
     // DB richiede: { sender_city, sender_province, sender_zip, recipient_city, ... }
     if (sanitizedPayload.mittente && typeof sanitizedPayload.mittente === 'object') {
       // ⚠️ FIX: Mappa TUTTI i campi mittente, non solo city/province/zip
-      sanitizedPayload.sender_name = sanitizedPayload.mittente.nome || sanitizedPayload.mittente.name || null;
-      sanitizedPayload.sender_address = sanitizedPayload.mittente.indirizzo || sanitizedPayload.mittente.address || null;
-      sanitizedPayload.sender_city = sanitizedPayload.mittente.citta || sanitizedPayload.mittente.città || sanitizedPayload.mittente.city || null;
-      sanitizedPayload.sender_province = sanitizedPayload.mittente.provincia || sanitizedPayload.mittente.province || null;
-      sanitizedPayload.sender_postal_code = sanitizedPayload.mittente.cap || sanitizedPayload.mittente.zip || sanitizedPayload.mittente.postal_code || null;
-      sanitizedPayload.sender_phone = sanitizedPayload.mittente.telefono || sanitizedPayload.mittente.phone || null;
+      sanitizedPayload.sender_name =
+        sanitizedPayload.mittente.nome || sanitizedPayload.mittente.name || null;
+      sanitizedPayload.sender_address =
+        sanitizedPayload.mittente.indirizzo || sanitizedPayload.mittente.address || null;
+      sanitizedPayload.sender_city =
+        sanitizedPayload.mittente.citta ||
+        sanitizedPayload.mittente.città ||
+        sanitizedPayload.mittente.city ||
+        null;
+      sanitizedPayload.sender_province =
+        sanitizedPayload.mittente.provincia || sanitizedPayload.mittente.province || null;
+      sanitizedPayload.sender_postal_code =
+        sanitizedPayload.mittente.cap ||
+        sanitizedPayload.mittente.zip ||
+        sanitizedPayload.mittente.postal_code ||
+        null;
+      sanitizedPayload.sender_phone =
+        sanitizedPayload.mittente.telefono || sanitizedPayload.mittente.phone || null;
       sanitizedPayload.sender_email = sanitizedPayload.mittente.email || null;
       // COMPAT: Mantieni anche sender_zip per retrocompatibilità
       sanitizedPayload.sender_zip = sanitizedPayload.sender_postal_code;
@@ -637,15 +752,27 @@ export async function POST(request: NextRequest) {
       // Elimina oggetto mittente dopo mapping
       delete sanitizedPayload.mittente;
     }
-    
+
     if (sanitizedPayload.destinatario && typeof sanitizedPayload.destinatario === 'object') {
       // ⚠️ FIX: Mappa TUTTI i campi destinatario, non solo city/province/zip
-      sanitizedPayload.recipient_name = sanitizedPayload.destinatario.nome || sanitizedPayload.destinatario.name || null;
-      sanitizedPayload.recipient_address = sanitizedPayload.destinatario.indirizzo || sanitizedPayload.destinatario.address || null;
-      sanitizedPayload.recipient_city = sanitizedPayload.destinatario.citta || sanitizedPayload.destinatario.città || sanitizedPayload.destinatario.city || null;
-      sanitizedPayload.recipient_province = sanitizedPayload.destinatario.provincia || sanitizedPayload.destinatario.province || null;
-      sanitizedPayload.recipient_postal_code = sanitizedPayload.destinatario.cap || sanitizedPayload.destinatario.zip || sanitizedPayload.destinatario.postal_code || null;
-      sanitizedPayload.recipient_phone = sanitizedPayload.destinatario.telefono || sanitizedPayload.destinatario.phone || null;
+      sanitizedPayload.recipient_name =
+        sanitizedPayload.destinatario.nome || sanitizedPayload.destinatario.name || null;
+      sanitizedPayload.recipient_address =
+        sanitizedPayload.destinatario.indirizzo || sanitizedPayload.destinatario.address || null;
+      sanitizedPayload.recipient_city =
+        sanitizedPayload.destinatario.citta ||
+        sanitizedPayload.destinatario.città ||
+        sanitizedPayload.destinatario.city ||
+        null;
+      sanitizedPayload.recipient_province =
+        sanitizedPayload.destinatario.provincia || sanitizedPayload.destinatario.province || null;
+      sanitizedPayload.recipient_postal_code =
+        sanitizedPayload.destinatario.cap ||
+        sanitizedPayload.destinatario.zip ||
+        sanitizedPayload.destinatario.postal_code ||
+        null;
+      sanitizedPayload.recipient_phone =
+        sanitizedPayload.destinatario.telefono || sanitizedPayload.destinatario.phone || null;
       sanitizedPayload.recipient_email = sanitizedPayload.destinatario.email || null;
       // COMPAT: Mantieni anche recipient_zip per retrocompatibilità
       sanitizedPayload.recipient_zip = sanitizedPayload.recipient_postal_code;
@@ -661,15 +788,23 @@ export async function POST(request: NextRequest) {
       // Elimina oggetto destinatario dopo mapping
       delete sanitizedPayload.destinatario;
     }
-    
+
     // 3. Normalizza payload (rimuove undefined, normalizza tipi, serializza JSONB)
     const normalizedPayload = normalizeShipmentPayload(sanitizedPayload);
-    
+
     // ⚠️ LOGGING SICURO: Log struttura payload senza esporre dati sensibili
     const safePayload = Object.keys(normalizedPayload).reduce((acc, key) => {
-      const sensitiveFields = ['email', 'phone', 'api_key', 'api_secret', 'password', 'token', 'secret'];
-      const isSensitive = sensitiveFields.some(field => key.toLowerCase().includes(field));
-      
+      const sensitiveFields = [
+        'email',
+        'phone',
+        'api_key',
+        'api_secret',
+        'password',
+        'token',
+        'secret',
+      ];
+      const isSensitive = sensitiveFields.some((field) => key.toLowerCase().includes(field));
+
       const value = normalizedPayload[key];
       if (isSensitive) {
         acc[key] = '[REDACTED]';
@@ -684,18 +819,24 @@ export async function POST(request: NextRequest) {
       }
       return acc;
     }, {} as any);
-    
+
     console.log('📋 [API] Payload normalizzato (struttura):', {
       fields_count: Object.keys(normalizedPayload).length,
       is_superadmin: accountType === 'superadmin',
-      has_admin_fields: !!(normalizedPayload.created_by_admin_id),
-      structure: safePayload
+      has_admin_fields: !!normalizedPayload.created_by_admin_id,
+      structure: safePayload,
     });
-    
+
     // Salva nel database (SOLO Supabase)
     let createdShipment: any = null;
     try {
-      const authContext = await createAuthContextFromSession(session);
+      // Converti ActingContext in AuthContext per addSpedizione
+      const authContext: AuthContext = {
+        type: 'user',
+        userId: session.target.id,
+        userEmail: session.target.email || undefined,
+        isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+      };
       // Usa payload normalizzato invece di spedizione originale
       createdShipment = await addSpedizione(normalizedPayload, authContext);
       console.log('✅ [API] Spedizione creata con ID:', createdShipment.id);
@@ -712,23 +853,24 @@ export async function POST(request: NextRequest) {
       console.log('🚀 [API] Chiamo orchestrator per corriere:', body.corriere);
       const { createShipmentWithOrchestrator } = await import('@/lib/actions/spedisci-online');
       ldvResult = await createShipmentWithOrchestrator(spedizione, body.corriere || 'GLS');
-      
+
       console.log('📦 [API] Risultato orchestrator:', {
         success: ldvResult.success,
         method: ldvResult.method,
         tracking: ldvResult.tracking_number,
         has_label_url: !!ldvResult.label_url,
-        error: ldvResult.error
+        error: ldvResult.error,
       });
-      
+
       if (ldvResult.success) {
         console.log(`✅ LDV creata (${ldvResult.method}):`, ldvResult.tracking_number);
-        
+
         // ⚠️ CRITICO: Verifica shipmentId PRIMA di tutto
         const shipmentIdDirect = (ldvResult as any).shipmentId;
-        const shipmentIdMetadata = ldvResult.metadata?.shipmentId || ldvResult.metadata?.increment_id;
+        const shipmentIdMetadata =
+          ldvResult.metadata?.shipmentId || ldvResult.metadata?.increment_id;
         const shipmentId = shipmentIdDirect || shipmentIdMetadata;
-        
+
         console.log('🔍 [API] ⚠️⚠️⚠️ VERIFICA SHIPMENTID ⚠️⚠️⚠️:', {
           shipmentId_diretto: shipmentIdDirect || 'NON TROVATO',
           shipmentId_metadata: shipmentIdMetadata || 'NON TROVATO',
@@ -737,7 +879,7 @@ export async function POST(request: NextRequest) {
           metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
           result_keys: Object.keys(ldvResult),
         });
-        
+
         console.log('📦 [API] Dettagli risultato orchestrator:', {
           has_tracking: !!ldvResult.tracking_number,
           has_label_url: !!ldvResult.label_url,
@@ -747,9 +889,11 @@ export async function POST(request: NextRequest) {
           method: ldvResult.method,
           // ⚠️ DEBUG: Verifica shipmentId nel metadata
           shipmentId_in_metadata: shipmentId || 'NON TROVATO',
-          metadata_content: ldvResult.metadata ? JSON.stringify(ldvResult.metadata).substring(0, 200) : 'null',
+          metadata_content: ldvResult.metadata
+            ? JSON.stringify(ldvResult.metadata).substring(0, 200)
+            : 'null',
         });
-        
+
         // ⚠️ PERSISTENZA: Salva LDV, tracking e metadata in shipments SOLO se orchestrator ha successo
         if (createdShipment?.id) {
           try {
@@ -757,18 +901,18 @@ export async function POST(request: NextRequest) {
             const updateData: any = {
               updated_at: new Date().toISOString(),
             };
-            
+
             // Aggiorna tracking_number se fornito dall'orchestrator
             if (ldvResult.tracking_number) {
               updateData.tracking_number = ldvResult.tracking_number;
               updateData.ldv = ldvResult.tracking_number; // LDV = tracking number
             }
-            
+
             // Aggiorna external_tracking_number se presente (es. Poste waybill_number)
             if (ldvResult.metadata?.waybill_number) {
               updateData.external_tracking_number = ldvResult.metadata.waybill_number;
             }
-            
+
             // ⚠️ FIX P0: Salva SEMPRE label_data se abbiamo label_pdf (base64)
             // Questo è necessario per avere sempre l'etichetta originale disponibile per il download
             // Anche se c'è label_url, salviamo label_data come backup (l'URL potrebbe scadere)
@@ -776,14 +920,18 @@ export async function POST(request: NextRequest) {
               if (Buffer.isBuffer(ldvResult.label_pdf)) {
                 // Converti Buffer in base64 string per salvare in database
                 updateData.label_data = ldvResult.label_pdf.toString('base64');
-                console.log('💾 [API] Salvato label_pdf come label_data (base64, size:', ldvResult.label_pdf.length, 'bytes)');
+                console.log(
+                  '💾 [API] Salvato label_pdf come label_data (base64, size:',
+                  ldvResult.label_pdf.length,
+                  'bytes)'
+                );
               } else if (typeof ldvResult.label_pdf === 'string') {
                 // Già base64 string
                 updateData.label_data = ldvResult.label_pdf;
                 console.log('💾 [API] Salvato label_pdf come label_data (già base64)');
               }
             }
-            
+
             // ⚠️ FIX P0: Salva SEMPRE metadata se spedizione ha successo
             // Questo è necessario per il download della LDV originale dal corriere
             // Anche se label_url non è disponibile, salviamo comunque le info per tracciabilità
@@ -801,7 +949,7 @@ export async function POST(request: NextRequest) {
                 created_at: new Date().toISOString(), // Timestamp per tracciabilità
               };
               // Rimuovi chiavi null per evitare oggetto troppo grande
-              Object.keys(posteMetadata).forEach(key => {
+              Object.keys(posteMetadata).forEach((key) => {
                 if ((posteMetadata as any)[key] === null) delete (posteMetadata as any)[key];
               });
               updateData.metadata = posteMetadata;
@@ -816,21 +964,22 @@ export async function POST(request: NextRequest) {
                 created_at: new Date().toISOString(), // Timestamp per tracciabilità
               };
               // Rimuovi chiavi null per evitare oggetto troppo grande
-              Object.keys(carrierMetadata).forEach(key => {
+              Object.keys(carrierMetadata).forEach((key) => {
                 if ((carrierMetadata as any)[key] === null) delete (carrierMetadata as any)[key];
               });
               updateData.metadata = carrierMetadata;
             }
-            
+
             // ⚠️ FIX CRITICO: Salva shipmentId per TUTTI i corrieri (incluso Poste Italiane)
             // Prima era dentro il blocco else e non veniva eseguito per Poste Italiane!
             // Secondo openapi.json: POST /shipping/create restituisce "shipmentId" che è l'increment_id per cancellazione
             // ⚠️ CRITICO: Cerca shipmentId in ordine: direttamente nel risultato > metadata.shipmentId > metadata.increment_id
-            const shipmentId = (ldvResult as any).shipmentId || // PRIORITÀ 1: Direttamente nel risultato
-                               ldvResult.metadata?.shipmentId || // PRIORITÀ 2: Nel metadata
-                               ldvResult.metadata?.increment_id || // PRIORITÀ 3: Alias nel metadata
-                               null;
-            
+            const shipmentId =
+              (ldvResult as any).shipmentId || // PRIORITÀ 1: Direttamente nel risultato
+              ldvResult.metadata?.shipmentId || // PRIORITÀ 2: Nel metadata
+              ldvResult.metadata?.increment_id || // PRIORITÀ 3: Alias nel metadata
+              null;
+
             console.log('🔍 [API] DEBUG shipmentId extraction (per TUTTI i corrieri):', {
               corriere: body.corriere,
               has_metadata: !!ldvResult.metadata,
@@ -838,13 +987,18 @@ export async function POST(request: NextRequest) {
               metadata_keys: ldvResult.metadata ? Object.keys(ldvResult.metadata) : [],
               shipmentId_from_metadata: shipmentId || 'NON TROVATO',
               has_shipmentId_in_result: !!(ldvResult as any).shipmentId,
-              metadata_content: ldvResult.metadata ? JSON.stringify(ldvResult.metadata).substring(0, 300) : 'null',
+              metadata_content: ldvResult.metadata
+                ? JSON.stringify(ldvResult.metadata).substring(0, 300)
+                : 'null',
               full_result_keys: Object.keys(ldvResult),
             });
-            
+
             if (shipmentId) {
               updateData.shipment_id_external = String(shipmentId);
-              console.log('💾 [API] ✅ Salvato shipmentId (increment_id) come shipment_id_external:', updateData.shipment_id_external);
+              console.log(
+                '💾 [API] ✅ Salvato shipmentId (increment_id) come shipment_id_external:',
+                updateData.shipment_id_external
+              );
             } else {
               // ⚠️ FALLBACK: Se shipmentId non è nel risultato, prova a estrarlo dal tracking number
               const trackingForExtraction = ldvResult.tracking_number || trackingNumber;
@@ -853,38 +1007,61 @@ export async function POST(request: NextRequest) {
                 if (trackingMatch) {
                   const extractedShipmentId = trackingMatch[1];
                   updateData.shipment_id_external = extractedShipmentId;
-                  console.warn('⚠️ [API] shipmentId NON nel risultato, estratto dal tracking come fallback:', {
-                    extracted_shipment_id: extractedShipmentId,
-                    tracking: trackingForExtraction,
-                    corriere: body.corriere,
-                    warning: 'Questo potrebbe non essere corretto se il tracking number non contiene l\'increment_id reale',
-                  });
+                  console.warn(
+                    '⚠️ [API] shipmentId NON nel risultato, estratto dal tracking come fallback:',
+                    {
+                      extracted_shipment_id: extractedShipmentId,
+                      tracking: trackingForExtraction,
+                      corriere: body.corriere,
+                      warning:
+                        "Questo potrebbe non essere corretto se il tracking number non contiene l'increment_id reale",
+                    }
+                  );
                 } else {
-                  console.error('❌ [API] shipmentId NON TROVATO e impossibile estrarlo dal tracking - cancellazione futura NON funzionerà!');
+                  console.error(
+                    '❌ [API] shipmentId NON TROVATO e impossibile estrarlo dal tracking - cancellazione futura NON funzionerà!'
+                  );
                   console.error('❌ [API] Corriere:', body.corriere);
-                  console.error('❌ [API] Metadata completo:', JSON.stringify(ldvResult.metadata || {}, null, 2));
+                  console.error(
+                    '❌ [API] Metadata completo:',
+                    JSON.stringify(ldvResult.metadata || {}, null, 2)
+                  );
                   console.error('❌ [API] Risultato completo (chiavi):', Object.keys(ldvResult));
                 }
               } else {
-                console.error('❌ [API] shipmentId NON TROVATO e tracking number non disponibile - cancellazione futura NON funzionerà!');
+                console.error(
+                  '❌ [API] shipmentId NON TROVATO e tracking number non disponibile - cancellazione futura NON funzionerà!'
+                );
                 console.error('❌ [API] Corriere:', body.corriere);
-                console.error('❌ [API] Metadata completo:', JSON.stringify(ldvResult.metadata || {}, null, 2));
+                console.error(
+                  '❌ [API] Metadata completo:',
+                  JSON.stringify(ldvResult.metadata || {}, null, 2)
+                );
                 console.error('❌ [API] Risultato completo (chiavi):', Object.keys(ldvResult));
               }
             }
-            
+
             console.log('💾 [API] Metadata preparato per salvataggio:', {
               has_label_url: !!updateData.metadata.label_url || !!updateData.metadata.label_pdf_url,
               has_label_pdf_flag: !!updateData.metadata.has_label_pdf,
               method: updateData.metadata.method,
               carrier: updateData.metadata.carrier,
             });
-            
+
             // ⚠️ LOGGING SICURO: Log struttura update senza dati sensibili
             const safeUpdate = Object.keys(updateData).reduce((acc, key) => {
-              const sensitiveFields = ['api_key', 'api_secret', 'password', 'token', 'secret', 'credential'];
-              const isSensitive = sensitiveFields.some(field => key.toLowerCase().includes(field));
-              
+              const sensitiveFields = [
+                'api_key',
+                'api_secret',
+                'password',
+                'token',
+                'secret',
+                'credential',
+              ];
+              const isSensitive = sensitiveFields.some((field) =>
+                key.toLowerCase().includes(field)
+              );
+
               const value = updateData[key];
               if (isSensitive) {
                 acc[key] = '[REDACTED]';
@@ -895,15 +1072,15 @@ export async function POST(request: NextRequest) {
               }
               return acc;
             }, {} as any);
-            
+
             console.log('💾 [API] Aggiornamento spedizione con dati orchestrator:', {
               shipment_id: createdShipment.id.substring(0, 8) + '...',
               has_tracking: !!updateData.tracking_number,
               has_ldv: !!updateData.ldv,
               has_metadata: !!updateData.metadata,
-              update_structure: safeUpdate
+              update_structure: safeUpdate,
             });
-            
+
             // Esegui UPDATE idempotente (usa ID come chiave)
             console.log('💾 [API] Eseguo UPDATE spedizione con:', {
               shipment_id: createdShipment.id.substring(0, 8) + '...',
@@ -912,16 +1089,19 @@ export async function POST(request: NextRequest) {
               has_metadata: !!updateData.metadata,
               has_shipment_id_external: !!updateData.shipment_id_external, // ⚠️ CRITICO per cancellazione
               shipment_id_external: updateData.shipment_id_external || 'NON SALVATO!',
-              metadata_label_url: updateData.metadata?.label_url || updateData.metadata?.label_pdf_url || 'NON DISPONIBILE',
+              metadata_label_url:
+                updateData.metadata?.label_url ||
+                updateData.metadata?.label_pdf_url ||
+                'NON DISPONIBILE',
             });
-            
+
             const { data: updatedShipment, error: updateError } = await supabaseAdmin
               .from('shipments')
               .update(updateData)
               .eq('id', createdShipment.id)
               .select('id, tracking_number, ldv, external_tracking_number, metadata, label_data')
               .single();
-            
+
             if (updateError) {
               console.error('❌ [API] Errore aggiornamento spedizione con dati orchestrator:', {
                 shipment_id: createdShipment.id,
@@ -937,14 +1117,20 @@ export async function POST(request: NextRequest) {
                 tracking_number: updatedShipment.tracking_number,
                 has_ldv: !!updatedShipment.ldv,
                 has_metadata: !!updatedShipment.metadata,
-                metadata_keys: updatedShipment.metadata ? Object.keys(updatedShipment.metadata) : [],
-                metadata_label_url: updatedShipment.metadata?.label_url || updatedShipment.metadata?.label_pdf_url || 'NON DISPONIBILE',
+                metadata_keys: updatedShipment.metadata
+                  ? Object.keys(updatedShipment.metadata)
+                  : [],
+                metadata_label_url:
+                  updatedShipment.metadata?.label_url ||
+                  updatedShipment.metadata?.label_pdf_url ||
+                  'NON DISPONIBILE',
               });
-              
+
               // Aggiorna oggetto spedizione per risposta
               spedizione.tracking = updatedShipment.tracking_number || spedizione.tracking;
               spedizione.ldv = updatedShipment.ldv || spedizione.ldv;
-              spedizione.external_tracking_number = updatedShipment.external_tracking_number || spedizione.external_tracking_number;
+              spedizione.external_tracking_number =
+                updatedShipment.external_tracking_number || spedizione.external_tracking_number;
               spedizione.metadata = updatedShipment.metadata || spedizione.metadata;
             }
           } catch (updateError: any) {
@@ -962,7 +1148,7 @@ export async function POST(request: NextRequest) {
             error: ldvResult.error,
             message: ldvResult.message,
           });
-          
+
           // ⚠️ CRITICO: Se la spedizione è già stata salvata, aggiorna lo stato per indicare che la LDV non è stata creata
           if (createdShipment?.id) {
             try {
@@ -975,14 +1161,17 @@ export async function POST(request: NextRequest) {
                 .eq('id', createdShipment.id);
               console.log('⚠️ [API] Spedizione aggiornata con status "ldv_failed"');
             } catch (updateError: any) {
-              console.error('❌ [API] Errore aggiornamento status spedizione:', updateError.message);
+              console.error(
+                '❌ [API] Errore aggiornamento status spedizione:',
+                updateError.message
+              );
             }
           }
-          
+
           // ⚠️ CRITICO: Rilancia errore per bloccare la risposta di successo
           throw new Error(
             `LDV non creata realmente: ${ldvResult.error || ldvResult.message || 'Fallback CSV generato'}\n` +
-            `Verifica la configurazione API in /dashboard/integrazioni`
+              `Verifica la configurazione API in /dashboard/integrazioni`
           );
         } else {
           console.warn('⚠️ Creazione LDV fallita (non critico):', ldvResult.error);
@@ -1006,9 +1195,13 @@ export async function POST(request: NextRequest) {
         label_pdf: ldvResult.label_pdf.toString('base64'),
         label_pdf_base64: true, // Flag per indicare al frontend che è base64
       } as any;
-      console.log('📄 [API] label_pdf convertito in base64 per frontend (size:', ldvResult.label_pdf.length, 'bytes)');
+      console.log(
+        '📄 [API] label_pdf convertito in base64 per frontend (size:',
+        ldvResult.label_pdf.length,
+        'bytes)'
+      );
     }
-    
+
     return NextResponse.json(
       {
         success: true,
@@ -1026,7 +1219,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * Handler DELETE - Soft delete spedizione
- * 
+ *
  * ⚠️ CRITICO: Usa SOLO Supabase - nessun fallback JSON
  * ⚠️ INTEGRAZIONE: Cancella anche su Spedisci.Online se configurato
  */
@@ -1034,14 +1227,14 @@ export async function DELETE(request: NextRequest) {
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
   let session: any = null;
-  
+
   try {
     logger.info('DELETE /api/spedizioni - Richiesta eliminazione spedizione');
-    
-    // Autenticazione
-    session = await auth();
 
-    if (!session?.user?.email) {
+    // Autenticazione
+    session = await getSafeAuth();
+
+    if (!session?.actor?.email) {
       logger.warn('DELETE /api/spedizioni - Non autenticato');
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -1065,14 +1258,14 @@ export async function DELETE(request: NextRequest) {
 
     // ⚠️ CRITICO: Usa SOLO Supabase per soft delete
     const { supabaseAdmin } = await import('@/lib/supabase');
-    
+
     console.log(`🗑️ [SUPABASE] Soft delete spedizione: ${id}`);
-    
+
     // Ottieni user_id Supabase se disponibile (opzionale)
     let supabaseUserId: string | null = null;
     try {
       const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
-      supabaseUserId = await getSupabaseUserIdFromEmail(session.user.email);
+      supabaseUserId = await getSupabaseUserIdFromEmail(session.actor.email);
     } catch (error) {
       // Non critico se non trovato
       console.warn('⚠️ [SUPABASE] Impossibile ottenere user_id per soft delete:', error);
@@ -1088,7 +1281,10 @@ export async function DELETE(request: NextRequest) {
 
     if (fetchError || !shipmentData) {
       console.error('❌ [SUPABASE] Spedizione non trovata:', fetchError?.message);
-      return NextResponse.json({ error: 'Spedizione non trovata o già eliminata' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Spedizione non trovata o già eliminata' },
+        { status: 404 }
+      );
     }
 
     const trackingNumber = shipmentData.tracking_number || shipmentData.ldv;
@@ -1103,16 +1299,18 @@ export async function DELETE(request: NextRequest) {
       shipment_id_external: shipmentIdExternal,
       isEmpty: !trackingNumber || trackingNumber.trim() === '',
       hasShipmentIdExternal: !!(shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN'),
-      warning: !shipmentIdExternal || shipmentIdExternal === 'UNKNOWN' 
-        ? '⚠️ ATTENZIONE: shipment_id_external non disponibile, verrà estratto increment_id dal tracking (potrebbe non essere corretto)'
-        : '✅ shipment_id_external disponibile, verrà usato direttamente',
+      warning:
+        !shipmentIdExternal || shipmentIdExternal === 'UNKNOWN'
+          ? '⚠️ ATTENZIONE: shipment_id_external non disponibile, verrà estratto increment_id dal tracking (potrebbe non essere corretto)'
+          : '✅ shipment_id_external disponibile, verrà usato direttamente',
     });
 
     // ⚠️ INTEGRAZIONE SPEDISCI.ONLINE: Cancella su piattaforma esterna
     // Prova a cancellare se abbiamo shipment_id_external O tracking_number
-    const canCancelRemotely = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') || 
-                              (trackingNumber && trackingNumber.trim() !== '');
-    
+    const canCancelRemotely =
+      (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ||
+      (trackingNumber && trackingNumber.trim() !== '');
+
     if (canCancelRemotely) {
       try {
         console.log('🗑️ [API] Tentativo cancellazione su Spedisci.Online:', {
@@ -1120,40 +1318,43 @@ export async function DELETE(request: NextRequest) {
           trackingNumber,
           method: shipmentIdExternal ? 'by_id' : 'by_tracking',
         });
-      
+
         // ⚠️ FIX: Recupera configurazione Spedisci.Online usando funzione RPC
         // PRIORITÀ 1: Configurazione dell'utente che cancella (se è reseller/proprietario)
         // PRIORITÀ 2: Configurazione del proprietario della spedizione
         // PRIORITÀ 3: Configurazione globale (is_default = true)
-        
+
         let configData: any = null;
-        
+
         // 1. Verifica se l'utente che cancella è un reseller e recupera la sua configurazione
         const { data: currentUserData } = await supabaseAdmin
           .from('users')
           .select('id, email, is_reseller')
-          .eq('email', session.user.email)
+          .eq('email', session.actor.email)
           .single();
-        
+
         const currentUserId = currentUserData?.id || supabaseUserId;
-        
+
         // Prova vari provider_id possibili (spediscionline, spedisci_online, spedisci-online)
         const possibleProviderIds = ['spediscionline', 'spedisci_online', 'spedisci-online'];
-        
+
         if (currentUserId) {
           // Prova prima con l'utente che cancella
           for (const providerId of possibleProviderIds) {
-            const { data: userConfig, error: userConfigError } = await supabaseAdmin.rpc('get_courier_config_for_user', {
-              p_user_id: currentUserId,
-              p_provider_id: providerId,
-            });
-            
+            const { data: userConfig, error: userConfigError } = await supabaseAdmin.rpc(
+              'get_courier_config_for_user',
+              {
+                p_user_id: currentUserId,
+                p_provider_id: providerId,
+              }
+            );
+
             if (userConfigError) {
               console.warn(`⚠️ [API] Errore RPC per ${providerId}:`, userConfigError.message);
             } else if (userConfig && userConfig.length > 0) {
               configData = userConfig[0];
               console.log('✅ [API] Usando configurazione utente che cancella:', {
-                email: session.user.email,
+                email: session.actor.email,
                 provider_id: providerId,
                 owner_user_id: configData.owner_user_id ? 'presente' : 'null',
               });
@@ -1161,19 +1362,25 @@ export async function DELETE(request: NextRequest) {
             }
           }
         }
-        
+
         // 2. Se non trovata, usa configurazione del proprietario della spedizione
         if (!configData) {
           const shipmentOwnerId = shipmentData.user_id;
           if (shipmentOwnerId && shipmentOwnerId !== currentUserId) {
             for (const providerId of possibleProviderIds) {
-              const { data: ownerConfig, error: ownerConfigError } = await supabaseAdmin.rpc('get_courier_config_for_user', {
-                p_user_id: shipmentOwnerId,
-                p_provider_id: providerId,
-              });
-              
+              const { data: ownerConfig, error: ownerConfigError } = await supabaseAdmin.rpc(
+                'get_courier_config_for_user',
+                {
+                  p_user_id: shipmentOwnerId,
+                  p_provider_id: providerId,
+                }
+              );
+
               if (ownerConfigError) {
-                console.warn(`⚠️ [API] Errore RPC per proprietario ${providerId}:`, ownerConfigError.message);
+                console.warn(
+                  `⚠️ [API] Errore RPC per proprietario ${providerId}:`,
+                  ownerConfigError.message
+                );
               } else if (ownerConfig && ownerConfig.length > 0) {
                 configData = ownerConfig[0];
                 console.log('✅ [API] Usando configurazione proprietario spedizione:', {
@@ -1186,7 +1393,7 @@ export async function DELETE(request: NextRequest) {
             }
           }
         }
-        
+
         // 3. Fallback: configurazione globale (is_default = true)
         if (!configData) {
           for (const providerId of possibleProviderIds) {
@@ -1197,19 +1404,26 @@ export async function DELETE(request: NextRequest) {
               .eq('is_default', true)
               .eq('is_active', true)
               .maybeSingle();
-            
+
             if (globalConfig) {
               configData = globalConfig;
-              console.log('✅ [API] Usando configurazione globale (default) per cancellazione:', providerId);
+              console.log(
+                '✅ [API] Usando configurazione globale (default) per cancellazione:',
+                providerId
+              );
               break;
             }
           }
-          
+
           if (!configData) {
-            console.log('⚠️ [API] Nessuna configurazione globale trovata per Spedisci.Online (provati:', possibleProviderIds.join(', '), ')');
+            console.log(
+              '⚠️ [API] Nessuna configurazione globale trovata per Spedisci.Online (provati:',
+              possibleProviderIds.join(', '),
+              ')'
+            );
           }
         }
-        
+
         // Log stato configurazione
         if (!configData) {
           console.log('ℹ️ [API] Spedisci.Online non configurato, skip cancellazione remota');
@@ -1217,11 +1431,11 @@ export async function DELETE(request: NextRequest) {
           console.warn('⚠️ [API] Configurazione Spedisci.Online trovata ma API key mancante');
         } else {
           console.log('✅ [API] Configurazione Spedisci.Online trovata, procedo con cancellazione');
-          
+
           // Decripta api_key se necessario
           const { isEncrypted, decryptCredential } = await import('@/lib/security/encryption');
           let apiKey = configData.api_key;
-          
+
           if (isEncrypted(apiKey)) {
             try {
               apiKey = decryptCredential(apiKey);
@@ -1231,34 +1445,43 @@ export async function DELETE(request: NextRequest) {
               throw new Error('Impossibile decriptare le credenziali API');
             }
           }
-          
+
           // ⚠️ FIX: Usa sempre SpedisciOnlineAdapter con cancelShipmentOnPlatform
           // Priorità: shipment_id_external (increment_id) > tracking_number
           const { SpedisciOnlineAdapter } = await import('@/lib/adapters/couriers/spedisci-online');
-          
+
           const adapter = new SpedisciOnlineAdapter({
             api_key: apiKey,
             base_url: configData.base_url || 'https://api.spedisci.online/api/v2',
           });
-          
+
           // ⚠️ PRIORITÀ: Usa shipment_id_external (increment_id) se disponibile, altrimenti tracking_number
           // Se shipment_id_external è null, il metodo cancelShipmentOnPlatform proverà a recuperarlo da Spedisci.Online
-          const idToCancel = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') 
-            ? shipmentIdExternal 
-            : trackingNumber;
-          
+          const idToCancel =
+            shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN'
+              ? shipmentIdExternal
+              : trackingNumber;
+
           console.log('🗑️ [API] Cancellazione Spedisci.Online:', {
             idToCancel,
-            method: (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by_increment_id' : 'by_tracking_with_fallback',
+            method:
+              shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN'
+                ? 'by_increment_id'
+                : 'by_tracking_with_fallback',
             shipmentIdExternal: shipmentIdExternal || 'null',
             trackingNumber: trackingNumber || 'null',
-            note: shipmentIdExternal ? 'Usando shipment_id_external diretto' : 'Proverà a recuperare increment_id da Spedisci.Online, poi fallback su estrazione dal tracking',
+            note: shipmentIdExternal
+              ? 'Usando shipment_id_external diretto'
+              : 'Proverà a recuperare increment_id da Spedisci.Online, poi fallback su estrazione dal tracking',
           });
-          
+
           spedisciOnlineCancelResult = await adapter.cancelShipmentOnPlatform(idToCancel);
-          
+
           if (spedisciOnlineCancelResult.success) {
-            const method = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'by increment_id' : 'by tracking';
+            const method =
+              shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN'
+                ? 'by increment_id'
+                : 'by tracking';
             const hasDirectId = !!(shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN');
             console.log(`✅ [API] Spedizione cancellata su Spedisci.Online (${method}):`, {
               idToCancel,
@@ -1266,7 +1489,7 @@ export async function DELETE(request: NextRequest) {
               hasDirectId,
               message: spedisciOnlineCancelResult.message,
             });
-            
+
             // ⚠️ FALLBACK: Se la cancellazione è riuscita ma shipment_id_external era null,
             // salva l'increment_id estratto per le prossime volte (se disponibile)
             if (!hasDirectId && trackingNumber) {
@@ -1275,12 +1498,15 @@ export async function DELETE(request: NextRequest) {
                 const trackingMatch = trackingNumber.match(/(\d+)$/);
                 if (trackingMatch) {
                   const extractedIncrementId = trackingMatch[1];
-                  console.log('💾 [API] Salvo increment_id estratto come fallback per prossime volte:', {
-                    shipment_id: id,
-                    extracted_increment_id: extractedIncrementId,
-                    tracking: trackingNumber,
-                  });
-                  
+                  console.log(
+                    '💾 [API] Salvo increment_id estratto come fallback per prossime volte:',
+                    {
+                      shipment_id: id,
+                      extracted_increment_id: extractedIncrementId,
+                      tracking: trackingNumber,
+                    }
+                  );
+
                   // Salva come shipment_id_external per le prossime volte
                   await supabaseAdmin
                     .from('shipments')
@@ -1289,30 +1515,43 @@ export async function DELETE(request: NextRequest) {
                       updated_at: new Date().toISOString(),
                     })
                     .eq('id', id);
-                  
+
                   console.log('✅ [API] shipment_id_external salvato come fallback');
                 }
               } catch (fallbackError: any) {
-                console.warn('⚠️ [API] Errore salvataggio fallback shipment_id_external:', fallbackError?.message);
+                console.warn(
+                  '⚠️ [API] Errore salvataggio fallback shipment_id_external:',
+                  fallbackError?.message
+                );
                 // Non bloccare il flusso
               }
             }
           } else {
-            const method = (shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN') ? 'increment_id' : 'tracking';
+            const method =
+              shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN' ? 'increment_id' : 'tracking';
             const hasDirectId = !!(shipmentIdExternal && shipmentIdExternal !== 'UNKNOWN');
-            
+
             // ⚠️ CRITICO: Se la cancellazione fallisce e non abbiamo shipment_id_external,
             // la spedizione potrebbe esistere ancora su Spedisci.Online
-            if (!hasDirectId && spedisciOnlineCancelResult.error?.includes('increment_id estratto')) {
-              console.error(`❌ [API] CRITICO: Cancellazione fallita - la spedizione potrebbe esistere ancora su Spedisci.Online!`, {
-                idToCancel,
-                method,
-                error: spedisciOnlineCancelResult.error,
-                action_required: 'Verifica manualmente su Spedisci.Online e cancella se necessario',
-                reason: 'shipment_id_external non disponibile, increment_id estratto dal tracking potrebbe non corrispondere',
-                tracking_number: trackingNumber,
-                suggestion: 'L\'increment_id estratto dal tracking number potrebbe non corrispondere all\'increment_id reale su Spedisci.Online. Verifica manualmente la spedizione su Spedisci.Online usando il tracking number.',
-              });
+            if (
+              !hasDirectId &&
+              spedisciOnlineCancelResult.error?.includes('increment_id estratto')
+            ) {
+              console.error(
+                `❌ [API] CRITICO: Cancellazione fallita - la spedizione potrebbe esistere ancora su Spedisci.Online!`,
+                {
+                  idToCancel,
+                  method,
+                  error: spedisciOnlineCancelResult.error,
+                  action_required:
+                    'Verifica manualmente su Spedisci.Online e cancella se necessario',
+                  reason:
+                    'shipment_id_external non disponibile, increment_id estratto dal tracking potrebbe non corrispondere',
+                  tracking_number: trackingNumber,
+                  suggestion:
+                    "L'increment_id estratto dal tracking number potrebbe non corrispondere all'increment_id reale su Spedisci.Online. Verifica manualmente la spedizione su Spedisci.Online usando il tracking number.",
+                }
+              );
             } else {
               console.warn(`⚠️ [API] Cancellazione per ${method} fallita:`, {
                 idToCancel,
@@ -1342,7 +1581,7 @@ export async function DELETE(request: NextRequest) {
         deleted: true,
         deleted_at: new Date().toISOString(),
         deleted_by_user_id: supabaseUserId,
-        deleted_by_user_email: session.user.email, // ⚠️ NUOVO: Traccia chi ha cancellato
+        deleted_by_user_email: session.actor.email, // ⚠️ NUOVO: Traccia chi ha cancellato
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -1357,17 +1596,25 @@ export async function DELETE(request: NextRequest) {
         hint: error.hint,
         code: error.code,
       });
-      
+
       // Se la spedizione non esiste o è già eliminata
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Spedizione non trovata o già eliminata' }, { status: 404 });
+        return NextResponse.json(
+          { error: 'Spedizione non trovata o già eliminata' },
+          { status: 404 }
+        );
       }
-      
-      throw new Error(`Errore Supabase: ${error.message}${error.details ? ` - ${error.details}` : ''}`);
+
+      throw new Error(
+        `Errore Supabase: ${error.message}${error.details ? ` - ${error.details}` : ''}`
+      );
     }
 
     if (!data) {
-      return NextResponse.json({ error: 'Spedizione non trovata o già eliminata' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Spedizione non trovata o già eliminata' },
+        { status: 404 }
+      );
     }
 
     console.log(`✅ [SUPABASE] Spedizione ${id} eliminata con successo (soft delete)`);
@@ -1375,10 +1622,12 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Spedizione eliminata con successo',
-      spedisciOnline: spedisciOnlineCancelResult ? {
-        cancelled: spedisciOnlineCancelResult.success,
-        message: spedisciOnlineCancelResult.message || spedisciOnlineCancelResult.error,
-      } : null,
+      spedisciOnline: spedisciOnlineCancelResult
+        ? {
+            cancelled: spedisciOnlineCancelResult.success,
+            message: spedisciOnlineCancelResult.message || spedisciOnlineCancelResult.error,
+          }
+        : null,
     });
   } catch (error) {
     const userId = session?.user?.id;

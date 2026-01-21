@@ -20,12 +20,12 @@ Questo documento descrive il sistema di autorizzazione e Acting Context (imperso
 
 ## Quick Reference
 
-| Sezione | Pagina | Link |
-|---------|--------|------|
-| Acting Context | docs/8-SECURITY/AUTHORIZATION.md | [Acting Context](#acting-context-impersonation-system) |
-| Authorization Rules | docs/8-SECURITY/AUTHORIZATION.md | [Rules](#authorization-rules) |
-| Implementation | docs/8-SECURITY/AUTHORIZATION.md | [Implementation](#implementation-files) |
-| Guardrails | docs/8-SECURITY/AUTHORIZATION.md | [Guardrails](#critical-guardrails) |
+| Sezione             | Pagina                           | Link                                                   |
+| ------------------- | -------------------------------- | ------------------------------------------------------ |
+| Acting Context      | docs/8-SECURITY/AUTHORIZATION.md | [Acting Context](#acting-context-impersonation-system) |
+| Authorization Rules | docs/8-SECURITY/AUTHORIZATION.md | [Rules](#authorization-rules)                          |
+| Implementation      | docs/8-SECURITY/AUTHORIZATION.md | [Implementation](#implementation-files)                |
+| Guardrails          | docs/8-SECURITY/AUTHORIZATION.md | [Guardrails](#critical-guardrails)                     |
 
 ## Content
 
@@ -124,17 +124,17 @@ import { isSuperAdmin, hasCapability } from '@/lib/security/rbac';
 
 export async function adminOnlyAction() {
   const context = await requireSafeAuth();
-  
+
   // Verifica ruolo
   if (!isSuperAdmin(context)) {
     throw new Error('FORBIDDEN: SuperAdmin only');
   }
-  
+
   // Verifica capability
   if (!hasCapability(context.target, 'advanced_pricing')) {
     throw new Error('FORBIDDEN: Missing capability');
   }
-  
+
   // Operazione autorizzata
 }
 ```
@@ -150,15 +150,13 @@ import { requireSafeAuth } from '@/lib/safe-auth';
 
 export async function createShipment(data: ShipmentData) {
   const context = await requireSafeAuth();
-  
+
   // Business logic usa SEMPRE context.target.id
-  const { data: shipment } = await supabaseAdmin
-    .from('shipments')
-    .insert({
-      ...data,
-      user_id: context.target.id, // ✅ Target, non actor
-    });
-  
+  const { data: shipment } = await supabaseAdmin.from('shipments').insert({
+    ...data,
+    user_id: context.target.id, // ✅ Target, non actor
+  });
+
   // Audit log registra ENTRAMBI
   await writeAuditLog({
     context,
@@ -167,9 +165,9 @@ export async function createShipment(data: ShipmentData) {
     metadata: {
       actor_id: context.actor.id, // Chi ha fatto l'azione
       target_id: context.target.id, // Per conto di chi
-    }
+    },
   });
-  
+
   return shipment;
 }
 ```
@@ -181,35 +179,38 @@ export async function createShipment(data: ShipmentData) {
 export async function POST(request: Request) {
   const { targetUserId, reason } = await request.json();
   const context = await requireSafeAuth();
-  
+
   // Verifica SUPERADMIN
   if (!isSuperAdmin(context)) {
     return Response.json({ error: 'FORBIDDEN' }, { status: 403 });
   }
-  
+
   // Verifica target
   const { data: target } = await supabaseAdmin
     .from('users')
     .select('id, role')
     .eq('id', targetUserId)
     .single();
-  
+
   if (!target || isSuperAdmin({ target })) {
     return Response.json({ error: 'INVALID_TARGET' }, { status: 400 });
   }
-  
+
   // Crea cookie firmato
   const cookie = createImpersonationCookie({
     actorId: context.target.id,
     targetId: targetUserId,
     expiresAt: Date.now() + 3600 * 1000, // 1 ora
-    reason
+    reason,
   });
-  
+
   // Set cookie
-  return Response.json({ success: true }, {
-    headers: { 'Set-Cookie': cookie }
-  });
+  return Response.json(
+    { success: true },
+    {
+      headers: { 'Set-Cookie': cookie },
+    }
+  );
 }
 ```
 
@@ -217,12 +218,12 @@ export async function POST(request: Request) {
 
 ## Common Issues
 
-| Issue | Soluzione |
-|-------|-----------|
-| Impersonation non funziona | Verifica cookie signature e ruolo SUPERADMIN |
-| Target non trovato | Verifica che utente esista e non sia SUPERADMIN |
-| Cookie scaduto | Cookie ha TTL 3600s, riavvia impersonation |
-| Audit log mancante | Verifica che `writeAuditLog()` sia chiamato con context |
+| Issue                      | Soluzione                                               |
+| -------------------------- | ------------------------------------------------------- |
+| Impersonation non funziona | Verifica cookie signature e ruolo SUPERADMIN            |
+| Target non trovato         | Verifica che utente esista e non sia SUPERADMIN         |
+| Cookie scaduto             | Cookie ha TTL 3600s, riavvia impersonation              |
+| Audit log mancante         | Verifica che `writeAuditLog()` sia chiamato con context |
 
 ---
 
@@ -236,11 +237,12 @@ export async function POST(request: Request) {
 
 ## Changelog
 
-| Date | Version | Changes | Author |
-|------|---------|---------|--------|
-| 2026-01-12 | 1.0.0 | Initial version | AI Agent |
+| Date       | Version | Changes         | Author   |
+| ---------- | ------- | --------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
 
 ---
-*Last Updated: 2026-01-12*  
-*Status: 🟢 Active*  
-*Maintainer: Engineering Team*
+
+_Last Updated: 2026-01-12_  
+_Status: 🟢 Active_  
+_Maintainer: Engineering Team_

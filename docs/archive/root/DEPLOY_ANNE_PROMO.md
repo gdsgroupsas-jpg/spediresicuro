@@ -28,6 +28,7 @@ git push origin main
 ## 🔄 Deploy Automatico Vercel
 
 Se Vercel è collegato al tuo repository GitHub/GitLab:
+
 - ✅ Il deploy partirà **automaticamente** dopo il push
 - ⏱️ Il deploy richiede circa 2-5 minuti
 - 🔔 Riceverai una notifica quando il deploy è completato
@@ -56,6 +57,7 @@ Dopo il deploy, verifica che la sezione sia visibile:
 ## 📍 Posizione Sezione
 
 La sezione Anne è posizionata nella homepage tra:
+
 - **Testimonials Section** (prima)
 - **Anne Promo Section** (nuova sezione)
 - **Final CTA** (dopo)
@@ -63,7 +65,7 @@ La sezione Anne è posizionata nella homepage tra:
 ---
 
 **Nota:** Se hai problemi con git, assicurati che:
+
 - Git sia installato e configurato
 - Il repository remoto sia configurato (`git remote -v`)
 - Tu abbia i permessi per fare push
-

@@ -1,6 +1,6 @@
 /**
  * Features Section
- * 
+ *
  * Sezione che mostra i principali benefici e funzionalità
  */
 
@@ -30,7 +30,8 @@ const features = [
   {
     icon: TrendingUp,
     title: 'Risparmia Tempo',
-    description: 'Riduci del 90% il tempo per creare una spedizione. Più tempo per il tuo business.',
+    description:
+      'Riduci del 90% il tempo per creare una spedizione. Più tempo per il tuo business.',
     color: 'from-green-500 to-emerald-500',
   },
   {
@@ -52,7 +53,7 @@ export default function FeaturesSection() {
     <section className="py-24 bg-white relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#FFD700]/5 via-transparent to-[#00B8D4]/5 pointer-events-none" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16">
@@ -77,7 +78,9 @@ export default function FeaturesSection() {
                 className="group p-8 rounded-2xl border border-gray-100 hover:border-transparent hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50 hover:-translate-y-2"
               >
                 {/* Icon */}
-                <div className={`inline-flex p-4 rounded-xl bg-gradient-to-r ${feature.color} mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+                <div
+                  className={`inline-flex p-4 rounded-xl bg-gradient-to-r ${feature.color} mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}
+                >
                   <Icon className="w-8 h-8 text-white" />
                 </div>
 
@@ -85,9 +88,7 @@ export default function FeaturesSection() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#FF9500] transition-colors">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {feature.description}
-                </p>
+                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
               </div>
             );
           })}
@@ -96,4 +97,3 @@ export default function FeaturesSection() {
     </section>
   );
 }
-

@@ -5,6 +5,7 @@ Guida passo-passo per far funzionare Google OAuth su Vercel quando funziona in l
 ## ⚠️ Problema Comune
 
 Google OAuth funziona in locale ma non online perché:
+
 1. **Redirect URI non configurato** nella Google Console per l'URL di produzione
 2. **Variabili d'ambiente non configurate** su Vercel
 3. **NEXTAUTH_URL non configurato** correttamente
@@ -89,23 +90,17 @@ Se ancora non funziona:
 ## 🆘 Problemi Comuni
 
 ### Errore: "redirect_uri_mismatch"
+
 **Soluzione**: Il redirect URI in Google Console non corrisponde all'URL Vercel. Verifica che sia esattamente uguale.
 
 ### Errore: "invalid_client"
+
 **Soluzione**: GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET non sono configurati correttamente su Vercel.
 
 ### Errore: "NEXTAUTH_URL not set"
+
 **Soluzione**: Aggiungi NEXTAUTH_URL nelle variabili ambiente Vercel con l'URL completo del tuo sito.
 
 ### Login funziona ma redirect non funziona
+
 **Soluzione**: Verifica che trustHost sia true nella configurazione NextAuth (già configurato).
-
-
-
-
-
-
-
-
-
-

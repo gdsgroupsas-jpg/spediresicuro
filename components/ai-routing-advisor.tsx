@@ -1,6 +1,6 @@
 /**
  * AI Routing Advisor Component
- * 
+ *
  * Componente che mostra suggerimenti AI per il routing ottimale
  * basato su reliability score e performance reali
  */
@@ -150,15 +150,11 @@ export default function AIRoutingAdvisor({
 
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
-        <div className="flex-shrink-0 mt-0.5">
-          {getRiskIcon(suggestion.rischioRitardo)}
-        </div>
+        <div className="flex-shrink-0 mt-0.5">{getRiskIcon(suggestion.rischioRitardo)}</div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <Zap className="w-4 h-4" />
-            <h3 className="font-bold text-sm uppercase tracking-wide">
-              Consiglio AI Routing
-            </h3>
+            <h3 className="font-bold text-sm uppercase tracking-wide">Consiglio AI Routing</h3>
           </div>
           <p className="text-sm leading-relaxed">{suggestion.motivo}</p>
         </div>
@@ -220,4 +216,3 @@ export default function AIRoutingAdvisor({
     </div>
   );
 }
-

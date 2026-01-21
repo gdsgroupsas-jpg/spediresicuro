@@ -1,6 +1,6 @@
 /**
  * API Route per Registrazione Utenti
- * 
+ *
  * Gestisce la registrazione di nuovi utenti usando Supabase Auth
  * con conferma email obbligatoria.
  */
@@ -16,7 +16,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, name, accountType } = body;
 
-    console.log('📝 [REGISTER] Tentativo registrazione:', { email, hasPassword: !!password, hasName: !!name });
+    console.log('📝 [REGISTER] Tentativo registrazione:', {
+      email,
+      hasPassword: !!password,
+      hasName: !!name,
+    });
 
     // Validazione input
     if (!email || !password || !name) {
@@ -40,7 +44,9 @@ export async function POST(request: NextRequest) {
     if (!isSupabaseConfigured()) {
       console.error('❌ [REGISTER] Supabase non configurato');
       return NextResponse.json(
-        { error: 'Sistema di registrazione temporaneamente non disponibile. Contatta il supporto.' },
+        {
+          error: 'Sistema di registrazione temporaneamente non disponibile. Contatta il supporto.',
+        },
         { status: 503 }
       );
     }
@@ -51,10 +57,15 @@ export async function POST(request: NextRequest) {
       const existingUser = await findUserByEmail(email);
       if (existingUser) {
         console.log('⚠️ [REGISTER] Utente già esistente nella tabella users:', email);
-        return ApiErrors.CONFLICT('Questa email è già registrata. Usa il login invece della registrazione.');
+        return ApiErrors.CONFLICT(
+          'Questa email è già registrata. Usa il login invece della registrazione.'
+        );
       }
     } catch (checkError: any) {
-      console.warn('⚠️ [REGISTER] Errore verifica utente esistente (non critico):', checkError.message);
+      console.warn(
+        '⚠️ [REGISTER] Errore verifica utente esistente (non critico):',
+        checkError.message
+      );
       // Continua, auth.signUp gestirà il caso "already registered"
     }
 
@@ -64,25 +75,31 @@ export async function POST(request: NextRequest) {
 
     // ⚠️ CRITICO: Usa auth.signUp() (flusso reale) invece di admin.createUser()
     // auth.signUp() invia automaticamente email di conferma se "Enable email confirmations" è ON
-    console.log('➕ [REGISTER] Creazione utente con auth.signUp() (flusso reale, email confirmation automatica)...', { 
-      email, 
-      accountType: validAccountType 
-    });
-    
+    console.log(
+      '➕ [REGISTER] Creazione utente con auth.signUp() (flusso reale, email confirmation automatica)...',
+      {
+        email,
+        accountType: validAccountType,
+      }
+    );
+
     // ⚠️ CRITICO: emailRedirectTo deve puntare a /auth/callback per pulire URL
     // ⚠️ P0 FIX: Forza dominio canonico (produzione) anche in preview per garantire redirect corretto
     // NON usare VERCEL_URL (preview domain) per emailRedirectTo - causa redirect a root invece che callback
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                    (process.env.NODE_ENV === 'production' ? 'https://spediresicuro.vercel.app' : 'http://localhost:3000');
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://spediresicuro.vercel.app'
+        : 'http://localhost:3000');
     const callbackUrl = `${baseUrl}/auth/callback`;
-    
+
     console.log('🔗 [REGISTER] emailRedirectTo configurato:', {
       baseUrl,
       callbackUrl,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
       NODE_ENV: process.env.NODE_ENV,
     });
-    
+
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email.toLowerCase().trim(),
       password: password,
@@ -100,18 +117,22 @@ export async function POST(request: NextRequest) {
         message: signUpError.message,
         status: signUpError.status,
       });
-      
+
       // Gestione errori specifici Supabase
-      if (signUpError.message?.includes('already registered') || 
-          signUpError.message?.includes('already exists') ||
-          signUpError.message?.includes('User already registered')) {
-        return ApiErrors.CONFLICT('Questa email è già registrata. Usa il login invece della registrazione.');
+      if (
+        signUpError.message?.includes('already registered') ||
+        signUpError.message?.includes('already exists') ||
+        signUpError.message?.includes('User already registered')
+      ) {
+        return ApiErrors.CONFLICT(
+          'Questa email è già registrata. Usa il login invece della registrazione.'
+        );
       }
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Errore durante la registrazione. Riprova più tardi.',
-          details: process.env.NODE_ENV === 'development' ? signUpError.message : undefined
+          details: process.env.NODE_ENV === 'development' ? signUpError.message : undefined,
         },
         { status: 500 }
       );
@@ -136,10 +157,15 @@ export async function POST(request: NextRequest) {
     // ⚠️ CRITICO: Verifica che confirmation_sent_at sia valorizzato
     if (!signUpData.user.confirmation_sent_at) {
       console.error('❌ [REGISTER] confirmation_sent_at NON valorizzato dopo signUp!');
-      console.error('   Questo significa che "Enable email confirmations" è OFF o SMTP non configurato');
+      console.error(
+        '   Questo significa che "Enable email confirmations" è OFF o SMTP non configurato'
+      );
       // Non blocchiamo la registrazione, ma loggiamo l'errore
     } else {
-      console.log('✅ [REGISTER] confirmation_sent_at valorizzato:', signUpData.user.confirmation_sent_at);
+      console.log(
+        '✅ [REGISTER] confirmation_sent_at valorizzato:',
+        signUpData.user.confirmation_sent_at
+      );
     }
 
     // Verifica che email_confirmed_at sia NULL (email non confermata)
@@ -151,24 +177,27 @@ export async function POST(request: NextRequest) {
 
     // Aggiorna app_metadata con role e account_type usando admin API
     try {
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        supabaseUserId,
-        {
-          app_metadata: {
-            provider: 'email',
-            role: role,
-            account_type: validAccountType,
-          },
-        }
-      );
-      
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(supabaseUserId, {
+        app_metadata: {
+          provider: 'email',
+          role: role,
+          account_type: validAccountType,
+        },
+      });
+
       if (updateError) {
-        console.warn('⚠️ [REGISTER] Errore aggiornamento app_metadata (non critico):', updateError.message);
+        console.warn(
+          '⚠️ [REGISTER] Errore aggiornamento app_metadata (non critico):',
+          updateError.message
+        );
       } else {
         console.log('✅ [REGISTER] app_metadata aggiornato con role e account_type');
       }
     } catch (updateError: any) {
-      console.warn('⚠️ [REGISTER] Errore aggiornamento app_metadata (non critico):', updateError.message);
+      console.warn(
+        '⚠️ [REGISTER] Errore aggiornamento app_metadata (non critico):',
+        updateError.message
+      );
     }
 
     // Sincronizza con la tabella users (idempotente - upsert)
@@ -197,13 +226,19 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (dbError) {
-        console.warn('⚠️ [REGISTER] Errore sincronizzazione tabella users (non critico):', dbError.message);
+        console.warn(
+          '⚠️ [REGISTER] Errore sincronizzazione tabella users (non critico):',
+          dbError.message
+        );
         // Non blocchiamo la registrazione se la sincronizzazione fallisce
       } else if (dbUser) {
         console.log('✅ [REGISTER] Utente sincronizzato nella tabella users (idempotente)');
       }
     } catch (syncError: any) {
-      console.warn('⚠️ [REGISTER] Errore sincronizzazione tabella users (non critico):', syncError.message);
+      console.warn(
+        '⚠️ [REGISTER] Errore sincronizzazione tabella users (non critico):',
+        syncError.message
+      );
       // Non blocchiamo la registrazione se la sincronizzazione fallisce
     }
 
@@ -229,7 +264,7 @@ export async function POST(request: NextRequest) {
       cause: error.cause,
       originalError: error.originalError,
     });
-    
+
     // Gestione errori specifici
     if (error.message === 'Email già registrata' || error.message?.includes('già registrata')) {
       return NextResponse.json(
@@ -239,7 +274,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Errore Supabase - violazione constraint unique
-    if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint') || error.code === '23505') {
+    if (
+      error.message?.includes('duplicate key') ||
+      error.message?.includes('unique constraint') ||
+      error.code === '23505'
+    ) {
       return NextResponse.json(
         { error: 'Questa email è già registrata. Usa il login invece della registrazione.' },
         { status: 409 }
@@ -247,25 +286,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Errore database non disponibile o Supabase non configurato
-    if (error.message?.includes('EROFS') || error.message?.includes('read-only') || error.message?.includes('Supabase non configurato')) {
+    if (
+      error.message?.includes('EROFS') ||
+      error.message?.includes('read-only') ||
+      error.message?.includes('Supabase non configurato')
+    ) {
       return NextResponse.json(
-        { 
-          error: error.message?.includes('Supabase non configurato') 
+        {
+          error: error.message?.includes('Supabase non configurato')
             ? 'Database non configurato. Contatta il supporto tecnico.'
             : 'Database temporaneamente non disponibile. Riprova tra qualche istante.',
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         },
         { status: 503 }
       );
     }
 
     // Messaggio errore più dettagliato per debug (solo in sviluppo)
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? `Errore durante la registrazione: ${error.message || 'Errore sconosciuto'}`
-      : 'Errore durante la registrazione. Riprova.';
+    const errorMessage =
+      process.env.NODE_ENV === 'development'
+        ? `Errore durante la registrazione: ${error.message || 'Errore sconosciuto'}`
+        : 'Errore durante la registrazione. Riprova.';
 
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
         // In sviluppo, aggiungi dettagli per debug
         ...(process.env.NODE_ENV === 'development' && {
@@ -273,12 +317,10 @@ export async function POST(request: NextRequest) {
             message: error.message,
             code: error.code,
             name: error.name,
-          }
-        })
+          },
+        }),
       },
       { status: 500 }
     );
   }
 }
-
-

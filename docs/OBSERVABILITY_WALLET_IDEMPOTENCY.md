@@ -119,7 +119,7 @@ Tutti i log critici sono emessi in formato JSON per facilitare aggregazione e an
 #### 1. Lock In Progress Bloccati (>5 minuti)
 
 ```sql
-SELECT 
+SELECT
   il.idempotency_key,
   u.email AS user_email,
   il.created_at,
@@ -136,7 +136,7 @@ ORDER BY il.created_at ASC;
 #### 2. Lock Failed (Pagamenti "In Limbo")
 
 ```sql
-SELECT 
+SELECT
   il.idempotency_key,
   u.email AS user_email,
   il.last_error,
@@ -159,7 +159,7 @@ ORDER BY il.created_at DESC;
 #### 3. Dashboard Rapida
 
 ```sql
-SELECT 
+SELECT
   'Lock in_progress' AS metric,
   COUNT(*) AS count,
   COUNT(CASE WHEN created_at < NOW() - INTERVAL '5 minutes' THEN 1 END) AS stuck_5min
@@ -169,7 +169,7 @@ WHERE status = 'in_progress'
 
 UNION ALL
 
-SELECT 
+SELECT
   'Lock failed (last 24h)' AS metric,
   COUNT(*) AS count,
   NULL AS stuck_5min
@@ -196,7 +196,7 @@ Usa aggregazione log (es. CloudWatch, Datadog, ELK) per contare eventi:
 
 ```sql
 -- Metriche aggregate lock per stato
-SELECT 
+SELECT
   status,
   COUNT(*) AS count,
   COUNT(CASE WHEN created_at >= NOW() - INTERVAL '1 hour' THEN 1 END) AS last_hour,
@@ -247,4 +247,3 @@ GROUP BY status;
 
 - Query SQL: `scripts/operational-queries-wallet-idempotency.sql`
 - Log strutturati: `lib/wallet/retry.ts`, `app/api/shipments/create/route.ts`
-

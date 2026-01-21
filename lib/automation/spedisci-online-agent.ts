@@ -1,15 +1,15 @@
 /**
  * Spedisci.Online Automation Agent
- * 
+ *
  * Agent automatico per estrarre e aggiornare:
  * - Session cookies
  * - CSRF tokens
  * - Codici contratto
  * - Dati configurazione
- * 
+ *
  * ⚠️ IMPORTANTE: Questo agent automatizza il TUO account Spedisci.Online.
  * È legale perché stai automatizzando il tuo account personale.
- * 
+ *
  * REQUISITI:
  * - Credenziali Spedisci.Online (username/password)
  * - Accesso email per 2FA
@@ -44,22 +44,22 @@ try {
 export interface AutomationSettings {
   // 2FA Method: 'email' (IMAP) o 'manual' (Microsoft Authenticator)
   two_factor_method: 'email' | 'manual';
-  
+
   // Email 2FA (se two_factor_method = 'email')
   email_2fa?: string;
   imap_server?: string;
   imap_port?: number;
   imap_username?: string;
   imap_password?: string;
-  
+
   // Manual 2FA (se two_factor_method = 'manual')
   // L'agent aspetterà che inserisci OTP manualmente
   manual_otp_callback?: (() => Promise<string>) | null; // Callback per ottenere OTP
-  
+
   // Credenziali Spedisci.Online
   spedisci_online_username: string;
   spedisci_online_password: string;
-  
+
   // Configurazione
   auto_refresh_interval_hours?: number;
   enabled: boolean;
@@ -97,7 +97,7 @@ export class SpedisciOnlineAgent {
 
   /**
    * Estrae session cookie e dati da Spedisci.Online
-   * 
+   *
    * Algoritmo Intelligente Anti-Conflitto:
    * 1. Verifica lock attivo (se utente sta usando, aspetta)
    * 2. Verifica session nel DB (se valida, riusala)
@@ -114,7 +114,10 @@ export class SpedisciOnlineAgent {
    *    j. Rilascia lock
    * 4. Se session valida, ritorna quella
    */
-  async extractSessionData(configId?: string, forceRefresh: boolean = false): Promise<ExtractionResult> {
+  async extractSessionData(
+    configId?: string,
+    forceRefresh: boolean = false
+  ): Promise<ExtractionResult> {
     if (!puppeteer) {
       return {
         success: false,
@@ -125,21 +128,25 @@ export class SpedisciOnlineAgent {
     // ============================================
     // STEP 1: Verifica lock e session esistente
     // ============================================
-    
+
     if (configId) {
       // Verifica lock attivo
       const lockCheck = await this.checkLock(configId);
       if (lockCheck.has_lock) {
         if (lockCheck.lock_type === 'manual') {
           // Utente sta usando manualmente - NON interferire
-          const expiresAt = lockCheck.expires_at ? new Date(lockCheck.expires_at).toLocaleString('it-IT') : 'data sconosciuta';
+          const expiresAt = lockCheck.expires_at
+            ? new Date(lockCheck.expires_at).toLocaleString('it-IT')
+            : 'data sconosciuta';
           return {
             success: false,
             error: `Account in uso manuale. Lock attivo fino alle ${expiresAt}. Attendi o rilascia lock manualmente.`,
           };
         } else if (lockCheck.lock_type === 'agent' && !forceRefresh) {
           // Altro agent sta lavorando - aspetta
-          const expiresAt = lockCheck.expires_at ? new Date(lockCheck.expires_at).toLocaleString('it-IT') : 'data sconosciuta';
+          const expiresAt = lockCheck.expires_at
+            ? new Date(lockCheck.expires_at).toLocaleString('it-IT')
+            : 'data sconosciuta';
           return {
             success: false,
             error: `Altro agent sta lavorando. Lock attivo fino alle ${expiresAt}.`,
@@ -164,7 +171,7 @@ export class SpedisciOnlineAgent {
     // ============================================
     // STEP 2: Acquisisci lock prima di procedere
     // ============================================
-    
+
     let lockId: string | null = null;
     if (configId) {
       try {
@@ -219,33 +226,37 @@ export class SpedisciOnlineAgent {
 
       // Verifica se richiede 2FA
       const needs2FA = await page.evaluate(() => {
-        return document.body.textContent?.includes('codice') || 
-               document.body.textContent?.includes('verifica') ||
-               document.body.textContent?.includes('autenticazione') ||
-               document.querySelector('input[name="code"]') !== null ||
-               document.querySelector('input[name="otp"]') !== null ||
-               document.querySelector('input[type="text"][placeholder*="codice"]') !== null;
+        return (
+          document.body.textContent?.includes('codice') ||
+          document.body.textContent?.includes('verifica') ||
+          document.body.textContent?.includes('autenticazione') ||
+          document.querySelector('input[name="code"]') !== null ||
+          document.querySelector('input[name="otp"]') !== null ||
+          document.querySelector('input[type="text"][placeholder*="codice"]') !== null
+        );
       });
 
       if (needs2FA) {
         console.log('🔐 [AGENT] Rilevato 2FA...');
-        
+
         let code2FA: string | null = null;
-        
+
         // Gestione 2FA in base al metodo configurato
         if (this.settings.two_factor_method === 'email') {
           // Metodo email (IMAP)
           console.log('📧 [AGENT] Leggo codice 2FA da email...');
           code2FA = await this.read2FACode();
-          
+
           if (!code2FA) {
-            throw new Error('Impossibile leggere codice 2FA da email. Verifica configurazione IMAP.');
+            throw new Error(
+              'Impossibile leggere codice 2FA da email. Verifica configurazione IMAP.'
+            );
           }
         } else if (this.settings.two_factor_method === 'manual') {
           // Metodo manuale (Microsoft Authenticator)
           console.log('👤 [AGENT] 2FA manuale richiesto (Microsoft Authenticator)');
           console.log('⏳ [AGENT] In attesa di OTP manuale...');
-          
+
           if (this.settings.manual_otp_callback) {
             // Usa callback se fornito
             code2FA = await this.settings.manual_otp_callback();
@@ -254,7 +265,7 @@ export class SpedisciOnlineAgent {
             // In questo caso, l'agent non può procedere automaticamente
             throw new Error(
               '2FA manuale richiesto. Per automation con Microsoft Authenticator, ' +
-              'usa sync manuale dalla dashboard e inserisci OTP quando richiesto.'
+                'usa sync manuale dalla dashboard e inserisci OTP quando richiesto.'
             );
           }
         } else {
@@ -266,22 +277,26 @@ export class SpedisciOnlineAgent {
         }
 
         // Inserisci codice 2FA
-        const codeInput = await page.$('input[name="code"], input[name="otp"], input[type="text"][placeholder*="codice"]');
+        const codeInput = await page.$(
+          'input[name="code"], input[name="otp"], input[type="text"][placeholder*="codice"]'
+        );
         if (codeInput) {
           await codeInput.type(code2FA);
         } else {
           // Fallback: cerca qualsiasi input di testo
           await page.type('input[type="text"]', code2FA);
         }
-        
+
         // Clicca submit
-        const submitButton = await page.$('button[type="submit"], button:has-text("Verifica"), button:has-text("Conferma")');
+        const submitButton = await page.$(
+          'button[type="submit"], button:has-text("Verifica"), button:has-text("Conferma")'
+        );
         if (submitButton) {
           await submitButton.click();
         } else {
           await page.keyboard.press('Enter');
         }
-        
+
         await page.waitForTimeout(2000);
       }
 
@@ -354,7 +369,6 @@ export class SpedisciOnlineAgent {
         contracts: contracts,
         message: 'Session data estratta con successo',
       };
-
     } catch (error: any) {
       console.error('❌ [AGENT] Errore estrazione:', error);
       return {
@@ -367,7 +381,7 @@ export class SpedisciOnlineAgent {
         await this.releaseLock(configId, lockId);
         console.log('🔓 [AGENT] Lock rilasciato');
       }
-      
+
       if (browser) {
         await browser.close();
       }
@@ -391,7 +405,13 @@ export class SpedisciOnlineAgent {
 
       if (error) {
         console.warn('⚠️ [AGENT] Errore verifica lock:', error);
-        return { has_lock: false, lock_type: null, locked_by: null, expires_at: null, minutes_remaining: null };
+        return {
+          has_lock: false,
+          lock_type: null,
+          locked_by: null,
+          expires_at: null,
+          minutes_remaining: null,
+        };
       }
 
       if (data && data.length > 0) {
@@ -404,10 +424,22 @@ export class SpedisciOnlineAgent {
         };
       }
 
-      return { has_lock: false, lock_type: null, locked_by: null, expires_at: null, minutes_remaining: null };
+      return {
+        has_lock: false,
+        lock_type: null,
+        locked_by: null,
+        expires_at: null,
+        minutes_remaining: null,
+      };
     } catch (error: any) {
       console.warn('⚠️ [AGENT] Errore check lock:', error);
-      return { has_lock: false, lock_type: null, locked_by: null, expires_at: null, minutes_remaining: null };
+      return {
+        has_lock: false,
+        lock_type: null,
+        locked_by: null,
+        expires_at: null,
+        minutes_remaining: null,
+      };
     }
   }
 
@@ -594,7 +626,8 @@ export class SpedisciOnlineAgent {
       const pageData = await page.evaluate(() => {
         return {
           client_id: (document.querySelector('[data-client-id]') as HTMLElement)?.dataset.clientId,
-          vector_contract_id: (document.querySelector('[data-vector-contract-id]') as HTMLElement)?.dataset.vectorContractId,
+          vector_contract_id: (document.querySelector('[data-vector-contract-id]') as HTMLElement)
+            ?.dataset.vectorContractId,
         };
       });
 
@@ -651,7 +684,10 @@ export async function updateCourierConfigWithSessionData(
 /**
  * Esegue sync automatico per una configurazione
  */
-export async function syncCourierConfig(configId: string, forceRefresh: boolean = false): Promise<ExtractionResult> {
+export async function syncCourierConfig(
+  configId: string,
+  forceRefresh: boolean = false
+): Promise<ExtractionResult> {
   try {
     // 1. Recupera configurazione
     const { data: config, error } = await supabaseAdmin
@@ -682,16 +718,14 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
     // ============================================
     // 🔓 DECRITTAZIONE PASSWORD (SICUREZZA CRITICA)
     // ============================================
-    
+
     const settings: AutomationSettings = { ...rawSettings };
-    
+
     // Decripta password se criptate
     if (config.automation_encrypted) {
       if (settings.spedisci_online_password) {
         try {
-          settings.spedisci_online_password = decryptCredential(
-            settings.spedisci_online_password
-          );
+          settings.spedisci_online_password = decryptCredential(settings.spedisci_online_password);
         } catch (error) {
           console.error('❌ Errore decriptazione password Spedisci.Online:', error);
           return {
@@ -700,7 +734,7 @@ export async function syncCourierConfig(configId: string, forceRefresh: boolean 
           };
         }
       }
-      
+
       if (settings.imap_password) {
         try {
           settings.imap_password = decryptCredential(settings.imap_password);
@@ -772,18 +806,12 @@ export async function syncAllEnabledConfigs(): Promise<void> {
       try {
         await syncCourierConfig(config.id);
         // P1-3: evita log di UUID completi
-        console.log(
-          `✅ [SYNC] Config ${String(config.id).slice(0, 8)}... sincronizzata`
-        );
+        console.log(`✅ [SYNC] Config ${String(config.id).slice(0, 8)}... sincronizzata`);
       } catch (error: any) {
-        console.error(
-          `❌ [SYNC] Errore sync config ${String(config.id).slice(0, 8)}...:`,
-          error
-        );
+        console.error(`❌ [SYNC] Errore sync config ${String(config.id).slice(0, 8)}...:`, error);
       }
     }
   } catch (error: any) {
     console.error('❌ [SYNC] Errore sync globale:', error);
   }
 }
-

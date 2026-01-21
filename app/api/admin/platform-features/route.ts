@@ -1,6 +1,6 @@
 /**
  * API Route: Gestione Platform Features (Superadmin)
- * 
+ *
  * GET: Lista tutte le platform features
  * POST: Aggiorna una platform feature (solo superadmin)
  */
@@ -13,7 +13,9 @@ import { ApiErrors, handleApiError } from '@/lib/api-responses';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione e permessi admin
-    const adminAuth = await requireAdminRole('Accesso negato. Solo gli admin possono gestire le features della piattaforma.');
+    const adminAuth = await requireAdminRole(
+      'Accesso negato. Solo gli admin possono gestire le features della piattaforma.'
+    );
     if (!adminAuth.authorized) return adminAuth.response;
 
     // 2. Carica tutte le platform features
@@ -43,7 +45,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 1. Verifica autenticazione e permessi admin
-    const adminAuth = await requireAdminRole('Accesso negato. Solo gli admin possono modificare le features della piattaforma.');
+    const adminAuth = await requireAdminRole(
+      'Accesso negato. Solo gli admin possono modificare le features della piattaforma.'
+    );
     if (!adminAuth.authorized) return adminAuth.response;
 
     // 2. Leggi body della richiesta
@@ -99,9 +103,3 @@ export async function POST(request: NextRequest) {
     return handleApiError(error, 'POST /api/admin/platform-features');
   }
 }
-
-
-
-
-
-

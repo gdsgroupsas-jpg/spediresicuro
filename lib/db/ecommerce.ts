@@ -152,10 +152,7 @@ export async function getOrdersToFulfill(integrationId: string) {
 /**
  * Collega ordine e-commerce a spedizione
  */
-export async function linkOrderToShipment(
-  orderId: string,
-  shipmentId: string
-): Promise<void> {
+export async function linkOrderToShipment(orderId: string, shipmentId: string): Promise<void> {
   const { error } = await supabase
     .from('ecommerce_orders')
     .update({ shipment_id: shipmentId })
@@ -181,10 +178,7 @@ export async function updateOrderStatus(
     updates.fulfillment_status = fulfillmentStatus;
   }
 
-  const { error } = await supabase
-    .from('ecommerce_orders')
-    .update(updates)
-    .eq('id', orderId);
+  const { error } = await supabase.from('ecommerce_orders').update(updates).eq('id', orderId);
 
   if (error) {
     console.error('Error updating order status:', error);
@@ -209,7 +203,7 @@ export async function getSyncStats(userId: string, period: 'today' | 'week' | 'm
 
   // Ottieni integrazioni dell'utente
   const integrations = await getUserIntegrations(userId);
-  const integrationIds = integrations.map(i => i.id);
+  const integrationIds = integrations.map((i) => i.id);
 
   if (integrationIds.length === 0) {
     return {
@@ -238,8 +232,10 @@ export async function getSyncStats(userId: string, period: 'today' | 'week' | 'm
 
   const stats = {
     total_orders: data.length,
-    orders_fulfilled: data.filter(o => o.shipment_id !== null).length,
-    orders_pending: data.filter(o => o.shipment_id === null && ['pending', 'processing'].includes(o.status)).length,
+    orders_fulfilled: data.filter((o) => o.shipment_id !== null).length,
+    orders_pending: data.filter(
+      (o) => o.shipment_id === null && ['pending', 'processing'].includes(o.status)
+    ).length,
     total_revenue: data.reduce((sum, o) => sum + (parseFloat(o.total as any) || 0), 0),
   };
 

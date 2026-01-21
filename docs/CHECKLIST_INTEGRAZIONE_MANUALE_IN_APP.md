@@ -30,6 +30,7 @@
 **File da creare:** `app/dashboard/manuale/page.tsx`
 
 **Requisiti:**
+
 - Server Component (async)
 - Legge `docs/MANUALE_UTENTE_RESELLER_V1.md`
 - Usa `react-markdown` con stili dashboard
@@ -37,6 +38,7 @@
 - Protezione automatica via `app/dashboard/layout.tsx`
 
 **Template base:**
+
 ```typescript
 import fs from 'fs/promises';
 import path from 'path';
@@ -87,6 +89,7 @@ export default async function ManualeDashboardPage() {
 ```
 
 **Stili Markdown per Dashboard:**
+
 - Background bianco (non dark)
 - Testo grigio scuro (non bianco)
 - Link arancioni (`#FF9500`)
@@ -101,6 +104,7 @@ export default async function ManualeDashboardPage() {
 **File da modificare:** `lib/config/navigationConfig.ts`
 
 **Modifica necessaria:**
+
 ```typescript
 const supportSection: NavSection = {
   id: 'support',
@@ -129,6 +133,7 @@ const supportSection: NavSection = {
 **File da modificare:** `app/manuale/page.tsx`
 
 **Modifica:**
+
 ```typescript
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth-config';
@@ -136,12 +141,12 @@ import { auth } from '@/lib/auth-config';
 export default async function ManualePage() {
   // Verifica autenticazione
   const session = await auth();
-  
+
   if (session) {
     // Se autenticato, redirect a versione protetta
     redirect('/dashboard/manuale');
   }
-  
+
   // Se non autenticato, mostra versione pubblica (opzionale)
   // OPPURE redirect a login
   redirect('/login?callbackUrl=/dashboard/manuale');
@@ -153,6 +158,7 @@ export default async function ManualePage() {
 **File da modificare:** `app/manuale/page.tsx`
 
 **Modifica:**
+
 ```typescript
 import { notFound } from 'next/navigation';
 
@@ -167,6 +173,7 @@ export default async function ManualePage() {
 **File da modificare:** `app/manuale/page.tsx`
 
 **Modifica path:**
+
 ```typescript
 async function getManualContent(): Promise<string> {
   try {
@@ -188,9 +195,11 @@ async function getManualContent(): Promise<string> {
 **File da modificare:** `middleware.ts`
 
 **Se si sceglie Opzione B (404):**
+
 - Rimuovere `/manuale` da `PUBLIC_ROUTES` (linea ~44)
 
 **Se si sceglie Opzione A (redirect):**
+
 - Mantenere `/manuale` in `PUBLIC_ROUTES` (per permettere redirect)
 
 ---
@@ -314,11 +323,13 @@ const markdownComponents: Components = {
 **URL:** `/dashboard/manuale`
 
 **Protezione:**
+
 - ✅ Automatica via `app/dashboard/layout.tsx`
 - ✅ Richiede autenticazione
 - ✅ Richiede dati cliente completati (via middleware)
 
 **Accesso:**
+
 - Sidebar → Sezione "Supporto" → "Manuale Utente"
 - URL diretto (se autenticato)
 
@@ -327,10 +338,12 @@ const markdownComponents: Components = {
 **URL:** `/manuale`
 
 **Comportamento consigliato:**
+
 - Se autenticato → redirect a `/dashboard/manuale`
 - Se non autenticato → redirect a `/login?callbackUrl=/dashboard/manuale`
 
 **Alternativa:**
+
 - 404 Not Found (disabilita completamente)
 
 ---
@@ -401,4 +414,3 @@ Vedi file separato: `app/dashboard/manuale/page.tsx` (da creare)
 ---
 
 **Fine Checklist**
-

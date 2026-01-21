@@ -99,7 +99,15 @@ async function getShipmentMetrics(supabase: ReturnType<typeof getSupabaseAdmin>)
   const dates = getDateBoundaries();
 
   // Use RPC for efficient aggregation, or multiple count queries
-  const [totalResult, todayResult, weekResult, monthResult, statusResult, deliveredResult, costResult] = await Promise.all([
+  const [
+    totalResult,
+    todayResult,
+    weekResult,
+    monthResult,
+    statusResult,
+    deliveredResult,
+    costResult,
+  ] = await Promise.all([
     // Total count
     supabase
       .from('shipments')
@@ -169,10 +177,7 @@ async function getShipmentMetrics(supabase: ReturnType<typeof getSupabaseAdmin>)
 
   // Calculate success rate and average cost
   const successRate = total > 0 ? deliveredCount / total : 0;
-  const totalCost = (costResult.data || []).reduce(
-    (sum, s) => sum + (s.final_price || 0),
-    0
-  );
+  const totalCost = (costResult.data || []).reduce((sum, s) => sum + (s.final_price || 0), 0);
   const averageCost = total > 0 ? totalCost / total : 0;
 
   return {
@@ -269,66 +274,67 @@ async function getRevenueMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) 
 async function getUserMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const dates = getDateBoundaries();
 
-  const [totalResult, active30dResult, newTodayResult, newWeekResult, newMonthResult] = await Promise.all([
-    // Total users (excluding test users)
-    supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .not('email', 'like', 'test@%')
-      .not('email', 'like', 'test-%@%')
-      .not('email', 'ilike', '%@test.%')
-      .not('email', 'like', 'e2e-%@%')
-      .not('email', 'like', 'smoke-test-%@%')
-      .not('email', 'like', 'integration-test-%@%'),
+  const [totalResult, active30dResult, newTodayResult, newWeekResult, newMonthResult] =
+    await Promise.all([
+      // Total users (excluding test users)
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .not('email', 'like', 'test@%')
+        .not('email', 'like', 'test-%@%')
+        .not('email', 'ilike', '%@test.%')
+        .not('email', 'like', 'e2e-%@%')
+        .not('email', 'like', 'smoke-test-%@%')
+        .not('email', 'like', 'integration-test-%@%'),
 
-    // Active users (logged in within 30 days)
-    supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .gte('last_login_at', dates.active30dStart)
-      .not('email', 'like', 'test@%')
-      .not('email', 'like', 'test-%@%')
-      .not('email', 'ilike', '%@test.%')
-      .not('email', 'like', 'e2e-%@%')
-      .not('email', 'like', 'smoke-test-%@%')
-      .not('email', 'like', 'integration-test-%@%'),
+      // Active users (logged in within 30 days)
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('last_login_at', dates.active30dStart)
+        .not('email', 'like', 'test@%')
+        .not('email', 'like', 'test-%@%')
+        .not('email', 'ilike', '%@test.%')
+        .not('email', 'like', 'e2e-%@%')
+        .not('email', 'like', 'smoke-test-%@%')
+        .not('email', 'like', 'integration-test-%@%'),
 
-    // New today
-    supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', dates.todayStart)
-      .not('email', 'like', 'test@%')
-      .not('email', 'like', 'test-%@%')
-      .not('email', 'ilike', '%@test.%')
-      .not('email', 'like', 'e2e-%@%')
-      .not('email', 'like', 'smoke-test-%@%')
-      .not('email', 'like', 'integration-test-%@%'),
+      // New today
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', dates.todayStart)
+        .not('email', 'like', 'test@%')
+        .not('email', 'like', 'test-%@%')
+        .not('email', 'ilike', '%@test.%')
+        .not('email', 'like', 'e2e-%@%')
+        .not('email', 'like', 'smoke-test-%@%')
+        .not('email', 'like', 'integration-test-%@%'),
 
-    // New this week
-    supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', dates.weekStart)
-      .not('email', 'like', 'test@%')
-      .not('email', 'like', 'test-%@%')
-      .not('email', 'ilike', '%@test.%')
-      .not('email', 'like', 'e2e-%@%')
-      .not('email', 'like', 'smoke-test-%@%')
-      .not('email', 'like', 'integration-test-%@%'),
+      // New this week
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', dates.weekStart)
+        .not('email', 'like', 'test@%')
+        .not('email', 'like', 'test-%@%')
+        .not('email', 'ilike', '%@test.%')
+        .not('email', 'like', 'e2e-%@%')
+        .not('email', 'like', 'smoke-test-%@%')
+        .not('email', 'like', 'integration-test-%@%'),
 
-    // New this month
-    supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', dates.monthStart)
-      .not('email', 'like', 'test@%')
-      .not('email', 'like', 'test-%@%')
-      .not('email', 'ilike', '%@test.%')
-      .not('email', 'like', 'e2e-%@%')
-      .not('email', 'like', 'smoke-test-%@%')
-      .not('email', 'like', 'integration-test-%@%'),
-  ]);
+      // New this month
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', dates.monthStart)
+        .not('email', 'like', 'test@%')
+        .not('email', 'like', 'test-%@%')
+        .not('email', 'ilike', '%@test.%')
+        .not('email', 'like', 'e2e-%@%')
+        .not('email', 'like', 'smoke-test-%@%')
+        .not('email', 'like', 'integration-test-%@%'),
+    ]);
 
   return {
     total: totalResult.count || 0,
@@ -354,10 +360,7 @@ async function getWalletMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
     console.error('Error fetching wallet balance:', balanceError);
   }
 
-  const totalBalance = (balanceData || []).reduce(
-    (sum, u) => sum + (u.wallet_balance || 0),
-    0
-  );
+  const totalBalance = (balanceData || []).reduce((sum, u) => sum + (u.wallet_balance || 0), 0);
 
   // Get wallet transactions
   const { data: transactions, error: txError } = await supabase
@@ -378,9 +381,7 @@ async function getWalletMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   }
 
   // Today's transactions
-  const transactionsToday = validTx.filter(
-    (t) => t.created_at >= dates.todayStart
-  ).length;
+  const transactionsToday = validTx.filter((t) => t.created_at >= dates.todayStart).length;
 
   // Get pending top-ups
   const { data: topups, error: topupError } = await supabase
@@ -403,8 +404,7 @@ async function getWalletMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const approvedTopups = allTopups.filter((t) => t.status === 'approved');
   const avgAmount =
     approvedTopups.length > 0
-      ? approvedTopups.reduce((sum, t) => sum + (t.amount || 0), 0) /
-        approvedTopups.length
+      ? approvedTopups.reduce((sum, t) => sum + (t.amount || 0), 0) / approvedTopups.length
       : 0;
 
   return {
@@ -463,35 +463,31 @@ export async function getQuickStats(): Promise<{
   const dates = getDateBoundaries();
 
   // Parallel queries for quick stats
-  const [shipmentResult, revenueResult, topupResult, userResult] =
-    await Promise.all([
-      supabase
-        .from('shipments')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', dates.todayStart)
-        .eq('deleted', false),
+  const [shipmentResult, revenueResult, topupResult, userResult] = await Promise.all([
+    supabase
+      .from('shipments')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', dates.todayStart)
+      .eq('deleted', false),
 
-      supabase
-        .from('shipments')
-        .select('final_price')
-        .gte('created_at', dates.todayStart)
-        .eq('deleted', false),
+    supabase
+      .from('shipments')
+      .select('final_price')
+      .gte('created_at', dates.todayStart)
+      .eq('deleted', false),
 
-      supabase
-        .from('top_up_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending'),
+    supabase
+      .from('top_up_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
 
-      supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .gte('last_login_at', dates.active30dStart),
-    ]);
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .gte('last_login_at', dates.active30dStart),
+  ]);
 
-  const revenueToday = (revenueResult.data || []).reduce(
-    (sum, s) => sum + (s.final_price || 0),
-    0
-  );
+  const revenueToday = (revenueResult.data || []).reduce((sum, s) => sum + (s.final_price || 0), 0);
 
   return {
     shipmentsToday: shipmentResult.count || 0,

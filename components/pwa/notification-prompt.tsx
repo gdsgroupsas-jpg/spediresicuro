@@ -7,7 +7,8 @@ import useServiceWorker from '@/lib/hooks/use-service-worker';
 const NOTIFICATION_PROMPT_DISMISSED_KEY = 'notificationPromptDismissed';
 
 export function NotificationPrompt() {
-  const { status, requestNotificationPermission, unsubscribeFromNotifications } = useServiceWorker();
+  const { status, requestNotificationPermission, unsubscribeFromNotifications } =
+    useServiceWorker();
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
@@ -16,7 +17,7 @@ export function NotificationPrompt() {
 
     // Controlla se l'utente ha già rifiutato il prompt
     const wasDismissed = localStorage.getItem(NOTIFICATION_PROMPT_DISMISSED_KEY) === 'true';
-    
+
     // Mostra il prompt solo se:
     // 1. Le notifiche sono supportate
     // 2. Non sono ancora abilitate
@@ -68,13 +69,14 @@ export function NotificationPrompt() {
         <div className="mt-1">
           <Bell className="w-5 h-5 text-[#FF9500]" />
         </div>
-        
+
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900">Abilita Notifiche</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Ricevi aggiornamenti sulle tue spedizioni, messaggi di Anne e avvisi importanti in tempo reale.
+            Ricevi aggiornamenti sulle tue spedizioni, messaggi di Anne e avvisi importanti in tempo
+            reale.
           </p>
-          
+
           <div className="flex gap-2 mt-4">
             <button
               onClick={handleEnable}

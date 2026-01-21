@@ -1,6 +1,6 @@
 /**
  * Componente: Confronto Contratti per Reseller
- * 
+ *
  * Mostra tutti i contratti disponibili (API Reseller e API Master)
  * con prezzi comparativi e permette selezione manuale
  */
@@ -106,7 +106,14 @@ export default function ContractComparison({
     // Debounce: aspetta 500ms prima di calcolare
     const timeoutId = setTimeout(fetchComparison, 500);
     return () => clearTimeout(timeoutId);
-  }, [weight, destination.zip, destination.province, courierId, serviceType, JSON.stringify(options)]);
+  }, [
+    weight,
+    destination.zip,
+    destination.province,
+    courierId,
+    serviceType,
+    JSON.stringify(options),
+  ]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('it-IT', {
@@ -154,7 +161,15 @@ export default function ContractComparison({
         </p>
         {bestSource && bestPrice && (
           <div className="text-sm text-gray-600 mb-3">
-            💡 Miglior prezzo: <span className="font-semibold text-green-600">{formatPrice(bestPrice)}</span> con <span className="font-medium">{bestSource === 'reseller' ? 'API Reseller' : bestSource === 'master' ? 'API Master' : 'Contratto Standard'}</span>
+            💡 Miglior prezzo:{' '}
+            <span className="font-semibold text-green-600">{formatPrice(bestPrice)}</span> con{' '}
+            <span className="font-medium">
+              {bestSource === 'reseller'
+                ? 'API Reseller'
+                : bestSource === 'master'
+                  ? 'API Master'
+                  : 'Contratto Standard'}
+            </span>
           </div>
         )}
       </div>
@@ -173,8 +188,8 @@ export default function ContractComparison({
                 isSelected
                   ? 'border-orange-500 bg-orange-50 shadow-md'
                   : isBest
-                  ? 'border-green-300 bg-green-50 hover:border-green-400'
-                  : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                    ? 'border-green-300 bg-green-50 hover:border-green-400'
+                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
               }`}
             >
               <div className="flex items-start justify-between mb-2">

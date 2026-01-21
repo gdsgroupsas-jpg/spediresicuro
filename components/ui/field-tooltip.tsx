@@ -1,6 +1,6 @@
 /**
  * Componente Tooltip per Campi Form
- * 
+ *
  * Mostra un tooltip automatico quando l'utente passa il mouse sul campo
  */
 
@@ -15,11 +15,7 @@ interface FieldTooltipProps {
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export default function FieldTooltip({ 
-  content, 
-  children, 
-  position = 'top' 
-}: FieldTooltipProps) {
+export default function FieldTooltip({ content, children, position = 'top' }: FieldTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   const positionClasses = {
@@ -30,13 +26,13 @@ export default function FieldTooltip({
   };
 
   return (
-    <div 
+    <div
       className="relative inline-block"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
-      
+
       {isVisible && (
         <div
           className={`absolute z-50 ${positionClasses[position]} w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl pointer-events-none`}
@@ -51,10 +47,10 @@ export default function FieldTooltip({
               position === 'top'
                 ? 'top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900'
                 : position === 'bottom'
-                ? 'bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900'
-                : position === 'left'
-                ? 'left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900'
-                : 'right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900'
+                  ? 'bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900'
+                  : position === 'left'
+                    ? 'left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900'
+                    : 'right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900'
             }`}
           />
         </div>
@@ -62,13 +58,3 @@ export default function FieldTooltip({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-

@@ -1,5 +1,5 @@
-import Header from '@/components/header'
-import Footer from '@/components/footer'
+import Header from '@/components/header';
+import Footer from '@/components/footer';
 
 export default function ContattiPage() {
   return (
@@ -28,15 +28,5 @@ export default function ContattiPage() {
       </main>
       <Footer />
     </>
-  )
+  );
 }
-
-
-
-
-
-
-
-
-
-

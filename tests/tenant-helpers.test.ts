@@ -1,6 +1,6 @@
 /**
  * Test per Tenant Helpers
- * 
+ *
  * Verifica funzionamento sistema tenant_id con fallback
  */
 
@@ -166,10 +166,7 @@ describe('Tenant Helpers', () => {
       (supabaseAdmin.from as any).mockReturnValue({
         select: vi.fn(() => ({
           or: vi.fn().mockResolvedValue({
-            data: [
-              { id: 'user-1' },
-              { id: 'user-2' },
-            ],
+            data: [{ id: 'user-1' }, { id: 'user-2' }],
             error: null,
           }),
         })),

@@ -1,6 +1,6 @@
 /**
  * AI Provider Adapter
- * 
+ *
  * Astrazione per supportare multiple AI providers (Anthropic, DeepSeek, etc.)
  * Pattern Adapter per isolare la logica specifica di ogni provider
  */
@@ -61,14 +61,14 @@ export class AnthropicClient implements AIClient {
   }): Promise<AIResponse> {
     // Converte messaggi nel formato Anthropic
     const anthropicMessages = params.messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content,
       }));
 
     // Formatta tools per Anthropic
-    const anthropicTools = params.tools?.map(tool => ({
+    const anthropicTools = params.tools?.map((tool) => ({
       name: tool.name,
       description: tool.description,
       input_schema: tool.input_schema,
@@ -127,7 +127,7 @@ export class DeepSeekClient implements AIClient {
     maxTokens?: number;
   }): Promise<AIResponse> {
     // DeepSeek usa formato OpenAI-compatible
-    const openaiMessages = params.messages.map(m => ({
+    const openaiMessages = params.messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
@@ -141,7 +141,7 @@ export class DeepSeekClient implements AIClient {
     }
 
     // Formatta tools per OpenAI format (DeepSeek compatibile)
-    const openaiTools = params.tools?.map(tool => ({
+    const openaiTools = params.tools?.map((tool) => ({
       type: 'function' as const,
       function: {
         name: tool.name,
@@ -154,7 +154,7 @@ export class DeepSeekClient implements AIClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
         model: params.model || 'deepseek-chat',
@@ -256,14 +256,14 @@ export class GeminiClient implements AIClient {
     // Converte messaggi per Gemini
     // Gemini usa formato: contents array con role e parts
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-    
+
     // Converte messaggi conversazione (escludi system, gestito via systemInstruction)
     for (const msg of params.messages) {
       if (msg.role === 'system') {
         // System già gestito via systemInstruction
         continue;
       }
-      
+
       // Gemini usa 'user' e 'model' (non 'assistant')
       const geminiRole = msg.role === 'user' ? 'user' : 'model';
       contents.push({
@@ -273,17 +273,22 @@ export class GeminiClient implements AIClient {
     }
 
     // Formatta tools per Gemini (Function Calling)
-    const tools = params.tools && params.tools.length > 0 ? [{
-      functionDeclarations: params.tools.map(tool => ({
-        name: tool.name,
-        description: tool.description,
-        parameters: {
-          type: SchemaType.OBJECT,
-          properties: tool.input_schema.properties || {},
-          required: tool.input_schema.required || [],
-        },
-      })),
-    }] : undefined;
+    const tools =
+      params.tools && params.tools.length > 0
+        ? [
+            {
+              functionDeclarations: params.tools.map((tool) => ({
+                name: tool.name,
+                description: tool.description,
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: tool.input_schema.properties || {},
+                  required: tool.input_schema.required || [],
+                },
+              })),
+            },
+          ]
+        : undefined;
 
     try {
       const result = await genModel.generateContent({
@@ -304,7 +309,7 @@ export class GeminiClient implements AIClient {
 
       // Estrae tool calls se presenti
       const toolCalls: Array<{ name: string; arguments: any }> = [];
-      
+
       // functionCalls() è una funzione che ritorna FunctionCall[]
       const functionCalls = response.functionCalls();
       if (functionCalls && functionCalls.length > 0) {
@@ -360,7 +365,7 @@ export async function getConfiguredAIProvider(): Promise<{
   model: AIModel;
 }> {
   const { supabaseAdmin } = await import('@/lib/db/client');
-  
+
   const { data, error } = await supabaseAdmin
     .from('system_settings')
     .select('setting_value')
@@ -377,7 +382,7 @@ export async function getConfiguredAIProvider(): Promise<{
 
   const value = data.setting_value as any;
   const provider = (value.provider || 'anthropic') as AIProvider;
-  
+
   // Determina model default basato su provider
   let defaultModel: string;
   switch (provider) {
@@ -390,7 +395,7 @@ export async function getConfiguredAIProvider(): Promise<{
     default:
       defaultModel = 'claude-3-haiku-20240307';
   }
-  
+
   return {
     provider,
     model: value.model || defaultModel,
@@ -412,4 +417,3 @@ export function getAPIKeyForProvider(provider: AIProvider): string | undefined {
       return undefined;
   }
 }
-

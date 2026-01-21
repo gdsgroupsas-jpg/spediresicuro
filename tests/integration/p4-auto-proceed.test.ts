@@ -1,6 +1,6 @@
 /**
  * Integration Tests: Auto-Proceed End-to-End (P4 Task 2)
- * 
+ *
  * Test end-to-end per verificare che auto-proceed funzioni correttamente
  * nel flusso completo supervisor-router -> supervisor -> response.
  */
@@ -94,7 +94,8 @@ describe('Auto-Proceed Integration (P4 Task 2)', () => {
   });
 
   it('dovrebbe includere agentState con suggestProceed se confidence 70-85%', async () => {
-    const { createPricingGraphWithCheckpointer } = await import('@/lib/agent/orchestrator/pricing-graph');
+    const { createPricingGraphWithCheckpointer } =
+      await import('@/lib/agent/orchestrator/pricing-graph');
     vi.mocked(createPricingGraphWithCheckpointer).mockReturnValue({
       invoke: vi.fn().mockResolvedValue({
         messages: [],
@@ -134,7 +135,8 @@ describe('Auto-Proceed Integration (P4 Task 2)', () => {
   });
 
   it('NON dovrebbe includere autoProceed se confidence < 70%', async () => {
-    const { createPricingGraphWithCheckpointer } = await import('@/lib/agent/orchestrator/pricing-graph');
+    const { createPricingGraphWithCheckpointer } =
+      await import('@/lib/agent/orchestrator/pricing-graph');
     vi.mocked(createPricingGraphWithCheckpointer).mockReturnValue({
       invoke: vi.fn().mockResolvedValue({
         messages: [],
@@ -171,4 +173,3 @@ describe('Auto-Proceed Integration (P4 Task 2)', () => {
     expect(result.agentState?.suggestProceed).toBeUndefined();
   });
 });
-

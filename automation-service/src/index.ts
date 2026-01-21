@@ -1,6 +1,6 @@
 /**
  * Automation Service per Spedisci.Online
- * 
+ *
  * Servizio Express standalone per Railway
  * Gestisce automation browser con Puppeteer
  */
@@ -38,21 +38,27 @@ const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 console.log('🔍 Debug Supabase Config:');
-console.log('  - SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NON CONFIGURATO');
+console.log(
+  '  - SUPABASE_URL:',
+  supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NON CONFIGURATO'
+);
 console.log('  - SERVICE_ROLE_KEY:', supabaseServiceKey ? 'CONFIGURATO' : 'NON CONFIGURATO');
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('⚠️ SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurati per diagnostics');
+  console.warn(
+    '⚠️ SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurati per diagnostics'
+  );
 }
 
-const supabaseAdmin = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null;
+const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    : null;
 
 // ============================================
 // RATE LIMITING
@@ -101,7 +107,7 @@ function sanitizeContext(obj: any): any {
 
   // Se è un array, sanitizza ogni elemento
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeContext(item));
+    return obj.map((item) => sanitizeContext(item));
   }
 
   // Se è un oggetto, sanitizza ricorsivamente
@@ -110,7 +116,7 @@ function sanitizeContext(obj: any): any {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         const value = obj[key];
-        
+
         // Se il valore è una stringa, controlla se è email o telefono
         if (typeof value === 'string') {
           // Pattern per email: qualcosa@qualcosa.qualcosa
@@ -118,9 +124,7 @@ function sanitizeContext(obj: any): any {
           if (emailPattern.test(value)) {
             // Maschera email: a***@b.com
             const [localPart, domain] = value.split('@');
-            const maskedLocal = localPart.length > 0 
-              ? `${localPart[0]}***` 
-              : '***';
+            const maskedLocal = localPart.length > 0 ? `${localPart[0]}***` : '***';
             sanitized[key] = `${maskedLocal}@${domain}`;
             continue;
           }
@@ -149,10 +153,10 @@ function sanitizeContext(obj: any): any {
 
 // Health check endpoint (info limitate per sicurezza)
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     service: 'automation-service',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
     // Rimossa uptime per non esporre info sistema
   });
 });
@@ -161,32 +165,34 @@ app.get('/health', (req: Request, res: Response) => {
 app.post('/api/sync', syncLimiter, async (req: Request, res: Response) => {
   try {
     const { config_id, sync_all, force_refresh, otp } = req.body;
-    
+
     // Log sanitizzato (non espone UUID completo per sicurezza)
     const configIdShort = config_id ? `${config_id.substring(0, 8)}...` : null;
-    console.log('🔄 [AUTOMATION] Richiesta sync ricevuta:', { 
-      config_id: configIdShort, 
-      sync_all, 
-      force_refresh 
+    console.log('🔄 [AUTOMATION] Richiesta sync ricevuta:', {
+      config_id: configIdShort,
+      sync_all,
+      force_refresh,
     });
 
     // Verifica autenticazione (OBBLIGATORIA per sicurezza)
     const authToken = req.headers.authorization;
     const expectedToken = process.env.AUTOMATION_SERVICE_TOKEN;
-    
+
     if (!expectedToken) {
-      console.error('❌ [AUTOMATION] AUTOMATION_SERVICE_TOKEN non configurato - Rischio sicurezza!');
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Configurazione sicurezza mancante' 
+      console.error(
+        '❌ [AUTOMATION] AUTOMATION_SERVICE_TOKEN non configurato - Rischio sicurezza!'
+      );
+      return res.status(500).json({
+        success: false,
+        error: 'Configurazione sicurezza mancante',
       });
     }
-    
+
     if (authToken !== `Bearer ${expectedToken}`) {
       console.warn('⚠️ [AUTOMATION] Tentativo accesso non autorizzato');
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized - Token mancante o non valido' 
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized - Token mancante o non valido',
       });
     }
 
@@ -194,22 +200,22 @@ app.post('/api/sync', syncLimiter, async (req: Request, res: Response) => {
       // Sync tutte le configurazioni abilitate
       console.log('🔄 [AUTOMATION] Avvio sync globale...');
       await syncAllEnabledConfigs();
-      
+
       return res.json({
         success: true,
         message: 'Sync globale completata',
         timestamp: new Date().toISOString(),
       });
-    } 
-    
+    }
+
     if (config_id) {
       // Sync configurazione specifica
       // Log sanitizzato (non espone UUID completo)
       const configIdShort = config_id ? `${config_id.substring(0, 8)}...` : null;
       console.log(`🔄 [AUTOMATION] Avvio sync per config: ${configIdShort}`);
-      
+
       const result = await syncCourierConfig(config_id, force_refresh || false);
-      
+
       if (result.success) {
         return res.json({
           success: true,
@@ -225,22 +231,22 @@ app.post('/api/sync', syncLimiter, async (req: Request, res: Response) => {
           timestamp: new Date().toISOString(),
         });
       }
-    } 
-    
+    }
+
     return res.status(400).json({
       success: false,
       error: 'Specifica config_id o sync_all=true',
       timestamp: new Date().toISOString(),
     });
-    
   } catch (error: any) {
     console.error('❌ [AUTOMATION] Errore sync:', error);
-    
+
     // Sanitizza error message in produzione (non esporre dettagli sistema)
-    const errorMessage = process.env.NODE_ENV === 'production'
-      ? 'Errore durante sync. Verifica logs per dettagli.'
-      : error.message || 'Errore sconosciuto';
-    
+    const errorMessage =
+      process.env.NODE_ENV === 'production'
+        ? 'Errore durante sync. Verifica logs per dettagli.'
+        : error.message || 'Errore sconosciuto';
+
     return res.status(500).json({
       success: false,
       error: errorMessage,
@@ -253,24 +259,26 @@ app.post('/api/sync', syncLimiter, async (req: Request, res: Response) => {
 app.post('/api/sync-shipments', syncLimiter, async (req: Request, res: Response) => {
   try {
     const { configId } = req.body;
-    
+
     // Verifica autenticazione (OBBLIGATORIA)
     const authToken = req.headers.authorization;
     const expectedToken = process.env.AUTOMATION_SERVICE_TOKEN;
-    
+
     if (!expectedToken) {
-      console.error('❌ [SYNC SHIPMENTS] AUTOMATION_SERVICE_TOKEN non configurato - Rischio sicurezza!');
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Configurazione sicurezza mancante' 
+      console.error(
+        '❌ [SYNC SHIPMENTS] AUTOMATION_SERVICE_TOKEN non configurato - Rischio sicurezza!'
+      );
+      return res.status(500).json({
+        success: false,
+        error: 'Configurazione sicurezza mancante',
       });
     }
-    
+
     if (authToken !== `Bearer ${expectedToken}`) {
       console.warn('⚠️ [SYNC SHIPMENTS] Tentativo accesso non autorizzato');
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized - Token mancante o non valido' 
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized - Token mancante o non valido',
       });
     }
 
@@ -310,11 +318,12 @@ app.post('/api/sync-shipments', syncLimiter, async (req: Request, res: Response)
     }
   } catch (error: any) {
     console.error('❌ [SYNC SHIPMENTS] Errore:', error);
-    
-    const errorMessage = process.env.NODE_ENV === 'production'
-      ? 'Errore durante sync spedizioni. Verifica logs per dettagli.'
-      : error.message || 'Errore sconosciuto';
-    
+
+    const errorMessage =
+      process.env.NODE_ENV === 'production'
+        ? 'Errore durante sync spedizioni. Verifica logs per dettagli.'
+        : error.message || 'Errore sconosciuto';
+
     return res.status(500).json({
       success: false,
       error: errorMessage,
@@ -338,7 +347,7 @@ app.get('/api/cron/sync', syncLimiter, async (req: Request, res: Response) => {
         error: 'Configurazione sicurezza mancante',
       });
     }
-    
+
     if (authHeader !== `Bearer ${secretToken}`) {
       console.warn('⚠️ [CRON] Tentativo accesso non autorizzato');
       return res.status(401).json({
@@ -348,9 +357,9 @@ app.get('/api/cron/sync', syncLimiter, async (req: Request, res: Response) => {
     }
 
     console.log('🔄 [CRON] Avvio sync automatico automation...');
-    
+
     await syncAllEnabledConfigs();
-    
+
     return res.json({
       success: true,
       message: 'Sync automatico completata',
@@ -358,12 +367,13 @@ app.get('/api/cron/sync', syncLimiter, async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('❌ [CRON] Errore sync automatico:', error);
-    
+
     // Sanitizza error message in produzione
-    const errorMessage = process.env.NODE_ENV === 'production'
-      ? 'Errore durante sync. Verifica logs per dettagli.'
-      : error.message || 'Errore durante sync';
-    
+    const errorMessage =
+      process.env.NODE_ENV === 'production'
+        ? 'Errore durante sync. Verifica logs per dettagli.'
+        : error.message || 'Errore durante sync';
+
     return res.status(500).json({
       success: false,
       error: errorMessage,
@@ -388,7 +398,9 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
 
     // Avviso se si usa il token di default (non sicuro per produzione)
     if (!process.env.DIAGNOSTICS_TOKEN) {
-      console.warn('⚠️ [DIAGNOSTICS] DIAGNOSTICS_TOKEN non configurato - uso token di default (NON SICURO per produzione)');
+      console.warn(
+        '⚠️ [DIAGNOSTICS] DIAGNOSTICS_TOKEN non configurato - uso token di default (NON SICURO per produzione)'
+      );
     }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -443,7 +455,7 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
 
     // 3. Valida context (JSON): max 10KB e max 3 livelli profondità
     let contextObj = context || {};
-    
+
     // Se context è stringa, prova a parsarla
     if (typeof context === 'string') {
       try {
@@ -470,7 +482,7 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
       if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
         return currentDepth;
       }
-      
+
       let maxDepth = currentDepth;
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
@@ -535,14 +547,14 @@ app.post('/api/diagnostics', diagnosticsLimiter, async (req: Request, res: Respo
       message: 'Evento diagnostico salvato con successo',
       timestamp: new Date().toISOString(),
     });
-
   } catch (error: any) {
     console.error('❌ [DIAGNOSTICS] Errore:', error);
-    
-    const errorMessage = process.env.NODE_ENV === 'production'
-      ? 'Errore durante salvataggio diagnostica. Verifica logs per dettagli.'
-      : error.message || 'Errore sconosciuto';
-    
+
+    const errorMessage =
+      process.env.NODE_ENV === 'production'
+        ? 'Errore durante salvataggio diagnostica. Verifica logs per dettagli.'
+        : error.message || 'Errore sconosciuto';
+
     return res.status(500).json({
       success: false,
       error: errorMessage,
@@ -558,4 +570,3 @@ app.listen(PORT, () => {
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
   console.log(`🔄 Sync endpoint: http://localhost:${PORT}/api/sync`);
 });
-

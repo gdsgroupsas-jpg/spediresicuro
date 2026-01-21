@@ -42,8 +42,7 @@ function getConfig(): TelegramConfig | null {
     return null;
   }
 
-  const adminChatIds = process.env.TELEGRAM_ADMIN_CHAT_IDS
-    ?.split(',')
+  const adminChatIds = process.env.TELEGRAM_ADMIN_CHAT_IDS?.split(',')
     .map((id) => id.trim())
     .filter(Boolean);
 
@@ -132,9 +131,7 @@ export async function sendToAdmins(
     return { success: false, sent: 0, failed: 0 };
   }
 
-  const chatIds = config.adminChatIds?.length
-    ? config.adminChatIds
-    : [config.defaultChatId];
+  const chatIds = config.adminChatIds?.length ? config.adminChatIds : [config.defaultChatId];
 
   let sent = 0;
   let failed = 0;
@@ -185,10 +182,7 @@ export async function sendAlert(
  * Escape HTML special characters for Telegram
  */
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ============================================================
@@ -344,7 +338,9 @@ export function formatHealthStatus(
 /**
  * Set webhook URL for the bot
  */
-export async function setWebhook(webhookUrl: string): Promise<{ success: boolean; error?: string }> {
+export async function setWebhook(
+  webhookUrl: string
+): Promise<{ success: boolean; error?: string }> {
   const config = getConfig();
 
   if (!config) {

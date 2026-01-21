@@ -32,7 +32,7 @@ Ringraziamo per l'audit approfondito. Rispondiamo punto per punto con **evidenze
 📄 `lib/wallet/credit-check.ts:48-57`
 
 ```typescript
-const isSuperadmin = data.role === "SUPERADMIN" || data.role === "superadmin";
+const isSuperadmin = data.role === 'SUPERADMIN' || data.role === 'superadmin';
 
 // Superadmin bypassa controllo credito
 if (isSuperadmin) {
@@ -140,14 +140,11 @@ BEGIN
 
 ```typescript
 // CRASH-SAFE IDEMPOTENCY LOCK
-const { data: lockResult, error: lockError } = await supabaseAdmin.rpc(
-  "acquire_idempotency_lock",
-  {
-    p_idempotency_key: idempotencyKey,
-    p_user_id: targetId,
-    p_ttl_minutes: 30,
-  }
-);
+const { data: lockResult, error: lockError } = await supabaseAdmin.rpc('acquire_idempotency_lock', {
+  p_idempotency_key: idempotencyKey,
+  p_user_id: targetId,
+  p_ttl_minutes: 30,
+});
 ```
 
 **Flusso implementato**:
@@ -223,10 +220,10 @@ complete_lock()               -- Status='completed'
 // Usa 'auto' per selezionare automaticamente:
 // 1. Google Vision (se GOOGLE_CLOUD_CREDENTIALS configurata) ✅ ATTIVO
 // 2. Claude Vision (se ANTHROPIC_API_KEY configurata)
-const ocr = createOCRAdapter("auto");
+const ocr = createOCRAdapter('auto');
 
 // Converti base64 a Buffer
-const imageBuffer = Buffer.from(image, "base64");
+const imageBuffer = Buffer.from(image, 'base64');
 
 // Estrai dati con fallback: Google Vision → Claude Vision
 let result = await ocr.extract(imageBuffer, options);
@@ -367,9 +364,9 @@ return { apiSource: 'reseller_own', ... };
 - Possibile refactor che introduce bug BYOC/Broker mixing
 - Enterprise-grade richiederebbe:
   ```typescript
-  type BrokerContext = ActingContext & { businessModel: "broker" };
+  type BrokerContext = ActingContext & { businessModel: 'broker' };
   type ByocContext = ActingContext & {
-    businessModel: "byoc";
+    businessModel: 'byoc';
     walletDisabled: true;
   };
   ```
@@ -537,15 +534,15 @@ export async function processCompensationQueue(): Promise<{
 }> {
   // Trova records con status='pending' e created_at > 7 giorni
   const { data: orphanRecords } = await supabaseAdmin
-    .from("compensation_queue")
-    .select("id, user_id, created_at, status, action")
-    .eq("status", "pending")
-    .lt("created_at", sevenDaysAgo.toISOString());
+    .from('compensation_queue')
+    .select('id, user_id, created_at, status, action')
+    .eq('status', 'pending')
+    .lt('created_at', sevenDaysAgo.toISOString());
 
   // Marca come 'expired' (mantiene audit trail)
-  await supabaseAdmin.from("compensation_queue").update({
-    status: "expired",
-    resolution_notes: "Auto-expired: record pending da più di 7 giorni",
+  await supabaseAdmin.from('compensation_queue').update({
+    status: 'expired',
+    resolution_notes: 'Auto-expired: record pending da più di 7 giorni',
   });
 }
 ```
@@ -644,7 +641,7 @@ export interface ActingContext {
 📄 `lib/safe-auth.ts:122-134`
 
 ```typescript
-const impersonateTargetId = headersList.get("x-sec-impersonate-target");
+const impersonateTargetId = headersList.get('x-sec-impersonate-target');
 
 if (!impersonateTargetId) {
   return { actor, target: actor, isImpersonating: false };

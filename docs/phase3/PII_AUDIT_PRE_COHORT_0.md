@@ -36,6 +36,7 @@
 ### Tool Utilizzati
 
 1. **Grep avanzato con regex PII**
+
    ```bash
    # Pattern cercati:
    - base64|data:image
@@ -154,24 +155,31 @@ grep -rInE "Sentry|sentry" --include="*.ts" lib/ app/
 #### ✅ Comportamento Corretto
 
 1. **`lib/telemetry/logger.ts:5`**
+
    ```typescript
    * ⚠️ NO PII nei log (no email, no nomi, no indirizzi)
    ```
 
 2. **`lib/agent/workers/ocr.ts:14`**
+
    ```typescript
    * ⚠️ NO PII nei log (no addressLine1, fullName, phone, etc.)
    ```
 
 3. **`lib/agent/workers/vision-fallback.ts:14`**
+
    ```typescript
    * ⚠️ NO PII nei log (no base64, no fullName, no addressLine1, no phone)
    ```
 
 4. **`lib/agent/workers/ocr.ts:582`**
+
    ```typescript
-   logger.log(`📸 [OCR Worker] Vision: campi estratti: ${extractedCount}, tentativi: ${visionResult.attempts}`);
+   logger.log(
+     `📸 [OCR Worker] Vision: campi estratti: ${extractedCount}, tentativi: ${visionResult.attempts}`
+   );
    ```
+
    ✅ Solo conteggi, non dati estratti
 
 5. **`lib/agent/workers/ocr.ts:658`**
@@ -183,15 +191,19 @@ grep -rInE "Sentry|sentry" --include="*.ts" lib/ app/
 #### ⚠️ Potenziali Rischi (Non Bloccanti)
 
 1. **`lib/logger.ts:51`**
+
    ```typescript
    ...(metadata || {}),
    ```
+
    ⚠️ Se `metadata` contiene PII, viene loggato. **Verificare chiamate** che passano `metadata`.
 
 2. **`lib/error-tracker.ts:55`**
+
    ```typescript
    message: error?.message || String(error),
    ```
+
    ⚠️ Se `error.message` contiene PII, viene loggato. **Verificare** che errori non contengano PII.
 
 3. **`app/api/ocr/extract/route.ts:85`**
@@ -293,10 +305,3 @@ grep -rInE "Sentry|sentry" --include="*.ts" lib/ app/
 Il sistema è **conforme** ai requisiti PII per Cohort 0. Nessun leak PII identificato nei log, telemetria o error tracking. I rischi minori identificati sono non bloccanti e possono essere gestiti con code review e monitoring.
 
 **Cohort 0 può procedere** ✅
-
-
-
-
-
-
-

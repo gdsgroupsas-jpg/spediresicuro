@@ -1,6 +1,6 @@
 /**
  * Pagina: AI OCR Scanner
- * 
+ *
  * Scanner OCR per estrazione automatica dati da immagini
  * Supporta screenshot WhatsApp, foto documenti, etc.
  */
@@ -58,7 +58,7 @@ export default function OCRScannerPage() {
       { key: 'email', label: 'Email' },
     ];
 
-    return fields.filter(field => data[field.key]);
+    return fields.filter((field) => data[field.key]);
   };
 
   return (
@@ -83,10 +83,7 @@ export default function OCRScannerPage() {
               </div>
             </div>
 
-            <OCRUpload
-              onDataExtracted={handleDataExtracted}
-              onError={handleError}
-            />
+            <OCRUpload onDataExtracted={handleDataExtracted} onError={handleError} />
           </div>
 
           {/* Results Area */}
@@ -185,7 +182,10 @@ export default function OCRScannerPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>
-                  <span>Funziona meglio con screenshot WhatsApp, foto documenti di identità, etichette spedizione</span>
+                  <span>
+                    Funziona meglio con screenshot WhatsApp, foto documenti di identità, etichette
+                    spedizione
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 font-bold">•</span>

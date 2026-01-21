@@ -1,6 +1,6 @@
 /**
  * Git Pre-Commit Hook
- * 
+ *
  * Esegue controlli prima del commit e crea ERROR_LOG.md se ci sono errori
  * Utilizzo: Aggiungi a .git/hooks/pre-commit
  */
@@ -14,12 +14,12 @@ const LOG_FILE = path.join(process.cwd(), 'ERROR_LOG.md');
 function writeLog(entry) {
   const timestamp = new Date().toISOString();
   const logEntry = `## Pre-Commit Check - ${timestamp}\n\n${entry}\n\n---\n\n`;
-  
+
   let existingContent = '';
   if (fs.existsSync(LOG_FILE)) {
     existingContent = fs.readFileSync(LOG_FILE, 'utf-8');
   }
-  
+
   const newContent = `# Error Log - SpedireSicuro\n\n> Ultimo aggiornamento: ${timestamp}\n\n---\n\n${logEntry}${existingContent}`;
   fs.writeFileSync(LOG_FILE, newContent, 'utf-8');
 }
@@ -49,14 +49,3 @@ try {
 }
 
 console.log('✅ Tutti i controlli superati!\n');
-
-
-
-
-
-
-
-
-
-
-

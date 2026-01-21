@@ -9,6 +9,7 @@
 ## 🎯 COSA FA QUESTA FUNZIONE?
 
 La pagina **Gestione Bonifici** ti permette di:
+
 - ✅ Vedere tutte le richieste di ricarica wallet via bonifico
 - ✅ Approvare o rifiutare le richieste
 - ✅ Controllare importi, utenti e ricevute
@@ -30,6 +31,7 @@ La pagina **Gestione Bonifici** ti permette di:
 Mostra tutte le richieste **non ancora processate**.
 
 **Cosa vedi:**
+
 - **Data:** Quando è stata creata la richiesta
 - **Utente:** Email e nome dell'utente che ha fatto la richiesta
 - **Importo:** Quanto vuole ricaricare (es. €100.00)
@@ -52,6 +54,7 @@ Mostra richieste che richiedono **controllo manuale** (es. AI confidence bassa).
 Mostra tutte le richieste **già approvate**.
 
 **Cosa vedi:**
+
 - Stessa struttura delle altre tab
 - Badge verde "Approvata"
 - Se l'importo approvato è diverso da quello richiesto, vedi: `(Approvato: €X)`
@@ -63,6 +66,7 @@ Mostra tutte le richieste **già approvate**.
 Mostra tutte le richieste **rifiutate**.
 
 **Cosa vedi:**
+
 - Badge rosso "Rifiutata"
 - Stessa struttura delle altre tab
 
@@ -79,6 +83,7 @@ Mostra tutte le richieste **rifiutate**.
 ### Step 2: Controlla Informazioni
 
 Nel modal vedi:
+
 - **Utente:** Nome e email
 - **Importo Richiesto:** Quanto ha chiesto l'utente
 - **Confidenza AI:** Barra di confidenza (verde = alta, giallo = media, rosso = bassa)
@@ -90,6 +95,7 @@ Nel modal vedi:
 - **Se vuoi approvare un importo diverso:** Inserisci l'importo (es. 80.00 invece di 100.00)
 
 **Esempio:**
+
 - Utente chiede: €100.00
 - Tu approvi: €80.00
 - Il wallet riceverà €80.00
@@ -102,6 +108,7 @@ Nel modal vedi:
 4. Il wallet dell'utente viene accreditato automaticamente
 
 **Cosa succede:**
+
 - ✅ Status cambia a "Approvata"
 - ✅ Wallet utente aumenta dell'importo approvato
 - ✅ Viene creata una transazione nel wallet
@@ -128,6 +135,7 @@ Nel campo **"Note / Motivo Rifiuto"** scrivi il motivo (es. "Ricevuta non leggib
 3. La richiesta sparisce da "In Attesa" e appare in "Rifiutate"
 
 **Cosa succede:**
+
 - ✅ Status cambia a "Rifiutata"
 - ✅ Il wallet dell'utente NON viene accreditato
 - ✅ Viene scritto un log di audit con il motivo
@@ -273,6 +281,7 @@ Quando apri "Dettagli" di una richiesta, vedi:
 ## 📞 SUPPORTO
 
 Se hai problemi:
+
 1. Controlla questo manuale
 2. Verifica i "Problemi Comuni" sopra
 3. Contatta il team tecnico

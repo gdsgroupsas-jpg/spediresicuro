@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
 /**
  * Configurazione Spedisci.Online Multi-Dominio
- * 
+ *
  * Interfaccia per gestire più configurazioni Spedisci.Online:
  * - Lista di tutte le configurazioni
  * - Aggiungere nuove configurazioni
@@ -10,11 +10,11 @@
  * - Solo superadmin può gestire
  */
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { 
-  Truck, 
-  Key, 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import {
+  Truck,
+  Key,
   Save,
   CheckCircle2,
   AlertCircle,
@@ -27,33 +27,33 @@ import {
   Power,
   PowerOff,
   Edit2,
-  X
-} from 'lucide-react'
+  X,
+} from 'lucide-react';
 
 interface Contract {
-  codice: string
-  corriere: string
+  codice: string;
+  corriere: string;
 }
 
 interface Config {
-  id?: string
-  name: string
-  dominio: string
-  base_url: string
-  api_key: string
-  contracts: Contract[]
-  is_active: boolean
-  is_default: boolean
+  id?: string;
+  name: string;
+  dominio: string;
+  base_url: string;
+  api_key: string;
+  contracts: Contract[];
+  is_active: boolean;
+  is_default: boolean;
 }
 
 export default function SpedisciOnlineConfigMulti() {
-  const { data: session } = useSession()
-  const [configs, setConfigs] = useState<Config[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingConfig, setEditingConfig] = useState<Config | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  
+  const { data: session } = useSession();
+  const [configs, setConfigs] = useState<Config[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<Config | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState<Config>({
     name: '',
@@ -63,39 +63,40 @@ export default function SpedisciOnlineConfigMulti() {
     contracts: [],
     is_active: true,
     is_default: false,
-  })
-  const [newContract, setNewContract] = useState({ codice: '', corriere: '' })
-  const [showApiKey, setShowApiKey] = useState(false)
+  });
+  const [newContract, setNewContract] = useState({ codice: '', corriere: '' });
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Carica configurazioni
   useEffect(() => {
-    loadConfigurations()
-  }, [])
+    loadConfigurations();
+  }, []);
 
   const loadConfigurations = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const { listConfigurations } = await import('@/actions/configurations')
-      const result = await listConfigurations()
-      
+      const { listConfigurations } = await import('@/actions/configurations');
+      const result = await listConfigurations();
+
       if (result.success && result.configs) {
         const spedisciConfigs = result.configs
           .filter((c: any) => c.provider_id === 'spedisci_online')
           .map((c: any) => {
-            let contracts: Contract[] = []
+            let contracts: Contract[] = [];
             if (c.contract_mapping) {
-              const mapping = typeof c.contract_mapping === 'string'
-                ? JSON.parse(c.contract_mapping)
-                : c.contract_mapping
-              
+              const mapping =
+                typeof c.contract_mapping === 'string'
+                  ? JSON.parse(c.contract_mapping)
+                  : c.contract_mapping;
+
               Object.entries(mapping).forEach(([codice, corriere]) => {
                 contracts.push({
                   codice: codice as string,
-                  corriere: corriere as string
-                })
-              })
+                  corriere: corriere as string,
+                });
+              });
             }
-            
+
             return {
               id: c.id,
               name: c.name || 'Configurazione Spedisci.Online',
@@ -105,39 +106,39 @@ export default function SpedisciOnlineConfigMulti() {
               contracts,
               is_active: c.is_active ?? true,
               is_default: c.is_default ?? false,
-            }
-          })
-        
-        setConfigs(spedisciConfigs)
+            };
+          });
+
+        setConfigs(spedisciConfigs);
       }
     } catch (error) {
-      console.error('Errore caricamento configurazioni:', error)
+      console.error('Errore caricamento configurazioni:', error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleToggleActive = async (configId: string, currentStatus: boolean) => {
     try {
-      const { updateConfigurationStatus } = await import('@/actions/configurations')
-      const result = await updateConfigurationStatus(configId, !currentStatus)
-      
+      const { updateConfigurationStatus } = await import('@/actions/configurations');
+      const result = await updateConfigurationStatus(configId, !currentStatus);
+
       if (result.success) {
-        await loadConfigurations()
+        await loadConfigurations();
       }
     } catch (error) {
-      console.error('Errore toggle attiva/disattiva:', error)
+      console.error('Errore toggle attiva/disattiva:', error);
     }
-  }
+  };
 
   const handleEdit = (config: Config) => {
-    setEditingConfig(config)
-    setFormData(config)
-    setShowForm(true)
-  }
+    setEditingConfig(config);
+    setFormData(config);
+    setShowForm(true);
+  };
 
   const handleNew = () => {
-    setEditingConfig(null)
+    setEditingConfig(null);
     setFormData({
       name: '',
       dominio: '',
@@ -146,13 +147,13 @@ export default function SpedisciOnlineConfigMulti() {
       contracts: [],
       is_active: true,
       is_default: false,
-    })
-    setShowForm(true)
-  }
+    });
+    setShowForm(true);
+  };
 
   const handleCancel = () => {
-    setShowForm(false)
-    setEditingConfig(null)
+    setShowForm(false);
+    setEditingConfig(null);
     setFormData({
       name: '',
       dominio: '',
@@ -161,64 +162,64 @@ export default function SpedisciOnlineConfigMulti() {
       contracts: [],
       is_active: true,
       is_default: false,
-    })
-    setNewContract({ codice: '', corriere: '' })
-  }
+    });
+    setNewContract({ codice: '', corriere: '' });
+  };
 
   const addContract = () => {
     if (newContract.codice.trim() && newContract.corriere.trim()) {
       setFormData({
         ...formData,
-        contracts: [...formData.contracts, { ...newContract }]
-      })
-      setNewContract({ codice: '', corriere: '' })
+        contracts: [...formData.contracts, { ...newContract }],
+      });
+      setNewContract({ codice: '', corriere: '' });
     }
-  }
+  };
 
   const removeContract = (index: number) => {
     setFormData({
       ...formData,
-      contracts: formData.contracts.filter((_, i) => i !== index)
-    })
-  }
+      contracts: formData.contracts.filter((_, i) => i !== index),
+    });
+  };
 
   const handleSave = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       // Valida
       if (!formData.api_key.trim()) {
-        alert('API Key è obbligatoria')
-        setIsSaving(false)
-        return
+        alert('API Key è obbligatoria');
+        setIsSaving(false);
+        return;
       }
 
       if (!formData.base_url.trim()) {
-        alert('Endpoint (Base URL) è obbligatorio')
-        setIsSaving(false)
-        return
+        alert('Endpoint (Base URL) è obbligatorio');
+        setIsSaving(false);
+        return;
       }
 
       // ⚠️ FIX: Aggiungi automaticamente il contratto se presente nei campi input ma non ancora aggiunto
-      let contractsToSave = [...formData.contracts]
+      let contractsToSave = [...formData.contracts];
       if (newContract.codice.trim() && newContract.corriere.trim()) {
         // Verifica se il contratto non è già nella lista
         const alreadyExists = contractsToSave.some(
-          c => c.codice === newContract.codice && c.corriere === newContract.corriere
-        )
+          (c) => c.codice === newContract.codice && c.corriere === newContract.corriere
+        );
         if (!alreadyExists) {
-          contractsToSave.push({ ...newContract })
-          console.log('✅ Contratto aggiunto automaticamente:', newContract)
+          contractsToSave.push({ ...newContract });
+          console.log('✅ Contratto aggiunto automaticamente:', newContract);
         }
       }
 
       // Prepara contract_mapping
-      const contractMapping: Record<string, string> = {}
-      contractsToSave.forEach(contract => {
+      const contractMapping: Record<string, string> = {};
+      contractsToSave.forEach((contract) => {
         if (contract.codice.trim() && contract.corriere.trim()) {
-          contractMapping[contract.codice] = contract.corriere
+          contractMapping[contract.codice] = contract.corriere;
         }
-      })
+      });
 
       const configInput = {
         id: editingConfig?.id,
@@ -230,74 +231,73 @@ export default function SpedisciOnlineConfigMulti() {
         is_active: formData.is_active,
         is_default: editingConfig ? editingConfig.is_default : false,
         description: formData.dominio.trim() ? `Dominio: ${formData.dominio.trim()}` : undefined,
-      }
+      };
 
       // ⚠️ FIX: Reseller usano savePersonalConfiguration, Admin usano saveConfiguration
-      const userRole = (session?.user as any)?.role
-      const isUserAdmin = userRole === 'admin' || (session?.user as any)?.account_type === 'superadmin'
-      
-      let result
+      const userRole = (session?.user as any)?.role;
+      const isUserAdmin =
+        userRole === 'admin' || (session?.user as any)?.account_type === 'superadmin';
+
+      let result;
       if (isUserAdmin) {
-        const { saveConfiguration } = await import('@/actions/configurations')
-        result = await saveConfiguration(configInput)
+        const { saveConfiguration } = await import('@/actions/configurations');
+        result = await saveConfiguration(configInput);
       } else {
         // Reseller o utenti normali usano savePersonalConfiguration
         // Rimuovi is_default perché non è permesso per config personali
-        const { is_default, ...personalConfigInput } = configInput
-        const { savePersonalConfiguration } = await import('@/actions/configurations')
-        result = await savePersonalConfiguration(personalConfigInput)
+        const { is_default, ...personalConfigInput } = configInput;
+        const { savePersonalConfiguration } = await import('@/actions/configurations');
+        result = await savePersonalConfiguration(personalConfigInput);
       }
 
       if (result.success) {
-        await loadConfigurations()
-        handleCancel()
+        await loadConfigurations();
+        handleCancel();
       } else {
-        alert(result.error || 'Errore durante il salvataggio')
+        alert(result.error || 'Errore durante il salvataggio');
       }
     } catch (error: any) {
-      alert(error.message || 'Errore durante il salvataggio')
+      alert(error.message || 'Errore durante il salvataggio');
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleDelete = async (configId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questa configurazione?')) return
+    if (!confirm('Sei sicuro di voler eliminare questa configurazione?')) return;
 
     try {
-      const { deleteConfiguration } = await import('@/actions/configurations')
-      const result = await deleteConfiguration(configId)
-      
+      const { deleteConfiguration } = await import('@/actions/configurations');
+      const result = await deleteConfiguration(configId);
+
       if (result.success) {
-        await loadConfigurations()
+        await loadConfigurations();
       }
     } catch (error) {
-      console.error('Errore eliminazione:', error)
+      console.error('Errore eliminazione:', error);
     }
-  }
+  };
 
   // ⚠️ RBAC: Admin vedono tutte le config, Reseller vedono solo la propria
-  const accountType = (session?.user as any)?.account_type
-  const isAdmin = (session?.user as any)?.role === 'admin' || accountType === 'superadmin'
-  const isReseller = (session?.user as any)?.is_reseller === true
-  const resellerRole = (session?.user as any)?.reseller_role
-  const isResellerAdmin = isReseller && resellerRole === 'admin'
-  const canAccessConfigurations = isAdmin || isReseller
+  const accountType = (session?.user as any)?.account_type;
+  const isAdmin = (session?.user as any)?.role === 'admin' || accountType === 'superadmin';
+  const isReseller = (session?.user as any)?.is_reseller === true;
+  const resellerRole = (session?.user as any)?.reseller_role;
+  const isResellerAdmin = isReseller && resellerRole === 'admin';
+  const canAccessConfigurations = isAdmin || isReseller;
 
   if (!canAccessConfigurations) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-8">
         <div className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Accesso Negato
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Accesso Negato</h3>
           <p className="text-gray-600">
             Devi essere un reseller o amministratore per gestire le configurazioni Spedisci.Online.
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -311,7 +311,7 @@ export default function SpedisciOnlineConfigMulti() {
               Configurazioni Spedisci.Online {isAdmin && '(Multi-Dominio)'}
             </h2>
             <p className="text-gray-600">
-              {isAdmin 
+              {isAdmin
                 ? 'Gestisci tutte le configurazioni Spedisci.Online. Puoi avere più domini con le stesse regole.'
                 : 'Gestisci la tua configurazione personale Spedisci.Online'}
             </p>
@@ -365,9 +365,7 @@ export default function SpedisciOnlineConfigMulti() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {config.name}
-                          </h3>
+                          <h3 className="text-lg font-semibold text-gray-900">{config.name}</h3>
                           {config.is_default && (
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
                               Default
@@ -386,9 +384,15 @@ export default function SpedisciOnlineConfigMulti() {
                           )}
                         </div>
                         <div className="space-y-1 text-sm text-gray-600">
-                          <p><strong>Dominio:</strong> {config.dominio || 'Non specificato'}</p>
-                          <p><strong>Endpoint:</strong> {config.base_url}</p>
-                          <p><strong>Contratti:</strong> {config.contracts.length}</p>
+                          <p>
+                            <strong>Dominio:</strong> {config.dominio || 'Non specificato'}
+                          </p>
+                          <p>
+                            <strong>Endpoint:</strong> {config.base_url}
+                          </p>
+                          <p>
+                            <strong>Contratti:</strong> {config.contracts.length}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -501,9 +505,7 @@ export default function SpedisciOnlineConfigMulti() {
               {/* Dominio e Endpoint */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Dominio
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Dominio</label>
                   <input
                     type="text"
                     value={formData.dominio}
@@ -530,25 +532,33 @@ export default function SpedisciOnlineConfigMulti() {
 
               {/* Contratti */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contratti
-                </label>
-                
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contratti</label>
+
                 {formData.contracts.length > 0 && (
                   <div className="mb-4 overflow-x-auto border border-gray-300 rounded-lg">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Codice</th>
-                          <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Corriere</th>
-                          <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Azioni</th>
+                          <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                            Codice
+                          </th>
+                          <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                            Corriere
+                          </th>
+                          <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                            Azioni
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {formData.contracts.map((contract, index) => (
                           <tr key={index} className="hover:bg-gray-50">
-                            <td className="border border-gray-300 px-4 py-2 font-mono text-sm text-gray-900">{contract.codice}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">{contract.corriere}</td>
+                            <td className="border border-gray-300 px-4 py-2 font-mono text-sm text-gray-900">
+                              {contract.codice}
+                            </td>
+                            <td className="border border-gray-300 px-4 py-2 text-sm text-gray-900">
+                              {contract.corriere}
+                            </td>
                             <td className="border border-gray-300 px-4 py-2 text-center">
                               <button
                                 onClick={() => removeContract(index)}
@@ -580,7 +590,9 @@ export default function SpedisciOnlineConfigMulti() {
                       <input
                         type="text"
                         value={newContract.corriere}
-                        onChange={(e) => setNewContract({ ...newContract, corriere: e.target.value })}
+                        onChange={(e) =>
+                          setNewContract({ ...newContract, corriere: e.target.value })
+                        }
                         placeholder="Corriere (es: Gls)"
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
                         style={{ fontSize: '15px' }}
@@ -643,6 +655,5 @@ export default function SpedisciOnlineConfigMulti() {
         )}
       </div>
     </div>
-  )
+  );
 }
-

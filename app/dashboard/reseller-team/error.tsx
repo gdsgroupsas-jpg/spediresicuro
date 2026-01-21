@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { AlertCircle, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect } from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function ResellerTeamError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
     // Log error to monitoring service
-    console.error('Reseller Team Page Error:', error)
-  }, [error])
+    console.error('Reseller Team Page Error:', error);
+  }, [error]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
@@ -22,9 +22,7 @@ export default function ResellerTeamError({
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="h-8 w-8 text-red-600" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Qualcosa è andato storto
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Qualcosa è andato storto</h1>
         <p className="text-gray-600 mb-6">
           {error.message || 'Errore imprevisto nel caricamento della pagina'}
         </p>
@@ -34,5 +32,5 @@ export default function ResellerTeamError({
         </Button>
       </div>
     </div>
-  )
+  );
 }

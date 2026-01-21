@@ -20,7 +20,7 @@ export {
   type PlatformFeeResult,
   type UpdatePlatformFeeInput,
   type UpdatePlatformFeeResult,
-} from "./platform-fee";
+} from './platform-fee';
 
 // Sprint 3: PricingService centralizzato
 export {
@@ -30,4 +30,4 @@ export {
   type PricingServiceOptions,
   type QuoteParams,
   type QuoteResult,
-} from "./pricing-service";
+} from './pricing-service';

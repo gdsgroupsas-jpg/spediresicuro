@@ -7,6 +7,7 @@ Questa guida spiega come configurare e utilizzare il sistema di autocompletament
 ## 🎯 Cosa Fa Questo Sistema
 
 Il sistema permette agli utenti di:
+
 - Cercare comuni italiani digitando nome, provincia o CAP
 - Ottenere risultati istantanei (<50ms) grazie a full-text search
 - Selezionare automaticamente città, provincia e CAP con un solo click
@@ -43,6 +44,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 ```
 
 **Dove trovarle:**
+
 - Vai su Supabase Dashboard → **Settings** → **API**
 - `NEXT_PUBLIC_SUPABASE_URL` = Project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon/public key
@@ -55,6 +57,7 @@ npm install
 ```
 
 Questo installerà:
+
 - `@supabase/supabase-js` - Client Supabase
 - `cmdk` - Componente combobox
 - `ts-node` e `dotenv` - Per script di seeding
@@ -68,6 +71,7 @@ npm run seed:geo
 ```
 
 **Cosa fa lo script:**
+
 - Scarica dati da GitHub (8000+ comuni italiani)
 - Trasforma i dati nel formato database
 - Inserisce in batch da 1000 (per evitare timeout)
@@ -76,6 +80,7 @@ npm run seed:geo
 **Tempo stimato:** 1-2 minuti
 
 **Output atteso:**
+
 ```
 🚀 Avvio seeding geo-locations...
 📥 Download dati comuni da GitHub...
@@ -120,12 +125,7 @@ function MyForm() {
     console.log('Tutti i CAP:', location.caps);
   };
 
-  return (
-    <AsyncLocationCombobox
-      onSelect={handleLocationSelect}
-      placeholder="Cerca città..."
-    />
-  );
+  return <AsyncLocationCombobox onSelect={handleLocationSelect} placeholder="Cerca città..." />;
 }
 ```
 
@@ -164,9 +164,11 @@ function MyForm() {
 ### GET `/api/geo/search?q=query`
 
 **Parametri:**
+
 - `q` (string, obbligatorio): Query di ricerca (min 2 caratteri)
 
 **Risposta:**
+
 ```json
 {
   "results": [
@@ -192,16 +194,19 @@ function MyForm() {
 ## 🎯 Funzionalità Componente
 
 ### ✅ Ricerca in Tempo Reale
+
 - Debounce 300ms (evita troppe chiamate API)
 - Ricerca su nome, provincia, CAP
 - Full-text search ottimizzato
 
 ### ✅ Multi-CAP Support
+
 - Se comune ha 1 CAP → seleziona automaticamente
 - Se comune ha più CAP → mostra dropdown secondario
 - Utente sceglie CAP specifico
 
 ### ✅ UX Ottimizzata
+
 - Skeleton loader durante ricerca
 - Gestione errori network
 - Messaggio "Nessun risultato"
@@ -209,6 +214,7 @@ function MyForm() {
 - Click outside per chiudere
 
 ### ✅ Accessibilità
+
 - ARIA labels
 - Focus management
 - Screen reader friendly
@@ -226,19 +232,25 @@ function MyForm() {
 ## 🐛 Troubleshooting
 
 ### Errore: "Tabella geo_locations non trovata"
+
 **Soluzione:** Esegui lo schema SQL in Supabase SQL Editor
 
 ### Errore: "Variabili ambiente mancanti"
+
 **Soluzione:** Verifica che `.env.local` contenga tutte le variabili Supabase
 
 ### Errore: "Errore durante la ricerca"
-**Soluzione:** 
+
+**Soluzione:**
+
 1. Verifica connessione Supabase
 2. Controlla che la tabella sia popolata (`npm run seed:geo`)
 3. Verifica RLS (Row Level Security) su Supabase
 
 ### Nessun risultato nella ricerca
+
 **Soluzione:**
+
 1. Verifica che il database sia popolato
 2. Controlla la query (min 2 caratteri)
 3. Prova con nomi comuni (es. "Roma", "Milano")
@@ -274,6 +286,7 @@ lib/
 Se i dati dei comuni cambiano:
 
 1. Esegui di nuovo lo script:
+
 ```bash
 npm run seed:geo
 ```
@@ -287,14 +300,3 @@ Lo script usa `upsert`, quindi aggiorna i dati esistenti senza duplicati.
 Il sistema è ora configurato e pronto all'uso. Puoi utilizzare `AsyncLocationCombobox` in qualsiasi form del progetto.
 
 **Esempio completo:** Vedi `app/dashboard/spedizioni/nuova/page.tsx`
-
-
-
-
-
-
-
-
-
-
-

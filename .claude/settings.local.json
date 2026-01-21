@@ -34,7 +34,21 @@
       "Bash(npx lint-staged)",
       "Bash(git reset:*)",
       "Bash(npm run type-check:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(gh repo edit:*)",
+      "Bash(gh repo view:*)",
+      "Bash(for file in scripts/*.js)",
+      "Bash(do echo \"Checking $file...\")",
+      "Bash(node --check:*)",
+      "Bash(done)",
+      "Bash(node scripts/validate-syntax.js:*)",
+      "Bash(npx lint-staged --diff=\"HEAD\" --relative)",
+      "Bash(if [ -f .env.local ])",
+      "Bash(then cat .env.local)",
+      "Bash(else echo \"# .env.local non esiste\")",
+      "Bash(fi)",
+      "Bash(npx eslint:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

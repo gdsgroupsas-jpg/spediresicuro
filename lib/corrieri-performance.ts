@@ -1,6 +1,6 @@
 /**
  * Sistema di Tracking Performance Corrieri
- * 
+ *
  * Calcola reliability score basato su dati storici reali
  */
 
@@ -10,33 +10,27 @@ import type { AuthContext } from './auth-context';
 
 /**
  * Calcola il Reliability Score di un corriere per una zona
- * 
+ *
  * Formula:
  * - Tasso successo: 40%
  * - Tempo medio consegna: 30%
  * - Volume spedizioni (più dati = più affidabile): 20%
  * - Trend recente: 10%
  */
-export function calculateReliabilityScore(
-  performance: CorrierePerformance
-): number {
+export function calculateReliabilityScore(performance: CorrierePerformance): number {
   const tassoSuccesso = performance.tassoSuccesso; // 0-100
   const tempoScore = Math.max(0, 100 - (performance.tempoMedioConsegna / 24) * 20); // Penalizza ritardi
   const volumeScore = Math.min(100, (performance.totaleSpedizioni / 100) * 100); // Più dati = meglio
   const trendScore = 80; // Placeholder, da calcolare con dati storici
 
-  const score =
-    tassoSuccesso * 0.4 +
-    tempoScore * 0.3 +
-    volumeScore * 0.2 +
-    trendScore * 0.1;
+  const score = tassoSuccesso * 0.4 + tempoScore * 0.3 + volumeScore * 0.2 + trendScore * 0.1;
 
   return Math.round(Math.max(0, Math.min(100, score)));
 }
 
 /**
  * Analizza le performance dei corrieri per una zona specifica
- * 
+ *
  * ⚠️ IMPORTANTE: Richiede AuthContext per sicurezza (service_role per vedere tutte le spedizioni)
  */
 export async function analyzeCorrieriPerformance(
@@ -89,8 +83,7 @@ export async function analyzeCorrieriPerformance(
     } else if (sp.status === 'eccezione' || sp.status === 'in_transito') {
       // Se in transito da più di 3 giorni = ritardo
       const giorniInTransito = Math.floor(
-        (Date.now() - new Date(sp.createdAt || sp.dataCreazione).getTime()) /
-          (1000 * 60 * 60 * 24)
+        (Date.now() - new Date(sp.createdAt || sp.dataCreazione).getTime()) / (1000 * 60 * 60 * 24)
       );
       if (giorniInTransito > 3) {
         existing.consegneInRitardo++;
@@ -107,9 +100,7 @@ export async function analyzeCorrieriPerformance(
 
   performanceMap.forEach((perf) => {
     perf.tassoSuccesso =
-      perf.totaleSpedizioni > 0
-        ? (perf.consegneInTempo / perf.totaleSpedizioni) * 100
-        : 100; // Default 100% se nessun dato
+      perf.totaleSpedizioni > 0 ? (perf.consegneInTempo / perf.totaleSpedizioni) * 100 : 100; // Default 100% se nessun dato
 
     perf.tempoMedioConsegna = perf.totaleSpedizioni > 0 ? 24 : 48; // Placeholder
 
@@ -130,10 +121,7 @@ export async function analyzeCorrieriPerformance(
  * Performance di default quando non ci sono dati storici
  * (simulate per demo)
  */
-function getDefaultPerformance(
-  citta: string,
-  provincia: string
-): CorrierePerformance[] {
+function getDefaultPerformance(citta: string, provincia: string): CorrierePerformance[] {
   return [
     {
       corriere: 'GLS',
@@ -210,8 +198,8 @@ export async function generateRoutingSuggestion(
     !performanceScelto || performanceScelto.reliabilityScore >= 90
       ? 'basso'
       : performanceScelto.reliabilityScore >= 75
-      ? 'medio'
-      : 'alto';
+        ? 'medio'
+        : 'alto';
 
   // Genera messaggio motivazionale
   let motivo = '';
@@ -237,4 +225,3 @@ export async function generateRoutingSuggestion(
     differenzaPrezzo: differenza,
   };
 }
-

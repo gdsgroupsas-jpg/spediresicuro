@@ -1,9 +1,9 @@
 /**
  * Error Tracking System
- * 
+ *
  * Sistema centralizzato per tracciare errori con contesto completo
  * Integra con logger strutturato per tracciabilità
- * 
+ *
  * @example
  * trackError(error, { requestId, userId, context: 'API /api/shipments' });
  */
@@ -19,7 +19,7 @@ export interface ErrorContext {
 
 /**
  * Traccia un errore con contesto completo
- * 
+ *
  * @param error - Errore da tracciare
  * @param errorContext - Contesto dell'errore (requestId, userId, context, metadata)
  */
@@ -34,16 +34,12 @@ export function trackError(error: Error | any, errorContext: ErrorContext = {}):
   const logger = createLogger(requestId, userId);
 
   // Log errore strutturato
-  logger.error(
-    `Error in ${context}`,
-    error,
-    {
-      ...metadata,
-      context,
-      severity: determineSeverity(error),
-      errorType: error?.name || 'Error',
-    }
-  );
+  logger.error(`Error in ${context}`, error, {
+    ...metadata,
+    context,
+    severity: determineSeverity(error),
+    errorType: error?.name || 'Error',
+  });
 
   // In futuro: qui si può aggiungere integrazione con Sentry o altri servizi
   // if (process.env.SENTRY_DSN) {
@@ -56,7 +52,7 @@ export function trackError(error: Error | any, errorContext: ErrorContext = {}):
 
 /**
  * Determina la severità dell'errore
- * 
+ *
  * @param error - Errore da analizzare
  * @returns Severità: 'low' | 'medium' | 'high' | 'critical'
  */
@@ -92,7 +88,7 @@ function determineSeverity(error: Error | any): string {
 
 /**
  * Traccia un errore API con contesto standardizzato
- * 
+ *
  * @param error - Errore da tracciare
  * @param requestId - ID richiesta
  * @param userId - ID utente (opzionale)
@@ -120,7 +116,7 @@ export function trackApiError(
 
 /**
  * Traccia un errore di middleware
- * 
+ *
  * @param error - Errore da tracciare
  * @param requestId - ID richiesta
  * @param pathname - Pathname della richiesta

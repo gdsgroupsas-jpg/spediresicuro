@@ -19,6 +19,7 @@ npm run dev
 Quando invii un messaggio ad Anne, **guarda la console del server** (dove hai avviato `npm run dev`). Dovresti vedere:
 
 ### ✅ Se Funziona:
+
 ```
 🔍 [Anne Module] Verifica Environment Variables:
    ANTHROPIC_API_KEY presente: true
@@ -36,22 +37,28 @@ Quando invii un messaggio ad Anne, **guarda la console del server** (dove hai av
 ### ❌ Se NON Funziona:
 
 #### Caso 1: API Key Non Trovata
+
 ```
 ❌ [Anne Module] ANTHROPIC_API_KEY NON TROVATA!
 ```
+
 **Soluzione**: Riavvia il server dopo aver aggiunto la chiave.
 
 #### Caso 2: Errore 401 (Autenticazione)
+
 ```
 ❌ [Anne] Errore Claude API: { message: "...", status: 401, ... }
 ❌ [Anne] API Key presente: true
 ```
+
 **Possibili cause**:
+
 - Chiave API non valida o scaduta
 - Chiave copiata male (spazi, caratteri mancanti)
 - Chiave di un account diverso
 
 **Soluzione**:
+
 1. Vai su https://console.anthropic.com/
 2. Verifica che la chiave sia attiva
 3. Crea una nuova chiave se necessario
@@ -59,16 +66,21 @@ Quando invii un messaggio ad Anne, **guarda la console del server** (dove hai av
 5. Riavvia il server
 
 #### Caso 3: Errore 429 (Rate Limit)
+
 ```
 ❌ [Anne] Errore Claude API: { message: "...", status: 429, ... }
 ```
+
 **Soluzione**: Aspetta qualche minuto e riprova. Hai raggiunto il limite di richieste.
 
 #### Caso 4: Errore 400 (Bad Request)
+
 ```
 ❌ [Anne] Errore Claude API: { message: "...", status: 400, ... }
 ```
+
 **Possibili cause**:
+
 - Problema con il formato dei messaggi
 - Modello non disponibile con la tua API key
 
@@ -92,6 +104,7 @@ curl -X POST http://localhost:3000/api/ai/agent-chat \
 Il codice usa `claude-3-haiku-20240307`. Se la tua API key non ha accesso a questo modello, potresti avere errori.
 
 **Verifica**:
+
 1. Vai su https://console.anthropic.com/
 2. Controlla quali modelli sono disponibili per il tuo account
 3. Se necessario, modifica il modello in `app/api/ai/agent-chat/route.ts` (riga 191)
@@ -99,11 +112,13 @@ Il codice usa `claude-3-haiku-20240307`. Se la tua API key non ha accesso a ques
 ## 🔍 Passo 5: Verifica Formato Chiave
 
 La chiave deve essere esattamente:
+
 ```
 ANTHROPIC_API_KEY=sk-ant-api03-ABC123XYZ789...
 ```
 
 **Controlla**:
+
 - ✅ Non ci sono spazi prima o dopo il `=`
 - ✅ Non inizia con `#` (non è commentata)
 - ✅ Non ci sono virgolette attorno al valore

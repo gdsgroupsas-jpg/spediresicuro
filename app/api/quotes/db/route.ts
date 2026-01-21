@@ -14,19 +14,19 @@
  * ⚠️ SICUREZZA: RLS garantisce che ogni utente veda solo i suoi listini
  */
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
 import {
   calculateBestPriceForReseller,
   calculatePriceWithRules,
-} from "@/lib/db/price-lists-advanced";
-import { NextRequest, NextResponse } from "next/server";
+} from '@/lib/db/price-lists-advanced';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -43,49 +43,36 @@ export async function POST(request: NextRequest) {
 
     // Validazione parametri minimi
     if (!weight || weight <= 0) {
-      return NextResponse.json(
-        { error: "Peso obbligatorio e deve essere > 0" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Peso obbligatorio e deve essere > 0' }, { status: 400 });
     }
 
     if (!zip) {
-      return NextResponse.json(
-        { error: "CAP destinazione obbligatorio" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'CAP destinazione obbligatorio' }, { status: 400 });
     }
 
     // Recupera info utente
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Utente non trovato" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
     }
 
-    const isSuperadmin = user.account_type === "superadmin";
+    const isSuperadmin = user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
 
     // ✨ ENTERPRISE: Calcola preventivi da DB per ogni corriere disponibile
     // Recupera corrieri disponibili per l'utente
-    const { getAvailableCouriersForUser } = await import(
-      "@/lib/db/price-lists"
-    );
+    const { getAvailableCouriersForUser } = await import('@/lib/db/price-lists');
     let availableCouriers = await getAvailableCouriersForUser(user.id);
 
     console.log(
-      `🔍 [QUOTES DB] Utente: ${session.user.email}, isReseller: ${isReseller}, isSuperadmin: ${isSuperadmin}`
+      `🔍 [QUOTES DB] Utente: ${context.actor.email}, isReseller: ${isReseller}, isSuperadmin: ${isSuperadmin}`
     );
-    console.log(
-      `🔍 [QUOTES DB] Corrieri disponibili dalla config: ${availableCouriers.length}`
-    );
+    console.log(`🔍 [QUOTES DB] Corrieri disponibili dalla config: ${availableCouriers.length}`);
     availableCouriers.forEach((c, i) => {
       console.log(
         `   ${i + 1}. ${c.displayName || c.courierName} (carrierCode: ${
@@ -98,7 +85,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         rates: [],
-        message: "Nessun corriere configurato per questo utente",
+        message: 'Nessun corriere configurato per questo utente',
       });
     }
 
@@ -114,66 +101,54 @@ export async function POST(request: NextRequest) {
     if (isSuperadmin) {
       // Superadmin: vede tutti i listini attivi
       const { data } = await supabaseAdmin
-        .from("price_lists")
-        .select(
-          "id, courier_id, metadata, source_metadata, name, list_type, created_by"
-        )
-        .in("list_type", ["custom", "supplier"])
-        .eq("status", "active");
+        .from('price_lists')
+        .select('id, courier_id, metadata, source_metadata, name, list_type, created_by')
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active');
       activePriceLists = data || [];
     } else if (isReseller) {
       // RESELLER: vede TUTTI i suoi listini personalizzati attivi (custom + supplier)
       const { data } = await supabaseAdmin
-        .from("price_lists")
-        .select(
-          "id, courier_id, metadata, source_metadata, name, list_type, created_by"
-        )
-        .in("list_type", ["custom", "supplier"])
-        .eq("status", "active")
-        .eq("created_by", user.id);
+        .from('price_lists')
+        .select('id, courier_id, metadata, source_metadata, name, list_type, created_by')
+        .in('list_type', ['custom', 'supplier'])
+        .eq('status', 'active')
+        .eq('created_by', user.id);
       activePriceLists = data || [];
     } else {
       // UTENTI NORMALI: vedono SOLO i listini assegnati tramite price_list_assignments
       const { data: assignments } = await supabaseAdmin
-        .from("price_list_assignments")
-        .select("price_list_id, price_lists(*)")
-        .eq("user_id", user.id)
-        .is("revoked_at", null);
+        .from('price_list_assignments')
+        .select('price_list_id, price_lists(*)')
+        .eq('user_id', user.id)
+        .is('revoked_at', null);
 
       if (assignments && assignments.length > 0) {
         const assignedListIds = assignments.map((a) => a.price_list_id);
         const { data } = await supabaseAdmin
-          .from("price_lists")
-          .select(
-            "id, courier_id, metadata, source_metadata, name, list_type, created_by"
-          )
-          .in("id", assignedListIds)
-          .in("list_type", ["custom", "supplier"])
-          .eq("status", "active");
+          .from('price_lists')
+          .select('id, courier_id, metadata, source_metadata, name, list_type, created_by')
+          .in('id', assignedListIds)
+          .in('list_type', ['custom', 'supplier'])
+          .eq('status', 'active');
         activePriceLists = data || [];
       }
     }
 
     console.log(
-      `🔍 [QUOTES DB] Listini attivi (custom+supplier) trovati: ${
-        activePriceLists?.length || 0
-      }`
+      `🔍 [QUOTES DB] Listini attivi (custom+supplier) trovati: ${activePriceLists?.length || 0}`
     );
 
     // ✨ VALIDAZIONE: Reseller può creare spedizioni SOLO se ha listini personalizzati attivi
     if (isReseller) {
-      const customPriceLists = activePriceLists.filter(
-        (pl) => pl.list_type === "custom"
-      );
+      const customPriceLists = activePriceLists.filter((pl) => pl.list_type === 'custom');
       if (customPriceLists.length === 0) {
-        console.log(
-          `⚠️ [QUOTES DB] Reseller senza listini personalizzati attivi`
-        );
+        console.log(`⚠️ [QUOTES DB] Reseller senza listini personalizzati attivi`);
         return NextResponse.json({
           success: true,
           rates: [],
           message:
-            "Nessun listino personalizzato attivo. Attiva un listino personalizzato per creare spedizioni.",
+            'Nessun listino personalizzato attivo. Attiva un listino personalizzato per creare spedizioni.',
         });
       }
       console.log(
@@ -196,10 +171,8 @@ export async function POST(request: NextRequest) {
         const carrierCode = (metadata as any).carrier_code; // Prefisso (per logging)
 
         console.log(`🔍 [QUOTES DB] Listino (${pl.list_type}): "${pl.name}"`);
-        console.log(`   - carrier_code (prefisso): "${carrierCode || "N/A"}"`);
-        console.log(
-          `   - contract_code (completo): "${contractCode || "N/A"}"`
-        );
+        console.log(`   - carrier_code (prefisso): "${carrierCode || 'N/A'}"`);
+        console.log(`   - contract_code (completo): "${contractCode || 'N/A'}"`);
 
         // ✅ Usa contract_code per matching (se presente), altrimenti fallback a carrier_code
         const codeForMatching = contractCode || carrierCode;
@@ -226,18 +199,16 @@ export async function POST(request: NextRequest) {
           success: true,
           rates: [],
           message:
-            "I listini attivi non hanno contract_code configurato. Sincronizza i listini o aggiorna i metadata.",
+            'I listini attivi non hanno contract_code configurato. Sincronizza i listini o aggiorna i metadata.',
         });
       }
 
       console.log(
-        `🔍 [QUOTES DB] Contract codes attivi dai listini: ${Array.from(
-          activeContractCodes
-        ).join(", ")}`
+        `🔍 [QUOTES DB] Contract codes attivi dai listini: ${Array.from(activeContractCodes).join(
+          ', '
+        )}`
       );
-      console.log(
-        `🔍 [QUOTES DB] Corrieri disponibili dalla config: ${availableCouriers.length}`
-      );
+      console.log(`🔍 [QUOTES DB] Corrieri disponibili dalla config: ${availableCouriers.length}`);
       availableCouriers.forEach((c, i) => {
         console.log(
           `   ${i + 1}. ${c.displayName || c.courierName} (carrierCode: ${
@@ -257,7 +228,7 @@ export async function POST(request: NextRequest) {
         const courierContractCode = (
           courier.contractCode ||
           courier.carrierCode ||
-          ""
+          ''
         ).toLowerCase();
 
         if (!courierContractCode) {
@@ -283,7 +254,7 @@ export async function POST(request: NextRequest) {
           console.log(
             `❌ [QUOTES DB] Nessun match contract_code: "${courierContractCode}" (corriere) non presente in listini attivi (${Array.from(
               activeContractCodes
-            ).join(", ")})`
+            ).join(', ')})`
           );
         }
 
@@ -300,7 +271,7 @@ export async function POST(request: NextRequest) {
           success: true,
           rates: [],
           message:
-            "Nessun carrier_code corrisponde ai listini personalizzati attivi. Verifica la configurazione.",
+            'Nessun carrier_code corrisponde ai listini personalizzati attivi. Verifica la configurazione.',
         });
       }
     } else {
@@ -312,7 +283,7 @@ export async function POST(request: NextRequest) {
         success: true,
         rates: [],
         message:
-          "Nessun listino personalizzato attivo. Attiva un listino personalizzato per vedere i preventivi.",
+          'Nessun listino personalizzato attivo. Attiva un listino personalizzato per vedere i preventivi.',
       });
     }
 
@@ -329,7 +300,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         rates: [],
-        message: "Nessun corriere disponibile con listino attivo.",
+        message: 'Nessun corriere disponibile con listino attivo.',
       });
     }
 
@@ -350,11 +321,11 @@ export async function POST(request: NextRequest) {
             destination: {
               zip,
               province,
-              country: "IT",
+              country: 'IT',
             },
             courierId: courier.courierId || undefined, // courierId opzionale
             contractCode: courier.carrierCode || courier.contractCode, // ✨ NUOVO: per matching contract_code
-            serviceType: services.includes("express") ? "express" : "standard",
+            serviceType: services.includes('express') ? 'express' : 'standard',
             options: {
               declaredValue: parseFloat(insuranceValue) || 0,
               cashOnDelivery: parseFloat(codValue) > 0,
@@ -377,9 +348,7 @@ export async function POST(request: NextRequest) {
             } else {
               // Fallback: usa identificatore generico
               quoteResult._configId =
-                bestPriceResult.apiSource === "reseller"
-                  ? "reseller_config"
-                  : "master_config";
+                bestPriceResult.apiSource === 'reseller' ? 'reseller_config' : 'master_config';
             }
           } else {
             console.warn(
@@ -396,10 +365,10 @@ export async function POST(request: NextRequest) {
             destination: {
               zip,
               province,
-              country: "IT",
+              country: 'IT',
             },
             courierId: courier.courierId || undefined, // courierId opzionale
-            serviceType: services.includes("express") ? "express" : "standard",
+            serviceType: services.includes('express') ? 'express' : 'standard',
             options: {
               declaredValue: parseFloat(insuranceValue) || 0,
               cashOnDelivery: parseFloat(codValue) > 0,
@@ -425,63 +394,47 @@ export async function POST(request: NextRequest) {
             }:`
           );
           console.log(
-            `   - quoteResult.basePrice: €${
-              quoteResult.basePrice?.toFixed(2) || "undefined"
-            }`
+            `   - quoteResult.basePrice: €${quoteResult.basePrice?.toFixed(2) || 'undefined'}`
           );
           console.log(
-            `   - quoteResult.surcharges: €${
-              quoteResult.surcharges?.toFixed(2) || "undefined"
-            }`
+            `   - quoteResult.surcharges: €${quoteResult.surcharges?.toFixed(2) || 'undefined'}`
+          );
+          console.log(`   - quoteResult.margin: €${quoteResult.margin?.toFixed(2) || 'undefined'}`);
+          console.log(
+            `   - quoteResult.totalCost: €${quoteResult.totalCost?.toFixed(2) || 'undefined'}`
           );
           console.log(
-            `   - quoteResult.margin: €${
-              quoteResult.margin?.toFixed(2) || "undefined"
-            }`
-          );
-          console.log(
-            `   - quoteResult.totalCost: €${
-              quoteResult.totalCost?.toFixed(2) || "undefined"
-            }`
-          );
-          console.log(
-            `   - quoteResult.finalPrice: €${
-              quoteResult.finalPrice?.toFixed(2) || "undefined"
-            }`
+            `   - quoteResult.finalPrice: €${quoteResult.finalPrice?.toFixed(2) || 'undefined'}`
           );
           console.log(
             `   - quoteResult.supplierPrice: €${
-              quoteResult.supplierPrice?.toFixed(2) || "undefined"
+              quoteResult.supplierPrice?.toFixed(2) || 'undefined'
             }`
           );
-          console.log(
-            `   - quoteResult.priceListId: ${quoteResult.priceListId}`
-          );
+          console.log(`   - quoteResult.priceListId: ${quoteResult.priceListId}`);
           console.log(
             `   - quoteResult.appliedPriceList.name: ${
-              (quoteResult.appliedPriceList as any)?.name || "N/A"
+              (quoteResult.appliedPriceList as any)?.name || 'N/A'
             }`
           );
           console.log(
             `   - quoteResult.appliedPriceList.list_type: ${
-              (quoteResult.appliedPriceList as any)?.list_type || "N/A"
+              (quoteResult.appliedPriceList as any)?.list_type || 'N/A'
             }`
           );
           console.log(
             `   - quoteResult.appliedPriceList.master_list_id: ${
-              (quoteResult.appliedPriceList as any)?.master_list_id || "N/A"
+              (quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'
             }`
           );
           console.log(
             `   - quoteResult.appliedPriceList.default_margin_percent: ${
-              (quoteResult.appliedPriceList as any)?.default_margin_percent ??
-              "N/A"
+              (quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'
             }`
           );
           console.log(
             `   - quoteResult.appliedPriceList.default_margin_fixed: ${
-              (quoteResult.appliedPriceList as any)?.default_margin_fixed ??
-              "N/A"
+              (quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'
             }`
           );
 
@@ -495,72 +448,49 @@ export async function POST(request: NextRequest) {
             0;
 
           console.log(
-            `💰 [QUOTES DB] Mapping valori per ${
-              courier.displayName || courier.courierName
-            }:`
+            `💰 [QUOTES DB] Mapping valori per ${courier.displayName || courier.courierName}:`
           );
           console.log(
             `   - supplierPrice calcolato: €${supplierPrice.toFixed(2)} (${
               quoteResult.supplierPrice !== undefined
-                ? "supplierPrice"
+                ? 'supplierPrice'
                 : quoteResult.totalCost !== undefined
-                ? "totalCost"
-                : "basePrice"
+                  ? 'totalCost'
+                  : 'basePrice'
             })`
           );
+          console.log(`   - total_price (finalPrice): €${quoteResult.finalPrice.toFixed(2)}`);
+          console.log(`   - weight_price (supplierPrice): €${supplierPrice.toFixed(2)}`);
           console.log(
-            `   - total_price (finalPrice): €${quoteResult.finalPrice.toFixed(
-              2
-            )}`
-          );
-          console.log(
-            `   - weight_price (supplierPrice): €${supplierPrice.toFixed(2)}`
-          );
-          console.log(
-            `   - Differenza (margine): €${(
-              quoteResult.finalPrice - supplierPrice
-            ).toFixed(2)}`
+            `   - Differenza (margine): €${(quoteResult.finalPrice - supplierPrice).toFixed(2)}`
           );
 
           // Verifica che il margine sia stato calcolato correttamente
-          if (
-            supplierPrice === quoteResult.finalPrice &&
-            quoteResult.margin === 0
-          ) {
+          if (supplierPrice === quoteResult.finalPrice && quoteResult.margin === 0) {
             console.warn(
               `⚠️ [QUOTES DB] ⚠️ PROBLEMA RILEVATO: Margine 0% per ${courier.courierName}`
             );
-            console.warn(
-              `   - Costo fornitore = prezzo finale (€${supplierPrice.toFixed(
-                2
-              )})`
-            );
+            console.warn(`   - Costo fornitore = prezzo finale (€${supplierPrice.toFixed(2)})`);
             console.warn(`   - Listino ID: ${quoteResult.priceListId}`);
             console.warn(
-              `   - Listino tipo: ${
-                (quoteResult.appliedPriceList as any)?.list_type || "N/A"
-              }`
+              `   - Listino tipo: ${(quoteResult.appliedPriceList as any)?.list_type || 'N/A'}`
             );
             console.warn(
               `   - Master List ID: ${
-                (quoteResult.appliedPriceList as any)?.master_list_id || "N/A"
+                (quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'
               }`
             );
             console.warn(
               `   - default_margin_percent: ${
-                (quoteResult.appliedPriceList as any)?.default_margin_percent ??
-                "N/A"
+                (quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'
               }`
             );
             console.warn(
               `   - default_margin_fixed: ${
-                (quoteResult.appliedPriceList as any)?.default_margin_fixed ??
-                "N/A"
+                (quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'
               }`
             );
-            console.warn(
-              `   - ⚠️ Il prezzo di vendita non riflette il listino personalizzato!`
-            );
+            console.warn(`   - ⚠️ Il prezzo di vendita non riflette il listino personalizzato!`);
           } else if (quoteResult.margin > 0) {
             console.log(
               `✅ [QUOTES DB] Margine calcolato correttamente per ${
@@ -579,13 +509,13 @@ export async function POST(request: NextRequest) {
 
           // ✨ ENTERPRISE: Normalizza contractCode per evitare problemi di matching
           // Se contractCode è null/undefined o contiene solo "default", usa "default" standardizzato
-          let normalizedContractCode = courier.contractCode || "default";
+          let normalizedContractCode = courier.contractCode || 'default';
           if (
-            normalizedContractCode.toLowerCase().includes("default") &&
-            normalizedContractCode !== "default"
+            normalizedContractCode.toLowerCase().includes('default') &&
+            normalizedContractCode !== 'default'
           ) {
             // Se contiene "default" ma non è esattamente "default", normalizza
-            normalizedContractCode = "default";
+            normalizedContractCode = 'default';
           }
 
           const rate = {
@@ -593,28 +523,24 @@ export async function POST(request: NextRequest) {
             contractCode: normalizedContractCode,
             total_price: quoteResult.finalPrice.toString(), // ✨ Prezzo finale CON margine
             weight_price: supplierPrice.toString(), // ✨ Costo fornitore SENZA margine (totalCost)
-            base_price:
-              quoteResult.basePrice?.toString() || supplierPrice.toString(),
-            surcharges: quoteResult.surcharges?.toString() || "0",
-            margin: quoteResult.margin?.toString() || "0",
-            _source: "db", // ✨ Flag: prezzo da DB
+            base_price: quoteResult.basePrice?.toString() || supplierPrice.toString(),
+            surcharges: quoteResult.surcharges?.toString() || '0',
+            margin: quoteResult.margin?.toString() || '0',
+            _source: 'db', // ✨ Flag: prezzo da DB
             _priceListId: quoteResult.priceListId,
-            _apiSource: quoteResult._apiSource || "db",
+            _apiSource: quoteResult._apiSource || 'db',
             _configId: quoteResult._configId || quoteResult._courierConfigId, // ✨ Usa courier_config_id se presente
 
             // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
-            vat_mode: quoteResult.vatMode || "excluded", // Default per retrocompatibilità
+            vat_mode: quoteResult.vatMode || 'excluded', // Default per retrocompatibilità
             vat_rate: (quoteResult.vatRate || 22.0).toString(),
-            vat_amount: quoteResult.vatAmount?.toString() || "0",
+            vat_amount: quoteResult.vatAmount?.toString() || '0',
             total_price_with_vat:
-              quoteResult.totalPriceWithVAT?.toString() ||
-              quoteResult.finalPrice.toString(),
+              quoteResult.totalPriceWithVAT?.toString() || quoteResult.finalPrice.toString(),
           };
 
           console.log(
-            `📤 [QUOTES DB] Rate mappato per ${
-              courier.displayName || courier.courierName
-            }:`
+            `📤 [QUOTES DB] Rate mappato per ${courier.displayName || courier.courierName}:`
           );
           console.log(
             `   - total_price: ${
@@ -627,16 +553,12 @@ export async function POST(request: NextRequest) {
             } (da supplierPrice: €${supplierPrice.toFixed(2)})`
           );
           console.log(
-            `   - margin: ${rate.margin} (da margin: €${
-              quoteResult.margin?.toFixed(2) || "0.00"
-            })`
+            `   - margin: ${rate.margin} (da margin: €${quoteResult.margin?.toFixed(2) || '0.00'})`
           );
           console.log(`   - vat_mode: ${rate.vat_mode} (ADR-001)`);
           console.log(`   - vat_rate: ${rate.vat_rate}% (ADR-001)`);
           console.log(`   - vat_amount: ${rate.vat_amount} (ADR-001)`);
-          console.log(
-            `   - total_price_with_vat: ${rate.total_price_with_vat} (ADR-001)`
-          );
+          console.log(`   - total_price_with_vat: ${rate.total_price_with_vat} (ADR-001)`);
 
           rates.push(rate);
           console.log(
@@ -657,10 +579,7 @@ export async function POST(request: NextRequest) {
           );
         }
       } catch (error: any) {
-        console.error(
-          `❌ [QUOTES DB] Errore calcolo per ${courier.courierName}:`,
-          error
-        );
+        console.error(`❌ [QUOTES DB] Errore calcolo per ${courier.courierName}:`, error);
         errors.push(`${courier.courierName}: ${error.message}`);
       }
     }
@@ -679,7 +598,7 @@ export async function POST(request: NextRequest) {
 
     for (const rate of rates) {
       // Chiave = carrier_code (chiave UNICA per ogni tariffa)
-      const key = (rate.contractCode || rate.carrierCode || "").toLowerCase();
+      const key = (rate.contractCode || rate.carrierCode || '').toLowerCase();
 
       if (!deduplicatedRates.has(key)) {
         deduplicatedRates.set(key, rate);
@@ -691,8 +610,8 @@ export async function POST(request: NextRequest) {
 
     // Ordina per prezzo crescente (più economico prima)
     finalRates.sort((a, b) => {
-      const priceA = parseFloat(a.total_price || "0");
-      const priceB = parseFloat(b.total_price || "0");
+      const priceA = parseFloat(a.total_price || '0');
+      const priceB = parseFloat(b.total_price || '0');
       return priceA - priceB;
     });
 
@@ -709,9 +628,7 @@ export async function POST(request: NextRequest) {
       console.warn(`   2. Matching contract_code fallito`);
       console.warn(`   3. Calcolo prezzo fallito per tutti i corrieri`);
       console.warn(`   4. Listini senza entries (matrice vuota)`);
-      console.warn(
-        `   - Corrieri disponibili dopo filtro: ${availableCouriers.length}`
-      );
+      console.warn(`   - Corrieri disponibili dopo filtro: ${availableCouriers.length}`);
       console.warn(`   - Rates calcolati: ${rates.length}`);
       console.warn(`   - Errori: ${errors.length}`);
     }
@@ -720,18 +637,18 @@ export async function POST(request: NextRequest) {
       success: true,
       rates: finalRates,
       details: {
-        source: "database",
+        source: 'database',
         cached: false,
         totalRates: finalRates.length,
         errors: errors.length > 0 ? errors : undefined,
       },
     });
   } catch (error: any) {
-    console.error("❌ [QUOTES DB] Errore:", error);
+    console.error('❌ [QUOTES DB] Errore:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Errore durante il calcolo preventivi da DB",
+        error: error.message || 'Errore durante il calcolo preventivi da DB',
       },
       { status: 500 }
     );

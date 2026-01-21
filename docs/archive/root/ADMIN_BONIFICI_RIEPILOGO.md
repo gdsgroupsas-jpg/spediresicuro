@@ -9,22 +9,27 @@
 ## 📁 FILE CREATI/MODIFICATI
 
 ### 1. Server Actions
+
 **File:** `app/actions/topups-admin.ts` (NUOVO)
 
 **Funzioni:**
+
 - `getTopUpRequestsAdmin({ status, search, limit, offset })` - Lista richieste con filtri
 - `getTopUpRequestAdmin(id)` - Dettaglio singola richiesta
 - `verifyAdminAccess()` - Helper per verifica permessi admin
 
 **Sicurezza:**
+
 - ✅ Verifica admin/superadmin in ogni funzione
 - ✅ Usa `supabaseAdmin` per bypassare RLS
 - ✅ Join con tabella `users` per email e nome
 
 ### 2. Pagina UI
+
 **File:** `app/dashboard/admin/bonifici/page.tsx` (NUOVO)
 
 **Componenti:**
+
 - Tabs per status: Pending | Manual Review | Approved | Rejected
 - Tabella con colonne: Data, Utente, Importo, Stato, AI Conf, Azioni
 - Modal/Dialog per dettagli e azioni
@@ -32,6 +37,7 @@
 - Toast notifications (sonner)
 
 **Funzionalità:**
+
 - ✅ Visualizza lista richieste filtrate per status
 - ✅ Apre modal con dettagli richiesta
 - ✅ Link "Apri ricevuta" per visualizzare file
@@ -46,6 +52,7 @@
 ## 🔗 INTEGRAZIONE CON FUNZIONI ESISTENTI
 
 La pagina usa le funzioni già implementate in `app/actions/wallet.ts`:
+
 - `approveTopUpRequest(requestId, approvedAmount?)` - Approvazione atomica con rollback
 - `rejectTopUpRequest(requestId, reason)` - Rifiuto con audit log
 
@@ -54,6 +61,7 @@ La pagina usa le funzioni già implementate in `app/actions/wallet.ts`:
 ## 🧪 TEST MANUALI STEP-BY-STEP
 
 ### Prerequisiti
+
 1. Avere almeno un utente admin/superadmin configurato
 2. Avere almeno una richiesta `top_up_requests` con `status = 'pending'`
 3. Browser con accesso all'applicazione
@@ -63,11 +71,13 @@ La pagina usa le funzioni già implementate in `app/actions/wallet.ts`:
 ### Test 1: Accesso e Visualizzazione
 
 **Passi:**
+
 1. Accedi come admin/superadmin
 2. Vai su `/dashboard/admin/bonifici`
 3. Verifica che la pagina carichi senza errori
 
 **Risultato atteso:**
+
 - ✅ Pagina carica correttamente
 - ✅ Tab "In Attesa" è attivo di default
 - ✅ Tabella mostra richieste con status `pending`
@@ -75,10 +85,11 @@ La pagina usa le funzioni già implementate in `app/actions/wallet.ts`:
 - ✅ Conteggi tab aggiornati
 
 **Query verifica:**
+
 ```sql
 -- Conta richieste per status
-SELECT status, COUNT(*) 
-FROM top_up_requests 
+SELECT status, COUNT(*)
+FROM top_up_requests
 GROUP BY status;
 ```
 
@@ -87,6 +98,7 @@ GROUP BY status;
 ### Test 2: Creazione Richiesta e Visualizzazione
 
 **Passi:**
+
 1. Accedi come utente normale (non admin)
 2. Crea una richiesta top-up (upload ricevuta bonifico)
 3. Accedi come admin
@@ -94,6 +106,7 @@ GROUP BY status;
 5. Verifica che la richiesta appaia in tab "In Attesa"
 
 **Risultato atteso:**
+
 - ✅ Richiesta appare in tab "In Attesa"
 - ✅ Email/nome utente visibili nella colonna "Utente"
 - ✅ Importo corretto
@@ -102,6 +115,7 @@ GROUP BY status;
 - ✅ Bottone "Dettagli" presente
 
 **Query verifica:**
+
 ```sql
 -- Verifica richiesta creata
 SELECT id, user_id, amount, status, created_at
@@ -116,10 +130,12 @@ LIMIT 1;
 ### Test 3: Visualizzazione Dettagli
 
 **Passi:**
+
 1. Dalla lista, clicca "Dettagli" su una richiesta `pending`
 2. Verifica contenuto modal
 
 **Risultato atteso:**
+
 - ✅ Modal si apre
 - ✅ Mostra: Utente (nome + email), Stato, Importo Richiesto
 - ✅ AI Confidence con barra progresso (se disponibile)
@@ -133,6 +149,7 @@ LIMIT 1;
 ### Test 4: Approvazione Richiesta
 
 **Passi:**
+
 1. Apri dettagli di una richiesta `pending`
 2. Verifica che "Importo da Accreditare" sia precompilato con amount
 3. Clicca "Approva"
@@ -141,6 +158,7 @@ LIMIT 1;
 6. Verifica che lista si aggiorni
 
 **Risultato atteso:**
+
 - ✅ Toast: "Richiesta approvata. Credito di €X accreditato."
 - ✅ Modal si chiude
 - ✅ Lista si aggiorna automaticamente
@@ -150,6 +168,7 @@ LIMIT 1;
 - ✅ Audit log creato
 
 **Query verifica:**
+
 ```sql
 -- Verifica status richiesta
 SELECT id, status, approved_by, approved_at, approved_amount
@@ -181,18 +200,21 @@ WHERE action = 'top_up_request_approved' AND resource_id = '<request_id>';
 ### Test 5: Approvazione con Importo Diverso
 
 **Passi:**
+
 1. Apri dettagli di una richiesta `pending` con amount = 100
 2. Modifica "Importo da Accreditare" a 80
 3. Clicca "Approva"
 4. Verifica risultato
 
 **Risultato atteso:**
+
 - ✅ Toast successo
 - ✅ Wallet aumenta di 80 (non 100)
 - ✅ `approved_amount` = 80 nella richiesta
 - ✅ Audit log contiene `approved_amount: 80`
 
 **Query verifica:**
+
 ```sql
 SELECT approved_amount, amount
 FROM top_up_requests
@@ -205,12 +227,14 @@ WHERE id = '<request_id>';
 ### Test 6: Rifiuto Richiesta
 
 **Passi:**
+
 1. Apri dettagli di una richiesta `pending`
 2. Inserisci motivo: "Ricevuta non leggibile"
 3. Clicca "Rifiuta"
 4. Verifica risultato
 
 **Risultato atteso:**
+
 - ✅ Toast: "Richiesta rifiutata con successo."
 - ✅ Modal si chiude
 - ✅ Lista si aggiorna
@@ -220,6 +244,7 @@ WHERE id = '<request_id>';
 - ✅ Audit log creato
 
 **Query verifica:**
+
 ```sql
 -- Verifica status richiesta
 SELECT id, status, approved_by, approved_at, admin_notes
@@ -228,7 +253,7 @@ WHERE id = '<request_id>';
 -- Deve essere: status='rejected', admin_notes='Ricevuta non leggibile'
 
 -- Verifica NESSUNA wallet_transaction creata
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM wallet_transactions
 WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 -- Deve essere: 0
@@ -245,12 +270,14 @@ WHERE action = 'top_up_request_rejected' AND resource_id = '<request_id>';
 ### Test 7: Doppia Approvazione (Idempotenza)
 
 **Passi:**
+
 1. Approva una richiesta (Test 4)
 2. Vai su tab "Approvate"
 3. Apri dettagli della richiesta già approvata
 4. Clicca "Approva" di nuovo (se il bottone è ancora visibile)
 
 **Risultato atteso:**
+
 - ✅ Se bottone "Approva" è ancora visibile e cliccato:
   - Toast errore: "Richiesta già processata."
   - Nessuna nuova wallet_transaction creata
@@ -260,9 +287,10 @@ WHERE action = 'top_up_request_rejected' AND resource_id = '<request_id>';
   - Nessun bottone azione visibile
 
 **Query verifica:**
+
 ```sql
 -- Conta transazioni per questa richiesta
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM wallet_transactions
 WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 -- Deve essere: 1 (anche dopo doppio click)
@@ -273,20 +301,23 @@ WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 ### Test 8: Race Condition (Concorrenza)
 
 **Passi:**
+
 1. Apri due tab browser con `/dashboard/admin/bonifici`
 2. Entrambe le tab: apri dettagli della stessa richiesta `pending`
 3. In entrambe le tab: clicca "Approva" simultaneamente (o quasi)
 
 **Risultato atteso:**
+
 - ✅ Solo una approvazione riesce
 - ✅ L'altra mostra errore: "Richiesta già processata."
 - ✅ Solo 1 wallet_transaction creata
 - ✅ Wallet aumenta solo 1 volta
 
 **Query verifica:**
+
 ```sql
 -- Conta transazioni
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM wallet_transactions
 WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 -- Deve essere: 1 (anche con click simultanei)
@@ -297,12 +328,14 @@ WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 ### Test 9: Search
 
 **Passi:**
+
 1. Vai su `/dashboard/admin/bonifici`
 2. Inserisci email utente nella search bar
 3. Premi Enter o clicca "Aggiorna"
 4. Verifica risultati
 
 **Risultato atteso:**
+
 - ✅ Lista filtra per email/nome utente
 - ✅ Solo richieste dell'utente cercato sono visibili
 - ✅ Search funziona anche con parte dell'email
@@ -312,11 +345,13 @@ WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 ### Test 10: Navigazione Tab
 
 **Passi:**
+
 1. Vai su `/dashboard/admin/bonifici`
 2. Clicca su ogni tab: In Attesa | Revisione | Approvate | Rifiutate
 3. Verifica contenuto
 
 **Risultato atteso:**
+
 - ✅ Ogni tab mostra solo richieste con status corrispondente
 - ✅ Conteggi tab aggiornati correttamente
 - ✅ Tabella si aggiorna quando cambi tab
@@ -326,11 +361,13 @@ WHERE description LIKE '%Approvazione richiesta ricarica #<request_id>%';
 ### Test 11: Accesso Non Autorizzato
 
 **Passi:**
+
 1. Accedi come utente normale (non admin)
 2. Vai su `/dashboard/admin/bonifici`
 3. Verifica comportamento
 
 **Risultato atteso:**
+
 - ✅ Redirect a `/dashboard?error=unauthorized`
 - ✅ O pagina mostra "Accesso negato"
 - ✅ Nessun dato caricato

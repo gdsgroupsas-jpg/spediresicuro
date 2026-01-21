@@ -1,4 +1,4 @@
-import { StatsCardsSkeleton, DataTableSkeleton } from '@/components/shared/data-table-skeleton'
+import { StatsCardsSkeleton, DataTableSkeleton } from '@/components/shared/data-table-skeleton';
 
 export default function ResellerTeamLoading() {
   return (
@@ -27,5 +27,5 @@ export default function ResellerTeamLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
 /**
  * Configurazione centralizzata per l'agent orchestrator e workers.
- * 
+ *
  * Tutte le costanti magiche sono qui per facilitare:
  * - Testing (override facile)
  * - Tuning (cambiare valori senza toccare logica)
@@ -140,7 +140,7 @@ export const autoProceedConfig = {
    * Soglia di confidence per auto-proceed completo (senza chiedere conferma).
    * Valore: 0-100. Se confidenceScore >= AUTO_PROCEED_THRESHOLD e validationErrors.length === 0,
    * procede automaticamente (solo per operazioni sicure: pricing, address normalization).
-   * 
+   *
    * ⚠️ CRITICO: Auto-proceed NON si applica mai a:
    * - booking_worker (creazione LDV/spedizione)
    * - Operazioni wallet (ricarica, addebito, svincolo giacenza)
@@ -165,10 +165,7 @@ export const autoProceedConfig = {
    * Finestra di annullamento per auto-proceed (in millisecondi).
    * L'utente può annullare l'auto-proceed entro questo tempo.
    */
-  CANCELLATION_WINDOW_MS: parseInt(
-    process.env.AUTO_PROCEED_CANCELLATION_WINDOW_MS || '5000',
-    10
-  ),
+  CANCELLATION_WINDOW_MS: parseInt(process.env.AUTO_PROCEED_CANCELLATION_WINDOW_MS || '5000', 10),
 } as const;
 
 /**
@@ -183,4 +180,3 @@ export const agentConfig = {
   ocr: ocrConfig,
   autoProceed: autoProceedConfig,
 } as const;
-

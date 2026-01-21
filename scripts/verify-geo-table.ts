@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -33,37 +32,36 @@ async function checkGeoTable() {
       console.error('❌ Error querying geo_locations (HEAD):', error);
       return;
     }
-    
+
     console.log(`✅ Connection OK. Total rows: ${count}`);
 
     // 2. Try the Search query (Sarno)
     const searchTerm = 'sarno:*';
     console.log(`🔍 Testing search for: "${searchTerm}"...`);
-    
+
     const { data: searchData, error: searchError } = await supabase
       .from('geo_locations')
       .select('name, province, region, caps')
       .textSearch('search_vector', searchTerm, {
-        type: 'websearch', 
+        type: 'websearch',
         config: 'italian',
       })
       .limit(5);
 
-     if (searchError) {
+    if (searchError) {
       console.error('❌ Error executing textSearch:');
       console.error(JSON.stringify(searchError, null, 2));
-      
+
       if (searchError.message.includes('does not exist') || searchError.code === '42703') {
-           console.log('💡 HINT: Does the column "search_vector" exist? Is it generated?');
+        console.log('💡 HINT: Does the column "search_vector" exist? Is it generated?');
       }
       return;
     }
-    
+
     console.log(`✅ Search result count: ${searchData?.length}`);
     if (searchData?.length > 0) {
-        console.log('📝 Sample:', JSON.stringify(searchData[0]));
+      console.log('📝 Sample:', JSON.stringify(searchData[0]));
     }
-
   } catch (e: any) {
     console.error('❌ Unexpected error:', e.message);
   }

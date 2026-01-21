@@ -47,10 +47,7 @@ export function FiscalHealthSkeleton() {
       <div className="h-5 w-40 bg-slate-700 rounded mb-4"></div>
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between p-3 bg-slate-700/30 rounded-xl"
-          >
+          <div key={i} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-xl">
             <div className="flex items-center gap-3">
               <div className="w-5 h-5 bg-slate-700 rounded"></div>
               <div className="h-4 w-32 bg-slate-700 rounded"></div>

@@ -1,9 +1,9 @@
 /**
  * Type Guards per AgentState
- * 
+ *
  * Type guards per migliorare type safety in LangGraph context.
  * Rimuove necessità di `as any` o `unknown` non gestiti.
- * 
+ *
  * P3 Task 5: Type Safety Improvements
  */
 
@@ -41,13 +41,8 @@ export function isBaseMessageArray(value: unknown): value is BaseMessage[] {
   }
 
   // Verifica che tutti gli elementi siano BaseMessage
-  return value.every(msg => {
-    return (
-      typeof msg === 'object' &&
-      msg !== null &&
-      'content' in msg &&
-      'getType' in msg
-    );
+  return value.every((msg) => {
+    return typeof msg === 'object' && msg !== null && 'content' in msg && 'getType' in msg;
   });
 }
 
@@ -78,4 +73,3 @@ export function toAgentState(value: unknown, fallback: AgentState): AgentState {
   }
   return fallback;
 }
-

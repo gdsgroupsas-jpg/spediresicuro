@@ -7,6 +7,7 @@
 **Branch**: `feature/m4-business-dashboards`
 
 ### Dependencies on Previous Milestones
+
 - **M1**: Sentry Error Tracking, Health Checks ✅
 - **M2**: APM, Structured Logging (`lib/logger.ts`), Instrumentation ✅
 - **M3**: Uptime Monitoring, Audit Schema (`audit_logs` table) ✅
@@ -73,20 +74,21 @@ Central service for logging all business events with consistent format.
 
 **Event Categories:**
 
-| Category | Events | Fields |
-|----------|--------|--------|
-| **Shipment** | created, status_changed, cancelled, deleted | shipment_id, old_status, new_status, courier, cost |
-| **User** | registered, login, profile_updated, role_changed | user_id, changes, ip_address |
-| **Financial** | wallet_topup, wallet_charge, refund, fee_applied | user_id, amount, balance_before, balance_after |
+| Category      | Events                                           | Fields                                             |
+| ------------- | ------------------------------------------------ | -------------------------------------------------- |
+| **Shipment**  | created, status_changed, cancelled, deleted      | shipment_id, old_status, new_status, courier, cost |
+| **User**      | registered, login, profile_updated, role_changed | user_id, changes, ip_address                       |
+| **Financial** | wallet_topup, wallet_charge, refund, fee_applied | user_id, amount, balance_before, balance_after     |
 
 **Interface:**
+
 ```typescript
 interface AuditEvent {
   action: string;
   resource_type: 'shipment' | 'user' | 'wallet' | 'topup';
   resource_id: string;
   actor_id: string;
-  target_id?: string;  // For impersonation
+  target_id?: string; // For impersonation
   metadata: Record<string, unknown>;
   ip_address?: string;
 }
@@ -95,9 +97,11 @@ interface AuditEvent {
 ### 2. Metrics Endpoints
 
 #### `/api/metrics/prometheus` (GET)
+
 Prometheus exposition format for Grafana scraping.
 
 **Metrics to expose:**
+
 ```prometheus
 # Shipment Metrics
 spedire_shipments_total{status="delivered"} 1234
@@ -125,14 +129,17 @@ spedire_topups_approved_today 8
 ```
 
 **Security:**
+
 - Bearer token authentication (`METRICS_API_TOKEN`)
 - Rate limiting (60 req/min)
 - No PII in metrics
 
 #### `/api/metrics/business` (GET)
+
 JSON format for internal admin dashboard.
 
 **Response:**
+
 ```json
 {
   "timestamp": "2024-01-15T10:30:00Z",
@@ -150,7 +157,7 @@ JSON format for internal admin dashboard.
       "cancelled": 77
     },
     "successRate": 0.95,
-    "averageCost": 8.50
+    "averageCost": 8.5
   },
   "revenue": {
     "total": 123456.78,
@@ -167,11 +174,11 @@ JSON format for internal admin dashboard.
     "newThisMonth": 89
   },
   "wallet": {
-    "totalBalance": 45678.90,
+    "totalBalance": 45678.9,
     "transactionsToday": 123,
     "topupsPending": 12,
     "topupsApprovedToday": 8,
-    "averageTopupAmount": 150.00
+    "averageTopupAmount": 150.0
   }
 }
 ```
@@ -179,6 +186,7 @@ JSON format for internal admin dashboard.
 ### 3. Database Enhancements
 
 #### Audit Events Extension
+
 Extend existing `audit_logs` table usage with standardized actions:
 
 ```typescript
@@ -208,6 +216,7 @@ const AUDIT_ACTIONS = {
 ```
 
 #### Retention Policy
+
 SQL function for audit log cleanup (configurable retention):
 
 ```sql
@@ -234,6 +243,7 @@ $$ LANGUAGE plpgsql;
 ### 4. Grafana Cloud Setup
 
 **Free Tier Limits:**
+
 - 10,000 active series
 - 14-day retention
 - 50GB logs/month (with Loki)
@@ -266,6 +276,7 @@ $$ LANGUAGE plpgsql;
 ## Implementation Plan
 
 ### Phase 1: Audit Trail Service (2h)
+
 - [ ] Create `lib/services/audit-service.ts`
 - [ ] Define all audit action constants
 - [ ] Implement `logAuditEvent()` function
@@ -274,6 +285,7 @@ $$ LANGUAGE plpgsql;
 - [ ] Add audit calls to user operations
 
 ### Phase 2: Metrics Endpoints (2h)
+
 - [ ] Create `/api/metrics/prometheus/route.ts`
 - [ ] Create `/api/metrics/business/route.ts`
 - [ ] Implement Prometheus text format helper
@@ -281,6 +293,7 @@ $$ LANGUAGE plpgsql;
 - [ ] Create metrics aggregation queries
 
 ### Phase 3: Grafana Integration (2h)
+
 - [ ] Create Grafana Cloud account (free)
 - [ ] Configure Prometheus data source
 - [ ] Create dashboard JSON
@@ -288,6 +301,7 @@ $$ LANGUAGE plpgsql;
 - [ ] Configure alerting rules
 
 ### Phase 4: Admin Dashboard UI (2h)
+
 - [ ] Create `/app/(admin)/admin/metrics/page.tsx`
 - [ ] Add metrics overview cards
 - [ ] Add charts (using recharts)
@@ -295,6 +309,7 @@ $$ LANGUAGE plpgsql;
 - [ ] Add export functionality
 
 ### Phase 5: Testing & Documentation (1h)
+
 - [ ] Create `/api/test/m4-metrics/route.ts`
 - [ ] Write Grafana setup documentation
 - [ ] Update ops runbook
@@ -341,6 +356,7 @@ FINANCIAL_AUDIT_RETENTION_DAYS=365
 ## Files to Create/Modify
 
 ### New Files
+
 ```
 lib/services/audit-service.ts          # Audit trail service
 lib/metrics/prometheus.ts              # Prometheus format helpers
@@ -355,6 +371,7 @@ docs/7-OPERATIONS/GRAFANA_SETUP.md     # Setup guide
 ```
 
 ### Modified Files
+
 ```
 app/actions/shipments.ts               # Add audit logging
 app/actions/wallet.ts                  # Add audit logging
@@ -368,17 +385,17 @@ middleware.ts                          # Add metrics auth check
 
 ### Completed ✅
 
-| Component | File | Status |
-|-----------|------|--------|
-| Audit Trail Service | `lib/services/audit-service.ts` | ✅ Implemented |
-| Prometheus Helpers | `lib/metrics/prometheus.ts` | ✅ Implemented |
-| Business Metrics Queries | `lib/metrics/business-metrics.ts` | ✅ Implemented |
-| Prometheus Endpoint | `app/api/metrics/prometheus/route.ts` | ✅ Implemented |
-| Business Metrics API | `app/api/metrics/business/route.ts` | ✅ Implemented |
-| Test Endpoint | `app/api/test/m4-metrics/route.ts` | ✅ Implemented |
-| Admin Dashboard | `app/dashboard/admin/metrics/page.tsx` | ✅ Implemented |
-| Retention Policy | `supabase/migrations/113_audit_logs_retention_policy.sql` | ✅ Implemented |
-| Grafana Setup Guide | `docs/7-OPERATIONS/GRAFANA_SETUP.md` | ✅ Implemented |
+| Component                | File                                                      | Status         |
+| ------------------------ | --------------------------------------------------------- | -------------- |
+| Audit Trail Service      | `lib/services/audit-service.ts`                           | ✅ Implemented |
+| Prometheus Helpers       | `lib/metrics/prometheus.ts`                               | ✅ Implemented |
+| Business Metrics Queries | `lib/metrics/business-metrics.ts`                         | ✅ Implemented |
+| Prometheus Endpoint      | `app/api/metrics/prometheus/route.ts`                     | ✅ Implemented |
+| Business Metrics API     | `app/api/metrics/business/route.ts`                       | ✅ Implemented |
+| Test Endpoint            | `app/api/test/m4-metrics/route.ts`                        | ✅ Implemented |
+| Admin Dashboard          | `app/dashboard/admin/metrics/page.tsx`                    | ✅ Implemented |
+| Retention Policy         | `supabase/migrations/113_audit_logs_retention_policy.sql` | ✅ Implemented |
+| Grafana Setup Guide      | `docs/7-OPERATIONS/GRAFANA_SETUP.md`                      | ✅ Implemented |
 
 ### Access URLs
 

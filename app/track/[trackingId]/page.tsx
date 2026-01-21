@@ -1,6 +1,6 @@
 /**
  * Branded Tracking Page - SpedireSicuro
- * 
+ *
  * Pagina di tracking per clienti finali con:
  * - Design ottimizzato per conversioni (CRO)
  * - Upsell integrato
@@ -57,7 +57,12 @@ interface TrackingData {
 function getMockTrackingData(trackingId: string): TrackingData {
   // Usa un hash del trackingId per avere status consistenti
   const hash = trackingId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const statuses: TrackingData['status'][] = ['in_transit', 'delivered', 'exception', 'out_for_delivery'];
+  const statuses: TrackingData['status'][] = [
+    'in_transit',
+    'delivered',
+    'exception',
+    'out_for_delivery',
+  ];
   const randomStatus = statuses[hash % statuses.length] || 'in_transit';
 
   return {
@@ -180,8 +185,8 @@ function TrackingTimeline({ history }: { history: TrackingEvent[] }) {
                   isActive
                     ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] shadow-lg shadow-[#FF9500]/50'
                     : isPast
-                    ? 'bg-green-500'
-                    : 'bg-gray-300'
+                      ? 'bg-green-500'
+                      : 'bg-gray-300'
                 }`}
               >
                 {isActive && (
@@ -302,7 +307,8 @@ function UpsellCard({
             {product.discount_percent}% OFF
           </div>
           <p className="text-sm text-gray-600">
-            Sul tuo prossimo ordine con codice: <span className="font-mono font-bold text-[#FF9500]">{product.discount_code}</span>
+            Sul tuo prossimo ordine con codice:{' '}
+            <span className="font-mono font-bold text-[#FF9500]">{product.discount_code}</span>
           </p>
         </div>
 
@@ -341,7 +347,7 @@ function UpsellCard({
 export default function TrackingPage() {
   const params = useParams();
   const trackingId = (params?.trackingId as string) || '';
-  
+
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [upsellDismissed, setUpsellDismissed] = useState(false);
@@ -387,7 +393,8 @@ export default function TrackingPage() {
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Spedizione non trovata</h1>
           <p className="text-gray-600 mb-6">
-            Il codice di tracciamento <span className="font-mono font-bold">{trackingId}</span> non è stato trovato.
+            Il codice di tracciamento <span className="font-mono font-bold">{trackingId}</span> non
+            è stato trovato.
           </p>
           <Link
             href="/contatti"
@@ -443,7 +450,9 @@ export default function TrackingPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Consegna Stimata</p>
-                <p className="text-2xl font-bold text-gray-900">{trackingData.estimated_delivery}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {trackingData.estimated_delivery}
+                </p>
               </div>
             </div>
           </div>
@@ -504,4 +513,3 @@ export default function TrackingPage() {
     </div>
   );
 }
-

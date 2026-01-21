@@ -79,7 +79,7 @@ export interface Shipment {
   price_list_id?: string; // ID listino applicato (per audit)
   applied_price_rule_id?: string; // ID regola applicata (per audit)
   // ✨ NUOVO: VAT Semantics (ADR-001)
-  vat_mode?: "included" | "excluded" | null; // NULL = legacy (assume 'excluded')
+  vat_mode?: 'included' | 'excluded' | null; // NULL = legacy (assume 'excluded')
   vat_rate?: number; // Default 22.00
 
   // Geo-analytics

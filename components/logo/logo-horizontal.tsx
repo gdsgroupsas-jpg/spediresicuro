@@ -1,9 +1,9 @@
-import React from 'react'
+import React from 'react';
 
 interface LogoHorizontalProps {
-  className?: string
-  width?: number
-  height?: number
+  className?: string;
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -11,7 +11,11 @@ interface LogoHorizontalProps {
  * Basato su design Gemini - ottimizzato per React e header
  * Versione ottimizzata per non essere tagliata nell'header
  */
-export default function LogoHorizontal({ className = '', width = 400, height = 133 }: LogoHorizontalProps) {
+export default function LogoHorizontal({
+  className = '',
+  width = 400,
+  height = 133,
+}: LogoHorizontalProps) {
   return (
     <svg
       width={width}
@@ -63,7 +67,7 @@ export default function LogoHorizontal({ className = '', width = 400, height = 1
       >
         SPEDIRESICURO
       </text>
-      
+
       {/* Tagline - posizionata più in alto e più piccola */}
       <text
         x="1980"
@@ -78,5 +82,5 @@ export default function LogoHorizontal({ className = '', width = 400, height = 1
         Powered by AI
       </text>
     </svg>
-  )
+  );
 }

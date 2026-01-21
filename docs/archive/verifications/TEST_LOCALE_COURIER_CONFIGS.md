@@ -3,6 +3,7 @@
 ## ✅ Checklist Pre-Test
 
 ### 1. Verifica Setup Base
+
 ```bash
 # Verifica variabili ambiente
 npm run check:env:simple
@@ -15,17 +16,20 @@ npm run verify:supabase
 ```
 
 ### 2. Verifica Migration Database
+
 Assicurati che la migration `010_courier_configs_system.sql` sia stata eseguita:
+
 - ✅ Tabella `courier_configs` creata
 - ✅ Colonna `assigned_config_id` aggiunta a `users`
 - ✅ Policy RLS configurate
 - ✅ Unique index per default config creato
 
 **Verifica rapida:**
+
 ```sql
 -- In Supabase SQL Editor
 SELECT COUNT(*) FROM courier_configs;
-SELECT column_name FROM information_schema.columns 
+SELECT column_name FROM information_schema.columns
 WHERE table_name = 'users' AND column_name = 'assigned_config_id';
 ```
 
@@ -34,6 +38,7 @@ WHERE table_name = 'users' AND column_name = 'assigned_config_id';
 ## 🚀 Setup Test Locale
 
 ### 1. Avvia Server di Sviluppo
+
 ```bash
 npm run dev
 ```
@@ -41,6 +46,7 @@ npm run dev
 L'applicazione sarà disponibile su: **http://localhost:3000**
 
 ### 2. Login come Admin
+
 1. Vai su `http://localhost:3000/login`
 2. Accedi con un account admin
 3. Verifica che il ruolo sia `admin` nel database
@@ -52,6 +58,7 @@ L'applicazione sarà disponibile su: **http://localhost:3000**
 ### Test 1: Creare Prima Configurazione
 
 1. **Vai alla Dashboard Admin:**
+
    ```
    http://localhost:3000/dashboard/admin/configurations
    ```
@@ -63,7 +70,7 @@ L'applicazione sarà disponibile su: **http://localhost:3000**
    - **Provider**: `Spedisci.Online`
    - **API Key**: Inserisci una chiave API valida (o di test)
    - **Base URL**: `https://ecommerceitalia.spedisci.online/api/v2`
-   - **Mapping Contratti**: 
+   - **Mapping Contratti**:
      - Servizio: `poste` → Codice: `TEST123`
      - Servizio: `gls` → Codice: `TEST456`
    - **Default**: ✅ Spunta se vuoi usarla come fallback
@@ -80,7 +87,7 @@ L'applicazione sarà disponibile su: **http://localhost:3000**
 
 ```sql
 -- In Supabase SQL Editor
-SELECT 
+SELECT
   id,
   name,
   provider_id,
@@ -96,6 +103,7 @@ Dovresti vedere la configurazione appena creata.
 ### Test 3: Creare Spedizione (Usa Config DB)
 
 1. **Vai a creare spedizione:**
+
    ```
    http://localhost:3000/dashboard/spedizioni/nuova
    ```
@@ -113,6 +121,7 @@ Dovresti vedere la configurazione appena creata.
 ### Test 4: Test Fallback a Variabili d'Ambiente
 
 1. **Disattiva tutte le configurazioni nel DB:**
+
    ```sql
    UPDATE courier_configs SET is_active = false;
    ```
@@ -131,13 +140,15 @@ Dovresti vedere la configurazione appena creata.
 ### Test 5: Assegnare Configurazione a Utente Specifico
 
 1. **Ottieni ID configurazione:**
+
    ```sql
    SELECT id, name FROM courier_configs WHERE name = 'Configurazione Test Locale';
    ```
 
 2. **Assegna a utente:**
+
    ```sql
-   UPDATE users 
+   UPDATE users
    SET assigned_config_id = 'UUID-CONFIG-QUI'
    WHERE email = 'tuo-email@example.com';
    ```
@@ -155,17 +166,18 @@ Dovresti vedere la configurazione appena creata.
 2. **Ottieni ID spedizione**
 
 3. **Testa generazione LDV interna:**
+
    ```typescript
    // In browser console o componente React
    const response = await fetch('/api/test/ldv-internal', {
      method: 'POST',
      headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ 
+     body: JSON.stringify({
        shipmentId: 'ID-SPEDIZIONE-QUI',
-       format: 'pdf' 
-     })
+       format: 'pdf',
+     }),
    });
-   
+
    const blob = await response.blob();
    const url = URL.createObjectURL(blob);
    window.open(url);
@@ -180,6 +192,7 @@ Dovresti vedere la configurazione appena creata.
 ### Errore: "Accesso negato" nella pagina configurazioni
 
 **Soluzione:**
+
 1. Verifica che l'utente sia admin:
    ```sql
    SELECT email, role FROM users WHERE email = 'tuo-email@example.com';
@@ -192,6 +205,7 @@ Dovresti vedere la configurazione appena creata.
 ### Errore: "Configurazione non trovata" durante creazione spedizione
 
 **Soluzione:**
+
 1. Verifica che esista una config default:
    ```sql
    SELECT * FROM courier_configs WHERE is_default = true AND is_active = true;
@@ -201,6 +215,7 @@ Dovresti vedere la configurazione appena creata.
 ### Errore: "Provider non disponibile"
 
 **Soluzione:**
+
 1. Verifica che la factory supporti il provider
 2. Controlla `lib/couriers/factory.ts`
 3. Verifica che le credenziali siano valide
@@ -208,6 +223,7 @@ Dovresti vedere la configurazione appena creata.
 ### LDV interna non genera
 
 **Soluzione:**
+
 1. Verifica che la spedizione esista
 2. Controlla che l'utente abbia accesso
 3. Verifica che i dati spedizione siano completi
@@ -220,11 +236,13 @@ Dovresti vedere la configurazione appena creata.
 ### Log da Controllare
 
 **Console Browser (F12):**
+
 - `✅ Configurazione DB trovata per utente: ...`
 - `⚠️ Configurazione DB non trovata, uso fallback env`
 - `✅ Provider istanziato con successo`
 
 **Server Logs:**
+
 - `✅ Configurazione creata: ...`
 - `✅ Provider recuperato tramite factory`
 - `✅ LDV interna generata: ...`
@@ -233,7 +251,7 @@ Dovresti vedere la configurazione appena creata.
 
 ```sql
 -- Verifica configurazioni
-SELECT 
+SELECT
   name,
   provider_id,
   is_active,
@@ -243,7 +261,7 @@ FROM courier_configs
 ORDER BY created_at DESC;
 
 -- Verifica utenti con config assegnata
-SELECT 
+SELECT
   u.email,
   u.role,
   cc.name as config_name
@@ -252,7 +270,7 @@ LEFT JOIN courier_configs cc ON u.assigned_config_id = cc.id
 WHERE u.assigned_config_id IS NOT NULL;
 
 -- Verifica policy RLS
-SELECT 
+SELECT
   schemaname,
   tablename,
   policyname
@@ -278,17 +296,20 @@ WHERE tablename = 'courier_configs';
 ## 🎯 Test Avanzati (Opzionali)
 
 ### Test Multi-Configurazione
+
 1. Crea 2 configurazioni per lo stesso provider
 2. Imposta una come default
 3. Assegna l'altra a un utente specifico
 4. Verifica che l'utente usi la sua config, gli altri la default
 
 ### Test Performance
+
 1. Crea 10+ configurazioni
 2. Verifica che le query siano veloci
 3. Controlla gli indici nel database
 
 ### Test Sicurezza
+
 1. Prova ad accedere a `/dashboard/admin/configurations` con utente non-admin
 2. Verifica che venga negato l'accesso
 3. Prova a modificare config tramite API senza essere admin
@@ -296,4 +317,3 @@ WHERE tablename = 'courier_configs';
 ---
 
 **Buon testing! 🚀**
-

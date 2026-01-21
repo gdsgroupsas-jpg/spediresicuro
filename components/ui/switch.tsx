@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import * as React from 'react'
-import { cn } from '@/lib/utils'
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 interface SwitchProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  checked?: boolean
-  onCheckedChange?: (checked: boolean) => void
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
 }
 
 const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
   ({ className, checked = false, onCheckedChange, disabled, ...props }, ref) => {
     const handleClick = () => {
       if (!disabled && onCheckedChange) {
-        onCheckedChange(!checked)
+        onCheckedChange(!checked);
       }
-    }
+    };
 
     return (
       <button
@@ -28,9 +28,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD700]/50 focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          checked
-            ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500]'
-            : 'bg-gray-200',
+          checked ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500]' : 'bg-gray-200',
           className
         )}
         {...props}
@@ -42,10 +40,10 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           )}
         />
       </button>
-    )
+    );
   }
-)
+);
 
-Switch.displayName = 'Switch'
+Switch.displayName = 'Switch';
 
-export { Switch }
+export { Switch };

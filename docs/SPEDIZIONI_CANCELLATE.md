@@ -39,6 +39,7 @@ Il sistema di **Spedizioni Cancellate** implementa un meccanismo di **soft delet
 **Tabella:** `shipments`
 
 **Campi aggiunti (Migration `050_add_deleted_by_user_email.sql`):**
+
 ```sql
 deleted BOOLEAN DEFAULT FALSE,
 deleted_at TIMESTAMPTZ,
@@ -48,6 +49,7 @@ deleted_by_user_name TEXT
 ```
 
 **Indici per performance:**
+
 ```sql
 CREATE INDEX idx_shipments_deleted ON shipments(deleted) WHERE deleted = true;
 CREATE INDEX idx_shipments_deleted_at ON shipments(deleted_at) WHERE deleted = true;
@@ -59,20 +61,24 @@ CREATE INDEX idx_shipments_deleted_by_user_id ON shipments(deleted_by_user_id) W
 #### `DELETE /api/spedizioni?id={shipmentId}`
 
 **Funzionalità:**
+
 - Soft delete nel database locale
 - Cancellazione simultanea su Spedisci.Online (se configurato)
 - Popolamento campi audit trail
 
 **Priorità configurazione Spedisci.Online:**
+
 1. Configurazione del reseller che cancella (se è reseller)
 2. Configurazione del proprietario della spedizione
 3. Configurazione globale (`is_default = true`)
 
 **Metodi di cancellazione su Spedisci.Online:**
+
 - **Preferito**: `shipment_id_external` (se disponibile)
 - **Fallback**: `tracking_number`
 
 **Esempio risposta:**
+
 ```json
 {
   "success": true,
@@ -90,19 +96,23 @@ CREATE INDEX idx_shipments_deleted_by_user_id ON shipments(deleted_by_user_id) W
 #### `GET /api/spedizioni/cancellate`
 
 **Funzionalità:**
+
 - Recupera tutte le spedizioni cancellate con filtri RBAC
 - Paginazione supportata (`page`, `limit`)
 
 **Filtri RBAC:**
+
 - **Admin/SuperAdmin**: Vede tutte le spedizioni cancellate
 - **Reseller**: Vede le proprie + quelle dei suoi sub-user (via `parent_id`)
 - **User normale**: Vede solo le proprie spedizioni cancellate
 
 **Query Parameters:**
+
 - `page` (default: 1): Numero pagina
 - `limit` (default: 50): Elementi per pagina
 
 **Esempio risposta:**
+
 ```json
 {
   "success": true,
@@ -112,7 +122,7 @@ CREATE INDEX idx_shipments_deleted_by_user_id ON shipments(deleted_by_user_id) W
       "tracking_number": "3UW1LZ1549783",
       "recipient_name": "Mario Rossi",
       "carrier": "GLS",
-      "total_cost": 8.50,
+      "total_cost": 8.5,
       "created_at": "2025-01-01T10:00:00Z",
       "deleted_at": "2025-01-01T12:00:00Z",
       "deleted_by_user_email": "test@example.com",
@@ -135,6 +145,7 @@ CREATE INDEX idx_shipments_deleted_by_user_id ON shipments(deleted_by_user_id) W
 **Componente:** `app/dashboard/spedizioni/cancellate/page.tsx`
 
 **Funzionalità:**
+
 - Tabella con tutte le spedizioni cancellate
 - Colonne visualizzate:
   - Tracking / LDV
@@ -153,6 +164,7 @@ CREATE INDEX idx_shipments_deleted_by_user_id ON shipments(deleted_by_user_id) W
 - Filtri RBAC automatici (gestiti dal backend)
 
 **Navigazione:**
+
 - Link nella sidebar: "Spedizioni Cancellate" (icona Trash2)
 - Breadcrumb: Dashboard > Spedizioni > Spedizioni Cancellate
 
@@ -175,13 +187,14 @@ Le spedizioni cancellate rispettano le stesse policy RLS delle spedizioni attive
 **Campo utilizzato:** `parent_id` (tabella `users`)
 
 **Query per reseller:**
+
 ```sql
 -- Recupera tutti i sub-user del reseller
 SELECT id FROM users WHERE parent_id = :reseller_user_id;
 
 -- Filtra spedizioni cancellate
-SELECT * FROM shipments 
-WHERE deleted = true 
+SELECT * FROM shipments
+WHERE deleted = true
 AND user_id IN (:reseller_id, :sub_user_id_1, :sub_user_id_2, ...);
 ```
 
@@ -283,11 +296,13 @@ AND user_id IN (:reseller_id, :sub_user_id_1, :sub_user_id_2, ...);
 **Problema**: L'`increment_id` estratto dal tracking number non corrispondeva all'`increment_id` reale della spedizione su Spedisci.Online, causando errori 404 durante la cancellazione.
 
 **Soluzione**:
+
 1. **Salvataggio `shipmentId` durante creazione**: Il `shipmentId` (increment_id) viene ora estratto dalla risposta API di Spedisci.Online e salvato come `shipment_id_external` nel database
 2. **Estrazione corretta da tracking**: Se `shipment_id_external` non è disponibile, l'estrazione dal tracking ora cerca il numero alla fine (es: `3UW1LZ1549886` → `1549886`) invece di usare `parseInt()` che restituiva solo `3`
 3. **Priorità corretta**: La cancellazione ora usa `shipment_id_external` (increment_id reale) se disponibile, altrimenti estrae dal tracking
 
 **File modificati**:
+
 - `lib/adapters/couriers/spedisci-online.ts`: Estrazione `shipmentId` dalla risposta API e correzione logica estrazione `increment_id`
 - `lib/engine/fulfillment-orchestrator.ts`: Passaggio `shipmentId` nel risultato
 - `app/api/spedizioni/route.ts`: Salvataggio `shipment_id_external` durante creazione
@@ -299,7 +314,7 @@ AND user_id IN (:reseller_id, :sub_user_id_1, :sub_user_id_2, ...);
 **Soluzione**: Ora tutti i file PDF usano solo il tracking number come nome: `3UW1LZ1549886.pdf`
 
 **File modificati**:
+
 - `app/dashboard/spedizioni/nuova/page.tsx`: Nome file durante creazione
 - `app/api/spedizioni/[id]/ldv/route.ts`: Nome file durante download da lista
 - `lib/adapters/export/index.ts`: Nome file per fallback ExportService
-

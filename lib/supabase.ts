@@ -1,6 +1,6 @@
 /**
  * Client Supabase per il progetto
- * 
+ *
  * Configurazione client Supabase per accesso al database.
  * Supporta sia client-side che server-side.
  */
@@ -16,19 +16,23 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
     '⚠️ Supabase URL o Anon Key non configurati. ' +
-    'Aggiungi NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local'
+      'Aggiungi NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local'
   );
 }
 
 // Use placeholder values during build if not configured
 const buildTimeUrl = supabaseUrl || 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
-const buildTimeAnonKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder';
-const buildTimeServiceKey = supabaseServiceKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0NTE5MjAwMCwiZXhwIjoxOTYwNzY4MDAwfQ.placeholder';
+const buildTimeAnonKey =
+  supabaseAnonKey ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder';
+const buildTimeServiceKey =
+  supabaseServiceKey ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY0NTE5MjAwMCwiZXhwIjoxOTYwNzY4MDAwfQ.placeholder';
 
 /**
  * Client Supabase per uso client-side (browser)
  * Usa la chiave anonima (pubblica, sicura per Row Level Security)
- * 
+ *
  * ⚠️ IMPORTANTE: Usa storage key univoco per evitare istanze multiple
  */
 export const supabase = createClient(buildTimeUrl, buildTimeAnonKey, {
@@ -67,7 +71,7 @@ export const supabaseAdmin = supabaseServiceKey
 if (!supabaseAdmin && process.env.NODE_ENV === 'production') {
   console.warn(
     '⚠️ Supabase Service Role Key non configurata. ' +
-    'Aggiungi SUPABASE_SERVICE_ROLE_KEY in .env.local per script di seeding.'
+      'Aggiungi SUPABASE_SERVICE_ROLE_KEY in .env.local per script di seeding.'
   );
 }
 
@@ -76,14 +80,15 @@ if (!supabaseAdmin && process.env.NODE_ENV === 'production') {
  * Utile per decidere se usare Supabase o fallback JSON
  */
 export function isSupabaseConfigured(): boolean {
-  const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
-                 process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
-  const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && 
-                     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder');
-  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY && 
-                        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
-  
+  const hasUrl =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://xxxxxxxxxxxxxxxxxxxxx.supabase.co';
+  const hasAnonKey =
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder');
+  const hasServiceKey =
+    !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
+
   return hasUrl && hasAnonKey && hasServiceKey;
 }
-
-

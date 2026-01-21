@@ -13,9 +13,10 @@ Questi record violano il principio di multi-tenancy e possono esporre dati a ute
 **Strategia:** Soft delete delle shipments orfane esistenti.
 
 **Query eseguita:**
+
 ```sql
 UPDATE shipments
-SET 
+SET
   deleted = true,
   deleted_at = NOW(),
   notes = COALESCE(notes || E'\n', '') || '[ORPHAN_REMEDIATION] ...',
@@ -26,6 +27,7 @@ WHERE user_id IS NULL
 ```
 
 **Risultato atteso:**
+
 - Tutte le shipments orfane marcate come `deleted = true`
 - `deleted_at` impostato a NOW()
 - Motivo salvato in `notes`
@@ -35,11 +37,12 @@ WHERE user_id IS NULL
 **Strategia:** Constraint + Trigger per impedire nuovi orfani.
 
 **Constraint:**
+
 ```sql
 ALTER TABLE shipments
 ADD CONSTRAINT shipments_no_orphan_check
 CHECK (
-  user_id IS NOT NULL 
+  user_id IS NOT NULL
   OR created_by_user_email IS NOT NULL
 );
 ```
@@ -47,10 +50,12 @@ CHECK (
 **Regola:** Almeno uno tra `user_id` e `created_by_user_email` deve essere NOT NULL.
 
 **Trigger:**
+
 - `trigger_prevent_orphan_shipment` (BEFORE INSERT)
 - `trigger_prevent_orphan_shipment_update` (BEFORE UPDATE)
 
 **Comportamento:**
+
 - INSERT con entrambi null → `ORPHAN_SHIPMENT_PREVENTED` exception
 - UPDATE che setta entrambi a null → `ORPHAN_SHIPMENT_PREVENTED` exception
 
@@ -64,9 +69,10 @@ psql $DATABASE_URL -f supabase/migrations/034_remediate_orphan_shipments.sql
 ```
 
 **Verifica:**
+
 ```sql
 -- Dovrebbe restituire 0
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM shipments
 WHERE user_id IS NULL
   AND created_by_user_email IS NULL
@@ -81,16 +87,18 @@ psql $DATABASE_URL -f supabase/migrations/035_prevent_orphan_shipments.sql
 ```
 
 **Verifica constraint:**
+
 ```sql
-SELECT conname, pg_get_constraintdef(oid) 
-FROM pg_constraint 
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
 WHERE conname = 'shipments_no_orphan_check';
 ```
 
 **Verifica trigger:**
+
 ```sql
-SELECT tgname, tgtype 
-FROM pg_trigger 
+SELECT tgname, tgtype
+FROM pg_trigger
 WHERE tgname LIKE '%prevent_orphan%';
 ```
 
@@ -99,8 +107,8 @@ WHERE tgname LIKE '%prevent_orphan%';
 ```sql
 -- Questo DEVE fallire
 INSERT INTO shipments (
-  tracking_number, 
-  sender_name, 
+  tracking_number,
+  sender_name,
   recipient_name,
   weight,
   user_id,
@@ -119,8 +127,8 @@ INSERT INTO shipments (
 ```sql
 -- Questo DEVE funzionare (almeno uno NOT NULL)
 INSERT INTO shipments (
-  tracking_number, 
-  sender_name, 
+  tracking_number,
+  sender_name,
   recipient_name,
   weight,
   user_id,
@@ -145,6 +153,7 @@ npm run audit:security
 ```
 
 **Atteso:**
+
 ```
 ORPHAN_SHIPMENTS: PASS (count: 0)
 ```
@@ -174,15 +183,18 @@ WHERE user_id IS NULL
 **Regola:** `user_id IS NOT NULL OR created_by_user_email IS NOT NULL`
 
 **Motivazione:**
+
 - `user_id` è il campo primario per multi-tenancy (preferito)
 - `created_by_user_email` è fallback per compatibilità legacy/NextAuth
 - Almeno uno deve essere presente per garantire tracciabilità
 
 **Alternativa considerata:**
+
 - `user_id IS NOT NULL` sempre → troppo restrittivo (blocca service_role operations)
 - `created_by_user_email IS NOT NULL` sempre → non sufficiente (email può essere spoofata)
 
 **Scelta finale:** Constraint OR permette:
+
 - ✅ User normale: `user_id NOT NULL` (preferito)
 - ✅ Service role: `user_id NULL, created_by_user_email NOT NULL` (con audit)
 - ❌ Orfano: `user_id NULL, created_by_user_email NULL` (bloccato)
@@ -192,6 +204,7 @@ WHERE user_id IS NULL
 **Funzione:** `prevent_orphan_shipment()`
 
 **Comportamento:**
+
 - Valida PRIMA di INSERT/UPDATE
 - Lancia exception chiara se violazione
 - Messaggio: `ORPHAN_SHIPMENT_PREVENTED: Shipment non può essere creata senza user_id o created_by_user_email`
@@ -201,4 +214,3 @@ WHERE user_id IS NULL
 - **Service Role Operations:** Possono ancora inserire con `user_id NULL` se `created_by_user_email` è presente
 - **Legacy Data:** Le shipments orfane esistenti vengono soft-deleted, non eliminate fisicamente
 - **Audit Trail:** Il motivo della remediation è salvato in `notes`
-

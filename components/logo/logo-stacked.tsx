@@ -1,16 +1,20 @@
-import React from 'react'
+import React from 'react';
 
 interface LogoStackedProps {
-  className?: string
-  width?: number
-  height?: number
+  className?: string;
+  width?: number;
+  height?: number;
 }
 
 /**
  * Logo Stacked - Versione verticale colorata (simbolo sopra, testo sotto)
  * Basato su design Gemini - ottimizzato per React
  */
-export default function LogoStacked({ className = '', width = 300, height = 360 }: LogoStackedProps) {
+export default function LogoStacked({
+  className = '',
+  width = 300,
+  height = 360,
+}: LogoStackedProps) {
   return (
     <svg
       width={width}
@@ -73,5 +77,5 @@ export default function LogoStacked({ className = '', width = 300, height = 360 
         Powered by AI
       </text>
     </svg>
-  )
+  );
 }

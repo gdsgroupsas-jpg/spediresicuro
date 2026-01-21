@@ -41,19 +41,15 @@ export class FiscalErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  Errore di Sistema
-                </h2>
-                <p className="text-slate-400 text-sm mt-1">
-                  Finance Control Room
-                </p>
+                <h2 className="text-2xl font-bold text-white">Errore di Sistema</h2>
+                <p className="text-slate-400 text-sm mt-1">Finance Control Room</p>
               </div>
             </div>
 
             <div className="bg-slate-900/50 rounded-xl p-4 mb-6">
               <p className="text-slate-300 leading-relaxed">
-                Si è verificato un errore durante il caricamento dei dati fiscali.
-                Riprova più tardi o contatta il supporto tecnico.
+                Si è verificato un errore durante il caricamento dei dati fiscali. Riprova più tardi
+                o contatta il supporto tecnico.
               </p>
               {this.state.error && (
                 <details className="mt-4">

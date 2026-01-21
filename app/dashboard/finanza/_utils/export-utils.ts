@@ -42,11 +42,17 @@ export async function exportToPDF(fiscalContext: FiscalContext): Promise<void> {
 
   doc.setFontSize(10);
   const summaryData = [
-    ['Periodo:', `${new Date(fiscalContext.period.start).toLocaleDateString('it-IT')} - ${new Date(fiscalContext.period.end).toLocaleDateString('it-IT')}`],
+    [
+      'Periodo:',
+      `${new Date(fiscalContext.period.start).toLocaleDateString('it-IT')} - ${new Date(fiscalContext.period.end).toLocaleDateString('it-IT')}`,
+    ],
     ['Spedizioni:', fiscalContext.shipmentsSummary.count.toString()],
     ['Ricavi Totali:', `€ ${fiscalContext.shipmentsSummary.total_revenue.toFixed(2)}`],
     ['Margine Netto:', `€ ${fiscalContext.shipmentsSummary.total_margin.toFixed(2)}`],
-    ['Margine %:', `${((fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100).toFixed(1)}%`],
+    [
+      'Margine %:',
+      `${((fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100).toFixed(1)}%`,
+    ],
     ['Saldo Wallet:', `€ ${fiscalContext.wallet.balance.toFixed(2)}`],
   ];
 
@@ -122,7 +128,10 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
     ['Finance Control Room - Report Fiscale'],
     [''],
     ['Generato il:', new Date().toLocaleString('it-IT')],
-    ['Periodo:', `${new Date(fiscalContext.period.start).toLocaleDateString('it-IT')} - ${new Date(fiscalContext.period.end).toLocaleDateString('it-IT')}`],
+    [
+      'Periodo:',
+      `${new Date(fiscalContext.period.start).toLocaleDateString('it-IT')} - ${new Date(fiscalContext.period.end).toLocaleDateString('it-IT')}`,
+    ],
     [''],
     ['RIEPILOGO'],
     ['Metrica', 'Valore'],
@@ -131,7 +140,11 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
     ['Margine Netto', fiscalContext.shipmentsSummary.total_margin],
     [
       'Margine %',
-      ((fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100).toFixed(2) + '%',
+      (
+        (fiscalContext.shipmentsSummary.total_margin /
+          fiscalContext.shipmentsSummary.total_revenue) *
+        100
+      ).toFixed(2) + '%',
     ],
     ['Saldo Wallet', fiscalContext.wallet.balance],
     [''],
@@ -169,10 +182,33 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
     ['Metriche Dettagliate'],
     [''],
     ['Categoria', 'Valore', 'Note'],
-    ['Revenue per Shipment', (fiscalContext.shipmentsSummary.total_revenue / fiscalContext.shipmentsSummary.count).toFixed(2), 'Media'],
-    ['Margin per Shipment', (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.count).toFixed(2), 'Media'],
-    ['COD Percentage', ((fiscalContext.pending_cod_count / fiscalContext.shipmentsSummary.count) * 100).toFixed(1) + '%', 'Su totale spedizioni'],
-    ['Avg COD Value', fiscalContext.pending_cod_count > 0 ? (fiscalContext.pending_cod_value / fiscalContext.pending_cod_count).toFixed(2) : 0, 'Media per contrassegno'],
+    [
+      'Revenue per Shipment',
+      (fiscalContext.shipmentsSummary.total_revenue / fiscalContext.shipmentsSummary.count).toFixed(
+        2
+      ),
+      'Media',
+    ],
+    [
+      'Margin per Shipment',
+      (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.count).toFixed(
+        2
+      ),
+      'Media',
+    ],
+    [
+      'COD Percentage',
+      ((fiscalContext.pending_cod_count / fiscalContext.shipmentsSummary.count) * 100).toFixed(1) +
+        '%',
+      'Su totale spedizioni',
+    ],
+    [
+      'Avg COD Value',
+      fiscalContext.pending_cod_count > 0
+        ? (fiscalContext.pending_cod_value / fiscalContext.pending_cod_count).toFixed(2)
+        : 0,
+      'Media per contrassegno',
+    ],
   ];
 
   const metricsSheet = XLSX.utils.aoa_to_sheet(metricsData);

@@ -1,8 +1,8 @@
-'use server'
+'use server';
 
 /**
  * Server Actions per Automation Spedisci.Online
- * 
+ *
  * Gestisce:
  * - Abilitazione/disabilitazione automation
  * - Configurazione settings
@@ -10,7 +10,7 @@
  * - Verifica stato
  */
 
-import { auth } from '@/lib/auth-config';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { syncCourierConfig } from '@/lib/automation/spedisci-online-agent';
 import type { AutomationSettings } from '@/lib/automation/spedisci-online-agent';
@@ -21,8 +21,8 @@ import { encryptCredential, decryptCredential } from '@/lib/security/encryption'
  */
 async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return { isAdmin: false, error: 'Non autenticato' };
     }
 
@@ -30,16 +30,19 @@ async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('account_type, role')
-      .eq('email', session.user.email)
+      .eq('email', context.actor.email)
       .single();
 
     if (error || !user) {
-      return { isAdmin: false, error: 'Utente non trovato. Verifica di essere loggato correttamente.' };
+      return {
+        isAdmin: false,
+        error: 'Utente non trovato. Verifica di essere loggato correttamente.',
+      };
     }
 
     // Verifica admin usando account_type o role (per compatibilità)
-    const isAdmin = 
-      user.account_type === 'superadmin' || 
+    const isAdmin =
+      user.account_type === 'superadmin' ||
       user.account_type === 'admin' ||
       user.role === 'admin' ||
       user.role === 'superadmin';
@@ -121,24 +124,22 @@ export async function saveAutomationSettings(
     // ============================================
     // 🔐 CRITTAZIONE PASSWORD (SICUREZZA CRITICA)
     // ============================================
-    
+
     // Crea copia settings per criptare password
     const encryptedSettings: any = { ...settings };
-    
+
     // Cripta password Spedisci.Online
     if (encryptedSettings.spedisci_online_password) {
       encryptedSettings.spedisci_online_password = encryptCredential(
         encryptedSettings.spedisci_online_password
       );
     }
-    
+
     // Cripta password IMAP (se presente)
     if (encryptedSettings.imap_password) {
-      encryptedSettings.imap_password = encryptCredential(
-        encryptedSettings.imap_password
-      );
+      encryptedSettings.imap_password = encryptCredential(encryptedSettings.imap_password);
     }
-    
+
     // Marca come criptato
     const { error: updateError } = await supabaseAdmin
       .from('courier_configs')
@@ -207,9 +208,7 @@ export async function manualSync(
 /**
  * Ottiene stato automation per una configurazione
  */
-export async function getAutomationStatus(
-  configId: string
-): Promise<{
+export async function getAutomationStatus(configId: string): Promise<{
   success: boolean;
   enabled?: boolean;
   last_sync?: string;
@@ -261,9 +260,7 @@ export async function getAutomationStatus(
 /**
  * Ottiene automation settings per una configurazione
  */
-export async function getAutomationSettings(
-  configId: string
-): Promise<{
+export async function getAutomationSettings(configId: string): Promise<{
   success: boolean;
   settings?: AutomationSettings;
   error?: string;
@@ -285,25 +282,23 @@ export async function getAutomationSettings(
     }
 
     const settings = (config.automation_settings as any) || {};
-    
+
     // ============================================
     // 🔓 DECRITTAZIONE PASSWORD (se criptate)
     // ============================================
-    
+
     if (config.automation_encrypted) {
       // Decripta password se presenti
       if (settings.spedisci_online_password) {
         try {
-          settings.spedisci_online_password = decryptCredential(
-            settings.spedisci_online_password
-          );
+          settings.spedisci_online_password = decryptCredential(settings.spedisci_online_password);
         } catch (error) {
           console.error('❌ Errore decriptazione password Spedisci.Online:', error);
           // Se decriptazione fallisce, rimuovi password (non esporre dati corrotti)
           settings.spedisci_online_password = '';
         }
       }
-      
+
       if (settings.imap_password) {
         try {
           settings.imap_password = decryptCredential(settings.imap_password);
@@ -335,15 +330,15 @@ export async function acquireManualLock(
   durationMinutes: number = 60
 ): Promise<{ success: boolean; lock_id?: string; error?: string }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
 
     const { data: lockId, error } = await supabaseAdmin.rpc('acquire_automation_lock', {
       p_config_id: configId,
       p_lock_type: 'manual',
-      p_locked_by: session.user.email,
+      p_locked_by: context.actor.email,
       p_reason: 'Uso manuale Spedisci.Online',
       p_duration_minutes: durationMinutes,
     });
@@ -418,4 +413,3 @@ export async function checkLock(configId: string): Promise<{
     return { success: false, error: error.message };
   }
 }
-

@@ -4,17 +4,17 @@
  * Gestione completa listini prezzi con sistema PriceRule avanzato
  */
 
-"use server";
+'use server';
 
-import { auth } from "@/lib/auth-config";
-import { supabaseAdmin } from "@/lib/db/client";
+import { getSafeAuth } from '@/lib/safe-auth';
+import { supabaseAdmin } from '@/lib/db/client';
 import {
   createPriceList,
   deletePriceList,
   getApplicablePriceList,
   getPriceListById,
   updatePriceList,
-} from "@/lib/db/price-lists";
+} from '@/lib/db/price-lists';
 import type {
   AssignPriceListInput,
   ClonePriceListInput,
@@ -22,8 +22,8 @@ import type {
   PriceCalculationResult,
   PriceListAssignment,
   UpdatePriceListInput,
-} from "@/types/listini";
-import type { CourierServiceType } from "@/types/shipments";
+} from '@/types/listini';
+import type { CourierServiceType } from '@/types/shipments';
 
 /**
  * Helper: Logga evento listino nel financial_audit_log
@@ -38,7 +38,7 @@ async function logPriceListEvent(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    await supabaseAdmin.rpc("log_price_list_event", {
+    await supabaseAdmin.rpc('log_price_list_event', {
       p_event_type: eventType,
       p_price_list_id: priceListId,
       p_actor_id: actorId,
@@ -46,76 +46,73 @@ async function logPriceListEvent(
       p_old_value: oldValue ? JSON.stringify(oldValue) : null,
       p_new_value: newValue ? JSON.stringify(newValue) : null,
       p_metadata: metadata || {},
-      p_severity: "info",
+      p_severity: 'info',
     });
   } catch (error) {
     // Non bloccare l'operazione se il logging fallisce
-    console.error("Errore logging evento listino:", error);
+    console.error('Errore logging evento listino:', error);
   }
 }
 
 /**
  * Crea nuovo listino prezzi
  */
-export async function createPriceListAction(
-  data: CreatePriceListInput
-): Promise<{
+export async function createPriceListAction(data: CreatePriceListInput): Promise<{
   success: boolean;
   priceList?: any;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Recupera user ID
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Verifica permessi
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isAdmin && !isReseller && !isBYOC) {
       return {
         success: false,
-        error: "Solo admin, reseller e BYOC possono creare listini",
+        error: 'Solo admin, reseller e BYOC possono creare listini',
       };
     }
 
     // Se list_type non specificato, imposta default basato su utente
     if (!data.list_type) {
       if (isAdmin && data.is_global) {
-        data.list_type = "global";
+        data.list_type = 'global';
       } else if (isReseller || isBYOC) {
-        data.list_type = "supplier";
+        data.list_type = 'supplier';
       }
     }
 
     // Validazione per BYOC: può creare SOLO listini fornitore
-    if (isBYOC && data.list_type !== "supplier") {
+    if (isBYOC && data.list_type !== 'supplier') {
       return {
         success: false,
-        error: "BYOC può creare solo listini fornitore (list_type = supplier)",
+        error: 'BYOC può creare solo listini fornitore (list_type = supplier)',
       };
     }
 
     // Validazione per Reseller: non può creare listini globali
-    if (isReseller && data.list_type === "global") {
+    if (isReseller && data.list_type === 'global') {
       return {
         success: false,
-        error: "Reseller non può creare listini globali",
+        error: 'Reseller non può creare listini globali',
       };
     }
 
@@ -123,7 +120,7 @@ export async function createPriceListAction(
     if (data.is_global && !isAdmin) {
       return {
         success: false,
-        error: "Solo gli admin possono creare listini globali",
+        error: 'Solo gli admin possono creare listini globali',
       };
     }
 
@@ -131,8 +128,8 @@ export async function createPriceListAction(
 
     return { success: true, priceList };
   } catch (error: any) {
-    console.error("Errore creazione listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore creazione listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -148,55 +145,54 @@ export async function updatePriceListAction(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Recupera listino esistente
     const existingPriceList = await getPriceListById(id);
     if (!existingPriceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
     // Verifica permessi: admin, creatore, O proprietario (assigned_to_user_id)
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isOwner = existingPriceList.created_by === user.id;
     const isAssignedOwner = existingPriceList.assigned_to_user_id === user.id;
 
     if (!isAdmin && !isOwner && !isAssignedOwner) {
       return {
         success: false,
-        error: "Non hai i permessi per modificare questo listino",
+        error: 'Non hai i permessi per modificare questo listino',
       };
     }
 
     // Validazione per BYOC: non può cambiare list_type
-    const isBYOC = user.account_type === "byoc";
-    if (isBYOC && data.list_type && data.list_type !== "supplier") {
+    const isBYOC = user.account_type === 'byoc';
+    if (isBYOC && data.list_type && data.list_type !== 'supplier') {
       return {
         success: false,
-        error: "BYOC può modificare solo listini fornitore",
+        error: 'BYOC può modificare solo listini fornitore',
       };
     }
 
     // Validazione per Reseller: non può cambiare list_type a 'global'
     const isReseller = user.is_reseller === true;
-    if (isReseller && data.list_type === "global") {
+    if (isReseller && data.list_type === 'global') {
       return {
         success: false,
-        error: "Reseller non può creare listini globali",
+        error: 'Reseller non può creare listini globali',
       };
     }
 
@@ -210,29 +206,32 @@ export async function updatePriceListAction(
     if (data.status && data.status !== existingPriceList.status) {
       changes.status = { from: existingPriceList.status, to: data.status };
       // Logga attivazione/disattivazione separatamente
-      if (data.status === "active" && existingPriceList.status !== "active") {
+      if (data.status === 'active' && existingPriceList.status !== 'active') {
         await logPriceListEvent(
-          "price_list_activated",
+          'price_list_activated',
           id,
           user.id,
           `Listino attivato: ${updated.name || existingPriceList.name}`
         );
-      } else if (data.status === "archived" && existingPriceList.status !== "archived") {
+      } else if (data.status === 'archived' && existingPriceList.status !== 'archived') {
         await logPriceListEvent(
-          "price_list_archived",
+          'price_list_archived',
           id,
           user.id,
           `Listino archiviato: ${updated.name || existingPriceList.name}`
         );
       }
     }
-    if (data.default_margin_percent !== undefined && data.default_margin_percent !== existingPriceList.default_margin_percent) {
+    if (
+      data.default_margin_percent !== undefined &&
+      data.default_margin_percent !== existingPriceList.default_margin_percent
+    ) {
       changes.default_margin_percent = {
         from: existingPriceList.default_margin_percent,
         to: data.default_margin_percent,
       };
       await logPriceListEvent(
-        "price_list_margin_updated",
+        'price_list_margin_updated',
         id,
         user.id,
         `Margine aggiornato: ${existingPriceList.default_margin_percent}% → ${data.default_margin_percent}%`,
@@ -250,7 +249,7 @@ export async function updatePriceListAction(
       const newRulesCount = (data.rules as any[])?.length || 0;
       if (newRulesCount > oldRulesCount) {
         await logPriceListEvent(
-          "price_list_rule_created",
+          'price_list_rule_created',
           id,
           user.id,
           `Regola creata: ${newRulesCount - oldRulesCount} nuova/e`,
@@ -259,7 +258,7 @@ export async function updatePriceListAction(
         );
       } else if (newRulesCount < oldRulesCount) {
         await logPriceListEvent(
-          "price_list_rule_deleted",
+          'price_list_rule_deleted',
           id,
           user.id,
           `Regola eliminata: ${oldRulesCount - newRulesCount} rimossa/e`,
@@ -268,7 +267,7 @@ export async function updatePriceListAction(
         );
       } else {
         await logPriceListEvent(
-          "price_list_rule_updated",
+          'price_list_rule_updated',
           id,
           user.id,
           `Regole modificate: ${newRulesCount} regole`,
@@ -281,10 +280,10 @@ export async function updatePriceListAction(
     // Logga aggiornamento generale se ci sono modifiche
     if (Object.keys(changes).length > 0) {
       await logPriceListEvent(
-        "price_list_updated",
+        'price_list_updated',
         id,
         user.id,
-        `Listino aggiornato: ${Object.keys(changes).join(", ")}`,
+        `Listino aggiornato: ${Object.keys(changes).join(', ')}`,
         existingPriceList,
         updated
       );
@@ -292,43 +291,41 @@ export async function updatePriceListAction(
 
     return { success: true, priceList: updated };
   } catch (error: any) {
-    console.error("Errore aggiornamento listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore aggiornamento listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
 /**
  * Ottiene listino applicabile per utente corrente
  */
-export async function getApplicablePriceListAction(
-  courierId?: string
-): Promise<{
+export async function getApplicablePriceListAction(courierId?: string): Promise<{
   success: boolean;
   priceList?: any;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     const priceList = await getApplicablePriceList(user.id, courierId);
 
     return { success: true, priceList };
   } catch (error: any) {
-    console.error("Errore recupero listino applicabile:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero listino applicabile:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -363,43 +360,37 @@ export async function calculateQuoteAction(
   error?: string;
   // ✨ NUOVO: Informazioni aggiuntive per reseller
   resellerComparison?: {
-    apiSource: "reseller" | "master" | "default";
+    apiSource: 'reseller' | 'master' | 'default';
     resellerPrice?: PriceCalculationResult;
     masterPrice?: PriceCalculationResult;
     priceDifference?: number;
   };
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // ✨ Se è reseller e non è specificato un listino, usa confronto automatico
     if (user.is_reseller && !priceListId) {
-      const { calculateBestPriceForReseller } = await import(
-        "@/lib/db/price-lists-advanced"
-      );
-      const bestPriceResult = await calculateBestPriceForReseller(
-        user.id,
-        params
-      );
+      const { calculateBestPriceForReseller } = await import('@/lib/db/price-lists-advanced');
+      const bestPriceResult = await calculateBestPriceForReseller(user.id, params);
 
       if (!bestPriceResult) {
         return {
           success: false,
-          error:
-            "Impossibile calcolare preventivo. Verifica listino configurato.",
+          error: 'Impossibile calcolare preventivo. Verifica listino configurato.',
         };
       }
 
@@ -416,23 +407,20 @@ export async function calculateQuoteAction(
     }
 
     // Calcolo normale (utente standard o listino specificato)
-    const { calculatePriceWithRules } = await import(
-      "@/lib/db/price-lists-advanced"
-    );
+    const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
     const result = await calculatePriceWithRules(user.id, params, priceListId);
 
     if (!result) {
       return {
         success: false,
-        error:
-          "Impossibile calcolare preventivo. Verifica listino configurato.",
+        error: 'Impossibile calcolare preventivo. Verifica listino configurato.',
       };
     }
 
     return { success: true, result };
   } catch (error: any) {
-    console.error("Errore calcolo preventivo:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore calcolo preventivo:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -447,43 +435,42 @@ export async function assignPriceListToUserAction(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: currentUser } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!currentUser) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo admin può assegnare listini
     const isAdmin =
-      currentUser.account_type === "admin" ||
-      currentUser.account_type === "superadmin";
+      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
     if (!isAdmin) {
       return {
         success: false,
-        error: "Solo gli admin possono assegnare listini",
+        error: 'Solo gli admin possono assegnare listini',
       };
     }
 
     // Verifica che listino esista
     const priceList = await getPriceListById(priceListId);
     if (!priceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
     // Assegna listino all'utente
     const { error } = await supabaseAdmin
-      .from("users")
+      .from('users')
       .update({ assigned_price_list_id: priceListId })
-      .eq("id", userId);
+      .eq('id', userId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -491,8 +478,8 @@ export async function assignPriceListToUserAction(
 
     return { success: true };
   } catch (error: any) {
-    console.error("Errore assegnazione listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore assegnazione listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -505,26 +492,26 @@ export async function getPriceListByIdAction(id: string): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Recupera user ID
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // ✅ FIX P0-2: Verifica authorization PRIMA di recuperare listino
     // Previene information disclosure
     const { data: canAccess, error: accessError } = await supabaseAdmin.rpc(
-      "can_access_price_list",
+      'can_access_price_list',
       {
         p_user_id: user.id,
         p_price_list_id: id,
@@ -532,8 +519,8 @@ export async function getPriceListByIdAction(id: string): Promise<{
     );
 
     if (accessError) {
-      console.error("Errore verifica accesso:", accessError);
-      return { success: false, error: "Errore verifica permessi" };
+      console.error('Errore verifica accesso:', accessError);
+      return { success: false, error: 'Errore verifica permessi' };
     }
 
     if (!canAccess) {
@@ -544,12 +531,12 @@ export async function getPriceListByIdAction(id: string): Promise<{
 
       // Tenta di loggare in audit table (best effort, non bloccare se fallisce)
       try {
-        await supabaseAdmin.rpc("log_unauthorized_access", {
+        await supabaseAdmin.rpc('log_unauthorized_access', {
           p_user_id: user.id,
-          p_resource_type: "price_list",
+          p_resource_type: 'price_list',
           p_resource_id: id,
-          p_message: "Attempted to access price list without authorization",
-          p_metadata: { action: "getPriceListByIdAction" },
+          p_message: 'Attempted to access price list without authorization',
+          p_metadata: { action: 'getPriceListByIdAction' },
         });
       } catch {
         // Silent fail - audit logging non deve bloccare l'operazione
@@ -557,7 +544,7 @@ export async function getPriceListByIdAction(id: string): Promise<{
 
       return {
         success: false,
-        error: "Non autorizzato a visualizzare questo listino",
+        error: 'Non autorizzato a visualizzare questo listino',
       };
     }
 
@@ -565,13 +552,13 @@ export async function getPriceListByIdAction(id: string): Promise<{
     const priceList = await getPriceListById(id);
 
     if (!priceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
     return { success: true, priceList };
   } catch (error: any) {
-    console.error("Errore recupero listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -583,46 +570,45 @@ export async function deletePriceListAction(id: string): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Recupera listino esistente
     const existingPriceList = await getPriceListById(id);
     if (!existingPriceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
     // Verifica permessi: admin, creatore, O proprietario (assigned_to_user_id)
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isOwner = existingPriceList.created_by === user.id;
     const isAssignedOwner = existingPriceList.assigned_to_user_id === user.id;
 
     if (!isAdmin && !isOwner && !isAssignedOwner) {
       return {
         success: false,
-        error: "Non hai i permessi per eliminare questo listino",
+        error: 'Non hai i permessi per eliminare questo listino',
       };
     }
 
     // Validazione per BYOC: può eliminare solo listini fornitore
-    const isBYOC = user.account_type === "byoc";
-    if (isBYOC && existingPriceList.list_type !== "supplier") {
+    const isBYOC = user.account_type === 'byoc';
+    if (isBYOC && existingPriceList.list_type !== 'supplier') {
       return {
         success: false,
-        error: "BYOC può eliminare solo listini fornitore",
+        error: 'BYOC può eliminare solo listini fornitore',
       };
     }
 
@@ -630,8 +616,8 @@ export async function deletePriceListAction(id: string): Promise<{
 
     return { success: true };
   } catch (error: any) {
-    console.error("Errore eliminazione listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore eliminazione listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -649,24 +635,24 @@ export async function listPriceListsAction(filters?: {
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // ✅ FIX P0-1: Usa RPC function sicura invece di .or() con template literals
     // Previene SQL injection usando parametri typed
-    const { data, error } = await supabaseAdmin.rpc("get_user_price_lists", {
+    const { data, error } = await supabaseAdmin.rpc('get_user_price_lists', {
       p_user_id: user.id,
       p_courier_id: filters?.courierId || null,
       p_status: filters?.status || null,
@@ -685,9 +671,9 @@ export async function listPriceListsAction(filters?: {
 
       if (courierIds.length > 0) {
         const { data: couriers } = await supabaseAdmin
-          .from("couriers")
-          .select("id, code, name")
-          .in("id", courierIds);
+          .from('couriers')
+          .select('id, code, name')
+          .in('id', courierIds);
 
         // Aggiungi i dati del corriere ai listini
         const courierMap = new Map(couriers?.map((c) => [c.id, c]) || []);
@@ -702,8 +688,8 @@ export async function listPriceListsAction(filters?: {
 
     return { success: true, priceLists: data || [] };
   } catch (error: any) {
-    console.error("Errore lista listini:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore lista listini:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -714,7 +700,7 @@ export async function listPriceListsAction(filters?: {
  * @returns Listino creato
  */
 export async function createSupplierPriceListAction(
-  data: Omit<CreatePriceListInput, "list_type" | "is_global"> & {
+  data: Omit<CreatePriceListInput, 'list_type' | 'is_global'> & {
     courier_id: string;
     metadata?: {
       courier_config_id?: string;
@@ -729,28 +715,28 @@ export async function createSupplierPriceListAction(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isReseller && !isBYOC) {
       return {
         success: false,
-        error: "Solo Reseller e BYOC possono creare listini fornitore",
+        error: 'Solo Reseller e BYOC possono creare listini fornitore',
       };
     }
 
@@ -761,10 +747,10 @@ export async function createSupplierPriceListAction(
       data.metadata?.contract_code
     ) {
       const { data: existingLists } = await supabaseAdmin
-        .from("price_lists")
-        .select("id, name, metadata, source_metadata")
-        .eq("created_by", user.id)
-        .eq("list_type", "supplier")
+        .from('price_lists')
+        .select('id, name, metadata, source_metadata')
+        .eq('created_by', user.id)
+        .eq('list_type', 'supplier')
         .limit(100);
 
       if (existingLists && data.metadata) {
@@ -772,10 +758,8 @@ export async function createSupplierPriceListAction(
           const metadata = pl.metadata || pl.source_metadata || {};
           return (
             metadata.courier_config_id === data.metadata?.courier_config_id &&
-            metadata.carrier_code?.toLowerCase() ===
-              data.metadata?.carrier_code?.toLowerCase() &&
-            metadata.contract_code?.toLowerCase() ===
-              data.metadata?.contract_code?.toLowerCase()
+            metadata.carrier_code?.toLowerCase() === data.metadata?.carrier_code?.toLowerCase() &&
+            metadata.contract_code?.toLowerCase() === data.metadata?.contract_code?.toLowerCase()
           );
         });
 
@@ -791,7 +775,7 @@ export async function createSupplierPriceListAction(
     // Imposta automaticamente list_type = 'supplier'
     const priceListData: CreatePriceListInput = {
       ...data,
-      list_type: "supplier",
+      list_type: 'supplier',
       is_global: false,
     };
 
@@ -799,8 +783,8 @@ export async function createSupplierPriceListAction(
 
     return { success: true, priceList };
   } catch (error: any) {
-    console.error("Errore creazione listino fornitore:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore creazione listino fornitore:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -815,30 +799,28 @@ export async function listSupplierPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      session.user.id === "00000000-0000-0000-0000-000000000000" ||
-      session.user.id === "test-user-id"
+      context.actor.id === '00000000-0000-0000-0000-000000000000' ||
+      context.actor.id === 'test-user-id'
     ) {
-      console.log(
-        "🧪 [TEST MODE] listSupplierPriceListsAction: returning mock data"
-      );
+      console.log('🧪 [TEST MODE] listSupplierPriceListsAction: returning mock data');
       return {
         success: true,
         priceLists: [
           {
-            id: "mock-price-list-1",
-            name: "Listino Test GLS",
-            list_type: "supplier",
-            status: "active",
-            version: "1.0",
-            courier_id: "mock-courier-gls",
-            courier: { id: "mock-courier-gls", code: "gls", name: "GLS" },
+            id: 'mock-price-list-1',
+            name: 'Listino Test GLS',
+            list_type: 'supplier',
+            status: 'active',
+            version: '1.0',
+            courier_id: 'mock-courier-gls',
+            courier: { id: 'mock-courier-gls', code: 'gls', name: 'GLS' },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
@@ -847,45 +829,41 @@ export async function listSupplierPriceListsAction(): Promise<{
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isReseller && !isBYOC) {
       return {
         success: false,
-        error: "Solo Reseller e BYOC possono vedere listini fornitore",
+        error: 'Solo Reseller e BYOC possono vedere listini fornitore',
       };
     }
 
     // Recupera solo listini fornitore dell'utente
-    console.log(
-      `🔍 [LISTINI] Cerca listini fornitore: user.id=${user.id}, list_type=supplier`
-    );
+    console.log(`🔍 [LISTINI] Cerca listini fornitore: user.id=${user.id}, list_type=supplier`);
     const { data: priceLists, error } = await supabaseAdmin
-      .from("price_lists")
-      .select("*")
-      .eq("list_type", "supplier")
-      .eq("created_by", user.id)
-      .order("created_at", { ascending: false });
+      .from('price_lists')
+      .select('*')
+      .eq('list_type', 'supplier')
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("Errore recupero listini fornitore:", error);
+      console.error('Errore recupero listini fornitore:', error);
       return { success: false, error: error.message };
     }
 
     console.log(
-      `📊 [LISTINI] Trovati ${
-        priceLists?.length || 0
-      } listini fornitore per user.id=${user.id}`
+      `📊 [LISTINI] Trovati ${priceLists?.length || 0} listini fornitore per user.id=${user.id}`
     );
 
     // Recupera i corrieri separatamente se necessario
@@ -896,9 +874,9 @@ export async function listSupplierPriceListsAction(): Promise<{
 
       if (courierIds.length > 0) {
         const { data: couriers } = await supabaseAdmin
-          .from("couriers")
-          .select("id, code, name")
-          .in("id", courierIds);
+          .from('couriers')
+          .select('id, code, name')
+          .in('id', courierIds);
 
         // Aggiungi i dati del corriere ai listini
         const courierMap = new Map(couriers?.map((c) => [c.id, c]) || []);
@@ -923,9 +901,9 @@ export async function listSupplierPriceListsAction(): Promise<{
       const priceListIds = priceLists.map((pl: any) => pl.id);
       if (priceListIds.length > 0) {
         const { data: entriesCounts } = await supabaseAdmin
-          .from("price_list_entries")
-          .select("price_list_id")
-          .in("price_list_id", priceListIds);
+          .from('price_list_entries')
+          .select('price_list_id')
+          .in('price_list_id', priceListIds);
 
         // Conta entries per listino
         const entriesMap = new Map<string, number>();
@@ -948,14 +926,12 @@ export async function listSupplierPriceListsAction(): Promise<{
     }
 
     console.log(
-      `✅ [LISTINI] Ritorno ${
-        priceLists?.length || 0
-      } listini con dati corriere popolati`
+      `✅ [LISTINI] Ritorno ${priceLists?.length || 0} listini con dati corriere popolati`
     );
     return { success: true, priceLists: priceLists || [] };
   } catch (error: any) {
-    console.error("Errore listino fornitore:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore listino fornitore:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -965,61 +941,59 @@ export async function listSupplierPriceListsAction(): Promise<{
  * @param courierId - ID corriere
  * @returns Listino fornitore o null
  */
-export async function getSupplierPriceListForCourierAction(
-  courierId: string
-): Promise<{
+export async function getSupplierPriceListForCourierAction(courierId: string): Promise<{
   success: boolean;
   priceList?: any;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === "byoc";
+    const isBYOC = user.account_type === 'byoc';
 
     if (!isReseller && !isBYOC) {
       return {
         success: false,
-        error: "Solo Reseller e BYOC possono vedere listini fornitore",
+        error: 'Solo Reseller e BYOC possono vedere listini fornitore',
       };
     }
 
     // Recupera listino fornitore per corriere
     const { data: priceList, error } = await supabaseAdmin
-      .from("price_lists")
-      .select("*")
-      .eq("list_type", "supplier")
-      .eq("courier_id", courierId)
-      .eq("created_by", user.id)
-      .order("created_at", { ascending: false })
+      .from('price_lists')
+      .select('*')
+      .eq('list_type', 'supplier')
+      .eq('courier_id', courierId)
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (error) {
-      console.error("Errore recupero listino fornitore:", error);
+      console.error('Errore recupero listino fornitore:', error);
       return { success: false, error: error.message };
     }
 
     // Recupera il corriere separatamente se necessario
     if (priceList && priceList.courier_id) {
       const { data: courier } = await supabaseAdmin
-        .from("couriers")
-        .select("id, code, name")
-        .eq("id", priceList.courier_id)
+        .from('couriers')
+        .select('id, code, name')
+        .eq('id', priceList.courier_id)
         .single();
 
       if (courier) {
@@ -1029,8 +1003,8 @@ export async function getSupplierPriceListForCourierAction(
 
     return { success: true, priceList: priceList || null };
   } catch (error: any) {
-    console.error("Errore listino fornitore:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore listino fornitore:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1046,56 +1020,51 @@ export async function getSupplierPriceListForCourierAction(
  * @param input - Dati per clonazione
  * @returns Listino clonato con tracciabilità master_list_id
  */
-export async function clonePriceListAction(
-  input: ClonePriceListInput
-): Promise<{
+export async function clonePriceListAction(input: ClonePriceListInput): Promise<{
   success: boolean;
   priceList?: any;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può clonare
-    if (user.account_type !== "superadmin") {
+    if (user.account_type !== 'superadmin') {
       return {
         success: false,
-        error: "Solo superadmin può clonare listini",
+        error: 'Solo superadmin può clonare listini',
       };
     }
 
     // Verifica che il listino sorgente esista
     const sourcePriceList = await getPriceListById(input.source_price_list_id);
     if (!sourcePriceList) {
-      return { success: false, error: "Listino sorgente non trovato" };
+      return { success: false, error: 'Listino sorgente non trovato' };
     }
 
     // Usa la funzione DB clone_price_list
-    const { data: clonedId, error } = await supabaseAdmin.rpc(
-      "clone_price_list",
-      {
-        p_source_id: input.source_price_list_id,
-        p_new_name: input.name,
-        p_target_user_id: input.target_user_id || null,
-        p_overrides: input.overrides || {},
-      }
-    );
+    const { data: clonedId, error } = await supabaseAdmin.rpc('clone_price_list', {
+      p_source_id: input.source_price_list_id,
+      p_new_name: input.name,
+      p_target_user_id: input.target_user_id || null,
+      p_overrides: input.overrides || {},
+    });
 
     if (error) {
-      console.error("Errore clonazione listino:", error);
+      console.error('Errore clonazione listino:', error);
       return { success: false, error: error.message };
     }
 
@@ -1108,8 +1077,8 @@ export async function clonePriceListAction(
 
     return { success: true, priceList: clonedPriceList };
   } catch (error: any) {
-    console.error("Errore clonazione listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore clonazione listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1120,58 +1089,53 @@ export async function clonePriceListAction(
  * @param input - Dati assegnazione
  * @returns Assegnazione creata
  */
-export async function assignPriceListToUserViaTableAction(
-  input: AssignPriceListInput
-): Promise<{
+export async function assignPriceListToUserViaTableAction(input: AssignPriceListInput): Promise<{
   success: boolean;
   assignment?: PriceListAssignment;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può assegnare
-    if (user.account_type !== "superadmin") {
+    if (user.account_type !== 'superadmin') {
       return {
         success: false,
-        error: "Solo superadmin può assegnare listini",
+        error: 'Solo superadmin può assegnare listini',
       };
     }
 
     // ✨ FIX: Passa p_caller_id per supportare service_role
     // La funzione PostgreSQL usa auth.uid() che è NULL con service_role,
     // quindi passiamo esplicitamente l'ID del chiamante
-    const { data: assignmentId, error } = await supabaseAdmin.rpc(
-      "assign_price_list",
-      {
-        p_price_list_id: input.price_list_id,
-        p_user_id: input.user_id,
-        p_notes: input.notes || null,
-        p_caller_id: user.id,  // ✨ Passa ID utente corrente per service_role
-      }
-    );
+    const { data: assignmentId, error } = await supabaseAdmin.rpc('assign_price_list', {
+      p_price_list_id: input.price_list_id,
+      p_user_id: input.user_id,
+      p_notes: input.notes || null,
+      p_caller_id: user.id, // ✨ Passa ID utente corrente per service_role
+    });
 
     if (error) {
-      console.error("Errore assegnazione listino:", error);
+      console.error('Errore assegnazione listino:', error);
       return { success: false, error: error.message };
     }
 
     // Recupera l'assegnazione creata
     const { data: assignment } = await supabaseAdmin
-      .from("price_list_assignments")
+      .from('price_list_assignments')
       .select(
         `
         *,
@@ -1180,7 +1144,7 @@ export async function assignPriceListToUserViaTableAction(
         assigner:users!price_list_assignments_assigned_by_fkey(id, email)
       `
       )
-      .eq("id", assignmentId)
+      .eq('id', assignmentId)
       .single();
 
     console.log(
@@ -1189,8 +1153,8 @@ export async function assignPriceListToUserViaTableAction(
 
     return { success: true, assignment };
   } catch (error: any) {
-    console.error("Errore assegnazione listino:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore assegnazione listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1201,46 +1165,41 @@ export async function assignPriceListToUserViaTableAction(
  * @param assignmentId - ID assegnazione da revocare
  * @returns Successo/errore
  */
-export async function revokePriceListAssignmentAction(
-  assignmentId: string
-): Promise<{
+export async function revokePriceListAssignmentAction(assignmentId: string): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può revocare
-    if (user.account_type !== "superadmin") {
+    if (user.account_type !== 'superadmin') {
       return {
         success: false,
-        error: "Solo superadmin può revocare assegnazioni",
+        error: 'Solo superadmin può revocare assegnazioni',
       };
     }
 
     // Usa la funzione DB revoke_price_list_assignment
-    const { data: success, error } = await supabaseAdmin.rpc(
-      "revoke_price_list_assignment",
-      {
-        p_assignment_id: assignmentId,
-      }
-    );
+    const { data: success, error } = await supabaseAdmin.rpc('revoke_price_list_assignment', {
+      p_assignment_id: assignmentId,
+    });
 
     if (error) {
-      console.error("Errore revoca assegnazione:", error);
+      console.error('Errore revoca assegnazione:', error);
       return { success: false, error: error.message };
     }
 
@@ -1248,8 +1207,8 @@ export async function revokePriceListAssignmentAction(
 
     return { success: true };
   } catch (error: any) {
-    console.error("Errore revoca assegnazione:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore revoca assegnazione:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1260,39 +1219,37 @@ export async function revokePriceListAssignmentAction(
  * @param priceListId - ID listino
  * @returns Array di assegnazioni
  */
-export async function listAssignmentsForPriceListAction(
-  priceListId: string
-): Promise<{
+export async function listAssignmentsForPriceListAction(priceListId: string): Promise<{
   success: boolean;
   assignments?: PriceListAssignment[];
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può vedere tutte le assegnazioni
-    if (user.account_type !== "superadmin" && user.account_type !== "admin") {
+    if (user.account_type !== 'superadmin' && user.account_type !== 'admin') {
       return {
         success: false,
-        error: "Solo admin può vedere le assegnazioni",
+        error: 'Solo admin può vedere le assegnazioni',
       };
     }
 
     const { data: assignments, error } = await supabaseAdmin
-      .from("price_list_assignments")
+      .from('price_list_assignments')
       .select(
         `
         *,
@@ -1300,18 +1257,18 @@ export async function listAssignmentsForPriceListAction(
         assigner:users!price_list_assignments_assigned_by_fkey(id, email)
       `
       )
-      .eq("price_list_id", priceListId)
-      .order("assigned_at", { ascending: false });
+      .eq('price_list_id', priceListId)
+      .order('assigned_at', { ascending: false });
 
     if (error) {
-      console.error("Errore recupero assegnazioni:", error);
+      console.error('Errore recupero assegnazioni:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true, assignments: assignments || [] };
   } catch (error: any) {
-    console.error("Errore recupero assegnazioni:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero assegnazioni:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1327,47 +1284,47 @@ export async function listAssignedPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Recupera listini assegnati via tabella price_list_assignments
     const { data: assignments, error: assignmentsError } = await supabaseAdmin
-      .from("price_list_assignments")
-      .select("price_list_id")
-      .eq("user_id", user.id)
-      .is("revoked_at", null);
+      .from('price_list_assignments')
+      .select('price_list_id')
+      .eq('user_id', user.id)
+      .is('revoked_at', null);
 
     if (assignmentsError) {
-      console.error("Errore recupero assegnazioni:", assignmentsError);
+      console.error('Errore recupero assegnazioni:', assignmentsError);
     }
 
     const assignedIds = assignments?.map((a) => a.price_list_id) || [];
 
     // Recupera listini: sia assegnati direttamente che via tabella
     const { data: priceLists, error } = await supabaseAdmin
-      .from("price_lists")
-      .select("*")
+      .from('price_lists')
+      .select('*')
       .or(
         `assigned_to_user_id.eq.${user.id},id.in.(${
-          assignedIds.join(",") || "00000000-0000-0000-0000-000000000000"
+          assignedIds.join(',') || '00000000-0000-0000-0000-000000000000'
         })`
       )
-      .order("created_at", { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("Errore recupero listini assegnati:", error);
+      console.error('Errore recupero listini assegnati:', error);
       return { success: false, error: error.message };
     }
 
@@ -1379,9 +1336,9 @@ export async function listAssignedPriceListsAction(): Promise<{
 
       if (courierIds.length > 0) {
         const { data: couriers } = await supabaseAdmin
-          .from("couriers")
-          .select("id, code, name")
-          .in("id", courierIds);
+          .from('couriers')
+          .select('id, code, name')
+          .in('id', courierIds);
 
         const courierMap = new Map(couriers?.map((c) => [c.id, c]) || []);
 
@@ -1393,16 +1350,12 @@ export async function listAssignedPriceListsAction(): Promise<{
       }
     }
 
-    console.log(
-      `✅ [ASSIGNED] Trovati ${priceLists?.length || 0} listini assegnati a ${
-        user.id
-      }`
-    );
+    console.log(`✅ [ASSIGNED] Trovati ${priceLists?.length || 0} listini assegnati a ${user.id}`);
 
     return { success: true, priceLists: priceLists || [] };
   } catch (error: any) {
-    console.error("Errore recupero listini assegnati:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero listini assegnati:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1418,30 +1371,28 @@ export async function listMasterPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      session.user.id === "00000000-0000-0000-0000-000000000000" ||
-      session.user.id === "test-user-id"
+      context.actor.id === '00000000-0000-0000-0000-000000000000' ||
+      context.actor.id === 'test-user-id'
     ) {
-      console.log(
-        "🧪 [TEST MODE] listMasterPriceListsAction: returning mock data"
-      );
+      console.log('🧪 [TEST MODE] listMasterPriceListsAction: returning mock data');
       return {
         success: true,
         priceLists: [
           {
-            id: "mock-master-list-1",
-            name: "Listino Master Standard",
-            list_type: "master",
-            status: "active",
-            version: "1.0",
-            courier_id: "mock-courier-gls",
-            courier: { id: "mock-courier-gls", code: "gls", name: "GLS" },
+            id: 'mock-master-list-1',
+            name: 'Listino Master Standard',
+            list_type: 'master',
+            status: 'active',
+            version: '1.0',
+            courier_id: 'mock-courier-gls',
+            courier: { id: 'mock-courier-gls', code: 'gls', name: 'GLS' },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             derived_count: 5,
@@ -1453,32 +1404,32 @@ export async function listMasterPriceListsAction(): Promise<{
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può vedere i listini master
-    if (user.account_type !== "superadmin") {
+    if (user.account_type !== 'superadmin') {
       return {
         success: false,
-        error: "Solo superadmin può vedere i listini master",
+        error: 'Solo superadmin può vedere i listini master',
       };
     }
 
     // Recupera listini master (quelli senza master_list_id)
     const { data: masterLists, error } = await supabaseAdmin
-      .from("price_lists")
-      .select("*")
-      .is("master_list_id", null)
-      .order("created_at", { ascending: false });
+      .from('price_lists')
+      .select('*')
+      .is('master_list_id', null)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("Errore recupero listini master:", error);
+      console.error('Errore recupero listini master:', error);
       return { success: false, error: error.message };
     }
 
@@ -1488,9 +1439,9 @@ export async function listMasterPriceListsAction(): Promise<{
 
       // Conta derivazioni
       const { data: derivations } = await supabaseAdmin
-        .from("price_lists")
-        .select("master_list_id")
-        .in("master_list_id", masterIds);
+        .from('price_lists')
+        .select('master_list_id')
+        .in('master_list_id', masterIds);
 
       const derivationCounts = new Map<string, number>();
       derivations?.forEach((d: any) => {
@@ -1500,10 +1451,10 @@ export async function listMasterPriceListsAction(): Promise<{
 
       // Conta assegnazioni attive
       const { data: assignments } = await supabaseAdmin
-        .from("price_list_assignments")
-        .select("price_list_id")
-        .in("price_list_id", masterIds)
-        .is("revoked_at", null);
+        .from('price_list_assignments')
+        .select('price_list_id')
+        .in('price_list_id', masterIds)
+        .is('revoked_at', null);
 
       const assignmentCounts = new Map<string, number>();
       assignments?.forEach((a: any) => {
@@ -1524,9 +1475,9 @@ export async function listMasterPriceListsAction(): Promise<{
 
       if (courierIds.length > 0) {
         const { data: couriers } = await supabaseAdmin
-          .from("couriers")
-          .select("id, code, name")
-          .in("id", courierIds);
+          .from('couriers')
+          .select('id, code, name')
+          .in('id', courierIds);
 
         const courierMap = new Map(couriers?.map((c) => [c.id, c]) || []);
 
@@ -1538,14 +1489,12 @@ export async function listMasterPriceListsAction(): Promise<{
       }
     }
 
-    console.log(
-      `✅ [MASTER] Trovati ${masterLists?.length || 0} listini master`
-    );
+    console.log(`✅ [MASTER] Trovati ${masterLists?.length || 0} listini master`);
 
     return { success: true, priceLists: masterLists || [] };
   } catch (error: any) {
-    console.error("Errore recupero listini master:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero listini master:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1567,34 +1516,32 @@ export async function listUsersForAssignmentAction(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      session.user.id === "00000000-0000-0000-0000-000000000000" ||
-      session.user.id === "test-user-id"
+      context.actor.id === '00000000-0000-0000-0000-000000000000' ||
+      context.actor.id === 'test-user-id'
     ) {
-      console.log(
-        "🧪 [TEST MODE] listUsersForAssignmentAction: returning mock data"
-      );
+      console.log('🧪 [TEST MODE] listUsersForAssignmentAction: returning mock data');
       return {
         success: true,
         users: [
           {
-            id: "mock-user-reseller",
-            email: "reseller@test.com",
-            name: "Reseller Test SRL",
-            account_type: "reseller",
+            id: 'mock-user-reseller',
+            email: 'reseller@test.com',
+            name: 'Reseller Test SRL',
+            account_type: 'reseller',
             is_reseller: true,
           },
           {
-            id: "mock-user-byoc",
-            email: "byoc@test.com",
-            name: "BYOC User",
-            account_type: "byoc",
+            id: 'mock-user-byoc',
+            email: 'byoc@test.com',
+            name: 'BYOC User',
+            account_type: 'byoc',
             is_reseller: false,
           },
         ],
@@ -1602,48 +1549,48 @@ export async function listUsersForAssignmentAction(): Promise<{
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può vedere la lista utenti
-    if (user.account_type !== "superadmin") {
+    if (user.account_type !== 'superadmin') {
       return {
         success: false,
-        error: "Solo superadmin può vedere la lista utenti",
+        error: 'Solo superadmin può vedere la lista utenti',
       };
     }
 
     // Recupera utenti reseller e BYOC (destinatari delle assegnazioni)
     const { data: users, error } = await supabaseAdmin
-      .from("users")
-      .select("id, email, name, account_type, is_reseller")
-      .or("is_reseller.eq.true,account_type.eq.byoc")
-      .order("name", { ascending: true });
+      .from('users')
+      .select('id, email, name, account_type, is_reseller')
+      .or('is_reseller.eq.true,account_type.eq.byoc')
+      .order('name', { ascending: true });
 
     if (error) {
-      console.error("Errore recupero utenti:", error);
+      console.error('Errore recupero utenti:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true, users: users || [] };
   } catch (error: any) {
-    console.error("Errore recupero utenti:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore recupero utenti:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
 /**
  * Recupera corrieri disponibili per l'utente corrente
- * 
+ *
  * ⚠️ SERVER ACTION: Sostituisce chiamata diretta a getAvailableCouriersForUser
  * che causava errori 401 quando eseguita lato client (supabaseAdmin non disponibile)
- * 
+ *
  * @returns Lista corrieri disponibili con info contratto
  */
 export async function getAvailableCouriersForUserAction(): Promise<{
@@ -1657,30 +1604,30 @@ export async function getAvailableCouriersForUserAction(): Promise<{
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     // Recupera user ID
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Import dinamico per evitare problemi di bundling
-    const { getAvailableCouriersForUser } = await import("@/lib/db/price-lists");
+    const { getAvailableCouriersForUser } = await import('@/lib/db/price-lists');
     const couriers = await getAvailableCouriersForUser(user.id);
 
     return { success: true, couriers };
   } catch (error: any) {
-    console.error("Errore getAvailableCouriersForUserAction:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore getAvailableCouriersForUserAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
 
@@ -1714,29 +1661,28 @@ export async function getPriceListAuditEventsAction(
   error?: string;
 }> {
   try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Non autenticato" };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
     const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, account_type, is_reseller")
-      .eq("email", session.user.email)
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
       .single();
 
     if (!user) {
-      return { success: false, error: "Utente non trovato" };
+      return { success: false, error: 'Utente non trovato' };
     }
 
     // Verifica permessi sul listino
     const priceList = await getPriceListById(priceListId);
     if (!priceList) {
-      return { success: false, error: "Listino non trovato" };
+      return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === "admin" || user.account_type === "superadmin";
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isOwner = priceList.created_by === user.id;
     const isAssignedOwner = priceList.assigned_to_user_id === user.id;
 
@@ -1748,7 +1694,7 @@ export async function getPriceListAuditEventsAction(
     }
 
     // Recupera eventi
-    const { data, error } = await supabaseAdmin.rpc("get_price_list_audit_events", {
+    const { data, error } = await supabaseAdmin.rpc('get_price_list_audit_events', {
       p_price_list_id: priceListId,
       p_event_types: options?.eventTypes || null,
       p_limit: options?.limit || 100,
@@ -1757,7 +1703,7 @@ export async function getPriceListAuditEventsAction(
     });
 
     if (error) {
-      console.error("Errore get_price_list_audit_events:", error);
+      console.error('Errore get_price_list_audit_events:', error);
       return { success: false, error: error.message };
     }
 
@@ -1782,7 +1728,7 @@ export async function getPriceListAuditEventsAction(
       total_count: Number(total_count),
     };
   } catch (error: any) {
-    console.error("Errore getPriceListAuditEventsAction:", error);
-    return { success: false, error: error.message || "Errore sconosciuto" };
+    console.error('Errore getPriceListAuditEventsAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }

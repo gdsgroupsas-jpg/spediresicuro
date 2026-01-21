@@ -9,20 +9,24 @@
 ## 📋 Test Eseguiti
 
 ### ✅ Verifica 1: Database Schema
+
 - ✅ Tabella `account_capabilities` esiste
 - ✅ Campo `tenant_id` in `users` esiste
 - ✅ Funzione `has_capability()` esiste
 - ✅ Funzione `get_user_tenant()` esiste
 
 ### ✅ Verifica 2: Dati Popolati
+
 - ✅ Capability attive presenti
 - ✅ Utenti con `tenant_id` popolato
 
 ### ✅ Verifica 3: Funzioni Funzionanti
+
 - ✅ `has_capability()` restituisce risultati corretti
 - ✅ `get_user_tenant()` restituisce risultati corretti
 
 ### ✅ Verifica 4: RLS Policies
+
 - ✅ Policy `users_select_reseller` attiva
 - ✅ Policy `account_capabilities_select` attiva
 

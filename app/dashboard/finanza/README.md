@@ -7,6 +7,7 @@ La **Finance Control Room** è una dashboard enterprise-grade per il monitoraggi
 ## ✨ Features
 
 ### Core Features
+
 - ✅ **Real-time Metrics Dashboard** - KPI cards con margini, proiezioni e ROI
 - ✅ **AI-Powered Insights** - ANNE AI fornisce analisi contestuali in tempo reale
 - ✅ **Interactive AI Chat** - Dialogo con ANNE per consulenze fiscali
@@ -18,6 +19,7 @@ La **Finance Control Room** è una dashboard enterprise-grade per il monitoraggi
 - ✅ **Fiscal Health Check** - Monitor plafond export, regime forfettario, rischi
 
 ### Technical Features
+
 - ✅ **Server Actions** - Next.js 14 server actions per data fetching
 - ✅ **Comprehensive Testing** - Unit tests per tutti i moduli
 - ✅ **Error Handling** - Custom error types con context
@@ -60,7 +62,7 @@ tests/unit/
 import FinanceControlRoom from '@/app/dashboard/finanza/page';
 
 // Component auto-wrapped in FiscalErrorBoundary
-<FinanceControlRoom />
+<FinanceControlRoom />;
 ```
 
 ### Server Actions
@@ -106,12 +108,12 @@ const expertAdvice = consultFiscalBrain(userQuery);
 
 ## 🎯 Role-Based Access Control
 
-| Role | Access Level |
-|------|-------------|
-| **User** | Own shipments only |
-| **Admin** | Own shipments + aggregated analytics |
-| **Reseller** | Own + sub-users' shipments |
-| **SuperAdmin** | Full platform visibility |
+| Role           | Access Level                         |
+| -------------- | ------------------------------------ |
+| **User**       | Own shipments only                   |
+| **Admin**      | Own shipments + aggregated analytics |
+| **Reseller**   | Own + sub-users' shipments           |
+| **SuperAdmin** | Full platform visibility             |
 
 ## 📊 Data Flow
 
@@ -153,6 +155,7 @@ npm run test:coverage
 ## 🚀 Future Enhancements
 
 ### Planned Features (Nice-to-Have)
+
 - [ ] **Real-time WebSocket** - Live updates for metrics
 - [ ] **Chart Visualization** - Recharts integration for analytics
 - [ ] **Payment Integration** - "Paga Ora" button connected to Stripe
@@ -175,18 +178,21 @@ npm run test:coverage
 ## 📝 Best Practices
 
 ### When to use this page
+
 - Monthly fiscal reviews
 - Tax deadline monitoring
 - Cash flow analysis
 - AI-powered fiscal consultation
 
 ### Performance Considerations
+
 - Data fetched once on mount (consider SWR for real-time)
 - AI insights generated client-side from cached data
 - Lazy load AI chat dialog
 - Optimize re-renders with React.memo if needed
 
 ### Error Handling
+
 - All database errors caught and typed
 - User-friendly error messages
 - Error boundary prevents full page crash
@@ -207,8 +213,8 @@ export const FISCAL_BRAIN: FiscalScenario[] = [
     trigger_condition: 'When X happens...',
     expert_advice: 'You should do Y because...',
     actionable_step: 'Step-by-step action',
-    risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  }
+    risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+  },
 ];
 ```
 

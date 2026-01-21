@@ -36,7 +36,10 @@ const markdownComponents: Components = {
     <h1 className="text-4xl font-bold text-gray-900 mt-10 mb-4 leading-tight" {...props} />
   ),
   h2: ({ node: _node, ...props }) => (
-    <h2 className="text-3xl font-semibold text-gray-900 mt-10 mb-4 leading-snug border-b border-gray-200 pb-2" {...props} />
+    <h2
+      className="text-3xl font-semibold text-gray-900 mt-10 mb-4 leading-snug border-b border-gray-200 pb-2"
+      {...props}
+    />
   ),
   h3: ({ node: _node, ...props }) => (
     <h3 className="text-2xl font-semibold text-gray-800 mt-8 mb-3 leading-snug" {...props} />
@@ -44,9 +47,7 @@ const markdownComponents: Components = {
   h4: ({ node: _node, ...props }) => (
     <h4 className="text-xl font-semibold text-gray-800 mt-6 mb-3 leading-snug" {...props} />
   ),
-  p: ({ node: _node, ...props }) => (
-    <p className="text-gray-700 leading-relaxed mb-4" {...props} />
-  ),
+  p: ({ node: _node, ...props }) => <p className="text-gray-700 leading-relaxed mb-4" {...props} />,
   a: ({ node: _node, ...props }) => (
     <a
       className="text-[#FF9500] hover:text-[#FFB84D] underline underline-offset-2 font-semibold transition-colors"
@@ -59,9 +60,7 @@ const markdownComponents: Components = {
   ol: ({ node: _node, ...props }) => (
     <ol className="list-decimal list-inside space-y-2 text-gray-700 mb-4 ml-4" {...props} />
   ),
-  li: ({ node: _node, ...props }) => (
-    <li className="leading-relaxed" {...props} />
-  ),
+  li: ({ node: _node, ...props }) => <li className="leading-relaxed" {...props} />,
   strong: ({ node: _node, ...props }) => (
     <strong className="text-gray-900 font-semibold" {...props} />
   ),
@@ -88,10 +87,7 @@ const markdownComponents: Components = {
 
     return (
       <pre className="bg-gray-900 border border-gray-200 rounded-xl p-4 overflow-x-auto mb-6">
-        <code
-          className={`text-sm text-gray-100 font-mono leading-relaxed ${codeClass}`}
-          {...props}
-        >
+        <code className={`text-sm text-gray-100 font-mono leading-relaxed ${codeClass}`} {...props}>
           {children}
         </code>
       </pre>
@@ -102,18 +98,17 @@ const markdownComponents: Components = {
       <table className="min-w-full text-left text-gray-700" {...props} />
     </div>
   ),
-  thead: ({ node: _node, ...props }) => (
-    <thead className="bg-gray-50" {...props} />
-  ),
+  thead: ({ node: _node, ...props }) => <thead className="bg-gray-50" {...props} />,
   th: ({ node: _node, ...props }) => (
-    <th className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-200" {...props} />
+    <th
+      className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-200"
+      {...props}
+    />
   ),
   td: ({ node: _node, ...props }) => (
     <td className="px-4 py-3 text-sm border-b border-gray-200 align-top" {...props} />
   ),
-  hr: ({ node: _node, ...props }) => (
-    <hr className="border-t border-gray-200 my-8" {...props} />
-  ),
+  hr: ({ node: _node, ...props }) => <hr className="border-t border-gray-200 my-8" {...props} />,
 };
 
 export default async function ManualeDashboardPage() {
@@ -130,10 +125,7 @@ export default async function ManualeDashboardPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
           <div className="p-6 sm:p-10">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={markdownComponents}
-            >
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
               {content}
             </ReactMarkdown>
           </div>
@@ -142,4 +134,3 @@ export default async function ManualeDashboardPage() {
     </div>
   );
 }
-

@@ -127,8 +127,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Prometheus metrics error', { error: errorMessage });
 
     // Return minimal error metric

@@ -17,11 +17,7 @@ interface Message {
   timestamp: Date;
 }
 
-export function AIChatDialog({
-  isOpen,
-  onClose,
-  fiscalContext,
-}: AIChatDialogProps) {
+export function AIChatDialog({ isOpen, onClose, fiscalContext }: AIChatDialogProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -59,8 +55,7 @@ export function AIChatDialog({
     setTimeout(() => {
       const brainResponse = consultFiscalBrain(userMessage.content);
 
-      let assistantContent =
-        'Ho analizzato la tua domanda. ';
+      let assistantContent = 'Ho analizzato la tua domanda. ';
 
       if (brainResponse) {
         assistantContent += brainResponse;
@@ -105,9 +100,7 @@ export function AIChatDialog({
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">ANNE Fiscal AI</h2>
-              <p className="text-sm text-slate-400">
-                Assistente Intelligente Fiscale
-              </p>
+              <p className="text-sm text-slate-400">Assistente Intelligente Fiscale</p>
             </div>
           </div>
           <button
@@ -124,15 +117,11 @@ export function AIChatDialog({
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex gap-3 ${
-                message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-              }`}
+              className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
               <div
                 className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  message.role === 'user'
-                    ? 'bg-blue-600'
-                    : 'bg-indigo-600'
+                  message.role === 'user' ? 'bg-blue-600' : 'bg-indigo-600'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -153,9 +142,7 @@ export function AIChatDialog({
                       : 'bg-slate-700 text-slate-100'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {message.content}
-                  </p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                 </div>
                 <p className="text-xs text-slate-500 mt-1 px-2">
                   {message.timestamp.toLocaleTimeString('it-IT', {

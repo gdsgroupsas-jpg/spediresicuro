@@ -42,10 +42,7 @@ export async function GET() {
     const db = instrumentSupabaseClient(supabaseAdmin, requestId);
 
     const dbStart = Date.now();
-    const { data: users, error: dbError } = await db
-      .from('users')
-      .select('id, email')
-      .limit(3);
+    const { data: users, error: dbError } = await db.from('users').select('id, email').limit(3);
     const dbDuration = Date.now() - dbStart;
 
     if (dbError) {
@@ -112,7 +109,8 @@ export async function GET() {
         spanId: traceContext?.spanId || 'unknown',
       },
       instructions: {
-        verifySentry: 'Go to Sentry → Performance → Transactions → Search for "GET /api/test/m2-apm"',
+        verifySentry:
+          'Go to Sentry → Performance → Transactions → Search for "GET /api/test/m2-apm"',
         expectedSpans: [
           'http.server (root span from middleware)',
           'db.query.users (database query)',

@@ -3,18 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { 
-  Search, 
-  Eye, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Search,
+  Eye,
+  CheckCircle2,
+  XCircle,
   Clock,
   AlertCircle,
   ExternalLink,
   RefreshCw,
   Trash2,
   User,
-  Wallet
+  Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,19 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { getTopUpRequestsAdmin, getTopUpRequestAdmin, TopUpRequestAdmin } from '@/app/actions/topups-admin';
+import {
+  getTopUpRequestsAdmin,
+  getTopUpRequestAdmin,
+  TopUpRequestAdmin,
+} from '@/app/actions/topups-admin';
 import { approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest } from '@/app/actions/wallet';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -49,7 +59,7 @@ export default function AdminBonificiPage() {
   // Verifica permessi admin
   useEffect(() => {
     if (status === 'loading') return;
-    
+
     if (status === 'unauthenticated' || !session) {
       router.push('/login');
       return;
@@ -63,11 +73,10 @@ export default function AdminBonificiPage() {
           const userData = data.user || data;
           const userAccountType = userData.account_type || userData.accountType;
           const userRole = userData.role;
-          
-          const isAdmin = userAccountType === 'superadmin' || 
-                         userAccountType === 'admin' || 
-                         userRole === 'admin';
-          
+
+          const isAdmin =
+            userAccountType === 'superadmin' || userAccountType === 'admin' || userRole === 'admin';
+
           if (isAdmin) {
             setIsAuthorized(true);
             loadRequests('pending');
@@ -177,31 +186,28 @@ export default function AdminBonificiPage() {
     let amountToApprove: number;
 
     if (raw === '') {
-        // Usa importo originale
-        amountToApprove = selectedRequest.amount;
-        console.log('Campo vuoto → uso importo originale:', amountToApprove);
+      // Usa importo originale
+      amountToApprove = selectedRequest.amount;
+      console.log('Campo vuoto → uso importo originale:', amountToApprove);
     } else {
-        // Sostituisci virgola con punto per parsing (formato italiano)
-        const normalized = raw.replace(',', '.');
-        const parsedAmount = Number(normalized);
+      // Sostituisci virgola con punto per parsing (formato italiano)
+      const normalized = raw.replace(',', '.');
+      const parsedAmount = Number(normalized);
 
-        // Validazione robusta
-        if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
-            toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
-            return;
-        }
-        amountToApprove = parsedAmount;
-        console.log('Importo specificato:', parsedAmount);
+      // Validazione robusta
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10000) {
+        toast.error('Importo non valido. Deve essere tra €0.01 e €10.000');
+        return;
+      }
+      amountToApprove = parsedAmount;
+      console.log('Importo specificato:', parsedAmount);
     }
 
     try {
       setIsProcessing(true);
       console.log('✅ Approving request:', selectedRequest.id, 'with amount:', amountToApprove);
-      
-      const result = await approveTopUpRequest(
-        selectedRequest.id,
-        amountToApprove
-      );
+
+      const result = await approveTopUpRequest(selectedRequest.id, amountToApprove);
 
       console.log('✅ Approve result:', result);
 
@@ -214,11 +220,13 @@ export default function AdminBonificiPage() {
         loadRequests(activeTab);
         loadAllRequestsForCounts();
       } else {
-        toast.error(result.error || 'Errore durante l\'approvazione');
+        toast.error(result.error || "Errore durante l'approvazione");
       }
     } catch (error: any) {
       console.error('❌ Errore approvazione:', error);
-      toast.error('Errore imprevisto durante l\'approvazione: ' + (error.message || 'Errore sconosciuto'));
+      toast.error(
+        "Errore imprevisto durante l'approvazione: " + (error.message || 'Errore sconosciuto')
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -257,7 +265,11 @@ export default function AdminBonificiPage() {
     if (!selectedRequest) return;
 
     // Conferma cancellazione
-    if (!confirm(`Sei sicuro di voler eliminare questa richiesta?\n\nQuesta azione è irreversibile e la richiesta verrà eliminata definitivamente.`)) {
+    if (
+      !confirm(
+        `Sei sicuro di voler eliminare questa richiesta?\n\nQuesta azione è irreversibile e la richiesta verrà eliminata definitivamente.`
+      )
+    ) {
       return;
     }
 
@@ -296,16 +308,18 @@ export default function AdminBonificiPage() {
       rejected: 'Rifiutata',
     };
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || styles.pending}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || styles.pending}`}
+      >
         {labels[status as keyof typeof labels] || status}
       </span>
     );
   }
 
   function formatCurrency(amount: number) {
-    return new Intl.NumberFormat('it-IT', { 
-      style: 'currency', 
-      currency: 'EUR' 
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
     }).format(amount);
   }
 
@@ -335,9 +349,7 @@ export default function AdminBonificiPage() {
             <Wallet className="w-8 h-8 text-blue-600" />
             Gestione Bonifici
           </h1>
-          <p className="text-gray-500 mt-1">
-            Approvazione e rifiuto richieste di ricarica wallet
-          </p>
+          <p className="text-gray-500 mt-1">Approvazione e rifiuto richieste di ricarica wallet</p>
         </div>
 
         {/* Tabs */}
@@ -347,19 +359,19 @@ export default function AdminBonificiPage() {
               <TabsList className="bg-transparent">
                 <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-50">
                   <Clock className="w-4 h-4 mr-2" />
-                  In Attesa ({allRequests.filter(r => r.status === 'pending').length})
+                  In Attesa ({allRequests.filter((r) => r.status === 'pending').length})
                 </TabsTrigger>
                 <TabsTrigger value="manual_review" className="data-[state=active]:bg-orange-50">
                   <AlertCircle className="w-4 h-4 mr-2" />
-                  Revisione ({allRequests.filter(r => r.status === 'manual_review').length})
+                  Revisione ({allRequests.filter((r) => r.status === 'manual_review').length})
                 </TabsTrigger>
                 <TabsTrigger value="approved" className="data-[state=active]:bg-green-50">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Approvate ({allRequests.filter(r => r.status === 'approved').length})
+                  Approvate ({allRequests.filter((r) => r.status === 'approved').length})
                 </TabsTrigger>
                 <TabsTrigger value="rejected" className="data-[state=active]:bg-red-50">
                   <XCircle className="w-4 h-4 mr-2" />
-                  Rifiutate ({allRequests.filter(r => r.status === 'rejected').length})
+                  Rifiutate ({allRequests.filter((r) => r.status === 'rejected').length})
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -434,17 +446,16 @@ export default function AdminBonificiPage() {
                             <div className="font-semibold text-gray-900">
                               {formatCurrency(request.amount)}
                             </div>
-                            {request.approved_amount && request.approved_amount !== request.amount && (
-                              <div className="text-xs text-gray-500 mt-0.5">
-                                Approvato: {formatCurrency(request.approved_amount)}
-                              </div>
-                            )}
+                            {request.approved_amount &&
+                              request.approved_amount !== request.amount && (
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  Approvato: {formatCurrency(request.approved_amount)}
+                                </div>
+                              )}
                           </td>
-                          <td className="px-6 py-4">
-                            {getStatusBadge(request.status)}
-                          </td>
+                          <td className="px-6 py-4">{getStatusBadge(request.status)}</td>
                           <td className="px-6 py-4 text-gray-600">
-                            {request.ai_confidence !== null 
+                            {request.ai_confidence !== null
                               ? `${Math.round(request.ai_confidence * 100)}%`
                               : '-'}
                           </td>
@@ -482,7 +493,8 @@ export default function AdminBonificiPage() {
               <DialogDescription>
                 {selectedRequest && (
                   <>
-                    Richiesta #{selectedRequest.id.slice(0, 8)}... · {formatDate(selectedRequest.created_at)}
+                    Richiesta #{selectedRequest.id.slice(0, 8)}... ·{' '}
+                    {formatDate(selectedRequest.created_at)}
                   </>
                 )}
               </DialogDescription>
@@ -508,9 +520,7 @@ export default function AdminBonificiPage() {
                       <Label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">
                         Stato
                       </Label>
-                      <div className="mt-1">
-                        {getStatusBadge(selectedRequest.status)}
-                      </div>
+                      <div className="mt-1">{getStatusBadge(selectedRequest.status)}</div>
                     </div>
                   </div>
                 </div>
@@ -540,8 +550,8 @@ export default function AdminBonificiPage() {
                               selectedRequest.ai_confidence > 0.8
                                 ? 'bg-green-500'
                                 : selectedRequest.ai_confidence > 0.5
-                                ? 'bg-yellow-500'
-                                : 'bg-red-500'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-red-500'
                             }`}
                             style={{ width: `${selectedRequest.ai_confidence * 100}%` }}
                           />
@@ -571,10 +581,14 @@ export default function AdminBonificiPage() {
                 </div>
 
                 {/* Approvazione (solo se pending o manual_review) */}
-                {(selectedRequest.status === 'pending' || selectedRequest.status === 'manual_review') && (
+                {(selectedRequest.status === 'pending' ||
+                  selectedRequest.status === 'manual_review') && (
                   <div className="bg-white rounded-lg p-5 border border-gray-200 space-y-5">
                     <div>
-                      <Label htmlFor="approvedAmount" className="text-sm font-medium text-gray-900 mb-2 block">
+                      <Label
+                        htmlFor="approvedAmount"
+                        className="text-sm font-medium text-gray-900 mb-2 block"
+                      >
                         Importo da Accreditare (€)
                       </Label>
                       <Input
@@ -592,12 +606,16 @@ export default function AdminBonificiPage() {
                         className="text-lg font-semibold"
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Lasciare vuoto per accreditare l&apos;importo richiesto ({formatCurrency(selectedRequest.amount)})
+                        Lasciare vuoto per accreditare l&apos;importo richiesto (
+                        {formatCurrency(selectedRequest.amount)})
                       </p>
                     </div>
 
                     <div>
-                      <Label htmlFor="rejectReason" className="text-sm font-medium text-gray-900 mb-2 block">
+                      <Label
+                        htmlFor="rejectReason"
+                        className="text-sm font-medium text-gray-900 mb-2 block"
+                      >
                         Note / Motivo Rifiuto
                       </Label>
                       <Textarea
@@ -646,17 +664,17 @@ export default function AdminBonificiPage() {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <p className="text-sm font-semibold text-green-900">
-                        Richiesta Approvata
-                      </p>
+                      <p className="text-sm font-semibold text-green-900">Richiesta Approvata</p>
                     </div>
                     <div className="space-y-1 text-sm text-green-800">
                       <p>
-                        <strong>Data approvazione:</strong> {formatDate(selectedRequest.approved_at)}
+                        <strong>Data approvazione:</strong>{' '}
+                        {formatDate(selectedRequest.approved_at)}
                       </p>
                       {selectedRequest.approved_amount && (
                         <p>
-                          <strong>Importo accreditato:</strong> {formatCurrency(selectedRequest.approved_amount)}
+                          <strong>Importo accreditato:</strong>{' '}
+                          {formatCurrency(selectedRequest.approved_amount)}
                         </p>
                       )}
                     </div>
@@ -667,9 +685,7 @@ export default function AdminBonificiPage() {
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <XCircle className="w-5 h-5 text-red-600" />
-                      <p className="text-sm font-semibold text-red-900">
-                        Richiesta Rifiutata
-                      </p>
+                      <p className="text-sm font-semibold text-red-900">Richiesta Rifiutata</p>
                     </div>
                     {selectedRequest.approved_at && (
                       <p className="text-sm text-red-800">

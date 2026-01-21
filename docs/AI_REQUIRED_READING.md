@@ -22,9 +22,11 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ## 📚 A. DOCUMENTI CORE (OBBLIGATORI - Leggere PRIMA di sviluppare)
 
 ### 1. README.md (Costituzione)
+
 **File:** `README.md` (root)  
 **Priorità:** 🔴 P0 - OBBLIGATORIO  
 **Contenuto:**
+
 - Visione & Identità (Logistics OS, non comparatore)
 - 3 modelli operativi (Broker, SaaS/BYOC, Web Reseller)
 - Financial Core ("No Credit, No Label")
@@ -36,15 +38,18 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 2. docs/SECURITY.md
+
 **File:** `docs/SECURITY.md`  
 **Priorità:** 🔴 P0 - OBBLIGATORIO  
 **Contenuto:**
+
 - Architettura multi-tenant
 - Acting Context (Impersonation System)
 - RLS policies e isolamento
 - Audit logging
 
 **Quando leggerlo:** Prima di modificare:
+
 - Autenticazione/autorizzazione
 - Query database
 - Operazioni multi-tenant
@@ -55,15 +60,18 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 3. docs/MONEY_FLOWS.md
+
 **File:** `docs/MONEY_FLOWS.md`  
 **Priorità:** 🔴 P0 - OBBLIGATORIO  
 **Contenuto:**
+
 - Sistema wallet prepagato
 - Flussi finanziari (ricarica, debit, credit)
 - Anti-fraud mechanisms
 - Idempotency patterns
 
 **Quando leggerlo:** Prima di modificare:
+
 - Wallet operations
 - Payment flows
 - Shipment creation (debit wallet)
@@ -74,14 +82,17 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 4. docs/OPS_RUNBOOK.md
+
 **File:** `docs/OPS_RUNBOOK.md`  
 **Priorità:** 🟡 P1 - Consigliato  
 **Contenuto:**
+
 - Deployment procedures
 - Incident response
 - Monitoring e alerting
 
 **Quando leggerlo:** Prima di:
+
 - Deploy in produzione
 - Modifiche infrastrutturali
 - Setup monitoring
@@ -89,14 +100,17 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 5. docs/DB_SCHEMA.md
+
 **File:** `docs/DB_SCHEMA.md`  
 **Priorità:** 🟡 P1 - Consigliato  
 **Contenuto:**
+
 - Tabelle database
 - RLS policies
 - Invarianti e constraints
 
 **Quando leggerlo:** Prima di:
+
 - Modifiche schema database
 - Nuove migrations
 - Query complesse
@@ -104,14 +118,17 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 6. docs/ARCHITECTURE.md
+
 **File:** `docs/ARCHITECTURE.md`  
 **Priorità:** 🟡 P1 - Consigliato  
 **Contenuto:**
+
 - Deep dive tecnico
 - Patterns architetturali
 - Performance considerations
 
 **Quando leggerlo:** Prima di:
+
 - Refactoring architetturale
 - Ottimizzazioni performance
 - Nuove feature complesse
@@ -123,9 +140,11 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ## 📋 B. DOCUMENTI OPERATIVI (Leggere quando rilevanti)
 
 ### 7. docs/MIGRATIONS.md
+
 **File:** `docs/MIGRATIONS.md`  
 **Priorità:** 🟡 P1 - Quando si lavora su DB  
 **Contenuto:**
+
 - Storia migrations (49+ migrations)
 - Procedure rollback
 - Best practices migrations
@@ -135,9 +154,11 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 8. WALLET_SECURITY_GUARDRAILS.md
+
 **File:** `WALLET_SECURITY_GUARDRAILS.md` (root)  
 **Priorità:** 🔴 P0 - Se si lavora su wallet  
 **Contenuto:**
+
 - Regole critiche wallet (NON BYPASSABILE)
 - Pattern corretti/errati
 - Esempi codice
@@ -147,9 +168,11 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 9. AUDIT_GO_NOGO_PIVOT.md
+
 **File:** `AUDIT_GO_NOGO_PIVOT.md` (root)  
 **Priorità:** 🟡 P1 - Per contesto strategico  
 **Contenuto:**
+
 - Audit strategico GO/NO-GO/PIVOT
 - Top 5 rischi
 - Top 5 fix prioritari
@@ -162,9 +185,11 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ## 🤖 C. DOCUMENTI AI/VALIDAZIONE (Leggere quando rilevanti)
 
 ### 10. WALLET_AUDIT_REPORT.md
+
 **File:** `WALLET_AUDIT_REPORT.md` (root)  
 **Priorità:** 🟡 P1 - Se si lavora su wallet  
 **Contenuto:**
+
 - Audit wallet completo
 - Vulnerabilità P0 trovate e fixate
 - Test di validazione
@@ -174,9 +199,11 @@ Questo documento definisce la "Bibbia" del progetto. Ogni AI che lavora su Spedi
 ---
 
 ### 11. WALLET_AI_VALIDATION_PROMPT.md
+
 **File:** `WALLET_AI_VALIDATION_PROMPT.md` (root)  
 **Priorità:** 🟢 P2 - Per validazione esterna  
 **Contenuto:**
+
 - Prompt per validazione AI esterna
 - Domande di validazione
 - Output richiesto
@@ -234,9 +261,11 @@ Prima di proporre qualsiasi modifica, verifica:
 ## 🚫 DOCUMENTI OBSOLETI (Non usare per sviluppo attivo)
 
 ### docs/archive/
+
 **Status:** 📦 STORICO - Solo per riferimento storico
 
 **Contenuto:**
+
 - Documentazione vecchia
 - Analisi obsolete
 - Progetti abbandonati
@@ -257,12 +286,15 @@ Se crei un nuovo documento, segui questo template:
 **Ultimo Aggiornamento:** YYYY-MM-DD
 
 ## Contenuto
+
 [Descrizione contenuto]
 
 ## Quando Leggerlo
+
 [Scenari specifici]
 
 ## Allineamento Costituzione
+
 [Verifica rispetto a README.md]
 ```
 
@@ -271,23 +303,27 @@ Se crei un nuovo documento, segui questo template:
 ## 🎯 PRIORITÀ LETTURA PER TIPO DI MODIFICA
 
 ### Modifica Wallet
+
 1. README.md (Costituzione)
 2. WALLET_SECURITY_GUARDRAILS.md
 3. docs/MONEY_FLOWS.md
 4. WALLET_AUDIT_REPORT.md
 
 ### Modifica Autenticazione/RLS
+
 1. README.md (Costituzione)
 2. docs/SECURITY.md
 3. docs/DB_SCHEMA.md
 
 ### Modifica Shipment Creation
+
 1. README.md (Costituzione)
 2. docs/MONEY_FLOWS.md
 3. docs/ARCHITECTURE.md
 4. AUDIT_GO_NOGO_PIVOT.md (per contesto)
 
 ### Nuova Feature
+
 1. README.md (Costituzione)
 2. docs/ARCHITECTURE.md
 3. Verifica allineamento modelli operativi
@@ -297,11 +333,13 @@ Se crei un nuovo documento, segui questo template:
 ## ⚠️ SEGNALAZIONE DOCUMENTI OBSOLETI
 
 Se trovi un documento:
+
 - ❌ Non allineato alla Costituzione
 - ❌ Contiene informazioni obsolete
 - ❌ Contraddice altri documenti
 
 **AZIONE OBBLIGATORIA:**
+
 1. Segnala nel commit message
 2. Proponi fix o deprecazione
 3. Aggiorna questo file (AI_REQUIRED_READING.md)
@@ -309,6 +347,7 @@ Se trovi un documento:
 ---
 
 **Questo documento DEVE essere aggiornato ogni volta che:**
+
 - Viene creato un nuovo documento
 - Un documento viene deprecato
 - Un documento viene aggiornato significativamente
@@ -317,4 +356,3 @@ Se trovi un documento:
 
 _Last updated: December 23, 2025_  
 _Maintained by: Development Team + AI Agents_
-

@@ -1,12 +1,12 @@
 /**
  * Script di Verifica Configurazione Supabase
- * 
+ *
  * Verifica che Supabase sia configurato correttamente:
  * - Connessione funzionante
  * - Tabella geo_locations esistente
  * - Indici creati
  * - Dati presenti (opzionale)
- * 
+ *
  * Utilizzo:
  *   npm run verify:supabase
  */
@@ -226,14 +226,13 @@ async function main() {
   console.log('');
 
   results.forEach((result) => {
-    const icon =
-      result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⚠️';
+    const icon = result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⚠️';
     const color =
       result.status === 'success'
         ? '\x1b[32m'
         : result.status === 'error'
-        ? '\x1b[31m'
-        : '\x1b[33m';
+          ? '\x1b[31m'
+          : '\x1b[33m';
     const reset = '\x1b[0m';
 
     console.log(`${icon} ${color}${result.step}${reset}`);
@@ -269,14 +268,3 @@ main().catch((error) => {
   console.error('\n❌ ERRORE CRITICO:', error);
   process.exit(1);
 });
-
-
-
-
-
-
-
-
-
-
-

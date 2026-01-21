@@ -33,11 +33,13 @@ Sistema di **lock intelligente** che previene conflitti:
 ### **1. Lock Manuale** 🔒
 
 **Quando usare:**
+
 - Prima di accedere manualmente a Spedisci.Online
 - Quando devi lavorare sul tuo account per più di 5 minuti
 - Quando vuoi essere sicuro che l'agent non interferisca
 
 **Come funziona:**
+
 1. Acquisisci lock manuale dalla dashboard
 2. Lock dura **60 minuti** (configurabile)
 3. L'agent **NON farà sync** mentre lock è attivo
@@ -45,6 +47,7 @@ Sistema di **lock intelligente** che previene conflitti:
 5. Se dimentichi, lock scade automaticamente
 
 **Vantaggi:**
+
 - ✅ Nessun conflitto con agent
 - ✅ Puoi lavorare tranquillamente
 - ✅ Session non viene invalidata
@@ -53,11 +56,13 @@ Sistema di **lock intelligente** che previene conflitti:
 ### **2. Lock Agent** 🤖
 
 **Quando si attiva:**
+
 - Automaticamente quando l'agent inizia sync
 - Previene doppio sync simultaneo
 - Scade automaticamente dopo 30 minuti
 
 **Come funziona:**
+
 1. Agent verifica se c'è lock attivo
 2. Se lock manuale → Agent aspetta (ritorna errore)
 3. Se nessun lock → Agent acquisisce lock
@@ -65,6 +70,7 @@ Sistema di **lock intelligente** che previene conflitti:
 5. Agent rilascia lock quando finisce
 
 **Vantaggi:**
+
 - ✅ Previene doppio sync simultaneo
 - ✅ Auto-release dopo completamento
 - ✅ Auto-expire previene deadlock
@@ -72,17 +78,20 @@ Sistema di **lock intelligente** che previene conflitti:
 ### **3. Session Reuse** ♻️
 
 **Quando si attiva:**
+
 - Prima di ogni sync, l'agent verifica session nel DB
 - Se session valida (non scaduta) → Riusa quella
 - Se session scaduta → Fa nuovo login
 
 **Come funziona:**
+
 1. Agent controlla `session_data` nel database
 2. Verifica `expires_at` (se presente)
 3. Se valida → Ritorna session esistente (NON fa login)
 4. Se scaduta → Procede con estrazione nuova
 
 **Vantaggi:**
+
 - ✅ Evita login inutili
 - ✅ Più veloce (non apre browser)
 - ✅ Meno risorse utilizzate
@@ -112,6 +121,7 @@ Sistema di **lock intelligente** che previene conflitti:
    - L'agent può ora fare sync
 
 **Se dimentichi di rilasciare:**
+
 - Lock scade automaticamente dopo 60 minuti
 - Oppure usa "Forza Sync" per ignorare lock
 
@@ -131,6 +141,7 @@ Sistema di **lock intelligente** che previene conflitti:
    - Verifica stato session
 
 **Se sync fallisce con "Lock attivo":**
+
 - Verifica se stai usando Spedisci.Online manualmente
 - Rilascia lock manuale se presente
 - Oppure usa "Forza Sync" (ignora lock)
@@ -146,6 +157,7 @@ Sistema di **lock intelligente** che previene conflitti:
 5. Se session valida → Agent riusa quella (NON fa login)
 
 **Vantaggi:**
+
 - ✅ Non interferisce se stai usando manualmente
 - ✅ Riusa session valide (più veloce)
 - ✅ Auto-retry al prossimo ciclo cron
@@ -201,8 +213,9 @@ Mostra stato lock per ogni configurazione:
 Default: **60 minuti**
 
 Per cambiare durata, modifica chiamata:
+
 ```typescript
-await acquireManualLock(configId, 120) // 120 minuti = 2 ore
+await acquireManualLock(configId, 120); // 120 minuti = 2 ore
 ```
 
 ### **Durata Lock Agent:**
@@ -210,13 +223,15 @@ await acquireManualLock(configId, 120) // 120 minuti = 2 ore
 Default: **30 minuti**
 
 Modificabile in `lib/automation/spedisci-online-agent.ts`:
+
 ```typescript
-await this.acquireLock(configId, 'agent', 'Sistema automation', 30)
+await this.acquireLock(configId, 'agent', 'Sistema automation', 30);
 ```
 
 ### **Auto-Expire:**
 
 Lock scadono automaticamente anche se non rilasciati manualmente:
+
 - Previene deadlock
 - Previene lock "dimenticati"
 - Sistema sempre funzionante
@@ -230,6 +245,7 @@ Lock scadono automaticamente anche se non rilasciati manualmente:
 **Causa:** Lock manuale o agent già attivo
 
 **Soluzione:**
+
 1. Vai su dashboard automation
 2. Verifica tipo lock (Manuale o Agent)
 3. Se Manuale → Rilascia se hai finito
@@ -240,6 +256,7 @@ Lock scadono automaticamente anche se non rilasciati manualmente:
 **Causa:** Non hai acquisito lock manuale
 
 **Soluzione:**
+
 1. **SEMPRE** acquisisci lock manuale prima di usare Spedisci.Online
 2. Vai su dashboard automation
 3. Clicca "Lock Manuale"
@@ -250,6 +267,7 @@ Lock scadono automaticamente anche se non rilasciati manualmente:
 **Causa:** Raro, possibile deadlock
 
 **Soluzione:**
+
 1. Lock scade automaticamente dopo durata configurata
 2. Oppure usa "Forza Sync" per ignorare lock
 3. Verifica database: `automation_locks` table
@@ -259,6 +277,7 @@ Lock scadono automaticamente anche se non rilasciati manualmente:
 **Causa:** Lock manuale sempre attivo, agent non può fare sync
 
 **Soluzione:**
+
 1. Verifica lock attivi su dashboard
 2. Rilascia lock manuali se non più necessari
 3. Riduci durata lock manuale se troppo lunga
@@ -277,6 +296,7 @@ Lock scadono automaticamente anche se non rilasciati manualmente:
 ### **Logs:**
 
 Controlla logs server per:
+
 - `🔒 [AGENT] Lock acquisito` - Lock acquisito
 - `🔓 [AGENT] Lock rilasciato` - Lock rilasciato
 - `⚠️ [AGENT] Lock già attivo` - Lock esistente
@@ -297,4 +317,3 @@ Controlla logs server per:
 **Ultimo aggiornamento:** 2025-12-03  
 **Versione:** 1.0  
 **Autore:** Sistema Automation SpedireSicuro
-

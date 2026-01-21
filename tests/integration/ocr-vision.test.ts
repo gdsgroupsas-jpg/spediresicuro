@@ -1,12 +1,12 @@
 /**
  * Integration Tests: OCR Vision (Sprint 2.5)
- * 
+ *
  * Test del flusso completo ocrWorker con immagini:
  * - Feature flag disabilitato → clarification
  * - Feature flag abilitato + Vision success → draft popolato
  * - Feature flag abilitato + Vision fallisce → clarification esplicita
  * - Confidence sotto soglia → blocco
- * 
+ *
  * ⚠️ Questi test mockano extractData() per evitare chiamate Gemini reali.
  */
 
@@ -23,7 +23,7 @@ vi.mock('@/lib/agent/orchestrator/nodes', () => ({
 
 // Mock config
 vi.mock('@/lib/config', async (importOriginal) => {
-  const original = await importOriginal() as any;
+  const original = (await importOriginal()) as any;
   return {
     ...original,
     ocrConfig: {
@@ -40,7 +40,8 @@ import { ocrConfig } from '@/lib/config';
 // ==================== FIXTURES ====================
 
 // Immagine base64 minima 1x1 pixel PNG trasparente
-const MINIMAL_IMAGE_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+const MINIMAL_IMAGE_BASE64 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
 const createMockAgentState = (messageContent: string): AgentState => ({
   messages: [new HumanMessage({ content: messageContent })],
@@ -70,7 +71,7 @@ describe('OCR Vision Integration (Sprint 2.5)', () => {
     it('should return clarification when ENABLE_OCR_IMAGES is false', async () => {
       // Override config per questo test
       vi.doMock('@/lib/config', async (importOriginal) => {
-        const original = await importOriginal() as any;
+        const original = (await importOriginal()) as any;
         return {
           ...original,
           ocrConfig: {
@@ -79,11 +80,11 @@ describe('OCR Vision Integration (Sprint 2.5)', () => {
           },
         };
       });
-      
+
       // Reimporta con nuova config
       vi.resetModules();
       const { ocrWorker: ocrWorkerDisabled } = await import('@/lib/agent/workers/ocr');
-      
+
       const state = createMockAgentState(MINIMAL_IMAGE_BASE64);
       const result = await ocrWorkerDisabled(state, nullLogger);
 
@@ -298,5 +299,3 @@ describe('OCR Vision Integration (Sprint 2.5)', () => {
     });
   });
 });
-
-

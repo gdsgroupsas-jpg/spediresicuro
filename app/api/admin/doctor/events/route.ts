@@ -1,8 +1,8 @@
 /**
  * API Endpoint: Doctor Service - Eventi Diagnostici
- * 
+ *
  * GET /api/admin/doctor/events
- * 
+ *
  * Recupera eventi diagnostici con filtri (tipo, severità, data, utente).
  * Solo admin/superadmin possono accedere.
  */
@@ -14,14 +14,11 @@ import { supabaseAdmin } from '@/lib/db/client';
 export async function GET(request: NextRequest) {
   try {
     const context = await requireSafeAuth();
-    
+
     // Verifica permessi admin
     const isAdmin = context.actor.role === 'admin' || context.actor.role === 'superadmin';
     if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -61,10 +58,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Errore recupero eventi diagnostici:', error);
-      return NextResponse.json(
-        { error: 'Errore recupero eventi' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Errore recupero eventi' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -78,10 +72,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Errore API Doctor Events:', error);
-    return NextResponse.json(
-      { error: 'Errore interno del server' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Errore interno del server' }, { status: 500 });
   }
 }
 
@@ -90,7 +81,7 @@ export async function GET(request: NextRequest) {
  */
 function getDateFromRange(range: string): Date {
   const now = new Date();
-  
+
   switch (range) {
     case '24h':
       return new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -106,8 +97,3 @@ function getDateFromRange(range: string): Date {
 }
 
 export const dynamic = 'force-dynamic';
-
-
-
-
-

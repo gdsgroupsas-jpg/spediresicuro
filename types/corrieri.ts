@@ -39,4 +39,3 @@ export interface AutoPilotConfig {
   minReliabilityScore: number; // Score minimo richiesto (0-100)
   priorita: 'affidabilita' | 'prezzo' | 'bilanciato';
 }
-

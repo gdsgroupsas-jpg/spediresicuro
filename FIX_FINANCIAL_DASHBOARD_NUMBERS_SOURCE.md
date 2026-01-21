@@ -24,15 +24,17 @@ Dalla screenshot della dashboard SuperAdmin (`/dashboard/super-admin/financial`)
 ## 🔍 **ORIGINE DEI NUMERI**
 
 ### **Componente UI**
+
 - **File:** `app/dashboard/super-admin/financial/page.tsx`
 - **Componente:** `StatsCards` (`_components/stats-cards.tsx`)
 - **Dati:** Provengono da `getPlatformStatsAction()`
 
 ### **Server Action**
+
 - **File:** `actions/platform-costs.ts`
 - **Funzione:** `getPlatformStatsAction()`
-- **Problema Originale:** 
-  - ❌ Query dirette su `platform_provider_costs` 
+- **Problema Originale:**
+  - ❌ Query dirette su `platform_provider_costs`
   - ❌ Nessun JOIN con `shipments`
   - ❌ Nessun filtro per test o cancellate
 
@@ -41,12 +43,13 @@ Dalla screenshot della dashboard SuperAdmin (`/dashboard/super-admin/financial`)
 ```typescript
 // ❌ PRIMA: Query diretta senza filtri
 const { data: totalStats } = await supabaseAdmin
-  .from("platform_provider_costs")
-  .select("billed_amount, provider_cost, platform_margin")
-  .eq("api_source", "platform");
+  .from('platform_provider_costs')
+  .select('billed_amount, provider_cost, platform_margin')
+  .eq('api_source', 'platform');
 ```
 
 **Risultato:** Includeva TUTTE le spedizioni, anche:
+
 - Spedizioni di test (`tracking_number LIKE '%TEST%'`)
 - Spedizioni cancellate (`deleted = true`)
 
@@ -57,6 +60,7 @@ const { data: totalStats } = await supabaseAdmin
 ### **Contesto: Migrations Precedenti**
 
 Prima di questo fix, erano state applicate:
+
 - **Migration 101:** Esclude spedizioni di test dalle viste finanziarie
 - **Migration 103:** Esclude spedizioni cancellate dalle viste finanziarie
 
@@ -69,16 +73,19 @@ Tuttavia, `getPlatformStatsAction()` faceva ancora query dirette senza filtri.
 Creata 3 funzioni SQL che escludono test E cancellate:
 
 #### **a) `get_platform_stats()`**
+
 - Calcola statistiche totali
 - Esclude test e cancellate
 - Restituisce: total_shipments, total_revenue, total_cost, total_margin, avg_margin_percent, pending_reconciliation, negative_margin_count, last_30_days_shipments
 
 #### **b) `get_margin_by_courier(p_start_date)`**
+
 - Margini aggregati per corriere
 - Parametro: `p_start_date` (opzionale)
 - Esclude test e cancellate
 
 #### **c) `get_top_resellers(p_limit, p_start_date)`**
+
 - Top resellers per platform usage
 - Parametri: `p_limit` (default 20), `p_start_date` (opzionale)
 - Esclude test e cancellate
@@ -96,14 +103,17 @@ WHERE ppc.api_source = 'platform'
 **File:** `actions/platform-costs.ts`
 
 #### **`getPlatformStatsAction()`**
+
 - ✅ Usa `get_platform_stats()` RPC
 - ✅ Fallback a query dirette se RPC non disponibile
 
 #### **`getMarginByCourierAction()`**
+
 - ✅ Usa `get_margin_by_courier()` RPC
 - ✅ Fallback a query dirette se RPC non disponibile
 
 #### **`getTopResellersAction()`**
+
 - ✅ Usa `get_top_resellers()` RPC
 - ✅ Fallback a query dirette se RPC non disponibile
 
@@ -138,15 +148,16 @@ supabase migration up 104_get_platform_stats_function
 ```
 
 Oppure esegui manualmente nel SQL Editor di Supabase:
+
 - File: `supabase/migrations/104_get_platform_stats_function.sql`
 
 ### **Step 2: Verifica Funzioni**
 
 ```sql
 -- Verifica che le funzioni esistano
-SELECT routine_name 
-FROM information_schema.routines 
-WHERE routine_schema = 'public' 
+SELECT routine_name
+FROM information_schema.routines
+WHERE routine_schema = 'public'
   AND routine_name IN (
     'get_platform_stats',
     'get_margin_by_courier',
@@ -172,7 +183,7 @@ SELECT * FROM get_platform_stats();
 
 ```sql
 -- Conta spedizioni di test in platform_provider_costs
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM platform_provider_costs ppc
 JOIN shipments s ON s.id = ppc.shipment_id
 WHERE ppc.api_source = 'platform'
@@ -183,7 +194,7 @@ WHERE ppc.api_source = 'platform'
 
 ```sql
 -- Conta spedizioni cancellate in platform_provider_costs
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM platform_provider_costs ppc
 JOIN shipments s ON s.id = ppc.shipment_id
 WHERE ppc.api_source = 'platform'
@@ -194,7 +205,7 @@ WHERE ppc.api_source = 'platform'
 
 ```sql
 -- Confronta: totale vs esclusi test/cancellate
-SELECT 
+SELECT
   (SELECT COUNT(*) FROM platform_provider_costs WHERE api_source = 'platform') AS totale,
   (SELECT total_shipments FROM get_platform_stats()) AS esclusi_test_cancellate;
 ```
@@ -204,18 +215,23 @@ SELECT
 ## 📝 **NOTE TECNICHE**
 
 ### **Fallback Legacy**
+
 Le funzioni TypeScript hanno un fallback alle query dirette se le RPC non sono disponibili. Questo garantisce:
+
 - ✅ Compatibilità con database senza migration 104
 - ✅ Degrado graceful
 - ⚠️ I dati potrebbero includere test/cancellate se RPC non disponibile
 
 ### **Performance**
+
 Le funzioni SQL RPC sono ottimizzate:
+
 - ✅ JOIN efficienti con `shipments`
 - ✅ Indici su `tracking_number` e `deleted` (se presenti)
 - ✅ Aggregazioni a livello database (più veloci)
 
 ### **Sicurezza**
+
 - ✅ Funzioni con `SECURITY DEFINER`
 - ✅ Verifica SuperAdmin nel codice TypeScript
 - ✅ Solo service_role può eseguire (gestito via `supabaseAdmin`)
@@ -268,4 +284,4 @@ Le funzioni SQL RPC sono ottimizzate:
 
 ---
 
-**Motto:** *"Test First, Commit After - Excellence Only"*
+**Motto:** _"Test First, Commit After - Excellence Only"_

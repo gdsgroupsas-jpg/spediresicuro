@@ -11,32 +11,25 @@
  * 7. Gestione accessori dinamica (solo se presenti nel listino cliente)
  */
 
-"use client";
+'use client';
 
-import { COMMON_ACCESSORY_SERVICES } from "@/types/supplier-price-list-config";
-import { featureFlags } from "@/lib/config/feature-flags";
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  Clock,
-  Loader2,
-  XCircle,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { COMMON_ACCESSORY_SERVICES } from '@/types/supplier-price-list-config';
+import { featureFlags } from '@/lib/config/feature-flags';
+import { AlertCircle, Check, ChevronDown, Clock, Loader2, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 // Rimuoviamo useQuoteRequest per gestire chiamate parallele manualmente
 
 // Costi stimati per servizi accessori (da confermare in fase di creazione spedizione)
 const ACCESSORY_SERVICE_COSTS: Record<string, number> = {
   Exchange: 3.5,
-  "Document Return": 2.0,
-  "Saturday Service": 5.0,
+  'Document Return': 2.0,
+  'Saturday Service': 5.0,
   Express12: 8.0,
-  "Preavviso Telefonico": 1.5,
-  "POD (Proof of Delivery)": 1.0,
-  "Fermo Deposito": 3.0,
-  "Consegna al Piano": 15.0,
-  "Consegna Appuntamento": 4.0,
+  'Preavviso Telefonico': 1.5,
+  'POD (Proof of Delivery)': 1.0,
+  'Fermo Deposito': 3.0,
+  'Consegna al Piano': 15.0,
+  'Consegna Appuntamento': 4.0,
 };
 
 interface IntelligentQuoteComparatorProps {
@@ -105,34 +98,29 @@ export function IntelligentQuoteComparator({
   const [totalCount, setTotalCount] = useState(0);
 
   // ✨ NUOVO: Stati per selezione corriere e servizio accessorio
-  const [selectedCourierKey, setSelectedCourierKey] = useState<string | null>(
-    null
-  );
-  const [selectedAccessoryService, setSelectedAccessoryService] = useState<
-    string | null
-  >(null);
+  const [selectedCourierKey, setSelectedCourierKey] = useState<string | null>(null);
+  const [selectedAccessoryService, setSelectedAccessoryService] = useState<string | null>(null);
   const [showAccessoryDropdown, setShowAccessoryDropdown] = useState(false);
-  
 
   // ⚠️ FIX: Prevenire loop infinito - traccia se abbiamo già fatto le chiamate per questi parametri
-  const lastRequestParamsRef = useRef<string>("");
+  const lastRequestParamsRef = useRef<string>('');
   const isRequestingRef = useRef(false);
-  
+
   // ✨ FIX: Memorizza i servizi precedenti per rilevare cambiamenti
-  const prevServicesRef = useRef<string>("");
-  
+  const prevServicesRef = useRef<string>('');
+
   // ✨ ENTERPRISE: Reset cache quando cambia resetKey (es. dopo reset form)
   const prevResetKeyRef = useRef<string | number | undefined>(undefined);
   if (resetKey !== undefined && prevResetKeyRef.current !== resetKey) {
     console.log(
-      "🔄 [QUOTE COMPARATOR] Reset key cambiato:",
+      '🔄 [QUOTE COMPARATOR] Reset key cambiato:',
       prevResetKeyRef.current,
-      "→",
+      '→',
       resetKey,
-      "- Reset cache interna"
+      '- Reset cache interna'
     );
     prevResetKeyRef.current = resetKey;
-    lastRequestParamsRef.current = ""; // Forza nuova chiamata
+    lastRequestParamsRef.current = ''; // Forza nuova chiamata
     isRequestingRef.current = false;
     setQuotes(new Map()); // Reset quotes
     setSelectedCourierKey(null); // Reset selezione
@@ -140,16 +128,16 @@ export function IntelligentQuoteComparator({
   }
 
   // ✨ IMPORTANTE: Reset refs quando cambiano servizi o COD - PRIMA dell'useEffect principale
-  const currentServicesKey = services.sort().join(",");
+  const currentServicesKey = services.sort().join(',');
   if (prevServicesRef.current !== currentServicesKey) {
     console.log(
-      "🔄 [QUOTE COMPARATOR] Servizi cambiati:",
+      '🔄 [QUOTE COMPARATOR] Servizi cambiati:',
       prevServicesRef.current,
-      "→",
+      '→',
       currentServicesKey
     );
     prevServicesRef.current = currentServicesKey;
-    lastRequestParamsRef.current = ""; // Forza nuova chiamata
+    lastRequestParamsRef.current = ''; // Forza nuova chiamata
     isRequestingRef.current = false;
   }
 
@@ -175,33 +163,25 @@ export function IntelligentQuoteComparator({
     // ✨ BUG FIX: Include dimensions nel requestKey per evitare rates obsoleti quando cambiano le dimensioni
     // ✨ ENTERPRISE: Include resetKey nel requestKey per forzare nuova chiamata dopo reset form
     const dimensionsKey = dimensions
-      ? `${dimensions.length || 0}-${dimensions.width || 0}-${
-          dimensions.height || 0
-        }`
-      : "no-dimensions";
-    const resetKeyStr = resetKey !== undefined ? String(resetKey) : "0";
+      ? `${dimensions.length || 0}-${dimensions.width || 0}-${dimensions.height || 0}`
+      : 'no-dimensions';
+    const resetKeyStr = resetKey !== undefined ? String(resetKey) : '0';
     const requestKey = `${resetKeyStr}-${weight}-${zip}-${province}-${services.join(
-      ","
-    )}-${insuranceValue}-${codValue}-${dimensionsKey}-${couriers.length}-${useDbFirst ? "db" : "api"}`;
+      ','
+    )}-${insuranceValue}-${codValue}-${dimensionsKey}-${couriers.length}-${useDbFirst ? 'db' : 'api'}`;
 
     // ✨ DEBUG: Log per vedere se i parametri cambiano
-    console.log("🔄 [QUOTE COMPARATOR] useEffect triggered:", {
+    console.log('🔄 [QUOTE COMPARATOR] useEffect triggered:', {
       requestKey,
       lastRequestKey: lastRequestParamsRef.current,
       isRequesting: isRequestingRef.current,
       services,
-      willSkip:
-        isRequestingRef.current || lastRequestParamsRef.current === requestKey,
+      willSkip: isRequestingRef.current || lastRequestParamsRef.current === requestKey,
     });
 
     // Se stiamo già facendo una richiesta o abbiamo già fatto questa richiesta, esci
-    if (
-      isRequestingRef.current ||
-      lastRequestParamsRef.current === requestKey
-    ) {
-      console.log(
-        "⏭️ [QUOTE COMPARATOR] Skipping request - already done or in progress"
-      );
+    if (isRequestingRef.current || lastRequestParamsRef.current === requestKey) {
+      console.log('⏭️ [QUOTE COMPARATOR] Skipping request - already done or in progress');
       return;
     }
 
@@ -222,13 +202,11 @@ export function IntelligentQuoteComparator({
         // Inizializza stato loading per tutti i contratti
         const initialQuotes = new Map<string, QuoteResult>();
         couriers.forEach((courier) => {
-          const key = `${courier.displayName}::${
-            courier.contractCode || "default"
-          }`;
+          const key = `${courier.displayName}::${courier.contractCode || 'default'}`;
           initialQuotes.set(key, {
             courier: courier.displayName,
             courierName: courier.courierName,
-            contractCode: courier.contractCode || "default",
+            contractCode: courier.contractCode || 'default',
             success: false,
             loading: true,
           });
@@ -238,19 +216,16 @@ export function IntelligentQuoteComparator({
         // ✨ ENTERPRISE: DB-first con fallback a API
         // Se useDbFirst=true, usa endpoint DB (veloce, isolato, sicuro)
         // Se fallisce o useDbFirst=false, fallback a API realtime
-        console.log(
-          "📊 [QUOTE COMPARATOR] Modalità:",
-          useDbFirst ? "DB-first" : "API-realtime",
-        );
+        console.log('📊 [QUOTE COMPARATOR] Modalità:', useDbFirst ? 'DB-first' : 'API-realtime');
 
         let result: any = null;
 
         if (useDbFirst) {
           try {
             // ✨ ENTERPRISE: Chiamata DB-first
-            const dbResponse = await fetch("/api/quotes/db", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+            const dbResponse = await fetch('/api/quotes/db', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 weight,
                 zip,
@@ -268,44 +243,43 @@ export function IntelligentQuoteComparator({
             if (dbResult.success && dbResult.rates && dbResult.rates.length > 0) {
               result = dbResult;
               console.log(
-                "✅ [QUOTE COMPARATOR] Preventivi da DB:",
+                '✅ [QUOTE COMPARATOR] Preventivi da DB:',
                 dbResult.rates.length,
-                "rates"
+                'rates'
               );
-              console.log("🔒 [QUOTE COMPARATOR] ⚠️ IMPORTANTE: Nessuna chiamata API esterna. Tutti i prezzi calcolati da matrici database.");
+              console.log(
+                '🔒 [QUOTE COMPARATOR] ⚠️ IMPORTANTE: Nessuna chiamata API esterna. Tutti i prezzi calcolati da matrici database.'
+              );
             } else {
               // ✨ NO FALLBACK API: Mostra solo risultati DB (anche se vuoti)
               console.warn(
-                "⚠️ [QUOTE COMPARATOR] DB non ha risultati. Nessun listino attivo per questi parametri."
+                '⚠️ [QUOTE COMPARATOR] DB non ha risultati. Nessun listino attivo per questi parametri.'
               );
               result = {
                 success: true,
                 rates: [],
-                message: dbResult.message || "Nessun listino attivo disponibile per questa spedizione.",
+                message:
+                  dbResult.message || 'Nessun listino attivo disponibile per questa spedizione.',
               };
             }
           } catch (dbError: any) {
             // ✨ NO FALLBACK API: Mostra errore invece di chiamare API
-            console.error(
-              "❌ [QUOTE COMPARATOR] Errore DB:",
-              dbError.message
-            );
+            console.error('❌ [QUOTE COMPARATOR] Errore DB:', dbError.message);
             result = {
               success: false,
               rates: [],
-              error: dbError.message || "Errore durante il calcolo preventivi da database.",
+              error: dbError.message || 'Errore durante il calcolo preventivi da database.',
             };
           }
         } else {
           // ✨ RIMOSSO: Modalità API realtime non più supportata
           // Il sistema funziona SOLO con matrici database
-          console.warn(
-            "⚠️ [QUOTE COMPARATOR] useDbFirst=false non supportato. Usa solo DB."
-          );
+          console.warn('⚠️ [QUOTE COMPARATOR] useDbFirst=false non supportato. Usa solo DB.');
           result = {
             success: false,
             rates: [],
-            error: "Il sistema funziona solo con listini database. Attiva un listino per vedere i preventivi.",
+            error:
+              'Il sistema funziona solo con listini database. Attiva un listino per vedere i preventivi.',
           };
         }
 
@@ -319,9 +293,7 @@ export function IntelligentQuoteComparator({
                 next.set(key, {
                   ...existing,
                   success: false,
-                  error:
-                    result?.error ||
-                    "Nessun rate disponibile per questa destinazione",
+                  error: result?.error || 'Nessun rate disponibile per questa destinazione',
                   loading: false,
                 });
               }
@@ -359,11 +331,11 @@ export function IntelligentQuoteComparator({
             const normalized = contractCode
               .toLowerCase()
               .trim()
-              .replace(/\s+/g, "")
-              .replace(/-/g, "")
-              .replace(/_/g, "")
-              .replace(/---/g, "") // Rimuovi anche tripli trattini
-              .replace(/--/g, ""); // Rimuovi doppi trattini
+              .replace(/\s+/g, '')
+              .replace(/-/g, '')
+              .replace(/_/g, '')
+              .replace(/---/g, '') // Rimuovi anche tripli trattini
+              .replace(/--/g, ''); // Rimuovi doppi trattini
             if (!ratesByNormalizedCode.has(normalized)) {
               ratesByNormalizedCode.set(normalized, []);
             }
@@ -378,18 +350,18 @@ export function IntelligentQuoteComparator({
                 (p: string) =>
                   p.length > 2 &&
                   ![
-                    "poste",
-                    "gls",
-                    "brt",
-                    "sda",
-                    "ups",
-                    "dhl",
-                    "postedeliverybusiness",
-                    "posteitaliane",
+                    'poste',
+                    'gls',
+                    'brt',
+                    'sda',
+                    'ups',
+                    'dhl',
+                    'postedeliverybusiness',
+                    'posteitaliane',
                   ].includes(p)
               )
               .sort()
-              .join("-");
+              .join('-');
             if (keyParts) {
               if (!ratesByKeyParts.has(keyParts)) {
                 ratesByKeyParts.set(keyParts, []);
@@ -400,15 +372,10 @@ export function IntelligentQuoteComparator({
         });
 
         // ✨ DEBUG: Log dettagliato tutti i rates ricevuti
+        console.log('🔍 [QUOTE COMPARATOR] ========================================');
+        console.log('🔍 [QUOTE COMPARATOR] Rates ricevuti dal DB:', result.rates.length);
         console.log(
-          "🔍 [QUOTE COMPARATOR] ========================================"
-        );
-        console.log(
-          "🔍 [QUOTE COMPARATOR] Rates ricevuti dal DB:",
-          result.rates.length
-        );
-        console.log(
-          "🔍 [QUOTE COMPARATOR] TUTTI i rates ricevuti (RAW):",
+          '🔍 [QUOTE COMPARATOR] TUTTI i rates ricevuti (RAW):',
           result.rates.map((r: any) => ({
             carrierCode: r.carrierCode,
             contractCode: r.contractCode,
@@ -417,31 +384,21 @@ export function IntelligentQuoteComparator({
             margin: r.margin || 'MISSING',
           }))
         );
+        console.log('🔍 [QUOTE COMPARATOR] Contratti configurati nel DB:', couriers.length);
         console.log(
-          "🔍 [QUOTE COMPARATOR] Contratti configurati nel DB:",
-          couriers.length
-        );
-        console.log(
-          "🔍 [QUOTE COMPARATOR] TUTTI i contratti configurati (RAW):",
+          '🔍 [QUOTE COMPARATOR] TUTTI i contratti configurati (RAW):',
           couriers.map((c) => ({
             displayName: c.displayName,
             courierName: c.courierName,
             contractCode: c.contractCode,
           }))
         );
-        console.log(
-          "🔍 [QUOTE COMPARATOR] ========================================"
-        );
+        console.log('🔍 [QUOTE COMPARATOR] ========================================');
 
         // ✨ DEBUG: Log dettagliato per troubleshooting
-        console.log(
-          "🔍 [QUOTE COMPARATOR] ========================================"
-        );
-        console.log(
-          "🔍 [QUOTE COMPARATOR] Rates ricevuti:",
-          result.rates.length
-        );
-        console.log("🔍 [QUOTE COMPARATOR] 📊 TUTTI I RATES RAW DAL DB:");
+        console.log('🔍 [QUOTE COMPARATOR] ========================================');
+        console.log('🔍 [QUOTE COMPARATOR] Rates ricevuti:', result.rates.length);
+        console.log('🔍 [QUOTE COMPARATOR] 📊 TUTTI I RATES RAW DAL DB:');
         console.table(
           result.rates.map((r: any) => ({
             carrierCode: r.carrierCode,
@@ -452,18 +409,11 @@ export function IntelligentQuoteComparator({
           }))
         );
         // Log separato per carrierCode unici
-        const uniqueCarriers = [
-          ...new Set(result.rates.map((r: any) => r.carrierCode)),
-        ];
-        console.log(
-          "🔍 [QUOTE COMPARATOR] Carrier codes UNICI nei rates:",
-          uniqueCarriers
-        );
+        const uniqueCarriers = [...new Set(result.rates.map((r: any) => r.carrierCode))];
+        console.log('🔍 [QUOTE COMPARATOR] Carrier codes UNICI nei rates:', uniqueCarriers);
 
         // ✨ DEBUG: Mostra TUTTI i contractCode ricevuti dal DB per debugging
-        console.log(
-          "📋 [QUOTE COMPARATOR] Contract codes EFFETTIVI ricevuti dal DB:"
-        );
+        console.log('📋 [QUOTE COMPARATOR] Contract codes EFFETTIVI ricevuti dal DB:');
         result.rates.forEach((rate: any, idx: number) => {
           console.log(
             `   Rate ${idx + 1}: carrierCode="${
@@ -473,16 +423,14 @@ export function IntelligentQuoteComparator({
         });
 
         console.log(
-          "🔍 [QUOTE COMPARATOR] Contratti configurati:",
+          '🔍 [QUOTE COMPARATOR] Contratti configurati:',
           couriers.map((c) => ({
             displayName: c.displayName,
             courierName: c.courierName,
             contractCode: c.contractCode,
           }))
         );
-        console.log(
-          "🔍 [QUOTE COMPARATOR] ========================================"
-        );
+        console.log('🔍 [QUOTE COMPARATOR] ========================================');
 
         // ✨ FILTRO DESTINAZIONE: Escludi contratti internazionali se destinazione è Italia
         // ⚠️ FIX REGRESSIONE: "GLS Europa" non deve apparire per destinazioni italiane
@@ -493,27 +441,23 @@ export function IntelligentQuoteComparator({
           /^[0-9]{5}$/.test(zip) &&
           province &&
           /^[A-Z]{2}$/.test(province) &&
-          province !== "IT";
+          province !== 'IT';
         const internationalKeywords = [
-          "europa",
-          "europe",
-          "international",
-          "internazionale",
-          "worldwide",
-          "mondiale",
-          "eu-",
+          'europa',
+          'europe',
+          'international',
+          'internazionale',
+          'worldwide',
+          'mondiale',
+          'eu-',
         ];
 
         // Filtra rates per escludere contratti internazionali se destinazione è Italia
         const filteredRates = result.rates.filter((rate: any) => {
           if (isItalianDestination) {
-            const rateCode = (rate.contractCode || "").toLowerCase();
+            const rateCode = (rate.contractCode || '').toLowerCase();
             // Escludi se contiene keyword internazionali
-            if (
-              internationalKeywords.some((keyword) =>
-                rateCode.includes(keyword)
-              )
-            ) {
+            if (internationalKeywords.some((keyword) => rateCode.includes(keyword))) {
               console.warn(
                 `⚠️ [QUOTE COMPARATOR] Escluso rate internazionale per destinazione italiana: ${rate.contractCode}`
               );
@@ -526,19 +470,13 @@ export function IntelligentQuoteComparator({
         // ✨ MAPPING: Per ogni contratto configurato, verifica se ha rates nella risposta
         const mappedQuotes = new Map<string, QuoteResult>();
         couriers.forEach((courier) => {
-          const key = `${courier.displayName}::${
-            courier.contractCode || "default"
-          }`;
-          const contractCode = courier.contractCode || "default";
+          const key = `${courier.displayName}::${courier.contractCode || 'default'}`;
+          const contractCode = courier.contractCode || 'default';
 
           // ⚠️ FIX: Escludi contratti internazionali se destinazione è Italia
           if (isItalianDestination) {
             const configCodeLower = contractCode.toLowerCase();
-            if (
-              internationalKeywords.some((keyword) =>
-                configCodeLower.includes(keyword)
-              )
-            ) {
+            if (internationalKeywords.some((keyword) => configCodeLower.includes(keyword))) {
               console.warn(
                 `⚠️ [QUOTE COMPARATOR] Escluso contratto configurato internazionale per destinazione italiana: ${contractCode}`
               );
@@ -553,7 +491,7 @@ export function IntelligentQuoteComparator({
           // ✨ FIX CRITICO: Filtra rates per corriere PRIMA di cercare match
           // ⚠️ IMPORTANTE: Filtra solo rates del corriere configurato, non tutti i rates
           const ratesForCourier = filteredRates.filter((rate: any) => {
-            const rateCarrier = (rate.carrierCode || "").toLowerCase().trim();
+            const rateCarrier = (rate.carrierCode || '').toLowerCase().trim();
             const configCourier = courier.courierName.toLowerCase().trim();
             // Match esatto o parziale (es. "postedeliverybusiness" matcha "PosteDeliveryBusiness")
             return (
@@ -566,7 +504,7 @@ export function IntelligentQuoteComparator({
           // 1. Prova match esatto case-sensitive (priorità massima) - SOLO nei rates del corriere
           const exactMatchRates = ratesByExactMatch.get(contractCode) || [];
           let ratesForContract = exactMatchRates.filter((r: any) => {
-            const rateCarrier = (r.carrierCode || "").toLowerCase().trim();
+            const rateCarrier = (r.carrierCode || '').toLowerCase().trim();
             const configCourier = courier.courierName.toLowerCase().trim();
             return (
               rateCarrier === configCourier ||
@@ -577,10 +515,9 @@ export function IntelligentQuoteComparator({
 
           // 2. Se non trovato, prova match esatto case-insensitive - SOLO nei rates del corriere
           if (ratesForContract.length === 0) {
-            const caseInsensitiveRates =
-              ratesByContractCode.get(contractCode.toLowerCase()) || [];
+            const caseInsensitiveRates = ratesByContractCode.get(contractCode.toLowerCase()) || [];
             ratesForContract = caseInsensitiveRates.filter((r: any) => {
-              const rateCarrier = (r.carrierCode || "").toLowerCase().trim();
+              const rateCarrier = (r.carrierCode || '').toLowerCase().trim();
               const configCourier = courier.courierName.toLowerCase().trim();
               return (
                 rateCarrier === configCourier ||
@@ -596,14 +533,14 @@ export function IntelligentQuoteComparator({
             const normalized = contractCode
               .toLowerCase()
               .trim()
-              .replace(/\s+/g, "")
-              .replace(/-/g, "")
-              .replace(/_/g, "")
-              .replace(/---/g, "") // Rimuovi tripli trattini
-              .replace(/--/g, ""); // Rimuovi doppi trattini
+              .replace(/\s+/g, '')
+              .replace(/-/g, '')
+              .replace(/_/g, '')
+              .replace(/---/g, '') // Rimuovi tripli trattini
+              .replace(/--/g, ''); // Rimuovi doppi trattini
             const normalizedRates = ratesByNormalizedCode.get(normalized) || [];
             ratesForContract = normalizedRates.filter((r: any) => {
-              const rateCarrier = (r.carrierCode || "").toLowerCase().trim();
+              const rateCarrier = (r.carrierCode || '').toLowerCase().trim();
               const configCourier = courier.courierName.toLowerCase().trim();
               return (
                 rateCarrier === configCourier ||
@@ -623,43 +560,43 @@ export function IntelligentQuoteComparator({
                 (p: string) =>
                   p.length > 2 &&
                   ![
-                    "poste",
-                    "gls",
-                    "brt",
-                    "sda",
-                    "ups",
-                    "dhl",
-                    "postedeliverybusiness",
-                    "posteitaliane",
-                    "interno",
+                    'poste',
+                    'gls',
+                    'brt',
+                    'sda',
+                    'ups',
+                    'dhl',
+                    'postedeliverybusiness',
+                    'posteitaliane',
+                    'interno',
                   ].includes(p)
               )
               .sort()
-              .join("-");
+              .join('-');
 
             if (configKeyParts) {
               // Cerca nei rates del corriere per parti chiave
               ratesForContract = ratesForCourier.filter((rate: any) => {
-                const rateCode = (rate.contractCode || "").toLowerCase();
+                const rateCode = (rate.contractCode || '').toLowerCase();
                 const rateKeyParts = rateCode
                   .split(/[-_\s]+/)
                   .filter(
                     (p: string) =>
                       p.length > 2 &&
                       ![
-                        "poste",
-                        "gls",
-                        "brt",
-                        "sda",
-                        "ups",
-                        "dhl",
-                        "postedeliverybusiness",
-                        "posteitaliane",
-                        "interno",
+                        'poste',
+                        'gls',
+                        'brt',
+                        'sda',
+                        'ups',
+                        'dhl',
+                        'postedeliverybusiness',
+                        'posteitaliane',
+                        'interno',
                       ].includes(p)
                   )
                   .sort()
-                  .join("-");
+                  .join('-');
 
                 return rateKeyParts === configKeyParts;
               });
@@ -671,9 +608,9 @@ export function IntelligentQuoteComparator({
           // ✨ FIX: Usa ratesForCourier invece di filteredRates per evitare match con altri corrieri
           if (ratesForContract.length === 0) {
             ratesForContract = ratesForCourier.filter((rate: any) => {
-              const rateCode = (rate.contractCode || "").toLowerCase().trim();
+              const rateCode = (rate.contractCode || '').toLowerCase().trim();
               const configCode = contractCode.toLowerCase().trim();
-              const rateCarrier = (rate.carrierCode || "").toLowerCase();
+              const rateCarrier = (rate.carrierCode || '').toLowerCase();
               const configCourier = courier.courierName.toLowerCase();
 
               // ⚠️ ANTI-BUG: Verifica che il corriere corrisponda
@@ -687,19 +624,16 @@ export function IntelligentQuoteComparator({
 
               // ⚠️ ANTI-BUG: NO match se configCode è solo un prefisso generico
               const genericPrefixes = [
-                "poste",
-                "gls",
-                "brt",
-                "sda",
-                "ups",
-                "dhl",
-                "postedeliverybusiness",
-                "posteitaliane",
+                'poste',
+                'gls',
+                'brt',
+                'sda',
+                'ups',
+                'dhl',
+                'postedeliverybusiness',
+                'posteitaliane',
               ];
-              if (
-                genericPrefixes.includes(configCode) ||
-                configCode.length < 5
-              ) {
+              if (genericPrefixes.includes(configCode) || configCode.length < 5) {
                 return false;
               }
 
@@ -709,10 +643,7 @@ export function IntelligentQuoteComparator({
               const normalizedConfigCode = configCode.replace(/---+/g, '-').replace(/--+/g, '-');
               const configParts = normalizedConfigCode
                 .split(/[-_\s]+/)
-                .filter(
-                  (p: string) =>
-                    p.length > 1 && !genericPrefixes.includes(p.toLowerCase())
-                );
+                .filter((p: string) => p.length > 1 && !genericPrefixes.includes(p.toLowerCase()));
 
               // Se non ci sono parti specifiche, non matchare
               if (configParts.length === 0) {
@@ -736,16 +667,11 @@ export function IntelligentQuoteComparator({
                 // Se configCode contiene parti molto specifiche (es. "pdb", "solution"), richiedi match di quelle
                 const specificParts = configParts.filter(
                   (p) =>
-                    p.length >= 2 &&
-                    !["and", "the", "for", "with", "of"].includes(
-                      p.toLowerCase()
-                    )
+                    p.length >= 2 && !['and', 'the', 'for', 'with', 'of'].includes(p.toLowerCase())
                 );
                 if (specificParts.length > 0) {
                   // Almeno una parte specifica deve matchare
-                  return specificParts.some((part) =>
-                    rateCode.includes(part.toLowerCase())
-                  );
+                  return specificParts.some((part) => rateCode.includes(part.toLowerCase()));
                 }
                 return true;
               }
@@ -756,19 +682,15 @@ export function IntelligentQuoteComparator({
             // ⚠️ ANTI-BUG: Se ci sono più rates, usa solo quello con più parti matchate
             if (ratesForContract.length > 1) {
               ratesForContract = ratesForContract.sort((a, b) => {
-                const aCode = (a.contractCode || "").toLowerCase();
-                const bCode = (b.contractCode || "").toLowerCase();
+                const aCode = (a.contractCode || '').toLowerCase();
+                const bCode = (b.contractCode || '').toLowerCase();
                 const configCodeLower = contractCode.toLowerCase();
                 const configParts = configCodeLower
                   .split(/[-_\s]/)
                   .filter((p: string) => p.length > 2);
 
-                const aMatches = configParts.filter((p: string) =>
-                  aCode.includes(p)
-                ).length;
-                const bMatches = configParts.filter((p: string) =>
-                  bCode.includes(p)
-                ).length;
+                const aMatches = configParts.filter((p: string) => aCode.includes(p)).length;
+                const bMatches = configParts.filter((p: string) => bCode.includes(p)).length;
 
                 // Ordina per numero di parti matchate (decrescente)
                 return bMatches - aMatches;
@@ -783,30 +705,31 @@ export function IntelligentQuoteComparator({
           // Se contractCode è "default" o un placeholder generico, usa il primo rate disponibile per quel corriere
           // Questo risolve il problema quando il DB ha "default" ma l'API restituisce codici specifici
           if (ratesForContract.length === 0 && ratesForCourier.length > 0) {
-            const isDefaultOrPlaceholder = 
-              contractCode.toLowerCase() === "default" ||
-              contractCode.toLowerCase().includes("replace_with") ||
-              contractCode.toLowerCase().includes("placeholder") ||
-              contractCode.trim() === "" ||
-              contractCode === "REPLACE_WITH_CONTRACT_CODE";
-            
+            const isDefaultOrPlaceholder =
+              contractCode.toLowerCase() === 'default' ||
+              contractCode.toLowerCase().includes('replace_with') ||
+              contractCode.toLowerCase().includes('placeholder') ||
+              contractCode.trim() === '' ||
+              contractCode === 'REPLACE_WITH_CONTRACT_CODE';
+
             if (isDefaultOrPlaceholder) {
               // Usa il primo rate disponibile per questo corriere (escludi internazionali se destinazione italiana)
               const availableRates = isItalianDestination
                 ? ratesForCourier.filter((r: any) => {
-                    const rateCode = (r.contractCode || "").toLowerCase();
-                    return !internationalKeywords.some((keyword) =>
-                      rateCode.includes(keyword)
-                    );
+                    const rateCode = (r.contractCode || '').toLowerCase();
+                    return !internationalKeywords.some((keyword) => rateCode.includes(keyword));
                   })
                 : ratesForCourier;
-              
+
               if (availableRates.length > 0) {
                 // Prendi il rate più economico come fallback intelligente
-                ratesForContract = [availableRates.sort((a: any, b: any) => 
-                  parseFloat(a.total_price || "0") - parseFloat(b.total_price || "0")
-                )[0]];
-                
+                ratesForContract = [
+                  availableRates.sort(
+                    (a: any, b: any) =>
+                      parseFloat(a.total_price || '0') - parseFloat(b.total_price || '0')
+                  )[0],
+                ];
+
                 console.log(
                   `🔄 [QUOTE COMPARATOR] Fallback intelligente per ${courier.displayName}:`,
                   `contractCode "${contractCode}" non trovato, uso primo rate disponibile:`,
@@ -821,26 +744,23 @@ export function IntelligentQuoteComparator({
             console.log(
               `✅ [QUOTE COMPARATOR] Match trovato per ${courier.displayName} (${contractCode}):`,
               ratesForContract.map(
-                (r: any) =>
-                  `${r.carrierCode}::${r.contractCode} (€${r.total_price})`
+                (r: any) => `${r.carrierCode}::${r.contractCode} (€${r.total_price})`
               )
             );
           } else {
             console.warn(
               `⚠️ [QUOTE COMPARATOR] NESSUN match per ${courier.displayName} (${contractCode})`
             );
-            console.warn(
-              `   📋 ContractCode configurato nel DB: "${contractCode}"`
-            );
+            console.warn(`   📋 ContractCode configurato nel DB: "${contractCode}"`);
             console.warn(
               `   📋 ContractCode normalizzato: "${contractCode
                 .toLowerCase()
                 .trim()
-                .replace(/\s+/g, "")
-                .replace(/-/g, "")
-                .replace(/_/g, "")
-                .replace(/---/g, "")
-                .replace(/--/g, "")}"`
+                .replace(/\s+/g, '')
+                .replace(/-/g, '')
+                .replace(/_/g, '')
+                .replace(/---/g, '')
+                .replace(/--/g, '')}"`
             );
             console.warn(
               `   📋 ContractCode keyParts: "${contractCode
@@ -850,19 +770,19 @@ export function IntelligentQuoteComparator({
                   (p: string) =>
                     p.length > 2 &&
                     ![
-                      "poste",
-                      "gls",
-                      "brt",
-                      "sda",
-                      "ups",
-                      "dhl",
-                      "postedeliverybusiness",
-                      "posteitaliane",
-                      "interno",
+                      'poste',
+                      'gls',
+                      'brt',
+                      'sda',
+                      'ups',
+                      'dhl',
+                      'postedeliverybusiness',
+                      'posteitaliane',
+                      'interno',
                     ].includes(p)
                 )
                 .sort()
-                .join("-")}"`
+                .join('-')}"`
             );
             console.warn(
               `   🔍 Rates disponibili per questo corriere (${courier.courierName}):`,
@@ -873,34 +793,34 @@ export function IntelligentQuoteComparator({
               ratesForCourier.forEach((r: any, index: number) => {
                 console.warn(`      Rate ${index + 1}:`, {
                   carrierCode: r.carrierCode,
-                  contractCode: r.contractCode || "(vuoto)",
-                  contractCode_normalized: (r.contractCode || "")
+                  contractCode: r.contractCode || '(vuoto)',
+                  contractCode_normalized: (r.contractCode || '')
                     .toLowerCase()
                     .trim()
-                    .replace(/\s+/g, "")
-                    .replace(/-/g, "")
-                    .replace(/_/g, "")
-                    .replace(/---/g, "")
-                    .replace(/--/g, ""),
-                  contractCode_keyParts: (r.contractCode || "")
+                    .replace(/\s+/g, '')
+                    .replace(/-/g, '')
+                    .replace(/_/g, '')
+                    .replace(/---/g, '')
+                    .replace(/--/g, ''),
+                  contractCode_keyParts: (r.contractCode || '')
                     .toLowerCase()
                     .split(/[-_\s]+/)
                     .filter(
                       (p: string) =>
                         p.length > 2 &&
                         ![
-                          "poste",
-                          "gls",
-                          "brt",
-                          "sda",
-                          "ups",
-                          "dhl",
-                          "postedeliverybusiness",
-                          "posteitaliane",
+                          'poste',
+                          'gls',
+                          'brt',
+                          'sda',
+                          'ups',
+                          'dhl',
+                          'postedeliverybusiness',
+                          'posteitaliane',
                         ].includes(p)
                     )
                     .sort()
-                    .join("-"),
+                    .join('-'),
                   total_price: r.total_price,
                 });
               });
@@ -908,30 +828,30 @@ export function IntelligentQuoteComparator({
             // ✨ DEBUG: Prova tutti i livelli di matching per capire perché non matcha
             const configCodeLower = contractCode.toLowerCase().trim();
             const configNormalized = configCodeLower
-              .replace(/\s+/g, "")
-              .replace(/-/g, "")
-              .replace(/_/g, "")
-              .replace(/---/g, "")
-              .replace(/--/g, "");
+              .replace(/\s+/g, '')
+              .replace(/-/g, '')
+              .replace(/_/g, '')
+              .replace(/---/g, '')
+              .replace(/--/g, '');
             const configKeyParts = configCodeLower
               .split(/[-_\s]+/)
               .filter(
                 (p: string) =>
                   p.length > 2 &&
                   ![
-                    "poste",
-                    "gls",
-                    "brt",
-                    "sda",
-                    "ups",
-                    "dhl",
-                    "postedeliverybusiness",
-                    "posteitaliane",
-                    "interno",
+                    'poste',
+                    'gls',
+                    'brt',
+                    'sda',
+                    'ups',
+                    'dhl',
+                    'postedeliverybusiness',
+                    'posteitaliane',
+                    'interno',
                   ].includes(p)
               )
               .sort()
-              .join("-");
+              .join('-');
             console.warn(
               `   🔍 Tentativo match esatto: "${contractCode}" in rates?`,
               ratesForCourier.some((r: any) => r.contractCode === contractCode)
@@ -939,47 +859,46 @@ export function IntelligentQuoteComparator({
             console.warn(
               `   🔍 Tentativo match case-insensitive: "${configCodeLower}" in rates?`,
               ratesForCourier.some(
-                (r: any) =>
-                  (r.contractCode || "").toLowerCase() === configCodeLower
+                (r: any) => (r.contractCode || '').toLowerCase() === configCodeLower
               )
             );
             console.warn(
               `   🔍 Tentativo match normalizzato: "${configNormalized}" in rates?`,
               ratesForCourier.some((r: any) => {
-                const rateNormalized = (r.contractCode || "")
+                const rateNormalized = (r.contractCode || '')
                   .toLowerCase()
                   .trim()
-                  .replace(/\s+/g, "")
-                  .replace(/-/g, "")
-                  .replace(/_/g, "")
-                  .replace(/---/g, "")
-                  .replace(/--/g, "");
+                  .replace(/\s+/g, '')
+                  .replace(/-/g, '')
+                  .replace(/_/g, '')
+                  .replace(/---/g, '')
+                  .replace(/--/g, '');
                 return rateNormalized === configNormalized;
               })
             );
             console.warn(
               `   🔍 Tentativo match keyParts: "${configKeyParts}" in rates?`,
               ratesForCourier.some((r: any) => {
-                const rateKeyParts = (r.contractCode || "")
+                const rateKeyParts = (r.contractCode || '')
                   .toLowerCase()
                   .split(/[-_\s]+/)
                   .filter(
                     (p: string) =>
                       p.length > 2 &&
                       ![
-                        "poste",
-                        "gls",
-                        "brt",
-                        "sda",
-                        "ups",
-                        "dhl",
-                        "postedeliverybusiness",
-                        "posteitaliane",
+                        'poste',
+                        'gls',
+                        'brt',
+                        'sda',
+                        'ups',
+                        'dhl',
+                        'postedeliverybusiness',
+                        'posteitaliane',
                       ].includes(p)
                   )
                   .sort()
-                  .join("-");
-                return rateKeyParts === configKeyParts && rateKeyParts !== "";
+                  .join('-');
+                return rateKeyParts === configKeyParts && rateKeyParts !== '';
               })
             );
           }
@@ -1011,8 +930,8 @@ export function IntelligentQuoteComparator({
             // Potrebbe essere un corriere "interno" che non passa per Spedisci.Online
             // Oppure un corriere temporaneamente non disponibile
             const isInternalCourier =
-              courier.courierName.toLowerCase().includes("interno") ||
-              contractCode.toLowerCase().includes("interno");
+              courier.courierName.toLowerCase().includes('interno') ||
+              contractCode.toLowerCase().includes('interno');
 
             if (isInternalCourier) {
               console.log(
@@ -1025,18 +944,12 @@ export function IntelligentQuoteComparator({
                 `⚠️ [QUOTE COMPARATOR] Contratto ${courier.displayName} (${contractCode}) non ha rates dall'API`
               );
               console.warn(`   - CourierName: ${courier.courierName}`);
-              console.warn(
-                `   - Rates disponibili per questo corriere:`,
-                ratesForCourier.length
-              );
+              console.warn(`   - Rates disponibili per questo corriere:`, ratesForCourier.length);
             }
           }
         });
 
-        console.log(
-          "✅ [QUOTE COMPARATOR] Contratti mappati con successo:",
-          mappedQuotes.size
-        );
+        console.log('✅ [QUOTE COMPARATOR] Contratti mappati con successo:', mappedQuotes.size);
 
         // ℹ️ NOTA: Corrieri "interni" non passano per Spedisci.Online
         // Per ora non mostrati nel preventivatore API. In futuro: calcolo da listino interno.
@@ -1055,7 +968,7 @@ export function IntelligentQuoteComparator({
               next.set(key, {
                 ...existing,
                 success: false,
-                error: error.message || "Errore sconosciuto",
+                error: error.message || 'Errore sconosciuto',
                 loading: false,
               });
             }
@@ -1094,19 +1007,14 @@ export function IntelligentQuoteComparator({
 
     // Ordina per prezzo totale (crescente) - il più economico prima
     return valid.sort((a, b) => {
-      const priceA = a.rates?.[0]
-        ? parseFloat(a.rates[0].total_price || "0")
-        : Infinity;
-      const priceB = b.rates?.[0]
-        ? parseFloat(b.rates[0].total_price || "0")
-        : Infinity;
+      const priceA = a.rates?.[0] ? parseFloat(a.rates[0].total_price || '0') : Infinity;
+      const priceB = b.rates?.[0] ? parseFloat(b.rates[0].total_price || '0') : Infinity;
       return priceA - priceB;
     });
   }, [quotes]);
 
   // Progresso calcolo
-  const progressPercent =
-    totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   if (!isDataComplete) {
     return (
@@ -1114,8 +1022,8 @@ export function IntelligentQuoteComparator({
         <div className="flex items-center gap-2 text-yellow-800">
           <AlertCircle className="w-5 h-5" />
           <p className="text-sm font-medium">
-            Completa tutti i campi (zona geografica, peso, misure) per attivare
-            il preventivatore intelligente
+            Completa tutti i campi (zona geografica, peso, misure) per attivare il preventivatore
+            intelligente
           </p>
         </div>
       </div>
@@ -1129,9 +1037,7 @@ export function IntelligentQuoteComparator({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-2xl font-bold text-gray-900">
-                Preventivatore Intelligente
-              </h3>
+              <h3 className="text-2xl font-bold text-gray-900">Preventivatore Intelligente</h3>
               {validQuotes.length > 0 && (
                 <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                   {validQuotes.length} disponibili
@@ -1140,10 +1046,10 @@ export function IntelligentQuoteComparator({
             </div>
             <p className="text-sm text-gray-600">
               {isCalculating
-                ? "Calcolo preventivi in corso..."
+                ? 'Calcolo preventivi in corso...'
                 : validQuotes.length > 0
-                ? `${validQuotes.length} di ${couriers.length} contratti configurati supportano questa destinazione`
-                : "Nessun contratto disponibile per questa destinazione"}
+                  ? `${validQuotes.length} di ${couriers.length} contratti configurati supportano questa destinazione`
+                  : 'Nessun contratto disponibile per questa destinazione'}
             </p>
           </div>
 
@@ -1173,13 +1079,10 @@ export function IntelligentQuoteComparator({
       {validQuotes.length === 0 && !isCalculating && (
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-lg p-8 text-center">
           <XCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-700 font-semibold text-lg mb-2">
-            Nessun contratto disponibile
-          </p>
+          <p className="text-gray-700 font-semibold text-lg mb-2">Nessun contratto disponibile</p>
           <p className="text-sm text-gray-600 max-w-md mx-auto">
-            Nessuno dei {couriers.length} contratti configurati supporta questa
-            destinazione con i parametri inseriti. Verifica che i dati
-            (destinazione, peso, dimensioni) siano corretti.
+            Nessuno dei {couriers.length} contratti configurati supporta questa destinazione con i
+            parametri inseriti. Verifica che i dati (destinazione, peso, dimensioni) siano corretti.
           </p>
         </div>
       )}
@@ -1212,7 +1115,8 @@ export function IntelligentQuoteComparator({
                 {validQuotes.map((quote, index) => {
                   // ✨ CHIAVE UNIVOCA: Usa carrierCode o contractCode (univoco per ogni tariffa)
                   // courierName non è univoco (es. "PosteDeliveryBusiness" appare più volte)
-                  const quoteKey = quote.carrierCode || quote.contractCode || `${quote.courierName}-${index}`;
+                  const quoteKey =
+                    quote.carrierCode || quote.contractCode || `${quote.courierName}-${index}`;
                   const isSelected = selectedCourierKey === quoteKey;
 
                   return (
@@ -1221,14 +1125,11 @@ export function IntelligentQuoteComparator({
                       quote={quote}
                       isSelected={isSelected}
                       onSelect={() => {
-                        console.log(
-                          "🖱️ [QUOTE COMPARATOR] Selezione corriere:",
-                          {
-                            courier: quote.courier,
-                            courierName: quote.courierName,
-                            contractCode: quote.contractCode,
-                          }
-                        );
+                        console.log('🖱️ [QUOTE COMPARATOR] Selezione corriere:', {
+                          courier: quote.courier,
+                          courierName: quote.courierName,
+                          contractCode: quote.contractCode,
+                        });
 
                         // Toggle selezione corriere
                         if (isSelected) {
@@ -1255,20 +1156,14 @@ export function IntelligentQuoteComparator({
             (() => {
               // ✨ CHIAVE UNIVOCA: Trova quote per carrierCode/contractCode (univoco per ogni tariffa)
               const selectedQuote = validQuotes.find(
-                (q) =>
-                  (q.carrierCode || q.contractCode) === selectedCourierKey
+                (q) => (q.carrierCode || q.contractCode) === selectedCourierKey
               );
               if (!selectedQuote) return null;
 
-              const courierKey = (
-                selectedQuote.courierName || selectedQuote.courier
-              ).toLowerCase();
-              const availableServices =
-                COMMON_ACCESSORY_SERVICES[courierKey] || [];
+              const courierKey = (selectedQuote.courierName || selectedQuote.courier).toLowerCase();
+              const availableServices = COMMON_ACCESSORY_SERVICES[courierKey] || [];
               const bestRate = selectedQuote.rates?.[0];
-              const basePrice = bestRate
-                ? parseFloat(bestRate.total_price || "0")
-                : 0;
+              const basePrice = bestRate ? parseFloat(bestRate.total_price || '0') : 0;
               const accessoryCost = selectedAccessoryService
                 ? ACCESSORY_SERVICE_COSTS[selectedAccessoryService] || 0
                 : 0;
@@ -1279,20 +1174,12 @@ export function IntelligentQuoteComparator({
                   {/* Header selezione */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-gray-900">
-                        {selectedQuote.courier}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {selectedQuote.contractCode}
-                      </p>
+                      <h4 className="font-bold text-gray-900">{selectedQuote.courier}</h4>
+                      <p className="text-sm text-gray-600">{selectedQuote.contractCode}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-500 uppercase">
-                        Prezzo Vendita
-                      </p>
-                      <p className="text-lg font-bold text-gray-700">
-                        €{basePrice.toFixed(2)}
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase">Prezzo Vendita</p>
+                      <p className="text-lg font-bold text-gray-700">€{basePrice.toFixed(2)}</p>
                     </div>
                   </div>
 
@@ -1304,7 +1191,7 @@ export function IntelligentQuoteComparator({
                       </label>
                       <div className="relative">
                         <select
-                          value={selectedAccessoryService || ""}
+                          value={selectedAccessoryService || ''}
                           onChange={(e) => {
                             setSelectedAccessoryService(e.target.value || null);
                           }}
@@ -1314,10 +1201,7 @@ export function IntelligentQuoteComparator({
                           {availableServices.map((service) => (
                             <option key={service} value={service}>
                               {service} (+€
-                              {(ACCESSORY_SERVICE_COSTS[service] || 0).toFixed(
-                                2
-                              )}
-                              )
+                              {(ACCESSORY_SERVICE_COSTS[service] || 0).toFixed(2)})
                             </option>
                           ))}
                         </select>
@@ -1330,18 +1214,12 @@ export function IntelligentQuoteComparator({
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-gray-600">Prezzo Vendita</span>
-                      <span className="font-medium">
-                        €{basePrice.toFixed(2)}
-                      </span>
+                      <span className="font-medium">€{basePrice.toFixed(2)}</span>
                     </div>
                     {selectedAccessoryService && (
                       <div className="flex justify-between items-center mb-2 text-[#FF9500]">
-                        <span className="text-sm">
-                          {selectedAccessoryService}
-                        </span>
-                        <span className="font-medium">
-                          +€{accessoryCost.toFixed(2)}
-                        </span>
+                        <span className="text-sm">{selectedAccessoryService}</span>
+                        <span className="font-medium">+€{accessoryCost.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between items-center">
@@ -1352,8 +1230,8 @@ export function IntelligentQuoteComparator({
                     </div>
                     {selectedAccessoryService && (
                       <p className="text-xs text-gray-500 mt-2 italic">
-                        * Il costo del servizio accessorio è stimato. Il prezzo
-                        finale sarà confermato alla creazione della spedizione.
+                        * Il costo del servizio accessorio è stimato. Il prezzo finale sarà
+                        confermato alla creazione della spedizione.
                       </p>
                     )}
                   </div>
@@ -1364,9 +1242,8 @@ export function IntelligentQuoteComparator({
                       // ✨ ENTERPRISE: Estrai configId dal rate selezionato
                       // Il rate contiene metadata _configId e _configName dalla chiamata multi-config
                       const selectedConfigId = bestRate?._configId;
-                      console.log("✅ [QUOTE COMPARATOR] Conferma selezione:", {
-                        courier:
-                          selectedQuote.courierName || selectedQuote.courier,
+                      console.log('✅ [QUOTE COMPARATOR] Conferma selezione:', {
+                        courier: selectedQuote.courierName || selectedQuote.courier,
                         contractCode: selectedQuote.contractCode, // ✨ Passato internamente (non mostrato in UI)
                         accessoryService: selectedAccessoryService,
                         finalPrice,
@@ -1410,16 +1287,16 @@ function QuoteTableRow({
   isSelected?: boolean;
 }) {
   const bestRate = quote.rates?.[0];
-  const totalPrice = bestRate ? parseFloat(bestRate.total_price || "0") : 0;
-  const supplierPrice = bestRate ? parseFloat(bestRate.weight_price || "0") : 0;
+  const totalPrice = bestRate ? parseFloat(bestRate.total_price || '0') : 0;
+  const supplierPrice = bestRate ? parseFloat(bestRate.weight_price || '0') : 0;
   const margin = totalPrice - supplierPrice;
 
   // Formatta contractCode per display
   const formatContractCode = (code: string) => {
-    if (!code) return "Standard";
+    if (!code) return 'Standard';
     return code
-      .replace(/^(gls|postedeliverybusiness|brt|sda|ups|dhl)-/i, "")
-      .replace(/-/g, " ")
+      .replace(/^(gls|postedeliverybusiness|brt|sda|ups|dhl)-/i, '')
+      .replace(/-/g, ' ')
       .replace(/\b\w/g, (l) => l.toUpperCase())
       .substring(0, 25);
   };
@@ -1429,31 +1306,23 @@ function QuoteTableRow({
       tabIndex={0}
       className={`transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 ${
         isSelected
-          ? "bg-[#FF9500]/10 border-l-4 border-l-[#FF9500]"
+          ? 'bg-[#FF9500]/10 border-l-4 border-l-[#FF9500]'
           : isBest
-          ? "bg-green-50 hover:bg-green-100"
-          : "hover:bg-gray-50"
+            ? 'bg-green-50 hover:bg-green-100'
+            : 'hover:bg-gray-50'
       }`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log(
-          "🖱️ [QUOTE TABLE] Click su riga:",
-          quote.courier,
-          quote.contractCode
-        );
+        console.log('🖱️ [QUOTE TABLE] Click su riga:', quote.courier, quote.contractCode);
         onSelect();
       }}
       onKeyDown={(e) => {
         // ✨ ACCESSIBILITÀ: Permetti selezione con Enter o Space
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           e.stopPropagation();
-          console.log(
-            "⌨️ [QUOTE TABLE] Selezione da tastiera:",
-            quote.courier,
-            quote.contractCode
-          );
+          console.log('⌨️ [QUOTE TABLE] Selezione da tastiera:', quote.courier, quote.contractCode);
           onSelect();
         }
       }}
@@ -1467,9 +1336,7 @@ function QuoteTableRow({
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-gray-900 text-sm leading-tight">
-              {quote.courier}
-            </div>
+            <div className="font-semibold text-gray-900 text-sm leading-tight">{quote.courier}</div>
             {/* ✨ SEMPLIFICAZIONE: Nascondi contract code nel preventivatore
                 Il contract code viene comunque passato internamente alla creazione spedizione
                 Se il reseller vuole vedere altre opzioni, può attivare altri listini personalizzati */}
@@ -1480,34 +1347,26 @@ function QuoteTableRow({
 
       {/* Colonna Costo Fornitore */}
       <td className="px-3 py-2.5 text-right">
-        <div className="text-sm font-medium text-gray-700">
-          €{supplierPrice.toFixed(2)}
-        </div>
-        {margin > 0 && (
-          <div className="text-xs text-green-600 mt-0.5">
-            +€{margin.toFixed(2)}
-          </div>
-        )}
+        <div className="text-sm font-medium text-gray-700">€{supplierPrice.toFixed(2)}</div>
+        {margin > 0 && <div className="text-xs text-green-600 mt-0.5">+€{margin.toFixed(2)}</div>}
       </td>
 
       {/* Colonna Prezzo Vendita */}
       <td className="px-3 py-2.5 text-right">
         <div className="flex flex-col items-end">
-          <span className="text-base font-bold text-[#FF9500]">
-            €{totalPrice.toFixed(2)}
-          </span>
-          
+          <span className="text-base font-bold text-[#FF9500]">€{totalPrice.toFixed(2)}</span>
+
           {/* ✨ NUOVO: Badge VAT (solo se feature flag abilitato) - ADR-001 */}
           {featureFlags.showVATSemantics && bestRate && (
             <div className="text-xs text-gray-500 mt-0.5">
-              {bestRate.vat_mode === "excluded" ? (
-                <span>+ IVA {bestRate.vat_rate || "22"}%</span>
-              ) : bestRate.vat_mode === "included" ? (
+              {bestRate.vat_mode === 'excluded' ? (
+                <span>+ IVA {bestRate.vat_rate || '22'}%</span>
+              ) : bestRate.vat_mode === 'included' ? (
                 <span className="text-green-600">IVA incl.</span>
               ) : null}
             </div>
           )}
-          
+
           {quote.cached && (
             <div className="text-xs text-blue-600 mt-0.5 flex items-center justify-end gap-1">
               <Clock className="w-3 h-3" />

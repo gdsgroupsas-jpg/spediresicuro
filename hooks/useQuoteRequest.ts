@@ -1,6 +1,6 @@
 /**
  * useQuoteRequest Hook - Enterprise-Grade Quote Request Management
- * 
+ *
  * Gestisce richieste quote con:
  * - Debounce automatico
  * - Request queue (limita chiamate simultanee)
@@ -44,12 +44,7 @@ interface PendingRequest {
 }
 
 export function useQuoteRequest(options: UseQuoteRequestOptions = {}) {
-  const {
-    debounceMs = 500,
-    maxConcurrent = 3,
-    retryAttempts = 2,
-    retryDelay = 1000,
-  } = options;
+  const { debounceMs = 500, maxConcurrent = 3, retryAttempts = 2, retryDelay = 1000 } = options;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,72 +58,66 @@ export function useQuoteRequest(options: UseQuoteRequestOptions = {}) {
   /**
    * Esegue una richiesta quote
    */
-  const executeRequest = useCallback(
-    async (params: QuoteRequestParams): Promise<QuoteResult> => {
-      try {
-        setLoading(true);
-        setError(null);
+  const executeRequest = useCallback(async (params: QuoteRequestParams): Promise<QuoteResult> => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        // ✨ ENTERPRISE: Chiama endpoint real-time con cache Redis
-        const response = await fetch('/api/quotes/realtime', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            weight: params.weight,
-            zip: params.zip,
-            province: params.province,
-            courier: params.courier,
-            contractCode: params.contractCode,
-            services: params.services || [],
-            insuranceValue: params.insuranceValue || 0,
-            codValue: params.codValue || 0,
-          }),
-        });
+      // ✨ ENTERPRISE: Chiama endpoint real-time con cache Redis
+      const response = await fetch('/api/quotes/realtime', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          weight: params.weight,
+          zip: params.zip,
+          province: params.province,
+          courier: params.courier,
+          contractCode: params.contractCode,
+          services: params.services || [],
+          insuranceValue: params.insuranceValue || 0,
+          codValue: params.codValue || 0,
+        }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        const result: QuoteResult = {
-          success: true,
-          rates: data.rates || [], // Endpoint real-time restituisce 'rates', non 'contracts'
-          cached: data.details?.cached || false,
-          cacheAge: data.details?.cacheAge,
-        };
-
-        setLastResult(result);
-        return result;
-      } catch (err: any) {
-        const errorMessage = err.message || 'Errore durante il recupero del preventivo';
-        setError(errorMessage);
-        
-        const result: QuoteResult = {
-          success: false,
-          error: errorMessage,
-        };
-
-        setLastResult(result);
-        throw err;
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
-    },
-    []
-  );
+
+      const data = await response.json();
+
+      const result: QuoteResult = {
+        success: true,
+        rates: data.rates || [], // Endpoint real-time restituisce 'rates', non 'contracts'
+        cached: data.details?.cached || false,
+        cacheAge: data.details?.cacheAge,
+      };
+
+      setLastResult(result);
+      return result;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Errore durante il recupero del preventivo';
+      setError(errorMessage);
+
+      const result: QuoteResult = {
+        success: false,
+        error: errorMessage,
+      };
+
+      setLastResult(result);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   /**
    * Processa la coda di richieste
    */
   const processQueue = useCallback(async () => {
-    while (
-      queueRef.current.length > 0 &&
-      activeRequestsRef.current < maxConcurrent
-    ) {
+    while (queueRef.current.length > 0 && activeRequestsRef.current < maxConcurrent) {
       const request = queueRef.current.shift();
       if (!request) break;
 
