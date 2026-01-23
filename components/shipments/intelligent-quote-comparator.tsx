@@ -56,7 +56,8 @@ interface IntelligentQuoteComparatorProps {
     courier: string,
     contractCode: string,
     accessoryService?: string,
-    configId?: string // ✨ ENTERPRISE: ConfigId della configurazione API che ha fornito questo rate
+    configId?: string, // ✨ ENTERPRISE: ConfigId della configurazione API che ha fornito questo rate
+    finalPrice?: number // ✨ FIX: Prezzo finale selezionato (con servizi accessori)
   ) => void;
   // ✨ ENTERPRISE: resetKey per forzare reset cache quando si resetta il form
   resetKey?: string | number;
@@ -1255,7 +1256,8 @@ export function IntelligentQuoteComparator({
                         selectedQuote.courierName || selectedQuote.courier,
                         selectedQuote.contractCode,
                         selectedAccessoryService || undefined,
-                        selectedConfigId // ✨ Passa configId al callback
+                        selectedConfigId, // ✨ Passa configId al callback
+                        finalPrice // ✨ FIX: Passa prezzo finale (include servizi accessori)
                       );
                       // Chiudi pannello dopo conferma
                       setShowAccessoryDropdown(false);
