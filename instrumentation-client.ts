@@ -11,26 +11,28 @@ import * as Sentry from '@sentry/nextjs';
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // M2: Performance monitoring enabled (10% sampling, FREE tier: 10K/month)
-  tracesSampleRate: parseFloat(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+  // Performance Monitoring: 10% sample rate for production insights
+  // Adjust based on traffic volume and Sentry quota
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0.0,
 
-  // Profiling disabled (keep cost at €0)
-  profilesSampleRate: 0.0,
+  // Profiling: 10% of transactions (requires performance monitoring)
+  profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0.0,
 
   // Environment
   environment: process.env.NODE_ENV || 'development',
 
-  // Session Replay: DISABLED (costs replay sessions)
-  // To enable: set replaysOnErrorSampleRate to 1.0
+  // Session Replay: Capture 100% of error sessions for debugging
   replaysSessionSampleRate: 0.0,
-  replaysOnErrorSampleRate: 0.0,
+  replaysOnErrorSampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0.0,
 
-  // Integrations
+  // Integrations for better performance data
   integrations: [
-    Sentry.browserTracingIntegration({
-      // Trace navigation and interactions
-      traceFetch: true,
-      traceXHR: true,
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
+      maskAllText: true,
+      blockAllMedia: true,
     }),
   ],
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
