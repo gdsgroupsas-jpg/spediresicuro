@@ -118,7 +118,7 @@ export async function calculatePriceFromPriceList(
       });
 
       if (bestPriceResult && bestPriceResult.bestPrice) {
-        const quote = bestPriceResult.bestPrice;
+        const quote = bestPriceResult.bestPrice as any;
 
         console.log(`✅ [PRICE CALC] Prezzo calcolato:`, {
           totalPrice: quote.total_price,
