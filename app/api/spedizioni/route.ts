@@ -476,21 +476,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcola prezzo base
+    // ✨ PRICING LOGIC: Usa prezzo dal comparatore se disponibile, altrimenti calcola dai listini
     const peso = parseFloat(body.peso) || 0;
-    const basePrice = 10; // Prezzo base fisso
-    const pesoPrice = peso * 2; // 2€ per kg
-    const expressMultiplier = body.tipoSpedizione === 'express' ? 1.5 : 1;
-    const prezzoBase = (basePrice + pesoPrice) * expressMultiplier;
+    const assicurazione = parseFloat(body.assicurazione) || 0;
+    let prezzoFinale: number;
 
-    // Costi aggiuntivi
+    if (body.final_price && typeof body.final_price === 'number' && body.final_price > 0) {
+      // Ottimizzazione: usa prezzo già calcolato dal comparatore
+      prezzoFinale = body.final_price;
+      console.log('💰 [API] Usando prezzo dal comparatore:', prezzoFinale);
+    } else {
+      // Fallback: calcola prezzo dai listini (stessa logica del comparatore)
+      console.log('🔄 [API] final_price mancante, calcolo dai listini...');
+
+      const { calculatePriceFromPriceList } =
+        await import('@/lib/services/pricing/calculate-from-pricelist');
+      const { getSupabaseUserIdFromEmail } = await import('@/lib/database');
+
+      const userId = await getSupabaseUserIdFromEmail(session.actor.email);
+      if (!userId) {
+        return NextResponse.json(
+          { error: 'Utente non trovato', message: 'Impossibile calcolare il prezzo' },
+          { status: 404 }
+        );
+      }
+
+      const priceResult = await calculatePriceFromPriceList({
+        userId,
+        courierCode: body.corriere || '',
+        weight: peso,
+        destination: {
+          zip: body.destinatarioCap || '',
+          province: body.destinatarioProvincia,
+          city: body.destinatarioCitta,
+          country: 'IT',
+        },
+        serviceType: body.tipoSpedizione === 'express' ? 'express' : 'standard',
+        options: {
+          cashOnDelivery:
+            body.contrassegno && body.contrassegnoAmount && parseFloat(body.contrassegnoAmount) > 0,
+          declaredValue: assicurazione,
+          insurance: assicurazione > 0,
+        },
+      });
+
+      if (!priceResult.success || !priceResult.price || priceResult.price <= 0) {
+        return NextResponse.json(
+          {
+            error: 'Prezzo non disponibile',
+            message:
+              priceResult.error ||
+              `Nessun listino attivo trovato per il corriere ${body.corriere}. Verifica la configurazione dei listini personalizzati.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      prezzoFinale = priceResult.price;
+      console.log('✅ [API] Prezzo calcolato dai listini:', prezzoFinale);
+    }
+
+    // Variabili per compatibilità payload (non più usate per calcolo prezzo)
+    const prezzoBase = 0; // Non più calcolato - il prezzo viene dai listini
+    const margine = 0; // Non più calcolato - il margine è già incluso in final_price
+    const costoContrassegno = 0; // Incluso nel prezzo dei listini
+    const costoAssicurazione = 0; // Incluso nel prezzo dei listini
+
+    // Validazione contrassegno
     const contrassegno =
       body.contrassegno && body.contrassegnoAmount ? parseFloat(body.contrassegnoAmount) || 0 : 0;
-    const assicurazione = parseFloat(body.assicurazione) || 0;
-    const costoContrassegno = contrassegno > 0 ? 3 : 0; // Costo fisso per gestione contrassegno
-    const costoAssicurazione = assicurazione > 0 ? assicurazione * 0.02 : 0; // 2% del valore assicurato
 
-    // Validazione: codValue >= 0 (codValue è il campo OpenAPI per contrassegno)
     if (contrassegno < 0) {
       return NextResponse.json(
         {
@@ -510,27 +565,6 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
-    }
-
-    // ✨ FIX: Usa final_price dal frontend se disponibile (prezzo listino personalizzato con margine)
-    // Altrimenti calcola prezzo finale con margine default
-    let prezzoFinale: number;
-    let margine: number;
-    if (body.final_price && typeof body.final_price === 'number' && body.final_price > 0) {
-      // Usa prezzo dal quote selezionato (listino personalizzato)
-      prezzoFinale = body.final_price;
-      // Calcola margine approssimativo per logging (prezzo finale - costo base)
-      margine = prezzoFinale - prezzoBase - costoContrassegno - costoAssicurazione;
-      console.log(
-        '💰 [API] Usando final_price dal frontend (listino personalizzato):',
-        prezzoFinale
-      );
-    } else {
-      // Calcola prezzo finale con margine default (fallback)
-      const marginePercentuale = 15;
-      margine = (prezzoBase * marginePercentuale) / 100;
-      prezzoFinale = prezzoBase + margine + costoContrassegno + costoAssicurazione;
-      console.log('💰 [API] Calcolato prezzo finale con margine default:', prezzoFinale);
     }
 
     // ✨ FIX: Platform fee per ruoli BUSINESS (SUPERADMIN, ADMIN, RESELLER, BYOC)
