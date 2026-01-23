@@ -306,6 +306,43 @@ const prezzoFinale = result.price;
 
 ⚠️ **Requires active price lists** configured in database. No more hard-coded fallback.
 
+## Margin Configuration
+
+### margin_type Options
+
+Custom price lists support three margin types configured in `metadata.margin_type`:
+
+| margin_type | Behavior                                     | Use Case                             |
+| ----------- | -------------------------------------------- | ------------------------------------ |
+| `"none"`    | **ZERO margin** - entry price IS final price | Resellers with pre-negotiated prices |
+| `"percent"` | Apply `default_margin_percent` on base       | Standard markup percentage           |
+| `"fixed"`   | Apply `default_margin_fixed` as flat fee     | Fixed fee per shipment               |
+
+### Example: No Margin Configuration
+
+```json
+{
+  "name": "gls 5000 rivendita",
+  "list_type": "custom",
+  "metadata": {
+    "margin_type": "none" // ✨ ZERO margin applied
+  },
+  "default_margin_percent": 0,
+  "default_margin_fixed": 0
+}
+```
+
+**Result**: Entry price €12 → Final price €12 (no margin added)
+
+### Important: margin_type="none" Behavior
+
+When `margin_type` is `"none"`:
+
+- System respects user's explicit configuration
+- **No automatic margin is applied**, even if price list has a master
+- The price in the entry IS the final selling price
+- This was fixed in commit `ce62ffc` (2026-01-23)
+
 ## Troubleshooting
 
 ### Price is different from expected
@@ -313,7 +350,8 @@ const prezzoFinale = result.price;
 1. Check active price lists in admin: `/dashboard/admin/price-lists`
 2. Verify courier code matches exactly
 3. Check weight brackets in price list
-4. Verify custom margin configuration
+4. **Verify `metadata.margin_type`** - if "none", no margin should be applied
+5. Check `default_margin_percent` and `default_margin_fixed` values
 
 ### No price returned
 
@@ -345,4 +383,4 @@ For questions or issues:
 
 ---
 
-_Last updated: 2026-01-23_
+_Last updated: 2026-01-23 (margin_type=none fix added)_
