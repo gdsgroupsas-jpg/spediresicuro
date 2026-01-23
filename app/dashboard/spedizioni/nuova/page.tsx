@@ -757,7 +757,9 @@ export default function NuovaSpedizionePage() {
       };
 
       // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
+      console.log('🔍 [FORM] selectedQuoteExactPrice prima invio:', selectedQuoteExactPrice);
       console.log('📋 [FORM] Payload COMPLETO spedizione (prima invio):', payload);
+      console.log('💰 [FORM] final_price nel payload:', payload.final_price || 'MANCANTE');
 
       console.log('📋 [FORM] Payload indirizzo strutturato:', {
         mittente: {
@@ -1683,13 +1685,15 @@ export default function NuovaSpedizionePage() {
                           courierName,
                           contractCode,
                           accessoryService,
-                          configId // ✨ ENTERPRISE: ConfigId della configurazione API
+                          configId, // ✨ ENTERPRISE: ConfigId della configurazione API
+                          finalPrice // ✨ FIX: Prezzo finale dal comparatore (include servizi accessori)
                         ) => {
                           console.log('✅ [FORM] Corriere confermato dal preventivatore:', {
                             courierName,
                             contractCode,
                             accessoryService,
                             configId, // ✨ Salva configId per usarlo nella creazione
+                            finalPrice, // ✨ FIX: Prezzo finale ricevuto dal comparatore
                           });
                           setFormData((prev) => ({
                             ...prev,
@@ -1699,37 +1703,53 @@ export default function NuovaSpedizionePage() {
                           // ✨ ENTERPRISE: Salva configId per usarlo nella creazione spedizione
                           setSelectedConfigId(configId);
 
-                          // ✨ ENTERPRISE: Salva quote selezionato per mostrare costo esatto
-                          const selectedQuote = courierQuotes.get(
-                            `${courierName}::${contractCode}`
-                          );
-                          if (
-                            selectedQuote &&
-                            selectedQuote.rates &&
-                            selectedQuote.rates.length > 0
-                          ) {
-                            const bestRate = selectedQuote.rates[0];
-                            const exactPrice = parseFloat(bestRate.total_price || '0');
+                          // ✨ FIX: Usa prezzo finale dal comparatore (già calcolato con servizi accessori)
+                          console.log('🔍 [FORM] finalPrice ricevuto dal comparatore:', finalPrice);
+                          if (finalPrice && finalPrice > 0) {
+                            console.log(
+                              '✅ [FORM] Settando selectedQuoteExactPrice con finalPrice:',
+                              finalPrice
+                            );
                             setSelectedQuoteExactPrice({
                               courierName,
-                              price: exactPrice,
+                              price: finalPrice,
                               contractCode,
-                            });
-                            // ✨ NUOVO: Estrai VAT context dal quote selezionato (ADR-001)
-                            setSelectedVATContext({
-                              vat_mode: bestRate.vat_mode || null,
-                              vat_rate: bestRate.vat_rate
-                                ? parseFloat(bestRate.vat_rate)
-                                : undefined,
                             });
                           } else {
-                            // Se non abbiamo ancora il quote, cerca nel preventivatore
-                            // Il prezzo verrà aggiornato quando il quote arriva
-                            setSelectedQuoteExactPrice({
-                              courierName,
-                              price: 0, // Placeholder, verrà aggiornato
-                              contractCode,
-                            });
+                            console.warn(
+                              '⚠️ [FORM] finalPrice mancante o 0, cerco in courierQuotes'
+                            );
+                            // ✨ FALLBACK: Cerca quote in courierQuotes solo se finalPrice manca
+                            const selectedQuote = courierQuotes.get(
+                              `${courierName}::${contractCode}`
+                            );
+                            if (
+                              selectedQuote &&
+                              selectedQuote.rates &&
+                              selectedQuote.rates.length > 0
+                            ) {
+                              const bestRate = selectedQuote.rates[0];
+                              const exactPrice = parseFloat(bestRate.total_price || '0');
+                              setSelectedQuoteExactPrice({
+                                courierName,
+                                price: exactPrice,
+                                contractCode,
+                              });
+                              // ✨ NUOVO: Estrai VAT context dal quote selezionato (ADR-001)
+                              setSelectedVATContext({
+                                vat_mode: bestRate.vat_mode || null,
+                                vat_rate: bestRate.vat_rate
+                                  ? parseFloat(bestRate.vat_rate)
+                                  : undefined,
+                              });
+                            } else {
+                              // Se non abbiamo il quote, usa placeholder
+                              setSelectedQuoteExactPrice({
+                                courierName,
+                                price: 0, // Placeholder, verrà aggiornato
+                                contractCode,
+                              });
+                            }
                           }
                         }}
                       />
