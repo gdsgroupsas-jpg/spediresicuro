@@ -87,7 +87,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com https://r2cdn.perplexity.ai data:",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.supabase.co https://*.vercel.app wss://*.supabase.co https://api.anthropic.com",
+              "connect-src 'self' https://*.supabase.co https://*.vercel.app wss://*.supabase.co https://api.anthropic.com https://o4510730837360640.ingest.de.sentry.io",
               "worker-src 'self' blob:", // Necessario per Tesseract.js workers
               "frame-src 'self'",
               "object-src 'none'",
@@ -117,14 +117,18 @@ module.exports = withSentryConfig(nextConfig, {
   // Upload source maps for better error stack traces
   widenClientFileUpload: true,
 
-  // Automatically annotate React components for better error context
-  reactComponentAnnotation: {
-    enabled: true,
-  },
-
   // Hide Sentry from the client bundle
   hideSourceMaps: true,
 
-  // Disable telemetry
-  disableLogger: true,
+  // Updated options for webpack-scoped config
+  webpack: {
+    // Automatically annotate React components for better error context
+    reactComponentAnnotation: {
+      enabled: true,
+    },
+    // Disable telemetry
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });
