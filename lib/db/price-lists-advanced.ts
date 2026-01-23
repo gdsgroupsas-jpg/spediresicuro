@@ -889,31 +889,35 @@ async function calculateWithDefaultMargin(
         console.log(`   - list_type: ${priceList.list_type}`);
         console.log(`   - master_list_id: ${priceList.master_list_id || 'NULL'}`);
 
-        if (priceList.default_margin_percent) {
+        // ✨ FIX CRITICO: Se margin_type è "none", NON applicare MAI margine!
+        // L'utente ha esplicitamente configurato il listino senza margine.
+        // Il prezzo nelle entry È il prezzo finale.
+        const marginType =
+          (priceList.metadata as any)?.margin_type ||
+          (priceList.source_metadata as any)?.margin_type;
+        console.log(`   - metadata.margin_type: ${marginType || 'NULL'}`);
+
+        if (marginType === 'none') {
+          // Utente ha esplicitamente richiesto ZERO margine
+          margin = 0;
+          console.log(
+            `   - ✅ margin_type = "none" → ZERO margine applicato (rispetto volontà utente)`
+          );
+        } else if (priceList.default_margin_percent && priceList.default_margin_percent > 0) {
           margin = costBaseForMargin * (priceList.default_margin_percent / 100);
           console.log(
             `   - Margine percentuale: ${
               priceList.default_margin_percent
             }% su €${costBaseForMargin.toFixed(2)} = €${margin.toFixed(2)}`
           );
-        } else if (priceList.default_margin_fixed) {
+        } else if (priceList.default_margin_fixed && priceList.default_margin_fixed > 0) {
           margin = priceList.default_margin_fixed;
           console.log(`   - Margine fisso: €${margin.toFixed(2)}`);
         } else {
-          // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
-          // applica margine di default globale per garantire consistenza nel comparatore
-          // Questo garantisce che OGNI corriere nel comparatore abbia sempre un margine
-          if (priceList.list_type === 'custom' && priceList.master_list_id) {
-            margin = costBaseForMargin * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
-            console.log(
-              `   - ⚠️ Margine default globale: ${
-                pricingConfig.DEFAULT_MARGIN_PERCENT
-              }% su €${costBaseForMargin.toFixed(2)} = €${margin.toFixed(2)}`
-            );
-          } else {
-            console.log(`   - ⚠️ Nessun margine configurato, margin = 0`);
-          }
-          // Se non è CUSTOM con master, margin rimane 0 (comportamento originale)
+          // Nessun margine configurato e margin_type non è "none"
+          // In questo caso, non applichiamo margine di default automatico
+          // L'utente deve configurare esplicitamente il margine se lo vuole
+          console.log(`   - ⚠️ Nessun margine configurato, margin = 0`);
         }
         // ✨ FIX: Quando i prezzi sono identici, finalPrice = supplierTotalCostExclVAT + margin
         // Altrimenti finalPrice = totalCostExclVAT + margin
