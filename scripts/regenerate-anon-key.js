@@ -51,8 +51,8 @@ if (secretJWT.startsWith("'")) secretJWT = secretJWT.slice(1, -1);
 // If I try to HMAC with a JWT string as the key, I get a valid signature relative to THAT key, but Supabase won't verify it because Supabase uses the Project Secret.
 
 // LET'S CHECK if `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` is a JWT or a Secret.
-// User showed logs: `SUPABASE_SERVICE_ROLE_KEY="sb_secret_rPXDOSWpUHMtAsrt_MQ3gA_YNqEB2Vp"`
-// WAIT! That looks like a Random String (Secret), NOT a JWT (which starts with eyJ).
+// The Service Role Key format is either a JWT (starts with eyJ) or a secret string (starts with sb_secret_)
+// WAIT! Random String Secrets (NOT JWT) start with sb_secret_
 // 32-40 chars. `sb_secret_...`
 // This IS the secret!
 // If so, I CAN sign a new token.
