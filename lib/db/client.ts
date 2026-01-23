@@ -47,12 +47,20 @@ export const supabase = createClient(buildTimeUrl, buildTimeAnonKey, {
 });
 
 // Client admin (bypassa RLS) - usare solo server-side
-export const supabaseAdmin = createClient(buildTimeUrl, buildTimeServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+// ⚠️ IMPORTANTE: Verifica se la service key esiste prima di usare il placeholder
+export const supabaseAdmin = supabaseServiceKey
+  ? createClient(buildTimeUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : createClient(buildTimeUrl, buildTimeServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
 // Helper per creare client autenticato per utente specifico
 export function getSupabaseClient(accessToken?: string) {
