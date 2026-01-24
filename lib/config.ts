@@ -72,12 +72,35 @@ export const bookingConfig = {
 } as const;
 
 /**
+ * Feature Flags per migrazione graduale
+ */
+export const featureFlags = {
+  /**
+   * FINANCE_STRICT_MARGIN: Abilita calcolo margine strict (no fallback hardcoded)
+   *
+   * - true: Usa computeMargin() da lib/financial, margin=null se dati mancanti
+   * - false: Legacy mode con fallback a DEFAULT_MARGIN_PERCENT (warning in console)
+   *
+   * Default: false (per migrazione graduale)
+   * Target: true entro prossima major release
+   *
+   * @see lib/financial/margin-calculator.ts
+   */
+  FINANCE_STRICT_MARGIN: process.env.FINANCE_STRICT_MARGIN === 'true',
+} as const;
+
+/**
  * Configurazione per i margini di ricarico
  */
 export const pricingConfig = {
   /**
+   * @deprecated Usa computeMargin() da lib/financial invece.
+   * Questa costante sarà rimossa quando FINANCE_STRICT_MARGIN=true diventa default.
+   *
    * Margine percentuale di default per il calcolo prezzi.
    * Applicato al prezzo base del corriere.
+   *
+   * ⚠️ NON USARE DIRETTAMENTE - controllare sempre featureFlags.FINANCE_STRICT_MARGIN
    */
   DEFAULT_MARGIN_PERCENT: 20,
 

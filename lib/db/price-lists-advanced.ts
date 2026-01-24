@@ -5,7 +5,7 @@
  * matching intelligente e calcolo prezzi dinamico.
  */
 
-import { pricingConfig } from '@/lib/config';
+import { featureFlags, pricingConfig } from '@/lib/config';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import {
   calculatePriceWithVAT,
@@ -603,6 +603,23 @@ async function calculatePriceWithRule(
       ? calculateVATAmount(finalPriceExclVAT, vatRate)
       : finalPrice - finalPriceExclVAT;
 
+  // ✨ ENTERPRISE: supplierPrice solo da fonti affidabili (NO calcoli approssimati)
+  let ruleSupplierPrice: number | undefined;
+  if (supplierTotalCostExclVAT > 0) {
+    // ✅ Master list presente - costo fornitore REALE
+    ruleSupplierPrice = supplierTotalCostExclVAT;
+    console.log(`✅ [PRICE CALC RULE] Costo fornitore da master: €${ruleSupplierPrice.toFixed(2)}`);
+  } else if (priceList.list_type === 'supplier') {
+    // ✅ Listino fornitore puro - totalCost È il costo fornitore
+    ruleSupplierPrice = totalCostExclVAT;
+    console.log(`✅ [PRICE CALC RULE] Listino supplier: €${ruleSupplierPrice.toFixed(2)}`);
+  } else {
+    // ⚠️ Configurazione mancante - NON calcolare approssimazioni
+    console.warn(
+      `⚠️ [PRICE CALC RULE] Listino "${priceList.name}" senza master_list_id - costo fornitore non determinabile`
+    );
+  }
+
   return {
     basePrice: basePriceExclVAT, // Sempre IVA esclusa per consistenza
     surcharges: surchargesExclVAT, // Sempre IVA esclusa per consistenza
@@ -612,8 +629,8 @@ async function calculatePriceWithRule(
     appliedRule: rule,
     appliedPriceList: priceList,
     priceListId: priceList.id,
-    // ✨ NUOVO: Aggiungi costo fornitore originale (sempre IVA esclusa per consistenza)
-    supplierPrice: supplierTotalCostExclVAT > 0 ? supplierTotalCostExclVAT : undefined,
+    // ✨ ENTERPRISE FIX: Usa fallback chain per supplierPrice
+    supplierPrice: ruleSupplierPrice,
     // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
     supplierPriceOriginal: supplierTotalCostOriginal > 0 ? supplierTotalCostOriginal : undefined,
     // ✨ NUOVO: VAT Semantics (ADR-001)
@@ -667,14 +684,33 @@ async function calculateWithDefaultMargin(
   let masterVATMode: 'included' | 'excluded' = 'excluded'; // Default per retrocompatibilità
   let masterVATRate = 22.0;
   if (priceList.master_list_id && priceList.list_type === 'custom') {
+    console.log(`🔍 [PRICE CALC MASTER] Recupero costo fornitore da master list...`);
+    console.log(`   - Custom List: ${priceList.name} (ID: ${priceList.id})`);
+    console.log(`   - Master List ID: ${priceList.master_list_id}`);
+    console.log(
+      `   - Params: peso=${params.weight}kg, zip=${params.destination.zip}, provincia=${params.destination.province}, service=${params.serviceType}`
+    );
+
     try {
-      const { data: masterList } = await supabaseAdmin
+      const { data: masterList, error: masterError } = await supabaseAdmin
         .from('price_lists')
         .select('*, entries:price_list_entries(*)')
         .eq('id', priceList.master_list_id)
         .single();
 
-      if (masterList && masterList.entries) {
+      if (masterError) {
+        console.warn(`⚠️ [PRICE CALC MASTER] Errore query master list:`, masterError.message);
+      } else if (!masterList) {
+        console.warn(
+          `⚠️ [PRICE CALC MASTER] Master list non trovato (ID: ${priceList.master_list_id})`
+        );
+      } else if (!masterList.entries || masterList.entries.length === 0) {
+        console.warn(`⚠️ [PRICE CALC MASTER] Master list "${masterList.name}" non ha entries!`);
+      } else {
+        console.log(
+          `✅ [PRICE CALC MASTER] Master list trovato: "${masterList.name}" con ${masterList.entries.length} entries`
+        );
+
         // ✨ NUOVO: Recupera vat_mode del master list (ADR-001 fix)
         masterVATMode = getVATModeWithFallback(masterList.vat_mode);
         masterVATRate = masterList.vat_rate || 22.0;
@@ -695,13 +731,25 @@ async function calculateWithDefaultMargin(
           // ✨ FIX: Salva prezzo originale fornitore (già IVA inclusa se masterVATMode === 'included')
           supplierTotalCostOriginal = supplierBasePrice + supplierSurcharges;
           console.log(
-            `✅ [PRICE CALC] Listino personalizzato: recuperato prezzo fornitore originale €${supplierTotalCostOriginal.toFixed(2)} (vat_mode: ${masterVATMode})`
+            `✅ [PRICE CALC MASTER] Recuperato prezzo fornitore: €${supplierTotalCostOriginal.toFixed(2)} (vat_mode: ${masterVATMode})`
+          );
+        } else {
+          console.warn(
+            `⚠️ [PRICE CALC MASTER] calculatePriceFromList ha restituito null per master "${masterList.name}"`
+          );
+          console.warn(
+            `   - Params usati: peso=${params.weight}, zip=${params.destination.zip || 'vuoto'}, service=${params.serviceType || 'standard'}`
+          );
+          console.warn(
+            `   - Provincia: ${params.destination.province || 'N/A'}, Regione: ${params.destination.region || 'N/A'}`
           );
         }
       }
     } catch (error) {
-      console.warn(`⚠️ [PRICE CALC] Errore recupero prezzo fornitore originale:`, error);
+      console.warn(`⚠️ [PRICE CALC MASTER] Errore recupero prezzo fornitore originale:`, error);
     }
+  } else if (priceList.list_type === 'custom' && !priceList.master_list_id) {
+    console.warn(`⚠️ [PRICE CALC MASTER] Listino custom "${priceList.name}" senza master_list_id!`);
   }
 
   if (priceList.entries && priceList.entries.length > 0) {
@@ -958,10 +1006,35 @@ async function calculateWithDefaultMargin(
           ? supplierTotalCostExclVATForComparison
           : totalCostExclVATForComparison; // Prezzi identici: usa supplierTotalCostExclVAT se disponibile
 
-      const resultSupplierPrice =
-        supplierTotalCostExclVATForComparison > 0
-          ? supplierTotalCostExclVATForComparison
-          : undefined;
+      // ✨ ENTERPRISE: supplierPrice deve SEMPRE venire da fonte affidabile
+      // 1. Se c'è supplierTotalCostExclVAT dal master → usa quello (listino custom con master_list_id)
+      // 2. Se listino è di tipo 'supplier' → totalCost È il costo fornitore (listino fornitore non ha margine)
+      // ⚠️ NO FALLBACK APPROSSIMATI - Il costo fornitore deve essere REALE, non calcolato
+      let resultSupplierPrice: number | undefined;
+      if (supplierTotalCostExclVATForComparison > 0) {
+        // ✅ Caso 1: Master list presente - costo fornitore REALE dal listino master
+        resultSupplierPrice = supplierTotalCostExclVATForComparison;
+        console.log(
+          `✅ [PRICE CALC] Costo fornitore da master_list: €${resultSupplierPrice.toFixed(2)}`
+        );
+      } else if (priceList.list_type === 'supplier') {
+        // ✅ Caso 2: Listino fornitore puro - totalCost È il costo fornitore (nessun margine)
+        resultSupplierPrice = totalCostExclVATForComparison;
+        console.log(
+          `✅ [PRICE CALC] Listino supplier: supplierPrice = €${resultSupplierPrice.toFixed(2)}`
+        );
+      } else {
+        // ⚠️ ENTERPRISE WARNING: Configurazione mancante
+        console.warn(
+          `⚠️ [PRICE CALC] ATTENZIONE: Listino "${priceList.name}" (tipo: ${priceList.list_type}) senza master_list_id!`
+        );
+        console.warn(`   → ID listino: ${priceList.id}`);
+        console.warn(`   → Impossibile determinare costo fornitore reale.`);
+        console.warn(
+          `   → AZIONE RICHIESTA: Configura master_list_id per tracciamento margini accurato.`
+        );
+        // resultSupplierPrice = undefined → fiscal-data.ts userà fallback da margin_percent
+      }
 
       // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
       const resultSupplierPriceOriginal =
@@ -1040,7 +1113,19 @@ async function calculateWithDefaultMargin(
           marginExclVAT = priceList.default_margin_fixed;
         } else if (priceList.list_type === 'custom' && priceList.master_list_id) {
           // Margine default globale se listino CUSTOM con master ma senza margine configurato
-          marginExclVAT = costBaseForMarginExclVAT * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+          if (featureFlags.FINANCE_STRICT_MARGIN) {
+            // Strict mode: margine 0 se non configurato
+            marginExclVAT = 0;
+            console.warn(
+              `[PRICE CALC] Listino CUSTOM "${priceList.name}" senza margine configurato - strict mode (margin=0)`
+            );
+          } else {
+            // Legacy mode: fallback con warning deprecation
+            marginExclVAT = costBaseForMarginExclVAT * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+            console.warn(
+              `[PRICE CALC] ⚠️ DEPRECATED: Usando DEFAULT_MARGIN_PERCENT (${pricingConfig.DEFAULT_MARGIN_PERCENT}%) per listino "${priceList.name}". Configurare margine esplicito.`
+            );
+          }
         }
         // Quando i prezzi sono identici, finalPrice = supplierTotalCost + margin
         finalPriceExclVAT = costBaseForMarginExclVAT + marginExclVAT;
@@ -1163,16 +1248,22 @@ async function calculateWithDefaultMargin(
   } else if (priceList.default_margin_fixed) {
     marginExclVATFallback = priceList.default_margin_fixed;
   } else {
-    // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato,
-    // applica margine di default globale per garantire consistenza nel comparatore
+    // ✨ FIX: Se listino CUSTOM con master ma senza margine configurato
     if (priceList.list_type === 'custom' && priceList.master_list_id) {
-      marginExclVATFallback =
-        totalCostExclVATFallback * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
-      console.log(
-        `⚠️ [PRICE CALC] Listino CUSTOM senza margine configurato (fallback), applicato margine default globale ${
-          pricingConfig.DEFAULT_MARGIN_PERCENT
-        }%: €${marginExclVATFallback.toFixed(2)}`
-      );
+      if (featureFlags.FINANCE_STRICT_MARGIN) {
+        // Strict mode: margine 0 se non configurato
+        marginExclVATFallback = 0;
+        console.warn(
+          `[PRICE CALC FALLBACK] Listino CUSTOM "${priceList.name}" senza margine configurato - strict mode (margin=0)`
+        );
+      } else {
+        // Legacy mode: fallback con warning deprecation
+        marginExclVATFallback =
+          totalCostExclVATFallback * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
+        console.warn(
+          `[PRICE CALC FALLBACK] ⚠️ DEPRECATED: Usando DEFAULT_MARGIN_PERCENT (${pricingConfig.DEFAULT_MARGIN_PERCENT}%) per listino "${priceList.name}". Configurare margine esplicito.`
+        );
+      }
     }
   }
 
@@ -1190,8 +1281,26 @@ async function calculateWithDefaultMargin(
       ? calculateVATAmount(finalPriceExclVATFallback, vatRateFallback)
       : finalPriceFallback - finalPriceExclVATFallback;
 
-  // ✨ FIX: Se listino CUSTOM con master, aggiungi supplierPrice anche nel fallback
+  // ✨ ENTERPRISE: supplierPrice solo da fonti affidabili (NO calcoli approssimati)
   const supplierTotalCost = supplierBasePrice > 0 ? supplierBasePrice + supplierSurcharges : 0;
+
+  let fallbackSupplierPrice: number | undefined;
+  if (supplierTotalCost > 0) {
+    // ✅ Master list presente - costo fornitore REALE
+    fallbackSupplierPrice = supplierTotalCost;
+    console.log(
+      `✅ [PRICE CALC FALLBACK] Costo fornitore da master: €${fallbackSupplierPrice.toFixed(2)}`
+    );
+  } else if (priceList.list_type === 'supplier') {
+    // ✅ Listino fornitore puro - totalCost È il costo fornitore
+    fallbackSupplierPrice = totalCostExclVATFallback;
+    console.log(`✅ [PRICE CALC FALLBACK] Listino supplier: €${fallbackSupplierPrice.toFixed(2)}`);
+  } else {
+    // ⚠️ Configurazione mancante - NON calcolare approssimazioni
+    console.warn(
+      `⚠️ [PRICE CALC FALLBACK] Listino "${priceList.name}" senza master_list_id - costo fornitore non determinabile`
+    );
+  }
 
   return {
     basePrice: basePriceExclVATFallback, // Sempre IVA esclusa per consistenza
@@ -1201,8 +1310,8 @@ async function calculateWithDefaultMargin(
     finalPrice: finalPriceFallback, // Nella modalità IVA del listino
     appliedPriceList: priceList,
     priceListId: priceList.id,
-    // ✨ FIX: Aggiungi supplierPrice se disponibile (listino CUSTOM con master)
-    supplierPrice: supplierTotalCost > 0 ? supplierTotalCost : undefined,
+    // ✨ ENTERPRISE FIX: Usa fallback chain per supplierPrice
+    supplierPrice: fallbackSupplierPrice,
     // ✨ NUOVO: VAT Semantics (ADR-001) - anche nel fallback
     vatMode: priceList.vat_mode || 'excluded',
     vatRate: vatRateFallback,

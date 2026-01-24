@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculatePrice } from '@/lib/db/price-lists';
+import { featureFlags, pricingConfig } from '@/lib/config';
 
 export interface PricingRequest {
   weight: number; // kg
@@ -87,7 +88,8 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
     }
 
     const results: PricingResult[] = [];
-    const marginPercent = 15; // Margine di ricarico standard
+    // ⚠️ RIMOSSO: const marginPercent = 15 hardcoded
+    // Il margine deve venire dal listino o non essere applicato
 
     // Calcola per ogni corriere
     for (const courier of couriers) {
@@ -111,9 +113,32 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
           );
 
           if (priceResult) {
-            // Applica margine
-            const margin = (priceResult.totalCost * marginPercent) / 100;
-            const finalPrice = priceResult.totalCost + margin;
+            // ✅ NUOVO: Usa margine dal listino se disponibile
+            let margin: number;
+            let finalPrice: number;
+
+            // Il calcolo prezzo può includere già il margine (se listino configurato)
+            // Nota: calculatePrice restituisce { basePrice, surcharges, totalCost, details }
+            // Il margine potrebbe essere in details.margin se il listino lo include
+            const marginFromDetails = priceResult.details?.margin;
+            if (marginFromDetails !== undefined && marginFromDetails !== null) {
+              // Margine dal listino (preferito)
+              margin = marginFromDetails;
+              finalPrice = priceResult.totalCost + margin;
+            } else if (featureFlags.FINANCE_STRICT_MARGIN) {
+              // Strict mode: skip corriere se manca configurazione margine
+              console.warn(
+                `[PRICING_ENGINE] Corriere ${courier.name} senza margine configurato - skipped in strict mode`
+              );
+              continue;
+            } else {
+              // Legacy mode: fallback con warning deprecation
+              console.warn(
+                `[PRICING_ENGINE] ⚠️ DEPRECATED: Usando DEFAULT_MARGIN_PERCENT (${pricingConfig.DEFAULT_MARGIN_PERCENT}%) per ${courier.name}. Configurare listino.`
+              );
+              margin = (priceResult.totalCost * pricingConfig.DEFAULT_MARGIN_PERCENT) / 100;
+              finalPrice = priceResult.totalCost + margin;
+            }
 
             results.push({
               courier: courier.name,
