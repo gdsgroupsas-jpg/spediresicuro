@@ -1,3 +1,27 @@
+# 1.1.0 (2026-01-24) - FUSION RELEASE
+
+### Features
+
+- **copilot:** Integrate local LLM copilot from Dario's codebase (Llama/Qwen support)
+- **user-memory:** Add user preferences persistence (language, tone, default sender, preferred couriers)
+- **onboarding:** Add profile completion gating with disabled buttons and warning banners
+- **testing:** Add 15 E2E Playwright test specs (auth, shipments, payments, reseller flows)
+- **docs:** Add 00-HANDBOOK documentation hub with AI workflows, rules, and task mapping
+
+### Improvements
+
+- **dashboard:** Add "Complete your profile" banner when profile incomplete
+- **spedizioni:** Disable Import, Export, Return, New Shipment buttons until profile complete
+- **hooks:** Add useProfileCompletion hook for onboarding state management
+
+### Integration Notes
+
+- Merged best features from spediresicuro-master (Dario)
+- Kept our superior: pricing engine (flexible margins), auth system (impersonation), API key service
+- See FUSION_PLAN.md for complete merge details
+
+---
+
 # 1.0.0 (2026-01-21)
 
 ### Bug Fixes

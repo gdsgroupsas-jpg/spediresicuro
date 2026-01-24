@@ -41,6 +41,7 @@ import {
 import ImportOrders from '@/components/import/import-orders';
 import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
 import { featureFlags } from '@/lib/config/feature-flags';
+import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
 import dynamic from 'next/dynamic';
 
 // Carica lo scanner solo quando serve (dynamic import per performance)
@@ -247,6 +248,11 @@ function ReturnBadge({ isReturn, returnStatus }: { isReturn?: boolean; returnSta
 export default function ListaSpedizioniPage() {
   const router = useRouter();
   const { data: session } = useSession();
+
+  // Onboarding gating: verifica se profilo completato
+  const { isComplete: isProfileComplete, isLoading: isProfileLoading } = useProfileCompletion();
+  const profileIncomplete = !isProfileLoading && isProfileComplete === false;
+
   const [spedizioni, setSpedizioni] = useState<Spedizione[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1076,7 +1082,9 @@ export default function ListaSpedizioniPage() {
               {/* Pulsante Import */}
               <button
                 onClick={() => setShowImportModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all"
+                disabled={profileIncomplete}
+                title={profileIncomplete ? 'Completa il profilo per importare ordini' : undefined}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all ${profileIncomplete ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <FileDown className="w-4 h-4" />
                 Importa Ordini
@@ -1097,8 +1105,9 @@ export default function ListaSpedizioniPage() {
                 <div className="relative">
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    disabled={isExporting}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all disabled:opacity-50 transform hover:scale-105"
+                    disabled={isExporting || profileIncomplete}
+                    title={profileIncomplete ? 'Completa il profilo per esportare' : undefined}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all disabled:opacity-50 transform hover:scale-105 ${profileIncomplete ? 'cursor-not-allowed' : ''}`}
                   >
                     <Download className="w-4 h-4" />
                     {isExporting ? 'Esportazione...' : 'Esporta'}
@@ -1174,29 +1183,71 @@ export default function ListaSpedizioniPage() {
               )}
               <button
                 onClick={() => setShowReturnScanner(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all transform hover:scale-105"
-                title="Registra un reso tramite scanner"
+                disabled={profileIncomplete}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all transform hover:scale-105 ${profileIncomplete ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={
+                  profileIncomplete
+                    ? 'Completa il profilo per registrare resi'
+                    : 'Registra un reso tramite scanner'
+                }
               >
                 <ArrowLeftRight className="w-5 h-5" />
                 Registra Reso
               </button>
-              <Link
-                href="/dashboard/spedizioni/nuova"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all transform hover:scale-105"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Nuova Spedizione
-              </Link>
+              {profileIncomplete ? (
+                <div
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm opacity-50 cursor-not-allowed"
+                  title="Completa il profilo per creare spedizioni"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Nuova Spedizione
+                </div>
+              ) : (
+                <Link
+                  href="/dashboard/spedizioni/nuova"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FF9500] focus:ring-offset-2 transition-all transform hover:scale-105"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Nuova Spedizione
+                </Link>
+              )}
             </div>
           }
         />
+
+        {/* Banner Profilo Incompleto */}
+        {profileIncomplete && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Profilo incompleto</p>
+              <p className="text-sm text-amber-700">
+                Le funzioni operative sono in sola lettura.{' '}
+                <Link
+                  href="/dashboard/dati-cliente"
+                  className="underline font-medium hover:text-amber-900"
+                >
+                  Completa il profilo
+                </Link>{' '}
+                per sbloccare tutte le funzionalità.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Filtri e Ricerca - Stile Premium */}
         {!isLoading && !error && spedizioni.length > 0 && (
