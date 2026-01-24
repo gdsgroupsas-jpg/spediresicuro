@@ -1,327 +1,380 @@
-/**
- * Telegram Message Queue with Redis (Upstash)
- *
- * Centralizzato message queueing system per Telegram Bot API.
- * TUTTI i messaggi Telegram passano attraverso questa queue.
- *
- * Features:
- * - Rate limiting: 120 messaggi/minuto (globale)
- * - Delay minimo tra messaggi consecutivi
- * - Persistenza con Redis (Upstash free tier)
- * - Retry logic per messaggi falliti
- * - Priority queue support
- *
- * Architecture (secondo specifiche Dario):
- * - Funzione base sendTelegramMessage() è SINCRONA
- * - Queue gestisce asincronia
- * - Pattern: enqueueMessage(chatId, text, options)
- *
- * Milestone: M5 - Telegram Notifications
- * Cost: €0/month (Upstash Free Tier: 10K commands/day)
- */
+import fs from 'fs/promises';
+import path from 'path';
 
-import { Redis } from '@upstash/redis';
+type ParseMode = 'HTML' | 'Markdown' | 'MarkdownV2';
 
-// ============================================================
-// Configuration & Constants
-// ============================================================
+export interface QueueMessageOptions {
+  parseMode?: ParseMode;
+  disableNotification?: boolean;
+  replyToMessageId?: number;
+  priority?: number;
+}
 
-const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-// Rate limiting configuration
-const RATE_LIMIT = {
-  MAX_MESSAGES_PER_MINUTE: 120, // Telegram best practice
-  MIN_DELAY_MS: 500, // Minimum delay between messages (0.5s)
-  MAX_RETRIES: 3, // Max retry attempts for failed messages
-  RETRY_DELAY_MS: 2000, // Delay before retry (2s)
-};
-
-// Queue keys
-const QUEUE_KEY = 'telegram:queue';
-const LAST_SENT_KEY = 'telegram:last_sent';
-const RATE_COUNTER_KEY = 'telegram:rate_counter';
-
-// ============================================================
-// Types
-// ============================================================
-
-export interface QueuedMessage {
+interface QueueMessage {
   id: string;
   chatId: string;
   text: string;
-  parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
-  disableNotification?: boolean;
-  replyToMessageId?: number;
-  priority?: number; // Higher = more important (default: 0)
-  retryCount?: number;
+  options: QueueMessageOptions;
+  attempts: number;
+  notBefore: number;
   enqueuedAt: number;
+  storagePath?: string;
 }
 
-export interface QueueStats {
-  queueLength: number;
-  messagesLastMinute: number;
-  lastSentTimestamp: number;
+const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
+const RATE_LIMIT_MS = Number(process.env.TELEGRAM_RATE_LIMIT_MS || 1100);
+const MAX_RETRIES = Number(process.env.TELEGRAM_QUEUE_MAX_RETRIES || 0);
+const MAX_QUEUE_SIZE = Number(process.env.TELEGRAM_QUEUE_MAX_SIZE || 500);
+const AUTO_START = process.env.TELEGRAM_QUEUE_AUTOSTART !== 'false';
+const FAILED_RETRY_MINUTES = Number(process.env.TELEGRAM_QUEUE_FAILED_RETRY_MINUTES || 0);
+const RETRY_LOG_INTERVAL_MS = Number(process.env.TELEGRAM_QUEUE_RETRY_LOG_INTERVAL_MS || 30000);
+
+const QUEUE_DIR =
+  process.env.TELEGRAM_QUEUE_DIR || path.join(process.cwd(), 'data', 'telegram-queue');
+const PENDING_DIR = path.join(QUEUE_DIR, 'pending');
+const PROCESSING_DIR = path.join(QUEUE_DIR, 'processing');
+const FAILED_DIR = path.join(QUEUE_DIR, 'failed');
+
+const queue: QueueMessage[] = [];
+const queueIndex = new Map<string, QueueMessage>();
+let processing = false;
+let lastSentAt = 0;
+let initialized = false;
+let failedRetryTimer: NodeJS.Timeout | null = null;
+let lastRetryLogAt = 0;
+let totalEnqueued = 0;
+let totalSent = 0;
+let totalRetries = 0;
+let totalFailed = 0;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ============================================================
-// Redis Client
-// ============================================================
-
-let redisClient: Redis | null = null;
-
-/**
- * Get or create Redis client
- */
-function getRedisClient(): Redis | null {
-  if (!REDIS_URL || !REDIS_TOKEN) {
-    console.warn('[TELEGRAM_QUEUE] Redis not configured - queue disabled');
-    return null;
-  }
-
-  if (!redisClient) {
-    // Upstash Redis REST API client
-    redisClient = new Redis({
-      url: REDIS_URL,
-      token: REDIS_TOKEN,
-    });
-
-    console.log('[TELEGRAM_QUEUE] Redis client initialized');
-  }
-
-  return redisClient;
+function generateId(): string {
+  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// ============================================================
-// Queue Operations
-// ============================================================
+async function ensureDirs(): Promise<void> {
+  await fs.mkdir(PENDING_DIR, { recursive: true });
+  await fs.mkdir(PROCESSING_DIR, { recursive: true });
+  await fs.mkdir(FAILED_DIR, { recursive: true });
+}
 
-/**
- * Enqueue a message to be sent via Telegram
- * This is the ONLY way to send messages - centralizzato
- *
- * @returns Message ID if queued, null if failed
- */
-export async function enqueueMessage(
-  chatId: string,
-  text: string,
-  options: {
-    parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
-    disableNotification?: boolean;
-    replyToMessageId?: number;
-    priority?: number;
-  } = {}
-): Promise<string | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    console.warn('[TELEGRAM_QUEUE] Queue not available - message not sent');
-    return null;
-  }
-
-  const message: QueuedMessage = {
-    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    chatId: String(chatId),
-    text,
-    parseMode: options.parseMode || 'HTML',
-    disableNotification: options.disableNotification || false,
-    replyToMessageId: options.replyToMessageId,
-    priority: options.priority || 0,
-    retryCount: 0,
-    enqueuedAt: Date.now(),
-  };
-
-  // Add to sorted set with priority (higher priority = lower score)
-  const score = Date.now() - (message.priority || 0) * 1000000;
-
+async function safeRename(fromPath: string, toPath: string): Promise<void> {
+  await fs.rm(toPath, { force: true });
   try {
-    await redis.zadd(QUEUE_KEY, { score, member: JSON.stringify(message) });
-    console.log('[TELEGRAM_QUEUE] Message enqueued:', {
-      id: message.id,
-      chatId: message.chatId,
-      textPreview: text.substring(0, 50),
-      priority: message.priority,
-    });
-    return message.id;
-  } catch (err) {
-    console.error('[TELEGRAM_QUEUE] Failed to enqueue:', err);
-    return null;
-  }
-}
-
-/**
- * Get next message from queue (respecting rate limits)
- * @returns Message to send, or null if rate limited or queue empty
- */
-export async function dequeueMessage(): Promise<QueuedMessage | null> {
-  const redis = getRedisClient();
-  if (!redis) return null;
-
-  try {
-    // Check rate limits
-    const canSend = await checkRateLimit();
-    if (!canSend) {
-      console.log('[TELEGRAM_QUEUE] Rate limited - waiting');
-      return null;
-    }
-
-    // Get message with highest priority (lowest score)
-    const messages = await redis.zrange(QUEUE_KEY, 0, 0);
-
-    if (!messages || messages.length === 0) {
-      return null; // Queue empty
-    }
-
-    const messageData = messages[0];
-
-    // @upstash/redis auto-deserializes JSON, so messageData might be object or string
-    const message: QueuedMessage =
-      typeof messageData === 'string' ? JSON.parse(messageData) : messageData;
-
-    // Remove from queue (must pass string for zrem)
-    const messageString =
-      typeof messageData === 'string' ? messageData : JSON.stringify(messageData);
-    await redis.zrem(QUEUE_KEY, messageString);
-
-    console.log('[TELEGRAM_QUEUE] Message dequeued:', {
-      id: message.id,
-      chatId: message.chatId,
-      waitTime: Date.now() - message.enqueuedAt,
-    });
-
-    return message;
+    await fs.rename(fromPath, toPath);
   } catch (error) {
-    console.error('[TELEGRAM_QUEUE] Dequeue error:', error);
-    return null;
+    await fs.copyFile(fromPath, toPath);
+    await fs.unlink(fromPath);
   }
 }
 
-/**
- * Check if we can send a message (rate limiting)
- */
-async function checkRateLimit(): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) return false;
-
-  const now = Date.now();
-
-  // Check minimum delay between messages
-  const lastSent = await redis.get<string>(LAST_SENT_KEY);
-  if (lastSent) {
-    const timeSinceLastSent = now - parseInt(lastSent);
-    if (timeSinceLastSent < RATE_LIMIT.MIN_DELAY_MS) {
-      return false; // Too soon
-    }
-  }
-
-  // Check messages per minute limit
-  const messagesLastMinute = await redis.get<string>(RATE_COUNTER_KEY);
-  if (messagesLastMinute && parseInt(messagesLastMinute) >= RATE_LIMIT.MAX_MESSAGES_PER_MINUTE) {
-    console.warn('[TELEGRAM_QUEUE] Rate limit reached: 120 msg/min');
-    return false;
-  }
-
-  return true;
+async function persistMessage(message: QueueMessage, dir: string): Promise<void> {
+  const fileName = message.storagePath
+    ? path.basename(message.storagePath)
+    : `${message.enqueuedAt}_${message.id}.json`;
+  const finalPath = path.join(dir, fileName);
+  const tempPath = `${finalPath}.tmp`;
+  const { storagePath, ...payloadMessage } = message;
+  const payload = JSON.stringify(payloadMessage, null, 2);
+  await fs.writeFile(tempPath, payload, 'utf8');
+  await safeRename(tempPath, finalPath);
+  message.storagePath = finalPath;
 }
 
-/**
- * Update rate limiting counters after sending
- */
-export async function updateRateLimitCounters(): Promise<void> {
-  const redis = getRedisClient();
-  if (!redis) return;
-
-  const now = Date.now();
-
-  // Update last sent timestamp
-  await redis.set(LAST_SENT_KEY, now.toString());
-
-  // Increment counter with 60s TTL
-  const count = await redis.incr(RATE_COUNTER_KEY);
-  if (count === 1) {
-    // First message in this minute - set expiry
-    await redis.expire(RATE_COUNTER_KEY, 60);
-  }
-}
-
-/**
- * Re-queue a failed message for retry
- */
-export async function requeueMessage(message: QueuedMessage): Promise<void> {
-  const redis = getRedisClient();
-  if (!redis) return;
-
-  if ((message.retryCount || 0) >= RATE_LIMIT.MAX_RETRIES) {
-    console.error('[TELEGRAM_QUEUE] Max retries reached, message dropped:', message.id);
+async function moveMessage(message: QueueMessage, dir: string): Promise<void> {
+  if (!message.storagePath) {
+    await persistMessage(message, dir);
     return;
   }
+  const fileName = path.basename(message.storagePath);
+  const targetPath = path.join(dir, fileName);
+  if (message.storagePath === targetPath) return;
+  await safeRename(message.storagePath, targetPath);
+  message.storagePath = targetPath;
+}
 
-  message.retryCount = (message.retryCount || 0) + 1;
-
-  // Add back to queue with lower priority (retry messages go to end)
-  const score = Date.now() + RATE_LIMIT.RETRY_DELAY_MS;
-
-  await redis.zadd(QUEUE_KEY, { score, member: JSON.stringify(message) });
-
-  console.log('[TELEGRAM_QUEUE] Message requeued for retry:', {
-    id: message.id,
-    retryCount: message.retryCount,
+function enqueueInternal(message: QueueMessage): void {
+  queue.push(message);
+  queueIndex.set(message.id, message);
+  queue.sort((a, b) => {
+    const priorityDiff = (b.options.priority || 0) - (a.options.priority || 0);
+    if (priorityDiff !== 0) return priorityDiff;
+    if (a.notBefore !== b.notBefore) return a.notBefore - b.notBefore;
+    return a.enqueuedAt - b.enqueuedAt;
   });
 }
 
-/**
- * Get queue statistics
- */
-export async function getQueueStats(): Promise<QueueStats> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return {
-      queueLength: 0,
-      messagesLastMinute: 0,
-      lastSentTimestamp: 0,
-    };
+async function loadPendingFromDisk(): Promise<void> {
+  const files = await fs.readdir(PENDING_DIR).catch(() => []);
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+    const fullPath = path.join(PENDING_DIR, file);
+    try {
+      const raw = await fs.readFile(fullPath, 'utf8');
+      const message = JSON.parse(raw) as QueueMessage;
+      message.storagePath = fullPath;
+      if (!message.id || !message.chatId || !message.text) {
+        await moveMessage(message, FAILED_DIR);
+        continue;
+      }
+      message.options = message.options || {};
+      message.attempts = message.attempts ?? 0;
+      message.notBefore = message.notBefore ?? Date.now();
+      message.enqueuedAt = message.enqueuedAt ?? Date.now();
+      if (!queueIndex.has(message.id)) {
+        enqueueInternal(message);
+      }
+    } catch (error) {
+      const failedPath = path.join(FAILED_DIR, file);
+      await safeRename(fullPath, failedPath);
+      console.error('[TELEGRAM_QUEUE] Corrupted message moved to failed', {
+        file,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+}
+
+async function recoverProcessingToPending(): Promise<void> {
+  const files = await fs.readdir(PROCESSING_DIR).catch(() => []);
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+    const fromPath = path.join(PROCESSING_DIR, file);
+    const toPath = path.join(PENDING_DIR, file);
+    await safeRename(fromPath, toPath);
+  }
+}
+
+export async function requeueFailedMessages(): Promise<number> {
+  await ensureDirs();
+  const files = await fs.readdir(FAILED_DIR).catch(() => []);
+  let requeued = 0;
+
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+    const failedPath = path.join(FAILED_DIR, file);
+    try {
+      const raw = await fs.readFile(failedPath, 'utf8');
+      const message = JSON.parse(raw) as QueueMessage;
+      message.storagePath = failedPath;
+      if (!message.id || !message.chatId || !message.text) {
+        continue;
+      }
+      message.attempts = 0;
+      message.notBefore = Date.now();
+      await moveMessage(message, PENDING_DIR);
+      await persistMessage(message, PENDING_DIR);
+      if (!queueIndex.has(message.id)) {
+        enqueueInternal(message);
+      }
+      requeued += 1;
+    } catch (error) {
+      console.error('[TELEGRAM_QUEUE] Failed to requeue message', {
+        file,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
-  const [queueLength, messagesLastMinute, lastSent] = await Promise.all([
-    redis.zcard(QUEUE_KEY),
-    redis.get<string>(RATE_COUNTER_KEY),
-    redis.get<string>(LAST_SENT_KEY),
-  ]);
+  if (requeued > 0 && AUTO_START) {
+    void drainQueue();
+  }
 
-  return {
-    queueLength: queueLength || 0,
-    messagesLastMinute: parseInt(messagesLastMinute || '0'),
-    lastSentTimestamp: parseInt(lastSent || '0'),
+  return requeued;
+}
+
+async function ensureInitialized(): Promise<void> {
+  if (initialized) return;
+  await ensureDirs();
+  await recoverProcessingToPending();
+  await loadPendingFromDisk();
+  initialized = true;
+  if (queue.length > 0 && AUTO_START) {
+    void drainQueue();
+  }
+  if (FAILED_RETRY_MINUTES > 0 && !failedRetryTimer) {
+    failedRetryTimer = setInterval(
+      () => {
+        void requeueFailedMessages();
+      },
+      FAILED_RETRY_MINUTES * 60 * 1000
+    );
+  }
+}
+
+async function sendToTelegram(message: QueueMessage): Promise<void> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    throw new Error('Telegram bot token not configured');
+  }
+
+  const url = `${TELEGRAM_API_BASE}${botToken}/sendMessage`;
+  const payload: Record<string, any> = {
+    chat_id: message.chatId,
+    text: message.text,
+    parse_mode: message.options.parseMode || 'HTML',
+    disable_notification: message.options.disableNotification || false,
   };
-}
 
-/**
- * Clear entire queue (use with caution)
- */
-export async function clearQueue(): Promise<void> {
-  const redis = getRedisClient();
-  if (!redis) return;
+  if (message.options.replyToMessageId) {
+    payload.reply_to_message_id = message.options.replyToMessageId;
+  }
 
-  await redis.del(QUEUE_KEY);
-  console.log('[TELEGRAM_QUEUE] Queue cleared');
-}
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
-// ============================================================
-// Graceful Shutdown
-// ============================================================
-
-/**
- * Close Redis connection on shutdown
- */
-export async function closeQueue(): Promise<void> {
-  if (redisClient) {
-    // Upstash Redis REST client doesn't need explicit closing
-    redisClient = null;
-    console.log('[TELEGRAM_QUEUE] Redis connection closed');
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) {
+    const reason = data?.description || `HTTP ${response.status}`;
+    throw new Error(`Telegram API error: ${reason}`);
   }
 }
 
-// Handle process termination
-if (typeof process !== 'undefined') {
-  process.on('SIGTERM', closeQueue);
-  process.on('SIGINT', closeQueue);
+async function drainQueue(): Promise<void> {
+  await ensureInitialized();
+  if (processing) return;
+  processing = true;
+
+  try {
+    while (queue.length > 0) {
+      const now = Date.now();
+      const nextIndex = queue.findIndex((msg) => msg.notBefore <= now);
+
+      if (nextIndex === -1) {
+        const nextTime = Math.min(...queue.map((msg) => msg.notBefore));
+        await sleep(Math.max(0, nextTime - now));
+        continue;
+      }
+
+      const message = queue.splice(nextIndex, 1)[0];
+      queueIndex.delete(message.id);
+      await moveMessage(message, PROCESSING_DIR);
+
+      const sinceLast = Date.now() - lastSentAt;
+      if (sinceLast < RATE_LIMIT_MS) {
+        await sleep(RATE_LIMIT_MS - sinceLast);
+      }
+
+      try {
+        await sendToTelegram(message);
+        lastSentAt = Date.now();
+        totalSent += 1;
+        if (message.storagePath) {
+          await fs.unlink(message.storagePath).catch(() => undefined);
+        }
+      } catch (error) {
+        message.attempts += 1;
+        const errorText = error instanceof Error ? error.message : String(error);
+        const shouldRetry =
+          MAX_RETRIES <= 0 || Number.isNaN(MAX_RETRIES) || message.attempts <= MAX_RETRIES;
+        if (shouldRetry) {
+          const backoff = Math.min(30000, 1000 * Math.pow(2, message.attempts - 1));
+          message.notBefore = Date.now() + backoff;
+          totalRetries += 1;
+          const now = Date.now();
+          if (now - lastRetryLogAt >= RETRY_LOG_INTERVAL_MS) {
+            lastRetryLogAt = now;
+            console.warn('[TELEGRAM_QUEUE] Retry scheduled', {
+              id: message.id,
+              chatId: message.chatId,
+              attempts: message.attempts,
+              nextRetryAt: new Date(message.notBefore).toISOString(),
+              pending: queue.length + 1,
+            });
+          }
+          await moveMessage(message, PENDING_DIR);
+          await persistMessage(message, PENDING_DIR);
+          enqueueInternal(message);
+        } else {
+          await moveMessage(message, FAILED_DIR);
+          await persistMessage(message, FAILED_DIR);
+          totalFailed += 1;
+          console.error('[TELEGRAM_QUEUE] Message moved to failed', {
+            id: message.id,
+            chatId: message.chatId,
+            attempts: message.attempts,
+            error: errorText,
+          });
+        }
+      }
+    }
+  } finally {
+    processing = false;
+    if (queue.length > 0 && AUTO_START) {
+      setImmediate(() => {
+        void drainQueue();
+      });
+    }
+  }
+}
+
+export async function enqueueMessage(
+  chatId: string,
+  text: string,
+  options: QueueMessageOptions = {}
+): Promise<string | null> {
+  await ensureInitialized();
+
+  if (queue.length >= MAX_QUEUE_SIZE) {
+    console.warn('[TELEGRAM_QUEUE] Queue size above limit, persisting anyway', {
+      pending: queue.length,
+      limit: MAX_QUEUE_SIZE,
+    });
+  }
+
+  const message: QueueMessage = {
+    id: generateId(),
+    chatId,
+    text,
+    options,
+    attempts: 0,
+    notBefore: Date.now(),
+    enqueuedAt: Date.now(),
+  };
+
+  try {
+    await persistMessage(message, PENDING_DIR);
+  } catch (error) {
+    console.error('[TELEGRAM_QUEUE] Failed to persist message', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+
+  totalEnqueued += 1;
+  enqueueInternal(message);
+  if (AUTO_START) {
+    void drainQueue();
+  }
+  return message.id;
+}
+
+export function getQueueStats(): {
+  pending: number;
+  processing: boolean;
+  lastSentAt: number;
+  totals: {
+    enqueued: number;
+    sent: number;
+    retries: number;
+    failed: number;
+  };
+} {
+  return {
+    pending: queue.length,
+    processing,
+    lastSentAt,
+    totals: {
+      enqueued: totalEnqueued,
+      sent: totalSent,
+      retries: totalRetries,
+      failed: totalFailed,
+    },
+  };
 }

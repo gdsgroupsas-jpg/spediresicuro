@@ -1,156 +1,53 @@
 /**
- * Telegram Queue Worker
+ * Telegram Queue Status & Retry Endpoint
  *
- * Background worker che processa la queue di messaggi Telegram.
- * Viene chiamato da Vercel Cron (ogni 30 secondi) o manualmente.
+ * Il sistema di coda Telegram di Dario è AUTO-GESTITO:
+ * - drainQueue() viene chiamato automaticamente su enqueue
+ * - Non serve un worker esterno per processare i messaggi
  *
- * Processo:
- * 1. Dequeue messaggio (rispettando rate limits)
- * 2. Invia via Telegram Bot API
- * 3. Update rate limit counters
- * 4. Retry se fallisce
+ * Questo endpoint serve per:
+ * 1. Monitorare lo stato della queue
+ * 2. Forzare retry dei messaggi falliti
  *
  * Endpoint: GET /api/cron/telegram-queue
- * Cron Schedule: Every minute (* * * * *)
+ * POST per forzare retry dei messaggi falliti
  *
  * Milestone: M5 - Telegram Notifications
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  dequeueMessage,
-  updateRateLimitCounters,
-  requeueMessage,
-  getQueueStats,
-} from '@/lib/services/telegram-queue';
-
-const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
+import { getQueueStats, requeueFailedMessages } from '@/lib/services/telegram-queue';
 
 /**
- * Process messages from the queue
- */
-async function processQueueMessages(): Promise<{
-  processed: number;
-  failed: number;
-  remaining: number;
-}> {
-  let processed = 0;
-  let failed = 0;
-
-  const config = {
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-  };
-
-  if (!config.botToken) {
-    console.error('[TELEGRAM_QUEUE_WORKER] Bot token not configured');
-    return { processed: 0, failed: 0, remaining: 0 };
-  }
-
-  // Process multiple messages in one run (up to 10, respecting rate limits)
-  const MAX_MESSAGES_PER_RUN = 10;
-
-  for (let i = 0; i < MAX_MESSAGES_PER_RUN; i++) {
-    const message = await dequeueMessage();
-
-    if (!message) {
-      // Queue empty or rate limited
-      break;
-    }
-
-    try {
-      // Send message via Telegram Bot API
-      const url = `${TELEGRAM_API_BASE}${config.botToken}/sendMessage`;
-
-      const payload = {
-        chat_id: message.chatId,
-        text: message.text,
-        parse_mode: message.parseMode || 'HTML',
-        disable_notification: message.disableNotification || false,
-        ...(message.replyToMessageId ? { reply_to_message_id: message.replyToMessageId } : {}),
-      };
-
-      console.log('[TELEGRAM_QUEUE_WORKER] Sending message:', {
-        id: message.id,
-        chatId: message.chatId,
-        textPreview: message.text.substring(0, 50),
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        console.error('[TELEGRAM_QUEUE_WORKER] Send failed:', {
-          id: message.id,
-          error: data.description,
-        });
-
-        // Re-queue for retry
-        await requeueMessage(message);
-        failed++;
-      } else {
-        console.log('[TELEGRAM_QUEUE_WORKER] Message sent successfully:', {
-          id: message.id,
-          messageId: data.result?.message_id,
-        });
-
-        // Update rate limit counters
-        await updateRateLimitCounters();
-        processed++;
-      }
-    } catch (error) {
-      console.error('[TELEGRAM_QUEUE_WORKER] Error processing message:', {
-        id: message.id,
-        error: error instanceof Error ? error.message : 'Unknown',
-      });
-
-      // Re-queue for retry
-      await requeueMessage(message);
-      failed++;
-    }
-  }
-
-  // Get remaining queue length
-  const stats = await getQueueStats();
-
-  return {
-    processed,
-    failed,
-    remaining: stats.queueLength,
-  };
-}
-
-/**
- * GET - Process queue (called by Vercel Cron)
+ * GET - Get queue status (monitoring)
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret (optional for status endpoint)
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET_TOKEN;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.warn('[TELEGRAM_QUEUE_WORKER] Unauthorized cron request');
+    console.warn('[TELEGRAM_QUEUE] Unauthorized request');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  console.log('[TELEGRAM_QUEUE_WORKER] Starting queue processing');
-
   try {
-    const result = await processQueueMessages();
-
-    console.log('[TELEGRAM_QUEUE_WORKER] Processing complete:', result);
+    const stats = getQueueStats();
 
     return NextResponse.json({
       success: true,
-      ...result,
+      queue: {
+        pending: stats.pending,
+        processing: stats.processing,
+        lastSentAt: stats.lastSentAt,
+        lastSentAtISO: stats.lastSentAt ? new Date(stats.lastSentAt).toISOString() : null,
+      },
+      totals: stats.totals,
       timestamp: new Date().toISOString(),
+      note: 'Queue is auto-managed. Messages are processed automatically on enqueue.',
     });
   } catch (error) {
-    console.error('[TELEGRAM_QUEUE_WORKER] Worker error:', error);
+    console.error('[TELEGRAM_QUEUE] Stats error:', error);
 
     return NextResponse.json(
       {
@@ -164,22 +61,37 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST - Manual trigger (for testing/debugging)
+ * POST - Retry failed messages
  */
 export async function POST(request: NextRequest) {
-  console.log('[TELEGRAM_QUEUE_WORKER] Manual trigger');
+  // Verify cron secret
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET_TOKEN;
+
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    console.warn('[TELEGRAM_QUEUE] Unauthorized retry request');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  console.log('[TELEGRAM_QUEUE] Manual retry of failed messages');
 
   try {
-    const result = await processQueueMessages();
+    const requeued = await requeueFailedMessages();
+    const stats = getQueueStats();
 
     return NextResponse.json({
       success: true,
-      ...result,
+      requeued,
+      queue: {
+        pending: stats.pending,
+        processing: stats.processing,
+      },
+      totals: stats.totals,
       timestamp: new Date().toISOString(),
       trigger: 'manual',
     });
   } catch (error) {
-    console.error('[TELEGRAM_QUEUE_WORKER] Manual trigger error:', error);
+    console.error('[TELEGRAM_QUEUE] Retry error:', error);
 
     return NextResponse.json(
       {
