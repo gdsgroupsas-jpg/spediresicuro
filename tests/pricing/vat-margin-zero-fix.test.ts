@@ -148,14 +148,14 @@ describe('VAT Margin Zero Fix', () => {
       expect(result?.vatRate).toBe(22.0);
 
       // Nota: Quando isManuallyModified = false (prezzi equivalenti), viene applicato
-      // margine default globale (20%) per garantire consistenza nel comparatore.
+      // margine default globale (0% - personalizzabile per utente).
       // totalCostExclVAT = 122 / 1.22 = 100€
       // supplierTotalCostExclVAT = 100€ (già esclusa)
-      // margin = 100 * 20% = 20€ (margine default globale)
-      const expectedMargin = 100 * 0.2; // 20% default margin
+      // margin = 100 * 0% = 0€ (margine default 0)
+      const expectedMargin = 100 * 0; // 0% default margin (customizable)
       expect(result?.margin).toBeCloseTo(expectedMargin, 2);
-      // finalPrice = (100 + 20) * 1.22 = 146.40€ (con IVA inclusa)
-      expect(result?.finalPrice).toBeCloseTo(146.4, 2);
+      // finalPrice = (100 + 0) * 1.22 = 122€ (con IVA inclusa)
+      expect(result?.finalPrice).toBeCloseTo(122, 2);
     });
   });
 
@@ -262,14 +262,14 @@ describe('VAT Margin Zero Fix', () => {
       expect(result?.vatRate).toBe(22.0);
 
       // Nota: Quando isManuallyModified = false (prezzi equivalenti), viene applicato
-      // margine default globale (20%) per garantire consistenza nel comparatore.
+      // margine default globale (0% - personalizzabile per utente).
       // totalCostExclVAT = 100€ (già esclusa)
       // supplierTotalCostExclVAT = 122 / 1.22 = 100€
-      // margin = 100 * 20% = 20€ (margine default globale)
-      const expectedMargin = 100 * 0.2; // 20% default margin
+      // margin = 100 * 0% = 0€ (margine default 0)
+      const expectedMargin = 100 * 0; // 0% default margin (customizable)
       expect(result?.margin).toBeCloseTo(expectedMargin, 2);
-      // finalPrice = 100 + 20 = 120€ (con IVA esclusa)
-      expect(result?.finalPrice).toBeCloseTo(120, 2);
+      // finalPrice = 100 + 0 = 100€ (con IVA esclusa)
+      expect(result?.finalPrice).toBeCloseTo(100, 2);
     });
   });
 
@@ -484,13 +484,13 @@ describe('VAT Margin Zero Fix', () => {
       expect(result?.vatMode).toBe('excluded');
 
       // Nota: Quando isManuallyModified = false (prezzi identici), viene applicato
-      // margine default globale (20%) per garantire consistenza nel comparatore.
+      // margine default globale (0% - personalizzabile per utente).
       // totalCostExclVAT = 100€
       // supplierTotalCostExclVAT = 100€
-      // margin = 100 * 20% = 20€ (margine default globale)
-      const expectedMargin = 100 * 0.2; // 20% default margin
+      // margin = 100 * 0% = 0€ (margine default 0)
+      const expectedMargin = 100 * 0; // 0% default margin (customizable)
       expect(result?.margin).toBeCloseTo(expectedMargin, 2);
-      expect(result?.finalPrice).toBeCloseTo(120, 2); // 100 + 20 = 120€
+      expect(result?.finalPrice).toBeCloseTo(100, 2); // 100 + 0 = 100€
     });
   });
 });
