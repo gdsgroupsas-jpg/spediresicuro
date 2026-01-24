@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ActingContext } from '@/lib/safe-auth';
 import type { CreateShipmentInput } from '@/lib/validations/shipment';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
-import { getPlatformFeeSafe, DEFAULT_PLATFORM_FEE } from '@/lib/services/pricing/platform-fee';
+import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
 // Sprint 1: Financial Tracking
 import {
   recordPlatformCost,
@@ -89,9 +89,41 @@ function buildIdempotencyKey(validated: CreateShipmentInput, targetId: string) {
 
 /**
  * Core business logic per creazione spedizione.
- * Pensata per essere ri-usata da:
- * - API Route (`app/api/shipments/create/route.ts`)
+ *
+ * ## Single Source of Truth
+ * Questa funzione è l'unica implementazione della logica di creazione spedizione.
+ * Tutti i consumer (API routes, test, integrazioni) devono usare questa funzione.
+ *
+ * ## Chiamata da:
+ * - `app/api/shipments/create/route.ts` (API Route - thin wrapper)
  * - Smoke test scripts (con courier mock + failure injection)
+ *
+ * ## Flusso:
+ * 1. Genera idempotency key (hash di recipient + packages)
+ * 2. Acquisisce lock idempotency (crash-safe)
+ * 3. Verifica credito wallet (pre-check)
+ * 4. Debita wallet (con idempotency)
+ * 5. Chiama API corriere
+ * 6. Inserisce shipment in DB
+ * 7. Registra costo piattaforma (financial tracking)
+ * 8. Aggiusta wallet (diff stima vs reale)
+ * 9. Completa lock idempotency
+ *
+ * ## Invariante "No Credit, No Label"
+ * Se il wallet non ha credito sufficiente, la spedizione NON viene creata.
+ *
+ * @param params.context - Contesto autenticazione (actor + target per impersonation)
+ * @param params.validated - Dati spedizione validati (Zod schema)
+ * @param params.deps - Dipendenze iniettabili (supabaseAdmin, getCourierClient)
+ * @returns {status: number, json: any} - Risposta HTTP-like
+ *
+ * @example
+ * const result = await createShipmentCore({
+ *   context: await requireSafeAuth(),
+ *   validated: createShipmentSchema.parse(body),
+ *   deps: { supabaseAdmin, getCourierClient: async (v) => CourierFactory.getClient(...) }
+ * });
+ * return Response.json(result.json, { status: result.status });
  */
 export async function createShipmentCore(params: {
   context: ActingContext;
@@ -221,17 +253,31 @@ export async function createShipmentCore(params: {
   }
 
   // ============================================
-  // STIMA COSTO (buffer 20%) + PLATFORM FEE (Sprint 2.7)
+  // STIMA COSTO (da prezzo quotato o fallback) + PLATFORM FEE
   // ============================================
-  const baseEstimatedCost = 8.5;
-  const courierEstimate = baseEstimatedCost * 1.2;
-
-  // Platform fee dinamica per utente (fail-safe: usa default se errore)
+  // ⚠️ FIX CRITICO: Usa prezzo reale quotato dal frontend invece di hardcoded €8.50
+  // Il prezzo quotato viene dal preventivo (calcolato da listino reale)
+  // Margine sicurezza 10% per gestire eventuali variazioni
   const platformFee = await getPlatformFeeSafe(targetId);
-  const estimatedCost = courierEstimate + platformFee;
+
+  let estimatedCost: number;
+  let estimateSource: 'quoted' | 'fallback';
+
+  if (validated.final_price && validated.final_price > 0) {
+    // ✅ Usa prezzo reale quotato dal frontend (calcolato durante preventivo)
+    estimatedCost = validated.final_price * 1.1; // 10% margine sicurezza
+    estimateSource = 'quoted';
+  } else {
+    // ⚠️ Fallback: stima conservativa per spedizioni senza preventivo
+    // TODO: Calcolare da listino basato su peso/destinazione
+    const fallbackEstimate = 15.0; // Aumentato da €8.50 per sicurezza
+    estimatedCost = (fallbackEstimate + platformFee) * 1.2; // 20% margine
+    estimateSource = 'fallback';
+  }
 
   console.log('💰 [CreateShipment] Cost estimate:', {
-    courierEstimate,
+    source: estimateSource,
+    quotedPrice: validated.final_price,
     platformFee,
     estimatedCost,
     userId: targetId?.substring(0, 8) + '...', // NO PII
@@ -269,7 +315,7 @@ export async function createShipmentCore(params: {
    */
   let walletDebited = false;
   let walletDebitAmount = 0;
-  let walletTransactionId: string | undefined;
+  let _walletTransactionId: string | undefined; // Prefixed: kept for audit trail
 
   if (!isSuperadmin) {
     // P0: Passa idempotency_key a wallet function (standalone idempotent)
@@ -306,7 +352,7 @@ export async function createShipmentCore(params: {
 
     walletDebited = true;
     walletDebitAmount = estimatedCost;
-    walletTransactionId = result?.transaction_id;
+    _walletTransactionId = result?.transaction_id;
   }
 
   // ============================================
@@ -343,7 +389,7 @@ export async function createShipmentCore(params: {
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
             // P0: Refund con idempotency (derivata da shipment idempotency_key)
-            const { data, error } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            const { error } = await supabaseAdmin.rpc('increment_wallet_balance', {
               p_user_id: userId,
               p_amount: amount,
               p_idempotency_key: `${idempotencyKey}-refund`, // P0: Idempotent refund
@@ -548,6 +594,7 @@ export async function createShipmentCore(params: {
     // ============================================
     // Determina api_source e registra costo piattaforma
     // IMPORTANTE: Questo NON deve bloccare la risposta al cliente
+    // ENTERPRISE FIX: Registra SEMPRE il provider cost, non solo per 'platform'
     try {
       const apiSourceResult = await determineApiSource(supabaseAdmin, {
         userId: targetId,
@@ -563,11 +610,35 @@ export async function createShipmentCore(params: {
         apiSourceResult.priceListId
       );
 
-      // Se usa contratti piattaforma, registra il costo
-      if (apiSourceResult.apiSource === 'platform') {
-        // Calcola il costo reale che paghiamo al corriere
-        const serviceType = (validated as any).serviceType || 'standard';
-        const providerCostResult = await calculateProviderCost(supabaseAdmin, {
+      // ENTERPRISE: Calcola e registra il costo fornitore per TUTTE le spedizioni
+      // Questo permette tracking margini accurato per tutti i tipi di utenti
+      const serviceType = (validated as any).serviceType || 'standard';
+
+      // ✨ ENTERPRISE FIX: Se base_price è fornito dal frontend (dal quote), usalo direttamente
+      // Questo garantisce che il costo fornitore sia quello REALE dal listino, non ri-calcolato
+      const providedBasePrice = (validated as any).base_price;
+      let providerCostResult: {
+        cost: number;
+        source: 'api_realtime' | 'master_list' | 'historical_avg' | 'estimate';
+        confidence: 'high' | 'medium' | 'low';
+        details?: string;
+      };
+
+      if (providedBasePrice && providedBasePrice > 0) {
+        // Usa il costo fornitore fornito dal frontend (calcolato durante il quoting)
+        providerCostResult = {
+          cost: providedBasePrice,
+          source: 'master_list', // Il costo viene dal listino, passato via quote
+          confidence: 'high',
+          details: 'Costo fornitore dal listino (calcolato durante preventivo)',
+        };
+        console.log(
+          '💰 [PLATFORM_COST] Usando base_price fornito dal frontend:',
+          providedBasePrice
+        );
+      } else {
+        // Fallback: calcola il costo fornitore (per spedizioni senza quote)
+        providerCostResult = await calculateProviderCost(supabaseAdmin, {
           courierCode: validated.carrier,
           weight: validated.packages[0]?.weight || 1,
           destination: {
@@ -578,30 +649,52 @@ export async function createShipmentCore(params: {
           serviceType,
           masterPriceListId: apiSourceResult.masterPriceListId,
         });
-
-        // Registra il costo piattaforma
-        await recordPlatformCost(supabaseAdmin, {
-          shipmentId: shipment.id,
-          trackingNumber: courierResponse.trackingNumber,
-          billedUserId: targetId,
-          billedAmount: finalCost, // Quanto abbiamo addebitato al cliente
-          providerCost: providerCostResult.cost, // Quanto paghiamo noi
-          apiSource: apiSourceResult.apiSource,
-          courierCode: validated.carrier,
-          serviceType,
-          priceListId: apiSourceResult.priceListId,
-          masterPriceListId: apiSourceResult.masterPriceListId,
-          costSource: providerCostResult.source,
-        });
-
-        console.log('💰 [PLATFORM_COST] Recorded:', {
-          shipmentId: shipment.id,
-          billed: finalCost,
-          providerCost: providerCostResult.cost,
-          margin: finalCost - providerCostResult.cost,
-          source: providerCostResult.source,
-        });
+        console.log(
+          '💰 [PLATFORM_COST] Calcolato provider cost (fallback):',
+          providerCostResult.cost
+        );
       }
+
+      // Registra il costo in platform_provider_costs (per tutte le spedizioni)
+      await recordPlatformCost(supabaseAdmin, {
+        shipmentId: shipment.id,
+        trackingNumber: courierResponse.trackingNumber,
+        billedUserId: targetId,
+        billedAmount: finalCost, // Quanto abbiamo addebitato al cliente
+        providerCost: providerCostResult.cost, // Quanto paghiamo noi
+        apiSource: apiSourceResult.apiSource,
+        courierCode: validated.carrier,
+        serviceType,
+        priceListId: apiSourceResult.priceListId,
+        masterPriceListId: apiSourceResult.masterPriceListId,
+        costSource: providerCostResult.source,
+      });
+
+      // ENTERPRISE: Aggiorna anche base_price sulla spedizione per accesso rapido
+      // Questo evita join con platform_provider_costs per calcoli margine
+      await supabaseAdmin
+        .from('shipments')
+        .update({
+          base_price: providerCostResult.cost,
+          final_price: finalCost,
+        })
+        .eq('id', shipment.id);
+
+      console.log('💰 [PLATFORM_COST] Recorded:', {
+        shipmentId: shipment.id,
+        apiSource: apiSourceResult.apiSource,
+        billed: finalCost,
+        providerCost: providerCostResult.cost,
+        margin: finalCost - providerCostResult.cost,
+        marginPercent:
+          providerCostResult.cost > 0
+            ? Math.round(
+                ((finalCost - providerCostResult.cost) / providerCostResult.cost) * 100 * 100
+              ) / 100
+            : 0,
+        source: providerCostResult.source,
+        confidence: providerCostResult.confidence,
+      });
     } catch (trackingError) {
       // NON bloccare - graceful degradation
       console.error('[PLATFORM_COST] Failed to track (non-blocking):', trackingError);
@@ -627,7 +720,7 @@ export async function createShipmentCore(params: {
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
             // P0: Refund con idempotency (derivata da shipment idempotency_key)
-            const { data, error } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            const { error } = await supabaseAdmin.rpc('increment_wallet_balance', {
               p_user_id: userId,
               p_amount: amount,
               p_idempotency_key: `${idempotencyKey}-refund`, // P0: Idempotent refund
@@ -718,6 +811,22 @@ export async function createShipmentCore(params: {
         carrier: shipment.carrier || validated.carrier,
         cost: shipment.total_cost || shipment.final_price || finalCost,
         label_data: shipment.label_data,
+        sender: {
+          name: shipment.sender_name,
+          address: shipment.sender_address,
+          city: shipment.sender_city,
+          province: shipment.sender_province,
+          postalCode: shipment.sender_zip,
+          country: shipment.sender_country,
+        },
+        recipient: {
+          name: shipment.recipient_name,
+          address: shipment.recipient_address,
+          city: shipment.recipient_city,
+          province: shipment.recipient_province,
+          postalCode: shipment.recipient_zip,
+          country: shipment.recipient_country,
+        },
       },
     },
   };
