@@ -69,22 +69,24 @@ function FinanceControlRoomContent() {
       next_deadline = `${fiscalContext.deadlines[0].date} - ${fiscalContext.deadlines[0].type}`;
     }
 
+    // ✨ FIX: Margine può essere null se dati mancanti
+    const marginValue = fiscalContext.shipmentsSummary.total_margin;
+    const revenueValue = fiscalContext.shipmentsSummary.total_revenue;
+    const marginExcludedCount = fiscalContext.shipmentsSummary.margin_excluded_count || 0;
+
+    // Calcola percentuale margine SOLO se margine è calcolabile
+    const marginPercent =
+      marginValue !== null && revenueValue > 0 ? (marginValue / revenueValue) * 100 : null;
+
     return {
-      revenue: fiscalContext.shipmentsSummary.total_revenue,
-      margin: fiscalContext.shipmentsSummary.total_margin,
-      projection: fiscalContext.shipmentsSummary.total_revenue * 1.1,
-      roi:
-        fiscalContext.shipmentsSummary.total_revenue > 0
-          ? (fiscalContext.shipmentsSummary.total_margin /
-              fiscalContext.shipmentsSummary.total_revenue) *
-            100
-          : 0,
-      marginPercent:
-        fiscalContext.shipmentsSummary.total_revenue > 0
-          ? (fiscalContext.shipmentsSummary.total_margin /
-              fiscalContext.shipmentsSummary.total_revenue) *
-            100
-          : 0,
+      revenue: revenueValue,
+      margin: marginValue, // Può essere null
+      // ✨ RIMOSSO: proiezione finta con * 1.1
+      // La proiezione dovrebbe essere basata su trend reali, non un moltiplicatore arbitrario
+      projection: null,
+      roi: marginPercent, // Può essere null
+      marginPercent, // Può essere null
+      marginExcludedCount, // Spedizioni escluse dal calcolo margine
       tax_risk: 'LOW' as const,
       next_deadline,
     };
@@ -201,7 +203,13 @@ function FinanceControlRoomContent() {
             <div>
               <p className="text-slate-400 text-sm font-medium">MARGINE NETTO (Mese)</p>
               <h2 className="text-3xl font-bold text-white mt-1">
-                € {stats?.margin.toLocaleString('it-IT', { minimumFractionDigits: 2 }) || '0,00'}
+                {stats && stats.margin !== null ? (
+                  `€ ${stats.margin.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`
+                ) : (
+                  <span className="text-slate-500" title="Dati costo fornitore mancanti">
+                    N/A
+                  </span>
+                )}
               </h2>
             </div>
             <div className="bg-green-500/10 p-2 rounded-lg">
@@ -211,23 +219,30 @@ function FinanceControlRoomContent() {
           <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
             <div
               className="bg-gradient-to-r from-green-500 to-emerald-400 h-full transition-all duration-500"
-              style={{ width: `${Math.min((stats?.marginPercent || 0) * 3, 100)}%` }}
+              style={{ width: `${Math.min((stats?.marginPercent ?? 0) * 3, 100)}%` }}
             ></div>
           </div>
           <p className="text-green-400 text-xs mt-3 font-medium flex items-center gap-1">
-            <Zap className="w-3 h-3" /> Margine: {stats?.marginPercent.toFixed(1) || '0.0'}%
+            <Zap className="w-3 h-3" /> Margine:{' '}
+            {stats && stats.marginPercent !== null ? `${stats.marginPercent.toFixed(1)}%` : 'N/A'}
           </p>
+          {(stats?.marginExcludedCount ?? 0) > 0 && (
+            <p className="text-yellow-400 text-xs mt-1">
+              {stats?.marginExcludedCount} spedizioni escluse (dati mancanti)
+            </p>
+          )}
         </div>
 
-        {/* KPI 2: Proiezione */}
+        {/* KPI 2: Proiezione - In Sviluppo */}
         <div className="bg-slate-800/50 backdrop-blur border border-slate-700/50 p-6 rounded-2xl hover:bg-slate-800 transition-colors relative overflow-hidden">
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-bl-full"></div>
           <div className="flex justify-between items-start mb-4">
             <div>
               <p className="text-slate-400 text-sm font-medium">PROIEZIONE CHIUSURA</p>
               <h2 className="text-3xl font-bold text-purple-200 mt-1">
-                €{' '}
-                {stats?.projection.toLocaleString('it-IT', { minimumFractionDigits: 2 }) || '0,00'}
+                <span className="text-slate-500" title="Funzionalità in sviluppo">
+                  Coming Soon
+                </span>
               </h2>
             </div>
             <div className="bg-purple-500/10 p-2 rounded-lg">
@@ -235,8 +250,8 @@ function FinanceControlRoomContent() {
             </div>
           </div>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Basato sul trend attuale, proiezione con un{' '}
-            <span className="text-white font-bold">+10%</span> rispetto al periodo.
+            Le proiezioni saranno basate su trend reali e modelli predittivi. Funzionalità in
+            sviluppo.
           </p>
         </div>
 
@@ -278,27 +293,16 @@ function FinanceControlRoomContent() {
           <RevenueChart fiscalContext={fiscalContext} isLoading={isLoading} />
         </div>
 
-        {/* Fiscal Health */}
+        {/* Fiscal Health - In Sviluppo */}
         <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
           <h3 className="text-lg font-semibold text-white mb-4">Fiscal Health Check</h3>
-          <div className="space-y-4">
-            {[
-              { label: 'Dichiarazione IVA', status: 'Ready', color: 'text-green-400' },
-              { label: 'Plafond Export', status: '82% Utilizzato', color: 'text-yellow-400' },
-              { label: 'Rischio Controlli', status: 'Basso', color: 'text-blue-400' },
-              { label: 'Regime Forfettario', status: 'In Soglia', color: 'text-green-400' },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 bg-slate-700/30 rounded-xl hover:bg-slate-700/50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className={`w-5 h-5 ${item.color}`} />
-                  <span className="text-slate-300 font-medium">{item.label}</span>
-                </div>
-                <span className={`text-sm font-bold ${item.color}`}>{item.status}</span>
-              </div>
-            ))}
+          {/* ✨ RIMOSSO: Array hardcoded con dati finti */}
+          <div className="text-center py-8">
+            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-500 opacity-50" />
+            <p className="text-slate-400 mb-2">Funzionalità in sviluppo</p>
+            <p className="text-slate-500 text-sm">
+              L&apos;analisi fiscale automatizzata sarà disponibile prossimamente.
+            </p>
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-700">
@@ -349,23 +353,30 @@ function FinanceControlRoomContent() {
 
 // Helper function to generate AI insights
 function generateAIInsight(fiscalContext: any): string {
-  const marginPercent =
-    fiscalContext.shipmentsSummary.total_revenue > 0
-      ? (fiscalContext.shipmentsSummary.total_margin /
-          fiscalContext.shipmentsSummary.total_revenue) *
-        100
-      : 0;
+  const totalMargin = fiscalContext.shipmentsSummary.total_margin;
+  const totalRevenue = fiscalContext.shipmentsSummary.total_revenue;
+  const marginExcluded = fiscalContext.shipmentsSummary.margin_excluded_count || 0;
 
   let insight = `Analisi completata. `;
 
-  if (marginPercent > 20) {
-    insight += `Margine eccellente (${marginPercent.toFixed(1)}%). `;
-  } else if (marginPercent > 15) {
-    insight += `Margine buono (${marginPercent.toFixed(1)}%). `;
-  } else if (marginPercent > 10) {
-    insight += `Margine nella media (${marginPercent.toFixed(1)}%). `;
-  } else {
-    insight += `Attenzione: margine basso (${marginPercent.toFixed(1)}%). `;
+  // ✨ FIX: Gestisci margine null
+  if (totalMargin === null) {
+    insight += `Margine non calcolabile (dati costo fornitore mancanti). `;
+    if (marginExcluded > 0) {
+      insight += `${marginExcluded} spedizioni escluse dall'analisi. `;
+    }
+  } else if (totalRevenue > 0) {
+    const marginPercent = (totalMargin / totalRevenue) * 100;
+
+    if (marginPercent > 20) {
+      insight += `Margine eccellente (${marginPercent.toFixed(1)}%). `;
+    } else if (marginPercent > 15) {
+      insight += `Margine buono (${marginPercent.toFixed(1)}%). `;
+    } else if (marginPercent > 10) {
+      insight += `Margine nella media (${marginPercent.toFixed(1)}%). `;
+    } else {
+      insight += `Attenzione: margine basso (${marginPercent.toFixed(1)}%). `;
+    }
   }
 
   if (fiscalContext.pending_cod_count > 0) {

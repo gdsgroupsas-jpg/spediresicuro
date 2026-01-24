@@ -5,13 +5,23 @@
 
 export type UserRole = 'user' | 'admin' | 'reseller' | 'superadmin';
 
+/**
+ * Motivo per cui il margine non e calcolabile
+ * @see lib/financial/margin-calculator.ts
+ */
+export type MarginUnavailableReason =
+  | 'MISSING_COST_DATA'
+  | 'NOT_APPLICABLE_FOR_MODEL'
+  | 'MISSING_FINAL_PRICE';
+
 export interface Shipment {
   id: string;
   created_at: string;
   status: string;
   total_price: number;
-  courier_cost: number;
-  margin: number;
+  courier_cost: number | null; // null se costo non disponibile
+  margin: number | null; // null se non calcolabile
+  margin_reason: MarginUnavailableReason | null; // motivo se margin=null
   cash_on_delivery: boolean | number;
   cod_status: 'pending' | 'collected' | 'paid' | null;
   user_id: string;
@@ -33,8 +43,10 @@ export interface FiscalDeadline {
 
 export interface ShipmentsSummary {
   count: number;
-  total_margin: number;
+  total_margin: number | null; // null se nessuna spedizione con margine calcolabile
   total_revenue: number;
+  margin_calculable_count: number; // spedizioni con margine calcolato
+  margin_excluded_count: number; // spedizioni escluse dal calcolo
 }
 
 export interface WalletInfo {

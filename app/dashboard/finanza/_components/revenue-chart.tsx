@@ -130,7 +130,8 @@ function generateMockData(): ChartDataPoint[] {
 function generateDataFromContext(context: FiscalContext): ChartDataPoint[] {
   const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
   const totalRevenue = context.shipmentsSummary.total_revenue;
-  const totalMargin = context.shipmentsSummary.total_margin;
+  // ✨ FIX: Handle null margin - use 0 as fallback for display
+  const totalMargin = context.shipmentsSummary.total_margin ?? 0;
   const totalCosts = totalRevenue - totalMargin;
 
   // Distribute data across 7 days with realistic variance

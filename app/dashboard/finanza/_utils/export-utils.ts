@@ -48,10 +48,18 @@ export async function exportToPDF(fiscalContext: FiscalContext): Promise<void> {
     ],
     ['Spedizioni:', fiscalContext.shipmentsSummary.count.toString()],
     ['Ricavi Totali:', `€ ${fiscalContext.shipmentsSummary.total_revenue.toFixed(2)}`],
-    ['Margine Netto:', `€ ${fiscalContext.shipmentsSummary.total_margin.toFixed(2)}`],
+    [
+      'Margine Netto:',
+      fiscalContext.shipmentsSummary.total_margin !== null
+        ? `€ ${fiscalContext.shipmentsSummary.total_margin.toFixed(2)}`
+        : 'N/A',
+    ],
     [
       'Margine %:',
-      `${((fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100).toFixed(1)}%`,
+      fiscalContext.shipmentsSummary.total_margin !== null &&
+      fiscalContext.shipmentsSummary.total_revenue > 0
+        ? `${((fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.total_revenue) * 100).toFixed(1)}%`
+        : 'N/A',
     ],
     ['Saldo Wallet:', `€ ${fiscalContext.wallet.balance.toFixed(2)}`],
   ];
@@ -137,14 +145,17 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
     ['Metrica', 'Valore'],
     ['Spedizioni Totali', fiscalContext.shipmentsSummary.count],
     ['Ricavi Totali', fiscalContext.shipmentsSummary.total_revenue],
-    ['Margine Netto', fiscalContext.shipmentsSummary.total_margin],
+    ['Margine Netto', fiscalContext.shipmentsSummary.total_margin ?? 'N/A'],
     [
       'Margine %',
-      (
-        (fiscalContext.shipmentsSummary.total_margin /
-          fiscalContext.shipmentsSummary.total_revenue) *
-        100
-      ).toFixed(2) + '%',
+      fiscalContext.shipmentsSummary.total_margin !== null &&
+      fiscalContext.shipmentsSummary.total_revenue > 0
+        ? (
+            (fiscalContext.shipmentsSummary.total_margin /
+              fiscalContext.shipmentsSummary.total_revenue) *
+            100
+          ).toFixed(2) + '%'
+        : 'N/A',
     ],
     ['Saldo Wallet', fiscalContext.wallet.balance],
     [''],
@@ -191,9 +202,12 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
     ],
     [
       'Margin per Shipment',
-      (fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.count).toFixed(
-        2
-      ),
+      fiscalContext.shipmentsSummary.total_margin !== null &&
+      fiscalContext.shipmentsSummary.count > 0
+        ? (
+            fiscalContext.shipmentsSummary.total_margin / fiscalContext.shipmentsSummary.count
+          ).toFixed(2)
+        : 'N/A',
       'Media',
     ],
     [
