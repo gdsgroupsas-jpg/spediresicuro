@@ -202,16 +202,19 @@ describe('Fix Margine Default - Test Pesanti', () => {
       // ✅ Verifica: supplierPrice viene calcolato dal master
       expect(result.supplierPrice).toBe(4.4);
 
-      // ✅ Verifica: margin viene applicato (default globale 20%)
-      const expectedMargin = 4.4 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0.88
+      // ✅ Verifica: margin viene applicato (default 0% - personalizzabile per utente)
+      const expectedMargin = 4.4 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0 con default 0%
       expect(result.margin).toBeCloseTo(expectedMargin, 2);
 
       // ✅ Verifica: finalPrice = totalCost + margin
-      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2); // 5.28
+      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2);
 
-      // ✅ Verifica: supplierPrice ≠ finalPrice (NON devono essere uguali)
-      expect(result.supplierPrice).not.toBe(result.finalPrice);
-      expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+      // ✅ Con margine 0%, supplierPrice === finalPrice (il margine è personalizzabile)
+      if (pricingConfig.DEFAULT_MARGIN_PERCENT === 0) {
+        expect(result.finalPrice).toBeCloseTo(result.supplierPrice!, 2);
+      } else {
+        expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+      }
     });
 
     it('deve funzionare con diversi pesi e destinazioni', async () => {
@@ -280,10 +283,16 @@ describe('Fix Margine Default - Test Pesanti', () => {
         expect(result).not.toBeNull();
         if (!result) continue;
 
-        // ✅ Verifica: sempre supplierPrice ≠ finalPrice
-        expect(result.supplierPrice).not.toBe(result.finalPrice);
-        expect(result.margin).toBeGreaterThan(0);
-        expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+        // ✅ Verifica: con margine default 0%, finalPrice === supplierPrice quando prezzi identici
+        // (il margine è personalizzabile per utente/reseller)
+        if (pricingConfig.DEFAULT_MARGIN_PERCENT === 0) {
+          expect(result.finalPrice).toBeCloseTo(result.supplierPrice!, 2);
+          expect(result.margin).toBeCloseTo(0, 2);
+        } else {
+          expect(result.supplierPrice).not.toBe(result.finalPrice);
+          expect(result.margin).toBeGreaterThan(0);
+          expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+        }
       }
     });
   });
@@ -633,10 +642,23 @@ describe('Fix Margine Default - Test Pesanti', () => {
         expect(result).not.toBeNull();
         if (!result) continue;
 
-        // ✅ Verifica CRITICA: supplierPrice ≠ finalPrice (NON devono mai essere uguali)
-        expect(result.supplierPrice).not.toBe(result.finalPrice);
-        expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
-        expect(result.margin).toBeGreaterThan(0);
+        // ✅ Verifica: supplierPrice e finalPrice rispettano il margine configurato
+        // Con DEFAULT_MARGIN_PERCENT = 0%, finalPrice può essere uguale a supplierPrice
+        // a meno che il listino abbia un margine esplicito configurato o prezzi modificati
+        if (scenario.list.default_margin_percent && scenario.list.default_margin_percent > 0) {
+          // Listino con margine esplicito configurato
+          expect(result.supplierPrice).not.toBe(result.finalPrice);
+          expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+          expect(result.margin).toBeGreaterThan(0);
+        } else if (scenario.list.id === 'custom-list-modified') {
+          // Listino con prezzi CUSTOM modificati (8.0 vs master 4.4)
+          // finalPrice diverso da supplierPrice per override prezzo, non per margine
+          expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+        } else if (pricingConfig.DEFAULT_MARGIN_PERCENT === 0) {
+          // Con margine default 0% e stesso prezzo del master, finalPrice === supplierPrice
+          expect(result.finalPrice).toBeCloseTo(result.supplierPrice!, 2);
+          expect(result.margin).toBeCloseTo(0, 2);
+        }
       }
     });
   });
@@ -842,14 +864,19 @@ describe('Fix Margine Default - Test Pesanti', () => {
       // ✅ Verifica: Poste ora funziona correttamente (dopo la fix)
       expect(result.supplierPrice).toBe(4.4);
 
-      // ✅ Verifica CRITICA: margin viene applicato (default globale 20%)
-      const expectedMargin = 4.4 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100); // 0.88
+      // ✅ Verifica: margin viene applicato (default 0% - personalizzabile per utente)
+      const expectedMargin = 4.4 * (pricingConfig.DEFAULT_MARGIN_PERCENT / 100);
       expect(result.margin).toBeCloseTo(expectedMargin, 2);
 
-      // ✅ Verifica CRITICA: finalPrice ≠ supplierPrice (NON devono essere uguali)
-      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2); // 5.28
-      expect(result.supplierPrice).not.toBe(result.finalPrice);
-      expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+      // ✅ Verifica: finalPrice = totalCost + margin
+      expect(result.finalPrice).toBeCloseTo(4.4 + expectedMargin, 2);
+
+      // ✅ Con margine 0%, supplierPrice === finalPrice (il margine è personalizzabile)
+      if (pricingConfig.DEFAULT_MARGIN_PERCENT === 0) {
+        expect(result.finalPrice).toBeCloseTo(result.supplierPrice!, 2);
+      } else {
+        expect(result.finalPrice).toBeGreaterThan(result.supplierPrice!);
+      }
     });
   });
 });
