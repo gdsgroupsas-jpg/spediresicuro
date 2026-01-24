@@ -183,10 +183,10 @@ describe('Pricing Engine - Contract Tests', () => {
       expect(Number.isNaN(results[0].finalPrice)).toBe(false);
     });
 
-    it('should apply margin correctly (20% default)', async () => {
+    it('should apply margin correctly (0% default - customizable per user)', async () => {
       const baseCost = 10.0;
-      // DEFAULT_MARGIN_PERCENT is 20% when no listino is configured
-      const expectedMargin = (baseCost * 20) / 100;
+      // DEFAULT_MARGIN_PERCENT is 0% - margin is customizable per reseller/user
+      const expectedMargin = (baseCost * 0) / 100;
       const expectedFinalPrice = baseCost + expectedMargin;
 
       vi.mocked(calculatePrice).mockResolvedValueOnce({
@@ -550,8 +550,8 @@ describe('Pricing Engine - Contract Tests', () => {
 
     it('should calculate finalPrice = totalCost + margin', async () => {
       const totalCost = 10.0;
-      // DEFAULT_MARGIN_PERCENT is 20% when no listino is configured
-      const expectedMargin = (totalCost * 20) / 100;
+      // DEFAULT_MARGIN_PERCENT is 0% - margin is customizable per reseller/user
+      const expectedMargin = (totalCost * 0) / 100;
       const expectedFinalPrice = totalCost + expectedMargin;
 
       vi.mocked(calculatePrice).mockResolvedValueOnce({
