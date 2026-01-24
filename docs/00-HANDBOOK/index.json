@@ -1,0 +1,2337 @@
+﻿{
+  "version": "1.1",
+  "updated": "2026-01-19",
+  "entries": [
+    {
+      "id": "CHANGELOG_md",
+      "title": "CHANGELOG",
+      "path": "CHANGELOG.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs__TEMPLATE_md",
+      "title": "_TEMPLATE",
+      "path": "docs/_TEMPLATE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_DECISION_LOG_md",
+      "title": "DECISION_LOG",
+      "path": "docs/00-HANDBOOK/DECISION_LOG.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_documentation_README_md",
+      "title": "README",
+      "path": "docs/00-HANDBOOK/documentation/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_index_json",
+      "title": "index",
+      "path": "docs/00-HANDBOOK/index.json",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_README_md",
+      "title": "README",
+      "path": "docs/00-HANDBOOK/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_rules_AI_DO_DONT_md",
+      "title": "AI_DO_DONT",
+      "path": "docs/00-HANDBOOK/rules/AI_DO_DONT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_rules_README_md",
+      "title": "README",
+      "path": "docs/00-HANDBOOK/rules/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_rules_spediresicuro_mdc",
+      "title": "spediresicuro",
+      "path": "docs/00-HANDBOOK/rules/spediresicuro.mdc",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_rules_spiega_mdc",
+      "title": "spiega",
+      "path": "docs/00-HANDBOOK/rules/spiega.mdc",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_skills_README_md",
+      "title": "README",
+      "path": "docs/00-HANDBOOK/skills/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_testing_ENV_REQUIREMENTS_md",
+      "title": "ENV_REQUIREMENTS",
+      "path": "docs/00-HANDBOOK/testing/ENV_REQUIREMENTS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_testing_README_md",
+      "title": "README",
+      "path": "docs/00-HANDBOOK/testing/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_testing_TASK_DOC_TEST_MAP_md",
+      "title": "TASK_DOC_TEST_MAP",
+      "path": "docs/00-HANDBOOK/testing/TASK_DOC_TEST_MAP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_workflows_README_md",
+      "title": "README",
+      "path": "docs/00-HANDBOOK/workflows/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_workflows_WORKFLOWS_md",
+      "title": "WORKFLOWS",
+      "path": "docs/00-HANDBOOK/workflows/WORKFLOWS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_AI_FEATURES_TOGGLE_md",
+      "title": "AI_FEATURES_TOGGLE",
+      "path": "docs/11-FEATURES/AI_FEATURES_TOGGLE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_FINANCIAL_TRACKING_md",
+      "title": "FINANCIAL_TRACKING",
+      "path": "docs/11-FEATURES/FINANCIAL_TRACKING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_INVOICE_RECHARGES_md",
+      "title": "INVOICE_RECHARGES",
+      "path": "docs/11-FEATURES/INVOICE_RECHARGES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_PRICE_LISTS_md",
+      "title": "PRICE_LISTS",
+      "path": "docs/11-FEATURES/PRICE_LISTS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_RESELLER_HIERARCHY_md",
+      "title": "RESELLER_HIERARCHY",
+      "path": "docs/11-FEATURES/RESELLER_HIERARCHY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_SHIPMENTS_md",
+      "title": "SHIPMENTS",
+      "path": "docs/11-FEATURES/SHIPMENTS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_WALLET_md",
+      "title": "WALLET",
+      "path": "docs/11-FEATURES/WALLET.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_12_TROUBLESHOOTING_API_ISSUES_md",
+      "title": "API_ISSUES",
+      "path": "docs/12-TROUBLESHOOTING/API_ISSUES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_12_TROUBLESHOOTING_COMMON_ISSUES_md",
+      "title": "COMMON_ISSUES",
+      "path": "docs/12-TROUBLESHOOTING/COMMON_ISSUES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_12_TROUBLESHOOTING_DATABASE_ISSUES_md",
+      "title": "DATABASE_ISSUES",
+      "path": "docs/12-TROUBLESHOOTING/DATABASE_ISSUES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_12_TROUBLESHOOTING_DEBUG_GUIDE_md",
+      "title": "DEBUG_GUIDE",
+      "path": "docs/12-TROUBLESHOOTING/DEBUG_GUIDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_12_TROUBLESHOOTING_PERFORMANCE_ISSUES_md",
+      "title": "PERFORMANCE_ISSUES",
+      "path": "docs/12-TROUBLESHOOTING/PERFORMANCE_ISSUES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_1_GETTING_STARTED_README_md",
+      "title": "README",
+      "path": "docs/1-GETTING-STARTED/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_2_ARCHITECTURE_AI_ORCHESTRATOR_md",
+      "title": "AI_ORCHESTRATOR",
+      "path": "docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_2_ARCHITECTURE_BACKEND_md",
+      "title": "BACKEND",
+      "path": "docs/2-ARCHITECTURE/BACKEND.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_2_ARCHITECTURE_DATABASE_md",
+      "title": "DATABASE",
+      "path": "docs/2-ARCHITECTURE/DATABASE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_2_ARCHITECTURE_FRONTEND_md",
+      "title": "FRONTEND",
+      "path": "docs/2-ARCHITECTURE/FRONTEND.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_2_ARCHITECTURE_OVERVIEW_md",
+      "title": "OVERVIEW",
+      "path": "docs/2-ARCHITECTURE/OVERVIEW.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_3_API_ERROR_CODES_md",
+      "title": "ERROR_CODES",
+      "path": "docs/3-API/ERROR_CODES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_3_API_OVERVIEW_md",
+      "title": "OVERVIEW",
+      "path": "docs/3-API/OVERVIEW.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_3_API_REST_API_md",
+      "title": "REST_API",
+      "path": "docs/3-API/REST_API.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_3_API_SERVER_ACTIONS_md",
+      "title": "SERVER_ACTIONS",
+      "path": "docs/3-API/SERVER_ACTIONS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_3_API_WEBHOOKS_md",
+      "title": "WEBHOOKS",
+      "path": "docs/3-API/WEBHOOKS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_4_UI_COMPONENTS_NAVIGATION_md",
+      "title": "NAVIGATION",
+      "path": "docs/4-UI-COMPONENTS/NAVIGATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_4_UI_COMPONENTS_OVERVIEW_md",
+      "title": "OVERVIEW",
+      "path": "docs/4-UI-COMPONENTS/OVERVIEW.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_5_TESTING_STRATEGY_md",
+      "title": "STRATEGY",
+      "path": "docs/5-TESTING/STRATEGY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_6_DEPLOYMENT_CI_CD_md",
+      "title": "CI_CD",
+      "path": "docs/6-DEPLOYMENT/CI_CD.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_6_DEPLOYMENT_OVERVIEW_md",
+      "title": "OVERVIEW",
+      "path": "docs/6-DEPLOYMENT/OVERVIEW.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_6_DEPLOYMENT_VERCEL_md",
+      "title": "VERCEL",
+      "path": "docs/6-DEPLOYMENT/VERCEL.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_7_OPERATIONS_GRAFANA_SETUP_md",
+      "title": "GRAFANA_SETUP",
+      "path": "docs/7-OPERATIONS/GRAFANA_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_7_OPERATIONS_MONITORING_md",
+      "title": "MONITORING",
+      "path": "docs/7-OPERATIONS/MONITORING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_7_OPERATIONS_UPTIMEROBOT_SETUP_md",
+      "title": "UPTIMEROBOT_SETUP",
+      "path": "docs/7-OPERATIONS/UPTIMEROBOT_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_AUDIT_LOGGING_md",
+      "title": "AUDIT_LOGGING",
+      "path": "docs/8-SECURITY/AUDIT_LOGGING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_AUTHENTICATION_md",
+      "title": "AUTHENTICATION",
+      "path": "docs/8-SECURITY/AUTHENTICATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_AUTHORIZATION_md",
+      "title": "AUTHORIZATION",
+      "path": "docs/8-SECURITY/AUTHORIZATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_DATA_PROTECTION_md",
+      "title": "DATA_PROTECTION",
+      "path": "docs/8-SECURITY/DATA_PROTECTION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_GDPR_md",
+      "title": "GDPR",
+      "path": "docs/8-SECURITY/GDPR.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_OVERVIEW_md",
+      "title": "OVERVIEW",
+      "path": "docs/8-SECURITY/OVERVIEW.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_9_BUSINESS_BUSINESS_MODELS_md",
+      "title": "BUSINESS_MODELS",
+      "path": "docs/9-BUSINESS/BUSINESS_MODELS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_9_BUSINESS_VISION_md",
+      "title": "VISION",
+      "path": "docs/9-BUSINESS/VISION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_AGENT_TESTING_PROMPT_RESELLER_md",
+      "title": "AGENT_TESTING_PROMPT_RESELLER",
+      "path": "docs/AGENT_TESTING_PROMPT_RESELLER.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_AGENT_TESTING_PROMPT_SUPERADMIN_md",
+      "title": "AGENT_TESTING_PROMPT_SUPERADMIN",
+      "path": "docs/AGENT_TESTING_PROMPT_SUPERADMIN.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_AI_AGENT_GUIDE_md",
+      "title": "AI_AGENT_GUIDE",
+      "path": "docs/AI_AGENT_GUIDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_AI_REQUIRED_READING_md",
+      "title": "AI_REQUIRED_READING",
+      "path": "docs/AI_REQUIRED_READING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ALERTS_SETUP_md",
+      "title": "ALERTS_SETUP",
+      "path": "docs/ALERTS_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ANALISI_CALCOLO_PREZZI_ANNE_md",
+      "title": "ANALISI_CALCOLO_PREZZI_ANNE",
+      "path": "docs/ANALISI_CALCOLO_PREZZI_ANNE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ANALISI_FASE0_AUDIT_md",
+      "title": "ANALISI_FASE0_AUDIT",
+      "path": "docs/ANALISI_FASE0_AUDIT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ANALISI_PROBLEMA_4_4_COMPARATORE_md",
+      "title": "ANALISI_PROBLEMA_4_4_COMPARATORE",
+      "path": "docs/ANALISI_PROBLEMA_4_4_COMPARATORE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ANALISI_STRUTTURA_LISTINI_FORNITORE_md",
+      "title": "ANALISI_STRUTTURA_LISTINI_FORNITORE",
+      "path": "docs/ANALISI_STRUTTURA_LISTINI_FORNITORE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ANALISI_VINCOLO_UNICITA_CARRIER_CODE_md",
+      "title": "ANALISI_VINCOLO_UNICITA_CARRIER_CODE",
+      "path": "docs/ANALISI_VINCOLO_UNICITA_CARRIER_CODE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ANNE_PRICE_LIST_CAPABILITIES_md",
+      "title": "ANNE_PRICE_LIST_CAPABILITIES",
+      "path": "docs/ANNE_PRICE_LIST_CAPABILITIES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_API_VERSIONING_md",
+      "title": "API_VERSIONING",
+      "path": "docs/API_VERSIONING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_debug_DEBUG_ANNE_LOCALE_md",
+      "title": "DEBUG_ANNE_LOCALE",
+      "path": "docs/archive/debug/DEBUG_ANNE_LOCALE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_debug_DEBUG_CHIAMATA_API_md",
+      "title": "DEBUG_CHIAMATA_API",
+      "path": "docs/archive/debug/DEBUG_CHIAMATA_API.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_debug_DEBUG_DATI_CLIENTE_md",
+      "title": "DEBUG_DATI_CLIENTE",
+      "path": "docs/archive/debug/DEBUG_DATI_CLIENTE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_debug_DEBUG_REDIRECT_LOGIN_md",
+      "title": "DEBUG_REDIRECT_LOGIN",
+      "path": "docs/archive/debug/DEBUG_REDIRECT_LOGIN.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_CHIAMATA_API_SPEDISCIONLINE_md",
+      "title": "FIX_CHIAMATA_API_SPEDISCIONLINE",
+      "path": "docs/archive/fixes/FIX_CHIAMATA_API_SPEDISCIONLINE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_DATI_CLIENTE_SUPABASE_md",
+      "title": "FIX_DATI_CLIENTE_SUPABASE",
+      "path": "docs/archive/fixes/FIX_DATI_CLIENTE_SUPABASE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_EROFS_VERCEL_md",
+      "title": "FIX_EROFS_VERCEL",
+      "path": "docs/archive/fixes/FIX_EROFS_VERCEL.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_ERROR_CONFIGURATION_md",
+      "title": "FIX_ERROR_CONFIGURATION",
+      "path": "docs/archive/fixes/FIX_ERROR_CONFIGURATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_ERRORE_GEO_LOCATIONS_md",
+      "title": "FIX_ERRORE_GEO_LOCATIONS",
+      "path": "docs/archive/fixes/FIX_ERRORE_GEO_LOCATIONS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_ERRORE_INTERNO_ANNE_md",
+      "title": "FIX_ERRORE_INTERNO_ANNE",
+      "path": "docs/archive/fixes/FIX_ERRORE_INTERNO_ANNE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_LOGIN_REMOTO_md",
+      "title": "FIX_LOGIN_REMOTO",
+      "path": "docs/archive/fixes/FIX_LOGIN_REMOTO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_MOBILE_LOGIN_md",
+      "title": "FIX_MOBILE_LOGIN",
+      "path": "docs/archive/fixes/FIX_MOBILE_LOGIN.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_FIX_PROBLEMI_LOCALE_md",
+      "title": "FIX_PROBLEMI_LOCALE",
+      "path": "docs/archive/fixes/FIX_PROBLEMI_LOCALE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_P0_FIXES_APPLIED_md",
+      "title": "P0_FIXES_APPLIED",
+      "path": "docs/archive/fixes/P0_FIXES_APPLIED.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_PIANO_FIX_CODICE_CONTRATTO_md",
+      "title": "PIANO_FIX_CODICE_CONTRATTO",
+      "path": "docs/archive/fixes/PIANO_FIX_CODICE_CONTRATTO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_fixes_SECURITY_FIXES_COMPLETE_md",
+      "title": "SECURITY_FIXES_COMPLETE",
+      "path": "docs/archive/fixes/SECURITY_FIXES_COMPLETE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_README_md",
+      "title": "README",
+      "path": "docs/archive/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_riepiloghi_ANALISI_MODIFICHE_CLAUDE_md",
+      "title": "ANALISI_MODIFICHE_CLAUDE",
+      "path": "docs/archive/riepiloghi/ANALISI_MODIFICHE_CLAUDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_riepiloghi_CORREZIONE_CONFIGURAZIONE_md",
+      "title": "CORREZIONE_CONFIGURAZIONE",
+      "path": "docs/archive/riepiloghi/CORREZIONE_CONFIGURAZIONE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_riepiloghi_LOGIN_FUNZIONANTE_md",
+      "title": "LOGIN_FUNZIONANTE",
+      "path": "docs/archive/riepiloghi/LOGIN_FUNZIONANTE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_riepiloghi_RIEPILOGO_MODIFICHE_CLAUDE_md",
+      "title": "RIEPILOGO_MODIFICHE_CLAUDE",
+      "path": "docs/archive/riepiloghi/RIEPILOGO_MODIFICHE_CLAUDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_riepiloghi_RIEPILOGO_SCRIPT_SUPABASE_md",
+      "title": "RIEPILOGO_SCRIPT_SUPABASE",
+      "path": "docs/archive/riepiloghi/RIEPILOGO_SCRIPT_SUPABASE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_riepiloghi_SOLUZIONE_RISPOSTA_VUOTA_md",
+      "title": "SOLUZIONE_RISPOSTA_VUOTA",
+      "path": "docs/archive/riepiloghi/SOLUZIONE_RISPOSTA_VUOTA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_ADMIN_BONIFICI_RIEPILOGO_md",
+      "title": "ADMIN_BONIFICI_RIEPILOGO",
+      "path": "docs/archive/root/ADMIN_BONIFICI_RIEPILOGO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_ANALISI_CODICE_OPZIONE4_md",
+      "title": "ANALISI_CODICE_OPZIONE4",
+      "path": "docs/archive/root/ANALISI_CODICE_OPZIONE4.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_ANALISI_RISCHI_WALLET_md",
+      "title": "ANALISI_RISCHI_WALLET",
+      "path": "docs/archive/root/ANALISI_RISCHI_WALLET.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_ARCHITECTURE_md",
+      "title": "ARCHITECTURE",
+      "path": "docs/archive/root/ARCHITECTURE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_BUSINESS_ANALYSIS_md",
+      "title": "BUSINESS_ANALYSIS",
+      "path": "docs/archive/root/BUSINESS_ANALYSIS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_CHECKLIST_ENV_LOCALE_md",
+      "title": "CHECKLIST_ENV_LOCALE",
+      "path": "docs/archive/root/CHECKLIST_ENV_LOCALE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_CONFRONTO_VERCEL_VS_LOCALE_md",
+      "title": "CONFRONTO_VERCEL_VS_LOCALE",
+      "path": "docs/archive/root/CONFRONTO_VERCEL_VS_LOCALE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_DEPLOY_ANNE_PROMO_md",
+      "title": "DEPLOY_ANNE_PROMO",
+      "path": "docs/archive/root/DEPLOY_ANNE_PROMO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_DIAGNOSTICA_POSTE_RISULTATI_md",
+      "title": "DIAGNOSTICA_POSTE_RISULTATI",
+      "path": "docs/archive/root/DIAGNOSTICA_POSTE_RISULTATI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_DIAGNOSTICA_POSTE_STEP2_md",
+      "title": "DIAGNOSTICA_POSTE_STEP2",
+      "path": "docs/archive/root/DIAGNOSTICA_POSTE_STEP2.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_DOCUMENTAZIONE_COMPLETA_PROGETTO_md",
+      "title": "DOCUMENTAZIONE_COMPLETA_PROGETTO",
+      "path": "docs/archive/root/DOCUMENTAZIONE_COMPLETA_PROGETTO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_FIX_WALLET_SECURITY_RIEPILOGO_md",
+      "title": "FIX_WALLET_SECURITY_RIEPILOGO",
+      "path": "docs/archive/root/FIX_WALLET_SECURITY_RIEPILOGO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_GUIDA_RAPIDA_VERCEL_md",
+      "title": "GUIDA_RAPIDA_VERCEL",
+      "path": "docs/archive/root/GUIDA_RAPIDA_VERCEL.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_INVENTARIO_SISTEMA_FINANZIARIO_md",
+      "title": "INVENTARIO_SISTEMA_FINANZIARIO",
+      "path": "docs/archive/root/INVENTARIO_SISTEMA_FINANZIARIO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_ISTRUZIONI_DEPLOY_URGENTE_md",
+      "title": "ISTRUZIONI_DEPLOY_URGENTE",
+      "path": "docs/archive/root/ISTRUZIONI_DEPLOY_URGENTE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_MANUALE_UTENTE_BONIFICI_md",
+      "title": "MANUALE_UTENTE_BONIFICI",
+      "path": "docs/archive/root/MANUALE_UTENTE_BONIFICI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_PR_INSTRUCTIONS_md",
+      "title": "PR_INSTRUCTIONS",
+      "path": "docs/archive/root/PR_INSTRUCTIONS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_PR_INSTRUCTIONS_OPZIONE4_md",
+      "title": "PR_INSTRUCTIONS_OPZIONE4",
+      "path": "docs/archive/root/PR_INSTRUCTIONS_OPZIONE4.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_RECAP_EXECUTIVE_SUMMARY_md",
+      "title": "RECAP_EXECUTIVE_SUMMARY",
+      "path": "docs/archive/root/RECAP_EXECUTIVE_SUMMARY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_RECAP_PROGETTO_COMPLETO_md",
+      "title": "RECAP_PROGETTO_COMPLETO",
+      "path": "docs/archive/root/RECAP_PROGETTO_COMPLETO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_RIEPILOGO_COMMIT_PUSH_md",
+      "title": "RIEPILOGO_COMMIT_PUSH",
+      "path": "docs/archive/root/RIEPILOGO_COMMIT_PUSH.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_RIEPILOGO_FIX_APPROVE_TOPUP_md",
+      "title": "RIEPILOGO_FIX_APPROVE_TOPUP",
+      "path": "docs/archive/root/RIEPILOGO_FIX_APPROVE_TOPUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_RIEPILOGO_FIX_REPOSITORY_md",
+      "title": "RIEPILOGO_FIX_REPOSITORY",
+      "path": "docs/archive/root/RIEPILOGO_FIX_REPOSITORY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_RIEPILOGO_MODIFICHE_SESSIONE_md",
+      "title": "RIEPILOGO_MODIFICHE_SESSIONE",
+      "path": "docs/archive/root/RIEPILOGO_MODIFICHE_SESSIONE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_SECURITY_md",
+      "title": "SECURITY",
+      "path": "docs/archive/root/SECURITY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_TEST_POSTE_API_md",
+      "title": "TEST_POSTE_API",
+      "path": "docs/archive/root/TEST_POSTE_API.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_TODO_SPRINT_1_FINANCIAL_TRACKING_md",
+      "title": "TODO_SPRINT_1_FINANCIAL_TRACKING",
+      "path": "docs/archive/root/TODO_SPRINT_1_FINANCIAL_TRACKING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_TOPUPS_ADMIN_FALLBACK_AUTH_md",
+      "title": "TOPUPS_ADMIN_FALLBACK_AUTH",
+      "path": "docs/archive/root/TOPUPS_ADMIN_FALLBACK_AUTH.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_root_VISION_BUSINESS_md",
+      "title": "VISION_BUSINESS",
+      "path": "docs/archive/root/VISION_BUSINESS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_COS_E_GIT_PAGER_md",
+      "title": "COS_E_GIT_PAGER",
+      "path": "docs/archive/setup-temporanei/COS_E_GIT_PAGER.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_CREATE_TEST_USER_md",
+      "title": "CREATE_TEST_USER",
+      "path": "docs/archive/setup-temporanei/CREATE_TEST_USER.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_dashboard_redesign_md",
+      "title": "dashboard-redesign",
+      "path": "docs/archive/setup-temporanei/dashboard-redesign.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_IMPORTA_UTENTI_DEMO_md",
+      "title": "IMPORTA_UTENTI_DEMO",
+      "path": "docs/archive/setup-temporanei/IMPORTA_UTENTI_DEMO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_RICREA_TABELLA_USERS_md",
+      "title": "RICREA_TABELLA_USERS",
+      "path": "docs/archive/setup-temporanei/RICREA_TABELLA_USERS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_RICREA_UTENTI_DEMO_md",
+      "title": "RICREA_UTENTI_DEMO",
+      "path": "docs/archive/setup-temporanei/RICREA_UTENTI_DEMO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_SECURITY_CREDENTIALS_md",
+      "title": "SECURITY_CREDENTIALS",
+      "path": "docs/archive/setup-temporanei/SECURITY_CREDENTIALS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_TEST_SUITE_COMPLETA_md",
+      "title": "TEST_SUITE_COMPLETA",
+      "path": "docs/archive/setup-temporanei/TEST_SUITE_COMPLETA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_setup_temporanei_VERCEL_GOOGLE_OAUTH_SETUP_md",
+      "title": "VERCEL_GOOGLE_OAUTH_SETUP",
+      "path": "docs/archive/setup-temporanei/VERCEL_GOOGLE_OAUTH_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_TEST_FASE1_CHECKLIST_md",
+      "title": "TEST_FASE1_CHECKLIST",
+      "path": "docs/archive/verifications/TEST_FASE1_CHECKLIST.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_TEST_LOCALE_COURIER_CONFIGS_md",
+      "title": "TEST_LOCALE_COURIER_CONFIGS",
+      "path": "docs/archive/verifications/TEST_LOCALE_COURIER_CONFIGS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_VERIFICA_CONFIGURAZIONE_COMPLETA_md",
+      "title": "VERIFICA_CONFIGURAZIONE_COMPLETA",
+      "path": "docs/archive/verifications/VERIFICA_CONFIGURAZIONE_COMPLETA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_VERIFICA_ENV_LOCALE_md",
+      "title": "VERIFICA_ENV_LOCALE",
+      "path": "docs/archive/verifications/VERIFICA_ENV_LOCALE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_VERIFICA_ERRORI_VERCEL_md",
+      "title": "VERIFICA_ERRORI_VERCEL",
+      "path": "docs/archive/verifications/VERIFICA_ERRORI_VERCEL.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_VERIFICA_SCHEMA_USERS_md",
+      "title": "VERIFICA_SCHEMA_USERS",
+      "path": "docs/archive/verifications/VERIFICA_SCHEMA_USERS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_archive_verifications_VERIFICA_UTENTI_SUPABASE_md",
+      "title": "VERIFICA_UTENTI_SUPABASE",
+      "path": "docs/archive/verifications/VERIFICA_UTENTI_SUPABASE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_AUTOMATION_LOCK_SYSTEM_md",
+      "title": "AUTOMATION_LOCK_SYSTEM",
+      "path": "docs/AUTOMATION_LOCK_SYSTEM.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_AUTOMATION_SPEDISCI_ONLINE_md",
+      "title": "AUTOMATION_SPEDISCI_ONLINE",
+      "path": "docs/AUTOMATION_SPEDISCI_ONLINE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CAPABILITY_SYSTEM_USAGE_md",
+      "title": "CAPABILITY_SYSTEM_USAGE",
+      "path": "docs/CAPABILITY_SYSTEM_USAGE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CHECK_MIGRATIONS_GUIDA_md",
+      "title": "CHECK_MIGRATIONS_GUIDA",
+      "path": "docs/CHECK_MIGRATIONS_GUIDA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CHECK_MIGRATIONS_GUIDA_V2_md",
+      "title": "CHECK_MIGRATIONS_GUIDA_V2",
+      "path": "docs/CHECK_MIGRATIONS_GUIDA_V2.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CHECKLIST_INTEGRAZIONE_MANUALE_IN_APP_md",
+      "title": "CHECKLIST_INTEGRAZIONE_MANUALE_IN_APP",
+      "path": "docs/CHECKLIST_INTEGRAZIONE_MANUALE_IN_APP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CI_AND_TELEMETRY_md",
+      "title": "CI_AND_TELEMETRY",
+      "path": "docs/CI_AND_TELEMETRY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_COME_METTERE_IN_PRODUCTION_md",
+      "title": "COME_METTERE_IN_PRODUCTION",
+      "path": "docs/COME_METTERE_IN_PRODUCTION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_COME_PROTEGGO_I_MIEI_DATI_md",
+      "title": "COME_PROTEGGO_I_MIEI_DATI",
+      "path": "docs/COME_PROTEGGO_I_MIEI_DATI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_COMPENSATION_QUEUE_ALERTING_md",
+      "title": "COMPENSATION_QUEUE_ALERTING",
+      "path": "docs/COMPENSATION_QUEUE_ALERTING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CONFIGURAZIONE_ENCRYPTION_KEY_md",
+      "title": "CONFIGURAZIONE_ENCRYPTION_KEY",
+      "path": "docs/CONFIGURAZIONE_ENCRYPTION_KEY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_COURIER_CONFIGS_SYSTEM_md",
+      "title": "COURIER_CONFIGS_SYSTEM",
+      "path": "docs/COURIER_CONFIGS_SYSTEM.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CSP_SECURITY_POLICY_md",
+      "title": "CSP_SECURITY_POLICY",
+      "path": "docs/CSP_SECURITY_POLICY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_GLM_CHECKLIST_md",
+      "title": "CURSOR_GLM_CHECKLIST",
+      "path": "docs/CURSOR_GLM_CHECKLIST.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_GLM_MODEL_NAME_FIX_md",
+      "title": "CURSOR_GLM_MODEL_NAME_FIX",
+      "path": "docs/CURSOR_GLM_MODEL_NAME_FIX.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_GLM_SETUP_md",
+      "title": "CURSOR_GLM_SETUP",
+      "path": "docs/CURSOR_GLM_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_GLM_TROUBLESHOOTING_md",
+      "title": "CURSOR_GLM_TROUBLESHOOTING",
+      "path": "docs/CURSOR_GLM_TROUBLESHOOTING.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_MCP_SETUP_COMPLETATO_md",
+      "title": "CURSOR_MCP_SETUP_COMPLETATO",
+      "path": "docs/CURSOR_MCP_SETUP_COMPLETATO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_MCP_VISION_SETUP_md",
+      "title": "CURSOR_MCP_VISION_SETUP",
+      "path": "docs/CURSOR_MCP_VISION_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_CURSOR_ZAI_CONFIGURAZIONE_COMPLETA_md",
+      "title": "CURSOR_ZAI_CONFIGURAZIONE_COMPLETA",
+      "path": "docs/CURSOR_ZAI_CONFIGURAZIONE_COMPLETA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DB_SCHEMA_md",
+      "title": "DB_SCHEMA",
+      "path": "docs/DB_SCHEMA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DEPLOYMENT_COMPLETE_REPORT_md",
+      "title": "DEPLOYMENT_COMPLETE_REPORT",
+      "path": "docs/DEPLOYMENT_COMPLETE_REPORT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DESIGN_COURIER_SELECTION_ENTERPRISE_GAPS_md",
+      "title": "DESIGN_COURIER_SELECTION_ENTERPRISE_GAPS",
+      "path": "docs/DESIGN_COURIER_SELECTION_ENTERPRISE_GAPS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DESIGN_COURIER_SELECTION_REALTIME_md",
+      "title": "DESIGN_COURIER_SELECTION_REALTIME",
+      "path": "docs/DESIGN_COURIER_SELECTION_REALTIME.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DEVELOPMENT_PLAN_FASE3_md",
+      "title": "DEVELOPMENT_PLAN_FASE3",
+      "path": "docs/DEVELOPMENT_PLAN_FASE3.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DEVELOPMENT_PLAN_FASE4_md",
+      "title": "DEVELOPMENT_PLAN_FASE4",
+      "path": "docs/DEVELOPMENT_PLAN_FASE4.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DIAGNOSTIC_SHIPMENT_CREATION_FAILURE_md",
+      "title": "DIAGNOSTIC_SHIPMENT_CREATION_FAILURE",
+      "path": "docs/DIAGNOSTIC_SHIPMENT_CREATION_FAILURE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DOCS_CHANGELOG_md",
+      "title": "DOCS_CHANGELOG",
+      "path": "docs/DOCS_CHANGELOG.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DOCUMENTATION_ALIGNMENT_REPORT_md",
+      "title": "DOCUMENTATION_ALIGNMENT_REPORT",
+      "path": "docs/DOCUMENTATION_ALIGNMENT_REPORT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DOCUMENTATION_COMPLETE_md",
+      "title": "DOCUMENTATION_COMPLETE",
+      "path": "docs/DOCUMENTATION_COMPLETE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_DOCUMENTATION_FINAL_STATUS_md",
+      "title": "DOCUMENTATION_FINAL_STATUS",
+      "path": "docs/DOCUMENTATION_FINAL_STATUS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_E2E_TEST_COMPLETED_md",
+      "title": "E2E_TEST_COMPLETED",
+      "path": "docs/E2E_TEST_COMPLETED.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FASE4_COMPLETE_REPORT_md",
+      "title": "FASE4_COMPLETE_REPORT",
+      "path": "docs/FASE4_COMPLETE_REPORT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FASE4_POST_DEPLOY_CHECKLIST_md",
+      "title": "FASE4_POST_DEPLOY_CHECKLIST",
+      "path": "docs/FASE4_POST_DEPLOY_CHECKLIST.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FIX_MARGINE_DEFAULT_COMPARATORE_md",
+      "title": "FIX_MARGINE_DEFAULT_COMPARATORE",
+      "path": "docs/FIX_MARGINE_DEFAULT_COMPARATORE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FIX_PLAN_TEMPLATE_md",
+      "title": "FIX_PLAN_TEMPLATE",
+      "path": "docs/FIX_PLAN_TEMPLATE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FIX_PRIORITA_LISTINI_CUSTOM_md",
+      "title": "FIX_PRIORITA_LISTINI_CUSTOM",
+      "path": "docs/FIX_PRIORITA_LISTINI_CUSTOM.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FIX_SHIPMENT_CREATION_STEPS_md",
+      "title": "FIX_SHIPMENT_CREATION_STEPS",
+      "path": "docs/FIX_SHIPMENT_CREATION_STEPS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FIX_SPEDISCI_ONLINE_401_md",
+      "title": "FIX_SPEDISCI_ONLINE_401",
+      "path": "docs/FIX_SPEDISCI_ONLINE_401.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_FLUSSO_CREAZIONE_RESELLER_md",
+      "title": "FLUSSO_CREAZIONE_RESELLER",
+      "path": "docs/FLUSSO_CREAZIONE_RESELLER.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_GDPR_IMPLEMENTATION_md",
+      "title": "GDPR_IMPLEMENTATION",
+      "path": "docs/GDPR_IMPLEMENTATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_GDPR_OCR_DPA_md",
+      "title": "GDPR_OCR_DPA",
+      "path": "docs/GDPR_OCR_DPA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_GEO_AUTOCOMPLETE_SETUP_md",
+      "title": "GEO_AUTOCOMPLETE_SETUP",
+      "path": "docs/GEO_AUTOCOMPLETE_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_GUIDA_ANTI_DUPLICATI_md",
+      "title": "GUIDA_ANTI_DUPLICATI",
+      "path": "docs/GUIDA_ANTI_DUPLICATI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_GUIDA_REGISTRAZIONE_POSTE_md",
+      "title": "GUIDA_REGISTRAZIONE_POSTE",
+      "path": "docs/GUIDA_REGISTRAZIONE_POSTE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_INTEGRATION_HUB_COMPLETE_md",
+      "title": "INTEGRATION_HUB_COMPLETE",
+      "path": "docs/INTEGRATION_HUB_COMPLETE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_INTEGRATION_HUB_IMPLEMENTATION_md",
+      "title": "INTEGRATION_HUB_IMPLEMENTATION",
+      "path": "docs/INTEGRATION_HUB_IMPLEMENTATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_INTEGRATION_HUB_QUICK_START_md",
+      "title": "INTEGRATION_HUB_QUICK_START",
+      "path": "docs/INTEGRATION_HUB_QUICK_START.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_INTEGRATION_HUB_REFACTOR_md",
+      "title": "INTEGRATION_HUB_REFACTOR",
+      "path": "docs/INTEGRATION_HUB_REFACTOR.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_INVESTIGAZIONE_DUPLICATI_CORRIERI_md",
+      "title": "INVESTIGAZIONE_DUPLICATI_CORRIERI",
+      "path": "docs/INVESTIGAZIONE_DUPLICATI_CORRIERI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_LOGICA_PREVENTIVATORE_LISTINI_PERSONALIZZATI_md",
+      "title": "LOGICA_PREVENTIVATORE_LISTINI_PERSONALIZZATI",
+      "path": "docs/LOGICA_PREVENTIVATORE_LISTINI_PERSONALIZZATI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MANUALE_UTENTE_COMPLETO_md",
+      "title": "MANUALE_UTENTE_COMPLETO",
+      "path": "docs/MANUALE_UTENTE_COMPLETO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MANUALE_UTENTE_DOC_MAP_md",
+      "title": "MANUALE_UTENTE_DOC_MAP",
+      "path": "docs/MANUALE_UTENTE_DOC_MAP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MANUALE_UTENTE_RESELLER_V1_md",
+      "title": "MANUALE_UTENTE_RESELLER_V1",
+      "path": "docs/MANUALE_UTENTE_RESELLER_V1.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MCP_ANTI_CRASH_POLICY_md",
+      "title": "MCP_ANTI_CRASH_POLICY",
+      "path": "docs/MCP_ANTI_CRASH_POLICY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MICROSOFT_AUTHENTICATOR_SETUP_md",
+      "title": "MICROSOFT_AUTHENTICATOR_SETUP",
+      "path": "docs/MICROSOFT_AUTHENTICATOR_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MIGRATION_COMPLETE_md",
+      "title": "MIGRATION_COMPLETE",
+      "path": "docs/MIGRATION_COMPLETE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MIGRATION_EXECUTION_REPORT_081_087_md",
+      "title": "MIGRATION_EXECUTION_REPORT_081_087",
+      "path": "docs/MIGRATION_EXECUTION_REPORT_081_087.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MIGRATION_TEST_PLAN_081_087_md",
+      "title": "MIGRATION_TEST_PLAN_081_087",
+      "path": "docs/MIGRATION_TEST_PLAN_081_087.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MIGRATION_VERIFICATION_md",
+      "title": "MIGRATION_VERIFICATION",
+      "path": "docs/MIGRATION_VERIFICATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MIGRATIONS_md",
+      "title": "MIGRATIONS",
+      "path": "docs/MIGRATIONS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_MONEY_FLOWS_md",
+      "title": "MONEY_FLOWS",
+      "path": "docs/MONEY_FLOWS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_OAUTH_SETUP_md",
+      "title": "OAUTH_SETUP",
+      "path": "docs/OAUTH_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_OBSERVABILITY_WALLET_IDEMPOTENCY_md",
+      "title": "OBSERVABILITY_WALLET_IDEMPOTENCY",
+      "path": "docs/OBSERVABILITY_WALLET_IDEMPOTENCY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_OPS_RUNBOOK_md",
+      "title": "OPS_RUNBOOK",
+      "path": "docs/OPS_RUNBOOK.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ORPHAN_SHIPMENTS_REMEDIATION_md",
+      "title": "ORPHAN_SHIPMENTS_REMEDIATION",
+      "path": "docs/ORPHAN_SHIPMENTS_REMEDIATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_P0_AUDIT_FIXES_md",
+      "title": "P0_AUDIT_FIXES",
+      "path": "docs/P0_AUDIT_FIXES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_phase3_COST_ALERT_PRE_COHORT_0_md",
+      "title": "COST_ALERT_PRE_COHORT_0",
+      "path": "docs/phase3/COST_ALERT_PRE_COHORT_0.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_phase3_KILL_SWITCH_DRY_RUN_PRE_COHORT_0_md",
+      "title": "KILL_SWITCH_DRY_RUN_PRE_COHORT_0",
+      "path": "docs/phase3/KILL_SWITCH_DRY_RUN_PRE_COHORT_0.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_phase3_PII_AUDIT_PRE_COHORT_0_md",
+      "title": "PII_AUDIT_PRE_COHORT_0",
+      "path": "docs/phase3/PII_AUDIT_PRE_COHORT_0.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_PLAYWRIGHT_VS_VITEST_md",
+      "title": "PLAYWRIGHT_VS_VITEST",
+      "path": "docs/PLAYWRIGHT_VS_VITEST.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_POST_DEPLOY_SECURITY_CHECKLIST_md",
+      "title": "POST_DEPLOY_SECURITY_CHECKLIST",
+      "path": "docs/POST_DEPLOY_SECURITY_CHECKLIST.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_poste_Manuale_Utente_API_WS_pdf",
+      "title": "Manuale_Utente_API_WS",
+      "path": "docs/poste/Manuale_Utente_API_WS.pdf",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_PR_40_REVIEW_ENTERPRISE_md",
+      "title": "PR_40_REVIEW_ENTERPRISE",
+      "path": "docs/PR_40_REVIEW_ENTERPRISE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_PR37_REVIEW_md",
+      "title": "PR37_REVIEW",
+      "path": "docs/PR37_REVIEW.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_PRICE_LIST_ASSIGNMENTS_md",
+      "title": "PRICE_LIST_ASSIGNMENTS",
+      "path": "docs/PRICE_LIST_ASSIGNMENTS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_PRODUCTION_FIX_SUMMARY_md",
+      "title": "PRODUCTION_FIX_SUMMARY",
+      "path": "docs/PRODUCTION_FIX_SUMMARY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_PROMPT_CONTINUA_DOCUMENTAZIONE_md",
+      "title": "PROMPT_CONTINUA_DOCUMENTAZIONE",
+      "path": "docs/PROMPT_CONTINUA_DOCUMENTAZIONE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_QUICK_FIX_GUIDE_md",
+      "title": "QUICK_FIX_GUIDE",
+      "path": "docs/QUICK_FIX_GUIDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_README_md",
+      "title": "README",
+      "path": "docs/README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_README_API_CORRIERI_md",
+      "title": "README_API_CORRIERI",
+      "path": "docs/README_API_CORRIERI.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_REQUIRED_INPUTS_FOR_FIX_md",
+      "title": "REQUIRED_INPUTS_FOR_FIX",
+      "path": "docs/REQUIRED_INPUTS_FOR_FIX.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_RESELLER_PRICING_GOVERNANCE_md",
+      "title": "RESELLER_PRICING_GOVERNANCE",
+      "path": "docs/RESELLER_PRICING_GOVERNANCE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_RESELLER_SHIPMENT_CREATION_md",
+      "title": "RESELLER_SHIPMENT_CREATION",
+      "path": "docs/RESELLER_SHIPMENT_CREATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_REVISIONE_FINALE_ENTERPRISE_md",
+      "title": "REVISIONE_FINALE_ENTERPRISE",
+      "path": "docs/REVISIONE_FINALE_ENTERPRISE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_RIEPILOGO_PR_33_md",
+      "title": "RIEPILOGO_PR_33",
+      "path": "docs/RIEPILOGO_PR_33.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_ROADMAP_ENTERPRISE_LISTINI_WALLET_md",
+      "title": "ROADMAP_ENTERPRISE_LISTINI_WALLET",
+      "path": "docs/ROADMAP_ENTERPRISE_LISTINI_WALLET.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SCHEMA_FASE0_PROPOSTO_md",
+      "title": "SCHEMA_FASE0_PROPOSTO",
+      "path": "docs/SCHEMA_FASE0_PROPOSTO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_security_AUDIT_MODE_PROMPT_md",
+      "title": "AUDIT_MODE_PROMPT",
+      "path": "docs/security/AUDIT_MODE_PROMPT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SECURITY_AUDIT_COMPLETE_md",
+      "title": "SECURITY_AUDIT_COMPLETE",
+      "path": "docs/SECURITY_AUDIT_COMPLETE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SECURITY_GATE_ACTING_CONTEXT_md",
+      "title": "SECURITY_GATE_ACTING_CONTEXT",
+      "path": "docs/SECURITY_GATE_ACTING_CONTEXT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SESSION_STATUS_2026_01_01_md",
+      "title": "SESSION_STATUS_2026_01_01",
+      "path": "docs/SESSION_STATUS_2026_01_01.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SHIPMENT_CREATION_FIX_SUMMARY_md",
+      "title": "SHIPMENT_CREATION_FIX_SUMMARY",
+      "path": "docs/SHIPMENT_CREATION_FIX_SUMMARY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SICUREZZA_AUTOMATION_md",
+      "title": "SICUREZZA_AUTOMATION",
+      "path": "docs/SICUREZZA_AUTOMATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SICUREZZA_COMMIT_md",
+      "title": "SICUREZZA_COMMIT",
+      "path": "docs/SICUREZZA_COMMIT.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SICUREZZA_CRITICA_PASSWORD_md",
+      "title": "SICUREZZA_CRITICA_PASSWORD",
+      "path": "docs/SICUREZZA_CRITICA_PASSWORD.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SICUREZZA_GEO_LOCATIONS_md",
+      "title": "SICUREZZA_GEO_LOCATIONS",
+      "path": "docs/SICUREZZA_GEO_LOCATIONS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SLACK_SETUP_QUICK_md",
+      "title": "SLACK_SETUP_QUICK",
+      "path": "docs/SLACK_SETUP_QUICK.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SMOKE_TEST_SECURITY_BASELINE_md",
+      "title": "SMOKE_TEST_SECURITY_BASELINE",
+      "path": "docs/SMOKE_TEST_SECURITY_BASELINE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SOLUZIONI_CALCOLO_PREZZI_ANNE_md",
+      "title": "SOLUZIONI_CALCOLO_PREZZI_ANNE",
+      "path": "docs/SOLUZIONI_CALCOLO_PREZZI_ANNE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPEDISCI_ONLINE_401_FIX_COMPLETE_md",
+      "title": "SPEDISCI_ONLINE_401_FIX_COMPLETE",
+      "path": "docs/SPEDISCI_ONLINE_401_FIX_COMPLETE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPEDISCI_ONLINE_401_FIX_SUMMARY_md",
+      "title": "SPEDISCI_ONLINE_401_FIX_SUMMARY",
+      "path": "docs/SPEDISCI_ONLINE_401_FIX_SUMMARY.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPEDIZIONI_CANCELLATE_md",
+      "title": "SPEDIZIONI_CANCELLATE",
+      "path": "docs/SPEDIZIONI_CANCELLATE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPIEGAZIONE_DIFFERENZA_GLS_POSTE_md",
+      "title": "SPIEGAZIONE_DIFFERENZA_GLS_POSTE",
+      "path": "docs/SPIEGAZIONE_DIFFERENZA_GLS_POSTE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPIEGAZIONE_FEE_VS_ABBONAMENTO_md",
+      "title": "SPIEGAZIONE_FEE_VS_ABBONAMENTO",
+      "path": "docs/SPIEGAZIONE_FEE_VS_ABBONAMENTO.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPIEGAZIONE_SEMPLICE_ENTERPRISE_md",
+      "title": "SPIEGAZIONE_SEMPLICE_ENTERPRISE",
+      "path": "docs/SPIEGAZIONE_SEMPLICE_ENTERPRISE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SPRINT_2_5_OCR_IMMAGINI_GUIDA_md",
+      "title": "SPRINT_2.5_OCR_IMMAGINI_GUIDA",
+      "path": "docs/SPRINT_2.5_OCR_IMMAGINI_GUIDA.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_STAGING_TEST_RESULTS_md",
+      "title": "STAGING_TEST_RESULTS",
+      "path": "docs/STAGING_TEST_RESULTS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_STATO_IMPLEMENTAZIONE_PR40_md",
+      "title": "STATO_IMPLEMENTAZIONE_PR40",
+      "path": "docs/STATO_IMPLEMENTAZIONE_PR40.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_STORIA_ACCOUNT_TYPE_md",
+      "title": "STORIA_ACCOUNT_TYPE",
+      "path": "docs/STORIA_ACCOUNT_TYPE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SUPABASE_CLI_SETUP_md",
+      "title": "SUPABASE_CLI_SETUP",
+      "path": "docs/SUPABASE_CLI_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SUPABASE_SECURITY_GUIDE_md",
+      "title": "SUPABASE_SECURITY_GUIDE",
+      "path": "docs/SUPABASE_SECURITY_GUIDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SUPABASE_SETUP_GUIDE_md",
+      "title": "SUPABASE_SETUP_GUIDE",
+      "path": "docs/SUPABASE_SETUP_GUIDE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_SYNC_LISTINI_FORNITORE_md",
+      "title": "SYNC_LISTINI_FORNITORE",
+      "path": "docs/SYNC_LISTINI_FORNITORE.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_TEST_E2E_SYNC_md",
+      "title": "TEST_E2E_SYNC",
+      "path": "docs/TEST_E2E_SYNC.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_TEST_IMPORTANCE_EXPLAINED_md",
+      "title": "TEST_IMPORTANCE_EXPLAINED",
+      "path": "docs/TEST_IMPORTANCE_EXPLAINED.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_TEST_TYPES_EXPLAINED_md",
+      "title": "TEST_TYPES_EXPLAINED",
+      "path": "docs/TEST_TYPES_EXPLAINED.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_TESTING_QA_PLAN_md",
+      "title": "TESTING_QA_PLAN",
+      "path": "docs/TESTING_QA_PLAN.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_VERIFY_MIGRATION_md",
+      "title": "VERIFY_MIGRATION",
+      "path": "docs/VERIFY_MIGRATION.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_VS_CODE_TEST_SETUP_md",
+      "title": "VS_CODE_TEST_SETUP",
+      "path": "docs/VS_CODE_TEST_SETUP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "README_md",
+      "title": "README",
+      "path": "README.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "ROADMAP_md",
+      "title": "ROADMAP",
+      "path": "ROADMAP.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "TEST_INSTRUCTIONS_md",
+      "title": "TEST_INSTRUCTIONS",
+      "path": "TEST_INSTRUCTIONS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    }
+  ]
+}

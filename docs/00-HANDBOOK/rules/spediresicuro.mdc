@@ -1,0 +1,43 @@
+﻿---
+alwaysApply: true
+---
+PROGETTO: SpedireSicuro.it - Preventivi spedizioni con ricarico
+
+STACK: Next.js 14, TypeScript, Tailwind CSS, Vercel gratis
+
+DATABASE: JSON locale poi PostgreSQL Vercel
+
+PRIORITÀ: Landing preventivo, Form spedizione, Calcolo margine, Tracking, Dashboard, Pagamenti
+
+CONVENZIONI: File kebab-case, Componenti PascalCase, Variabili camelCase italiano, Commenti in italiano
+
+VINCOLI: Budget zero, Codice rivendibile, GDPR compliant, Performance sotto 2 secondi
+
+BUSINESS: Margine configurabile su spedizioni, Modello commissioni da definire, Possibile abbonamento aziende
+
+PROCESSO AI (OBBLIGATORIO):
+- Lavoro autonomo dopo l'assegnazione dei task, senza richiedere micro-decisioni
+- Ogni modifica deve avere test specifici per il componente (nuovi o aggiornati)
+- Eseguire i test pertinenti e considerare il lavoro "finito" solo se i test passano
+- Comunicare il risultato solo dopo validazione test
+- Dopo un lavoro testato, chiedere sempre approvazione prima di aggiornare documentazione e/o rules/workflow quando il processo o l'approccio devono migliorare
+
+GIT: 
+- Repository: https://github.com/gdsgroupsas-jpg/spediresicuro.git
+- Account GitHub: gdsgroupsas-jpg
+- Branch principale: master
+- ⚠️ SEMPRE verificare account Git prima di commit/push manuali: git config user.email (deve essere "gdsgroupsas@gmail.com") e user.name coerente (es. "GDS Group SAS")
+- ⚠️⚠️⚠️ REPO UNICO: /home/sigorn/projects/spediresicuro (WSL), evitare copie su C:\
+- 📖 LEGGERE PRIMA: ISTRUZIONI_REPOSITORY.md per dettagli completi
+
+DOCUMENTAZIONE:
+- 📦 docs/archive/ contiene SOLO documentazione STORICA (non usare per sviluppo attivo)
+- 🔍 Quando cerchi documentazione: usa PRIMA README.md e docs/ (escludendo archive/)
+- 📚 Usa docs/archive/ SOLO se richiesto esplicitamente dall'utente
+- ✅ Documentazione attiva: README.md (root), docs/README.md (indice), docs/*.md (escluso archive/)
+
+VERCEL:
+- Deploy automatico attivo: ogni push su master → deploy automatico su Vercel
+- Account Vercel: stesso account del vecchio progetto "spedire sicuro platform"
+- ⚠️ Creare nuovo progetto Vercel separato per questo progetto
+

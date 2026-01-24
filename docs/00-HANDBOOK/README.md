@@ -1,0 +1,33 @@
+﻿---
+title: Handbook Hub
+scope: process
+audience: all
+owner: docs
+status: active
+source_of_truth: true
+updated: 2026-01-19
+---
+
+# Documentation Hub
+
+This folder is the single entry point for rules, workflows, documentation maps, skills, and testing.
+
+Start here:
+
+- docs/00-HANDBOOK/rules/README.md
+- docs/00-HANDBOOK/workflows/README.md
+- docs/00-HANDBOOK/documentation/README.md
+- docs/00-HANDBOOK/skills/README.md
+- docs/00-HANDBOOK/testing/README.md
+- docs/00-HANDBOOK/workflows/WORKFLOWS.md#flow-0-processo-operativo-ai
+- docs/00-HANDBOOK/rules/spediresicuro.mdc
+- docs/00-HANDBOOK/rules/AI_DO_DONT.md
+- docs/00-HANDBOOK/testing/TASK_DOC_TEST_MAP.md
+- docs/00-HANDBOOK/testing/ENV_REQUIREMENTS.md
+- docs/00-HANDBOOK/DECISION_LOG.md
+- docs/00-HANDBOOK/index.json
+
+Notes:
+
+- .cursor/rules is a junction that points here so IDE rules stay in sync.
+- Use this hub as the source of truth for process changes.
