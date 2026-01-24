@@ -7,11 +7,18 @@
  * - track_shipment: Traccia spedizione
  * - analyze_business_health: Analizza salute business (solo admin)
  * - check_error_logs: Controlla errori sistema (solo admin)
+ *
+ * PRICING TOOLS (accesso atomizzato ai listini):
+ * - get_price_list_details: Dettagli listino specifico
+ * - get_supplier_cost: Costo fornitore puro per una spedizione
+ * - list_user_price_lists: Listini assegnati a utente
+ * - compare_supplier_vs_selling: Confronto costo/vendita
  */
 
 import { calculateOptimalPrice, PricingRequest } from './pricing-engine';
 import { supabaseAdmin } from '@/lib/db/client';
-import { buildContext, formatContextForPrompt } from './context-builder';
+import { getPriceListById, calculatePriceWithRules } from '@/lib/db/price-lists';
+import { calculatePriceFromList } from '@/lib/pricing/calculator';
 
 export interface ToolDefinition {
   name: string;
@@ -222,6 +229,110 @@ export const ANNE_TOOLS: ToolDefinition[] = [
         },
       },
       required: ['csvData'],
+    },
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRICING TOOLS - Accesso atomizzato ai listini
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    name: 'get_price_list_details',
+    description:
+      'Ottiene i dettagli completi di un listino prezzi specifico: margine configurato, listino fornitore collegato, regole, stato. Usa questo tool per rispondere a domande come "che margine ho su GLS?" o "qual è il mio listino attivo?"',
+    parameters: {
+      type: 'object',
+      properties: {
+        priceListId: {
+          type: 'string',
+          description: 'ID del listino da interrogare (opzionale se si vuole il listino attivo)',
+        },
+        courierId: {
+          type: 'string',
+          description: 'ID del corriere per trovare il listino attivo (es. "gls", "brt")',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_supplier_cost',
+    description:
+      'Calcola il COSTO FORNITORE puro per una spedizione, senza margine applicato. Questo è quanto paghiamo al corriere. Usa per domande come "quanto mi costa GLS per 5kg a Roma?"',
+    parameters: {
+      type: 'object',
+      properties: {
+        weight: {
+          type: 'number',
+          description: 'Peso pacco in kg',
+        },
+        destinationZip: {
+          type: 'string',
+          description: 'CAP destinazione',
+        },
+        destinationProvince: {
+          type: 'string',
+          description: 'Provincia destinazione (2 lettere)',
+        },
+        courierId: {
+          type: 'string',
+          description: 'ID del corriere specifico (opzionale)',
+        },
+        serviceType: {
+          type: 'string',
+          enum: ['standard', 'express', 'economy'],
+          description: 'Tipo servizio',
+        },
+      },
+      required: ['weight', 'destinationZip', 'destinationProvince'],
+    },
+  },
+  {
+    name: 'list_user_price_lists',
+    description:
+      'Lista tutti i listini prezzi assegnati a un utente/reseller. Mostra quali corrieri sono attivi, margini configurati, stato. Usa per "quali listini ho?" o "che corrieri posso usare?"',
+    parameters: {
+      type: 'object',
+      properties: {
+        targetUserId: {
+          type: 'string',
+          description: 'ID utente da interrogare (default: utente corrente)',
+        },
+        includeInactive: {
+          type: 'boolean',
+          description: 'Includi anche listini non attivi (default: false)',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'compare_supplier_vs_selling',
+    description:
+      'Confronta COSTO FORNITORE vs PREZZO VENDITA per una spedizione specifica. Mostra margine in € e %. Usa per "quanto margino su questa spedizione?" o "confronta costo e vendita per 5kg Roma"',
+    parameters: {
+      type: 'object',
+      properties: {
+        weight: {
+          type: 'number',
+          description: 'Peso pacco in kg',
+        },
+        destinationZip: {
+          type: 'string',
+          description: 'CAP destinazione',
+        },
+        destinationProvince: {
+          type: 'string',
+          description: 'Provincia destinazione (2 lettere)',
+        },
+        courierId: {
+          type: 'string',
+          description: 'ID corriere specifico (opzionale, altrimenti mostra tutti)',
+        },
+        priceListId: {
+          type: 'string',
+          description: 'ID listino specifico (opzionale, altrimenti usa listino attivo)',
+        },
+      },
+      required: ['weight', 'destinationZip', 'destinationProvince'],
     },
   },
 ];
@@ -576,6 +687,386 @@ export async function executeTool(
             error: `Errore creazione batch: ${error.message}`,
           };
         }
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // PRICING TOOLS - Accesso atomizzato ai listini
+      // ═══════════════════════════════════════════════════════════════════════
+
+      case 'get_price_list_details': {
+        const { priceListId, courierId } = toolCall.arguments;
+
+        let priceList = null;
+
+        if (priceListId) {
+          // Cerca per ID specifico
+          priceList = await getPriceListById(priceListId);
+        } else {
+          // Cerca listino attivo per utente (e opzionalmente corriere)
+          const { data: lists } = await supabaseAdmin
+            .from('price_lists')
+            .select('*')
+            .eq('status', 'active')
+            .or(`assigned_to_user_id.eq.${userId},list_type.eq.global`)
+            .order('created_at', { ascending: false });
+
+          if (lists && lists.length > 0) {
+            // Se specificato corriere, filtra
+            if (courierId) {
+              priceList = lists.find((l: any) => l.courier_id === courierId) || lists[0];
+            } else {
+              priceList = lists[0];
+            }
+          }
+        }
+
+        if (!priceList) {
+          return {
+            success: false,
+            result: null,
+            error: 'Nessun listino trovato',
+          };
+        }
+
+        // Se è un listino custom, recupera anche il master (fornitore)
+        let masterList = null;
+        if (priceList.master_list_id) {
+          masterList = await getPriceListById(priceList.master_list_id);
+        }
+
+        // Recupera info corriere
+        let courierInfo = null;
+        if (priceList.courier_id) {
+          const { data: courier } = await supabaseAdmin
+            .from('couriers')
+            .select('id, name, code')
+            .eq('id', priceList.courier_id)
+            .single();
+          courierInfo = courier;
+        }
+
+        return {
+          success: true,
+          result: {
+            listino: {
+              id: priceList.id,
+              nome: priceList.name,
+              tipo: priceList.list_type,
+              stato: priceList.status,
+              corriere: courierInfo?.name || 'N/A',
+              corriereId: priceList.courier_id,
+            },
+            margine: {
+              percentuale: priceList.default_margin_percent ?? 0,
+              fisso: priceList.default_margin_fixed ?? 0,
+              tipo: priceList.default_margin_percent
+                ? 'percentuale'
+                : priceList.default_margin_fixed
+                  ? 'fisso'
+                  : 'nessuno',
+            },
+            listinoFornitore: masterList
+              ? {
+                  id: masterList.id,
+                  nome: masterList.name,
+                  collegato: true,
+                }
+              : { collegato: false },
+            regole: (priceList.rules as any[])?.length || 0,
+            validita: {
+              da: priceList.valid_from || 'sempre',
+              a: priceList.valid_until || 'sempre',
+            },
+            vatMode: priceList.vat_mode || 'excluded',
+          },
+        };
+      }
+
+      case 'get_supplier_cost': {
+        const { weight, destinationZip, destinationProvince, courierId, serviceType } =
+          toolCall.arguments;
+
+        // Trova listini fornitore (master/supplier)
+        let query = supabaseAdmin
+          .from('price_lists')
+          .select('*, entries:price_list_entries(*)')
+          .eq('status', 'active')
+          .in('list_type', ['supplier', 'master']);
+
+        if (courierId) {
+          query = query.eq('courier_id', courierId);
+        }
+
+        const { data: supplierLists, error } = await query;
+
+        if (error || !supplierLists || supplierLists.length === 0) {
+          return {
+            success: false,
+            result: null,
+            error: 'Nessun listino fornitore trovato',
+          };
+        }
+
+        const results: any[] = [];
+
+        for (const list of supplierLists) {
+          // Recupera info corriere
+          const { data: courier } = await supabaseAdmin
+            .from('couriers')
+            .select('id, name, code')
+            .eq('id', list.courier_id)
+            .single();
+
+          const priceResult = calculatePriceFromList(
+            list,
+            weight,
+            destinationZip,
+            serviceType || 'standard'
+          );
+
+          if (priceResult) {
+            results.push({
+              corriere: courier?.name || list.name,
+              corriereId: list.courier_id,
+              costoFornitore: {
+                base: Math.round(priceResult.basePrice * 100) / 100,
+                supplementi: Math.round(priceResult.surcharges * 100) / 100,
+                totale: Math.round(priceResult.totalCost * 100) / 100,
+              },
+              tempiConsegna: priceResult.details?.estimatedDeliveryDays || null,
+              listinoId: list.id,
+              listinoNome: list.name,
+            });
+          }
+        }
+
+        if (results.length === 0) {
+          return {
+            success: false,
+            result: null,
+            error: 'Nessun prezzo trovato per questa tratta',
+          };
+        }
+
+        // Ordina per costo
+        results.sort((a, b) => a.costoFornitore.totale - b.costoFornitore.totale);
+
+        return {
+          success: true,
+          result: {
+            parametri: {
+              peso: weight,
+              destinazione: `${destinationZip} ${destinationProvince}`,
+              servizio: serviceType || 'standard',
+            },
+            costiFornitore: results,
+            piuEconomico: results[0],
+            message: `Costo fornitore più basso: ${results[0].corriere} a €${results[0].costoFornitore.totale.toFixed(2)}`,
+          },
+        };
+      }
+
+      case 'list_user_price_lists': {
+        const targetUserId = toolCall.arguments.targetUserId || userId;
+        const includeInactive = toolCall.arguments.includeInactive || false;
+
+        // Verifica permessi: solo admin può vedere listini altri utenti
+        if (targetUserId !== userId && userRole !== 'admin') {
+          return {
+            success: false,
+            result: null,
+            error: 'Non autorizzato a visualizzare listini di altri utenti',
+          };
+        }
+
+        // Query listini assegnati
+        let query = supabaseAdmin
+          .from('price_lists')
+          .select('*, courier:couriers(id, name, code)')
+          .or(`assigned_to_user_id.eq.${targetUserId},list_type.eq.global`);
+
+        if (!includeInactive) {
+          query = query.eq('status', 'active');
+        }
+
+        const { data: priceLists, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+          return {
+            success: false,
+            result: null,
+            error: `Errore recupero listini: ${error.message}`,
+          };
+        }
+
+        // Cerca anche assegnazioni tramite price_list_assignments
+        const { data: assignments } = await supabaseAdmin
+          .from('price_list_assignments')
+          .select('price_list_id')
+          .eq('user_id', targetUserId)
+          .is('revoked_at', null);
+
+        // Recupera listini da assignments
+        let assignedLists: any[] = [];
+        if (assignments && assignments.length > 0) {
+          const assignedIds = assignments.map((a) => a.price_list_id);
+          const { data: additionalLists } = await supabaseAdmin
+            .from('price_lists')
+            .select('*, courier:couriers(id, name, code)')
+            .in('id', assignedIds);
+
+          if (additionalLists) {
+            assignedLists = additionalLists;
+          }
+        }
+
+        // Combina e deduplica
+        const allLists = [...(priceLists || []), ...assignedLists];
+        const uniqueLists = allLists.filter(
+          (list, index, self) => index === self.findIndex((l) => l.id === list.id)
+        );
+
+        const listini = uniqueLists.map((list: any) => ({
+          id: list.id,
+          nome: list.name,
+          tipo: list.list_type,
+          stato: list.status,
+          corriere: list.courier?.name || 'N/A',
+          corriereId: list.courier_id,
+          marginePercentuale: list.default_margin_percent ?? 0,
+          margineFisso: list.default_margin_fixed ?? 0,
+          hasMaster: !!list.master_list_id,
+          validoDa: list.valid_from,
+          validoA: list.valid_until,
+        }));
+
+        // Raggruppa per corriere
+        const perCorriere: Record<string, any[]> = {};
+        listini.forEach((l) => {
+          const key = l.corriere || 'Altro';
+          if (!perCorriere[key]) perCorriere[key] = [];
+          perCorriere[key].push(l);
+        });
+
+        return {
+          success: true,
+          result: {
+            totaleListini: listini.length,
+            listini,
+            perCorriere,
+            corrieriAttivi: Object.keys(perCorriere),
+            message: `Trovati ${listini.length} listini attivi per ${Object.keys(perCorriere).length} corrieri`,
+          },
+        };
+      }
+
+      case 'compare_supplier_vs_selling': {
+        const { weight, destinationZip, destinationProvince, courierId, priceListId } =
+          toolCall.arguments;
+
+        const results: any[] = [];
+
+        // 1. Trova listino/i personalizzato/i dell'utente
+        let customListsQuery = supabaseAdmin
+          .from('price_lists')
+          .select('*, courier:couriers(id, name, code)')
+          .eq('status', 'active')
+          .eq('list_type', 'custom')
+          .or(`assigned_to_user_id.eq.${userId},list_type.eq.global`);
+
+        if (priceListId) {
+          customListsQuery = supabaseAdmin
+            .from('price_lists')
+            .select('*, courier:couriers(id, name, code)')
+            .eq('id', priceListId);
+        } else if (courierId) {
+          customListsQuery = customListsQuery.eq('courier_id', courierId);
+        }
+
+        const { data: customLists } = await customListsQuery;
+
+        if (!customLists || customLists.length === 0) {
+          return {
+            success: false,
+            result: null,
+            error: 'Nessun listino personalizzato trovato',
+          };
+        }
+
+        for (const customList of customLists) {
+          // Calcola prezzo con regole (include margine)
+          const sellingPrice = await calculatePriceWithRules(userId, {
+            weight,
+            destination: {
+              zip: destinationZip,
+              province: destinationProvince,
+              country: 'IT',
+            },
+          });
+
+          if (!sellingPrice) continue;
+
+          // Il supplierPrice viene dal calcolo
+          const supplierCost = sellingPrice.supplierPrice || sellingPrice.totalCost;
+          const finalPrice = sellingPrice.finalPrice;
+          const marginAmount = finalPrice - supplierCost;
+          const marginPercent = supplierCost > 0 ? (marginAmount / supplierCost) * 100 : 0;
+
+          results.push({
+            corriere: customList.courier?.name || customList.name,
+            corriereId: customList.courier_id,
+            listino: {
+              id: customList.id,
+              nome: customList.name,
+              margineConfigurato: customList.default_margin_percent ?? 0,
+            },
+            costoFornitore: Math.round(supplierCost * 100) / 100,
+            prezzoVendita: Math.round(finalPrice * 100) / 100,
+            margine: {
+              euro: Math.round(marginAmount * 100) / 100,
+              percentuale: Math.round(marginPercent * 100) / 100,
+            },
+            dettagli: {
+              basePrice: sellingPrice.basePrice,
+              surcharges: sellingPrice.surcharges,
+            },
+          });
+        }
+
+        if (results.length === 0) {
+          return {
+            success: false,
+            result: null,
+            error: 'Impossibile calcolare confronto per questa tratta',
+          };
+        }
+
+        // Ordina per margine
+        results.sort((a, b) => b.margine.euro - a.margine.euro);
+
+        const totaleFornitore = results.reduce((sum, r) => sum + r.costoFornitore, 0);
+        const totaleVendita = results.reduce((sum, r) => sum + r.prezzoVendita, 0);
+        const totaleMargine = totaleVendita - totaleFornitore;
+
+        return {
+          success: true,
+          result: {
+            parametri: {
+              peso: weight,
+              destinazione: `${destinationZip} ${destinationProvince}`,
+            },
+            confronti: results,
+            riepilogo: {
+              corrieriAnalizzati: results.length,
+              margineMedio: {
+                euro: Math.round((totaleMargine / results.length) * 100) / 100,
+                percentuale: Math.round((totaleMargine / totaleFornitore) * 100 * 100) / 100 || 0,
+              },
+              migliorePerMargine: results[0],
+            },
+            message: `Margine medio: €${(totaleMargine / results.length).toFixed(2)} (${((totaleMargine / totaleFornitore) * 100).toFixed(1)}%)`,
+          },
+        };
       }
 
       default:
