@@ -296,6 +296,7 @@ export default function NuovaSpedizionePage() {
     courierName: string;
     price: number;
     contractCode?: string;
+    supplierPrice?: number; // ✨ ENTERPRISE: Costo fornitore reale dal listino
   } | null>(null);
   // ✨ NUOVO: VAT context dal quote selezionato (ADR-001)
   const [selectedVATContext, setSelectedVATContext] = useState<{
@@ -754,12 +755,19 @@ export default function NuovaSpedizionePage() {
           selectedQuoteExactPrice.price > 0 && {
             final_price: selectedQuoteExactPrice.price,
           }),
+        // ✨ ENTERPRISE: Costo fornitore reale dal listino (per calcolo margine accurato)
+        ...(selectedQuoteExactPrice &&
+          selectedQuoteExactPrice.supplierPrice &&
+          selectedQuoteExactPrice.supplierPrice > 0 && {
+            base_price: selectedQuoteExactPrice.supplierPrice,
+          }),
       };
 
       // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
       console.log('🔍 [FORM] selectedQuoteExactPrice prima invio:', selectedQuoteExactPrice);
       console.log('📋 [FORM] Payload COMPLETO spedizione (prima invio):', payload);
       console.log('💰 [FORM] final_price nel payload:', payload.final_price || 'MANCANTE');
+      console.log('💰 [FORM] base_price nel payload:', payload.base_price || 'MANCANTE');
 
       console.log('📋 [FORM] Payload indirizzo strutturato:', {
         mittente: {
@@ -1686,7 +1694,8 @@ export default function NuovaSpedizionePage() {
                           contractCode,
                           accessoryService,
                           configId, // ✨ ENTERPRISE: ConfigId della configurazione API
-                          finalPrice // ✨ FIX: Prezzo finale dal comparatore (include servizi accessori)
+                          finalPrice, // ✨ FIX: Prezzo finale dal comparatore (include servizi accessori)
+                          supplierPrice // ✨ ENTERPRISE: Costo fornitore reale dal listino
                         ) => {
                           console.log('✅ [FORM] Corriere confermato dal preventivatore:', {
                             courierName,
@@ -1694,6 +1703,7 @@ export default function NuovaSpedizionePage() {
                             accessoryService,
                             configId, // ✨ Salva configId per usarlo nella creazione
                             finalPrice, // ✨ FIX: Prezzo finale ricevuto dal comparatore
+                            supplierPrice, // ✨ ENTERPRISE: Costo fornitore reale
                           });
                           setFormData((prev) => ({
                             ...prev,
@@ -1705,15 +1715,22 @@ export default function NuovaSpedizionePage() {
 
                           // ✨ FIX: Usa prezzo finale dal comparatore (già calcolato con servizi accessori)
                           console.log('🔍 [FORM] finalPrice ricevuto dal comparatore:', finalPrice);
+                          console.log(
+                            '🔍 [FORM] supplierPrice ricevuto dal comparatore:',
+                            supplierPrice
+                          );
                           if (finalPrice && finalPrice > 0) {
                             console.log(
                               '✅ [FORM] Settando selectedQuoteExactPrice con finalPrice:',
-                              finalPrice
+                              finalPrice,
+                              'e supplierPrice:',
+                              supplierPrice
                             );
                             setSelectedQuoteExactPrice({
                               courierName,
                               price: finalPrice,
                               contractCode,
+                              supplierPrice, // ✨ ENTERPRISE: Costo fornitore reale
                             });
                           } else {
                             console.warn(
