@@ -57,7 +57,8 @@ interface IntelligentQuoteComparatorProps {
     contractCode: string,
     accessoryService?: string,
     configId?: string, // ✨ ENTERPRISE: ConfigId della configurazione API che ha fornito questo rate
-    finalPrice?: number // ✨ FIX: Prezzo finale selezionato (con servizi accessori)
+    finalPrice?: number, // ✨ FIX: Prezzo finale selezionato (con servizi accessori)
+    supplierPrice?: number // ✨ ENTERPRISE: Costo fornitore reale dal listino (per calcolo margine accurato)
   ) => void;
   // ✨ ENTERPRISE: resetKey per forzare reset cache quando si resetta il form
   resetKey?: string | number;
@@ -1243,11 +1244,14 @@ export function IntelligentQuoteComparator({
                       // ✨ ENTERPRISE: Estrai configId dal rate selezionato
                       // Il rate contiene metadata _configId e _configName dalla chiamata multi-config
                       const selectedConfigId = bestRate?._configId;
+                      // ✨ ENTERPRISE: Estrai costo fornitore reale dal rate (per calcolo margine accurato)
+                      const supplierPrice = bestRate ? parseFloat(bestRate.weight_price || '0') : 0;
                       console.log('✅ [QUOTE COMPARATOR] Conferma selezione:', {
                         courier: selectedQuote.courierName || selectedQuote.courier,
                         contractCode: selectedQuote.contractCode, // ✨ Passato internamente (non mostrato in UI)
                         accessoryService: selectedAccessoryService,
                         finalPrice,
+                        supplierPrice, // ✨ ENTERPRISE: Costo fornitore reale
                         configId: selectedConfigId, // ✨ ConfigId della configurazione API
                         // ✨ DEBUG: Contract code e configId vengono passati internamente alla creazione spedizione
                         // anche se non mostrati nel preventivatore per semplificare l'UI
@@ -1257,7 +1261,8 @@ export function IntelligentQuoteComparator({
                         selectedQuote.contractCode,
                         selectedAccessoryService || undefined,
                         selectedConfigId, // ✨ Passa configId al callback
-                        finalPrice // ✨ FIX: Passa prezzo finale (include servizi accessori)
+                        finalPrice, // ✨ FIX: Passa prezzo finale (include servizi accessori)
+                        supplierPrice // ✨ ENTERPRISE: Passa costo fornitore reale
                       );
                       // Chiudi pannello dopo conferma
                       setShowAccessoryDropdown(false);

@@ -55,6 +55,10 @@ export const createShipmentSchema = z.object({
   // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
   vat_mode: z.enum(['included', 'excluded']).optional().nullable(), // NULL = legacy (assume 'excluded')
   vat_rate: z.number().positive().optional(), // Default 22.0 se non specificato
+  // ✨ ENTERPRISE: Pricing info dal preventivo (per calcolo margine accurato)
+  base_price: z.number().positive().optional(), // Costo fornitore reale dal listino
+  final_price: z.number().positive().optional(), // Prezzo finale di vendita
+  priceListId: z.string().optional(), // ID listino usato per il preventivo
 });
 
 export type CreateShipmentInput = z.infer<typeof createShipmentSchema>;
