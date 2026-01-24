@@ -271,6 +271,13 @@ const resellerSection: NavSection = {
       icon: FileText,
       description: 'Listini personalizzati per i tuoi clienti',
     },
+    {
+      id: 'reseller-report-fiscale',
+      label: 'Report Fiscale',
+      href: '/dashboard/reseller/report-fiscale',
+      icon: FileSpreadsheet,
+      description: 'Report per fatturazione ai clienti',
+    },
   ],
 };
 

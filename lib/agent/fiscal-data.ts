@@ -1,4 +1,5 @@
 import { createServerActionClient } from '@/lib/supabase-server';
+import { computeMargin } from '@/lib/financial';
 import type {
   UserRole,
   Shipment,
@@ -6,6 +7,7 @@ import type {
   FiscalDeadline,
   FiscalContext,
   FiscalDataError,
+  MarginUnavailableReason,
 } from './fiscal-data.types';
 
 export type {
@@ -15,6 +17,7 @@ export type {
   FiscalDeadline,
   FiscalContext,
   FiscalDataError,
+  MarginUnavailableReason,
 } from './fiscal-data.types';
 
 /**
@@ -22,7 +25,7 @@ export type {
  */
 async function getSubUserIds(resellerId: string): Promise<string[]> {
   const supabase = createServerActionClient();
-  const { data } = await supabase.from('users').select('id').eq('parent_reseller_id', resellerId);
+  const { data } = await supabase.from('users').select('id').eq('parent_id', resellerId);
 
   return data ? data.map((u) => u.id) : [];
 }
@@ -38,12 +41,13 @@ export async function getShipmentsByPeriod(
   endDate: string // ISO Date string
 ): Promise<Shipment[]> {
   const supabase = createServerActionClient();
-  // ⚠️ FIX: Usa colonne fiscali (dopo migrazione 105_add_fiscal_columns_to_shipments.sql)
-  // total_price, courier_cost, margin, cod_status ora esistono nel database
+  // ⚠️ FIX: Usa colonne reali della tabella shipments
+  // total_cost/final_price = prezzo vendita, base_price = costo fornitore
+  // Se base_price non è popolato, usiamo platform_provider_costs
   let query = supabase
     .from('shipments')
     .select(
-      'id, created_at, status, total_price, courier_cost, margin, cash_on_delivery, cod_status, user_id'
+      'id, created_at, status, total_cost, final_price, base_price, margin_percent, cash_on_delivery, cod_status, user_id'
     )
     .gte('created_at', startDate)
     .lte('created_at', endDate)
@@ -90,16 +94,73 @@ export async function getShipmentsByPeriod(
     throw fiscalError;
   }
 
-  // ⚠️ FIX: Le colonne total_price, courier_cost, margin, cod_status ora esistono nel database
-  // (dopo migrazione 105_add_fiscal_columns_to_shipments.sql)
-  // Assicuriamoci che i valori numerici siano parsati correttamente
-  const mappedData = (data || []).map((s: any) => ({
-    ...s,
-    total_price: parseFloat(s.total_price || '0') || 0,
-    courier_cost: parseFloat(s.courier_cost || '0') || 0,
-    margin: parseFloat(s.margin || '0') || 0,
-    cod_status: s.cod_status || null,
-  }));
+  // Recupera provider costs da platform_provider_costs per calcolo margine accurato
+  const shipmentIds = (data || []).map((s: any) => s.id);
+  let providerCostMap = new Map<string, number>();
+
+  if (shipmentIds.length > 0) {
+    const { data: providerCosts, error: providerCostsError } = await supabase
+      .from('platform_provider_costs')
+      .select('shipment_id, provider_cost')
+      .in('shipment_id', shipmentIds);
+
+    if (!providerCostsError && providerCosts) {
+      for (const pc of providerCosts) {
+        if (pc.shipment_id && pc.provider_cost != null) {
+          providerCostMap.set(pc.shipment_id, parseFloat(pc.provider_cost));
+        }
+      }
+    }
+  }
+
+  // ✅ NUOVO: Usa computeMargin per calcolo strict (no calcoli inversi)
+  // PRINCIPIO: Un margine esiste SOLO se esistono dati reali
+  const mappedData = (data || []).map((s: any) => {
+    // Prezzo vendita
+    const total_price = parseFloat(s.final_price) || parseFloat(s.total_cost) || 0;
+
+    // Costo fornitore: SOLO da dati reali
+    const basePrice = parseFloat(s.base_price) || null;
+    const providerCost = providerCostMap.get(s.id) ?? null;
+
+    // Usa computeMargin per calcolo strict
+    // ⚠️ RIMOSSO: calcolo inverso courier_cost = total_price / (1 + margin_percent/100)
+    const marginResult = computeMargin({
+      finalPrice: total_price,
+      providerCost: providerCost,
+      basePrice: basePrice,
+      apiSource: s.api_source || 'platform',
+    });
+
+    // Determina courier_cost dal source usato
+    const courier_cost =
+      marginResult.costSource === 'provider_cost'
+        ? providerCost
+        : marginResult.costSource === 'base_price'
+          ? basePrice
+          : null;
+
+    // Converti reason a tipo compatibile
+    let margin_reason: MarginUnavailableReason | null = null;
+    if (!marginResult.isCalculable && marginResult.reason) {
+      if (
+        marginResult.reason === 'MISSING_COST_DATA' ||
+        marginResult.reason === 'NOT_APPLICABLE_FOR_MODEL' ||
+        marginResult.reason === 'MISSING_FINAL_PRICE'
+      ) {
+        margin_reason = marginResult.reason;
+      }
+    }
+
+    return {
+      ...s,
+      total_price: Math.round(total_price * 100) / 100,
+      courier_cost: courier_cost !== null ? Math.round(courier_cost * 100) / 100 : null,
+      margin: marginResult.margin,
+      margin_reason,
+      cod_status: s.cod_status || null,
+    };
+  });
 
   return mappedData as Shipment[];
 }
@@ -242,10 +303,19 @@ export async function getFiscalContext(userId: string, role: UserRole): Promise<
     // Continua anche se il wallet fallisce
   }
 
-  // Calcolo margini grezzi al volo per non passare troppi dati all'LLM se non servono
-  // ma l'LLM vuole "vedere" i dati per rispondere.
-  // Ottimizzazione token: passiamo aggregati se la lista è enorme?
-  // Per ora passiamo raw limitati, o aggregati settimanali.
+  // ✅ NUOVO: Calcola margini SOLO da spedizioni con dati reali
+  // NON sommare 0 per spedizioni senza costo
+  const shipmentsWithMargin = shipments?.filter((s) => s.margin !== null) || [];
+  const shipmentsExcluded = shipments?.filter((s) => s.margin === null) || [];
+
+  const margin_calculable_count = shipmentsWithMargin.length;
+  const margin_excluded_count = shipmentsExcluded.length;
+
+  // Margine totale (null se nessuna spedizione calcolabile)
+  const total_margin =
+    margin_calculable_count > 0
+      ? shipmentsWithMargin.reduce((acc, s) => acc + (s.margin ?? 0), 0)
+      : null;
 
   return {
     userId,
@@ -256,8 +326,10 @@ export async function getFiscalContext(userId: string, role: UserRole): Promise<
     },
     shipmentsSummary: {
       count: shipments?.length || 0,
-      total_margin: shipments?.reduce((acc, s) => acc + (s.margin || 0), 0) || 0,
+      total_margin: total_margin !== null ? Math.round(total_margin * 100) / 100 : null,
       total_revenue: shipments?.reduce((acc, s) => acc + (s.total_price || 0), 0) || 0,
+      margin_calculable_count,
+      margin_excluded_count,
     },
     pending_cod_count: cods?.length || 0,
     pending_cod_value: cods?.reduce((acc, s) => acc + (Number(s.cash_on_delivery) || 0), 0) || 0,
