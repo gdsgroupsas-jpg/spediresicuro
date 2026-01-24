@@ -166,7 +166,7 @@ describe('FinanceControlRoom', () => {
     });
   });
 
-  it('shows fiscal health check section', async () => {
+  it('shows fiscal health check section (feature in development)', async () => {
     vi.mocked(useFiscalData).mockReturnValue({
       data: mockFiscalData,
       isLoading: false,
@@ -179,10 +179,8 @@ describe('FinanceControlRoom', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Fiscal Health Check')).toBeInTheDocument();
-      expect(screen.getByText('Dichiarazione IVA')).toBeInTheDocument();
-      expect(screen.getByText('Plafond Export')).toBeInTheDocument();
-      expect(screen.getByText('Rischio Controlli')).toBeInTheDocument();
-      expect(screen.getByText('Regime Forfettario')).toBeInTheDocument();
+      // Fiscal health details are now "in sviluppo" - no fake data
+      expect(screen.getByText('Funzionalità in sviluppo')).toBeInTheDocument();
     });
   });
 
@@ -286,7 +284,7 @@ describe('FinanceControlRoom', () => {
     });
   });
 
-  it('calculates projection correctly from revenue', async () => {
+  it('shows projection as "Coming Soon" (feature in development)', async () => {
     vi.mocked(useFiscalData).mockReturnValue({
       data: mockFiscalData,
       isLoading: false,
@@ -298,15 +296,8 @@ describe('FinanceControlRoom', () => {
     render(<FinanceControlRoom />);
 
     await waitFor(() => {
-      // Projection should be revenue * 1.1
-      const expectedProjection = mockFiscalData.shipmentsSummary.total_revenue * 1.1;
-      const formattedProjection = expectedProjection.toLocaleString('it-IT', {
-        minimumFractionDigits: 2,
-      });
-      // Use simpler regex match as locale strings can be tricky with spaces
-      expect(
-        screen.getByText(new RegExp(formattedProjection.replace(/\./g, '\\.').replace(/,/g, ',')))
-      ).toBeInTheDocument();
+      // Projection feature is now "Coming Soon" - no fake calculations
+      expect(screen.getByText('Coming Soon')).toBeInTheDocument();
     });
   });
 });
