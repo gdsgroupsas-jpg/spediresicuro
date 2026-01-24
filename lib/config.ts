@@ -98,11 +98,11 @@ export const pricingConfig = {
    * Questa costante sarà rimossa quando FINANCE_STRICT_MARGIN=true diventa default.
    *
    * Margine percentuale di default per il calcolo prezzi.
-   * Applicato al prezzo base del corriere.
+   * Il margine PARTE DA 0 ed è PERSONALIZZABILE per ogni reseller/utente.
    *
    * ⚠️ NON USARE DIRETTAMENTE - controllare sempre featureFlags.FINANCE_STRICT_MARGIN
    */
-  DEFAULT_MARGIN_PERCENT: 20,
+  DEFAULT_MARGIN_PERCENT: 0,
 
   /**
    * Soglia minima di reliability score per considerare un corriere affidabile.
