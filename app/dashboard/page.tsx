@@ -17,7 +17,8 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import PageHeader from '@/components/page-header';
 import UserFeaturesList from '@/components/features/user-features-list';
-import { Shield, ArrowRight } from 'lucide-react';
+import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
+import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -155,6 +156,11 @@ function ProgressRing({
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+
+  // Onboarding gating: verifica se profilo completato
+  const { isComplete: isProfileComplete, isLoading: isProfileLoading } = useProfileCompletion();
+  const profileIncomplete = !isProfileLoading && isProfileComplete === false;
+
   const [userRole, setUserRole] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({
     totaleSpedizioni: 0,
@@ -389,6 +395,30 @@ export default function DashboardPage() {
         subtitle="Panoramica completa delle tue attività di spedizione"
         showBackButton={false}
       />
+
+      {/* Banner Profilo Incompleto */}
+      {profileIncomplete && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                Completa il profilo per sbloccare le funzioni principali
+              </p>
+              <p className="text-sm text-amber-700">
+                Per poter creare spedizioni, importare ordini ed esportare dati, devi prima
+                completare i tuoi dati cliente.{' '}
+                <Link
+                  href="/dashboard/dati-cliente"
+                  className="underline font-medium hover:text-amber-900"
+                >
+                  Completa ora →
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🚀 NEW: Doctor AI Status Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8 relative z-10">
