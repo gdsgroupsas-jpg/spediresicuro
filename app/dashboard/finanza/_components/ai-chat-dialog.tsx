@@ -66,7 +66,11 @@ export function AIChatDialog({ isOpen, onClose, fiscalContext }: AIChatDialogPro
 
       // Add context if available
       if (fiscalContext) {
-        assistantContent += `\n\n📊 Contesto attuale:\n• Margine: €${fiscalContext.shipmentsSummary.total_margin.toFixed(2)}\n• Ricavi: €${fiscalContext.shipmentsSummary.total_revenue.toFixed(2)}\n• COD Pendenti: ${fiscalContext.pending_cod_count}`;
+        const marginDisplay =
+          fiscalContext.shipmentsSummary.total_margin !== null
+            ? `€${fiscalContext.shipmentsSummary.total_margin.toFixed(2)}`
+            : 'N/A (dati mancanti)';
+        assistantContent += `\n\n📊 Contesto attuale:\n• Margine: ${marginDisplay}\n• Ricavi: €${fiscalContext.shipmentsSummary.total_revenue.toFixed(2)}\n• COD Pendenti: ${fiscalContext.pending_cod_count}`;
       }
 
       const assistantMessage: Message = {
