@@ -7,7 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth as getLegacySafeAuth } from '@/lib/safe-auth';
-import { buildContext } from '@/lib/ai/context-builder';
+import { buildContext, formatContextForPrompt } from '@/lib/ai/context-builder';
+import { runLocalCopilot } from '@/lib/agent/copilot';
 import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from '@/lib/ai/prompts';
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
 import { getCachedContext, setCachedContext, getContextCacheKey } from '@/lib/ai/cache';
@@ -243,6 +244,56 @@ export async function POST(request: NextRequest) {
         },
       };
     }
+
+    // ===== COPILOT LOCALE (TinyLlama/Qwen) =====
+    // Prova prima il LLM locale, fallback a Claude se non disponibile
+    try {
+      const contextSummary = formatContextForPrompt(context);
+      const localCopilotResult = await runLocalCopilot({
+        message: cleanMessage,
+        history: messages,
+        contextSummary,
+        userId: userId as string,
+        userRole,
+        isAdmin,
+        actingContext,
+      });
+
+      if (localCopilotResult.status === 'handled' && localCopilotResult.message) {
+        const responseMetadata: any = {
+          trace_id: traceId,
+          userRole,
+          timestamp: new Date().toISOString(),
+          isMock: false,
+          toolCalls: localCopilotResult.toolCalls?.length ?? 0,
+          executionTime: Date.now() - startTime,
+          rateLimitRemaining: rateLimitResult.remaining,
+          usingLocalLLM: true,
+        };
+
+        if (localCopilotResult.metadata) {
+          responseMetadata.copilot = localCopilotResult.metadata;
+        }
+
+        console.log(`✅ [Anne] Risposta da copilot locale (${Date.now() - startTime}ms)`);
+        return NextResponse.json({
+          success: true,
+          message: localCopilotResult.message,
+          metadata: responseMetadata,
+        });
+      }
+
+      // status === 'fallback' -> continua con Claude API
+      if (localCopilotResult.fallbackReason) {
+        console.log(`🔄 [Anne] Copilot fallback: ${localCopilotResult.fallbackReason}`);
+      }
+    } catch (copilotError: any) {
+      // LLM locale non disponibile, fallback silenzioso a Claude
+      console.log(
+        `🔄 [Anne] Copilot non disponibile: ${copilotError?.message || 'errore sconosciuto'}`
+      );
+    }
+    // ===== FINE COPILOT LOCALE =====
 
     // Costruisci system prompt
     // ⚠️ Verifica che context abbia la struttura corretta
