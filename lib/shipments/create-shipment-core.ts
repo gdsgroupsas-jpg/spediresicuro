@@ -318,6 +318,12 @@ export async function createShipmentCore(params: {
   let _walletTransactionId: string | undefined; // Prefixed: kept for audit trail
 
   if (!isSuperadmin) {
+    console.log('💳 [WALLET] Starting wallet debit:', {
+      userId: targetId?.substring(0, 8) + '...',
+      amount: estimatedCost,
+      idempotencyKey: idempotencyKey?.substring(0, 16) + '...',
+    });
+
     // P0: Passa idempotency_key a wallet function (standalone idempotent)
     const { data: walletResult, error: walletError } = await withConcurrencyRetry(
       async () =>
@@ -329,7 +335,21 @@ export async function createShipmentCore(params: {
       { operationName: 'shipment_debit_estimate' }
     );
 
+    console.log('💳 [WALLET] RPC result:', {
+      hasData: !!walletResult,
+      hasError: !!walletError,
+      errorMessage: walletError?.message,
+      errorCode: walletError?.code,
+      dataType: typeof walletResult,
+      dataPreview: JSON.stringify(walletResult)?.substring(0, 200),
+    });
+
     if (walletError) {
+      console.error('❌ [WALLET] Debit failed:', {
+        error: walletError.message,
+        code: walletError.code,
+        details: walletError,
+      });
       return {
         status: 402,
         json: {
@@ -343,6 +363,12 @@ export async function createShipmentCore(params: {
 
     // P0: Handle new JSONB return type
     const result = (walletResult as any)?.[0] || walletResult;
+    console.log('💳 [WALLET] Parsed result:', {
+      success: result?.success,
+      idempotentReplay: result?.idempotent_replay,
+      transactionId: result?.transaction_id,
+    });
+
     if (result?.idempotent_replay) {
       console.log('💰 [WALLET] Idempotent replay: wallet already debited for this operation', {
         transaction_id: result.transaction_id,
@@ -353,6 +379,10 @@ export async function createShipmentCore(params: {
     walletDebited = true;
     walletDebitAmount = estimatedCost;
     _walletTransactionId = result?.transaction_id;
+    console.log('✅ [WALLET] Debit successful:', {
+      amount: walletDebitAmount,
+      transactionId: _walletTransactionId,
+    });
   }
 
   // ============================================
@@ -456,7 +486,11 @@ export async function createShipmentCore(params: {
     courierFinalCost,
     platformFee,
     finalCost,
+    trackingNumber: courierResponse.trackingNumber,
+    shipmentId: courierResponse.shipmentId,
   });
+
+  console.log('🚀 [CreateShipment] Proceeding to DB insert...');
 
   let shipment: any;
   try {
@@ -509,12 +543,9 @@ export async function createShipmentCore(params: {
         walletDebitAmount = finalCost;
       }
 
-      await supabaseAdmin.from('wallet_transactions').insert({
-        user_id: targetId,
-        amount: -finalCost,
-        type: 'SHIPMENT_CHARGE',
-        description: `Spedizione ${courierResponse.trackingNumber}`,
-      } as any);
+      // NOTE: Non serve insert manuale in wallet_transactions!
+      // Le funzioni RPC decrement_wallet_balance() e increment_wallet_balance()
+      // già creano le transazioni internamente con idempotency.
     }
 
     // 2) Insert shipment (allow override)
@@ -576,6 +607,12 @@ export async function createShipmentCore(params: {
       idempotencyKey,
       courierResponse,
       finalCost,
+    });
+
+    console.log('📝 [CreateShipment] DB insert result:', {
+      success: !!newShipment,
+      error: shipmentError?.message,
+      shipmentId: newShipment?.id,
     });
 
     if (shipmentError || !newShipment)

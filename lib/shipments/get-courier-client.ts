@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CourierFactory } from '@/lib/services/couriers/courier-factory';
 import type { CreateShipmentInput } from '@/lib/validations/shipment';
 import type { CourierClient } from './create-shipment-core';
+import { decryptCredential } from '@/lib/security/encryption';
 
 export interface GetCourierClientOptions {
   /** ID utente target (chi paga) */
@@ -197,18 +198,48 @@ export async function getCourierClientReal(
   // ============================================
   const carrierLower = validated.carrier.toLowerCase();
   const contractMapping = courierConfig.contract_mapping || {};
+
+  console.log('🔍 [CONTRACT] Looking up contract:', {
+    validatedCarrier: validated.carrier,
+    carrierLower,
+    contractMappingKeys: Object.keys(contractMapping),
+    validatedContractId: validated.contract_id,
+  });
+
+  // Try multiple key formats to find the contract
+  // NOTE: contract_mapping structure: { "contractCode": "displayName" }
+  // We need the KEY (contractCode), not the VALUE (displayName)
   const contractId =
     validated.contract_id ||
     contractMapping[carrierLower] ||
     contractMapping[validated.carrier] ||
+    // Also try to find by partial match (for normalized carriers like POSTE)
+    Object.entries(contractMapping).find(
+      ([key]) =>
+        key.toLowerCase().includes(carrierLower) || carrierLower.includes(key.toLowerCase())
+    )?.[0] || // ← [0] = KEY (contractCode), NOT [1] (displayName)
     contractMapping['default'] ||
     undefined;
+
+  console.log('📋 [CONTRACT] Selected contract:', {
+    contractId: contractId || '(none - will use default)',
+    source: validated.contract_id
+      ? 'validated.contract_id'
+      : contractMapping[carrierLower]
+        ? 'carrierLower'
+        : contractMapping[validated.carrier]
+          ? 'carrier'
+          : 'partial-match or default',
+  });
 
   // ============================================
   // CREATE CLIENT
   // ============================================
+  // ⚠️ CRITICAL: API key is stored encrypted in DB - must decrypt before use
+  const decryptedApiKey = decryptCredential(courierConfig.api_key);
+
   const client = CourierFactory.getClient(validated.provider, validated.carrier, {
-    apiKey: courierConfig.api_key,
+    apiKey: decryptedApiKey,
     baseUrl: courierConfig.base_url,
     contractId: contractId,
   });
