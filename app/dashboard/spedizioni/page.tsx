@@ -43,6 +43,7 @@ import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
 import { featureFlags } from '@/lib/config/feature-flags';
 import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
 import dynamic from 'next/dynamic';
+import { TrackingModal } from '@/components/tracking';
 
 // Carica lo scanner solo quando serve (dynamic import per performance)
 const ReturnScanner = dynamic(() => import('@/components/ReturnScanner'), {
@@ -294,6 +295,12 @@ export default function ListaSpedizioniPage() {
   // Modale scanner resi
   const [showReturnScanner, setShowReturnScanner] = useState(false);
 
+  // Modale tracking
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [trackingShipmentId, setTrackingShipmentId] = useState<string | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState<string | null>(null);
+  const [trackingCarrier, setTrackingCarrier] = useState<string | null>(null);
+
   // Menu selezione rapida per periodo
   const [showSelectMenu, setShowSelectMenu] = useState(false);
 
@@ -494,10 +501,12 @@ export default function ListaSpedizioniPage() {
     router.push(`/dashboard/spedizioni/${id}`);
   };
 
-  // Handler per tracking esterno
-  const handleTrack = (tracking: string) => {
-    // In futuro: integrazione con API corrieri
-    window.open(`https://tracking.example.com/${tracking}`, '_blank');
+  // Handler per tracking - apre modale con timeline
+  const handleTrack = (shipmentId: string, tracking: string, carrier?: string) => {
+    setTrackingShipmentId(shipmentId);
+    setTrackingNumber(tracking);
+    setTrackingCarrier(carrier || null);
+    setShowTrackingModal(true);
   };
 
   // Handler elimina spedizione singola
@@ -1660,7 +1669,7 @@ export default function ListaSpedizioniPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleTrack(spedizione.tracking!);
+                              handleTrack(spedizione.id, spedizione.tracking!, spedizione.corriere);
                             }}
                             className="text-sm font-mono text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
                           >
@@ -1827,7 +1836,11 @@ export default function ListaSpedizioniPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleTrack(spedizione.tracking!);
+                                handleTrack(
+                                  spedizione.id,
+                                  spedizione.tracking!,
+                                  spedizione.corriere
+                                );
                               }}
                               className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg focus:outline-none transition-all"
                               title="Traccia spedizione"
@@ -2083,6 +2096,17 @@ export default function ListaSpedizioniPage() {
               // Real-time aggiornerà automaticamente la lista
               // La spedizione apparirà in tempo reale su tutti i dispositivi
             }}
+          />
+        )}
+
+        {/* Modal Tracking Spedizione */}
+        {showTrackingModal && trackingShipmentId && (
+          <TrackingModal
+            open={showTrackingModal}
+            onOpenChange={setShowTrackingModal}
+            shipmentId={trackingShipmentId}
+            trackingNumber={trackingNumber || undefined}
+            carrier={trackingCarrier || undefined}
           />
         )}
       </div>

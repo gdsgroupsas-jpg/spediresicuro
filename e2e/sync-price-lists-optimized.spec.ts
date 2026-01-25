@@ -75,7 +75,10 @@ test.describe('Sync Listini Ottimizzati', () => {
       throw new Error('Onboarding non completato');
     }
 
-    await page.waitForLoadState('networkidle');
+    // Use domcontentloaded instead of networkidle (more reliable in CI)
+    // networkidle can timeout if there are any long-polling or periodic requests
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000); // Brief wait for React hydration
   }
 
   test('1. Verifica listini esistenti (compatibilità)', async ({ page }) => {
