@@ -25,6 +25,8 @@
     "check:env:simple": "node scripts/check-env-simple.js",
     "verify:users": "ts-node --project tsconfig.scripts.json scripts/verifica-crea-utenti-supabase.ts",
     "verify:reseller-wallet": "ts-node --project tsconfig.scripts.json scripts/verify-supabase-reseller-wallet.ts",
+    "cleanup:test-users": "ts-node --project tsconfig.scripts.json scripts/cleanup-test-users.ts",
+    "cleanup:test-users:execute": "ts-node --project tsconfig.scripts.json scripts/cleanup-test-users.ts --execute",
     "test:poste": "ts-node --project tsconfig.scripts.json scripts/test-poste-api.ts",
     "test:redis": "ts-node --project tsconfig.scripts.json scripts/test-redis-connection.ts",
     "create:smoke-test-user": "ts-node --project tsconfig.scripts.json scripts/create-smoke-test-user.ts",
