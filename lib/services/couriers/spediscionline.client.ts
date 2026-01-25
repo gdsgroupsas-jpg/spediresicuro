@@ -38,7 +38,33 @@ export class SpedisciOnlineClient extends BaseCourierClient {
   ): Promise<CourierCreateShipmentResponse> {
     const { timeout = 30000 } = options;
 
-    // Prepara payload SpedisciOnline
+    // Prepara payload SpedisciOnline (schema da openapi.json)
+    // CRITICAL: carrierCode deve essere il prefisso del provider (es. "postedeliverybusiness", "gls", "brt")
+    // contractCode è il codice contratto completo (es. "postedeliverybusiness-SDA---Express---H24+")
+    const contractCode = this.contractId || this.getDefaultContract(this.carrier);
+
+    // Estrai carrierCode dal contractCode
+    // Formato contractCode: "carriercode-ContractName" (es. "postedeliverybusiness-SDA---Express---H24+")
+    // Se contractCode contiene "-", la prima parte è il carrierCode
+    // Altrimenti, usa contractCode stesso come carrierCode (per casi legacy)
+    let carrierCode: string;
+    if (contractCode && contractCode.includes('-')) {
+      carrierCode = contractCode.split('-')[0].toLowerCase();
+    } else if (contractCode) {
+      // Usa contractCode come carrierCode se non contiene "-"
+      carrierCode = contractCode.toLowerCase();
+    } else {
+      // Fallback al carrier normalizzato (potrebbe non funzionare per alcuni provider)
+      carrierCode = this.carrier.toLowerCase();
+    }
+
+    console.log('🔧 [SPEDISCIONLINE] Carrier/Contract resolution:', {
+      contractId: this.contractId,
+      contractCode,
+      carrierCode,
+      originalCarrier: this.carrier,
+    });
+
     const payload = {
       packages: request.packages.map((pkg) => ({
         length: pkg.length,
@@ -70,13 +96,21 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         phone: request.recipient.phone || null,
         email: request.recipient.email,
       },
-      carrier: this.carrier, // Corriere dinamico (GLS, POSTE, BRT, UPS, etc)
-      contract: this.contractId || this.getDefaultContract(this.carrier), // Contratto specifico
+      carrierCode: carrierCode, // ✅ OpenAPI: carrierCode (lowercase)
+      contractCode: contractCode, // ✅ OpenAPI: contractCode
       insuranceValue: request.insurance || 0,
       codValue: request.cod || 0,
       accessoriServices: [],
       notes: request.notes || '',
     };
+
+    console.log('📦 [SPEDISCIONLINE] Creating shipment:', {
+      carrierCode,
+      contractCode,
+      baseUrl: this.baseUrl,
+      sender: payload.shipFrom.city,
+      recipient: payload.shipTo.city,
+    });
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -94,9 +128,46 @@ export class SpedisciOnlineClient extends BaseCourierClient {
 
       clearTimeout(timeoutId);
 
-      const data: SpedisciOnlineRawResponse = await response.json();
+      // Debug: log raw response info before parsing
+      const contentType = response.headers.get('content-type') || '';
+      console.log('📦 [SPEDISCIONLINE] Raw response:', {
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+      });
+
+      // SpedisciOnline API bug: sometimes returns JSON with text/html Content-Type
+      // Try to parse as JSON regardless of Content-Type, fall back to error if it's actually HTML
+      const textBody = await response.text();
+      let data: SpedisciOnlineRawResponse;
+
+      try {
+        data = JSON.parse(textBody);
+      } catch {
+        // Actual HTML or invalid JSON
+        console.error('❌ [SPEDISCIONLINE] Non-JSON response body:', {
+          first500Chars: textBody.substring(0, 500),
+          fullUrl: `${this.baseUrl}/shipping/create`,
+        });
+        throw new Error(
+          `SpedisciOnline returned invalid response. Check API key and endpoint URL.`
+        );
+      }
+
+      console.log('📦 [SPEDISCIONLINE] API response:', {
+        status: response.status,
+        ok: response.ok,
+        hasTrackingNumber: !!data?.trackingNumber,
+        hasLabelData: !!data?.labelData,
+        shipmentCost: data?.shipmentCost,
+        error: (data as any)?.message || (data as any)?.error,
+      });
 
       if (!response.ok) {
+        console.error('❌ [SPEDISCIONLINE] API error:', {
+          status: response.status,
+          data: JSON.stringify(data).substring(0, 500),
+        });
         const error = new Error((data as any).message || 'SpedisciOnline API error');
         (error as any).statusCode = response.status;
         (error as any).data = data;
@@ -133,6 +204,13 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         (timeoutError as any).statusCode = 'TIMEOUT';
         throw timeoutError;
       }
+
+      // Log non-timeout errors for debugging
+      console.error('❌ [SPEDISCIONLINE] Unexpected error:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack?.substring(0, 300),
+      });
 
       throw error;
     }
