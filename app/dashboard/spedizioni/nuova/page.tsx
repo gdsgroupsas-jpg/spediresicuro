@@ -280,6 +280,7 @@ export default function NuovaSpedizionePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitCompleted, setSubmitCompleted] = useState(false); // Blocca pulsante fino a reset form
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
 
@@ -603,9 +604,9 @@ export default function NuovaSpedizionePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ⚠️ DOUBLE-SUBMIT PROTECTION: Blocca se già in corso
-    if (isSubmitting) {
-      console.warn('⚠️ [FORM] Submit già in corso, ignoro click duplicato');
+    // ⚠️ DOUBLE-SUBMIT PROTECTION: Blocca se già in corso o appena completato
+    if (isSubmitting || submitCompleted) {
+      console.warn('⚠️ [FORM] Submit già in corso o completato, ignoro click duplicato');
       return;
     }
 
@@ -809,7 +810,8 @@ export default function NuovaSpedizionePage() {
         },
       });
 
-      const response = await fetch('/api/spedizioni', {
+      // ✨ ENTERPRISE: Usa nuovo endpoint con idempotency
+      const response = await fetch('/api/shipments/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -824,36 +826,52 @@ export default function NuovaSpedizionePage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Errore sconosciuto' }));
         console.error('❌ [FORM] Errore API:', errorData);
+        // Gestisci errore idempotency (409 = richiesta duplicata)
+        if (response.status === 409) {
+          throw new Error(errorData.message || 'Operazione già in corso. Attendi qualche secondo.');
+        }
         throw new Error(errorData.message || errorData.error || 'Errore durante il salvataggio');
       }
 
       const result = await response.json();
-      console.log('📦 [CLIENT] Risultato API spedizioni:', result);
-      console.log('📦 [CLIENT] LDV Result (da result.ldv):', result.ldv);
-      console.log('📦 [CLIENT] LDV Result (da result.data?.ldv):', result.data?.ldv);
-      console.log('📦 [CLIENT] Tracking:', result.data?.tracking);
-      console.log('📦 [CLIENT] Corriere:', result.data?.corriere);
+      console.log('📦 [CLIENT] Risultato API shipments/create:', result);
+      console.log('📦 [CLIENT] Shipment:', result.shipment);
+      console.log('📦 [CLIENT] Tracking:', result.shipment?.tracking_number);
+      console.log('📦 [CLIENT] Idempotent replay:', result.idempotent_replay);
       console.log('📦 [CLIENT] Success:', result.success);
-      console.log('📦 [CLIENT] Message:', result.message);
+
+      // Notifica se è un replay idempotente (spedizione già creata)
+      if (result.idempotent_replay) {
+        console.log('ℹ️ [CLIENT] Spedizione già esistente (idempotent replay)');
+      }
 
       // Legacy state (sempre settato per compatibilità)
       setSubmitSuccess(true);
-      setCreatedTracking(result.data?.tracking || null);
+      setCreatedTracking(result.shipment?.tracking_number || null);
 
       // Enterprise Feedback: Mostra SuccessModal invece dell'inline message
       if (useEnterpriseFeedback) {
         setCreatedShipmentData({
-          tracking: result.data?.tracking || '',
-          courier: formData.corriere,
-          cost: selectedQuoteExactPrice?.price
-            ? `€${selectedQuoteExactPrice.price.toFixed(2)}`
-            : '',
+          tracking: result.shipment?.tracking_number || '',
+          courier: result.shipment?.carrier || formData.corriere,
+          cost: result.shipment?.cost
+            ? `€${result.shipment.cost.toFixed(2)}`
+            : selectedQuoteExactPrice?.price
+              ? `€${selectedQuoteExactPrice.price.toFixed(2)}`
+              : '',
         });
         setShowSuccessModal(true);
       }
 
       // Genera e scarica documento (CSV o PDF)
-      const spedizioneData = result.data;
+      // Adatta formato response: result.shipment invece di result.data
+      const spedizioneData = result.shipment
+        ? {
+            ...result.shipment,
+            tracking: result.shipment.tracking_number,
+            corriere: result.shipment.carrier,
+          }
+        : null;
       if (spedizioneData) {
         // Aggiungi data creazione se manca
         const spedizioneWithDate = {
@@ -866,147 +884,84 @@ export default function NuovaSpedizionePage() {
           // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
           console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
 
-          // VERIFICA SE ESISTE UN'ETICHETTA REALE (DALL'API)
-          // L'API restituisce ldv al livello root, non dentro data
-          const ldvResult = result.ldv || result.data?.ldv;
-          console.log('🔍 [CLIENT] Verifica LDV:', {
-            'result.ldv': result.ldv,
-            'result.data?.ldv': result.data?.ldv,
-            ldvResult: ldvResult,
-            'ldvResult?.success': ldvResult?.success,
-            'ldvResult?.label_url': ldvResult?.label_url,
-            'ldvResult?.error': ldvResult?.error,
-            'ldvResult?.method': ldvResult?.method,
+          // ✨ ENTERPRISE: Verifica etichetta dal nuovo endpoint
+          // Il nuovo endpoint mette label_data in result.shipment.label_data
+          const labelData = result.shipment?.label_data;
+          console.log('🔍 [CLIENT] Verifica Label:', {
+            'result.shipment?.label_data': labelData ? 'presente' : 'assente',
+            'labelData length': labelData?.length,
           });
 
-          if (ldvResult && ldvResult.success && ldvResult.label_url) {
-            console.log('📄 Apertura etichetta originale:', ldvResult.label_url);
-            window.open(ldvResult.label_url, '_blank');
-          } else if (ldvResult && ldvResult.success && ldvResult.label_pdf) {
-            // ⚠️ FIX: Gestisci label_pdf base64 (scarica come PDF)
-            console.log('📄 [CLIENT] label_pdf base64 ricevuto, scarico PDF...');
-            try {
-              // Decodifica base64 e crea blob
-              const base64Data = ldvResult.label_pdf;
-              const binaryString = atob(base64Data);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+          if (labelData) {
+            // Verifica se è un URL o base64
+            if (labelData.startsWith('http://') || labelData.startsWith('https://')) {
+              console.log('📄 Apertura etichetta URL:', labelData);
+              window.open(labelData, '_blank');
+            } else {
+              // È base64, scarica come PDF
+              console.log('📄 [CLIENT] label_data base64 ricevuto, scarico PDF...');
+              try {
+                // Decodifica base64 e crea blob
+                const base64Data = labelData;
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+
+                const trackingNumber =
+                  result.shipment?.tracking_number || spedizioneData?.tracking || 'spedizione';
+                const filename = `${trackingNumber}.pdf`;
+
+                // Scarica il PDF
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Cleanup
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+                console.log('✅ [CLIENT] PDF etichetta scaricato con successo:', filename);
+              } catch (pdfError) {
+                console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
+                // Fallback al ticket interno
+                if (spedizioneData) {
+                  const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+                  const trackingNumber = spedizioneData.tracking || 'spedizione';
+                  const filename = `${trackingNumber}.pdf`;
+                  downloadPDF(pdfDoc, filename);
+                }
               }
-              const blob = new Blob([bytes], { type: 'application/pdf' });
-              const blobUrl = URL.createObjectURL(blob);
-
-              // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
-              const trackingNumber =
-                ldvResult.tracking_number || spedizioneData.tracking || 'spedizione';
-              const filename = `${trackingNumber}.pdf`;
-
-              // Scarica il PDF
-              const link = document.createElement('a');
-              link.href = blobUrl;
-              link.download = filename;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-
-              // Cleanup
-              setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
-              console.log('✅ [CLIENT] PDF etichetta scaricato con successo:', filename);
-            } catch (pdfError) {
-              console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
-              // Fallback al ticket interno
-              const pdfDoc = generateShipmentPDF(spedizioneWithDate);
-              const trackingNumber = spedizioneData.tracking || 'spedizione';
-              const filename = `${trackingNumber}.pdf`;
-              downloadPDF(pdfDoc, filename);
             }
           } else {
             // FALLBACK: Genera Ticket interno se non c'è etichetta reale
             console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
 
-            // LOGGING DETTAGLIATO (da remote)
-            console.log('   - ldvResult:', ldvResult);
-            console.log('   - ldvResult?.success:', ldvResult?.success);
-            console.log('   - ldvResult?.label_url:', ldvResult?.label_url);
-            console.log('   - ldvResult?.error:', ldvResult?.error);
-            console.log('   - ldvResult?.method:', ldvResult?.method);
-
             // ⚠️ MOSTRA ERRORE ALL'UTENTE - MESSAGGIO MIGLIORATO
-            // Se c'è un errore nell'oggetto LDV, mostralo con dettagli utili
-            const errorMsg = result.ldv?.error || result.ldv?.message;
-            const method = result.ldv?.method || 'sconosciuto';
+            const errorMsg = result.error || result.message;
 
             if (errorMsg) {
-              // Messaggio più specifico in base al metodo usato
-              let title = '⚠️ Errore Creazione LDV';
-              let details = errorMsg;
-
-              if (method === 'broker') {
-                title = '⚠️ Errore Spedisci.online';
-                // Verifica se è un errore di contratto mancante
-                if (
-                  errorMsg.toLowerCase().includes('contratto') ||
-                  errorMsg.toLowerCase().includes('contract')
-                ) {
-                  const corriereName =
-                    formData.corriere || spedizioneData?.corriere || 'questo corriere';
-                  details =
-                    `Contratto non configurato per ${corriereName}.\n\n` +
-                    `Configura il contratto nel wizard Spedisci.online:\n` +
-                    `1. Vai su Integrazioni\n` +
-                    `2. Apri il wizard Spedisci.online\n` +
-                    `3. Aggiungi il contratto per ${corriereName}\n\n` +
-                    `Errore tecnico: ${errorMsg}`;
-                } else if (
-                  errorMsg.toLowerCase().includes('401') ||
-                  errorMsg.toLowerCase().includes('unauthorized')
-                ) {
-                  details =
-                    `API Key non valida o scaduta.\n\n` +
-                    `Verifica le credenziali nel wizard Spedisci.online.\n\n` +
-                    `Errore tecnico: ${errorMsg}`;
-                } else if (
-                  errorMsg.toLowerCase().includes('404') ||
-                  errorMsg.toLowerCase().includes('not found')
-                ) {
-                  details =
-                    `Endpoint non trovato.\n\n` +
-                    `Verifica che il Base URL sia corretto nel wizard Spedisci.online.\n\n` +
-                    `Errore tecnico: ${errorMsg}`;
-                } else {
-                  details =
-                    `Errore durante la creazione della spedizione tramite Spedisci.online.\n\n` +
-                    `Errore: ${errorMsg}\n\n` +
-                    `La spedizione è stata salvata localmente. Puoi provare a crearla manualmente dal pannello Spedisci.online.`;
-                }
-              } else {
-                details = `Errore: ${errorMsg}\n\nLa spedizione è stata salvata localmente.`;
-              }
-
+              // Messaggio generico per errori
               alert(
-                `${title}\n\n${details}\n\nÈ stato generato un ticket di riserva (PDF locale).`
-              );
-            } else if (!result.ldv) {
-              // Caso raro: ldv null (errore server interno prima dell'orchestrator)
-              console.warn('Oggetto LDV mancante nella risposta');
-              alert(
-                '⚠️ ERRORE DI SISTEMA:\n\nIl server non ha restituito informazioni sulla spedizione (LDV mancante).\nControlla i log del server per dettagli.'
+                `⚠️ Errore Creazione Etichetta\n\n${errorMsg}\n\nÈ stato generato un ticket di riserva (PDF locale).`
               );
             }
 
-            const pdfDoc = generateShipmentPDF(spedizioneWithDate);
-            // ⚠️ FIX: Nome file = solo tracking number (senza prefisso LDV_)
-            const trackingNumber = spedizioneData.tracking || 'spedizione';
-            const filename = `${trackingNumber}.pdf`;
-            downloadPDF(pdfDoc, filename);
+            // Genera ticket di riserva
+            if (spedizioneData) {
+              const pdfDoc = generateShipmentPDF(spedizioneWithDate);
+              const trackingNumber = spedizioneData.tracking || 'spedizione';
+              const filename = `${trackingNumber}.pdf`;
+              downloadPDF(pdfDoc, filename);
+            }
           }
         }, 500);
       }
-
-      // ⚠️ FIX: Reset form e mostra messaggio successo invece di redirect
-      setSubmitSuccess(true);
-      setCreatedTracking(spedizioneData?.tracking || spedizioneData?.ldv || null);
 
       // Salva dati mittente predefiniti prima del reset
       const currentMittente = {
@@ -1068,6 +1023,7 @@ export default function NuovaSpedizionePage() {
 
         // Reset stati
         setSubmitSuccess(false);
+        setSubmitCompleted(false); // Riabilita pulsante dopo reset completo
         setCreatedTracking(null);
         setSubmitError(null);
 
@@ -1847,10 +1803,10 @@ export default function NuovaSpedizionePage() {
                     <form onSubmit={handleSubmit}>
                       <button
                         type="submit"
-                        disabled={isSubmitting || progress < 100}
+                        disabled={isSubmitting || submitCompleted || progress < 100}
                         className="w-full px-6 py-4 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        {isSubmitting ? (
+                        {isSubmitting || submitCompleted ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
                             Generazione...
