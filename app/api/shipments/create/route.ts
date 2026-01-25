@@ -5,6 +5,7 @@ import { writeShipmentAuditLog } from '@/lib/security/audit-log';
 import { createShipmentSchema } from '@/lib/validations/shipment';
 import { createShipmentCore } from '@/lib/shipments/create-shipment-core';
 import { getCourierClientReal } from '@/lib/shipments/get-courier-client';
+import { convertLegacyPayload } from '@/lib/shipments/convert-legacy-payload';
 
 export async function POST(request: Request) {
   // ============================================
@@ -16,18 +17,16 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // ============================================
-    // LEGACY FORMAT SUPPORT
+    // LEGACY FORMAT SUPPORT (conversione completa)
     // ============================================
-    // Se il frontend invia 'corriere' senza 'carrier', mappa automaticamente
-    if (body.corriere && !body.carrier) {
-      body.carrier = body.corriere.toUpperCase();
-      body.provider = body.provider || 'spediscionline';
-    }
+    // Converte payload legacy (mittenteNome, corriere, peso, etc.)
+    // in formato standard (sender, recipient, packages, carrier)
+    const convertedBody = convertLegacyPayload(body);
 
     // ============================================
     // VALIDATION (Zod)
     // ============================================
-    const validated = createShipmentSchema.parse(body);
+    const validated = createShipmentSchema.parse(convertedBody);
 
     // ============================================
     // CALL CORE (Single Source of Truth)

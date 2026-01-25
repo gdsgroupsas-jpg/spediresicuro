@@ -1,0 +1,76 @@
+# Tracking Sync Cron Job
+# Syncs tracking data for active shipments from Spedisci.Online API
+# Runs every 4 hours
+
+name: Sync Tracking
+
+on:
+  # Run every 4 hours
+  schedule:
+    - cron: '0 */4 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to sync'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  # Default to production
+  APP_URL: ${{ vars.PRODUCTION_URL || 'https://app.spediresicuro.com' }}
+
+jobs:
+  sync-tracking:
+    name: Sync Tracking Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Sync Tracking from Spedisci.Online
+        run: |
+          echo "Starting tracking sync for ${{ env.APP_URL }}"
+
+          # Call the cron API endpoint
+          response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ env.APP_URL }}/api/cron/sync-tracking")
+
+          # Extract HTTP status code
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          # Check if successful
+          if [ "$http_code" != "200" ]; then
+            echo "Error: Tracking sync failed with status $http_code"
+            exit 1
+          fi
+
+          # Parse response
+          synced=$(echo "$body" | jq -r '.synced // 0')
+          errors=$(echo "$body" | jq -r '.errors // 0')
+
+          echo "Synced: $synced shipments"
+          echo "Errors: $errors"
+
+          # Fail if too many errors
+          if [ "$errors" -gt 10 ]; then
+            echo "Warning: High number of errors during sync"
+            # Don't fail the job, just warn
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Tracking sync failed! Check logs for details."
+          # TODO: Add Slack/Discord notification here if needed

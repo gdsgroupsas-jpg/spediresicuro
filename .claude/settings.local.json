@@ -54,7 +54,10 @@
       "Bash(npx tsx:*)",
       "Bash(git diff:*)",
       "Bash(npm audit fix:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh pr create:*)",
+      "Bash(npx supabase:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []
