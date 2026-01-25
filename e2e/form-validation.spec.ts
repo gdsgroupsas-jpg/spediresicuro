@@ -353,13 +353,19 @@ test.describe('Validazione Form Nuova Spedizione', () => {
 
     // Città mittente - seleziona dal dropdown
     const mittenteCityInput = page.getByPlaceholder('Cerca città...').first();
-    await mittenteCityInput.fill('Milano');
-    await page.waitForTimeout(2000);
+    await mittenteCityInput.click();
+    await mittenteCityInput.clear();
+    await mittenteCityInput.pressSequentially('Milano', { delay: 50 });
+    await page.waitForTimeout(2500);
 
-    // Clicca sul primo risultato
-    const firstOption = page.locator('[role="option"]').first();
-    if (await firstOption.isVisible().catch(() => false)) {
-      await firstOption.click();
+    // Clicca sul primo risultato (supporta cmdk e altri selectors)
+    const firstOption = page
+      .locator('[cmdk-item], [role="option"], [data-radix-collection-item]')
+      .first();
+    const milanoOption = page.getByText('Milano (MI)', { exact: false }).first();
+    const optionMittente = (await firstOption.count()) > 0 ? firstOption : milanoOption;
+    if (await optionMittente.isVisible().catch(() => false)) {
+      await optionMittente.click();
       await page.waitForTimeout(1000);
 
       // Se appare popup CAP, seleziona il primo
@@ -396,13 +402,19 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     const destinatarioCityInputs = page.getByPlaceholder('Cerca città...');
     if ((await destinatarioCityInputs.count()) >= 2) {
       const destinatarioCityInput = destinatarioCityInputs.nth(1);
-      await destinatarioCityInput.fill('Roma');
-      await page.waitForTimeout(2000);
+      await destinatarioCityInput.click();
+      await destinatarioCityInput.clear();
+      await destinatarioCityInput.pressSequentially('Roma', { delay: 50 });
+      await page.waitForTimeout(2500);
 
-      // Clicca sul primo risultato
-      const firstOptionDest = page.locator('[role="option"]').first();
-      if (await firstOptionDest.isVisible().catch(() => false)) {
-        await firstOptionDest.click();
+      // Clicca sul primo risultato (supporta cmdk e altri selectors)
+      const firstOptionDest = page
+        .locator('[cmdk-item], [role="option"], [data-radix-collection-item]')
+        .first();
+      const romaOption = page.getByText('Roma (RM)', { exact: false }).first();
+      const optionDest = (await firstOptionDest.count()) > 0 ? firstOptionDest : romaOption;
+      if (await optionDest.isVisible().catch(() => false)) {
+        await optionDest.click();
         await page.waitForTimeout(1000);
 
         // Se appare popup CAP, seleziona il primo
@@ -468,22 +480,30 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       // Se le città non contengono provincia/CAP, riprova selezione
       if (!mittenteCityValue.includes('MI') || !mittenteCityValue.includes('20100')) {
         console.log('⚠️ Città mittente non completa, riprovo...');
-        await mittenteCityInput.fill('Milano');
-        await page.waitForTimeout(2000);
-        const option = page.locator('[role="option"]').first();
-        if (await option.isVisible().catch(() => false)) {
-          await option.click();
+        await mittenteCityInput.click();
+        await mittenteCityInput.clear();
+        await mittenteCityInput.pressSequentially('Milano', { delay: 50 });
+        await page.waitForTimeout(2500);
+        const option = page.locator('[cmdk-item], [role="option"]').first();
+        const milanoRetry = page.getByText('Milano (MI)', { exact: false }).first();
+        const optionRetry = (await option.count()) > 0 ? option : milanoRetry;
+        if (await optionRetry.isVisible().catch(() => false)) {
+          await optionRetry.click();
           await page.waitForTimeout(1000);
         }
       }
 
       if (!destinatarioCityValue.includes('RM') || !destinatarioCityValue.includes('00100')) {
         console.log('⚠️ Città destinatario non completa, riprovo...');
-        await destinatarioCityInputs.nth(1).fill('Roma');
-        await page.waitForTimeout(2000);
-        const option = page.locator('[role="option"]').first();
-        if (await option.isVisible().catch(() => false)) {
-          await option.click();
+        await destinatarioCityInputs.nth(1).click();
+        await destinatarioCityInputs.nth(1).clear();
+        await destinatarioCityInputs.nth(1).pressSequentially('Roma', { delay: 50 });
+        await page.waitForTimeout(2500);
+        const option = page.locator('[cmdk-item], [role="option"]').first();
+        const romaRetry = page.getByText('Roma (RM)', { exact: false }).first();
+        const optionRetryDest = (await option.count()) > 0 ? option : romaRetry;
+        if (await optionRetryDest.isVisible().catch(() => false)) {
+          await optionRetryDest.click();
           await page.waitForTimeout(1000);
         }
       }

@@ -267,8 +267,14 @@ test.describe('Nuova Spedizione - Happy Path', () => {
     // Seleziona città mittente
     const mittenteCityInput = page.getByPlaceholder('Cerca città...').first();
     await expect(mittenteCityInput).toBeVisible({ timeout: 5000 });
-    await mittenteCityInput.fill('Milano');
-    await page.waitForTimeout(2000); // Attendi che i risultati appaiano
+
+    // Usa type() invece di fill() per simulare digitazione reale e triggerare onChange
+    await mittenteCityInput.click();
+    await mittenteCityInput.clear();
+    await mittenteCityInput.pressSequentially('Milano', { delay: 50 });
+
+    // Attendi debounce (300ms) + tempo per fetch + rendering
+    await page.waitForTimeout(2500);
 
     // Clicca sul primo risultato (Milano)
     // Prima verifica che non ci siano overlay che bloccano
@@ -279,15 +285,24 @@ test.describe('Nuova Spedizione - Happy Path', () => {
       await page.waitForTimeout(500);
     }
 
-    const firstOption = page.locator('[role="option"]').first();
-    await expect(firstOption).toBeVisible({ timeout: 5000 });
+    // Cerca opzioni nel dropdown cmdk - prova multiple selectors
+    const dropdownSelector = page
+      .locator('[cmdk-item], [role="option"], [data-radix-collection-item]')
+      .first();
+    const firstOption = dropdownSelector;
+
+    // Se non trova opzioni, prova a cercare il testo direttamente
+    const milanoOption = page.getByText('Milano (MI)', { exact: false }).first();
+    const optionToClick = (await dropdownSelector.count()) > 0 ? dropdownSelector : milanoOption;
+
+    await expect(optionToClick).toBeVisible({ timeout: 10000 });
 
     // Prova click normale, se fallisce usa force
     try {
-      await firstOption.click({ timeout: 3000 });
+      await optionToClick.click({ timeout: 3000 });
     } catch (e) {
       console.log('⚠️ Click normale fallito, uso force click...');
-      await firstOption.click({ force: true });
+      await optionToClick.click({ force: true });
     }
     await page.waitForTimeout(1000);
 
