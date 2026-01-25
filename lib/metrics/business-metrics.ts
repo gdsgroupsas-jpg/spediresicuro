@@ -363,15 +363,17 @@ async function getWalletMetrics(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const totalBalance = (balanceData || []).reduce((sum, u) => sum + (u.wallet_balance || 0), 0);
 
   // Get wallet transactions
+  // Note: wallet_transactions has no status column - all transactions are valid
   const { data: transactions, error: txError } = await supabase
     .from('wallet_transactions')
-    .select('type, amount, created_at, status');
+    .select('type, amount, created_at');
 
   if (txError) {
     console.error('Error fetching transactions:', txError);
   }
 
-  const validTx = (transactions || []).filter((t) => t.status === 'COMPLETED');
+  // All wallet transactions are valid (no pending state in this table)
+  const validTx = transactions || [];
 
   // Transactions by type
   const byType: Record<string, number> = {};
