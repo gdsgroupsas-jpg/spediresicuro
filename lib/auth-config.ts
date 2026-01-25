@@ -413,6 +413,22 @@ export const authOptions = {
         }
       }
 
+      // ⚠️ NUOVO: Aggiorna last_login_at per metriche Active Users
+      // Fail-safe: non blocca il login se fallisce
+      // Rollback: TRACK_LAST_LOGIN=false
+      if (user?.email) {
+        try {
+          const { updateLastLogin } = await import('@/lib/metrics/login-tracker');
+          await updateLastLogin(user.email);
+        } catch (error: any) {
+          // Già gestito in updateLastLogin, questo è solo safety extra
+          console.warn(
+            '⚠️ [NEXTAUTH] updateLastLogin wrapper error (non-blocking):',
+            error.message
+          );
+        }
+      }
+
       console.log('✅ [NEXTAUTH] signIn callback completato con successo');
       return true;
     },
