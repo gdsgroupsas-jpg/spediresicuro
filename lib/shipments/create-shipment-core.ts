@@ -543,12 +543,9 @@ export async function createShipmentCore(params: {
         walletDebitAmount = finalCost;
       }
 
-      await supabaseAdmin.from('wallet_transactions').insert({
-        user_id: targetId,
-        amount: -finalCost,
-        type: 'SHIPMENT_CHARGE',
-        description: `Spedizione ${courierResponse.trackingNumber}`,
-      } as any);
+      // NOTE: Non serve insert manuale in wallet_transactions!
+      // Le funzioni RPC decrement_wallet_balance() e increment_wallet_balance()
+      // già creano le transazioni internamente con idempotency.
     }
 
     // 2) Insert shipment (allow override)
