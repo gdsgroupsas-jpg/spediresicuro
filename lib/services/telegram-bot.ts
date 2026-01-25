@@ -61,10 +61,75 @@ export function isTelegramConfigured(): boolean {
 }
 
 /**
- * Send a message via Telegram Bot API (ASYNC)
+ * Send a message DIRECTLY via Telegram Bot API (no queue)
+ *
+ * Use this for immediate responses (e.g., bot commands) where
+ * the queue-based approach doesn't work (Vercel serverless).
+ *
+ * @returns Success + messageId if sent, error if fails
+ */
+export async function sendTelegramMessageDirect(
+  text: string,
+  options: SendMessageOptions = {}
+): Promise<{ success: boolean; messageId?: number; error?: string }> {
+  const config = getConfig();
+
+  if (!config) {
+    console.warn('[TELEGRAM] Bot not configured - skipping message');
+    return { success: false, error: 'Telegram not configured' };
+  }
+
+  const chatId = String(options.chatId || config.defaultChatId);
+
+  console.log('[TELEGRAM] Sending message directly:', {
+    chatId,
+    textLength: text.length,
+    textPreview: text.substring(0, 50),
+  });
+
+  try {
+    const url = `${TELEGRAM_API_BASE}${config.botToken}/sendMessage`;
+    const payload: Record<string, unknown> = {
+      chat_id: chatId,
+      text: text,
+      parse_mode: options.parseMode || 'HTML',
+      disable_notification: options.disableNotification || false,
+    };
+
+    if (options.replyToMessageId) {
+      payload.reply_to_message_id = options.replyToMessageId;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      console.error('[TELEGRAM] API error:', data.description);
+      return { success: false, error: data.description };
+    }
+
+    console.log('[TELEGRAM] Message sent successfully:', { messageId: data.result?.message_id });
+    return { success: true, messageId: data.result?.message_id };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[TELEGRAM] Send failed:', errorMsg);
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * Send a message via Telegram Bot API (ASYNC with queue)
  *
  * IMPORTANTE: Questa funzione è ASINCRONA e usa la message queue.
  * NON invia messaggi direttamente - li mette in coda per essere processati.
+ *
+ * NOTE: On Vercel serverless, the queue may not work due to ephemeral filesystem.
+ * Use sendTelegramMessageDirect() for immediate responses instead.
  *
  * Architecture (secondo specifiche Dario):
  * - Funzione async: enqueue e attende conferma

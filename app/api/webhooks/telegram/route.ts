@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   TelegramUpdate,
   parseCommand,
-  sendTelegramMessage,
+  sendTelegramMessageDirect,
   formatHealthStatus,
   isTelegramConfigured,
 } from '@/lib/services/telegram-bot';
@@ -199,7 +199,7 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
   // /id is always allowed (for setup)
   if (command !== 'id' && !isAuthorizedChat(chatId)) {
     console.log('[TELEGRAM_WEBHOOK] Chat not authorized:', { chatId });
-    await sendTelegramMessage('⛔ Non sei autorizzato ad usare questo bot.', {
+    await sendTelegramMessageDirect('⛔ Non sei autorizzato ad usare questo bot.', {
       chatId: String(chatId),
     });
     return;
@@ -228,14 +228,14 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
       response = await handleUnknown(chatId, command);
   }
 
-  // Send response (now synchronous - enqueued)
-  console.log('[TELEGRAM_WEBHOOK] Enqueuing response:', {
+  // Send response directly (bypassing queue for Vercel serverless compatibility)
+  console.log('[TELEGRAM_WEBHOOK] Sending response directly:', {
     command,
     chatId,
     responseLength: response.length,
   });
-  const sendResult = await sendTelegramMessage(response, { chatId: String(chatId) });
-  console.log('[TELEGRAM_WEBHOOK] Enqueue result:', sendResult);
+  const sendResult = await sendTelegramMessageDirect(response, { chatId: String(chatId) });
+  console.log('[TELEGRAM_WEBHOOK] Send result:', sendResult);
 }
 
 /**
