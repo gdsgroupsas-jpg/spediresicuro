@@ -102,6 +102,61 @@ export interface StandardPayload {
 }
 
 /**
+ * Normalizes carrier names to match the enum values.
+ * Maps various carrier name variations to standard codes.
+ */
+function normalizeCarrierName(carrier: string): string {
+  const normalized = carrier.toUpperCase().trim();
+
+  // Poste variations
+  if (
+    normalized.includes('POSTE') ||
+    normalized.includes('POSTEDELIVERY') ||
+    normalized.includes('POSTEITALIANE')
+  ) {
+    return 'POSTE';
+  }
+
+  // GLS variations
+  if (normalized.includes('GLS')) {
+    return 'GLS';
+  }
+
+  // BRT/Bartolini variations
+  if (normalized.includes('BRT') || normalized.includes('BARTOLINI')) {
+    return 'BRT';
+  }
+
+  // SDA variations
+  if (normalized.includes('SDA')) {
+    return 'SDA';
+  }
+
+  // UPS variations
+  if (normalized.includes('UPS')) {
+    return 'UPS';
+  }
+
+  // DHL variations
+  if (normalized.includes('DHL')) {
+    return 'DHL';
+  }
+
+  // TNT variations
+  if (normalized.includes('TNT')) {
+    return 'TNT';
+  }
+
+  // FedEx variations
+  if (normalized.includes('FEDEX') || normalized.includes('FED')) {
+    return 'FEDEX';
+  }
+
+  // Return as-is if no match (validation will catch invalid values)
+  return normalized;
+}
+
+/**
  * Converts legacy payload format to standard format.
  *
  * @param body - The request body (could be legacy or standard format)
@@ -148,7 +203,11 @@ export function convertLegacyPayload(body: LegacyPayload | StandardPayload): Sta
       postalCode: legacy.destinatarioCap || '',
       country: legacy.destinatarioCountry || 'IT',
       phone: legacy.destinatarioTelefono,
-      email: legacy.destinatarioEmail,
+      // Only include email if it's a valid non-empty string
+      email:
+        legacy.destinatarioEmail && legacy.destinatarioEmail.trim()
+          ? legacy.destinatarioEmail.trim()
+          : undefined,
     },
     packages: [
       {
@@ -158,7 +217,7 @@ export function convertLegacyPayload(body: LegacyPayload | StandardPayload): Sta
         height: parseFloat(String(legacy.altezza)) || 10,
       },
     ],
-    carrier: (legacy.corriere || legacy.carrier || '').toUpperCase(),
+    carrier: normalizeCarrierName(legacy.corriere || legacy.carrier || ''),
     provider: legacy.provider || 'spediscionline',
     notes: legacy.note,
     configId: legacy.configId,

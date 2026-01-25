@@ -153,6 +153,63 @@ describe('convertLegacyPayload', () => {
       expect(convertLegacyPayload(withBoth).carrier).toBe('GLS');
     });
 
+    it('should normalize carrier names to standard values', () => {
+      // Poste variations
+      expect(
+        convertLegacyPayload({ mittenteNome: 'T', corriere: 'POSTEDELIVERYBUSINESS' }).carrier
+      ).toBe('POSTE');
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'PosteItaliane' }).carrier).toBe(
+        'POSTE'
+      );
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'poste' }).carrier).toBe('POSTE');
+
+      // BRT/Bartolini variations
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'bartolini' }).carrier).toBe(
+        'BRT'
+      );
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'BRT-EXPRESS' }).carrier).toBe(
+        'BRT'
+      );
+
+      // GLS variations
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'GLS-Italy' }).carrier).toBe(
+        'GLS'
+      );
+
+      // Standard names should remain unchanged
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'UPS' }).carrier).toBe('UPS');
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'DHL' }).carrier).toBe('DHL');
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'SDA' }).carrier).toBe('SDA');
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'TNT' }).carrier).toBe('TNT');
+      expect(convertLegacyPayload({ mittenteNome: 'T', corriere: 'FEDEX' }).carrier).toBe('FEDEX');
+    });
+
+    it('should handle empty recipient email correctly', () => {
+      // Empty string should become undefined
+      const withEmptyEmail: LegacyPayload = {
+        mittenteNome: 'Test',
+        destinatarioNome: 'Recipient',
+        destinatarioEmail: '',
+      };
+      expect(convertLegacyPayload(withEmptyEmail).recipient.email).toBeUndefined();
+
+      // Whitespace only should become undefined
+      const withWhitespaceEmail: LegacyPayload = {
+        mittenteNome: 'Test',
+        destinatarioNome: 'Recipient',
+        destinatarioEmail: '   ',
+      };
+      expect(convertLegacyPayload(withWhitespaceEmail).recipient.email).toBeUndefined();
+
+      // Valid email should be preserved
+      const withValidEmail: LegacyPayload = {
+        mittenteNome: 'Test',
+        destinatarioNome: 'Recipient',
+        destinatarioEmail: 'valid@email.com',
+      };
+      expect(convertLegacyPayload(withValidEmail).recipient.email).toBe('valid@email.com');
+    });
+
     it('should handle numeric weight/dimension values', () => {
       const withNumericValues: LegacyPayload = {
         mittenteNome: 'Test',
