@@ -48,6 +48,10 @@ Optional (NULL) for backward compatibility with old code.';
 -- STEP 2: Refactor decrement_wallet_balance
 -- ============================================
 
+-- Drop existing function signatures to avoid conflicts
+DROP FUNCTION IF EXISTS decrement_wallet_balance(UUID, DECIMAL);
+DROP FUNCTION IF EXISTS decrement_wallet_balance(UUID, DECIMAL, TEXT);
+
 CREATE OR REPLACE FUNCTION decrement_wallet_balance(
   p_user_id UUID,
   p_amount DECIMAL(10,2),
@@ -211,6 +215,10 @@ USAGE:
 -- STEP 3: Refactor increment_wallet_balance
 -- ============================================
 
+-- Drop existing function signatures to avoid conflicts
+DROP FUNCTION IF EXISTS increment_wallet_balance(UUID, DECIMAL);
+DROP FUNCTION IF EXISTS increment_wallet_balance(UUID, DECIMAL, TEXT);
+
 CREATE OR REPLACE FUNCTION increment_wallet_balance(
   p_user_id UUID,
   p_amount DECIMAL(10,2),
@@ -335,6 +343,12 @@ Same idempotency guarantees as decrement_wallet_balance().';
 -- ============================================
 -- STEP 4: Update add_wallet_credit (wrapper)
 -- ============================================
+
+-- Drop ALL existing signatures to avoid "function name is not unique" error
+DROP FUNCTION IF EXISTS add_wallet_credit(UUID, DECIMAL);
+DROP FUNCTION IF EXISTS add_wallet_credit(UUID, DECIMAL, TEXT);
+DROP FUNCTION IF EXISTS add_wallet_credit(UUID, DECIMAL, TEXT, UUID);
+DROP FUNCTION IF EXISTS add_wallet_credit(UUID, DECIMAL, TEXT, UUID, TEXT);
 
 CREATE OR REPLACE FUNCTION add_wallet_credit(
   p_user_id UUID,
