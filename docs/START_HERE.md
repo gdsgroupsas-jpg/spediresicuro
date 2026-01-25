@@ -1,6 +1,6 @@
 # 🚀 START HERE - Quick Sync for New AI Chat Sessions
 
-**Last Updated:** 2026-01-21
+**Last Updated:** 2026-01-25
 **Current Version:** 1.0.0
 **Status:** Top Tier Standards Achieved (10/10)
 
@@ -568,9 +568,45 @@ npx lint-staged          # Run lint-staged manually
 node --check <file>      # Validate JavaScript syntax
 ```
 
+### Admin / Maintenance
+
+```bash
+npm run cleanup:test-users           # Preview test users to delete (dry-run)
+npm run cleanup:test-users:execute   # Execute test user cleanup
+```
+
 ---
 
 ## 📋 Recent Changes (Last 7 Days)
+
+### 2026-01-25 - Metrics & Test Data Cleanup
+
+**Metrics Fix:**
+
+- ✅ `lib/metrics/login-tracker.ts` - Track `last_login_at` for Active Users metric
+- ✅ Fixed `wallet_transactions` query (removed non-existent `status` column)
+- ✅ Grafana dashboard now shows correct Active Users count
+
+**Test Data Management (Enterprise-Grade):**
+
+- ✅ `scripts/cleanup-test-users.ts` - CLI script for test user cleanup
+- ✅ `app/api/admin/cleanup-test-users/route.ts` - API endpoint for admin dashboard
+- ✅ `tests/helpers/test-cleanup.ts` - TestCleanup helper for automatic cleanup in tests
+- ✅ Cascade delete support (shipments, wallet_transactions, financial_audit_log, etc.)
+- ✅ Feature flag: `TRACK_LAST_LOGIN=false` for instant rollback
+
+**Commands:**
+
+```bash
+npm run cleanup:test-users           # Preview (dry-run)
+npm run cleanup:test-users:execute   # Execute deletion
+```
+
+**Database Cleanup:**
+
+- 331 → 9 users (322 test users removed)
+- 48 test shipments removed
+- 20 financial_audit_log records removed
 
 ### 2026-01-21 - Score 10/10 Raggiunto
 
