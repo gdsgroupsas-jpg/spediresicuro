@@ -347,20 +347,36 @@ export class TrackingService {
       });
 
       // Upsert events (ignore duplicates based on unique constraint)
-      // Note: tracking_events table not in generated types, using raw query approach
+      // Note: tracking_events table not in generated Supabase types
+      // Using type assertion to bypass strict typing until types are regenerated
+      const supabaseAny = this.supabaseAdmin as unknown as {
+        from: (table: string) => {
+          upsert: (
+            data: Record<string, unknown>,
+            options?: { onConflict?: string; ignoreDuplicates?: boolean }
+          ) => Promise<{ error: { message: string } | null }>;
+        };
+      };
+
       for (const event of events) {
-        const { error: upsertError } = await this.supabaseAdmin.rpc('upsert_tracking_event', {
-          p_shipment_id: event.shipment_id,
-          p_tracking_number: event.tracking_number,
-          p_event_date: event.event_date,
-          p_status: event.status,
-          p_status_normalized: event.status_normalized,
-          p_location: event.location,
-          p_carrier: event.carrier,
-          p_provider: event.provider,
-          p_raw_data: event.raw_data,
-          p_fetched_at: event.fetched_at,
-        });
+        const { error: upsertError } = await supabaseAny.from('tracking_events').upsert(
+          {
+            shipment_id: event.shipment_id,
+            tracking_number: event.tracking_number,
+            event_date: event.event_date,
+            status: event.status,
+            status_normalized: event.status_normalized,
+            location: event.location,
+            carrier: event.carrier,
+            provider: event.provider,
+            raw_data: event.raw_data,
+            fetched_at: event.fetched_at,
+          },
+          {
+            onConflict: 'shipment_id,event_date,status',
+            ignoreDuplicates: false,
+          }
+        );
         if (upsertError) {
           console.warn('Error upserting tracking event:', upsertError.message);
         }
