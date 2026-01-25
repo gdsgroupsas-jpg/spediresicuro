@@ -5,78 +5,7 @@ import { writeShipmentAuditLog } from '@/lib/security/audit-log';
 import { createShipmentSchema } from '@/lib/validations/shipment';
 import { createShipmentCore } from '@/lib/shipments/create-shipment-core';
 import { getCourierClientReal } from '@/lib/shipments/get-courier-client';
-
-/**
- * Converte payload legacy (formato frontend vecchio) in formato standard.
- * Supporta retrocompatibilita' con il form /dashboard/spedizioni/nuova
- */
-function convertLegacyPayload(body: any): any {
-  // Se ha gia' formato nuovo (sender, recipient, packages), ritorna as-is
-  if (body.sender && body.recipient && body.packages) {
-    return body;
-  }
-
-  // Rileva se e' formato legacy (ha mittenteNome o destinatarioNome)
-  const isLegacy = body.mittenteNome || body.destinatarioNome;
-  if (!isLegacy) {
-    return body; // Non e' legacy, ritorna as-is
-  }
-
-  console.log('🔄 [LEGACY] Convertendo payload legacy in formato standard');
-
-  // Converte formato legacy -> standard
-  return {
-    sender: {
-      name: body.mittenteNome || '',
-      company: body.mittenteAzienda,
-      address: body.mittenteIndirizzo || '',
-      address2: body.mittenteIndirizzo2,
-      city: body.mittenteCitta || '',
-      province: body.mittenteProvincia || '',
-      postalCode: body.mittenteCap || '',
-      country: body.mittenteCountry || 'IT',
-      phone: body.mittenteTelefono,
-      email: body.mittenteEmail || 'noemail@spediresicuro.it', // Default per validazione
-    },
-    recipient: {
-      name: body.destinatarioNome || '',
-      company: body.destinatarioAzienda,
-      address: body.destinatarioIndirizzo || '',
-      address2: body.destinatarioIndirizzo2,
-      city: body.destinatarioCitta || '',
-      province: body.destinatarioProvincia || '',
-      postalCode: body.destinatarioCap || '',
-      country: body.destinatarioCountry || 'IT',
-      phone: body.destinatarioTelefono,
-      email: body.destinatarioEmail,
-    },
-    packages: [
-      {
-        weight: parseFloat(body.peso) || 1,
-        length: parseFloat(body.lunghezza) || 10,
-        width: parseFloat(body.larghezza) || 10,
-        height: parseFloat(body.altezza) || 10,
-      },
-    ],
-    carrier: (body.corriere || body.carrier || '').toUpperCase(),
-    provider: body.provider || 'spediscionline',
-    notes: body.note,
-    configId: body.configId,
-    contract_id: body.selectedContractId,
-    // COD (contrassegno)
-    ...(body.contrassegnoAmount &&
-      parseFloat(body.contrassegnoAmount) > 0 && {
-        cod: { value: parseFloat(body.contrassegnoAmount) },
-      }),
-    // VAT semantics
-    vat_mode: body.vat_mode,
-    vat_rate: body.vat_rate,
-    // Pricing info
-    base_price: body.base_price,
-    final_price: body.final_price,
-    priceListId: body.priceListId,
-  };
-}
+import { convertLegacyPayload } from '@/lib/shipments/convert-legacy-payload';
 
 export async function POST(request: Request) {
   // ============================================

@@ -26,7 +26,14 @@ export async function POST(request: NextRequest) {
 
     const providedSecret = cronSecret || authHeader?.replace('Bearer ', '');
 
-    if (CRON_SECRET && providedSecret !== CRON_SECRET) {
+    // CRITICAL: Se CRON_SECRET non è configurato, blocca tutte le richieste
+    // Questo evita che l'endpoint sia aperto in caso di env var mancante
+    if (!CRON_SECRET) {
+      console.error('[Tracking Sync] CRON_SECRET not configured - endpoint disabled');
+      return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
+    }
+
+    if (providedSecret !== CRON_SECRET) {
       console.warn('[Tracking Sync] Unauthorized cron request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

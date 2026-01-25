@@ -5,49 +5,27 @@
  * and other carrier APIs.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database, Json } from '@/lib/db/database.types';
 
-// Database row types
-interface ShipmentRow {
-  id: string;
-  tracking_number: string | null;
-  carrier: string | null;
-  tracking_status: string | null;
-  tracking_last_update: string | null;
-  created_at: string;
-}
+// Type aliases from generated database types
+type TrackingEventInsert = Database['public']['Tables']['tracking_events']['Insert'];
 
-interface TrackingEventRow {
-  id: string;
-  shipment_id: string;
-  tracking_number: string;
-  event_date: string;
-  status: string;
-  status_normalized: string;
-  location: string | null;
-  description: string | null;
-  carrier: string | null;
-  provider: string | null;
-  raw_data: Record<string, unknown> | null;
-  created_at: string;
-  fetched_at: string;
-}
-
-// Types
+// Types - aligned with database schema
 export interface TrackingEvent {
   id?: string;
   shipment_id: string;
   tracking_number: string;
   event_date: string;
   status: string;
-  status_normalized: string;
+  status_normalized: string | null;
   location: string | null;
-  description?: string;
-  carrier?: string;
-  provider?: string;
-  raw_data?: Record<string, unknown>;
-  created_at?: string;
-  fetched_at?: string;
+  description?: string | null;
+  carrier?: string | null;
+  provider?: string | null;
+  raw_data?: Json | null;
+  created_at?: string | null;
+  fetched_at?: string | null;
 }
 
 export interface TrackingResponse {
@@ -154,14 +132,28 @@ function parseItalianDate(dateStr: string): Date {
   return new Date(year, month, day);
 }
 
+// Configuration constants with env var overrides
+const TRACKING_CONFIG = {
+  // Cache TTL: how long before we consider cached tracking data stale (default: 30 minutes)
+  CACHE_TTL_MS: parseInt(process.env.TRACKING_CACHE_TTL_MINUTES || '30', 10) * 60 * 1000,
+  // Sync max age: only sync shipments with tracking data older than this (default: 4 hours)
+  SYNC_MAX_AGE_MS: parseInt(process.env.TRACKING_SYNC_MAX_AGE_HOURS || '4', 10) * 60 * 60 * 1000,
+  // Sync batch limit: max shipments to sync per cron run (default: 100)
+  SYNC_BATCH_LIMIT: parseInt(process.env.TRACKING_SYNC_BATCH_LIMIT || '100', 10),
+  // Sync delay: delay between API calls for rate limiting (default: 500ms)
+  SYNC_DELAY_MS: parseInt(process.env.TRACKING_SYNC_DELAY_MS || '500', 10),
+  // Sync lookback: only sync shipments created within this period (default: 14 days)
+  SYNC_LOOKBACK_DAYS: parseInt(process.env.TRACKING_SYNC_LOOKBACK_DAYS || '14', 10),
+};
+
 export class TrackingService {
-  private supabaseAdmin: ReturnType<typeof createClient>;
+  private supabaseAdmin: SupabaseClient<Database>;
   private spedisciOnlineBaseUrl: string;
   private spedisciOnlineApiKey: string;
 
   constructor() {
     // Initialize admin client for service operations
-    this.supabaseAdmin = createClient(
+    this.supabaseAdmin = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -185,9 +177,7 @@ export class TrackingService {
         .eq('id', shipmentId)
         .single();
 
-      const shipment = shipmentData as ShipmentRow | null;
-
-      if (shipmentError || !shipment) {
+      if (shipmentError || !shipmentData) {
         return {
           success: false,
           tracking_number: '',
@@ -200,7 +190,7 @@ export class TrackingService {
         };
       }
 
-      if (!shipment.tracking_number) {
+      if (!shipmentData.tracking_number) {
         return {
           success: false,
           tracking_number: '',
@@ -214,11 +204,15 @@ export class TrackingService {
       }
 
       // Check if we need to refresh from API
-      const shouldRefresh = forceRefresh || this.shouldRefreshTracking(shipment);
+      const shouldRefresh = forceRefresh || this.shouldRefreshTracking(shipmentData);
 
       if (shouldRefresh) {
         // Fetch from Spedisci.Online API
-        await this.fetchAndCacheTracking(shipment.id, shipment.tracking_number, shipment.carrier);
+        await this.fetchAndCacheTracking(
+          shipmentData.id,
+          shipmentData.tracking_number,
+          shipmentData.carrier
+        );
       }
 
       // Get cached events from DB
@@ -228,19 +222,19 @@ export class TrackingService {
         .eq('shipment_id', shipmentId)
         .order('event_date', { ascending: false });
 
-      const events = (eventsData || []) as TrackingEventRow[];
+      // Type is correctly inferred from Database types
+      const trackingEvents = eventsData || [];
 
       if (eventsError) {
         console.error('Error fetching tracking events:', eventsError);
       }
 
-      const trackingEvents = (events || []) as TrackingEvent[];
       const latestEvent = trackingEvents[0];
 
       return {
         success: true,
-        tracking_number: shipment.tracking_number,
-        carrier: shipment.carrier || undefined,
+        tracking_number: shipmentData.tracking_number,
+        carrier: shipmentData.carrier || undefined,
         current_status: latestEvent?.status || 'unknown',
         current_status_normalized: latestEvent?.status_normalized || 'unknown',
         last_update: latestEvent?.fetched_at || null,
@@ -283,12 +277,11 @@ export class TrackingService {
       return false;
     }
 
-    // Check cache age (30 minutes)
+    // Check cache age (configurable, default 30 minutes)
     const lastUpdate = new Date(shipment.tracking_last_update);
     const cacheAge = Date.now() - lastUpdate.getTime();
-    const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
-    return cacheAge > CACHE_TTL;
+    return cacheAge > TRACKING_CONFIG.CACHE_TTL_MS;
   }
 
   /**
@@ -328,7 +321,7 @@ export class TrackingService {
 
       // Transform and insert events
       const now = new Date().toISOString();
-      const events = data.TrackingDettaglio.map((event) => {
+      const events: TrackingEventInsert[] = data.TrackingDettaglio.map((event) => {
         const eventDate = parseItalianDate(event.Data);
         const statusNormalized = normalizeStatus(event.Stato);
 
@@ -341,45 +334,34 @@ export class TrackingService {
           location: event.Luogo || null,
           carrier: carrier || 'unknown',
           provider: 'spediscionline',
-          raw_data: event,
+          raw_data: event as Json,
           fetched_at: now,
         };
       });
 
-      // Upsert events (ignore duplicates based on unique constraint)
-      // Note: tracking_events table not in generated Supabase types
-      // Using type assertion to bypass strict typing until types are regenerated
-      const supabaseAny = this.supabaseAdmin as unknown as {
-        from: (table: string) => {
-          upsert: (
-            data: Record<string, unknown>,
-            options?: { onConflict?: string; ignoreDuplicates?: boolean }
-          ) => Promise<{ error: { message: string } | null }>;
-        };
-      };
-
+      // Upsert events using properly typed client
+      let upsertErrors = 0;
       for (const event of events) {
-        const { error: upsertError } = await supabaseAny.from('tracking_events').upsert(
-          {
-            shipment_id: event.shipment_id,
-            tracking_number: event.tracking_number,
-            event_date: event.event_date,
-            status: event.status,
-            status_normalized: event.status_normalized,
-            location: event.location,
-            carrier: event.carrier,
-            provider: event.provider,
-            raw_data: event.raw_data,
-            fetched_at: event.fetched_at,
-          },
-          {
+        const { error: upsertError } = await this.supabaseAdmin
+          .from('tracking_events')
+          .upsert(event, {
             onConflict: 'shipment_id,event_date,status',
             ignoreDuplicates: false,
-          }
-        );
+          });
+
         if (upsertError) {
-          console.warn('Error upserting tracking event:', upsertError.message);
+          upsertErrors++;
+          console.error(
+            `[TrackingService] Error upserting tracking event for shipment ${shipmentId}:`,
+            upsertError.message
+          );
         }
+      }
+
+      if (upsertErrors > 0) {
+        console.warn(
+          `[TrackingService] ${upsertErrors}/${events.length} events failed to upsert for shipment ${shipmentId}`
+        );
       }
 
       // The trigger will automatically update shipment tracking_status
@@ -400,7 +382,11 @@ export class TrackingService {
       delayBetween?: number; // Delay between API calls (ms)
     } = {}
   ): Promise<{ synced: number; errors: number }> {
-    const { maxAge = 4 * 60 * 60 * 1000, limit = 100, delayBetween = 500 } = options;
+    const {
+      maxAge = TRACKING_CONFIG.SYNC_MAX_AGE_MS,
+      limit = TRACKING_CONFIG.SYNC_BATCH_LIMIT,
+      delayBetween = TRACKING_CONFIG.SYNC_DELAY_MS,
+    } = options;
 
     let synced = 0;
     let errors = 0;
@@ -408,6 +394,9 @@ export class TrackingService {
     try {
       // Get active shipments that need tracking update
       const cutoffDate = new Date(Date.now() - maxAge).toISOString();
+      const lookbackDate = new Date(
+        Date.now() - TRACKING_CONFIG.SYNC_LOOKBACK_DAYS * 24 * 60 * 60 * 1000
+      ).toISOString();
 
       const { data: shipmentsData, error } = await this.supabaseAdmin
         .from('shipments')
@@ -416,21 +405,21 @@ export class TrackingService {
         .not('tracking_status', 'eq', 'delivered')
         .not('tracking_status', 'eq', 'cancelled')
         .or(`tracking_last_update.is.null,tracking_last_update.lt.${cutoffDate}`)
-        .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Last 14 days
+        .gte('created_at', lookbackDate)
         .order('tracking_last_update', { ascending: true, nullsFirst: true })
         .limit(limit);
-
-      const shipments = (shipmentsData || []) as ShipmentRow[];
 
       if (error) {
         console.error('Error fetching shipments for tracking sync:', error);
         return { synced: 0, errors: 1 };
       }
 
+      const shipments = shipmentsData || [];
       console.log(`Syncing tracking for ${shipments.length} shipments`);
 
       for (const shipment of shipments) {
         try {
+          // tracking_number is guaranteed non-null by the query filter
           await this.fetchAndCacheTracking(
             shipment.id,
             shipment.tracking_number!,
@@ -466,9 +455,7 @@ export class TrackingService {
       .eq('tracking_number', trackingNumber)
       .single();
 
-    const shipment = shipmentData as { id: string } | null;
-
-    if (error || !shipment) {
+    if (error || !shipmentData) {
       return {
         success: false,
         tracking_number: trackingNumber,
@@ -481,7 +468,7 @@ export class TrackingService {
       };
     }
 
-    return this.getTracking(shipment.id);
+    return this.getTracking(shipmentData.id);
   }
 }
 
