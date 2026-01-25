@@ -486,7 +486,11 @@ export async function createShipmentCore(params: {
     courierFinalCost,
     platformFee,
     finalCost,
+    trackingNumber: courierResponse.trackingNumber,
+    shipmentId: courierResponse.shipmentId,
   });
+
+  console.log('🚀 [CreateShipment] Proceeding to DB insert...');
 
   let shipment: any;
   try {
@@ -606,6 +610,12 @@ export async function createShipmentCore(params: {
       idempotencyKey,
       courierResponse,
       finalCost,
+    });
+
+    console.log('📝 [CreateShipment] DB insert result:', {
+      success: !!newShipment,
+      error: shipmentError?.message,
+      shipmentId: newShipment?.id,
     });
 
     if (shipmentError || !newShipment)
