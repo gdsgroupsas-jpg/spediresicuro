@@ -23,6 +23,11 @@
  *   4. Rollback info (salva ID eliminati per eventuale restore)
  */
 
+// Load environment variables from .env.local
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+
 import { createClient } from '@supabase/supabase-js';
 import * as readline from 'readline';
 
@@ -370,7 +375,19 @@ PATTERNS MATCHED:
         if (topupCount) console.log(`   Deleted ${topupCount} top-up requests`);
       }
 
-      // 4. Delete user
+      // 4. Delete financial_audit_log (required for cascade)
+      const { error: falError, count: falCount } = await supabase
+        .from('financial_audit_log')
+        .delete({ count: 'exact' })
+        .eq('user_id', user.id);
+
+      if (falError) {
+        console.log(`   Warning: Failed to delete financial_audit_log: ${falError.message}`);
+      } else if (falCount) {
+        console.log(`   Deleted ${falCount} financial_audit_log records`);
+      }
+
+      // 5. Delete user
       const { error: userError } = await supabase.from('users').delete().eq('id', user.id);
 
       if (userError) {
