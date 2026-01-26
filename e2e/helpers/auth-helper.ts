@@ -45,6 +45,7 @@ export async function authenticateAs(page: Page, role: TestUserRole = 'user') {
   };
 
   // Mock completo dell'API session di NextAuth
+  // IMPORTANTE: onboarding_complete DEVE essere true per evitare redirect a /dati-cliente
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       status: 200,
@@ -57,6 +58,7 @@ export async function authenticateAs(page: Page, role: TestUserRole = 'user') {
           role: role === 'user' ? 'user' : 'admin',
           account_type: accountTypeMap[role],
           is_reseller: isResellerMap[role],
+          onboarding_complete: true, // Bypass middleware onboarding check
         },
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       }),

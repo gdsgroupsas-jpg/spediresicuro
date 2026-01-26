@@ -750,6 +750,7 @@ export const auth = async (...args: any[]) => {
             is_reseller: true,
             reseller_role: 'admin',
             account_type: 'superadmin', // Force superadmin for permissions
+            onboarding_complete: true, // ✅ Bypass onboarding redirect for E2E tests
           },
           expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         };

@@ -45,6 +45,7 @@ jobs:
           NODE_ENV: production
           PORT: 3000
           CI: "true"
+          PLAYWRIGHT_TEST_MODE: "true"
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
