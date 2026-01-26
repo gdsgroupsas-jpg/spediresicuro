@@ -9,13 +9,14 @@ interface ConfirmActionDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  description: string;
+  description: string | React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: 'default' | 'destructive';
   requireConfirmation?: boolean;
   confirmationText?: string;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -33,12 +34,13 @@ export function ConfirmActionDialog({
   requireConfirmation = false,
   confirmationText = '',
   isLoading = false,
+  disabled = false,
 }: ConfirmActionDialogProps) {
   const [inputValue, setInputValue] = useState('');
 
   if (!isOpen) return null;
 
-  const isConfirmEnabled = !requireConfirmation || inputValue === confirmationText;
+  const isConfirmEnabled = (!requireConfirmation || inputValue === confirmationText) && !disabled;
 
   const handleConfirm = () => {
     if (isConfirmEnabled && !isLoading) {
@@ -90,7 +92,7 @@ export function ConfirmActionDialog({
               <h2 id="dialog-title" className="text-lg font-semibold text-gray-900">
                 {title}
               </h2>
-              <p className="mt-1 text-sm text-gray-500">{description}</p>
+              <div className="mt-1 text-sm text-gray-500">{description}</div>
             </div>
           </div>
           <button

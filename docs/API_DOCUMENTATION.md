@@ -536,6 +536,52 @@ DELETE /api/shipments/:id
 
 ---
 
+### **Admin API**
+
+#### **Delete User (Superadmin Only)**
+
+```http
+DELETE /api/admin/users/:id
+Authorization: Cookie (must be superadmin)
+```
+
+**Description:** Permanently deletes a user account. This is an atomic operation that:
+
+1. Deletes the user from Supabase Auth (`auth.users`)
+2. Soft-deletes all user shipments (preserves audit trail)
+3. Hard-deletes user from `public.users`
+4. Creates audit log entry
+
+**Security:**
+
+- Only superadmin users can call this endpoint
+- Cannot delete yourself
+- Cannot delete other admins
+
+**Response (Success):**
+
+```json
+{
+  "success": true,
+  "message": "Utente user@example.com cancellato con successo. Spedizioni cancellate: 5, Features rimosse: 0, Profili rimossi: 0",
+  "statistics": {
+    "deleted_shipments_count": 5,
+    "deleted_features_count": 0,
+    "deleted_profiles_count": 0,
+    "wallet_balance_final": 25.5
+  }
+}
+```
+
+**Errors:**
+
+- `401 Unauthorized` - Not authenticated
+- `403 Forbidden` - Not a superadmin, or trying to delete self/other admin
+- `404 Not Found` - User not found
+- `500 Internal Server Error` - Deletion failed
+
+---
+
 ### **Wallet API**
 
 #### **Get Balance** ⚠️ DEPRECATED - Endpoint Not Implemented
@@ -909,6 +955,13 @@ Access-Control-Allow-Origin: http://localhost:3000
 
 ## 📚 **Changelog**
 
+### **v1.0.2** (2026-01-26)
+
+- ✅ **ADDED:** DELETE /api/admin/users/:id - Superadmin user deletion endpoint
+- ✅ **ADDED:** `delete_user_complete()` RPC function documentation
+- 📋 **CHANGES:**
+  - Admin API section added with user management endpoints
+
 ### **v1.0.1** (2026-01-20)
 
 - ✅ **CORRECTED:** Updated all endpoint paths to match actual implementation
@@ -931,6 +984,6 @@ Access-Control-Allow-Origin: http://localhost:3000
 
 ---
 
-**Last Updated:** 2026-01-20 20:45 CET
-**API Version:** 1.0.1
+**Last Updated:** 2026-01-26
+**API Version:** 1.0.2
 **Validation Status:** ✅ All endpoints validated

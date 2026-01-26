@@ -70,19 +70,32 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // Se l'email rimane in auth.users, non potrà essere riutilizzata!
 
     // 7a. Cancella da Supabase Auth PRIMA (non può essere fatto in SQL)
+    // Nota: se l'utente non esiste più in auth.users (già eliminato), continuiamo comunque
     const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteAuthError) {
-      console.error('❌ [DELETE USER] Errore cancellazione auth.users:', deleteAuthError);
-      return NextResponse.json(
-        {
-          error: `Errore durante la cancellazione dell'utente da Supabase Auth: ${deleteAuthError.message || 'Errore sconosciuto'}`,
-        },
-        { status: 500 }
-      );
-    }
+      // Se l'errore è "user not found", l'utente potrebbe essere già stato eliminato da auth
+      // In questo caso, continuiamo con la cancellazione dal database pubblico
+      const isUserNotFound =
+        deleteAuthError.message?.toLowerCase().includes('not found') ||
+        deleteAuthError.message?.toLowerCase().includes('user not found');
 
-    console.log(`✅ [DELETE USER] Utente cancellato da auth.users: ${targetUser.email}`);
+      if (!isUserNotFound) {
+        console.error('❌ [DELETE USER] Errore cancellazione auth.users:', deleteAuthError);
+        return NextResponse.json(
+          {
+            error: `Errore durante la cancellazione dell'utente da Supabase Auth: ${deleteAuthError.message || 'Errore sconosciuto'}`,
+          },
+          { status: 500 }
+        );
+      }
+
+      console.log(
+        `⚠️ [DELETE USER] Utente già eliminato da auth.users, continuo con database pubblico: ${targetUser.email}`
+      );
+    } else {
+      console.log(`✅ [DELETE USER] Utente cancellato da auth.users: ${targetUser.email}`);
+    }
 
     // 7b. Cancellazione atomica da database pubblico (ENTERPRISE-GRADE)
     // Usa funzione SQL atomica per garantire consistenza completa

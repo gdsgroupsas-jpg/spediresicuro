@@ -11,6 +11,8 @@ import {
   Copy,
   Check,
   UserCog,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +25,7 @@ import { SearchInputDebounced } from '@/components/shared/search-input-debounced
 import { EmptyState } from '@/components/shared/empty-state';
 import { DataTableSkeleton } from '@/components/shared/data-table-skeleton';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
+import { Input } from '@/components/ui/input';
 
 import { ManageWalletDialog } from './manage-wallet-dialog';
 import { BulkActionsBar } from './bulk-actions-bar';
@@ -79,6 +82,10 @@ export function UsersTable() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   const [confirmToggle, setConfirmToggle] = useState<{ user: User; enabled: boolean } | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ user: User; confirmEmail: string } | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filtra utenti
   const filteredUsers = useMemo(() => {
@@ -202,6 +209,41 @@ export function UsersTable() {
 
   const handleCopyId = (id: string) => {
     copy(id, 'ID copiato');
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setDeleteDialog({ user, confirmEmail: '' });
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteDialog) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/users/${deleteDialog.user.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Errore durante l'eliminazione");
+      }
+
+      toast.success(`Utente ${deleteDialog.user.email} eliminato con successo`);
+      invalidate();
+      setDeleteDialog(null);
+    } catch (error: any) {
+      toast.error(error.message || "Errore durante l'eliminazione dell'utente");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const canDeleteUser = (user: User) => {
+    // Non può eliminare superadmin
+    if (user.account_type === 'superadmin') return false;
+    return true;
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -441,15 +483,28 @@ export function UsersTable() {
                       </button>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleManageWallet(user)}
-                        className="gap-1"
-                      >
-                        <UserCog className="h-4 w-4" />
-                        Gestisci
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleManageWallet(user)}
+                          className="gap-1"
+                        >
+                          <UserCog className="h-4 w-4" />
+                          Gestisci
+                        </Button>
+                        {canDeleteUser(user) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user)}
+                            className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Elimina utente"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -531,6 +586,49 @@ export function UsersTable() {
         confirmText={confirmToggle?.enabled ? 'Attiva' : 'Disattiva'}
         variant={confirmToggle?.enabled ? 'default' : 'destructive'}
         isLoading={toggleResellerMutation.isPending}
+      />
+
+      {/* Delete User Confirmation Dialog */}
+      <ConfirmActionDialog
+        isOpen={!!deleteDialog}
+        onClose={() => setDeleteDialog(null)}
+        onConfirm={confirmDeleteUser}
+        title="Elimina Utente"
+        description={
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-red-800">
+                <p className="font-medium">Attenzione: questa azione è irreversibile!</p>
+                <p className="mt-1">
+                  Stai per eliminare definitivamente l&apos;utente{' '}
+                  <strong>{deleteDialog?.user.email}</strong>. Verranno eliminati anche tutti i dati
+                  associati (spedizioni, transazioni, profili).
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Digita l&apos;email dell&apos;utente per confermare:
+              </label>
+              <Input
+                type="email"
+                value={deleteDialog?.confirmEmail || ''}
+                onChange={(e) =>
+                  setDeleteDialog((prev) =>
+                    prev ? { ...prev, confirmEmail: e.target.value } : null
+                  )
+                }
+                placeholder={deleteDialog?.user.email}
+                className="w-full"
+              />
+            </div>
+          </div>
+        }
+        confirmText="Elimina definitivamente"
+        variant="destructive"
+        isLoading={isDeleting}
+        disabled={deleteDialog?.confirmEmail !== deleteDialog?.user.email}
       />
     </div>
   );
