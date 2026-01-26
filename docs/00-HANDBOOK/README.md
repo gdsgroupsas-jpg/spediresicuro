@@ -22,6 +22,7 @@ Start here:
 - docs/00-HANDBOOK/workflows/WORKFLOWS.md#flow-0-processo-operativo-ai
 - docs/00-HANDBOOK/rules/spediresicuro.mdc
 - docs/00-HANDBOOK/rules/AI_DO_DONT.md
+- docs/00-HANDBOOK/rules/SECURITY_SECRETS.md
 - docs/00-HANDBOOK/testing/TASK_DOC_TEST_MAP.md
 - docs/00-HANDBOOK/testing/ENV_REQUIREMENTS.md
 - docs/00-HANDBOOK/DECISION_LOG.md

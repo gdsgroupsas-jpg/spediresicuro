@@ -27,3 +27,4 @@ updated: 2026-01-19
 - Change process docs without explicit approval after tested work.
 - Create duplicate sources of truth.
 - Introduce non-ASCII text unless the file already uses it.
+- **MAI COMMITTARE SEGRETI** - Nessun token, password, API key, client secret nel codice o documentazione. Vedi docs/00-HANDBOOK/rules/SECURITY_SECRETS.md
