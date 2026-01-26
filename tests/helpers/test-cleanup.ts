@@ -161,11 +161,12 @@ export class TestCleanup {
 
       for (const userId of ids) {
         try {
-          // Delete cascade dependencies
+          // Delete cascade dependencies (order matters for FK constraints)
+          await supabaseAdmin.from('platform_provider_costs').delete().eq('billed_user_id', userId);
+          await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userId);
           await supabaseAdmin.from('shipments').delete().eq('user_id', userId);
           await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userId);
           await supabaseAdmin.from('top_up_requests').delete().eq('user_id', userId);
-          await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userId);
           await supabaseAdmin.from('price_list_assignments').delete().eq('user_id', userId);
           await supabaseAdmin.from('user_spedisci_online_configs').delete().eq('user_id', userId);
 
