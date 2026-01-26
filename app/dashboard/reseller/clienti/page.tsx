@@ -36,7 +36,7 @@ import {
 } from './_components/client-card-with-listino';
 import { ClientStatsCards } from './_components/client-stats-cards';
 
-import { CreateUserDialog } from '@/app/dashboard/reseller-team/_components/create-user-dialog';
+import { CreateClientWizardDialog } from './_components/create-client-wizard-dialog';
 import { WalletRechargeDialog } from '@/app/dashboard/reseller-team/_components/wallet-recharge-dialog';
 
 import {
@@ -212,7 +212,7 @@ function ResellerClientiContent() {
                 <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Aggiorna
               </Button>
-              <CreateUserDialog onSuccess={handleUserCreated} />
+              <CreateClientWizardDialog onSuccess={handleUserCreated} />
             </div>
           }
         />
@@ -307,7 +307,7 @@ function ResellerClientiContent() {
                 icon={Users}
                 title="Nessun cliente ancora"
                 description="Crea il tuo primo cliente per iniziare a gestire le spedizioni"
-                action={<CreateUserDialog onSuccess={handleUserCreated} />}
+                action={<CreateClientWizardDialog onSuccess={handleUserCreated} />}
               />
             ) : (
               <EmptyState
