@@ -105,12 +105,33 @@ async function verifyAdminAccess(): Promise<{
 }
 
 /**
+ * Helper: Maschera credenziali sensibili nelle configurazioni
+ * NON espone api_key e api_secret in chiaro al frontend
+ */
+function maskConfigCredentials(configs: any[]): any[] {
+  return configs.map((config: any) => {
+    const masked: any = { ...config };
+
+    // Mascheramento aggressivo: mostra solo ultimi 4 caratteri se possibile
+    if (config.api_key) {
+      masked.api_key = config.api_key.length > 4 ? `...${config.api_key.slice(-4)}` : '********';
+    }
+
+    // Secret sempre completamente oscurato
+    if (config.api_secret) {
+      masked.api_secret = '********';
+    }
+
+    return masked;
+  });
+}
+
+/**
  * Verifica se l'utente può gestire una configurazione
  *
- * ⚠️ RBAC:
- * - super_admin: sempre OK (può gestire tutte le config)
+ * ⚠️ RBAC AGGIORNATO:
+ * - super_admin/admin: può gestire config globali + proprie (NON di altri reseller!)
  * - reseller_admin: solo se owner_user_id === session.user.id (solo la propria config)
- * - admin: sempre OK (può gestire tutte le config)
  *
  * @param configOwnerUserId - owner_user_id della configurazione (opzionale, se null = config globale)
  * @returns Risultato verifica permessi
@@ -160,10 +181,37 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
       configOwnerUserId,
     });
 
-    // 1. Super Admin: sempre OK
+    // ==========================================
+    // ✨ NUOVA REGOLA: Superadmin/Admin LIMITATI
+    // ==========================================
+    // Possono accedere SOLO a:
+    //   1. Config globali (configOwnerUserId === null)
+    //   2. Config create da loro stessi
+    // NON possono accedere a config di altri reseller!
+
     if (accountType === 'superadmin' || user.role === 'admin') {
-      console.log('✅ [verifyConfigAccess] Accesso OK: Super Admin');
-      return { canAccess: true, userId };
+      // Config globale: OK
+      if (!configOwnerUserId) {
+        console.log('✅ [verifyConfigAccess] Accesso OK: Admin/Superadmin, config globale');
+        return { canAccess: true, userId };
+      }
+      // Config propria: OK
+      if (configOwnerUserId === userId) {
+        console.log('✅ [verifyConfigAccess] Accesso OK: Admin/Superadmin, config propria');
+        return { canAccess: true, userId };
+      }
+      // Config di altro reseller: NEGATO!
+      console.log(
+        '❌ [verifyConfigAccess] Admin/Superadmin: config di altro reseller, accesso negato',
+        {
+          configOwnerUserId,
+          userId,
+        }
+      );
+      return {
+        canAccess: false,
+        error: 'Accesso negato. Puoi gestire solo configurazioni globali o create da te.',
+      };
     }
 
     // 2. Reseller Admin: solo se owner_user_id === session.user.id
@@ -1175,6 +1223,9 @@ export async function setPersonalConfigurationAsDefault(id: string): Promise<{
 /**
  * Server Action: Assegna configurazione a utente
  *
+ * ✨ SICUREZZA: Usa RPC con ownership check per prevenire cross-assignment
+ * Un admin/superadmin può assegnare SOLO config globali o proprie, NON di altri reseller.
+ *
  * @param userId - ID utente
  * @param configId - ID configurazione (null per rimuovere assegnazione)
  * @returns Risultato operazione
@@ -1188,70 +1239,86 @@ export async function assignConfigurationToUser(
   message?: string;
 }> {
   try {
-    // 1. Verifica permessi admin
-    const { isAdmin, error: authError } = await verifyAdminAccess();
-    if (!isAdmin) {
-      return { success: false, error: authError };
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
     }
 
-    // 2. Verifica che l'utente esista
-    const { data: user, error: userError } = await supabaseAdmin
+    // Recupera ID utente chiamante
+    const { data: callerData, error: callerError } = await supabaseAdmin
       .from('users')
-      .select('id, email')
-      .eq('id', userId)
+      .select('id, account_type, role')
+      .eq('email', context.actor.email.toLowerCase())
       .single();
 
-    if (userError || !user) {
-      return {
-        success: false,
-        error: 'Utente non trovato',
-      };
+    if (callerError || !callerData) {
+      return { success: false, error: 'Utente non trovato' };
     }
 
-    // 3. Se configId è fornito, verifica che la configurazione esista e sia attiva
-    if (configId) {
-      const { data: config, error: configError } = await supabaseAdmin
-        .from('courier_configs')
-        .select('id, is_active')
-        .eq('id', configId)
-        .single();
+    // Se configId è null, rimuovi assegnazione direttamente
+    if (!configId) {
+      const { error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({ assigned_config_id: null })
+        .eq('id', userId);
 
-      if (configError || !config) {
+      if (updateError) {
+        return { success: false, error: updateError.message };
+      }
+
+      console.log(`✅ Assegnazione configurazione rimossa per utente:`, userId);
+      return { success: true, message: 'Assegnazione rimossa con successo' };
+    }
+
+    // ✨ Usa RPC sicura con ownership check
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      'assign_config_to_user_secure',
+      {
+        p_caller_id: callerData.id,
+        p_user_id: userId,
+        p_config_id: configId,
+      }
+    );
+
+    if (rpcError) {
+      console.error('❌ Errore RPC assegnazione configurazione:', rpcError);
+
+      const errorMessage = rpcError.message || '';
+
+      if (errorMessage.includes('UNAUTHORIZED')) {
         return {
           success: false,
-          error: 'Configurazione non trovata',
+          error:
+            'Non puoi assegnare questa configurazione. Puoi assegnare solo configurazioni globali o create da te.',
         };
       }
 
-      if (!config.is_active) {
+      if (errorMessage.includes('USER_NOT_FOUND')) {
+        return { success: false, error: 'Utente non trovato' };
+      }
+
+      if (errorMessage.includes('FORBIDDEN')) {
+        return {
+          success: false,
+          error: 'Puoi assegnare configurazioni solo ai tuoi clienti',
+        };
+      }
+
+      if (errorMessage.includes('CONFIG_NOT_ACTIVE')) {
         return {
           success: false,
           error: 'Impossibile assegnare una configurazione inattiva',
         };
       }
+
+      return { success: false, error: rpcError.message };
     }
 
-    // 4. Aggiorna utente
-    const { error: updateError } = await supabaseAdmin
-      .from('users')
-      .update({ assigned_config_id: configId })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Errore assegnazione configurazione:', updateError);
-      return {
-        success: false,
-        error: updateError.message || "Errore durante l'assegnazione",
-      };
-    }
-
-    console.log(`✅ Configurazione ${configId ? 'assegnata' : 'rimossa'} per utente:`, userId);
+    console.log(`✅ Configurazione assegnata per utente:`, userId);
 
     return {
       success: true,
-      message: configId
-        ? 'Configurazione assegnata con successo'
-        : 'Assegnazione rimossa con successo',
+      message: 'Configurazione assegnata con successo',
     };
   } catch (error: any) {
     console.error('Errore assignConfigurationToUser:', error);
@@ -1263,7 +1330,11 @@ export async function assignConfigurationToUser(
 }
 
 /**
- * Server Action: Lista tutte le configurazioni (solo admin)
+ * Server Action: Lista configurazioni accessibili all'utente
+ *
+ * ✨ SICUREZZA: Usa RPC con ownership check
+ * - Admin/Superadmin: vedono SOLO config globali + proprie (NON di altri reseller)
+ * - Reseller: vede SOLO le proprie configurazioni
  *
  * @returns Lista configurazioni
  */
@@ -1282,7 +1353,7 @@ export async function listConfigurations(): Promise<{
 
     let user: any;
     if (context.actor.id === 'test-user-id') {
-      user = { role: 'admin', is_reseller: true };
+      user = { id: 'test-user-id', role: 'admin', is_reseller: true };
     } else {
       user = await findUserByEmail(context.actor.email);
     }
@@ -1291,56 +1362,57 @@ export async function listConfigurations(): Promise<{
       return { success: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin = user.role === 'admin';
-    const isReseller = (user as any).is_reseller === true;
-
-    // 2. Costruisci query con filtro RBAC
-    // ⚠️ RBAC:
-    // - Admin: vede tutte le configurazioni (globali + personali)
-    // - Reseller: vede SOLO la propria configurazione personale (created_by = email)
-    let query = supabaseAdmin
-      .from('courier_configs')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!isAdmin) {
-      // ⚠️ RBAC: Reseller e utenti normali vedono SOLO la propria configurazione
-      query = query.eq('created_by', context.actor.email);
-    }
-    // Admin vedono TUTTO (nessun filtro)
-
-    // 3. Esegui query
-    const { data: configs, error: fetchError } = await query;
+    // 2. ✨ Usa RPC con ownership filtering
+    // Tutti gli utenti (incluso superadmin) vedono SOLO config globali + proprie
+    const { data: configs, error: fetchError } = await supabaseAdmin.rpc(
+      'get_user_owned_courier_configs',
+      {
+        p_user_id: (user as any).id,
+        p_provider_id: null,
+        p_is_active: null,
+      }
+    );
 
     if (fetchError) {
-      console.error('Errore recupero configurazioni:', fetchError);
+      console.error('Errore RPC get_user_owned_courier_configs:', fetchError);
+
+      // Fallback: query diretta filtrata
+      console.log('⚠️ Fallback: query diretta filtrata per utente');
+      const { data: fallbackConfigs, error: fallbackError } = await supabaseAdmin
+        .from('courier_configs')
+        .select('*')
+        .or(
+          `owner_user_id.eq.${(user as any).id},created_by.eq.${context.actor.email},owner_user_id.is.null`
+        )
+        .order('created_at', { ascending: false });
+
+      if (fallbackError) {
+        return { success: false, error: fallbackError.message };
+      }
+
+      // Filtra manualmente per sicurezza
+      const filteredConfigs = (fallbackConfigs || []).filter((c: any) => {
+        // Config globali (owner_user_id null) sempre accessibili
+        if (!c.owner_user_id) return true;
+        // Config proprie
+        if (c.owner_user_id === (user as any).id) return true;
+        if (c.created_by === context.actor.email) return true;
+        // NON mostrare config di altri reseller
+        return false;
+      });
+
       return {
-        success: false,
-        error: fetchError.message || 'Errore durante il recupero',
+        success: true,
+        configs: maskConfigCredentials(filteredConfigs) as CourierConfig[],
+        currentUserEmail: context.actor.email || undefined,
       };
     }
 
     // ⚠️ SICUREZZA: NON esporre credenziali in chiaro al frontend
     // Maschera sempre api_key e api_secret
-    const maskedConfigs = (configs || []).map((config: any) => {
-      const masked: any = { ...config };
-
-      // Mascheramento aggressivo: mostra solo ultimi 4 caratteri se possibile
-      if (config.api_key) {
-        masked.api_key = config.api_key.length > 4 ? `...${config.api_key.slice(-4)}` : '********';
-      }
-
-      // Secret sempre completamente oscurato
-      if (config.api_secret) {
-        masked.api_secret = '********';
-      }
-
-      return masked;
-    }) as CourierConfig[];
-
     return {
       success: true,
-      configs: maskedConfigs,
+      configs: maskConfigCredentials(configs || []) as CourierConfig[],
       currentUserEmail: context.actor.email || undefined,
     };
   } catch (error: any) {
