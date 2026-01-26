@@ -1,0 +1,63 @@
+# Gitleaks configuration for SpedireSicuro
+# https://github.com/gitleaks/gitleaks
+
+[extend]
+# Use the default gitleaks config as base
+useDefault = true
+
+# Title for this configuration
+title = "SpedireSicuro Gitleaks Config"
+
+# Custom allowlist for false positives
+[allowlist]
+description = "Allowlist for SpedireSicuro"
+
+# Allow paths that are known to be safe
+paths = [
+  '''node_modules/''',
+  '''\.next/''',
+  '''dist/''',
+  '''\.git/''',
+  '''package-lock\.json''',
+  '''pnpm-lock\.yaml''',
+  '''\.env\.example''',
+]
+
+# Allow specific commits (use only if necessary after review)
+# commits = [
+#   "abc123...",
+# ]
+
+# Custom rules to detect project-specific secrets
+[[rules]]
+id = "supabase-access-token"
+description = "Supabase Personal Access Token"
+regex = '''sbp_[a-zA-Z0-9]{40}'''
+tags = ["key", "supabase"]
+
+[[rules]]
+id = "google-oauth-secret"
+description = "Google OAuth Client Secret"
+regex = '''GOCSPX-[a-zA-Z0-9_-]{28}'''
+tags = ["key", "google", "oauth"]
+
+[[rules]]
+id = "supabase-service-role-key"
+description = "Supabase Service Role Key (JWT)"
+regex = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+'''
+tags = ["key", "supabase", "jwt"]
+# Only flag if it looks like a service role key
+# Anon keys are public
+
+[[rules]]
+id = "nextauth-secret"
+description = "NextAuth Secret"
+regex = '''NEXTAUTH_SECRET\s*=\s*["\']?[a-zA-Z0-9+/=]{32,}["\']?'''
+tags = ["key", "nextauth"]
+
+# Stop rules - these patterns should NOT be flagged
+[[rules]]
+id = "allow-placeholder-secrets"
+description = "Placeholder secrets in examples"
+regex = '''(your-.*-here|YOUR_.*_KEY|your_.*_key|TUO_.*|placeholder|example)'''
+allowlist = { regexes = ['''.*'''] }

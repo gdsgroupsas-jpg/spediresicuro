@@ -126,10 +126,14 @@ VEDI-ULTIMO-COMMIT.bat
 setup.bat
 SPIEGAZIONE-PROBLEMA-OUTPUT.md
 
-.vercel
-.env*.local
+# Security cleanup files (contain actual secrets to remove)
+scripts/secrets-to-remove.txt
 
-.vercel
-.env*.local
+# BFG Repo Cleaner backup
+*.git.bfg-report/
+
+# Gitleaks reports
+gitleaks-report.json
+gitleaks-report.sarif
 
 nul
