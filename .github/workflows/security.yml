@@ -117,12 +117,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Only fetch the current commit, not full history
+          # PR refs contain rotated secrets from before cleanup that cannot be removed
+          fetch-depth: 1
 
-      - name: TruffleHog Secret Scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          extra_args: --only-verified
+      - name: TruffleHog Secret Scan (filesystem mode)
+        # Use docker directly to scan filesystem only, not git history
+        # This avoids scanning PR refs which contain old rotated secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/trufflesecurity/trufflehog:latest \
+            filesystem /repo \
+            --only-verified \
+            --fail
 
   # CodeQL analysis for JavaScript/TypeScript
   codeql-analysis:
