@@ -580,6 +580,75 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
+### delete_user_complete()
+
+**Purpose:** Atomic user deletion (hard-delete user + soft-delete shipments + audit log)
+
+```sql
+CREATE OR REPLACE FUNCTION delete_user_complete(
+  p_user_id UUID,
+  p_admin_id UUID,
+  p_admin_email TEXT,
+  p_target_user_email TEXT,
+  p_target_user_name TEXT
+)
+RETURNS TABLE (
+  deleted_shipments_count INTEGER,
+  deleted_features_count INTEGER,
+  deleted_profiles_count INTEGER,
+  wallet_balance_final DECIMAL(10, 2),
+  orphaned_shipments_before INTEGER,
+  status TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- 1. Validate user exists
+  IF NOT EXISTS(SELECT 1 FROM users WHERE id = p_user_id) THEN
+    RAISE EXCEPTION 'User % not found', p_user_id;
+  END IF;
+
+  -- 2. Soft-delete all user shipments
+  UPDATE shipments
+  SET deleted = true, deleted_at = NOW(), deleted_by_user_id = p_admin_id
+  WHERE user_id = p_user_id AND deleted = false;
+
+  -- 3. Get wallet balance before deletion
+  SELECT wallet_balance FROM users WHERE id = p_user_id;
+
+  -- 4. Hard-delete user from public.users
+  DELETE FROM users WHERE id = p_user_id;
+
+  -- 5. Log in audit_logs (without FK references to avoid constraint errors)
+  INSERT INTO audit_logs (action, resource_type, user_email, severity, message, metadata)
+  VALUES ('user_deleted_complete', 'user', p_admin_email, 'info',
+    'Utente ' || p_target_user_email || ' eliminato',
+    jsonb_build_object(
+      'deleted_user_id', p_user_id::text,
+      'admin_id', p_admin_id::text,
+      'target_user_email', p_target_user_email,
+      'wallet_balance_final', v_wallet_balance,
+      'deleted_shipments_count', v_deleted_shipments_count
+    )
+  );
+
+  RETURN QUERY SELECT ...;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Usage:** Called from `/api/admin/users/[id]` DELETE endpoint (superadmin only)
+
+**⚠️ IMPORTANTE:**
+
+- Prima viene eliminato l'utente da `auth.users` via Supabase Admin API
+- Poi viene chiamata questa funzione per eliminare da `public.users`
+- L'audit log NON usa `user_id` e `resource_id` FK per evitare constraint errors (l'utente è già cancellato)
+
+---
+
 ### log_acting_context_audit()
 
 **Purpose:** Write audit log with acting context (impersonation-aware)
