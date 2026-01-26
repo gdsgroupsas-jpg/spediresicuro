@@ -5,10 +5,17 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "🔄 Aggiornamento variabili ambiente su Vercel...`n"
 
-# Nuovi valori da .env.local
-$newEncryptionKey = "REDACTED_ENCRYPTION_KEY"
-$newAutomationToken = "REDACTED_AUTOMATION_TOKEN"
-$newSupabaseKey = "REDACTED_SUPABASE_SECRET_KEY"
+# Leggi valori da .env.local (MAI hardcodare segreti!)
+$envPath = Join-Path $PSScriptRoot ".." ".env.local"
+if (-not (Test-Path $envPath)) {
+    Write-Error "File .env.local non trovato. Crea il file con i segreti."
+    exit 1
+}
+
+$envContent = Get-Content $envPath -Raw
+$newEncryptionKey = if ($envContent -match 'ENCRYPTION_KEY=["'']?([^"''\r\n]+)') { $matches[1] } else { throw "ENCRYPTION_KEY non trovato" }
+$newAutomationToken = if ($envContent -match 'AUTOMATION_SERVICE_TOKEN=["'']?([^"''\r\n]+)') { $matches[1] } else { throw "AUTOMATION_SERVICE_TOKEN non trovato" }
+$newSupabaseKey = if ($envContent -match 'SUPABASE_SERVICE_ROLE_KEY=["'']?([^"''\r\n]+)') { $matches[1] } else { throw "SUPABASE_SERVICE_ROLE_KEY non trovato" }
 
 $environments = @("development", "preview", "production")
 
