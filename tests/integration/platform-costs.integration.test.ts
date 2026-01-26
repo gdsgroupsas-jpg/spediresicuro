@@ -270,20 +270,30 @@ describe('Platform Costs Integration', () => {
   });
 
   afterAll(async () => {
-    // Cleanup in ordine inverso (dipendenze prima)
-    if (testCostRecordId) {
-      await supabaseAdmin.from('platform_provider_costs').delete().eq('id', testCostRecordId);
+    // Cleanup COMPLETO in ordine inverso (dipendenze prima)
+    // Elimina TUTTI i record collegati agli utenti test, non solo quelli tracciati
+
+    const userIds = [testReseller?.id, testSuperAdmin?.id].filter(Boolean);
+
+    for (const userId of userIds) {
+      // 1. financial_audit_log
+      await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userId);
+
+      // 2. platform_provider_costs
+      await supabaseAdmin.from('platform_provider_costs').delete().eq('billed_user_id', userId);
+
+      // 3. shipments
+      await supabaseAdmin.from('shipments').delete().eq('user_id', userId);
+
+      // 4. wallet_transactions
+      await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userId);
     }
 
-    if (testShipmentId) {
-      await supabaseAdmin.from('shipments').delete().eq('id', testShipmentId);
-    }
-
+    // 5. price_lists (by ID, not user)
     if (testPlatformPriceList?.id) {
       await supabaseAdmin.from('price_lists').delete().eq('id', testPlatformPriceList.id);
     }
 
-    // New cleanup for master list
     if (testMasterList?.id) {
       await supabaseAdmin.from('price_lists').delete().eq('id', testMasterList.id);
     }
@@ -292,6 +302,7 @@ describe('Platform Costs Integration', () => {
       await supabaseAdmin.from('price_lists').delete().eq('id', testOwnPriceList.id);
     }
 
+    // 6. Utenti test
     if (testReseller?.id) {
       await supabaseAdmin.from('users').delete().eq('id', testReseller.id);
     }
