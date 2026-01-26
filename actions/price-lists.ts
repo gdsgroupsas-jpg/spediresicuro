@@ -426,6 +426,12 @@ export async function calculateQuoteAction(
 
 /**
  * Assegna listino a utente
+ *
+ * ✨ SICUREZZA TOP-TIER:
+ * - Usa RPC assign_listino_to_user_secure
+ * - Verifica ownership: reseller può assegnare SOLO i suoi listini
+ * - Verifica parentela: reseller può assegnare SOLO ai suoi clienti
+ * - Superadmin può assegnare qualsiasi listino a qualsiasi utente
  */
 export async function assignPriceListToUserAction(
   userId: string,
@@ -442,7 +448,7 @@ export async function assignPriceListToUserAction(
 
     const { data: currentUser } = await supabaseAdmin
       .from('users')
-      .select('id, account_type')
+      .select('id, account_type, is_reseller')
       .eq('email', context.actor.email)
       .single();
 
@@ -450,31 +456,63 @@ export async function assignPriceListToUserAction(
       return { success: false, error: 'Utente non trovato' };
     }
 
-    // Solo admin può assegnare listini
+    // Verifica permessi: admin, superadmin, o reseller
     const isAdmin =
       currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
-    if (!isAdmin) {
+    const isReseller =
+      currentUser.is_reseller === true ||
+      currentUser.account_type === 'reseller' ||
+      currentUser.account_type === 'reseller_admin';
+
+    if (!isAdmin && !isReseller) {
       return {
         success: false,
-        error: 'Solo gli admin possono assegnare listini',
+        error: 'Solo admin e reseller possono assegnare listini',
       };
     }
 
-    // Verifica che listino esista
-    const priceList = await getPriceListById(priceListId);
-    if (!priceList) {
-      return { success: false, error: 'Listino non trovato' };
+    // ✨ USA RPC SICURA con ownership check
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      'assign_listino_to_user_secure',
+      {
+        p_caller_id: currentUser.id,
+        p_user_id: userId,
+        p_price_list_id: priceListId,
+      }
+    );
+
+    if (rpcError) {
+      console.error('Errore RPC assegnazione listino:', rpcError);
+
+      // Gestione errori specifici
+      const errorMessage = rpcError.message || '';
+
+      if (errorMessage.includes('UNAUTHORIZED') || errorMessage.includes('Non hai accesso')) {
+        return {
+          success: false,
+          error: 'Non hai accesso a questo listino. Puoi assegnare solo listini che hai creato.',
+        };
+      }
+
+      if (errorMessage.includes('USER_NOT_FOUND')) {
+        return { success: false, error: 'Utente non trovato' };
+      }
+
+      if (errorMessage.includes('FORBIDDEN') || errorMessage.includes('solo ai tuoi clienti')) {
+        return {
+          success: false,
+          error: 'Puoi assegnare listini solo ai tuoi clienti',
+        };
+      }
+
+      return { success: false, error: rpcError.message };
     }
 
-    // Assegna listino all'utente
-    const { error } = await supabaseAdmin
-      .from('users')
-      .update({ assigned_price_list_id: priceListId })
-      .eq('id', userId);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    console.log('✅ [ASSIGN LISTINO] Assegnato con ownership check:', {
+      callerId: currentUser.id,
+      userId,
+      priceListId,
+    });
 
     return { success: true };
   } catch (error: any) {
@@ -1581,6 +1619,80 @@ export async function listUsersForAssignmentAction(): Promise<{
     return { success: true, users: users || [] };
   } catch (error: any) {
     console.error('Errore recupero utenti:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+/**
+ * ✨ NUOVO: Lista listini disponibili per assegnazione
+ *
+ * Usa RPC get_user_owned_price_lists per garantire ownership:
+ * - Superadmin: vede tutti i listini
+ * - Reseller: vede SOLO i listini che ha creato (privacy totale)
+ * - Admin: vede globali + propri
+ *
+ * @returns Array di listini assegnabili
+ */
+export async function getAssignablePriceListsAction(options?: {
+  listType?: string;
+  status?: string;
+}): Promise<{
+  success: boolean;
+  priceLists?: any[];
+  error?: string;
+}> {
+  try {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
+      .single();
+
+    if (!user) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    // Verifica permessi: admin, superadmin, o reseller
+    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isReseller =
+      user.is_reseller === true ||
+      user.account_type === 'reseller' ||
+      user.account_type === 'reseller_admin';
+
+    if (!isAdmin && !isReseller) {
+      return {
+        success: false,
+        error: 'Solo admin e reseller possono vedere listini per assegnazione',
+      };
+    }
+
+    // ✨ USA RPC SICURA con ownership filtering
+    const { data: priceLists, error: rpcError } = await supabaseAdmin.rpc(
+      'get_user_owned_price_lists',
+      {
+        p_user_id: user.id,
+        p_list_type: options?.listType || null,
+        p_status: options?.status || 'active', // Default solo listini attivi
+      }
+    );
+
+    if (rpcError) {
+      console.error('Errore RPC get_user_owned_price_lists:', rpcError);
+      return { success: false, error: rpcError.message };
+    }
+
+    console.log(
+      `✅ [ASSIGNABLE LISTS] ${priceLists?.length || 0} listini disponibili per ${user.id}`
+    );
+
+    return { success: true, priceLists: priceLists || [] };
+  } catch (error: any) {
+    console.error('Errore getAssignablePriceListsAction:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }

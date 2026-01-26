@@ -5,10 +5,15 @@
  *
  * Utilizza il componente OnboardingWizard in mode="reseller"
  * per permettere ai reseller di creare clienti completi.
+ *
+ * ✨ SICUREZZA TOP-TIER:
+ * - Creazione atomica client + listino
+ * - Ownership check su listini (mostra SOLO i propri)
+ * - Privacy totale tra reseller
  */
 
-import { useState } from 'react';
-import { Plus, UserPlus } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -20,6 +25,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { OnboardingWizard } from '@/components/onboarding';
+import type { AssignablePriceList } from '@/components/onboarding/types';
+import { getAssignablePriceListsAction } from '@/actions/price-lists';
 
 interface CreateClientWizardDialogProps {
   onSuccess?: () => void;
@@ -47,12 +54,47 @@ export function CreateClientWizardDialog({
     setInternalIsOpen(true);
   };
 
-  const handleComplete = (data: any) => {
-    if (data.generatedPassword) {
-      toast.success(`Cliente creato! Password: ${data.generatedPassword}`, { duration: 10000 });
-    } else {
-      toast.success('Cliente creato con successo!');
+  /**
+   * ✨ Carica listini disponibili per assegnazione
+   * Usa RPC con ownership filtering - mostra SOLO i listini del reseller
+   */
+  const handleLoadPriceLists = useCallback(async (): Promise<AssignablePriceList[]> => {
+    try {
+      const result = await getAssignablePriceListsAction({ status: 'active' });
+      if (result.success && result.priceLists) {
+        return result.priceLists.map((pl) => ({
+          id: pl.id,
+          name: pl.name,
+          description: pl.description,
+          courier_id: pl.courier_id,
+          list_type: pl.list_type,
+          status: pl.status,
+          default_margin_percent: pl.default_margin_percent,
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error('Errore caricamento listini:', error);
+      return [];
     }
+  }, []);
+
+  const handleComplete = (data: any) => {
+    const messages: string[] = [];
+
+    if (data.generatedPassword) {
+      messages.push(`Password: ${data.generatedPassword}`);
+    }
+    if (data.priceListId) {
+      messages.push('Listino assegnato');
+    }
+
+    const message =
+      messages.length > 0
+        ? `Cliente creato! ${messages.join(' | ')}`
+        : 'Cliente creato con successo!';
+
+    toast.success(message, { duration: 10000 });
 
     // Delay close to let user see the success message
     setTimeout(() => {
@@ -88,7 +130,12 @@ export function CreateClientWizardDialog({
           </DialogHeader>
 
           <div className="mt-4">
-            <OnboardingWizard mode="reseller" onComplete={handleComplete} onCancel={handleClose} />
+            <OnboardingWizard
+              mode="reseller"
+              onComplete={handleComplete}
+              onCancel={handleClose}
+              onLoadPriceLists={handleLoadPriceLists}
+            />
           </div>
         </DialogContent>
       </Dialog>

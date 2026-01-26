@@ -3,6 +3,11 @@
  *
  * POST: Crea un nuovo cliente per il reseller (persona o azienda)
  * GET: Ottiene lista clienti del reseller
+ *
+ * ✨ SICUREZZA TOP-TIER:
+ * - Creazione atomica client + listino via RPC PostgreSQL
+ * - Ownership check su listini (reseller può assegnare SOLO i suoi)
+ * - Transazione unica: o tutto o niente
  */
 
 import { requireAuth } from '@/lib/api-middleware';
@@ -77,6 +82,7 @@ export async function POST(request: NextRequest) {
       nomeIntestatario,
       documentoIdentita,
       password,
+      priceListId, // ✨ NUOVO: Listino opzionale da assegnare atomicamente
     } = body;
 
     // Validazione email
@@ -208,41 +214,81 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Crea utente
-    const { data: newUser, error: createError } = await supabaseAdmin
-      .from('users')
-      .insert([
-        {
-          email: email.toLowerCase().trim(),
-          password: hashedPassword,
-          name: `${nome} ${cognome}`,
-          role: 'user',
-          account_type: 'user',
-          parent_id: resellerId,
-          is_reseller: false,
-          wallet_balance: 0.0,
-          company_name: tipoCliente === 'azienda' ? ragioneSociale : null,
-          phone: telefono,
-          provider: 'credentials',
-          dati_cliente: datiCliente,
-        },
-      ])
-      .select('id, email, name')
-      .single();
+    // ========================================
+    // ✨ CREAZIONE ATOMICA VIA RPC
+    // ========================================
+    // Usa la funzione PostgreSQL per garantire:
+    // 1. Atomicità: client + listino creati insieme o nessuno dei due
+    // 2. Privacy: verifica ownership listino prima di assegnare
+    // 3. Sicurezza: SECURITY DEFINER con permessi controllati
 
-    if (createError) {
-      console.error('❌ [RESELLER CLIENTS] Errore creazione cliente:', createError);
+    const clientName = `${nome} ${cognome}`;
+    const companyName = tipoCliente === 'azienda' ? ragioneSociale : null;
+
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      'create_client_with_listino',
+      {
+        p_reseller_id: resellerId,
+        p_email: email.toLowerCase().trim(),
+        p_password_hash: hashedPassword,
+        p_name: clientName,
+        p_dati_cliente: datiCliente,
+        p_price_list_id: priceListId || null,
+        p_company_name: companyName,
+        p_phone: telefono,
+      }
+    );
+
+    if (rpcError) {
+      console.error('❌ [RESELLER CLIENTS] Errore RPC creazione cliente:', rpcError);
+
+      // Gestione errori specifici dalla RPC
+      const errorMessage = rpcError.message || '';
+
+      if (errorMessage.includes('EMAIL_EXISTS')) {
+        return NextResponse.json(
+          { error: 'Un utente con questa email esiste già' },
+          { status: 400 }
+        );
+      }
+
+      if (errorMessage.includes('LISTINO_NOT_OWNED')) {
+        return NextResponse.json(
+          {
+            error:
+              'Non puoi assegnare questo listino. Puoi assegnare solo listini che hai creato tu.',
+          },
+          { status: 403 }
+        );
+      }
+
+      if (errorMessage.includes('LISTINO_NOT_ACTIVE')) {
+        return NextResponse.json({ error: 'Il listino selezionato non è attivo' }, { status: 400 });
+      }
+
+      if (errorMessage.includes('UNAUTHORIZED')) {
+        return NextResponse.json(
+          { error: 'Non sei autorizzato a creare clienti' },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
-        { error: createError.message || 'Errore durante la creazione del cliente' },
+        { error: rpcError.message || 'Errore durante la creazione del cliente' },
         { status: 500 }
       );
     }
 
-    console.log('✅ [RESELLER CLIENTS] Cliente creato:', {
+    // Estrai dati dal risultato RPC
+    const clientId = rpcResult?.client_id;
+    const clientEmail = rpcResult?.email;
+
+    console.log('✅ [RESELLER CLIENTS] Cliente creato ATOMICAMENTE:', {
       resellerId,
-      clientId: newUser.id,
-      clientEmail: newUser.email,
+      clientId,
+      clientEmail,
       tipoCliente,
+      priceListId: priceListId || 'none',
     });
 
     return NextResponse.json({
@@ -251,11 +297,12 @@ export async function POST(request: NextRequest) {
         ? `Cliente creato con successo! Password generata: ${generatedPassword}`
         : 'Cliente creato con successo!',
       client: {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
+        id: clientId,
+        email: clientEmail,
+        name: clientName,
       },
       generatedPassword,
+      priceListAssigned: !!priceListId,
     });
   } catch (error: any) {
     console.error('❌ [RESELLER CLIENTS] Errore:', error);

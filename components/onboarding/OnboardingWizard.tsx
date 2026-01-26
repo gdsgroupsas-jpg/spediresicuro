@@ -12,7 +12,7 @@ import {
   Check,
 } from 'lucide-react';
 import { WizardProvider, useWizard } from './WizardContext';
-import { OnboardingWizardProps, OnboardingFormData } from './types';
+import { OnboardingWizardProps, OnboardingFormData, AssignablePriceList } from './types';
 import {
   StepTipoCliente,
   StepAnagrafica,
@@ -20,17 +20,26 @@ import {
   StepAzienda,
   StepBancari,
   StepDocumento,
+  StepListino,
   StepRiepilogo,
 } from './steps';
 
 function WizardContent({
   onComplete,
   onCancel,
+  availablePriceLists,
+  onLoadPriceLists,
 }: {
   onComplete?: (
-    data: OnboardingFormData & { clientId?: string; generatedPassword?: string }
+    data: OnboardingFormData & {
+      clientId?: string;
+      generatedPassword?: string;
+      priceListId?: string;
+    }
   ) => void;
   onCancel?: () => void;
+  availablePriceLists?: AssignablePriceList[];
+  onLoadPriceLists?: () => Promise<AssignablePriceList[]>;
 }) {
   const {
     currentStep,
@@ -51,6 +60,7 @@ function WizardContent({
     mode,
     targetUserId,
     clientEmail,
+    selectedPriceListId,
     errors,
     setError,
     clearError,
@@ -129,6 +139,10 @@ function WizardContent({
       // Add email for reseller mode (creating new client)
       if (mode === 'reseller') {
         payload.email = clientEmail;
+        // ✨ Aggiungi listino selezionato per creazione atomica
+        if (selectedPriceListId) {
+          payload.priceListId = selectedPriceListId;
+        }
       }
 
       // Choose API endpoint based on mode
@@ -166,6 +180,7 @@ function WizardContent({
           ...formData,
           clientId: data.client?.id,
           generatedPassword: data.generatedPassword,
+          priceListId: selectedPriceListId || undefined,
         });
       }
 
@@ -205,6 +220,13 @@ function WizardContent({
         return <StepBancari />;
       case 'documento':
         return <StepDocumento />;
+      case 'listino':
+        return (
+          <StepListino
+            availablePriceLists={availablePriceLists}
+            onLoadPriceLists={onLoadPriceLists}
+          />
+        );
       case 'riepilogo':
         return <StepRiepilogo />;
       default:
@@ -400,6 +422,8 @@ export function OnboardingWizard({
   targetUserId,
   targetUserEmail,
   initialData,
+  availablePriceLists,
+  onLoadPriceLists,
   onComplete,
   onCancel,
 }: OnboardingWizardProps) {
@@ -410,7 +434,12 @@ export function OnboardingWizard({
       targetUserEmail={targetUserEmail}
       initialData={initialData}
     >
-      <WizardContent onComplete={onComplete} onCancel={onCancel} />
+      <WizardContent
+        onComplete={onComplete}
+        onCancel={onCancel}
+        availablePriceLists={availablePriceLists}
+        onLoadPriceLists={onLoadPriceLists}
+      />
     </WizardProvider>
   );
 }

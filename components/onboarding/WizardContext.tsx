@@ -14,6 +14,9 @@ interface WizardContextValue {
   targetUserEmail?: string;
   clientEmail: string;
   setClientEmail: (email: string) => void;
+  /** ✨ Listino selezionato per assegnazione */
+  selectedPriceListId: string | null;
+  setSelectedPriceListId: (id: string | null) => void;
 
   // Computed
   steps: WizardStep[];
@@ -71,14 +74,24 @@ export function WizardProvider({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clientEmail, setClientEmailState] = useState(targetUserEmail || '');
+  const [selectedPriceListId, setSelectedPriceListIdState] = useState<string | null>(null);
 
   const setClientEmail = useCallback((email: string) => {
     setClientEmailState(email);
   }, []);
 
-  // Filter steps based on tipoCliente
+  const setSelectedPriceListId = useCallback((id: string | null) => {
+    setSelectedPriceListIdState(id);
+  }, []);
+
+  // Filter steps based on tipoCliente and mode
   const activeSteps = WIZARD_STEPS.filter((step) => {
+    // Skip azienda step if not azienda
     if (step.isConditional && formData.tipoCliente !== 'azienda') {
+      return false;
+    }
+    // ✨ Skip listino step if not admin/reseller mode
+    if (step.isAdminOnly && mode === 'self') {
       return false;
     }
     return true;
@@ -205,6 +218,8 @@ export function WizardProvider({
     targetUserEmail,
     clientEmail,
     setClientEmail,
+    selectedPriceListId,
+    setSelectedPriceListId,
     steps: WIZARD_STEPS,
     activeSteps,
     currentStepData,

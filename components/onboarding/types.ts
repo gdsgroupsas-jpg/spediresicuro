@@ -65,17 +65,39 @@ export interface WizardStep {
   description: string;
   isOptional?: boolean;
   isConditional?: boolean; // Solo se tipoCliente === 'azienda'
+  isAdminOnly?: boolean; // ✨ Solo per admin/reseller
 }
 
 export type WizardMode = 'self' | 'admin' | 'reseller';
+
+/**
+ * Listino disponibile per assegnazione
+ */
+export interface AssignablePriceList {
+  id: string;
+  name: string;
+  description?: string;
+  courier_id?: string;
+  list_type?: string;
+  status?: string;
+  default_margin_percent?: number;
+}
 
 export interface OnboardingWizardProps {
   mode: WizardMode;
   targetUserId?: string; // Per mode admin (utente esistente)
   targetUserEmail?: string; // Per mode admin/reseller
   initialData?: Partial<OnboardingFormData>;
+  /** ✨ Listini disponibili per assegnazione (mode reseller/admin) */
+  availablePriceLists?: AssignablePriceList[];
+  /** ✨ Callback per caricare listini on-demand */
+  onLoadPriceLists?: () => Promise<AssignablePriceList[]>;
   onComplete?: (
-    data: OnboardingFormData & { clientId?: string; generatedPassword?: string }
+    data: OnboardingFormData & {
+      clientId?: string;
+      generatedPassword?: string;
+      priceListId?: string;
+    }
   ) => void;
   onCancel?: () => void;
 }
@@ -113,6 +135,13 @@ export const WIZARD_STEPS: WizardStep[] = [
     title: 'Documento',
     description: 'Documento di identità',
     isOptional: true,
+  },
+  {
+    id: 'listino',
+    title: 'Listino',
+    description: 'Assegna un listino prezzi',
+    isOptional: true,
+    isAdminOnly: true, // ✨ Solo per admin/reseller
   },
   {
     id: 'riepilogo',
