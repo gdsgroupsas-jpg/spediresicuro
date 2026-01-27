@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -127,9 +128,9 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent size="large">
         <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
               <Store className="w-6 h-6 text-white" />
             </div>
@@ -142,179 +143,183 @@ export function CreateResellerDialog({ isOpen, onClose, onSuccess }: CreateResel
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Informazioni Account */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-5 h-5 text-blue-600" />
-              <h3 className="font-semibold text-gray-900">Informazioni Account</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                  Nome Completo *
-                </Label>
-                <Input
-                  id="name"
-                  {...register('name')}
-                  placeholder="Mario Rossi"
-                  className="mt-1"
-                  disabled={isPending}
-                />
-                {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>}
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <DialogBody className="space-y-6">
+            {/* Informazioni Account */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-gray-900">Informazioni Account</h3>
               </div>
 
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email *
-                </Label>
-                <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                    Nome Completo *
+                  </Label>
                   <Input
-                    id="email"
-                    type="email"
-                    {...register('email')}
-                    placeholder="reseller@example.com"
-                    className="pl-10"
+                    id="name"
+                    {...register('name')}
+                    placeholder="Mario Rossi"
+                    className="mt-1"
                     disabled={isPending}
                   />
+                  {errors.name && (
+                    <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
+                  )}
                 </div>
-                {errors.email && (
-                  <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
-                )}
-              </div>
 
-              <div>
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                  Password *
-                </Label>
-                <div className="flex gap-2 mt-1">
-                  <div className="relative flex-1">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    Email *
+                  </Label>
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
-                      id="password"
-                      type="text"
-                      {...register('password')}
-                      placeholder="Minimo 8 caratteri"
+                      id="email"
+                      type="email"
+                      {...register('email')}
+                      placeholder="reseller@example.com"
                       className="pl-10"
                       disabled={isPending}
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeneratePassword}
-                    disabled={isPending}
-                    className="shrink-0"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Genera
-                  </Button>
+                  {errors.email && (
+                    <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+                  )}
                 </div>
-                {generatedPassword && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                    <p className="text-green-800 font-mono">{generatedPassword}</p>
-                    <p className="text-green-600 text-xs mt-1">Salva questa password!</p>
-                  </div>
-                )}
-                {errors.password && (
-                  <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Credito Iniziale */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
-            <div className="flex items-center gap-2 mb-4">
-              <Wallet className="w-5 h-5 text-green-600" />
-              <h3 className="font-semibold text-gray-900">Credito Iniziale</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="initialCredit" className="text-sm font-medium text-gray-700">
-                  Importo da Accreditare
-                </Label>
-                <Input
-                  id="initialCredit"
-                  type="number"
-                  step="0.01"
-                  {...register('initialCredit', { valueAsNumber: true })}
-                  className="mt-1 text-lg font-semibold"
-                  disabled={isPending}
-                />
-                {errors.initialCredit && (
-                  <p className="text-sm text-red-600 mt-1">{errors.initialCredit.message}</p>
-                )}
-              </div>
-
-              {/* Quick Amounts */}
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Importi Rapidi
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {QUICK_CREDITS.map((amount) => (
-                    <button
-                      key={amount}
+                <div>
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                    Password *
+                  </Label>
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="password"
+                        type="text"
+                        {...register('password')}
+                        placeholder="Minimo 8 caratteri"
+                        className="pl-10"
+                        disabled={isPending}
+                      />
+                    </div>
+                    <Button
                       type="button"
-                      onClick={() => handleQuickCredit(amount)}
+                      variant="outline"
+                      onClick={handleGeneratePassword}
                       disabled={isPending}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        initialCredit === amount
-                          ? 'bg-green-600 text-white shadow-lg scale-105'
-                          : 'bg-white border border-green-200 text-green-700 hover:bg-green-50'
-                      }`}
+                      className="shrink-0"
                     >
-                      {formatCurrency(amount)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div className="bg-white rounded-lg p-4 border-2 border-green-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Credito Totale:</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    {formatCurrency(initialCredit || 0)}
-                  </span>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Genera
+                    </Button>
+                  </div>
+                  {generatedPassword && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                      <p className="text-green-800 font-mono">{generatedPassword}</p>
+                      <p className="text-green-600 text-xs mt-1">Salva questa password!</p>
+                    </div>
+                  )}
+                  {errors.password && (
+                    <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Note (Opzionale) */}
-          <div>
-            <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
-              Note Interne (opzionale)
-            </Label>
-            <Textarea
-              id="notes"
-              {...register('notes')}
-              placeholder="Es: Cliente referenziato da..."
-              className="mt-1"
-              rows={3}
-              disabled={isPending}
-            />
-          </div>
+            {/* Credito Iniziale */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Wallet className="w-5 h-5 text-green-600" />
+                <h3 className="font-semibold text-gray-900">Credito Iniziale</h3>
+              </div>
 
-          {/* Summary Badge */}
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="default" className="bg-purple-600">
-                🎯 Riepilogo
-              </Badge>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="initialCredit" className="text-sm font-medium text-gray-700">
+                    Importo da Accreditare
+                  </Label>
+                  <Input
+                    id="initialCredit"
+                    type="number"
+                    step="0.01"
+                    {...register('initialCredit', { valueAsNumber: true })}
+                    className="mt-1 text-lg font-semibold"
+                    disabled={isPending}
+                  />
+                  {errors.initialCredit && (
+                    <p className="text-sm text-red-600 mt-1">{errors.initialCredit.message}</p>
+                  )}
+                </div>
+
+                {/* Quick Amounts */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Importi Rapidi
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_CREDITS.map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        onClick={() => handleQuickCredit(amount)}
+                        disabled={isPending}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          initialCredit === amount
+                            ? 'bg-green-600 text-white shadow-lg scale-105'
+                            : 'bg-white border border-green-200 text-green-700 hover:bg-green-50'
+                        }`}
+                      >
+                        {formatCurrency(amount)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="bg-white rounded-lg p-4 border-2 border-green-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Credito Totale:</span>
+                    <span className="text-2xl font-bold text-green-600">
+                      {formatCurrency(initialCredit || 0)}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <ul className="space-y-1 text-sm text-gray-700">
-              <li>✅ Account reseller attivato automaticamente</li>
-              <li>✅ Credito wallet disponibile immediatamente</li>
-              <li>✅ Può creare e gestire propri clienti</li>
-              <li>✅ Accesso alla dashboard reseller</li>
-            </ul>
-          </div>
+
+            {/* Note (Opzionale) */}
+            <div>
+              <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                Note Interne (opzionale)
+              </Label>
+              <Textarea
+                id="notes"
+                {...register('notes')}
+                placeholder="Es: Cliente referenziato da..."
+                className="mt-1"
+                rows={3}
+                disabled={isPending}
+              />
+            </div>
+
+            {/* Summary Badge */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="default" className="bg-purple-600">
+                  🎯 Riepilogo
+                </Badge>
+              </div>
+              <ul className="space-y-1 text-sm text-gray-700">
+                <li>✅ Account reseller attivato automaticamente</li>
+                <li>✅ Credito wallet disponibile immediatamente</li>
+                <li>✅ Può creare e gestire propri clienti</li>
+                <li>✅ Accesso alla dashboard reseller</li>
+              </ul>
+            </div>
+          </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>

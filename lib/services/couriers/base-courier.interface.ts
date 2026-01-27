@@ -32,6 +32,12 @@ export interface CourierCreateShipmentRequest {
   insurance?: number;
   cod?: number;
   notes?: string;
+  // Pickup (ritiro a domicilio)
+  pickup?: {
+    pickup_from_address?: string; // "1" se attivo
+    pickup_date?: string; // formato DD/MM/YYYY
+    pickup_time?: string; // "AM" o "PM"
+  };
 }
 
 export interface CourierCreateShipmentResponse {

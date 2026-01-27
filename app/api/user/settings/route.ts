@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { findUserByEmail, updateUser } from '@/lib/database';
 import { requireAuth } from '@/lib/api-middleware';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // ⚠️ IMPORTANTE: Questa route usa headers() per l'autenticazione, quindi deve essere dinamica
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,19 @@ export async function GET(request: NextRequest) {
       return ApiErrors.NOT_FOUND('Utente');
     }
 
+    // Ottieni shipments_count per auto-detect wizard mode
+    let shipmentsCount = 0;
+    try {
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('shipments_count')
+        .eq('email', context!.actor.email!)
+        .single();
+      shipmentsCount = userData?.shipments_count || 0;
+    } catch (e) {
+      console.error('Errore recupero shipments_count:', e);
+    }
+
     // Restituisci impostazioni (senza password)
     return NextResponse.json({
       defaultSender: user.defaultSender || null,
@@ -39,6 +53,7 @@ export async function GET(request: NextRequest) {
       role: user.role,
       provider: user.provider,
       image: user.image,
+      shipmentsCount, // Per auto-detect wizard mode
     });
   } catch (error: any) {
     return handleApiError(error, 'GET /api/user/settings');

@@ -102,6 +102,12 @@ export class SpedisciOnlineClient extends BaseCourierClient {
       codValue: request.cod || 0,
       accessoriServices: [],
       notes: request.notes || '',
+      // Pickup (ritiro a domicilio) - parametri da OpenAPI
+      ...(request.pickup?.pickup_from_address === '1' && {
+        pickup_from_address: '1',
+        pickup_date: request.pickup.pickup_date,
+        pickup_time: request.pickup.pickup_time,
+      }),
     };
 
     console.log('📦 [SPEDISCIONLINE] Creating shipment:', {

@@ -463,6 +463,21 @@
                   "label_format": {
                     "type": "string",
                     "description": "\"PDF\" or \"ZPL\""
+                  },
+                  "pickup_from_address": {
+                    "type": "integer",
+                    "description": "Set to 1 to request pickup from the sender address. Only available for certain carriers (e.g., Poste Italiane).",
+                    "enum": [0, 1]
+                  },
+                  "pickup_date": {
+                    "type": "string",
+                    "description": "Pickup date in DD/MM/YYYY format (e.g., '27/01/2026'). Required when pickup_from_address is 1.",
+                    "pattern": "^\\d{2}/\\d{2}/\\d{4}$"
+                  },
+                  "pickup_time": {
+                    "type": "string",
+                    "description": "Pickup time slot. AM = Morning, PM = Afternoon. Required when pickup_from_address is 1.",
+                    "enum": ["AM", "PM"]
                   }
                 },
                 "required": [
@@ -562,6 +577,52 @@
                     "accessoriServices": [],
                     "label_format": "PDF"
                   }
+                },
+                "example-with-pickup": {
+                  "value": {
+                    "carrierCode": "poste",
+                    "contractCode": "poste-standard",
+                    "packages": [
+                      {
+                        "length": 17,
+                        "width": 25,
+                        "height": 26,
+                        "weight": 3
+                      }
+                    ],
+                    "shipFrom": {
+                      "name": "GDS GROUP SAS",
+                      "company": "GDS GROUP",
+                      "street1": "Via risorgimento 30",
+                      "street2": "",
+                      "city": "Striano",
+                      "state": "NA",
+                      "postalCode": "80040",
+                      "country": "IT",
+                      "phone": "0818276241",
+                      "email": "gdsgroupsas@gmail.com"
+                    },
+                    "shipTo": {
+                      "name": "Mario Rossi",
+                      "company": "",
+                      "street1": "Via Roma 2",
+                      "street2": "",
+                      "city": "Telese Terme",
+                      "state": "BN",
+                      "postalCode": "82037",
+                      "country": "IT",
+                      "phone": null,
+                      "email": "email@example.com"
+                    },
+                    "notes": "Fragile - maneggiare con cura",
+                    "insuranceValue": 0,
+                    "codValue": 0,
+                    "accessoriServices": [],
+                    "label_format": "PDF",
+                    "pickup_from_address": 1,
+                    "pickup_date": "27/01/2026",
+                    "pickup_time": "PM"
+                  }
                 }
               }
             },
@@ -608,6 +669,18 @@
                     },
                     "labelZPL": {
                       "type": "string"
+                    },
+                    "pickupId": {
+                      "type": "string",
+                      "description": "Pickup confirmation ID (only present when pickup was requested)"
+                    },
+                    "pickupDate": {
+                      "type": "string",
+                      "description": "Confirmed pickup date (only present when pickup was requested)"
+                    },
+                    "pickupTime": {
+                      "type": "string",
+                      "description": "Confirmed pickup time slot (only present when pickup was requested)"
                     }
                   },
                   "x-examples": {

@@ -59,6 +59,14 @@ export const createShipmentSchema = z.object({
   base_price: z.number().positive().optional(), // Costo fornitore reale dal listino
   final_price: z.number().positive().optional(), // Prezzo finale di vendita
   priceListId: z.string().optional(), // ID listino usato per il preventivo
+  // ✨ PICKUP: Prenotazione ritiro a domicilio (per API Spedisci.online)
+  pickup: z
+    .object({
+      pickup_from_address: z.string().optional(), // "1" se attivo
+      pickup_date: z.string().optional(), // formato DD/MM/YYYY
+      pickup_time: z.enum(['AM', 'PM']).optional(), // Mattino o Pomeriggio
+    })
+    .optional(),
 });
 
 export type CreateShipmentInput = z.infer<typeof createShipmentSchema>;

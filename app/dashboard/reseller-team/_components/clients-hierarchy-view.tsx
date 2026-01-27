@@ -36,9 +36,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { TierBadge } from '@/lib/utils/tier-badge';
 import { calculateTierFromSubUsers } from '@/lib/db/tier-helpers';
 import { WalletRechargeDialog } from './wallet-recharge-dialog';
-import { CreateUserDialog } from './create-user-dialog';
 import { UserActionsMenu } from './user-actions-menu';
-import { CreateResellerDialog } from '@/app/dashboard/super-admin/_components/create-reseller-dialog';
 
 interface ResellerCardProps {
   reseller: {
@@ -399,9 +397,6 @@ export function ClientsHierarchyView() {
   // Dialog states
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   const [selectedUserForWallet, setSelectedUserForWallet] = useState<any>(null);
-  const [createResellerDialogOpen, setCreateResellerDialogOpen] = useState(false);
-  const [createSubUserDialogOpen, setCreateSubUserDialogOpen] = useState(false);
-  const [selectedResellerForSubUser, setSelectedResellerForSubUser] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
 
@@ -416,8 +411,8 @@ export function ClientsHierarchyView() {
   };
 
   const handleCreateSubUser = (resellerId: string) => {
-    setSelectedResellerForSubUser(resellerId);
-    setCreateSubUserDialogOpen(true);
+    // Naviga alla pagina di creazione cliente con reseller preselezionato
+    router.push(`/dashboard/reseller/clienti/nuovo?resellerId=${resellerId}`);
   };
 
   const handleDeleteConfirm = async () => {
@@ -482,11 +477,11 @@ export function ClientsHierarchyView() {
             </h2>
           </div>
           <Button
-            onClick={() => setCreateResellerDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => router.push('/dashboard/reseller/clienti/nuovo')}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Crea Reseller
+            Nuovo Utente
           </Button>
         </div>
 
@@ -575,28 +570,6 @@ export function ClientsHierarchyView() {
         }}
         onSuccess={async () => {
           await invalidate();
-        }}
-      />
-
-      <CreateResellerDialog
-        isOpen={createResellerDialogOpen}
-        onClose={() => setCreateResellerDialogOpen(false)}
-        onSuccess={async () => {
-          await invalidate();
-          setCreateResellerDialogOpen(false);
-        }}
-      />
-
-      <CreateUserDialog
-        isOpen={createSubUserDialogOpen}
-        onClose={() => {
-          setCreateSubUserDialogOpen(false);
-          setSelectedResellerForSubUser(null);
-        }}
-        onSuccess={async () => {
-          await invalidate();
-          setCreateSubUserDialogOpen(false);
-          setSelectedResellerForSubUser(null);
         }}
       />
 
