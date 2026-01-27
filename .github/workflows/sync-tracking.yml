@@ -23,7 +23,7 @@ on:
 
 env:
   # Default to production
-  APP_URL: ${{ vars.PRODUCTION_URL || 'https://app.spediresicuro.com' }}
+  APP_URL: ${{ vars.PRODUCTION_URL || 'https://app.spediresicuro.it' }}
 
 jobs:
   sync-tracking:
