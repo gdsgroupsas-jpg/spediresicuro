@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Shield, Store, DollarSign, FileText, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Shield, DollarSign, FileText, AlertTriangle, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { UsersTable } from './_components/users-table';
-import { CreateResellerDialog } from './_components/create-reseller-dialog';
 import { AIProviderSelector } from './_components/ai-provider-selector';
 
 export default function SuperAdminDashboard() {
@@ -16,7 +15,6 @@ export default function SuperAdminDashboard() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showCreateReseller, setShowCreateReseller] = useState(false);
 
   // Verifica permessi superadmin
   useEffect(() => {
@@ -163,11 +161,11 @@ export default function SuperAdminDashboard() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => setShowCreateReseller(true)}
+                  onClick={() => router.push('/dashboard/reseller/clienti/nuovo')}
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
                 >
-                  <Store className="w-4 h-4 mr-2" />
-                  Crea Reseller
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Nuovo Utente
                 </Button>
               </div>
             </div>
@@ -176,16 +174,6 @@ export default function SuperAdminDashboard() {
               <UsersTable />
             </div>
           </div>
-
-          {/* Create Reseller Dialog */}
-          <CreateResellerDialog
-            isOpen={showCreateReseller}
-            onClose={() => setShowCreateReseller(false)}
-            onSuccess={() => {
-              // Refresh della tabella utenti
-              window.location.reload();
-            }}
-          />
         </main>
       </div>
     </QueryProvider>

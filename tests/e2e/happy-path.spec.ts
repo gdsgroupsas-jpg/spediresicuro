@@ -34,6 +34,27 @@ test.describe('Nuova Spedizione - Happy Path', () => {
       'x-test-mode': 'playwright',
     });
 
+    // Mock API user/settings - restituisce utente con >10 spedizioni per forzare quick mode
+    await page.route('**/api/user/settings', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            defaultSender: null,
+            email: 'test@example.com',
+            name: 'Test User E2E',
+            role: 'user',
+            provider: 'credentials',
+            image: null,
+            shipmentsCount: 50, // >10 per forzare quick mode
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
     // Mock API geo/search
     await page.route('**/api/geo/search*', async (route) => {
       const url = new URL(route.request().url());
@@ -162,6 +183,17 @@ test.describe('Nuova Spedizione - Happy Path', () => {
       console.log('⚠️ Redirected to login - auth bypass not working, skipping test');
       test.skip();
       return;
+    }
+
+    // STEP 1.5: Se siamo in wizard mode, switcha a quick mode
+    // (il mock restituisce shipmentsCount: 50 che dovrebbe forzare quick mode,
+    // ma se localStorage ha una preferenza salvata potrebbe essere in wizard mode)
+    const wizardModeButton = page.getByRole('button', { name: /Passa a Modalità Rapida/i });
+    const isWizardMode = await wizardModeButton.isVisible({ timeout: 2000 }).catch(() => false);
+    if (isWizardMode) {
+      console.log('🔄 Rilevato Wizard Mode, switcho a Quick Mode per il test...');
+      await wizardModeButton.click();
+      await page.waitForTimeout(1500);
     }
 
     // STEP 2: Chiudi TUTTI i popup/cookie che potrebbero interferire

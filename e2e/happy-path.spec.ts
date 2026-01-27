@@ -132,6 +132,23 @@ test.describe('Nuova Spedizione - Happy Path', () => {
       });
     });
 
+    // Mock user settings to return high shipmentsCount (forces Quick mode)
+    await page.route('**/api/user/settings**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          defaultSender: null,
+          email: 'test@example.com',
+          name: 'Test User E2E',
+          role: 'user',
+          provider: 'credentials',
+          image: null,
+          shipmentsCount: 50, // >10 forces Quick mode
+        }),
+      });
+    });
+
     // Mock API couriers/available per lista corrieri
     await page.route('**/api/couriers/available*', async (route) => {
       await route.fulfill({

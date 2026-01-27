@@ -12,7 +12,18 @@
  * In CI potrebbero essere saltati se l'ambiente non è configurato.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+
+// Helper per switchare da Wizard a Quick mode se necessario
+async function ensureQuickMode(page: Page) {
+  const wizardModeButton = page.getByRole('button', { name: /Passa a Modalità Rapida/i });
+  const isWizardMode = await wizardModeButton.isVisible({ timeout: 2000 }).catch(() => false);
+  if (isWizardMode) {
+    console.log('🔄 Rilevato Wizard Mode, switcho a Quick Mode per il test...');
+    await wizardModeButton.click();
+    await page.waitForTimeout(1500);
+  }
+}
 
 test.describe('Validazione Form Nuova Spedizione', () => {
   test.beforeEach(async ({ page }) => {
@@ -77,6 +88,27 @@ test.describe('Validazione Form Nuova Spedizione', () => {
         }),
       });
     });
+
+    // Mock API user/settings - restituisce utente con >10 spedizioni per forzare quick mode
+    await page.route(/\/api\/user\/settings/, async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            defaultSender: null,
+            email: 'test@example.com',
+            name: 'Test User E2E',
+            role: 'user',
+            provider: 'credentials',
+            image: null,
+            shipmentsCount: 50, // >10 per forzare quick mode
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
   });
 
   test('Pulsante submit disabilitato con form vuoto', async ({ page }) => {
@@ -98,6 +130,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       test.skip();
       return;
     }
+
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
 
     // Verifica che il pulsante "Genera Spedizione" sia disabilitato
     const submitButton = page.getByRole('button', { name: /Genera Spedizione/i });
@@ -124,6 +159,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       test.skip();
       return;
     }
+
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
 
     // Compila nome mittente con meno di 2 caratteri
     const nomeInput = page
@@ -162,6 +200,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       return;
     }
 
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
+
     // Compila indirizzo con meno di 5 caratteri
     const indirizzoInput = page
       .getByText('Indirizzo', { exact: false })
@@ -197,6 +238,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       return;
     }
 
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
+
     // Compila email non valida
     const emailInputs = page.locator('input[type="email"]');
     if ((await emailInputs.count()) > 0) {
@@ -229,6 +273,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       test.skip();
       return;
     }
+
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
 
     // Compila telefono con meno di 8 caratteri
     const telefonoInputs = page.locator('input[type="tel"]');
@@ -263,6 +310,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       return;
     }
 
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
+
     // Scroll fino al campo peso
     await page.evaluate(() => window.scrollTo(0, 1200));
     await page.waitForTimeout(500);
@@ -291,6 +341,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       test.skip();
       return;
     }
+
+    // Se siamo in wizard mode, switcha a quick mode
+    await ensureQuickMode(page);
 
     // Helper per compilare campo
     const fillInputByLabel = async (labelText: string, value: string) => {

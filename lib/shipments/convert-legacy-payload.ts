@@ -55,6 +55,13 @@ export interface LegacyPayload {
   base_price?: number;
   final_price?: number;
   priceListId?: string;
+
+  // Pickup (ritiro a domicilio)
+  pickup?: {
+    pickup_from_address?: string; // "1" se attivo
+    pickup_date?: string; // formato DD/MM/YYYY
+    pickup_time?: string; // "AM" o "PM"
+  };
 }
 
 export interface StandardPayload {
@@ -99,6 +106,13 @@ export interface StandardPayload {
   base_price?: number;
   final_price?: number;
   priceListId?: string;
+
+  // Pickup (ritiro a domicilio)
+  pickup?: {
+    pickup_from_address?: string; // "1" se attivo
+    pickup_date?: string; // formato DD/MM/YYYY
+    pickup_time?: string; // "AM" o "PM"
+  };
 }
 
 /**
@@ -227,6 +241,8 @@ export function convertLegacyPayload(body: LegacyPayload | StandardPayload): Sta
     base_price: legacy.base_price,
     final_price: legacy.final_price,
     priceListId: legacy.priceListId,
+    // Pickup (passthrough)
+    pickup: legacy.pickup,
   };
 
   // Add COD if present

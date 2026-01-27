@@ -14,7 +14,7 @@
  * - Creazione clienti
  */
 
-import { FileText, Filter, RefreshCw, Search, ShieldAlert, Users } from 'lucide-react';
+import { FileText, Filter, RefreshCw, Search, ShieldAlert, Users, UserPlus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -35,8 +35,6 @@ import {
   type ClientWithListino,
 } from './_components/client-card-with-listino';
 import { ClientStatsCards } from './_components/client-stats-cards';
-
-import { CreateClientWizardDialog } from './_components/create-client-wizard-dialog';
 import { WalletRechargeDialog } from '@/app/dashboard/reseller-team/_components/wallet-recharge-dialog';
 
 import {
@@ -181,11 +179,6 @@ function ResellerClientiContent() {
     router.push(`/dashboard/reseller-team?edit=${clientId}`);
   };
 
-  const handleUserCreated = () => {
-    loadData();
-    toast.success('Cliente creato con successo');
-  };
-
   const handleListinoAssigned = () => {
     setShowAssignDialog(false);
     setSelectedClientForListino(null);
@@ -212,7 +205,13 @@ function ResellerClientiContent() {
                 <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Aggiorna
               </Button>
-              <CreateClientWizardDialog onSuccess={handleUserCreated} />
+              <Button
+                onClick={() => router.push('/dashboard/reseller/clienti/nuovo')}
+                className="bg-[#FACC15] hover:bg-[#FBBF24] text-black font-semibold"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nuovo Cliente
+              </Button>
             </div>
           }
         />
@@ -307,7 +306,15 @@ function ResellerClientiContent() {
                 icon={Users}
                 title="Nessun cliente ancora"
                 description="Crea il tuo primo cliente per iniziare a gestire le spedizioni"
-                action={<CreateClientWizardDialog onSuccess={handleUserCreated} />}
+                action={
+                  <Button
+                    onClick={() => router.push('/dashboard/reseller/clienti/nuovo')}
+                    className="bg-[#FACC15] hover:bg-[#FBBF24] text-black font-semibold"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Nuovo Cliente
+                  </Button>
+                }
               />
             ) : (
               <EmptyState

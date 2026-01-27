@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Users, ShieldAlert } from 'lucide-react';
+import { Users, ShieldAlert, UserPlus } from 'lucide-react';
 import { Toaster } from 'sonner';
 
 import DashboardNav from '@/components/dashboard-nav';
@@ -12,19 +12,13 @@ import { Button } from '@/components/ui/button';
 
 import { TeamStatsCards } from './_components/team-stats-cards';
 import { SubUsersTable } from './_components/sub-users-table';
-import { CreateUserDialog } from './_components/create-user-dialog';
 import { ClientsHierarchyView } from './_components/clients-hierarchy-view';
 
-import {
-  useSubUsersStats,
-  useInvalidateSubUsers,
-  useAllClients,
-} from '@/lib/queries/use-sub-users';
+import { useSubUsersStats } from '@/lib/queries/use-sub-users';
 
 function ResellerDashboardContent() {
+  const router = useRouter();
   const { data: stats, isLoading: statsLoading } = useSubUsersStats();
-  const { data: allClients, isLoading: allClientsLoading } = useAllClients();
-  const invalidate = useInvalidateSubUsers();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
 
   // Verifica se è superadmin
@@ -47,10 +41,6 @@ function ResellerDashboardContent() {
     }
     checkSuperAdmin();
   }, []);
-
-  const handleUserCreated = () => {
-    invalidate();
-  };
 
   // Se superadmin, mostra sempre vista gerarchica (gestisce loading/error internamente)
   // IMPORTANTE: Aspetta che isSuperAdmin sia determinato (non null) prima di decidere
@@ -91,7 +81,15 @@ function ResellerDashboardContent() {
           title="Gestione Clienti"
           subtitle="Amministra i tuoi clienti e il loro wallet"
           breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Clienti' }]}
-          actions={<CreateUserDialog onSuccess={handleUserCreated} />}
+          actions={
+            <Button
+              onClick={() => router.push('/dashboard/reseller/clienti/nuovo')}
+              className="bg-[#FACC15] hover:bg-[#FBBF24] text-black font-semibold"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Nuovo Cliente
+            </Button>
+          }
         />
 
         {/* Stats Cards */}

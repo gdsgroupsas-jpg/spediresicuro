@@ -18,6 +18,8 @@ export interface CourierCreateShippingInput {
   insurance?: number;
   cod?: number;
   notes?: string;
+  // Pickup (ritiro a domicilio)
+  pickup?: CreateShipmentInput['pickup'];
 }
 
 export interface CourierCreateShippingResult {
@@ -406,6 +408,8 @@ export async function createShipmentCore(params: {
         insurance: validated.insurance?.value,
         cod: validated.cod?.value,
         notes: validated.notes,
+        // Pickup (ritiro a domicilio)
+        pickup: validated.pickup,
       },
       { timeout: 30000 }
     );

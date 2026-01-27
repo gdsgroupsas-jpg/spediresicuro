@@ -66,6 +66,23 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       });
     });
 
+    // Mock user settings to return high shipmentsCount (forces Quick mode)
+    await page.route('**/api/user/settings**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          defaultSender: null,
+          email: 'test@example.com',
+          name: 'Test User E2E',
+          role: 'user',
+          provider: 'credentials',
+          image: null,
+          shipmentsCount: 50, // >10 forces Quick mode
+        }),
+      });
+    });
+
     // Mock API geo/search con dati validi per Milano e Roma
     await page.route('**/api/geo/search*', async (route) => {
       const url = new URL(route.request().url());
@@ -170,8 +187,9 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       timeout: 30000,
     });
 
-    // Attendi stabilizzazione pagina
-    await page.waitForTimeout(2000);
+    // Attendi che il loading scompaia (aspettiamo che il form venga visualizzato)
+    // Il testo "Caricamento..." indica che sta ancora caricando
+    await expect(page.getByText('Caricamento...')).toBeHidden({ timeout: 15000 });
 
     // Verifica se siamo stati reindirizzati al login
     if (page.url().includes('/login')) {

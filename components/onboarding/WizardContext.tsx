@@ -1,7 +1,16 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { OnboardingFormData, EMPTY_FORM_DATA, WIZARD_STEPS, WizardStep, WizardMode } from './types';
+import {
+  OnboardingFormData,
+  EMPTY_FORM_DATA,
+  WIZARD_STEPS,
+  WizardStep,
+  WizardMode,
+  UserCreationType,
+  ResellerFormData,
+  EMPTY_RESELLER_FORM_DATA,
+} from './types';
 
 interface WizardContextValue {
   // State
@@ -14,9 +23,18 @@ interface WizardContextValue {
   targetUserEmail?: string;
   clientEmail: string;
   setClientEmail: (email: string) => void;
-  /** ✨ Listino selezionato per assegnazione */
+  /** Listino selezionato per assegnazione */
   selectedPriceListId: string | null;
   setSelectedPriceListId: (id: string | null) => void;
+  /** Tipo utente da creare (solo superadmin) */
+  userCreationType: UserCreationType;
+  setUserCreationType: (type: UserCreationType) => void;
+  /** Dati form reseller (solo superadmin) */
+  resellerFormData: ResellerFormData;
+  updateResellerFormData: (data: Partial<ResellerFormData>) => void;
+  /** Reseller selezionato per assegnare cliente (solo superadmin) */
+  selectedResellerId: string | null;
+  setSelectedResellerId: (id: string | null) => void;
 
   // Computed
   steps: WizardStep[];
@@ -76,6 +94,12 @@ export function WizardProvider({
   const [clientEmail, setClientEmailState] = useState(targetUserEmail || '');
   const [selectedPriceListId, setSelectedPriceListIdState] = useState<string | null>(null);
 
+  // Superadmin-specific state
+  const [userCreationType, setUserCreationTypeState] = useState<UserCreationType>('cliente');
+  const [resellerFormData, setResellerFormData] =
+    useState<ResellerFormData>(EMPTY_RESELLER_FORM_DATA);
+  const [selectedResellerId, setSelectedResellerIdState] = useState<string | null>(null);
+
   const setClientEmail = useCallback((email: string) => {
     setClientEmailState(email);
   }, []);
@@ -84,17 +108,100 @@ export function WizardProvider({
     setSelectedPriceListIdState(id);
   }, []);
 
-  // Filter steps based on tipoCliente and mode
+  const setUserCreationType = useCallback((type: UserCreationType) => {
+    setUserCreationTypeState(type);
+    // Reset step quando cambia il tipo
+    setCurrentStep(0);
+  }, []);
+
+  const updateResellerFormData = useCallback((data: Partial<ResellerFormData>) => {
+    setResellerFormData((prev) => ({ ...prev, ...data }));
+  }, []);
+
+  const setSelectedResellerId = useCallback((id: string | null) => {
+    setSelectedResellerIdState(id);
+  }, []);
+
+  // Filter steps based on tipoCliente, mode, and userCreationType
   const activeSteps = WIZARD_STEPS.filter((step) => {
-    // Skip azienda step if not azienda
+    // === SUPERADMIN MODE ===
+    if (mode === 'superadmin') {
+      // Step selezione tipo utente: sempre visibile per superadmin
+      if (step.id === 'selezione-tipo-utente') {
+        return true;
+      }
+
+      // Se sta creando un RESELLER
+      if (userCreationType === 'reseller') {
+        // Mostra solo step per creazione reseller
+        if (step.isResellerCreation === true) {
+          // Skip step azienda se il reseller è persona fisica
+          if (step.isConditional && resellerFormData.tipoCliente !== 'azienda') {
+            return false;
+          }
+          return true;
+        }
+        return false;
+      }
+
+      // Se sta creando un CLIENTE
+      if (userCreationType === 'cliente') {
+        // Skip step reseller creation
+        if (step.isResellerCreation) {
+          return false;
+        }
+        // Mostra step selezione reseller (per assegnare cliente)
+        if (step.id === 'selezione-reseller') {
+          return true;
+        }
+        // Mostra step cliente
+        if (step.isClienteCreation) {
+          // Skip azienda se non è azienda
+          if (step.isConditional && formData.tipoCliente !== 'azienda') {
+            return false;
+          }
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // === RESELLER / ADMIN MODE ===
+    if (mode === 'reseller' || mode === 'admin') {
+      // Skip step superadmin-only
+      if (step.isSuperadminOnly) {
+        return false;
+      }
+      // Skip step reseller creation (solo superadmin può creare reseller)
+      if (step.isResellerCreation) {
+        return false;
+      }
+      // Mostra step cliente
+      if (step.isClienteCreation || step.isAdminOnly) {
+        // Skip azienda se non è azienda
+        if (step.isConditional && formData.tipoCliente !== 'azienda') {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    }
+
+    // === SELF MODE ===
+    // Skip step superadmin/admin only
+    if (step.isSuperadminOnly || step.isAdminOnly || step.isResellerCreation) {
+      return false;
+    }
+    // Skip selezione reseller (non serve per self)
+    if (step.id === 'selezione-reseller') {
+      return false;
+    }
+    // Skip azienda se non è azienda
     if (step.isConditional && formData.tipoCliente !== 'azienda') {
       return false;
     }
-    // ✨ Skip listino step if not admin/reseller mode
-    if (step.isAdminOnly && mode === 'self') {
-      return false;
-    }
-    return true;
+    // Mostra solo step cliente per self-onboarding
+    return step.isClienteCreation === true;
   });
 
   const currentStepData = activeSteps[currentStep] || activeSteps[0];
@@ -197,12 +304,105 @@ export function WizardProvider({
         break;
       }
 
+      // === SUPERADMIN STEPS ===
+      case 'selezione-tipo-utente': {
+        // Sempre valido - basta che sia selezionato (default 'cliente')
+        break;
+      }
+
+      // === RESELLER CREATION STEPS ===
+      case 'reseller-account': {
+        const { email, password } = resellerFormData;
+        if (!email.trim()) {
+          newErrors['reseller.email'] = "L'email è obbligatoria";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          newErrors['reseller.email'] = 'Email non valida';
+        }
+        if (!password.trim()) {
+          newErrors['reseller.password'] = 'La password è obbligatoria';
+        } else if (password.length < 8) {
+          newErrors['reseller.password'] = 'La password deve avere almeno 8 caratteri';
+        }
+        break;
+      }
+
+      case 'reseller-tipo-cliente': {
+        // Sempre valido - ha un default ('azienda')
+        break;
+      }
+
+      case 'reseller-anagrafica': {
+        const { nome, cognome, codiceFiscale, telefono } = resellerFormData.anagrafica;
+        if (!nome.trim()) newErrors['reseller.anagrafica.nome'] = 'Il nome è obbligatorio';
+        if (!cognome.trim()) newErrors['reseller.anagrafica.cognome'] = 'Il cognome è obbligatorio';
+        if (!codiceFiscale.trim()) {
+          newErrors['reseller.anagrafica.codiceFiscale'] = 'Il codice fiscale è obbligatorio';
+        } else if (codiceFiscale.length !== 16) {
+          newErrors['reseller.anagrafica.codiceFiscale'] =
+            'Il codice fiscale deve essere di 16 caratteri';
+        }
+        if (!telefono.trim())
+          newErrors['reseller.anagrafica.telefono'] = 'Il telefono è obbligatorio';
+        break;
+      }
+
+      case 'reseller-indirizzo': {
+        const { indirizzo, citta, provincia, cap } = resellerFormData.indirizzo;
+        if (!indirizzo.trim())
+          newErrors['reseller.indirizzo.indirizzo'] = "L'indirizzo è obbligatorio";
+        if (!citta.trim()) newErrors['reseller.indirizzo.citta'] = 'La città è obbligatoria';
+        if (!provincia.trim())
+          newErrors['reseller.indirizzo.provincia'] = 'La provincia è obbligatoria';
+        if (!cap.trim()) newErrors['reseller.indirizzo.cap'] = 'Il CAP è obbligatorio';
+        break;
+      }
+
+      case 'reseller-azienda': {
+        if (resellerFormData.tipoCliente === 'azienda') {
+          const { ragioneSociale, partitaIva } = resellerFormData.azienda;
+          if (!ragioneSociale.trim()) {
+            newErrors['reseller.azienda.ragioneSociale'] = 'La ragione sociale è obbligatoria';
+          }
+          if (!partitaIva.trim()) {
+            newErrors['reseller.azienda.partitaIva'] = 'La partita IVA è obbligatoria';
+          } else if (partitaIva.length !== 11) {
+            newErrors['reseller.azienda.partitaIva'] = 'La partita IVA deve essere di 11 caratteri';
+          }
+        }
+        break;
+      }
+
+      case 'reseller-bancari': {
+        // Opzionale, nessuna validazione obbligatoria
+        break;
+      }
+
+      case 'reseller-credito': {
+        // Il credito ha un default, sempre valido
+        if (resellerFormData.initialCredit < 0) {
+          newErrors['reseller.initialCredit'] = 'Il credito non può essere negativo';
+        }
+        break;
+      }
+
+      case 'reseller-riepilogo': {
+        // Riepilogo, nessuna validazione
+        break;
+      }
+
+      case 'selezione-reseller': {
+        if (!selectedResellerId) {
+          newErrors['selezione-reseller'] = 'Seleziona un reseller a cui assegnare il cliente';
+        }
+        break;
+      }
+
       // bancari e documento sono opzionali, nessuna validazione obbligatoria
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [currentStepData.id, formData]);
+  }, [currentStepData.id, formData, resellerFormData, selectedResellerId]);
 
   const setSubmitting = useCallback((value: boolean) => {
     setIsSubmitting(value);
@@ -220,6 +420,14 @@ export function WizardProvider({
     setClientEmail,
     selectedPriceListId,
     setSelectedPriceListId,
+    // Superadmin-specific
+    userCreationType,
+    setUserCreationType,
+    resellerFormData,
+    updateResellerFormData,
+    selectedResellerId,
+    setSelectedResellerId,
+    // Computed
     steps: WIZARD_STEPS,
     activeSteps,
     currentStepData,
@@ -228,6 +436,7 @@ export function WizardProvider({
     canGoPrev,
     isLastStep,
     isFirstStep,
+    // Actions
     nextStep,
     prevStep,
     goToStep,

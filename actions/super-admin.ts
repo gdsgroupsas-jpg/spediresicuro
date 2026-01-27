@@ -474,10 +474,47 @@ export async function getAllUsers(limit: number = 100): Promise<{
  */
 export async function createReseller(data: {
   email: string;
-  name: string;
   password: string;
   initialCredit?: number;
   notes?: string;
+  // Nuovi campi per dati completi reseller
+  tipoCliente?: 'persona' | 'azienda';
+  anagrafica?: {
+    nome: string;
+    cognome: string;
+    codiceFiscale?: string;
+    dataNascita?: string;
+    luogoNascita?: string;
+    sesso?: 'M' | 'F';
+    telefono?: string;
+    cellulare?: string;
+  };
+  indirizzo?: {
+    indirizzo: string;
+    citta: string;
+    provincia: string;
+    cap: string;
+    nazione: string;
+  };
+  azienda?: {
+    ragioneSociale: string;
+    partitaIva: string;
+    codiceSDI?: string;
+    pec?: string;
+    indirizzoFatturazione?: string;
+    cittaFatturazione?: string;
+    provinciaFatturazione?: string;
+    capFatturazione?: string;
+  };
+  bancari?: {
+    iban?: string;
+    banca?: string;
+    nomeIntestatario?: string;
+  };
+  // Listino iniziale (opzionale)
+  priceListId?: string;
+  // Manteniamo name per backwards compatibility
+  name?: string;
 }): Promise<{
   success: boolean;
   message?: string;
@@ -495,7 +532,14 @@ export async function createReseller(data: {
     }
 
     // 2. Valida dati input
-    if (!data.email || !data.name || !data.password) {
+    // Supporta sia il vecchio formato (name) che il nuovo (anagrafica.nome + cognome)
+    const resellerName =
+      data.name ||
+      (data.anagrafica?.nome && data.anagrafica?.cognome
+        ? `${data.anagrafica.nome} ${data.anagrafica.cognome}`
+        : null);
+
+    if (!data.email || !resellerName || !data.password) {
       return {
         success: false,
         error: 'Email, nome e password sono obbligatori.',
@@ -570,7 +614,7 @@ export async function createReseller(data: {
       password: data.password, // Password in plain text (Supabase la hasha automaticamente)
       email_confirm: true, // Conferma email automaticamente (reseller creati da admin sono verificati)
       user_metadata: {
-        name: data.name.trim(),
+        name: resellerName.trim(),
       },
       app_metadata: {
         role: 'user',
@@ -596,19 +640,80 @@ export async function createReseller(data: {
     // La verifica email è gestita da Supabase Auth tramite email_confirmed_at in auth.users.
     console.log('💾 [CREATE RESELLER] Creazione record in public.users...');
 
+    // Costruisci dati_cliente se abbiamo i nuovi campi
+    let datiCliente: Record<string, any> | null = null;
+    if (data.anagrafica) {
+      datiCliente = {
+        nome: data.anagrafica.nome,
+        cognome: data.anagrafica.cognome,
+        codiceFiscale: data.anagrafica.codiceFiscale?.toUpperCase() || null,
+        dataNascita: data.anagrafica.dataNascita || null,
+        luogoNascita: data.anagrafica.luogoNascita || null,
+        sesso: data.anagrafica.sesso || null,
+        telefono: data.anagrafica.telefono || null,
+        cellulare: data.anagrafica.cellulare || null,
+        email: emailLower,
+        tipoCliente: data.tipoCliente || 'persona',
+        datiCompletati: true,
+        dataCompletamento: new Date().toISOString(),
+      };
+
+      // Aggiungi indirizzo se presente
+      if (data.indirizzo) {
+        datiCliente.indirizzo = data.indirizzo.indirizzo;
+        datiCliente.citta = data.indirizzo.citta;
+        datiCliente.provincia = data.indirizzo.provincia?.toUpperCase() || null;
+        datiCliente.cap = data.indirizzo.cap;
+        datiCliente.nazione = data.indirizzo.nazione || 'Italia';
+      }
+
+      // Aggiungi dati azienda se presente e tipoCliente è azienda
+      if (data.tipoCliente === 'azienda' && data.azienda) {
+        datiCliente.ragioneSociale = data.azienda.ragioneSociale;
+        datiCliente.partitaIva = data.azienda.partitaIva;
+        datiCliente.codiceSDI = data.azienda.codiceSDI || null;
+        datiCliente.pec = data.azienda.pec || null;
+        datiCliente.indirizzoFatturazione = data.azienda.indirizzoFatturazione || null;
+        datiCliente.cittaFatturazione = data.azienda.cittaFatturazione || null;
+        datiCliente.provinciaFatturazione =
+          data.azienda.provinciaFatturazione?.toUpperCase() || null;
+        datiCliente.capFatturazione = data.azienda.capFatturazione || null;
+      }
+
+      // Aggiungi dati bancari se presenti
+      if (data.bancari) {
+        datiCliente.iban = data.bancari.iban?.toUpperCase() || null;
+        datiCliente.banca = data.bancari.banca || null;
+        datiCliente.nomeIntestatario = data.bancari.nomeIntestatario || null;
+      }
+    }
+
+    // Determina company_name per aziende
+    const companyName =
+      data.tipoCliente === 'azienda' && data.azienda?.ragioneSociale
+        ? data.azienda.ragioneSociale
+        : null;
+
+    // Determina phone
+    const phone = data.anagrafica?.telefono || data.anagrafica?.cellulare || null;
+
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
       .insert([
         {
           id: authUserId, // ⚠️ CRITICO: Usa ID di auth come ID anche in public.users
           email: emailLower,
-          name: data.name.trim(),
+          name: resellerName.trim(),
           password: null, // Password gestita da Supabase Auth (non più hash manuale)
           account_type: 'reseller', // ⚠️ FIX: Reseller creati da superadmin hanno account_type='reseller'
           is_reseller: true, // Flag reseller attivo
           reseller_role: 'admin', // ⚠️ FIX: Reseller creati da superadmin sono automaticamente admin
           wallet_balance: data.initialCredit || 0,
           provider: 'credentials',
+          company_name: companyName,
+          phone: phone,
+          dati_cliente: datiCliente,
+          assigned_price_list_id: data.priceListId || null, // Listino iniziale (opzionale)
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -662,7 +767,7 @@ export async function createReseller(data: {
 
     return {
       success: true,
-      message: `Reseller "${data.name}" creato con successo! L'utente può fare login immediatamente con email e password.`,
+      message: `Reseller "${resellerName}" creato con successo! L'utente può fare login immediatamente con email e password.`,
       userId: userId,
     };
   } catch (error: any) {
