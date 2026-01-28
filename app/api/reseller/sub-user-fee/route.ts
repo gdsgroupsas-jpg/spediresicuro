@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * API: Gestione Fee Sub-User per RESELLER
  *
