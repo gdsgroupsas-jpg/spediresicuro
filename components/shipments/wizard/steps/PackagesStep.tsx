@@ -5,9 +5,9 @@ import { Package, Plus, Trash2, Scale, Ruler, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { useShipmentWizard, PackageData } from '../ShipmentWizardContext';
+import { useShipmentWizard } from '../ShipmentWizardContext';
 import { cn } from '@/lib/utils';
+import { calcVolume, calcPesoVolumetrico, calcPesoTassabile } from '@/lib/package-metrics';
 
 // Preset comuni per colli
 const PACKAGE_PRESETS = [
@@ -205,21 +205,46 @@ export function PackagesStep() {
               />
             </div>
 
-            {/* Volume preview */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Volume:</span>
-                <span className="font-medium">
-                  {((pkg.lunghezza * pkg.larghezza * pkg.altezza) / 1000000).toFixed(3)} m³
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-gray-600">Peso volumetrico (L×W×H/5000):</span>
-                <span className="font-medium">
-                  {((pkg.lunghezza * pkg.larghezza * pkg.altezza) / 5000).toFixed(2)} kg
-                </span>
-              </div>
-            </div>
+            {/* Volume, peso volumetrico e peso tassabile */}
+            {(() => {
+              const volume = calcVolume(pkg.lunghezza, pkg.larghezza, pkg.altezza);
+              const pesoVolumetrico = calcPesoVolumetrico(
+                pkg.lunghezza,
+                pkg.larghezza,
+                pkg.altezza
+              );
+              const { pesoTassabile, usaVolumetrico } = calcPesoTassabile(
+                pkg.peso,
+                pkg.lunghezza,
+                pkg.larghezza,
+                pkg.altezza
+              );
+              return (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Volume:</span>
+                    <span className="font-medium">{volume.toFixed(3)} m³</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Peso volumetrico (L×W×H/5000):</span>
+                    <span className="font-medium">{pesoVolumetrico.toFixed(2)} kg</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm pt-1 border-t border-gray-200">
+                    <span className="text-gray-700 font-semibold">Peso tassabile:</span>
+                    <span
+                      className={`font-bold ${usaVolumetrico ? 'text-orange-600' : 'text-gray-900'}`}
+                    >
+                      {pesoTassabile.toFixed(2)} kg
+                      {usaVolumetrico && (
+                        <span className="ml-1 text-xs font-normal text-orange-500">
+                          (volumetrico)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>

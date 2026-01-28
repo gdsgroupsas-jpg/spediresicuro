@@ -177,9 +177,14 @@ function normalizeCarrierName(carrier: string): string {
  * @returns Standard payload format
  */
 export function convertLegacyPayload(body: LegacyPayload | StandardPayload): StandardPayload {
-  // If already in new format (has sender, recipient, packages), return as-is
+  // If already in new format (has sender, recipient, packages), normalize carrier and return
   if ('sender' in body && 'recipient' in body && 'packages' in body) {
-    return body as StandardPayload;
+    const standard = body as StandardPayload;
+    // Normalizza sempre il carrier code per gestire varianti tipo POSTEDELIVERYBUSINESS
+    if (standard.carrier) {
+      standard.carrier = normalizeCarrierName(standard.carrier);
+    }
+    return standard;
   }
 
   const legacy = body as LegacyPayload;

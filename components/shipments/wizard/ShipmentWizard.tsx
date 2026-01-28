@@ -20,6 +20,23 @@ interface ShipmentWizardProps {
   onCancel?: () => void;
 }
 
+// Normalizza il carrier code per l'API (es. POSTEDELIVERYBUSINESS -> POSTE)
+function normalizeCarrierCode(carrierCode: string | undefined): string {
+  if (!carrierCode) return 'GLS';
+  const code = carrierCode.toUpperCase();
+  // Mappa codici estesi ai codici base accettati dall'API
+  if (code.includes('POSTE') || code.includes('CRONO')) return 'POSTE';
+  if (code.includes('GLS')) return 'GLS';
+  if (code.includes('BRT') || code.includes('BARTOLINI')) return 'BRT';
+  if (code.includes('UPS')) return 'UPS';
+  if (code.includes('DHL')) return 'DHL';
+  if (code.includes('SDA')) return 'SDA';
+  if (code.includes('TNT')) return 'TNT';
+  if (code.includes('FEDEX')) return 'FEDEX';
+  // Fallback: usa i primi 3-4 caratteri
+  return code.substring(0, 4);
+}
+
 function WizardContent({ onSuccess, onCancel }: ShipmentWizardProps) {
   const { data, currentStep, isStepComplete } = useShipmentWizard();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -115,8 +132,8 @@ function WizardContent({ onSuccess, onCancel }: ShipmentWizardProps) {
               pickup_time: data.pickup.pickupTime,
             }
           : undefined,
-        // Corriere selezionato
-        carrier: data.carrier?.carrierCode,
+        // Corriere selezionato (normalizzato per API)
+        carrier: normalizeCarrierCode(data.carrier?.carrierCode),
         provider: 'spediscionline',
         configId: data.carrier?.configId,
         final_price: data.carrier?.finalPrice,
@@ -138,15 +155,52 @@ function WizardContent({ onSuccess, onCancel }: ShipmentWizardProps) {
         throw new Error(result.error || 'Errore nella creazione della spedizione');
       }
 
+      // Download automatico etichetta PDF se disponibile
+      const labelData = result.shipment?.label_data;
+      if (labelData) {
+        try {
+          // labelData può essere base64 o URL
+          if (labelData.startsWith('http')) {
+            // È un URL, apri in nuova tab
+            window.open(labelData, '_blank');
+          } else {
+            // È base64, crea blob e scarica
+            const byteCharacters = atob(labelData);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `etichetta-${result.shipment?.tracking_number || result.ldv || 'spedizione'}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
+        } catch (downloadError) {
+          console.warn('Errore download etichetta:', downloadError);
+          // Non bloccare il flusso, mostra solo warning
+        }
+      }
+
       toast.success(
         <div>
           <p className="font-semibold">Spedizione creata con successo!</p>
-          <p className="text-sm mt-1">LDV: {result.ldv || result.shipmentId}</p>
+          <p className="text-sm mt-1">
+            LDV: {result.shipment?.tracking_number || result.ldv || result.shipmentId}
+          </p>
+          {labelData && (
+            <p className="text-xs text-green-600 mt-1">Etichetta scaricata automaticamente</p>
+          )}
         </div>
       );
 
       // Callback di successo
-      onSuccess?.(result.shipmentId || result.ldv);
+      onSuccess?.(result.shipment?.id || result.shipmentId || result.ldv);
     } catch (error: any) {
       console.error('Errore creazione spedizione:', error);
       toast.error(error.message || 'Errore imprevisto. Riprova.');

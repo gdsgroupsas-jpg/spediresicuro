@@ -49,32 +49,29 @@ export function CarrierStep() {
     setError(null);
 
     try {
-      // Prepara i dati per la richiesta preventivi (usando nomi italiani dal context)
+      // Calcola peso totale e peso volumetrico per tutti i colli
+      const totalWeight = data.packages.reduce((sum, pkg) => sum + pkg.peso, 0);
+      const totalVolumetricWeight = data.packages.reduce((sum, pkg) => {
+        const volumetric = (pkg.lunghezza * pkg.larghezza * pkg.altezza) / 5000;
+        return sum + volumetric;
+      }, 0);
+      // Peso tassabile: il maggiore tra peso reale e volumetrico
+      const chargeableWeight = Math.max(totalWeight, totalVolumetricWeight);
+
+      // Prepara i dati per l'API /api/quotes/db (formato flat atteso dall'API)
       const quoteRequest = {
-        sender: {
-          postalCode: data.mittente.cap,
-          city: data.mittente.citta,
-          country: 'IT',
-        },
-        recipient: {
-          postalCode: data.destinatario.cap,
-          city: data.destinatario.citta,
-          country: 'IT',
-        },
-        packages: data.packages.map((pkg) => ({
-          weight: pkg.peso,
+        weight: chargeableWeight,
+        zip: data.destinatario.cap,
+        province: data.destinatario.provincia,
+        city: data.destinatario.citta,
+        services: data.services.serviziAccessori || [],
+        insuranceValue: data.services.assicurazioneEnabled ? data.services.assicurazioneValue : 0,
+        codValue: data.services.contrassegnoEnabled ? data.services.contrassegnoAmount : 0,
+        dimensions: data.packages.map((pkg) => ({
           length: pkg.lunghezza,
           width: pkg.larghezza,
           height: pkg.altezza,
         })),
-        services: {
-          contrassegno: data.services.contrassegnoEnabled
-            ? data.services.contrassegnoAmount
-            : undefined,
-          assicurazione: data.services.assicurazioneEnabled
-            ? data.services.assicurazioneValue
-            : undefined,
-        },
       };
 
       const response = await fetch('/api/quotes/db', {
@@ -89,25 +86,33 @@ export function CarrierStep() {
 
       const result = await response.json();
 
-      // Mappa i risultati nel formato atteso
-      const mappedQuotes: QuoteResult[] = (result.quotes || []).map((q: any, index: number) => ({
-        id: q.id || `quote-${index}`,
-        carrier: q.carrier || q.corriere,
-        carrierCode: q.carrierCode || q.carrier?.toUpperCase() || 'GLS',
-        contractCode: q.contractCode || q.contract_code || '',
-        carrierLogo: q.logo,
-        service: q.service || q.servizio,
-        price: q.price || q.prezzo,
-        originalPrice: q.originalPrice || q.prezzoOriginale,
-        deliveryDays: q.deliveryDays || q.tempiConsegna || '2-3 giorni',
-        deliveryDate: q.deliveryDate,
-        features: q.features || [],
-        recommended: index === 0,
-        configId: q.configId,
-        supplierPrice: q.supplierPrice || q.base_price,
-        vatMode: q.vat_mode,
-        vatRate: q.vat_rate,
-      }));
+      // L'API restituisce { success, rates, details }
+      // Mappa i rates nel formato QuoteResult
+      const rates = result.rates || [];
+      const mappedQuotes: QuoteResult[] = rates.map((rate: any, index: number) => {
+        // Estrai nome corriere dal carrierCode (es. "gls" -> "GLS")
+        const carrierName = (rate.carrierCode || '').toUpperCase();
+        const contractCode = rate.contractCode || rate.carrierCode || '';
+
+        return {
+          id: rate._priceListId || `quote-${index}`,
+          carrier: carrierName,
+          carrierCode: carrierName,
+          contractCode: contractCode,
+          carrierLogo: undefined,
+          service: contractCode.includes('express') ? 'Express' : 'Standard',
+          price: parseFloat(rate.total_price) || 0,
+          originalPrice: parseFloat(rate.weight_price) || undefined, // Costo fornitore come prezzo originale
+          deliveryDays: '2-3 giorni',
+          deliveryDate: undefined,
+          features: ['Tracking'],
+          recommended: index === 0,
+          configId: rate._configId,
+          supplierPrice: parseFloat(rate.weight_price) || parseFloat(rate.base_price) || 0,
+          vatMode: rate.vat_mode as 'included' | 'excluded' | undefined,
+          vatRate: parseFloat(rate.vat_rate) || undefined,
+        };
+      });
 
       setQuotes(mappedQuotes);
 

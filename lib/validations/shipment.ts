@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+// Helper per email opzionale: accetta stringa vuota o email valida
+const optionalEmail = z
+  .string()
+  .transform((val) => (val === '' ? undefined : val))
+  .pipe(z.string().email('Email non valida').optional())
+  .or(z.literal(''));
+
 export const createShipmentSchema = z.object({
   sender: z.object({
     name: z.string().min(1, 'Nome mittente obbligatorio'),
@@ -11,7 +18,7 @@ export const createShipmentSchema = z.object({
     postalCode: z.string().min(1, 'CAP mittente obbligatorio'),
     country: z.string().default('IT'),
     phone: z.string().optional(),
-    email: z.string().email('Email mittente non valida'),
+    email: optionalEmail.optional(),
   }),
   recipient: z.object({
     name: z.string().min(1, 'Nome destinatario obbligatorio'),
@@ -23,7 +30,7 @@ export const createShipmentSchema = z.object({
     postalCode: z.string().min(1, 'CAP destinatario obbligatorio'),
     country: z.string().default('IT'),
     phone: z.string().optional(),
-    email: z.string().email('Email destinatario non valida').optional(),
+    email: optionalEmail.optional(),
   }),
   packages: z
     .array(
