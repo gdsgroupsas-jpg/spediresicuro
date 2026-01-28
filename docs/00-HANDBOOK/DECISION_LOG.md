@@ -37,15 +37,20 @@ Record structural and process decisions for fast AI retrieval.
 - Impact: ShipmentWizard.tsx, ShipmentWizardContext.tsx, CarrierStep.tsx, convert-legacy-payload.ts, shipment.ts validation
 - Tests: Existing tests cover carrier normalization (convert-legacy-payload.test.ts)
 
-## 2026-01-28 - Wallet Logic Refactor (PLANNED)
+## 2026-01-28 - Wallet Logic Refactor
 
 - Decision: Simplify wallet debit logic
-- Current: Block estimated cost (final_price × 1.10) → Create shipment → Adjust with conguaglio
-- Proposed: Verify balance >= final_price → Create shipment → Debit final_price (no conguaglio)
+- Before: Block estimated cost (final_price × 1.10) → Create shipment → Adjust with conguaglio
+- After: Verify balance >= final_price → Create shipment → Debit final_price (no conguaglio)
 - Rationale:
   1. Single transaction instead of block+adjustment
   2. User pays exactly what they see in quote
   3. Margin guaranteed by price list, not by API response
   4. BYOC pays only platform_fee (industry standard)
-- Status: Pending PR - requires separate implementation
-- Impact: create-shipment-core.ts, wallet functions, tests
+- Role-based logic:
+  - SUPERADMIN: No wallet charge (internal testing)
+  - BYOC: Charge only platform_fee (they pay courier directly)
+  - RESELLER/USER: Charge final_price from their assigned price list
+- Status: PR #80 merged
+- Impact: create-shipment-core.ts (removed ~50 lines of adjustment logic)
+- Tests: Wallet smoke tests pass (zero-balance, idempotency, courier-fail, db-fail)
