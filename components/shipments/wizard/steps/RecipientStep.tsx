@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AddressFields from '@/components/ui/address-fields';
 import { useShipmentWizard } from '../ShipmentWizardContext';
+import { RecipientAutocomplete } from '../RecipientAutocomplete';
 
 export function RecipientStep() {
   const { data, setDestinatario, validateStep } = useShipmentWizard();
@@ -29,18 +30,31 @@ export function RecipientStep() {
 
       {/* Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Nome */}
+        {/* Nome - con autocomplete da spedizioni precedenti */}
         <div className="space-y-2">
           <Label htmlFor="recipient-nome" className="flex items-center gap-2">
             <User className="w-4 h-4 text-gray-500" />
             Nome Completo *
           </Label>
-          <Input
+          <RecipientAutocomplete
             id="recipient-nome"
             value={data.destinatario.nome}
-            onChange={(e) => setDestinatario({ nome: e.target.value })}
+            onChange={(value) => setDestinatario({ nome: value })}
+            onSelectRecipient={(recipient) => {
+              // Auto-compila TUTTI i campi destinatario
+              setDestinatario({
+                nome: recipient.nome,
+                indirizzo: recipient.indirizzo,
+                citta: recipient.citta,
+                provincia: recipient.provincia,
+                cap: recipient.cap,
+                telefono: recipient.telefono,
+                email: recipient.email,
+                company: recipient.company,
+              });
+            }}
             placeholder="Luigi Verdi"
-            className={hasError('nome') ? 'border-red-500' : ''}
+            hasError={hasError('nome')}
           />
           {hasError('nome') && (
             <p className="text-sm text-red-500">Nome deve avere almeno 2 caratteri</p>
@@ -134,8 +148,8 @@ export function RecipientStep() {
       {/* Tips */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
         <p className="text-sm text-green-800">
-          <strong>Suggerimento:</strong> Il telefono del destinatario e obbligatorio per la consegna
-          e per eventuali contatti da parte del corriere.
+          <strong>Suggerimento:</strong> Inizia a digitare il nome per vedere i destinatari delle
+          spedizioni precedenti. Il telefono e obbligatorio per la consegna.
         </p>
       </div>
     </div>

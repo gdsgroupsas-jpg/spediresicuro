@@ -36,10 +36,13 @@ const TEST_EMAIL_PATTERNS = [
   /^test@/i,
   /test-.*@spediresicuro\.it$/i,
   /@test\./i,
+  /@test\.com$/i, // Catch all @test.com emails
   /test.*@.*test/i,
   /^e2e-/i,
   /^smoke-test-/i,
   /^integration-test-/i,
+  /^audit_test_/i, // Audit test users
+  /^audit_user_/i, // Audit user B
   /playwright/i,
   /cypress/i,
   /vitest/i,
