@@ -151,10 +151,25 @@ describe('P1-1 Audit Verification: Ownership Bypass', () => {
       console.error('TEST FAILED WITH ERROR:', e);
       throw e;
     } finally {
-      // Cleanup best effort
+      // Cleanup best effort - delete from public.users BEFORE auth.users
+      // to avoid orphaned records
       if (configA?.id) await supabaseAdmin.from('courier_configs').delete().eq('id', configA.id);
-      if (userA?.id) await supabaseAdmin.auth.admin.deleteUser(userA.id);
-      if (userB?.id) await supabaseAdmin.auth.admin.deleteUser(userB.id);
+      if (userA?.id) {
+        await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userA.id);
+        await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userA.id);
+        await supabaseAdmin.from('top_up_requests').delete().eq('user_id', userA.id);
+        await supabaseAdmin.from('shipments').delete().eq('user_id', userA.id);
+        await supabaseAdmin.from('users').delete().eq('id', userA.id);
+        await supabaseAdmin.auth.admin.deleteUser(userA.id);
+      }
+      if (userB?.id) {
+        await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userB.id);
+        await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userB.id);
+        await supabaseAdmin.from('top_up_requests').delete().eq('user_id', userB.id);
+        await supabaseAdmin.from('shipments').delete().eq('user_id', userB.id);
+        await supabaseAdmin.from('users').delete().eq('id', userB.id);
+        await supabaseAdmin.auth.admin.deleteUser(userB.id);
+      }
     }
   });
 });

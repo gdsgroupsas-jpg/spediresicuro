@@ -102,11 +102,19 @@ describe('Audit Fixes Comprehensive Tests', () => {
   });
 
   afterEach(async () => {
-    // Cleanup
+    // Cleanup - IMPORTANT: Delete from public.users BEFORE auth.users
+    // to avoid orphaned records (auth.admin.deleteUser only deletes from auth.users)
     if (testConfig?.id) {
       await supabaseAdmin.from('courier_configs').delete().eq('id', testConfig.id);
     }
     if (testUser?.id) {
+      // First delete from public.users (cascade dependencies)
+      await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', testUser.id);
+      await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', testUser.id);
+      await supabaseAdmin.from('top_up_requests').delete().eq('user_id', testUser.id);
+      await supabaseAdmin.from('shipments').delete().eq('user_id', testUser.id);
+      await supabaseAdmin.from('users').delete().eq('id', testUser.id);
+      // Then delete from auth.users
       await supabaseAdmin.auth.admin.deleteUser(testUser.id);
     }
 
@@ -167,8 +175,13 @@ describe('Audit Fixes Comprehensive Tests', () => {
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/Non autorizzato|non trovata/i);
       } finally {
-        // Cleanup User B
+        // Cleanup User B - delete from public.users BEFORE auth.users
         if (userB?.id) {
+          await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('top_up_requests').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('shipments').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('users').delete().eq('id', userB.id);
           await supabaseAdmin.auth.admin.deleteUser(userB.id);
         }
       }
@@ -231,7 +244,13 @@ describe('Audit Fixes Comprehensive Tests', () => {
         // Verifica: dovrebbe essere null (accesso negato)
         expect(config).toBeNull();
       } finally {
+        // Cleanup User B - delete from public.users BEFORE auth.users
         if (userB?.id) {
+          await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('top_up_requests').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('shipments').delete().eq('user_id', userB.id);
+          await supabaseAdmin.from('users').delete().eq('id', userB.id);
           await supabaseAdmin.auth.admin.deleteUser(userB.id);
         }
       }

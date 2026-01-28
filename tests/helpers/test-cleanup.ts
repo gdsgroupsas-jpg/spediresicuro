@@ -231,3 +231,34 @@ export async function cleanupTestUsers(userIds: string[]): Promise<void> {
   cleanup.trackUsers(userIds);
   await cleanup.execute();
 }
+
+/**
+ * Full cleanup for test user - deletes from both public.users AND auth.users
+ * Use this in security tests that create users via auth.admin.createUser
+ *
+ * IMPORTANT: This function deletes from public.users FIRST (cascade dependencies),
+ * then from auth.users. This order is critical to avoid orphaned records.
+ */
+export async function cleanupTestUserFull(userId: string): Promise<void> {
+  if (!userId) return;
+
+  // 1. Delete cascade dependencies from public schema
+  await supabaseAdmin.from('courier_configs').delete().eq('owner_user_id', userId);
+  await supabaseAdmin.from('financial_audit_log').delete().eq('user_id', userId);
+  await supabaseAdmin.from('wallet_transactions').delete().eq('user_id', userId);
+  await supabaseAdmin.from('top_up_requests').delete().eq('user_id', userId);
+  await supabaseAdmin.from('shipments').delete().eq('user_id', userId);
+  await supabaseAdmin.from('price_list_assignments').delete().eq('user_id', userId);
+  await supabaseAdmin.from('platform_provider_costs').delete().eq('billed_user_id', userId);
+  await supabaseAdmin.from('user_spedisci_online_configs').delete().eq('user_id', userId);
+
+  // 2. Delete from public.users
+  await supabaseAdmin.from('users').delete().eq('id', userId);
+
+  // 3. Delete from auth.users (if it still exists)
+  try {
+    await supabaseAdmin.auth.admin.deleteUser(userId);
+  } catch {
+    // Ignore errors - user might already be deleted or not exist in auth
+  }
+}
