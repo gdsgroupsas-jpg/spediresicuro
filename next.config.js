@@ -109,7 +109,8 @@ const nextConfig = {
 module.exports = withSentryConfig(nextConfig, {
   // Sentry organization and project
   org: 'spediresicuro',
-  project: 'spediresicuro',
+  project: 'javascript-nextjs',
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Disable source maps upload in development
   silent: !process.env.CI,
