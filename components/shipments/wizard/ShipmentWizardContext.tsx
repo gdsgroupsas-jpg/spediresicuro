@@ -176,9 +176,9 @@ const STEP_ORDER: WizardStep[] = [
   'sender',
   'recipient',
   'packages',
+  'carrier',
   'services',
   'pickup',
-  'carrier',
   'confirm',
 ];
 

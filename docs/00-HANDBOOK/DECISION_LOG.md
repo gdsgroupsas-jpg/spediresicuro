@@ -23,3 +23,29 @@ Record structural and process decisions for fast AI retrieval.
 - Decision: create docs/00-HANDBOOK as the canonical process hub.
 - Rationale: single entry point for rules, workflows, testing, and skills.
 - Impact: new index files, AI process flow added.
+
+## 2026-01-28 - Shipment Wizard Improvements
+
+- Decision: Multiple improvements to shipment creation wizard
+- Changes:
+  1. **Step order**: Mittente → Destinatario → Colli → Corriere → Servizi → Ritiro → Conferma
+  2. **Carrier normalization**: POSTEDELIVERYBUSINESS → POSTE, etc. (both in wizard and legacy payload converter)
+  3. **Auto PDF download**: Automatic label download after successful shipment creation
+  4. **Email validation**: Accept empty strings in recipient email (optional field)
+  5. **CarrierStep API format**: Fixed request format to match /api/quotes/db expectations
+- Rationale: Improve UX flow, fix validation errors, ensure carrier codes match API enum
+- Impact: ShipmentWizard.tsx, ShipmentWizardContext.tsx, CarrierStep.tsx, convert-legacy-payload.ts, shipment.ts validation
+- Tests: Existing tests cover carrier normalization (convert-legacy-payload.test.ts)
+
+## 2026-01-28 - Wallet Logic Refactor (PLANNED)
+
+- Decision: Simplify wallet debit logic
+- Current: Block estimated cost (final_price × 1.10) → Create shipment → Adjust with conguaglio
+- Proposed: Verify balance >= final_price → Create shipment → Debit final_price (no conguaglio)
+- Rationale:
+  1. Single transaction instead of block+adjustment
+  2. User pays exactly what they see in quote
+  3. Margin guaranteed by price list, not by API response
+  4. BYOC pays only platform_fee (industry standard)
+- Status: Pending PR - requires separate implementation
+- Impact: create-shipment-core.ts, wallet functions, tests
