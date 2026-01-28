@@ -392,7 +392,7 @@ export function WizardProvider({
 
       case 'selezione-reseller': {
         if (!selectedResellerId) {
-          newErrors['selezione-reseller'] = 'Seleziona un reseller a cui assegnare il cliente';
+          newErrors['selectedReseller'] = 'Seleziona un reseller a cui assegnare il cliente';
         }
         break;
       }
