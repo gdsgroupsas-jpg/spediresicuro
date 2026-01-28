@@ -10,31 +10,24 @@ import {
   updateShipmentApiSource,
 } from '@/lib/shipments/platform-cost-recorder';
 import { determineApiSource, calculateProviderCost } from '@/lib/pricing/platform-cost-calculator';
+import type {
+  CourierCreateShipmentRequest,
+  CourierCreateShipmentResponse,
+  CourierClientOptions,
+} from '@/lib/services/couriers/base-courier.interface';
 
-export interface CourierCreateShippingInput {
-  sender: CreateShipmentInput['sender'];
-  recipient: CreateShipmentInput['recipient'] & { email?: string };
-  packages: CreateShipmentInput['packages'];
-  insurance?: number;
-  cod?: number;
-  notes?: string;
-  // Pickup (ritiro a domicilio)
-  pickup?: CreateShipmentInput['pickup'];
-}
-
-export interface CourierCreateShippingResult {
-  cost: number;
-  trackingNumber: string;
-  shipmentId: string;
-  labelData?: string | null;
-  labelZPL?: string | null;
-}
+/**
+ * Single source of truth: tipi re-esportati da base-courier.interface.ts
+ * Mantenuti come alias per retrocompatibilità import negli smoke test.
+ */
+export type CourierCreateShippingInput = CourierCreateShipmentRequest;
+export type CourierCreateShippingResult = CourierCreateShipmentResponse;
 
 export interface CourierClient {
   createShipping(
-    payload: CourierCreateShippingInput,
-    opts?: { timeout?: number }
-  ): Promise<CourierCreateShippingResult>;
+    payload: CourierCreateShipmentRequest,
+    opts?: CourierClientOptions
+  ): Promise<CourierCreateShipmentResponse>;
   deleteShipping(payload: { shipmentId: string }): Promise<void>;
 }
 
