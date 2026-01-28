@@ -255,44 +255,52 @@ export async function createShipmentCore(params: {
   }
 
   // ============================================
-  // STIMA COSTO (da prezzo quotato o fallback) + PLATFORM FEE
+  // CALCOLO COSTO WALLET (Simplified Debit Logic)
   // ============================================
-  // ⚠️ FIX CRITICO: Usa prezzo reale quotato dal frontend invece di hardcoded €8.50
-  // Il prezzo quotato viene dal preventivo (calcolato da listino reale)
-  // Margine sicurezza 10% per gestire eventuali variazioni
+  // ✅ REFACTOR 2026-01-28: Scala esattamente final_price (niente stima + conguaglio)
+  // - L'utente paga esattamente quanto vede nel preventivo
+  // - Margini garantiti dal listino, non dall'API response
+  // - BYOC paga solo platform_fee (standard di mercato: Sendcloud, Shippo, etc.)
   const platformFee = await getPlatformFeeSafe(targetId);
 
-  let estimatedCost: number;
-  let estimateSource: 'quoted' | 'fallback';
+  const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin';
+  const isByoc = user.role === 'BYOC' || user.role === 'byoc';
 
-  if (validated.final_price && validated.final_price > 0) {
-    // ✅ Usa prezzo reale quotato dal frontend (calcolato durante preventivo)
-    estimatedCost = validated.final_price * 1.1; // 10% margine sicurezza
-    estimateSource = 'quoted';
+  let walletChargeAmount: number;
+  let chargeSource: 'quoted' | 'fallback' | 'byoc_fee';
+
+  if (isByoc) {
+    // BYOC: Paga solo il platform fee (il costo spedizione lo paga direttamente al corriere)
+    walletChargeAmount = platformFee;
+    chargeSource = 'byoc_fee';
+  } else if (validated.final_price && validated.final_price > 0) {
+    // ✅ Usa prezzo ESATTO dal preventivo (calcolato dal listino dell'utente)
+    // Nessun margine: l'utente paga esattamente quanto vede nel preventivo
+    walletChargeAmount = validated.final_price;
+    chargeSource = 'quoted';
   } else {
     // ⚠️ Fallback: stima conservativa per spedizioni senza preventivo
-    // TODO: Calcolare da listino basato su peso/destinazione
-    const fallbackEstimate = 15.0; // Aumentato da €8.50 per sicurezza
-    estimatedCost = (fallbackEstimate + platformFee) * 1.2; // 20% margine
-    estimateSource = 'fallback';
+    // Questo caso dovrebbe essere raro (API calls dirette senza UI quote)
+    const fallbackEstimate = 15.0;
+    walletChargeAmount = fallbackEstimate + platformFee;
+    chargeSource = 'fallback';
   }
 
-  console.log('💰 [CreateShipment] Cost estimate:', {
-    source: estimateSource,
+  console.log('💰 [CreateShipment] Wallet charge:', {
+    source: chargeSource,
     quotedPrice: validated.final_price,
     platformFee,
-    estimatedCost,
+    walletChargeAmount,
+    isByoc,
     userId: targetId?.substring(0, 8) + '...', // NO PII
   });
 
-  const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin';
-
-  if (!isSuperadmin && (user.wallet_balance || 0) < estimatedCost) {
+  if (!isSuperadmin && (user.wallet_balance || 0) < walletChargeAmount) {
     return {
       status: 402,
       json: {
         error: 'INSUFFICIENT_CREDIT',
-        required: estimatedCost,
+        required: walletChargeAmount,
         available: user.wallet_balance || 0,
         message: `Credito insufficiente. Disponibile: €${(user.wallet_balance || 0).toFixed(2)}`,
       },
@@ -322,19 +330,20 @@ export async function createShipmentCore(params: {
   if (!isSuperadmin) {
     console.log('💳 [WALLET] Starting wallet debit:', {
       userId: targetId?.substring(0, 8) + '...',
-      amount: estimatedCost,
+      amount: walletChargeAmount,
       idempotencyKey: idempotencyKey?.substring(0, 16) + '...',
     });
 
     // P0: Passa idempotency_key a wallet function (standalone idempotent)
+    // ✅ REFACTOR: Debit diretto di walletChargeAmount (no stima + conguaglio)
     const { data: walletResult, error: walletError } = await withConcurrencyRetry(
       async () =>
         await supabaseAdmin.rpc('decrement_wallet_balance', {
           p_user_id: targetId,
-          p_amount: estimatedCost,
+          p_amount: walletChargeAmount,
           p_idempotency_key: idempotencyKey, // P0: Wallet-level idempotency
         }),
-      { operationName: 'shipment_debit_estimate' }
+      { operationName: 'shipment_debit_final' }
     );
 
     console.log('💳 [WALLET] RPC result:', {
@@ -356,7 +365,7 @@ export async function createShipmentCore(params: {
         status: 402,
         json: {
           error: 'INSUFFICIENT_CREDIT',
-          required: estimatedCost,
+          required: walletChargeAmount,
           available: user.wallet_balance || 0,
           message: `Credito insufficiente. Disponibile: €${(user.wallet_balance || 0).toFixed(2)}`,
         },
@@ -379,7 +388,7 @@ export async function createShipmentCore(params: {
     }
 
     walletDebited = true;
-    walletDebitAmount = estimatedCost;
+    walletDebitAmount = walletChargeAmount;
     _walletTransactionId = result?.transaction_id;
     console.log('✅ [WALLET] Debit successful:', {
       amount: walletDebitAmount,
@@ -498,61 +507,21 @@ export async function createShipmentCore(params: {
 
   let shipment: any;
   try {
-    // 1) Wallet adjustment + ledger
+    // ✅ REFACTOR 2026-01-28: Niente più wallet adjustment/conguaglio
+    // L'utente ha già pagato walletChargeAmount (= final_price dal listino)
+    // Il costo corriere (courierFinalCost) è un costo interno, non impatta il wallet
+    // Log per audit trail
     if (!isSuperadmin && walletDebited) {
-      const costDifference = finalCost - walletDebitAmount;
-
-      if (Math.abs(costDifference) > 0.01) {
-        if (costDifference > 0) {
-          // P0: Adjustment debit con idempotency
-          const { error: adjustError } = await withConcurrencyRetry(
-            async () =>
-              await supabaseAdmin.rpc('decrement_wallet_balance', {
-                p_user_id: targetId,
-                p_amount: costDifference,
-                p_idempotency_key: `${idempotencyKey}-adjust-debit`, // P0: Idempotent adjustment
-              }),
-            { operationName: 'shipment_debit_adjustment' }
-          );
-          if (adjustError) throw new Error(`Wallet adjustment failed: ${adjustError.message}`);
-          walletDebitAmount = finalCost;
-        } else {
-          // P0: Adjustment credit con idempotency
-          const { error: adjustError } = await supabaseAdmin.rpc('increment_wallet_balance', {
-            p_user_id: targetId,
-            p_amount: Math.abs(costDifference),
-            p_idempotency_key: `${idempotencyKey}-adjust-credit`, // P0: Idempotent adjustment
-          });
-          if (adjustError) {
-            await supabaseAdmin.from('compensation_queue').insert({
-              user_id: targetId,
-              provider_id:
-                validated.provider === 'spediscionline' ? 'spediscionline' : validated.provider,
-              carrier: validated.carrier,
-              action: 'REFUND',
-              original_cost: Math.abs(costDifference),
-              error_context: {
-                adjustment_error: adjustError.message,
-                estimated: walletDebitAmount,
-                actual: finalCost,
-                retry_strategy: 'MANUAL',
-              },
-              status: 'PENDING',
-            } as any);
-          } else {
-            walletDebitAmount = finalCost;
-          }
-        }
-      } else {
-        walletDebitAmount = finalCost;
-      }
-
-      // NOTE: Non serve insert manuale in wallet_transactions!
-      // Le funzioni RPC decrement_wallet_balance() e increment_wallet_balance()
-      // già creano le transazioni internamente con idempotency.
+      console.log('💰 [WALLET] Simplified debit - no adjustment needed:', {
+        walletDebited: walletDebitAmount,
+        courierCost: courierFinalCost,
+        platformFee,
+        internalCost: finalCost,
+        margin: walletDebitAmount - finalCost,
+      });
     }
 
-    // 2) Insert shipment (allow override)
+    // Insert shipment (allow override)
     const insertShipmentFn =
       deps.overrides?.insertShipment ??
       (async (args) => {
