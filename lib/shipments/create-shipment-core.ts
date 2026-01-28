@@ -13,7 +13,7 @@ import { determineApiSource, calculateProviderCost } from '@/lib/pricing/platfor
 
 export interface CourierCreateShippingInput {
   sender: CreateShipmentInput['sender'];
-  recipient: Required<CreateShipmentInput['recipient']> & { email: string };
+  recipient: CreateShipmentInput['recipient'] & { email?: string };
   packages: CreateShipmentInput['packages'];
   insurance?: number;
   cod?: number;
