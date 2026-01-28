@@ -60,9 +60,10 @@ export async function GET() {
     }
 
     // Ottieni tutti i reseller (is_reseller = true OR account_type = 'reseller')
+    // NOTA: company_name non esiste come colonna separata, è dentro dati_cliente JSONB
     const { data: resellers, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, company_name, wallet_balance, created_at')
+      .select('id, email, name, dati_cliente, wallet_balance, created_at')
       .or('is_reseller.eq.true,account_type.eq.reseller')
       .order('name', { ascending: true });
 
@@ -71,9 +72,19 @@ export async function GET() {
       return NextResponse.json({ error: 'Errore caricamento reseller' }, { status: 500 });
     }
 
+    // Mappa i risultati estraendo company_name da dati_cliente
+    const mappedResellers = (resellers || []).map((r: any) => ({
+      id: r.id,
+      email: r.email,
+      name: r.name,
+      company_name: r.dati_cliente?.ragioneSociale || null,
+      wallet_balance: r.wallet_balance,
+      created_at: r.created_at,
+    }));
+
     return NextResponse.json({
-      resellers: resellers || [],
-      count: resellers?.length || 0,
+      resellers: mappedResellers,
+      count: mappedResellers.length,
     });
   } catch (error: any) {
     console.error('Errore API GET resellers:', error);
