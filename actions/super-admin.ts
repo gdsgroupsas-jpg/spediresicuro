@@ -688,14 +688,8 @@ export async function createReseller(data: {
       }
     }
 
-    // Determina company_name per aziende
-    const companyName =
-      data.tipoCliente === 'azienda' && data.azienda?.ragioneSociale
-        ? data.azienda.ragioneSociale
-        : null;
-
-    // Determina phone
-    const phone = data.anagrafica?.telefono || data.anagrafica?.cellulare || null;
+    // ⚠️ NOTA: company_name e phone non esistono come colonne separate nella tabella users
+    // Questi dati sono già inclusi in dati_cliente JSONB (ragioneSociale, telefono, cellulare)
 
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
@@ -710,8 +704,6 @@ export async function createReseller(data: {
           reseller_role: 'admin', // ⚠️ FIX: Reseller creati da superadmin sono automaticamente admin
           wallet_balance: data.initialCredit || 0,
           provider: 'credentials',
-          company_name: companyName,
-          phone: phone,
           dati_cliente: datiCliente,
           assigned_price_list_id: data.priceListId || null, // Listino iniziale (opzionale)
           created_at: new Date().toISOString(),
