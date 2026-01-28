@@ -9,7 +9,7 @@ export interface CourierCreateShipmentRequest {
     postalCode: string;
     country: string;
     phone?: string;
-    email: string;
+    email?: string; // Opzionale: fallback a noemail@spediresicuro.it se assente
   };
   recipient: {
     name: string;
@@ -21,7 +21,7 @@ export interface CourierCreateShipmentRequest {
     postalCode: string;
     country: string;
     phone?: string;
-    email: string;
+    email?: string; // Opzionale: alcuni corrieri non richiedono email destinatario
   };
   packages: Array<{
     length: number;
