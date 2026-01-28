@@ -75,11 +75,13 @@ export default function WalletPage() {
       setIsLoading(true);
 
       // Carica info utente con wallet balance
+      let currentBalance = 0;
       const userResponse = await fetch('/api/user/info');
       if (userResponse.ok) {
         const userData = await userResponse.json();
         const user = userData.user || userData;
-        setWalletBalance(user.wallet_balance || 0);
+        currentBalance = user.wallet_balance || 0;
+        setWalletBalance(currentBalance);
       }
 
       // Carica transazioni reali dal database
@@ -90,7 +92,8 @@ export default function WalletPage() {
         if (transactionsData.success && transactionsData.transactions) {
           // Le transazioni arrivano in ordine decrescente (più recenti prima)
           // Calcola balance_after partendo dal saldo attuale e andando indietro
-          let runningBalance = walletBalance;
+          // IMPORTANTE: usa currentBalance (valore appena caricato) invece di walletBalance (state asincrono)
+          let runningBalance = currentBalance;
           loadedTransactions = transactionsData.transactions.map((tx: WalletTransaction) => {
             // Sottrai l'importo per ottenere il saldo prima di questa transazione
             runningBalance -= tx.amount;
