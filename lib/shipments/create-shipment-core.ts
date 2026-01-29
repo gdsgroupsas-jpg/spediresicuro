@@ -60,6 +60,9 @@ export interface CreateShipmentCoreDeps {
     }) => Promise<{ data: any | null; error: { message: string } | null }>;
   };
 
+  /** ID della courier_config usata (per tracking per-fornitore) */
+  courierConfigId?: string;
+
   now?: () => Date;
   /**
    * Forza idempotencyKey deterministica (utile per test retry).
@@ -560,6 +563,8 @@ export async function createShipmentCore(params: {
             vat_rate: args.validated.vat_rate || 22.0, // Default per retrocompatibilità
             // Best-effort: utile per vincoli anti-orphan e audit
             created_by_user_email: context.target.email,
+            // Per-provider tracking (dashboard aggregation)
+            ...(deps.courierConfigId ? { courier_config_id: deps.courierConfigId } : {}),
           } as any)
           .select()
           .single();
