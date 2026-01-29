@@ -750,6 +750,8 @@ export async function getTopResellersAction(
 export interface ProviderMarginData {
   config_id: string;
   provider_name: string;
+  owner_label: string; // "Piattaforma" | email del proprietario
+  is_platform: boolean; // true = config della piattaforma (admin/default)
   total_shipments: number;
   total_revenue: number;
   total_cost: number;
@@ -786,7 +788,10 @@ export async function getMarginByProviderAction(startDate?: string): Promise<{
           name,
           config_label,
           provider_id,
-          carrier
+          carrier,
+          owner_user_id,
+          is_default,
+          account_type
         )
       `
       )
@@ -802,11 +807,16 @@ export async function getMarginByProviderAction(startDate?: string): Promise<{
     const { data, error } = await query;
     if (error) throw error;
 
+    // Recupera l'ID dell'admin/superadmin corrente per confronto ownership
+    const { userId: currentUserId } = authCheck;
+
     // Aggrega per courier_config_id
     const configMap = new Map<
       string,
       {
         provider_name: string;
+        owner_label: string;
+        is_platform: boolean;
         total_shipments: number;
         total_revenue: number;
         total_cost: number;
@@ -829,8 +839,18 @@ export async function getMarginByProviderAction(startDate?: string): Promise<{
           `${(configInfo.provider_id || '').replaceAll('_', ' ')} (${configInfo.carrier || 'N/A'})`
         : configId.substring(0, 8);
 
+      // Ownership: admin/default = piattaforma, tutto il resto = reseller/BYOC
+      const ownerUserId = configInfo?.owner_user_id;
+      const isPlatform =
+        configInfo?.is_default === true ||
+        configInfo?.account_type === 'admin' ||
+        ownerUserId === currentUserId;
+      const ownerLabel = isPlatform ? 'Piattaforma' : ownerUserId || 'Sconosciuto';
+
       const existing = configMap.get(configId) || {
         provider_name: providerName,
+        owner_label: ownerLabel,
+        is_platform: isPlatform,
         total_shipments: 0,
         total_revenue: 0,
         total_cost: 0,
@@ -842,6 +862,8 @@ export async function getMarginByProviderAction(startDate?: string): Promise<{
 
       configMap.set(configId, {
         provider_name: existing.provider_name,
+        owner_label: existing.owner_label,
+        is_platform: existing.is_platform,
         total_shipments: existing.total_shipments + 1,
         total_revenue: existing.total_revenue + revenue,
         total_cost: existing.total_cost + cost,
@@ -849,10 +871,34 @@ export async function getMarginByProviderAction(startDate?: string): Promise<{
       });
     });
 
+    // Risolvi owner_user_id → email per le config non-piattaforma
+    const ownerIds = new Set<string>();
+    configMap.forEach((stats) => {
+      if (!stats.is_platform && stats.owner_label !== 'Sconosciuto') {
+        ownerIds.add(stats.owner_label); // owner_label contiene l'UUID completo
+      }
+    });
+
+    if (ownerIds.size > 0) {
+      const { data: owners } = await supabaseAdmin
+        .from('users')
+        .select('id, email')
+        .in('id', Array.from(ownerIds));
+      const emailMap = new Map((owners || []).map((u: any) => [u.id, u.email]));
+
+      configMap.forEach((stats) => {
+        if (!stats.is_platform && emailMap.has(stats.owner_label)) {
+          stats.owner_label = emailMap.get(stats.owner_label)!;
+        }
+      });
+    }
+
     const result: ProviderMarginData[] = Array.from(configMap.entries())
       .map(([config_id, stats]) => ({
         config_id,
         provider_name: stats.provider_name,
+        owner_label: stats.owner_label,
+        is_platform: stats.is_platform,
         total_shipments: stats.total_shipments,
         total_revenue: Math.round(stats.total_revenue * 100) / 100,
         total_cost: Math.round(stats.total_cost * 100) / 100,
@@ -862,7 +908,11 @@ export async function getMarginByProviderAction(startDate?: string): Promise<{
             ? Math.round((stats.gross_margin / stats.total_cost) * 100 * 100) / 100
             : 0,
       }))
-      .sort((a, b) => b.gross_margin - a.gross_margin);
+      // Ordina: prima piattaforma, poi per margine decrescente
+      .sort((a, b) => {
+        if (a.is_platform !== b.is_platform) return a.is_platform ? -1 : 1;
+        return b.gross_margin - a.gross_margin;
+      });
 
     return { success: true, data: result };
   } catch (error: any) {

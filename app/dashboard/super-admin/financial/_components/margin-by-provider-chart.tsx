@@ -1,11 +1,13 @@
 'use client';
 
 import { TrendingDown, TrendingUp, Server } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface ProviderMarginData {
   config_id: string;
   provider_name: string;
+  owner_label: string;
+  is_platform: boolean;
   total_shipments: number;
   total_revenue: number;
   total_cost: number;
@@ -13,16 +15,26 @@ interface ProviderMarginData {
   avg_margin_percent: number;
 }
 
+type FilterType = 'all' | 'platform' | 'reseller';
+
 interface MarginByProviderChartProps {
   data: ProviderMarginData[];
   isLoading: boolean;
 }
 
 export function MarginByProviderChart({ data, isLoading }: MarginByProviderChartProps) {
-  const sortedData = useMemo(
-    () => (data.length > 0 ? [...data].sort((a, b) => b.gross_margin - a.gross_margin) : []),
+  const [filter, setFilter] = useState<FilterType>('all');
+
+  const hasBothTypes = useMemo(
+    () => data.some((d) => d.is_platform) && data.some((d) => !d.is_platform),
     [data]
   );
+
+  const filteredData = useMemo(() => {
+    if (filter === 'platform') return data.filter((d) => d.is_platform);
+    if (filter === 'reseller') return data.filter((d) => !d.is_platform);
+    return data;
+  }, [data, filter]);
 
   if (isLoading) {
     return (
@@ -58,8 +70,14 @@ export function MarginByProviderChart({ data, isLoading }: MarginByProviderChart
     );
   }
 
-  const maxMargin = Math.max(...data.map((d) => Math.abs(d.gross_margin)));
-  const totalMargin = data.reduce((sum, d) => sum + d.gross_margin, 0);
+  const maxMargin = Math.max(...filteredData.map((d) => Math.abs(d.gross_margin)), 1);
+  const totalMargin = filteredData.reduce((sum, d) => sum + d.gross_margin, 0);
+
+  const filterButtons: { key: FilterType; label: string }[] = [
+    { key: 'all', label: 'Tutti' },
+    { key: 'platform', label: 'Piattaforma' },
+    { key: 'reseller', label: 'Reseller/BYOC' },
+  ];
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -83,10 +101,28 @@ export function MarginByProviderChart({ data, isLoading }: MarginByProviderChart
             </p>
           </div>
         </div>
+
+        {hasBothTypes && (
+          <div className="flex gap-1 mt-3">
+            {filterButtons.map((btn) => (
+              <button
+                key={btn.key}
+                onClick={() => setFilter(btn.key)}
+                className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                  filter === btn.key
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
-        {sortedData.map((provider) => {
+        {filteredData.map((provider) => {
           const isPositive = provider.gross_margin >= 0;
           const barWidth = maxMargin > 0 ? (Math.abs(provider.gross_margin) / maxMargin) * 100 : 0;
 
@@ -96,6 +132,15 @@ export function MarginByProviderChart({ data, isLoading }: MarginByProviderChart
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-700">
                     {provider.provider_name}
+                  </span>
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                      provider.is_platform
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {provider.owner_label}
                   </span>
                   <span className="text-xs text-gray-400">
                     {provider.total_shipments.toLocaleString('it-IT')} spedizioni
@@ -125,7 +170,9 @@ export function MarginByProviderChart({ data, isLoading }: MarginByProviderChart
                 <div
                   className={`h-full rounded-md transition-all duration-500 ${
                     isPositive
-                      ? 'bg-gradient-to-r from-purple-400 to-purple-500'
+                      ? provider.is_platform
+                        ? 'bg-gradient-to-r from-purple-400 to-purple-500'
+                        : 'bg-gradient-to-r from-amber-400 to-amber-500'
                       : 'bg-gradient-to-r from-red-400 to-red-500'
                   }`}
                   style={{ width: `${Math.max(barWidth, 3)}%` }}
