@@ -31,18 +31,19 @@ export async function POST(request: Request) {
     // ============================================
     // CALL CORE (Single Source of Truth)
     // ============================================
+    // Resolve courier config (client + configId for per-provider tracking)
+    const courierResult = await getCourierClientReal(supabaseAdmin, validated, {
+      userId: context.target.id,
+      configId: validated.configId || (body as any).configId,
+    });
+
     const result = await createShipmentCore({
       context,
       validated,
       deps: {
         supabaseAdmin,
-        getCourierClient: async (v) => {
-          const { client } = await getCourierClientReal(supabaseAdmin, v, {
-            userId: context.target.id,
-            configId: validated.configId || (body as any).configId,
-          });
-          return client;
-        },
+        getCourierClient: async () => courierResult.client,
+        courierConfigId: courierResult.configId,
       },
     });
 

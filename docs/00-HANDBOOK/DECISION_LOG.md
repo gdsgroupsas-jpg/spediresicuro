@@ -5,7 +5,7 @@ audience: all
 owner: engineering
 status: active
 source_of_truth: true
-updated: 2026-01-19
+updated: 2026-01-29
 ---
 
 # Decision Log
@@ -54,3 +54,20 @@ Record structural and process decisions for fast AI retrieval.
 - Status: PR #80 merged
 - Impact: create-shipment-core.ts (removed ~50 lines of adjustment logic)
 - Tests: Wallet smoke tests pass (zero-balance, idempotency, courier-fail, db-fail)
+
+## 2026-01-29 - Per-Provider Financial Tracking
+
+- Decision: Add `courier_config_id` to shipments + per-provider analytics dashboard
+- Problem: No way to aggregate financial data by provider/API config (e.g. Prime vs SpeedGo)
+- Changes:
+  1. **Migration**: Added `courier_config_id` (uuid FK, nullable) to `shipments` table with partial index
+  2. **Shipment creation**: `getCourierClientReal()` result now passes `configId` through to insert
+  3. **Dashboard**: New "Margine per Fornitore" chart in Analytics tab (same pattern as MarginByCourierChart)
+  4. **Action**: `getMarginByProviderAction()` aggregates shipments by `courier_config_id` with JOIN to `courier_configs`
+- Architecture:
+  - `courier_config_id` is optional (nullable) - legacy shipments have NULL
+  - No RLS added: system uses `supabaseAdmin` (service_role) throughout; RLS would have no effect
+  - Tenant isolation enforced at application layer via `getCourierClientReal()` ownership checks
+  - Query limited to 50k rows for performance safety
+- Impact: migration, route.ts, create-shipment-core.ts, platform-costs.ts, financial dashboard page
+- Tests: TypeScript build clean, smoke tests compile without errors (field is optional)
