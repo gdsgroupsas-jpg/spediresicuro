@@ -71,3 +71,16 @@ Record structural and process decisions for fast AI retrieval.
   - Query limited to 50k rows for performance safety
 - Impact: migration, route.ts, create-shipment-core.ts, platform-costs.ts, financial dashboard page
 - Tests: TypeScript build clean, smoke tests compile without errors (field is optional)
+
+## 2026-01-29 - Reseller Per-Provider Analytics
+
+- Decision: Extend per-provider margin visibility to reseller dashboard
+- Problem: Reseller had fiscal report by client but no breakdown by courier config/provider
+- Changes:
+  1. **Action**: `getResellerMarginByProvider()` in `reseller-fiscal-report.ts` — scoped to reseller's sub-users via `parent_id`, filtered by month/year
+  2. **Component**: `ResellerProviderChart` — horizontal bar chart (orange gradient, same pattern as superadmin but simplified: no owner badges, no platform/reseller filter)
+  3. **Integration**: Added to report-fiscale page with parallel `Promise.all` loading
+  4. **Type**: `ResellerProviderMarginData` in `types/reseller-fiscal.ts`
+- Security: Auth via `getSafeAuth()`, verified `is_reseller || superadmin`, data scoped to `parent_id` sub-users only
+- Impact: reseller-fiscal-report.ts, report-fiscale/page.tsx, reseller-provider-chart.tsx, reseller-fiscal.ts
+- Tests: TypeScript build clean
