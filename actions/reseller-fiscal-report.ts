@@ -497,16 +497,16 @@ export async function getResellerMarginByProvider(
       return { success: false, error: 'Non sei un reseller' };
     }
 
-    // Sub-users del reseller
+    // Sub-users del reseller + reseller stesso
     const { data: clients } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('parent_id', currentUser.id);
 
     const clientIds = (clients || []).map((c: any) => c.id);
-    if (clientIds.length === 0) {
-      return { success: true, data: [] };
-    }
+    // Includi anche le spedizioni dirette del reseller stesso
+    clientIds.push(currentUser.id);
+    // (Se non ci sono sub-users, comunque mostra le spedizioni del reseller)
 
     // Periodo
     const startDate = new Date(filters.year, filters.month - 1, 1);
