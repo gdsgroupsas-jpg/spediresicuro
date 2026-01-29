@@ -1857,6 +1857,7 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
         (user as any).account_type = supabaseUser.account_type || effectiveRole;
         (user as any).is_reseller = supabaseUser.is_reseller === true;
         (user as any).reseller_role = supabaseUser.reseller_role || undefined;
+        (user as any).wallet_balance = supabaseUser.wallet_balance ?? 0;
 
         console.log('✅ [SUPABASE] Utente trovato in Supabase', {
           hasDatiCliente: !!user.datiCliente,
