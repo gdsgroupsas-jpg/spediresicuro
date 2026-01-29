@@ -138,3 +138,16 @@ export interface FiscalExportOptions {
   include_details: boolean; // Include dettaglio spedizioni
   separator?: string; // Per CSV, default ';'
 }
+
+/**
+ * Margine aggregato per configurazione API (fornitore) - vista reseller
+ */
+export interface ResellerProviderMarginData {
+  config_id: string;
+  provider_name: string;
+  total_shipments: number;
+  total_revenue: number;
+  total_cost: number;
+  gross_margin: number;
+  avg_margin_percent: number;
+}

@@ -1,4 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from 'next/server';
 import { requireSafeAuth } from '@/lib/safe-auth';
 import { getSmartSuggestion } from '@/lib/agent/smart-suggestions';
 
