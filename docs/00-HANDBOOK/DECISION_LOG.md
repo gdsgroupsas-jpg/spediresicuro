@@ -72,6 +72,23 @@ Record structural and process decisions for fast AI retrieval.
 - Impact: migration, route.ts, create-shipment-core.ts, platform-costs.ts, financial dashboard page
 - Tests: TypeScript build clean, 8 unit tests (provider-analytics.test.ts), 3 unit tests (courier-config-tracking.test.ts)
 
+## 2026-01-29 - Address Validation & Autocomplete System
+
+- Decision: Implement top-tier address validation inspired by ShippyPro
+- Components:
+  1. **Google Places Autocomplete**: Search-as-you-type for Italian addresses with session-based billing
+  2. **Italian Postal Dataset**: CAP/City/Province cross-validation using ISTAT/Poste Italiane data
+  3. **Postal Normalization**: Street abbreviations per Italian postal standards (Via->V., Piazza->P.zza)
+  4. **Address Classification**: Residential/business heuristic (P.IVA, company name, business keywords)
+  5. **Redis Cache**: Upstash caching layer for Places API (24h autocomplete, 7d details)
+- Provider choice: Google Places API over Photon/Nominatim/Streetlayer
+  - Rationale: Free tier covers ~10k sessions/month, industry standard quality, zero ops
+  - Cost at 50k shipments: ~$680/month (~$0.013/shipment), justified by $5-15/error savings
+  - Future option: migrate to Photon self-hosted on VPS when volume justifies ops overhead
+- Architecture: Adapter pattern (Google + Mock), factory with auto-detection, graceful degradation
+- Impact: 19 new files, 6 modified files across lib/, app/api/, components/, tests/, docs/
+- Tests: 7 test files (unit + integration) covering postal data, classification, normalization, cache, adapter, API routes
+
 ## 2026-01-29 - Reseller Per-Provider Analytics
 
 - Decision: Extend per-provider margin visibility to reseller dashboard

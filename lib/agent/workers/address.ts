@@ -19,7 +19,13 @@ import {
   calculateMissingFieldsForPricing,
   hasEnoughDataForPricing,
 } from '@/lib/address/shipment-draft';
-import { extractAndMerge, extractAddressDataFromText } from '@/lib/address/normalize-it-address';
+import {
+  extractAndMerge,
+  extractAddressDataFromText,
+  normalizeStreetForPostal,
+} from '@/lib/address/normalize-it-address';
+import { validateAddress } from '@/lib/address/italian-postal-data';
+import { classifyAddress } from '@/lib/address/classify-address';
 import { defaultLogger, type ILogger } from '../logger';
 
 // ==================== TIPI ====================
@@ -84,6 +90,47 @@ export function processAddressCore(
 } {
   const updatedDraft = extractAndMerge(messageText, existingDraft);
   const { extractedAnything } = extractAddressDataFromText(messageText);
+
+  // Normalizzazione postale dell'indirizzo
+  if (updatedDraft.recipient?.addressLine1) {
+    updatedDraft.recipient.addressLine1 = normalizeStreetForPostal(
+      updatedDraft.recipient.addressLine1
+    );
+  }
+
+  // Validazione CAP/Città/Provincia con dataset Poste Italiane
+  if (
+    updatedDraft.recipient?.postalCode &&
+    updatedDraft.recipient?.city &&
+    updatedDraft.recipient?.province
+  ) {
+    const validation = validateAddress(
+      updatedDraft.recipient.postalCode,
+      updatedDraft.recipient.city,
+      updatedDraft.recipient.province
+    );
+    if (!validation.valid && validation.suggestion) {
+      // Auto-correct con suggerimenti del dataset postale
+      if (validation.suggestion.correctProvince) {
+        updatedDraft.recipient.province = validation.suggestion.correctProvince;
+      }
+      if (validation.suggestion.correctCap) {
+        updatedDraft.recipient.postalCode = validation.suggestion.correctCap;
+      }
+    }
+  }
+
+  // Classificazione indirizzo (residenziale/business)
+  const classification = classifyAddress({
+    companyName: updatedDraft.recipient?.companyName,
+    vatNumber: updatedDraft.recipient?.vatNumber,
+    addressLine1: updatedDraft.recipient?.addressLine1,
+    fullName: updatedDraft.recipient?.fullName,
+  });
+  if (updatedDraft.recipient) {
+    updatedDraft.recipient.addressType = classification.type;
+  }
+
   const missingFields = calculateMissingFieldsForPricing(updatedDraft);
   const readyForPricing = hasEnoughDataForPricing(updatedDraft);
 
