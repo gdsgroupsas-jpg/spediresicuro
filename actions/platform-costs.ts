@@ -743,6 +743,184 @@ export async function getTopResellersAction(
   }
 }
 
+// ============================================
+// SPRINT 3: Per-Provider Analytics
+// ============================================
+
+export interface ProviderMarginData {
+  config_id: string;
+  provider_name: string;
+  owner_label: string; // "Piattaforma" | email del proprietario
+  is_platform: boolean; // true = config della piattaforma (admin/default)
+  total_shipments: number;
+  total_revenue: number;
+  total_cost: number;
+  gross_margin: number;
+  avg_margin_percent: number;
+}
+
+/**
+ * Ottiene margini aggregati per configurazione API (fornitore)
+ * Usa shipments.courier_config_id per raggruppare per provider
+ */
+export async function getMarginByProviderAction(startDate?: string): Promise<{
+  success: boolean;
+  data?: ProviderMarginData[];
+  error?: string;
+}> {
+  const authCheck = await verifySuperAdmin();
+  if (!authCheck.success) {
+    return { success: false, error: authCheck.error };
+  }
+
+  try {
+    // Query shipments con courier_config_id JOIN courier_configs
+    // Limit per evitare timeout su dataset grandi
+    let query = supabaseAdmin
+      .from('shipments')
+      .select(
+        `
+        courier_config_id,
+        base_price,
+        final_price,
+        courier_configs(
+          id,
+          name,
+          config_label,
+          provider_id,
+          carrier,
+          owner_user_id,
+          is_default,
+          account_type
+        )
+      `
+      )
+      .not('courier_config_id', 'is', null)
+      .not('base_price', 'is', null)
+      .not('final_price', 'is', null)
+      .limit(50000);
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Recupera l'ID dell'admin/superadmin corrente per confronto ownership
+    const { userId: currentUserId } = authCheck;
+
+    // Aggrega per courier_config_id
+    const configMap = new Map<
+      string,
+      {
+        provider_name: string;
+        owner_label: string;
+        is_platform: boolean;
+        total_shipments: number;
+        total_revenue: number;
+        total_cost: number;
+        gross_margin: number;
+      }
+    >();
+
+    (data || []).forEach((row: any) => {
+      const configId = row.courier_config_id;
+      if (!configId) return;
+
+      const configInfo = Array.isArray(row.courier_configs)
+        ? row.courier_configs[0]
+        : row.courier_configs;
+
+      // Usa name/config_label se disponibili, altrimenti fallback a provider_id
+      const displayName = configInfo?.config_label || configInfo?.name || null;
+      const providerName = configInfo
+        ? displayName ||
+          `${(configInfo.provider_id || '').replaceAll('_', ' ')} (${configInfo.carrier || 'N/A'})`
+        : configId.substring(0, 8);
+
+      // Ownership: admin/default = piattaforma, tutto il resto = reseller/BYOC
+      const ownerUserId = configInfo?.owner_user_id;
+      const isPlatform =
+        configInfo?.is_default === true ||
+        configInfo?.account_type === 'admin' ||
+        ownerUserId === currentUserId;
+      const ownerLabel = isPlatform ? 'Piattaforma' : ownerUserId || 'Sconosciuto';
+
+      const existing = configMap.get(configId) || {
+        provider_name: providerName,
+        owner_label: ownerLabel,
+        is_platform: isPlatform,
+        total_shipments: 0,
+        total_revenue: 0,
+        total_cost: 0,
+        gross_margin: 0,
+      };
+
+      const revenue = row.final_price || 0;
+      const cost = row.base_price || 0;
+
+      configMap.set(configId, {
+        provider_name: existing.provider_name,
+        owner_label: existing.owner_label,
+        is_platform: existing.is_platform,
+        total_shipments: existing.total_shipments + 1,
+        total_revenue: existing.total_revenue + revenue,
+        total_cost: existing.total_cost + cost,
+        gross_margin: existing.gross_margin + (revenue - cost),
+      });
+    });
+
+    // Risolvi owner_user_id → email per le config non-piattaforma
+    const ownerIds = new Set<string>();
+    configMap.forEach((stats) => {
+      if (!stats.is_platform && stats.owner_label !== 'Sconosciuto') {
+        ownerIds.add(stats.owner_label); // owner_label contiene l'UUID completo
+      }
+    });
+
+    if (ownerIds.size > 0) {
+      const { data: owners } = await supabaseAdmin
+        .from('users')
+        .select('id, email')
+        .in('id', Array.from(ownerIds));
+      const emailMap = new Map((owners || []).map((u: any) => [u.id, u.email]));
+
+      configMap.forEach((stats) => {
+        if (!stats.is_platform && emailMap.has(stats.owner_label)) {
+          stats.owner_label = emailMap.get(stats.owner_label)!;
+        }
+      });
+    }
+
+    const result: ProviderMarginData[] = Array.from(configMap.entries())
+      .map(([config_id, stats]) => ({
+        config_id,
+        provider_name: stats.provider_name,
+        owner_label: stats.owner_label,
+        is_platform: stats.is_platform,
+        total_shipments: stats.total_shipments,
+        total_revenue: Math.round(stats.total_revenue * 100) / 100,
+        total_cost: Math.round(stats.total_cost * 100) / 100,
+        gross_margin: Math.round(stats.gross_margin * 100) / 100,
+        avg_margin_percent:
+          stats.total_cost > 0
+            ? Math.round((stats.gross_margin / stats.total_cost) * 100 * 100) / 100
+            : 0,
+      }))
+      // Ordina: prima piattaforma, poi per margine decrescente
+      .sort((a, b) => {
+        if (a.is_platform !== b.is_platform) return a.is_platform ? -1 : 1;
+        return b.gross_margin - a.gross_margin;
+      });
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('[PLATFORM_COSTS] getMarginByProviderAction error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 /**
  * Genera CSV export dei dati finanziari
  */

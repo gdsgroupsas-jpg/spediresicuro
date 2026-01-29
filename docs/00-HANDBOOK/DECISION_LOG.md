@@ -5,7 +5,7 @@ audience: all
 owner: engineering
 status: active
 source_of_truth: true
-updated: 2026-01-19
+updated: 2026-01-29
 ---
 
 # Decision Log
@@ -54,3 +54,33 @@ Record structural and process decisions for fast AI retrieval.
 - Status: PR #80 merged
 - Impact: create-shipment-core.ts (removed ~50 lines of adjustment logic)
 - Tests: Wallet smoke tests pass (zero-balance, idempotency, courier-fail, db-fail)
+
+## 2026-01-29 - Per-Provider Financial Tracking
+
+- Decision: Add `courier_config_id` to shipments + per-provider analytics dashboard
+- Problem: No way to aggregate financial data by provider/API config (e.g. Prime vs SpeedGo)
+- Changes:
+  1. **Migration**: Added `courier_config_id` (uuid FK, nullable) to `shipments` table with partial index
+  2. **Shipment creation**: `getCourierClientReal()` result now passes `configId` through to insert
+  3. **Dashboard**: New "Margine per Fornitore" chart in Analytics tab (same pattern as MarginByCourierChart)
+  4. **Action**: `getMarginByProviderAction()` aggregates shipments by `courier_config_id` with JOIN to `courier_configs`
+- Architecture:
+  - `courier_config_id` is optional (nullable) - legacy shipments have NULL
+  - No RLS added: system uses `supabaseAdmin` (service_role) throughout; RLS would have no effect
+  - Tenant isolation enforced at application layer via `getCourierClientReal()` ownership checks
+  - Query limited to 50k rows for performance safety
+- Impact: migration, route.ts, create-shipment-core.ts, platform-costs.ts, financial dashboard page
+- Tests: TypeScript build clean, smoke tests compile without errors (field is optional)
+
+## 2026-01-29 - Reseller Per-Provider Analytics
+
+- Decision: Extend per-provider margin visibility to reseller dashboard
+- Problem: Reseller had fiscal report by client but no breakdown by courier config/provider
+- Changes:
+  1. **Action**: `getResellerMarginByProvider()` in `reseller-fiscal-report.ts` — scoped to reseller's sub-users via `parent_id`, filtered by month/year
+  2. **Component**: `ResellerProviderChart` — horizontal bar chart (orange gradient, same pattern as superadmin but simplified: no owner badges, no platform/reseller filter)
+  3. **Integration**: Added to report-fiscale page with parallel `Promise.all` loading
+  4. **Type**: `ResellerProviderMarginData` in `types/reseller-fiscal.ts`
+- Security: Auth via `getSafeAuth()`, verified `is_reseller || superadmin`, data scoped to `parent_id` sub-users only
+- Impact: reseller-fiscal-report.ts, report-fiscale/page.tsx, reseller-provider-chart.tsx, reseller-fiscal.ts
+- Tests: TypeScript build clean

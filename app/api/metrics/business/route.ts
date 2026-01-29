@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Business Metrics API Endpoint
  *

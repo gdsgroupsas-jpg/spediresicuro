@@ -1,4 +1,6 @@
-﻿/**
+export const dynamic = 'force-dynamic';
+
+/**
  * API Route: Value Stats - P4 Task 1
  *
  * Calcola statistiche di valore per l'utente:

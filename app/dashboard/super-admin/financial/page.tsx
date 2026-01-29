@@ -24,6 +24,7 @@ import {
   getStartDateForPeriod,
 } from './_components/period-selector';
 import { MarginByCourierChart } from './_components/margin-by-courier-chart';
+import { MarginByProviderChart } from './_components/margin-by-provider-chart';
 import { TopResellersTable } from './_components/top-resellers-table';
 
 import {
@@ -33,12 +34,14 @@ import {
   getReconciliationPendingAction,
   updateReconciliationStatusAction,
   getMarginByCourierAction,
+  getMarginByProviderAction,
   getTopResellersAction,
   exportFinancialCSVAction,
   type PlatformMonthlyPnL,
   type MarginAlert,
   type ReconciliationPending,
   type CourierMarginData,
+  type ProviderMarginData,
   type TopResellerData,
 } from '@/actions/platform-costs';
 
@@ -69,6 +72,7 @@ export default function FinancialDashboard() {
   const [alerts, setAlerts] = useState<MarginAlert[]>([]);
   const [reconciliation, setReconciliation] = useState<ReconciliationPending[]>([]);
   const [courierMargins, setCourierMargins] = useState<CourierMarginData[]>([]);
+  const [providerMargins, setProviderMargins] = useState<ProviderMarginData[]>([]);
   const [topResellers, setTopResellers] = useState<TopResellerData[]>([]);
 
   const [activeTab, setActiveTab] = useState<
@@ -122,21 +126,30 @@ export default function FinancialDashboard() {
     const startDateStr = startDate?.toISOString();
 
     try {
-      const [statsRes, monthlyRes, alertsRes, reconciliationRes, courierRes, resellersRes] =
-        await Promise.all([
-          getPlatformStatsAction(),
-          getMonthlyPnLAction(12),
-          getMarginAlertsAction(),
-          getReconciliationPendingAction(),
-          getMarginByCourierAction(startDateStr),
-          getTopResellersAction(20, startDateStr),
-        ]);
+      const [
+        statsRes,
+        monthlyRes,
+        alertsRes,
+        reconciliationRes,
+        courierRes,
+        providerRes,
+        resellersRes,
+      ] = await Promise.all([
+        getPlatformStatsAction(),
+        getMonthlyPnLAction(12),
+        getMarginAlertsAction(),
+        getReconciliationPendingAction(),
+        getMarginByCourierAction(startDateStr),
+        getMarginByProviderAction(startDateStr),
+        getTopResellersAction(20, startDateStr),
+      ]);
 
       if (statsRes.success) setStats(statsRes.data!);
       if (monthlyRes.success) setMonthlyPnL(monthlyRes.data!);
       if (alertsRes.success) setAlerts(alertsRes.data!);
       if (reconciliationRes.success) setReconciliation(reconciliationRes.data!);
       if (courierRes.success) setCourierMargins(courierRes.data!);
+      if (providerRes.success) setProviderMargins(providerRes.data!);
       if (resellersRes.success) setTopResellers(resellersRes.data!);
     } catch (error) {
       console.error('Errore caricamento dati:', error);
@@ -324,11 +337,17 @@ export default function FinancialDashboard() {
         )}
 
         {activeTab === 'analytics' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <MarginByCourierChart
-              data={courierMargins}
-              isLoading={isRefreshing && courierMargins.length === 0}
-            />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MarginByCourierChart
+                data={courierMargins}
+                isLoading={isRefreshing && courierMargins.length === 0}
+              />
+              <MarginByProviderChart
+                data={providerMargins}
+                isLoading={isRefreshing && providerMargins.length === 0}
+              />
+            </div>
             <TopResellersTable
               data={topResellers}
               isLoading={isRefreshing && topResellers.length === 0}

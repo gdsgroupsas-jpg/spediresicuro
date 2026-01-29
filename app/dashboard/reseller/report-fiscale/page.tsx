@@ -27,9 +27,17 @@ import { FiscalStatsCards } from './_components/fiscal-stats-cards';
 import { MonthYearSelector } from './_components/month-year-selector';
 import { ClientSummaryTable } from './_components/client-summary-table';
 import { ExportFiscalDialog } from './_components/export-fiscal-dialog';
+import { ResellerProviderChart } from './_components/reseller-provider-chart';
 
-import { getResellerFiscalReport } from '@/actions/reseller-fiscal-report';
-import type { MonthlyFiscalSummary, FiscalReportFilters } from '@/types/reseller-fiscal';
+import {
+  getResellerFiscalReport,
+  getResellerMarginByProvider,
+} from '@/actions/reseller-fiscal-report';
+import type {
+  MonthlyFiscalSummary,
+  FiscalReportFilters,
+  ResellerProviderMarginData,
+} from '@/types/reseller-fiscal';
 
 function ReportFiscaleContent() {
   const router = useRouter();
@@ -46,6 +54,7 @@ function ReportFiscaleContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [providerMargins, setProviderMargins] = useState<ResellerProviderMarginData[]>([]);
 
   // Load data
   const loadData = useCallback(
@@ -58,7 +67,10 @@ function ReportFiscaleContent() {
         }
 
         const filters: FiscalReportFilters = { month, year };
-        const result = await getResellerFiscalReport(filters);
+        const [result, providerRes] = await Promise.all([
+          getResellerFiscalReport(filters),
+          getResellerMarginByProvider(filters),
+        ]);
 
         if (!result.success) {
           toast.error(result.error || 'Errore caricamento dati');
@@ -66,6 +78,7 @@ function ReportFiscaleContent() {
         }
 
         setData(result.data || null);
+        if (providerRes.success) setProviderMargins(providerRes.data || []);
 
         if (showRefreshToast) {
           toast.success('Dati aggiornati');
@@ -184,6 +197,14 @@ function ReportFiscaleContent() {
 
         {/* Client table */}
         <ClientSummaryTable clients={data?.clients || []} isLoading={isLoading} />
+
+        {/* Provider margin chart */}
+        <div className="mt-6">
+          <ResellerProviderChart
+            data={providerMargins}
+            isLoading={isLoading && providerMargins.length === 0}
+          />
+        </div>
 
         {/* Export Dialog */}
         <ExportFiscalDialog
