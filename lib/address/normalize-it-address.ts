@@ -308,6 +308,76 @@ export function capitalizeWords(text: string): string {
     .join(' ');
 }
 
+// ==================== POSTAL NORMALIZATION ====================
+
+/**
+ * Abbreviazioni standard postali italiane
+ * Usate per normalizzare indirizzi secondo formato Poste Italiane
+ */
+const POSTAL_ABBREVIATIONS: [RegExp, string][] = [
+  [/\bvia\b/gi, 'V.'],
+  [/\bviale\b/gi, 'V.le'],
+  [/\bpiazza\b/gi, 'P.zza'],
+  [/\bpiazzale\b/gi, 'P.le'],
+  [/\bcorso\b/gi, 'C.so'],
+  [/\blargo\b/gi, 'L.go'],
+  [/\bvicolo\b/gi, 'Vic.'],
+  [/\bstrada\b/gi, 'Str.'],
+  [/\btraversa\b/gi, 'Trav.'],
+  [/\bcontrada\b/gi, 'C.da'],
+  [/\blocalità\b/gi, 'Loc.'],
+  [/\blocalita\b/gi, 'Loc.'],
+  [/\bfrazione\b/gi, 'Fraz.'],
+  [/\bborgo\b/gi, 'B.go'],
+  [/\bsalita\b/gi, 'Sal.'],
+  [/\blungotevere\b/gi, 'Lgotev.'],
+  [/\blungomare\b/gi, 'Lgomare'],
+];
+
+/**
+ * Normalizza un indirizzo secondo il formato postale italiano
+ * Converte forme estese in abbreviazioni standard.
+ *
+ * @example normalizeStreetForPostal("Via Roma 20") → "V. Roma 20"
+ * @example normalizeStreetForPostal("Piazza Garibaldi 1") → "P.zza Garibaldi 1"
+ */
+export function normalizeStreetForPostal(street: string): string {
+  if (!street) return '';
+
+  let normalized = normalizeText(street);
+
+  for (const [pattern, replacement] of POSTAL_ABBREVIATIONS) {
+    normalized = normalized.replace(pattern, replacement);
+  }
+
+  return normalized;
+}
+
+/**
+ * Estrae il numero civico dall'indirizzo, separandolo dalla via
+ *
+ * @example extractStreetNumber("Via Roma 20") → { street: "Via Roma", number: "20" }
+ * @example extractStreetNumber("Via Roma 20/A") → { street: "Via Roma", number: "20/A" }
+ * @example extractStreetNumber("Via Roma") → { street: "Via Roma", number: null }
+ */
+export function extractStreetNumber(address: string): { street: string; number: string | null } {
+  if (!address) return { street: '', number: null };
+
+  const cleaned = normalizeText(address);
+
+  // Pattern: indirizzo seguito da numero civico (opzionalmente con lettera, /A, /B, bis, etc.)
+  const match = cleaned.match(/^(.+?)\s+(\d+(?:\s*[/\\]\s*[A-Za-z0-9]+)?(?:\s*(?:bis|ter))?)\s*$/i);
+
+  if (match) {
+    return {
+      street: normalizeText(match[1]),
+      number: match[2].replace(/\s+/g, '').toUpperCase(),
+    };
+  }
+
+  return { street: cleaned, number: null };
+}
+
 // ==================== MAIN EXTRACTION ====================
 
 export interface AddressExtractionResult {

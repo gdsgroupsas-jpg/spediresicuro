@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Command } from 'cmdk';
 import { MapPin, CheckCircle2 } from 'lucide-react';
+import StreetAutocomplete from './street-autocomplete';
+import type { PlaceDetails } from '@/lib/adapters/google-places/base';
 
 interface AddressFieldsProps {
   label?: string;
@@ -16,6 +18,14 @@ interface AddressFieldsProps {
   cityValid?: boolean;
   provinceValid?: boolean;
   postalCodeValid?: boolean;
+  /** Abilita autocomplete indirizzo via Google Places */
+  enableStreetAutocomplete?: boolean;
+  /** Valore campo indirizzo (via + civico) */
+  streetValue?: string;
+  /** Callback cambio indirizzo */
+  onStreetChange?: (street: string) => void;
+  /** Indirizzo validato (selezionato da autocomplete) */
+  streetValid?: boolean;
 }
 
 interface LocationResult {
@@ -154,6 +164,10 @@ export default function AddressFields({
   cityValid,
   provinceValid,
   postalCodeValid,
+  enableStreetAutocomplete = false,
+  streetValue = '',
+  onStreetChange,
+  streetValid,
 }: AddressFieldsProps) {
   const [cityInput, setCityInput] = useState(cityValue);
   const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
@@ -276,12 +290,46 @@ export default function AddressFields({
     }
   };
 
+  const handlePlaceSelect = useCallback(
+    (details: PlaceDetails) => {
+      // Auto-fill city/province/CAP from selected place
+      setIsSelectionInProgress(true);
+
+      if (details.city) {
+        setCityInput(details.city);
+        onCityChange(details.city);
+      }
+      if (details.province) {
+        onProvinceChange(details.province);
+      }
+      if (details.postalCode) {
+        onPostalCodeChange(details.postalCode);
+      }
+
+      setTimeout(() => {
+        setIsSelectionInProgress(false);
+      }, 100);
+    },
+    [onCityChange, onProvinceChange, onPostalCodeChange]
+  );
+
   return (
     <div className="space-y-3">
       {label && (
         <h3 className="text-sm font-semibold text-gray-700 mb-3">
           {label} {required && <span className="text-red-500">*</span>}
         </h3>
+      )}
+
+      {/* Street Autocomplete (Google Places) */}
+      {enableStreetAutocomplete && onStreetChange && (
+        <StreetAutocomplete
+          value={streetValue}
+          onChange={onStreetChange}
+          onPlaceSelect={handlePlaceSelect}
+          required={required}
+          valid={streetValid}
+        />
       )}
 
       {/* Città con Autocomplete */}

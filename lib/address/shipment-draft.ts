@@ -47,6 +47,12 @@ export const RecipientSchema = z.object({
   province: italianProvinceSchema,
   postalCode: italianPostalCodeSchema,
   country: z.enum(['IT']).default('IT'),
+  companyName: z.string().trim().optional(),
+  vatNumber: z
+    .string()
+    .regex(/^(?:IT)?\d{11}$/i, 'P.IVA deve essere 11 cifre (opzionale prefisso IT)')
+    .optional(),
+  addressType: z.enum(['residential', 'business', 'unknown']).optional(),
 });
 
 export const SenderSchema = z.object({

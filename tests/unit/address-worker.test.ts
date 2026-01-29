@@ -123,7 +123,7 @@ describe('processAddressSync', () => {
 
       // Dati esistenti NON cancellati
       expect(result.shipmentDraft.recipient?.fullName).toBe('Mario Rossi');
-      expect(result.shipmentDraft.recipient?.addressLine1).toBe('Via Roma 123');
+      expect(result.shipmentDraft.recipient?.addressLine1).toBe('V. Roma 123');
       expect(result.shipmentDraft.recipient?.city).toBe('Milano');
       expect(result.shipmentDraft.recipient?.province).toBe('MI');
       expect(result.shipmentDraft.recipient?.postalCode).toBe('20100');
