@@ -70,7 +70,7 @@ Record structural and process decisions for fast AI retrieval.
   - Tenant isolation enforced at application layer via `getCourierClientReal()` ownership checks
   - Query limited to 50k rows for performance safety
 - Impact: migration, route.ts, create-shipment-core.ts, platform-costs.ts, financial dashboard page
-- Tests: TypeScript build clean, smoke tests compile without errors (field is optional)
+- Tests: TypeScript build clean, 8 unit tests (provider-analytics.test.ts), 3 unit tests (courier-config-tracking.test.ts)
 
 ## 2026-01-29 - Reseller Per-Provider Analytics
 
@@ -81,6 +81,6 @@ Record structural and process decisions for fast AI retrieval.
   2. **Component**: `ResellerProviderChart` — horizontal bar chart (orange gradient, same pattern as superadmin but simplified: no owner badges, no platform/reseller filter)
   3. **Integration**: Added to report-fiscale page with parallel `Promise.all` loading
   4. **Type**: `ResellerProviderMarginData` in `types/reseller-fiscal.ts`
-- Security: Auth via `getSafeAuth()`, verified `is_reseller || superadmin`, data scoped to `parent_id` sub-users only
+- Security: Auth via `getSafeAuth()`, verified `is_reseller || superadmin`, data scoped to `parent_id` sub-users + reseller's own shipments
 - Impact: reseller-fiscal-report.ts, report-fiscale/page.tsx, reseller-provider-chart.tsx, reseller-fiscal.ts
-- Tests: TypeScript build clean
+- Tests: TypeScript build clean, 9 unit tests (reseller-provider-analytics.test.ts)
