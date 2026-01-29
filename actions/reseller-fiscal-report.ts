@@ -19,6 +19,7 @@ import type {
   FiscalShipmentLine,
   FiscalEntity,
   MarginUnavailableReason,
+  ResellerProviderMarginData,
 } from '@/types/reseller-fiscal';
 
 // Nomi mesi in italiano
@@ -464,6 +465,145 @@ export async function getResellerFiscalReport(
     return { success: true, data: summary };
   } catch (error: any) {
     console.error('Errore getResellerFiscalReport:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+/**
+ * Margini aggregati per configurazione API (fornitore) - vista reseller
+ * Mostra al reseller come si distribuiscono i margini tra le diverse courier_config
+ * usate dai suoi clienti (sub-users).
+ */
+export async function getResellerMarginByProvider(
+  filters: FiscalReportFilters
+): Promise<{ success: boolean; data?: ResellerProviderMarginData[]; error?: string }> {
+  try {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data: currentUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', context.actor.id)
+      .single();
+
+    if (userError || !currentUser) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    if (!currentUser.is_reseller && currentUser.account_type !== 'superadmin') {
+      return { success: false, error: 'Non sei un reseller' };
+    }
+
+    // Sub-users del reseller
+    const { data: clients } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('parent_id', currentUser.id);
+
+    const clientIds = (clients || []).map((c: any) => c.id);
+    if (clientIds.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    // Periodo
+    const startDate = new Date(filters.year, filters.month - 1, 1);
+    const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
+
+    // Query spedizioni dei clienti con courier_config_id
+    const { data, error } = await supabaseAdmin
+      .from('shipments')
+      .select(
+        `
+        courier_config_id,
+        base_price,
+        final_price,
+        courier_configs(
+          id,
+          name,
+          config_label,
+          provider_id,
+          carrier
+        )
+      `
+      )
+      .in('user_id', clientIds)
+      .not('courier_config_id', 'is', null)
+      .not('base_price', 'is', null)
+      .not('final_price', 'is', null)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .neq('status', 'cancelled')
+      .limit(50000);
+
+    if (error) throw error;
+
+    // Aggrega per courier_config_id
+    const configMap = new Map<
+      string,
+      {
+        provider_name: string;
+        total_shipments: number;
+        total_revenue: number;
+        total_cost: number;
+        gross_margin: number;
+      }
+    >();
+
+    (data || []).forEach((row: any) => {
+      const configId = row.courier_config_id;
+      if (!configId) return;
+
+      const configInfo = Array.isArray(row.courier_configs)
+        ? row.courier_configs[0]
+        : row.courier_configs;
+
+      const displayName = configInfo?.config_label || configInfo?.name || null;
+      const providerName = configInfo
+        ? displayName ||
+          `${(configInfo.provider_id || '').replaceAll('_', ' ')} (${configInfo.carrier || 'N/A'})`
+        : configId.substring(0, 8);
+
+      const existing = configMap.get(configId) || {
+        provider_name: providerName,
+        total_shipments: 0,
+        total_revenue: 0,
+        total_cost: 0,
+        gross_margin: 0,
+      };
+
+      const revenue = row.final_price || 0;
+      const cost = row.base_price || 0;
+
+      configMap.set(configId, {
+        provider_name: existing.provider_name,
+        total_shipments: existing.total_shipments + 1,
+        total_revenue: existing.total_revenue + revenue,
+        total_cost: existing.total_cost + cost,
+        gross_margin: existing.gross_margin + (revenue - cost),
+      });
+    });
+
+    const result: ResellerProviderMarginData[] = Array.from(configMap.entries())
+      .map(([config_id, stats]) => ({
+        config_id,
+        provider_name: stats.provider_name,
+        total_shipments: stats.total_shipments,
+        total_revenue: Math.round(stats.total_revenue * 100) / 100,
+        total_cost: Math.round(stats.total_cost * 100) / 100,
+        gross_margin: Math.round(stats.gross_margin * 100) / 100,
+        avg_margin_percent:
+          stats.total_cost > 0
+            ? Math.round((stats.gross_margin / stats.total_cost) * 100 * 100) / 100
+            : 0,
+      }))
+      .sort((a, b) => b.gross_margin - a.gross_margin);
+
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('[FISCAL_REPORT] getResellerMarginByProvider error:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
