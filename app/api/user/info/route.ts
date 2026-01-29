@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       const { supabaseAdmin } = await import('@/lib/db/client');
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from('users')
-        .select('account_type, role, is_reseller, reseller_role')
+        .select('account_type, role, is_reseller, reseller_role, wallet_balance')
         .eq('email', context!.actor.email)
         .single();
 
@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
       reseller_role: resellerRole,
       provider: user.provider,
       image: user.image,
+      wallet_balance: (user as any).wallet_balance || 0,
       company_name: (user as any).company_name,
       vat_number: (user as any).vat_number,
       phone: (user as any).phone,
