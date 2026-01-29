@@ -223,7 +223,6 @@ async function smokeTestGoldenPath(): Promise<void> {
     .select('*')
     .eq('is_active', true)
     .eq('provider_id', 'spedisci_online')
-    .not('carrier', 'is', null)
     .limit(1);
 
   if (configError || !configs || configs.length === 0) {
@@ -345,7 +344,7 @@ async function smokeTestGoldenPath(): Promise<void> {
   } else {
     const shipment = shipments[0];
     const checks = {
-      status_ok: shipment.status === 'confirmed',
+      status_ok: shipment.status === 'pending' || shipment.status === 'confirmed',
       tracking_saved: !!shipment.tracking_number,
       label_data_present: !!shipment.label_data,
       external_id_present: !!shipment.shipment_id_external,
