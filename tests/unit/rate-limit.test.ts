@@ -13,12 +13,9 @@ import {
   resetForTesting,
 } from '@/lib/security/rate-limit';
 
-// Mock Redis module
-vi.mock('@upstash/redis', () => ({
-  Redis: vi.fn().mockImplementation(() => ({
-    incr: vi.fn(),
-    expire: vi.fn(),
-  })),
+// Mock Redis module - force null so rate-limit uses in-memory fallback
+vi.mock('@/lib/db/redis', () => ({
+  getRedis: vi.fn(() => null),
 }));
 
 describe('Rate Limit Utility', () => {
