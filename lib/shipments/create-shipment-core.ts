@@ -823,6 +823,29 @@ export async function createShipmentCore(params: {
     };
   }
 
+  // ============================================
+  // EMAIL CONFERMA SPEDIZIONE (non-blocking)
+  // ============================================
+  try {
+    const { sendShipmentConfirmation } = await import('@/lib/email/resend');
+    const userEmail = context.target.email;
+    if (userEmail && !userEmail.endsWith('@spediresicuro.local')) {
+      sendShipmentConfirmation({
+        to: userEmail,
+        recipientName: shipment.recipient_name || validated.recipient.name || '',
+        trackingNumber: shipment.tracking_number || courierResponse.trackingNumber,
+        carrier: shipment.carrier || validated.carrier,
+        senderCity: shipment.sender_city || validated.sender.city || '',
+        recipientCity: shipment.recipient_city || validated.recipient.city || '',
+        cost: shipment.final_price || walletChargeAmount || finalCost,
+      }).catch((emailErr: any) => {
+        console.warn('⚠️ [EMAIL] Shipment confirmation failed (non-blocking):', emailErr?.message);
+      });
+    }
+  } catch {
+    // ignore — email is best-effort
+  }
+
   return {
     status: 200,
     json: {

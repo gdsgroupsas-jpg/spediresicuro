@@ -203,7 +203,33 @@ async function handleCheckoutSessionCompleted(session: any) {
     );
   }
 
-  // 7. Audit log (non bloccante)
+  // 7. Email conferma ricarica (non bloccante)
+  try {
+    const { sendWalletTopUp } = await import('@/lib/email/resend');
+    const userEmail = session.customer_email;
+    if (userEmail) {
+      // Get user name + new balance
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('display_name, wallet_balance')
+        .eq('id', userId)
+        .maybeSingle();
+
+      sendWalletTopUp({
+        to: userEmail,
+        userName: userData?.display_name || '',
+        amount: amountCredit,
+        method: 'stripe',
+        newBalance: userData?.wallet_balance,
+      }).catch((emailErr: any) => {
+        console.warn('⚠️ [STRIPE WEBHOOK] Email failed (non-blocking):', emailErr?.message);
+      });
+    }
+  } catch (emailError) {
+    console.warn('⚠️ [STRIPE WEBHOOK] Email setup failed (non-blocking):', emailError);
+  }
+
+  // 8. Audit log (non bloccante)
   try {
     await supabaseAdmin.from('audit_logs').insert({
       action: 'stripe_payment_completed',
