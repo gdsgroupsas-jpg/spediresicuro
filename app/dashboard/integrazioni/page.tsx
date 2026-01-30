@@ -12,7 +12,6 @@ import { motion } from 'framer-motion';
 import DashboardNav from '@/components/dashboard-nav';
 import IntegrationCard from '@/components/integrazioni/integration-card';
 import UniversalWidgetCard from '@/components/integrazioni/universal-widget-card';
-import CourierAPIConfig from '@/components/integrazioni/courier-api-config';
 import { ShoppingBag, Store, Zap, Code } from 'lucide-react';
 
 // Piattaforme supportate
@@ -167,17 +166,7 @@ export default function IntegrazioniPage() {
           <UniversalWidgetCard />
         </motion.div>
 
-        {/* Configurazione API Corrieri (Spedisci.Online, GLS, BRT, Poste) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mb-12"
-        >
-          <CourierAPIConfig />
-        </motion.div>
-
-        {/* Grid Integrazioni */}
+        {/* Grid Integrazioni Store */}
         <motion.div
           variants={containerVariants}
           initial="hidden"

@@ -1,17 +1,18 @@
 /**
- * API Route: Quote Real-Time da Spedisci.Online
+ * API Route: Quote Real-Time Multi-Provider
  *
- * ✨ MULTI-CONFIG: Chiama API per OGNI configurazione dell'utente
- * e unisce tutti i rates ricevuti.
+ * MULTI-CONFIG + MULTI-PROVIDER: Chiama API per OGNI configurazione dell'utente
+ * (SpedisciOnline + SpediamoPro + altri) e unisce tutti i rates ricevuti.
  *
- * Se un reseller ha N configurazioni API (N account Spedisci.Online),
- * faremo N chiamate e uniremo tutti i rates.
+ * Se un reseller ha N configurazioni API (es. 2 SpedisciOnline + 1 SpediamoPro),
+ * faremo N chiamate in parallelo e uniremo tutti i rates.
  *
- * ⚠️ ENTERPRISE: Include cache Redis (TTL 5min), multi-config support
+ * ENTERPRISE: Include cache Redis (TTL 5min), multi-config, multi-provider support
  */
 
 import { testSpedisciOnlineRates } from '@/actions/spedisci-online-rates';
 import { getAllUserSpedisciOnlineConfigs } from '@/lib/actions/spedisci-online';
+import { getAllUserSpediamoProConfigs, getSpediamoProQuotes } from '@/lib/actions/spediamopro';
 import { getCurrentUser } from '@/lib/auth-helper';
 import { supabaseAdmin } from '@/lib/db/client';
 import { NextRequest, NextResponse } from 'next/server';
@@ -54,12 +55,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'CAP destinazione obbligatorio' }, { status: 400 });
     }
 
-    // ✨ MULTI-CONFIG: Recupera TUTTE le configurazioni dell'utente
-    const configsResult = await getAllUserSpedisciOnlineConfigs();
+    // MULTI-CONFIG + MULTI-PROVIDER: Recupera configurazioni da TUTTI i provider in parallelo
+    const [configsResult, spediamoProConfigsResult] = await Promise.all([
+      getAllUserSpedisciOnlineConfigs(),
+      getAllUserSpediamoProConfigs().catch((err) => {
+        console.warn('[QUOTES API] Errore recupero config SpediamoPro:', err.message);
+        return { success: false, configs: [] as any[] };
+      }),
+    ]);
 
-    if (!configsResult.success || !configsResult.configs || configsResult.configs.length === 0) {
-      // Nessuna configurazione API: prova fallback a listini
-      console.log('⚠️ [QUOTES API] Nessuna configurazione API trovata, uso fallback listini');
+    const hasSpedisciOnline =
+      configsResult.success && configsResult.configs && configsResult.configs.length > 0;
+    const hasSpediamoPro =
+      spediamoProConfigsResult.success &&
+      spediamoProConfigsResult.configs &&
+      spediamoProConfigsResult.configs.length > 0;
+
+    if (!hasSpedisciOnline && !hasSpediamoPro) {
+      console.log('[QUOTES API] Nessuna configurazione API trovata, uso fallback listini');
       return await handleListinoFallback(
         context.actor.email,
         weight,
@@ -72,19 +85,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ [QUOTES API] Trovate ${configsResult.configs.length} configurazioni API`);
-    console.log(`📊 [QUOTES API] Dettaglio configurazioni trovate:`);
-    configsResult.configs.forEach((config, idx) => {
-      console.log(
-        `   Config ${idx + 1}: "${config.configName}" (${config.configId.substring(0, 8)}...)`
-      );
-      console.log(`      - Contratti: ${Object.keys(config.contract_mapping).join(', ')}`);
-      console.log(`      - Base URL: ${config.base_url}`);
-      console.log(
-        `      - API Key (hash): ${config.api_key ? config.api_key.substring(0, 10) + '...' : 'MANCANTE'}`
-      );
-    });
-    console.log(`📊 [QUOTES API] Servizi accessori richiesti:`, services);
+    const soConfigCount = configsResult.configs?.length || 0;
+    const spConfigCount = spediamoProConfigsResult.configs?.length || 0;
+    console.log(
+      `[QUOTES API] Trovate ${soConfigCount} config SpedisciOnline + ${spConfigCount} config SpediamoPro`
+    );
 
     // Prepara parametri base per le chiamate
     const baseParams = {
@@ -126,14 +131,14 @@ export async function POST(request: NextRequest) {
     let anyCached = false;
     let maxCacheAge = 0;
 
-    // ⚠️ FIX: Usa TUTTE le configurazioni senza deduplica errata
-    // Ogni configId è già univoco - se l'utente ha N configurazioni, le chiamiamo tutte
-    // La deduplica per API key (substring) causava bug: configurazioni diverse venivano saltate
-    const uniqueConfigs = configsResult.configs;
+    // Usa TUTTE le configurazioni senza deduplica errata
+    const uniqueConfigs = configsResult.configs || [];
 
-    console.log(`📊 [QUOTES API] Configurazioni da chiamare: ${uniqueConfigs.length}`);
+    console.log(
+      `[QUOTES API] Configurazioni da chiamare: ${uniqueConfigs.length} SpedisciOnline + ${spConfigCount} SpediamoPro`
+    );
 
-    // Esegui chiamate in parallelo per performance
+    // Esegui chiamate SpedisciOnline in parallelo
     const promises = uniqueConfigs.map(async (config) => {
       try {
         console.log(
@@ -186,21 +191,71 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    const results = await Promise.all(promises);
+    // Esegui chiamate SpediamoPro in parallelo (contemporaneamente a SpedisciOnline)
+    const spediamoProPromises = (spediamoProConfigsResult.configs || []).map(async (config) => {
+      try {
+        console.log(
+          `[QUOTES API] Chiamata SpediamoPro per config "${config.configName}" (${config.configId.substring(0, 8)}...)`
+        );
 
-    // Unisci tutti i rates
+        const result = await getSpediamoProQuotes({
+          configId: config.configId,
+          senderCap: baseParams.shipFrom.postalCode,
+          senderCity: baseParams.shipFrom.city,
+          senderProv: baseParams.shipFrom.state,
+          recipientCap: baseParams.shipTo.postalCode,
+          recipientCity: baseParams.shipTo.city,
+          recipientProv: baseParams.shipTo.state,
+          parcels: baseParams.packages,
+          insuranceValue: baseParams.insuranceValue,
+          codValue: baseParams.codValue,
+        });
+
+        if (result.success && result.rates && result.rates.length > 0) {
+          console.log(
+            `[QUOTES API] SpediamoPro "${config.configName}": ${result.rates.length} rates`
+          );
+
+          const ratesWithMeta = result.rates.map((rate: any) => ({
+            ...rate,
+            _configId: config.configId,
+            _configName: config.configName,
+            _provider: 'spediamopro',
+          }));
+
+          return { success: true, rates: ratesWithMeta };
+        } else {
+          return { success: false, error: result.error, configName: config.configName };
+        }
+      } catch (error: any) {
+        console.error(`[QUOTES API] Errore SpediamoPro "${config.configName}":`, error.message);
+        return { success: false, error: error.message, configName: config.configName };
+      }
+    });
+
+    // Aspetta TUTTI i risultati (SpedisciOnline + SpediamoPro) in parallelo
+    const [soResults, spResults] = await Promise.all([
+      Promise.all(promises),
+      Promise.all(spediamoProPromises),
+    ]);
+    const results = [...soResults, ...spResults];
+
+    // Unisci tutti i rates da tutti i provider
     for (const result of results) {
       if (result.success && result.rates) {
         allRates.push(...result.rates);
-        if (result.cached) anyCached = true;
-        if (result.cacheAge && result.cacheAge > maxCacheAge) maxCacheAge = result.cacheAge;
+        const r = result as any;
+        if (r.cached) anyCached = true;
+        if (r.cacheAge && r.cacheAge > maxCacheAge) maxCacheAge = r.cacheAge;
       } else if (result.error) {
-        errors.push(`${result.configName}: ${result.error}`);
+        const r = result as any;
+        errors.push(`${r.configName || 'unknown'}: ${result.error}`);
       }
     }
 
+    const totalConfigs = uniqueConfigs.length + (spediamoProConfigsResult.configs?.length || 0);
     console.log(
-      `✅ [QUOTES API] Totale rates unificati: ${allRates.length} da ${uniqueConfigs.length} configurazioni uniche`
+      `[QUOTES API] Totale rates unificati: ${allRates.length} da ${totalConfigs} configurazioni`
     );
 
     // Se nessun rate da nessuna config, prova fallback listini
@@ -327,7 +382,7 @@ async function handleListinoFallback(
       error: 'Nessuna configurazione API e nessun listino disponibile',
       details: {
         requiresConfig: true,
-        configUrl: '/dashboard/integrazioni',
+        configUrl: '/dashboard/configurazioni-corrieri',
       },
     },
     { status: 422 }
