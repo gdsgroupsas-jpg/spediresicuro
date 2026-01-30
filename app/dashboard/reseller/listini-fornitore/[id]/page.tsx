@@ -460,23 +460,29 @@ export default function PriceListDetailPage() {
     setHasUnsavedChanges(false);
   }
 
-  // Costruisce merged rows (logica esistente)
+  // Costruisce merged rows — dynamic zone detection
   function buildMergedRows() {
-    const sortedZones = [...PRICING_MATRIX.ZONES]
-      .map((z) => z.code)
-      .sort((a, b) => {
-        const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
-        const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
-        return (zoneA?.priority || 999) - (zoneB?.priority || 999);
-      });
+    // Detect zones from entries instead of hardcoding PRICING_MATRIX
+    const entryZoneCodes = [
+      ...new Set(entries.filter((e) => e.zone_code).map((e) => e.zone_code!)),
+    ];
+    const isStandardMatrix = entryZoneCodes.every((z) =>
+      PRICING_MATRIX.ZONES.some((pz) => pz.code === z)
+    );
+
+    const sortedZones = isStandardMatrix
+      ? [...PRICING_MATRIX.ZONES]
+          .map((z) => z.code)
+          .sort((a, b) => {
+            const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
+            const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
+            return (zoneA?.priority || 999) - (zoneB?.priority || 999);
+          })
+      : entryZoneCodes.sort();
 
     const normalizeZoneCode = (code: string | undefined | null): string | null => {
       if (!code) return null;
-
-      // Normalizza il codice (lowercase, rimuovi underscore e trattini)
       const normalized = code.toLowerCase().replace(/[_\-\s]+/g, '_');
-
-      // Mappatura codici legacy
       const legacyMap: Record<string, string> = {
         it_std: 'IT-ITALIA',
         it_cal: 'IT-CALABRIA',
@@ -488,8 +494,6 @@ export default function PriceListDetailPage() {
         eu_z1: 'EU-ZONA1',
         eu_z2: 'EU-ZONA2',
       };
-
-      // Mappatura nomi semplici (da CSV import)
       const nameMap: Record<string, string> = {
         italia: 'IT-ITALIA',
         sardegna: 'IT-SARDEGNA',
@@ -509,23 +513,9 @@ export default function PriceListDetailPage() {
         europa_2: 'EU-ZONA2',
         europa_zona_2: 'EU-ZONA2',
       };
-
-      // Prova prima con mappatura legacy
-      if (legacyMap[normalized]) {
-        return legacyMap[normalized];
-      }
-
-      // Prova con mappatura nomi semplici
-      if (nameMap[normalized]) {
-        return nameMap[normalized];
-      }
-
-      // Se il codice è già nel formato corretto (IT-*, EU-*), ritorna così com'è
-      if (code.match(/^(IT|EU)-/i)) {
-        return code.toUpperCase();
-      }
-
-      // Altrimenti ritorna il codice originale (potrebbe essere già corretto)
+      if (legacyMap[normalized]) return legacyMap[normalized];
+      if (nameMap[normalized]) return nameMap[normalized];
+      if (code.match(/^(IT|EU)-/i)) return code.toUpperCase();
       return code;
     };
 
@@ -562,7 +552,6 @@ export default function PriceListDetailPage() {
     for (let i = 0; i < uniqueWeights.length; i++) {
       const currentWeight = uniqueWeights[i];
       const currentPrices = getPricesForWeight(currentWeight);
-      let prevWeightBreakpoint = i > 0 ? uniqueWeights[i - 1] : 0;
 
       if (mergedRows.length > 0) {
         const lastMerged = mergedRows[mergedRows.length - 1];
@@ -743,10 +732,14 @@ export default function PriceListDetailPage() {
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                Tariffe per Peso e Zona (Matrice Completa)
+                {entries.some((e) => e.zone_code)
+                  ? 'Tariffe per Peso e Zona (Matrice Completa)'
+                  : 'Tariffe per Fascia di Peso'}
               </h2>
               <p className="text-sm text-gray-500">
-                Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne = Zone Geografiche
+                {entries.some((e) => e.zone_code)
+                  ? 'Visualizzazione a matrice: Righe = Scaglioni di Peso, Colonne = Zone Geografiche'
+                  : 'Prezzo base per ogni scaglione di peso'}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -873,17 +866,192 @@ export default function PriceListDetailPage() {
               );
             }
 
-            // Ordina zone secondo priority
-            const sortedZones = [...PRICING_MATRIX.ZONES]
-              .map((z) => z.code)
-              .sort((a, b) => {
-                const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
-                const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
-                return (zoneA?.priority || 999) - (zoneB?.priority || 999);
-              });
+            // Controlla se è un listino senza zone (es. SpediamoPro)
+            const hasZones = entries.some((e) => e.zone_code);
+
+            if (!hasZones && entries.length > 0) {
+              // Controlla se ci sono varianti taglia (size_label)
+              const hasSizes = entries.some((e: any) => e.size_label);
+
+              if (hasSizes) {
+                // Raggruppa per taglia
+                const sizeGroups = new Map<string, typeof entries>();
+                for (const entry of entries) {
+                  const label = (entry as any).size_label || '-';
+                  if (!sizeGroups.has(label)) sizeGroups.set(label, []);
+                  sizeGroups.get(label)!.push(entry);
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {Array.from(sizeGroups.entries()).map(([sizeLabel, sizeEntries]) => {
+                      const sorted = [...sizeEntries].sort((a, b) => a.weight_from - b.weight_from);
+                      const sample = sizeEntries[0] as any;
+                      const dims =
+                        sample?.max_length && sample?.max_width && sample?.max_height
+                          ? `${sample.max_length} × ${sample.max_width} × ${sample.max_height} cm`
+                          : null;
+
+                      return (
+                        <div key={sizeLabel}>
+                          <div className="flex items-center gap-3 mb-2 px-1">
+                            <Badge className="bg-indigo-100 text-indigo-800 font-bold text-sm px-3 py-1">
+                              Taglia {sizeLabel}
+                            </Badge>
+                            {dims && <span className="text-sm text-gray-500">Max: {dims}</span>}
+                          </div>
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                                  Fascia Peso (KG)
+                                </th>
+                                <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">
+                                  Prezzo Base
+                                </th>
+                                <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+                                  Consegna (gg)
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {sorted.map((entry, idx) => (
+                                <tr key={entry.id || idx} className="hover:bg-gray-50">
+                                  <td className="px-4 py-3 font-semibold text-gray-900">
+                                    {entry.weight_from === 0
+                                      ? `Fino a ${entry.weight_to}`
+                                      : `${entry.weight_from} - ${entry.weight_to}`}{' '}
+                                    kg
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                                    {formatCurrency(entry.base_price)}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-gray-600">
+                                    {entry.estimated_delivery_days_min &&
+                                    entry.estimated_delivery_days_max
+                                      ? `${entry.estimated_delivery_days_min}-${entry.estimated_delivery_days_max}`
+                                      : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              // Listino semplice: solo peso → prezzo (nessuna zona, nessuna taglia)
+              const sortedEntries = [...entries].sort((a, b) => a.weight_from - b.weight_from);
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+                          Fascia Peso (KG)
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">
+                          Prezzo Base
+                        </th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+                          Tipo Servizio
+                        </th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+                          Consegna (gg)
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {sortedEntries.map((entry, idx) => (
+                        <tr key={entry.id || idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-semibold text-gray-900">
+                            {entry.weight_from === 0
+                              ? `Fino a ${entry.weight_to}`
+                              : `${entry.weight_from} - ${entry.weight_to}`}{' '}
+                            kg
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                            {formatCurrency(entry.base_price)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge
+                              className={
+                                entry.service_type === 'express'
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : 'bg-blue-100 text-blue-700'
+                              }
+                            >
+                              {entry.service_type || 'standard'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600">
+                            {entry.estimated_delivery_days_min && entry.estimated_delivery_days_max
+                              ? `${entry.estimated_delivery_days_min}-${entry.estimated_delivery_days_max}`
+                              : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            }
+
+            // Detect zone codes from entries — use actual data instead of hardcoded PRICING_MATRIX
+            const entryZoneCodes = [
+              ...new Set(entries.filter((e) => e.zone_code).map((e) => e.zone_code!)),
+            ];
+            const isStandardMatrix = entryZoneCodes.every((z) =>
+              PRICING_MATRIX.ZONES.some((pz) => pz.code === z)
+            );
+
+            // For standard IT zones, use priority ordering; for custom zones (Europa), sort alphabetically
+            const sortedZones = isStandardMatrix
+              ? [...PRICING_MATRIX.ZONES]
+                  .map((z) => z.code)
+                  .sort((a, b) => {
+                    const zoneA = PRICING_MATRIX.ZONES.find((z) => z.code === a);
+                    const zoneB = PRICING_MATRIX.ZONES.find((z) => z.code === b);
+                    return (zoneA?.priority || 999) - (zoneB?.priority || 999);
+                  })
+              : entryZoneCodes.sort();
+
+            // Zone label resolver: metadata.zone_mapping > PRICING_MATRIX > raw code
+            const zoneMapping = (priceList.metadata as any)?.zone_mapping as
+              | Record<string, { label: string; countries: string[] }>
+              | undefined;
+            const getZoneLabel = (code: string): string => {
+              if (zoneMapping?.[code]) return zoneMapping[code].label;
+              const pmZone = PRICING_MATRIX.ZONES.find((z) => z.code === code);
+              if (pmZone) return pmZone.name;
+              return code;
+            };
+            const getZoneCountries = (code: string): string[] | null => {
+              if (zoneMapping?.[code]) return zoneMapping[code].countries;
+              return null;
+            };
 
             return (
               <div className="overflow-x-auto">
+                {/* Zone legend for Europa listings */}
+                {zoneMapping && (
+                  <div className="px-6 py-3 bg-blue-50 border-b text-sm">
+                    <div className="flex flex-wrap gap-x-6 gap-y-1">
+                      {sortedZones.map((zc) => {
+                        const countries = getZoneCountries(zc);
+                        if (!countries) return null;
+                        return (
+                          <span key={zc} className="text-gray-700">
+                            <strong>{getZoneLabel(zc)}</strong>: {countries.join(', ')}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
@@ -891,13 +1059,13 @@ export default function PriceListDetailPage() {
                         Peso (KG)
                       </th>
                       {sortedZones.map((zoneCode) => {
-                        const zone = PRICING_MATRIX.ZONES.find((z) => z.code === zoneCode);
-                        const zoneName = zone?.name || zoneCode;
+                        const zoneName = getZoneLabel(zoneCode);
+                        const countries = getZoneCountries(zoneCode);
                         return (
                           <th
                             key={zoneCode}
                             className="px-4 py-3 text-center font-medium text-gray-500 uppercase tracking-wider border-b"
-                            title={zoneName}
+                            title={countries ? `${zoneName}: ${countries.join(', ')}` : zoneName}
                           >
                             {zoneName}
                           </th>

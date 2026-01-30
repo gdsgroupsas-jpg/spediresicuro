@@ -16,30 +16,38 @@ interface SpediamoProTokenData {
 }
 
 interface SpediamoProSimulazioneRequest {
-  sender_nation: string;
-  sender_cap: string;
-  sender_city: string;
-  sender_prov: string;
-  recipient_nation: string;
-  recipient_cap: string;
-  recipient_city: string;
-  recipient_prov: string;
-  parcels: Array<{
-    weight: number;
-    length: number;
-    width: number;
-    height: number;
+  nazioneMittente: string;
+  capMittente: string;
+  cittaMittente: string;
+  provinciaMittente: string;
+  nazioneDestinatario: string;
+  capDestinatario: string;
+  cittaDestinatario: string;
+  provinciaDestinatario: string;
+  colli: Array<{
+    pesoReale: number;
+    profondita: number; // length
+    larghezza: number; // width
+    altezza: number; // height
   }>;
 }
 
 interface SpediamoProSimulazioneRate {
   id: number; // ID simulazione, usato per creare la spedizione
-  carrier: string; // es. "BRTEXP", "SDASTD", "UPSSTD"
-  carrier_name?: string;
-  price: number;
+  corriere: string; // es. "BRT", "SDA", "UPS"
+  tariffCode: string; // es. "BRTEXP", "SDASTD", "UPSSTD"
+  tariffa: number; // prezzo totale IVA inclusa
+  tariffaBase?: number;
+  supplementoCarburante?: number;
+  iva?: number;
+  ivaEsclusa?: number; // prezzo senza IVA
+  dataConsegnaPrevistaIT?: string;
+  oreConsegna?: string;
+  // Alias per backward compat
+  carrier?: string;
+  price?: number;
   price_vat?: number;
   delivery_time?: string;
-  services?: string[];
 }
 
 interface SpediamoProShipmentData {
@@ -244,28 +252,38 @@ export class SpediamoProClient extends BaseCourierClient {
       // STEP 1: Simulazione (preventivo)
       console.log('[SPEDIAMOPRO] Step 1/5: Simulazione preventivo...');
       const simulazionePayload: SpediamoProSimulazioneRequest = {
-        sender_nation: request.sender.country || 'IT',
-        sender_cap: request.sender.postalCode,
-        sender_city: request.sender.city,
-        sender_prov: request.sender.province,
-        recipient_nation: request.recipient.country || 'IT',
-        recipient_cap: request.recipient.postalCode,
-        recipient_city: request.recipient.city,
-        recipient_prov: request.recipient.province,
-        parcels: request.packages.map((pkg) => ({
-          weight: pkg.weight,
-          length: pkg.length,
-          width: pkg.width,
-          height: pkg.height,
+        nazioneMittente: request.sender.country || 'IT',
+        capMittente: request.sender.postalCode,
+        cittaMittente: request.sender.city,
+        provinciaMittente: request.sender.province,
+        nazioneDestinatario: request.recipient.country || 'IT',
+        capDestinatario: request.recipient.postalCode,
+        cittaDestinatario: request.recipient.city,
+        provinciaDestinatario: request.recipient.province,
+        colli: request.packages.map((pkg) => ({
+          pesoReale: pkg.weight,
+          profondita: pkg.length,
+          larghezza: pkg.width,
+          altezza: pkg.height,
         })),
       };
 
-      const rates = await this.apiCall<SpediamoProSimulazioneRate[]>(
+      const simResponse = await this.apiCall<any>(
         'POST',
         '/api/v1/simulazione',
         simulazionePayload,
         controller.signal
       );
+
+      // Estrai array rates dalla risposta
+      let rates: SpediamoProSimulazioneRate[];
+      if (Array.isArray(simResponse)) {
+        rates = simResponse;
+      } else if (simResponse?.simulazione?.spedizioni) {
+        rates = simResponse.simulazione.spedizioni;
+      } else {
+        rates = [];
+      }
 
       if (!rates || rates.length === 0) {
         throw new Error('SpediamoPro: nessun servizio disponibile per questa tratta');
@@ -274,7 +292,9 @@ export class SpediamoProClient extends BaseCourierClient {
       // Seleziona il rate corretto in base al carrier/contractId richiesto
       const selectedRate = this.selectRate(rates);
       if (!selectedRate) {
-        const availableCarriers = rates.map((r) => r.carrier).join(', ');
+        const availableCarriers = rates
+          .map((r) => r.tariffCode || r.corriere || r.carrier)
+          .join(', ');
         throw new Error(
           `SpediamoPro: corriere "${this.carrier || this.contractId}" non disponibile. ` +
             `Disponibili: ${availableCarriers}`
@@ -283,8 +303,8 @@ export class SpediamoProClient extends BaseCourierClient {
 
       console.log('[SPEDIAMOPRO] Step 1 completato:', {
         simulazioneId: selectedRate.id,
-        carrier: selectedRate.carrier,
-        price: selectedRate.price,
+        carrier: selectedRate.tariffCode || selectedRate.corriere || selectedRate.carrier,
+        price: selectedRate.ivaEsclusa || selectedRate.tariffa || selectedRate.price,
       });
 
       // STEP 2: Crea spedizione dalla simulazione
@@ -385,13 +405,20 @@ export class SpediamoProClient extends BaseCourierClient {
       );
 
       const trackingNumber = finalShipment?.tracking_number || '';
-      const cost = finalShipment?.price || selectedRate.price;
+      const cost =
+        finalShipment?.price ||
+        selectedRate.ivaEsclusa ||
+        selectedRate.tariffa ||
+        selectedRate.price ||
+        0;
+      const carrierLabel =
+        selectedRate.tariffCode || selectedRate.corriere || selectedRate.carrier || '';
 
       console.log('[SPEDIAMOPRO] Spedizione completata:', {
         shipmentId: shipment.id,
         trackingNumber,
         cost,
-        carrier: selectedRate.carrier,
+        carrier: carrierLabel,
       });
 
       return {
@@ -400,7 +427,7 @@ export class SpediamoProClient extends BaseCourierClient {
         trackingNumber,
         cost: typeof cost === 'string' ? parseFloat(cost) : cost,
         labelData,
-        carrier: selectedRate.carrier,
+        carrier: carrierLabel,
         rawResponse: finalShipment,
       };
     } catch (error: any) {
@@ -444,24 +471,41 @@ export class SpediamoProClient extends BaseCourierClient {
     codValue?: number;
   }): Promise<SpediamoProSimulazioneRate[]> {
     const payload: SpediamoProSimulazioneRequest = {
-      sender_nation: params.senderNation || 'IT',
-      sender_cap: params.senderCap,
-      sender_city: params.senderCity,
-      sender_prov: params.senderProv,
-      recipient_nation: params.recipientNation || 'IT',
-      recipient_cap: params.recipientCap,
-      recipient_city: params.recipientCity,
-      recipient_prov: params.recipientProv,
-      parcels: params.parcels,
+      nazioneMittente: params.senderNation || 'IT',
+      capMittente: params.senderCap,
+      cittaMittente: params.senderCity,
+      provinciaMittente: params.senderProv,
+      nazioneDestinatario: params.recipientNation || 'IT',
+      capDestinatario: params.recipientCap,
+      cittaDestinatario: params.recipientCity,
+      provinciaDestinatario: params.recipientProv,
+      colli: params.parcels.map((p) => ({
+        pesoReale: p.weight,
+        profondita: p.length,
+        larghezza: p.width,
+        altezza: p.height,
+      })),
     };
 
-    const rates = await this.apiCall<SpediamoProSimulazioneRate[]>(
-      'POST',
-      '/api/v1/simulazione',
-      payload
-    );
+    const response = await this.apiCall<any>('POST', '/api/v1/simulazione', payload);
 
-    return rates || [];
+    // L'API ritorna { simulazione: { spedizioni: [...], id, codice, ... } }
+    let rates: SpediamoProSimulazioneRate[];
+    if (Array.isArray(response)) {
+      rates = response;
+    } else if (response?.simulazione?.spedizioni) {
+      rates = response.simulazione.spedizioni;
+    } else if (response?.data && Array.isArray(response.data)) {
+      rates = response.data;
+    } else {
+      console.log(
+        '[SPEDIAMOPRO] Risposta simulazione non riconosciuta:',
+        JSON.stringify(response).substring(0, 500)
+      );
+      rates = [];
+    }
+
+    return rates;
   }
 
   /**
@@ -572,24 +616,28 @@ export class SpediamoProClient extends BaseCourierClient {
    * Seleziona il rate migliore dalla simulazione in base al carrier/contractId configurato.
    */
   private selectRate(rates: SpediamoProSimulazioneRate[]): SpediamoProSimulazioneRate | null {
+    const getCode = (r: SpediamoProSimulazioneRate) =>
+      (r.tariffCode || r.corriere || r.carrier || '').toUpperCase();
+
     // Se abbiamo un contractId specifico (es. "BRTEXP"), cerca match esatto
     if (this.contractId) {
-      const exact = rates.find((r) => r.carrier?.toUpperCase() === this.contractId!.toUpperCase());
+      const exact = rates.find((r) => getCode(r) === this.contractId!.toUpperCase());
       if (exact) return exact;
     }
 
     // Se abbiamo un carrier generico (es. "BRT"), cerca match parziale
     if (this.carrier) {
       const carrierUpper = this.carrier.toUpperCase();
-      const match = rates.find(
-        (r) =>
-          r.carrier?.toUpperCase() === carrierUpper ||
-          r.carrier?.toUpperCase().startsWith(carrierUpper)
-      );
+      const match = rates.find((r) => {
+        const code = getCode(r);
+        return code === carrierUpper || code.startsWith(carrierUpper);
+      });
       if (match) return match;
     }
 
     // Fallback: ritorna il rate piu economico
-    return rates.sort((a, b) => a.price - b.price)[0] || null;
+    const getPrice = (r: SpediamoProSimulazioneRate) =>
+      r.ivaEsclusa || r.tariffa || r.price || 999999;
+    return rates.sort((a, b) => getPrice(a) - getPrice(b))[0] || null;
   }
 }

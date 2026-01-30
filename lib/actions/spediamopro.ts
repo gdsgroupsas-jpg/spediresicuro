@@ -188,25 +188,103 @@ export async function getSpediamoProQuotes(params: {
     });
 
     // Normalizza rates al formato standard del sistema
-    const normalizedRates = rates.map((rate) => ({
-      carrierCode: rate.carrier,
-      contractCode: rate.carrier, // SpediamoPro usa il codice carrier come contratto
-      weight_price: (rate.price || 0).toString(),
+    // API ritorna: corriere, tariffCode, tariffa (IVA incl), ivaEsclusa, supplementoCarburante
+    const normalizedRates = rates.map((rate: any) => ({
+      carrierCode: rate.tariffCode || rate.corriere || rate.carrier,
+      contractCode: rate.tariffCode || rate.corriere || rate.carrier,
+      weight_price: (
+        rate.ivaEsclusa ||
+        rate.tariffaBase ||
+        rate.tariffa ||
+        rate.price ||
+        0
+      ).toString(),
       insurance_price: '0',
       cod_price: '0',
       services_price: '0',
-      fuel: '0',
-      total_price: (rate.price || 0).toString(),
-      total_price_vat: (rate.price_vat || 0).toString(),
-      delivery_time: rate.delivery_time || '',
+      fuel: (rate.supplementoCarburante || 0).toString(),
+      total_price: (rate.ivaEsclusa || rate.tariffa || rate.price || 0).toString(),
+      total_price_vat: (rate.tariffa || rate.price_vat || 0).toString(),
+      delivery_time: rate.oreConsegna || rate.dataConsegnaPrevistaIT || rate.delivery_time || '',
       source: 'spediamopro',
       _provider: 'spediamopro',
-      _simulationId: rate.id, // Necessario per creare la spedizione
+      _simulationId: rate.id,
     }));
 
     return { success: true, rates: normalizedRates };
   } catch (error: any) {
     console.error('[SPEDIAMOPRO] Errore quote:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Test rates SpediamoPro per validazione listino DB vs API.
+ * Usato dal dialog "Test Validazione API vs Listino DB".
+ */
+export async function testSpediamoProRates(testParams?: {
+  packages?: Array<{ length: number; width: number; height: number; weight: number }>;
+  shipFrom?: { city: string; state: string; postalCode: string; country: string };
+  shipTo?: { city: string; state: string; postalCode: string; country: string };
+  configId?: string;
+}): Promise<{
+  success: boolean;
+  rates?: any[];
+  error?: string;
+  details?: {
+    responseTime?: number;
+    carriersFound?: string[];
+  };
+}> {
+  try {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const configId = testParams?.configId;
+    if (!configId) {
+      return { success: false, error: 'Config ID SpediamoPro mancante' };
+    }
+
+    const defaultFrom = { city: 'Roma', state: 'RM', postalCode: '00100', country: 'IT' };
+    const defaultTo = { city: 'Milano', state: 'MI', postalCode: '20100', country: 'IT' };
+    const from = testParams?.shipFrom || defaultFrom;
+    const to = testParams?.shipTo || defaultTo;
+    const packages = testParams?.packages || [{ length: 30, width: 20, height: 15, weight: 2 }];
+
+    const startTime = Date.now();
+    const result = await getSpediamoProQuotes({
+      configId,
+      senderCap: from.postalCode,
+      senderCity: from.city,
+      senderProv: from.state,
+      senderNation: from.country,
+      recipientCap: to.postalCode,
+      recipientCity: to.city,
+      recipientProv: to.state,
+      recipientNation: to.country,
+      parcels: packages,
+    });
+    const responseTime = Date.now() - startTime;
+
+    if (!result.success || !result.rates) {
+      return {
+        success: false,
+        error: result.error || 'Errore recupero rates SpediamoPro',
+        details: { responseTime },
+      };
+    }
+
+    const carriersFound = [...new Set(result.rates.map((r: any) => r.carrierCode))];
+
+    return {
+      success: true,
+      rates: result.rates,
+      details: { responseTime, carriersFound },
+    };
+  } catch (error: any) {
+    console.error('[SPEDIAMOPRO] Errore test rates:', error.message);
     return { success: false, error: error.message };
   }
 }

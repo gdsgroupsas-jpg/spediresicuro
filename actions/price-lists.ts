@@ -1686,11 +1686,30 @@ export async function getAssignablePriceListsAction(options?: {
       return { success: false, error: rpcError.message };
     }
 
-    console.log(
-      `✅ [ASSIGNABLE LISTS] ${priceLists?.length || 0} listini disponibili per ${user.id}`
-    );
+    // Enrich with courier display names
+    let enrichedLists = priceLists || [];
+    if (enrichedLists.length > 0) {
+      const courierIds = [
+        ...new Set(enrichedLists.map((pl: any) => pl.courier_id).filter(Boolean)),
+      ];
+      if (courierIds.length > 0) {
+        const { data: couriers } = await supabaseAdmin
+          .from('couriers')
+          .select('id, display_name, name')
+          .in('id', courierIds);
+        if (couriers) {
+          const courierMap = new Map(couriers.map((c: any) => [c.id, c.display_name || c.name]));
+          enrichedLists = enrichedLists.map((pl: any) => ({
+            ...pl,
+            courier_name: pl.courier_id ? courierMap.get(pl.courier_id) || null : null,
+          }));
+        }
+      }
+    }
 
-    return { success: true, priceLists: priceLists || [] };
+    console.log(`✅ [ASSIGNABLE LISTS] ${enrichedLists.length} listini disponibili per ${user.id}`);
+
+    return { success: true, priceLists: enrichedLists };
   } catch (error: any) {
     console.error('Errore getAssignablePriceListsAction:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };

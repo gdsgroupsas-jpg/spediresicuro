@@ -84,6 +84,7 @@ function WizardContent({
     targetUserId,
     clientEmail,
     selectedPriceListId,
+    selectedPriceListIds,
     errors,
     setError,
     clearError,
@@ -139,8 +140,14 @@ function WizardContent({
           azienda:
             resellerFormData.tipoCliente === 'azienda' ? resellerFormData.azienda : undefined,
           bancari: resellerFormData.bancari,
-          // Listino iniziale (opzionale)
-          priceListId: resellerFormData.selectedPriceListId || undefined,
+          // Listini iniziali (opzionale)
+          priceListId:
+            resellerFormData.selectedPriceListIds?.[0] ||
+            resellerFormData.selectedPriceListId ||
+            undefined,
+          priceListIds: resellerFormData.selectedPriceListIds?.length
+            ? resellerFormData.selectedPriceListIds
+            : undefined,
         };
 
         const response = await fetch('/api/superadmin/resellers', {
@@ -209,7 +216,10 @@ function WizardContent({
       // Add email for reseller/superadmin mode (creating new client)
       if (mode === 'reseller' || mode === 'superadmin') {
         payload.email = clientEmail;
-        if (selectedPriceListId) {
+        if (selectedPriceListIds.length > 0) {
+          payload.priceListIds = selectedPriceListIds;
+          payload.priceListId = selectedPriceListIds[0]; // backward compat
+        } else if (selectedPriceListId) {
           payload.priceListId = selectedPriceListId;
         }
       }
@@ -257,9 +267,9 @@ function WizardContent({
           userCreationType: 'cliente',
           clientId: data.client?.id,
           generatedPassword: data.generatedPassword,
-          priceListId: selectedPriceListId || undefined,
+          priceListId: selectedPriceListIds[0] || selectedPriceListId || undefined,
           parentResellerId: selectedResellerId || undefined,
-        });
+        } as Parameters<typeof onComplete>[0]);
       }
 
       // If self-service mode, redirect to dashboard
