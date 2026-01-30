@@ -20,8 +20,8 @@ import { supabaseAdmin } from '@/lib/db/client';
 // COSTANTI
 // ============================================
 
-/** Fee di default applicata se non c'è override per l'utente */
-export const DEFAULT_PLATFORM_FEE = 0.5;
+/** Fee di default applicata se non c'è override per l'utente (0 = nessuna fee) */
+export const DEFAULT_PLATFORM_FEE = 0;
 
 // ============================================
 // TIPI
@@ -95,7 +95,7 @@ export interface UpdatePlatformFeeResult {
  * 1. platform_fee_override (massima priorità)
  * 2. parent_imposed_fee (fee imposta dal parent)
  * 3. Fee del parent (ricorsivo)
- * 4. Default €0.50
+ * 4. Default €0 (nessuna fee)
  *
  * @param userId - UUID dell'utente
  * @returns PlatformFeeResult con fee e metadati
@@ -281,7 +281,7 @@ export async function updatePlatformFee(
   }
 
   // Inserisci record audit manualmente (controllo su changed_by)
-  const newFeeValue = newFee ?? 0.5; // Valore effettivo da loggare
+  const newFeeValue = newFee ?? DEFAULT_PLATFORM_FEE; // Valore effettivo da loggare
   const { error: auditError } = await supabaseAdmin.from('platform_fee_history').insert({
     user_id: targetUserId,
     old_fee: previousFee,
