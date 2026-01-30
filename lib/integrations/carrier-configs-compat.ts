@@ -256,6 +256,9 @@ export async function testCarrierCredentials(configId: string): Promise<{
           // Test generico per altri provider
           testResult = await testGenericCredentials(config);
           break;
+        case 'spediamopro':
+          testResult = await testSpediamoProCredentials(config);
+          break;
         default:
           testResult = { success: false, error: 'Provider non supportato per test automatico' };
       }
@@ -337,6 +340,35 @@ async function testSpedisciOnlineCredentials(
 async function testPosteCredentials(config: any): Promise<{ success: boolean; error?: string }> {
   // TODO: Implementare test Poste se necessario
   return { success: false, error: 'Test Poste non ancora implementato' };
+}
+
+/**
+ * Testa credenziali SpediamoPro
+ */
+async function testSpediamoProCredentials(
+  config: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { decryptCredential, isEncrypted } = await import('@/lib/security/encryption');
+    const { SpediamoProClient } = await import('@/lib/services/couriers/spediamopro.client');
+
+    let apiKey = config.api_key;
+    if (isEncrypted(apiKey)) {
+      apiKey = decryptCredential(apiKey);
+    }
+
+    const baseUrl = config.base_url || 'https://core.spediamopro.com';
+    const client = new SpediamoProClient({ apiKey, baseUrl });
+    const valid = await client.validateCredentials();
+
+    if (valid) {
+      return { success: true };
+    } else {
+      return { success: false, error: 'Credenziali SpediamoPro non valide o scadute' };
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Errore connessione SpediamoPro' };
+  }
 }
 
 /**

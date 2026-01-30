@@ -2,10 +2,11 @@
  * Seed Script: Popola listini fornitore SpediamoPro dal PDF listino_italia_2026.pdf
  *
  * Crea 3 listini per ogni corriere (base, sconto 12%, sconto 22%)
- * oppure 1 listino base per corriere con le 3 fasce come note.
  *
  * Strategia: 1 listino supplier per corriere/servizio con prezzo BASE (listino base).
  * I prezzi sono IVA esclusa, fuel surcharge incluso.
+ *
+ * InPost: unificato in 1 listino con entries per ogni taglia (S/M/L) + dimensioni max.
  *
  * Usage: npx tsx scripts/seed-spediamopro-price-lists.ts
  */
@@ -22,6 +23,14 @@ interface WeightEntry {
   sconto22: number;
 }
 
+interface SizeVariant {
+  label: string; // "S", "M", "L"
+  max_length: number;
+  max_width: number;
+  max_height: number;
+  entries: WeightEntry[];
+}
+
 interface CarrierData {
   name: string;
   courier_slug: string; // maps to couriers.name
@@ -29,7 +38,8 @@ interface CarrierData {
   service_type: 'standard' | 'express';
   delivery_days_min: number;
   delivery_days_max: number;
-  entries: WeightEntry[];
+  entries?: WeightEntry[];
+  sizes?: SizeVariant[]; // for carriers with size variants (e.g. InPost)
 }
 
 const carriers: CarrierData[] = [
@@ -71,7 +81,7 @@ const carriers: CarrierData[] = [
   {
     name: 'Poste Delivery Express',
     courier_slug: 'poste',
-    carrier_code: 'SDASTD',
+    carrier_code: 'SDAEXP',
     service_type: 'express',
     delivery_days_min: 1,
     delivery_days_max: 2,
@@ -87,45 +97,49 @@ const carriers: CarrierData[] = [
     ],
   },
   {
-    name: 'InPost Italia (S)',
+    name: 'InPost Italia',
     courier_slug: 'inpost',
     carrier_code: 'INPOSTSTD',
     service_type: 'standard',
     delivery_days_min: 1,
     delivery_days_max: 2,
-    entries: [
-      { weight_to: 2, base: 4.97, sconto12: 4.35, sconto22: 3.87 },
-      { weight_to: 5, base: 5.49, sconto12: 4.8, sconto22: 4.27 },
-      { weight_to: 10, base: 6.13, sconto12: 5.36, sconto22: 4.77 },
-      { weight_to: 25, base: 6.39, sconto12: 5.59, sconto22: 4.97 },
-    ],
-  },
-  {
-    name: 'InPost Italia (M)',
-    courier_slug: 'inpost',
-    carrier_code: 'INPOSTSTD',
-    service_type: 'standard',
-    delivery_days_min: 1,
-    delivery_days_max: 2,
-    entries: [
-      { weight_to: 2, base: 5.74, sconto12: 5.03, sconto22: 4.47 },
-      { weight_to: 5, base: 6.13, sconto12: 5.36, sconto22: 4.77 },
-      { weight_to: 10, base: 6.13, sconto12: 5.36, sconto22: 4.77 },
-      { weight_to: 25, base: 6.39, sconto12: 5.59, sconto22: 4.97 },
-    ],
-  },
-  {
-    name: 'InPost Italia (L)',
-    courier_slug: 'inpost',
-    carrier_code: 'INPOSTSTD',
-    service_type: 'standard',
-    delivery_days_min: 1,
-    delivery_days_max: 2,
-    entries: [
-      { weight_to: 2, base: 6.39, sconto12: 5.59, sconto22: 4.97 },
-      { weight_to: 5, base: 6.64, sconto12: 5.81, sconto22: 5.17 },
-      { weight_to: 10, base: 6.64, sconto12: 5.81, sconto22: 5.17 },
-      { weight_to: 25, base: 6.9, sconto12: 6.04, sconto22: 5.37 },
+    sizes: [
+      {
+        label: 'S',
+        max_length: 8,
+        max_width: 38,
+        max_height: 64,
+        entries: [
+          { weight_to: 2, base: 4.97, sconto12: 4.35, sconto22: 3.87 },
+          { weight_to: 5, base: 5.49, sconto12: 4.8, sconto22: 4.27 },
+          { weight_to: 10, base: 6.13, sconto12: 5.36, sconto22: 4.77 },
+          { weight_to: 25, base: 6.39, sconto12: 5.59, sconto22: 4.97 },
+        ],
+      },
+      {
+        label: 'M',
+        max_length: 19,
+        max_width: 38,
+        max_height: 64,
+        entries: [
+          { weight_to: 2, base: 5.74, sconto12: 5.03, sconto22: 4.47 },
+          { weight_to: 5, base: 6.13, sconto12: 5.36, sconto22: 4.77 },
+          { weight_to: 10, base: 6.13, sconto12: 5.36, sconto22: 4.77 },
+          { weight_to: 25, base: 6.39, sconto12: 5.59, sconto22: 4.97 },
+        ],
+      },
+      {
+        label: 'L',
+        max_length: 41,
+        max_width: 38,
+        max_height: 64,
+        entries: [
+          { weight_to: 2, base: 6.39, sconto12: 5.59, sconto22: 4.97 },
+          { weight_to: 5, base: 6.64, sconto12: 5.81, sconto22: 5.17 },
+          { weight_to: 10, base: 6.64, sconto12: 5.81, sconto22: 5.17 },
+          { weight_to: 25, base: 6.9, sconto12: 6.04, sconto22: 5.37 },
+        ],
+      },
     ],
   },
   {
@@ -149,6 +163,59 @@ const TIERS = [
   { key: 'sconto12' as const, label: 'Sconto 12%', suffix: ' (Sconto 12% - ricarica €250)' },
   { key: 'sconto22' as const, label: 'Sconto 22%', suffix: ' (Sconto 22% - ricarica €1000)' },
 ];
+
+// Build flat entries from carrier data (handles both simple and size-variant carriers)
+function buildEntries(
+  carrier: CarrierData,
+  tierKey: 'base' | 'sconto12' | 'sconto22'
+): Array<{
+  weight_from: number;
+  weight_to: number;
+  base_price: number;
+  service_type: 'standard' | 'express';
+  fuel_surcharge_percent: number;
+  estimated_delivery_days_min: number;
+  estimated_delivery_days_max: number;
+  max_length?: number;
+  max_width?: number;
+  max_height?: number;
+  size_label?: string;
+}> {
+  if (carrier.sizes) {
+    // Size-variant carrier (e.g. InPost S/M/L)
+    const result: ReturnType<typeof buildEntries> = [];
+    for (const size of carrier.sizes) {
+      for (let idx = 0; idx < size.entries.length; idx++) {
+        const e = size.entries[idx];
+        result.push({
+          weight_from: idx === 0 ? 0 : size.entries[idx - 1].weight_to,
+          weight_to: e.weight_to,
+          base_price: e[tierKey],
+          service_type: carrier.service_type,
+          fuel_surcharge_percent: 0,
+          estimated_delivery_days_min: carrier.delivery_days_min,
+          estimated_delivery_days_max: carrier.delivery_days_max,
+          max_length: size.max_length,
+          max_width: size.max_width,
+          max_height: size.max_height,
+          size_label: size.label,
+        });
+      }
+    }
+    return result;
+  }
+
+  // Simple carrier (no size variants)
+  return carrier.entries!.map((e, idx) => ({
+    weight_from: idx === 0 ? 0 : carrier.entries![idx - 1].weight_to,
+    weight_to: e.weight_to,
+    base_price: e[tierKey],
+    service_type: carrier.service_type,
+    fuel_surcharge_percent: 0,
+    estimated_delivery_days_min: carrier.delivery_days_min,
+    estimated_delivery_days_max: carrier.delivery_days_max,
+  }));
+}
 
 async function seed() {
   // Dynamic imports after dotenv has loaded
@@ -235,6 +302,26 @@ async function seed() {
   }
   console.log('');
 
+  // Archive old separate S/M/L lists if they exist
+  console.log('Archiviazione vecchi listini separati S/M/L...');
+  const { data: oldSmlLists } = await supabaseAdmin
+    .from('price_lists')
+    .select('id, name')
+    .or(
+      'name.ilike.%InPost Italia (S)%,name.ilike.%InPost Italia (M)%,name.ilike.%InPost Italia (L)%'
+    )
+    .eq('status', 'active');
+
+  if (oldSmlLists && oldSmlLists.length > 0) {
+    for (const old of oldSmlLists) {
+      await supabaseAdmin.from('price_lists').update({ status: 'archived' }).eq('id', old.id);
+      console.log(`  Archiviato: ${old.name} (${old.id})`);
+    }
+  } else {
+    console.log('  Nessun vecchio listino S/M/L trovato');
+  }
+  console.log('');
+
   let totalLists = 0;
   let totalEntries = 0;
 
@@ -256,6 +343,7 @@ async function seed() {
         continue;
       }
 
+      const hasSizes = !!carrier.sizes;
       const priceList = await createPriceList(
         {
           courier_id: courierUUIDs[carrier.courier_slug],
@@ -268,7 +356,7 @@ async function seed() {
           source_file_name: 'listino_italia_2026.pdf',
           vat_mode: 'excluded',
           vat_rate: 22,
-          description: `Listino fornitore SpediamoPro - ${carrier.name} - ${tier.label}. Consegne 24/48h Italia. Fuel surcharge incluso.`,
+          description: `Listino fornitore SpediamoPro - ${carrier.name} - ${tier.label}. Consegne 24/48h Italia. Fuel surcharge incluso.${hasSizes ? ' Include taglie S/M/L.' : ''}`,
           notes: `Carrier code: ${carrier.carrier_code}. Provider: spediamopro. Aggiornamento: 01/2026.`,
           metadata: {
             provider: 'spediamopro',
@@ -277,27 +365,18 @@ async function seed() {
             tier: tier.key,
             tier_label: tier.label,
             fuel_included: true,
+            has_size_variants: hasSizes,
           },
         },
         adminId
       );
 
-      // Build entries
-      const entries = carrier.entries.map((e, idx) => ({
-        weight_from: idx === 0 ? 0 : carrier.entries[idx - 1].weight_to,
-        weight_to: e.weight_to,
-        base_price: e[tier.key],
-        service_type: carrier.service_type as 'standard' | 'express',
-        fuel_surcharge_percent: 0, // already included in price
-        estimated_delivery_days_min: carrier.delivery_days_min,
-        estimated_delivery_days_max: carrier.delivery_days_max,
-      }));
-
+      const entries = buildEntries(carrier, tier.key);
       await addPriceListEntries(priceList.id, entries);
 
       totalLists++;
       totalEntries += entries.length;
-      console.log(`   ✅ Creato: ${priceList.id} (${entries.length} fasce peso)\n`);
+      console.log(`   ✅ Creato: ${priceList.id} (${entries.length} entries)\n`);
     }
   }
 

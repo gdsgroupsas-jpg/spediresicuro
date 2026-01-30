@@ -99,8 +99,9 @@ export interface ResellerFormData {
   bancari: DatiBancari;
   // Documento (opzionale)
   documento: DocumentoIdentita;
-  // Listino assegnato (opzionale)
+  // Listini assegnati (opzionale)
   selectedPriceListId: string | null;
+  selectedPriceListIds: string[];
 }
 
 export const EMPTY_RESELLER_FORM_DATA: ResellerFormData = {
@@ -149,6 +150,7 @@ export const EMPTY_RESELLER_FORM_DATA: ResellerFormData = {
     dataScadenza: '',
   },
   selectedPriceListId: null,
+  selectedPriceListIds: [],
 };
 
 /**
@@ -159,6 +161,7 @@ export interface AssignablePriceList {
   name: string;
   description?: string;
   courier_id?: string;
+  courier_name?: string;
   list_type?: string;
   status?: string;
   default_margin_percent?: number;

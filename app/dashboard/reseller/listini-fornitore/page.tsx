@@ -44,7 +44,9 @@ export default function ResellerListiniFornitorePage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'archived'>(
+    'active'
+  );
   const [userId, setUserId] = useState<string | null>(null);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [isResellerAdmin, setIsResellerAdmin] = useState(false); // Solo admin reseller può eliminare

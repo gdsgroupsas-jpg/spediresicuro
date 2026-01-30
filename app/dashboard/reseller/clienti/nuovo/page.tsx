@@ -87,6 +87,7 @@ export default function NuovoUtentePage() {
           name: pl.name,
           description: pl.description,
           courier_id: pl.courier_id,
+          courier_name: pl.courier_name,
           list_type: pl.list_type,
           status: pl.status,
           default_margin_percent: pl.default_margin_percent,

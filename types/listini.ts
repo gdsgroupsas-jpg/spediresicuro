@@ -149,6 +149,11 @@ export interface PriceListEntry {
 
   base_price: number;
 
+  max_length?: number;
+  max_width?: number;
+  max_height?: number;
+  size_label?: string;
+
   fuel_surcharge_percent?: number;
   island_surcharge?: number;
   ztl_surcharge?: number;

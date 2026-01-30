@@ -23,9 +23,13 @@ interface WizardContextValue {
   targetUserEmail?: string;
   clientEmail: string;
   setClientEmail: (email: string) => void;
-  /** Listino selezionato per assegnazione */
+  /** Listino selezionato per assegnazione (backward compat) */
   selectedPriceListId: string | null;
   setSelectedPriceListId: (id: string | null) => void;
+  /** Listini selezionati per assegnazione (multi-select) */
+  selectedPriceListIds: string[];
+  togglePriceListId: (id: string) => void;
+  clearPriceListIds: () => void;
   /** Tipo utente da creare (solo superadmin) */
   userCreationType: UserCreationType;
   setUserCreationType: (type: UserCreationType) => void;
@@ -93,6 +97,7 @@ export function WizardProvider({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clientEmail, setClientEmailState] = useState(targetUserEmail || '');
   const [selectedPriceListId, setSelectedPriceListIdState] = useState<string | null>(null);
+  const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>([]);
 
   // Superadmin-specific state
   const [userCreationType, setUserCreationTypeState] = useState<UserCreationType>('cliente');
@@ -106,6 +111,20 @@ export function WizardProvider({
 
   const setSelectedPriceListId = useCallback((id: string | null) => {
     setSelectedPriceListIdState(id);
+  }, []);
+
+  const togglePriceListId = useCallback((id: string) => {
+    setSelectedPriceListIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      // Keep backward compat: first selected or null
+      setSelectedPriceListIdState(next.length > 0 ? next[0] : null);
+      return next;
+    });
+  }, []);
+
+  const clearPriceListIds = useCallback(() => {
+    setSelectedPriceListIds([]);
+    setSelectedPriceListIdState(null);
   }, []);
 
   const setUserCreationType = useCallback((type: UserCreationType) => {
@@ -420,6 +439,9 @@ export function WizardProvider({
     setClientEmail,
     selectedPriceListId,
     setSelectedPriceListId,
+    selectedPriceListIds,
+    togglePriceListId,
+    clearPriceListIds,
     // Superadmin-specific
     userCreationType,
     setUserCreationType,
