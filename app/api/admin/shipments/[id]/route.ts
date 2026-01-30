@@ -80,32 +80,51 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     if (refundAmount && refundAmount > 0 && shipment.user_id) {
       try {
-        const idempotencyKey = `cancel-${shipmentId}`;
-        const { error: refundError } = await supabaseAdmin.rpc('increment_wallet_balance', {
-          p_user_id: shipment.user_id,
-          p_amount: refundAmount,
-          p_idempotency_key: idempotencyKey,
-        });
+        // Verifica account_type: superadmin non paga dal wallet, quindi non riceve rimborso
+        const { data: shipmentOwner } = await supabaseAdmin
+          .from('users')
+          .select('account_type')
+          .eq('id', shipment.user_id)
+          .maybeSingle();
 
-        if (refundError) {
-          console.error('❌ [WALLET] Errore rimborso admin cancellazione:', refundError.message);
-          await supabaseAdmin.from('compensation_queue').insert({
-            user_id: shipment.user_id,
-            shipment_id_external: shipment.shipment_id_external || 'UNKNOWN',
-            tracking_number: shipment.tracking_number || 'UNKNOWN',
-            action: 'REFUND',
-            original_cost: refundAmount,
-            error_context: {
-              reason: 'admin_cancellation_refund_failed',
-              refund_error: refundError.message,
-              admin_email: context.actor.email,
-            },
-            status: 'PENDING',
-          } as any);
-          walletRefundResult = { success: false, amount: refundAmount, error: refundError.message };
+        const ownerIsSuperadmin = shipmentOwner?.account_type?.toLowerCase() === 'superadmin';
+
+        if (ownerIsSuperadmin) {
+          console.log(
+            'ℹ️ [WALLET] Skip rimborso: proprietario è superadmin (wallet non debitato alla creazione)'
+          );
         } else {
-          console.log(`✅ [WALLET] Rimborso admin €${refundAmount} per spedizione ${shipmentId}`);
-          walletRefundResult = { success: true, amount: refundAmount };
+          const idempotencyKey = `cancel-${shipmentId}`;
+          const { error: refundError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            p_user_id: shipment.user_id,
+            p_amount: refundAmount,
+            p_idempotency_key: idempotencyKey,
+          });
+
+          if (refundError) {
+            console.error('❌ [WALLET] Errore rimborso admin cancellazione:', refundError.message);
+            await supabaseAdmin.from('compensation_queue').insert({
+              user_id: shipment.user_id,
+              shipment_id_external: shipment.shipment_id_external || 'UNKNOWN',
+              tracking_number: shipment.tracking_number || 'UNKNOWN',
+              action: 'REFUND',
+              original_cost: refundAmount,
+              error_context: {
+                reason: 'admin_cancellation_refund_failed',
+                refund_error: refundError.message,
+                admin_email: context.actor.email,
+              },
+              status: 'PENDING',
+            } as any);
+            walletRefundResult = {
+              success: false,
+              amount: refundAmount,
+              error: refundError.message,
+            };
+          } else {
+            console.log(`✅ [WALLET] Rimborso admin €${refundAmount} per spedizione ${shipmentId}`);
+            walletRefundResult = { success: true, amount: refundAmount };
+          }
         }
       } catch (refundErr: any) {
         console.error('❌ [WALLET] Eccezione rimborso admin:', refundErr?.message);
