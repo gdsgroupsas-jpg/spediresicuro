@@ -591,6 +591,19 @@ export async function createShipmentCore(params: {
 
     shipment = newShipment;
 
+    // Aggiorna descrizione wallet_transaction con dettagli spedizione
+    if (_walletTransactionId && courierResponse.trackingNumber) {
+      const recipientName = validated.recipient.name || '';
+      const recipientCity = validated.recipient.city || '';
+      const carrierName = validated.carrier || '';
+      const tracking = courierResponse.trackingNumber;
+      const description = `Spedizione ${carrierName} → ${recipientName}, ${recipientCity} - ${tracking}`;
+      await supabaseAdmin
+        .from('wallet_transactions')
+        .update({ description })
+        .eq('id', _walletTransactionId);
+    }
+
     await supabaseAdmin.rpc('complete_idempotency_lock', {
       p_idempotency_key: idempotencyKey,
       p_shipment_id: shipment.id,
@@ -680,11 +693,12 @@ export async function createShipmentCore(params: {
 
       // ENTERPRISE: Aggiorna anche base_price sulla spedizione per accesso rapido
       // Questo evita join con platform_provider_costs per calcoli margine
+      // final_price = prezzo di vendita al cliente (walletChargeAmount), NON il costo interno
       await supabaseAdmin
         .from('shipments')
         .update({
           base_price: providerCostResult.cost,
-          final_price: finalCost,
+          final_price: walletChargeAmount,
         })
         .eq('id', shipment.id);
 
