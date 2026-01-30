@@ -1,10 +1,11 @@
 import { BaseCourierClient } from './base-courier.interface';
 import { SpedisciOnlineClient } from './spediscionline.client';
+import { SpediamoProClient } from './spediamopro.client';
 
 export class CourierFactory {
   static getClient(
-    provider: string, // 'spediscionline', 'poste_native', 'gls_native'
-    carrier: string, // 'GLS', 'POSTE', 'BRT', 'UPS'
+    provider: string, // 'spediscionline', 'spediamopro', 'poste_native', 'gls_native'
+    carrier: string, // 'GLS', 'POSTE', 'BRT', 'UPS', 'BRTEXP', 'SDASTD'
     config: {
       apiKey: string;
       baseUrl: string;
@@ -21,16 +22,15 @@ export class CourierFactory {
           carrier, // Passa il corriere specifico
         });
 
-      // FUTURO: Altri provider nativi
-      // case 'poste_native':
-      // case 'poste-italiane-native':
-      //   return new PosteItalianeNativeClient(config)
-
-      // case 'gls_native':
-      //   return new GLSNativeClient(config)
-
-      // case 'brt_native':
-      //   return new BRTNativeClient(config)
+      case 'spediamopro':
+      case 'spediamo_pro':
+      case 'spediamo.pro':
+        // SpediamoPro: broker con JWT auth e flusso multi-step
+        // Corrieri: SDA, BRT, UPS, InPost (codici: SDASTD, BRTEXP, UPSSTD, etc)
+        return new SpediamoProClient({
+          ...config,
+          carrier,
+        });
 
       default:
         throw new Error(`Unsupported provider: ${provider}`);

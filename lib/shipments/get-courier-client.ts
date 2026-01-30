@@ -55,8 +55,15 @@ export async function getCourierClientReal(
   const { userId, configId: specificConfigId } = options;
 
   // Normalizza provider ID per DB
-  const providerId =
-    validated.provider === 'spediscionline' ? 'spedisci_online' : validated.provider;
+  const providerLower = validated.provider.toLowerCase();
+  let providerId: string;
+  if (providerLower === 'spediscionline' || providerLower === 'spedisci.online') {
+    providerId = 'spedisci_online';
+  } else if (providerLower === 'spediamo.pro' || providerLower === 'spediamo_pro') {
+    providerId = 'spediamopro';
+  } else {
+    providerId = validated.provider;
+  }
 
   // Recupera assigned_config_id dell'utente
   const { data: userData } = await supabaseAdmin

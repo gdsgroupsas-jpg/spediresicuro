@@ -496,11 +496,18 @@ const accountSection: NavSection = {
       description: 'Preferenze e configurazioni',
     },
     {
+      id: 'courier-config',
+      label: 'Configurazioni Corrieri',
+      href: '/dashboard/configurazioni-corrieri',
+      icon: Truck,
+      description: 'Configura API corrieri con wizard guidati',
+    },
+    {
       id: 'integrations',
-      label: 'Integrazioni',
+      label: 'Integrazioni Store',
       href: '/dashboard/integrazioni',
       icon: Zap,
-      description: 'Connessioni e API',
+      description: 'Connessioni e-commerce e widget',
     },
   ],
 };

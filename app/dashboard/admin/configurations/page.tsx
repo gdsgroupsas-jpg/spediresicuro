@@ -49,6 +49,7 @@ const AVAILABLE_PROVIDERS = [
   { id: 'gls', name: 'GLS', baseUrl: 'https://api.gls.it' },
   { id: 'brt', name: 'BRT', baseUrl: 'https://api.brt.it' },
   { id: 'poste', name: 'Poste Italiane', baseUrl: 'https://api.poste.it' },
+  { id: 'spediamopro', name: 'SpediamoPro', baseUrl: 'https://core.spediamopro.com' },
 ];
 
 export default function ConfigurationsPage() {

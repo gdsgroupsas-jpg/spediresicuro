@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 
 const PosteWizard = dynamic(() => import('./PosteWizard'));
 const SpedisciOnlineWizard = dynamic(() => import('./SpedisciOnlineWizard'));
+const SpediamoProWizard = dynamic(() => import('./SpediamoProWizard'));
 
 interface CourierAPI {
   id: string;
@@ -75,6 +76,26 @@ const availableAPIs: CourierAPI[] = [
         placeholder:
           '{"interno": "Interno", "postedeliverybusiness": "PosteDeliveryBusiness", "ups": "UPS", "gls": "Gls"}',
         required: false,
+      },
+    ],
+  },
+  {
+    id: 'spediamopro',
+    name: 'SpediamoPro',
+    fields: [
+      {
+        key: 'api_key',
+        label: 'AuthCode',
+        type: 'password',
+        placeholder: '1644084641669B1A8903E41C69A031CA...',
+        required: true,
+      },
+      {
+        key: 'base_url',
+        label: 'Base URL',
+        type: 'url',
+        placeholder: 'https://core.spediamopro.com',
+        required: true,
       },
     ],
   },
@@ -144,6 +165,7 @@ export default function CourierAPIConfig() {
   const [selectedAPI, setSelectedAPI] = useState<string>('spedisci_online');
   const [showPosteWizard, setShowPosteWizard] = useState(false);
   const [showSpedisciOnlineWizard, setShowSpedisciOnlineWizard] = useState(false);
+  const [showSpediamoProWizard, setShowSpediamoProWizard] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -376,7 +398,17 @@ export default function CourierAPIConfig() {
           onClose={() => setShowSpedisciOnlineWizard(false)}
           onSuccess={() => {
             setShowSpedisciOnlineWizard(false);
-            loadConfigurations(); // Reload to show new config
+            loadConfigurations();
+          }}
+        />
+      )}
+
+      {showSpediamoProWizard && (
+        <SpediamoProWizard
+          onClose={() => setShowSpediamoProWizard(false)}
+          onSuccess={() => {
+            setShowSpediamoProWizard(false);
+            loadConfigurations();
           }}
         />
       )}
@@ -384,7 +416,7 @@ export default function CourierAPIConfig() {
       {/* Selezione Corriere */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">Seleziona Corriere</label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {availableAPIs.map((api) => (
             <button
               key={api.id}
@@ -641,9 +673,139 @@ export default function CourierAPIConfig() {
         </div>
       )}
 
+      {/* Banner Wizard per SpediamoPro - Solo Wizard, no form manuale */}
+      {selectedAPI === 'spediamopro' && (
+        <div
+          className={`mb-6 rounded-xl p-6 shadow-lg border ${
+            hasExistingConfig
+              ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-900'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-600 border-emerald-400 text-white'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Zap
+                  className={`w-6 h-6 ${hasExistingConfig ? 'text-emerald-600' : 'text-white'}`}
+                />
+                {hasExistingConfig
+                  ? 'Aggiorna Configurazione SpediamoPro'
+                  : 'Configurazione Guidata SpediamoPro'}
+              </h3>
+              <p className={`font-medium ${hasExistingConfig ? 'opacity-90' : 'opacity-95'}`}>
+                {hasExistingConfig
+                  ? 'Usa il Wizard per aggiornare AuthCode e ambiente in modo sicuro.'
+                  : 'Configura il tuo account SpediamoPro in pochi secondi. Corrieri rilevati automaticamente.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowSpediamoProWizard(true)}
+              className={`px-6 py-2.5 font-bold rounded-lg transition-colors shadow-md ${
+                hasExistingConfig
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-white text-emerald-900 hover:bg-emerald-50'
+              }`}
+            >
+              {hasExistingConfig ? 'Apri Wizard' : 'Avvia Wizard'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista Configurazioni Esistenti per SpediamoPro */}
+      {selectedAPI === 'spediamopro' && (
+        <div className="space-y-6 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <User className="w-4 h-4 text-emerald-600" />
+              Le Tue Configurazioni SpediamoPro
+            </h3>
+
+            {existingConfigs.filter(
+              (c) =>
+                c.provider_id === 'spediamopro' &&
+                c.is_active &&
+                (!currentUserEmail || c.created_by === currentUserEmail)
+            ).length === 0 ? (
+              <p className="text-sm text-gray-500 italic">
+                Nessuna configurazione SpediamoPro attiva.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {existingConfigs
+                  .filter(
+                    (c) =>
+                      c.provider_id === 'spediamopro' &&
+                      c.is_active &&
+                      (!currentUserEmail || c.created_by === currentUserEmail)
+                  )
+                  .map((config) => (
+                    <div
+                      key={config.id}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:border-emerald-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        {config.is_default && (
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {config.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {config.base_url || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm('Sei sicuro di voler eliminare questa configurazione?'))
+                              return;
+                            try {
+                              const { deletePersonalConfiguration } =
+                                await import('@/actions/configurations');
+                              const delResult = await deletePersonalConfiguration(config.id);
+                              if (delResult.success) {
+                                await loadConfigurations();
+                                setResult({
+                                  success: true,
+                                  message: 'Configurazione eliminata',
+                                });
+                                setTimeout(() => setResult(null), 3000);
+                              } else {
+                                setResult({
+                                  success: false,
+                                  error: delResult.error || 'Errore',
+                                });
+                                setTimeout(() => setResult(null), 3000);
+                              }
+                            } catch (error: any) {
+                              setResult({
+                                success: false,
+                                error: error.message || 'Errore',
+                              });
+                              setTimeout(() => setResult(null), 3000);
+                            }
+                          }}
+                          className="p-1.5 hover:bg-red-50 rounded transition-colors text-red-600"
+                          title="Elimina configurazione"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Form Credenziali */}
-      {/* ⚠️ Spedisci.online usa solo il wizard, non mostrare il form manuale */}
-      {currentAPI && selectedAPI !== 'spedisci_online' && (
+      {/* Spedisci.online e SpediamoPro usano solo il wizard, non mostrare il form manuale */}
+      {currentAPI && selectedAPI !== 'spedisci_online' && selectedAPI !== 'spediamopro' && (
         <div className="space-y-6">
           {/* Banner Wizard per Poste Italiane */}
           {selectedAPI === 'poste' && (
