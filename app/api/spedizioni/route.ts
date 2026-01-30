@@ -1308,7 +1308,7 @@ export async function DELETE(request: NextRequest) {
     // ⚠️ PRIMA: Recupera la spedizione per avere il tracking number E shipment_id_external
     const { data: shipmentData, error: fetchError } = await supabaseAdmin
       .from('shipments')
-      .select('id, tracking_number, ldv, user_id, shipment_id_external')
+      .select('id, tracking_number, ldv, user_id, shipment_id_external, final_price')
       .eq('id', id)
       .eq('deleted', false)
       .single();
@@ -1653,9 +1653,52 @@ export async function DELETE(request: NextRequest) {
 
     console.log(`✅ [SUPABASE] Spedizione ${id} eliminata con successo (soft delete)`);
 
+    // ============================================
+    // RIMBORSO WALLET: riaccredita final_price
+    // ============================================
+    let walletRefundResult: { success: boolean; amount?: number; error?: string } | null = null;
+    const refundAmount = shipmentData.final_price;
+
+    if (refundAmount && refundAmount > 0 && shipmentData.user_id) {
+      try {
+        const idempotencyKey = `cancel-${id}`;
+        const { error: refundError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+          p_user_id: shipmentData.user_id,
+          p_amount: refundAmount,
+          p_idempotency_key: idempotencyKey,
+        });
+
+        if (refundError) {
+          console.error('❌ [WALLET] Errore rimborso cancellazione:', refundError.message);
+          // Compensation queue per review manuale
+          await supabaseAdmin.from('compensation_queue').insert({
+            user_id: shipmentData.user_id,
+            shipment_id_external: shipmentData.shipment_id_external || 'UNKNOWN',
+            tracking_number: shipmentData.tracking_number || shipmentData.ldv || 'UNKNOWN',
+            action: 'REFUND',
+            original_cost: refundAmount,
+            error_context: {
+              reason: 'cancellation_refund_failed',
+              refund_error: refundError.message,
+              cancelled_by: session.actor.email,
+            },
+            status: 'PENDING',
+          } as any);
+          walletRefundResult = { success: false, amount: refundAmount, error: refundError.message };
+        } else {
+          console.log(`✅ [WALLET] Rimborso €${refundAmount} per cancellazione spedizione ${id}`);
+          walletRefundResult = { success: true, amount: refundAmount };
+        }
+      } catch (refundErr: any) {
+        console.error('❌ [WALLET] Eccezione rimborso:', refundErr?.message);
+        walletRefundResult = { success: false, amount: refundAmount, error: refundErr?.message };
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Spedizione eliminata con successo',
+      walletRefund: walletRefundResult,
       spedisciOnline: spedisciOnlineCancelResult
         ? {
             cancelled: spedisciOnlineCancelResult.success,
