@@ -14,7 +14,7 @@ Sezione "Posta" nel dashboard che permette ai superadmin di inviare e ricevere e
 
 ```
 Email in entrata:
-  Mittente → @spediresicuro.it → Resend Inbound → Webhook POST → DB emails
+  Mittente → @spediresicuro.it → Resend Inbound → Webhook POST → Resend API (fetch html/text) → DB emails
 
 Email in uscita:
   Dashboard Componi → POST /api/email/send → Resend API → Destinatario
@@ -89,11 +89,13 @@ Voce "Posta" nella sezione "Comunicazioni" della sidebar, visibile solo a supera
 
 ## Configurazione Resend
 
-### Webhook Inbound (già configurato)
+### Inbound Email (già configurato)
 
-- **Endpoint:** `https://spediresicuro.it/api/webhooks/email-inbound`
-- **Event:** `email.received`
-- **Status:** Attivo
+- **MX Record:** `inbound-smtp.eu-west-1.amazonaws.com` (priority 10) su Vercel DNS
+- **Enable Receiving:** Attivo nel pannello Resend Domains
+- **Webhook URL:** `https://www.spediresicuro.it/api/webhooks/email-inbound` (con www per evitare redirect 307)
+
+**Nota:** Il webhook Resend inbound wrappa i dati in `payload.data` e NON include `html`/`text`. Il contenuto viene recuperato via `GET /emails/{email_id}` della Resend API.
 
 ### Limiti Free Tier
 
