@@ -43,6 +43,11 @@ async function getCachedMasterList(masterListId: string): Promise<any | null> {
   return data;
 }
 
+/** @internal Exposed only for test cleanup */
+export function __clearMasterListCache() {
+  masterListCache.clear();
+}
+
 /**
  * Ottiene il listino applicabile per un utente
  *
