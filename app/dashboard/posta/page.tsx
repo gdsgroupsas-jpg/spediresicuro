@@ -117,6 +117,47 @@ export default function PostaPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ─── Contact autocomplete ───
+  const [contactSuggestions, setContactSuggestions] = useState<
+    { id: string; name: string; email: string; company: string | null }[]
+  >([]);
+  const [activeAutoField, setActiveAutoField] = useState<'to' | 'cc' | null>(null);
+  const autoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchContacts = useCallback((query: string, field: 'to' | 'cc') => {
+    if (autoRef.current) clearTimeout(autoRef.current);
+    // Get last email segment (after last comma)
+    const parts = query.split(',');
+    const current = parts[parts.length - 1].trim();
+    if (current.length < 2) {
+      setContactSuggestions([]);
+      setActiveAutoField(null);
+      return;
+    }
+    setActiveAutoField(field);
+    autoRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/contacts/search?q=${encodeURIComponent(current)}&limit=5`);
+        const data = await res.json();
+        if (res.ok) setContactSuggestions(data.results || []);
+      } catch {}
+    }, 200);
+  }, []);
+
+  const selectContact = (email: string, field: 'to' | 'cc') => {
+    setComposerData((d) => {
+      const current = d[field];
+      const parts = current
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      parts[parts.length > 0 ? parts.length - 1 : 0] = email;
+      return { ...d, [field]: parts.join(', ') + ', ' };
+    });
+    setContactSuggestions([]);
+    setActiveAutoField(null);
+  };
+
   // ─── Fetch emails ───
 
   const fetchEmails = useCallback(
@@ -809,22 +850,68 @@ export default function PostaPage() {
               </select>
             </div>
 
-            <div>
+            <div className="relative">
               <label className="text-xs text-gray-500 mb-1 block">A</label>
               <Input
                 placeholder="destinatario@email.com"
                 value={composerData.to}
-                onChange={(e) => setComposerData((d) => ({ ...d, to: e.target.value }))}
+                onChange={(e) => {
+                  setComposerData((d) => ({ ...d, to: e.target.value }));
+                  searchContacts(e.target.value, 'to');
+                }}
+                onBlur={() =>
+                  setTimeout(() => {
+                    if (activeAutoField === 'to') setActiveAutoField(null);
+                  }, 200)
+                }
               />
+              {activeAutoField === 'to' && contactSuggestions.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  {contactSuggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center justify-between"
+                      onMouseDown={() => selectContact(c.email, 'to')}
+                    >
+                      <span className="font-medium text-gray-900">{c.name}</span>
+                      <span className="text-gray-500 text-xs">{c.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div>
+            <div className="relative">
               <label className="text-xs text-gray-500 mb-1 block">CC</label>
               <Input
                 placeholder="cc@email.com (opzionale)"
                 value={composerData.cc}
-                onChange={(e) => setComposerData((d) => ({ ...d, cc: e.target.value }))}
+                onChange={(e) => {
+                  setComposerData((d) => ({ ...d, cc: e.target.value }));
+                  searchContacts(e.target.value, 'cc');
+                }}
+                onBlur={() =>
+                  setTimeout(() => {
+                    if (activeAutoField === 'cc') setActiveAutoField(null);
+                  }, 200)
+                }
               />
+              {activeAutoField === 'cc' && contactSuggestions.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  {contactSuggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center justify-between"
+                      onMouseDown={() => selectContact(c.email, 'cc')}
+                    >
+                      <span className="font-medium text-gray-900">{c.name}</span>
+                      <span className="text-gray-500 text-xs">{c.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
