@@ -65,9 +65,9 @@ async function downloadPdfFromUrl(
   }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const searchParams = request.nextUrl.searchParams;
     const format = (searchParams.get('format') || 'pdf') as 'pdf' | 'csv' | 'xlsx';
 

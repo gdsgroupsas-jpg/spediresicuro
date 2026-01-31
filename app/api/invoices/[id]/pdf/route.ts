@@ -12,10 +12,10 @@ import { createServerActionClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { requireSafeAuth } from '@/lib/safe-auth';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const context = await requireSafeAuth();
-    const invoiceId = params.id;
+    const { id: invoiceId } = await params;
 
     // 1. Recupera fattura
     const { data: invoice, error: invoiceError } = await supabaseAdmin

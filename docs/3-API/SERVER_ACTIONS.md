@@ -13,7 +13,7 @@ Catalogo completo di tutte le Server Actions disponibili in SpedireSicuro. Le Se
 
 ## Prerequisites
 
-- Next.js 14+ App Router
+- Next.js 15+ App Router
 - React Server Components
 - Conoscenza base di TypeScript
 

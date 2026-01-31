@@ -92,9 +92,10 @@ npm run prepare  # Installa husky
 ### 1.2 Code Standards Setup
 
 ```json
-// .eslintrc.warehouse.json (regole specifiche warehouse)
+// eslint.config.warehouse.mjs (regole specifiche warehouse, ESLint 9 flat config)
+// NOTE: The project now uses eslint.config.mjs (ESLint 9 flat config) instead of .eslintrc.json
 {
-  "extends": [".eslintrc.json"],
+  "extends": ["./eslint.config.mjs"],
   "rules": {
     "no-console": "error", // NO console.log in warehouse code
     "@typescript-eslint/no-explicit-any": "error", // NO any

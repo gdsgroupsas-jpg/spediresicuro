@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Save, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
@@ -58,11 +58,8 @@ interface Spedizione {
   colli?: number;
 }
 
-export default function DettaglioSpedizionePage({
-  params,
-}: {
-  params: Promise<{ id: string }> | { id: string };
-}) {
+export default function DettaglioSpedizionePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: spedizioneId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
@@ -73,20 +70,8 @@ export default function DettaglioSpedizionePage({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
-  const [spedizioneId, setSpedizioneId] = useState<string>('');
-
-  // Gestisci params (può essere Promise in Next.js 15+)
-  useEffect(() => {
-    async function resolveParams() {
-      const resolvedParams = params instanceof Promise ? await params : params;
-      setSpedizioneId(resolvedParams.id);
-    }
-    resolveParams();
-  }, [params]);
 
   useEffect(() => {
-    if (!spedizioneId) return;
-
     async function loadSpedizione() {
       try {
         setIsLoading(true);

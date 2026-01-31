@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-SpedireSicuro is a **Logistics Operating System (Logistics OS)** - a B2B infrastructure orchestrating shipments, payments, and carriers. It is NOT a price comparator. Built with Next.js 14 (App Router), Supabase (PostgreSQL + RLS), and deployed on Vercel.
+SpedireSicuro is a **Logistics Operating System (Logistics OS)** - a B2B infrastructure orchestrating shipments, payments, and carriers. It is NOT a price comparator. Built with Next.js 15 (App Router), Supabase (PostgreSQL + RLS), and deployed on Vercel.
 
 ## Architecture Principles (Inviolable)
 

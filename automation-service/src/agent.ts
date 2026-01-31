@@ -18,12 +18,12 @@ try {
   console.warn('⚠️ Puppeteer non installato. Installa con: npm install puppeteer');
 }
 
-// Importa imap per leggere email 2FA
-let ImapClient: any = null;
+// Importa imapflow per leggere email 2FA
+let ImapFlow: any = null;
 try {
-  ImapClient = require('imap');
+  ImapFlow = require('imapflow').ImapFlow;
 } catch (e) {
-  console.warn('⚠️ IMAP client non installato. Installa con: npm install imap');
+  console.warn('⚠️ ImapFlow non installato. Installa con: npm install imapflow');
 }
 
 // ============================================
@@ -583,68 +583,61 @@ class SOA {
   }
 
   private async read2FACode(): Promise<string | null> {
-    if (!ImapClient) {
+    if (!ImapFlow) {
       return null;
     }
 
-    return new Promise((resolve, reject) => {
-      const imap = new ImapClient({
+    const client = new ImapFlow({
+      host: this.settings.imap_server,
+      port: this.settings.imap_port,
+      secure: true,
+      auth: {
         user: this.settings.imap_username,
-        password: this.settings.imap_password,
-        host: this.settings.imap_server,
-        port: this.settings.imap_port,
-        tls: true,
-      });
+        pass: this.settings.imap_password,
+      },
+      logger: false,
+    });
 
-      imap.once('ready', () => {
-        imap.openBox('INBOX', false, (err: any, box: any) => {
-          if (err) {
-            reject(err);
-            return;
+    try {
+      await client.connect();
+      const lock = await client.getMailboxLock('INBOX');
+
+      try {
+        // Cerca email non lette da Spedisci.Online
+        let messages = [];
+        for await (const msg of client.fetch(
+          { from: 'noreply@spedisci.online', seen: false },
+          { source: true }
+        )) {
+          messages.push(msg);
+        }
+
+        // Fallback: cerca anche email già lette
+        if (!messages.length) {
+          for await (const msg of client.fetch(
+            { from: 'noreply@spedisci.online' },
+            { source: true }
+          )) {
+            messages.push(msg);
           }
+        }
 
-          imap.search(['UNSEEN', ['FROM', 'noreply@spedisci.online']], (err: any, results: any) => {
-            if (err || !results.length) {
-              imap.search([['FROM', 'noreply@spedisci.online']], (err2: any, results2: any) => {
-                if (err2 || !results2.length) {
-                  resolve(null);
-                  return;
-                }
-                this.fetchEmail(imap, results2[results2.length - 1], resolve);
-              });
-              return;
-            }
+        if (!messages.length) return null;
 
-            this.fetchEmail(imap, results[results.length - 1], resolve);
-          });
-        });
-      });
-
-      imap.once('error', (err: any) => {
-        reject(err);
-      });
-
-      imap.connect();
-    });
-  }
-
-  private fetchEmail(imap: any, uid: number, resolve: (code: string | null) => void) {
-    const fetch = imap.fetch(uid, { bodies: '' });
-
-    fetch.on('message', (msg: any) => {
-      msg.on('body', (stream: any) => {
-        let buffer = '';
-        stream.on('data', (chunk: Buffer) => {
-          buffer += chunk.toString('utf8');
-        });
-        stream.once('end', () => {
-          const codeMatch = buffer.match(/\b\d{6}\b/);
-          const code = codeMatch ? codeMatch[0] : null;
-          resolve(code);
-          imap.end();
-        });
-      });
-    });
+        // Prendi l'ultima email
+        const lastMsg = messages[messages.length - 1];
+        const body = lastMsg.source?.toString('utf8') || '';
+        const codeMatch = body.match(/\b\d{6}\b/);
+        return codeMatch ? codeMatch[0] : null;
+      } finally {
+        lock.release();
+      }
+    } catch (err) {
+      console.error('❌ [AGENT] Errore IMAP:', err);
+      return null;
+    } finally {
+      await client.logout().catch(() => {});
+    }
   }
 
   private async extractContracts(page: any): Promise<Record<string, string>> {
