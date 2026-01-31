@@ -28,16 +28,45 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { from, to, cc, bcc, subject, html, text, replyToEmailId } = body;
+    const { from, to, cc, bcc, subject, html, text, replyToEmailId, draft } = body;
 
-    if (!to || !subject) {
-      return NextResponse.json({ error: 'Campi obbligatori: to, subject' }, { status: 400 });
-    }
-
-    const toArray = Array.isArray(to) ? to : [to];
+    const toArray = Array.isArray(to) ? to.filter(Boolean) : to ? [to] : [];
     const ccArray = Array.isArray(cc) ? cc.filter(Boolean) : [];
     const bccArray = Array.isArray(bcc) ? bcc.filter(Boolean) : [];
     const fromAddress = from || 'SpedireSicuro <noreply@spediresicuro.it>';
+
+    // Save as draft without sending
+    if (draft) {
+      const { data: draftRecord, error: draftError } = await supabaseAdmin
+        .from('emails')
+        .insert({
+          message_id: null,
+          direction: 'outbound',
+          from_address: fromAddress,
+          to_address: toArray.length > 0 ? toArray : [''],
+          cc: ccArray,
+          bcc: bccArray,
+          subject: subject || '(bozza)',
+          body_html: html || null,
+          body_text: text || null,
+          reply_to_message_id: replyToEmailId || null,
+          status: 'draft',
+          read: true,
+          folder: 'drafts',
+        })
+        .select('id')
+        .single();
+
+      if (draftError) {
+        return NextResponse.json({ error: draftError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, id: draftRecord?.id, draft: true });
+    }
+
+    if (!toArray.length || !subject) {
+      return NextResponse.json({ error: 'Campi obbligatori: to, subject' }, { status: 400 });
+    }
 
     // Send via Resend
     const { data, error: sendError } = await resend.emails.send({

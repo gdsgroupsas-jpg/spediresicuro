@@ -50,29 +50,40 @@ Email in uscita:
 
 ### API Routes
 
-| Metodo | Endpoint                             | Descrizione                                   |
-| ------ | ------------------------------------ | --------------------------------------------- |
-| POST   | `/api/webhooks/email-inbound`        | Webhook Resend (pubblico, no auth)            |
-| GET    | `/api/email?folder=inbox&search=...` | Lista email con filtri                        |
-| POST   | `/api/email/send`                    | Invia email via Resend                        |
-| GET    | `/api/email/[id]`                    | Dettaglio email (auto-mark read)              |
-| PATCH  | `/api/email/[id]`                    | Aggiorna read/starred/folder                  |
-| DELETE | `/api/email/[id]`                    | Sposta in cestino (o elimina definitivamente) |
+| Metodo | Endpoint                             | Descrizione                                              |
+| ------ | ------------------------------------ | -------------------------------------------------------- |
+| POST   | `/api/webhooks/email-inbound`        | Webhook Resend (pubblico, no auth)                       |
+| GET    | `/api/email?folder=inbox&search=...` | Lista email con filtri                                   |
+| POST   | `/api/email/send`                    | Invia email via Resend (o salva bozza con `draft: true`) |
+| GET    | `/api/email/[id]`                    | Dettaglio email (auto-mark read)                         |
+| PATCH  | `/api/email/[id]`                    | Aggiorna read/starred/folder                             |
+| DELETE | `/api/email/[id]`                    | Sposta in cestino (o elimina definitivamente)            |
 
 Tutte le route (tranne webhook) richiedono autenticazione superadmin.
 
 ### UI — `/dashboard/posta`
 
-Layout a 3 colonne stile Gmail:
+Layout a 3 colonne stile Gmail (responsive: 1 colonna su mobile):
 
 - **Sidebar sinistra:** Cartelle (Inbox, Inviati, Bozze, Cestino) con badge unread count, bottone "Componi"
-- **Lista centrale:** Email con from/to, oggetto, preview, data, stella, indicatore non letto
-- **Pannello destro:** Dettaglio email completo con HTML sanitizzato, Rispondi/Inoltra/Elimina
+- **Lista centrale:** Email con from/to, oggetto, preview, data, stella, indicatore non letto, paginazione "Carica altre"
+- **Pannello destro:** Dettaglio email con HTML sanitizzato, Rispondi/Rispondi a tutti/Inoltra/Elimina, quick reply, empty state
+
+Funzionalità:
+
+- **Auto-refresh:** Polling ogni 30 secondi per nuove email
+- **Paginazione:** Load more con conteggio rimanenti (50 per pagina)
+- **Bozze:** Salvataggio bozza dal composer (salva in folder `drafts` senza inviare)
+- **Rispondi a tutti:** Include tutti i destinatari originali e CC (esclusi indirizzi propri)
+- **Conferma eliminazione:** AlertDialog prima di cestinare/eliminare definitivamente
+- **Responsive mobile:** Sidebar overlay, vista lista/dettaglio alternata, bottone "Lista" per tornare indietro
+- **Empty states:** Messaggi contestuali per cartelle vuote e pannello dettaglio
 
 Composer modale con:
 
 - Select "Da" tra 5 indirizzi @spediresicuro.it
 - Campi A, CC, Oggetto, Messaggio
+- Bottone "Salva bozza" e "Invia"
 - Rispondi pre-popola con "Re:" e quota messaggio originale
 
 ### Navigazione
