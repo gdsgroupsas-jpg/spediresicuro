@@ -18,6 +18,31 @@ import type { PriceCalculationResult, PriceList, PriceRule } from '@/types/listi
 import type { CourierServiceType } from '@/types/shipments';
 import { supabaseAdmin } from './client';
 
+// ✨ PERFORMANCE: In-memory cache for master price lists to avoid repeated queries
+// within the same request lifecycle. Entries expire after 30 seconds.
+const masterListCache = new Map<string, { data: any; timestamp: number }>();
+const MASTER_CACHE_TTL = 30_000; // 30s
+
+async function getCachedMasterList(masterListId: string): Promise<any | null> {
+  const cached = masterListCache.get(masterListId);
+  if (cached && Date.now() - cached.timestamp < MASTER_CACHE_TTL) {
+    return cached.data;
+  }
+  const { data, error } = await supabaseAdmin
+    .from('price_lists')
+    .select('*, entries:price_list_entries(*)')
+    .eq('id', masterListId)
+    .single();
+  if (error || !data) {
+    if (error && error.code !== 'PGRST116') {
+      console.warn(`⚠️ [MASTER CACHE] Error loading master list ${masterListId}:`, error?.message);
+    }
+    return null;
+  }
+  masterListCache.set(masterListId, { data, timestamp: Date.now() });
+  return data;
+}
+
 /**
  * Ottiene il listino applicabile per un utente
  *
@@ -692,15 +717,10 @@ async function calculateWithDefaultMargin(
     );
 
     try {
-      const { data: masterList, error: masterError } = await supabaseAdmin
-        .from('price_lists')
-        .select('*, entries:price_list_entries(*)')
-        .eq('id', priceList.master_list_id)
-        .single();
+      // ✨ PERFORMANCE: Use cached master list to avoid repeated queries
+      const masterList = await getCachedMasterList(priceList.master_list_id);
 
-      if (masterError) {
-        console.warn(`⚠️ [PRICE CALC MASTER] Errore query master list:`, masterError.message);
-      } else if (!masterList) {
+      if (!masterList) {
         console.warn(
           `⚠️ [PRICE CALC MASTER] Master list non trovato (ID: ${priceList.master_list_id})`
         );
@@ -1513,43 +1533,45 @@ export async function calculateBestPriceForReseller(
         metadata: any;
       }> = [];
 
-      // Calcola prezzo per ogni listino attivo (custom o supplier)
+      // Calcola prezzo per ogni listino attivo in PARALLELO (Performance optimization)
       console.log(
         `🔍 [RESELLER] Listini filtrati per calcolo: ${filtered.length} (su ${activePriceLists.length} totali)`
       );
-      for (const priceList of filtered) {
-        const metadata = priceList.metadata || priceList.source_metadata || {};
-        const contractCode = (metadata as any).contract_code;
-        const carrierCode = (metadata as any).carrier_code;
+      await Promise.all(
+        filtered.map(async (priceList) => {
+          const metadata = priceList.metadata || priceList.source_metadata || {};
+          const contractCode = (metadata as any).contract_code;
+          const carrierCode = (metadata as any).carrier_code;
 
-        console.log(
-          `🔍 [RESELLER] Calcolo prezzo per listino: "${priceList.name}" (${priceList.list_type})`
-        );
-        console.log(`   - contract_code: ${contractCode || 'N/A'}`);
-        console.log(`   - carrier_code: ${carrierCode || 'N/A'}`);
-        console.log(`   - master_list_id: ${priceList.master_list_id || 'N/A'}`);
-        console.log(`   - entries: ${priceList.entries?.length || 0}`);
-
-        const calculatedPrice = await calculatePriceWithRules(userId, params, priceList.id);
-        if (calculatedPrice) {
           console.log(
-            `✅ [RESELLER] Prezzo calcolato: €${calculatedPrice.finalPrice.toFixed(
-              2
-            )} (fornitore: €${
-              calculatedPrice.supplierPrice?.toFixed(2) || calculatedPrice.totalCost.toFixed(2)
-            })`
+            `🔍 [RESELLER] Calcolo prezzo per listino: "${priceList.name}" (${priceList.list_type})`
           );
-          priceResults.push({
-            price: calculatedPrice,
-            list: priceList,
-            metadata,
-          });
-        } else {
-          console.warn(
-            `⚠️ [RESELLER] Impossibile calcolare prezzo per listino "${priceList.name}"`
-          );
-        }
-      }
+          console.log(`   - contract_code: ${contractCode || 'N/A'}`);
+          console.log(`   - carrier_code: ${carrierCode || 'N/A'}`);
+          console.log(`   - master_list_id: ${priceList.master_list_id || 'N/A'}`);
+          console.log(`   - entries: ${priceList.entries?.length || 0}`);
+
+          const calculatedPrice = await calculatePriceWithRules(userId, params, priceList.id);
+          if (calculatedPrice) {
+            console.log(
+              `✅ [RESELLER] Prezzo calcolato: €${calculatedPrice.finalPrice.toFixed(
+                2
+              )} (fornitore: €${
+                calculatedPrice.supplierPrice?.toFixed(2) || calculatedPrice.totalCost.toFixed(2)
+              })`
+            );
+            priceResults.push({
+              price: calculatedPrice,
+              list: priceList,
+              metadata,
+            });
+          } else {
+            console.warn(
+              `⚠️ [RESELLER] Impossibile calcolare prezzo per listino "${priceList.name}"`
+            );
+          }
+        })
+      );
 
       // Se ci sono risultati, scegli il listino CUSTOM se presente, altrimenti il più economico
       if (priceResults.length > 0) {
