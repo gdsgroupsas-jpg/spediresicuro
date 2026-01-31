@@ -304,285 +304,290 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    for (const courier of availableCouriers) {
-      console.log(
-        `🔍 [QUOTES DB] Calcolo preventivo per: ${
-          courier.displayName || courier.courierName
-        } (carrierCode: ${courier.carrierCode || courier.contractCode})`
-      );
-      try {
-        // Per reseller E superadmin: usa sistema listini avanzato
-        let quoteResult: any;
+    // ✨ PERFORMANCE: Calcola preventivi per TUTTI i corrieri in PARALLELO
+    await Promise.all(
+      availableCouriers.map(async (courier) => {
+        console.log(
+          `🔍 [QUOTES DB] Calcolo preventivo per: ${
+            courier.displayName || courier.courierName
+          } (carrierCode: ${courier.carrierCode || courier.contractCode})`
+        );
+        try {
+          // Per reseller E superadmin: usa sistema listini avanzato
+          let quoteResult: any;
 
-        if (isReseller || isSuperadmin) {
-          // ✨ Passa anche contractCode per filtrare listini per contract_code nei metadata
-          const bestPriceResult = await calculateBestPriceForReseller(user.id, {
-            weight: parseFloat(weight),
-            destination: {
-              zip,
-              province,
-              country: 'IT',
-            },
-            courierId: courier.courierId || undefined, // courierId opzionale
-            contractCode: courier.carrierCode || courier.contractCode, // ✨ NUOVO: per matching contract_code
-            serviceType: services.includes('express') ? 'express' : 'standard',
-            options: {
-              declaredValue: parseFloat(insuranceValue) || 0,
-              cashOnDelivery: parseFloat(codValue) > 0,
-              insurance: parseFloat(insuranceValue) > 0,
-            },
-          });
+          if (isReseller || isSuperadmin) {
+            // ✨ Passa anche contractCode per filtrare listini per contract_code nei metadata
+            const bestPriceResult = await calculateBestPriceForReseller(user.id, {
+              weight: parseFloat(weight),
+              destination: {
+                zip,
+                province,
+                country: 'IT',
+              },
+              courierId: courier.courierId || undefined, // courierId opzionale
+              contractCode: courier.carrierCode || courier.contractCode, // ✨ NUOVO: per matching contract_code
+              serviceType: services.includes('express') ? 'express' : 'standard',
+              options: {
+                declaredValue: parseFloat(insuranceValue) || 0,
+                cashOnDelivery: parseFloat(codValue) > 0,
+                insurance: parseFloat(insuranceValue) > 0,
+              },
+            });
 
-          if (bestPriceResult && bestPriceResult.bestPrice) {
-            quoteResult = bestPriceResult.bestPrice;
-            // Aggiungi metadata per tracciare quale API è stata usata
-            quoteResult._apiSource = bestPriceResult.apiSource;
+            if (bestPriceResult && bestPriceResult.bestPrice) {
+              quoteResult = bestPriceResult.bestPrice;
+              // Aggiungi metadata per tracciare quale API è stata usata
+              quoteResult._apiSource = bestPriceResult.apiSource;
 
-            // ✨ ENTERPRISE: Usa courier_config_id dal listino personalizzato se presente
-            // Questo è fondamentale per usare la configurazione API corretta nella creazione spedizione
-            if (quoteResult._courierConfigId) {
-              quoteResult._configId = quoteResult._courierConfigId;
-              console.log(
-                `✅ [QUOTES DB] Usato courier_config_id dal listino personalizzato: ${quoteResult._courierConfigId}`
-              );
+              // ✨ ENTERPRISE: Usa courier_config_id dal listino personalizzato se presente
+              // Questo è fondamentale per usare la configurazione API corretta nella creazione spedizione
+              if (quoteResult._courierConfigId) {
+                quoteResult._configId = quoteResult._courierConfigId;
+                console.log(
+                  `✅ [QUOTES DB] Usato courier_config_id dal listino personalizzato: ${quoteResult._courierConfigId}`
+                );
+              } else {
+                // Fallback: usa identificatore generico
+                quoteResult._configId =
+                  bestPriceResult.apiSource === 'reseller' ? 'reseller_config' : 'master_config';
+              }
             } else {
-              // Fallback: usa identificatore generico
-              quoteResult._configId =
-                bestPriceResult.apiSource === 'reseller' ? 'reseller_config' : 'master_config';
+              console.warn(
+                `⚠️ [QUOTES DB] calculateBestPriceForReseller non ha restituito risultati per ${
+                  courier.displayName || courier.courierName
+                }`
+              );
+              console.warn(`   - bestPriceResult:`, bestPriceResult);
             }
           } else {
-            console.warn(
-              `⚠️ [QUOTES DB] calculateBestPriceForReseller non ha restituito risultati per ${
+            // Utente normale: calcola da listino assegnato
+            quoteResult = await calculatePriceWithRules(user.id, {
+              weight: parseFloat(weight),
+              destination: {
+                zip,
+                province,
+                country: 'IT',
+              },
+              courierId: courier.courierId || undefined, // courierId opzionale
+              serviceType: services.includes('express') ? 'express' : 'standard',
+              options: {
+                declaredValue: parseFloat(insuranceValue) || 0,
+                cashOnDelivery: parseFloat(codValue) > 0,
+                insurance: parseFloat(insuranceValue) > 0,
+              },
+            });
+          }
+
+          if (quoteResult && quoteResult.finalPrice) {
+            // Formatta come rate per compatibilità con IntelligentQuoteComparator
+            //
+            // ✨ SCHEMA RESELLER:
+            // - weight_price = COSTO FORNITORE (prezzo dal listino fornitore originale, tramite master_list_id)
+            // - total_price = PREZZO VENDITA (prezzo finale dal listino personalizzato attivo, con margine)
+            //
+            // Se è un listino personalizzato con master_list_id, usa supplierPrice (costo fornitore originale)
+            // Altrimenti usa totalCost (per listini fornitore o senza master_list_id)
+
+            // 🔍 LOGGING DETTAGLIATO: Traccia valori ricevuti da calculatePriceWithRules
+            console.log(
+              `🔍 [QUOTES DB] Valori ricevuti da calculatePriceWithRules per ${
                 courier.displayName || courier.courierName
+              }:`
+            );
+            console.log(
+              `   - quoteResult.basePrice: €${quoteResult.basePrice?.toFixed(2) || 'undefined'}`
+            );
+            console.log(
+              `   - quoteResult.surcharges: €${quoteResult.surcharges?.toFixed(2) || 'undefined'}`
+            );
+            console.log(
+              `   - quoteResult.margin: €${quoteResult.margin?.toFixed(2) || 'undefined'}`
+            );
+            console.log(
+              `   - quoteResult.totalCost: €${quoteResult.totalCost?.toFixed(2) || 'undefined'}`
+            );
+            console.log(
+              `   - quoteResult.finalPrice: €${quoteResult.finalPrice?.toFixed(2) || 'undefined'}`
+            );
+            console.log(
+              `   - quoteResult.supplierPrice: €${
+                quoteResult.supplierPrice?.toFixed(2) || 'undefined'
               }`
             );
-            console.warn(`   - bestPriceResult:`, bestPriceResult);
-          }
-        } else {
-          // Utente normale: calcola da listino assegnato
-          quoteResult = await calculatePriceWithRules(user.id, {
-            weight: parseFloat(weight),
-            destination: {
-              zip,
-              province,
-              country: 'IT',
-            },
-            courierId: courier.courierId || undefined, // courierId opzionale
-            serviceType: services.includes('express') ? 'express' : 'standard',
-            options: {
-              declaredValue: parseFloat(insuranceValue) || 0,
-              cashOnDelivery: parseFloat(codValue) > 0,
-              insurance: parseFloat(insuranceValue) > 0,
-            },
-          });
-        }
-
-        if (quoteResult && quoteResult.finalPrice) {
-          // Formatta come rate per compatibilità con IntelligentQuoteComparator
-          //
-          // ✨ SCHEMA RESELLER:
-          // - weight_price = COSTO FORNITORE (prezzo dal listino fornitore originale, tramite master_list_id)
-          // - total_price = PREZZO VENDITA (prezzo finale dal listino personalizzato attivo, con margine)
-          //
-          // Se è un listino personalizzato con master_list_id, usa supplierPrice (costo fornitore originale)
-          // Altrimenti usa totalCost (per listini fornitore o senza master_list_id)
-
-          // 🔍 LOGGING DETTAGLIATO: Traccia valori ricevuti da calculatePriceWithRules
-          console.log(
-            `🔍 [QUOTES DB] Valori ricevuti da calculatePriceWithRules per ${
-              courier.displayName || courier.courierName
-            }:`
-          );
-          console.log(
-            `   - quoteResult.basePrice: €${quoteResult.basePrice?.toFixed(2) || 'undefined'}`
-          );
-          console.log(
-            `   - quoteResult.surcharges: €${quoteResult.surcharges?.toFixed(2) || 'undefined'}`
-          );
-          console.log(`   - quoteResult.margin: €${quoteResult.margin?.toFixed(2) || 'undefined'}`);
-          console.log(
-            `   - quoteResult.totalCost: €${quoteResult.totalCost?.toFixed(2) || 'undefined'}`
-          );
-          console.log(
-            `   - quoteResult.finalPrice: €${quoteResult.finalPrice?.toFixed(2) || 'undefined'}`
-          );
-          console.log(
-            `   - quoteResult.supplierPrice: €${
-              quoteResult.supplierPrice?.toFixed(2) || 'undefined'
-            }`
-          );
-          console.log(`   - quoteResult.priceListId: ${quoteResult.priceListId}`);
-          console.log(
-            `   - quoteResult.appliedPriceList.name: ${
-              (quoteResult.appliedPriceList as any)?.name || 'N/A'
-            }`
-          );
-          console.log(
-            `   - quoteResult.appliedPriceList.list_type: ${
-              (quoteResult.appliedPriceList as any)?.list_type || 'N/A'
-            }`
-          );
-          console.log(
-            `   - quoteResult.appliedPriceList.master_list_id: ${
-              (quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'
-            }`
-          );
-          console.log(
-            `   - quoteResult.appliedPriceList.default_margin_percent: ${
-              (quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'
-            }`
-          );
-          console.log(
-            `   - quoteResult.appliedPriceList.default_margin_fixed: ${
-              (quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'
-            }`
-          );
-
-          // ✨ FIX: Usa supplierPriceOriginal se disponibile (prezzo originale nella modalità VAT del master)
-          // Altrimenti usa supplierPrice (normalizzato IVA esclusa per calcoli)
-          const supplierPrice =
-            (quoteResult as any).supplierPriceOriginal ?? // Prezzo originale master (con IVA inclusa se master ha IVA inclusa)
-            quoteResult.supplierPrice ?? // Prezzo normalizzato IVA esclusa (per calcoli)
-            quoteResult.totalCost ??
-            quoteResult.basePrice ??
-            0;
-
-          console.log(
-            `💰 [QUOTES DB] Mapping valori per ${courier.displayName || courier.courierName}:`
-          );
-          console.log(
-            `   - supplierPrice calcolato: €${supplierPrice.toFixed(2)} (${
-              quoteResult.supplierPrice !== undefined
-                ? 'supplierPrice'
-                : quoteResult.totalCost !== undefined
-                  ? 'totalCost'
-                  : 'basePrice'
-            })`
-          );
-          console.log(`   - total_price (finalPrice): €${quoteResult.finalPrice.toFixed(2)}`);
-          console.log(`   - weight_price (supplierPrice): €${supplierPrice.toFixed(2)}`);
-          console.log(
-            `   - Differenza (margine): €${(quoteResult.finalPrice - supplierPrice).toFixed(2)}`
-          );
-
-          // Verifica che il margine sia stato calcolato correttamente
-          if (supplierPrice === quoteResult.finalPrice && quoteResult.margin === 0) {
-            console.warn(
-              `⚠️ [QUOTES DB] ⚠️ PROBLEMA RILEVATO: Margine 0% per ${courier.courierName}`
+            console.log(`   - quoteResult.priceListId: ${quoteResult.priceListId}`);
+            console.log(
+              `   - quoteResult.appliedPriceList.name: ${
+                (quoteResult.appliedPriceList as any)?.name || 'N/A'
+              }`
             );
-            console.warn(`   - Costo fornitore = prezzo finale (€${supplierPrice.toFixed(2)})`);
-            console.warn(`   - Listino ID: ${quoteResult.priceListId}`);
-            console.warn(
-              `   - Listino tipo: ${(quoteResult.appliedPriceList as any)?.list_type || 'N/A'}`
+            console.log(
+              `   - quoteResult.appliedPriceList.list_type: ${
+                (quoteResult.appliedPriceList as any)?.list_type || 'N/A'
+              }`
             );
-            console.warn(
-              `   - Master List ID: ${
+            console.log(
+              `   - quoteResult.appliedPriceList.master_list_id: ${
                 (quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'
               }`
             );
-            console.warn(
-              `   - default_margin_percent: ${
+            console.log(
+              `   - quoteResult.appliedPriceList.default_margin_percent: ${
                 (quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'
               }`
             );
-            console.warn(
-              `   - default_margin_fixed: ${
+            console.log(
+              `   - quoteResult.appliedPriceList.default_margin_fixed: ${
                 (quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'
               }`
             );
-            console.warn(`   - ⚠️ Il prezzo di vendita non riflette il listino personalizzato!`);
-          } else if (quoteResult.margin > 0) {
+
+            // ✨ FIX: Usa supplierPriceOriginal se disponibile (prezzo originale nella modalità VAT del master)
+            // Altrimenti usa supplierPrice (normalizzato IVA esclusa per calcoli)
+            const supplierPrice =
+              (quoteResult as any).supplierPriceOriginal ?? // Prezzo originale master (con IVA inclusa se master ha IVA inclusa)
+              quoteResult.supplierPrice ?? // Prezzo normalizzato IVA esclusa (per calcoli)
+              quoteResult.totalCost ??
+              quoteResult.basePrice ??
+              0;
+
             console.log(
-              `✅ [QUOTES DB] Margine calcolato correttamente per ${
-                courier.courierName
-              }: €${supplierPrice.toFixed(2)} + €${quoteResult.margin.toFixed(
-                2
-              )} = €${quoteResult.finalPrice.toFixed(2)}`
+              `💰 [QUOTES DB] Mapping valori per ${courier.displayName || courier.courierName}:`
+            );
+            console.log(
+              `   - supplierPrice calcolato: €${supplierPrice.toFixed(2)} (${
+                quoteResult.supplierPrice !== undefined
+                  ? 'supplierPrice'
+                  : quoteResult.totalCost !== undefined
+                    ? 'totalCost'
+                    : 'basePrice'
+              })`
+            );
+            console.log(`   - total_price (finalPrice): €${quoteResult.finalPrice.toFixed(2)}`);
+            console.log(`   - weight_price (supplierPrice): €${supplierPrice.toFixed(2)}`);
+            console.log(
+              `   - Differenza (margine): €${(quoteResult.finalPrice - supplierPrice).toFixed(2)}`
+            );
+
+            // Verifica che il margine sia stato calcolato correttamente
+            if (supplierPrice === quoteResult.finalPrice && quoteResult.margin === 0) {
+              console.warn(
+                `⚠️ [QUOTES DB] ⚠️ PROBLEMA RILEVATO: Margine 0% per ${courier.courierName}`
+              );
+              console.warn(`   - Costo fornitore = prezzo finale (€${supplierPrice.toFixed(2)})`);
+              console.warn(`   - Listino ID: ${quoteResult.priceListId}`);
+              console.warn(
+                `   - Listino tipo: ${(quoteResult.appliedPriceList as any)?.list_type || 'N/A'}`
+              );
+              console.warn(
+                `   - Master List ID: ${
+                  (quoteResult.appliedPriceList as any)?.master_list_id || 'N/A'
+                }`
+              );
+              console.warn(
+                `   - default_margin_percent: ${
+                  (quoteResult.appliedPriceList as any)?.default_margin_percent ?? 'N/A'
+                }`
+              );
+              console.warn(
+                `   - default_margin_fixed: ${
+                  (quoteResult.appliedPriceList as any)?.default_margin_fixed ?? 'N/A'
+                }`
+              );
+              console.warn(`   - ⚠️ Il prezzo di vendita non riflette il listino personalizzato!`);
+            } else if (quoteResult.margin > 0) {
+              console.log(
+                `✅ [QUOTES DB] Margine calcolato correttamente per ${
+                  courier.courierName
+                }: €${supplierPrice.toFixed(2)} + €${quoteResult.margin.toFixed(
+                  2
+                )} = €${quoteResult.finalPrice.toFixed(2)}`
+              );
+            } else {
+              console.warn(
+                `⚠️ [QUOTES DB] Margine = 0 ma finalPrice ≠ supplierPrice: €${supplierPrice.toFixed(
+                  2
+                )} vs €${quoteResult.finalPrice.toFixed(2)}`
+              );
+            }
+
+            // ✨ ENTERPRISE: Normalizza contractCode per evitare problemi di matching
+            // Se contractCode è null/undefined o contiene solo "default", usa "default" standardizzato
+            let normalizedContractCode = courier.contractCode || 'default';
+            if (
+              normalizedContractCode.toLowerCase().includes('default') &&
+              normalizedContractCode !== 'default'
+            ) {
+              // Se contiene "default" ma non è esattamente "default", normalizza
+              normalizedContractCode = 'default';
+            }
+
+            const rate = {
+              carrierCode: courier.courierName.toLowerCase(),
+              contractCode: normalizedContractCode,
+              total_price: quoteResult.finalPrice.toString(), // ✨ Prezzo finale CON margine
+              weight_price: supplierPrice.toString(), // ✨ Costo fornitore SENZA margine (totalCost)
+              base_price: quoteResult.basePrice?.toString() || supplierPrice.toString(),
+              surcharges: quoteResult.surcharges?.toString() || '0',
+              margin: quoteResult.margin?.toString() || '0',
+              _source: 'db', // ✨ Flag: prezzo da DB
+              _priceListId: quoteResult.priceListId,
+              _apiSource: quoteResult._apiSource || 'db',
+              _configId: quoteResult._configId || quoteResult._courierConfigId, // ✨ Usa courier_config_id se presente
+
+              // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
+              vat_mode: quoteResult.vatMode || 'excluded', // Default per retrocompatibilità
+              vat_rate: (quoteResult.vatRate || 22.0).toString(),
+              vat_amount: quoteResult.vatAmount?.toString() || '0',
+              total_price_with_vat:
+                quoteResult.totalPriceWithVAT?.toString() || quoteResult.finalPrice.toString(),
+            };
+
+            console.log(
+              `📤 [QUOTES DB] Rate mappato per ${courier.displayName || courier.courierName}:`
+            );
+            console.log(
+              `   - total_price: ${
+                rate.total_price
+              } (da finalPrice: €${quoteResult.finalPrice.toFixed(2)})`
+            );
+            console.log(
+              `   - weight_price: ${
+                rate.weight_price
+              } (da supplierPrice: €${supplierPrice.toFixed(2)})`
+            );
+            console.log(
+              `   - margin: ${rate.margin} (da margin: €${quoteResult.margin?.toFixed(2) || '0.00'})`
+            );
+            console.log(`   - vat_mode: ${rate.vat_mode} (ADR-001)`);
+            console.log(`   - vat_rate: ${rate.vat_rate}% (ADR-001)`);
+            console.log(`   - vat_amount: ${rate.vat_amount} (ADR-001)`);
+            console.log(`   - total_price_with_vat: ${rate.total_price_with_vat} (ADR-001)`);
+
+            rates.push(rate);
+            console.log(
+              `✅ [QUOTES DB] Rate aggiunto per ${
+                courier.displayName || courier.courierName
+              }: €${quoteResult.finalPrice.toFixed(2)}`
             );
           } else {
             console.warn(
-              `⚠️ [QUOTES DB] Margine = 0 ma finalPrice ≠ supplierPrice: €${supplierPrice.toFixed(
-                2
-              )} vs €${quoteResult.finalPrice.toFixed(2)}`
+              `⚠️ [QUOTES DB] quoteResult non valido per ${
+                courier.displayName || courier.courierName
+              }:`,
+              {
+                hasQuoteResult: !!quoteResult,
+                hasFinalPrice: !!(quoteResult && quoteResult.finalPrice),
+                finalPrice: quoteResult?.finalPrice,
+              }
             );
           }
-
-          // ✨ ENTERPRISE: Normalizza contractCode per evitare problemi di matching
-          // Se contractCode è null/undefined o contiene solo "default", usa "default" standardizzato
-          let normalizedContractCode = courier.contractCode || 'default';
-          if (
-            normalizedContractCode.toLowerCase().includes('default') &&
-            normalizedContractCode !== 'default'
-          ) {
-            // Se contiene "default" ma non è esattamente "default", normalizza
-            normalizedContractCode = 'default';
-          }
-
-          const rate = {
-            carrierCode: courier.courierName.toLowerCase(),
-            contractCode: normalizedContractCode,
-            total_price: quoteResult.finalPrice.toString(), // ✨ Prezzo finale CON margine
-            weight_price: supplierPrice.toString(), // ✨ Costo fornitore SENZA margine (totalCost)
-            base_price: quoteResult.basePrice?.toString() || supplierPrice.toString(),
-            surcharges: quoteResult.surcharges?.toString() || '0',
-            margin: quoteResult.margin?.toString() || '0',
-            _source: 'db', // ✨ Flag: prezzo da DB
-            _priceListId: quoteResult.priceListId,
-            _apiSource: quoteResult._apiSource || 'db',
-            _configId: quoteResult._configId || quoteResult._courierConfigId, // ✨ Usa courier_config_id se presente
-
-            // ✨ NUOVO: VAT Semantics (ADR-001) - Campi opzionali per retrocompatibilità
-            vat_mode: quoteResult.vatMode || 'excluded', // Default per retrocompatibilità
-            vat_rate: (quoteResult.vatRate || 22.0).toString(),
-            vat_amount: quoteResult.vatAmount?.toString() || '0',
-            total_price_with_vat:
-              quoteResult.totalPriceWithVAT?.toString() || quoteResult.finalPrice.toString(),
-          };
-
-          console.log(
-            `📤 [QUOTES DB] Rate mappato per ${courier.displayName || courier.courierName}:`
-          );
-          console.log(
-            `   - total_price: ${
-              rate.total_price
-            } (da finalPrice: €${quoteResult.finalPrice.toFixed(2)})`
-          );
-          console.log(
-            `   - weight_price: ${
-              rate.weight_price
-            } (da supplierPrice: €${supplierPrice.toFixed(2)})`
-          );
-          console.log(
-            `   - margin: ${rate.margin} (da margin: €${quoteResult.margin?.toFixed(2) || '0.00'})`
-          );
-          console.log(`   - vat_mode: ${rate.vat_mode} (ADR-001)`);
-          console.log(`   - vat_rate: ${rate.vat_rate}% (ADR-001)`);
-          console.log(`   - vat_amount: ${rate.vat_amount} (ADR-001)`);
-          console.log(`   - total_price_with_vat: ${rate.total_price_with_vat} (ADR-001)`);
-
-          rates.push(rate);
-          console.log(
-            `✅ [QUOTES DB] Rate aggiunto per ${
-              courier.displayName || courier.courierName
-            }: €${quoteResult.finalPrice.toFixed(2)}`
-          );
-        } else {
-          console.warn(
-            `⚠️ [QUOTES DB] quoteResult non valido per ${
-              courier.displayName || courier.courierName
-            }:`,
-            {
-              hasQuoteResult: !!quoteResult,
-              hasFinalPrice: !!(quoteResult && quoteResult.finalPrice),
-              finalPrice: quoteResult?.finalPrice,
-            }
-          );
+        } catch (error: any) {
+          console.error(`❌ [QUOTES DB] Errore calcolo per ${courier.courierName}:`, error);
+          errors.push(`${courier.courierName}: ${error.message}`);
         }
-      } catch (error: any) {
-        console.error(`❌ [QUOTES DB] Errore calcolo per ${courier.courierName}:`, error);
-        errors.push(`${courier.courierName}: ${error.message}`);
-      }
-    }
+      })
+    );
 
     console.log(
       `📊 [QUOTES DB] Riepilogo calcolo: ${rates.length} rates calcolati, ${errors.length} errori`

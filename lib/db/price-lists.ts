@@ -436,28 +436,31 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
     // ⚠️ SICUREZZA: Valida userId prima di usarlo nelle query
     assertValidUserId(userId);
 
-    // 1. Recupera informazioni utente per verificare assigned_config_id
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('assigned_config_id')
-      .eq('id', userId)
-      .maybeSingle();
+    // 1+2. Recupera user info E configurazioni in PARALLELO (Performance: ~60ms → ~20ms)
+    const [userResult, personalResult, defaultResult] = await Promise.all([
+      supabaseAdmin.from('users').select('assigned_config_id').eq('id', userId).maybeSingle(),
+      supabaseAdmin
+        .from('courier_configs')
+        .select('id, provider_id, contract_mapping')
+        .eq('owner_user_id', userId)
+        .eq('is_active', true),
+      supabaseAdmin
+        .from('courier_configs')
+        .select('id, provider_id, contract_mapping')
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .is('owner_user_id', null),
+    ]);
 
+    const user = userResult.data;
     const assignedConfigId = user?.assigned_config_id;
-
-    // 2. Recupera configurazioni con logica a 3 priorità
-    // Priorità 1: Configurazioni personali (owner_user_id = userId)
-    const { data: personalConfigs, error: personalError } = await supabaseAdmin
-      .from('courier_configs')
-      .select('id, provider_id, contract_mapping')
-      .eq('owner_user_id', userId)
-      .eq('is_active', true);
-
-    if (personalError) {
-      console.error('Errore recupero configurazioni personali:', personalError);
+    const personalConfigs = personalResult.data;
+    if (personalResult.error) {
+      console.error('Errore recupero configurazioni personali:', personalResult.error);
     }
+    const defaultConfigs = !defaultResult.error && defaultResult.data ? defaultResult.data : [];
 
-    // Priorità 2: Configurazione assegnata (se presente)
+    // Priorità 2: Configurazione assegnata (se presente) — dipende da user query
     let assignedConfigs: any[] = [];
     if (assignedConfigId) {
       const { data: assignedConfig, error: assignedError } = await supabaseAdmin
@@ -471,18 +474,6 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
         assignedConfigs = [assignedConfig];
       }
     }
-
-    // Priorità 3: Configurazioni default globali
-    // ⚠️ IMPORTANTE: Includiamo anche le default per mostrare TUTTI i contratti disponibili
-    // Le config personali/assegnate hanno priorità nella Map (mantengono il primo trovato)
-    const { data: defaultConfigsData, error: defaultError } = await supabaseAdmin
-      .from('courier_configs')
-      .select('id, provider_id, contract_mapping')
-      .eq('is_default', true)
-      .eq('is_active', true)
-      .is('owner_user_id', null); // Default globali hanno owner_user_id NULL
-
-    const defaultConfigs = !defaultError && defaultConfigsData ? defaultConfigsData : [];
 
     // 3. Unisci tutte le configurazioni (priorità: personali > assegnate > default)
     const allConfigs = [...(personalConfigs || []), ...assignedConfigs, ...defaultConfigs];
@@ -596,7 +587,29 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
       }
     }
 
-    // 5. Converti in array con displayName formattato
+    // 5. Batch lookup courier IDs (Performance: N queries → 1 query)
+    const uniqueCourierNames = [
+      ...new Set(Array.from(couriersMap.values()).map((d) => d.courierName)),
+    ];
+    const { data: allCouriers } = await supabaseAdmin.from('couriers').select('id, name');
+
+    // Build a lookup map for courier name → id
+    const courierIdMap = new Map<string, string>();
+    if (allCouriers) {
+      for (const courier of allCouriers) {
+        for (const name of uniqueCourierNames) {
+          if (
+            courier.name.toLowerCase().includes(name.toLowerCase()) ||
+            name.toLowerCase().includes(courier.name.toLowerCase())
+          ) {
+            courierIdMap.set(name, courier.id);
+            break;
+          }
+        }
+      }
+    }
+
+    // 6. Converti in array con displayName formattato
     const result = [];
     for (const [, data] of Array.from(couriersMap.entries())) {
       const baseName = getBaseCourierName(data.courierName);
@@ -605,16 +618,8 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
       // DisplayName = "Corriere" o "Corriere - Suffisso" (es. "GLS 5000", "Poste Italiane SDA Express H24+")
       const displayName = carrierSuffix ? `${baseName} ${carrierSuffix}` : baseName;
 
-      // Prova a trovare courier_id nella tabella couriers
-      const { data: courier } = await supabaseAdmin
-        .from('couriers')
-        .select('id, name')
-        .ilike('name', `%${data.courierName}%`)
-        .limit(1)
-        .maybeSingle();
-
       result.push({
-        courierId: courier?.id || data.courierName,
+        courierId: courierIdMap.get(data.courierName) || data.courierName,
         courierName: data.courierName, // Nome interno per matching API
         displayName, // ✨ Nome formattato per UI (es. "GLS 5000")
         providerId: data.providerId,
