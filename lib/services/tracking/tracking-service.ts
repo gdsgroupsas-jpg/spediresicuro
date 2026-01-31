@@ -50,7 +50,18 @@ interface SpedisciOnlineTrackingResponse {
 }
 
 // Status normalization mapping
+// IMPORTANT: Order matters - giacenza patterns checked before exception
 const STATUS_MAP: Record<string, string> = {
+  // Giacenza (held at depot) - MUST be before exceptions
+  'in giacenza': 'in_giacenza',
+  giacenza: 'in_giacenza',
+  'mancata consegna': 'in_giacenza',
+  'tentativo di consegna fallito': 'in_giacenza',
+  'fermo deposito': 'in_giacenza',
+  'in deposito': 'in_giacenza',
+  'destinatario assente': 'in_giacenza',
+  'non consegnabile': 'in_giacenza',
+
   // Delivered
   consegnata: 'delivered',
   delivered: 'delivered',
@@ -71,7 +82,6 @@ const STATUS_MAP: Record<string, string> = {
   // Exceptions
   eccezione: 'exception',
   problema: 'exception',
-  'destinatario assente': 'exception',
 
   // Created/Pending
   'spedizione generata': 'created',
@@ -82,7 +92,7 @@ const STATUS_MAP: Record<string, string> = {
   respinta: 'returned',
 };
 
-function normalizeStatus(rawStatus: string): string {
+export function normalizeStatus(rawStatus: string): string {
   const lower = rawStatus.toLowerCase();
 
   // Check exact matches first
@@ -92,7 +102,14 @@ function normalizeStatus(rawStatus: string): string {
     }
   }
 
-  // Pattern matching
+  // Pattern matching - giacenza BEFORE exception
+  if (
+    lower.includes('giacenz') ||
+    lower.includes('mancata consegna') ||
+    lower.includes('fermo deposito') ||
+    lower.includes('non consegnabile')
+  )
+    return 'in_giacenza';
   if (lower.includes('consegnat')) return 'delivered';
   if (lower.includes('transit')) return 'in_transit';
   if (lower.includes('partita') || lower.includes('partenza')) return 'in_transit';
@@ -100,7 +117,7 @@ function normalizeStatus(rawStatus: string): string {
     return 'out_for_delivery';
   if (lower.includes('destinatar') || lower.includes('arrivata')) return 'at_destination';
   if (lower.includes('eccezione') || lower.includes('problem') || lower.includes('assente'))
-    return 'exception';
+    return 'in_giacenza';
   if (lower.includes('generata') || lower.includes('registrata')) return 'created';
   if (lower.includes('ritiro')) return 'pending_pickup';
   if (lower.includes('reso') || lower.includes('return')) return 'returned';
