@@ -93,9 +93,9 @@ const initialAddressData: AddressData = {
 const initialPackage: PackageData = {
   id: crypto.randomUUID(),
   peso: 1,
-  lunghezza: 20,
-  larghezza: 20,
-  altezza: 10,
+  lunghezza: 0,
+  larghezza: 0,
+  altezza: 0,
   contenuto: '',
 };
 
@@ -216,9 +216,9 @@ export function ShipmentWizardProvider({ children }: { children: React.ReactNode
     const newPackage: PackageData = {
       id: crypto.randomUUID(),
       peso: 1,
-      lunghezza: 20,
-      larghezza: 20,
-      altezza: 10,
+      lunghezza: 0,
+      larghezza: 0,
+      altezza: 0,
       contenuto: '',
     };
     setData((prev) => ({

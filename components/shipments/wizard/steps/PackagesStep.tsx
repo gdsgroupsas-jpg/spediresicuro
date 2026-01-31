@@ -148,10 +148,11 @@ export function PackagesStep() {
                   id={`pkg-${pkg.id}-lunghezza`}
                   type="number"
                   min="1"
-                  value={pkg.lunghezza}
+                  value={pkg.lunghezza || ''}
                   onChange={(e) =>
                     updatePackage(pkg.id, { lunghezza: parseInt(e.target.value) || 0 })
                   }
+                  placeholder="es. 30"
                 />
               </div>
 
@@ -164,10 +165,11 @@ export function PackagesStep() {
                   id={`pkg-${pkg.id}-larghezza`}
                   type="number"
                   min="1"
-                  value={pkg.larghezza}
+                  value={pkg.larghezza || ''}
                   onChange={(e) =>
                     updatePackage(pkg.id, { larghezza: parseInt(e.target.value) || 0 })
                   }
+                  placeholder="es. 20"
                 />
               </div>
 
@@ -180,10 +182,11 @@ export function PackagesStep() {
                   id={`pkg-${pkg.id}-altezza`}
                   type="number"
                   min="1"
-                  value={pkg.altezza}
+                  value={pkg.altezza || ''}
                   onChange={(e) =>
                     updatePackage(pkg.id, { altezza: parseInt(e.target.value) || 0 })
                   }
+                  placeholder="es. 15"
                 />
               </div>
             </div>
