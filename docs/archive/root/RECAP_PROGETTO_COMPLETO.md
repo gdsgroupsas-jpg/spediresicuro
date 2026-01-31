@@ -4,7 +4,7 @@
 
 **Data:** Dicembre 2025  
 **Progetto:** SpedireSicuro.it - Preventivi spedizioni con ricarico  
-**Stack:** Next.js 14, TypeScript, Tailwind CSS, Supabase, Node.js/Express  
+**Stack:** Next.js 15, TypeScript, Tailwind CSS, Supabase, Node.js/Express  
 **Deploy:** Vercel (Next.js) + Automation Service standalone
 
 ---

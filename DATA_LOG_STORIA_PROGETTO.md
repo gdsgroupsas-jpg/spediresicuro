@@ -15,7 +15,7 @@
 
 ## 1) Executive Snapshot (verificabile)
 
-SpedireSicuro.it è un **Logistics Operating System** costruito su **Next.js 14 (App Router)** con backend **Supabase**. Il cuore del sistema è **transazionale e governato** da invarianti: **wallet prepagato**, **idempotency lock**, **compensation queue** e **security fail‑closed**.
+SpedireSicuro.it è un **Logistics Operating System** costruito su **Next.js 15 (App Router)** con backend **Supabase**. Il cuore del sistema è **transazionale e governato** da invarianti: **wallet prepagato**, **idempotency lock**, **compensation queue** e **security fail‑closed**.
 
 **Evidenze principali:**
 
