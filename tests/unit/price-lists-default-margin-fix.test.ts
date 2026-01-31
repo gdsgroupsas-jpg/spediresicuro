@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PriceList } from '@/types/listini';
-import { calculatePriceWithRules } from '@/lib/db/price-lists-advanced';
+import { calculatePriceWithRules, __clearMasterListCache } from '@/lib/db/price-lists-advanced';
 import { pricingConfig } from '@/lib/config';
 
 // Mock Supabase
@@ -135,7 +135,8 @@ describe('Fix Margine Default - Test Pesanti', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    __clearMasterListCache();
   });
 
   describe('Scenario 1: Listino CUSTOM con Master, Prezzi Identici, SENZA Margine Configurato', () => {
@@ -226,7 +227,8 @@ describe('Fix Margine Default - Test Pesanti', () => {
       ];
 
       for (const testCase of testCases) {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
+        __clearMasterListCache();
 
         // Ordine corretto: prima custom (da getPriceListById), poi master (da calculateWithDefaultMargin)
         vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
@@ -584,7 +586,8 @@ describe('Fix Margine Default - Test Pesanti', () => {
       ];
 
       for (const scenario of scenarios) {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
+        __clearMasterListCache();
 
         // Ordine corretto: prima custom (da getPriceListById), poi master (da calculateWithDefaultMargin)
         vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
@@ -665,7 +668,8 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
   describe('Scenario 5: Test con Valori Reali (GLS vs Poste Italiane)', () => {
     it('simula scenario GLS: listino CUSTOM con prezzi modificati', async () => {
-      vi.clearAllMocks();
+      vi.resetAllMocks();
+      __clearMasterListCache();
 
       const glsMaster: PriceList = {
         ...masterPriceList,
@@ -767,7 +771,8 @@ describe('Fix Margine Default - Test Pesanti', () => {
     });
 
     it('simula scenario Poste Italiane: listino CUSTOM con prezzi identici, senza margine', async () => {
-      vi.clearAllMocks();
+      vi.resetAllMocks();
+      __clearMasterListCache();
 
       const posteMaster: PriceList = {
         ...masterPriceList,
