@@ -258,8 +258,17 @@ describe('navigationConfig - Section Ordering', () => {
     expect(logisticsIndex).toBeLessThan(accountIndex);
   });
 
-  it('should have communications and support sections at the end', () => {
+  it('should have support as the last section for user role', () => {
     const config = getNavigationForUser('user');
+
+    const sectionIds = config.sections.map((s) => s.id);
+    // Communications is superadmin-only, so user only sees support at the end
+    expect(sectionIds[sectionIds.length - 1]).toBe('support');
+    expect(sectionIds).not.toContain('communications');
+  });
+
+  it('should have communications and support at the end for superadmin', () => {
+    const config = getNavigationForUser('superadmin');
 
     const sectionIds = config.sections.map((s) => s.id);
     const lastTwoSections = sectionIds.slice(-2);
