@@ -36,6 +36,7 @@ import {
   Search,
   DollarSign,
   Activity,
+  Contact,
   type LucideIcon,
   Trash2,
 } from 'lucide-react';
@@ -202,6 +203,13 @@ const communicationsSection: NavSection = {
       href: '/dashboard/posta',
       icon: Mail,
       description: 'Email inbox e invio @spediresicuro.it',
+    },
+    {
+      id: 'rubrica',
+      label: 'Rubrica',
+      href: '/dashboard/rubrica',
+      icon: Contact,
+      description: 'Gestione contatti e rubrica',
     },
   ],
 };
