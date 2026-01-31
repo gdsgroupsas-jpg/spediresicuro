@@ -2,7 +2,11 @@
  * Webhook: Resend Inbound Email
  *
  * Receives inbound emails from Resend and stores them in the emails table.
- * Configure Resend Inbound to POST to: https://spediresicuro.it/api/webhooks/email-inbound
+ * Configure Resend Inbound to POST to: https://www.spediresicuro.it/api/webhooks/email-inbound
+ *
+ * Resend payload structure:
+ * { type: "email.received", created_at: "...", data: { from, to, cc, bcc, subject, message_id, ... } }
+ * Note: html/text are NOT included in the webhook — must be fetched via Resend API.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,30 +16,48 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
 
-    // Resend inbound webhook payload fields
-    const { from, to, cc, subject, html, text, attachments, message_id } = payload;
+    // Resend wraps inbound email data inside "data"
+    const emailData = payload.data || payload;
 
-    // Normalize addresses
-    const fromAddress = typeof from === 'string' ? from : from?.address || from?.[0]?.address || '';
-    const toAddresses = Array.isArray(to)
-      ? to.map((t: any) => (typeof t === 'string' ? t : t?.address || ''))
-      : typeof to === 'string'
-        ? [to]
-        : [];
-    const ccAddresses = Array.isArray(cc)
-      ? cc.map((c: any) => (typeof c === 'string' ? c : c?.address || ''))
-      : [];
+    const { from, to, cc, bcc, subject, attachments, message_id, email_id } = emailData;
+
+    // from is a string like "Name <email@example.com>"
+    const fromAddress = typeof from === 'string' ? from : '';
+    // to/cc/bcc are arrays of strings
+    const toAddresses = Array.isArray(to) ? to : typeof to === 'string' ? [to] : [];
+    const ccAddresses = Array.isArray(cc) ? cc : [];
+    const bccAddresses = Array.isArray(bcc) ? bcc : [];
+
+    // Fetch email content (html/text) from Resend API since webhook doesn't include it
+    let bodyHtml: string | null = null;
+    let bodyText: string | null = null;
+    const resendEmailId = email_id || message_id;
+
+    if (resendEmailId && process.env.RESEND_API_KEY) {
+      try {
+        const res = await fetch(`https://api.resend.com/emails/${resendEmailId}`, {
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+        });
+        if (res.ok) {
+          const detail = await res.json();
+          bodyHtml = detail.html || null;
+          bodyText = detail.text || null;
+        }
+      } catch (fetchErr: any) {
+        console.error('[EMAIL-INBOUND] Failed to fetch email content:', fetchErr.message);
+      }
+    }
 
     const { error } = await supabaseAdmin.from('emails').insert({
-      message_id: message_id || null,
+      message_id: message_id || email_id || null,
       direction: 'inbound',
       from_address: fromAddress,
       to_address: toAddresses,
       cc: ccAddresses,
-      bcc: [],
+      bcc: bccAddresses,
       subject: subject || '(nessun oggetto)',
-      body_html: html || null,
-      body_text: text || null,
+      body_html: bodyHtml,
+      body_text: bodyText,
       attachments: attachments || [],
       status: 'received',
       read: false,
@@ -46,7 +68,6 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[EMAIL-INBOUND] Insert error:', error.message);
-      // Still return 200 to avoid Resend retries
       return NextResponse.json({ received: true, error: error.message }, { status: 200 });
     }
 
