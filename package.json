@@ -90,6 +90,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
+    "@eslint/eslintrc": "^3.3.3",
     "@google-cloud/vision": "^5.3.4",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.3.0",
@@ -113,11 +114,11 @@
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^11.0.0",
-    "imap": "^0.8.19",
-    "jspdf": "^2.5.2",
-    "jspdf-autotable": "^3.8.4",
+    "imapflow": "^1.2.8",
+    "jspdf": "^4.0.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.555.0",
-    "next": "^14.2.0",
+    "next": "^15.5.11",
     "next-auth": "^5.0.0-beta.30",
     "postcss": "^8.4.0",
     "puppeteer": "^24.15.0",
@@ -135,7 +136,6 @@
     "tailwind-merge": "^2.2.0",
     "tailwindcss": "^3.4.0",
     "tesseract.js": "^6.0.1",
-    "xlsx": "^0.18.5",
     "zod": "^3.22.0"
   },
   "devDependencies": {
@@ -150,8 +150,8 @@
     "@vitest/coverage-v8": "^3.1.4",
     "@vitest/ui": "^3.1.4",
     "dotenv": "^16.3.1",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.0",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^15.5.11",
     "happy-dom": "^20.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
@@ -159,7 +159,7 @@
     "standard-version": "^9.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.0",
-    "vercel": "^40.0.0",
+    "vercel": "^50.9.6",
     "vitest": "^3.1.4",
     "wait-on": "^8.0.1"
   }

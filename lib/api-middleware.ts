@@ -39,7 +39,7 @@ export interface AdminAuthResult extends AuthResult {
 export async function requireAuth(): Promise<AuthResult> {
   // ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const testHeader = headersList.get('x-test-mode');
     const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
 

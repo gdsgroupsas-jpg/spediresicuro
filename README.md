@@ -11,7 +11,7 @@
 
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 ![Security](https://img.shields.io/badge/security-hardened-success)
-![Stack](https://img.shields.io/badge/stack-Next.js%2014%20%2B%20Supabase-blue)
+![Stack](https://img.shields.io/badge/stack-Next.js%2015%20%2B%20Supabase-blue)
 ![Issues](https://img.shields.io/badge/P0%20issues-4%20remaining-orange)
 
 </div>
@@ -443,7 +443,7 @@ Il motore decide quale Adapter usare e quali credenziali iniettare (Master vs Ut
 
 #### Backend
 
-- **Next.js 14** - App Router con Server Actions
+- **Next.js 15** - App Router con Server Actions
 - **TypeScript** - Strict type checking
 - **Supabase** - PostgreSQL con RLS (Row Level Security) stretta
 

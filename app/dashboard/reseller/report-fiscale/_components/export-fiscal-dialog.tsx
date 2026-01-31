@@ -46,7 +46,7 @@ export function ExportFiscalDialog({ isOpen, onClose, data }: ExportFiscalDialog
         exportFiscalCSV(data);
         toast.success('Report CSV scaricato');
       } else {
-        exportFiscalExcel(data);
+        await exportFiscalExcel(data);
         toast.success('Report Excel scaricato');
       }
       onClose();

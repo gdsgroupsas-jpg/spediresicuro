@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getSafeAuth } from '@/lib/safe-auth';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const context = await getSafeAuth();
 
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
 
-    const invoiceId = params.id;
+    const { id: invoiceId } = await params;
 
     // Recupera fattura
     const { data: invoice, error: invoiceError } = await supabaseAdmin

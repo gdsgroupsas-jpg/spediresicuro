@@ -566,7 +566,7 @@ npm run verify:supabase
 
 ### **External Documentation**
 
-- [Next.js 14 App Router](https://nextjs.org/docs)
+- [Next.js 15 App Router](https://nextjs.org/docs)
 - [Supabase Documentation](https://supabase.com/docs)
 - [LangGraph Guide](https://langchain-ai.github.io/langgraph/)
 - [Conventional Commits](https://www.conventionalcommits.org/)

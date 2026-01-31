@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getInvoiceById } from '@/app/actions/invoices';
 import { Invoice } from '@/types/invoices';
 import { ArrowLeft, Download, Printer, FileText } from 'lucide-react';
 import Link from 'next/link';
 
-export default function FatturaDettaglioPage({ params }: { params: { id: string } }) {
+export default function FatturaDettaglioPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +16,7 @@ export default function FatturaDettaglioPage({ params }: { params: { id: string 
   useEffect(() => {
     async function load() {
       try {
-        const data = await getInvoiceById(params.id);
+        const data = await getInvoiceById(id);
         setInvoice(data);
       } catch (err: any) {
         console.error(err);
@@ -25,7 +26,7 @@ export default function FatturaDettaglioPage({ params }: { params: { id: string 
       }
     }
     load();
-  }, [params.id]);
+  }, [id]);
 
   if (isLoading) return <div className="p-12 text-center text-gray-500">Caricamento...</div>;
   if (error || !invoice)

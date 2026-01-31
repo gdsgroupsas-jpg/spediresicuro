@@ -11,7 +11,7 @@ import { updateUser } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return ApiErrors.FORBIDDEN('Solo gli admin possono modificare i dati di altri utenti');
     }
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     // Verifica che l'utente target esista
     const { data: targetUser, error: userError } = await supabaseAdmin

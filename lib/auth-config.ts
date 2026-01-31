@@ -734,7 +734,7 @@ export const auth = async (...args: any[]) => {
   if (process.env.NODE_ENV !== 'production' || isCI || isPlaywrightMode) {
     try {
       const { headers } = await import('next/headers');
-      const headersList = headers();
+      const headersList = await headers();
       const testHeader = headersList.get('x-test-mode');
 
       if (testHeader === 'playwright' || isPlaywrightMode) {

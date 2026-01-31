@@ -4,7 +4,7 @@
  * Funzioni per esportare il report fiscale in CSV e Excel.
  */
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type { MonthlyFiscalSummary, FiscalShipmentLine } from '@/types/reseller-fiscal';
 
 /**
@@ -105,24 +105,25 @@ export function exportFiscalCSV(data: MonthlyFiscalSummary): void {
 /**
  * Genera Excel multi-sheet
  */
-export function exportFiscalExcel(data: MonthlyFiscalSummary): void {
-  const workbook = XLSX.utils.book_new();
+export async function exportFiscalExcel(data: MonthlyFiscalSummary): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
 
   // Sheet 1: Riepilogo
-  const summaryData = [
-    ['REPORT FISCALE - ' + data.period.label.toUpperCase()],
-    [],
-    ['CEDENTE (Reseller)'],
+  const summarySheet = workbook.addWorksheet('Riepilogo');
+  const summaryRows: (string | number | null)[][] = [
+    ['REPORT FISCALE - ' + data.period.label.toUpperCase(), ''],
+    ['', ''],
+    ['CEDENTE (Reseller)', ''],
     ['Nome/Ragione Sociale', data.reseller.company_name || data.reseller.name],
     ['Email', data.reseller.email || ''],
     ['P.IVA', data.reseller.vat_number || ''],
     ['Codice Fiscale', data.reseller.fiscal_code || ''],
-    [],
-    ['PERIODO'],
+    ['', ''],
+    ['PERIODO', ''],
     ['Dal', formatDate(data.period.start_date)],
     ['Al', formatDate(data.period.end_date)],
-    [],
-    ['TOTALI'],
+    ['', ''],
+    ['TOTALI', ''],
     ['Numero Spedizioni', data.total_shipments],
     ['Totale Lordo', formatCurrency(data.total_gross) + ' EUR'],
     ['Totale Netto (Imponibile)', formatCurrency(data.total_net) + ' EUR'],
@@ -136,11 +137,11 @@ export function exportFiscalExcel(data: MonthlyFiscalSummary): void {
       data.avg_margin_percent !== null ? data.avg_margin_percent.toFixed(1) + '%' : 'N/A',
     ],
   ];
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Riepilogo');
+  summaryRows.forEach((row) => summarySheet.addRow(row));
 
   // Sheet 2: Per Cliente
-  const clientHeaders = [
+  const clientSheet = workbook.addWorksheet('Per Cliente');
+  clientSheet.addRow([
     'Cliente',
     'Email',
     'P.IVA',
@@ -150,24 +151,24 @@ export function exportFiscalExcel(data: MonthlyFiscalSummary): void {
     'IVA EUR',
     'Margine EUR',
     'Margine %',
-  ];
-  const clientRows = data.clients.map((c) => [
-    c.client.company_name || c.client.name,
-    c.client.email,
-    c.client.vat_number || '',
-    c.shipments_count,
-    c.total_gross,
-    c.total_net,
-    c.total_vat,
-    c.total_margin,
-    c.avg_margin_percent,
   ]);
-  const clientData = [clientHeaders, ...clientRows];
-  const clientSheet = XLSX.utils.aoa_to_sheet(clientData);
-  XLSX.utils.book_append_sheet(workbook, clientSheet, 'Per Cliente');
+  data.clients.forEach((c) =>
+    clientSheet.addRow([
+      c.client.company_name || c.client.name,
+      c.client.email,
+      c.client.vat_number || '',
+      c.shipments_count,
+      c.total_gross,
+      c.total_net,
+      c.total_vat,
+      c.total_margin,
+      c.avg_margin_percent,
+    ])
+  );
 
   // Sheet 3: Dettaglio Spedizioni
-  const detailHeaders = [
+  const detailSheet = workbook.addWorksheet('Dettaglio Spedizioni');
+  detailSheet.addRow([
     'Data',
     'Tracking',
     'Cliente',
@@ -182,11 +183,10 @@ export function exportFiscalExcel(data: MonthlyFiscalSummary): void {
     'Servizio',
     'Destinatario',
     'Citta',
-  ];
-  const detailRows: any[][] = [];
+  ]);
   for (const client of data.clients) {
     for (const s of client.shipments) {
-      detailRows.push([
+      detailSheet.addRow([
         formatDate(s.date),
         s.tracking_number,
         client.client.company_name || client.client.name,
@@ -204,11 +204,18 @@ export function exportFiscalExcel(data: MonthlyFiscalSummary): void {
       ]);
     }
   }
-  const detailData = [detailHeaders, ...detailRows];
-  const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
-  XLSX.utils.book_append_sheet(workbook, detailSheet, 'Dettaglio Spedizioni');
 
   // Download
-  const fileName = `report-fiscale-${data.period.label.replace(' ', '-')}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `report-fiscale-${data.period.label.replace(' ', '-')}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

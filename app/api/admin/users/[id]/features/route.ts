@@ -11,7 +11,7 @@ import { findUserByEmail } from '@/lib/database';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // 1. Verifica autenticazione
     const context = await getSafeAuth();
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // 3. Ottieni ID utente
-    const userId = params.id;
+    const { id: userId } = await params;
 
     if (!userId) {
       return NextResponse.json({ error: 'ID utente mancante' }, { status: 400 });
