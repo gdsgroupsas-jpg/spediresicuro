@@ -11,16 +11,18 @@ export const dynamic = 'force-dynamic';
  * GET /api/giacenze/[id]/actions
  * Azioni disponibili con costi calcolati dal listino
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
     const { context } = authResult;
 
+    const { id } = await params;
+
     const user = await getUserByEmail(context!.actor.email!, 'id');
     if (!user) return ApiErrors.NOT_FOUND('Utente');
 
-    const actions = await getAvailableActions(params.id, user.id);
+    const actions = await getAvailableActions(id, user.id);
 
     return NextResponse.json({
       success: true,
@@ -35,11 +37,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * POST /api/giacenze/[id]/actions
  * Esegui azione giacenza con addebito wallet
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
     const { context } = authResult;
+
+    const { id } = await params;
 
     const user = await getUserByEmail(context!.actor.email!, 'id');
     if (!user) return ApiErrors.NOT_FOUND('Utente');
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Campo action_type obbligatorio' }, { status: 400 });
     }
 
-    const result = await executeAction(params.id, user.id, action_type, new_address);
+    const result = await executeAction(id, user.id, action_type, new_address);
 
     return NextResponse.json({
       success: true,

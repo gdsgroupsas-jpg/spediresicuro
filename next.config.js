@@ -4,7 +4,6 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const nextConfig = {
   // Configurazione per performance ottimali
   reactStrictMode: true,
-  swcMinify: true,
 
   // Ottimizzazioni per Vercel
   compress: true,
@@ -16,8 +15,6 @@ const nextConfig = {
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu',
     ],
-    // M2: Enable instrumentation hook for Sentry
-    instrumentationHook: true,
   },
 
   // ⚡ BUILD OPTIMIZATION: Esclude dipendenze pesanti dal bundle client via webpack
@@ -30,7 +27,7 @@ const nextConfig = {
         puppeteer: false, // Browser automation (solo server-side)
         'tesseract.js': false, // OCR (solo server-side, client usa dynamic import)
         '@google-cloud/vision': false, // Google Vision API (solo server-side)
-        imap: false, // Email client (solo server-side)
+        imapflow: false, // Email client (solo server-side)
         cheerio: false, // HTML parsing (solo server-side)
       };
     }

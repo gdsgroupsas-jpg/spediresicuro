@@ -19,17 +19,15 @@ async function requireSuperadmin() {
   return { context };
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireSuperadmin();
   if ('error' in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('emails')
-    .select('*')
-    .eq('id', params.id)
-    .single();
+  const { id } = await params;
+
+  const { data, error } = await supabaseAdmin.from('emails').select('*').eq('id', id).single();
 
   if (error || !data) {
     return NextResponse.json({ error: 'Email non trovata' }, { status: 404 });
@@ -37,18 +35,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   // Auto-mark as read
   if (!data.read) {
-    await supabaseAdmin.from('emails').update({ read: true }).eq('id', params.id);
+    await supabaseAdmin.from('emails').update({ read: true }).eq('id', id);
     data.read = true;
   }
 
   return NextResponse.json(data);
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireSuperadmin();
   if ('error' in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+
+  const { id } = await params;
 
   const body = await request.json();
   const updates: Record<string, any> = {};
@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const { data, error } = await supabaseAdmin
     .from('emails')
     .update(updates)
-    .eq('id', params.id)
+    .eq('id', id)
     .select('id, read, starred, folder')
     .single();
 
@@ -77,18 +77,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   return NextResponse.json(data);
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireSuperadmin();
   if ('error' in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
+  const { id } = await params;
+
   // Check if already in trash
-  const { data: email } = await supabaseAdmin
-    .from('emails')
-    .select('folder')
-    .eq('id', params.id)
-    .single();
+  const { data: email } = await supabaseAdmin.from('emails').select('folder').eq('id', id).single();
 
   if (!email) {
     return NextResponse.json({ error: 'Email non trovata' }, { status: 404 });
@@ -96,7 +97,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   if (email.folder === 'trash') {
     // Hard delete
-    const { error } = await supabaseAdmin.from('emails').delete().eq('id', params.id);
+    const { error } = await supabaseAdmin.from('emails').delete().eq('id', id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -105,10 +106,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   }
 
   // Move to trash
-  const { error } = await supabaseAdmin
-    .from('emails')
-    .update({ folder: 'trash' })
-    .eq('id', params.id);
+  const { error } = await supabaseAdmin.from('emails').update({ folder: 'trash' }).eq('id', id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

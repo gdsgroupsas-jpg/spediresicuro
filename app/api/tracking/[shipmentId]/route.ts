@@ -16,9 +16,12 @@ import { getTrackingService } from '@/lib/services/tracking';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest, { params }: { params: { shipmentId: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ shipmentId: string }> }
+) {
   try {
-    const { shipmentId } = params;
+    const { shipmentId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const forceRefresh = searchParams.get('refresh') === 'true';
 

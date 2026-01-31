@@ -11,7 +11,10 @@ import { getSafeAuth } from '@/lib/safe-auth';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // 1. Verifica autenticazione
     const context = await getSafeAuth();
@@ -31,7 +34,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // 3. Ottieni ID spedizione
-    const shipmentId = params.id;
+    const { id: shipmentId } = await params;
 
     if (!shipmentId) {
       return NextResponse.json({ error: 'ID spedizione mancante' }, { status: 400 });
