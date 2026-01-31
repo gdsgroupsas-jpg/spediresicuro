@@ -194,13 +194,14 @@ const communicationsSection: NavSection = {
   id: 'communications',
   label: 'Comunicazioni',
   collapsible: false,
+  requiredRole: ['superadmin'],
   items: [
     {
       id: 'mail',
       label: 'Posta',
       href: '/dashboard/posta',
       icon: Mail,
-      description: 'Messaggi e notifiche',
+      description: 'Email inbox e invio @spediresicuro.it',
     },
   ],
 };
@@ -620,8 +621,12 @@ export function getNavigationForUser(
   // 6. SEZIONI PERSONALI (tutti gli utenti)
   sections.push(accountSection);
 
-  // 7. SEZIONI SUPPORTO (sempre alla fine)
-  sections.push(communicationsSection);
+  // 7. COMUNICAZIONI (solo superadmin — email inbox)
+  if (role === 'superadmin') {
+    sections.push(communicationsSection);
+  }
+
+  // 8. SEZIONI SUPPORTO (sempre alla fine)
   sections.push(supportSection);
 
   // Azioni principali (AI Assistant - sempre visibile)
