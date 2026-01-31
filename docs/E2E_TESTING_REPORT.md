@@ -460,7 +460,7 @@ CREATE POLICY "api_keys_update_own" ON public.api_keys FOR UPDATE USING (auth.ui
 **Environment:**
 
 - Node.js: v18+
-- Next.js: 14.x
+- Next.js: 15.x
 - Supabase: Cloud (production database)
 - Browser: Chrome/Edge on Windows
 

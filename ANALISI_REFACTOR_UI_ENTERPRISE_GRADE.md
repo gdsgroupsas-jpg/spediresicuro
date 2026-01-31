@@ -1292,7 +1292,7 @@ STATUS: ✅ ALL BLOCKERS CLEARED
 
 **Codebase Audit:**
 
-- [ ] Verify Next.js 14 App Router fully functional
+- [ ] Verify Next.js 15 App Router fully functional
 - [ ] Check React Query integration (useQuery, useMutation)
 - [ ] Audit Server Actions contract (input/output shape)
 - [ ] Verify Supabase RLS policies unchanged

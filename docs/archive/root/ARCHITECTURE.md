@@ -23,7 +23,7 @@
 
 ## System Overview
 
-SpedireSicuro is a **Next.js 14** application with **App Router** architecture, using **Supabase** (PostgreSQL) as the database and **Vercel** for hosting.
+SpedireSicuro is a **Next.js 15** application with **App Router** architecture, using **Supabase** (PostgreSQL) as the database and **Vercel** for hosting.
 
 **Architettura:** Logistics Operating System (Logistics OS) - Non è un comparatore prezzi, è un'infrastruttura B2B che orchestra spedizioni, pagamenti e corrieri.
 
@@ -57,7 +57,7 @@ SpedireSicuro is a **Next.js 14** application with **App Router** architecture, 
 
 ### Frontend
 
-- **Next.js 14.2+** - App Router (NOT Pages Router)
+- **Next.js 15.5+** - App Router (NOT Pages Router)
 - **React 18+** - Server Components + Client Components
 - **TypeScript** - Strict mode enabled
 - **Tailwind CSS** - Utility-first styling

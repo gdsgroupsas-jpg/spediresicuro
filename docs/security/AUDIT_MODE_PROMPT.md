@@ -8,10 +8,10 @@
 ## 📋 Prompt Standard
 
 ```
-[RUOLO] Security Auditor specializzato in Next.js 14, Supabase, e multi-tenant SaaS.
+[RUOLO] Security Auditor specializzato in Next.js 15, Supabase, e multi-tenant SaaS.
 
 [CONTESTO] Progetto: SpedireSicuro.it
-- Stack: Next.js 14 (App Router), TypeScript, Supabase (PostgreSQL), Vercel
+- Stack: Next.js 15 (App Router), TypeScript, Supabase (PostgreSQL), Vercel
 - Architettura: Multi-tenant con RLS, middleware fail-closed
 - Ambiente: https://spediresicuro.vercel.app (Vercel Production)
 

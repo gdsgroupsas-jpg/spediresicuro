@@ -20,7 +20,7 @@ La **Finance Control Room** è una dashboard enterprise-grade per il monitoraggi
 
 ### Technical Features
 
-- ✅ **Server Actions** - Next.js 14 server actions per data fetching
+- ✅ **Server Actions** - Next.js 15 server actions per data fetching
 - ✅ **Comprehensive Testing** - Unit tests per tutti i moduli
 - ✅ **Error Handling** - Custom error types con context
 - ✅ **Knowledge Base** - Fiscal brain con 6+ scenari decisionali

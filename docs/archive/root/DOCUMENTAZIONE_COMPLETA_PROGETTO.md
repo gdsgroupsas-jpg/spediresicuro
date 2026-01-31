@@ -27,7 +27,7 @@ Per operare su questo progetto è richiesto il seguente profilo tecnico "Full St
 
 ### Core Stack
 
-- **Frontend**: Next.js 14 (App Router), React Server Components, TypeScript.
+- **Frontend**: Next.js 15 (App Router), React Server Components, TypeScript.
 - **Styling**: Tailwind CSS, Shadcn/UI, Framer Motion (Glassmorphism UI).
 - **Backend**: Next.js API Routes (Edge/Node), Supabase (PostgreSQL).
 - **Auth**: NextAuth.js v5 (Role-Based Access Control).

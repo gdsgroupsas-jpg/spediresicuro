@@ -39,7 +39,7 @@ graph TB
 ```mermaid
 graph TB
     subgraph "SpedireSicuro System"
-        WebApp[Web Application<br/>Next.js 14 + React]
+        WebApp[Web Application<br/>Next.js 15 + React]
         API[API Layer<br/>Next.js API Routes]
         AgentOrch[AI Agent Orchestrator<br/>LangGraph Supervisor]
         PricingEngine[Pricing Engine<br/>Calculator + VAT]
