@@ -14,7 +14,8 @@ export type ShipmentStatus =
   | 'failed'
   | 'cancelled'
   | 'returned'
-  | 'scanned_at_pickup';
+  | 'scanned_at_pickup'
+  | 'in_giacenza';
 
 export type RecipientType = 'B2C' | 'B2B';
 

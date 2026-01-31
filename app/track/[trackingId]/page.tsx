@@ -25,6 +25,7 @@ import {
   HelpCircle,
   ArrowRight,
   X,
+  Archive,
 } from 'lucide-react';
 import { LogoHorizontal } from '@/components/logo';
 
@@ -39,7 +40,7 @@ interface TrackingEvent {
 
 interface TrackingData {
   trackingId: string;
-  status: 'in_transit' | 'delivered' | 'exception' | 'out_for_delivery';
+  status: 'in_transit' | 'delivered' | 'exception' | 'out_for_delivery' | 'in_giacenza';
   estimated_delivery: string;
   current_location: string;
   recipient_name: string;
@@ -144,6 +145,12 @@ function StatusBadge({ status }: { status: TrackingData['status'] }) {
       className: 'bg-gradient-to-r from-red-500 to-rose-600',
       icon: AlertCircle,
       pulse: false,
+    },
+    in_giacenza: {
+      label: 'In Giacenza',
+      className: 'bg-gradient-to-r from-amber-500 to-orange-600',
+      icon: Archive,
+      pulse: true,
     },
   };
 

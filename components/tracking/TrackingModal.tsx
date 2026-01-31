@@ -13,6 +13,7 @@ import {
   Clock,
   Copy,
   Loader2,
+  Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +53,7 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   in_transit: <Truck className="w-5 h-5 text-blue-500" />,
   out_for_delivery: <Truck className="w-5 h-5 text-orange-500" />,
   at_destination: <MapPin className="w-5 h-5 text-purple-500" />,
+  in_giacenza: <Archive className="w-5 h-5 text-amber-500" />,
   exception: <AlertCircle className="w-5 h-5 text-red-500" />,
   created: <Package className="w-5 h-5 text-gray-500" />,
   pending_pickup: <Clock className="w-5 h-5 text-yellow-500" />,
@@ -67,6 +69,7 @@ const STATUS_COLORS: Record<string, string> = {
   in_transit: 'bg-blue-500',
   out_for_delivery: 'bg-orange-500',
   at_destination: 'bg-purple-500',
+  in_giacenza: 'bg-amber-500',
   exception: 'bg-red-500',
   created: 'bg-gray-400',
   pending_pickup: 'bg-yellow-500',
@@ -82,6 +85,7 @@ const STATUS_LABELS: Record<string, string> = {
   in_transit: 'In Transito',
   out_for_delivery: 'In Consegna',
   at_destination: 'Arrivato a Destinazione',
+  in_giacenza: 'In Giacenza',
   exception: 'Eccezione',
   created: 'Creato',
   pending_pickup: 'In Attesa Ritiro',

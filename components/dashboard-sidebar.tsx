@@ -25,6 +25,7 @@ import {
 } from '@/lib/config/navigationConfig';
 import { cn } from '@/lib/utils';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
+import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -32,6 +33,7 @@ export default function DashboardSidebar() {
   const [accountType, setAccountType] = useState<string | null>(null);
   const [isReseller, setIsReseller] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const giacenzeCount = useGiacenzeCount();
 
   // 🆕 LocalStorage keys
   const STORAGE_KEYS = {
@@ -387,6 +389,11 @@ export default function DashboardSidebar() {
                           )}
                         />
                         <span className="flex-1 truncate">{item.label}</span>
+                        {item.id === 'giacenze' && giacenzeCount > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white min-w-[18px] text-center">
+                            {giacenzeCount}
+                          </span>
+                        )}
                         {item.badge && (
                           <span
                             className={cn(
@@ -474,6 +481,11 @@ export default function DashboardSidebar() {
                                     )}
                                   />
                                   <span className="flex-1 truncate text-sm">{item.label}</span>
+                                  {item.id === 'giacenze' && giacenzeCount > 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-500 text-white min-w-[18px] text-center">
+                                      {giacenzeCount}
+                                    </span>
+                                  )}
                                   {item.badge && (
                                     <span
                                       className={cn(
