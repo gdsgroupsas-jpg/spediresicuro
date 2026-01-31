@@ -64,13 +64,13 @@ Sistema di **automazione intelligente** per estrarre e aggiornare automaticament
 ### **1. Installa Dipendenze**
 
 ```bash
-npm install puppeteer imap @types/imap cheerio qs
+npm install puppeteer imapflow cheerio qs
 ```
 
 **Note:**
 
 - `puppeteer`: Browser automation (installa anche Chromium)
-- `imap`: Lettura email per 2FA
+- `imapflow`: Lettura email per 2FA (sostituisce `imap`, Promise-based, zero vulnerabilità)
 - `cheerio`: Parsing HTML (opzionale, già usato)
 - `qs`: Query string encoding (opzionale, già usato)
 
@@ -312,7 +312,7 @@ npm install puppeteer
 **Soluzione:**
 
 ```bash
-npm install imap @types/imap
+npm install imapflow
 ```
 
 ### **Problema: "Login fallito"**

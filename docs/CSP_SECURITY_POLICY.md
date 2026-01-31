@@ -16,7 +16,7 @@ La **Content Security Policy (CSP)** è un meccanismo di sicurezza che previene 
 
 ### **Librerie che Richiedono `unsafe-eval`**
 
-1. **jsPDF (2.5.2)**
+1. **jsPDF (4.x)**
    - Usa `eval()` internamente per parsing template
    - Necessario per generazione PDF client-side
    - **Alternativa futura:** Usare generazione PDF server-side
@@ -26,10 +26,10 @@ La **Content Security Policy (CSP)** è un meccanismo di sicurezza che previene 
    - Necessario per OCR client-side
    - **Alternativa futura:** Usare OCR server-side (Google Vision, Claude)
 
-3. **xlsx (0.18.5)**
-   - Usa `eval()` per parsing formule Excel
-   - Necessario per export/import Excel
-   - **Alternativa futura:** Usare librerie alternative o server-side
+3. **ExcelJS** (sostituisce xlsx 0.18.5 rimosso per vulnerabilità Prototype Pollution)
+   - Potrebbe richiedere `eval()` in alcuni contesti
+   - Necessario per export Excel client-side
+   - **Alternativa futura:** Spostare export Excel su API route server-side
 
 ### **Rischio di Sicurezza**
 
@@ -85,10 +85,11 @@ La **Content Security Policy (CSP)** è un meccanismo di sicurezza che previene 
    - Oppure Tesseract server-side (Node.js)
    - **Beneficio:** Rimuove bisogno di `unsafe-eval` per OCR
 
-3. **xlsx → Server-Side**
+3. **ExcelJS → Server-Side**
    - Spostare export/import Excel su API route
-   - Usare `xlsx` solo server-side
+   - Usare `exceljs` solo server-side
    - **Beneficio:** Rimuove bisogno di `unsafe-eval` per Excel
+   - **Nota:** xlsx è stato rimosso e sostituito con exceljs (gen 2026)
 
 ### **Fase 2: CSP Stricta (Dopo Migrazione)**
 

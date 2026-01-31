@@ -174,7 +174,7 @@ npm run build
 
 ### Build Optimization
 
-**Next.js 14 App Router:**
+**Next.js 15 App Router:**
 
 - Automatic code splitting
 - Static optimization

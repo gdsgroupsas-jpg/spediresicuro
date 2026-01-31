@@ -2,7 +2,7 @@
 
 ## Overview
 
-Questa documentazione descrive l'architettura frontend di SpedireSicuro, basata su Next.js 14 App Router con TypeScript, Tailwind CSS e Shadcn/UI.
+Questa documentazione descrive l'architettura frontend di SpedireSicuro, basata su Next.js 15 App Router con TypeScript, Tailwind CSS e Shadcn/UI.
 
 ## Target Audience
 
@@ -15,7 +15,7 @@ Questa documentazione descrive l'architettura frontend di SpedireSicuro, basata 
 ## Prerequisites
 
 - Node.js 18+
-- Next.js 14 knowledge
+- Next.js 15 knowledge
 - React hooks familiarity
 - TypeScript basics
 
@@ -136,7 +136,7 @@ export function ClientComponent() {
 **Conventioni:**
 
 - PascalCase per componenti: `SmartInput.tsx`
-- Kebab-case per file: `smart-input.tsx` (Next.js 14)
+- Kebab-case per file: `smart-input.tsx` (Next.js 15)
 - Collocati in `components/` con sottocartelle tematiche
 
 **Esempio Componente SmartInput (da `app/dashboard/spedizioni/nuova/page.tsx`):**

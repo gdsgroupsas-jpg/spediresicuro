@@ -295,7 +295,7 @@
 
 **Architecture:**
 
-- Next.js 14 App Router
+- Next.js 15 App Router
 - Server Components by default
 - Server Actions for mutations
 - Clear separation of concerns
@@ -510,7 +510,7 @@ spediresicuro/
 │   └── workflows/ci.yml            # CI/CD pipeline (6 gates)
 ├── .husky/
 │   └── pre-commit                   # Git hooks (Prettier + ESLint)
-├── app/                             # Next.js 14 app directory
+├── app/                             # Next.js 15 app directory
 ├── docs/                            # 120+ documentation files
 │   ├── START_HERE.md               # 👈 YOU ARE HERE
 │   ├── AUDIT_2026-01-20.md         # Critical: Read this

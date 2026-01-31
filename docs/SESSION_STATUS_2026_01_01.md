@@ -38,7 +38,7 @@ npm audit fix  # Eseguito - 5 vulnerabilità corrette automaticamente
 **Stato finale audit:**
 
 - 🔴 21 vulnerabilità residue (richiedono breaking changes)
-- ⚠️ `xlsx` - **NO FIX DISPONIBILE** (considera migrazione a `exceljs` o `sheetjs-ce`)
+- ✅ `xlsx` - **RISOLTO** (gen 2026): rimosso e sostituito con `exceljs`
 
 ### 3. Validazione Test Suite
 
@@ -88,10 +88,7 @@ npm audit fix  # Eseguito - 5 vulnerabilità corrette automaticamente
 
 ### P0 - Sicurezza Critica
 
-1. **Migrazione xlsx** - La libreria `xlsx` ha vulnerabilità senza fix. Valutare:
-   - `exceljs` (alternativa completa)
-   - `sheetjs-ce` (community edition più aggiornata)
-   - Rimuovere se non strettamente necessaria
+1. ~~**Migrazione xlsx**~~ - ✅ **COMPLETATO** (gen 2026): `xlsx` rimosso, sostituito con `exceljs` in tutti i file di export (finanza + report fiscale reseller). Vulnerabilità Prototype Pollution e ReDoS eliminate.
 
 ### P1 - Prima del Go-Live
 

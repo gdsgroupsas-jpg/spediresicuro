@@ -100,7 +100,7 @@ npm run test:e2e            # Esegui test Playwright E2E
 
 ```
 spediresicuro/
-├── app/                    # Next.js 14 App Router
+├── app/                    # Next.js 15 App Router
 ├── components/              # Componenti React
 ├── lib/                    # Logica condivisa
 ├── actions/                # Server Actions

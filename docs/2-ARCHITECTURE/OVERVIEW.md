@@ -15,7 +15,7 @@ Questo documento descrive l'architettura generale di SpedireSicuro, un Logistics
 ## Prerequisites
 
 - Node.js 18+
-- Next.js 14 knowledge
+- Next.js 15 knowledge
 - Supabase basics
 - TypeScript familiarity
 
@@ -33,7 +33,7 @@ Questo documento descrive l'architettura generale di SpedireSicuro, un Logistics
 
 ### System Overview
 
-SpedireSicuro è un'**applicazione Next.js 14** con architettura **App Router**, che usa **Supabase** (PostgreSQL) come database e **Vercel** per l'hosting.
+SpedireSicuro è un'**applicazione Next.js 15** con architettura **App Router**, che usa **Supabase** (PostgreSQL) come database e **Vercel** per l'hosting.
 
 **Architettura:** Logistics Operating System (Logistics OS) - Non è un comparatore prezzi, è un'infrastruttura B2B che orchestra spedizioni, pagamenti e corrieri.
 
@@ -72,7 +72,7 @@ SpedireSicuro è un'**applicazione Next.js 14** con architettura **App Router**,
 
 #### Frontend
 
-- **Next.js 14.2+** - App Router (NOT Pages Router)
+- **Next.js 15.2+** - App Router (NOT Pages Router)
 - **React 18+** - Server Components + Client Components
 - **TypeScript** - Strict mode enabled
 - **Tailwind CSS** - Utility-first styling
