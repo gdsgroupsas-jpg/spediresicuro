@@ -119,7 +119,7 @@ export async function getSafeAuth(): Promise<ActingContext | null> {
     };
 
     // 2. Leggi headers impersonation (iniettati dal middleware se valido)
-    const headersList = headers();
+    const headersList = await headers();
     const impersonateTargetId = headersList.get('x-sec-impersonate-target');
     const impersonateActive = headersList.get('x-sec-impersonate-active');
     const impersonateReason = headersList.get('x-sec-impersonate-reason');

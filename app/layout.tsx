@@ -75,14 +75,14 @@ export const metadata: Metadata = {
 
 import { headers } from 'next/headers';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Detect test mode to disable interfereing components (Anne, etc.)
   let isTestMode = false;
   let testModeHeader = null;
 
   try {
     // Solo se non siamo in build time static generation
-    const headersList = headers();
+    const headersList = await headers();
     testModeHeader = headersList.get('x-test-mode');
     isTestMode = testModeHeader === 'playwright' || process.env.PLAYWRIGHT_TEST_MODE === 'true';
   } catch (e) {

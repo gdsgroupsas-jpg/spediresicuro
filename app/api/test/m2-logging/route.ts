@@ -27,7 +27,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const headersList = headers();
+  const headersList = await headers();
   const requestId = headersList.get('x-request-id') || 'test-unknown';
   const logger = createLogger(requestId, 'test-user-123');
 

@@ -1,7 +1,7 @@
 import type { FiscalContext } from '@/lib/agent/fiscal-data.types';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -129,23 +129,26 @@ export async function exportToPDF(fiscalContext: FiscalContext): Promise<void> {
  * Export fiscal data to Excel with multiple sheets
  */
 export async function exportToExcel(fiscalContext: FiscalContext): Promise<void> {
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
 
   // Sheet 1: Summary
-  const summaryData = [
-    ['Finance Control Room - Report Fiscale'],
-    [''],
+  const summarySheet = workbook.addWorksheet('Riepilogo');
+  summarySheet.columns = [{ width: 25 }, { width: 20 }];
+
+  const summaryRows: (string | number | null)[][] = [
+    ['Finance Control Room - Report Fiscale', ''],
+    ['', ''],
     ['Generato il:', new Date().toLocaleString('it-IT')],
     [
       'Periodo:',
       `${new Date(fiscalContext.period.start).toLocaleDateString('it-IT')} - ${new Date(fiscalContext.period.end).toLocaleDateString('it-IT')}`,
     ],
-    [''],
-    ['RIEPILOGO'],
+    ['', ''],
+    ['RIEPILOGO', ''],
     ['Metrica', 'Valore'],
     ['Spedizioni Totali', fiscalContext.shipmentsSummary.count],
     ['Ricavi Totali', fiscalContext.shipmentsSummary.total_revenue],
-    ['Margine Netto', fiscalContext.shipmentsSummary.total_margin ?? 'N/A'],
+    ['Margine Netto', fiscalContext.shipmentsSummary.total_margin ?? ('N/A' as any)],
     [
       'Margine %',
       fiscalContext.shipmentsSummary.total_margin !== null &&
@@ -158,40 +161,31 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
         : 'N/A',
     ],
     ['Saldo Wallet', fiscalContext.wallet.balance],
-    [''],
-    ['CONTRASSEGNI (COD)'],
+    ['', ''],
+    ['CONTRASSEGNI (COD)', ''],
     ['Pendenti', fiscalContext.pending_cod_count],
     ['Valore Totale', fiscalContext.pending_cod_value],
   ];
-
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-
-  // Set column widths
-  summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }];
-
-  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Riepilogo');
+  summaryRows.forEach((row) => summarySheet.addRow(row));
 
   // Sheet 2: Deadlines
-  const deadlinesData = [
-    ['Prossime Scadenze Fiscali'],
-    [''],
-    ['Data', 'Tipo', 'Descrizione'],
-    ...fiscalContext.deadlines.map((d) => [
-      new Date(d.date).toLocaleDateString('it-IT'),
-      d.type,
-      d.description,
-    ]),
-  ];
+  const deadlinesSheet = workbook.addWorksheet('Scadenze');
+  deadlinesSheet.columns = [{ width: 12 }, { width: 15 }, { width: 40 }];
 
-  const deadlinesSheet = XLSX.utils.aoa_to_sheet(deadlinesData);
-  deadlinesSheet['!cols'] = [{ wch: 12 }, { wch: 15 }, { wch: 40 }];
+  deadlinesSheet.addRow(['Prossime Scadenze Fiscali']);
+  deadlinesSheet.addRow([]);
+  deadlinesSheet.addRow(['Data', 'Tipo', 'Descrizione']);
+  fiscalContext.deadlines.forEach((d) =>
+    deadlinesSheet.addRow([new Date(d.date).toLocaleDateString('it-IT'), d.type, d.description])
+  );
 
-  XLSX.utils.book_append_sheet(workbook, deadlinesSheet, 'Scadenze');
+  // Sheet 3: Metrics
+  const metricsSheet = workbook.addWorksheet('Metriche');
+  metricsSheet.columns = [{ width: 25 }, { width: 15 }, { width: 30 }];
 
-  // Sheet 3: Metrics (for further analysis)
-  const metricsData = [
-    ['Metriche Dettagliate'],
-    [''],
+  const metricsRows: (string | number)[][] = [
+    ['Metriche Dettagliate', '', ''],
+    ['', '', ''],
     ['Categoria', 'Valore', 'Note'],
     [
       'Revenue per Shipment',
@@ -220,17 +214,23 @@ export async function exportToExcel(fiscalContext: FiscalContext): Promise<void>
       'Avg COD Value',
       fiscalContext.pending_cod_count > 0
         ? (fiscalContext.pending_cod_value / fiscalContext.pending_cod_count).toFixed(2)
-        : 0,
+        : '0',
       'Media per contrassegno',
     ],
   ];
+  metricsRows.forEach((row) => metricsSheet.addRow(row));
 
-  const metricsSheet = XLSX.utils.aoa_to_sheet(metricsData);
-  metricsSheet['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 30 }];
-
-  XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Metriche');
-
-  // Save
-  const fileName = `fiscal-report-${new Date().toISOString().split('T')[0]}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  // Save - generate buffer and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `fiscal-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

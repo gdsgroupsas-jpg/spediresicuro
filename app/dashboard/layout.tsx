@@ -29,7 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // SECURITY: In produzione, NESSUN bypass è permesso
   if (!isProductionEnv) {
     try {
-      const headersList = headers();
+      const headersList = await headers();
       testHeaderValue = headersList.get('x-test-mode');
       isTestMode = testHeaderValue === 'playwright' || process.env.PLAYWRIGHT_TEST_MODE === 'true';
       if (testHeaderValue) {
