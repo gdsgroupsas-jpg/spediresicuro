@@ -36,6 +36,7 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
 | Gestione Wallet       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet)                |
 | Gestione Listini      | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Listini](#flow-3-gestione-listini)              |
 | Admin Dashboard       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard)                 |
+| Contrassegni (COD)    | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [COD](#flow-5-gestione-contrassegni-cod)         |
 | Processo Operativo AI | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [AI Process](#flow-0-processo-operativo-ai)      |
 
 ## Content
@@ -468,6 +469,91 @@ POST / api / admin / features;
 
 ---
 
+### Flow 5: Gestione Contrassegni (COD)
+
+**Obiettivo:** Gestire i contrassegni (Cash On Delivery) ricevuti dai corrieri, matchare con spedizioni, creare distinte di pagamento per i clienti.
+
+**URL:** `/dashboard/contrassegni`
+
+**Ruoli:** Solo Admin / SuperAdmin
+
+**Steps:**
+
+1. **Upload File Corriere**
+   - Tab "Distinte Contrassegni" → sezione Upload
+   - Seleziona parser (Formato Generico o carrier-specifico)
+   - Upload file Excel/CSV (drag & drop o click)
+   - **Backend:**
+     1. Parsing file con parser modulare (`lib/cod/parsers/`)
+     2. Match automatico LDV → `shipments.tracking_number` o `shipments.ldv`
+     3. Creazione `cod_files` + `cod_items`
+     4. Calcolo totali: file vs sistema
+     5. Alert discrepanza se importi non corrispondono
+     6. Audit log `cod_file_uploaded`
+
+2. **Verifica Contrassegni**
+   - Tab "Lista Contrassegni"
+   - Filtri: Cliente, Stato COD (in_attesa/assegnato/rimborsato), Date (da/a), Ricerca testo
+   - Tabella: LDV, Rif. Mittente, Contrassegno €, Pagato €, Destinatario, Stato, Data
+   - Checkbox per selezione multipla
+
+3. **Creazione Distinte**
+   - Seleziona contrassegni → Click "Crea Distinte"
+   - **Backend:**
+     1. Raggruppa items per `client_id`
+     2. Crea una `cod_distinte` per cliente
+     3. Aggiorna `cod_items.distinta_id` e `status = 'assegnato'`
+     4. Audit log `cod_distinta_created` per ogni distinta
+
+4. **Pagamento Distinta**
+   - Tab "Distinte Contrassegni" → Tabella distinte
+   - Click icona € → Dialog con metodo pagamento (Assegno, SEPA, Contanti, Compensata)
+   - **Backend:**
+     1. Aggiorna `cod_distinte.status = 'pagata'`
+     2. Aggiorna `cod_items.status = 'rimborsato'`
+     3. Ricalcola `cod_files.total_cod_paid`
+     4. Notifica in-app al cliente (tipo `refund_processed`)
+     5. Audit log `cod_distinta_paid`
+
+5. **Export e Stampa**
+   - Export Excel singola distinta (`/api/cod/distinte/export?id=`)
+   - Stampa distinta (finestra dedicata con dettaglio items e totali)
+
+6. **Eliminazione Distinta**
+   - Click Trash → Conferma eliminazione
+   - **Backend:**
+     1. Scollega items (`distinta_id = null`, `status = 'in_attesa'`)
+     2. Elimina distinta
+     3. Audit log `cod_distinta_deleted`
+
+**Stati COD Item:** `in_attesa` → `assegnato` → `rimborsato`
+
+**Stati Distinta:** `in_lavorazione` → `pagata`
+
+**API Endpoints:**
+
+```typescript
+POST /api/cod/upload           // Upload + parse file
+GET  /api/cod/items            // Lista items con filtri
+GET  /api/cod/files            // Lista file caricati
+GET  /api/cod/clients          // Clienti distinti per filtro
+GET  /api/cod/parsers          // Parser disponibili
+POST /api/cod/distinte         // Crea distinte
+GET  /api/cod/distinte         // Lista distinte
+PATCH /api/cod/distinte        // Segna pagata
+DELETE /api/cod/distinte       // Elimina
+GET  /api/cod/distinte/export  // Export Excel
+```
+
+**Edge Cases:**
+
+- **File senza match:** Items restano `in_attesa` (senza `shipment_id`)
+- **Discrepanza importi:** Toast warning con differenza file vs sistema
+- **Items già in distinta:** Esclusi automaticamente dalla selezione
+- **Clienti sconosciuti:** Raggruppati sotto "Cliente sconosciuto"
+
+---
+
 ## Common Issues
 
 | Issue                        | Soluzione                                                |
@@ -487,9 +573,10 @@ POST / api / admin / features;
 
 ## Changelog
 
-| Date       | Version | Changes         | Author   |
-| ---------- | ------- | --------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
+| Date       | Version | Changes                      | Author   |
+| ---------- | ------- | ---------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version              | AI Agent |
+| 2026-02-01 | 1.1.0   | Added Flow 5: COD Management | AI Agent |
 
 ---
 

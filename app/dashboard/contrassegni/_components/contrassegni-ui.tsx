@@ -94,10 +94,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
     const contrassegnoEvaso = checkContrassegnoEvaso(shipment);
 
     let paymentStatus = calculatePaymentStatus(shipment);
-    if (contrassegnoEvaso) {
-      paymentStatus = 'evaso';
-    } else if (contrassegnoInCarica) {
-      paymentStatus = 'in_carica';
+    // Legacy override solo se cod_status non presente
+    if (!shipment.cod_status) {
+      if (contrassegnoEvaso) paymentStatus = 'evaso';
+      else if (contrassegnoInCarica) paymentStatus = 'in_carica';
     }
 
     const expectedPaymentDate = calculateExpectedPaymentDate(shipment);
@@ -115,38 +115,38 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
     };
   }
 
-  // Verifica se contrassegno è in carica
+  // Verifica se contrassegno è in carica — usa cod_status reale quando disponibile
   function checkContrassegnoInCarica(shipment: any): boolean {
+    if (shipment.cod_status === 'collected') return true;
     if (!shipment.internal_notes) return false;
     return shipment.internal_notes.includes('Contrassegno preso in carica');
   }
 
-  // Verifica se contrassegno è evaso
+  // Verifica se contrassegno è evaso — usa cod_status reale quando disponibile
   function checkContrassegnoEvaso(shipment: any): boolean {
+    if (shipment.cod_status === 'paid') return true;
     if (shipment.notes && shipment.notes.includes('CONTRASSEGNO EVASO')) return true;
     if (shipment.internal_notes && shipment.internal_notes.includes('Contrassegno EVASO'))
       return true;
     return false;
   }
 
-  // Calcola stato pagamento
+  // Calcola stato pagamento — priorità a cod_status reale dal DB
   function calculatePaymentStatus(shipment: any): CashOnDeliveryShipment['paymentStatus'] {
+    // Dato reale dal sistema COD (sincronizzato via trigger)
+    if (shipment.cod_status === 'paid') return 'paid';
+    if (shipment.cod_status === 'collected') return 'in_carica';
+
+    // Fallback euristica per spedizioni senza match COD
     if (shipment.status === 'delivered' && shipment.delivered_at) {
       const daysSince = Math.floor(
         (Date.now() - new Date(shipment.delivered_at).getTime()) / (1000 * 60 * 60 * 24)
       );
-
-      if (daysSince > 7) {
-        return 'paid';
-      }
-
-      return 'payment_expected';
-    }
-
-    if (shipment.status === 'delivered') {
+      if (daysSince > 7) return 'payment_expected';
       return 'delivered';
     }
 
+    if (shipment.status === 'delivered') return 'delivered';
     return 'pending';
   }
 

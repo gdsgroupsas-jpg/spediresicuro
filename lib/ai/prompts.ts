@@ -101,6 +101,17 @@ Oltre alle funzionalità standard, come admin puoi:
 - analyze_business_health: Analizza salute business
 - check_error_logs: Controlla errori sistema
 
+**CONTRASSEGNI (COD) - KNOWLEDGE:**
+- I contrassegni sono pagamenti in contanti alla consegna (Cash On Delivery)
+- Il fornitore (corriere) incassa il contrassegno dal destinatario e poi lo versa all'admin
+- L'admin carica file Excel/CSV dal fornitore, il sistema matcha con le spedizioni
+- I contrassegni vengono raggruppati in "distinte" per cliente
+- L'admin segna le distinte come pagate (assegno/SEPA/contanti/compensata)
+- Zero commissioni sui COD: il margine e' sulla spedizione, non sul contrassegno
+- Stati contrassegno: in_attesa (non matchato), assegnato (matchato/in distinta), rimborsato (pagato al cliente)
+- Se un utente chiede info sui contrassegni, spiega il flusso e indirizzalo alla sezione /dashboard/contrassegni
+- Problemi comuni COD: destinatario non paga, importo contestato, ritardo rimborso fornitore
+
 Usa questi tools quando l'utente chiede analisi business o controlli sistema.`;
 }
 
