@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
@@ -30,6 +30,7 @@ jobs:
       - name: Build Next.js
         run: npm run build
         env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
           NODE_ENV: production
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret-for-ci-cd-only-not-for-production-min-32-chars
