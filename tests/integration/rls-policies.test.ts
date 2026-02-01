@@ -129,7 +129,7 @@ describe('RLS Policies - Isolamento Multi-Tenant', () => {
     adminId = admin.id;
 
     // Crea configurazioni di test
-    const { data: configA } = await supabaseAdmin
+    const { data: configA, error: errA } = await supabaseAdmin
       .from('courier_configs')
       .insert({
         name: 'Config Reseller A',
@@ -144,7 +144,7 @@ describe('RLS Policies - Isolamento Multi-Tenant', () => {
       .select()
       .single();
 
-    const { data: configB } = await supabaseAdmin
+    const { data: configB, error: errB } = await supabaseAdmin
       .from('courier_configs')
       .insert({
         name: 'Config Reseller B',
@@ -159,7 +159,7 @@ describe('RLS Policies - Isolamento Multi-Tenant', () => {
       .select()
       .single();
 
-    const { data: configByoc } = await supabaseAdmin
+    const { data: configByoc, error: errByoc } = await supabaseAdmin
       .from('courier_configs')
       .insert({
         name: 'Config BYOC A',
@@ -174,11 +174,11 @@ describe('RLS Policies - Isolamento Multi-Tenant', () => {
       .select()
       .single();
 
-    const { data: configDef } = await supabaseAdmin
+    const { data: configDef, error: errDef } = await supabaseAdmin
       .from('courier_configs')
       .insert({
         name: 'Config Default',
-        provider_id: 'spedisci_online',
+        provider_id: `test_provider_${suffix}`,
         owner_user_id: null, // Default
         is_active: true,
         is_default: true,
@@ -190,7 +190,9 @@ describe('RLS Policies - Isolamento Multi-Tenant', () => {
       .single();
 
     if (!configA || !configB || !configByoc || !configDef) {
-      throw new Error('Errore creazione configurazioni test');
+      throw new Error(
+        `Errore creazione configurazioni test: configA=${errA?.message || 'OK'}, configB=${errB?.message || 'OK'}, configByoc=${errByoc?.message || 'OK'}, configDef=${errDef?.message || 'OK'}`
+      );
     }
 
     configResellerA = configA.id;
