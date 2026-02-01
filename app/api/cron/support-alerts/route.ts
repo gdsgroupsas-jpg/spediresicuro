@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { sendEmail } from '@/lib/email/resend';
 import { sendTelegramMessageDirect } from '@/lib/services/telegram-bot';
+import { sendWhatsAppText, isWhatsAppConfigured } from '@/lib/services/whatsapp';
 
 // Vercel Cron config
 export const runtime = 'nodejs';
@@ -204,6 +205,18 @@ async function createNotification(
         { chatId: telegramChatId }
       );
       if (result.success) channels.push('telegram');
+    }
+  }
+
+  // Invio WhatsApp se richiesto e l'utente ha un numero salvato
+  if (preferredChannels.includes('whatsapp') && isWhatsAppConfigured()) {
+    const whatsappPhone = memory?.preferences?.whatsapp_phone;
+    if (whatsappPhone) {
+      const result = await sendWhatsAppText(
+        whatsappPhone,
+        `*${notificationSubject(type)}*\n\n${message}`
+      );
+      if (result.success) channels.push('whatsapp');
     }
   }
 
