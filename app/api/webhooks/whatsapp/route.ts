@@ -49,6 +49,11 @@ export const maxDuration = 60;
 const processedMessages = new Map<string, number>();
 const DEDUP_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// Rate limiting per phone number (prevent abuse)
+const phoneCooldowns = new Map<string, { count: number; windowStart: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 10; // max 10 messages per minute per phone
+
 function isDuplicate(messageId: string): boolean {
   const now = Date.now();
   // Cleanup old entries
@@ -58,6 +63,64 @@ function isDuplicate(messageId: string): boolean {
   if (processedMessages.has(messageId)) return true;
   processedMessages.set(messageId, now);
   return false;
+}
+
+function isRateLimited(phone: string): boolean {
+  const now = Date.now();
+  const entry = phoneCooldowns.get(phone);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    phoneCooldowns.set(phone, { count: 1, windowStart: now });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+/**
+ * Verify X-Hub-Signature-256 HMAC from Meta.
+ * Requires WHATSAPP_APP_SECRET env var.
+ * If app secret is not configured, rejects all requests (fail-closed).
+ */
+async function verifyWebhookSignature(request: NextRequest, rawBody: string): Promise<boolean> {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) {
+    // Fail-closed: if no app secret configured, log warning and reject
+    console.error('[WHATSAPP_WEBHOOK] WHATSAPP_APP_SECRET not configured - rejecting POST');
+    return false;
+  }
+
+  const signature = request.headers.get('x-hub-signature-256');
+  if (!signature) {
+    console.warn('[WHATSAPP_WEBHOOK] Missing X-Hub-Signature-256 header');
+    return false;
+  }
+
+  // signature format: "sha256=<hex>"
+  const expectedPrefix = 'sha256=';
+  if (!signature.startsWith(expectedPrefix)) return false;
+  const receivedHmac = signature.slice(expectedPrefix.length);
+
+  // Compute HMAC using Web Crypto API (available in Node 18+ and Edge Runtime)
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(appSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody));
+  const computedHmac = Array.from(new Uint8Array(signatureBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  // Timing-safe comparison (constant time)
+  if (computedHmac.length !== receivedHmac.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computedHmac.length; i++) {
+    diff |= computedHmac.charCodeAt(i) ^ receivedHmac.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 // ==================== GET: Webhook Verification ====================
@@ -94,25 +157,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: 'ok' });
   }
 
+  // Read raw body for HMAC verification
+  const rawBody = await request.text();
+
+  // Verify HMAC signature (fail-closed: rejects if WHATSAPP_APP_SECRET not set)
+  const isValid = await verifyWebhookSignature(request, rawBody);
+  if (!isValid) {
+    console.warn('[WHATSAPP_WEBHOOK] Invalid signature - rejecting');
+    return NextResponse.json({ status: 'ok' }); // 200 to stop Meta retries
+  }
+
   let body: WhatsAppWebhookBody;
   try {
-    body = await request.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ status: 'ok' });
   }
 
-  // Meta expects 200 OK immediately (process async)
-  // But on Vercel serverless we must process before returning
   const messages = parseWebhookMessages(body);
 
   for (const msg of messages) {
     if (isDuplicate(msg.messageId)) {
-      console.log('[WHATSAPP_WEBHOOK] Duplicate message, skipping:', msg.messageId);
       continue;
     }
 
-    // Process in background-ish (don't await to not block other messages)
-    // But we still need to finish before Vercel kills the function
+    // Rate limit per phone number
+    if (isRateLimited(msg.from)) {
+      console.warn('[WHATSAPP_WEBHOOK] Rate limited:', msg.from);
+      continue;
+    }
+
     await processIncomingMessage(msg.from, msg.name, msg.text, msg.messageId);
   }
 
@@ -137,9 +211,11 @@ async function processIncomingMessage(
     const user = await lookupUserByPhone(phone);
 
     if (!user) {
+      // Sanitize sender name (user-controlled, strip to alphanumeric + spaces, max 50 chars)
+      const safeName = senderName.replace(/[^\p{L}\p{N}\s]/gu, '').slice(0, 50) || 'utente';
       await sendWhatsAppText(
         phone,
-        `Ciao ${senderName}! Per usare Anne via WhatsApp, collega il tuo numero dalla dashboard SpedireSicuro (Impostazioni > Notifiche > WhatsApp).`
+        `Ciao ${safeName}! Per usare Anne via WhatsApp, collega il tuo numero dalla dashboard SpedireSicuro (Impostazioni > Notifiche > WhatsApp).`
       );
       return;
     }
