@@ -19,6 +19,7 @@ import { calculateOptimalPrice, PricingRequest } from './pricing-engine';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPriceListById, calculatePriceWithRules } from '@/lib/db/price-lists';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
+import { SUPPORT_TOOL_DEFINITIONS, executeSupportTool } from './tools/support-tools';
 
 export interface ToolDefinition {
   name: string;
@@ -335,6 +336,10 @@ export const ANNE_TOOLS: ToolDefinition[] = [
       required: ['weight', 'destinationZip', 'destinationProvince'],
     },
   },
+  // ═══════════════════════════════════════════════════════════════════════
+  // SUPPORT TOOLS - Assistenza AI-native con Anne
+  // ═══════════════════════════════════════════════════════════════════════
+  ...SUPPORT_TOOL_DEFINITIONS,
 ];
 
 /**
@@ -1067,6 +1072,20 @@ export async function executeTool(
             message: `Margine medio: €${(totaleMargine / results.length).toFixed(2)} (${((totaleMargine / totaleFornitore) * 100).toFixed(1)}%)`,
           },
         };
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // SUPPORT TOOLS - Delegati a support-tools.ts
+      // ═══════════════════════════════════════════════════════════════════
+      case 'get_shipment_status':
+      case 'manage_hold':
+      case 'cancel_shipment':
+      case 'process_refund':
+      case 'force_refresh_tracking':
+      case 'check_wallet_status':
+      case 'diagnose_shipment_issue':
+      case 'escalate_to_human': {
+        return await executeSupportTool(toolCall, userId, userRole);
       }
 
       default:

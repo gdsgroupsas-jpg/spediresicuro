@@ -39,6 +39,7 @@ import {
   Contact,
   type LucideIcon,
   Trash2,
+  Headphones,
 } from 'lucide-react';
 
 /**
@@ -52,6 +53,8 @@ export interface NavItem {
   badge?: string;
   variant?: 'default' | 'primary' | 'gradient' | 'ai';
   description?: string;
+  /** Se specificato, la voce è visibile solo per questi ruoli */
+  roles?: ('user' | 'admin' | 'superadmin')[];
 }
 
 /**
@@ -222,6 +225,14 @@ const supportSection: NavSection = {
   label: 'Supporto',
   collapsible: false,
   items: [
+    {
+      id: 'escalations',
+      label: 'Escalation',
+      href: '/dashboard/supporto',
+      icon: Headphones,
+      description: 'Gestione escalation assistenza',
+      roles: ['admin', 'superadmin'],
+    },
     {
       id: 'manual',
       label: 'Manuale Utente',
@@ -634,8 +645,11 @@ export function getNavigationForUser(
     sections.push(communicationsSection);
   }
 
-  // 8. SEZIONI SUPPORTO (sempre alla fine)
-  sections.push(supportSection);
+  // 8. SEZIONI SUPPORTO (sempre alla fine, con filtro item per ruolo)
+  sections.push({
+    ...supportSection,
+    items: supportSection.items.filter((item) => !item.roles || item.roles.includes(role)),
+  });
 
   // Azioni principali (AI Assistant - sempre visibile)
   const mainActions: NavItem[] = [
