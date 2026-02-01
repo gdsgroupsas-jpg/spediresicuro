@@ -7,6 +7,7 @@
 
 'use client';
 
+import React from 'react';
 import { Package, MapPin, RefreshCw, HelpCircle } from 'lucide-react';
 
 interface QuickAction {
