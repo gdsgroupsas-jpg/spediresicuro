@@ -12,8 +12,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { Home, ChevronRight, ArrowLeft, Bot, Ghost, Sparkles, Bell } from 'lucide-react';
+import { Home, ChevronRight, ArrowLeft, Bot, Ghost, Sparkles } from 'lucide-react';
+import NotificationBell from '@/components/anne/NotificationBell';
 
 interface BreadcrumbItem {
   label: string;
@@ -39,7 +39,6 @@ export default function DashboardTopBar({
 }: DashboardTopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [showNotifications, setShowNotifications] = useState(false);
 
   // Genera breadcrumbs automatici se non forniti
   const autoBreadcrumbs: BreadcrumbItem[] =
@@ -158,15 +157,7 @@ export default function DashboardTopBar({
             )}
 
             {/* Notifications */}
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-colors duration-200"
-              title="Notifiche"
-            >
-              <Bell className="w-5 h-5 text-gray-600" />
-              {/* Badge per notifiche non lette */}
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <NotificationBell />
           </div>
         </div>
       </div>

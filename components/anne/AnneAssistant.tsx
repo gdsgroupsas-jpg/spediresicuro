@@ -35,6 +35,8 @@ import { ValueDashboard } from './ValueDashboard';
 import { HumanError } from './HumanError';
 import { SmartSuggestions } from './SmartSuggestions';
 import { AutoProceedBanner } from './AutoProceedBanner';
+import { ActionConfirmCard } from './ActionConfirmCard';
+import { SupportQuickActions } from './SupportQuickActions';
 import type { AgentState } from '@/lib/agent/orchestrator/state';
 import { autoProceedConfig } from '@/lib/config';
 
@@ -79,6 +81,9 @@ export function AnneAssistant({
   // P4: AgentState corrente (per componenti P4)
   const [currentAgentState, setCurrentAgentState] = useState<AgentState | null>(null);
   const [showAutoProceed, setShowAutoProceed] = useState(false);
+  const [currentPendingAction, setCurrentPendingAction] = useState<
+    AgentState['pendingAction'] | null
+  >(null);
 
   // Preferenze utente (localStorage)
   const [preferences, setPreferences] = useState({
@@ -255,6 +260,11 @@ export function AnneAssistant({
         // P4 Task 2: Mostra auto-proceed banner se attivato
         if (data.metadata.agentState.autoProceed) {
           setShowAutoProceed(true);
+        }
+
+        // Support: Salva pendingAction se presente
+        if (data.metadata.agentState.pendingAction) {
+          setCurrentPendingAction(data.metadata.agentState.pendingAction);
         }
       }
 
@@ -558,6 +568,31 @@ export function AnneAssistant({
                   </div>
                 ))}
 
+                {/* Support: ActionConfirmCard per azioni pending */}
+                {currentPendingAction && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%]">
+                      <ActionConfirmCard
+                        actionId={currentPendingAction.id}
+                        type={currentPendingAction.type}
+                        description={currentPendingAction.description}
+                        cost={currentPendingAction.cost}
+                        onConfirm={() => {
+                          // Invia "conferma" come messaggio utente
+                          setInput('Confermo');
+                          setCurrentPendingAction(null);
+                          setTimeout(() => sendMessage(), 100);
+                        }}
+                        onCancel={() => {
+                          setInput('Annulla');
+                          setCurrentPendingAction(null);
+                          setTimeout(() => sendMessage(), 100);
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-gray-100 rounded-xl px-4 py-2">
@@ -578,6 +613,16 @@ export function AnneAssistant({
 
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Support Quick Actions */}
+              {messages.length === 0 && (
+                <SupportQuickActions
+                  onSelect={(msg) => {
+                    setInput(msg);
+                    setTimeout(() => sendMessage(), 100);
+                  }}
+                />
+              )}
 
               {/* Input */}
               <div className="p-4 border-t bg-gray-50">

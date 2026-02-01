@@ -26,6 +26,7 @@ import { agentSessionService } from '@/lib/services/agent-session';
 import { assertAgentState } from './type-guards';
 import { detectPricingIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
+import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
 import { HumanMessage } from '@langchain/core/messages';
 import {
   logIntentDetected,
@@ -187,6 +188,57 @@ export async function supervisorRouter(
       executionTimeMs: Date.now() - startTime,
       source: 'supervisor_only',
     });
+  }
+
+  // 1.5. Support intent check (PRIMA del pricing, gestito direttamente)
+  const isSupportIntent = detectSupportIntent(message);
+  if (isSupportIntent) {
+    logger.log('🎧 [Supervisor Router] Intent supporto rilevato, invoco support worker');
+    intentDetected = 'non_pricing'; // Telemetria: non e pricing
+
+    try {
+      const supportResult = await supportWorker(
+        {
+          message,
+          userId,
+          userRole:
+            actingContext.target.role === 'admin' || actingContext.target.role === 'superadmin'
+              ? 'admin'
+              : 'user',
+        },
+        logger
+      );
+
+      supervisorDecision = 'end';
+      backendUsed = 'pricing_graph'; // Reuse field, means "handled internally"
+      success = true;
+
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: supportResult.response,
+        agentState: {
+          messages: [new HumanMessage(message)],
+          userId,
+          userEmail,
+          shipmentData: {},
+          processingStatus: 'complete',
+          validationErrors: [],
+          confidenceScore: 100,
+          needsHumanReview: false,
+          support_response: {
+            message: supportResult.response,
+            toolsUsed: supportResult.toolsUsed,
+          },
+          pendingAction: supportResult.pendingAction,
+        } as AgentState,
+        executionTimeMs: Date.now() - startTime,
+        source: 'supervisor_only',
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ [Supervisor Router] Errore support worker, fallback legacy:', errorMessage);
+      // Fallthrough al legacy handler
+    }
   }
 
   // 2. Decisione iniziale (prima di invocare graph)

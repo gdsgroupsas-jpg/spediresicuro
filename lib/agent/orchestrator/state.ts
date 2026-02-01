@@ -74,6 +74,7 @@ export interface AgentState {
     | 'debug_worker'
     | 'explain_worker'
     | 'price_list_worker'
+    | 'support_worker'
     | 'legacy'
     | 'END';
 
@@ -173,5 +174,29 @@ export interface AgentState {
     success: boolean;
     message: string;
     data?: any;
+  };
+
+  // ===== SUPPORT SYSTEM =====
+
+  /**
+   * Risposta del support worker.
+   * Popolato quando Anne gestisce richieste di assistenza.
+   */
+  support_response?: {
+    message: string;
+    toolsUsed: string[];
+  };
+
+  /**
+   * Azione in attesa di conferma utente.
+   * Popolato dal support worker quando serve conferma prima di eseguire.
+   */
+  pendingAction?: {
+    id: string;
+    type: string;
+    description: string;
+    cost?: number;
+    params: Record<string, any>;
+    expiresAt: string;
   };
 }
