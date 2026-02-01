@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 async function requireAdmin() {
   const auth = await getSafeAuth();
@@ -21,6 +22,14 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin();
   if (!auth) {
     return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
+  }
+
+  const rl = await rateLimit('support-escalations', auth.actor.id, {
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppe richieste' }, { status: 429 });
   }
 
   const url = new URL(request.url);
@@ -54,6 +63,14 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin();
   if (!auth) {
     return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
+  }
+
+  const rl = await rateLimit('support-escalations-patch', auth.actor.id, {
+    limit: 20,
+    windowSeconds: 60,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppe richieste' }, { status: 429 });
   }
 
   const body = await request.json();

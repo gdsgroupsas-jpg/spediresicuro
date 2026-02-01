@@ -167,6 +167,23 @@ export async function supportWorker(
   input: SupportWorkerInput,
   logger: ILogger = defaultLogger
 ): Promise<SupportWorkerResult> {
+  try {
+    return await _supportWorkerInternal(input, logger);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Errore sconosciuto';
+    console.error(`[Support Worker] Errore non gestito: ${msg}`, error);
+    return {
+      response:
+        'Mi dispiace, si è verificato un problema tecnico temporaneo. Riprova tra qualche istante oppure scrivi "aiuto" per riprovare.',
+      toolsUsed: [],
+    };
+  }
+}
+
+async function _supportWorkerInternal(
+  input: SupportWorkerInput,
+  logger: ILogger
+): Promise<SupportWorkerResult> {
   const { message, userId, userRole } = input;
   const toolsUsed: string[] = [];
 
