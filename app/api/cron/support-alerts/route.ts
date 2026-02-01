@@ -12,6 +12,8 @@
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
+import { sendEmail } from '@/lib/email/resend';
+import { sendTelegramMessageDirect } from '@/lib/services/telegram-bot';
 
 // Vercel Cron config
 export const runtime = 'nodejs';
@@ -164,24 +166,97 @@ async function createNotification(
   message: string,
   metadata: Record<string, any>
 ) {
+  const channels: string[] = ['in_app'];
+
+  // Leggi preferenze notifica utente
+  const { data: memory } = await supabaseAdmin
+    .from('anne_user_memory')
+    .select('preferences')
+    .eq('user_id', userId)
+    .single();
+
+  const preferredChannels: string[] = memory?.preferences?.notification_channels || ['in_app'];
+
+  // Invio email se richiesto dall'utente
+  if (preferredChannels.includes('email')) {
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (user?.email) {
+      const result = await sendEmail({
+        to: user.email,
+        subject: `SpedireSicuro — ${notificationSubject(type)}`,
+        html: notificationEmailHtml(message, type),
+      });
+      if (result.success) channels.push('email');
+    }
+  }
+
+  // Invio Telegram se richiesto e l'utente ha un chat_id salvato
+  if (preferredChannels.includes('telegram')) {
+    const telegramChatId = memory?.preferences?.telegram_chat_id;
+    if (telegramChatId) {
+      const result = await sendTelegramMessageDirect(
+        `🔔 <b>${notificationSubject(type)}</b>\n\n${escapeHtml(message)}`,
+        { chatId: telegramChatId }
+      );
+      if (result.success) channels.push('telegram');
+    }
+  }
+
+  // Salva notifica in DB con canali effettivamente consegnati
   const { error } = await supabaseAdmin.from('support_notifications').insert({
     user_id: userId,
     type,
     shipment_id: shipmentId,
     message,
     metadata,
-    channels_delivered: ['in_app'],
+    channels_delivered: channels,
   });
 
   if (error) {
     console.error(`[Support Alerts] Errore creazione notifica ${type}:`, error.message);
   }
+}
 
-  // TODO: Invia su canali aggiuntivi (Telegram, email) basandosi su preferenze utente
-  // const { data: memory } = await supabaseAdmin
-  //   .from('anne_user_memory')
-  //   .select('preferences')
-  //   .eq('user_id', userId)
-  //   .single();
-  // const channels = memory?.preferences?.notification_channels || ['in_app'];
+function notificationSubject(type: string): string {
+  const subjects: Record<string, string> = {
+    giacenza_detected: 'Nuova giacenza rilevata',
+    tracking_stale: 'Tracking fermo da 48h',
+    hold_expiring: 'Giacenza in scadenza',
+  };
+  return subjects[type] || 'Notifica supporto';
+}
+
+function notificationEmailHtml(message: string, type: string): string {
+  const colors: Record<string, string> = {
+    giacenza_detected: '#f59e0b',
+    tracking_stale: '#3b82f6',
+    hold_expiring: '#ef4444',
+  };
+  const color = colors[type] || '#3b82f6';
+
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: ${color}; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">🔔 ${notificationSubject(type)}</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; line-height: 1.5;">${message}</p>
+        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
+          <a href="https://spediresicuro.it/dashboard" style="color: #3b82f6;">Vai alla dashboard</a>
+        </p>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro — Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
