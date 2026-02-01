@@ -39,6 +39,7 @@ import { ActionConfirmCard } from './ActionConfirmCard';
 import { SupportQuickActions } from './SupportQuickActions';
 import type { AgentState } from '@/lib/agent/orchestrator/state';
 import { autoProceedConfig } from '@/lib/config';
+import { useAnneTyping } from '@/hooks/useAnneTyping';
 
 interface Message {
   role: 'user' | 'assistant' | 'suggestion';
@@ -91,6 +92,14 @@ export function AnneAssistant({
     autoGreet: true,
     notificationLevel: 'normal' as 'minimal' | 'normal' | 'proactive',
   });
+
+  // Typing indicators via Supabase Realtime Broadcast (nonce per-request per sicurezza)
+  const {
+    isTyping: isAnneTyping,
+    statusMessage: typingMessage,
+    prepareTyping,
+    stopTyping,
+  } = useAnneTyping(userId);
 
   // Context per suggerimenti proattivi
   const { currentSuggestion, dismissSuggestion } = useAnneContext();
@@ -201,6 +210,9 @@ export function AnneAssistant({
     setInput('');
     setIsLoading(true);
 
+    // Typing indicator: prepara canale broadcast PRIMA della fetch
+    const typingNonce = prepareTyping();
+
     // Timeout controller per gestire richieste lente su mobile
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 secondi timeout
@@ -214,6 +226,7 @@ export function AnneAssistant({
           userId,
           userRole,
           currentPage,
+          typingNonce,
           context: {
             previousMessages: messages.slice(-5), // Ultimi 5 messaggi per contesto
           },
@@ -304,6 +317,7 @@ export function AnneAssistant({
       ]);
     } finally {
       clearTimeout(timeoutId);
+      stopTyping();
       setIsLoading(false);
     }
   };
@@ -596,16 +610,23 @@ export function AnneAssistant({
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-gray-100 rounded-xl px-4 py-2">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" />
-                        <div
-                          className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
-                          style={{ animationDelay: '150ms' }}
-                        />
-                        <div
-                          className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
-                          style={{ animationDelay: '300ms' }}
-                        />
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" />
+                          <div
+                            className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                            style={{ animationDelay: '150ms' }}
+                          />
+                          <div
+                            className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                            style={{ animationDelay: '300ms' }}
+                          />
+                        </div>
+                        {isAnneTyping && typingMessage && (
+                          <span className="text-xs text-purple-600 animate-pulse">
+                            {typingMessage}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
