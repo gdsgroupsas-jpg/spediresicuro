@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 export async function GET(request: NextRequest) {
   const auth = await getSafeAuth();
@@ -16,6 +17,11 @@ export async function GET(request: NextRequest) {
   }
 
   const userId = auth.target.id;
+
+  const rl = await rateLimit('support-notifications', userId, { limit: 60, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppe richieste' }, { status: 429 });
+  }
   const url = new URL(request.url);
   const unreadOnly = url.searchParams.get('unread') !== 'false';
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
@@ -51,6 +57,15 @@ export async function PATCH(request: NextRequest) {
   }
 
   const userId = auth.target.id;
+
+  const rl = await rateLimit('support-notifications-patch', userId, {
+    limit: 30,
+    windowSeconds: 60,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppe richieste' }, { status: 429 });
+  }
+
   const body = await request.json();
   const { notificationIds, markAllRead } = body;
 
