@@ -282,8 +282,14 @@ export async function learnFromEscalation(escalationId: string): Promise<void> {
 
 /**
  * Estrai keywords rilevanti da un testo.
+ * IMPORTANTE: Sanitizza PII prima di estrarre keywords.
+ * Le keywords finiscono in support_case_patterns.trigger_conditions
+ * che è una tabella condivisa (non per-utente).
  */
 export function extractKeywords(text: string): string[] {
+  // Step 1: Rimuovi PII dal testo PRIMA di estrarre keywords
+  const sanitized = sanitizePII(text);
+
   const stopWords = new Set([
     'il',
     'lo',
@@ -343,10 +349,113 @@ export function extractKeywords(text: string): string[] {
     'perche',
   ]);
 
-  return text
+  // Step 2: Solo parole generiche di supporto, non nomi propri
+  const ALLOWED_DOMAIN_WORDS = new Set([
+    // Problemi spedizione
+    'giacenza',
+    'smarrita',
+    'smarrito',
+    'persa',
+    'perso',
+    'danneggiata',
+    'danneggiato',
+    'ritardo',
+    'bloccata',
+    'bloccato',
+    'consegnata',
+    'consegnato',
+    'rifiutata',
+    'rifiutato',
+    'mancante',
+    'errato',
+    'errata',
+    'sbagliato',
+    'sbagliata',
+    // Azioni
+    'riconsegna',
+    'reso',
+    'rimborso',
+    'cancellazione',
+    'annullamento',
+    'tracciamento',
+    'tracking',
+    'cancellare',
+    'annullare',
+    'rimborsare',
+    'tracciare',
+    'ritirare',
+    // Corrieri
+    'gls',
+    'brt',
+    'bartolini',
+    'poste',
+    'sda',
+    'ups',
+    'dhl',
+    'tnt',
+    'fedex',
+    // Motivi giacenza
+    'assente',
+    'destinatario',
+    'indirizzo',
+    'incompleto',
+    'chiuso',
+    'deposito',
+    'tentativo',
+    'consegna',
+    'fallita',
+    'fallito',
+    // Oggetti
+    'pacco',
+    'spedizione',
+    'collo',
+    'busta',
+    'lettera',
+    'etichetta',
+    'contrassegno',
+    'contante',
+    'pagamento',
+    // Stato
+    'transito',
+    'partita',
+    'partito',
+    'arrivata',
+    'arrivato',
+    'ferma',
+    'fermo',
+    'problema',
+    'errore',
+    'aiuto',
+    'urgente',
+    'importante',
+  ]);
+
+  return sanitized
     .toLowerCase()
     .replace(/[^a-zA-ZàèéìòùÀÈÉÌÒÙ\s]/g, '')
     .split(/\s+/)
-    .filter((w) => w.length > 2 && !stopWords.has(w))
+    .filter((w) => w.length > 2 && !stopWords.has(w) && ALLOWED_DOMAIN_WORDS.has(w))
     .slice(0, 10);
+}
+
+/**
+ * Rimuovi PII da un testo prima di processarlo.
+ * Rimuove: email, telefoni, codici fiscali, partite IVA, tracking numbers.
+ */
+function sanitizePII(text: string): string {
+  return (
+    text
+      // Email
+      .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '')
+      // Telefoni italiani (+39, 3xx, 0xx)
+      .replace(/(\+?39\s?)?\d{2,4}[\s.-]?\d{5,8}/g, '')
+      // Codice fiscale italiano (16 chars alfanumerico)
+      .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi, '')
+      // Partita IVA
+      .replace(/\b\d{11}\b/g, '')
+      // Tracking numbers (sequenze alfanumeriche lunghe)
+      .replace(/\b[A-Z0-9]{10,30}\b/g, '')
+      // CAP
+      .replace(/\b\d{5}\b/g, '')
+  );
 }
