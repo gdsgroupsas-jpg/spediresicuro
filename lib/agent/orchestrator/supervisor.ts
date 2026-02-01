@@ -433,6 +433,7 @@ export type SupervisorDecision =
   | 'debug_worker'
   | 'legacy'
   | 'price_list_worker'
+  | 'support_worker'
   | 'END';
 
 /**
