@@ -471,6 +471,38 @@ it('test wallet', () => {
 
 ---
 
+## Anne Support System Tests
+
+**Priority: P1 - Important**
+
+Il sistema di supporto AI-native di Anne ha una suite dedicata di unit test che coprono le funzioni pure (non richiedono DB):
+
+| Test File                           | Modulo testato                                       | # Test |
+| ----------------------------------- | ---------------------------------------------------- | ------ |
+| `tests/unit/case-learning.test.ts`  | `extractKeywords`, sanitizzazione PII, allowlist     | 15     |
+| `tests/unit/support-rules.test.ts`  | Decision engine, `findMatchingRule`, `shouldConfirm` | 30     |
+| `tests/unit/support-worker.test.ts` | `detectSupportIntent`, `detectConfirmation`          | 30     |
+
+**Esecuzione:**
+
+```bash
+# Solo test supporto
+npx vitest run tests/unit/case-learning.test.ts tests/unit/support-rules.test.ts tests/unit/support-worker.test.ts
+
+# Tutti i unit test (include supporto)
+npm run test:unit
+```
+
+**Cosa coprono:**
+
+- **case-learning**: Verifica che `extractKeywords` rimuova PII (email, telefoni, CF, P.IVA, tracking numbers, CAP) e estragga solo parole di dominio logistico dall'allowlist
+- **support-rules**: Verifica che il decision engine matchi correttamente le regole per giacenza (8 regole), cancellazione (3), rimborso (3), tracking (2), con corretta priorità e interpolazione messaggi
+- **support-worker**: Verifica il rilevamento intent di supporto (tracking, giacenza, cancellazione, rimborso, problemi) e il rilevamento conferma/cancellazione utente
+
+**Architettura:** Vedi [ANNE_SUPPORT_SYSTEM.md](../ANNE_SUPPORT_SYSTEM.md)
+
+---
+
 ## Related Documentation
 
 - [CI/CD](../6-DEPLOYMENT/CI_CD.md) - CI/CD integration
@@ -481,9 +513,10 @@ it('test wallet', () => {
 
 ## Changelog
 
-| Date       | Version | Changes         | Author   |
-| ---------- | ------- | --------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
+| Date       | Version | Changes                         | Author   |
+| ---------- | ------- | ------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version                 | Dev Team |
+| 2026-02-02 | 1.1.0   | Added Anne Support System tests | Dev Team |
 
 ---
 
