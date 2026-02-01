@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
 
     const userMessage = body.message || '';
     const messages = body.messages || []; // Storia conversazione
+    // Typing nonce: solo alfanumerici e trattini, max 64 char (previene injection nel channel name)
+    const rawNonce = typeof body.typingNonce === 'string' ? body.typingNonce : '';
+    const typingNonce = /^[a-zA-Z0-9\-]{8,64}$/.test(rawNonce) ? rawNonce : undefined;
     const isVoiceInput = userMessage.startsWith('[VOX]');
     const cleanMessage = isVoiceInput ? userMessage.replace('[VOX]', '') : userMessage;
 
@@ -138,6 +141,7 @@ export async function POST(request: NextRequest) {
       userEmail: userEmail,
       traceId,
       actingContext, // ⚠️ NUOVO: ActingContext iniettato
+      typingNonce, // Typing indicators: nonce dal client
     });
 
     // Se il supervisor ha una risposta pronta (END con pricing o clarification)
