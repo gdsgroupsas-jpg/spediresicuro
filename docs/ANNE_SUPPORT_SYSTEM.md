@@ -49,11 +49,13 @@ Utente chatta con Anne (chat esistente)
 
 ### API Routes
 
-| File                                     | Descrizione                          |
-| ---------------------------------------- | ------------------------------------ |
-| `app/api/support/notifications/route.ts` | GET/PATCH notifiche supporto         |
-| `app/api/support/escalations/route.ts`   | GET/PATCH escalation (admin)         |
-| `app/api/cron/support-alerts/route.ts`   | Cron ogni 30min: notifiche proattive |
+| File                                     | Descrizione                              |
+| ---------------------------------------- | ---------------------------------------- |
+| `app/api/support/notifications/route.ts` | GET/PATCH notifiche supporto             |
+| `app/api/support/escalations/route.ts`   | GET/PATCH escalation (admin)             |
+| `app/api/support/patterns/route.ts`      | GET/PATCH/DELETE pattern appresi (admin) |
+| `app/api/support/analytics/route.ts`     | GET KPI aggregate supporto (admin)       |
+| `app/api/cron/support-alerts/route.ts`   | Cron ogni 30min: notifiche proattive     |
 
 ### UI Components
 
@@ -62,7 +64,7 @@ Utente chatta con Anne (chat esistente)
 | `components/anne/ActionConfirmCard.tsx`   | Card conferma azione con costo                                 |
 | `components/anne/SupportQuickActions.tsx` | Pills rapide ("Traccia spedizione", "Problema giacenza", etc.) |
 | `components/anne/NotificationBell.tsx`    | Campanella notifiche nella top bar                             |
-| `app/dashboard/supporto/page.tsx`         | Dashboard admin escalation                                     |
+| `app/dashboard/supporto/page.tsx`         | Dashboard admin: escalation, knowledge base, analytics         |
 
 ### Database
 
@@ -147,18 +149,35 @@ Il cron `support-alerts` (ogni 30 minuti) controlla:
 - Tracking stale > 48h
 - Giacenze in scadenza (< 3 giorni)
 
-Canali attivi: in-app (campanella).
-Canali futuri (schema pronto): Telegram, email, WhatsApp.
+Canali attivi: in-app (campanella), email (Resend), Telegram (bot).
+Canale futuro: WhatsApp (schema pronto).
 
 ---
 
 ## Admin Dashboard
 
-`/dashboard/supporto` (solo admin/superadmin):
+`/dashboard/supporto` (solo admin/superadmin) — 3 tab:
+
+### Tab Escalation
 
 - Lista escalation con filtri per stato
 - Dettaglio con conversation snapshot di Anne
 - Azioni: prendi in carico, risolvi, chiudi
+
+### Tab Knowledge Base
+
+- Tabella pattern appresi da Anne (categoria, corriere, azione, confidence)
+- Toggle attivo/disattivo e validazione umana per ogni pattern
+- Eliminazione pattern
+- Filtri per categoria e stato attivo
+
+### Tab Analytics
+
+- KPI cards: escalation aperte, tasso risoluzione autonoma, pattern attivi, confidence media
+- Breakdown escalation per stato + tempo medio risoluzione
+- Pattern usage: success/failure rate per outcome
+- Notifiche inviate per tipo e canale di consegna
+- Top 5 pattern per utilizzo
 
 ---
 
