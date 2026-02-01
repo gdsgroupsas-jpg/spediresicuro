@@ -156,6 +156,28 @@ export async function buildContext(
         }
       }
 
+      // Statistiche contrassegni (COD)
+      try {
+        const { data: codStats } = await supabaseAdmin.from('cod_items').select('status, pagato');
+
+        if (codStats && codStats.length > 0) {
+          const inAttesa = codStats.filter((c) => c.status === 'in_attesa');
+          const assegnati = codStats.filter((c) => c.status === 'assegnato');
+          const rimborsati = codStats.filter((c) => c.status === 'rimborsato');
+          const totalDaPagare = assegnati.reduce((s, c) => s + (c.pagato || 0), 0);
+
+          (context as any).codStats = {
+            totale: codStats.length,
+            inAttesa: inAttesa.length,
+            assegnati: assegnati.length,
+            rimborsati: rimborsati.length,
+            totaleDaPagare: Math.round(totalDaPagare * 100) / 100,
+          };
+        }
+      } catch {
+        // Non critico
+      }
+
       // Errori di sistema recenti (ultime 24h)
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const { data: errors, error: errorsError } = await supabaseAdmin
@@ -223,6 +245,13 @@ export function formatContextForPrompt(context: {
     context.business.topCouriers.forEach((c, i) => {
       prompt += `${i + 1}. ${c.name}: ${c.shipments} spedizioni, €${c.revenue.toFixed(2)}\n`;
     });
+  }
+
+  if ((context as any).codStats) {
+    const cod = (context as any).codStats;
+    prompt += `\n**CONTRASSEGNI (COD):**\n`;
+    prompt += `- Totale: ${cod.totale} (${cod.inAttesa} in attesa, ${cod.assegnati} assegnati, ${cod.rimborsati} rimborsati)\n`;
+    prompt += `- Da pagare ai clienti: €${cod.totaleDaPagare.toFixed(2)}\n`;
   }
 
   if (context.system) {

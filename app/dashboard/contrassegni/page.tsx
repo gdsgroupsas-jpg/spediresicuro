@@ -1,8 +1,8 @@
 /**
  * Server Component: Gestione Contrassegni
  *
- * Fetch iniziale server-side con AuthContext + getSpedizioni.
- * Passa dati a Client Component per UI e realtime.
+ * - Admin/Superadmin: Vista admin con tabs (Lista COD + Distinte)
+ * - Utenti normali: Vista contrassegni spedizioni personali
  */
 
 import { getSafeAuth } from '@/lib/safe-auth';
@@ -10,47 +10,46 @@ import { getSpedizioni, getSupabaseUserIdFromEmail } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
 import DashboardNav from '@/components/dashboard-nav';
 import ContrassegniUI, { CashOnDeliveryShipment } from './_components/contrassegni-ui';
+import AdminContrassegni from './_components/admin-contrassegni';
 
-// Helper per arricchire shipment con calcoli (stesso codice del client)
+// Helper per arricchire shipment con calcoli — usa cod_status reale dal DB quando disponibile
 function enrichShipment(shipment: any): CashOnDeliveryShipment {
   function checkContrassegnoInCarica(s: any): boolean {
+    if (s.cod_status === 'collected') return true;
     if (!s.internal_notes) return false;
     return s.internal_notes.includes('Contrassegno preso in carica');
   }
 
   function checkContrassegnoEvaso(s: any): boolean {
+    if (s.cod_status === 'paid') return true;
     if (s.notes && s.notes.includes('CONTRASSEGNO EVASO')) return true;
     if (s.internal_notes && s.internal_notes.includes('Contrassegno EVASO')) return true;
     return false;
   }
 
   function calculatePaymentStatus(s: any): CashOnDeliveryShipment['paymentStatus'] {
+    // Priorità: dato reale dal sistema COD (sincronizzato via trigger)
+    if (s.cod_status === 'paid') return 'evaso';
+    if (s.cod_status === 'collected') return 'in_carica';
+
+    // Fallback euristica per spedizioni senza match COD
     if (s.status === 'delivered' && s.delivered_at) {
       const daysSince = Math.floor(
         (Date.now() - new Date(s.delivered_at).getTime()) / (1000 * 60 * 60 * 24)
       );
-
-      if (daysSince > 7) {
-        return 'paid';
-      }
-
-      return 'payment_expected';
-    }
-
-    if (s.status === 'delivered') {
+      if (daysSince > 7) return 'payment_expected';
       return 'delivered';
     }
 
+    if (s.status === 'delivered') return 'delivered';
     return 'pending';
   }
 
   function calculateExpectedPaymentDate(s: any): string | null {
     if (!s.delivered_at) return null;
-
     const deliveredDate = new Date(s.delivered_at);
     const expectedDate = new Date(deliveredDate);
     expectedDate.setDate(expectedDate.getDate() + 7);
-
     return expectedDate.toISOString();
   }
 
@@ -58,10 +57,10 @@ function enrichShipment(shipment: any): CashOnDeliveryShipment {
   const contrassegnoEvaso = checkContrassegnoEvaso(shipment);
 
   let paymentStatus = calculatePaymentStatus(shipment);
-  if (contrassegnoEvaso) {
-    paymentStatus = 'evaso';
-  } else if (contrassegnoInCarica) {
-    paymentStatus = 'in_carica';
+  // Legacy override solo se cod_status non presente
+  if (!shipment.cod_status) {
+    if (contrassegnoEvaso) paymentStatus = 'evaso';
+    else if (contrassegnoInCarica) paymentStatus = 'in_carica';
   }
 
   const expectedPaymentDate = calculateExpectedPaymentDate(shipment);
@@ -80,11 +79,9 @@ function enrichShipment(shipment: any): CashOnDeliveryShipment {
 }
 
 export default async function ContrassegniPage() {
-  // Autenticazione
   const context = await getSafeAuth();
 
   if (!context?.actor?.email) {
-    // Redirect o errore (gestito dal layout)
     return (
       <div className="min-h-screen bg-gray-50">
         <DashboardNav title="Gestione Contrassegni" subtitle="Accesso negato" />
@@ -97,34 +94,44 @@ export default async function ContrassegniPage() {
     );
   }
 
-  // Fetch dati server-side con AuthContext
+  const isAdmin = context.target.role === 'admin' || context.target.role === 'superadmin';
+
+  // Admin: mostra vista admin con tabs
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <DashboardNav
+          title="Admin Contrassegni"
+          subtitle="Gestione contrassegni, distinte e pagamenti"
+        />
+        <AdminContrassegni />
+      </div>
+    );
+  }
+
+  // Utenti normali: vista contrassegni personali
   let shipments: CashOnDeliveryShipment[] = [];
   let userId: string | null = null;
 
   try {
-    // Converti ActingContext in AuthContext per database operations
     const authContext: AuthContext = {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin: false,
     };
 
-    // Ottieni userId per realtime
-    if (authContext.type === 'user' && context.actor.email) {
+    if (context.actor.email) {
       userId = await getSupabaseUserIdFromEmail(context.actor.email);
     }
 
-    // Fetch spedizioni con AuthContext (multi-tenancy garantito)
     const allShipments = await getSpedizioni(authContext);
 
-    // Filtra contrassegni e arricchisci
     shipments = allShipments
       .filter((s: any) => s.cash_on_delivery === true && s.deleted !== true)
       .map((s: any) => enrichShipment(s));
   } catch (error: any) {
-    console.error('❌ [SERVER] Errore caricamento contrassegni:', error);
-    // In caso di errore, passa array vuoto (UI gestirà il messaggio)
+    console.error('[Contrassegni] Errore caricamento:', error);
     shipments = [];
   }
 

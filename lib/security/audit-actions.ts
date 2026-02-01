@@ -81,6 +81,14 @@ export const AUDIT_ACTIONS = {
   SECURITY_VIOLATION: 'security_violation',
 
   // ============================================
+  // COD (CONTRASSEGNI) OPERATIONS
+  // ============================================
+  COD_FILE_UPLOADED: 'cod_file_uploaded',
+  COD_DISTINTA_CREATED: 'cod_distinta_created',
+  COD_DISTINTA_PAID: 'cod_distinta_paid',
+  COD_DISTINTA_DELETED: 'cod_distinta_deleted',
+
+  // ============================================
   // AI AGENT OPERATIONS
   // ============================================
   AGENT_QUERY: 'agent_query',
@@ -108,6 +116,8 @@ export const AUDIT_RESOURCE_TYPES = {
   SECURITY_EVENT: 'security_event',
   SYSTEM: 'system',
   AGENT_SESSION: 'agent_session',
+  COD_FILE: 'cod_file',
+  COD_DISTINTA: 'cod_distinta',
 } as const;
 
 /**
