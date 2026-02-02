@@ -69,15 +69,27 @@ BEGIN
     RAISE EXCEPTION 'Listino sorgente non trovato: %', p_source_id;
   END IF;
   
-  -- Verifica che sia listino supplier
-  IF v_source_record.list_type != 'supplier' THEN
-    RAISE EXCEPTION 'Posso clonare solo listini supplier, non %', v_source_record.list_type;
+  -- Verifica che sia listino supplier o custom (i reseller possono clonare listini custom assegnati dal superadmin)
+  IF v_source_record.list_type NOT IN ('supplier', 'custom') THEN
+    RAISE EXCEPTION 'Posso clonare solo listini supplier o custom, non %', v_source_record.list_type;
   END IF;
-  
-  -- Se reseller, verifica che il listino sia proprio
+
+  -- Se reseller, verifica che il listino sia proprio OPPURE assegnato
   IF v_is_reseller AND NOT v_is_admin THEN
-    IF v_source_record.created_by != v_caller_id THEN
-      RAISE EXCEPTION 'Non autorizzato: puoi clonare solo listini supplier che hai creato tu';
+    IF v_source_record.created_by != v_caller_id
+       AND NOT EXISTS (
+         SELECT 1 FROM price_list_assignments
+         WHERE price_list_id = p_source_id
+           AND user_id = v_caller_id
+           AND revoked_at IS NULL
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM users
+         WHERE id = v_caller_id
+           AND assigned_price_list_id = p_source_id
+       )
+    THEN
+      RAISE EXCEPTION 'Non autorizzato: puoi clonare solo listini che hai creato tu o che ti sono stati assegnati';
     END IF;
   END IF;
   

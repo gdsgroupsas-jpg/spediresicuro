@@ -13,6 +13,7 @@ import {
   getResellerSupplierPriceListsAction,
   getResellerSubUsersAction,
 } from '@/actions/reseller-price-lists';
+import { listPriceListsAction } from '@/actions/price-lists';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -63,12 +64,33 @@ export function CloneSupplierPriceListDialog({
   async function loadData() {
     setIsLoading(true);
     try {
-      // Carica listini supplier
-      const priceListsResult = await getResellerSupplierPriceListsAction();
-      if (priceListsResult.success && priceListsResult.priceLists) {
-        setPriceLists(priceListsResult.priceLists);
-      } else {
-        toast.error(priceListsResult.error || 'Errore caricamento listini');
+      // Carica listini supplier propri + listini custom assegnati dal superadmin
+      const [supplierResult, allResult] = await Promise.all([
+        getResellerSupplierPriceListsAction(),
+        listPriceListsAction(),
+      ]);
+
+      const supplierLists = supplierResult.success ? supplierResult.priceLists || [] : [];
+      // Listini custom assegnati dal superadmin (non creati dal reseller)
+      const assignedCustomLists = allResult.success
+        ? (allResult.priceLists || []).filter(
+            (pl) => pl.list_type === 'custom' || pl.list_type === 'supplier'
+          )
+        : [];
+
+      // Merge e deduplica
+      const seenIds = new Set<string>();
+      const merged: PriceList[] = [];
+      for (const pl of [...supplierLists, ...assignedCustomLists]) {
+        if (!seenIds.has(pl.id)) {
+          seenIds.add(pl.id);
+          merged.push(pl);
+        }
+      }
+      setPriceLists(merged);
+
+      if (!supplierResult.success && !allResult.success) {
+        toast.error('Errore caricamento listini');
       }
 
       // Carica sub-users
@@ -196,8 +218,8 @@ export function CloneSupplierPriceListDialog({
             Clona Listino Fornitore
           </DialogTitle>
           <DialogDescription>
-            Clona un listino fornitore esistente applicando margini personalizzati per creare un
-            listino personalizzato per i tuoi clienti.
+            Clona un listino esistente (fornitore o assegnato) applicando margini personalizzati per
+            creare un listino personalizzato per i tuoi clienti.
           </DialogDescription>
         </DialogHeader>
 
