@@ -701,6 +701,45 @@ export async function listPriceListsAction(filters?: {
       return { success: false, error: error.message };
     }
 
+    // Per reseller: integra anche i listini CUSTOM assegnati dal superadmin
+    // che la RPC potrebbe non restituire (filtra solo created_by)
+    const isReseller = user.is_reseller === true;
+    if (isReseller) {
+      const ownedIds = new Set((data || []).map((pl: any) => pl.id));
+
+      // Listini assegnati via price_list_assignments
+      const { data: assignedIds } = await supabaseAdmin
+        .from('price_list_assignments')
+        .select('price_list_id')
+        .eq('user_id', user.id)
+        .is('revoked_at', null);
+
+      // Listino assegnato direttamente via users.assigned_price_list_id
+      const { data: userRow } = await supabaseAdmin
+        .from('users')
+        .select('assigned_price_list_id')
+        .eq('id', user.id)
+        .single();
+
+      const missingIds = [
+        ...(assignedIds?.map((a: any) => a.price_list_id) || []),
+        ...(userRow?.assigned_price_list_id ? [userRow.assigned_price_list_id] : []),
+      ].filter((id) => id && !ownedIds.has(id));
+
+      if (missingIds.length > 0) {
+        let assignedQuery = supabaseAdmin.from('price_lists').select('*').in('id', missingIds);
+
+        // Applica stessi filtri
+        if (filters?.courierId) assignedQuery = assignedQuery.eq('courier_id', filters.courierId);
+        if (filters?.status) assignedQuery = assignedQuery.eq('status', filters.status);
+
+        const { data: assignedLists } = await assignedQuery;
+        if (assignedLists?.length) {
+          data!.push(...assignedLists);
+        }
+      }
+    }
+
     // Recupera i corrieri separatamente se necessario
     if (data && data.length > 0) {
       const courierIds = data
