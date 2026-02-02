@@ -45,6 +45,51 @@ function formatToolsForAdapter(): AITool[] {
   }));
 }
 
+/**
+ * Sanitizza AgentState per invio al client.
+ * Rimuove dati interni/sensibili (userId, email, agent_context, messages LangChain).
+ * Espone solo i campi necessari al rendering delle card e componenti UI.
+ */
+function sanitizeAgentStateForClient(state: any): Record<string, any> {
+  // PendingAction: esponi solo campi UI (NO params che puo' contenere dati interni)
+  const pendingAction = state.pendingAction
+    ? {
+        id: state.pendingAction.id,
+        type: state.pendingAction.type,
+        description: state.pendingAction.description,
+        cost: state.pendingAction.cost,
+        expiresAt: state.pendingAction.expiresAt,
+      }
+    : undefined;
+
+  // BookingResult: esponi solo campi UI (NO error_code interno)
+  const bookingResult = state.booking_result
+    ? {
+        status: state.booking_result.status,
+        shipment_id: state.booking_result.shipment_id,
+        carrier_reference: state.booking_result.carrier_reference,
+        user_message: state.booking_result.user_message,
+      }
+    : undefined;
+
+  return {
+    // Dati per card interattive
+    pricing_options: state.pricing_options,
+    booking_result: bookingResult,
+    shipment_details: state.shipment_details,
+    // Dati per componenti P4
+    pendingAction,
+    autoProceed: state.autoProceed,
+    suggestProceed: state.suggestProceed,
+    userMessage: state.userMessage,
+    // Risposte worker (testo, non dati interni)
+    support_response: state.support_response,
+    clarification_request: state.clarification_request,
+    processingStatus: state.processingStatus,
+    // NO: userId, userEmail, messages, agent_context, shipmentData, shipmentDraft, params
+  };
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const traceId = generateTraceId(); // Genera trace_id per telemetria
@@ -179,9 +224,9 @@ export async function POST(request: NextRequest) {
         responseMetadata.telemetry = supervisorResult.telemetry;
       }
 
-      // P4: Includi AgentState nei metadata (per componenti P4)
+      // P4: Includi solo campi safe di AgentState (NO userId, email, agent_context, messages)
       if (supervisorResult.agentState) {
-        responseMetadata.agentState = supervisorResult.agentState;
+        responseMetadata.agentState = sanitizeAgentStateForClient(supervisorResult.agentState);
       }
 
       return NextResponse.json({
