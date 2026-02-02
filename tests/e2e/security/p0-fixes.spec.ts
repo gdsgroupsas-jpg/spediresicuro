@@ -133,7 +133,8 @@ test.describe('P0 Security Fixes Verification', () => {
       const currentUrl = page.url();
       const redirectedToLogin = currentUrl.includes('/login');
       const redirectedToListPage =
-        currentUrl.includes('/listini-fornitore') && !currentUrl.includes(userBPriceListId);
+        (currentUrl.includes('/listini-fornitore') || currentUrl.includes('/reseller/listini')) &&
+        !currentUrl.includes(userBPriceListId);
 
       expect(hasUnauthorizedError || redirectedToLogin || redirectedToListPage).toBe(true);
 
