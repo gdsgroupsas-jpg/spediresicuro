@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 PROGETTO: SpedireSicuro.it - Preventivi spedizioni con ricarico
 
-STACK: Next.js 14, TypeScript, Tailwind CSS, Vercel gratis
+STACK: Next.js 15.3, TypeScript, Tailwind CSS, Vercel gratis
 
 DATABASE: JSON locale poi PostgreSQL Vercel
 

@@ -54,3 +54,10 @@ export async function register() {
     });
   }
 }
+
+export const onRequestError = async (
+  ...args: Parameters<typeof import('@sentry/nextjs').captureRequestError>
+) => {
+  const Sentry = await import('@sentry/nextjs');
+  return Sentry.captureRequestError(...args);
+};
