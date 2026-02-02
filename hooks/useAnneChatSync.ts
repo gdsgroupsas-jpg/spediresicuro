@@ -2,13 +2,12 @@
  * Hook: Anne Chat Sync (Multi-device)
  *
  * Persiste messaggi chat in DB e sincronizza tra dispositivi
- * tramite Supabase Realtime (postgres_changes su anne_chat_messages).
+ * tramite polling API periodico.
  *
  * Flow:
  * 1. Mount: carica history da API
- * 2. Subscribe: ascolta INSERT su anne_chat_messages per userId
- * 3. Quando arriva messaggio da altro device → aggiunge a state locale
- * 4. sendMessage/receiveMessage salvano via API e aggiornano state
+ * 2. Poll: ogni 30s ricarica history per sync cross-device
+ * 3. sendMessage/receiveMessage salvano via API e aggiornano state
  *
  * Phase 4: Multi-device Sessions
  */
@@ -16,7 +15,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/db/client';
 
 export interface SyncedMessage {
   id: string;
@@ -29,6 +27,8 @@ export interface SyncedMessage {
 interface UseAnneChatSyncOptions {
   userId: string | undefined;
   enabled?: boolean;
+  /** Polling interval in ms (default 30000) */
+  pollInterval?: number;
 }
 
 interface UseAnneChatSyncReturn {
@@ -44,108 +44,99 @@ interface UseAnneChatSyncReturn {
   clearHistory: () => Promise<void>;
 }
 
+function parseMessages(raw: any[]): SyncedMessage[] {
+  return raw.map((m) => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    timestamp: new Date(m.created_at),
+    metadata: m.metadata,
+  }));
+}
+
 export function useAnneChatSync({
   userId,
   enabled = true,
+  pollInterval = 30000,
 }: UseAnneChatSyncOptions): UseAnneChatSyncReturn {
   const [messages, setMessages] = useState<SyncedMessage[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  // Track message IDs we've already added (prevent duplicates from realtime)
+  // Track known message IDs to detect new messages from other devices
   const knownIds = useRef(new Set<string>());
+  // Flag to skip polling merge when we just cleared
+  const justCleared = useRef(false);
 
   // ==================== LOAD HISTORY ====================
 
+  const loadHistory = useCallback(async (isInitial: boolean) => {
+    try {
+      const res = await fetch('/api/ai/chat-messages');
+      const data = await res.json();
+      if (!data.success) return;
+
+      const loaded = parseMessages(data.messages || []);
+      const loadedIds = new Set(loaded.map((m) => m.id));
+
+      if (isInitial) {
+        // First load: replace everything
+        knownIds.current = loadedIds;
+        setMessages(loaded);
+      } else {
+        // Poll: merge new messages from other devices
+        if (justCleared.current) {
+          justCleared.current = false;
+          return;
+        }
+
+        // Check if there are new messages we don't know about
+        const hasNew = loaded.some((m) => !knownIds.current.has(m.id));
+        // Check if messages were deleted on another device
+        const hasDeleted = [...knownIds.current].some(
+          (id) => !id.startsWith('temp-') && !loadedIds.has(id)
+        );
+
+        if (hasNew || hasDeleted) {
+          knownIds.current = loadedIds;
+          // Preserve any temp (optimistic) messages not yet confirmed
+          setMessages((prev) => {
+            const tempMessages = prev.filter((m) => m.id.startsWith('temp-'));
+            return [...loaded, ...tempMessages];
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[ANNE_CHAT_SYNC] Load history failed:', err);
+    }
+  }, []);
+
+  // Initial load
   useEffect(() => {
     if (!userId || !enabled) return;
 
     let cancelled = false;
     setIsLoadingHistory(true);
 
-    fetch('/api/ai/chat-messages')
-      .then((res) => res.json())
-      .then((data) => {
-        if (cancelled || !data.success) return;
-
-        const loaded: SyncedMessage[] = (data.messages || []).map((m: any) => {
-          knownIds.current.add(m.id);
-          return {
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            timestamp: new Date(m.created_at),
-            metadata: m.metadata,
-          };
-        });
-        setMessages(loaded);
-      })
-      .catch((err) => {
-        console.error('[ANNE_CHAT_SYNC] Load history failed:', err);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingHistory(false);
-      });
+    loadHistory(true).finally(() => {
+      if (!cancelled) setIsLoadingHistory(false);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [userId, enabled]);
+  }, [userId, enabled, loadHistory]);
 
-  // ==================== REALTIME SUBSCRIPTION ====================
+  // ==================== POLLING ====================
 
   useEffect(() => {
-    if (!userId || !enabled) return;
+    if (!userId || !enabled || pollInterval <= 0) return;
 
-    const channel = supabase
-      .channel(`anne-chat-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'anne_chat_messages',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as any;
-          if (!newMsg?.id) return;
+    const interval = setInterval(() => {
+      loadHistory(false);
+    }, pollInterval);
 
-          // Skip if we already know this message (we sent it from this device)
-          if (knownIds.current.has(newMsg.id)) return;
-
-          knownIds.current.add(newMsg.id);
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: newMsg.id,
-              role: newMsg.role,
-              content: newMsg.content,
-              timestamp: new Date(newMsg.created_at),
-              metadata: newMsg.metadata,
-            },
-          ]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'anne_chat_messages',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          // History cleared from another device
-          knownIds.current.clear();
-          setMessages([]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, enabled]);
+    return () => clearInterval(interval);
+  }, [userId, enabled, pollInterval, loadHistory]);
 
   // ==================== PERSIST MESSAGE ====================
 
@@ -182,6 +173,7 @@ export function useAnneChatSync({
 
         if (data.success && data.message?.id) {
           // Replace temp ID with real ID
+          knownIds.current.delete(tempId);
           knownIds.current.add(data.message.id);
           setMessages((prev) =>
             prev.map((m) =>
@@ -193,7 +185,6 @@ export function useAnneChatSync({
         }
       } catch (err) {
         console.error('[ANNE_CHAT_SYNC] Persist message failed:', err);
-        // Keep optimistic message in UI (best effort)
       }
     },
     [userId]
@@ -204,6 +195,7 @@ export function useAnneChatSync({
   const clearHistory = useCallback(async () => {
     if (!userId) return;
 
+    justCleared.current = true;
     knownIds.current.clear();
     setMessages([]);
 

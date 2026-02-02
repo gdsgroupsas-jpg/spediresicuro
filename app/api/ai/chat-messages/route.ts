@@ -11,6 +11,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { saveChatMessage, loadChatHistory, clearChatHistory } from '@/lib/services/anne-chat';
+import { rateLimit } from '@/lib/security/rate-limit';
+
+// Rate limit: 30 requests/min for GET, 60 for POST, 5 for DELETE
+async function checkRateLimit(userId: string, action: string, limit: number) {
+  const result = await rateLimit(`chat-messages-${action}`, userId, {
+    limit,
+    windowSeconds: 60,
+  });
+  return result;
+}
 
 export async function GET() {
   const ctx = await getSafeAuth();
@@ -21,6 +31,11 @@ export async function GET() {
   const userId = ctx.target.id;
   if (!userId) {
     return NextResponse.json({ error: 'ID utente mancante' }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(userId, 'get', 30);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppi tentativi, riprova tra poco' }, { status: 429 });
   }
 
   const messages = await loadChatHistory(userId);
@@ -36,6 +51,11 @@ export async function POST(request: NextRequest) {
   const userId = ctx.target.id;
   if (!userId) {
     return NextResponse.json({ error: 'ID utente mancante' }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(userId, 'post', 60);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppi tentativi, riprova tra poco' }, { status: 429 });
   }
 
   let body: any;
@@ -88,6 +108,11 @@ export async function DELETE() {
   const userId = ctx.target.id;
   if (!userId) {
     return NextResponse.json({ error: 'ID utente mancante' }, { status: 401 });
+  }
+
+  const rl = await checkRateLimit(userId, 'delete', 5);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Troppi tentativi, riprova tra poco' }, { status: 429 });
   }
 
   await clearChatHistory(userId);
