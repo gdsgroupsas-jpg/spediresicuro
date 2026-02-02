@@ -233,9 +233,10 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard R
 **Steps:**
 
 1. **Navigazione:**
-   - [ ] Vai su `/dashboard/reseller/listini-fornitore`
+   - [ ] Vai su `/dashboard/reseller/listini` (tab "Listini Fornitore")
    - [ ] Verifica che la pagina carichi senza errori
    - [ ] Controlla console browser: **NESSUN errore JavaScript**
+   - [ ] Verifica redirect: `/dashboard/reseller/listini-fornitore` → `/dashboard/reseller/listini?tab=fornitore`
 
 2. **Lista Listini:**
    - [ ] Verifica che la lista listini sia visibile
@@ -275,9 +276,10 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard R
 **Steps:**
 
 1. **Navigazione:**
-   - [ ] Vai su `/dashboard/reseller/listini-personalizzati`
+   - [ ] Vai su `/dashboard/reseller/listini` e clicca tab "Listini Personalizzati"
    - [ ] Verifica che la pagina carichi senza errori
    - [ ] Controlla console browser: **NESSUN errore JavaScript**
+   - [ ] Verifica redirect: `/dashboard/reseller/listini-personalizzati` → `/dashboard/reseller/listini?tab=personalizzati`
 
 2. **Lista Listini:**
    - [ ] Verifica che la lista listini personalizzati sia visibile
@@ -353,8 +355,7 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard R
    - [ ] Verifica presenza sezione "Reseller" nel menu
    - [ ] Verifica voci:
      - [ ] "I Miei Clienti" → punta a `/dashboard/reseller/clienti`
-     - [ ] "Listini Fornitore" → punta a `/dashboard/reseller/listini-fornitore`
-     - [ ] "Listini Personalizzati" → punta a `/dashboard/reseller/listini-personalizzati`
+     - [ ] "Listini" → punta a `/dashboard/reseller/listini` (pagina unificata con 2 tab)
    - [ ] Clicca su ogni voce e verifica navigazione corretta
 
 2. **Sezione Finanze:**

@@ -176,11 +176,10 @@ Eseguire test manuali completi per **Sprint 1, 2, 3** partendo dalla dashboard S
 
 1. **Menu Navigazione:**
    - [ ] Verifica che nel menu laterale ci sia la sezione "Finanza Piattaforma"
-   - [ ] Verifica che ci siano 2 voci:
-     - Financial Dashboard
-     - Listini Master
+   - [ ] Verifica che ci sia la voce "Financial Dashboard"
    - [ ] Clicca su "Financial Dashboard" → deve portare a `/dashboard/super-admin/financial`
-   - [ ] Clicca su "Listini Master" → deve portare a `/dashboard/super-admin/listini-master`
+   - [ ] Verifica che "Listini" sia in Amministrazione → porta a `/dashboard/listini`
+   - [ ] Su `/dashboard/listini` verifica tab "Listini Master" (solo superadmin)
 
 2. **Quick Actions (SuperAdmin Dashboard):**
    - [ ] Vai su `/dashboard/super-admin`

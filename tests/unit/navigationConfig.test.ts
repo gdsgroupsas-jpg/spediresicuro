@@ -324,6 +324,53 @@ describe('isNavItemActive helper', () => {
   });
 });
 
+describe('navigationConfig - Unified Listini Refactor', () => {
+  describe('Reseller section', () => {
+    it('should have single "Listini" item instead of fornitore + personalizzati', () => {
+      const config = getNavigationForUser('user', { isReseller: true });
+      const resellerSection = config.sections.find((s) => s.id === 'reseller');
+      const itemIds = resellerSection?.items.map((i) => i.id) || [];
+
+      expect(itemIds).toContain('reseller-listini');
+      expect(itemIds).not.toContain('reseller-listini-fornitore');
+      expect(itemIds).not.toContain('reseller-listini-personalizzati');
+    });
+
+    it('should have unified Listini pointing to /dashboard/reseller/listini', () => {
+      const config = getNavigationForUser('user', { isReseller: true });
+      const resellerSection = config.sections.find((s) => s.id === 'reseller');
+      const listiniItem = resellerSection?.items.find((i) => i.id === 'reseller-listini');
+
+      expect(listiniItem).toBeDefined();
+      expect(listiniItem?.href).toBe('/dashboard/reseller/listini');
+      expect(listiniItem?.label).toBe('Listini');
+    });
+  });
+
+  describe('Superadmin finance section', () => {
+    it('should NOT have listini-master item (moved to unified page)', () => {
+      const config = getNavigationForUser('superadmin', { isReseller: false });
+      const financeSection = config.sections.find((s) => s.id === 'superadmin-finance');
+      const itemIds = financeSection?.items.map((i) => i.id) || [];
+
+      expect(itemIds).not.toContain('listini-master');
+    });
+  });
+
+  describe('Admin finance subsection', () => {
+    it('should have "Listini" item (renamed from "Listini Prezzi")', () => {
+      const config = getNavigationForUser('admin', { isReseller: false });
+      const adminSection = config.sections.find((s) => s.id === 'admin');
+      const financeSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-finance');
+      const listiniItem = financeSubsection?.items.find((i) => i.id === 'price-lists');
+
+      expect(listiniItem).toBeDefined();
+      expect(listiniItem?.label).toBe('Listini');
+      expect(listiniItem?.href).toBe('/dashboard/listini');
+    });
+  });
+});
+
 describe('Feature Flags', () => {
   it('should have KEYBOARD_NAV enabled by default', () => {
     expect(FEATURES.KEYBOARD_NAV).toBe(true);

@@ -49,14 +49,14 @@ async function loginAsReseller(page: Page): Promise<boolean> {
   }
 }
 
-// Helper per navigare alla pagina listini fornitore
+// Helper per navigare alla pagina listini fornitore (unified reseller page)
 async function goToListiniFornitore(page: Page) {
   // Attendi che la sessione sia completamente caricata
   await page.waitForTimeout(2000);
 
-  // Naviga direttamente alla pagina
-  console.log('📍 Navigazione a /dashboard/reseller/listini-fornitore...');
-  await page.goto('/dashboard/reseller/listini-fornitore');
+  // Naviga alla pagina unificata reseller listini (tab fornitore è default)
+  console.log('📍 Navigazione a /dashboard/reseller/listini...');
+  await page.goto('/dashboard/reseller/listini');
 
   // Attendi che la pagina carichi e le API rispondano
   await page.waitForLoadState('networkidle');
@@ -79,16 +79,16 @@ async function goToListiniFornitore(page: Page) {
     );
   }
 
-  // Se siamo sulla dashboard principale senza listini-fornitore
-  if (!url.includes('listini-fornitore') && !url.includes('dati-cliente')) {
+  // Se siamo sulla dashboard principale senza /reseller/listini
+  if (!url.includes('/reseller/listini') && !url.includes('dati-cliente')) {
     console.log('🔄 Redirect non previsto - provo navigazione manuale via link...');
 
     // Cerca link diretto nel DOM
-    const directLink = page.locator('a[href*="listini-fornitore"]').first();
+    const directLink = page.locator('a[href*="/reseller/listini"]').first();
     if ((await directLink.count()) > 0) {
-      console.log('✅ Link listini-fornitore trovato, cliccando...');
+      console.log('✅ Link reseller/listini trovato, cliccando...');
       await directLink.click();
-      await page.waitForURL(/listini-fornitore/, { timeout: 15000 });
+      await page.waitForURL(/\/reseller\/listini/, { timeout: 15000 });
       await page.waitForLoadState('networkidle');
       console.log('📍 URL dopo click link:', page.url());
     } else {
@@ -100,10 +100,10 @@ async function goToListiniFornitore(page: Page) {
         await resellerButton.click();
         await page.waitForTimeout(1000);
 
-        const listiniLink = page.locator('a[href*="listini-fornitore"]').first();
+        const listiniLink = page.locator('a[href*="/reseller/listini"]').first();
         if ((await listiniLink.count()) > 0) {
           await listiniLink.click();
-          await page.waitForURL(/listini-fornitore/, { timeout: 15000 });
+          await page.waitForURL(/\/reseller\/listini/, { timeout: 15000 });
           console.log('📍 URL dopo click menu:', page.url());
         }
       }
@@ -577,7 +577,7 @@ test.describe.serial('Listini Fornitore - Reseller (Test Completi)', () => {
 test.describe('Gestione Errori', () => {
   test('Redirect a login se non autenticato', async ({ page }) => {
     // Tenta di accedere senza login
-    await page.goto('/dashboard/reseller/listini-fornitore');
+    await page.goto('/dashboard/reseller/listini');
 
     // Dovrebbe essere reindirizzato al login
     await page.waitForURL(/\/login|\/dashboard/, { timeout: 10000 });

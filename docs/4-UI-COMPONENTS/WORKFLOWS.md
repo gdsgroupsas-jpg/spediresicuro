@@ -196,7 +196,7 @@ const transactions = await getMyWalletTransactions();
 
 **Obiettivo:** Clonare listino fornitore, assegnarlo a clienti, modificare prezzi.
 
-**URL:** `/dashboard/reseller/listini-fornitore`
+**URL:** `/dashboard/reseller/listini` (tab "Fornitore" + tab "Personalizzati")
 
 **Steps:**
 
