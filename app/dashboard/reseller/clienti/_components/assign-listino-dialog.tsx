@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  assignPriceListToUserAction as assignPriceListAction,
-  revokePriceListFromUserAction,
-  listPriceListsAction,
-} from '@/actions/price-lists';
+import { bulkUpdateUserListiniAction, listPriceListsAction } from '@/actions/price-lists';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -89,38 +85,19 @@ export function AssignListinoDialog({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const currentSet = new Set(currentListinoIds);
-      const toAssign = [...selectedIds].filter((id) => !currentSet.has(id));
-      const toRevoke = [...currentSet].filter((id) => !selectedIds.has(id));
+      const result = await bulkUpdateUserListiniAction(clientId, [...selectedIds]);
 
-      let errors = 0;
-
-      for (const plId of toAssign) {
-        const result = await assignPriceListAction(clientId, plId);
-        if (!result.success) {
-          errors++;
-          toast.error(result.error || 'Errore assegnazione listino');
-        }
+      if (!result.success) {
+        toast.error(result.error || 'Errore nel salvataggio');
+        return;
       }
 
-      for (const plId of toRevoke) {
-        const result = await revokePriceListFromUserAction(clientId, plId);
-        if (!result.success) {
-          errors++;
-          toast.error(result.error || 'Errore revoca listino');
-        }
+      const changes = result.added + result.removed;
+      if (changes > 0) {
+        toast.success(`Listini aggiornati (${result.added} aggiunti, ${result.removed} rimossi)`);
       }
-
-      if (errors === 0) {
-        const changes = toAssign.length + toRevoke.length;
-        if (changes > 0) {
-          toast.success(
-            `Listini aggiornati (${toAssign.length} aggiunti, ${toRevoke.length} rimossi)`
-          );
-        }
-        onSuccess();
-        onOpenChange(false);
-      }
+      onSuccess();
+      onOpenChange(false);
     } catch (error) {
       console.error('Errore salvataggio listini:', error);
       toast.error('Errore nel salvataggio');
