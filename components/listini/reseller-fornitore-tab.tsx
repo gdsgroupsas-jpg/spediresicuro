@@ -8,6 +8,7 @@
 import {
   deletePriceListAction,
   getAvailableCouriersForUserAction,
+  listPriceListsAction,
   listSupplierPriceListsAction,
 } from '@/actions/price-lists';
 import { SupplierPriceListForm } from '@/components/listini/supplier-price-list-form';
@@ -33,9 +34,14 @@ import { toast } from 'sonner';
 interface ResellerFornitoreTabProps {
   accountType?: string;
   resellerRole?: string;
+  userId?: string;
 }
 
-export function ResellerFornitoreTab({ accountType, resellerRole }: ResellerFornitoreTabProps) {
+export function ResellerFornitoreTab({
+  accountType,
+  resellerRole,
+  userId,
+}: ResellerFornitoreTabProps) {
   const router = useRouter();
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,10 +108,22 @@ export function ResellerFornitoreTab({ accountType, resellerRole }: ResellerForn
     try {
       setIsLoading(true);
       const result = await listSupplierPriceListsAction();
+      const ownSupplier = result.success && result.priceLists ? result.priceLists : [];
 
-      if (result.success && result.priceLists) {
-        setPriceLists(result.priceLists);
-      } else {
+      // Carica anche i listini ricevuti dal SuperAdmin (custom, created_by != me)
+      let receivedLists: PriceList[] = [];
+      if (userId) {
+        const allResult = await listPriceListsAction();
+        if (allResult.success && allResult.priceLists) {
+          receivedLists = allResult.priceLists.filter(
+            (pl) => pl.created_by && pl.created_by !== userId
+          );
+        }
+      }
+
+      setPriceLists([...ownSupplier, ...receivedLists]);
+
+      if (!result.success) {
         toast.error(result.error || 'Errore caricamento listini');
       }
     } catch (error) {
