@@ -40,11 +40,29 @@ import { SupportQuickActions } from './SupportQuickActions';
 import type { AgentState } from '@/lib/agent/orchestrator/state';
 import { autoProceedConfig } from '@/lib/config';
 import { useAnneTyping } from '@/hooks/useAnneTyping';
+import {
+  PricingComparisonCard,
+  TrackingStatusCard,
+  BookingConfirmCard,
+  type TrackingCardData,
+} from './cards';
+import type { PricingResult } from '@/lib/ai/pricing-engine';
+import type { BookingResult } from '@/lib/agent/workers/booking';
+
+/** Dati strutturati per card interattive (opzionale) */
+interface MessageCardData {
+  type: 'pricing' | 'tracking' | 'booking';
+  pricing?: PricingResult[];
+  tracking?: TrackingCardData;
+  booking?: BookingResult;
+}
 
 interface Message {
   role: 'user' | 'assistant' | 'suggestion';
   content: string;
   timestamp: Date;
+  /** Se presente, renderizza una card interattiva al posto del testo */
+  cardData?: MessageCardData;
 }
 
 interface AnneAssistantProps {
@@ -281,12 +299,23 @@ export function AnneAssistant({
         }
       }
 
+      // Costruisci cardData se ci sono dati strutturati
+      const agentState = data.metadata?.agentState;
+      let cardData: MessageCardData | undefined;
+
+      if (agentState?.pricing_options?.length > 0) {
+        cardData = { type: 'pricing', pricing: agentState.pricing_options };
+      } else if (agentState?.booking_result) {
+        cardData = { type: 'booking', booking: agentState.booking_result };
+      }
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content: data.message || 'Nessuna risposta ricevuta.',
           timestamp: new Date(),
+          cardData,
         },
       ]);
     } catch (error: any) {
@@ -560,25 +589,39 @@ export function AnneAssistant({
                     key={idx}
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-[85%] rounded-xl px-4 py-2 text-sm ${
-                        msg.role === 'user'
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                          : msg.role === 'suggestion'
-                            ? 'bg-amber-50 border border-amber-200 text-amber-900'
-                            : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      {msg.role === 'suggestion' && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <Lightbulb className="w-3 h-3 text-amber-600" />
-                          <span className="text-xs font-semibold">Suggerimento</span>
-                        </div>
-                      )}
-                      <ReactMarkdown className="prose prose-sm max-w-none">
-                        {msg.content}
-                      </ReactMarkdown>
-                    </div>
+                    {/* Card interattive (se dati strutturati disponibili) */}
+                    {msg.cardData?.type === 'pricing' && msg.cardData.pricing && (
+                      <PricingComparisonCard options={msg.cardData.pricing} />
+                    )}
+                    {msg.cardData?.type === 'booking' && msg.cardData.booking && (
+                      <BookingConfirmCard result={msg.cardData.booking} />
+                    )}
+                    {msg.cardData?.type === 'tracking' && msg.cardData.tracking && (
+                      <TrackingStatusCard data={msg.cardData.tracking} />
+                    )}
+
+                    {/* Fallback testo (sempre mostrato se non c'e' card, o per suggerimenti/user) */}
+                    {!msg.cardData && (
+                      <div
+                        className={`max-w-[85%] rounded-xl px-4 py-2 text-sm ${
+                          msg.role === 'user'
+                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                            : msg.role === 'suggestion'
+                              ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                              : 'bg-gray-100 text-gray-900'
+                        }`}
+                      >
+                        {msg.role === 'suggestion' && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <Lightbulb className="w-3 h-3 text-amber-600" />
+                            <span className="text-xs font-semibold">Suggerimento</span>
+                          </div>
+                        )}
+                        <ReactMarkdown className="prose prose-sm max-w-none">
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 ))}
 
