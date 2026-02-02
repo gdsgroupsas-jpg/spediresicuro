@@ -12,6 +12,13 @@
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
+export interface ListinoInfo {
+  id: string;
+  name: string;
+  margin_percent: number | null;
+  status: string;
+}
+
 export interface ClientWithListino {
   id: string;
   email: string;
@@ -22,12 +29,7 @@ export interface ClientWithListino {
   created_at: string;
   shipments_count: number;
   total_spent: number;
-  assigned_listino: {
-    id: string;
-    name: string;
-    margin_percent: number | null;
-    status: string;
-  } | null;
+  assigned_listini: ListinoInfo[];
 }
 
 export interface ClientsStatsResult {
@@ -78,13 +80,13 @@ export async function getResellerClientsWithListino(): Promise<{
         id,
         email,
         name,
-        company_name,
-        phone,
         wallet_balance,
-        created_at
+        created_at,
+        dati_cliente,
+        assigned_price_list_id
       `
       )
-      .eq('parent_user_id', currentUser.id)
+      .eq('parent_id', currentUser.id)
       .order('created_at', { ascending: false });
 
     if (clientsError) {
@@ -114,7 +116,25 @@ export async function getResellerClientsWithListino(): Promise<{
       });
     });
 
-    // Ottieni listini assegnati via price_list_assignments
+    // Mappa multi-listino per utente (user_id -> ListinoInfo[])
+    const assignmentMap = new Map<string, ListinoInfo[]>();
+    const seenIds = new Map<string, Set<string>>(); // user_id -> Set<price_list_id> per dedup
+
+    const addListino = (userId: string, pl: any) => {
+      if (!pl?.id) return;
+      if (!seenIds.has(userId)) seenIds.set(userId, new Set());
+      if (seenIds.get(userId)!.has(pl.id)) return;
+      seenIds.get(userId)!.add(pl.id);
+      if (!assignmentMap.has(userId)) assignmentMap.set(userId, []);
+      assignmentMap.get(userId)!.push({
+        id: pl.id,
+        name: pl.name,
+        margin_percent: pl.default_margin_percent ?? pl.margin_percent ?? null,
+        status: pl.status,
+      });
+    };
+
+    // Fonte 1: price_list_assignments (N:N, revoked_at IS NULL)
     const { data: assignments } = await supabaseAdmin
       .from('price_list_assignments')
       .select(
@@ -129,17 +149,13 @@ export async function getResellerClientsWithListino(): Promise<{
       `
       )
       .in('user_id', clientIds)
-      .eq('is_active', true);
+      .is('revoked_at', null);
 
-    // Mappa assegnazioni per utente
-    const assignmentMap = new Map<string, any>();
     assignments?.forEach((a) => {
-      if (a.price_list) {
-        assignmentMap.set(a.user_id, a.price_list);
-      }
+      if (a.price_list) addListino(a.user_id, a.price_list);
     });
 
-    // Ottieni anche listini assegnati direttamente (assigned_to_user_id)
+    // Fonte 2: price_lists.assigned_to_user_id (legacy diretto)
     const { data: directAssignments } = await supabaseAdmin
       .from('price_lists')
       .select('id, name, default_margin_percent, status, assigned_to_user_id')
@@ -147,34 +163,43 @@ export async function getResellerClientsWithListino(): Promise<{
       .eq('status', 'active');
 
     directAssignments?.forEach((pl) => {
-      if (pl.assigned_to_user_id && !assignmentMap.has(pl.assigned_to_user_id)) {
-        assignmentMap.set(pl.assigned_to_user_id, pl);
-      }
+      if (pl.assigned_to_user_id) addListino(pl.assigned_to_user_id, pl);
     });
+
+    // Fonte 3: users.assigned_price_list_id (legacy singolo dalla RPC)
+    const clientsWithAssignedPl = clients.filter((c) => (c as any).assigned_price_list_id);
+    if (clientsWithAssignedPl.length > 0) {
+      const plIds = clientsWithAssignedPl.map((c) => (c as any).assigned_price_list_id);
+      const { data: userAssignedPls } = await supabaseAdmin
+        .from('price_lists')
+        .select('id, name, default_margin_percent, status')
+        .in('id', plIds);
+
+      const plMap = new Map<string, any>();
+      userAssignedPls?.forEach((pl) => plMap.set(pl.id, pl));
+
+      clientsWithAssignedPl.forEach((c) => {
+        const pl = plMap.get((c as any).assigned_price_list_id);
+        if (pl) addListino(c.id, pl);
+      });
+    }
 
     // Costruisci risultato finale
     const clientsWithListino: ClientWithListino[] = clients.map((client) => {
       const shipmentStats = statsMap.get(client.id) || { count: 0, total: 0 };
-      const listino = assignmentMap.get(client.id);
 
       return {
         id: client.id,
         email: client.email,
         name: client.name || client.email.split('@')[0],
-        company_name: client.company_name,
-        phone: client.phone,
+        company_name: (client as any).dati_cliente?.ragioneSociale || null,
+        phone:
+          (client as any).dati_cliente?.telefono || (client as any).dati_cliente?.cellulare || null,
         wallet_balance: client.wallet_balance || 0,
         created_at: client.created_at,
         shipments_count: shipmentStats.count,
         total_spent: shipmentStats.total,
-        assigned_listino: listino
-          ? {
-              id: listino.id,
-              name: listino.name,
-              margin_percent: listino.default_margin_percent,
-              status: listino.status,
-            }
-          : null,
+        assigned_listini: assignmentMap.get(client.id) || [],
       };
     });
 
@@ -224,8 +249,8 @@ export async function getResellerClientsStats(): Promise<{
       activeClients,
       totalWalletBalance: clients.reduce((sum, c) => sum + c.wallet_balance, 0),
       totalShipments: clients.reduce((sum, c) => sum + c.shipments_count, 0),
-      clientsWithListino: clients.filter((c) => c.assigned_listino !== null).length,
-      clientsWithoutListino: clients.filter((c) => c.assigned_listino === null).length,
+      clientsWithListino: clients.filter((c) => c.assigned_listini.length > 0).length,
+      clientsWithoutListino: clients.filter((c) => c.assigned_listini.length === 0).length,
       totalRevenue: clients.reduce((sum, c) => sum + c.total_spent, 0),
     };
 

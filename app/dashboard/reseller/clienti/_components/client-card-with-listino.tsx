@@ -24,6 +24,13 @@ import {
   Wallet,
 } from 'lucide-react';
 
+export interface ListinoInfo {
+  id: string;
+  name: string;
+  margin_percent?: number | null;
+  status: string;
+}
+
 export interface ClientWithListino {
   id: string;
   email: string;
@@ -34,12 +41,7 @@ export interface ClientWithListino {
   created_at: string;
   shipments_count: number;
   total_spent: number;
-  assigned_listino?: {
-    id: string;
-    name: string;
-    margin_percent?: number | null;
-    status: string;
-  } | null;
+  assigned_listini: ListinoInfo[];
 }
 
 interface ClientCardWithListinoProps {
@@ -65,6 +67,10 @@ export function ClientCardWithListino({
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     return new Date(client.created_at) >= sevenDaysAgo;
   };
+
+  const listini = client.assigned_listini;
+  const hasListini = listini.length > 0;
+  const MAX_VISIBLE = 2;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-orange-200 transition-all group">
@@ -115,32 +121,40 @@ export function ClientCardWithListino({
           </div>
         </div>
 
-        {/* Listino Badge */}
-        <div className="flex items-center gap-3 shrink-0">
-          {client.assigned_listino ? (
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
-              onClick={() => onAssignListino(client.id)}
-              title="Clicca per cambiare listino"
-            >
-              <FileText className="w-4 h-4 text-green-600" />
-              <div className="text-left">
-                <p className="text-xs font-medium text-green-800 truncate max-w-[120px]">
-                  {client.assigned_listino.name}
-                </p>
-                {client.assigned_listino.margin_percent !== undefined && (
-                  <p className="text-[10px] text-green-600">
-                    +{client.assigned_listino.margin_percent}% margine
-                  </p>
-                )}
-              </div>
-            </div>
+        {/* Listini Badges */}
+        <div
+          className="flex items-center gap-1.5 shrink-0 cursor-pointer"
+          onClick={() => onAssignListino(client.id)}
+          title={hasListini ? 'Gestisci listini' : 'Assegna un listino'}
+        >
+          {hasListini ? (
+            <>
+              {listini.slice(0, MAX_VISIBLE).map((l) => (
+                <div
+                  key={l.id}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5 text-green-600" />
+                  <div className="text-left">
+                    <p className="text-xs font-medium text-green-800 truncate max-w-[100px]">
+                      {l.name}
+                    </p>
+                    {l.margin_percent != null && (
+                      <p className="text-[10px] text-green-600">+{l.margin_percent}%</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {listini.length > MAX_VISIBLE && (
+                <div className="px-2 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                  <span className="text-xs font-medium text-green-700">
+                    +{listini.length - MAX_VISIBLE}
+                  </span>
+                </div>
+              )}
+            </>
           ) : (
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors"
-              onClick={() => onAssignListino(client.id)}
-              title="Assegna un listino"
-            >
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
               <span className="text-xs font-medium text-amber-800">Nessun listino</span>
             </div>
@@ -168,23 +182,23 @@ export function ClientCardWithListino({
               Vedi Spedizioni
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {client.assigned_listino ? (
-              <DropdownMenuItem onClick={() => onAssignListino(client.id)}>
-                <Edit className="w-4 h-4 mr-2 text-orange-600" />
-                Cambia Listino
-              </DropdownMenuItem>
-            ) : (
-              <>
-                <DropdownMenuItem onClick={() => onAssignListino(client.id)}>
+            <DropdownMenuItem onClick={() => onAssignListino(client.id)}>
+              {hasListini ? (
+                <>
+                  <Edit className="w-4 h-4 mr-2 text-orange-600" />
+                  Gestisci Listini
+                </>
+              ) : (
+                <>
                   <Link2 className="w-4 h-4 mr-2 text-orange-600" />
-                  Assegna Listino Esistente
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCreateListino(client.id)}>
-                  <Plus className="w-4 h-4 mr-2 text-purple-600" />
-                  Crea Listino Personalizzato
-                </DropdownMenuItem>
-              </>
-            )}
+                  Assegna Listino
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCreateListino(client.id)}>
+              <Plus className="w-4 h-4 mr-2 text-purple-600" />
+              Crea Listino Personalizzato
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onEditClient(client.id)}>
               <Eye className="w-4 h-4 mr-2 text-gray-600" />

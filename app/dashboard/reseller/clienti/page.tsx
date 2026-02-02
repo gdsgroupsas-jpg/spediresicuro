@@ -120,9 +120,9 @@ function ResellerClientiContent() {
 
     // Listino filter
     if (listinoFilter === 'with') {
-      result = result.filter((c) => c.assigned_listino !== null);
+      result = result.filter((c) => c.assigned_listini.length > 0);
     } else if (listinoFilter === 'without') {
-      result = result.filter((c) => c.assigned_listino === null);
+      result = result.filter((c) => c.assigned_listini.length === 0);
     }
 
     // Sort
@@ -379,7 +379,7 @@ function ResellerClientiContent() {
           onOpenChange={setShowAssignDialog}
           clientId={selectedClientForListino.id}
           clientName={selectedClientForListino.name}
-          currentListinoId={selectedClientForListino.assigned_listino?.id}
+          currentListinoIds={selectedClientForListino.assigned_listini.map((l) => l.id)}
           onSuccess={handleListinoAssigned}
           onCreateNew={() => {
             setShowAssignDialog(false);

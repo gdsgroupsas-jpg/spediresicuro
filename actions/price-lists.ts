@@ -471,9 +471,9 @@ export async function assignPriceListToUserAction(
       };
     }
 
-    // ✨ USA RPC SICURA con ownership check
+    // ✨ USA RPC SICURA multi-listino con ownership check
     const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-      'assign_listino_to_user_secure',
+      'assign_listino_to_user_multi',
       {
         p_caller_id: currentUser.id,
         p_user_id: userId,
@@ -517,6 +517,68 @@ export async function assignPriceListToUserAction(
     return { success: true };
   } catch (error: any) {
     console.error('Errore assegnazione listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+/**
+ * Revoca listino da utente (soft delete in price_list_assignments)
+ */
+export async function revokePriceListFromUserAction(
+  userId: string,
+  priceListId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data: currentUser } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
+      .single();
+
+    if (!currentUser) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    const isAdmin =
+      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
+    const isReseller =
+      currentUser.is_reseller === true ||
+      currentUser.account_type === 'reseller' ||
+      currentUser.account_type === 'reseller_admin';
+
+    if (!isAdmin && !isReseller) {
+      return { success: false, error: 'Solo admin e reseller possono gestire listini' };
+    }
+
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      'revoke_listino_from_user',
+      {
+        p_caller_id: currentUser.id,
+        p_user_id: userId,
+        p_price_list_id: priceListId,
+      }
+    );
+
+    if (rpcError) {
+      console.error('Errore RPC revoca listino:', rpcError);
+      const errorMessage = rpcError.message || '';
+      if (errorMessage.includes('FORBIDDEN')) {
+        return { success: false, error: 'Puoi gestire listini solo dei tuoi clienti' };
+      }
+      return { success: false, error: rpcError.message };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Errore revoca listino:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
