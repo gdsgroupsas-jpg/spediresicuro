@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Ghost,
@@ -26,6 +26,10 @@ import {
   Sparkles,
   HelpCircle,
   Settings as SettingsIcon,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAnneContext } from './AnneContext';
@@ -41,6 +45,7 @@ import type { AgentState } from '@/lib/agent/orchestrator/state';
 import { autoProceedConfig } from '@/lib/config';
 import { useAnneTyping } from '@/hooks/useAnneTyping';
 import { useAnneChatSync, type SyncedMessage } from '@/hooks/useAnneChatSync';
+import { useVoiceIO } from '@/hooks/useVoiceIO';
 import {
   PricingComparisonCard,
   TrackingStatusCard,
@@ -143,8 +148,48 @@ export function AnneAssistant({
   // Context per suggerimenti proattivi
   const { currentSuggestion, dismissSuggestion } = useAnneContext();
 
+  // P5: Ref per invio vocale (sendMessage legge da input state, serve ref per bypass)
+  const pendingVoiceMessage = useRef<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // P5: Voice I/O
+  const handleVoiceTranscript = useCallback((text: string) => {
+    if (!text.trim()) return;
+    // Prefix [VOX] for voice-optimized backend responses
+    pendingVoiceMessage.current = `[VOX] ${text.trim()}`;
+    setInput(text.trim());
+  }, []);
+
+  const {
+    sttSupported,
+    ttsSupported,
+    isListening,
+    isSpeaking,
+    interimTranscript,
+    startListening,
+    stopListening,
+    speak,
+    stopSpeaking,
+    ttsEnabled,
+    setTtsEnabled,
+  } = useVoiceIO({
+    lang: 'it-IT',
+    onTranscript: handleVoiceTranscript,
+  });
+
+  // P5: Auto-send when voice transcript is set
+  useEffect(() => {
+    if (pendingVoiceMessage.current && input.trim()) {
+      // Small delay to let state update render
+      const timer = setTimeout(() => {
+        sendVoiceMessage(pendingVoiceMessage.current!);
+        pendingVoiceMessage.current = null;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [input]);
 
   // Carica preferenze da localStorage
   useEffect(() => {
@@ -312,6 +357,7 @@ export function AnneAssistant({
 
       // Persist assistant response with card metadata (multi-device sync + P2 cards)
       const agentState = data.metadata?.agentState;
+      const assistantContent = data.message || 'Nessuna risposta ricevuta.';
       const cardMeta: Record<string, unknown> = {};
 
       if (agentState?.pricing_options?.length > 0) {
@@ -322,7 +368,12 @@ export function AnneAssistant({
         cardMeta.cardData = agentState.booking_result;
       }
 
-      persistMessage('assistant', data.message || 'Nessuna risposta ricevuta.', cardMeta);
+      persistMessage('assistant', assistantContent, cardMeta);
+
+      // P5: TTS - leggi risposta ad alta voce se abilitato
+      if (ttsEnabled && ttsSupported) {
+        speak(assistantContent);
+      }
     } catch (error: any) {
       console.error('Errore Anne:', error);
 
@@ -344,6 +395,75 @@ export function AnneAssistant({
     } finally {
       clearTimeout(timeoutId);
       stopTyping();
+      setIsLoading(false);
+    }
+  };
+
+  // P5: Send voice message (uses [VOX] prefix for concise AI responses)
+  const sendVoiceMessage = async (voxMessage: string) => {
+    const displayText = voxMessage.replace('[VOX] ', '');
+    setInput('');
+
+    persistMessage('user', displayText);
+    setIsLoading(true);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch('/api/ai/agent-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: voxMessage,
+          userId,
+          userRole,
+          currentPage,
+          context: { previousMessages: messages.slice(-5) },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          const text = await response.text();
+          errorData = text ? JSON.parse(text) : {};
+        } catch {
+          errorData = { error: `Errore HTTP ${response.status}` };
+        }
+        throw new Error(errorData.error || `Errore (${response.status})`);
+      }
+
+      const responseText = await response.text();
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error('Risposta vuota dal server.');
+      }
+
+      const data = JSON.parse(responseText);
+
+      if (data.metadata?.telemetry && (userRole === 'admin' || userRole === 'superadmin')) {
+        setLastTelemetry(data.metadata.telemetry);
+      }
+      if (data.metadata?.agentState) {
+        setCurrentAgentState(data.metadata.agentState);
+      }
+
+      const assistantContent = data.message || 'Nessuna risposta ricevuta.';
+      persistMessage('assistant', assistantContent);
+
+      // TTS: leggi risposta
+      if (ttsEnabled && ttsSupported) {
+        speak(assistantContent);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.name === 'AbortError'
+          ? 'Richiesta scaduta. Riprova.'
+          : error.message || 'Errore tecnico.';
+      persistMessage('assistant', errorMessage);
+    } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
@@ -449,6 +569,27 @@ export function AnneAssistant({
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  {/* P5: TTS toggle */}
+                  {ttsSupported && (
+                    <button
+                      onClick={() => {
+                        if (isSpeaking) stopSpeaking();
+                        setTtsEnabled(!ttsEnabled);
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        ttsEnabled
+                          ? 'bg-purple-100 text-purple-600'
+                          : 'hover:bg-purple-100 text-gray-400'
+                      }`}
+                      title={ttsEnabled ? 'Disattiva voce' : 'Attiva voce'}
+                    >
+                      {ttsEnabled ? (
+                        <Volume2 className="w-4 h-4" />
+                      ) : (
+                        <VolumeX className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowSettings(!showSettings)}
                     className="p-2 hover:bg-purple-100 rounded-lg transition-colors"
@@ -687,6 +828,12 @@ export function AnneAssistant({
 
               {/* Input */}
               <div className="p-4 border-t bg-gray-50">
+                {/* P5: Interim transcript preview */}
+                {isListening && interimTranscript && (
+                  <div className="text-xs text-purple-500 italic mb-1 truncate">
+                    {interimTranscript}...
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <input
                     ref={inputRef}
@@ -694,10 +841,25 @@ export function AnneAssistant({
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Scrivi ad Anne..."
+                    placeholder={isListening ? 'Sto ascoltando...' : 'Scrivi ad Anne...'}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    disabled={isLoading}
+                    disabled={isLoading || isListening}
                   />
+                  {/* P5: Mic button */}
+                  {sttSupported && (
+                    <button
+                      onClick={isListening ? stopListening : startListening}
+                      disabled={isLoading}
+                      className={`p-2 rounded-lg transition-all ${
+                        isListening
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={isListening ? 'Interrompi ascolto' : 'Parla con Anne'}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </button>
+                  )}
                   <button
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}
