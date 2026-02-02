@@ -43,6 +43,7 @@ import {
 import { defaultLogger, type ILogger } from '../logger';
 import { ActingContext } from '@/lib/safe-auth';
 import { UserRole } from '@/lib/rbac';
+import { createTypingChannel, type TypingChannel } from '@/lib/realtime/typing-indicators';
 
 // ==================== TIPI ====================
 
@@ -52,6 +53,8 @@ export interface SupervisorInput {
   userEmail: string;
   traceId: string;
   actingContext: ActingContext; // ⚠️ NUOVO: ActingContext iniettato dalla route
+  /** Nonce per canale typing (opzionale, generato dal client) */
+  typingNonce?: string;
 }
 
 export interface SupervisorResult {
@@ -111,7 +114,7 @@ export async function supervisorRouter(
   logger: ILogger = defaultLogger
 ): Promise<SupervisorResult> {
   const startTime = Date.now();
-  const { message, userId, userEmail, traceId, actingContext } = input;
+  const { message, userId, userEmail, traceId, actingContext, typingNonce } = input;
 
   // Telemetria da costruire progressivamente
   let intentDetected: IntentType = 'unknown';
@@ -131,6 +134,18 @@ export async function supervisorRouter(
   // Sprint 2.4: OCR telemetry
   let ocrSource: 'image' | 'text' | null = null;
   let ocrExtractedFieldsCount = 0;
+
+  // Typing indicator: canale persistente per tutta la request
+  // Solo se il client ha inviato un nonce (opt-in, backward compatible)
+  let typing: TypingChannel | null = null;
+  if (typingNonce) {
+    try {
+      typing = await createTypingChannel(userId, typingNonce);
+      typing.emit('thinking', 'Analizzo la richiesta...').catch(() => {});
+    } catch {
+      // Fire-and-forget: non bloccare il router se il canale fallisce
+    }
+  }
 
   // Helper per emettere evento finale e restituire risultato
   const emitFinalTelemetryAndReturn = (
@@ -154,6 +169,9 @@ export async function supervisorRouter(
 
     // Emetti SEMPRE 1 evento finale per request
     logSupervisorRouterComplete(traceId, userId, telemetryData);
+
+    // Typing indicator: ANNE ha finito + cleanup canale
+    typing?.done().catch(() => {});
 
     return {
       ...result,
@@ -195,6 +213,9 @@ export async function supervisorRouter(
   if (isSupportIntent) {
     logger.log('🎧 [Supervisor Router] Intent supporto rilevato, invoco support worker');
     intentDetected = 'non_pricing'; // Telemetria: non e pricing
+
+    // Typing indicator: ANNE verifica spedizioni
+    typing?.emit('working', 'Verifico le tue spedizioni...', 'support').catch(() => {});
 
     try {
       const supportResult = await supportWorker(
@@ -285,6 +306,13 @@ export async function supervisorRouter(
       '💰 [Supervisor Router] Intent pricing rilevato, invoco pricing graph (supervisor deciderà routing)'
     );
   }
+
+  // Typing indicator: ANNE calcola i prezzi
+  const typingMsg =
+    supervisorDecision === 'ocr_worker'
+      ? 'Analizzo il documento...'
+      : 'Calcolo i prezzi migliori...';
+  typing?.emit('working', typingMsg, supervisorDecision).catch(() => {});
 
   try {
     // ARCHITETTURA: supervisor-router NON imposta next_step.
