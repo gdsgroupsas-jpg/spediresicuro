@@ -3,12 +3,13 @@
  *
  * Verifica:
  * 1. Accesso pagina solo per superadmin
- * 2. Visualizzazione listini master
+ * 2. Visualizzazione listini master (tab "master" nella pagina unificata)
  * 3. Funzionalità clone (UI)
  * 4. Funzionalità assign (UI)
  * 5. Visualizzazione assegnazioni
  *
  * Nota: Questo test usa mock data via x-test-mode: playwright
+ * URL: /dashboard/listini?tab=master (unified page, post-refactor 2026-02)
  */
 
 import { expect, test } from '@playwright/test';
@@ -39,14 +40,14 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
 
   test('1. Pagina carica correttamente per superadmin', async ({ page }) => {
     // Naviga alla pagina listini master
-    await page.goto('/dashboard/super-admin/listini-master');
+    await page.goto('/dashboard/listini?tab=master');
     await page.waitForLoadState('domcontentloaded');
 
     const url = page.url();
     console.log('📍 URL attuale:', url);
 
     // Verifica redirect prima di aspettare il contenuto
-    if (!url.includes('/listini-master')) {
+    if (!url.includes('/listini')) {
       console.log('⚠️ Redirect rilevato, skip check contenuto');
       return;
     }
@@ -69,10 +70,10 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
     expect(hasRealError).toBe(0);
 
     // Verifica heading
-    await expect(page.getByRole('heading', { name: 'Gestione Listini Master' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Gestione Listini' })).toBeVisible();
 
     // Verifica heading o access denied message
-    const hasHeading = (await page.locator('h1:has-text("Gestione Listini Master")').count()) > 0;
+    const hasHeading = (await page.locator('h1:has-text("Gestione Listini")').count()) > 0;
     const hasAccessDenied = (await page.locator('text=/Accesso Negato/i').count()) > 0;
     const hasLoading = (await page.locator('text=/Verifica permessi/i').count()) > 0;
 
@@ -87,7 +88,7 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
   });
 
   test('2. Verifica UI componenti principali', async ({ page }) => {
-    await page.goto('/dashboard/super-admin/listini-master');
+    await page.goto('/dashboard/listini?tab=master');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
@@ -122,7 +123,7 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
   });
 
   test('3. Test ricerca listini', async ({ page }) => {
-    await page.goto('/dashboard/super-admin/listini-master');
+    await page.goto('/dashboard/listini?tab=master');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
@@ -153,7 +154,7 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
   });
 
   test('4. Verifica pulsanti azione nella tabella', async ({ page }) => {
-    await page.goto('/dashboard/super-admin/listini-master');
+    await page.goto('/dashboard/listini?tab=master');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(5000);
 
@@ -190,7 +191,7 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
   });
 
   test('5. Test apertura dialog clone', async ({ page }) => {
-    await page.goto('/dashboard/super-admin/listini-master');
+    await page.goto('/dashboard/listini?tab=master');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(5000);
 
@@ -243,7 +244,7 @@ test.describe('Gestione Listini Master (Superadmin)', () => {
   });
 
   test('6. Test apertura dialog assegnazione', async ({ page }) => {
-    await page.goto('/dashboard/super-admin/listini-master');
+    await page.goto('/dashboard/listini?tab=master');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(5000);
 
