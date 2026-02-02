@@ -95,6 +95,12 @@ export const AUDIT_ACTIONS = {
   AGENT_MENTOR_RESPONSE: 'agent_mentor_response',
   AGENT_SESSION_CREATED: 'agent_session_created',
   AGENT_SESSION_UPDATED: 'agent_session_updated',
+
+  // ============================================
+  // PRICE LIST ASSIGNMENT OPERATIONS
+  // ============================================
+  PRICE_LIST_ASSIGNED: 'price_list_assigned',
+  PRICE_LIST_REVOKED: 'price_list_revoked',
 } as const;
 
 /**
@@ -118,6 +124,8 @@ export const AUDIT_RESOURCE_TYPES = {
   AGENT_SESSION: 'agent_session',
   COD_FILE: 'cod_file',
   COD_DISTINTA: 'cod_distinta',
+  PRICE_LIST: 'price_list',
+  PRICE_LIST_ASSIGNMENT: 'price_list_assignment',
 } as const;
 
 /**

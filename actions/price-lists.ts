@@ -24,6 +24,9 @@ import type {
   UpdatePriceListInput,
 } from '@/types/listini';
 import type { CourierServiceType } from '@/types/shipments';
+import { writeAuditLog } from '@/lib/security/audit-log';
+import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 /**
  * Helper: Logga evento listino nel financial_audit_log
@@ -471,6 +474,32 @@ export async function assignPriceListToUserAction(
       };
     }
 
+    // Rate limiting: 30 req/min per utente
+    const rl = await rateLimit('assign-listino', currentUser.id, { limit: 30, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return { success: false, error: 'Troppe richieste. Riprova tra qualche secondo.' };
+    }
+
+    // Reseller: verifica margine non negativo (no vendita sottocosto)
+    if (isReseller) {
+      const { data: plCheck } = await supabaseAdmin
+        .from('price_lists')
+        .select('default_margin_percent')
+        .eq('id', priceListId)
+        .single();
+
+      if (
+        plCheck &&
+        plCheck.default_margin_percent !== null &&
+        plCheck.default_margin_percent < 0
+      ) {
+        return {
+          success: false,
+          error: 'Non puoi assegnare un listino con margine negativo (vendita sottocosto)',
+        };
+      }
+    }
+
     // ✨ USA RPC SICURA multi-listino con ownership check
     const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
       'assign_listino_to_user_multi',
@@ -508,10 +537,13 @@ export async function assignPriceListToUserAction(
       return { success: false, error: rpcError.message };
     }
 
-    console.log('✅ [ASSIGN LISTINO] Assegnato con ownership check:', {
-      callerId: currentUser.id,
-      userId,
-      priceListId,
+    // Audit log (fail-open)
+    await writeAuditLog({
+      context,
+      action: AUDIT_ACTIONS.PRICE_LIST_ASSIGNED,
+      resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
+      resourceId: priceListId,
+      metadata: { targetUserId: userId, priceListId },
     });
 
     return { success: true };
@@ -558,6 +590,12 @@ export async function revokePriceListFromUserAction(
       return { success: false, error: 'Solo admin e reseller possono gestire listini' };
     }
 
+    // Rate limiting: 30 req/min per utente (stessa route di assign)
+    const rl = await rateLimit('assign-listino', currentUser.id, { limit: 30, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return { success: false, error: 'Troppe richieste. Riprova tra qualche secondo.' };
+    }
+
     const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
       'revoke_listino_from_user',
       {
@@ -575,6 +613,15 @@ export async function revokePriceListFromUserAction(
       }
       return { success: false, error: rpcError.message };
     }
+
+    // Audit log (fail-open)
+    await writeAuditLog({
+      context,
+      action: AUDIT_ACTIONS.PRICE_LIST_REVOKED,
+      resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
+      resourceId: priceListId,
+      metadata: { targetUserId: userId, priceListId },
+    });
 
     return { success: true };
   } catch (error: any) {
