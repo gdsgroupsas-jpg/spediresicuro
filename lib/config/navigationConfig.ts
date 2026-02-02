@@ -276,20 +276,11 @@ const resellerSection: NavSection = {
       description: 'Calcola preventivi basati sulla matrice del listino',
     },
     {
-      id: 'reseller-listini-fornitore',
-      label: 'Listini Fornitore',
-      href: '/dashboard/reseller/listini-fornitore',
-      icon: Package,
-      description: 'Gestisci i tuoi listini fornitore',
-    },
-    // Listini Personalizzati ora accessibile da "I Miei Clienti" inline
-    // Mantenuto per backward compatibility e accesso diretto
-    {
-      id: 'reseller-listini-personalizzati',
-      label: 'Listini Personalizzati',
-      href: '/dashboard/reseller/listini-personalizzati',
+      id: 'reseller-listini',
+      label: 'Listini',
+      href: '/dashboard/reseller/listini',
       icon: FileText,
-      description: 'Listini personalizzati per i tuoi clienti',
+      description: 'Gestisci listini fornitore e personalizzati',
     },
     {
       id: 'reseller-report-fiscale',
@@ -318,13 +309,6 @@ const superAdminFinanceSection: NavSection = {
       href: '/dashboard/super-admin/financial',
       icon: Calculator,
       description: 'P&L, Margini e Riconciliazione Piattaforma',
-    },
-    {
-      id: 'listini-master',
-      label: 'Listini Master',
-      href: '/dashboard/super-admin/listini-master',
-      icon: FileText,
-      description: 'Listini globali piattaforma',
     },
   ],
 };
@@ -417,10 +401,10 @@ const adminSection: NavSection = {
         },
         {
           id: 'price-lists',
-          label: 'Listini Prezzi',
+          label: 'Listini',
           href: '/dashboard/listini',
           icon: FileText,
-          description: 'Gestione listini per utenti',
+          description: 'Gestione listini prezzi e master',
         },
         {
           id: 'cash-on-delivery',

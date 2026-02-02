@@ -28,11 +28,11 @@ test.describe('Sync Listini Ottimizzati', () => {
     // Nota: il layout dashboard userà l'header per mostrare UI "simulata" se necessario
   });
 
-  // Helper per navigare (copiato dal test esistente)
+  // Helper per navigare (unified reseller listini page)
   async function goToListiniFornitore(page: any) {
     await page.waitForTimeout(2000);
-    console.log('📍 Navigazione a /dashboard/reseller/listini-fornitore...');
-    await page.goto('/dashboard/reseller/listini-fornitore');
+    console.log('📍 Navigazione a /dashboard/reseller/listini...');
+    await page.goto('/dashboard/reseller/listini');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(5000);
 
@@ -46,13 +46,13 @@ test.describe('Sync Listini Ottimizzati', () => {
       throw new Error('Account non è configurato come Reseller');
     }
 
-    if (!url.includes('listini-fornitore') && !url.includes('dati-cliente')) {
+    if (!url.includes('/reseller/listini') && !url.includes('dati-cliente')) {
       console.log('🔄 Redirect non previsto - provo navigazione manuale via link...');
-      const directLink = page.locator('a[href*="listini-fornitore"]').first();
+      const directLink = page.locator('a[href*="/reseller/listini"]').first();
       if ((await directLink.count()) > 0) {
-        console.log('✅ Link listini-fornitore trovato, cliccando...');
+        console.log('✅ Link reseller/listini trovato, cliccando...');
         await directLink.click();
-        await page.waitForURL(/listini-fornitore/, { timeout: 15000 });
+        await page.waitForURL(/\/reseller\/listini/, { timeout: 15000 });
         await page.waitForLoadState('networkidle');
         console.log('📍 URL dopo click link:', page.url());
       } else {
@@ -61,10 +61,10 @@ test.describe('Sync Listini Ottimizzati', () => {
         if ((await resellerButton.count()) > 0) {
           await resellerButton.click();
           await page.waitForTimeout(1000);
-          const listiniLink = page.locator('a[href*="listini-fornitore"]').first();
+          const listiniLink = page.locator('a[href*="/reseller/listini"]').first();
           if ((await listiniLink.count()) > 0) {
             await listiniLink.click();
-            await page.waitForURL(/listini-fornitore/, { timeout: 15000 });
+            await page.waitForURL(/\/reseller\/listini/, { timeout: 15000 });
             console.log('📍 URL dopo click menu:', page.url());
           }
         }
@@ -87,7 +87,7 @@ test.describe('Sync Listini Ottimizzati', () => {
     console.log('📍 URL finale:', finalUrl);
 
     // Skip test if redirected to login (reseller account not properly configured in CI)
-    if (finalUrl.includes('/login') || !finalUrl.includes('listini-fornitore')) {
+    if (finalUrl.includes('/login') || !finalUrl.includes('/reseller/listini')) {
       console.log(
         '⚠️ Skip: Redirected to login - reseller setup not available in this environment'
       );
@@ -97,7 +97,7 @@ test.describe('Sync Listini Ottimizzati', () => {
 
     // Verifica che la pagina si carichi correttamente
     // Cerca heading "Listini Fornitore"
-    const heading = page.locator('h1:has-text("Listini Fornitore")').first();
+    const heading = page.locator('h1:has-text("Gestione Listini")').first();
     await expect(heading).toBeVisible({ timeout: 10000 });
     console.log('✅ Heading "Listini Fornitore" trovato');
 
@@ -239,7 +239,7 @@ test.describe('Sync Listini Ottimizzati', () => {
     const finalUrl = page.url();
 
     // Skip test if redirected to login (reseller account not properly configured in CI)
-    if (finalUrl.includes('/login') || !finalUrl.includes('listini-fornitore')) {
+    if (finalUrl.includes('/login') || !finalUrl.includes('/reseller/listini')) {
       console.log(
         '⚠️ Skip: Redirected to login - reseller setup not available in this environment'
       );
@@ -252,7 +252,7 @@ test.describe('Sync Listini Ottimizzati', () => {
     await page.waitForTimeout(3000);
 
     // Verifica heading
-    const heading = page.locator('h1:has-text("Listini Fornitore")').first();
+    const heading = page.locator('h1:has-text("Gestione Listini")').first();
     await expect(heading).toBeVisible({ timeout: 10000 });
 
     // Verifica presenza tabella o stato vuoto

@@ -23,7 +23,7 @@ vi.mock('@/lib/pricing/calculator', () => ({
 }));
 
 import { supabaseAdmin } from '@/lib/db/client';
-import { calculatePriceWithRules } from '@/lib/db/price-lists-advanced';
+import { calculatePriceWithRules, __clearMasterListCache } from '@/lib/db/price-lists-advanced';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 
 describe('VAT Margin Zero Fix', () => {
@@ -43,6 +43,7 @@ describe('VAT Margin Zero Fix', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    __clearMasterListCache();
   });
 
   describe('Scenario 1: Master excluded, Custom included (Margin 0)', () => {

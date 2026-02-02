@@ -408,7 +408,7 @@ Il menu laterale è organizzato in **sezioni**:
 
 ---
 
-### 4.3 Listini Master (`/dashboard/super-admin/listini-master`)
+### 4.3 Listini Master (`/dashboard/listini?tab=master`)
 
 **Cosa serve:**
 
@@ -500,7 +500,7 @@ Il menu laterale è organizzato in **sezioni**:
 
 ---
 
-### 5.2 Listini Fornitore (`/dashboard/reseller/listini-fornitore`)
+### 5.2 Listini Fornitore (`/dashboard/reseller/listini?tab=fornitore`)
 
 **Cosa serve:**
 
@@ -533,7 +533,7 @@ Il menu laterale è organizzato in **sezioni**:
 
 ---
 
-### 5.3 Listini Personalizzati (`/dashboard/reseller/listini-personalizzati`)
+### 5.3 Listini Personalizzati (`/dashboard/reseller/listini?tab=personalizzati`)
 
 **Cosa serve:**
 

@@ -176,7 +176,8 @@ WHERE u.parent_user_id = '<reseller_id>';
 
 - [ ] Nuova sezione "Finanza Piattaforma" visibile nel menu laterale
 - [ ] Voce "Financial Dashboard" punta a `/dashboard/super-admin/financial`
-- [ ] Voce "Listini Master" presente e punta a `/dashboard/super-admin/listini-master`
+- [ ] Voce "Listini" presente in Amministrazione e punta a `/dashboard/listini`
+- [ ] Tab "Listini Master" visibile per superadmin su `/dashboard/listini?tab=master`
 - [ ] Tutti i link navigano correttamente (nessun errore 404)
 
 **Verifica SuperAdmin - Quick Actions (Dashboard):**
@@ -184,10 +185,10 @@ WHERE u.parent_user_id = '<reseller_id>';
 - [ ] Vai su `/dashboard/super-admin`
 - [ ] Verifica presenza di 3 card "Quick Actions":
   - [ ] Financial Dashboard (card verde) → link funzionante
-  - [ ] Listini Master (card blu) → link funzionante
+  - [ ] Listini Master (card blu) → redirecta a `/dashboard/listini?tab=master`
   - [ ] Analytics (card grigia, disabled se non implementato)
 - [ ] Clic su "Financial Dashboard" → porta a `/dashboard/super-admin/financial`
-- [ ] Clic su "Listini Master" → porta a `/dashboard/super-admin/listini-master`
+- [ ] Clic su "Listini Master" → porta a `/dashboard/listini?tab=master`
 
 ---
 

@@ -583,7 +583,7 @@ describe('Platform Provider Costs', () => {
  *
  * Combina:
  * - Lista clienti (da reseller-team)
- * - Gestione listini (da listini-personalizzati)
+ * - Gestione listini (da /reseller/listini?tab=personalizzati)
  * - Stats aggregate
  * - Azioni rapide
  */
@@ -860,12 +860,13 @@ const resellerSection: NavSection = {
       description: 'Gestisci clienti, listini e wallet',
     },
     {
-      id: 'listini-fornitore',
-      label: 'Listini Fornitore',
-      href: '/dashboard/reseller/listini-fornitore',
+      id: 'reseller-listini',
+      label: 'Listini',
+      href: '/dashboard/reseller/listini',
       icon: FileText,
+      description: 'Listini fornitore e personalizzati (pagina unificata con tab)',
     },
-    // RIMOSSO: listini-personalizzati (ora in clienti)
+    // NOTA: listini-fornitore e listini-personalizzati unificati in /reseller/listini (refactor 2026-02)
   ],
 };
 

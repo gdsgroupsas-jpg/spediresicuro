@@ -43,7 +43,7 @@ Questo documento descrive i test E2E per verificare il processo completo di sinc
 
 **Problema**: Il dialog "Configura" non si apriva quando si cliccava il pulsante nella pagina reseller.
 
-**Causa**: La pagina `/dashboard/reseller/listini-fornitore` non aveva implementato il dialog di configurazione, mentre la pagina BYOC (`/dashboard/byoc/listini-fornitore`) ce l'aveva.
+**Causa**: La pagina reseller listini fornitore (ora `/dashboard/reseller/listini`) non aveva implementato il dialog di configurazione, mentre la pagina BYOC (`/dashboard/byoc/listini-fornitore`) ce l'aveva.
 
 **Soluzione**: Aggiunto alla pagina reseller:
 
@@ -55,7 +55,7 @@ Questo documento descrive i test E2E per verificare il processo completo di sinc
 
 **File Modificati**:
 
-- `app/dashboard/reseller/listini-fornitore/page.tsx`
+- `components/listini/reseller-fornitore-tab.tsx` (estratto da vecchia `app/dashboard/reseller/listini-fornitore/page.tsx`)
 
 **Status**: ✅ **RISOLTO** - Dialog ora funziona correttamente
 
@@ -122,7 +122,7 @@ Se preferisci testare manualmente:
 ### 1. Verifica Listini Esistenti
 
 - [ ] Accedi con account test
-- [ ] Naviga a `/dashboard/reseller/listini-fornitore`
+- [ ] Naviga a `/dashboard/reseller/listini` (tab Fornitore)
 - [ ] Verifica che i listini esistenti siano visibili
 - [ ] Verifica struttura tabella (Nome, Corriere, Status, Azioni)
 
@@ -200,7 +200,8 @@ Nessun problema noto al momento. Tutti i test passano correttamente.
 
 - **Test E2E**: `e2e/sync-price-lists-optimized.spec.ts`
 - **Componente Dialog Config**: `components/listini/supplier-price-list-config-dialog.tsx`
-- **Pagina Reseller**: `app/dashboard/reseller/listini-fornitore/page.tsx`
+- **Pagina Reseller (unificata)**: `app/dashboard/reseller/listini/page.tsx`
+- **Tab Fornitore**: `components/listini/reseller-fornitore-tab.tsx`
 - **Pagina BYOC**: `app/dashboard/byoc/listini-fornitore/page.tsx`
 - **Server Action Sync**: `actions/spedisci-online-rates.ts`
 - **Server Action Config**: `actions/supplier-price-list-config.ts`

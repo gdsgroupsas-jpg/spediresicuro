@@ -1233,7 +1233,7 @@ async function calculateWithDefaultMargin(
         // ✨ FIX: Prezzo fornitore originale nella modalità VAT del master (per visualizzazione)
         supplierPriceOriginal: resultSupplierPriceOriginal, // Nella modalità VAT del master list
         // ✨ NUOVO: VAT Semantics (ADR-001)
-        vatMode: priceList.vat_mode || 'excluded',
+        vatMode: customVATMode,
         vatRate: customVATRate,
         vatAmount,
         totalPriceWithVAT:
