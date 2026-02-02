@@ -250,12 +250,14 @@ Client (sub-user del reseller)
 ```
 
 **Sicurezza e isolamento:**
+
 - I listini supplier del superadmin non sono mai esposti ai reseller
 - Ogni reseller vede solo: listini creati da lui + listini esplicitamente assegnati a lui
 - La funzione SQL `reseller_clone_supplier_price_list` verifica ownership o assegnazione prima di clonare
 - Isolamento multi-tenant: reseller A non vede listini di reseller B
 
 **Server Actions coinvolte:**
+
 - `listPriceListsAction()` - include listini assegnati via `price_list_assignments` per reseller
 - `resellerCloneSupplierPriceListAction()` - clona listini supplier o custom (propri o assegnati)
 - `resellerAssignPriceListAction()` - assegna listino clonato ai sub-user

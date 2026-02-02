@@ -24,10 +24,9 @@ function mergeOwnedAndAssigned(
 ): Array<{ id: string; list_type: string; created_by: string }> {
   const ownedIdSet = new Set(ownedLists.map((pl) => pl.id));
 
-  const missingIds = [
-    ...assignedIds,
-    ...(directAssignedId ? [directAssignedId] : []),
-  ].filter((id) => id && !ownedIdSet.has(id));
+  const missingIds = [...assignedIds, ...(directAssignedId ? [directAssignedId] : [])].filter(
+    (id) => id && !ownedIdSet.has(id)
+  );
 
   const assignedLists = allPriceLists.filter((pl) => missingIds.includes(pl.id));
 
@@ -159,42 +158,72 @@ describe('Reseller Assigned Price Lists', () => {
   describe('Autorizzazione clone listini', () => {
     it('reseller puo clonare il proprio listino supplier', () => {
       const result = canResellerClone(
-        RESELLER_A_ID, 'supplier', RESELLER_A_ID, [], null, 'pl-reseller-a-own'
+        RESELLER_A_ID,
+        'supplier',
+        RESELLER_A_ID,
+        [],
+        null,
+        'pl-reseller-a-own'
       );
       expect(result.allowed).toBe(true);
     });
 
     it('reseller puo clonare listino custom assegnato dal superadmin', () => {
       const result = canResellerClone(
-        SUPERADMIN_ID, 'custom', RESELLER_A_ID, ['pl-custom-1'], null, 'pl-custom-1'
+        SUPERADMIN_ID,
+        'custom',
+        RESELLER_A_ID,
+        ['pl-custom-1'],
+        null,
+        'pl-custom-1'
       );
       expect(result.allowed).toBe(true);
     });
 
     it('reseller puo clonare listino assegnato via assigned_price_list_id', () => {
       const result = canResellerClone(
-        SUPERADMIN_ID, 'custom', RESELLER_A_ID, [], 'pl-custom-2', 'pl-custom-2'
+        SUPERADMIN_ID,
+        'custom',
+        RESELLER_A_ID,
+        [],
+        'pl-custom-2',
+        'pl-custom-2'
       );
       expect(result.allowed).toBe(true);
     });
 
     it('reseller NON puo clonare listino non assegnato di un altro reseller', () => {
       const result = canResellerClone(
-        RESELLER_B_ID, 'custom', RESELLER_A_ID, [], null, 'pl-reseller-b-own'
+        RESELLER_B_ID,
+        'custom',
+        RESELLER_A_ID,
+        [],
+        null,
+        'pl-reseller-b-own'
       );
       expect(result.allowed).toBe(false);
     });
 
     it('reseller NON puo clonare listino supplier del superadmin non assegnato', () => {
       const result = canResellerClone(
-        SUPERADMIN_ID, 'supplier', RESELLER_A_ID, [], null, 'pl-supplier-1'
+        SUPERADMIN_ID,
+        'supplier',
+        RESELLER_A_ID,
+        [],
+        null,
+        'pl-supplier-1'
       );
       expect(result.allowed).toBe(false);
     });
 
     it('reseller NON puo clonare listino di tipo global', () => {
       const result = canResellerClone(
-        SUPERADMIN_ID, 'global', RESELLER_A_ID, ['pl-global-1'], null, 'pl-global-1'
+        SUPERADMIN_ID,
+        'global',
+        RESELLER_A_ID,
+        ['pl-global-1'],
+        null,
+        'pl-global-1'
       );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('Tipo non clonabile');
